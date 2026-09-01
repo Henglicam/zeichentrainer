@@ -233,7 +233,7 @@ function renderAdd(main){
     <div id="c-list"></div>
   </div>`;
   $("#f-add").onclick=addManual;
-  const ni=$("#f-noimg"); if(ni) ni.onclick=()=>{ S.pendingImg=null; S.pendingFull=null; S.pendingUse="crop"; renderAdd(main); };
+  const ni=$("#f-noimg"); if(ni) ni.onclick=()=>{ S.pendingImg=null; S.pendingFull=null; renderAdd(main); };
   const uc=$("#f-usecrop"); if(uc) uc.onclick=()=>{ S.pendingUse="crop"; renderAdd(main); };
   const uf=$("#f-usefull"); if(uf) uf.onclick=()=>{ S.pendingUse="full"; renderAdd(main); };
   /* Draft survives tab switches (e.g. pick word → back to cropping) */
@@ -268,7 +268,7 @@ async function addManual(){
   const card={c:word,p:pin,m:mean,ex,exp:"",exm,t:"Custom"};
   const chosenImg=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
   if(chosenImg){ card.img=chosenImg; }
-  S.pendingImg=null; S.pendingFull=null; S.pendingUse="crop";
+  S.pendingImg=null; S.pendingFull=null;
   S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
   S.queue=buildQueue(false);
@@ -300,20 +300,27 @@ let DICT=null, _dictLoading=null;
 function loadDict(){
   if(DICT) return Promise.resolve(DICT);
   if(!_dictLoading){
-    _dictLoading=fetch("./vendor/cedict.tsv.gz")
-      .then(r=>{
-        if(!r.ok) throw new Error("dictionary not available");
-        return new Response(r.body.pipeThrough(new DecompressionStream("gzip"))).text();
-      })
-      .then(t=>{
-        DICT=new Map();
-        for(const line of t.split("\n")){
-          const i=line.indexOf("\t");
-          if(i>0) DICT.set(line.slice(0,i),line.slice(i+1));
-        }
-        return DICT;
-      })
-      .catch(err=>{ _dictLoading=null; throw err; });
+    _dictLoading=(async()=>{
+      const url=new URL("./vendor/cedict.tsv.gz",location.href).href;
+      let r=await fetch(url);
+      if(!r.ok){
+        /* heal a poisoned cache entry (e.g. a 404 cached before the file was deployed) */
+        try{ const c=await caches.open("zt-ocr-v1"); await c.delete(url); }catch(e){}
+        r=await fetch(url,{cache:"reload"});
+        if(!r.ok) throw new Error("dictionary not available ("+r.status+")");
+      }
+      const buf=new Uint8Array(await r.arrayBuffer());
+      /* gzip magic bytes — if a server/proxy already decompressed, treat as plain text */
+      const text=(buf[0]===0x1f&&buf[1]===0x8b)
+        ? await new Response(new Response(buf).body.pipeThrough(new DecompressionStream("gzip"))).text()
+        : new TextDecoder().decode(buf);
+      DICT=new Map();
+      for(const line of text.split("\n")){
+        const i=line.indexOf("\t");
+        if(i>0) DICT.set(line.slice(0,i),line.slice(i+1));
+      }
+      return DICT;
+    })().catch(err=>{ _dictLoading=null; throw err; });
   }
   return _dictLoading;
 }
@@ -341,7 +348,31 @@ async function ocrWorker(status){
 }
 
 /* per-photo result (session only): characters with box + auto pinyin; tap to select */
-const OCRRES={}, SELS={};
+const OCRRES={}, SELS={}, QSNOTE={};
+async function quickSave(id){
+  const R=OCRRES[id]; if(!R) return;
+  const chars=R.flat.filter(c=>SELS[id].has(c.i));
+  if(!chars.length) return;
+  const w=chars.map(c=>c.ch).join("");
+  const p=pinyinPro.pinyin(w,{type:"array",toneType:"symbol"}).join(" ");
+  const m=(DICT&&DICT.get(w))||"";
+  if(!m){ /* no dictionary meaning — the form is needed to fill it in */
+    S.prefill={w,p,m:""}; S.mode="add"; render(); return;
+  }
+  if(deck().some(d=>d.c===w)){
+    QSNOTE[id]=`“${w}” is already in the deck.`;
+    SELS[id].clear(); renderShots(); return;
+  }
+  const card={c:w,p,m,ex:"",exp:"",exm:"",t:"Custom"};
+  const img=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
+  if(img) card.img=img;
+  S.custom.push(card);
+  try{ await idbPut("custom",card); }catch(e){}
+  S.queue=buildQueue(false);
+  QSNOTE[id]=`“${w}” saved — ${esc(p)}. Auto values, verify when in doubt.`;
+  SELS[id].clear();
+  setStats(); renderShots();
+}
 async function onOcr(id,region){
   /* region (optional): {blob,X,Y} — OCR only on the crop, boxes shifted
      back into full-image coordinates */
@@ -381,7 +412,10 @@ async function onOcr(id,region){
       const ps=pinyinPro.pinyin(cs.map(c=>c.ch).join(""),{type:"array",toneType:"symbol"});
       cs.forEach((c,j)=>{ c.i=i++; c.py=ps[j]||""; flat.push(c); });
     });
-    OCRRES[id]={w:W,h:H,flat}; SELS[id]=new Set();
+    OCRRES[id]={w:W,h:H,flat};
+    /* a tight frame usually IS the word — pre-select it */
+    SELS[id]=new Set(flat.length<=4?flat.map(c=>c.i):[]);
+    delete QSNOTE[id];
     renderShots();
   }catch(err){ status("OCR failed: "+(err&&err.message||err)); }
 }
@@ -397,13 +431,17 @@ function overlayHTML(id){
 function selbarHTML(id){
   const R=OCRRES[id]; if(!R) return "";
   const chars=R.flat.filter(c=>SELS[id].has(c.i));
-  if(!chars.length) return `<span class="badge">Tap characters in the image to select a word for the card.</span>`;
+  if(!chars.length){
+    const note=QSNOTE[id]?`<span class="ok" style="margin:0">${QSNOTE[id]}</span><br>`:"";
+    return `${note}<span class="badge">Tap characters in the image to select a word for the card.</span>`;
+  }
   const w=chars.map(c=>c.ch).join("");
   const p=pinyinPro.pinyin(w,{type:"array",toneType:"symbol"}).join(" ");
   const m=(DICT&&DICT.get(w))||"";
   return `<div class="selbar"><span class="sw">${esc(w)}</span><span class="sp">${esc(p)}</span>
-    ${m?`<span class="sm">${esc(m)}</span>`:`<span class="sm none">not in dictionary</span>`}
-    <button class="btn mini" data-mkcard="${esc(w)}" data-p="${esc(p)}" data-m="${esc(m)}">→ Card</button>
+    ${m?`<span class="sm">${esc(m)}</span>`:`<span class="sm none">${DICT?"not in dictionary":"dictionary not loaded"}</span>`}
+    <button class="btn mini" data-quicksave="${id}">Save card</button>
+    <button class="btn mini" data-mkcard="${esc(w)}" data-p="${esc(p)}" data-m="${esc(m)}">Edit…</button>
     <button class="del" data-clearsel="${id}">clear</button></div>`;
 }
 
@@ -488,7 +526,7 @@ async function cropOk(id){
   const r=await cropBlob(id);
   if(!r){ alert("Draw a frame with your finger first."); return; }
   const rec=S.inbox.find(x=>x.id===id);
-  CROP=null; S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null; S.pendingUse="crop";
+  CROP=null; S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null;
   S.mode="add"; render();
 }
 async function cropOcr(id){
@@ -497,7 +535,7 @@ async function cropOcr(id){
   /* the framed area doubles as the card image — '-> Card' carries it along;
      the full photo stays available as context via the toggle in the Add form */
   const rec=S.inbox.find(x=>x.id===id);
-  S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null; S.pendingUse="crop";
+  S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null;
   CROP=null; renderShots();
   onOcr(id,r);
 }
@@ -505,7 +543,7 @@ async function cropOcr(id){
 /* ---------- Kamera / Inbox ---------- */
 function renderInbox(main){
   main.innerHTML=`<div class="pane">
-    <div class="lead">Take a photo — it stays on this device. Flow: CROP → draw a frame → OCR overlays pinyin on the characters; tap them, then "→ Card" opens the form with word, pinyin, meaning and the framed image prefilled. First OCR use downloads ~12 MB once, works offline afterwards; verify tones + meaning via chat.</div>
+    <div class="lead">Take a photo — it stays on this device. After shooting you land in crop mode: draw a frame → OCR overlays pinyin; short frames come pre-selected. "Save card" stores word, pinyin, meaning and image in one tap ("Edit…" opens the form). First OCR use downloads ~12 MB once, works offline afterwards; verify tones + meaning via chat.</div>
     <button class="btn primary block" id="snap">Take photo</button>
     <div id="shots"></div>
   </div>`;
@@ -550,6 +588,7 @@ function renderShots(){
     S.mode="add"; render();
   });
   box.querySelectorAll("[data-clearsel]").forEach(b=> b.onclick=()=>{ SELS[b.dataset.clearsel].clear(); renderShots(); });
+  box.querySelectorAll("[data-quicksave]").forEach(b=> b.onclick=()=>quickSave(b.dataset.quicksave));
   box.querySelectorAll(".croplayer").forEach(wireCrop);
 }
 async function onPhoto(e){
@@ -571,6 +610,8 @@ async function onPhoto(e){
   const rec={ id:"shot_"+Date.now(), blob, ts:Date.now() };
   S.inbox.unshift(rec);
   try{ await idbPut("inbox",rec); }catch(err){}
+  /* next step is always framing the text — go straight into crop mode */
+  CROP={id:rec.id,rect:null};
   if(S.mode!=="inbox"){ S.mode="inbox"; render(); } else renderShots();
 }
 async function delShot(id){
