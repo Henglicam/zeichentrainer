@@ -35,10 +35,15 @@
   <main id="main" class="center"></main>
   <footer id="ftr">
     <span class="badge">SPEICHER · dauerhaft (auf diesem Gerät)</span>
-    <button class="reset" id="reset">ZURÜCKSETZEN</button>
+    <div class="actions">
+      <button class="reset" id="export">EXPORT</button>
+      <button class="reset" id="import">IMPORT</button>
+      <button class="reset" id="reset">ZURÜCKSETZEN</button>
+    </div>
   </footer>
 </div>
 <input id="cam" type="file" accept="image/*" capture="environment" hidden>
+<input id="imp" type="file" accept="application/json,.json" hidden>
 <script src="./app.js"></script>
 </body>
 </html>
