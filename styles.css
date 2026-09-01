@@ -130,6 +130,10 @@ nav{display:flex;gap:14px}
 .croprect{position:absolute;display:none;border:2px dashed var(--bone);
   box-shadow:0 0 0 1px rgba(20,20,16,.85), 0 0 0 9999px rgba(20,20,16,.5);
   pointer-events:none}
+.croprect .h{position:absolute;width:14px;height:14px;background:var(--bone);
+  border:1px solid rgba(20,20,16,.85);border-radius:1px}
+.croprect .h.tl{left:-8px;top:-8px} .croprect .h.tr{right:-8px;top:-8px}
+.croprect .h.bl{left:-8px;bottom:-8px} .croprect .h.br{right:-8px;bottom:-8px}
 
 .croppreview img{width:auto;max-width:100%;max-height:120px;display:block;
   border:1px solid var(--line);border-radius:2px}

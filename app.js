@@ -405,17 +405,37 @@ function wireCrop(layer){
   layer.onpointerdown=e=>{
     e.preventDefault();
     const r=layer.getBoundingClientRect();
-    const sx=e.clientX-r.left, sy=e.clientY-r.top;
-    CROP.rect=null;
-    rect.style.display="block";
-    Object.assign(rect.style,{left:sx+"px",top:sy+"px",width:"0px",height:"0px"});
+    const px=e.clientX-r.left, py=e.clientY-r.top;
+    const cur=CROP.rect;
+    const setRect=(x,y,w,h)=>{
+      Object.assign(rect.style,{left:x+"px",top:y+"px",width:w+"px",height:h+"px",display:"block"});
+      CROP.rect={x,y,w,h,lw:r.width,lh:r.height};
+    };
+    /* three modes: grab a corner -> resize (opposite corner anchored),
+       press inside the frame -> move it, anywhere else -> draw a new frame */
+    let mode="draw", anchor=[px,py], grab=null, mw=0, mh=0;
+    if(cur){
+      const corners={tl:[cur.x,cur.y],tr:[cur.x+cur.w,cur.y],bl:[cur.x,cur.y+cur.h],br:[cur.x+cur.w,cur.y+cur.h]};
+      for(const k of ["tl","tr","bl","br"]){
+        if(Math.hypot(px-corners[k][0],py-corners[k][1])<=22){
+          mode="resize"; anchor=corners[{tl:"br",tr:"bl",bl:"tr",br:"tl"}[k]]; break;
+        }
+      }
+      if(mode==="draw" && px>=cur.x&&px<=cur.x+cur.w&&py>=cur.y&&py<=cur.y+cur.h){
+        mode="move"; grab=[px-cur.x,py-cur.y]; mw=cur.w; mh=cur.h;
+      }
+    }
+    if(mode==="draw") setRect(px,py,0,0);
     layer.setPointerCapture(e.pointerId);
     layer.onpointermove=ev=>{
       const x=Math.min(Math.max(ev.clientX-r.left,0),r.width);
       const y=Math.min(Math.max(ev.clientY-r.top,0),r.height);
-      const L=Math.min(sx,x),T=Math.min(sy,y),Wd=Math.abs(x-sx),Hd=Math.abs(y-sy);
-      Object.assign(rect.style,{left:L+"px",top:T+"px",width:Wd+"px",height:Hd+"px"});
-      CROP.rect={x:L,y:T,w:Wd,h:Hd,lw:r.width,lh:r.height};
+      if(mode==="move"){
+        setRect(Math.min(Math.max(x-grab[0],0),r.width-mw),
+                Math.min(Math.max(y-grab[1],0),r.height-mh), mw, mh);
+      }else{
+        setRect(Math.min(anchor[0],x),Math.min(anchor[1],y),Math.abs(x-anchor[0]),Math.abs(y-anchor[1]));
+      }
     };
     layer.onpointerup=()=>{
       layer.onpointermove=null; layer.onpointerup=null;
@@ -433,7 +453,7 @@ async function showCropPreview(id){
   _prevURL=URL.createObjectURL(r.blob);
   box.innerHTML=`<div class="croppreview">
     <img src="${_prevURL}" alt="selected area">
-    <div class="badge" style="margin:6px 0 8px">Selected area — drag on the photo to redraw.</div>
+    <div class="badge" style="margin:6px 0 8px">Selected area — drag a corner to resize, drag inside to move, drag elsewhere to redraw.</div>
     <div class="cropacts">
       <button class="btn mini" data-cropocr="${id}">OCR this area</button>
       <button class="btn mini" data-cropok="${id}">Image only</button>
@@ -494,13 +514,13 @@ function renderShots(){
         <div class="shotwrap">
           <img src="${shotURL(s)}" alt="photo">
           ${cropping?"":overlayHTML(s.id)}
-          ${cropping?`<div class="croplayer" data-id="${s.id}"><div class="croprect"></div></div>`:""}
+          ${cropping?`<div class="croplayer" data-id="${s.id}"><div class="croprect"><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div></div></div>`:""}
         </div>
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">CANCEL</button>`
           :`<button class="ocr-btn" data-crop="${s.id}">CROP</button><button class="ocr-btn" data-ocr="${s.id}">OCR FULL IMAGE</button><button class="del" data-del="${s.id}">delete</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${cropping
-          ?`<span class="badge">Draw a frame with your finger over the text.</span>`
+          ?`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it.</span>`
           :(OCRRES[s.id]?selbarHTML(s.id):"")}</div>
       </div>`;
     }).join("");
