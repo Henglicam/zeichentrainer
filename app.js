@@ -325,6 +325,7 @@ async function ocrWorker(status){
         workerPath:base+"worker.min.js",
         corePath:base+"tesseract-core-simd-lstm.wasm.js",
         langPath:base.replace(/\/$/,""),
+        cacheMethod:"none", /* SW cache covers offline; tesseract's IndexedDB cache is a known corruption source */
         logger:m=>{ if(m.status==="recognizing text") status("recognizing … "+Math.round(m.progress*100)+"%"); }
       });
       _ocrWorker=w; return w;
@@ -339,11 +340,17 @@ async function onOcr(id,region){
   /* region (optional): {blob,X,Y} — OCR only on the crop, boxes shifted
      back into full-image coordinates */
   const rec=S.inbox.find(s=>s.id===id); if(!rec) return;
+  /* drop any previous result immediately — stale boxes over the photo read
+     as wrong output while the new recognition is still running */
+  delete OCRRES[id]; delete SELS[id];
+  renderShots();
   const box=$("#ocr-"+id); if(!box) return;
   const status=t=>{ box.innerHTML=`<span class="badge">${esc(t)}</span>`; };
   try{
     const w=await ocrWorker(status);
     status("recognizing …");
+    /* crops are a single text block — PSM 6 is far more robust there than auto layout */
+    await w.setParameters({tessedit_pageseg_mode:region?"6":"3"});
     const [{data},bmp]=await Promise.all([
       w.recognize(region?region.blob:rec.blob,{},{blocks:true,text:true}),
       createImageBitmap(rec.blob)
