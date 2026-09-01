@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#141410">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="识字">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="stylesheet" href="./styles.css">
+<title>识字 Zeichentrainer</title>
+</head>
+<body>
+<div id="app">
+  <header id="hdr">
+    <div class="brand">
+      <span class="logo">识字</span>
+      <span class="ver">PWA v1</span>
+      <nav>
+        <button class="tab on" data-mode="study">Lernen</button>
+        <button class="tab" data-mode="add">Hinzufügen</button>
+        <button class="tab" data-mode="inbox">Kamera</button>
+      </nav>
+    </div>
+    <div class="stats">
+      <span id="stat-open"><b>OFFEN</b> <span class="v">0</span></span>
+      <span id="stat-done"><b>ERLEDIGT</b> <span class="j">0</span></span>
+      <span id="stat-deck"><b>DECK</b> <span class="v">0</span></span>
+    </div>
+  </header>
+  <main id="main" class="center"></main>
+  <footer id="ftr">
+    <span class="badge">SPEICHER · dauerhaft (auf diesem Gerät)</span>
+    <button class="reset" id="reset">ZURÜCKSETZEN</button>
+  </footer>
+</div>
+<input id="cam" type="file" accept="image/*" capture="environment" hidden>
+<script src="./app.js"></script>
+</body>
+</html>
