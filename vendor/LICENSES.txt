@@ -1,0 +1,19 @@
+Drittanbieter-Dateien in diesem Ordner (lokal gebündelt, damit die App
+offline und ohne CDN läuft):
+
+- tesseract.min.js, worker.min.js
+  tesseract.js 7.0.0 — Apache License 2.0
+  https://github.com/naptha/tesseract.js
+  (enthält regenerator-runtime, MIT, Copyright Facebook, Inc.)
+
+- tesseract-core-simd-lstm.wasm.js, tesseract-core-simd-lstm.wasm
+  tesseract.js-core — Apache License 2.0
+  https://github.com/naptha/tesseract.js-core
+  (kompiliertes Tesseract OCR, Apache License 2.0,
+  https://github.com/tesseract-ocr/tesseract)
+
+- chi_sim.traineddata.gz
+  tessdata_fast (Vereinfachtes Chinesisch) — Apache License 2.0
+  https://github.com/tesseract-ocr/tessdata_fast
+
+Volltext der Apache License 2.0: https://www.apache.org/licenses/LICENSE-2.0

@@ -101,6 +101,13 @@ nav{display:flex;gap:14px}
 .shot img{width:100%;border-radius:2px;display:block;margin-bottom:8px}
 .shot .meta{display:flex;justify-content:space-between;align-items:center}
 .shot .ts{font-family:var(--mono);font-size:10px;color:var(--faint)}
+.shot .acts{display:flex;gap:16px}
+.ocr-btn{background:none;border:none;cursor:pointer;font-family:var(--mono);font-size:11px;
+  color:var(--jade);letter-spacing:1px}
+.ocr:not(:empty){margin-top:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:2px;cursor:pointer;
+  font-family:var(--hanzi);font-size:18px;color:var(--bone);padding:6px 10px}
 
 /* footer */
 #ftr{padding:12px 20px;border-top:1px solid var(--line);
