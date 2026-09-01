@@ -299,16 +299,18 @@ async function exportData(){
     progress:Object.entries(S.progress).map(([c,s])=>({c,...s})),
     custom:S.custom };
   const json=JSON.stringify(data,null,2);
-  const name="zeichentrainer-"+new Date().toISOString().slice(0,10)+".json";
   /* Android/MIUI blockiert programmatische Blob-Downloads teils stumm —
-     Share-Sheet ist der zuverlässige Weg, Download-Link nur Fallback */
-  const file=new File([json],name,{type:"application/json"});
+     Share-Sheet ist der zuverlässige Weg, Download-Link nur Fallback.
+     Chrome/Android teilt nur whitelisted Dateitypen (.txt ja, .json nein),
+     daher .json.txt mit text/plain */
+  const name="zeichentrainer-"+new Date().toISOString().slice(0,10)+".json.txt";
+  const file=new File([json],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){
     try{ await navigator.share({files:[file],title:name}); return; }
     catch(err){ if(err && err.name==="AbortError") return; }
   }
   try{
-    const url=URL.createObjectURL(new Blob([json],{type:"application/json"}));
+    const url=URL.createObjectURL(new Blob([json],{type:"text/plain"}));
     const a=document.createElement("a");
     a.href=url; a.download=name;
     document.body.appendChild(a); a.click(); a.remove();
