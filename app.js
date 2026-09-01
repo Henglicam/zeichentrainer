@@ -257,10 +257,60 @@ async function delCustom(c){
   setStats(); renderCustomList();
 }
 
+/* ---------- OCR (Tesseract.js, komplett lokal aus ./vendor — kein CDN) ---------- */
+let _ocrWorker=null, _ocrLoading=null;
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    const s=document.createElement("script");
+    s.src=src; s.onload=res; s.onerror=()=>rej(new Error("Script nicht ladbar"));
+    document.head.appendChild(s);
+  });
+}
+async function ocrWorker(status){
+  if(_ocrWorker) return _ocrWorker;
+  if(!_ocrLoading){
+    _ocrLoading=(async()=>{
+      status("OCR lädt … (einmalig ~9 MB, danach offline)");
+      if(!window.Tesseract) await loadScript("./vendor/tesseract.min.js");
+      /* Pfade zur Laufzeit aus der Seiten-URL — bleibt relativ zum Subpath */
+      const base=new URL("./vendor/",location.href).href;
+      const w=await Tesseract.createWorker("chi_sim",1,{
+        workerPath:base+"worker.min.js",
+        corePath:base+"tesseract-core-simd-lstm.wasm.js",
+        langPath:base.replace(/\/$/,""),
+        logger:m=>{ if(m.status==="recognizing text") status("erkenne … "+Math.round(m.progress*100)+"%"); }
+      });
+      _ocrWorker=w; return w;
+    })().catch(err=>{ _ocrLoading=null; throw err; });
+  }
+  return _ocrLoading;
+}
+async function onOcr(id){
+  const rec=S.inbox.find(s=>s.id===id); if(!rec) return;
+  const box=$("#ocr-"+id); if(!box) return;
+  const status=t=>{ box.innerHTML=`<span class="badge">${esc(t)}</span>`; };
+  try{
+    const w=await ocrWorker(status);
+    status("erkenne …");
+    const {data}=await w.recognize(rec.blob);
+    /* Tesseract streut bei CJK Leerzeichen ein — pro Zeile entfernen, dann zusammenhängende Züge nehmen */
+    const runs=[...new Set(data.text.split("\n")
+      .map(l=>l.replace(/\s+/g,""))
+      .flatMap(l=>l.match(/[一-鿿]+/g)||[]))].slice(0,40);
+    if(!runs.length){ status("Keine chinesischen Zeichen erkannt."); return; }
+    box.innerHTML=`<div class="chips">${runs.map(r=>`<button class="chip" data-w="${esc(r)}">${esc(r)}</button>`).join("")}</div>
+      <div class="badge" style="margin-top:6px">Antippen → Karte anlegen. OCR rät — Pinyin/Bedeutung via Chat prüfen.</div>`;
+    box.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{
+      S.mode="add"; render();
+      $("#f-word").value=b.dataset.w; $("#f-word").focus();
+    });
+  }catch(err){ status("OCR fehlgeschlagen: "+(err&&err.message||err)); }
+}
+
 /* ---------- Kamera / Inbox ---------- */
 function renderInbox(main){
   main.innerHTML=`<div class="pane">
-    <div class="lead">Foto aufnehmen und lokal ablegen. Für Pinyin + Bedeutung: das Bild im Chat teilen — ich pflege die Karte fertig ein. (Offline-Auto-OCR mit geprüftem Pinyin/Deutsch kommt als v2.)</div>
+    <div class="lead">Foto aufnehmen und lokal ablegen. OCR liest die Zeichen direkt am Gerät (offline, erste Nutzung lädt einmalig ~9 MB). Für geprüftes Pinyin + Bedeutung bleibt der Chat der Qualitätsweg.</div>
     <button class="btn primary block" id="snap">Foto aufnehmen</button>
     <div id="shots"></div>
   </div>`;
@@ -274,9 +324,10 @@ function renderShots(){
     S.inbox.map(s=>{
       const url=URL.createObjectURL(s.blob);
       const dt=new Date(s.ts).toLocaleString("de-DE");
-      return `<div class="shot"><img src="${url}" alt="Aufnahme"><div class="meta"><span class="ts">${dt}</span><button class="del" data-id="${s.id}">löschen</button></div></div>`;
+      return `<div class="shot"><img src="${url}" alt="Aufnahme"><div class="meta"><span class="ts">${dt}</span><span class="acts"><button class="ocr-btn" data-id="${s.id}">OCR</button><button class="del" data-id="${s.id}">löschen</button></span></div><div class="ocr" id="ocr-${s.id}"></div></div>`;
     }).join("");
   box.querySelectorAll(".del").forEach(b=> b.onclick=()=>delShot(b.dataset.id));
+  box.querySelectorAll(".ocr-btn").forEach(b=> b.onclick=()=>onOcr(b.dataset.id));
 }
 async function onPhoto(e){
   const file=e.target.files && e.target.files[0];
