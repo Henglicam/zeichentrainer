@@ -312,7 +312,9 @@ async function ocrWorker(status){
 
 /* Ergebnis pro Foto (nur Session): Zeichen mit Box + Auto-Pinyin; Auswahl per Antippen */
 const OCRRES={}, SELS={};
-async function onOcr(id){
+async function onOcr(id,region){
+  /* region (optional): {blob,X,Y} — OCR nur auf dem Ausschnitt, Boxen zurück
+     ins Vollbild verschoben */
   const rec=S.inbox.find(s=>s.id===id); if(!rec) return;
   const box=$("#ocr-"+id); if(!box) return;
   const status=t=>{ box.innerHTML=`<span class="badge">${esc(t)}</span>`; };
@@ -320,15 +322,16 @@ async function onOcr(id){
     const w=await ocrWorker(status);
     status("erkenne …");
     const [{data},bmp]=await Promise.all([
-      w.recognize(rec.blob,{},{blocks:true,text:true}),
+      w.recognize(region?region.blob:rec.blob,{},{blocks:true,text:true}),
       createImageBitmap(rec.blob)
     ]);
     const W=bmp.width,H=bmp.height; bmp.close();
+    const dx=region?region.X:0, dy=region?region.Y:0;
     const lines=[];
     (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>{
       const cs=[];
       (l.words||[]).forEach(wd=>(wd.symbols||[]).forEach(sy=>{
-        if(CJK.test(sy.text)) cs.push({ch:sy.text,b:sy.bbox});
+        if(CJK.test(sy.text)) cs.push({ch:sy.text,b:{x0:sy.bbox.x0+dx,y0:sy.bbox.y0+dy,x1:sy.bbox.x1+dx,y1:sy.bbox.y1+dy}});
       }));
       if(cs.length) lines.push(cs);
     })));
@@ -385,26 +388,37 @@ function wireCrop(layer){
     layer.onpointerup=()=>{ layer.onpointermove=null; layer.onpointerup=null; };
   };
 }
-async function cropOk(id){
+async function cropBlob(id){
   const rec=S.inbox.find(s=>s.id===id);
-  if(!rec||!CROP||!CROP.rect||CROP.rect.w<8||CROP.rect.h<8){ alert("Erst mit dem Finger einen Rahmen aufziehen."); return; }
+  if(!rec||!CROP||!CROP.rect||CROP.rect.w<8||CROP.rect.h<8) return null;
   const {x,y,w,h,lw}=CROP.rect;
   const bmp=await createImageBitmap(rec.blob);
   const sc=bmp.width/lw;
+  const X=Math.round(x*sc), Y=Math.round(y*sc);
   const cv=document.createElement("canvas");
   cv.width=Math.max(1,Math.round(w*sc)); cv.height=Math.max(1,Math.round(h*sc));
-  cv.getContext("2d").drawImage(bmp,Math.round(x*sc),Math.round(y*sc),cv.width,cv.height,0,0,cv.width,cv.height);
+  cv.getContext("2d").drawImage(bmp,X,Y,cv.width,cv.height,0,0,cv.width,cv.height);
   bmp.close();
   const blob=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
-  if(!blob){ alert("Zuschneiden fehlgeschlagen."); return; }
-  CROP=null; S.pendingImg=blob;
+  return blob?{blob,X,Y}:null;
+}
+async function cropOk(id){
+  const r=await cropBlob(id);
+  if(!r){ alert("Erst mit dem Finger einen Rahmen aufziehen."); return; }
+  CROP=null; S.pendingImg=r.blob;
   S.mode="add"; render();
+}
+async function cropOcr(id){
+  const r=await cropBlob(id);
+  if(!r){ alert("Erst mit dem Finger einen Rahmen aufziehen."); return; }
+  CROP=null; renderShots();
+  onOcr(id,r);
 }
 
 /* ---------- Kamera / Inbox ---------- */
 function renderInbox(main){
   main.innerHTML=`<div class="pane">
-    <div class="lead">Foto aufnehmen und lokal ablegen. OCR blendet Pinyin über die Zeichen — antippen wählt sie für eine Karte aus. AUSSCHNITT schneidet einen Bildbereich für die Karte zu. Erste OCR-Nutzung lädt einmalig ~9 MB, danach offline; Bedeutung + Ton-Prüfung via Chat.</div>
+    <div class="lead">Foto aufnehmen und lokal ablegen. Ablauf: AUSSCHNITT → Rahmen aufziehen → OCR liest diesen Bereich und blendet Pinyin über die Zeichen; antippen wählt sie für die Karte. → KARTE speichert den Rahmen als Kartenbild. Erste OCR-Nutzung lädt einmalig ~9 MB, danach offline; Bedeutung + Ton-Prüfung via Chat.</div>
     <button class="btn primary block" id="snap">Foto aufnehmen</button>
     <div id="shots"></div>
   </div>`;
@@ -427,10 +441,10 @@ function renderShots(){
           ${cropping?`<div class="croplayer" data-id="${s.id}"><div class="croprect"></div></div>`:""}
         </div>
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
-          ?`<button class="ocr-btn" data-cropok="${s.id}">ÜBERNEHMEN</button><button class="del" data-cropcancel="${s.id}">ABBRECHEN</button>`
-          :`<button class="ocr-btn" data-ocr="${s.id}">OCR</button><button class="ocr-btn" data-crop="${s.id}">AUSSCHNITT</button><button class="del" data-del="${s.id}">löschen</button>`}</span></div>
+          ?`<button class="ocr-btn" data-cropocr="${s.id}">OCR</button><button class="ocr-btn" data-cropok="${s.id}">→ KARTE</button><button class="del" data-cropcancel="${s.id}">ABBRECHEN</button>`
+          :`<button class="ocr-btn" data-crop="${s.id}">AUSSCHNITT</button><button class="ocr-btn" data-ocr="${s.id}">OCR GANZES BILD</button><button class="del" data-del="${s.id}">löschen</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${cropping
-          ?`<span class="badge">Mit dem Finger einen Rahmen über den gewünschten Bildbereich ziehen.</span>`
+          ?`<span class="badge">Rahmen mit dem Finger aufziehen — OCR liest nur diesen Bereich, → KARTE speichert ihn als Kartenbild.</span>`
           :(OCRRES[s.id]?selbarHTML(s.id):"")}</div>
       </div>`;
     }).join("");
@@ -438,6 +452,7 @@ function renderShots(){
   box.querySelectorAll("[data-ocr]").forEach(b=> b.onclick=()=>onOcr(b.dataset.ocr));
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
   box.querySelectorAll("[data-cropok]").forEach(b=> b.onclick=()=>cropOk(b.dataset.cropok));
+  box.querySelectorAll("[data-cropocr]").forEach(b=> b.onclick=()=>cropOcr(b.dataset.cropocr));
   box.querySelectorAll("[data-cropcancel]").forEach(b=> b.onclick=()=>{ CROP=null; renderShots(); });
   box.querySelectorAll(".ovbox").forEach(b=> b.onclick=()=>{
     const sel=SELS[b.dataset.sid], i=+b.dataset.i;
