@@ -555,7 +555,20 @@ async function resetAll(){
 
 /* ---------- Service Worker & dauerhafter Speicher ---------- */
 if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("./sw.js").then(reg=>{
+      reg.update();
+      /* Installierte PWA prüft sonst kaum auf Updates — beim In-den-Vordergrund-Holen nachschauen */
+      document.addEventListener("visibilitychange",()=>{ if(!document.hidden) reg.update().catch(()=>{}); });
+    }).catch(()=>{});
+    /* Neue Version aktiviert (skipWaiting+claim) → einmal automatisch neu laden.
+       Erstinstallation (vorher kein Controller) löst keinen Reload aus. */
+    let hadCtrl=!!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange",()=>{
+      if(!hadCtrl){ hadCtrl=true; return; }
+      location.reload();
+    });
+  });
 }
 /* MIUI/Chrome räumt Speicher nicht-installierter Seiten auf — dauerhaften Speicher anfordern */
 if(navigator.storage && navigator.storage.persist){
