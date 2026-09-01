@@ -443,6 +443,9 @@ async function cropOk(id){
 async function cropOcr(id){
   const r=await cropBlob(id);
   if(!r){ alert("Draw a frame with your finger first."); return; }
+  /* the framed area doubles as the card image — '-> Card' carries it along
+     (removable in the Add form) */
+  S.pendingImg=r.blob;
   CROP=null; renderShots();
   onOcr(id,r);
 }
@@ -450,7 +453,7 @@ async function cropOcr(id){
 /* ---------- Kamera / Inbox ---------- */
 function renderInbox(main){
   main.innerHTML=`<div class="pane">
-    <div class="lead">Take a photo — it stays on this device. Flow: CROP → draw a frame → OCR reads that area and overlays pinyin on the characters; tap them to pick a word for the card. → CARD saves the frame as the card image. First OCR use downloads ~12 MB once, works offline afterwards; verify tones + meaning via chat.</div>
+    <div class="lead">Take a photo — it stays on this device. Flow: CROP → draw a frame → OCR overlays pinyin on the characters; tap them, then "→ Card" opens the form with word, pinyin, meaning and the framed image prefilled. First OCR use downloads ~12 MB once, works offline afterwards; verify tones + meaning via chat.</div>
     <button class="btn primary block" id="snap">Take photo</button>
     <div id="shots"></div>
   </div>`;
@@ -476,7 +479,7 @@ function renderShots(){
           ?`<button class="ocr-btn" data-cropocr="${s.id}">OCR</button><button class="ocr-btn" data-cropok="${s.id}">→ CARD</button><button class="del" data-cropcancel="${s.id}">CANCEL</button>`
           :`<button class="ocr-btn" data-crop="${s.id}">CROP</button><button class="ocr-btn" data-ocr="${s.id}">OCR FULL IMAGE</button><button class="del" data-del="${s.id}">delete</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${cropping
-          ?`<span class="badge">Draw a frame with your finger — OCR reads only that area, → CARD saves it as the card image.</span>`
+          ?`<span class="badge">Draw a frame with your finger — OCR reads that area and keeps it as the card image; → CARD saves it as image only.</span>`
           :(OCRRES[s.id]?selbarHTML(s.id):"")}</div>
       </div>`;
     }).join("");
