@@ -294,16 +294,26 @@ async function delShot(id){
 }
 
 /* ---------- Export / Import (Geräte-Wechsel; Fotos bleiben lokal) ---------- */
-function exportData(){
+async function exportData(){
   const data={ app:"zeichentrainer", version:1, exported:new Date().toISOString(),
     progress:Object.entries(S.progress).map(([c,s])=>({c,...s})),
     custom:S.custom };
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url; a.download="zeichentrainer-"+new Date().toISOString().slice(0,10)+".json";
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  const json=JSON.stringify(data,null,2);
+  const name="zeichentrainer-"+new Date().toISOString().slice(0,10)+".json";
+  /* Android/MIUI blockiert programmatische Blob-Downloads teils stumm —
+     Share-Sheet ist der zuverlässige Weg, Download-Link nur Fallback */
+  const file=new File([json],name,{type:"application/json"});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:name}); return; }
+    catch(err){ if(err && err.name==="AbortError") return; }
+  }
+  try{
+    const url=URL.createObjectURL(new Blob([json],{type:"application/json"}));
+    const a=document.createElement("a");
+    a.href=url; a.download=name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }catch(err){ alert("Export fehlgeschlagen: "+err); }
 }
 async function importData(e){
   const file=e.target.files && e.target.files[0];
