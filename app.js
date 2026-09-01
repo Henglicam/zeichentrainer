@@ -124,6 +124,9 @@ function wireChrome(){
   });
   $("#reset").onclick=resetAll;
   $("#cam").onchange=onPhoto;
+  $("#export").onclick=exportData;
+  $("#import").onclick=()=>$("#imp").click();
+  $("#imp").onchange=importData;
 }
 function setStats(){
   const remaining=Math.max(0,S.queue.length-S.idx);
@@ -288,6 +291,40 @@ async function delShot(id){
   S.inbox=S.inbox.filter(s=>s.id!==id);
   try{ await idbDel("inbox",id); }catch(e){}
   renderShots(); setStats();
+}
+
+/* ---------- Export / Import (Geräte-Wechsel; Fotos bleiben lokal) ---------- */
+function exportData(){
+  const data={ app:"zeichentrainer", version:1, exported:new Date().toISOString(),
+    progress:Object.entries(S.progress).map(([c,s])=>({c,...s})),
+    custom:S.custom };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download="zeichentrainer-"+new Date().toISOString().slice(0,10)+".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function importData(e){
+  const file=e.target.files && e.target.files[0];
+  e.target.value="";
+  if(!file) return;
+  let data=null;
+  try{ data=JSON.parse(await file.text()); }catch(err){}
+  if(!data || data.app!=="zeichentrainer" || !Array.isArray(data.progress) || !Array.isArray(data.custom)){
+    alert("Das ist kein Zeichentrainer-Export (JSON)."); return;
+  }
+  const prog=data.progress.filter(r=>r && typeof r.c==="string" && typeof r.due==="number");
+  const cust=data.custom.filter(r=>r && typeof r.c==="string" && typeof r.p==="string" && typeof r.m==="string");
+  if(!prog.length && !cust.length){ alert("Export ist leer — nichts zu importieren."); return; }
+  if(!confirm("Importieren: "+prog.length+" Fortschritts-Einträge, "+cust.length+" eigene Karten?\nEinträge zum selben Zeichen werden überschrieben.")) return;
+  try{
+    await Promise.all([...prog.map(r=>idbPut("progress",r)), ...cust.map(r=>idbPut("custom",r))]);
+  }catch(err){ alert("Import fehlgeschlagen — nichts dauerhaft gespeichert? ("+err+")"); return; }
+  prog.forEach(r=>{ const {c,...s}=r; S.progress[c]=s; });
+  cust.forEach(r=>{ const i=S.custom.findIndex(x=>x.c===r.c); if(i>=0) S.custom[i]=r; else S.custom.push(r); });
+  S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
+  S.mode="study"; render();
 }
 
 /* ---------- Reset ---------- */

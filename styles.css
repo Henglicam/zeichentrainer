@@ -104,7 +104,8 @@ nav{display:flex;gap:14px}
 
 /* footer */
 #ftr{padding:12px 20px;border-top:1px solid var(--line);
-  display:flex;justify-content:space-between;align-items:center}
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+#ftr .actions{display:flex;gap:16px}
 .badge{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:1px}
 .reset{background:none;border:none;cursor:pointer;font-family:var(--mono);font-size:10px;
   color:var(--faint);letter-spacing:1px}
