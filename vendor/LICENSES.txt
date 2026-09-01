@@ -1,15 +1,15 @@
-Drittanbieter-Dateien in diesem Ordner (lokal gebündelt, damit die App
-offline und ohne CDN läuft):
+Third-party files in this folder (bundled locally so the app runs
+offline and without any CDN):
 
 - tesseract.min.js, worker.min.js
   tesseract.js 7.0.0 — Apache License 2.0
   https://github.com/naptha/tesseract.js
-  (enthält regenerator-runtime, MIT, Copyright Facebook, Inc.)
+  (includes regenerator-runtime, MIT, Copyright Facebook, Inc.)
 
 - tesseract-core-simd-lstm.wasm.js, tesseract-core-simd-lstm.wasm
   tesseract.js-core — Apache License 2.0
   https://github.com/naptha/tesseract.js-core
-  (kompiliertes Tesseract OCR, Apache License 2.0,
+  (compiled Tesseract OCR, Apache License 2.0,
   https://github.com/tesseract-ocr/tesseract)
 
 - pinyin-pro.js
@@ -17,7 +17,14 @@ offline und ohne CDN läuft):
   https://github.com/zh-lx/pinyin-pro
 
 - chi_sim.traineddata.gz
-  tessdata_fast (Vereinfachtes Chinesisch) — Apache License 2.0
+  tessdata_fast (Simplified Chinese) — Apache License 2.0
   https://github.com/tesseract-ocr/tessdata_fast
 
-Volltext der Apache License 2.0: https://www.apache.org/licenses/LICENSE-2.0
+- cedict.tsv.gz
+  Derived from CC-CEDICT (Chinese-English dictionary),
+  via the cedict-json npm package — CC BY-SA 4.0
+  https://www.mdbg.net/chinese/dictionary?page=cc-cedict
+  This derived file is likewise licensed under CC BY-SA 4.0.
+
+Apache License 2.0 full text: https://www.apache.org/licenses/LICENSE-2.0
+CC BY-SA 4.0 full text: https://creativecommons.org/licenses/by-sa/4.0/
