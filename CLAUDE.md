@@ -1,66 +1,67 @@
 # CLAUDE.md — 识字 Zeichentrainer
 
-Arbeitssprache: **Deutsch.** Antworte H auf Deutsch. Kurz, direkt, keine übertriebene Höflichkeit.
+Working language: **English.** Reply to H in English. Short, direct, no excessive politeness.
 
-## Was das ist
-Erwachsenen-Zeichentrainer für Chinesisch (Spaced Repetition), Neuinterpretation von 悟空识字 ohne Kinder-Ästhetik.
-Nutzer: H, Produktmanager, Beijing, deutschsprachig, **Handy-only (Android/Xiaomi, Chrome, VPN), kein Rechner**.
-UI-Sprache: Deutsch. Lerninhalt: Chinesisch + Pinyin + deutsche Bedeutung.
+## What this is
+Chinese character trainer for adults (spaced repetition), a reinterpretation of 悟空识字 without the kids' aesthetic.
+User: H, product manager, Beijing, **phone-only (Android/Xiaomi, Chrome, VPN), no computer**.
+UI language: English. Learning content: Chinese + pinyin + English meaning.
 
-## Live-Deployment
-- Repo: `henglicam/zeichentrainer` · GitHub Pages, Branch `main`, Ordner `/ (root)`.
+## Live deployment
+- Repo: `henglicam/zeichentrainer` · GitHub Pages, branch `main`, folder `/ (root)`.
 - URL: `https://henglicam.github.io/zeichentrainer/`
-- Push auf `main` → Pages baut automatisch (~1–2 Min). `index.html` muss im Repo-Root liegen.
-- Die Seite ist **öffentlich** (Free-Plan). Nutzerdaten liegen ausschließlich lokal im Gerät (IndexedDB), nie im Repo.
+- Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
+- The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo.
 
-## Aktueller Stand (PWA v5)
-- **Dateien:** `index.html` · `styles.css` · `app.js` · `manifest.webmanifest` · `sw.js` · `icon-192/512/maskable-512.png`. Vanilla JS, keine Frameworks, kein Build-Step.
-- **PWA installiert und am Gerät verifiziert:** offline lauffähig (SW cache-first), `navigator.storage.persist()` gewährt — Footer-Badge zeigt den echten Status.
-- **Versionierung:** SW-Cache `zt-vN` in `sw.js` und Header-Label `PWA vN` in `index.html` laufen synchron. Bei **jeder** Änderung an gecachten Dateien beides hochzählen — sonst ist am Gerät nicht erkennbar, ob der neue Stand geladen ist.
-- Persistenz: **IndexedDB** (`zeichentrainer`, v1), Stores: `progress` (keyPath `c`), `custom` (keyPath `c`), `inbox` (keyPath `id`).
-  Auf Xiaomi im Chrome-Kontext bestätigt: überlebt komplettes Schließen.
-- Kamera: `<input type="file" accept="image/*" capture="environment">` → Foto als Blob in `inbox`. Funktioniert.
-- Tabs: Lernen (SRS) · Hinzufügen (manuelle Karte) · Kamera (Inbox).
-- **Export/Import** (Footer): Fortschritt + eigene Karten als JSON, Datei `zeichentrainer-JJJJ-MM-TT.json.txt` übers Android-Share-Sheet; Import validiert inhaltsbasiert und macht Upsert. Fotos bleiben lokal.
+## Current state (PWA v11)
+- **Files:** `index.html` · `styles.css` · `app.js` · `manifest.webmanifest` · `sw.js` · `icon-192/512/maskable-512.png` · `vendor/` (OCR + dictionaries, ~12 MB). Vanilla JS, no frameworks, no build step.
+- **PWA installed and verified on the device:** runs offline (SW cache-first), `navigator.storage.persist()` granted — the footer badge shows the real status.
+- **Versioning:** SW cache `zt-vN` in `sw.js` and the header label `PWA vN` in `index.html` move in lockstep. Bump both on **every** change to cached files. Since v9 the app updates itself (update check on load/foreground, auto-reload on `controllerchange`); the big `vendor/` cache (`zt-ocr-v1`) survives shell updates — only bump it when vendor files change.
+- Persistence: **IndexedDB** (`zeichentrainer`, v1), stores: `progress` (keyPath `c`), `custom` (keyPath `c`), `inbox` (keyPath `id`). Confirmed on Xiaomi in Chrome: survives a full app kill.
+- Camera: `<input type="file" accept="image/*" capture="environment">` → photo normalized (EXIF baked in, max 1600 px) and stored as blob in `inbox`.
+- **OCR flow (all offline, `vendor/`):** CROP → draw a frame with a finger → OCR (Tesseract.js 7, `chi_sim`) reads that area → semi-transparent pinyin boxes over the characters (pinyin-pro, word-aware 多音字 handling) → tapping characters composes a word → selection bar shows word + pinyin + **English meaning from CC-CEDICT** → "→ Card" prefills the Add form (marked unverified). → CARD saves the crop as the card image (shown on the card back; stays local, excluded from export).
+- Tabs: Learn (SRS) · Add (manual card) · Camera (inbox).
+- **Export/import** (footer): progress + custom cards as JSON, file `zeichentrainer-YYYY-MM-DD.json.txt` via the Android share sheet; import validates by content and upserts. Photos and card images stay local.
 
-## Harte Constraints (im Feld gelernt — nicht verletzen)
-1. **Keine externen Abhängigkeiten / CDNs.** Muss offline und hinter der GFW laufen. Nur System-CJK-Fonts.
-2. **Alle Pfade relativ** (`./…`). Die App liegt unter einem Subpath (`/zeichentrainer/`).
-3. **Persistenz nur via IndexedDB** (localStorage/sessionStorage nicht einsetzen). Bei PWA-Ausbau `navigator.storage.persist()` anfordern — Xiaomi/MIUI räumt Speicher nicht-installierter Seiten aggressiv weg.
-4. **Deploy phone-only:** H bedient GitHub nur im Handy-Browser. Änderungen als kleine, klar beschriebene PRs. Möglichst wenige Dateien; Binärdateien (Icons) im Repo erzeugen/committen, nicht H zum Hochladen geben.
-5. **Datenschutz-Regel:** Vertraulicher Text (echte Verträge, Lieferanten, Firmen-Interna) darf **nie** ins öffentliche Deck oder Repo. Nur allgemeine Vokabeln. Fotos bleiben lokal auf dem Gerät.
-6. **Dateien raus nur via Share-Sheet:** Programmatische Blob-Downloads (`<a download>`) blockiert Android/MIUI stumm. Stattdessen `navigator.share` mit Datei — und Chrome/Android teilt nur whitelisted Typen (`.txt`/`.csv`/Bilder/PDF ja, **`.json` nein**), daher Endung `.json.txt` mit `text/plain`.
+## Hard constraints (learned in the field — do not violate)
+1. **No external dependencies / CDNs.** Must run offline and behind the GFW. System CJK fonts only. Libraries and data go into `vendor/` (licenses in `vendor/LICENSES.txt`).
+2. **All paths relative** (`./…`). The app lives under a subpath (`/zeichentrainer/`).
+3. **Persistence only via IndexedDB** (do not use localStorage/sessionStorage). `navigator.storage.persist()` is requested — Xiaomi/MIUI aggressively evicts storage of non-installed sites.
+4. **Phone-only deploys:** H uses GitHub only in the phone browser. Ship changes as small, clearly described PRs. As few files as possible; generate/commit binaries (icons, vendor data) in the repo, never ask H to upload them.
+5. **Privacy rule:** Confidential text (real contracts, suppliers, company internals) must **never** end up in the public deck or repo. General vocabulary only. Photos and card images stay on the device.
+6. **Files leave the device only via the share sheet:** programmatic blob downloads (`<a download>`) are silently blocked by Android/MIUI. Use `navigator.share` with a file — and Chrome/Android only shares whitelisted types (`.txt`/`.csv`/images/PDF yes, **`.json` no**), hence the `.json.txt` extension with `text/plain`.
 
-## Design (eingefroren — nur auf Anfrage ändern)
-Materialsprache: 漆器 (Lackware) + Siegelrot. Bewusst kein AI-Default-Look.
-- Farben: INK `#141410` · PANEL `#1C1C16` · PANEL2 `#232319` · BONE `#EDE6D6` · MUTE `#8C8677` · FAINT `#57544A` · VERM `#B23A2E` · JADE `#7C9A86` · LINE `#2E2E24`
-- Fonts: Hanzi = `'Songti SC','STSong','Noto Serif CJK SC','Source Han Serif SC','SimSun',serif` · Fließtext = System-Sans · Labels/Daten = Mono
-- Signature-Element: Zeichen sitzt im **田字格-Reticle** (260px Quadrat, Rahmen LINE, Eck-Ticks 14px BONE, gestricheltes VERM-Fadenkreuz **nur bei Einzelzeichen**; bei Wörtern nur Ticks). Schriftgröße nach Zeichenzahl: 1→150px, 2→104, 3→74, 4+→58.
+## Design (frozen — change only on request)
+Material language: 漆器 (lacquerware) + seal red. Deliberately not the default AI look.
+- Colors: INK `#141410` · PANEL `#1C1C16` · PANEL2 `#232319` · BONE `#EDE6D6` · MUTE `#8C8677` · FAINT `#57544A` · VERM `#B23A2E` · JADE `#7C9A86` · LINE `#2E2E24`
+- Fonts: Hanzi = `'Songti SC','STSong','Noto Serif CJK SC','Source Han Serif SC','SimSun',serif` · body = system sans · labels/data = mono
+- Signature element: the character sits in a **田字格 reticle** (260px square, LINE border, 14px BONE corner ticks, dashed VERM crosshair **only for single characters**; words get ticks only). Font size by character count: 1→150px, 2→104, 3→74, 4+→58.
+- The crop frame must stay visible on any photo color: bright dashed edge, dimmed outside (red-on-red lesson).
 
-## Didaktik / SRS
-- Loop: Zeichen/Wort → Aufdecken → Pinyin, Bedeutung, (Kontextwort), Beispielsatz.
-- SM-2-light, Grade `again / hard / good / easy` mit Intervall-Vorschau. `again` hängt Karte in dieselbe Session zurück.
-- Session = fällige Karten + max. 8 neue. „Vorziehen" zieht künftige vor, wenn nichts fällig.
+## Didactics / SRS
+- Loop: character/word → reveal → pinyin, meaning, (context word), example sentence, (card image).
+- SM-2 light, grades `again / hard / good / easy` with interval preview. `again` re-queues the card within the same session.
+- Session = due cards + max. 8 new ones. "Pull forward" pulls future cards when nothing is due.
 
-## Deck-Format
-Karten leben in `DECK_BASE` (im Code). Schema:
+## Deck format
+Cards live in `DECK_BASE` (in code). Schema:
 ```
-{ c:"坚果", p:"jiānguǒ", m:"Nüsse",
-  w:"…", wp:"…", wm:"…",        // optional: Kontextwort + Pinyin + Bedeutung
-  ex:"坚果很有营养。", exp:"Jiānguǒ hěn yǒu yíngyǎng.", exm:"Nüsse sind sehr nahrhaft.",  // optional
-  t:"Essen" }                   // Thema: Alltag | Vertrag | Optik | Essen | Eigene
+{ c:"坚果", p:"jiānguǒ", m:"nuts",
+  w:"…", wp:"…", wm:"…",        // optional: context word + pinyin + meaning
+  ex:"坚果很有营养。", exp:"Jiānguǒ hěn yǒu yíngyǎng.", exm:"Nuts are very nutritious.",  // optional
+  t:"Food" }                    // theme: Everyday | Contract | Optics | Food | Custom
 ```
-Regeln: **Pinyin nur geprüft, mit korrekten Tönen — nie raten.** Bedeutungen auf Deutsch. Bei Unsicherheit: markieren statt erfinden.
-Neue Wörter kommen aus Fotos (Menüs, Schilder, Verpackungen), Anreicherung via Chat → dann ins Deck.
+Custom cards may additionally carry `img` (blob, local only, never exported).
+Rules: **Pinyin only verified, with correct tones — never guess.** Meanings in English. Auto pinyin (pinyin-pro) and auto meanings (CC-CEDICT) from OCR are prefills marked unverified — verify via chat before relying on them. When unsure: flag it instead of inventing.
+New words come from photos (menus, signs, packaging); chat enrichment remains the quality path.
 
 ## Roadmap
-Erledigt und am Gerät verifiziert: ~~1. PWA-Installation~~ · ~~2. Offline-Betrieb~~ · ~~3. Export/Import als JSON~~ (Stand 2026-09-01).
+Done and verified on the device: ~~1. PWA install~~ · ~~2. offline operation~~ · ~~3. export/import as JSON~~ · ~~4. OCR v2 (crop-first flow, pinyin overlay, tap-to-select, CC-CEDICT meanings, card images)~~ (as of 2026-09-01).
 
-Offen:
-4. OCR v2 (Tesseract.js `chi_sim` oder API) — Chat-Anreicherung bleibt der Qualitätsweg. Achtung Constraint 1: Engine + Sprachdaten (~10–20 MB) müssten ins Repo und in den SW-Cache, kein CDN.
+Open: nothing scheduled. Candidate next steps: better crop handles (resize instead of redraw), stroke-order animations, HSK tagging.
 
-## Arbeitsweise mit H
-- Build-first. Physische Realität schlägt Spec.
-- **Ehrlichkeit vor Zuversicht:** lieber „weiß ich nicht" als raten. Grenzen offen benennen.
-- Kleine, überprüfbare Schritte. Bei Unklarheit eine Frage, nicht fünf.
-- Bei jeder Änderung: prüfen, dass die App weiterhin ohne Netz-Abhängigkeiten und mit relativen Pfaden läuft.
+## Working with H
+- Build-first. Physical reality beats spec.
+- **Honesty over confidence:** better "I don't know" than a guess. Name limits openly.
+- Small, verifiable steps. When unclear: one question, not five.
+- On every change: confirm the app still runs with no network dependencies and relative paths, and bump both version markers.
