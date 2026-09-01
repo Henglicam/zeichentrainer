@@ -12,6 +12,10 @@ offline und ohne CDN läuft):
   (kompiliertes Tesseract OCR, Apache License 2.0,
   https://github.com/tesseract-ocr/tesseract)
 
+- pinyin-pro.js
+  pinyin-pro 3.29.3 — MIT License
+  https://github.com/zh-lx/pinyin-pro
+
 - chi_sim.traineddata.gz
   tessdata_fast (Vereinfachtes Chinesisch) — Apache License 2.0
   https://github.com/tesseract-ocr/tessdata_fast
