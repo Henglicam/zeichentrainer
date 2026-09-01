@@ -361,7 +361,10 @@ async function onOcr(id,region){
     (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>{
       const cs=[];
       (l.words||[]).forEach(wd=>(wd.symbols||[]).forEach(sy=>{
-        if(CJK.test(sy.text)) cs.push({ch:sy.text,b:{x0:sy.bbox.x0+dx,y0:sy.bbox.y0+dy,x1:sy.bbox.x1+dx,y1:sy.bbox.y1+dy}});
+        /* confidence gate: photo clutter (fences, foliage) produces phantom
+           characters with low certainty — drop them */
+        if(CJK.test(sy.text) && sy.confidence>=35)
+          cs.push({ch:sy.text,b:{x0:sy.bbox.x0+dx,y0:sy.bbox.y0+dy,x1:sy.bbox.x1+dx,y1:sy.bbox.y1+dy}});
       }));
       if(cs.length) lines.push(cs);
     })));
@@ -518,14 +521,13 @@ function renderShots(){
         </div>
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">CANCEL</button>`
-          :`<button class="ocr-btn" data-crop="${s.id}">CROP</button><button class="ocr-btn" data-ocr="${s.id}">OCR FULL IMAGE</button><button class="del" data-del="${s.id}">delete</button>`}</span></div>
+          :`<button class="ocr-btn" data-crop="${s.id}">CROP</button><button class="del" data-del="${s.id}">delete</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${cropping
           ?`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it.</span>`
           :(OCRRES[s.id]?selbarHTML(s.id):"")}</div>
       </div>`;
     }).join("");
   box.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>delShot(b.dataset.del));
-  box.querySelectorAll("[data-ocr]").forEach(b=> b.onclick=()=>onOcr(b.dataset.ocr));
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
   box.querySelectorAll("[data-cropok]").forEach(b=> b.onclick=()=>cropOk(b.dataset.cropok));
   box.querySelectorAll("[data-cropocr]").forEach(b=> b.onclick=()=>cropOcr(b.dataset.cropocr));
