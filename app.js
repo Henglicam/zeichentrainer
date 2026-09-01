@@ -417,8 +417,29 @@ function wireCrop(layer){
       Object.assign(rect.style,{left:L+"px",top:T+"px",width:Wd+"px",height:Hd+"px"});
       CROP.rect={x:L,y:T,w:Wd,h:Hd,lw:r.width,lh:r.height};
     };
-    layer.onpointerup=()=>{ layer.onpointermove=null; layer.onpointerup=null; };
+    layer.onpointerup=()=>{
+      layer.onpointermove=null; layer.onpointerup=null;
+      showCropPreview(layer.dataset.id);
+    };
   };
+}
+/* confirmation step: show exactly the selected area before anything runs */
+let _prevURL=null;
+async function showCropPreview(id){
+  const box=$("#ocr-"+id); if(!box) return;
+  const r=await cropBlob(id);
+  if(!r){ box.innerHTML=`<span class="badge">Frame too small — draw again.</span>`; return; }
+  if(_prevURL) URL.revokeObjectURL(_prevURL);
+  _prevURL=URL.createObjectURL(r.blob);
+  box.innerHTML=`<div class="croppreview">
+    <img src="${_prevURL}" alt="selected area">
+    <div class="badge" style="margin:6px 0 8px">Selected area — drag on the photo to redraw.</div>
+    <div class="cropacts">
+      <button class="btn mini" data-cropocr="${id}">OCR this area</button>
+      <button class="btn mini" data-cropok="${id}">Image only</button>
+    </div></div>`;
+  box.querySelector("[data-cropocr]").onclick=()=>cropOcr(id);
+  box.querySelector("[data-cropok]").onclick=()=>cropOk(id);
 }
 async function cropBlob(id){
   const rec=S.inbox.find(s=>s.id===id);
@@ -476,10 +497,10 @@ function renderShots(){
           ${cropping?`<div class="croplayer" data-id="${s.id}"><div class="croprect"></div></div>`:""}
         </div>
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
-          ?`<button class="ocr-btn" data-cropocr="${s.id}">OCR</button><button class="ocr-btn" data-cropok="${s.id}">→ CARD</button><button class="del" data-cropcancel="${s.id}">CANCEL</button>`
+          ?`<button class="del" data-cropcancel="${s.id}">CANCEL</button>`
           :`<button class="ocr-btn" data-crop="${s.id}">CROP</button><button class="ocr-btn" data-ocr="${s.id}">OCR FULL IMAGE</button><button class="del" data-del="${s.id}">delete</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${cropping
-          ?`<span class="badge">Draw a frame with your finger — OCR reads that area and keeps it as the card image; → CARD saves it as image only.</span>`
+          ?`<span class="badge">Draw a frame with your finger over the text.</span>`
           :(OCRRES[s.id]?selbarHTML(s.id):"")}</div>
       </div>`;
     }).join("");
