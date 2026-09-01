@@ -123,8 +123,11 @@ nav{display:flex;gap:14px}
 
 /* Zuschneiden */
 .croplayer{position:absolute;inset:0;touch-action:none;cursor:crosshair}
-.croprect{position:absolute;display:none;border:1px dashed var(--verm);
-  background:rgba(178,58,46,.16);pointer-events:none}
+/* Rahmen muss auf jeder Fotofarbe sichtbar sein (Rot auf Rot!):
+   helle gestrichelte Kante mit dunkler Kontur, außen wird abgedunkelt */
+.croprect{position:absolute;display:none;border:2px dashed var(--bone);
+  box-shadow:0 0 0 1px rgba(20,20,16,.85), 0 0 0 9999px rgba(20,20,16,.5);
+  pointer-events:none}
 
 /* Kartenbild (Ausschnitt) */
 .pimg img{max-width:100%;display:block;border:1px solid var(--line);border-radius:2px;margin-bottom:6px}
