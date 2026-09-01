@@ -299,9 +299,18 @@ async function resetAll(){
   render();
 }
 
-/* ---------- Service Worker ---------- */
+/* ---------- Service Worker & dauerhafter Speicher ---------- */
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+}
+/* MIUI/Chrome räumt Speicher nicht-installierter Seiten auf — dauerhaften Speicher anfordern */
+if(navigator.storage && navigator.storage.persist){
+  navigator.storage.persisted()
+    .then(p=>p||navigator.storage.persist())
+    .then(granted=>{
+      const b=document.querySelector("#ftr .badge");
+      if(b) b.textContent="SPEICHER · "+(granted?"dauerhaft (auf diesem Gerät)":"lokal (nicht garantiert)");
+    }).catch(()=>{});
 }
 
 boot();
