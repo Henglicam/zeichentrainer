@@ -105,9 +105,30 @@ nav{display:flex;gap:14px}
 .ocr-btn{background:none;border:none;cursor:pointer;font-family:var(--mono);font-size:11px;
   color:var(--jade);letter-spacing:1px}
 .ocr:not(:empty){margin-top:10px}
-.chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{background:var(--panel2);border:1px solid var(--line);border-radius:2px;cursor:pointer;
-  font-family:var(--hanzi);font-size:18px;color:var(--bone);padding:6px 10px}
+
+/* OCR-Overlay: Pinyin halbtransparent über den erkannten Zeichen, antippbar */
+.shotwrap{position:relative;margin-bottom:8px}
+.shotwrap img{margin-bottom:0}
+.ovbox{position:absolute;padding:0;background:rgba(20,20,16,.45);cursor:pointer;
+  border:1px solid rgba(237,230,214,.3);border-radius:1px;
+  display:flex;align-items:center;justify-content:center;overflow:visible}
+.ovbox .py{font-family:var(--mono);font-size:10px;line-height:1.2;color:var(--bone);
+  background:rgba(20,20,16,.72);padding:0 3px;border-radius:1px;white-space:nowrap;
+  pointer-events:none}
+.ovbox.sel{background:rgba(178,58,46,.42);border-color:var(--verm)}
+.selbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.selbar .sw{font-family:var(--hanzi);font-size:22px}
+.selbar .sp{font-family:var(--mono);font-size:12px;color:var(--mute)}
+.btn.mini{padding:8px 14px;font-size:13px}
+
+/* Zuschneiden */
+.croplayer{position:absolute;inset:0;touch-action:none;cursor:crosshair}
+.croprect{position:absolute;display:none;border:1px dashed var(--verm);
+  background:rgba(178,58,46,.16);pointer-events:none}
+
+/* Kartenbild (Ausschnitt) */
+.pimg img{max-width:100%;display:block;border:1px solid var(--line);border-radius:2px;margin-bottom:6px}
+.cardimg img{max-width:100%;border:1px solid var(--line);border-radius:2px;margin-top:18px}
 
 /* footer */
 #ftr{padding:12px 20px;border-top:1px solid var(--line);
