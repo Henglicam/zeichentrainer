@@ -13,13 +13,15 @@ UI-Sprache: Deutsch. Lerninhalt: Chinesisch + Pinyin + deutsche Bedeutung.
 - Push auf `main` → Pages baut automatisch (~1–2 Min). `index.html` muss im Repo-Root liegen.
 - Die Seite ist **öffentlich** (Free-Plan). Nutzerdaten liegen ausschließlich lokal im Gerät (IndexedDB), nie im Repo.
 
-## Aktueller Stand (v1)
-- **Eine Datei:** `index.html` — vanilla JS, CSS + JS inline. Keine Frameworks, kein Build-Step.
+## Aktueller Stand (PWA v5)
+- **Dateien:** `index.html` · `styles.css` · `app.js` · `manifest.webmanifest` · `sw.js` · `icon-192/512/maskable-512.png`. Vanilla JS, keine Frameworks, kein Build-Step.
+- **PWA installiert und am Gerät verifiziert:** offline lauffähig (SW cache-first), `navigator.storage.persist()` gewährt — Footer-Badge zeigt den echten Status.
+- **Versionierung:** SW-Cache `zt-vN` in `sw.js` und Header-Label `PWA vN` in `index.html` laufen synchron. Bei **jeder** Änderung an gecachten Dateien beides hochzählen — sonst ist am Gerät nicht erkennbar, ob der neue Stand geladen ist.
 - Persistenz: **IndexedDB** (`zeichentrainer`, v1), Stores: `progress` (keyPath `c`), `custom` (keyPath `c`), `inbox` (keyPath `id`).
   Auf Xiaomi im Chrome-Kontext bestätigt: überlebt komplettes Schließen.
 - Kamera: `<input type="file" accept="image/*" capture="environment">` → Foto als Blob in `inbox`. Funktioniert.
 - Tabs: Lernen (SRS) · Hinzufügen (manuelle Karte) · Kamera (Inbox).
-- Noch **kein** Manifest, **kein** Service Worker, **kein** Icon → aktuell nur Browser-Verknüpfung, kein Offline.
+- **Export/Import** (Footer): Fortschritt + eigene Karten als JSON, Datei `zeichentrainer-JJJJ-MM-TT.json.txt` übers Android-Share-Sheet; Import validiert inhaltsbasiert und macht Upsert. Fotos bleiben lokal.
 
 ## Harte Constraints (im Feld gelernt — nicht verletzen)
 1. **Keine externen Abhängigkeiten / CDNs.** Muss offline und hinter der GFW laufen. Nur System-CJK-Fonts.
@@ -27,6 +29,7 @@ UI-Sprache: Deutsch. Lerninhalt: Chinesisch + Pinyin + deutsche Bedeutung.
 3. **Persistenz nur via IndexedDB** (localStorage/sessionStorage nicht einsetzen). Bei PWA-Ausbau `navigator.storage.persist()` anfordern — Xiaomi/MIUI räumt Speicher nicht-installierter Seiten aggressiv weg.
 4. **Deploy phone-only:** H bedient GitHub nur im Handy-Browser. Änderungen als kleine, klar beschriebene PRs. Möglichst wenige Dateien; Binärdateien (Icons) im Repo erzeugen/committen, nicht H zum Hochladen geben.
 5. **Datenschutz-Regel:** Vertraulicher Text (echte Verträge, Lieferanten, Firmen-Interna) darf **nie** ins öffentliche Deck oder Repo. Nur allgemeine Vokabeln. Fotos bleiben lokal auf dem Gerät.
+6. **Dateien raus nur via Share-Sheet:** Programmatische Blob-Downloads (`<a download>`) blockiert Android/MIUI stumm. Stattdessen `navigator.share` mit Datei — und Chrome/Android teilt nur whitelisted Typen (`.txt`/`.csv`/Bilder/PDF ja, **`.json` nein**), daher Endung `.json.txt` mit `text/plain`.
 
 ## Design (eingefroren — nur auf Anfrage ändern)
 Materialsprache: 漆器 (Lackware) + Siegelrot. Bewusst kein AI-Default-Look.
@@ -50,11 +53,11 @@ Karten leben in `DECK_BASE` (im Code). Schema:
 Regeln: **Pinyin nur geprüft, mit korrekten Tönen — nie raten.** Bedeutungen auf Deutsch. Bei Unsicherheit: markieren statt erfinden.
 Neue Wörter kommen aus Fotos (Menüs, Schilder, Verpackungen), Anreicherung via Chat → dann ins Deck.
 
-## Roadmap (Reihenfolge)
-1. **PWA-Installation:** `manifest.webmanifest` (start_url `.`, scope `./`, display standalone, Farben INK), `sw.js` (cache-first für App-Shell, relative Pfade, Cache-Version bei jeder Änderung hochzählen), Icons `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` (Reticle + 识 in BONE auf INK; programmatisch erzeugen, z.B. Pillow mit Noto Serif CJK). In `index.html`: Manifest verlinken, SW registrieren, `navigator.storage.persist()`.
-2. Offline-Betrieb verifizieren.
-3. Export/Import des SRS-Fortschritts als JSON (Geräte-Wechsel).
-4. OCR v2 (Tesseract.js `chi_sim` oder API) — Chat-Anreicherung bleibt der Qualitätsweg.
+## Roadmap
+Erledigt und am Gerät verifiziert: ~~1. PWA-Installation~~ · ~~2. Offline-Betrieb~~ · ~~3. Export/Import als JSON~~ (Stand 2026-09-01).
+
+Offen:
+4. OCR v2 (Tesseract.js `chi_sim` oder API) — Chat-Anreicherung bleibt der Qualitätsweg. Achtung Constraint 1: Engine + Sprachdaten (~10–20 MB) müssten ins Repo und in den SW-Cache, kein CDN.
 
 ## Arbeitsweise mit H
 - Build-first. Physische Realität schlägt Spec.
