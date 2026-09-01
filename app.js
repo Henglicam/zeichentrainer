@@ -85,7 +85,7 @@ function idbClear(store){ return _os(store,"readwrite").then(os=>new Promise((re
 /* ---------- State ---------- */
 const S = { mode:"study", progress:{}, custom:[], inbox:[],
   queue:[], idx:0, revealed:false, done:0, ahead:false, ready:false,
-  pendingImg:null, prefill:null };
+  pendingImg:null, pendingFull:null, pendingUse:"crop", prefill:null };
 
 function deck(){
   const seen = new Set(DECK_BASE.map(d=>d.c));
@@ -212,8 +212,10 @@ async function grade(g){
 
 /* ---------- Add ---------- */
 function renderAdd(main){
-  const imgField=S.pendingImg?`<div class="field" id="f-imgfield"><label>Image · cropped from photo (stays local)</label>
-      <div class="pimg"><img src="${URL.createObjectURL(S.pendingImg)}" alt="crop"><button class="del" id="f-noimg">Remove image</button></div></div>`:"";
+  const curImg=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
+  const imgField=curImg?`<div class="field" id="f-imgfield"><label>Image · stays local</label>
+      <div class="pimg"><img src="${URL.createObjectURL(curImg)}" alt="card image">
+      <span class="imgacts">${S.pendingFull&&S.pendingImg?`<button class="del${S.pendingUse!=="full"?" on":""}" id="f-usecrop">CROP</button><button class="del${S.pendingUse==="full"?" on":""}" id="f-usefull">FULL PHOTO</button>`:""}<button class="del" id="f-noimg">Remove image</button></span></div></div>`:"";
   main.innerHTML=`<div class="pane">
     <div class="lead">Add a card by hand — or tap characters via OCR in the Camera tab. Verify auto pinyin and meaning via chat before saving.</div>
     ${imgField}
@@ -231,7 +233,9 @@ function renderAdd(main){
     <div id="c-list"></div>
   </div>`;
   $("#f-add").onclick=addManual;
-  const ni=$("#f-noimg"); if(ni) ni.onclick=()=>{ S.pendingImg=null; renderAdd(main); };
+  const ni=$("#f-noimg"); if(ni) ni.onclick=()=>{ S.pendingImg=null; S.pendingFull=null; S.pendingUse="crop"; renderAdd(main); };
+  const uc=$("#f-usecrop"); if(uc) uc.onclick=()=>{ S.pendingUse="crop"; renderAdd(main); };
+  const uf=$("#f-usefull"); if(uf) uf.onclick=()=>{ S.pendingUse="full"; renderAdd(main); };
   /* Draft survives tab switches (e.g. pick word → back to cropping) */
   if(S.prefill){
     S.draft={...(S.draft||{}), w:S.prefill.w||"", p:S.prefill.p||"", m:S.prefill.m||"", autoPin:!!S.prefill.p};
@@ -262,7 +266,9 @@ async function addManual(){
   if(!pin||!mean) return fail("Pinyin and meaning are required.");
   if(deck().some(d=>d.c===word)) return fail("“"+word+"” is already in the deck.");
   const card={c:word,p:pin,m:mean,ex,exp:"",exm,t:"Custom"};
-  if(S.pendingImg){ card.img=S.pendingImg; S.pendingImg=null; }
+  const chosenImg=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
+  if(chosenImg){ card.img=chosenImg; }
+  S.pendingImg=null; S.pendingFull=null; S.pendingUse="crop";
   S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
   S.queue=buildQueue(false);
@@ -481,15 +487,17 @@ async function cropBlob(id){
 async function cropOk(id){
   const r=await cropBlob(id);
   if(!r){ alert("Draw a frame with your finger first."); return; }
-  CROP=null; S.pendingImg=r.blob;
+  const rec=S.inbox.find(x=>x.id===id);
+  CROP=null; S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null; S.pendingUse="crop";
   S.mode="add"; render();
 }
 async function cropOcr(id){
   const r=await cropBlob(id);
   if(!r){ alert("Draw a frame with your finger first."); return; }
-  /* the framed area doubles as the card image — '-> Card' carries it along
-     (removable in the Add form) */
-  S.pendingImg=r.blob;
+  /* the framed area doubles as the card image — '-> Card' carries it along;
+     the full photo stays available as context via the toggle in the Add form */
+  const rec=S.inbox.find(x=>x.id===id);
+  S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null; S.pendingUse="crop";
   CROP=null; renderShots();
   onOcr(id,r);
 }
