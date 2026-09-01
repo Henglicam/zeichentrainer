@@ -13,7 +13,7 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo.
 
-## Current state (PWA v11)
+## Current state (PWA v18)
 - **Files:** `index.html` · `styles.css` · `app.js` · `manifest.webmanifest` · `sw.js` · `icon-192/512/maskable-512.png` · `vendor/` (OCR + dictionaries, ~12 MB). Vanilla JS, no frameworks, no build step.
 - **PWA installed and verified on the device:** runs offline (SW cache-first), `navigator.storage.persist()` granted — the footer badge shows the real status.
 - **Versioning:** SW cache `zt-vN` in `sw.js` and the header label `PWA vN` in `index.html` move in lockstep. Bump both on **every** change to cached files. Since v9 the app updates itself (update check on load/foreground, auto-reload on `controllerchange`); the big `vendor/` cache (`zt-ocr-v1`) survives shell updates — only bump it when vendor files change.
@@ -58,7 +58,7 @@ New words come from photos (menus, signs, packaging); chat enrichment remains th
 ## Roadmap
 Done and verified on the device: ~~1. PWA install~~ · ~~2. offline operation~~ · ~~3. export/import as JSON~~ · ~~4. OCR v2 (crop-first flow, pinyin overlay, tap-to-select, CC-CEDICT meanings, card images)~~ (as of 2026-09-01).
 
-Open: nothing scheduled. Candidate next steps: better crop handles (resize instead of redraw), stroke-order animations, HSK tagging.
+Open: nothing scheduled. Candidate next steps: stroke-order animations, HSK tagging, dictionary-based word snapping in the OCR overlay.
 
 ## Working with H
 - Build-first. Physical reality beats spec.
