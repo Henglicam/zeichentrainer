@@ -19,7 +19,7 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - **Versioning:** SW cache `zt-vN` in `sw.js` and the header label `PWA vN` in `index.html` move in lockstep. Bump both on **every** change to cached files. Since v9 the app updates itself (update check on load/foreground, auto-reload on `controllerchange`); the big `vendor/` cache (`zt-ocr-v1`) survives shell updates — only bump it when vendor files change.
 - Persistence: **IndexedDB** (`zeichentrainer`, v1), stores: `progress` (keyPath `c`), `custom` (keyPath `c`), `inbox` (keyPath `id`). Confirmed on Xiaomi in Chrome: survives a full app kill.
 - Camera: `<input type="file" accept="image/*" capture="environment">` → photo normalized (EXIF baked in, max 1600 px) and stored as blob in `inbox`.
-- **OCR flow (all offline, `vendor/`):** taking a photo lands directly in crop mode → draw a frame (corner handles resize, dragging inside moves, confirmation preview below) → "OCR this area" (Tesseract.js 7, `chi_sim`, PSM 6, symbols under confidence 35 dropped) → semi-transparent pinyin boxes over the characters (pinyin-pro, word-aware 多音字 handling); frames with ≤4 characters come pre-selected → selection bar shows word + pinyin + **English meaning from CC-CEDICT** → **"Save card"** stores word/pinyin/meaning/image in one tap and stays on the photo (no dictionary meaning → routes to the form); "Edit…" opens the Add form. Card image: the OCR frame or the full photo (toggle, sticky per session; shown on the card back; stays local, excluded from export).
+- **OCR flow (all offline, `vendor/`):** taking a photo lands directly in crop mode → draw a frame (corner handles resize, dragging inside moves, confirmation preview below) → "OCR this area" (Tesseract.js 7, `chi_sim`, PSM 6, symbols under confidence 35 dropped) → semi-transparent pinyin boxes over the characters (pinyin-pro, word-aware 多音字 handling); recognized lines are **segmented into CC-CEDICT words** (greedy longest match) — tapping one character selects the whole word, frames with ≤4 characters come pre-selected → selection bar shows **one row per word** (word + pinyin + English meaning) with per-row **Save** (stores word/pinyin/meaning/image in one tap, stays on the photo; no dictionary meaning → routes to the form) and "Edit…" (opens the Add form). Card image: the OCR frame or the full photo (toggle, sticky per session; shown on the card back; stays local, excluded from export).
 - Tabs: Learn (SRS) · Add (manual card) · Camera (inbox).
 - **Export/import** (footer): progress + custom cards as JSON, file `zeichentrainer-YYYY-MM-DD.json.txt` via the Android share sheet; import validates by content and upserts. Photos and card images stay local.
 
@@ -58,7 +58,7 @@ New words come from photos (menus, signs, packaging); chat enrichment remains th
 ## Roadmap
 Done and verified on the device: ~~1. PWA install~~ · ~~2. offline operation~~ · ~~3. export/import as JSON~~ · ~~4. OCR v2 (crop-first flow, pinyin overlay, tap-to-select, CC-CEDICT meanings, card images)~~ (as of 2026-09-01).
 
-Open: nothing scheduled. Candidate next steps: stroke-order animations, HSK tagging, dictionary-based word snapping in the OCR overlay.
+Open: nothing scheduled. Candidate next steps: stroke-order animations, HSK tagging.
 
 ## Working with H
 - Build-first. Physical reality beats spec.
