@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=86; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=88; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1545,16 +1545,16 @@ async function readPass(w,blob,status){
     let syms=[];
     symbols.forEach(sy=>{
       /* characters, sign punctuation and digits (30分钟 — H: the number was missing from the translation); letters stay out */
-      const keep=CJK.test(sy.text)||SIGN_PUNCT.test(sy.text)?sy.confidence>=35:/^[0-9]+$/.test(sy.text)&&sy.confidence>=80; /* a digit needs to be sure — decoration reads as 1 */
+      const keep=CJK.test(sy.text)||SIGN_PUNCT.test(sy.text)?sy.confidence>=35:/^[0-9]+$/.test(sy.text)&&sy.confidence>=70; /* a digit needs to be fairly sure — decoration reads as 1 */
       if(keep) syms.push({ch:sy.text,cf:sy.confidence,b:sy.bbox});
     });
     const edge=x=>/[、，。：:,.]/.test(x.ch);
     while(syms.length&&edge(syms[0])) syms.shift();
     while(syms.length&&edge(syms[syms.length-1])) syms.pop();
-    /* a digit is kept only at the characters' height (0.5–1.4 × their median): a ribbon ring read as 1 was twice as tall,
-       the 30 of 30分钟 is about as tall as 分 */
+    /* a digit is kept only near the characters' height (0.4–1.6 × their median — the boxes' heights swing; a ribbon ring
+       read as 1 was 2.1 × as tall, the 30 of 30分钟 measured 0.55–0.7 ×) */
     const cj=syms.filter(x=>CJK.test(x.ch)&&x.b);
-    if(cj.length){ const H=median(cj.map(x=>x.b.y1-x.b.y0)); syms=syms.filter(x=>!/^[0-9]+$/.test(x.ch)||!x.b||(x.b.y1-x.b.y0>=0.5*H&&x.b.y1-x.b.y0<=1.4*H)); }
+    if(cj.length){ const H=median(cj.map(x=>x.b.y1-x.b.y0)); syms=syms.filter(x=>!/^[0-9]+$/.test(x.ch)||!x.b||(x.b.y1-x.b.y0>=0.4*H&&x.b.y1-x.b.y0<=1.6*H)); }
     const t=syms.map(x=>x.ch).join("");
     if(CJK.test(t)) lines.push({t,cf:syms.filter(x=>CJK.test(x.ch)).map(x=>x.cf),bx:syms.map(x=>x.b?{x0:x.b.x0,y0:x.b.y0,x1:x.b.x1,y1:x.b.y1}:null)});
   });
@@ -1620,7 +1620,9 @@ async function secondLook(w,dk,passes,status,r){
     bmp2.close();
     /* Merge line by line: every reading tends to get some line right and lose another, so the lines of all tight
        passes are clustered by their vertical band and the most confident reading of each band is kept. */
-    const band=l=>{ const bs=l.bx.filter(Boolean); return bs.length?{y0:Math.min(...bs.map(b=>b.y0)),y1:Math.max(...bs.map(b=>b.y1))}:null; };
+    /* a line's band from the median centre and height of its boxes — the boxes' extremes are inflated (on a two-line
+       sign single boxes spanned both lines), and min/max once folded the two lines into one cluster (H: the first line vanished) */
+    const band=l=>{ const bs=l.bx.filter(Boolean); if(!bs.length) return null; const cy=median(bs.map(b=>(b.y0+b.y1)/2)), h=median(bs.map(b=>b.y1-b.y0)); return {y0:cy-h/2,y1:cy+h/2}; };
     const clusters=[];
     for(const l of tightLines){ const b=band(l); if(!b) continue;
       let c=clusters.find(c=>{ const ov=Math.min(c.y1,b.y1)-Math.max(c.y0,b.y0); return ov>0.5*Math.min(c.y1-c.y0,b.y1-b.y0); });
