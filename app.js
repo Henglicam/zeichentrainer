@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=92; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=93; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -87,6 +87,29 @@ function buildQueue(includeAhead){
 }
 const cardOf = c => deck().find(d=>d.c===c);
 async function setSetting(k,v){ S.settings[k]=v; try{ await idbPut("settings",{k,v}); }catch(e){} }
+/* diagnostics (H debugs alone on the phone): the last errors and the last reading's steps, shown and shared from More → Diagnostics */
+const ERRLOG=[], READLOG=[], LAST_READ={passes:null};
+function logErr(kind,msg){ ERRLOG.push({t:Date.now(),kind,msg:String(msg||"").slice(0,400)}); while(ERRLOG.length>20) ERRLOG.shift(); setSetting("errlog",ERRLOG.slice()).catch(()=>{}); }
+window.addEventListener("error",e=>logErr("error",(e.message||"")+(e.filename?` @${String(e.filename).split("/").pop()}:${e.lineno}`:"")));
+window.addEventListener("unhandledrejection",e=>{ const r=e.reason; logErr("promise",r&&(r.stack||r.message)||r); });
+function diagText(){
+  const ago=t=>{ const d=Math.round((Date.now()-t)/1000); return d<60?d+" s ago":d<3600?Math.round(d/60)+" min ago":Math.round(d/3600)+" h ago"; };
+  const out=[`Zeichentrainer diagnostics — ${new Date().toLocaleString("en-GB")}`,
+    `page ${pageVersion()||"?"} · script ${APP_V} · online ${navigator.onLine} · AI ${aiOn()?aiProvider()+(aiLive()?" live":" off"):"none"} · SW ${navigator.serviceWorker&&navigator.serviceWorker.controller?"yes":"no"}`,
+    navigator.userAgent, ""];
+  out.push(`Last reading (${READLOG.length} steps):`);
+  READLOG.forEach(x=>out.push(`  ${ago(x.t)}  ${x.text}`));
+  if(LAST_READ.passes) out.push("  passes: "+JSON.stringify(LAST_READ.passes));
+  out.push("", `Errors (${ERRLOG.length}):`);
+  ERRLOG.forEach(x=>out.push(`  ${ago(x.t)}  [${x.kind}] ${x.msg}`));
+  return out.join("\n")+"\n";
+}
+async function shareDiag(){
+  const text=diagText(), name="zeichentrainer-diagnostics.txt", file=new File([text],name,{type:"text/plain"});
+  if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
+  if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
+  try{ await navigator.clipboard.writeText(text); alert("Copied to the clipboard."); }catch(err){ alert("Sharing is not available here."); }
+}
 
 /* ---------- Boot ---------- */
 async function boot(){
@@ -94,6 +117,7 @@ async function boot(){
     const [prog, cust, inb, sett] = await Promise.all([idbAll("progress"), idbAll("custom"), idbAll("inbox"), idbAll("settings").catch(()=>[])]);
     S.progress = {}; prog.forEach(r=>{ const {c,...s}=r; S.progress[c]=s; });
     sett.forEach(r=>{ S.settings[r.k]=r.v; });
+    if(Array.isArray(S.settings.errlog)) ERRLOG.unshift(...S.settings.errlog.slice(-20));
     /* progress of cards that no longer exist (the built-in deck of v1–v32) is dropped */
     const have=new Set(cust.map(d=>d.c));
     for(const c of Object.keys(S.progress)) if(!have.has(c)){ delete S.progress[c]; idbDel("progress",c).catch(()=>{}); }
@@ -467,6 +491,9 @@ function renderMore(main){
     <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>
     <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}</div></div></div>
     <div class="mrow"><div><div class="t">Photos</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">Delete ${oldShots().length}</button>`:""}</div>
+    <div class="listhead">Diagnostics</div>
+    <div class="mrow"><div><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged · last reading: ${READLOG.length} step${READLOG.length===1?"":"s"}</div></div><span class="btnrow"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button></span></div>
+    <pre class="diag" id="diag-out" hidden></pre>
     <div class="listhead">Danger zone</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">deletes progress, custom cards and photos</div></div><button class="btn mini danger" id="reset">Reset</button></div>
     <div class="listhead">About</div>
@@ -477,6 +504,8 @@ function renderMore(main){
   $("#share-flag").onclick=shareFlagged;
   $("#show-flag").onclick=()=>{ S.mode="cards"; S.detail=null; S.editing=null; S.query=""; S.filterUnv=false; S.filterAi=false; S.filterFlag=true; render(); };
   const cs=$("#cleanshots"); if(cs) cs.onclick=cleanupShots;
+  $("#diag-show").onclick=()=>{ const o=$("#diag-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=diagText(); };
+  $("#diag-share").onclick=shareDiag;
   $("#mirror-url").onchange=async e=>{ await setSetting("mirror",e.target.value.trim()); tellMirror(); };
   renderOcrRow();
   $("#mirror-check").onclick=()=>{ mirrorCheck(true); };
@@ -1090,7 +1119,7 @@ const READ_TIMER={}, READ_WAIT=1200;
 let _prevURL=null;
 async function showCropPreview(id){
   const box=$("#ocr-"+id); if(!box) return;
-  const r=await cropBlob(id);
+  let r=null; try{ r=await cropBlob(id); }catch(err){ box.innerHTML=`<span class="badge">Reading failed: ${esc(err&&err.message||err)}</span>`; logErr("crop",err&&(err.stack||err.message)||err); return; }
   if(!r){ box.innerHTML=`<span class="badge">Frame too small — draw again.</span>`; return; }
   if(_prevURL) URL.revokeObjectURL(_prevURL);
   _prevURL=URL.createObjectURL(r.blob);
@@ -1343,9 +1372,14 @@ const median=a=>{ const t=a.slice().sort((p,q)=>p-q); return t[t.length>>1]; };
 /* status text of a photo's reading: kept in state and re-queried, so a re-render cannot swallow it */
 /* progress texts show as one line with a moving bar — the steps themselves (straightening, second look, percentages)
    are of no use to the user (H); only failures show as text */
-const READ_FAIL=/^(No Chinese|OCR failed|Reading failed|Frame too|nothing read)/;
-const readingHTML=t=>READ_FAIL.test(t)?`<span class="badge">${esc(t)}</span>`:`<div class="reading"><div class="bar"><i></i></div><span class="badge">Reading the text …</span></div>`;
-const readingStatus=id=>t=>{ READING[id]=t; const b=$("#ocr-"+id); if(b) b.innerHTML=readingHTML(t); };
+const READ_FAIL=/^(No Chinese|OCR failed|Reading failed|Frame too)/;
+/* a step that lasts longer than READ_STUCK shows its own text under the bar — a stuck step is a failure, not a step (v93) */
+const READ_STUCK=20000, READ_AT={};
+const readingHTML=(t,id)=>READ_FAIL.test(t)?`<span class="badge">${esc(t)}</span>`
+  :`<div class="reading"><div class="bar"><i></i></div><span class="badge">Reading the text …${id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK?` still at: ${esc(t)}`:""}</span></div>`;
+const readingStatus=id=>t=>{ READING[id]=t; READ_AT[id]=Date.now(); READLOG.push({t:Date.now(),text:t}); while(READLOG.length>40) READLOG.shift();
+  const b=$("#ocr-"+id); if(b) b.innerHTML=readingHTML(t,id);
+  setTimeout(()=>{ if(READING[id]!==t) return; const b2=$("#ocr-"+id); if(b2) b2.innerHTML=readingHTML(t,id); },READ_STUCK+50); };
 /* a canvas with the bitmap drawn at a scale (opaque — the reader is handed JPEGs) */
 function scaledCanvas(bmp,scale,readable){
   const cv=document.createElement("canvas"); cv.width=Math.max(1,Math.round(bmp.width*scale)); cv.height=Math.max(1,Math.round(bmp.height*scale));
@@ -1472,15 +1506,17 @@ async function secondLook(w,dk,passes,status,r){
   } finally { bmp.close(); }
 }
 async function cropSign(id){
-  const r=await cropBlob(id);
-  if(!r) return; /* no frame yet — nothing to do */
-  const rec=S.inbox.find(x=>x.id===id);
-  S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null;
-  delete SIGN[id]; delete QSNOTE[id]; /* the frame stays visible while reading */
-  renderShots();
-  const box=$("#ocr-"+id); if(!box) return;
   const status=readingStatus(id);
+  READLOG.length=0; LAST_READ.passes=null; status("cutting out the frame …");
   try{
+    const r=await cropBlob(id);
+    if(!r){ delete READING[id]; renderShots(); return; } /* no frame yet — nothing to do */
+    const rec=S.inbox.find(x=>x.id===id);
+    S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null;
+    delete SIGN[id]; delete QSNOTE[id]; /* the frame stays visible while reading */
+    renderShots();
+    const box=$("#ocr-"+id); if(!box) return;
+    status("loading the reader …");
     const w=await ocrWorker(status);
     await loadSigns().catch(()=>{}); /* phrasebook optional — falls back to word gloss */
     status("reading the text …");
@@ -1488,13 +1524,14 @@ async function cropSign(id){
     const passes=[{lines:await readPass(w,dk.blob,status),img:dk.blob,angle:dk.angle,tightened:false}];
     const cardBlob=await secondLook(w,dk,passes,status,r);
     if(!passes.some(p=>p.lines.length)){ /* nothing at all: the binarised whole frame at sizes guessed from the frame height */
-      status("nothing read yet, trying a black-and-white copy …");
+      status("trying a black-and-white copy …");
       const bmp=await createImageBitmap(dk.blob), guessH=bmp.height/1.6; /* one or two lines in the frame */
       for(const t of [45,65,90]){ const k=Math.min(1,t/guessH); const lines=await readPass(w,await toBW(bmp,k),status); passes.push({lines:scaleBoxes(lines,k),img:dk.blob,angle:dk.angle,tightened:false,scale:k,bw:true}); }
       bmp.close();
     }
     passes.sort((a,b)=>readingScore(b.lines)-readingScore(a.lines));
     r.passes=passes.map(p=>({s:Math.round(readingScore(p.lines)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),tight:p.tightened,bw:!!p.bw}));
+    LAST_READ.passes=r.passes;
     const best=passes[0], lines=best.lines;
     if(best.tightened) S.pendingImg=cardBlob||best.img;
     if(!lines.length){ status("No Chinese characters recognized — frame the characters tightly and try again."); return; }
@@ -1502,7 +1539,7 @@ async function cropSign(id){
     SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r};
     delete READING[id]; renderShots();
     if(aiAutoOn()) signAskAI(id); /* every reading is checked without a tap */
-  }catch(err){ status("OCR failed: "+(err&&err.message||err)); }
+  }catch(err){ status("OCR failed: "+(err&&err.message||err)); logErr("read",err&&(err.stack||err.message)||err); }
 }
 /* ---------- fixing one misread character: tap it, pick a replacement ----------
    Candidates come from the dictionary (words that fit the neighbouring characters), from the AI
@@ -1874,7 +1911,7 @@ function renderShots(){
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">CANCEL</button>`
           :`<button class="ocr-btn" data-crop="${s.id}">CROP</button><button class="del" data-del="${s.id}">delete</button>`}</span></div>
-        <div class="ocr" id="ocr-${s.id}">${SIGN[s.id]?signEditorHTML(s.id):READING[s.id]?readingHTML(READING[s.id]):cropping
+        <div class="ocr" id="ocr-${s.id}">${SIGN[s.id]?signEditorHTML(s.id):READING[s.id]?readingHTML(READING[s.id],s.id):cropping
           ?`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it.</span>`
           :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]} <button class="del" data-nextshot="1">Next photo</button></div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
