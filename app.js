@@ -64,7 +64,7 @@ function idbClear(store){ return _os(store,"readwrite").then(os=>new Promise((re
 const S = { mode:"study", progress:{}, custom:[], inbox:[],
   queue:[], idx:0, revealed:false, done:0, ahead:false, ready:false,
   pendingImg:null, pendingFull:null, pendingUse:"crop", prefill:null, persist:null,
-  detail:null, query:"", filterUnv:false, filterFlag:false, settings:{}, single:null, saved:null, editing:null };
+  detail:null, query:"", filterUnv:false, filterFlag:false, filterAi:false, settings:{}, single:null, saved:null, editing:null };
 
 function deck(){ return S.custom; }
 function buildQueue(includeAhead){
@@ -437,7 +437,7 @@ function renderMore(main){
     <div class="listhead">Your data</div>
     <div class="mrow"><div><div class="t">Export</div><div class="s">progress + cards, via the share sheet. ${backupNote()}</div></div><button class="btn mini" id="export">Export</button></div>
     <div class="mrow"><div><div class="t">Import</div><div class="s">a zeichentrainer-…json.txt file; same words are overwritten</div></div><button class="btn mini" id="import">Import</button></div>
-    <div class="mrow"><div><div class="t">Flagged cards</div><div class="s">${deck().filter(d=>d.flag).length} flagged for review, share the list as text (e.g. with a teacher)</div></div><button class="btn mini" id="share-flag">Share</button></div>
+    <div class="mrow"><div><div class="t">Flagged cards</div><div class="s">${deck().filter(d=>d.flag).length} flagged for review, share the list as text (e.g. with a teacher)</div></div><span class="btnrow"><button class="btn mini" id="show-flag">Show</button><button class="btn mini" id="share-flag">Share</button></span></div>
     <div class="listhead">Translation</div>
     <div class="mrow"><div><div class="t">Offline translation</div><div class="s" id="nmt-status">checking …</div></div><button class="btn mini" id="nmt-btn" hidden></button></div>
     <div class="listhead">Online AI review</div>
@@ -468,6 +468,7 @@ function renderMore(main){
   $("#export").onclick=exportData;
   $("#import").onclick=()=>$("#imp").click();
   $("#share-flag").onclick=shareFlagged;
+  $("#show-flag").onclick=()=>{ S.mode="cards"; S.detail=null; S.editing=null; S.query=""; S.filterUnv=false; S.filterAi=false; S.filterFlag=true; render(); };
   const cs=$("#cleanshots"); if(cs) cs.onclick=cleanupShots;
   $("#mirror-url").onchange=async e=>{ await setSetting("mirror",e.target.value.trim()); tellMirror(); };
   renderOcrRow();
@@ -729,7 +730,8 @@ function cardsListHTML(){
   const q=S.query.trim().toLowerCase();
   let list=S.custom.slice().sort((a,b)=>(b.at||0)-(a.at||0)); /* newest first */
   if(S.filterUnv) list=list.filter(d=>d.mt&&!d.mt.verified);
-  if(S.filterFlag) list=list.filter(d=>d.flag||d.ai);
+  if(S.filterFlag) list=list.filter(d=>d.flag);
+  if(S.filterAi) list=list.filter(d=>d.ai);
   if(q) list=list.filter(d=>[d.c,d.p,d.m,d.w,d.wp,d.wm,d.flagNote].filter(Boolean).join(" ").toLowerCase().includes(q));
   const rows=list.map(d=>`<button class="crow" data-c="${esc(d.c)}">
       ${d.img?`<img class="thumb" src="${thumbURL(d)}" alt="">`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`}
@@ -739,12 +741,12 @@ function cardsListHTML(){
   return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length};
 }
 function renderCards(main){
-  const unv=S.custom.filter(d=>d.mt&&!d.mt.verified).length, flg=S.custom.filter(d=>d.flag||d.ai).length, nAi=deck().filter(d=>d.ai).length;
+  const unv=S.custom.filter(d=>d.mt&&!d.mt.verified).length, flg=S.custom.filter(d=>d.flag).length, nAi=deck().filter(d=>d.ai).length;
   const {html,n}=cardsListHTML();
   main.innerHTML=`<div class="pane">
     <div class="cardsbar"><input id="q" type="search" placeholder="Search hanzi, pinyin, meaning" value="${esc(S.query)}" autocomplete="off"><button class="btn mini primary" id="newcard">+ New</button></div>
     ${nAi?`<div class="aibar"><span>${nAi} AI suggestion${nAi>1?"s":""} waiting</span><button class="btn mini primary" id="ai-acceptall">Accept all</button></div>`:""}
-    <div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">⚑ Review (${flg})</button><button class="chip${S.filterUnv?" on":""}" id="chip-unv">Unverified (${unv})</button></span><span class="badge" id="cnt">${n} of ${deck().length}</span></div>
+    <div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">⚑ Flagged (${flg})</button>${nAi?`<button class="chip${S.filterAi?" on":""}" id="chip-ai">AI (${nAi})</button>`:""}<button class="chip${S.filterUnv?" on":""}" id="chip-unv">Unverified (${unv})</button></span><span class="badge" id="cnt">${n} of ${deck().length}</span></div>
     <div class="clist" id="clist">${html}</div>
   </div>`;
   const wire=()=>{ document.querySelectorAll(".crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.c; render(); }); };
@@ -752,6 +754,7 @@ function renderCards(main){
   $("#q").oninput=e=>{ S.query=e.target.value; refresh(); };
   $("#chip-unv").onclick=()=>{ S.filterUnv=!S.filterUnv; render(); };
   $("#chip-flag").onclick=()=>{ S.filterFlag=!S.filterFlag; render(); };
+  const ca=$("#chip-ai"); if(ca) ca.onclick=()=>{ S.filterAi=!S.filterAi; render(); };
   const aa=$("#ai-acceptall"); if(aa) aa.onclick=async()=>{ aa.disabled=true; await aiAcceptAll(); render(); };
   $("#newcard").onclick=()=>{ S.mode="add"; render(); };
   wire();

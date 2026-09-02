@@ -242,7 +242,8 @@ button{font:inherit;color:inherit}
 .flagbtn.on{color:var(--verm)}
 #e-aibox{margin-top:8px}
 .btn.on{border-color:var(--verm);color:var(--verm)}
-.chipset{display:flex;gap:6px}
+.chipset{display:flex;gap:6px;flex-wrap:wrap}
+.btnrow{display:flex;gap:6px;flex:none}
 .field label.check{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--bone);margin-bottom:8px;min-height:44px}
 .field label.check input{width:22px;height:22px;accent-color:var(--verm);margin:0;flex:none}
 
