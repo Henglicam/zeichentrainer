@@ -513,6 +513,12 @@ async function shareFlagged(){
   try{ await navigator.clipboard.writeText(text); alert("Copied "+n+" flagged cards to the clipboard."); }
   catch(err){ alert("Sharing is not available here."); }
 }
+/* the photo on the front: the crop, or — after a tap on it — the whole photo (S.fullPic) */
+function frontPic(d){
+  const full=d.imgFull||(d.shot&&(S.inbox.find(x=>x.id===d.shot)||{}).blob);
+  const blob=S.fullPic&&full?full:d.img; if(!blob) return "";
+  return `<img class="signimg${S.fullPic&&full?" full":""}" data-pic="1" src="${URL.createObjectURL(blob)}" alt="photo">`;
+}
 function frontHTML(d){
   if(d.kind==="sign"){
     /* sign card: the picture is the exercise, text underneath wrapped only between words */
@@ -520,12 +526,12 @@ function frontHTML(d){
     const longest=Math.max(...lines.map(glyphs));
     const W=Math.min(440,Math.max(260,(window.innerWidth||390)-32));
     const fs=Math.min(longest<=6?40:longest<=9?30:24,Math.floor((W-28)/longest));
-    return `<div class="signfront">${d.img?`<img class="signimg" src="${URL.createObjectURL(d.img)}" alt="sign">`:""}
+    return `<div class="signfront">${frontPic(d)}
       <div class="signtext" style="font-size:${fs}px">${lines.map(l=>`<div>${esc(l)}</div>`).join("")}</div></div>`;
   }
   const single=glyphs(d.c)<=1;
   /* the photo is the cue — it belongs on the front, before reveal */
-  const pic=d.img?`<img class="signimg" src="${URL.createObjectURL(d.img)}" alt="photo">`:"";
+  const pic=frontPic(d);
   const lines=frontLines(d), {W,H,fs}=frontBox(lines,headFont(d.c));
   return `${pic}<div class="reticle" style="width:${W}px;height:${H}px">${reticleSVG(single,W,H)}<div class="glyph" style="font-size:${fs}px">${lines.map(esc).join("<br>")}</div></div>`;
 }
@@ -636,14 +642,15 @@ function renderStudy(main){
     back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="grades">${grds}</div>
       <div class="backacts"><button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?"⚑ Flagged for review · clear":"⚑ Flag for review"}</button><button class="del" id="edit-card">✎ Edit</button></div></div>`;
   } else {
-    back=`<div class="hint">Tap the character to reveal</div>`;
+    back=`<div class="hint">Tap the character to reveal${d.imgFull||d.shot?" · tap the photo for the whole picture":""}</div>`;
   }
   /* front: no tag row (theme / new / custom is noise while learning); tapping the photo or the character reveals */
   main.innerHTML=`<div class="card">
     ${S.single?`<div class="topline"><button class="del" id="back-cards">← Cards</button><span class="badge">testing from the list</span></div>`:""}
     <div class="front tap" id="reveal">${frontHTML(d)}</div>
     ${back}</div>`;
-  const rv=$("#reveal"); if(rv) rv.onclick=()=>{ S.revealed=!S.revealed; render(); }; /* tap toggles the back on and off */
+  /* tap on the photo: crop ⇄ whole photo; tap on the character: back on and off */
+  const rv=$("#reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); return; } S.revealed=!S.revealed; render(); };
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   const ed=$("#edit-card"); if(ed) ed.onclick=()=>{ S.editFrom="study"; S.editing=c; render(); };
@@ -663,14 +670,14 @@ async function grade(g){
   if(days[days.length-1]!==day){ days.push(day); if(days.length>400) days.shift(); await setSetting("days",days); }
   if(S.single){ nextSingle(c); return; }
   if(g==="again") S.queue.push(c); else S.done++;
-  S.idx++; S.revealed=false; render(); window.scrollTo({top:0});
+  S.idx++; S.revealed=false; S.fullPic=false; render(); window.scrollTo({top:0});
 }
 /* "Test this card" continues with the next card of the list (newest first); ← Cards stops */
 function nextSingle(c){
   const list=S.custom.slice().sort((a,b)=>(b.at||0)-(a.at||0)).map(d=>d.c);
   const next=list[list.indexOf(c)+1];
   if(!next){ endSingle(); return; }
-  S.single=next; S.queue=[next]; S.idx=0; S.revealed=false; render(); window.scrollTo({top:0});
+  S.single=next; S.queue=[next]; S.idx=0; S.revealed=false; S.fullPic=false; render(); window.scrollTo({top:0});
 }
 
 /* ---------- Add ---------- */
@@ -712,7 +719,9 @@ function renderAdd(main){
 }
 /* ---------- Cards: library with photos, detail, single-card test, edit ---------- */
 const THUMB={};
-function thumbURL(d){ return THUMB[d.c]||(THUMB[d.c]=URL.createObjectURL(d.img)); }
+/* list thumbnail: the whole photo when the card has one (H), otherwise the crop */
+function thumbBlob(d){ return d.imgFull||(d.shot&&(S.inbox.find(x=>x.id===d.shot)||{}).blob)||d.img; }
+function thumbURL(d){ return THUMB[d.c]||(THUMB[d.c]=URL.createObjectURL(thumbBlob(d))); }
 function dropThumb(c){ if(THUMB[c]){ URL.revokeObjectURL(THUMB[c]); delete THUMB[c]; } }
 function cardStatus(d){
   const p=S.progress[d.c]; if(!p) return "";
