@@ -86,7 +86,7 @@ function idbClear(store){ return _os(store,"readwrite").then(os=>new Promise((re
 const S = { mode:"study", progress:{}, custom:[], inbox:[],
   queue:[], idx:0, revealed:false, done:0, ahead:false, ready:false,
   pendingImg:null, pendingFull:null, pendingUse:"crop", prefill:null, persist:null,
-  detail:null, query:"", filterUnv:false, single:null, saved:null, editing:null };
+  detail:null, query:"", filterUnv:false, filterFlag:false, single:null, saved:null, editing:null };
 
 function deck(){
   /* custom entries override base cards with the same key (edited base cards) */
@@ -134,6 +134,7 @@ function setStats(){
   const inStudy=S.mode==="study";
   $("#stat-open").style.display=inStudy?"":"none";
   $("#stat-done").style.display=inStudy?"":"none";
+  $("#stat-deck").style.display=inStudy?"none":""; /* three pills overflow a 390px top bar */
   $("#stat-open .v").textContent=remaining;
   $("#stat-done .j").textContent=S.done;
   $("#stat-deck .v").textContent=deck().length;
@@ -168,6 +169,7 @@ function renderMore(main){
     <div class="listhead">Your data</div>
     <div class="mrow"><div><div class="t">Export</div><div class="s">progress + custom cards, via the share sheet</div></div><button class="btn mini" id="export">Export</button></div>
     <div class="mrow"><div><div class="t">Import</div><div class="s">a zeichentrainer-…json.txt file; same words are overwritten</div></div><button class="btn mini" id="import">Import</button></div>
+    <div class="mrow"><div><div class="t">Flagged cards</div><div class="s">${deck().filter(d=>d.flag).length} flagged for review, share the list as text (e.g. with a teacher)</div></div><button class="btn mini" id="share-flag">Share</button></div>
     <div class="mrow"><div><div class="t">Storage</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
     <div class="listhead">Danger zone</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">deletes progress, custom cards and photos</div></div><button class="btn mini danger" id="reset">Reset</button></div>
@@ -176,11 +178,48 @@ function renderMore(main){
   </div>`;
   $("#export").onclick=exportData;
   $("#import").onclick=()=>$("#imp").click();
+  $("#share-flag").onclick=shareFlagged;
   $("#reset").onclick=resetAll;
 }
 
 function tagsHTML(d,isNew){
-  return `<div class="tags"><span class="t">${esc(d.t||"")}</span><span class="${isNew?"n":"r"}">${isNew?"new":"review"}</span></div>`;
+  return `<div class="tags"><span class="t">${esc(d.t||"")}</span>${d.flag?`<span class="f">⚑ review</span>`:""}<span class="${isNew?"n":"r"}">${isNew?"new":"review"}</span></div>`;
+}
+/* ---------- review flag ----------
+   Any card can be flagged when the OCR text, pinyin or meaning looks odd and
+   someone (a teacher, later maybe an online model) should check it. The flag
+   lives on the card record; for base-deck cards it creates a local override. */
+async function setFlag(c,on,note){
+  const d=cardOf(c); if(!d) return;
+  const upd={...d};
+  if(on){ upd.flag=true; if(note!==undefined){ if(note) upd.flagNote=note; else delete upd.flagNote; } }
+  else { delete upd.flag; delete upd.flagNote; }
+  const i=S.custom.findIndex(x=>x.c===c);
+  if(i>=0) S.custom[i]=upd; else S.custom.push(upd);
+  try{ await idbPut("custom",upd); }catch(e){}
+}
+function flagNoteHTML(d){
+  return d.flag?`<div class="flagbox">⚑ Flagged for review${d.flagNote?`: ${esc(d.flagNote)}`:""}</div>`:"";
+}
+function flaggedText(){
+  /* plain-text list of flagged cards, e.g. to send to a teacher via the share sheet */
+  const list=deck().filter(d=>d.flag);
+  const lines=list.map(d=>`${d.c.replace(/\n/g," / ")}\n  ${d.p}\n  ${d.m}${d.flagNote?`\n  note: ${d.flagNote}`:""}`);
+  return `Zeichentrainer — ${list.length} card${list.length===1?"":"s"} flagged for review (${new Date().toLocaleDateString("en-GB")})\n\n`+lines.join("\n\n")+"\n";
+}
+async function shareFlagged(){
+  const n=deck().filter(d=>d.flag).length;
+  if(!n){ alert("No flagged cards."); return; }
+  const text=flaggedText();
+  const name="zeichentrainer-review-"+new Date().toISOString().slice(0,10)+".txt";
+  const file=new File([text],name,{type:"text/plain"});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:name,text:"Cards flagged for review"}); return; }
+    catch(err){ if(err && err.name==="AbortError") return; }
+  }
+  if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err && err.name==="AbortError") return; } }
+  try{ await navigator.clipboard.writeText(text); alert("Copied "+n+" flagged cards to the clipboard."); }
+  catch(err){ alert("Sharing is not available here."); }
 }
 function frontHTML(d){
   if(d.kind==="sign"){
@@ -204,7 +243,7 @@ function backHTML(d){
     ${d.exp?`<div class="exp">${esc(d.exp)}</div>`:""}
     ${d.exm?`<div class="exm">${esc(d.exm)}</div>`:""}</div>` : "";
   const glossBlock = d.kind==="sign" ? `<div class="gtable">${(d.gloss||[]).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("")}</div>
-    ${d.mt&&!d.mt.verified?`<span class="flag">meaning: auto · unverified</span>`:""}
+    ${d.mt&&!d.mt.verified?`<span class="flag">meaning auto-generated, unverified</span>`:""}
     ${d.imgFull?`<div class="cardimg"><img src="${URL.createObjectURL(d.imgFull)}" alt="context"></div>`:""}` : "";
   return `<div class="pin">${esc(d.p)}</div><div class="mean">${esc(d.m)}</div>
     ${d.kind==="sign"?glossBlock:wordBlock+exBlock}`;
@@ -233,7 +272,8 @@ function renderStudy(main){
   if(S.revealed){
     const grds=[["again","Again"],["hard","Hard"],["good","Good"],["easy","Easy"]].map(([g,l])=>
       `<button class="grade" data-g="${g}"><span class="lbl">${l}</span><span class="iv">${previewInterval(sched,g)}</span></button>`).join("");
-    back=`<div style="margin-top:26px">${backHTML(d)}<div class="grades">${grds}</div></div>`;
+    back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}<div class="grades">${grds}</div>
+      <button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?"⚑ Flagged for review · clear":"⚑ Flag for review"}</button></div>`;
   } else {
     back=`<button class="btn wide" id="reveal">Reveal</button>`;
   }
@@ -244,6 +284,7 @@ function renderStudy(main){
     ${back}</div>`;
   const rv=$("#reveal"); if(rv) rv.onclick=()=>{ S.revealed=true; render(); };
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
+  const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   document.querySelectorAll(".grade").forEach(b=> b.onclick=()=>grade(b.dataset.g));
 }
 
@@ -260,21 +301,21 @@ async function grade(g){
 /* ---------- Add ---------- */
 function renderAdd(main){
   const curImg=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
-  const imgField=curImg?`<div class="field" id="f-imgfield"><label>Image · stays local</label>
+  const imgField=curImg?`<div class="field" id="f-imgfield"><label>Image (stays on this phone)</label>
       <div class="pimg"><img src="${URL.createObjectURL(curImg)}" alt="card image">
       <span class="imgacts">${S.pendingFull&&S.pendingImg?`<button class="del${S.pendingUse!=="full"?" on":""}" id="f-usecrop">CROP</button><button class="del${S.pendingUse==="full"?" on":""}" id="f-usefull">FULL PHOTO</button>`:""}<button class="del" id="f-noimg">Remove image</button></span></div></div>`:"";
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back-cards">← Cards</button></div>
     <div class="lead">Add a card by hand. Pinyin and meaning filled from OCR are unverified until you check them.</div>
     ${imgField}
-    <div class="field"><label>词 · Word</label><input id="f-word" class="hanzi big" placeholder="快门"></div>
+    <div class="field"><label>Word</label><input id="f-word" class="hanzi big" placeholder="快门"></div>
     <div class="row">
       <div class="field narrow"><label>Pinyin</label><input id="f-pin" class="mono" placeholder="kuàimén"></div>
       <div class="field"><label>Meaning</label><input id="f-mean" placeholder="shutter"></div>
     </div>
     <div id="f-pinhint" class="err" style="display:none">Auto pinyin/meaning from OCR — unverified. Check the tones (多音字!) and adjust the meaning.</div>
-    <div class="field"><label>Example sentence · optional</label><input id="f-ex" class="hanzi" placeholder="快门速度很快。"></div>
-    <div class="field"><label>Translation · optional</label><input id="f-exm" placeholder="The shutter speed is very fast."></div>
+    <div class="field"><label>Example sentence (optional)</label><input id="f-ex" class="hanzi" placeholder="快门速度很快。"></div>
+    <div class="field"><label>Translation (optional)</label><input id="f-exm" placeholder="The shutter speed is very fast."></div>
     <div id="f-err" class="err" style="display:none"></div>
     <button class="btn primary block" id="f-add">Add card</button>
     <div id="f-ok" class="ok" style="display:none"></div>
@@ -312,25 +353,27 @@ function cardsListHTML(){
   const customSet=new Set(S.custom.map(d=>d.c));
   let list=[...S.custom.slice().reverse(), ...DECK_BASE.filter(d=>!customSet.has(d.c))];
   if(S.filterUnv) list=list.filter(d=>d.mt&&!d.mt.verified);
-  if(q) list=list.filter(d=>[d.c,d.p,d.m,d.w,d.wp,d.wm].filter(Boolean).join(" ").toLowerCase().includes(q));
+  if(S.filterFlag) list=list.filter(d=>d.flag);
+  if(q) list=list.filter(d=>[d.c,d.p,d.m,d.w,d.wp,d.wm,d.flagNote].filter(Boolean).join(" ").toLowerCase().includes(q));
   const rows=list.map(d=>`<button class="crow" data-c="${esc(d.c)}">
       ${d.img?`<img class="thumb" src="${thumbURL(d)}" alt="">`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`}
       <span class="ct"><span class="c">${esc(d.c.replace(/\n/g," / "))}</span><span class="p">${esc(d.p)}</span><span class="m">${esc(d.m)}</span></span>
-      <span class="cs">${d.kind==="sign"?'<span class="pill">sign</span>':customSet.has(d.c)?'<span class="pill">custom</span>':""}${cardStatus(d)}</span></button>`).join("");
+      <span class="cs">${d.flag?'<span class="pill flagged">⚑ review</span>':""}${d.kind==="sign"?'<span class="pill">sign</span>':customSet.has(d.c)?'<span class="pill">custom</span>':""}${cardStatus(d)}</span></button>`).join("");
   return {html:rows||`<div class="badge" style="margin-top:20px">No cards match.</div>`, n:list.length};
 }
 function renderCards(main){
-  const unv=S.custom.filter(d=>d.mt&&!d.mt.verified).length;
+  const unv=S.custom.filter(d=>d.mt&&!d.mt.verified).length, flg=S.custom.filter(d=>d.flag).length;
   const {html,n}=cardsListHTML();
   main.innerHTML=`<div class="pane">
     <div class="cardsbar"><input id="q" type="search" placeholder="Search hanzi, pinyin, meaning" value="${esc(S.query)}" autocomplete="off"><button class="btn mini primary" id="newcard">+ New</button></div>
-    <div class="chips"><button class="chip${S.filterUnv?" on":""}" id="chip-unv">Unverified · ${unv}</button><span class="badge" id="cnt">${n} of ${deck().length}</span></div>
+    <div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">⚑ Review (${flg})</button><button class="chip${S.filterUnv?" on":""}" id="chip-unv">Unverified (${unv})</button></span><span class="badge" id="cnt">${n} of ${deck().length}</span></div>
     <div class="clist" id="clist">${html}</div>
   </div>`;
   const wire=()=>{ document.querySelectorAll(".crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.c; render(); }); };
   const refresh=()=>{ const r=cardsListHTML(); $("#clist").innerHTML=r.html; $("#cnt").textContent=`${r.n} of ${deck().length}`; wire(); };
   $("#q").oninput=e=>{ S.query=e.target.value; refresh(); };
   $("#chip-unv").onclick=()=>{ S.filterUnv=!S.filterUnv; render(); };
+  $("#chip-flag").onclick=()=>{ S.filterFlag=!S.filterFlag; render(); };
   $("#newcard").onclick=()=>{ S.mode="add"; render(); };
   wire();
 }
@@ -340,12 +383,13 @@ function renderCardDetail(main,c){
   const p=S.progress[c];
   const stat=p?`interval ${p.interval} d · ease ${p.ease.toFixed(2)} · ${p.reps} review${p.reps===1?"":"s"} · next ${new Date(p.due).toLocaleDateString("en-GB")}`:"not studied yet";
   main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${d.kind==="sign"?"sign card":isCustom?"custom card":"base deck"}${d.mt&&!d.mt.verified?" · unverified":""}</span></div>
-    <div class="card">${tagsHTML(d,!p)}${frontHTML(d)}<div style="margin-top:22px">${backHTML(d)}</div></div>
+    <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${d.kind==="sign"?"sign card":isCustom?"custom card":"base deck"}${d.mt&&!d.mt.verified?", unverified":""}</span></div>
+    <div class="card">${tagsHTML(d,!p)}${frontHTML(d)}<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}</div>
     <div class="detailacts">
       <button class="btn primary" id="d-test">Test this card</button>
       <button class="btn" id="d-edit">Edit</button>
-      ${isCustom?`<button class="btn danger" id="d-del">Delete</button>`:`<button class="btn" disabled>Base card</button>`}
+      <button class="btn${d.flag?" on":""}" id="d-flag">${d.flag?"⚑ Clear flag":"⚑ Flag for review"}</button>
+      ${isCustom?`<button class="btn danger" id="d-del">Delete</button>`:""}
     </div>
     <div class="badge" style="margin-top:14px">${esc(stat)}</div>
   </div>`;
@@ -355,6 +399,7 @@ function renderCardDetail(main,c){
     S.single=c; S.queue=[c]; S.idx=0; S.revealed=false; S.mode="study"; render();
   };
   $("#d-edit").onclick=()=>{ S.editing=c; render(); };
+  $("#d-flag").onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   const del=$("#d-del"); if(del) del.onclick=async()=>{
     if(!confirm("Delete “"+c.replace(/\n/g," / ")+"” and its progress?")) return;
     await delCustom(c); S.detail=null; render();
@@ -366,19 +411,21 @@ function renderEdit(main,c){
   let removeImg=false;
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back">← Back</button><span class="badge">edit</span></div>
-    <div class="field"><label>${isSign?"Sign text · one line per row":"词 · Word"}${isCustom?"":" · base deck, fixed"}</label>
+    <div class="field"><label>${isSign?"Sign text, one line per row":"Word"}${isCustom?"":" (base deck, fixed)"}</label>
       ${isCustom?(isSign?`<textarea id="e-word" class="hanzi" rows="${d.c.split("\n").length+1}">${esc(d.c)}</textarea>`:`<input id="e-word" class="hanzi" value="${esc(d.c)}">`)
                :`<div class="ro hanzi">${esc(d.c).replace(/\n/g,"<br>")}</div>`}</div>
     <div class="row">
       <div class="field narrow"><label>Pinyin</label><input id="e-pin" class="mono" value="${esc(d.p)}"></div>
       <div class="field"><label>Meaning</label><input id="e-mean" value="${esc(d.m)}"></div>
     </div>
-    ${isSign?"":`<div class="field"><label>Context word · pinyin · meaning (optional)</label>
+    ${isSign?"":`<div class="field"><label>Context word, pinyin, meaning (optional)</label>
       <div class="row"><input id="e-w" class="hanzi" value="${esc(d.w||"")}" placeholder="学习"><input id="e-wp" class="mono" value="${esc(d.wp||"")}" placeholder="xuéxí"><input id="e-wm" value="${esc(d.wm||"")}" placeholder="to learn"></div></div>`}
-    <div class="field"><label>Example sentence · optional</label><input id="e-ex" class="hanzi" value="${esc(d.ex||"")}"></div>
-    <div class="field"><label>Example pinyin · optional</label><input id="e-exp" class="mono" value="${esc(d.exp||"")}"></div>
-    <div class="field"><label>Translation · optional</label><input id="e-exm" value="${esc(d.exm||"")}"></div>
-    ${d.img?`<div class="field" id="e-imgfield"><label>Image · stays local</label><div class="pimg"><img src="${thumbURL(d)}" alt=""><button class="del" id="e-noimg">Remove image</button></div></div>`:""}
+    <div class="field"><label>Example sentence (optional)</label><input id="e-ex" class="hanzi" value="${esc(d.ex||"")}"></div>
+    <div class="field"><label>Example pinyin (optional)</label><input id="e-exp" class="mono" value="${esc(d.exp||"")}"></div>
+    <div class="field"><label>Translation (optional)</label><input id="e-exm" value="${esc(d.exm||"")}"></div>
+    ${d.img?`<div class="field" id="e-imgfield"><label>Image (stays on this phone)</label><div class="pimg"><img src="${thumbURL(d)}" alt=""><button class="del" id="e-noimg">Remove image</button></div></div>`:""}
+    <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> Flag for review (OCR, pinyin or meaning looks wrong)</label>
+      <input id="e-note" value="${esc(d.flagNote||"")}" placeholder="Note for the reviewer (optional)"></div>
     <div id="e-err" class="err" style="display:none"></div>
     <button class="btn primary block" id="e-save">Save changes</button>
   </div>`;
@@ -424,6 +471,8 @@ function renderEdit(main,c){
       if(!upd.w){ delete upd.w; delete upd.wp; delete upd.wm; } }
     if(removeImg){ delete upd.img; delete upd.imgFull; dropThumb(c); }
     if(upd.mt) upd.mt={...upd.mt, verified:true}; /* a human edited it */
+    if($("#e-flag").checked){ upd.flag=true; const note=$("#e-note").value.trim(); if(note) upd.flagNote=note; else delete upd.flagNote; }
+    else { delete upd.flag; delete upd.flagNote; }
     const i=S.custom.findIndex(x=>x.c===c);
     if(i>=0) S.custom[i]=upd; else S.custom.push(upd); /* base card -> local override */
     try{ await idbPut("custom",upd); }catch(e){}
@@ -435,9 +484,9 @@ function renderCustomList(){
   if(!S.custom.length){ box.innerHTML=""; return; }
   const unv=S.custom.filter(d=>d.mt&&!d.mt.verified);
   const line=d=>esc(d.c.replace(/\n/g," / "));
-  box.innerHTML=(unv.length?`<div class="listhead">Review · ${unv.length} unverified</div>`+
+  box.innerHTML=(unv.length?`<div class="listhead">Review: ${unv.length} unverified</div>`+
     unv.map(d=>`<div class="item"><div class="left"><span class="c">${line(d)}</span><span class="m">${esc(d.m)}</span></div><button class="ocr-btn" data-ok="${esc(d.c)}">CONFIRM</button></div>`).join(""):"")+
-    `<div class="listhead">Custom cards · ${S.custom.length}</div>`+
+    `<div class="listhead">Custom cards (${S.custom.length})</div>`+
     S.custom.map(d=>`<div class="item"><div class="left"><span class="c">${line(d)}${d.kind==="sign"?'<span class="pill">sign</span>':""}</span><span class="p">${esc(d.p)}</span><span class="m">${esc(d.m)}</span></div><button class="del" data-c="${esc(d.c)}">delete</button></div>`).join("");
   box.querySelectorAll(".del").forEach(b=> b.onclick=()=>delCustom(b.dataset.c));
   box.querySelectorAll("[data-ok]").forEach(b=> b.onclick=()=>confirmCard(b.dataset.ok));
@@ -853,7 +902,7 @@ function signPreview(id){
   const live=res.filter(Boolean);
   const full=live.length>0 && live.every(r=>r.full);
   const mean=live.map(r=>r.en).filter(Boolean).join(" / ");
-  const sm=$(`#smean-${id}`); if(sm) sm.innerHTML=`<span class="badge">meaning · ${full?"phrasebook":"composed word by word"} · unverified</span><div>${esc(mean)||"—"}</div>`;
+  const sm=$(`#smean-${id}`); if(sm) sm.innerHTML=`<span class="badge">Meaning ${full?"from the phrasebook":"composed word by word"}, unverified</span><div>${esc(mean)||"—"}</div>`;
   const gl=$(`#sgloss-${id}`); if(gl) gl.innerHTML=live.flatMap(r=>r.gloss).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("");
   sg.res=res; sg.full=full; sg.mean=mean;
 }
@@ -898,7 +947,7 @@ function shotURL(s){ return IMGURL[s.id]||(IMGURL[s.id]=URL.createObjectURL(s.bl
 function renderShots(){
   const box=$("#shots"); if(!box) return;
   if(!S.inbox.length){ box.innerHTML=`<div class="badge" style="margin-top:18px">No photos yet.</div>`; return; }
-  box.innerHTML=`<div class="listhead">Inbox · ${S.inbox.length}</div>`+
+  box.innerHTML=`<div class="listhead">Inbox (${S.inbox.length})</div>`+
     S.inbox.map(s=>{
       const dt=new Date(s.ts).toLocaleString("en-GB");
       const cropping=CROP && CROP.id===s.id;
