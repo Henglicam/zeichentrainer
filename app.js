@@ -474,9 +474,9 @@ function renderStudy(main){
   /* front: no tag row (theme / new / custom is noise while learning); tapping the photo or the character reveals */
   main.innerHTML=`<div class="card">
     ${S.single?`<div class="topline"><button class="del" id="back-cards">← Cards</button><span class="badge">testing one card</span></div>`:""}
-    <div class="front${S.revealed?"":" tap"}" id="reveal">${frontHTML(d)}</div>
+    <div class="front tap" id="reveal">${frontHTML(d)}</div>
     ${back}</div>`;
-  const rv=$("#reveal"); if(rv && !S.revealed) rv.onclick=()=>{ S.revealed=true; render(); };
+  const rv=$("#reveal"); if(rv) rv.onclick=()=>{ S.revealed=!S.revealed; render(); }; /* tap toggles the back on and off */
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   const ed=$("#edit-card"); if(ed) ed.onclick=()=>{ S.editFrom="study"; S.editing=c; render(); };
