@@ -110,7 +110,7 @@ function wireChrome(){
       if(m==="cards" && (S.mode==="cards"||S.mode==="add")) S.detail=null; /* Cards again → back to the list */
       S.mode=m; render(); };
   });
-  $("#cam").onchange=onPhoto;
+  $("#cam").onchange=onPhoto; $("#album").onchange=onPhoto; /* camera, or photos already on the phone */
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden && S.mode==="inbox") renderShots(); });
   $("#imp").onchange=importData;
 }
@@ -1519,10 +1519,11 @@ async function confirmCard(c){
 function renderInbox(main){
   main.innerHTML=`<div class="pane">
     <div class="lead">Photos stay on this phone. Frame the text and tap Read — the card is made for you.</div>
-    <button class="btn primary block" id="snap">Take photo</button>
+    <div class="snaprow"><button class="btn primary" id="snap">Take photo</button><button class="btn" id="pick">From album</button></div>
     <div id="shots"></div>
   </div>`;
   $("#snap").onclick=()=>$("#cam").click();
+  $("#pick").onclick=()=>$("#album").click();
   renderShots();
 }
 const IMGURL={}; // cache object URLs per photo — renderShots re-runs on every selection
@@ -1587,15 +1588,23 @@ function renderShots(){
 }
 let PENDING_SHOT=false; /* a photo is being processed — the inbox shows a placeholder right away */
 async function onPhoto(e){
-  const file=e.target.files && e.target.files[0];
+  const files=[...(e.target.files||[])].filter(f=>f&&f.type.startsWith("image/"));
   e.target.value="";
-  if(!file) return;
+  if(!files.length) return;
   /* show something immediately: downscaling a 12-MP photo takes 1–3 s on the phone,
      and Chrome often does not repaint after the camera until the page is touched */
   PENDING_SHOT=true;
   if(S.mode!=="inbox"){ S.mode="inbox"; render(); } else renderShots();
   window.scrollTo({top:0});
   await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0))); /* let the placeholder paint first */
+  /* several photos from the album: all land in the inbox, the first one opens in crop mode */
+  let first=null;
+  for(const file of files){ const id=await addPhoto(file); if(!first) first=id; }
+  CROP=first?{id:first,rect:null}:null; PENDING_SHOT=false;
+  if(S.mode!=="inbox"){ S.mode="inbox"; render(); } else renderShots();
+  window.scrollTo({top:0});
+}
+async function addPhoto(file){
   /* bake in EXIF rotation + downscale to max 1600px: keeps the inbox small
      and the OCR boxes aligned with the displayed image */
   let blob=file;
@@ -1608,13 +1617,10 @@ async function onPhoto(e){
     bmp.close();
     blob=(await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85)))||file;
   }catch(err){}
-  const rec={ id:"shot_"+Date.now(), blob, ts:Date.now() };
+  const rec={ id:"shot_"+Date.now()+"_"+Math.floor(Math.random()*1000), blob, ts:Date.now() };
   S.inbox.unshift(rec);
   try{ await idbPut("inbox",rec); }catch(err){}
-  /* next step is always framing the text — go straight into crop mode */
-  CROP={id:rec.id,rect:null}; PENDING_SHOT=false;
-  if(S.mode!=="inbox"){ S.mode="inbox"; render(); } else renderShots();
-  window.scrollTo({top:0});
+  return rec.id;
 }
 async function delShot(id){
   S.inbox=S.inbox.filter(s=>s.id!==id);
