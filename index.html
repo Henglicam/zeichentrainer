@@ -17,30 +17,20 @@
 <body>
 <div id="app">
   <header id="hdr">
-    <div class="brand">
-      <span class="logo">识字</span>
-      <span class="ver">PWA v21</span>
-      <nav>
-        <button class="tab on" data-mode="study">Learn</button>
-        <button class="tab" data-mode="add">Add</button>
-        <button class="tab" data-mode="inbox">Camera</button>
-      </nav>
-    </div>
+    <div class="brand"><span class="logo">识字</span><span class="ver">PWA v22</span></div>
     <div class="stats">
-      <span id="stat-open"><b>DUE</b> <span class="v">0</span></span>
-      <span id="stat-done"><b>DONE</b> <span class="j">0</span></span>
-      <span id="stat-deck"><b>DECK</b> <span class="v">0</span></span>
+      <span id="stat-open"><b>DUE</b><span class="v">0</span></span>
+      <span id="stat-done"><b>DONE</b><span class="j">0</span></span>
+      <span id="stat-deck"><b>DECK</b><span class="v">0</span></span>
     </div>
   </header>
   <main id="main" class="center"></main>
-  <footer id="ftr">
-    <span class="badge">STORAGE · persistent (on this device)</span>
-    <div class="actions">
-      <button class="reset" id="export">EXPORT</button>
-      <button class="reset" id="import">IMPORT</button>
-      <button class="reset" id="reset">RESET</button>
-    </div>
-  </footer>
+  <nav id="tabs" aria-label="Sections">
+    <button class="tab on" data-mode="study"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 9.5h8M8 14h5"/></svg>Learn</button>
+    <button class="tab" data-mode="add"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add</button>
+    <button class="tab" data-mode="inbox"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3.2l1.8-2.5h6l1.8 2.5H20v11H4z"/><circle cx="12" cy="13.2" r="3.4"/></svg>Camera</button>
+    <button class="tab" data-mode="more"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18.5" cy="12" r="1.6"/></svg>More</button>
+  </nav>
 </div>
 <input id="cam" type="file" accept="image/*" capture="environment" hidden>
 <input id="imp" type="file" accept="application/json,text/plain,.json,.txt" hidden>
