@@ -85,7 +85,7 @@ function idbClear(store){ return _os(store,"readwrite").then(os=>new Promise((re
 /* ---------- State ---------- */
 const S = { mode:"study", progress:{}, custom:[], inbox:[],
   queue:[], idx:0, revealed:false, done:0, ahead:false, ready:false,
-  pendingImg:null, pendingFull:null, pendingUse:"crop", prefill:null };
+  pendingImg:null, pendingFull:null, pendingUse:"crop", prefill:null, persist:null };
 
 function deck(){
   const seen = new Set(DECK_BASE.map(d=>d.c));
@@ -123,10 +123,7 @@ function wireChrome(){
   document.querySelectorAll(".tab").forEach(b=>{
     b.onclick=()=>{ S.mode=b.dataset.mode; render(); };
   });
-  $("#reset").onclick=resetAll;
   $("#cam").onchange=onPhoto;
-  $("#export").onclick=exportData;
-  $("#import").onclick=()=>$("#imp").click();
   $("#imp").onchange=importData;
 }
 function setStats(){
@@ -154,10 +151,28 @@ function reticleSVG(single){
 function render(){
   setStats();
   const main=$("#main");
-  main.classList.toggle("center", S.mode!=="add" && S.mode!=="inbox");
+  main.classList.toggle("center", S.mode==="study");
   if(S.mode==="study") return renderStudy(main);
   if(S.mode==="add")   return renderAdd(main);
   if(S.mode==="inbox") return renderInbox(main);
+  if(S.mode==="more")  return renderMore(main);
+}
+function renderMore(main){
+  const ver=($(".ver")||{}).textContent||"";
+  const st=S.persist===true?"persistent on this device":S.persist===false?"local — the system may evict it; install the app to be safe":"checking…";
+  main.innerHTML=`<div class="pane more">
+    <div class="listhead">Your data</div>
+    <div class="mrow"><div><div class="t">Export</div><div class="s">progress + custom cards, via the share sheet</div></div><button class="btn mini" id="export">Export</button></div>
+    <div class="mrow"><div><div class="t">Import</div><div class="s">a zeichentrainer-…json.txt file; same words are overwritten</div></div><button class="btn mini" id="import">Import</button></div>
+    <div class="mrow"><div><div class="t">Storage</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
+    <div class="listhead">Danger zone</div>
+    <div class="mrow"><div><div class="t">Reset</div><div class="s">deletes progress, custom cards and photos</div></div><button class="btn mini danger" id="reset">Reset</button></div>
+    <div class="listhead">About</div>
+    <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s">${esc(ver)} · offline · everything stays on this phone</div></div></div>
+  </div>`;
+  $("#export").onclick=exportData;
+  $("#import").onclick=()=>$("#imp").click();
+  $("#reset").onclick=resetAll;
 }
 
 function renderStudy(main){
@@ -229,7 +244,7 @@ function renderAdd(main){
       <div class="pimg"><img src="${URL.createObjectURL(curImg)}" alt="card image">
       <span class="imgacts">${S.pendingFull&&S.pendingImg?`<button class="del${S.pendingUse!=="full"?" on":""}" id="f-usecrop">CROP</button><button class="del${S.pendingUse==="full"?" on":""}" id="f-usefull">FULL PHOTO</button>`:""}<button class="del" id="f-noimg">Remove image</button></span></div></div>`:"";
   main.innerHTML=`<div class="pane">
-    <div class="lead">Add a card by hand — or tap characters via OCR in the Camera tab. Verify auto pinyin and meaning via chat before saving.</div>
+    <div class="lead">Add a card by hand. Pinyin and meaning filled from OCR are unverified until you check them.</div>
     ${imgField}
     <div class="field"><label>词 · Word</label><input id="f-word" class="hanzi big" placeholder="快门"></div>
     <div class="row">
@@ -718,7 +733,7 @@ async function confirmCard(c){
 /* ---------- Kamera / Inbox ---------- */
 function renderInbox(main){
   main.innerHTML=`<div class="pane">
-    <div class="lead">Take a photo — it stays on this device. After shooting you land in crop mode: draw a frame → OCR overlays pinyin; a single-line frame comes fully selected: "Save phrase" stores the whole string as one card (meaning composed word by word); tap words to select single ones instead ("Edit…" opens the form). First OCR use downloads ~12 MB once, works offline afterwards; verify tones + meaning via chat.</div>
+    <div class="lead">Photos stay on this phone. Frame the text, then OCR it or read it as a sign.</div>
     <button class="btn primary block" id="snap">Take photo</button>
     <div id="shots"></div>
   </div>`;
@@ -887,8 +902,9 @@ if(navigator.storage && navigator.storage.persist){
   navigator.storage.persisted()
     .then(p=>p||navigator.storage.persist())
     .then(granted=>{
-      const b=document.querySelector("#ftr .badge");
-      if(b) b.textContent="STORAGE · "+(granted?"persistent (on this device)":"local (not guaranteed)");
+      S.persist=!!granted;
+      const b=document.querySelector("#storage-status");
+      if(b) b.textContent=granted?"persistent on this device":"local — the system may evict it; install the app to be safe";
     }).catch(()=>{});
 }
 
