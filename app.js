@@ -12,6 +12,7 @@ const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:
 
 /* ---------- SRS (SM-2 light) ---------- */
 const DAY = 86400000;
+const LEECH_FAILS = 4; /* "again" this many times in a row flags the card for review */
 const startOfDay = t => { const d = new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
 const today = () => startOfDay(Date.now());
 function schedule(card, grade){
@@ -23,7 +24,9 @@ function schedule(card, grade){
   else if (grade==="good"){ interval=interval<1?1:Math.round(interval*ease); }
   else if (grade==="easy"){ ease+=0.15; interval=interval<1?3:Math.round(interval*ease*1.3); }
   const due = grade==="again" ? today() : today()+interval*DAY;
-  return { interval, ease, due, reps };
+  /* consecutive failures — a leech is usually a bad card, not a bad memory */
+  const fails = grade==="again" ? ((card&&card.fails)||0)+1 : grade==="hard" ? ((card&&card.fails)||0) : 0;
+  return { interval, ease, due, reps, fails };
 }
 function previewInterval(card, grade){
   const s = schedule(card, grade);
@@ -300,6 +303,23 @@ function renderAiRow(){
     catch(err){ rs.textContent="failed: "+(err&&err.message||err); run.disabled=false; }
   };
 }
+/* ---------- backup nudge + photo cleanup: everything lives on one phone ---------- */
+const OLD_DAYS=30;
+function backupNote(){
+  const t=S.settings.lastExport, days=t?Math.floor((Date.now()-t)/DAY):null;
+  const txt=t?(days===0?"Last export: today.":`Last export: ${days} day${days===1?"":"s"} ago.`):"Never exported.";
+  const warn=S.custom.length && (!t||days>=OLD_DAYS);
+  return warn?`<span class="warn">${txt} Export now — the cards exist only on this phone.</span>`:txt;
+}
+/* inbox photos older than 30 days that already became a card */
+function oldShots(){ const cut=Date.now()-OLD_DAYS*DAY; return S.inbox.filter(sh=>sh.ts<cut && S.custom.some(d=>d.shot===sh.id)); }
+function shotsNote(){ const n=S.inbox.length, o=oldShots().length; return `${n} photo${n===1?"":"s"} in the inbox${o?`, ${o} older than ${OLD_DAYS} days and already turned into cards`:""}.`; }
+async function cleanupShots(){
+  const list=oldShots(); if(!list.length) return;
+  if(!confirm(`Delete ${list.length} old photo${list.length>1?"s":""}? The cards keep their own picture.`)) return;
+  for(const sh of list) await delShot(sh.id);
+  const st=$("#shots-status"); if(st) st.textContent=shotsNote(); const b=$("#cleanshots"); if(b) b.remove();
+}
 /* More → Offline translation: not in build / enable (size prompt) / on + pending count */
 async function renderNmtRow(){
   const st=$("#nmt-status"), btn=$("#nmt-btn"); if(!st||!btn) return;
@@ -313,14 +333,15 @@ async function renderNmtRow(){
     setBtn("Enable",async()=>{
       if(!confirm(`Download the zh→en translation model (${mb} MB) now? It stays cached on this phone.`)) return;
       await setSetting("nmt",true); btn.disabled=true;
-      try{ await nmtLoad(t=>{ st.textContent=t; }); st.textContent="ready"; }
+      try{ await nmtLoad(t=>{ st.textContent=t; }); st.textContent=`ready — loaded in ${(NMT.loadMs/1000).toFixed(1)} s`; }
       catch(err){ st.textContent="download failed: "+(err&&err.message||err); await setSetting("nmt",false); }
       renderNmtRow();
     });
     return;
   }
   const cached=await nmtCached();
-  st.textContent=(NMT.ready?"loaded":cached?"on, model cached":"on, model downloads on first use")+(aiAutoOn()?", used only without a connection":"")+(pend?`, ${pend} card${pend>1?"s":""} pending`:"");
+  const timing=NMT.loadMs?` (loaded in ${(NMT.loadMs/1000).toFixed(1)} s${NMT.lastMs?`, last translation ${(NMT.lastMs/1000).toFixed(1)} s`:""})`:"";
+  st.textContent=(NMT.ready?"loaded"+timing:cached?"on, model cached":"on, model downloads on first use")+(aiAutoOn()?", used only without a connection":"")+(pend?`, ${pend} card${pend>1?"s":""} pending`:"");
   if(pend) setBtn("Translate pending",async()=>{
     btn.disabled=true;
     try{ const n=await translatePending(t=>{ st.textContent=t; }); st.textContent=`translated ${n} card${n===1?"":"s"}`; }
@@ -334,7 +355,7 @@ function renderMore(main){
   const st=S.persist===true?"persistent on this device":S.persist===false?"local — the system may evict it; install the app to be safe":"checking…";
   main.innerHTML=`<div class="pane more">
     <div class="listhead">Your data</div>
-    <div class="mrow"><div><div class="t">Export</div><div class="s">progress + custom cards, via the share sheet</div></div><button class="btn mini" id="export">Export</button></div>
+    <div class="mrow"><div><div class="t">Export</div><div class="s">progress + cards, via the share sheet. ${backupNote()}</div></div><button class="btn mini" id="export">Export</button></div>
     <div class="mrow"><div><div class="t">Import</div><div class="s">a zeichentrainer-…json.txt file; same words are overwritten</div></div><button class="btn mini" id="import">Import</button></div>
     <div class="mrow"><div><div class="t">Flagged cards</div><div class="s">${deck().filter(d=>d.flag).length} flagged for review, share the list as text (e.g. with a teacher)</div></div><button class="btn mini" id="share-flag">Share</button></div>
     <div class="listhead">Translation</div>
@@ -353,6 +374,7 @@ function renderMore(main){
     </div>
     <div class="mrow"><div><div class="t">Review queue</div><div class="s" id="ai-runstatus"></div></div><button class="btn mini" id="ai-run" hidden></button></div>
     <div class="mrow"><div><div class="t">Storage</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
+    <div class="mrow"><div><div class="t">Photos</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">Delete ${oldShots().length}</button>`:""}</div>
     <div class="listhead">Danger zone</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">deletes progress, custom cards and photos</div></div><button class="btn mini danger" id="reset">Reset</button></div>
     <div class="listhead">About</div>
@@ -361,6 +383,7 @@ function renderMore(main){
   $("#export").onclick=exportData;
   $("#import").onclick=()=>$("#imp").click();
   $("#share-flag").onclick=shareFlagged;
+  const cs=$("#cleanshots"); if(cs) cs.onclick=cleanupShots;
   renderNmtRow(); renderAiRow();
   $("#reset").onclick=resetAll;
 }
@@ -419,18 +442,35 @@ function frontHTML(d){
   /* phrase fronts wrap only between words, and break where the photo did */
   return `${pic}<div class="reticle">${reticleSVG(single)}<div class="glyph" style="font-size:${headFont(d.c)}px">${d.seg?d.seg.map(x=>x==="\n"?"<br>":esc(x)).join("<wbr>"):esc(d.c)}</div></div>`;
 }
+/* ---------- pronunciation: the phone's own Chinese voice (nothing downloaded, works offline) ---------- */
+let TTS_VOICE;
+function ttsVoice(){
+  if(!("speechSynthesis" in window)) return null;
+  if(TTS_VOICE!==undefined) return TTS_VOICE;
+  const vs=speechSynthesis.getVoices();
+  if(!vs.length){ /* Android hands the voice list over a moment later */
+    speechSynthesis.addEventListener("voiceschanged",()=>{ TTS_VOICE=undefined; if(ttsVoice()&&S.revealed) render(); },{once:true});
+    return null;
+  }
+  TTS_VOICE=vs.find(v=>/^zh[-_]?CN/i.test(v.lang))||vs.find(v=>/^(zh|cmn)/i.test(v.lang))||null;
+  return TTS_VOICE;
+}
+function say(text){
+  const v=ttsVoice(); if(!v) return;
+  try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text.replace(/\n/g,"，")); u.voice=v; u.lang=v.lang; u.rate=0.85; speechSynthesis.speak(u); }catch(e){}
+}
+const SAY_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15 9.2a3.6 3.6 0 0 1 0 5.6"/><path d="M17.3 6.6a7 7 0 0 1 0 10.8"/></svg>';
+function sayBtn(d){ return ttsVoice()?`<button class="say" data-say="${esc(d.c)}" aria-label="Pronounce">${SAY_SVG}</button>`:""; }
+function wireSay(root){ (root||document).querySelectorAll("[data-say]").forEach(b=> b.onclick=e=>{ e.stopPropagation(); say(b.dataset.say); }); }
 function backHTML(d){
   const wordBlock = d.w ? `<div class="rule"></div>
     <div class="word"><span class="w">${esc(d.w)}</span><span class="wp">${esc(d.wp||"")}</span></div>
     <div class="wm">${esc(d.wm||"")}</div>` : "";
-  const exBlock = d.ex ? `<div class="ex"><div class="zh">${esc(d.ex)}</div>
-    ${d.exp?`<div class="exp">${esc(d.exp)}</div>`:""}
-    ${d.exm?`<div class="exm">${esc(d.exm)}</div>`:""}</div>` : "";
   const glossBlock = d.kind==="sign" ? `<div class="gtable">${(d.gloss||[]).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("")}</div>
     ${d.mt&&!d.mt.verified?`<span class="flag">meaning ${d.mt.src==="nmt"?"from the offline translation":d.mt.src==="phrasebook"?"from the phrasebook":d.mt.src==="llm"?"from the online AI":d.mt.src==="dict"?"from the dictionary":"composed word by word"}, unverified${d.mt.pending?" (translation pending)":""}${d.mt.suspect?" (reading uncertain: "+esc(d.mt.suspect)+")":""}</span>`:""}
     ${d.imgFull?`<div class="cardimg"><img src="${URL.createObjectURL(d.imgFull)}" alt="context"></div>`:""}` : "";
-  return `<div class="pin">${esc(d.p)}</div><div class="mean">${esc(d.m)}</div>
-    ${d.kind==="sign"?glossBlock:wordBlock+exBlock}`;
+  return `<div class="pin">${esc(d.p)}${sayBtn(d)}</div><div class="mean">${esc(d.m)}</div>
+    ${d.kind==="sign"?glossBlock:wordBlock}`;
 }
 function endSingle(){
   /* leave single-card test mode and restore the session queue */
@@ -480,6 +520,7 @@ function renderStudy(main){
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   const ed=$("#edit-card"); if(ed) ed.onclick=()=>{ S.editFrom="study"; S.editing=c; render(); };
+  wireSay();
   wireAi();
   document.querySelectorAll(".grade").forEach(b=> b.onclick=()=>grade(b.dataset.g));
 }
@@ -489,6 +530,8 @@ async function grade(g){
   const s=schedule(sched,g);
   S.progress[c]=s;
   try{ await idbPut("progress",{c,...s}); }catch(e){}
+  const d=cardOf(c);
+  if(s.fails>=LEECH_FAILS && d && !d.flag) await setFlag(c,true,`failed ${s.fails} times in a row — check text, meaning and photo`);
   if(S.single){ endSingle(); return; }
   if(g==="again") S.queue.push(c); else S.done++;
   S.idx++; S.revealed=false; render();
@@ -510,8 +553,6 @@ function renderAdd(main){
       <div class="field"><label>Meaning</label><input id="f-mean" placeholder="shutter"></div>
     </div>
     <div id="f-pinhint" class="err" style="display:none">Auto pinyin/meaning from OCR — unverified. Check the tones (多音字!) and adjust the meaning.</div>
-    <div class="field"><label>Example sentence (optional)</label><input id="f-ex" class="hanzi" placeholder="快门速度很快。"></div>
-    <div class="field"><label>Translation (optional)</label><input id="f-exm" placeholder="The shutter speed is very fast."></div>
     <div id="f-err" class="err" style="display:none"></div>
     <button class="btn primary block" id="f-add">Add card</button>
     <div id="f-ok" class="ok" style="display:none"></div>
@@ -528,11 +569,10 @@ function renderAdd(main){
   }
   const d0=S.draft||{};
   $("#f-word").value=d0.w||""; $("#f-pin").value=d0.p||""; $("#f-mean").value=d0.m||"";
-  $("#f-ex").value=d0.ex||""; $("#f-exm").value=d0.exm||"";
   if(d0.autoPin) $("#f-pinhint").style.display="";
   const saveDraft=()=>{ S.draft={ w:$("#f-word").value, p:$("#f-pin").value, m:$("#f-mean").value,
-    ex:$("#f-ex").value, exm:$("#f-exm").value, autoPin:$("#f-pinhint").style.display!=="none" }; };
-  ["f-word","f-pin","f-mean","f-ex","f-exm"].forEach(id=>$("#"+id).oninput=saveDraft);
+    autoPin:$("#f-pinhint").style.display!=="none" }; };
+  ["f-word","f-pin","f-mean"].forEach(id=>$("#"+id).oninput=saveDraft);
 }
 /* ---------- Cards: library with photos, detail, single-card test, edit ---------- */
 const THUMB={};
@@ -596,6 +636,7 @@ function renderCardDetail(main,c){
   };
   $("#d-edit").onclick=()=>{ S.editing=c; render(); };
   $("#d-flag").onclick=async()=>{ await setFlag(c,!d.flag); render(); };
+  wireSay();
   wireAi();
   const del=$("#d-del"); if(del) del.onclick=async()=>{
     if(!confirm("Delete “"+c.replace(/\n/g," / ")+"” and its progress?")) return;
@@ -621,9 +662,6 @@ function renderEdit(main,c){
     </div>
     ${isSign?"":`<div class="field"><label>Context word, pinyin, meaning (optional)</label>
       <div class="row"><input id="e-w" class="hanzi" value="${esc(d.w||"")}" placeholder="学习"><input id="e-wp" class="mono" value="${esc(d.wp||"")}" placeholder="xuéxí"><input id="e-wm" value="${esc(d.wm||"")}" placeholder="to learn"></div></div>`}
-    <div class="field"><label>Example sentence (optional)</label><input id="e-ex" class="hanzi" value="${esc(d.ex||"")}"></div>
-    <div class="field"><label>Example pinyin (optional)</label><input id="e-exp" class="mono" value="${esc(d.exp||"")}"></div>
-    <div class="field"><label>Translation (optional)</label><input id="e-exm" value="${esc(d.exm||"")}"></div>
     ${d.img?`<div class="field" id="e-imgfield"><label>Image (stays on this phone)</label><div class="pimg"><img src="${thumbURL(d)}" alt=""><button class="del" id="e-noimg">Remove image</button></div></div>`:""}
     <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> Flag for review (text, pinyin or meaning looks wrong)</label>
       <input id="e-note" value="${esc(d.flagNote||"")}" placeholder="Note for the reviewer (optional)"></div>
@@ -659,7 +697,7 @@ function renderEdit(main,c){
       if(!CJK.test(newC)) return fail("Please enter Chinese text.");
       if(newC!==c && deck().some(x=>x.c===newC)) return fail("“"+newC.replace(/\n/g," / ")+"” is already in the deck.");
     }
-    const upd={...d, p:pin, m:mean, ex:$("#e-ex").value.trim(), exp:$("#e-exp").value.trim(), exm:$("#e-exm").value.trim()};
+    const upd={...d, p:pin, m:mean}; delete upd.ex; delete upd.exp; delete upd.exm; /* example sentences were dropped in v41 */
     if(!isSign){ upd.w=$("#e-w").value.trim(); upd.wp=$("#e-wp").value.trim(); upd.wm=$("#e-wm").value.trim();
       if(!upd.w){ delete upd.w; delete upd.wp; delete upd.wm; } }
     if(removeImg){ delete upd.img; delete upd.imgFull; dropThumb(c); }
@@ -706,20 +744,20 @@ async function applyCardUpdate(c,upd,newC,pinByHand){
 }
 async function addManual(){
   const word=$("#f-word").value.trim(), pin=$("#f-pin").value.trim(), mean=$("#f-mean").value.trim();
-  const ex=$("#f-ex").value.trim(), exm=$("#f-exm").value.trim();
   const err=$("#f-err"), ok=$("#f-ok"); err.style.display="none"; ok.style.display="none";
   const fail=m=>{ err.textContent=m; err.style.display=""; };
   if(!CJK.test(word)) return fail("Please enter a Chinese word.");
   if(!pin||!mean) return fail("Pinyin and meaning are required.");
   if(deck().some(d=>d.c===word)) return fail("“"+word+"” is already in the deck.");
-  const card={c:word,p:pin,m:mean,ex,exp:"",exm,t:"Custom",at:Date.now()};
+  const card={c:word,p:pin,m:mean,t:"Custom",at:Date.now()};
+  if(S.pendingShot){ card.shot=S.pendingShot; S.pendingShot=null; }
   const chosenImg=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
   if(chosenImg){ card.img=chosenImg; }
   S.pendingImg=null; S.pendingFull=null;
   S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
   S.queue=buildQueue(false);
-  ["f-word","f-pin","f-mean","f-ex","f-exm"].forEach(id=>$("#"+id).value="");
+  ["f-word","f-pin","f-mean"].forEach(id=>$("#"+id).value="");
   const fi=$("#f-imgfield"); if(fi) fi.remove();
   $("#f-pinhint").style.display="none";
   S.draft=null;
@@ -816,7 +854,7 @@ async function quickSave(id,w,p,m,grp,ai){
     QSNOTE[id]=`“${w}” is already in the deck.`;
   }else{
     /* checked by the AI in the selection bar → verified; otherwise a dictionary prefill */
-    const card={c:w,p,m,ex:"",exp:"",exm:"",t:"Custom",at:Date.now(),mt:ai?{src:"llm",verified:true}:{src:"dict",verified:false}};
+    const card={c:w,p,m,t:"Custom",at:Date.now(),shot:id,mt:ai?{src:"llm",verified:true}:{src:"dict",verified:false}};
     /* doubtful OCR (low symbol confidence) → the online AI checks it automatically when enabled */
     const chars=R.flat.filter(c=>grp<0?SELS[id].has(c.i):c.g===grp);
     const why=ai?"":ocrDoubt(chars.map(c=>c.cf),m);
@@ -1058,7 +1096,7 @@ async function cropOk(id){
   const r=await cropBlob(id);
   if(!r){ alert("Draw a frame with your finger first."); return; }
   const rec=S.inbox.find(x=>x.id===id);
-  CROP=null; S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null;
+  CROP=null; S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null; S.pendingShot=id;
   S.mode="add"; render();
 }
 async function cropOcr(id){
@@ -1099,6 +1137,7 @@ async function fetchGz(url){
 function nmtLoad(status){
   if(NMT.ready) return NMT.ready;
   const say=t=>{ if(status) status(t); };
+  const t0=performance.now();
   NMT.ready=(async()=>{
     const info=await nmtInfo(); if(!info) throw new Error("translation model not in this build");
     say("starting translation engine …");
@@ -1112,6 +1151,7 @@ function nmtLoad(status){
     const bufs=await Promise.all([f.model,f.lex,...vocabNames].map(n=>fetchGz(NMT_DIR+n)));
     const [model,shortlist,...vocabs]=bufs;
     await nmtCall("loadTranslationModel",[{from:"zh",to:"en"},{model,shortlist,vocabs}],bufs);
+    NMT.loadMs=performance.now()-t0; /* shown in More — the field test on the Xiaomi */
     return true;
   })().catch(err=>{ NMT.ready=null; if(NMT.worker){ NMT.worker.terminate(); NMT.worker=null; } NMT.pending={}; throw err; });
   return NMT.ready;
@@ -1119,7 +1159,9 @@ function nmtLoad(status){
 async function nmtTranslate(texts,status){
   if(!texts.length) return [];
   await nmtLoad(status);
+  const t1=performance.now();
   const r=await nmtCall("translate",[{models:[{from:"zh",to:"en"}],texts:texts.map(t=>({text:t,html:false}))}]);
+  NMT.lastMs=performance.now()-t1;
   return r.map(x=>(x.target.text||"").trim());
 }
 /* was the model already fetched into the SW cache? (cheap check for the More tab) */
@@ -1313,8 +1355,8 @@ async function saveSign(id){
   /* a short single line is a word card (reticle front); anything longer is a sign card */
   const word=keep.length===1 && glyphs(c)<=4;
   const card=word
-    ? { c, p:pin, m:mean, ex:"",exp:"",exm:"", t:"Custom", at:Date.now(), mt, ...(keep[0].r.segs.filter(x=>CJK.test(x)).length>1?{seg:keep[0].r.segs.filter(x=>CJK.test(x))}:{}) }
-    : { kind:"sign", c, p:pin, m:mean, ex:"",exp:"",exm:"", t:"Sign", at:Date.now(),
+    ? { c, p:pin, m:mean, t:"Custom", at:Date.now(), shot:id, mt, ...(keep[0].r.segs.filter(x=>CJK.test(x)).length>1?{seg:keep[0].r.segs.filter(x=>CJK.test(x))}:{}) }
+    : { kind:"sign", c, p:pin, m:mean, t:"Sign", at:Date.now(), shot:id,
         segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
   if(S.pendingImg) card.img=S.pendingImg;
   if(S.pendingFull && !word) card.imgFull=S.pendingFull;
@@ -1455,14 +1497,14 @@ async function exportData(){
   const name="zeichentrainer-"+new Date().toISOString().slice(0,10)+".json.txt";
   const file=new File([json],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){
-    try{ await navigator.share({files:[file],title:name}); return; }
+    try{ await navigator.share({files:[file],title:name}); await setSetting("lastExport",Date.now()); return; }
     catch(err){ if(err && err.name==="AbortError") return; }
   }
   try{
     const url=URL.createObjectURL(new Blob([json],{type:"text/plain"}));
     const a=document.createElement("a");
     a.href=url; a.download=name;
-    document.body.appendChild(a); a.click(); a.remove();
+    document.body.appendChild(a); a.click(); a.remove(); await setSetting("lastExport",Date.now());
     setTimeout(()=>URL.revokeObjectURL(url),60000);
   }catch(err){ alert("Export failed: "+err); }
 }
