@@ -133,7 +133,8 @@ function reticleSVG(single){
 function render(){
   setStats();
   const main=$("#main");
-  main.classList.toggle("center", S.mode==="study");
+  main.classList.toggle("center", S.mode==="study"&&!S.editing);
+  if(S.editing) return renderEdit(main,S.editing); /* from the card detail or the study back */
   if(S.mode==="study") return renderStudy(main);
   if(S.mode==="add")   return renderAdd(main);
   if(S.mode==="inbox") return renderInbox(main);
@@ -463,7 +464,7 @@ function renderStudy(main){
     const grds=[["again","Again"],["hard","Hard"],["good","Good"],["easy","Easy"]].map(([g,l])=>
       `<button class="grade" data-g="${g}"><span class="lbl">${l}</span><span class="iv">${previewInterval(sched,g)}</span></button>`).join("");
     back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="grades">${grds}</div>
-      <button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?"⚑ Flagged for review · clear":"⚑ Flag for review"}</button></div>`;
+      <div class="backacts"><button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?"⚑ Flagged for review · clear":"⚑ Flag for review"}</button><button class="del" id="edit-card">✎ Edit</button></div></div>`;
   } else {
     back=`<div class="hint">Tap the character to reveal</div>`;
   }
@@ -475,6 +476,7 @@ function renderStudy(main){
   const rv=$("#reveal"); if(rv && !S.revealed) rv.onclick=()=>{ S.revealed=true; render(); };
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
+  const ed=$("#edit-card"); if(ed) ed.onclick=()=>{ S.editFrom="study"; S.editing=c; render(); };
   wireAi();
   document.querySelectorAll(".grade").forEach(b=> b.onclick=()=>grade(b.dataset.g));
 }
@@ -598,9 +600,14 @@ function renderCardDetail(main,c){
   };
 }
 function renderEdit(main,c){
-  const d=cardOf(c); if(!d){ S.editing=null; return renderCards(main); }
+  const d=cardOf(c); if(!d){ S.editing=null; S.editFrom=null; return render(); }
   const isSign=d.kind==="sign";
-  let removeImg=false;
+  let removeImg=false, aiApplied=false;
+  const leave=newC=>{ /* back to where the edit started: study back or card detail */
+    const from=S.editFrom; S.editing=null; S.editFrom=null;
+    if(from==="study"){ S.mode="study"; S.revealed=true; } else { S.mode="cards"; if(newC) S.detail=newC; }
+    render();
+  };
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back">← Back</button><span class="badge">edit</span></div>
     <div class="field"><label>${isSign?"Sign text, one line per row":"Word"}</label>
@@ -617,10 +624,25 @@ function renderEdit(main,c){
     ${d.img?`<div class="field" id="e-imgfield"><label>Image (stays on this phone)</label><div class="pimg"><img src="${thumbURL(d)}" alt=""><button class="del" id="e-noimg">Remove image</button></div></div>`:""}
     <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> Flag for review (OCR, pinyin or meaning looks wrong)</label>
       <input id="e-note" value="${esc(d.flagNote||"")}" placeholder="Note for the reviewer (optional)"></div>
+    ${aiOn()?`<div class="field"><button class="btn block" id="e-ai">Ask AI to check text, pinyin and meaning</button><div class="badge" id="e-aistatus" style="margin-top:6px"></div><div id="e-aibox" hidden class="aibox"></div></div>`:""}
     <div id="e-err" class="err" style="display:none"></div>
     <button class="btn primary block" id="e-save">Save changes</button>
   </div>`;
-  $("#back").onclick=()=>{ S.editing=null; render(); };
+  $("#back").onclick=()=>leave();
+  /* the AI fills the fields in place; nothing is stored until Save */
+  const ab=$("#e-ai"); if(ab) ab.onclick=async()=>{
+    const st=$("#e-aistatus"), box=$("#e-aibox"); ab.disabled=true; box.hidden=true;
+    const zh=$("#e-word").value, pin=$("#e-pin").value.trim(), mean=$("#e-mean").value.trim(), note=$("#e-note").value.trim();
+    try{
+      const [r]=await aiAsk([{kind:d.kind||"word",c:isSign?zh.split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):zh.replace(/\s+/g,""),p:pin,m:mean,flagNote:note,gloss:d.gloss,mt:{src:"dict",verified:false,suspect:"please check"}}],t=>{ st.textContent=t; });
+      if(r.zh&&CJK.test(r.zh)) $("#e-word").value=r.zh.replace(/\r/g,"");
+      if(r.p) $("#e-pin").value=r.p;
+      if(r.m) $("#e-mean").value=r.m;
+      aiApplied=true; st.textContent="";
+      box.hidden=false; box.innerHTML=`<div class="aihead">AI${r.ok?": looks right":" filled in its suggestion — check, then Save"}</div>${r.note&&r.note.toLowerCase()!=="ok"?`<div class="ainote">${esc(r.note)}</div>`:""}`;
+    }catch(err){ st.textContent="AI: "+(err&&err.message||err); }
+    ab.disabled=false;
+  };
   const ni=$("#e-noimg"); if(ni) ni.onclick=()=>{ removeImg=true; $("#e-imgfield").remove(); };
   $("#e-save").onclick=async()=>{
     const fail=m=>{ const e=$("#e-err"); e.textContent=m; e.style.display=""; };
@@ -639,10 +661,11 @@ function renderEdit(main,c){
       if(!upd.w){ delete upd.w; delete upd.wp; delete upd.wm; } }
     if(removeImg){ delete upd.img; delete upd.imgFull; dropThumb(c); }
     if(upd.mt){ upd.mt={...upd.mt, verified:true, pending:false}; delete upd.mt.suspect; } /* a human edited it */
+    if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
     if($("#e-flag").checked){ upd.flag=true; const note=$("#e-note").value.trim(); if(note) upd.flagNote=note; else delete upd.flagNote; }
     else { delete upd.flag; delete upd.flagNote; }
     await applyCardUpdate(c,upd,newC,pin!==d.p);
-    S.editing=null; S.detail=upd.c; render();
+    leave(upd.c);
   };
 }
 /* persist an edited card; when the Chinese text changes (OCR slip), recompute

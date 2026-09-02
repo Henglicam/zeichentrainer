@@ -227,7 +227,9 @@ button{font:inherit;color:inherit}
 .aiform{border:1px solid var(--line);border-radius:12px;padding:12px 14px 14px;margin:4px 0 10px}
 /* review flag */
 .flagbox{margin-top:16px;padding:10px 14px;border:1px solid var(--verm);border-radius:10px;color:var(--verm);font-size:14px;line-height:1.45;text-align:left;background:rgba(178,58,46,.08)}
-.flagbtn{display:block;margin:12px auto 0;font-size:14px} .flagbtn.on{color:var(--verm)}
+.backacts{display:flex;justify-content:center;gap:22px;margin-top:12px} .backacts .del{font-size:14px;padding:10px 4px}
+.flagbtn.on{color:var(--verm)}
+#e-aibox{margin-top:8px}
 .btn.on{border-color:var(--verm);color:var(--verm)}
 .chipset{display:flex;gap:6px}
 .field label.check{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--bone);margin-bottom:8px;min-height:44px}
