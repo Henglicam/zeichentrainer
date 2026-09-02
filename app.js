@@ -85,11 +85,14 @@ function idbClear(store){ return _os(store,"readwrite").then(os=>new Promise((re
 /* ---------- State ---------- */
 const S = { mode:"study", progress:{}, custom:[], inbox:[],
   queue:[], idx:0, revealed:false, done:0, ahead:false, ready:false,
-  pendingImg:null, pendingFull:null, pendingUse:"crop", prefill:null, persist:null };
+  pendingImg:null, pendingFull:null, pendingUse:"crop", prefill:null, persist:null,
+  detail:null, query:"", filterUnv:false, single:null, saved:null, editing:null };
 
 function deck(){
-  const seen = new Set(DECK_BASE.map(d=>d.c));
-  return [...DECK_BASE, ...S.custom.filter(d=>!seen.has(d.c))];
+  /* custom entries override base cards with the same key (edited base cards) */
+  const byC=new Map(DECK_BASE.map(d=>[d.c,d]));
+  S.custom.forEach(d=>byC.set(d.c,d));
+  return [...byC.values()];
 }
 function buildQueue(includeAhead){
   const p=S.progress, t=today(), d=deck();
@@ -134,7 +137,7 @@ function setStats(){
   $("#stat-open .v").textContent=remaining;
   $("#stat-done .j").textContent=S.done;
   $("#stat-deck .v").textContent=deck().length;
-  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.mode===S.mode));
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.mode===S.mode||(b.dataset.mode==="cards"&&S.mode==="add")));
 }
 
 const CLR={verm:"#B23A2E",bone:"#EDE6D6",line:"#2E2E24"};
@@ -156,6 +159,7 @@ function render(){
   if(S.mode==="add")   return renderAdd(main);
   if(S.mode==="inbox") return renderInbox(main);
   if(S.mode==="more")  return renderMore(main);
+  if(S.mode==="cards") return S.editing?renderEdit(main,S.editing):S.detail?renderCardDetail(main,S.detail):renderCards(main);
 }
 function renderMore(main){
   const ver=($(".ver")||{}).textContent||"";
@@ -175,6 +179,41 @@ function renderMore(main){
   $("#reset").onclick=resetAll;
 }
 
+function tagsHTML(d,isNew){
+  return `<div class="tags"><span class="t">${esc(d.t||"")}</span><span class="${isNew?"n":"r"}">${isNew?"new":"review"}</span></div>`;
+}
+function frontHTML(d){
+  if(d.kind==="sign"){
+    /* sign card: the picture is the exercise, text underneath wrapped only between words */
+    const lines=d.c.split("\n"), segs=d.segs||lines.map(l=>[l]);
+    const longest=Math.max(...lines.map(glyphs));
+    const fs=longest<=6?40:longest<=9?30:24;
+    return `<div class="signfront">${d.img?`<img class="signimg" src="${URL.createObjectURL(d.img)}" alt="sign">`:""}
+      <div class="signtext" style="font-size:${fs}px">${lines.map((l,i)=>`<div>${(segs[i]||[l]).map(esc).join("<wbr>")}</div>`).join("")}</div></div>`;
+  }
+  const single=glyphs(d.c)<=1;
+  return `<div class="reticle">${reticleSVG(single)}<div class="glyph" style="font-size:${headFont(d.c)}px">${d.seg?d.seg.map(esc).join("<wbr>"):esc(d.c)}</div></div>`;
+}
+function backHTML(d){
+  const wordBlock = d.w ? `<div class="rule"></div>
+    <div class="word"><span class="w">${esc(d.w)}</span><span class="wp">${esc(d.wp||"")}</span></div>
+    <div class="wm">${esc(d.wm||"")}</div>` : "";
+  const exBlock = d.ex ? `<div class="ex"><div class="zh">${esc(d.ex)}</div>
+    ${d.exp?`<div class="exp">${esc(d.exp)}</div>`:""}
+    ${d.exm?`<div class="exm">${esc(d.exm)}</div>`:""}</div>` : "";
+  const imgBlock = d.img ? `<div class="cardimg"><img src="${URL.createObjectURL(d.img)}" alt="source"></div>` : "";
+  const glossBlock = d.kind==="sign" ? `<div class="gtable">${(d.gloss||[]).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("")}</div>
+    ${d.mt&&!d.mt.verified?`<span class="flag">meaning: auto · unverified</span>`:""}
+    ${d.imgFull?`<div class="cardimg"><img src="${URL.createObjectURL(d.imgFull)}" alt="context"></div>`:""}` : "";
+  return `<div class="pin">${esc(d.p)}</div><div class="mean">${esc(d.m)}</div>
+    ${d.kind==="sign"?glossBlock:wordBlock+exBlock+imgBlock}`;
+}
+function endSingle(){
+  /* leave single-card test mode and restore the session queue */
+  const c=S.single; S.single=null;
+  if(S.saved){ Object.assign(S,S.saved); S.saved=null; }
+  S.revealed=false; S.mode="cards"; S.detail=c; render();
+}
 function renderStudy(main){
   if(!S.ready){ main.innerHTML=`<div class="badge">loading…</div>`; return; }
   const finished = S.idx>=S.queue.length;
@@ -189,42 +228,21 @@ function renderStudy(main){
     return;
   }
   const c=S.queue[S.idx], d=cardOf(c), sched=S.progress[c]||null, isNew=!S.progress[c];
-  const single=glyphs(d.c)<=1;
   let back="";
   if(S.revealed){
-    const wordBlock = d.w ? `<div class="rule"></div>
-      <div class="word"><span class="w">${esc(d.w)}</span><span class="wp">${esc(d.wp||"")}</span></div>
-      <div class="wm">${esc(d.wm||"")}</div>` : "";
-    const exBlock = d.ex ? `<div class="ex"><div class="zh">${esc(d.ex)}</div>
-      ${d.exp?`<div class="exp">${esc(d.exp)}</div>`:""}
-      ${d.exm?`<div class="exm">${esc(d.exm)}</div>`:""}</div>` : "";
-    const imgBlock = d.img ? `<div class="cardimg"><img src="${URL.createObjectURL(d.img)}" alt="source"></div>` : "";
-    const glossBlock = d.kind==="sign" ? `<div class="gtable">${(d.gloss||[]).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("")}</div>
-      ${d.mt&&!d.mt.verified?`<span class="flag">meaning: auto · unverified</span>`:""}
-      ${d.imgFull?`<div class="cardimg"><img src="${URL.createObjectURL(d.imgFull)}" alt="context"></div>`:""}` : "";
     const grds=[["again","Again"],["hard","Hard"],["good","Good"],["easy","Easy"]].map(([g,l])=>
       `<button class="grade" data-g="${g}"><span class="lbl">${l}</span><span class="iv">${previewInterval(sched,g)}</span></button>`).join("");
-    back=`<div style="margin-top:26px">
-      <div class="pin">${esc(d.p)}</div><div class="mean">${esc(d.m)}</div>
-      ${d.kind==="sign"?glossBlock:wordBlock+exBlock+imgBlock}
-      <div class="grades">${grds}</div></div>`;
+    back=`<div style="margin-top:26px">${backHTML(d)}<div class="grades">${grds}</div></div>`;
   } else {
     back=`<button class="btn wide" id="reveal">Reveal</button>`;
   }
-  let front=`<div class="reticle">${reticleSVG(single)}<div class="glyph" style="font-size:${headFont(d.c)}px">${d.seg?d.seg.map(esc).join("<wbr>"):esc(d.c)}</div></div>`;
-  if(d.kind==="sign"){
-    /* sign card: the picture is the exercise, text underneath wrapped only between words */
-    const lines=d.c.split("\n"), segs=d.segs||lines.map(l=>[l]);
-    const longest=Math.max(...lines.map(glyphs));
-    const fs=longest<=6?40:longest<=9?30:24;
-    front=`<div class="signfront">${d.img?`<img class="signimg" src="${URL.createObjectURL(d.img)}" alt="sign">`:""}
-      <div class="signtext" style="font-size:${fs}px">${lines.map((l,i)=>`<div>${(segs[i]||[l]).map(esc).join("<wbr>")}</div>`).join("")}</div></div>`;
-  }
   main.innerHTML=`<div class="card">
-    <div class="tags"><span class="t">${esc(d.t||"")}</span><span class="${isNew?"n":"r"}">${isNew?"new":"review"}</span></div>
-    ${front}
+    ${S.single?`<div class="topline"><button class="del" id="back-cards">← Cards</button><span class="badge">testing one card</span></div>`:""}
+    ${tagsHTML(d,isNew)}
+    ${frontHTML(d)}
     ${back}</div>`;
   const rv=$("#reveal"); if(rv) rv.onclick=()=>{ S.revealed=true; render(); };
+  const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
   document.querySelectorAll(".grade").forEach(b=> b.onclick=()=>grade(b.dataset.g));
 }
 
@@ -233,6 +251,7 @@ async function grade(g){
   const s=schedule(sched,g);
   S.progress[c]=s;
   try{ await idbPut("progress",{c,...s}); }catch(e){}
+  if(S.single){ endSingle(); return; }
   if(g==="again") S.queue.push(c); else S.done++;
   S.idx++; S.revealed=false; render();
 }
@@ -244,6 +263,7 @@ function renderAdd(main){
       <div class="pimg"><img src="${URL.createObjectURL(curImg)}" alt="card image">
       <span class="imgacts">${S.pendingFull&&S.pendingImg?`<button class="del${S.pendingUse!=="full"?" on":""}" id="f-usecrop">CROP</button><button class="del${S.pendingUse==="full"?" on":""}" id="f-usefull">FULL PHOTO</button>`:""}<button class="del" id="f-noimg">Remove image</button></span></div></div>`:"";
   main.innerHTML=`<div class="pane">
+    <div class="topline"><button class="del" id="back-cards">← Cards</button></div>
     <div class="lead">Add a card by hand. Pinyin and meaning filled from OCR are unverified until you check them.</div>
     ${imgField}
     <div class="field"><label>词 · Word</label><input id="f-word" class="hanzi big" placeholder="快门"></div>
@@ -257,9 +277,9 @@ function renderAdd(main){
     <div id="f-err" class="err" style="display:none"></div>
     <button class="btn primary block" id="f-add">Add card</button>
     <div id="f-ok" class="ok" style="display:none"></div>
-    <div id="c-list"></div>
   </div>`;
   $("#f-add").onclick=addManual;
+  $("#back-cards").onclick=()=>{ S.mode="cards"; S.detail=null; render(); };
   const ni=$("#f-noimg"); if(ni) ni.onclick=()=>{ S.pendingImg=null; S.pendingFull=null; renderAdd(main); };
   const uc=$("#f-usecrop"); if(uc) uc.onclick=()=>{ S.pendingUse="crop"; renderAdd(main); };
   const uf=$("#f-usefull"); if(uf) uf.onclick=()=>{ S.pendingUse="full"; renderAdd(main); };
@@ -276,6 +296,104 @@ function renderAdd(main){
     ex:$("#f-ex").value, exm:$("#f-exm").value, autoPin:$("#f-pinhint").style.display!=="none" }; };
   ["f-word","f-pin","f-mean","f-ex","f-exm"].forEach(id=>$("#"+id).oninput=saveDraft);
   renderCustomList();
+}
+/* ---------- Cards: library with photos, detail, single-card test, edit ---------- */
+const THUMB={};
+function thumbURL(d){ return THUMB[d.c]||(THUMB[d.c]=URL.createObjectURL(d.img)); }
+function dropThumb(c){ if(THUMB[c]){ URL.revokeObjectURL(THUMB[c]); delete THUMB[c]; } }
+function cardStatus(d){
+  const p=S.progress[d.c]; if(!p) return `<span class="st new">new</span>`;
+  const days=Math.round((p.due-today())/DAY);
+  return `<span class="st">${days<=0?"due":"in "+days+" d"}</span>`;
+}
+function cardsListHTML(){
+  const q=S.query.trim().toLowerCase();
+  const customSet=new Set(S.custom.map(d=>d.c));
+  let list=[...S.custom.slice().reverse(), ...DECK_BASE.filter(d=>!customSet.has(d.c))];
+  if(S.filterUnv) list=list.filter(d=>d.mt&&!d.mt.verified);
+  if(q) list=list.filter(d=>[d.c,d.p,d.m,d.w,d.wp,d.wm].filter(Boolean).join(" ").toLowerCase().includes(q));
+  const rows=list.map(d=>`<button class="crow" data-c="${esc(d.c)}">
+      ${d.img?`<img class="thumb" src="${thumbURL(d)}" alt="">`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`}
+      <span class="ct"><span class="c">${esc(d.c.replace(/\n/g," / "))}</span><span class="p">${esc(d.p)}</span><span class="m">${esc(d.m)}</span></span>
+      <span class="cs">${d.kind==="sign"?'<span class="pill">sign</span>':customSet.has(d.c)?'<span class="pill">custom</span>':""}${cardStatus(d)}</span></button>`).join("");
+  return {html:rows||`<div class="badge" style="margin-top:20px">No cards match.</div>`, n:list.length};
+}
+function renderCards(main){
+  const unv=S.custom.filter(d=>d.mt&&!d.mt.verified).length;
+  const {html,n}=cardsListHTML();
+  main.innerHTML=`<div class="pane">
+    <div class="cardsbar"><input id="q" type="search" placeholder="Search hanzi, pinyin, meaning" value="${esc(S.query)}" autocomplete="off"><button class="btn mini primary" id="newcard">+ New</button></div>
+    <div class="chips"><button class="chip${S.filterUnv?" on":""}" id="chip-unv">Unverified · ${unv}</button><span class="badge" id="cnt">${n} of ${deck().length}</span></div>
+    <div class="clist" id="clist">${html}</div>
+  </div>`;
+  const wire=()=>{ document.querySelectorAll(".crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.c; render(); }); };
+  const refresh=()=>{ const r=cardsListHTML(); $("#clist").innerHTML=r.html; $("#cnt").textContent=`${r.n} of ${deck().length}`; wire(); };
+  $("#q").oninput=e=>{ S.query=e.target.value; refresh(); };
+  $("#chip-unv").onclick=()=>{ S.filterUnv=!S.filterUnv; render(); };
+  $("#newcard").onclick=()=>{ S.mode="add"; render(); };
+  wire();
+}
+function renderCardDetail(main,c){
+  const d=cardOf(c); if(!d){ S.detail=null; return renderCards(main); }
+  const isCustom=S.custom.some(x=>x.c===c);
+  const p=S.progress[c];
+  const stat=p?`interval ${p.interval} d · ease ${p.ease.toFixed(2)} · ${p.reps} review${p.reps===1?"":"s"} · next ${new Date(p.due).toLocaleDateString("en-GB")}`:"not studied yet";
+  main.innerHTML=`<div class="pane">
+    <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${d.kind==="sign"?"sign card":isCustom?"custom card":"base deck"}${d.mt&&!d.mt.verified?" · unverified":""}</span></div>
+    <div class="card">${tagsHTML(d,!p)}${frontHTML(d)}<div style="margin-top:22px">${backHTML(d)}</div></div>
+    <div class="detailacts">
+      <button class="btn primary" id="d-test">Test this card</button>
+      <button class="btn" id="d-edit">Edit</button>
+      ${isCustom?`<button class="btn danger" id="d-del">Delete</button>`:`<button class="btn" disabled>Base card</button>`}
+    </div>
+    <div class="badge" style="margin-top:14px">${esc(stat)}</div>
+  </div>`;
+  $("#back").onclick=()=>{ S.detail=null; render(); };
+  $("#d-test").onclick=()=>{
+    S.saved={queue:S.queue,idx:S.idx,done:S.done,ahead:S.ahead};
+    S.single=c; S.queue=[c]; S.idx=0; S.revealed=false; S.mode="study"; render();
+  };
+  $("#d-edit").onclick=()=>{ S.editing=c; render(); };
+  const del=$("#d-del"); if(del) del.onclick=async()=>{
+    if(!confirm("Delete “"+c.replace(/\n/g," / ")+"” and its progress?")) return;
+    await delCustom(c); S.detail=null; render();
+  };
+}
+function renderEdit(main,c){
+  const d=cardOf(c); if(!d){ S.editing=null; return renderCards(main); }
+  const isSign=d.kind==="sign";
+  let removeImg=false;
+  main.innerHTML=`<div class="pane">
+    <div class="topline"><button class="del" id="back">← Back</button><span class="badge">edit</span></div>
+    <div class="field"><label>${isSign?"Sign text":"词 · Word"}</label><div class="ro hanzi">${esc(d.c).replace(/\n/g,"<br>")}</div></div>
+    <div class="row">
+      <div class="field narrow"><label>Pinyin</label><input id="e-pin" class="mono" value="${esc(d.p)}"></div>
+      <div class="field"><label>Meaning</label><input id="e-mean" value="${esc(d.m)}"></div>
+    </div>
+    ${isSign?"":`<div class="field"><label>Context word · pinyin · meaning (optional)</label>
+      <div class="row"><input id="e-w" class="hanzi" value="${esc(d.w||"")}" placeholder="学习"><input id="e-wp" class="mono" value="${esc(d.wp||"")}" placeholder="xuéxí"><input id="e-wm" value="${esc(d.wm||"")}" placeholder="to learn"></div></div>`}
+    <div class="field"><label>Example sentence · optional</label><input id="e-ex" class="hanzi" value="${esc(d.ex||"")}"></div>
+    <div class="field"><label>Example pinyin · optional</label><input id="e-exp" class="mono" value="${esc(d.exp||"")}"></div>
+    <div class="field"><label>Translation · optional</label><input id="e-exm" value="${esc(d.exm||"")}"></div>
+    ${d.img?`<div class="field" id="e-imgfield"><label>Image · stays local</label><div class="pimg"><img src="${thumbURL(d)}" alt=""><button class="del" id="e-noimg">Remove image</button></div></div>`:""}
+    <div id="e-err" class="err" style="display:none"></div>
+    <button class="btn primary block" id="e-save">Save changes</button>
+  </div>`;
+  $("#back").onclick=()=>{ S.editing=null; render(); };
+  const ni=$("#e-noimg"); if(ni) ni.onclick=()=>{ removeImg=true; $("#e-imgfield").remove(); };
+  $("#e-save").onclick=async()=>{
+    const pin=$("#e-pin").value.trim(), mean=$("#e-mean").value.trim();
+    if(!pin||!mean){ const e=$("#e-err"); e.textContent="Pinyin and meaning are required."; e.style.display=""; return; }
+    const upd={...d, p:pin, m:mean, ex:$("#e-ex").value.trim(), exp:$("#e-exp").value.trim(), exm:$("#e-exm").value.trim()};
+    if(!isSign){ upd.w=$("#e-w").value.trim(); upd.wp=$("#e-wp").value.trim(); upd.wm=$("#e-wm").value.trim();
+      if(!upd.w){ delete upd.w; delete upd.wp; delete upd.wm; } }
+    if(removeImg){ delete upd.img; delete upd.imgFull; dropThumb(c); }
+    if(upd.mt) upd.mt={...upd.mt, verified:true}; /* a human edited it */
+    const i=S.custom.findIndex(x=>x.c===c);
+    if(i>=0) S.custom[i]=upd; else S.custom.push(upd); /* base card -> local override */
+    try{ await idbPut("custom",upd); }catch(e){}
+    S.editing=null; S.detail=c; render();
+  };
 }
 function renderCustomList(){
   const box=$("#c-list"); if(!box) return;
@@ -314,7 +432,7 @@ async function addManual(){
 async function delCustom(c){
   S.custom=S.custom.filter(x=>x.c!==c);
   try{ await idbDel("custom",c); await idbDel("progress",c); }catch(e){}
-  delete S.progress[c];
+  delete S.progress[c]; dropThumb(c);
   setStats(); renderCustomList();
 }
 
@@ -727,7 +845,7 @@ async function confirmCard(c){
   const d=S.custom.find(x=>x.c===c); if(!d||!d.mt) return;
   d.mt.verified=true;
   try{ await idbPut("custom",d); }catch(e){}
-  renderCustomList();
+  if(S.mode==="cards") render(); else renderCustomList();
 }
 
 /* ---------- Kamera / Inbox ---------- */
