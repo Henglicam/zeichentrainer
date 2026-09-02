@@ -7,7 +7,7 @@
 
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
-const APP_V=79; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=80; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -801,8 +801,9 @@ function renderEdit(main,c){
      drawing sheet; SIGN carries the lines and the card's crop as the photo reference (no boxes: the whole crop) */
   const eid="edit"+(S.editSeq=(S.editSeq||0)+1), lines0=isSign?d.c.split("\n"):frontLines(d); /* plain id: it goes into selectors */
   const sg=SIGN[eid]={lines:lines0.slice(),orig:lines0.slice(),img:d.img||null,onChange:null};
+  const cropURL=d.img?URL.createObjectURL(d.img):""; /* the crop itself, not the whole-photo thumbnail (H: "only the cropped image, not with context") */
   const leave=newC=>{ /* back to where the edit started: study back or card detail */
-    delete SIGN[eid];
+    delete SIGN[eid]; if(cropURL) URL.revokeObjectURL(cropURL);
     const from=S.editFrom; S.editing=null; S.editFrom=null;
     if(from==="study"){ S.mode="study"; S.revealed=true; } else { S.mode="cards"; if(newC) S.detail=newC; }
     render();
@@ -819,7 +820,7 @@ function renderEdit(main,c){
     </div>
     ${isSign||!d.w?"":`<div class="field"><label>Context word, pinyin, meaning (optional)</label>
       <div class="row"><input id="e-w" class="hanzi" value="${esc(d.w||"")}" placeholder="学习"><input id="e-wp" class="mono" value="${esc(d.wp||"")}" placeholder="xuéxí"><input id="e-wm" value="${esc(d.wm||"")}" placeholder="to learn"></div></div>`}
-    ${d.img?`<div class="field" id="e-imgfield"><label>Image (stays on this phone)</label><div class="pimg"><img src="${thumbURL(d)}" alt=""><button class="del" id="e-noimg">Remove image</button></div></div>`:""}
+    ${d.img?`<div class="field" id="e-imgfield"><label>Image (stays on this phone)</label><div class="pimg"><img src="${cropURL}" alt=""><button class="del" id="e-noimg">Remove image</button></div></div>`:""}
     <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> Flag for review (text, pinyin or meaning looks wrong)</label>
       <input id="e-note" value="${esc(d.flagNote||"")}" placeholder="Note for the reviewer (optional)"></div>
     ${aiOn()?`<div class="field"><button class="btn block" id="e-ai">Ask AI to check text, pinyin and meaning</button><div class="badge" id="e-aistatus" style="margin-top:6px"></div><div id="e-aibox" hidden class="aibox"></div></div>`:""}
