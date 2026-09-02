@@ -48,10 +48,10 @@ button{font:inherit;color:inherit}
 .tags span{padding:3px 10px;border-radius:999px;border:1px solid var(--line)}
 .tags .t{color:var(--text2)} .tags .n{color:var(--verm);border-color:var(--verm)} .tags .r{color:var(--jade);border-color:var(--jade)}
 .tags .f{color:var(--verm);border-color:var(--verm);background:rgba(178,58,46,.12)}
-.reticle{position:relative;width:260px;height:260px;margin:0 auto}
+.reticle{position:relative;width:260px;height:260px;max-width:100%;margin:0 auto}
 .reticle svg{position:absolute;inset:0}
 .reticle .glyph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-family:var(--hanzi);line-height:1.15;color:var(--bone);user-select:none;
+  font-family:var(--hanzi);line-height:1.15;color:var(--bone);user-select:none;white-space:nowrap;text-align:center;
   padding:0 12px;text-align:center;word-break:keep-all;overflow-wrap:anywhere}
 .pin{font-family:var(--mono);font-size:21px;color:var(--bone);letter-spacing:.5px}
 .mean{font-size:18px;color:var(--bone);margin-top:6px;line-height:1.45}
@@ -212,7 +212,7 @@ button{font:inherit;color:inherit}
 .signfront{width:100%;max-width:440px;margin:0 auto}
 .signimg{max-width:100%;max-height:220px;display:block;margin:0 auto 10px;border:1px solid var(--line);border-radius:10px}
 .signtext{position:relative;font-family:var(--hanzi);line-height:1.3;color:var(--bone);padding:16px 14px;
-  word-break:keep-all;overflow-wrap:anywhere;border:1px solid var(--line);text-align:center}
+  white-space:nowrap;border:1px solid var(--line);text-align:center}
 .signtext::before,.signtext::after{content:"";position:absolute;width:14px;height:14px;border-color:var(--bone);border-style:solid}
 .signtext::before{left:-1px;top:-1px;border-width:2px 0 0 2px} .signtext::after{right:-1px;bottom:-1px;border-width:0 2px 2px 0}
 .flag{display:inline-block;font-size:13px;font-weight:500;padding:4px 10px;border:1px solid var(--verm);border-radius:999px;color:var(--verm);margin-top:12px}
