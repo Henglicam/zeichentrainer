@@ -1,4 +1,4 @@
-const CACHE = "zt-v70";
+const CACHE = "zt-v71";
 /* OCR assets (./vendor/, ~12 MB) live in their own cache that survives shell
    updates — otherwise every cache version bump would re-download all of
    Tesseract. Only bump this when vendor files change. */
@@ -9,7 +9,10 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  /* cache:"reload" — straight from the server, past the browser's HTTP cache. GitHub Pages sends max-age=600, so
+     after two deploys within ten minutes a new worker could otherwise fill its cache with the previous shell
+     (v70: the phone kept showing v69 with the v70 worker installed). */
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", e => {
