@@ -7,7 +7,7 @@
 
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
-const APP_V=72; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=73; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -902,7 +902,7 @@ async function addManual(){
   const card={c:word,p:pin,m:mean,t:"Custom",at:Date.now()};
   if(S.pendingShot){ card.shot=S.pendingShot; S.pendingShot=null; }
   const chosenImg=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
-  if(chosenImg){ card.img=chosenImg; }
+  if(chosenImg){ card.img=await jpegOf(chosenImg); }
   S.pendingImg=null; S.pendingFull=null;
   S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
@@ -1020,7 +1020,7 @@ async function quickSave(id,w,p,m,grp,ai){
       card.gloss=segs.filter(x=>x.w!=="\n").map(x=>({w:x.w,p:pinyinPro.pinyin(x.w,{toneType:"symbol"}),m:bestSense(x.w)})); /* word-by-word for the back */
     }
     const img=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
-    if(img) card.img=img;
+    if(img) card.img=await jpegOf(img);
     if(S.pendingFull) card.imgFull=S.pendingFull; /* whole photo as context on the back */
     S.custom.push(card);
     try{ await idbPut("custom",card); }catch(e){}
@@ -1435,6 +1435,16 @@ function estimateSkew(imgData,W,H){
   }
   return fine;
 }
+/* the reader gets lossless images (PNG); the card keeps a JPEG so a crop stays ~100 KB in IndexedDB */
+async function jpegOf(blob,q){
+  if(!blob||blob.type!=="image/png") return blob;
+  try{ const bmp=await createImageBitmap(blob); const cv=document.createElement("canvas"); cv.width=bmp.width; cv.height=bmp.height; cv.getContext("2d",{alpha:false}).drawImage(bmp,0,0); bmp.close();
+    return (await new Promise(res=>cv.toBlob(res,"image/jpeg",q||0.85)))||blob; }catch(e){ return blob; }
+}
+/* What the reader sees must be a JPEG: this Tesseract build misreads canvas PNGs and WebPs (measured on the tilted
+   composite: JPEG 0.95 → 本区域禁止违规 99 %, the same pixels as PNG → one character). Intermediate crops stay PNG so the
+   only lossy step is the last one — two JPEG generations in a row lost the line too. */
+const READ_JPEG=0.95;
 async function deskewBlob(blob){
   try{
     const bmp=await createImageBitmap(blob);
@@ -1443,15 +1453,15 @@ async function deskewBlob(blob){
     const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
     const ctx=cv.getContext("2d",{willReadFrequently:true}); ctx.drawImage(bmp,0,0,w,h);
     const angle=estimateSkew(ctx.getImageData(0,0,w,h),w,h);
-    if(Math.abs(angle)<1.5){ bmp.close(); return {blob,angle:0}; }
+    if(Math.abs(angle)<1.5){ bmp.close(); return {blob:await jpegOf(blob,READ_JPEG),angle:0}; }
     /* rotate the full crop back to horizontal; the corners are filled with the edge colour */
     const r=-angle*Math.PI/180, W=bmp.width, H=bmp.height;
     const nw=Math.round(Math.abs(W*Math.cos(r))+Math.abs(H*Math.sin(r))), nh=Math.round(Math.abs(W*Math.sin(r))+Math.abs(H*Math.cos(r)));
     const out=document.createElement("canvas"); out.width=nw; out.height=nh;
-    const o=out.getContext("2d");
+    const o=out.getContext("2d",{alpha:false}); /* opaque: the reader misreads a PNG that carries an alpha channel */
     const e=ctx.getImageData(1,1,1,1).data; o.fillStyle=`rgb(${e[0]},${e[1]},${e[2]})`; o.fillRect(0,0,nw,nh);
     o.translate(nw/2,nh/2); o.rotate(r); o.drawImage(bmp,-W/2,-H/2); bmp.close();
-    const rot=await new Promise(res=>out.toBlob(res,"image/jpeg",0.9));
+    const rot=await new Promise(res=>out.toBlob(res,"image/jpeg",READ_JPEG));
     return {blob:rot||blob,angle};
   }catch(e){ return {blob,angle:0}; }
 }
@@ -1468,25 +1478,80 @@ async function cropSign(id){
     const w=await ocrWorker(status);
     await loadSigns().catch(()=>{}); /* phrasebook optional — falls back to word gloss */
     status("reading the text …");
-    const dk=await deskewBlob(r.blob); if(dk.angle){ S.pendingImg=dk.blob; status(`straightened by ${Math.round(dk.angle)}°, reading the text …`); }
-    await w.setParameters({tessedit_pageseg_mode:"6"});
-    _ocrLog=p=>status("recognizing … "+p+"%");
-    const {data}=await w.recognize(dk.blob,{},{blocks:true,text:true}).finally(()=>{ _ocrLog=null; });
-    const lines=[];
-    (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>{
-      let syms=[];
-      (l.words||[]).forEach(wd=>(wd.symbols||[]).forEach(sy=>{
-        if(sy.confidence>=35 && (CJK.test(sy.text)||SIGN_PUNCT.test(sy.text))) syms.push({ch:sy.text,cf:sy.confidence,b:sy.bbox});
-      }));
-      const edge=x=>/[、，。：:,.]/.test(x.ch);
-      while(syms.length&&edge(syms[0])) syms.shift();
-      while(syms.length&&edge(syms[syms.length-1])) syms.pop();
-      const t=syms.map(x=>x.ch).join("");
-      if(CJK.test(t)) lines.push({t,cf:syms.filter(x=>CJK.test(x.ch)).map(x=>x.cf),bx:syms.map(x=>x.b?{x0:x.b.x0,y0:x.b.y0,x1:x.b.x1,y1:x.b.y1}:null)});
-    })));
-    if(!lines.length){ status("No Chinese characters recognized."); return; }
-    /* img = the (straightened) crop the text was read from, boxes = where each character sits in it: the picker shows the original */
-    SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:dk.blob, region:r};
+    /* one reading pass: the lines with their symbols (text, confidence, box) */
+    const readPass=async(blob)=>{
+      await w.setParameters({tessedit_pageseg_mode:"6"});
+      _ocrLog=p=>status("recognizing … "+p+"%");
+      const {data}=await w.recognize(blob,{},{blocks:true,text:true}).finally(()=>{ _ocrLog=null; });
+      const lines=[];
+      (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>{
+        let syms=[];
+        (l.words||[]).forEach(wd=>(wd.symbols||[]).forEach(sy=>{
+          if(sy.confidence>=35 && (CJK.test(sy.text)||SIGN_PUNCT.test(sy.text))) syms.push({ch:sy.text,cf:sy.confidence,b:sy.bbox});
+        }));
+        const edge=x=>/[、，。：:,.]/.test(x.ch);
+        while(syms.length&&edge(syms[0])) syms.shift();
+        while(syms.length&&edge(syms[syms.length-1])) syms.pop();
+        const t=syms.map(x=>x.ch).join("");
+        if(CJK.test(t)) lines.push({t,cf:syms.filter(x=>CJK.test(x.ch)).map(x=>x.cf),bx:syms.map(x=>x.b?{x0:x.b.x0,y0:x.b.y0,x1:x.b.x1,y1:x.b.y1}:null)});
+      })));
+      return lines;
+    };
+    /* readings compete by confidence, a mild weight on length, and how much of the text forms dictionary words —
+       garbage comes as many characters that are each plausible but form no words (加罗, 区和和, 二门花二人人) */
+    const meanCf=ls=>{ const cf=ls.flatMap(l=>l.cf); return cf.length?cf.reduce((a,c)=>a+c,0)/cf.length:0; };
+    const dictCover=ls=>{ if(!DICT) return 0.5; const ch=[...ls.map(l=>l.t).join("")].filter(c=>CJK.test(c)); if(!ch.length) return 0;
+      let i=0, cov=0; while(i<ch.length){ let hit=0; for(let len=Math.min(4,ch.length-i);len>=2;len--){ if(DICT.has(ch.slice(i,i+len).join(""))){ hit=len; break; } } if(hit){ cov+=hit; i+=hit; } else i++; }
+      return cov/ch.length; };
+    const score=ls=>{ const n=ls.flatMap(l=>l.cf).length; if(!n) return 0; const frag=Math.min(1,(n/ls.length)/4); /* many one- and two-character lines = fragments */
+      return meanCf(ls)*Math.pow(n,0.35)*frag*(0.75+0.5*dictCover(ls)); };
+    const toJpeg=(bmp,scale)=>{ const cv=document.createElement("canvas"); cv.width=Math.max(1,Math.round(bmp.width*scale)); cv.height=Math.max(1,Math.round(bmp.height*scale));
+      cv.getContext("2d",{alpha:false}).drawImage(bmp,0,0,cv.width,cv.height); return new Promise(res=>cv.toBlob(res,"image/jpeg",READ_JPEG)); };
+    const scaleBoxes=(ls,k)=>ls.map(l=>({...l,bx:l.bx.map(b=>b&&{x0:b.x0/k,y0:b.y0/k,x1:b.x1/k,y1:b.y1/k})}));
+    let dk=await deskewBlob(r.blob); if(dk.angle){ S.pendingImg=dk.blob; status(`straightened by ${Math.round(dk.angle)}°, reading the text …`); }
+    const passes=[{lines:await readPass(dk.blob),img:dk.blob,angle:dk.angle,tightened:false}];
+    /* Second look at a tight crop (v73). A loose frame with stripes, ribbons or a second label fools the tilt estimate and
+       the block reader (H: a Maotai label read as one false character from the ribbon). Where the first pass found text
+       in a small part of the frame, or was unsure, that part is cut out with one text height of margin, straightened on
+       its own and read again — at two character heights and native size, because the model's output swings with scale
+       even on a clean crop (measured: the same image read perfectly at 0.7× and as garbage at 1×). Best reading wins. */
+    const boxes=passes[0].lines.flatMap(l=>l.bx).filter(Boolean);
+    if(boxes.length){
+      const bmp=await createImageBitmap(dk.blob);
+      const hs=boxes.map(b=>b.y1-b.y0).sort((a,b)=>a-b), H=hs[hs.length>>1];
+      /* half a text height of the photo around the text, then one and a half of plain margin in the edge colour:
+         the reader wants margins, but real margins bring the clutter back */
+      const m=H/2, pad=Math.round(1.5*H);
+      const x0=Math.max(0,Math.min(...boxes.map(b=>b.x0))-m), y0=Math.max(0,Math.min(...boxes.map(b=>b.y0))-m);
+      const x1=Math.min(bmp.width,Math.max(...boxes.map(b=>b.x1))+m), y1=Math.min(bmp.height,Math.max(...boxes.map(b=>b.y1))+m);
+      const frac=((x1-x0)*(y1-y0))/(bmp.width*bmp.height); r.tightFrac=frac;
+      if((frac<0.6||meanCf(passes[0].lines)<92) && x1-x0>=24 && y1-y0>=24){
+        status("found text, reading it closely …");
+        const cv=document.createElement("canvas"); cv.width=(x1-x0)+2*pad; cv.height=(y1-y0)+2*pad;
+        const c2=cv.getContext("2d",{alpha:false,willReadFrequently:true});
+        c2.drawImage(bmp,x0,y0,x1-x0,y1-y0,pad,pad,x1-x0,y1-y0);
+        /* padding in the crop's median colour (the background) — a corner sample once hit a red ribbon and framed a white label in red */
+        const d=c2.getImageData(pad,pad,x1-x0,y1-y0).data, ch=[[],[],[]]; for(let i=0;i<d.length;i+=4*7){ ch[0].push(d[i]); ch[1].push(d[i+1]); ch[2].push(d[i+2]); }
+        const med=a=>{ a.sort((p,q)=>p-q); return a[a.length>>1]; }; c2.fillStyle=`rgb(${med(ch[0])},${med(ch[1])},${med(ch[2])})`;
+        c2.fillRect(0,0,cv.width,pad); c2.fillRect(0,cv.height-pad,cv.width,pad); c2.fillRect(0,0,pad,cv.height); c2.fillRect(cv.width-pad,0,pad,cv.height);
+        const tight=await new Promise(res=>cv.toBlob(res,"image/png")); /* lossless intermediate — deskewBlob hands the reader a JPEG */
+        const dk2=await deskewBlob(tight), bmp2=await createImageBitmap(dk2.blob);
+        const scales=[50/H,70/H,90/H].filter(k=>k<0.92); if(H<=110) scales.push(1); /* three character heights; native too while it is cheap */
+        for(const k of scales){
+          const lines=await readPass(k===1?dk2.blob:await toJpeg(bmp2,k));
+          passes.push({lines:k===1?lines:scaleBoxes(lines,k),img:dk2.blob,angle:dk2.angle,tightened:true,scale:k});
+        }
+        bmp2.close();
+      }
+      bmp.close();
+    }
+    passes.sort((a,b)=>score(b.lines)-score(a.lines));
+    r.passes=passes.map(p=>({s:Math.round(score(p.lines)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:+(p.scale||1).toFixed(2),tight:p.tightened}));
+    const best=passes[0], lines=best.lines, img=best.img, tightened=best.tightened; dk=best;
+    if(tightened) S.pendingImg=best.img;
+    if(!lines.length){ status("No Chinese characters recognized — frame the characters tightly and try again."); return; }
+    /* img = the (straightened, maybe tightened) crop the text was read from, boxes = where each character sits in it: the picker shows the original */
+    SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img, angle:dk.angle||0, tightened, region:r};
     delete READING[id]; renderShots();
     if(aiAutoOn()) signAskAI(id); /* every reading is checked without a tap */
   }catch(err){ status("OCR failed: "+(err&&err.message||err)); }
@@ -1570,7 +1635,7 @@ async function openCharPick(id,k,i,btn){
    among the characters (signs are monospaced), the size and vertical position come from the median box height. */
 function charBox(sg,k,i){
   const raw=(sg.boxes||[])[k]||[], n=[...(sg.lines[k]||"")].length;
-  if(!raw.length||raw.length!==n||i>=n) return null;
+  if(!raw.length||raw.length!==n||i>=n||n<2) return null; /* one character: its box alone is unreliable, the whole crop is shown */
   const ok=raw.filter(Boolean); if(!ok.length) return null;
   const med=a=>{ const t=a.slice().sort((p,q)=>p-q); return t[t.length>>1]; };
   const H=med(ok.map(b=>b.y1-b.y0)), cy=med(ok.map(b=>(b.y0+b.y1)/2));
@@ -1585,7 +1650,7 @@ async function drawCharRef(cv,sg,k,i,opt){ /* opt: {h: display height, side: nei
     const bmp=await createImageBitmap(sg.img);
     const bx=(sg.boxes||[])[k]||[];
     let b=charBox(sg,k,i);
-    if(!b){ const all=bx.filter(Boolean); b=all.length?{x0:Math.min(...all.map(x=>x.x0)),y0:Math.min(...all.map(x=>x.y0)),x1:Math.max(...all.map(x=>x.x1)),y1:Math.max(...all.map(x=>x.y1))}:{x0:0,y0:0,x1:bmp.width,y1:bmp.height}; }
+    if(!b) b={x0:0,y0:0,x1:bmp.width,y1:bmp.height}; /* no usable geometry: the whole crop */
     const o=opt||{}, h=Math.max(8,b.y1-b.y0), w=Math.max(8,b.x1-b.x0);
     if(o.square){ /* a square around the character (side = 1.5 × its larger dimension), the photo's edge padded in INK */
       const side=Math.max(w,h)*1.5, cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2, sx=cx-side/2, sy=cy-side/2, N=o.h||600;
@@ -1737,7 +1802,12 @@ function signEditorHTML(id){
   const low=sg.conf?Math.min(...sg.conf.flat().concat([100])):100;
   const doubt=!aiLive()&&low<OCR_DOUBT?` The reading looks uncertain (confidence ${Math.round(low)}%) — check the text.`:"";
   const head=sg.aiBusy?"Reading with the AI …":sg.ai?"Read and checked by the AI. Tap a character to change it.":`Text read from the photo. Tap a character to change it.${doubt}`;
-  return `<div class="signed"><div class="badge${sg.ai?" ai":""}" style="margin-bottom:8px">${head}</div>${rows}
+  /* what the reader actually looked at (H: "the wrong section is read") — the straightened, maybe tightened crop */
+  const nChars=sg.lines.join("").replace(/[^\u4e00-\u9fff]/g,"").length, meanCf=(sg.conf||[]).flat().reduce((a,c,_,arr)=>a+c/arr.length,0);
+  const weak=nChars<=2&&meanCf<85?`<div class="err" style="margin:4px 0 8px">Only ${nChars} character${nChars===1?"":"s"} found — if the photo shows more, frame the characters tightly and drag a corner to read again.</div>`:"";
+  if(sg.img&&!sg.imgURL) sg.imgURL=URL.createObjectURL(sg.img); /* once per reading — revoking on re-render broke the image still on screen */
+  const readArea=sg.imgURL?`<div class="readarea"><img src="${sg.imgURL}" alt="area read"><div class="badge">Read from this area${sg.angle?` (straightened by ${Math.round(sg.angle)}°)`:""}${sg.tightened?", cut to the text":""}.</div></div>`:"";
+  return `<div class="signed">${readArea}${weak}<div class="badge${sg.ai?" ai":""}" style="margin-bottom:8px">${head}</div>${rows}
     <div class="smean" id="smean-${id}"></div><div class="sgloss" id="sgloss-${id}"></div>
     <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save card</button>${aiOn()&&!sg.ai&&!sg.aiBusy?`<button class="btn mini" data-signai="${id}">Ask AI</button>`:""}<button class="del" data-splitwords="${id}">Split into words</button><button class="del" data-signcancel="${id}">cancel</button></div>
     ${sg.aiErr?`<div class="err" style="margin-top:6px">${esc(sg.aiErr)}</div>`:""}</div>`;
@@ -1819,7 +1889,7 @@ async function saveSign(id){
     ? { c, p:pin, m:mean, t:"Custom", at:Date.now(), shot:id, lb:"photo", mt, ...(keep[0].r.segs.filter(x=>CJK.test(x)).length>1?{seg:keep[0].r.segs.filter(x=>CJK.test(x)), gloss:keep[0].r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))}:{}) }
     : { kind:"sign", c, p:pin, m:mean, t:"Sign", at:Date.now(), shot:id,
         segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
-  if(S.pendingImg) card.img=S.pendingImg;
+  if(S.pendingImg) card.img=await jpegOf(S.pendingImg);
   if(S.pendingFull) card.imgFull=S.pendingFull;
   S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
