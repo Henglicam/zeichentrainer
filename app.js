@@ -167,11 +167,23 @@ function render(){
   if(S.mode==="cards") return S.editing?renderEdit(main,S.editing):S.detail?renderCardDetail(main,S.detail):renderCards(main);
 }
 /* ---------- online AI review (T3, opt-in) ----------
-   Flagged cards and pending translations can be checked by an online model
-   (Claude API) through the VPN. Only text leaves the phone: hanzi, pinyin,
-   meaning and the note — never photos. The key lives in the settings store. */
-const AI_URL="https://api.anthropic.com/v1/messages", AI_MODEL_DEFAULT="claude-sonnet-5";
-function aiOn(){ return !!(S.settings.aiKey); }
+   Flagged cards, doubtful OCR and pending translations can be checked by an
+   online model (DeepSeek / Qwen / GLM via the OpenAI-style API, or Claude).
+   Only text leaves the phone: hanzi, pinyin, meaning and the note — never
+   photos. The key lives in the settings store. */
+/* providers: Chinese ones take WeChat Pay / Alipay and need no VPN; all but Claude speak the OpenAI-style chat API */
+const AI_PROVIDERS={
+  deepseek:{name:"DeepSeek", base:"https://api.deepseek.com", model:"deepseek-chat", hint:"sk-…", where:"Key: platform.deepseek.com → API keys. Top up with WeChat Pay or Alipay (a few yuan last months). No VPN needed."},
+  qwen:{name:"Qwen (Alibaba Bailian)", base:"https://dashscope.aliyuncs.com/compatible-mode/v1", model:"qwen-plus", hint:"sk-…", where:"Key: bailian.console.aliyun.com → API-KEY (Alipay account). No VPN needed."},
+  glm:{name:"GLM (Zhipu)", base:"https://open.bigmodel.cn/api/paas/v4", model:"glm-4-flash", hint:"….…", where:"Key: open.bigmodel.cn → API keys. WeChat Pay or Alipay; glm-4-flash is free. No VPN needed."},
+  claude:{name:"Claude (Anthropic)", base:"https://api.anthropic.com/v1/messages", model:"claude-sonnet-5", hint:"sk-ant-…", where:"Key: console.anthropic.com → API keys. Needs the VPN and a card from outside China."},
+  custom:{name:"Other (OpenAI-style API)", base:"", model:"", hint:"API key", where:"Any provider with an OpenAI-compatible /chat/completions endpoint: enter its base URL and model name."}
+};
+const AI_PROVIDER_DEFAULT="deepseek";
+function aiProvider(){ return AI_PROVIDERS[S.settings.aiProvider]?S.settings.aiProvider:AI_PROVIDER_DEFAULT; }
+function aiModel(){ return S.settings.aiModel||AI_PROVIDERS[aiProvider()].model; }
+function aiBase(){ const pv=aiProvider(); return (pv==="custom"?(S.settings.aiBase||""):AI_PROVIDERS[pv].base).replace(/\/+$/,""); }
+function aiOn(){ return !!(S.settings.aiKey)&&!!aiBase(); }
 function aiQueue(){ return deck().filter(d=>d.flag||(d.mt&&(d.mt.pending||d.mt.suspect))); }
 function aiAutoOn(){ return aiOn()&&S.settings.aiAuto===true; }
 /* "obviously false" OCR: mean symbol confidence below the threshold, or words no dictionary knows */
@@ -197,17 +209,23 @@ For every card return the corrected card. Rules: "zh" = the Chinese text, fixed 
 Answer with a JSON array only, one object per input card in the same order: [{"c":"<input c>","zh":"…","p":"…","m":"…","note":"…","ok":true|false}]. No prose, no code fences.`;
 async function aiAsk(cards,status){
   const key=S.settings.aiKey; if(!key) throw new Error("no API key");
-  const model=S.settings.aiModel||AI_MODEL_DEFAULT;
+  const pv=aiProvider(), model=aiModel(), user=JSON.stringify(cards.map(aiCardPayload));
   status&&status(`asking ${model} about ${cards.length} card${cards.length>1?"s":""} …`);
   let r;
   try{
-    r=await fetch(AI_URL,{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-      body:JSON.stringify({model,max_tokens:4000,system:AI_SYSTEM,messages:[{role:"user",content:JSON.stringify(cards.map(aiCardPayload))}]})});
-  }catch(err){ throw new Error("no connection (offline, or the API is blocked — VPN?)"); }
+    if(pv==="claude")
+      r=await fetch(aiBase(),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({model,max_tokens:4000,system:AI_SYSTEM,messages:[{role:"user",content:user}]})});
+    else /* OpenAI-style chat completions (DeepSeek, Qwen, GLM, …) */
+      r=await fetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},
+        body:JSON.stringify({model,max_tokens:4000,temperature:0,messages:[{role:"system",content:AI_SYSTEM},{role:"user",content:user}]})});
+  }catch(err){ throw new Error("no connection (offline"+(pv==="claude"?", or the API is blocked — VPN?":", or this provider refuses calls from a browser — try another provider")+")"); }
   if(r.status===401||r.status===403) throw new Error("API key rejected ("+r.status+")");
-  if(!r.ok){ let t=""; try{ t=(await r.json()).error.message; }catch(e){} throw new Error("API error "+r.status+(t?": "+t:"")); }
+  if(r.status===402) throw new Error("no credit left at "+AI_PROVIDERS[pv].name);
+  if(!r.ok){ let t=""; try{ const j=await r.json(); t=(j.error&&(j.error.message||j.error))||j.message||""; }catch(e){} throw new Error("API error "+r.status+(t?": "+t:"")); }
   const data=await r.json();
-  const text=(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("").trim().replace(/^```(?:json)?\s*|\s*```$/g,"");
+  const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
+  const text=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,"");
   let arr; try{ arr=JSON.parse(text); }catch(e){ throw new Error("could not read the model's answer"); }
   if(!Array.isArray(arr)) throw new Error("unexpected answer");
   return arr.map(x=>({zh:String(x.zh||"").trim(),p:String(x.p||"").trim(),m:String(x.m||"").trim(),note:String(x.note||"").trim(),ok:!!x.ok,at:Date.now(),model}));
@@ -269,15 +287,21 @@ async function aiAuto(){
 function renderAiRow(){
   const st=$("#ai-status"), btn=$("#ai-btn"), run=$("#ai-run"), form=$("#ai-form"); if(!st) return;
   const all=aiQueue(), q=all.length, fl=all.filter(d=>d.flag).length, sp=all.filter(d=>!d.flag&&d.mt.suspect).length, pd=q-fl-sp;
-  st.textContent=aiOn()?`on (${S.settings.aiModel||AI_MODEL_DEFAULT}), sends card text only, never photos`:"off — needs your own API key (Claude), text only, through the VPN";
+  st.textContent=aiOn()?`on: ${AI_PROVIDERS[aiProvider()].name}, ${aiModel()}. Sends card text only, never photos`:"off — needs your own API key (DeepSeek, Qwen, GLM or Claude), text only";
   btn.textContent=aiOn()?"Settings":"Set up";
   run.hidden=!aiOn(); run.disabled=!q;
   run.textContent=q?`Ask AI about ${q} card${q>1?"s":""}`:"Nothing to review";
   const rs=$("#ai-runstatus"); if(rs) rs.textContent=q?`${fl} flagged, ${sp} doubtful OCR, ${pd} pending translation${pd===1?"":"s"}`:"flag a card, or save an OCR result that looks doubtful";
   btn.onclick=()=>{ form.hidden=!form.hidden; if(!form.hidden) $("#ai-key").focus(); };
+  const sel=$("#ai-provider"), showPv=()=>{ const pv=AI_PROVIDERS[sel.value]||AI_PROVIDERS[AI_PROVIDER_DEFAULT];
+    $("#ai-basefield").hidden=sel.value!=="custom"; $("#ai-where").textContent=pv.where; $("#ai-key").placeholder=pv.hint;
+    /* model follows the provider unless typed by hand in this form */
+    if(!$("#ai-model").dataset.hand) $("#ai-model").value=(sel.value===S.settings.aiProvider&&S.settings.aiModel)||pv.model; };
+  sel.onchange=showPv; $("#ai-model").oninput=e=>{ e.target.dataset.hand="1"; }; showPv();
   $("#ai-save").onclick=async()=>{
-    const key=$("#ai-key").value.trim(), model=$("#ai-model").value.trim();
-    if(key) await setSetting("aiKey",key); await setSetting("aiModel",model||AI_MODEL_DEFAULT); await setSetting("aiAuto",$("#ai-auto").checked);
+    const key=$("#ai-key").value.trim(), model=$("#ai-model").value.trim(), pv=sel.value;
+    await setSetting("aiProvider",pv); await setSetting("aiBase",$("#ai-base").value.trim());
+    if(key) await setSetting("aiKey",key); await setSetting("aiModel",model||AI_PROVIDERS[pv].model); await setSetting("aiAuto",$("#ai-auto").checked);
     form.hidden=true; renderAiRow();
   };
   $("#ai-remove").onclick=async()=>{ await setSetting("aiKey",""); await setSetting("aiAuto",false); $("#ai-key").value=""; form.hidden=true; renderAiRow(); };
@@ -329,10 +353,13 @@ function renderMore(main){
     <div class="listhead">Online AI review</div>
     <div class="mrow"><div><div class="t">AI review</div><div class="s" id="ai-status"></div></div><button class="btn mini" id="ai-btn">Set up</button></div>
     <div class="aiform" id="ai-form" hidden>
-      <div class="field"><label>Claude API key (stays on this phone)</label><input id="ai-key" type="password" autocomplete="off" placeholder="sk-ant-…" value="${esc(S.settings.aiKey||"")}"></div>
-      <div class="field"><label>Model</label><input id="ai-model" class="mono" autocomplete="off" value="${esc(S.settings.aiModel||AI_MODEL_DEFAULT)}"></div>
+      <div class="field"><label>Provider</label><select id="ai-provider">${Object.entries(AI_PROVIDERS).map(([k,v])=>`<option value="${k}"${aiProvider()===k?" selected":""}>${esc(v.name)}</option>`).join("")}</select>
+        <div class="badge" id="ai-where" style="margin-top:6px"></div></div>
+      <div class="field" id="ai-basefield" hidden><label>API base URL</label><input id="ai-base" class="mono" autocomplete="off" placeholder="https://…/v1" value="${esc(S.settings.aiBase||"")}"></div>
+      <div class="field"><label>API key (stays on this phone)</label><input id="ai-key" type="password" autocomplete="off" value="${esc(S.settings.aiKey||"")}"></div>
+      <div class="field"><label>Model</label><input id="ai-model" class="mono" autocomplete="off" value="${esc(aiModel())}"></div>
       <div class="field"><label class="check"><input type="checkbox" id="ai-auto"${S.settings.aiAuto?" checked":""}> Ask the AI automatically when online (doubtful OCR, pending translations)</label></div>
-      <div class="badge">What is sent: the Chinese text, pinyin, meaning and your note of flagged or pending cards. Never photos. Needs the VPN.</div>
+      <div class="badge">What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. Never photos.</div>
       <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" id="ai-save">Save</button><button class="del" id="ai-remove">Remove key</button></div>
     </div>
     <div class="mrow"><div><div class="t">Review queue</div><div class="s" id="ai-runstatus"></div></div><button class="btn mini" id="ai-run" hidden></button></div>
