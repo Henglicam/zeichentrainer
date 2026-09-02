@@ -7,7 +7,7 @@
 
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
-const APP_V=73; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=74; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1445,14 +1445,14 @@ async function jpegOf(blob,q){
    composite: JPEG 0.95 → 本区域禁止违规 99 %, the same pixels as PNG → one character). Intermediate crops stay PNG so the
    only lossy step is the last one — two JPEG generations in a row lost the line too. */
 const READ_JPEG=0.95;
-async function deskewBlob(blob){
+async function deskewBlob(blob,forced){ /* forced: rotate by this angle instead of estimating (the card crop follows the reading crop) */
   try{
     const bmp=await createImageBitmap(blob);
     const sc=Math.min(1,360/Math.max(bmp.width,bmp.height));
     const w=Math.max(1,Math.round(bmp.width*sc)), h=Math.max(1,Math.round(bmp.height*sc));
     const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
     const ctx=cv.getContext("2d",{willReadFrequently:true}); ctx.drawImage(bmp,0,0,w,h);
-    const angle=estimateSkew(ctx.getImageData(0,0,w,h),w,h);
+    const angle=forced!=null?forced:estimateSkew(ctx.getImageData(0,0,w,h),w,h);
     if(Math.abs(angle)<1.5){ bmp.close(); return {blob:await jpegOf(blob,READ_JPEG),angle:0}; }
     /* rotate the full crop back to horizontal; the corners are filled with the edge colour */
     const r=-angle*Math.PI/180, W=bmp.width, H=bmp.height;
@@ -1515,15 +1515,17 @@ async function cropSign(id){
        in a small part of the frame, or was unsure, that part is cut out with one text height of margin, straightened on
        its own and read again — at two character heights and native size, because the model's output swings with scale
        even on a clean crop (measured: the same image read perfectly at 0.7× and as garbage at 1×). Best reading wins. */
-    const boxes=passes[0].lines.flatMap(l=>l.bx).filter(Boolean);
+    const boxes=passes[0].lines.flatMap(l=>l.bx).filter(Boolean); let cardBlob=null;
     if(boxes.length){
       const bmp=await createImageBitmap(dk.blob);
       const hs=boxes.map(b=>b.y1-b.y0).sort((a,b)=>a-b), H=hs[hs.length>>1];
       /* half a text height of the photo around the text, then one and a half of plain margin in the edge colour:
          the reader wants margins, but real margins bring the clutter back */
-      const m=H/2, pad=Math.round(1.5*H);
-      const x0=Math.max(0,Math.min(...boxes.map(b=>b.x0))-m), y0=Math.max(0,Math.min(...boxes.map(b=>b.y0))-m);
-      const x1=Math.min(bmp.width,Math.max(...boxes.map(b=>b.x1))+m), y1=Math.min(bmp.height,Math.max(...boxes.map(b=>b.y1))+m);
+      /* the boxes' heights are right, their horizontal ends are not (they drift along the line and end early on the last
+         character — H: 骑 cut in half), so one full text height sideways, half a height above and below */
+      const mX=H, mY=H/2, pad=Math.round(1.5*H);
+      const x0=Math.max(0,Math.min(...boxes.map(b=>b.x0))-mX), y0=Math.max(0,Math.min(...boxes.map(b=>b.y0))-mY);
+      const x1=Math.min(bmp.width,Math.max(...boxes.map(b=>b.x1))+mX), y1=Math.min(bmp.height,Math.max(...boxes.map(b=>b.y1))+mY);
       const frac=((x1-x0)*(y1-y0))/(bmp.width*bmp.height); r.tightFrac=frac;
       if((frac<0.6||meanCf(passes[0].lines)<92) && x1-x0>=24 && y1-y0>=24){
         status("found text, reading it closely …");
@@ -1542,13 +1544,19 @@ async function cropSign(id){
           passes.push({lines:k===1?lines:scaleBoxes(lines,k),img:dk2.blob,angle:dk2.angle,tightened:true,scale:k});
         }
         bmp2.close();
+        /* the card image: the same area with a real margin of one text height all round, rotated like the reading crop */
+        const cx0=Math.max(0,x0-H/2), cy0=Math.max(0,y0-H/2), cx1=Math.min(bmp.width,x1+H/2), cy1=Math.min(bmp.height,y1+H/2);
+        const cc=document.createElement("canvas"); cc.width=cx1-cx0; cc.height=cy1-cy0;
+        cc.getContext("2d",{alpha:false}).drawImage(bmp,cx0,cy0,cc.width,cc.height,0,0,cc.width,cc.height);
+        const cardPng=await new Promise(res=>cc.toBlob(res,"image/png"));
+        cardBlob=dk2.angle?(await deskewBlob(cardPng,dk2.angle)).blob:await jpegOf(cardPng,READ_JPEG);
       }
       bmp.close();
     }
     passes.sort((a,b)=>score(b.lines)-score(a.lines));
     r.passes=passes.map(p=>({s:Math.round(score(p.lines)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:+(p.scale||1).toFixed(2),tight:p.tightened}));
     const best=passes[0], lines=best.lines, img=best.img, tightened=best.tightened; dk=best;
-    if(tightened) S.pendingImg=best.img;
+    if(tightened) S.pendingImg=cardBlob||best.img;
     if(!lines.length){ status("No Chinese characters recognized — frame the characters tightly and try again."); return; }
     /* img = the (straightened, maybe tightened) crop the text was read from, boxes = where each character sits in it: the picker shows the original */
     SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img, angle:dk.angle||0, tightened, region:r};
