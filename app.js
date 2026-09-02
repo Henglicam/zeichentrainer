@@ -635,7 +635,8 @@ function lineMeaning(line){
   }
   const words=parts.filter(x=>!x.punct);
   const full=words.length>0 && words.every(x=>x.ph);
-  const en=words.map(x=>x.ph?x.m:(x.w+" "+(x.m||"?"))).join(" · ");
+  /* fully phrasebook-matched line reads as English; a composed line shows word + gloss for every part */
+  const en=full?words.map(x=>x.m).join(" · "):words.map(x=>x.w+" "+(x.m||"?")).join(" · ");
   const py=pinyinPro.pinyin(words.map(x=>x.w).join(""),{type:"array",toneType:"symbol"}).join(" ");
   return {en,full,gloss:words,segs:parts.map(x=>x.w),py};
 }
