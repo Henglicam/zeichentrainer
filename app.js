@@ -454,6 +454,9 @@ function renderMore(main){
     </div>
     <div class="mrow"><div><div class="t">Review queue</div><div class="s" id="ai-runstatus"></div></div><button class="btn mini" id="ai-run" hidden></button></div>
     <div class="mrow"><div><div class="t">Storage</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
+    <div class="listhead">Updates without a VPN</div>
+    <div class="mrow"><div><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div></div><button class="btn mini" id="mirror-check">Check now</button></div>
+    <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>
     <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}</div></div></div>
     <div class="mrow"><div><div class="t">Photos</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">Delete ${oldShots().length}</button>`:""}</div>
     <div class="listhead">Danger zone</div>
@@ -465,6 +468,8 @@ function renderMore(main){
   $("#import").onclick=()=>$("#imp").click();
   $("#share-flag").onclick=shareFlagged;
   const cs=$("#cleanshots"); if(cs) cs.onclick=cleanupShots;
+  $("#mirror-url").onchange=async e=>{ await setSetting("mirror",e.target.value.trim()); };
+  $("#mirror-check").onclick=()=>{ mirrorCheck(true); };
   renderNmtRow(); renderAiRow();
   $("#reset").onclick=resetAll;
 }
@@ -1686,8 +1691,15 @@ if("serviceWorker" in navigator){
     navigator.serviceWorker.register("./sw.js").then(reg=>{
       reg.update();
       /* installed PWAs rarely check for updates on their own — check when brought to foreground */
-      document.addEventListener("visibilitychange",()=>{ if(!document.hidden) reg.update().catch(()=>{}); });
+      document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ reg.update().catch(()=>{}); mirrorCheck(); } });
+      mirrorCheck();
     }).catch(()=>{});
+    navigator.serviceWorker.addEventListener("message",e=>{
+      const d=e.data||{}; if(d.type!=="mirror-update") return;
+      MIRROR.busy=false; MIRROR.last=d;
+      const st=$("#mirror-status"); if(st) st.textContent=mirrorText();
+      if(d.status==="updated") setTimeout(()=>location.reload(),600);
+    });
     /* new version activated (skipWaiting+claim) → reload once automatically.
        First install (no controller before) does not trigger a reload. */
     let hadCtrl=!!navigator.serviceWorker.controller;
@@ -1696,6 +1708,26 @@ if("serviceWorker" in navigator){
       location.reload();
     });
   });
+}
+/* ---------- updates without a VPN: ask the worker to pull a newer shell from a mirror ---------- */
+const MIRROR_DEFAULT="https://cdn.jsdelivr.net/gh/henglicam/zeichentrainer@main/";
+const MIRROR={busy:false,last:null,at:0};
+function mirrorURL(){ const u=(S.settings.mirror||MIRROR_DEFAULT).trim(); return u.endsWith("/")?u:u+"/"; }
+function mirrorCheck(force){
+  if(!navigator.onLine||MIRROR.busy) return;
+  if(!force && Date.now()-MIRROR.at<3600000) return; /* at most once an hour by itself */
+  const ctrl=navigator.serviceWorker&&navigator.serviceWorker.controller; if(!ctrl) return;
+  MIRROR.busy=true; MIRROR.at=Date.now();
+  const local=+((($(".ver")||{}).textContent||"").match(/v(\d+)/)||[])[1]||0;
+  ctrl.postMessage({type:"mirror-update",mirror:mirrorURL(),local});
+  const st=$("#mirror-status"); if(st) st.textContent="checking the mirror …";
+  setTimeout(()=>{ if(MIRROR.busy){ MIRROR.busy=false; MIRROR.last={status:"error",error:"no answer from the mirror"}; const s2=$("#mirror-status"); if(s2) s2.textContent=mirrorText(); } },30000);
+}
+function mirrorText(){
+  const d=MIRROR.last; if(!d) return "checks github.io and the mirror on every start";
+  if(d.status==="current") return `up to date (mirror has v${d.remote})`;
+  if(d.status==="updated") return `updated to v${d.remote} from the mirror — reloading`;
+  return "mirror not reachable: "+(d.error||"");
 }
 /* MIUI/Chrome evicts storage of non-installed sites — request persistent storage */
 if(navigator.storage && navigator.storage.persist){
