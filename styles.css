@@ -214,7 +214,6 @@ button{font:inherit;color:inherit}
 .signed .ck.on,.ckpick .ck.on{background:var(--tint);color:#fff} /* the chosen character stays filled whatever the surface */
 .ckpick .cands{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 .ckacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px} .ckacts .grow{flex:1}
-.ck.add{font-family:var(--sans);font-size:22px;color:var(--tint);min-width:36px}
 .reading{display:flex;flex-direction:column;gap:8px;padding:4px 0}
 .reading .bar{position:relative;height:4px;border-radius:2px;background:var(--fill);overflow:hidden}
 .reading .bar i{position:absolute;top:0;bottom:0;width:40%;border-radius:2px;background:var(--tint);animation:slide 1.2s ease-in-out infinite}
