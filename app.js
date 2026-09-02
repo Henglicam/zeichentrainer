@@ -1153,7 +1153,12 @@ function aiOverlayAuto(id){
 }
 
 /* ---------- Cropping (crop → OCR or card image) ---------- */
-let CROP=null; // {id, rect:{x,y,w,h,lw,lh}} while cropping
+let CROP=null; // {id, rect:{x,y,w,h,lw,lh}} while cropping — stays until the card is saved (H, v50)
+function cropRectStyle(){
+  const r=CROP&&CROP.rect; if(!r||!r.lw||!r.lh) return "";
+  const pc=v=>(v*100).toFixed(2)+"%";
+  return ` style="display:block;left:${pc(r.x/r.lw)};top:${pc(r.y/r.lh)};width:${pc(r.w/r.lw)};height:${pc(r.h/r.lh)}"`;
+}
 function wireCrop(layer){
   const rect=layer.querySelector(".croprect");
   layer.onpointerdown=e=>{
@@ -1388,7 +1393,7 @@ async function cropSign(id){
   if(!r) return; /* no frame yet — nothing to do */
   const rec=S.inbox.find(x=>x.id===id);
   S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null;
-  CROP=null; delete OCRRES[id]; delete SELS[id]; delete SIGN[id]; delete QSNOTE[id];
+  delete OCRRES[id]; delete SELS[id]; delete SIGN[id]; delete QSNOTE[id]; /* the frame stays visible while reading */
   renderShots();
   const box=$("#ocr-"+id); if(!box) return;
   const status=t=>{ READING[id]=t; const b=$("#ocr-"+id); if(b) b.innerHTML=`<span class="badge">${esc(t)}</span>`; }; /* re-queried: a re-render must not swallow it */
@@ -1506,7 +1511,7 @@ async function saveSign(id){
   S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
   S.queue=buildQueue(false); QSCARD[id]=c;
-  delete SIGN[id];
+  delete SIGN[id]; if(CROP&&CROP.id===id) CROP=null; /* saved — the frame has done its job */
   QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}, ${mt.src==="llm"?"checked by the AI":mt.src==="nmt"?"meaning from the offline translation":mt.src==="phrasebook"?"meaning from the phrasebook":"meaning composed word by word"}${mt.src==="llm"?"":" (unverified"+(mt.pending?", translation pending":"")+")"}.`+(mt.suspect?` Reading uncertain (${esc(mt.suspect)})${aiAutoOn()?", the AI will check it":""}.`:"");
   aiAutoSoon();
   setStats(); renderShots();
@@ -1542,14 +1547,14 @@ function renderShots(){
         <div class="shotwrap">
           <img src="${shotURL(s)}" alt="photo">
           ${cropping?"":overlayHTML(s.id)}
-          ${cropping?`<div class="croplayer" data-id="${s.id}"><div class="croprect"><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div></div></div>`:""}
+          ${cropping?`<div class="croplayer" data-id="${s.id}"><div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div></div></div>`:""}
         </div>
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">CANCEL</button>`
           :`<button class="ocr-btn" data-crop="${s.id}">CROP</button><button class="del" data-del="${s.id}">delete</button>`}</span></div>
-        <div class="ocr" id="ocr-${s.id}">${cropping
+        <div class="ocr" id="ocr-${s.id}">${SIGN[s.id]?signEditorHTML(s.id):OCRRES[s.id]?selbarHTML(s.id):READING[s.id]?`<span class="badge">${esc(READING[s.id])}</span>`:cropping
           ?`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it.</span>`
-          :(SIGN[s.id]?signEditorHTML(s.id):OCRRES[s.id]?selbarHTML(s.id):QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]} <button class="del" data-nextshot="1">Next photo</button></div>${qsAiBox(s.id)}`:READING[s.id]?`<span class="badge">${esc(READING[s.id])}</span>`:"")}</div>
+          :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]} <button class="del" data-nextshot="1">Next photo</button></div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
     }).join("");
   box.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>delShot(b.dataset.del));
@@ -1557,7 +1562,7 @@ function renderShots(){
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
   box.querySelectorAll("[data-cropok]").forEach(b=> b.onclick=()=>cropOk(b.dataset.cropok));
   box.querySelectorAll("[data-cropocr]").forEach(b=> b.onclick=()=>cropOcr(b.dataset.cropocr));
-  box.querySelectorAll("[data-cropcancel]").forEach(b=> b.onclick=()=>{ CROP=null; renderShots(); });
+  box.querySelectorAll("[data-cropcancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.cropcancel; clearTimeout(READ_TIMER[id]); CROP=null; delete SIGN[id]; delete READING[id]; renderShots(); });
   box.querySelectorAll(".ovbox").forEach(b=> b.onclick=()=>{
     const id=b.dataset.sid, sel=SELS[id], i=+b.dataset.i;
     const ch=OCRRES[id].flat.find(c=>c.i===i);
@@ -1584,8 +1589,8 @@ function renderShots(){
   });
   box.querySelectorAll("[data-signsave]").forEach(b=> b.onclick=()=>saveSign(b.dataset.signsave));
   box.querySelectorAll("[data-splitwords]").forEach(b=> b.onclick=()=>{ const id=b.dataset.splitwords, sg=SIGN[id]; if(!sg||!sg.region) return;
-    delete SIGN[id]; SHOWBOX[id]=true; renderShots(); onOcr(id,sg.region); });
-  box.querySelectorAll("[data-signcancel]").forEach(b=> b.onclick=()=>{ delete SIGN[b.dataset.signcancel]; renderShots(); });
+    delete SIGN[id]; SHOWBOX[id]=true; if(CROP&&CROP.id===id) CROP=null; /* the boxes need the taps */ renderShots(); onOcr(id,sg.region); });
+  box.querySelectorAll("[data-signcancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.signcancel; delete SIGN[id]; if(CROP&&CROP.id===id) CROP=null; renderShots(); });
   Object.keys(SIGN).forEach(signPreview);
 }
 let PENDING_SHOT=false; /* a photo is being processed — the inbox shows a placeholder right away */
