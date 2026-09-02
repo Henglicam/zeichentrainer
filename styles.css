@@ -129,6 +129,12 @@ button{font:inherit;color:inherit}
 .say{background:none;border:1px solid var(--line);border-radius:999px;width:38px;height:38px;margin-left:10px;vertical-align:middle;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center}
 .say svg{width:20px;height:20px;fill:none;stroke:var(--text2);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round} .say:active svg{stroke:var(--jade)}
 .more .warn{color:var(--verm)}
+.cstrip{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
+.ck{font-family:var(--hanzi);font-size:22px;min-width:40px;height:40px;padding:0 6px;border:1px solid var(--line);border-radius:8px;background:none;color:var(--bone);cursor:pointer}
+.ck.low{border-color:var(--verm)} .ck.on{border-color:var(--jade);color:var(--jade)} .ck.ai{border-color:var(--jade)}
+.ckpick{margin:6px 0 10px;padding:10px 12px;border:1px solid var(--jade);border-radius:10px;background:rgba(124,154,134,.06)}
+.ckpick .cands{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.ckpick input.one{width:72px;flex:none;font-size:22px;text-align:center}
 .chars{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:16px}
 .chars .ch{font-family:var(--hanzi);font-size:22px;min-width:44px;height:44px;padding:0 8px;border:1px solid var(--line);border-radius:10px;background:none;color:var(--bone);cursor:pointer}
 .chars .ch.on{border-color:var(--jade);color:var(--jade)}

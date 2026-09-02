@@ -1483,12 +1483,84 @@ async function cropSign(id){
     if(aiAutoOn()) signAskAI(id); /* every reading is checked without a tap */
   }catch(err){ status("OCR failed: "+(err&&err.message||err)); }
 }
+/* ---------- fixing one misread character: tap it, pick a replacement ----------
+   Candidates come from the dictionary (words that fit the neighbouring characters), from the AI
+   (asked for that position), or are typed; a character can also be removed. */
+let CHARFREQ=null;
+function charCandidates(line,i){
+  const chars=[...line]; if(!DICT||!CJK.test(chars[i]||"")) return [];
+  if(!CHARFREQ){ /* how many dictionary words a character appears in: a crude frequency proxy for ranking */
+    CHARFREQ=new Map();
+    for(const key of DICT.keys()) for(const ch of new Set(key)) CHARFREQ.set(ch,(CHARFREQ.get(ch)||0)+1);
+  }
+  const out=new Map();
+  for(let len=4;len>=2;len--){
+    for(let start=Math.max(0,i-len+1);start<=i&&start+len<=chars.length;start++){
+      const pre=chars.slice(start,i).join(""), post=chars.slice(i+1,start+len).join("");
+      if(!CJK.test(pre+post) && (pre+post).length) continue;
+      /* scan the dictionary keys of this length that match around the position */
+      for(const key of DICT.keys()){
+        if(key.length!==len||!key.startsWith(pre)||!key.endsWith(post)||key.length!==pre.length+1+post.length) continue;
+        const cand=key[pre.length]; if(cand===chars[i]||!CJK.test(cand)) continue;
+        /* longer context first, then the more common character */
+        const score=len*100000+(CHARFREQ.get(cand)||0);
+        if((out.get(cand)||0)<score) out.set(cand,score);
+      }
+    }
+  }
+  return [...out.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]).slice(0,8);
+}
+async function aiCharAlternatives(line,i){
+  const key=S.settings.aiKey; if(!key) throw new Error("no API key");
+  const pv=aiProvider(), model=aiModel(), chars=[...line];
+  const sys="You correct OCR of Chinese signs, menus and packaging. Answer with a JSON array of single Chinese characters only, most likely first, no prose.";
+  const user=`OCR read this line: "${line}". Character ${i+1} ("${chars[i]}") is probably misread. Give up to 4 likely correct characters for that position, judging from the context.`;
+  let r;
+  if(pv==="claude") r=await fetch(aiBase(),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model,max_tokens:100,system:sys,messages:[{role:"user",content:user}]})});
+  else r=await fetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify({model,max_tokens:100,temperature:0,messages:[{role:"system",content:sys},{role:"user",content:user}]})});
+  if(!r.ok) throw new Error("API error "+r.status);
+  const data=await r.json();
+  const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
+  let arr=[]; try{ arr=JSON.parse(raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,"")); }catch(e){ arr=[...raw].filter(ch=>CJK.test(ch)); }
+  return [...new Set(arr.map(x=>String(x).trim()).filter(x=>[...x].length===1&&CJK.test(x)&&x!==chars[i]))].slice(0,4);
+}
+function charStripHTML(id,k){
+  const sg=SIGN[id], line=sg.lines[k], same=sg.orig&&sg.orig[k]===line.trim(), cf=(same&&sg.conf&&sg.conf[k])||[];
+  let ci=0;
+  return `<div class="cstrip">${[...line].map((ch,i)=>{ const isC=CJK.test(ch); const c=isC?cf[ci++]:100;
+    return `<button class="ck${isC&&c<OCR_DOUBT?" low":""}" data-ck="${k},${i}" data-sid="${id}" title="${isC&&c<100?Math.round(c)+"%":""}">${esc(ch)}</button>`; }).join("")}</div>`;
+}
+async function openCharPick(id,k,i,btn){
+  const sg=SIGN[id]; if(!sg) return;
+  const line=sg.lines[k], chars=[...line], ch=chars[i];
+  document.querySelectorAll(".ck.on").forEach(b=>b.classList.remove("on")); btn.classList.add("on");
+  let box=$("#ckpick-"+id); if(!box){ box=document.createElement("div"); box.className="ckpick"; box.id="ckpick-"+id; }
+  btn.closest(".sline").appendChild(box);
+  const apply=async(rep)=>{ const cs=[...sg.lines[k]]; if(rep===null) cs.splice(i,1); else cs[i]=rep; sg.lines[k]=cs.join(""); delete sg.ai; delete sg.aiErr; renderShots(); if(aiLive()) signAskAI(id); };
+  const render=(dict,ai,aiBusy)=>{
+    box.innerHTML=`<div class="badge">Replace <b class="hanzi">${esc(ch)}</b> with:</div>
+      <div class="cands">${ai.map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!ai.includes(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!aiBusy?`<span class="badge">no dictionary match — type it or ask the AI</span>`:""}${aiBusy?`<span class="badge">asking the AI …</span>`:""}</div>
+      <div class="cropacts"><input class="hanzi one" id="ck-type-${id}" maxlength="2" placeholder="type"><button class="btn mini" id="ck-ok-${id}">Use</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}<button class="del" id="ck-del-${id}">Remove</button><button class="del" id="ck-x-${id}">close</button></div>`;
+    box.querySelectorAll("[data-rep]").forEach(b=> b.onclick=()=>apply(b.dataset.rep));
+    $("#ck-ok-"+id).onclick=()=>{ const v=[...$("#ck-type-"+id).value.trim()].filter(c=>CJK.test(c))[0]; if(v) apply(v); };
+    $("#ck-type-"+id).onkeydown=e=>{ if(e.key==="Enter") $("#ck-ok-"+id).click(); };
+    $("#ck-del-"+id).onclick=()=>apply(null);
+    $("#ck-x-"+id).onclick=()=>{ box.remove(); btn.classList.remove("on"); };
+    const ab=$("#ck-ai-"+id); if(ab) ab.onclick=()=>askAI(dict);
+  };
+  const askAI=async(dict)=>{ render(dict,[],true); try{ const alts=await aiCharAlternatives(line,i); if(!box.isConnected) return; render(dict,alts,false); if(!alts.length) box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">the AI has no better idea</span>`); }catch(err){ if(!box.isConnected) return; render(dict,[],false); box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">AI: ${esc(err.message||err)}</span>`); } };
+  render([],[],false);
+  await loadDict().catch(()=>{});
+  const dict=charCandidates(line,i);
+  /* AI-first: while the AI is live it is asked at once, the dictionary candidates are the fallback */
+  if(aiLive()) askAI(dict); else render(dict,[],false);
+}
 function signEditorHTML(id){
   const sg=SIGN[id]; if(!sg) return "";
-  const rows=sg.lines.map((l,k)=>`<div class="sline"><input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(l)}" autocomplete="off"><div class="sp" id="sp-${id}-${k}"></div></div>`).join("");
+  const rows=sg.lines.map((l,k)=>`<div class="sline">${charStripHTML(id,k)}<input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(l)}" autocomplete="off"><div class="sp" id="sp-${id}-${k}"></div></div>`).join("");
   const low=sg.conf?Math.min(...sg.conf.flat().concat([100])):100;
   const doubt=!aiLive()&&low<OCR_DOUBT?` The reading looks uncertain (confidence ${Math.round(low)}%) — check the text.`:"";
-  const head=sg.aiBusy?"Reading with the AI …":sg.ai?"Read and checked by the AI. Tap the text to correct it.":`Text read from the photo. Tap to correct it.${doubt}`;
+  const head=sg.aiBusy?"Reading with the AI …":sg.ai?"Read and checked by the AI. Tap a character to change it.":`Text read from the photo. Tap a character to change it.${doubt}`;
   return `<div class="signed"><div class="badge${sg.ai?" ai":""}" style="margin-bottom:8px">${head}</div>${rows}
     <div class="smean" id="smean-${id}"></div><div class="sgloss" id="sgloss-${id}"></div>
     <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save card</button>${aiOn()&&!sg.ai&&!sg.aiBusy?`<button class="btn mini" data-signai="${id}">Ask AI</button>`:""}<button class="del" data-splitwords="${id}">Split into words</button><button class="del" data-signcancel="${id}">cancel</button></div>
@@ -1649,6 +1721,7 @@ function renderShots(){
   Object.keys(OCRRES).forEach(aiOverlayAuto);
   wireAi(box);
   box.querySelectorAll(".croplayer").forEach(wireCrop);
+  box.querySelectorAll("[data-ck]").forEach(b=> b.onclick=()=>{ const [k,i]=b.dataset.ck.split(",").map(Number); openCharPick(b.dataset.sid,k,i,b); });
   box.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{
     const sg=SIGN[inp.dataset.sid]; if(!sg) return;
     sg.lines[+inp.dataset.sline]=inp.value; signPreview(inp.dataset.sid);
