@@ -7,8 +7,8 @@
 
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
-const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" "); /* syllables with tone marks, space-separated */
-const APP_V=82; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
+const APP_V=83; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1408,6 +1408,7 @@ function lineMeaning(line){
   while(k<raw.length){
     const ch=raw[k];
     if(SIGN_PUNCT.test(ch)){ parts.push({w:ch,p:"",m:"",punct:true}); k++; continue; }
+    const num=raw.slice(k).match(/^[0-9]+/); if(num){ parts.push({w:num[0],p:num[0],m:num[0],num:true}); k+=num[0].length; continue; } /* a number reads as itself */
     const hit=(SIGNS||[]).find(e=>raw.startsWith(e.zh,k));
     if(hit){ parts.push({w:hit.zh,p:hit.py,m:hit.en,ph:true}); k+=hit.zh.length; continue; }
     const rest=raw.slice(k).split(SIGN_PUNCT)[0]; let len=Math.min(8,rest.length)||1;
@@ -1417,9 +1418,9 @@ function lineMeaning(line){
     k+=w.length;
   }
   const words=parts.filter(x=>!x.punct);
-  const full=words.length>0 && words.every(x=>x.ph);
+  const full=words.length>0 && words.every(x=>x.ph||x.num);
   /* fully phrasebook-matched line reads as English; a composed line shows word + gloss for every part */
-  const en=full?words.map(x=>x.m).join(" · "):words.map(x=>x.w+" "+(x.m||"?")).join(" · ");
+  const en=full?words.map(x=>x.m).join(" · "):words.map(x=>x.num?x.w:x.w+" "+(x.m||"?")).join(" · ");
   const py=pySpaced(words.map(x=>x.w).join(""));
   return {en,full,gloss:words,segs:parts.map(x=>x.w),py};
 }
@@ -1534,11 +1535,17 @@ async function readPass(w,blob,status){
   eachLine(data,symbols=>{
     let syms=[];
     symbols.forEach(sy=>{
-      if(sy.confidence>=35 && (CJK.test(sy.text)||SIGN_PUNCT.test(sy.text))) syms.push({ch:sy.text,cf:sy.confidence,b:sy.bbox});
+      /* characters, sign punctuation and digits (30分钟 — H: the number was missing from the translation); letters stay out */
+      const keep=CJK.test(sy.text)||SIGN_PUNCT.test(sy.text)?sy.confidence>=35:/^[0-9]+$/.test(sy.text)&&sy.confidence>=80; /* a digit needs to be sure — decoration reads as 1 */
+      if(keep) syms.push({ch:sy.text,cf:sy.confidence,b:sy.bbox});
     });
     const edge=x=>/[、，。：:,.]/.test(x.ch);
     while(syms.length&&edge(syms[0])) syms.shift();
     while(syms.length&&edge(syms[syms.length-1])) syms.pop();
+    /* a digit is kept only at the characters' height (0.5–1.4 × their median): a ribbon ring read as 1 was twice as tall,
+       the 30 of 30分钟 is about as tall as 分 */
+    const cj=syms.filter(x=>CJK.test(x.ch)&&x.b);
+    if(cj.length){ const H=median(cj.map(x=>x.b.y1-x.b.y0)); syms=syms.filter(x=>!/^[0-9]+$/.test(x.ch)||!x.b||(x.b.y1-x.b.y0>=0.5*H&&x.b.y1-x.b.y0<=1.4*H)); }
     const t=syms.map(x=>x.ch).join("");
     if(CJK.test(t)) lines.push({t,cf:syms.filter(x=>CJK.test(x.ch)).map(x=>x.cf),bx:syms.map(x=>x.b?{x0:x.b.x0,y0:x.b.y0,x1:x.b.x1,y1:x.b.y1}:null)});
   });
