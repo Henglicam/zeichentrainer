@@ -1399,6 +1399,56 @@ function lineMeaning(line){
   return {en,full,gloss:words,segs:parts.map(x=>x.w),py};
 }
 const SIGN={}; /* id -> {lines:[...], res, full, mean} while the transcript editor is open */
+/* ---------- deskew: a tilted sign is read badly, so the framed area is straightened first ----------
+   Skew estimate by projection profile: text pixels (far from the median brightness, so dark-on-light
+   and light-on-dark both count) are projected onto the y axis for candidate angles; horizontal lines
+   of text give the sharpest profile (highest variance). Runs on a ≤ 360 px copy — a few ms. */
+function estimateSkew(imgData,W,H){
+  const d=imgData.data, lum=new Float32Array(W*H);
+  for(let i=0;i<W*H;i++) lum[i]=(d[i*4]*0.299+d[i*4+1]*0.587+d[i*4+2]*0.114);
+  const sorted=Float32Array.from(lum).sort(); const med=sorted[sorted.length>>1];
+  const xs=[],ys=[];
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){ if(Math.abs(lum[y*W+x]-med)>60){ xs.push(x); ys.push(y); } }
+  if(xs.length<200) return 0;
+  const step=Math.max(1,Math.floor(xs.length/20000)); /* sample for speed */
+  let best=0,bestV=-1;
+  for(let a=-20;a<=20;a+=1){
+    const r=a*Math.PI/180, c=Math.cos(r), sn=Math.sin(r), hist=new Float64Array(H*2+W*2), off=W;
+    let n=0,sum=0;
+    for(let i=0;i<xs.length;i+=step){ const yy=Math.round(ys[i]*c-xs[i]*sn)+off; if(yy>=0&&yy<hist.length){ hist[yy]++; n++; } }
+    for(let i=0;i<hist.length;i++) sum+=hist[i]*hist[i];
+    const v=sum/n; if(v>bestV){ bestV=v; best=a; }
+  }
+  /* refine to half degrees around the best */
+  let fine=best,fineV=bestV;
+  for(const a of [best-0.5,best+0.5]){
+    const r=a*Math.PI/180, c=Math.cos(r), sn=Math.sin(r), hist=new Float64Array(H*2+W*2), off=W; let n=0,sum=0;
+    for(let i=0;i<xs.length;i+=step){ const yy=Math.round(ys[i]*c-xs[i]*sn)+off; if(yy>=0&&yy<hist.length){ hist[yy]++; n++; } }
+    for(let i=0;i<hist.length;i++) sum+=hist[i]*hist[i];
+    if(sum/n>fineV){ fineV=sum/n; fine=a; }
+  }
+  return fine;
+}
+async function deskewBlob(blob){
+  try{
+    const bmp=await createImageBitmap(blob);
+    const sc=Math.min(1,360/Math.max(bmp.width,bmp.height));
+    const w=Math.max(1,Math.round(bmp.width*sc)), h=Math.max(1,Math.round(bmp.height*sc));
+    const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+    const ctx=cv.getContext("2d",{willReadFrequently:true}); ctx.drawImage(bmp,0,0,w,h);
+    const angle=estimateSkew(ctx.getImageData(0,0,w,h),w,h);
+    if(Math.abs(angle)<1.5){ bmp.close(); return {blob,angle:0}; }
+    /* rotate the full crop back to horizontal; the corners are filled with the edge colour */
+    const r=-angle*Math.PI/180, W=bmp.width, H=bmp.height;
+    const nw=Math.round(Math.abs(W*Math.cos(r))+Math.abs(H*Math.sin(r))), nh=Math.round(Math.abs(W*Math.sin(r))+Math.abs(H*Math.cos(r)));
+    const out=document.createElement("canvas"); out.width=nw; out.height=nh;
+    const o=out.getContext("2d");
+    const e=ctx.getImageData(1,1,1,1).data; o.fillStyle=`rgb(${e[0]},${e[1]},${e[2]})`; o.fillRect(0,0,nw,nh);
+    o.translate(nw/2,nh/2); o.rotate(r); o.drawImage(bmp,-W/2,-H/2); bmp.close();
+    const rot=await new Promise(res=>out.toBlob(res,"image/jpeg",0.9));
+    return {blob:rot||blob,angle};
+  }catch(e){ return {blob,angle:0}; }
+}
 async function cropSign(id){
   const r=await cropBlob(id);
   if(!r) return; /* no frame yet — nothing to do */
@@ -1412,8 +1462,9 @@ async function cropSign(id){
     const w=await ocrWorker(status);
     await loadSigns().catch(()=>{}); /* phrasebook optional — falls back to word gloss */
     status("reading the text …");
+    const dk=await deskewBlob(r.blob); if(dk.angle){ S.pendingImg=dk.blob; status(`straightened by ${Math.round(dk.angle)}°, reading the text …`); }
     await w.setParameters({tessedit_pageseg_mode:"6"});
-    const {data}=await w.recognize(r.blob,{},{blocks:true,text:true});
+    const {data}=await w.recognize(dk.blob,{},{blocks:true,text:true});
     const lines=[];
     (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>{
       let t=""; const cfs=[];
