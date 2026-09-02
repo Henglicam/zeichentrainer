@@ -1,4 +1,4 @@
-const CACHE = "zt-v48";
+const CACHE = "zt-v49";
 /* OCR assets (./vendor/, ~12 MB) live in their own cache that survives shell
    updates — otherwise every cache version bump would re-download all of
    Tesseract. Only bump this when vendor files change. */
@@ -43,7 +43,8 @@ async function mirrorUpdate(mirror, client, pageVersion) {
       const res = await fetch(mirror + path, { cache: "no-store" });
       if (!res.ok) throw new Error("mirror " + res.status + " for " + path);
       const body = await res.blob();
-      const type = res.headers.get("Content-Type") || ({ html: "text/html", js: "text/javascript", css: "text/css", json: "application/json", webmanifest: "application/manifest+json", png: "image/png" }[path.split(".").pop()] || "application/octet-stream");
+      /* type by extension, never from the mirror: jsDelivr hands HTML out as text/plain */
+      const type = { html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8", css: "text/css; charset=utf-8", json: "application/json", webmanifest: "application/manifest+json", png: "image/png" }[path.split(".").pop()] || "application/octet-stream";
       puts.push([new Request(new URL(a, self.registration.scope).href), new Response(body, { headers: { "Content-Type": type } })]);
     }
     for (const [req, res] of puts) await cache.put(req, res); /* only after every file arrived */
