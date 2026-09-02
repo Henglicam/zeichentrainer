@@ -345,7 +345,7 @@ function renderMore(main){
       <div class="field" id="ai-basefield" hidden><label>API base URL</label><input id="ai-base" class="mono" autocomplete="off" placeholder="https://…/v1" value="${esc(S.settings.aiBase||"")}"></div>
       <div class="field"><label>API key (stays on this phone)</label><input id="ai-key" type="password" autocomplete="off" value="${esc(S.settings.aiKey||"")}"></div>
       <div class="field"><label>Model</label><input id="ai-model" class="mono" autocomplete="off" value="${esc(aiModel())}"></div>
-      <div class="field"><label class="check"><input type="checkbox" id="ai-auto"${S.settings.aiAuto?" checked":""}> Ask the AI automatically when online (doubtful OCR, pending translations)</label></div>
+      <div class="field"><label class="check"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> Check every new card with the AI automatically (when online)</label></div>
       <div class="badge">What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. Never photos.</div>
       <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" id="ai-save">Save</button><button class="del" id="ai-remove">Remove key</button></div>
     </div>
@@ -954,7 +954,8 @@ async function aiOverlayAsk(id,w,p,m){
   }catch(err){ AIFIX[id][w]={err:err&&err.message||String(err)}; }
   delete AIFIX[id]["~"+w]; renderShots();
 }
-/* automatic: a doubtful selection (low confidence / no meaning) is checked without a tap */
+/* automatic: every selection is checked without a tap (a few hundred tokens per card —
+   fractions of a fen at DeepSeek); debounced so tapping through words fires one request per text */
 let _ovAuto=null;
 function aiOverlayAuto(id){
   const R=OCRRES[id], sel=SELS[id]; if(!aiAutoOn()||!R||!sel||!sel.size) return;
@@ -962,7 +963,6 @@ function aiOverlayAuto(id){
   if(AIFIX[id]&&(AIFIX[id][w]||AIFIX[id]["~"+w])) return;
   const single=new Set(chars.map(c=>c.g)).size===1;
   const m=single?((DICT&&DICT.get(w))||""):"";
-  if(!ocrDoubt(chars.map(c=>c.cf),single?m:"x")) return;
   clearTimeout(_ovAuto);
   _ovAuto=setTimeout(()=>{ if(!OCRRES[id]||!SELS[id]) return;
     const p=pinyinPro.pinyin(w,{type:"array",toneType:"symbol"}).join(" "); aiOverlayAsk(id,w,p,m); },1200);
@@ -1219,7 +1219,7 @@ async function cropSign(id){
     if(!lines.length){ status("No Chinese characters recognized."); return; }
     SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf)};
     renderShots();
-    if(aiAutoOn() && ocrDoubt(lines.flatMap(x=>x.cf),"x")) signAskAI(id); /* doubtful → checked without a tap */
+    if(aiAutoOn()) signAskAI(id); /* every transcript is checked without a tap */
   }catch(err){ status("OCR failed: "+(err&&err.message||err)); }
 }
 function signEditorHTML(id){
