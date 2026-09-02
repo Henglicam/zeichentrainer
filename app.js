@@ -411,9 +411,8 @@ async function renderNmtRow(){
   if(!info){ st.textContent="zh→en model not in this build yet (run the “Fetch zh→en translation model” action on GitHub)"; btn.hidden=true; return; }
   if(!nmtOn()){
     st.textContent=`zh→en neural model (Mozilla, ${mb} MB, downloaded once and cached like OCR). Used when there is no connection; online, the AI does it.`;
-    setBtn("Enable",async()=>{
-      if(!confirm(`Download the zh→en translation model (${mb} MB) now? It stays cached on this phone.`)) return;
-      await setSetting("nmt",true); btn.disabled=true;
+    setBtn(`Download ${mb} MB`,async()=>{
+      await setSetting("nmt",true); btn.disabled=true; /* the button says the size — no extra question */
       try{ await nmtLoad(t=>{ st.textContent=t; }); st.textContent=`ready — loaded in ${(NMT.loadMs/1000).toFixed(1)} s`; }
       catch(err){ st.textContent="download failed: "+(err&&err.message||err); await setSetting("nmt",false); }
       renderNmtRow();
@@ -965,7 +964,7 @@ async function ocrWorker(status){
 }
 
 /* per-photo result (session only): characters with box + auto pinyin; tap to select */
-const OCRRES={}, SELS={}, QSNOTE={}, AIFIX={}, QSCARD={}, SHOWBOX={}; /* SHOWBOX[id]: word boxes shown although the AI is live */ /* QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) */ /* AIFIX[id][text] = AI check of an OCR selection before saving */
+const OCRRES={}, SELS={}, QSNOTE={}, AIFIX={}, QSCARD={}, SHOWBOX={}, READING={}; /* READING[id]: status text while the photo is being read */ /* SHOWBOX[id]: word boxes shown although the AI is live */ /* QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) */ /* AIFIX[id][text] = AI check of an OCR selection before saving */
 /* greedy longest-match segmentation against CC-CEDICT (max word length 8) */
 function segmentChars(chars){
   const out=[]; let k=0;
@@ -1021,7 +1020,7 @@ async function onOcr(id,region){
   delete OCRRES[id]; delete SELS[id];
   renderShots();
   const box=$("#ocr-"+id); if(!box) return;
-  const status=t=>{ box.innerHTML=`<span class="badge">${esc(t)}</span>`; };
+  const status=t=>{ READING[id]=t; const b=$("#ocr-"+id); if(b) b.innerHTML=`<span class="badge">${esc(t)}</span>`; }; /* re-queried: a re-render must not swallow it */
   try{
     const w=await ocrWorker(status);
     status("recognizing …");
@@ -1053,7 +1052,7 @@ async function onOcr(id,region){
       /* dictionary word groups: tapping one character selects the whole word */
       segmentChars(cs).forEach(seg=>{ seg.forEach(c=>{ c.g=g; }); g++; });
     });
-    OCRRES[id]={w:W,h:H,flat};
+    OCRRES[id]={w:W,h:H,flat}; delete READING[id];
     /* a tight single-line frame IS the word or phrase the user wants — pre-select it */
     /* with the AI live the whole frame is the card — everything pre-selected, no boxes to tap */
     SELS[id]=new Set((lines.length===1||flat.length<=4||aiLive())?flat.map(c=>c.i):[]);
@@ -1154,6 +1153,7 @@ function wireCrop(layer){
   const rect=layer.querySelector(".croprect");
   layer.onpointerdown=e=>{
     e.preventDefault();
+    clearTimeout(READ_TIMER[layer.dataset.id]); /* adjusting the frame — read after the next release */
     const r=layer.getBoundingClientRect();
     const px=e.clientX-r.left, py=e.clientY-r.top;
     const cur=CROP.rect;
@@ -1189,11 +1189,13 @@ function wireCrop(layer){
     };
     layer.onpointerup=()=>{
       layer.onpointermove=null; layer.onpointerup=null;
-      showCropPreview(layer.dataset.id);
+      showCropPreview(layer.dataset.id); /* starts the automatic read */
     };
   };
 }
-/* confirmation step: show exactly the selected area before anything runs */
+/* after the frame is released: show the area, then read it automatically — no tap needed;
+   a corner drag within that moment restarts the wait */
+const READ_TIMER={}, READ_WAIT=1200;
 let _prevURL=null;
 async function showCropPreview(id){
   const box=$("#ocr-"+id); if(!box) return;
@@ -1203,13 +1205,15 @@ async function showCropPreview(id){
   _prevURL=URL.createObjectURL(r.blob);
   box.innerHTML=`<div class="croppreview">
     <img src="${_prevURL}" alt="selected area">
-    <div class="badge" style="margin:6px 0 8px">Selected area — drag a corner to resize, drag inside to move, drag elsewhere to redraw.</div>
+    <div class="badge" style="margin:6px 0 8px">Reading in a moment — drag a corner first if the frame is off.</div>
     <div class="cropacts">
-      <button class="btn mini primary" data-cropread="${id}">Read</button>
+      <button class="del" data-cropread="${id}">Read now</button>
       <button class="del" data-cropok="${id}">Image only</button>
     </div></div>`;
-  box.querySelector("[data-cropread]").onclick=()=>cropSign(id);
-  box.querySelector("[data-cropok]").onclick=()=>cropOk(id);
+  box.querySelector("[data-cropread]").onclick=()=>{ clearTimeout(READ_TIMER[id]); cropSign(id); };
+  box.querySelector("[data-cropok]").onclick=()=>{ clearTimeout(READ_TIMER[id]); cropOk(id); };
+  clearTimeout(READ_TIMER[id]);
+  READ_TIMER[id]=setTimeout(()=>{ if(CROP&&CROP.id===id&&CROP.rect) cropSign(id); },READ_WAIT);
 }
 async function cropBlob(id){
   const rec=S.inbox.find(s=>s.id===id);
@@ -1227,14 +1231,14 @@ async function cropBlob(id){
 }
 async function cropOk(id){
   const r=await cropBlob(id);
-  if(!r){ alert("Draw a frame with your finger first."); return; }
+  if(!r) return; /* no frame yet — nothing to do */
   const rec=S.inbox.find(x=>x.id===id);
   CROP=null; S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null; S.pendingShot=id;
   S.mode="add"; render();
 }
 async function cropOcr(id){
   const r=await cropBlob(id);
-  if(!r){ alert("Draw a frame with your finger first."); return; }
+  if(!r) return; /* no frame yet — nothing to do */
   /* the framed area doubles as the card image — '-> Card' carries it along;
      the full photo stays available as context via the toggle in the Add form */
   const rec=S.inbox.find(x=>x.id===id);
@@ -1376,13 +1380,13 @@ function lineMeaning(line){
 const SIGN={}; /* id -> {lines:[...], res, full, mean} while the transcript editor is open */
 async function cropSign(id){
   const r=await cropBlob(id);
-  if(!r){ alert("Draw a frame with your finger first."); return; }
+  if(!r) return; /* no frame yet — nothing to do */
   const rec=S.inbox.find(x=>x.id===id);
   S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null;
   CROP=null; delete OCRRES[id]; delete SELS[id]; delete SIGN[id]; delete QSNOTE[id];
   renderShots();
   const box=$("#ocr-"+id); if(!box) return;
-  const status=t=>{ box.innerHTML=`<span class="badge">${esc(t)}</span>`; };
+  const status=t=>{ READING[id]=t; const b=$("#ocr-"+id); if(b) b.innerHTML=`<span class="badge">${esc(t)}</span>`; }; /* re-queried: a re-render must not swallow it */
   try{
     const w=await ocrWorker(status);
     await loadSigns().catch(()=>{}); /* phrasebook optional — falls back to word gloss */
@@ -1400,7 +1404,7 @@ async function cropSign(id){
     })));
     if(!lines.length){ status("No Chinese characters recognized."); return; }
     SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), region:r};
-    renderShots();
+    delete READING[id]; renderShots();
     if(aiAutoOn()) signAskAI(id); /* every reading is checked without a tap */
   }catch(err){ status("OCR failed: "+(err&&err.message||err)); }
 }
@@ -1474,7 +1478,7 @@ async function saveSign(id){
   const keep=sg.lines.map((l,k)=>({l:l.trim(),r:sg.res[k]})).filter(x=>x.r);
   if(!keep.length) return;
   const c=keep.map(x=>x.l).join("\n");
-  if(deck().some(d=>d.c===c)){ alert("This text is already in the deck."); return; }
+  if(deck().some(d=>d.c===c)){ sg.aiErr="This text is already in the deck."; renderShots(); return; }
   /* meaning: AI check (if done here) → phrasebook → offline translation (if enabled) → word gloss (then pending) */
   let mt={src:sg.full?"phrasebook":"gloss",verified:false,pending:!sg.full}, mean=sg.mean||"", pin=keep.map(x=>x.r.py).join(" / ");
   if(sg.ai && c===sg.ai.zh){ mean=sg.ai.m||mean; pin=sg.ai.p||pin; mt={src:"llm",verified:true,pending:false}; }
@@ -1540,7 +1544,7 @@ function renderShots(){
           :`<button class="ocr-btn" data-crop="${s.id}">CROP</button><button class="del" data-del="${s.id}">delete</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${cropping
           ?`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it.</span>`
-          :(SIGN[s.id]?signEditorHTML(s.id):OCRRES[s.id]?selbarHTML(s.id):QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]} <button class="del" data-nextshot="1">Next photo</button></div>${qsAiBox(s.id)}`:"")}</div>
+          :(SIGN[s.id]?signEditorHTML(s.id):OCRRES[s.id]?selbarHTML(s.id):QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]} <button class="del" data-nextshot="1">Next photo</button></div>${qsAiBox(s.id)}`:READING[s.id]?`<span class="badge">${esc(READING[s.id])}</span>`:"")}</div>
       </div>`;
     }).join("");
   box.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>delShot(b.dataset.del));
