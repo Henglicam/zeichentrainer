@@ -209,6 +209,14 @@ button{font:inherit;color:inherit}
 .flag{display:inline-block;font-size:13px;font-weight:500;padding:4px 10px;border:1px solid var(--verm);border-radius:999px;color:var(--verm);margin-top:12px}
 .pill{font-size:11px;font-weight:500;border:1px solid var(--line);border-radius:999px;padding:1px 7px;color:var(--text2);margin-left:6px;vertical-align:middle}
 .pill.flagged{color:var(--verm);border-color:var(--verm)}
+.pill.ai{color:var(--jade);border-color:var(--jade)}
+/* online AI review */
+.aibox{margin-top:14px;padding:12px 14px;border:1px solid var(--jade);border-radius:10px;text-align:left;font-size:15px;line-height:1.5;background:rgba(124,154,134,.08)}
+.aihead{font-size:13px;font-weight:500;color:var(--jade);margin-bottom:6px}
+.aibox .hanzi{font-size:20px} .aibox .mono{font-family:var(--mono);color:var(--text2)}
+.ainote{color:var(--text2);font-size:14px;margin-top:6px}
+.aiacts{display:flex;gap:8px;margin-top:10px}
+.aiform{border:1px solid var(--line);border-radius:12px;padding:12px 14px 14px;margin:4px 0 10px}
 /* review flag */
 .flagbox{margin-top:16px;padding:10px 14px;border:1px solid var(--verm);border-radius:10px;color:var(--verm);font-size:14px;line-height:1.45;text-align:left;background:rgba(178,58,46,.08)}
 .flagbtn{display:block;margin:12px auto 0;font-size:14px} .flagbtn.on{color:var(--verm)}
