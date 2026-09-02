@@ -119,6 +119,7 @@ async function boot(){
   S.ready=true;
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
   wireChrome(); render();
+  aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); });
 }
 
 /* ---------- Rendering ---------- */
@@ -165,6 +166,112 @@ function render(){
   if(S.mode==="more")  return renderMore(main);
   if(S.mode==="cards") return S.editing?renderEdit(main,S.editing):S.detail?renderCardDetail(main,S.detail):renderCards(main);
 }
+/* ---------- online AI review (T3, opt-in) ----------
+   Flagged cards and pending translations can be checked by an online model
+   (Claude API) through the VPN. Only text leaves the phone: hanzi, pinyin,
+   meaning and the note — never photos. The key lives in the settings store. */
+const AI_URL="https://api.anthropic.com/v1/messages", AI_MODEL_DEFAULT="claude-sonnet-5";
+function aiOn(){ return !!(S.settings.aiKey); }
+function aiQueue(){ return deck().filter(d=>d.flag||(d.mt&&d.mt.pending)); }
+function aiCardPayload(d){
+  return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:d.flag?"flagged by the learner":"meaning is only a word-by-word gloss, needs a real translation",
+    gloss:d.kind==="sign"?(d.gloss||[]).map(g=>g.w+" "+(g.m||"?")).join(" · "):undefined };
+}
+const AI_SYSTEM=`You review flashcards for an adult learning to read Chinese in Beijing. Cards come from OCR of photos (signs, menus, packaging), so the Chinese text may contain OCR slips, the pinyin is auto-generated and the meaning may be a crude word-by-word gloss.
+For every card return the corrected card. Rules: "zh" = the Chinese text, fixed only if it is clearly an OCR slip (keep line breaks); "p" = pinyin with tone marks, correct for this context (多音字!), one space between syllables, " / " between lines; "m" = natural English meaning of the whole text as a sign or word (short, no explanations); "note" = one short sentence on what was wrong, or "ok"; "ok" = true when zh, pinyin and meaning were already right.
+Answer with a JSON array only, one object per input card in the same order: [{"c":"<input c>","zh":"…","p":"…","m":"…","note":"…","ok":true|false}]. No prose, no code fences.`;
+async function aiAsk(cards,status){
+  const key=S.settings.aiKey; if(!key) throw new Error("no API key");
+  const model=S.settings.aiModel||AI_MODEL_DEFAULT;
+  status&&status(`asking ${model} about ${cards.length} card${cards.length>1?"s":""} …`);
+  let r;
+  try{
+    r=await fetch(AI_URL,{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model,max_tokens:4000,system:AI_SYSTEM,messages:[{role:"user",content:JSON.stringify(cards.map(aiCardPayload))}]})});
+  }catch(err){ throw new Error("no connection (offline, or the API is blocked — VPN?)"); }
+  if(r.status===401||r.status===403) throw new Error("API key rejected ("+r.status+")");
+  if(!r.ok){ let t=""; try{ t=(await r.json()).error.message; }catch(e){} throw new Error("API error "+r.status+(t?": "+t:"")); }
+  const data=await r.json();
+  const text=(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("").trim().replace(/^```(?:json)?\s*|\s*```$/g,"");
+  let arr; try{ arr=JSON.parse(text); }catch(e){ throw new Error("could not read the model's answer"); }
+  if(!Array.isArray(arr)) throw new Error("unexpected answer");
+  return arr.map(x=>({zh:String(x.zh||"").trim(),p:String(x.p||"").trim(),m:String(x.m||"").trim(),note:String(x.note||"").trim(),ok:!!x.ok,at:Date.now(),model}));
+}
+/* run the review over the whole queue (or the given cards) and store suggestions on the cards */
+async function aiReview(list,status){
+  list=list||aiQueue(); if(!list.length) return 0;
+  const sugg=await aiAsk(list,status);
+  let n=0;
+  for(let i=0;i<list.length;i++){
+    const d=list[i], sg=sugg[i]; if(!d||!sg) continue;
+    const upd={...d, ai:{...sg, c:d.c}};
+    if(!sg.zh) upd.ai.zh=d.c;
+    const k=S.custom.findIndex(x=>x.c===d.c);
+    if(k>=0) S.custom[k]=upd; else S.custom.push(upd); /* base card -> local override */
+    try{ await idbPut("custom",upd); }catch(e){} n++;
+  }
+  return n;
+}
+async function aiAccept(c){
+  const d=cardOf(c); if(!d||!d.ai) return;
+  const a=d.ai, upd={...d, p:a.p||d.p, m:a.m||d.m};
+  delete upd.ai; delete upd.flag; delete upd.flagNote;
+  upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
+  const newC=a.zh&&CJK.test(a.zh)?a.zh.replace(/\r/g,""):c;
+  if(newC!==c && deck().some(x=>x.c===newC)){ alert("“"+newC.replace(/\n/g," / ")+"” is already in the deck — merge by hand."); return; }
+  await applyCardUpdate(c,upd,newC,true);
+  if(S.detail===c) S.detail=upd.c;
+}
+async function aiDismiss(c){
+  const d=cardOf(c); if(!d||!d.ai) return;
+  const upd={...d}; delete upd.ai;
+  const k=S.custom.findIndex(x=>x.c===c); if(k>=0) S.custom[k]=upd; else S.custom.push(upd);
+  try{ await idbPut("custom",upd); }catch(e){}
+}
+function aiBoxHTML(d){
+  if(!d.ai) return "";
+  const a=d.ai, chg=[];
+  if(a.zh&&a.zh!==d.c) chg.push(`<div class="hanzi">${esc(a.zh).replace(/\n/g,"<br>")}</div>`);
+  if(a.p&&a.p!==d.p) chg.push(`<div class="mono">${esc(a.p)}</div>`);
+  if(a.m&&a.m!==d.m) chg.push(`<div>${esc(a.m)}</div>`);
+  return `<div class="aibox"><div class="aihead">AI suggestion${a.ok&&!chg.length?": looks right":""}</div>
+    ${chg.join("")}${a.note&&a.note.toLowerCase()!=="ok"?`<div class="ainote">${esc(a.note)}</div>`:""}
+    <div class="aiacts"><button class="btn mini primary" data-aiok="${esc(d.c)}">${chg.length?"Accept":"Mark verified"}</button><button class="btn mini" data-aino="${esc(d.c)}">Dismiss</button></div></div>`;
+}
+function wireAi(root){
+  (root||document).querySelectorAll("[data-aiok]").forEach(b=> b.onclick=async()=>{ b.disabled=true; await aiAccept(b.dataset.aiok); render(); });
+  (root||document).querySelectorAll("[data-aino]").forEach(b=> b.onclick=async()=>{ await aiDismiss(b.dataset.aino); render(); });
+}
+/* opt-in automatic run: pending translations are completed when the phone is online */
+let _aiAutoRan=false;
+async function aiAuto(){
+  if(!aiOn()||S.settings.aiAuto!==true||!navigator.onLine||_aiAutoRan) return;
+  const list=S.custom.filter(d=>d.mt&&d.mt.pending&&!d.ai); if(!list.length) return;
+  _aiAutoRan=true;
+  try{ await aiReview(list); if(S.mode==="more"||S.mode==="cards") render(); }catch(e){ console.warn("AI auto review:",e); }
+}
+/* More → Online AI review row + inline setup form */
+function renderAiRow(){
+  const st=$("#ai-status"), btn=$("#ai-btn"), run=$("#ai-run"), form=$("#ai-form"); if(!st) return;
+  const q=aiQueue().length, fl=deck().filter(d=>d.flag).length, pd=q-fl;
+  st.textContent=aiOn()?`on (${S.settings.aiModel||AI_MODEL_DEFAULT}), sends card text only, never photos`:"off — needs your own API key (Claude), text only, through the VPN";
+  btn.textContent=aiOn()?"Settings":"Set up";
+  run.hidden=!aiOn(); run.disabled=!q;
+  run.textContent=q?`Ask AI about ${q} card${q>1?"s":""}`:"Nothing to review";
+  const rs=$("#ai-runstatus"); if(rs) rs.textContent=q?`${fl} flagged, ${pd} pending translation${pd===1?"":"s"}`:"flag a card or save a sign the phrasebook does not know";
+  btn.onclick=()=>{ form.hidden=!form.hidden; if(!form.hidden) $("#ai-key").focus(); };
+  $("#ai-save").onclick=async()=>{
+    const key=$("#ai-key").value.trim(), model=$("#ai-model").value.trim();
+    if(key) await setSetting("aiKey",key); await setSetting("aiModel",model||AI_MODEL_DEFAULT); await setSetting("aiAuto",$("#ai-auto").checked);
+    form.hidden=true; renderAiRow();
+  };
+  $("#ai-remove").onclick=async()=>{ await setSetting("aiKey",""); await setSetting("aiAuto",false); $("#ai-key").value=""; form.hidden=true; renderAiRow(); };
+  run.onclick=async()=>{
+    run.disabled=true; const rs=$("#ai-runstatus");
+    try{ const n=await aiReview(null,t=>{ rs.textContent=t; }); rs.textContent=`${n} suggestion${n===1?"":"s"} ready — open the cards (Cards → Review) to accept or dismiss`; }
+    catch(err){ rs.textContent="failed: "+(err&&err.message||err); run.disabled=false; }
+  };
+}
 /* More → Offline translation: not in build / enable (size prompt) / on + pending count */
 async function renderNmtRow(){
   const st=$("#nmt-status"), btn=$("#nmt-btn"); if(!st||!btn) return;
@@ -204,6 +311,16 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">Flagged cards</div><div class="s">${deck().filter(d=>d.flag).length} flagged for review, share the list as text (e.g. with a teacher)</div></div><button class="btn mini" id="share-flag">Share</button></div>
     <div class="listhead">Translation</div>
     <div class="mrow"><div><div class="t">Offline translation</div><div class="s" id="nmt-status">checking …</div></div><button class="btn mini" id="nmt-btn" hidden></button></div>
+    <div class="listhead">Online AI review</div>
+    <div class="mrow"><div><div class="t">AI review</div><div class="s" id="ai-status"></div></div><button class="btn mini" id="ai-btn">Set up</button></div>
+    <div class="aiform" id="ai-form" hidden>
+      <div class="field"><label>Claude API key (stays on this phone)</label><input id="ai-key" type="password" autocomplete="off" placeholder="sk-ant-…" value="${esc(S.settings.aiKey||"")}"></div>
+      <div class="field"><label>Model</label><input id="ai-model" class="mono" autocomplete="off" value="${esc(S.settings.aiModel||AI_MODEL_DEFAULT)}"></div>
+      <div class="field"><label class="check"><input type="checkbox" id="ai-auto"${S.settings.aiAuto?" checked":""}> Complete pending translations automatically when online</label></div>
+      <div class="badge">What is sent: the Chinese text, pinyin, meaning and your note of flagged or pending cards. Never photos. Needs the VPN.</div>
+      <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" id="ai-save">Save</button><button class="del" id="ai-remove">Remove key</button></div>
+    </div>
+    <div class="mrow"><div><div class="t">Review queue</div><div class="s" id="ai-runstatus"></div></div><button class="btn mini" id="ai-run" hidden></button></div>
     <div class="mrow"><div><div class="t">Storage</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
     <div class="listhead">Danger zone</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">deletes progress, custom cards and photos</div></div><button class="btn mini danger" id="reset">Reset</button></div>
@@ -213,7 +330,7 @@ function renderMore(main){
   $("#export").onclick=exportData;
   $("#import").onclick=()=>$("#imp").click();
   $("#share-flag").onclick=shareFlagged;
-  renderNmtRow();
+  renderNmtRow(); renderAiRow();
   $("#reset").onclick=resetAll;
 }
 
@@ -307,7 +424,7 @@ function renderStudy(main){
   if(S.revealed){
     const grds=[["again","Again"],["hard","Hard"],["good","Good"],["easy","Easy"]].map(([g,l])=>
       `<button class="grade" data-g="${g}"><span class="lbl">${l}</span><span class="iv">${previewInterval(sched,g)}</span></button>`).join("");
-    back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}<div class="grades">${grds}</div>
+    back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="grades">${grds}</div>
       <button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?"⚑ Flagged for review · clear":"⚑ Flag for review"}</button></div>`;
   } else {
     back=`<div class="hint">Tap the character to reveal</div>`;
@@ -320,6 +437,7 @@ function renderStudy(main){
   const rv=$("#reveal"); if(rv && !S.revealed) rv.onclick=()=>{ S.revealed=true; render(); };
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
+  wireAi();
   document.querySelectorAll(".grade").forEach(b=> b.onclick=()=>grade(b.dataset.g));
 }
 
@@ -388,16 +506,16 @@ function cardsListHTML(){
   const customSet=new Set(S.custom.map(d=>d.c));
   let list=[...S.custom.slice().reverse(), ...DECK_BASE.filter(d=>!customSet.has(d.c))];
   if(S.filterUnv) list=list.filter(d=>d.mt&&!d.mt.verified);
-  if(S.filterFlag) list=list.filter(d=>d.flag);
+  if(S.filterFlag) list=list.filter(d=>d.flag||d.ai);
   if(q) list=list.filter(d=>[d.c,d.p,d.m,d.w,d.wp,d.wm,d.flagNote].filter(Boolean).join(" ").toLowerCase().includes(q));
   const rows=list.map(d=>`<button class="crow" data-c="${esc(d.c)}">
       ${d.img?`<img class="thumb" src="${thumbURL(d)}" alt="">`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`}
       <span class="ct"><span class="c">${esc(d.c.replace(/\n/g," / "))}</span><span class="p">${esc(d.p)}</span><span class="m">${esc(d.m)}</span></span>
-      <span class="cs">${d.flag?'<span class="pill flagged">⚑ review</span>':""}${cardStatus(d)}</span></button>`).join("");
+      <span class="cs">${d.ai?'<span class="pill ai">AI</span>':""}${d.flag?'<span class="pill flagged">⚑ review</span>':""}${cardStatus(d)}</span></button>`).join("");
   return {html:rows||`<div class="badge" style="margin-top:20px">No cards match.</div>`, n:list.length};
 }
 function renderCards(main){
-  const unv=S.custom.filter(d=>d.mt&&!d.mt.verified).length, flg=S.custom.filter(d=>d.flag).length;
+  const unv=S.custom.filter(d=>d.mt&&!d.mt.verified).length, flg=S.custom.filter(d=>d.flag||d.ai).length;
   const {html,n}=cardsListHTML();
   main.innerHTML=`<div class="pane">
     <div class="cardsbar"><input id="q" type="search" placeholder="Search hanzi, pinyin, meaning" value="${esc(S.query)}" autocomplete="off"><button class="btn mini primary" id="newcard">+ New</button></div>
@@ -419,7 +537,7 @@ function renderCardDetail(main,c){
   const stat=p?`interval ${p.interval} d · ease ${p.ease.toFixed(2)} · ${p.reps} review${p.reps===1?"":"s"} · next ${new Date(p.due).toLocaleDateString("en-GB")}`:"not studied yet";
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${d.kind==="sign"?"sign card":isCustom?"custom card":"base deck"}${d.mt&&!d.mt.verified?", unverified":""}${d.mt&&d.mt.pending?", translation pending":""}</span></div>
-    <div class="card">${tagsHTML(d,!p)}${frontHTML(d)}<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}</div>
+    <div class="card">${tagsHTML(d,!p)}${frontHTML(d)}<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}</div>
     <div class="detailacts">
       <button class="btn primary" id="d-test">Test this card</button>
       <button class="btn" id="d-edit">Edit</button>
@@ -435,6 +553,7 @@ function renderCardDetail(main,c){
   };
   $("#d-edit").onclick=()=>{ S.editing=c; render(); };
   $("#d-flag").onclick=async()=>{ await setFlag(c,!d.flag); render(); };
+  wireAi();
   const del=$("#d-del"); if(del) del.onclick=async()=>{
     if(!confirm("Delete “"+c.replace(/\n/g," / ")+"” and its progress?")) return;
     await delCustom(c); S.detail=null; render();
@@ -479,40 +598,48 @@ function renderEdit(main,c){
       if(newC!==c && deck().some(x=>x.c===newC)) return fail("“"+newC.replace(/\n/g," / ")+"” is already in the deck.");
     }
     const upd={...d, p:pin, m:mean, ex:$("#e-ex").value.trim(), exp:$("#e-exp").value.trim(), exm:$("#e-exm").value.trim()};
-    if(newC!==c){
-      upd.c=newC;
-      try{
-        if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
-        await loadDict().catch(()=>{}); if(isSign) await loadSigns().catch(()=>{});
-        if(isSign){
-          const res=newC.split("\n").map(lineMeaning);
-          upd.segs=res.map(r=>r.segs); upd.gloss=res.flatMap(r=>r.gloss.map(g=>({w:g.w,p:g.p,m:g.m})));
-          if(pin===d.p) upd.p=res.map(r=>r.py).join(" / ");
-        }else{
-          const chars=[...newC].filter(ch=>CJK.test(ch)).map(ch=>({ch}));
-          const segs=segmentChars(chars).map(seg=>seg.map(x=>x.ch).join(""));
-          if(segs.length>1) upd.seg=segs; else delete upd.seg;
-          if(pin===d.p) upd.p=pinyinPro.pinyin(newC,{type:"array",toneType:"symbol"}).join(" ");
-        }
-      }catch(e){}
-      /* move progress, custom record, thumbnail and queue entries to the new key */
-      if(S.progress[c]){ S.progress[newC]=S.progress[c]; delete S.progress[c];
-        try{ await idbDel("progress",c); await idbPut("progress",{c:newC,...S.progress[newC]}); }catch(e){} }
-      try{ await idbDel("custom",c); }catch(e){}
-      if(THUMB[c]){ THUMB[newC]=THUMB[c]; delete THUMB[c]; }
-      S.queue=S.queue.map(x=>x===c?newC:x); if(S.saved) S.saved.queue=S.saved.queue.map(x=>x===c?newC:x);
-    }
     if(!isSign){ upd.w=$("#e-w").value.trim(); upd.wp=$("#e-wp").value.trim(); upd.wm=$("#e-wm").value.trim();
       if(!upd.w){ delete upd.w; delete upd.wp; delete upd.wm; } }
     if(removeImg){ delete upd.img; delete upd.imgFull; dropThumb(c); }
     if(upd.mt) upd.mt={...upd.mt, verified:true, pending:false}; /* a human edited it */
     if($("#e-flag").checked){ upd.flag=true; const note=$("#e-note").value.trim(); if(note) upd.flagNote=note; else delete upd.flagNote; }
     else { delete upd.flag; delete upd.flagNote; }
-    const i=S.custom.findIndex(x=>x.c===c);
-    if(i>=0) S.custom[i]=upd; else S.custom.push(upd); /* base card -> local override */
-    try{ await idbPut("custom",upd); }catch(e){}
+    await applyCardUpdate(c,upd,newC,pin!==d.p);
     S.editing=null; S.detail=upd.c; render();
   };
+}
+/* persist an edited card; when the Chinese text changes (OCR slip), recompute
+   pinyin/segmentation/gloss (unless pinyin was set by hand) and move progress,
+   thumbnail and queue entries to the new key. Base cards become a local override. */
+async function applyCardUpdate(c,upd,newC,pinByHand){
+  const isSign=upd.kind==="sign";
+  if(newC && newC!==c){
+    upd.c=newC;
+    try{
+      if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
+      await loadDict().catch(()=>{}); if(isSign) await loadSigns().catch(()=>{});
+      if(isSign){
+        const res=newC.split("\n").map(lineMeaning);
+        upd.segs=res.map(r=>r.segs); upd.gloss=res.flatMap(r=>r.gloss.map(g=>({w:g.w,p:g.p,m:g.m})));
+        if(!pinByHand) upd.p=res.map(r=>r.py).join(" / ");
+      }else{
+        const chars=[...newC].filter(ch=>CJK.test(ch)).map(ch=>({ch}));
+        const segs=segmentChars(chars).map(seg=>seg.map(x=>x.ch).join(""));
+        if(segs.length>1) upd.seg=segs; else delete upd.seg;
+        if(!pinByHand) upd.p=pinyinPro.pinyin(newC,{type:"array",toneType:"symbol"}).join(" ");
+      }
+    }catch(e){}
+    if(S.progress[c]){ S.progress[newC]=S.progress[c]; delete S.progress[c];
+      try{ await idbDel("progress",c); await idbPut("progress",{c:newC,...S.progress[newC]}); }catch(e){} }
+    try{ await idbDel("custom",c); }catch(e){}
+    if(THUMB[c]){ THUMB[newC]=THUMB[c]; delete THUMB[c]; }
+    S.queue=S.queue.map(x=>x===c?newC:x); if(S.saved) S.saved.queue=S.saved.queue.map(x=>x===c?newC:x);
+    if(S.single===c) S.single=newC;
+  }
+  const i=S.custom.findIndex(x=>x.c===c);
+  if(i>=0) S.custom[i]=upd; else S.custom.push(upd);
+  try{ await idbPut("custom",upd); }catch(e){}
+  return upd;
 }
 function renderCustomList(){
   const box=$("#c-list"); if(!box) return;
@@ -883,8 +1010,10 @@ function nmtLoad(status){
     NMT.worker.onerror=e=>{ const err=new Error(e.message||"translation worker failed"); Object.values(NMT.pending).forEach(p=>p.rej(err)); NMT.pending={}; };
     await nmtCall("initialize",[{cacheSize:0}]);
     say("loading model ("+Math.round((info.downloadBytes||0)/1e6)+" MB, downloaded once) …");
-    const [model,shortlist,vocab]=await Promise.all([fetchGz(NMT_DIR+info.files.model), fetchGz(NMT_DIR+info.files.lex), fetchGz(NMT_DIR+info.files.vocab)]);
-    await nmtCall("loadTranslationModel",[{from:"zh",to:"en"},{model,shortlist,vocabs:[vocab]}],[model,shortlist,vocab]);
+    const f=info.files, vocabNames=f.vocab?[f.vocab]:[f.srcvocab,f.trgvocab]; /* one shared vocab or source + target */
+    const bufs=await Promise.all([f.model,f.lex,...vocabNames].map(n=>fetchGz(NMT_DIR+n)));
+    const [model,shortlist,...vocabs]=bufs;
+    await nmtCall("loadTranslationModel",[{from:"zh",to:"en"},{model,shortlist,vocabs}],bufs);
     return true;
   })().catch(err=>{ NMT.ready=null; if(NMT.worker){ NMT.worker.terminate(); NMT.worker=null; } NMT.pending={}; throw err; });
   return NMT.ready;
