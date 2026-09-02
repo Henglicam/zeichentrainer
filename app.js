@@ -1563,13 +1563,27 @@ async function openCharPick(id,k,i,btn){
   /* AI-first: while the AI is live it is asked at once, the dictionary candidates are the fallback */
   if(aiLive()) askAI(dict); else render(dict,[],false);
 }
+/* Where character i of line k sits in the reading crop. Tesseract's symbol boxes drift along a Chinese line (measured:
+   from the third character on, a box marks the right part of one character plus the left of the next), but the line's
+   overall extent and the box heights are right. So: the line's span from the first x0 to the last x1 is split evenly
+   among the characters (signs are monospaced), the size and vertical position come from the median box height. */
+function charBox(sg,k,i){
+  const raw=(sg.boxes||[])[k]||[], n=[...(sg.lines[k]||"")].length;
+  if(!raw.length||raw.length!==n||i>=n) return null;
+  const ok=raw.filter(Boolean); if(!ok.length) return null;
+  const med=a=>{ const t=a.slice().sort((p,q)=>p-q); return t[t.length>>1]; };
+  const H=med(ok.map(b=>b.y1-b.y0)), cy=med(ok.map(b=>(b.y0+b.y1)/2));
+  const x0=Math.min(...ok.map(b=>b.x0)), x1=Math.max(...ok.map(b=>b.x1)), cell=(x1-x0)/n;
+  const cx=x0+(i+0.5)*cell, side=Math.max(H,Math.min(cell,1.4*H));
+  return {x0:cx-side/2,y0:cy-side/2,x1:cx+side/2,y1:cy+side/2};
+}
 /* the tapped character as it looks in the photo — the original stays visible while drawing or typing (H: the keyboard hid it) */
 async function drawCharRef(cv,sg,k,i,opt){ /* opt: {h: display height, side: neighbour fraction shown left/right} */
   if(!cv||!sg.img) { if(cv) cv.remove(); return; }
   try{
     const bmp=await createImageBitmap(sg.img);
-    const line=[...sg.lines[k]], bx=(sg.boxes||[])[k]||[];
-    let b=(sg.orig&&sg.orig[k]===sg.lines[k].trim()&&bx.length===line.length)?bx[i]:null;
+    const bx=(sg.boxes||[])[k]||[];
+    let b=charBox(sg,k,i);
     if(!b){ const all=bx.filter(Boolean); b=all.length?{x0:Math.min(...all.map(x=>x.x0)),y0:Math.min(...all.map(x=>x.y0)),x1:Math.max(...all.map(x=>x.x1)),y1:Math.max(...all.map(x=>x.y1))}:{x0:0,y0:0,x1:bmp.width,y1:bmp.height}; }
     const o=opt||{}, h=Math.max(8,b.y1-b.y0), w=Math.max(8,b.x1-b.x0);
     if(o.square){ /* a square around the character (side = 1.5 × its larger dimension), the photo's edge padded in INK */
