@@ -160,7 +160,9 @@ function aiModel(){ return S.settings.aiModel||AI_PROVIDERS[aiProvider()].model;
 function aiBase(){ const pv=aiProvider(); return (pv==="custom"?(S.settings.aiBase||""):AI_PROVIDERS[pv].base).replace(/\/+$/,""); }
 function aiOn(){ return !!(S.settings.aiKey)&&!!aiBase(); }
 function aiQueue(){ return deck().filter(d=>d.flag||(d.mt&&(d.mt.pending||d.mt.suspect))); }
-function aiAutoOn(){ return aiOn()&&S.settings.aiAuto===true; }
+function aiAutoOn(){ return aiOn()&&S.settings.aiAuto!==false; }
+/* the online AI is the meaning source whenever it can be reached; the offline model is the fallback */
+function aiLive(){ return aiAutoOn()&&navigator.onLine; }
 /* "obviously false" OCR: mean symbol confidence below the threshold, or words no dictionary knows */
 const OCR_DOUBT=70;
 function ocrDoubt(confs,meaning,unknown){
@@ -265,7 +267,7 @@ function wireAi(root){
 /* opt-in automatic run: pending translations are completed when the phone is online */
 let _aiAutoRan=false;
 async function aiAuto(){
-  if(!aiOn()||S.settings.aiAuto!==true||!navigator.onLine||_aiAutoRan) return;
+  if(!aiLive()||_aiAutoRan) return;
   const list=S.custom.filter(d=>d.mt&&(d.mt.pending||d.mt.suspect)&&!d.ai); if(!list.length) return;
   _aiAutoRan=true;
   try{ await aiReview(list); if(S.mode==="more"||S.mode==="cards"||S.mode==="inbox") render(); }catch(e){ console.warn("AI auto review:",e); }
@@ -307,7 +309,7 @@ async function renderNmtRow(){
   const setBtn=(label,fn)=>{ btn.hidden=false; btn.disabled=false; btn.textContent=label; btn.onclick=fn; };
   if(!info){ st.textContent="zh→en model not in this build yet (run the “Fetch zh→en translation model” action on GitHub)"; btn.hidden=true; return; }
   if(!nmtOn()){
-    st.textContent=`zh→en neural model (Mozilla, ${mb} MB, downloaded once and cached like OCR). Signs the phrasebook does not cover get a full-sentence meaning.`;
+    st.textContent=`zh→en neural model (Mozilla, ${mb} MB, downloaded once and cached like OCR). Used when there is no connection; online, the AI does it.`;
     setBtn("Enable",async()=>{
       if(!confirm(`Download the zh→en translation model (${mb} MB) now? It stays cached on this phone.`)) return;
       await setSetting("nmt",true); btn.disabled=true;
@@ -318,7 +320,7 @@ async function renderNmtRow(){
     return;
   }
   const cached=await nmtCached();
-  st.textContent=(NMT.ready?"loaded":cached?"on, model cached":"on, model downloads on first use")+(pend?`, ${pend} card${pend>1?"s":""} pending`:"");
+  st.textContent=(NMT.ready?"loaded":cached?"on, model cached":"on, model downloads on first use")+(aiAutoOn()?", used only without a connection":"")+(pend?`, ${pend} card${pend>1?"s":""} pending`:"");
   if(pend) setBtn("Translate pending",async()=>{
     btn.disabled=true;
     try{ const n=await translatePending(t=>{ st.textContent=t; }); st.textContent=`translated ${n} card${n===1?"":"s"}`; }
@@ -1248,7 +1250,7 @@ function signPreview(id){
     :`<span class="badge">Meaning ${full?"from the phrasebook":"composed word by word"}, unverified</span><div>${esc(mean)||"—"}</div>`;
   const gl=$(`#sgloss-${id}`); if(gl) gl.innerHTML=live.flatMap(r=>r.gloss).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("");
   sg.res=res; sg.full=full; sg.mean=mean;
-  if(!sg.ai) signTranslate(id);
+  if(!sg.ai && !(aiLive()&&!sg.aiErr)) signTranslate(id); /* offline model only as fallback */
 }
 /* ask the online AI about the transcript right here; the corrected text lands in the editor */
 async function signAskAI(id){
@@ -1256,15 +1258,16 @@ async function signAskAI(id){
   signPreview(id);
   const lines=sg.lines.map(l=>l.trim()).filter(l=>CJK.test(l)); if(!lines.length) return;
   sg.aiBusy="asking the AI …"; delete sg.aiErr; renderShots();
-  try{
+  sg.aiPromise=(async()=>{ try{
     const c=lines.join("\n"), res=(sg.res||[]).filter(Boolean);
     const [r]=await aiAsk([{kind:"sign",c,p:res.map(x=>x.py).join(" / "),m:sg.mean||"",gloss:res.flatMap(x=>x.gloss),mt:{src:"gloss",verified:false,suspect:"read from a photo by OCR"}}]);
     if(!SIGN[id]) return;
     const zh=r.zh&&CJK.test(r.zh)?r.zh.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):c;
     sg.lines=zh.split("\n"); sg.ai={zh,p:r.p,m:r.m,note:r.note,ok:r.ok};
-  }catch(err){ if(SIGN[id]) sg.aiErr=err&&err.message||String(err); }
-  if(SIGN[id]) delete sg.aiBusy;
-  renderShots();
+  }catch(err){ if(SIGN[id]) sg.aiErr=err&&err.message||String(err); } /* → signPreview falls back to the offline model */
+  if(SIGN[id]){ delete sg.aiBusy; delete sg.aiPromise; }
+  renderShots(); })();
+  await sg.aiPromise;
 }
 /* offline translation of the lines the phrasebook did not cover — async so
    typing stays responsive; a token drops stale results */
@@ -1284,6 +1287,7 @@ async function signTranslate(id){
 }
 async function saveSign(id){
   const sg=SIGN[id]; if(!sg) return;
+  if(sg.aiPromise){ const b=document.querySelector(`[data-signsave="${id}"]`); if(b){ b.disabled=true; b.textContent="Waiting for the AI …"; } await sg.aiPromise; if(!SIGN[id]) return; }
   signPreview(id);
   const keep=sg.lines.map((l,k)=>({l:l.trim(),r:sg.res[k]})).filter(x=>x.r);
   if(!keep.length) return;
@@ -1292,7 +1296,7 @@ async function saveSign(id){
   /* meaning: AI check (if done here) → phrasebook → offline translation (if enabled) → word gloss (then pending) */
   let mt={src:sg.full?"phrasebook":"gloss",verified:false,pending:!sg.full}, mean=sg.mean||"", pin=keep.map(x=>x.r.py).join(" / ");
   if(sg.ai && c===sg.ai.zh){ mean=sg.ai.m||mean; pin=sg.ai.p||pin; mt={src:"llm",verified:true,pending:false}; }
-  else if(!sg.full && nmtOn()){
+  else if(!sg.full && nmtOn() && !(aiLive()&&!sg.aiErr)){ /* no connection (or AI failed): offline model */
     const btn=document.querySelector(`[data-signsave="${id}"]`); if(btn){ btn.disabled=true; btn.textContent="Translating …"; }
     try{ const r=await signMeaning(keep.map(x=>x.l)); mean=r.m||mean; mt={src:r.src,verified:false,pending:r.pending}; }catch(e){}
   }
