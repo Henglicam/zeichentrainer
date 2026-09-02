@@ -1605,13 +1605,51 @@ async function drawCharRef(cv,sg,k,i,opt){ /* opt: {h: display height, side: nei
    the pad fills the width, and nothing is read until Done is tapped (H: "it already takes it without me confirming").
    Strokes are rendered black on white at ~80 px and read by the same Tesseract model; ranked by confidence,
    then by what fits the neighbours. Tap a result to replace the character; the sheet closes. */
+/* The photo square in the drawing sheet: starts at the automatic crop (charBox) and can be moved with one finger and
+   zoomed with two (or the mouse wheel) — the automatic position is a guess, H corrects it by hand. View = centre + side
+   in image pixels; out-of-image parts are INK. */
+function attachRefView(cv,sg,k,i){
+  const N=600; cv.width=N; cv.height=N; const ctx=cv.getContext("2d");
+  const v={cx:0,cy:0,side:1,bmp:null};
+  const draw=()=>{
+    ctx.fillStyle="#141410"; ctx.fillRect(0,0,N,N); if(!v.bmp) return;
+    const sx=v.cx-v.side/2, sy=v.cy-v.side/2, kk=N/v.side;
+    const ix=Math.max(0,sx), iy=Math.max(0,sy), ex=Math.min(v.bmp.width,sx+v.side), ey=Math.min(v.bmp.height,sy+v.side);
+    if(ex>ix&&ey>iy) ctx.drawImage(v.bmp,ix,iy,ex-ix,ey-iy,(ix-sx)*kk,(iy-sy)*kk,(ex-ix)*kk,(ey-iy)*kk);
+  };
+  const clamp=()=>{ if(!v.bmp) return; const M=Math.max(v.bmp.width,v.bmp.height);
+    v.side=Math.min(Math.max(v.side,24),M*1.5); v.cx=Math.min(Math.max(v.cx,0),v.bmp.width); v.cy=Math.min(Math.max(v.cy,0),v.bmp.height); };
+  const ready=(async()=>{
+    if(!sg.img) return;
+    try{
+      v.bmp=await createImageBitmap(sg.img);
+      const b=charBox(sg,k,i);
+      if(b){ const w=b.x1-b.x0, h=b.y1-b.y0; v.cx=(b.x0+b.x1)/2; v.cy=(b.y0+b.y1)/2; v.side=Math.max(w,h)*1.5; }
+      else { v.cx=v.bmp.width/2; v.cy=v.bmp.height/2; v.side=Math.max(v.bmp.width,v.bmp.height); }
+      clamp(); draw();
+    }catch(e){}
+  })();
+  /* gestures: pointer map; one pointer pans, two pinch-zoom around their midpoint */
+  const pts=new Map(); let last=null;
+  const pxPerCss=()=>N/(cv.getBoundingClientRect().width||N);
+  const summary=()=>{ const a=[...pts.values()]; if(a.length>=2){ const dx=a[0].x-a[1].x, dy=a[0].y-a[1].y; return {x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2,d:Math.hypot(dx,dy)}; } return a.length?{x:a[0].x,y:a[0].y,d:0}:null; };
+  cv.onpointerdown=e=>{ e.preventDefault(); try{ cv.setPointerCapture(e.pointerId); }catch(x){} pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); last=summary(); };
+  cv.onpointermove=e=>{ if(!pts.has(e.pointerId)) return; e.preventDefault(); pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); const cur=summary(); if(!last||!cur) { last=cur; return; }
+    const k=v.side/N*pxPerCss(); /* image px per css px */
+    v.cx-=(cur.x-last.x)*k; v.cy-=(cur.y-last.y)*k;
+    if(last.d>0&&cur.d>0) v.side*=last.d/cur.d;
+    clamp(); draw(); last=cur; };
+  cv.onpointerup=cv.onpointercancel=e=>{ pts.delete(e.pointerId); last=summary(); };
+  cv.onwheel=e=>{ e.preventDefault(); v.side*=Math.pow(1.1,e.deltaY/100); clamp(); draw(); };
+  return {ready, view:v, draw, close:()=>{ if(v.bmp) v.bmp.close(); v.bmp=null; }};
+}
 const DRAW_SIZE=720;
 function openDrawSheet(id,k,i,apply){
   const sg=SIGN[id]; if(!sg) return;
   const ch=[...sg.lines[k]][i]||"";
   document.querySelectorAll(".drawsheet").forEach(x=>x.remove());
   const el=document.createElement("div"); el.className="drawsheet";
-  el.innerHTML=`<div class="dshead"><div class="badge">The character in the photo — draw it below.</div><button class="del" id="ds-x">Cancel</button></div>
+  el.innerHTML=`<div class="dshead"><div class="badge">The character in the photo (drag to move, pinch to zoom) — draw it below.</div><button class="del" id="ds-x">Cancel</button></div>
     <canvas class="ckref" width="1" height="1" title="the character in the photo"></canvas>
     <canvas class="pad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas>
     <div class="badge" id="ds-st">Draw all strokes, then tap Done.</div>
@@ -1625,11 +1663,11 @@ function openDrawSheet(id,k,i,apply){
     const used=kids.reduce((a,c)=>a+c.getBoundingClientRect().height,0)+gap*(kids.length-1)+parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);
     const S=Math.max(160,Math.min(el.clientWidth-32,Math.floor((el.clientHeight-used)/sq.length)));
     sq.forEach(c=>{ c.style.width=S+"px"; c.style.height=S+"px"; }); };
-  fitRef(); drawCharRef(el.querySelector(".ckref"),sg,k,i,{square:true,h:600}).then(fitRef);
+  fitRef(); const refView=attachRefView(el.querySelector(".ckref"),sg,k,i); refView.ready.then(fitRef); el.refView=refView;
   el.fitRef=fitRef; window.addEventListener("resize",fitRef);
   const cv=el.querySelector(".pad"), ctx=cv.getContext("2d"), strokes=[]; let cur=null, seq=0;
   const status=t=>{ const st=el.querySelector("#ds-st"); if(st) st.textContent=t; };
-  const close=()=>{ seq++; el.remove(); document.body.classList.remove("noscroll"); window.removeEventListener("resize",fitRef); };
+  const close=()=>{ seq++; el.remove(); document.body.classList.remove("noscroll"); window.removeEventListener("resize",fitRef); refView.close(); };
   const paint=()=>{
     ctx.clearRect(0,0,cv.width,cv.height);
     ctx.strokeStyle="rgba(237,230,214,.16)"; ctx.lineWidth=2; ctx.setLineDash([10,10]);
@@ -1638,7 +1676,7 @@ function openDrawSheet(id,k,i,apply){
     for(const st of strokes.concat(cur?[cur]:[])){ if(!st.length) continue; ctx.beginPath(); ctx.moveTo(st[0][0],st[0][1]); for(const p of st) ctx.lineTo(p[0],p[1]); if(st.length===1) ctx.lineTo(st[0][0]+0.1,st[0][1]); ctx.stroke(); }
   };
   const pt=e=>{ const r=cv.getBoundingClientRect(); return [(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height]; };
-  cv.onpointerdown=e=>{ e.preventDefault(); cv.setPointerCapture(e.pointerId); cur=[pt(e)]; paint(); };
+  cv.onpointerdown=e=>{ e.preventDefault(); try{ cv.setPointerCapture(e.pointerId); }catch(x){} cur=[pt(e)]; paint(); };
   cv.onpointermove=e=>{ if(!cur) return; e.preventDefault(); cur.push(pt(e)); paint(); };
   cv.onpointerup=cv.onpointercancel=e=>{ if(!cur) return; strokes.push(cur); cur=null; paint(); };
   const showCands=alts=>{

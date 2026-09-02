@@ -141,7 +141,7 @@ button{font:inherit;color:inherit}
 .drawsheet{position:fixed;inset:0;z-index:20;background:var(--ink);overflow-y:auto;display:flex;flex-direction:column;gap:10px;
   padding:calc(14px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom))}
 .drawsheet .dshead{display:flex;align-items:center;gap:12px} .drawsheet .dshead .badge{flex:1}
-.drawsheet .ckref{display:block;margin:0 auto;width:300px;height:300px;max-width:100%;border:1px solid var(--line);border-radius:12px;background:var(--ink)}
+.drawsheet .ckref{display:block;margin:0 auto;width:300px;height:300px;max-width:100%;border:1px solid var(--line);border-radius:12px;background:var(--ink);touch-action:none;cursor:grab}
 .drawsheet .pad{display:block;width:300px;height:300px;max-width:100%;margin:0 auto;border:1px solid var(--line);border-radius:12px;background:var(--panel2);touch-action:none}
 .drawsheet #ds-st{text-align:center} .drawsheet .cands{justify-content:center;min-height:60px;margin:0}
 .drawsheet .ck.draw{min-width:56px;height:56px;font-size:30px}
