@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#141410">
-<meta name="color-scheme" content="dark">
-<style>html,body{background:#141410}</style> <!-- dark before styles.css arrives: no white flash at the top -->
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F2F2F7">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+<meta name="color-scheme" content="light dark">
+<style>html,body{background:#F2F2F7}@media(prefers-color-scheme:dark){html,body{background:#000}}</style> <!-- the page colour before styles.css arrives: no flash at the top -->
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -19,7 +20,7 @@
 <body>
 <div id="app">
   <header id="hdr">
-    <div class="brand"><span class="logo">识字</span><span class="ver">PWA v81</span></div>
+    <div class="brand"><span class="logo">识字</span><span class="ver">PWA v82</span></div>
     <div class="stats">
       <span id="stat-open"><b>Due</b><span class="v">0</span></span>
       <span id="stat-done"><b>Done</b><span class="j">0</span></span>
