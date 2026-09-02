@@ -60,10 +60,6 @@ button{font:inherit;color:inherit}
 .word .w{font-family:var(--hanzi);font-size:26px}
 .word .wp{font-family:var(--mono);font-size:14px;color:var(--text2)}
 .wm{font-size:15px;color:var(--text2);margin-top:2px}
-.ex{margin-top:18px;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);text-align:left}
-.ex .zh{font-family:var(--hanzi);font-size:19px;line-height:1.5}
-.ex .exp{font-family:var(--mono);font-size:13px;color:var(--text2);margin-top:6px}
-.ex .exm{font-size:15px;color:var(--text2);margin-top:4px}
 .grades{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:22px}
 .grade{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:58px;background:var(--panel2);
   color:var(--bone);cursor:pointer;border:1px solid var(--line);border-radius:var(--r);padding:8px 4px}
@@ -128,6 +124,9 @@ button{font:inherit;color:inherit}
 .field select{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px;color:var(--bone);font-family:var(--sans);font-size:16px;padding:11px 14px;outline:none;-webkit-appearance:none;appearance:none}
 .field select:focus{border-color:var(--mute)}
 .chips{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.say{background:none;border:1px solid var(--line);border-radius:999px;width:38px;height:38px;margin-left:10px;vertical-align:middle;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.say svg{width:20px;height:20px;fill:none;stroke:var(--text2);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round} .say:active svg{stroke:var(--jade)}
+.more .warn{color:var(--verm)}
 .aibar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;padding:8px 8px 8px 14px;border:1px solid var(--jade);border-radius:10px;color:var(--jade);font-size:14px;font-weight:500}
 #shots .aibox{margin-top:8px}
 .chip{background:none;border:1px solid var(--line);border-radius:999px;color:var(--text2);font-size:13px;font-weight:500;

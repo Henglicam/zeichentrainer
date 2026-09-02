@@ -13,7 +13,7 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo.
 
-## Current state (PWA v40, 2026-09-02)
+## Current state (PWA v41, 2026-09-02)
 - **Files:** `index.html` · `styles.css` · `app.js` · `manifest.webmanifest` · `sw.js` · `signs.json` (phrasebook) · `nmt-model.json` (translation-model manifest) · `icon-192/512/maskable-512.png` · `vendor/` (Tesseract + dictionaries ~12 MB, `vendor/nmt/` Bergamot engine 5 MB + zh→en model 50 MB, licenses in `vendor/LICENSES.txt`) · `.github/workflows/fetch-nmt-model.yml` · `SPEC-sign-cards.md`. Vanilla JS, no frameworks, no build step.
 - **PWA:** installed and verified on the Xiaomi; runs offline (SW cache-first); `navigator.storage.persist()` granted. **Versioning:** SW cache `zt-vN` in `sw.js` and the header label `PWA vN` in `index.html` move in lockstep — bump both on **every** change to cached files. The app updates itself (update check on load/foreground, auto-reload on `controllerchange`); the vendor cache `zt-ocr-v1` survives shell updates — bump it only when vendor files change.
 - **Persistence:** IndexedDB `zeichentrainer` v2 — `progress` (keyPath `c`), `custom` (keyPath `c`, all cards), `inbox` (keyPath `id`, photos), `settings` (keyPath `k`). No built-in deck; `deck()` is `S.custom`, sorted by creation time `at` (oldest first, so cards are learned in the order they were taken; the Cards list shows newest first). At boot, progress rows without a card are pruned.
@@ -36,8 +36,13 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 Firefox Translations `zh-Hans→en` v2.0a2 (Mozilla, MPL-2.0; model 44 MB + shortlist 4.7 MB + vocab 0.7 MB gzipped = 50 MB) in the Bergamot WASM engine (`vendor/nmt/translator-worker.js` + `bergamot-translator-worker.{js,wasm}`, npm `@browsermt/bergamot-translator` 0.4.9, no SharedArrayBuffer). Fetched by the **GitHub Action "Fetch zh→en translation model"** (workflow_dispatch) from **Mozilla Remote Settings** (the source Firefox uses; the Git LFS objects on GitHub are gone, 410; the build sandbox cannot reach Mozilla) — it writes `nmt-model.json` (sizes, sha256), bumps both version markers and pushes branch `nmt-model`; Actions may not open PRs here, so the PR is opened by hand. Enable under More → Translation (size prompt; files cached in `zt-ocr-v1`), setting `nmt`; used **only without a connection** once the AI is set up. `signMeaning(lines)` → `{m, src: phrasebook|nmt|gloss, pending}`; "Translate pending" in More completes gloss-only cards. Verified on the build machine (~40 ms per sentence after load), **not yet timed on the Xiaomi**.
 
 ### Learning and the library
-- **Learn:** SM-2 light. Front = photo (crop) above the 田字格 reticle with the character/phrase (sign cards: photo + text wrapped by words and photo lines); no tag row, no Reveal button — **tapping the photo or the character reveals, tapping again hides the back** (toggle, v40). Back = pinyin, meaning, (context word, example), gloss table + context photo for sign cards, then **Again / Hard / Good / Easy** with interval preview, and underneath **⚑ Flag for review** and **✎ Edit** (`S.editFrom="study"`, Back/Save return to the revealed card). Empty deck → "No cards yet" + Take a photo.
+- **Learn:** SM-2 light (`fails` counter for leeches). Front = photo (crop) above the 田字格 reticle with the character/phrase (sign cards: photo + text wrapped by words and photo lines); no tag row, no Reveal button — **tapping the photo or the character reveals, tapping again hides the back** (toggle, v40). Back = pinyin (+ speaker), meaning, (context word), gloss table + context photo for sign cards, then **Again / Hard / Good / Easy** with interval preview, and underneath **⚑ Flag for review** and **✎ Edit** (`S.editFrom="study"`, Back/Save return to the revealed card). Empty deck → "No cards yet" + Take a photo.
 - **Cards:** every card newest first with a 104×58 photo thumbnail (words are horizontal) or glyph tile, pinyin, meaning, ⚑ review / jade AI pill and the real SRS status (`due`, `in N d`); search over hanzi, pinyin, meanings, context words and flag notes; chips **⚑ Review (N)** (flagged + suggested) and **Unverified (N)**; **+ New** opens the Add form. Detail: front + back preview, SRS stats, **Test this card** (single-card study, session queue restored), **Edit** (pinyin, meaning, context word, example, image removal, **and the Chinese text itself** — progress, images, queue entries move to the new key via `applyCardUpdate`; pinyin/segmentation/gloss recomputed unless pinyin was edited by hand; editing marks `verified`, clears `pending` and `suspect`), **⚑ Flag / Clear flag**, **Delete**.
+- **Pronunciation (v41):** a speaker button next to the pinyin on the card back and in the detail reads the text with the phone's own Chinese voice (`speechSynthesis`, zh-CN voice, nothing downloaded); the button only appears when such a voice exists (`ttsVoice()`, voices arrive asynchronously on Android).
+- **Leeches (v41):** progress rows carry `fails` (consecutive "again", reset by good/easy); at `LEECH_FAILS` = 4 the card is flagged automatically with the note "failed N times in a row — check text, meaning and photo".
+- **Backup nudge + photo cleanup (v41):** More shows "Last export: N days ago" (setting `lastExport`, set after a successful share), in red after 30 days or when never exported. Cards saved from a photo carry `shot:<inbox id>`; More → Photos offers to delete inbox photos older than 30 days that already became a card (the cards keep their own crop).
+- **Offline model timing (v41):** More → Offline translation shows "loaded in N s, last translation N s" (`NMT.loadMs`, `NMT.lastMs`) for the field test on the Xiaomi.
+- **No example sentences (v41, H):** the `ex/exp/exm` fields are gone from the Add and Edit forms and from the card back; old values on stored cards are ignored and dropped on the next edit.
 - **Review flag:** `flag:true` / `flagNote` on the card; included in export. More → **Flagged cards → Share** sends a plain-text list via the share sheet (`.txt`) for a teacher.
 - **Export/import** (More): progress + cards as JSON, `zeichentrainer-YYYY-MM-DD.json.txt` via the share sheet; import validates by content and upserts, keeping local images. **Reset** wipes cards, progress and photos.
 
@@ -62,7 +67,7 @@ Material language: 漆器 (lacquerware) + seal red. Deliberately not the default
 - The crop frame must stay visible on any photo color: bright dashed edge, dimmed outside (red-on-red lesson).
 
 ## Didactics / SRS
-- Loop: character/word → reveal → pinyin, meaning, (context word), example sentence, (card image).
+- Loop: photo + character/word → tap to reveal → pinyin (+ pronunciation), meaning, (context word). No example sentences (H, v41).
 - SM-2 light, grades `again / hard / good / easy` with interval preview. `again` re-queues the card within the same session.
 - Session = due cards + max. 8 new ones. "Pull forward" pulls future cards when nothing is due.
 
@@ -72,7 +77,7 @@ No built-in deck; all cards live in IndexedDB `custom`. Schema:
 { c:"坚果", p:"jiānguǒ", m:"nuts", t:"Custom", at:1756800000000,   // t: Custom | Sign · at: creation time
   seg:["坚果","\n","供应"],           // optional: word boundaries + photo line breaks for the front
   w:"…", wp:"…", wm:"…",              // optional: context word + pinyin + meaning
-  ex:"坚果很有营养。", exp:"…", exm:"…", // optional example
+  shot:"shot_1756800000000",           // inbox photo the card came from (photo cleanup)
   mt:{ src:"llm"|"dict"|"phrasebook"|"nmt"|"gloss", verified:true|false, pending:false, suspect:"reason" },
   flag:true, flagNote:"…",            // review flag
   ai:{ zh, p, m, note, ok, at, model } // a waiting AI suggestion
