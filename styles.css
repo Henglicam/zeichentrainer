@@ -143,7 +143,7 @@ button{font:inherit;color:inherit}
 .crow{display:grid;grid-template-columns:104px 1fr auto;gap:12px;align-items:center;width:100%;background:none;border:none;
   border-bottom:1px solid var(--line);padding:10px 0;text-align:left;cursor:pointer;color:var(--bone)}
 .crow:active{background:var(--panel)}
-.thumb{width:104px;height:58px;border-radius:8px;object-fit:cover;object-position:center;border:1px solid var(--line);background:var(--panel)}
+.thumb{width:104px;height:58px;border-radius:8px;object-fit:contain;object-position:center;border:1px solid var(--line);background:var(--panel)}
 .thumb.glyph{display:flex;align-items:center;justify-content:center;font-family:var(--hanzi);font-size:26px;color:var(--mute)}
 .ct{display:flex;flex-direction:column;min-width:0}
 .ct .c{font-family:var(--hanzi);font-size:19px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

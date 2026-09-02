@@ -712,7 +712,9 @@ function renderAdd(main){
 }
 /* ---------- Cards: library with photos, detail, single-card test, edit ---------- */
 const THUMB={};
-function thumbURL(d){ return THUMB[d.c]||(THUMB[d.c]=URL.createObjectURL(d.img)); }
+/* list thumbnail: the whole photo when the card has one (H), otherwise the crop */
+function thumbBlob(d){ return d.imgFull||(d.shot&&(S.inbox.find(x=>x.id===d.shot)||{}).blob)||d.img; }
+function thumbURL(d){ return THUMB[d.c]||(THUMB[d.c]=URL.createObjectURL(thumbBlob(d))); }
 function dropThumb(c){ if(THUMB[c]){ URL.revokeObjectURL(THUMB[c]); delete THUMB[c]; } }
 function cardStatus(d){
   const p=S.progress[d.c]; if(!p) return "";
