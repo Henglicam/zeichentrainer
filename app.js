@@ -26,7 +26,7 @@ function schedule(card, grade){
   const due = grade==="again" ? today() : today()+interval*DAY;
   /* consecutive failures — a leech is usually a bad card, not a bad memory */
   const fails = grade==="again" ? ((card&&card.fails)||0)+1 : grade==="hard" ? ((card&&card.fails)||0) : 0;
-  return { interval, ease, due, reps, fails };
+  return { interval, ease, due, reps, fails, last:today() };
 }
 function previewInterval(card, grade){
   const s = schedule(card, grade);
@@ -64,7 +64,7 @@ function idbClear(store){ return _os(store,"readwrite").then(os=>new Promise((re
 const S = { mode:"study", progress:{}, custom:[], inbox:[],
   queue:[], idx:0, revealed:false, done:0, ahead:false, ready:false,
   pendingImg:null, pendingFull:null, pendingUse:"crop", prefill:null, persist:null,
-  detail:null, query:"", filterUnv:false, filterFlag:false, settings:{}, single:null, saved:null, editing:null };
+  detail:null, query:"", filterUnv:false, filterFlag:false, filterHsk:0, settings:{}, single:null, saved:null, editing:null };
 
 function deck(){ return S.custom; }
 function buildQueue(includeAhead){
@@ -255,8 +255,8 @@ function aiCardPayload(d){
     gloss:d.kind==="sign"?(d.gloss||[]).map(g=>g.w+" "+(g.m||"?")).join(" · "):undefined };
 }
 const AI_SYSTEM=`You review flashcards for an adult learning to read Chinese in Beijing. Cards come from OCR of photos (signs, menus, packaging), so the Chinese text may contain OCR slips, the pinyin is auto-generated and the meaning may be a crude word-by-word gloss.
-For every card return the corrected card. Rules: "zh" = the Chinese text, fixed only if it is clearly an OCR slip (keep line breaks); "p" = pinyin with tone marks, correct for this context (多音字!), one space between syllables, " / " between lines; "m" = natural English meaning of the whole text as a sign or word (short, no explanations); "note" = one short sentence on what was wrong, or "ok"; "ok" = true when zh, pinyin and meaning were already right.
-Answer with a JSON array only, one object per input card in the same order: [{"c":"<input c>","zh":"…","p":"…","m":"…","note":"…","ok":true|false}]. No prose, no code fences.`;
+For every card return the corrected card. Rules: "zh" = the Chinese text, fixed only if it is clearly an OCR slip (keep line breaks); "p" = pinyin with tone marks, correct for this context (多音字!), one space between syllables, " / " between lines; "m" = natural English meaning of the whole text as a sign or word (short, no explanations); "note" = one short sentence on what was wrong, or "ok"; "ok" = true when zh, pinyin and meaning were already right; "hsk" = HSK level (1–6) of the word, for a sign the level of its hardest common word, 0 if unknown or beyond HSK 6.
+Answer with a JSON array only, one object per input card in the same order: [{"c":"<input c>","zh":"…","p":"…","m":"…","note":"…","ok":true|false,"hsk":0-6}]. No prose, no code fences.`;
 async function aiAsk(cards,status){
   const key=S.settings.aiKey; if(!key) throw new Error("no API key");
   const pv=aiProvider(), model=aiModel(), user=JSON.stringify(cards.map(aiCardPayload));
@@ -278,7 +278,7 @@ async function aiAsk(cards,status){
   const text=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,"");
   let arr; try{ arr=JSON.parse(text); }catch(e){ throw new Error("could not read the model's answer"); }
   if(!Array.isArray(arr)) throw new Error("unexpected answer");
-  return arr.map(x=>({zh:String(x.zh||"").trim(),p:String(x.p||"").trim(),m:String(x.m||"").trim(),note:String(x.note||"").trim(),ok:!!x.ok,at:Date.now(),model}));
+  return arr.map(x=>({zh:String(x.zh||"").trim(),p:String(x.p||"").trim(),m:String(x.m||"").trim(),note:String(x.note||"").trim(),ok:!!x.ok,hsk:Math.max(0,Math.min(6,parseInt(x.hsk)||0)),at:Date.now(),model}));
 }
 /* run the review over the whole queue (or the given cards) and store suggestions on the cards */
 async function aiReview(list,status){
@@ -297,7 +297,7 @@ async function aiReview(list,status){
 }
 async function aiAccept(c){
   const d=cardOf(c); if(!d||!d.ai) return;
-  const a=d.ai, upd={...d, p:a.p||d.p, m:a.m||d.m};
+  const a=d.ai, upd={...d, p:a.p||d.p, m:a.m||d.m}; if(a.hsk) upd.hsk=a.hsk;
   delete upd.ai; delete upd.flag; delete upd.flagNote;
   upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false}; delete upd.mt.suspect;
   const newC=a.zh&&CJK.test(a.zh)?a.zh.replace(/\r/g,""):c;
@@ -373,6 +373,17 @@ function renderAiRow(){
     catch(err){ rs.textContent="failed: "+(err&&err.message||err); run.disabled=false; }
   };
 }
+/* ---------- progress: cards learned, this week, streak of days ---------- */
+function dayKey(t){ const d=new Date(t||Date.now()); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function learnStats(){
+  const rows=Object.values(S.progress), weekAgo=today()-6*DAY;
+  const total=rows.filter(r=>r.reps>0).length, week=rows.filter(r=>r.last&&r.last>=weekAgo).length;
+  const days=new Set(S.settings.days||[]); let streak=0; const d=new Date();
+  if(!days.has(dayKey(d))) d.setDate(d.getDate()-1); /* today not yet, count from yesterday */
+  while(days.has(dayKey(d))){ streak++; d.setDate(d.getDate()-1); }
+  return {total,week,streak};
+}
+function statsLine(){ const {total,week,streak}=learnStats(); return `${total} card${total===1?"":"s"} learned, ${week} reviewed this week, streak ${streak} day${streak===1?"":"s"}`; }
 /* ---------- backup nudge + photo cleanup: everything lives on one phone ---------- */
 const OLD_DAYS=30;
 function backupNote(){
@@ -444,6 +455,7 @@ function renderMore(main){
     </div>
     <div class="mrow"><div><div class="t">Review queue</div><div class="s" id="ai-runstatus"></div></div><button class="btn mini" id="ai-run" hidden></button></div>
     <div class="mrow"><div><div class="t">Storage</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
+    <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}</div></div></div>
     <div class="mrow"><div><div class="t">Photos</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">Delete ${oldShots().length}</button>`:""}</div>
     <div class="listhead">Danger zone</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">deletes progress, custom cards and photos</div></div><button class="btn mini danger" id="reset">Reset</button></div>
@@ -533,6 +545,24 @@ function say(text){
 const SAY_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15 9.2a3.6 3.6 0 0 1 0 5.6"/><path d="M17.3 6.6a7 7 0 0 1 0 10.8"/></svg>';
 function sayBtn(d){ return ttsVoice()?`<button class="say" data-say="${esc(d.c)}" aria-label="Pronounce">${SAY_SVG}</button>`:""; }
 function wireSay(root){ (root||document).querySelectorAll("[data-say]").forEach(b=> b.onclick=e=>{ e.stopPropagation(); say(b.dataset.say); }); }
+/* every character of a word on the back, tap one for its own pinyin and meaning (dictionary, offline) */
+function charsHTML(d){
+  const chars=[...new Set([...d.c].filter(ch=>CJK.test(ch)))];
+  if(chars.length<2||chars.length>14) return "";
+  return `<div class="chars">${chars.map(ch=>`<button class="ch" data-ch="${ch}">${ch}</button>`).join("")}</div><div class="chinfo" id="chinfo" hidden></div>`;
+}
+async function charInfo(ch,btn){
+  const box=$("#chinfo"); if(!box) return;
+  document.querySelectorAll(".chars .ch").forEach(b=>b.classList.toggle("on",b===btn));
+  box.hidden=false; box.innerHTML=`<span class="badge">loading the dictionary …</span>`;
+  try{
+    if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
+    await loadDict().catch(()=>{});
+    const py=pinyinPro.pinyin(ch,{toneType:"symbol"}), m=bestSense(ch)||((DICT&&DICT.get(ch))||"");
+    box.innerHTML=`<span class="hanzi">${ch}</span><span class="mono">${esc(py)}</span><span>${esc(m||"not in the dictionary")}</span>`;
+  }catch(e){ box.innerHTML=`<span class="badge">dictionary not available</span>`; }
+}
+function wireChars(){ document.querySelectorAll(".chars .ch").forEach(b=> b.onclick=e=>{ e.stopPropagation(); charInfo(b.dataset.ch,b); }); }
 function backHTML(d){
   const wordBlock = d.w ? `<div class="rule"></div>
     <div class="word"><span class="w">${esc(d.w)}</span><span class="wp">${esc(d.wp||"")}</span></div>
@@ -540,7 +570,7 @@ function backHTML(d){
   const glossBlock = d.kind==="sign" ? `<div class="gtable">${(d.gloss||[]).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("")}</div>
     ${d.mt&&!d.mt.verified?`<span class="flag">meaning ${d.mt.src==="nmt"?"from the offline translation":d.mt.src==="phrasebook"?"from the phrasebook":d.mt.src==="llm"?"from the online AI":d.mt.src==="dict"?"from the dictionary":"composed word by word"}, unverified${d.mt.pending?" (translation pending)":""}${d.mt.suspect?" (reading uncertain: "+esc(d.mt.suspect)+")":""}</span>`:""}
     ${d.imgFull?`<div class="cardimg"><img src="${URL.createObjectURL(d.imgFull)}" alt="context"></div>`:""}` : "";
-  return `<div class="pin">${esc(d.p)}${sayBtn(d)}</div><div class="mean">${esc(d.m)}</div>
+  return `<div class="pin">${esc(d.p)}${sayBtn(d)}</div><div class="mean">${esc(d.m)}${d.hsk?`<span class="pill hsk">HSK ${d.hsk}</span>`:""}</div>${charsHTML(d)}
     ${d.kind==="sign"?glossBlock:wordBlock}`;
 }
 function endSingle(){
@@ -567,6 +597,7 @@ function renderStudy(main){
       <div class="mark">净</div>
       <h2>All clear.</h2>
       <p>${S.ahead?"Pulled-forward round finished.":"Nothing due today. Come back tomorrow — or pull the next cards forward."}</p>
+      <div class="badge" style="margin-bottom:18px">${statsLine()}</div>
       <button class="btn" id="ahead">Pull forward · next cards</button>
     </div>`;
     const a=$("#ahead"); if(a) a.onclick=()=>{ const q=buildQueue(true); if(q.length){S.queue=q;S.idx=0;S.done=0;S.ahead=true;S.revealed=false;render();} };
@@ -591,7 +622,7 @@ function renderStudy(main){
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   const ed=$("#edit-card"); if(ed) ed.onclick=()=>{ S.editFrom="study"; S.editing=c; render(); };
-  wireSay();
+  wireSay(); wireChars();
   wireAi();
   document.querySelectorAll(".grade").forEach(b=> b.onclick=()=>grade(b.dataset.g));
 }
@@ -603,6 +634,8 @@ async function grade(g){
   try{ await idbPut("progress",{c,...s}); }catch(e){}
   const d=cardOf(c);
   if(s.fails>=LEECH_FAILS && d && !d.flag) await setFlag(c,true,`failed ${s.fails} times in a row — check text, meaning and photo`);
+  const day=dayKey(), days=S.settings.days||[];
+  if(days[days.length-1]!==day){ days.push(day); if(days.length>400) days.shift(); await setSetting("days",days); }
   if(S.single){ endSingle(); return; }
   if(g==="again") S.queue.push(c); else S.done++;
   S.idx++; S.revealed=false; render();
@@ -659,6 +692,7 @@ function cardsListHTML(){
   let list=S.custom.slice().sort((a,b)=>(b.at||0)-(a.at||0)); /* newest first */
   if(S.filterUnv) list=list.filter(d=>d.mt&&!d.mt.verified);
   if(S.filterFlag) list=list.filter(d=>d.flag||d.ai);
+  if(S.filterHsk===1) list=list.filter(d=>d.hsk>=1&&d.hsk<=3); else if(S.filterHsk===2) list=list.filter(d=>d.hsk>=4);
   if(q) list=list.filter(d=>[d.c,d.p,d.m,d.w,d.wp,d.wm,d.flagNote].filter(Boolean).join(" ").toLowerCase().includes(q));
   const rows=list.map(d=>`<button class="crow" data-c="${esc(d.c)}">
       ${d.img?`<img class="thumb" src="${thumbURL(d)}" alt="">`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`}
@@ -673,7 +707,7 @@ function renderCards(main){
   main.innerHTML=`<div class="pane">
     <div class="cardsbar"><input id="q" type="search" placeholder="Search hanzi, pinyin, meaning" value="${esc(S.query)}" autocomplete="off"><button class="btn mini primary" id="newcard">+ New</button></div>
     ${nAi?`<div class="aibar"><span>${nAi} AI suggestion${nAi>1?"s":""} waiting</span><button class="btn mini primary" id="ai-acceptall">Accept all</button></div>`:""}
-    <div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">⚑ Review (${flg})</button><button class="chip${S.filterUnv?" on":""}" id="chip-unv">Unverified (${unv})</button></span><span class="badge" id="cnt">${n} of ${deck().length}</span></div>
+    <div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">⚑ Review (${flg})</button><button class="chip${S.filterUnv?" on":""}" id="chip-unv">Unverified (${unv})</button><button class="chip${S.filterHsk?" on":""}" id="chip-hsk">${S.filterHsk===2?`HSK 4–6 (${S.custom.filter(d=>d.hsk>=4).length})`:`HSK 1–3 (${S.custom.filter(d=>d.hsk>=1&&d.hsk<=3).length})`}</button></span><span class="badge" id="cnt">${n} of ${deck().length}</span></div>
     <div class="clist" id="clist">${html}</div>
   </div>`;
   const wire=()=>{ document.querySelectorAll(".crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.c; render(); }); };
@@ -681,6 +715,7 @@ function renderCards(main){
   $("#q").oninput=e=>{ S.query=e.target.value; refresh(); };
   $("#chip-unv").onclick=()=>{ S.filterUnv=!S.filterUnv; render(); };
   $("#chip-flag").onclick=()=>{ S.filterFlag=!S.filterFlag; render(); };
+  $("#chip-hsk").onclick=()=>{ S.filterHsk=(S.filterHsk+1)%3; render(); }; /* off → 1–3 → 4–6 */
   const aa=$("#ai-acceptall"); if(aa) aa.onclick=async()=>{ aa.disabled=true; await aiAcceptAll(); render(); };
   $("#newcard").onclick=()=>{ S.mode="add"; render(); };
   wire();
@@ -707,7 +742,7 @@ function renderCardDetail(main,c){
   };
   $("#d-edit").onclick=()=>{ S.editing=c; render(); };
   $("#d-flag").onclick=async()=>{ await setFlag(c,!d.flag); render(); };
-  wireSay();
+  wireSay(); wireChars();
   wireAi();
   const del=$("#d-del"); if(del) del.onclick=async()=>{
     if(!confirm("Delete “"+c.replace(/\n/g," / ")+"” and its progress?")) return;
@@ -717,7 +752,7 @@ function renderCardDetail(main,c){
 function renderEdit(main,c){
   const d=cardOf(c); if(!d){ S.editing=null; S.editFrom=null; return render(); }
   const isSign=d.kind==="sign";
-  let removeImg=false, aiApplied=false;
+  let removeImg=false, aiApplied=false, hskAI=0;
   const leave=newC=>{ /* back to where the edit started: study back or card detail */
     const from=S.editFrom; S.editing=null; S.editFrom=null;
     if(from==="study"){ S.mode="study"; S.revealed=true; } else { S.mode="cards"; if(newC) S.detail=newC; }
@@ -751,7 +786,7 @@ function renderEdit(main,c){
       if(r.zh&&CJK.test(r.zh)) $("#e-word").value=r.zh.replace(/\r/g,"");
       if(r.p) $("#e-pin").value=r.p;
       if(r.m) $("#e-mean").value=r.m;
-      aiApplied=true; st.textContent="";
+      aiApplied=true; hskAI=r.hsk||0; st.textContent="";
       box.hidden=false; box.innerHTML=`<div class="aihead">AI${r.ok?": looks right":" filled in its suggestion — check, then Save"}</div>${r.note&&r.note.toLowerCase()!=="ok"?`<div class="ainote">${esc(r.note)}</div>`:""}`;
     }catch(err){ st.textContent="AI: "+(err&&err.message||err); }
     ab.disabled=false;
@@ -775,7 +810,7 @@ function renderEdit(main,c){
       if(!upd.w){ delete upd.w; delete upd.wp; delete upd.wm; } }
     if(removeImg){ delete upd.img; delete upd.imgFull; dropThumb(c); }
     if(upd.mt){ upd.mt={...upd.mt, verified:true, pending:false}; delete upd.mt.suspect; } /* a human edited it */
-    if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
+    if(aiApplied){ upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false}; if(hskAI) upd.hsk=hskAI; }
     if($("#e-flag").checked){ upd.flag=true; const note=$("#e-note").value.trim(); if(note) upd.flagNote=note; else delete upd.flagNote; }
     else { delete upd.flag; delete upd.flagNote; }
     await applyCardUpdate(c,upd,newC,pin!==d.p,isSign?undefined:wordLines);
@@ -920,7 +955,7 @@ function segmentChars(chars){
   }
   return out;
 }
-async function quickSave(id,w,p,m,grp,ai){
+async function quickSave(id,w,p,m,grp,ai,hsk){
   const R=OCRRES[id]; if(!R) return;
   if(!m){ /* no dictionary meaning — the form is needed to fill it in */
     S.prefill={w,p,m:""}; S.mode="add"; render(); return;
@@ -930,6 +965,7 @@ async function quickSave(id,w,p,m,grp,ai){
   }else{
     /* checked by the AI in the selection bar → verified; otherwise a dictionary prefill */
     const card={c:w,p,m,t:"Custom",at:Date.now(),shot:id,lb:"photo",mt:ai?{src:"llm",verified:true}:{src:"dict",verified:false}};
+    if(ai&&hsk) card.hsk=hsk;
     /* doubtful OCR (low symbol confidence) → the online AI checks it automatically when enabled */
     const chars=R.flat.filter(c=>grp<0?SELS[id].has(c.i):c.g===grp);
     const why=ai?"":ocrDoubt(chars.map(c=>c.cf),m);
@@ -1016,7 +1052,7 @@ function overlayHTML(id){
 function selbarHTML(id){
   const R=OCRRES[id]; if(!R) return "";
   const chars=R.flat.filter(c=>SELS[id].has(c.i));
-  const note=QSNOTE[id]?`<div class="ok" style="margin:0 0 8px">${QSNOTE[id]}</div>${qsAiBox(id)}`:"";
+  const note=QSNOTE[id]?`<div class="ok" style="margin:0 0 8px">${QSNOTE[id]} <button class="del" data-nextshot="1">Next photo</button></div>${qsAiBox(id)}`:"";
   if(!chars.length){
     return `${note}<span class="badge">Tap a word in the image — one tap selects the whole dictionary word.</span>${aiLive()&&!SHOWBOX[id]?`<button class="del" data-boxes="${id}">Show the word boxes</button>`:""}`;
   }
@@ -1043,7 +1079,7 @@ function selbarHTML(id){
     const f=fixOf(w0), w=f&&f.zh?f.zh:w0, p=f&&f.p?f.p:p0, m=f&&f.m?f.m:m0;
     return `<div class="selbar${f?" ai":""}"><span class="sw">${esc(w)}</span><span class="sp">${esc(p)}</span>
       ${m?`<span class="sm">${esc(m)}</span>`:`<span class="sm none">${DICT?"not in dictionary":"dictionary not loaded"}</span>`}
-      <button class="btn mini" data-qs="${id}" data-g="${gr[0].g}" data-w="${esc(w)}" data-p="${esc(p)}" data-m="${esc(m)}" data-ai="${f?1:0}">Save</button>
+      <button class="btn mini" data-qs="${id}" data-g="${gr[0].g}" data-w="${esc(w)}" data-p="${esc(p)}" data-m="${esc(m)}" data-ai="${f?1:0}" data-hsk="${f&&f.hsk||0}">Save</button>
       <button class="btn mini" data-mkcard="${esc(w)}" data-p="${esc(p)}" data-m="${esc(m)}">Edit…</button>${aiPart(w0,p0,m0)}</div>`;
   }).join("");
   const boxes=aiLive()?`<button class="del" style="margin-top:6px" data-boxes="${id}">${SHOWBOX[id]?"Hide the word boxes":"Pick words on the photo"}</button>`:"";
@@ -1058,7 +1094,7 @@ function selbarHTML(id){
   const pf=fixOf(pw0), pw=pf&&pf.zh?pf.zh:pw0, pp=pf&&pf.p?pf.p:pp0, pm=pf&&pf.m?pf.m:pm0;
   const phrase=`<div class="selbar phrase${pf?" ai":""}"><span class="sw">${esc(pw)}</span><span class="sp">${esc(pp)}</span>
       <span class="sm">${esc(pm)}</span>
-      <button class="btn mini primary" data-qs="${id}" data-g="-1" data-w="${esc(pw)}" data-p="${esc(pp)}" data-m="${esc(pm)}" data-ai="${pf?1:0}">Save phrase</button>
+      <button class="btn mini primary" data-qs="${id}" data-g="-1" data-w="${esc(pw)}" data-p="${esc(pp)}" data-m="${esc(pm)}" data-ai="${pf?1:0}" data-hsk="${pf&&pf.hsk||0}">Save phrase</button>
       <button class="btn mini" data-mkcard="${esc(pw)}" data-p="${esc(pp)}" data-m="${esc(pm)}">Edit…</button>${aiPart(pw0,pp0,pm0)}</div>
     <div class="badge" style="margin:4px 0 6px">single words:</div>`;
   return `${note}${phrase}${rows}${boxes}<button class="del" style="margin-top:6px" data-clearsel="${id}">clear selection</button>`;
@@ -1072,7 +1108,7 @@ async function aiOverlayAsk(id,w,p,m){
   delete AIFIX[id][w]; AIFIX[id]["~"+w]="asking the AI …"; renderShots();
   try{
     const [r]=await aiAsk([{c:w,p,m,kind:"word",mt:{src:"dict",verified:false,suspect:"read from a photo by OCR"}}]);
-    AIFIX[id][w]={zh:r.zh&&CJK.test(r.zh)?r.zh.replace(/\s+/g,""):w,p:r.p,m:r.m,note:r.note,ok:r.ok};
+    AIFIX[id][w]={zh:r.zh&&CJK.test(r.zh)?r.zh.replace(/\s+/g,""):w,p:r.p,m:r.m,note:r.note,ok:r.ok,hsk:r.hsk};
   }catch(err){ AIFIX[id][w]={err:err&&err.message||String(err)}; }
   delete AIFIX[id]["~"+w]; renderShots();
 }
@@ -1387,7 +1423,7 @@ async function signAskAI(id){
     if(!SIGN[id]) return;
     let zh=r.zh&&CJK.test(r.zh)?r.zh.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):c;
     zh=recutLines(zh,lines); /* the model often drops the line breaks — the photo's lines win */
-    sg.lines=zh.split("\n"); sg.ai={zh,p:r.p,m:r.m,note:r.note,ok:r.ok};
+    sg.lines=zh.split("\n"); sg.ai={zh,p:r.p,m:r.m,note:r.note,ok:r.ok,hsk:r.hsk};
   }catch(err){ if(SIGN[id]) sg.aiErr=err&&err.message||String(err); } /* → signPreview falls back to the offline model */
   if(SIGN[id]){ delete sg.aiBusy; delete sg.aiPromise; }
   renderShots(); })();
@@ -1419,7 +1455,8 @@ async function saveSign(id){
   if(deck().some(d=>d.c===c)){ alert("This text is already in the deck."); return; }
   /* meaning: AI check (if done here) → phrasebook → offline translation (if enabled) → word gloss (then pending) */
   let mt={src:sg.full?"phrasebook":"gloss",verified:false,pending:!sg.full}, mean=sg.mean||"", pin=keep.map(x=>x.r.py).join(" / ");
-  if(sg.ai && c===sg.ai.zh){ mean=sg.ai.m||mean; pin=sg.ai.p||pin; mt={src:"llm",verified:true,pending:false}; }
+  let hsk=0;
+  if(sg.ai && c===sg.ai.zh){ mean=sg.ai.m||mean; pin=sg.ai.p||pin; mt={src:"llm",verified:true,pending:false}; hsk=sg.ai.hsk||0; }
   else if(!sg.full && nmtOn() && !(aiLive()&&!sg.aiErr)){ /* no connection (or AI failed): offline model */
     const btn=document.querySelector(`[data-signsave="${id}"]`); if(btn){ btn.disabled=true; btn.textContent="Translating …"; }
     try{ const r=await signMeaning(keep.map(x=>x.l)); mean=r.m||mean; mt={src:r.src,verified:false,pending:r.pending}; }catch(e){}
@@ -1434,6 +1471,7 @@ async function saveSign(id){
     ? { c, p:pin, m:mean, t:"Custom", at:Date.now(), shot:id, lb:"photo", mt, ...(keep[0].r.segs.filter(x=>CJK.test(x)).length>1?{seg:keep[0].r.segs.filter(x=>CJK.test(x))}:{}) }
     : { kind:"sign", c, p:pin, m:mean, t:"Sign", at:Date.now(), shot:id,
         segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
+  if(hsk) card.hsk=hsk;
   if(S.pendingImg) card.img=S.pendingImg;
   if(S.pendingFull && !word) card.imgFull=S.pendingFull;
   S.custom.push(card);
@@ -1482,10 +1520,11 @@ function renderShots(){
           :`<button class="ocr-btn" data-crop="${s.id}">CROP</button><button class="del" data-del="${s.id}">delete</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${cropping
           ?`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it.</span>`
-          :(SIGN[s.id]?signEditorHTML(s.id):OCRRES[s.id]?selbarHTML(s.id):QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:"")}</div>
+          :(SIGN[s.id]?signEditorHTML(s.id):OCRRES[s.id]?selbarHTML(s.id):QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]} <button class="del" data-nextshot="1">Next photo</button></div>${qsAiBox(s.id)}`:"")}</div>
       </div>`;
     }).join("");
   box.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>delShot(b.dataset.del));
+  box.querySelectorAll("[data-nextshot]").forEach(b=> b.onclick=()=>$("#cam").click());
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
   box.querySelectorAll("[data-cropok]").forEach(b=> b.onclick=()=>cropOk(b.dataset.cropok));
   box.querySelectorAll("[data-cropocr]").forEach(b=> b.onclick=()=>cropOcr(b.dataset.cropocr));
@@ -1504,7 +1543,7 @@ function renderShots(){
   });
   box.querySelectorAll("[data-clearsel]").forEach(b=> b.onclick=()=>{ SELS[b.dataset.clearsel].clear(); SHOWBOX[b.dataset.clearsel]=true; renderShots(); });
   box.querySelectorAll("[data-boxes]").forEach(b=> b.onclick=()=>{ SHOWBOX[b.dataset.boxes]=!SHOWBOX[b.dataset.boxes]; renderShots(); });
-  box.querySelectorAll("[data-qs]").forEach(b=> b.onclick=()=>quickSave(b.dataset.qs,b.dataset.w,b.dataset.p,b.dataset.m,+b.dataset.g,b.dataset.ai==="1"));
+  box.querySelectorAll("[data-qs]").forEach(b=> b.onclick=()=>quickSave(b.dataset.qs,b.dataset.w,b.dataset.p,b.dataset.m,+b.dataset.g,b.dataset.ai==="1",+b.dataset.hsk||0));
   box.querySelectorAll("[data-aiq]").forEach(b=> b.onclick=()=>aiOverlayAsk(b.dataset.aiq,b.dataset.w,b.dataset.p,b.dataset.m));
   box.querySelectorAll("[data-signai]").forEach(b=> b.onclick=()=>signAskAI(b.dataset.signai));
   Object.keys(OCRRES).forEach(aiOverlayAuto);
