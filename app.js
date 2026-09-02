@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=88; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=89; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1730,10 +1730,9 @@ async function openCharPick(id,k,i,btn){
     renderShots(); if(aiLive()) signAskAI(id); };
   const render=(dict,ai,aiBusy)=>{
     const seen=new Set();
-    box.innerHTML=`<div class="ckhead"><canvas class="ckref" width="1" height="1" title="the character in the photo"></canvas><div class="badge">Replace <b class="hanzi">${esc(ch)}</b> with:</div></div>
+    box.innerHTML=`<div class="badge">Replace <b class="hanzi">${esc(ch)}</b> with:</div>
       <div class="cands">${ai.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!aiBusy?`<span class="badge">no match — draw it or ask the AI</span>`:""}${aiBusy?`<span class="badge">asking the AI …</span>`:""}</div>
       <div class="ckacts"><button class="btn mini" id="ck-draw-${id}">Not here? Draw it</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}<span class="grow"></span><button class="del" id="ck-del-${id}">Remove</button><button class="del" id="ck-x-${id}">close</button></div>`;
-    drawCharRef(box.querySelector(".ckref"),sg,k,i);
     box.querySelectorAll("[data-rep]").forEach(b=> b.onclick=()=>apply(b.dataset.rep));
     $("#ck-del-"+id).onclick=()=>apply(null);
     $("#ck-x-"+id).onclick=()=>{ box.remove(); btn.classList.remove("on"); };
@@ -1759,21 +1758,6 @@ function charBox(sg,k,i){
   const x0=Math.min(...ok.map(b=>b.x0)), x1=Math.max(...ok.map(b=>b.x1)), cell=(x1-x0)/n;
   const cx=x0+(i+0.5)*cell, side=Math.max(H,Math.min(cell,1.4*H));
   return {x0:cx-side/2,y0:cy-side/2,x1:cx+side/2,y1:cy+side/2};
-}
-/* the tapped character as it looks in the photo — the original stays visible while drawing or typing (H: the keyboard hid it) */
-async function drawCharRef(cv,sg,k,i){ /* the picker's small reference (64 px tall); the drawing sheet has its own movable view */
-  if(!cv||!sg.img) { if(cv) cv.remove(); return; }
-  try{
-    const bmp=await createImageBitmap(sg.img);
-    let b=charBox(sg,k,i);
-    if(!b) b={x0:0,y0:0,x1:bmp.width,y1:bmp.height}; /* no usable geometry: the whole crop */
-    const h=Math.max(8,b.y1-b.y0), w=Math.max(8,b.x1-b.x0);
-    const padX=w*0.6, padY=h*0.25; /* a bit of the neighbours for orientation */
-    const sx=Math.max(0,b.x0-padX), sy=Math.max(0,b.y0-padY), sw=Math.min(bmp.width-sx,w+2*padX), sh=Math.min(bmp.height-sy,h+2*padY);
-    const H=64, W=Math.max(48,Math.min(200,Math.round(sw*H/sh)));
-    cv.width=W*2; cv.height=H*2; cv.style.width=W+"px"; cv.style.height=H+"px";
-    cv.getContext("2d").drawImage(bmp,sx,sy,sw,sh,0,0,cv.width,cv.height); bmp.close();
-  }catch(e){ cv.remove(); }
 }
 /* ---------- drawing sheet: write the character with a finger, the on-device reader names it ----------
    Opens over the whole screen (H: the inline pad sat below the fold, unseen). The photo character is at the top,

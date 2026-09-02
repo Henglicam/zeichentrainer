@@ -226,9 +226,8 @@ button{font:inherit;color:inherit}
 .ck.draw{box-shadow:inset 0 0 0 1.5px var(--label2)}
 .ckpick{margin:6px 0 10px;padding:12px;border-radius:var(--r);background:var(--card2)}
 .ckpick .ck{background:var(--card)} .signed .ck{background:var(--card2)} .pane .signed .ck{background:var(--card)}
+.signed .ck.on,.ckpick .ck.on{background:var(--tint);color:#fff} /* the chosen character stays filled whatever the surface */
 .ckpick .cands{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
-.ckhead{display:flex;align-items:center;gap:10px}
-.ckref{height:64px;border-radius:8px;background:var(--fill);flex:none}
 .ckacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px} .ckacts .grow{flex:1}
 
 /* drawing sheet */
