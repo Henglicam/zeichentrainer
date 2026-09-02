@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=95; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=96; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -286,10 +286,11 @@ let _aiSoon=null;
 function aiAutoSoon(){ if(!aiAutoOn()) return; clearTimeout(_aiSoon); _aiSoon=setTimeout(()=>{ _aiAutoRan=false; aiAuto(); },1500); }
 function aiCardPayload(d){
   return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"the reading looks uncertain ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
-    gloss:d.kind==="sign"?(d.gloss||[]).map(g=>g.w+" "+(g.m||"?")).join(" · "):undefined };
+    gloss:d.kind==="sign"?(d.gloss||[]).map(g=>g.w+" "+(g.m||"?")).join(" · "):undefined,
+    alt:d.alts&&d.alts.length?d.alts:undefined };
 }
 const AI_SYSTEM=`You review flashcards for an adult learning to read Chinese in Beijing. Cards come from OCR of photos (signs, menus, packaging), so the Chinese text may contain OCR slips, the pinyin is auto-generated and the meaning may be a crude word-by-word gloss.
-For every card return the corrected card. Rules: "zh" = the Chinese text, fixed only if it is clearly an OCR slip (keep line breaks); "p" = pinyin with tone marks, correct for this context (多音字!), one space between syllables, " / " between lines; "m" = natural English meaning of the whole text as a sign or word (short, no explanations); "note" = one short sentence on what was wrong, or "ok"; "ok" = true when zh, pinyin and meaning were already right; "bad" = true when the Chinese text is OCR garbage — no plausible sign, menu or product text can be made of it — then keep "zh" as given, leave "m" empty and say so in the note. Never replace an unreadable text with a guess.
+For every card return the corrected card. Rules: "zh" = the Chinese text, fixed only if it is clearly an OCR slip (keep line breaks); "p" = pinyin with tone marks, correct for this context (多音字!), one space between syllables, " / " between lines; "m" = natural English meaning of the whole text as a sign or word (short, no explanations); "note" = one short sentence on what was wrong, or "ok"; "ok" = true when zh, pinyin and meaning were already right; "alt" (when present) = other readings of the same photo by other OCR passes and models — the true text is often a mix of them, or a well-known name or phrase they all circle around; prefer a real sign, menu or product text that every reading could be a misreading of; "bad" = true when the Chinese text is OCR garbage — no plausible sign, menu or product text can be made of it — then keep "zh" as given, leave "m" empty and say so in the note. Never replace an unreadable text with a guess.
 Answer with a JSON array only, one object per input card in the same order: [{"c":"<input c>","zh":"…","p":"…","m":"…","note":"…","ok":true|false,"bad":true|false}]. No prose, no code fences.`;
 async function aiAsk(cards,status){
   const key=S.settings.aiKey; if(!key) throw new Error("no API key");
@@ -1044,18 +1045,42 @@ async function ocrWorker(status){
       if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
       await loadDict().catch(()=>{}); /* meanings are optional — OCR works without */
       /* paths derived from the page URL at runtime — stays relative to the subpath */
-      const base=new URL("./vendor/",location.href).href;
-      const w=await Tesseract.createWorker("chi_sim",1,{
-        workerPath:base+"worker.min.js",
-        corePath:base+"tesseract-core-simd-lstm.wasm.js",
-        langPath:base.replace(/\/$/,""),
-        cacheMethod:"none", /* SW cache covers offline; tesseract's IndexedDB cache is a known corruption source */
-        logger:m=>{ if(m.status==="recognizing text"&&_ocrLog) _ocrLog(Math.round(m.progress*100)); } /* one worker, many callers: the running job's handler */
-      });
+      const w=await makeWorker("chi_sim");
       _ocrWorker=w; return w;
     })().catch(err=>{ _ocrLoading=null; throw err; });
   }
   return _ocrLoading;
+}
+function makeWorker(lang){
+  const base=new URL("./vendor/",location.href).href;
+  return Tesseract.createWorker(lang,1,{
+    workerPath:base+"worker.min.js",
+    corePath:base+"tesseract-core-simd-lstm.wasm.js",
+    langPath:base.replace(/\/$/,""),
+    cacheMethod:"none", /* SW cache covers offline; tesseract's IndexedDB cache is a known corruption source */
+    logger:m=>{ if(m.status==="recognizing text"&&_ocrLog) _ocrLog(Math.round(m.progress*100)); } /* one job at a time, whichever worker: the running job's handler */
+  });
+}
+/* The traditional-character reader (v96, H's Yakult bottle: 養樂多 is a traditional logo, and the simplified model can only
+   answer with the nearest simplified shapes — 养兴多, 和准浴多; chi_tra reads 義樂多). Loaded on first need, its lines are
+   converted to simplified characters (`t2s`, OpenCC's character table) and compete like any other reading. */
+let _traWorker=null, _traLoading=null, T2S=null;
+async function traWorker(status){
+  if(_traWorker) return _traWorker;
+  if(!_traLoading){
+    _traLoading=(async()=>{
+      status("loading the traditional-character reader …");
+      if(!T2S){ const txt=await (await fetch("./vendor/t2s.txt")).text(); T2S=new Map(); for(const line of txt.split("\n")){ const cs=[...line]; if(cs.length>=2) T2S.set(cs[0],cs[1]); } }
+      const w=await makeWorker("chi_tra"); _traWorker=w; return w;
+    })().catch(err=>{ _traLoading=null; throw err; });
+  }
+  return _traLoading;
+}
+const t2s=str=>T2S?[...str].map(c=>T2S.get(c)||c).join(""):str;
+/* the traditional reader's lines, converted; null when that reader cannot be had (offline before its first download) */
+async function readPassTra(blob,status){
+  let w; try{ w=await traWorker(status); }catch(err){ logErr("tra",err&&err.message||err); return null; }
+  const ls=await readPass(w,blob,status); return ls.map(l=>({...l,t:t2s(l.t),tra:true}));
 }
 
 /* per-photo result (session only): characters with box + auto pinyin; tap to select */
@@ -1338,7 +1363,7 @@ async function jpegOf(blob,q){
 /* What the reader sees must be a JPEG: this Tesseract build misreads canvas PNGs and WebPs (measured on the tilted
    composite: JPEG 0.95 → 本区域禁止违规 99 %, the same pixels as PNG → one character). Intermediate crops stay PNG so the
    only lossy step is the last one — two JPEG generations in a row lost the line too. */
-const READ_JPEG=0.95, WEAK_READ=100; /* a reading below this score gets the whole-frame copies (v95: garbage at 58 on the Yakult logo) */
+const READ_JPEG=0.95, WEAK_READ=180; /* a reading below this score gets the whole-frame copies, both readers (v95: garbage at 58 on the Yakult logo; v96: 180 like the second look — H: time is no issue) */
 async function deskewBlob(blob,forced){ /* forced: rotate by this angle instead of estimating (the card crop follows the reading crop) */
   try{
     const bmp=await createImageBitmap(blob);
@@ -1469,7 +1494,9 @@ async function readPass(w,blob,status){
     const t=syms.map(x=>x.ch).join("");
     if(CJK.test(t)) lines.push({t,cf:syms.filter(x=>CJK.test(x.ch)).map(x=>x.cf),bx:syms.map(x=>x.b?{x0:x.b.x0,y0:x.b.y0,x1:x.b.x1,y1:x.b.y1}:null)});
   });
-  return lines;
+  /* lines of tiny "characters" beside a tall one are decoration or noise (v96: a soup of five such lines, 18 characters, once outscored the logo's three) */
+  const hOf=l=>{ const bs=l.bx.filter(Boolean); return bs.length?median(bs.map(b=>b.y1-b.y0)):0; }, hmax=Math.max(0,...lines.map(hOf));
+  return lines.filter(l=>hOf(l)>=0.45*hmax);
 }
 /* walk a Tesseract result line by line: cb(symbols, line) */
 const eachLine=(data,cb)=>(data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>cb((l.words||[]).flatMap(w=>w.symbols||[]),l))));
@@ -1485,9 +1512,11 @@ function dictCover(ls){
 }
 function readingScore(ls){
   const n=ls.flatMap(l=>l.cf).length; if(!n) return 0;
-  const frag=Math.min(1,(n/ls.length)/4); /* many one- and two-character lines = fragments */
+  const frag=Math.min(1,(n/ls.length)/3); /* lines under three characters = fragments (v96: /4 punished a real three-character logo against four garbage characters) */
   const short=ls.filter(l=>l.cf.length<=2).length/ls.length; /* v95: a soup of seven short lines (n = 15) once outscored the real three characters */
-  return meanCf(ls)*Math.pow(n,0.35)*frag*(1-0.5*short)*(0.75+0.5*dictCover(ls));
+  const cf=meanCf(ls);
+  /* confidence counts cubically: real text reads at 90–97 %, the reader's garbage at 79–86 %, and a linear weight let one more character outweigh that (v96) */
+  return cf*Math.pow(cf/100,2)*Math.pow(n,0.35)*frag*(1-0.5*short)*(0.75+0.5*dictCover(ls));
 }
 /* Second look at a tight crop. A loose frame with stripes, ribbons or a second label fools the tilt estimate and the
    block reader (H: a Maotai label read as one false character from the ribbon). Where the first pass found text in a
@@ -1509,7 +1538,7 @@ async function secondLook(w,dk,passes,status,r){
     const ext=textRowExtent(bmp,Math.min(...boxes.map(b=>b.x0)),Math.max(...boxes.map(b=>b.x1)),y0,y1,H);
     const x0=Math.max(0,ext.x0-mX), x1=Math.min(bmp.width,ext.x1+mX);
     const frac=((x1-x0)*(y1-y0))/(bmp.width*bmp.height);
-    if(!((frac<0.6||meanCf(first)<92) && x1-x0>=24 && y1-y0>=24)) return null;
+    if(!(x1-x0>=24 && y1-y0>=24)) return null; /* v96: always, not only on a loose frame or an unsure pass — H: time is no issue, and the copies read 脊 where the first pass had 疹 */
     status("found text, reading it closely …");
     /* the text area with 1.5 text heights of plain margin in the crop's median colour: the reader wants margins, real
        ones bring the clutter back, and a corner-sampled red ribbon once framed a white label in red */
@@ -1521,14 +1550,15 @@ async function secondLook(w,dk,passes,status,r){
     c2.fillRect(0,0,cv.width,pad); c2.fillRect(0,cv.height-pad,cv.width,pad); c2.fillRect(0,0,pad,cv.height); c2.fillRect(cv.width-pad,0,pad,cv.height);
     const tight=await new Promise(res=>cv.toBlob(res,"image/png")); /* lossless intermediate — deskewBlob hands the reader a JPEG */
     const dk2=await deskewBlob(tight), bmp2=await createImageBitmap(dk2.blob); r.tightBlob=dk2.blob; /* kept for diagnosis */
-    const scales=[45/H,60/H,75/H,90/H].filter(k=>k<0.92); if(H<=110) scales.push(1); /* four character heights; native too while it is cheap */
+    const scales=[45/H,60/H,75/H,90/H,110/H].filter(k=>k<0.92); if(H<=200) scales.push(1); /* five character heights; native too while it is cheap (v96: 脊柱 fused into one glyph below 90 px) */
     const tightLines=[];
-    const readTight=async(mode)=>{ for(const k of scales){
-      const lines=await readPass(w,mode==="bw"?await toBW(bmp2,k):mode==="chroma"?await toChroma(bmp2,k):k===1?dk2.blob:await toJpeg(bmp2,k),status), sc=k===1?lines:scaleBoxes(lines,k);
-      passes.push({lines:sc,img:dk2.blob,angle:dk2.angle,tightened:true,scale:k,bw:mode==="bw",chroma:mode==="chroma"}); tightLines.push(...sc); } };
-    await readTight("colour");
-    /* colour readings weak? read the black-and-white and the chromaticity copies at the same sizes */
-    if(Math.max(...passes.map(p=>readingScore(p.lines)))<180){ await readTight("bw"); await readTight("chroma"); }
+    const readTight=async(mode,tra)=>{ for(const k of scales){
+      const src=mode==="bw"?await toBW(bmp2,k):mode==="chroma"?await toChroma(bmp2,k):k===1?dk2.blob:await toJpeg(bmp2,k);
+      const lines=tra?await readPassTra(src,status):await readPass(w,src,status); if(!lines) return; const sc=k===1?lines:scaleBoxes(lines,k);
+      passes.push({lines:sc,img:dk2.blob,angle:dk2.angle,tightened:true,scale:k,bw:mode==="bw",chroma:mode==="chroma",tra:!!tra}); tightLines.push(...sc); } };
+    await readTight("colour"); await readTight("bw"); await readTight("chroma"); /* the copies always (v96) */
+    /* still weak? the traditional reader on all three — it knows glyphs the simplified one can only approximate */
+    if(Math.max(...passes.map(p=>readingScore(p.lines)))<180){ for(const mode of ["colour","bw","chroma"]) await readTight(mode,true); }
     bmp2.close();
     /* Merge line by line: every reading tends to get some line right and lose another, so the lines of all tight
        passes are clustered by their vertical band and the most confident reading of each band is kept. */
@@ -1575,19 +1605,31 @@ async function cropSign(id){
     if(Math.max(0,...passes.map(p=>readingScore(p.lines)))<WEAK_READ){ /* weak or nothing: the whole frame as black-and-white and chromaticity copies, sizes from the ink */
       status("trying a black-and-white copy …");
       const bmp=await createImageBitmap(dk.blob), H=inkHeight(bmp)||bmp.height/1.6;
-      for(const t of [45,65,90]){ const k=Math.min(1.5,t/H); for(const mode of ["bw","chroma"]){
-        const lines=await readPass(w,mode==="bw"?await toBW(bmp,k):await toChroma(bmp,k),status);
-        passes.push({lines:scaleBoxes(lines,k),img:dk.blob,angle:dk.angle,tightened:false,scale:k,bw:mode==="bw",chroma:mode==="chroma"}); } }
+      for(const t of [45,65,90]){ const k=Math.min(1.5,t/H); for(const mode of ["bw","chroma"]){ const src=mode==="bw"?await toBW(bmp,k):await toChroma(bmp,k);
+        for(const tra of [false,true]){ const lines=tra?await readPassTra(src,status):await readPass(w,src,status); if(!lines) continue;
+          passes.push({lines:scaleBoxes(lines,k),img:dk.blob,angle:dk.angle,tightened:false,scale:k,bw:mode==="bw",chroma:mode==="chroma",tra}); } } }
       bmp.close();
     }
-    passes.sort((a,b)=>readingScore(b.lines)-readingScore(a.lines));
-    r.passes=passes.map(p=>({s:Math.round(readingScore(p.lines)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),tight:p.tightened,bw:!!p.bw,ch:!!p.chroma}));
+    /* agreement counts: a text several passes produced beats a single pass's near-equal score (v96: 业主直租 ×3 lost a tie to 业主直祖 ×1) */
+    const textOf=p=>p.lines.map(x=>x.t).join("\n"), agree=new Map(); passes.forEach(p=>{ const t=textOf(p); if(t) agree.set(t,(agree.get(t)||0)+1); });
+    const score=p=>readingScore(p.lines)*Math.min(1.5,1+0.1*((agree.get(textOf(p))||1)-1));
+    passes.sort((a,b)=>score(b)-score(a));
+    r.passes=passes.map(p=>({s:Math.round(score(p)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),tight:p.tightened,bw:!!p.bw,ch:!!p.chroma,tra:!!p.tra}));
     LAST_READ.passes=r.passes;
     const best=passes[0], lines=best.lines;
     if(best.tightened) S.pendingImg=cardBlob||best.img;
     if(!lines.length){ status("No Chinese characters recognized — frame the characters tightly and try again."); return; }
     /* img = the (straightened, maybe tightened) crop the text was read from, boxes = where each character sits in it: the picker shows the original */
-    SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r};
+    /* the other readings (distinct texts, best first): the AI sees them all (the truth is often a mix, or a name they circle
+       around — 养兴多 / 义乐多 / 和准浴多 → 养乐多), the picker offers their characters at the same position */
+    const bestT=lines.map(x=>x.t).join("\n"), alts=[];
+    for(const p of passes){ const t=textOf(p); if(t&&t!==bestT&&!alts.includes(t)) alts.push(t); if(alts.length>=5) break; }
+    /* always among them: the traditional reader's best (it knows glyphs the other one lacks) and the best reading of another
+       length (two characters fused into one, or one lost — 专业冰矫正 beside 专业脊柱矫正 — is what the AI needs to see) */
+    const glyphsOf=t=>[...t].filter(c=>CJK.test(c)).length, nBest=glyphsOf(bestT);
+    for(const pick of [passes.find(p=>p.lines.some(l=>l.tra)&&textOf(p)!==bestT), passes.find(p=>textOf(p)&&glyphsOf(textOf(p))!==nBest&&readingScore(p.lines)>=0.6*readingScore(lines))]){
+      if(pick&&!alts.includes(textOf(pick))){ if(alts.length>=6) alts.pop(); alts.push(textOf(pick)); } }
+    SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r, alts};
     delete READING[id]; renderShots();
     if(aiAutoOn()) signAskAI(id); /* every reading is checked without a tap */
   }catch(err){ status("OCR failed: "+(err&&err.message||err)); logErr("read",err&&(err.stack||err.message)||err); }
@@ -1634,6 +1676,12 @@ async function aiCharAlternatives(line,i){
   let arr=[]; try{ arr=JSON.parse(raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,"")); }catch(e){ arr=[...raw].filter(ch=>CJK.test(ch)); }
   return [...new Set(arr.map(x=>String(x).trim()).filter(x=>[...x].length===1&&CJK.test(x)&&x!==chars[i]))].slice(0,4);
 }
+/* what the other readings saw at this position (v96): only readings with the same number of characters in that line */
+function altCharsAt(sg,k,i){
+  const line=sg.lines[k], n=[...line].length, out=[];
+  for(const t of sg.alts||[]){ const l=t.split("\n")[k]; if(!l) continue; const cs=[...l]; if(cs.length!==n) continue; const c=cs[i]; if(CJK.test(c)&&c!==[...line][i]&&!out.includes(c)) out.push(c); }
+  return out;
+}
 function charStripHTML(id,k){
   const sg=SIGN[id], line=sg.lines[k], same=sg.orig&&sg.orig[k]===line.trim(), cf=(same&&sg.conf&&sg.conf[k])||[];
   let ci=0;
@@ -1663,7 +1711,7 @@ async function openCharPick(id,k,i,btn){
   const askAI=async(dict)=>{ render(dict,[],true); try{ const alts=await aiCharAlternatives(line,i); if(!box.isConnected) return; render(dict,alts,false); if(!alts.length) box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">the AI has no better idea</span>`); }catch(err){ if(!box.isConnected) return; render(dict,[],false); box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">AI: ${esc(err.message||err)}</span>`); } };
   render([],[],false);
   await loadDict().catch(()=>{});
-  const dict=charCandidates(line,i);
+  const dict=[...new Set([...altCharsAt(sg,k,i),...charCandidates(line,i)])];
   /* AI-first: while the AI is live it is asked at once, the dictionary candidates are the fallback */
   if(aiLive()) askAI(dict); else render(dict,[],false);
 }
@@ -1876,7 +1924,7 @@ async function signAskAI(id){
   sg.aiBusy="asking the AI …"; delete sg.aiErr; renderShots();
   sg.aiPromise=(async()=>{ try{
     const c=lines.join("\n"), res=(sg.res||[]).filter(Boolean);
-    const [r]=await aiAsk([{kind:"sign",c,p:res.map(x=>x.py).join(" / "),m:sg.mean||"",gloss:res.flatMap(x=>x.gloss),mt:{src:"gloss",verified:false,suspect:"read from a photo by OCR"}}]);
+    const [r]=await aiAsk([{kind:"sign",c,p:res.map(x=>x.py).join(" / "),m:sg.mean||"",gloss:res.flatMap(x=>x.gloss),alts:sg.alts,mt:{src:"gloss",verified:false,suspect:"read from a photo by OCR"}}]);
     if(!SIGN[id]) return;
     let zh=r.zh&&CJK.test(r.zh)&&!r.bad?r.zh.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):c;
     zh=recutLines(zh,lines); /* the model often drops the line breaks — the photo's lines win */
@@ -1933,6 +1981,7 @@ async function saveSign(id){
     : { kind:"sign", c, p:pin, m:mean, t:"Sign", at:Date.now(), shot:id,
         segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
   if(sg.flag){ card.flag=true; const note=(sg.flagNote||"").trim(); if(note) card.flagNote=note; } /* H: flag a new card at once, without opening it again */
+  if(sg.alts&&sg.alts.length) card.alts=sg.alts.slice(0,5); /* the other readings stay with the card for a later AI check */
   if(S.pendingImg) card.img=await jpegOf(S.pendingImg);
   if(S.pendingFull) card.imgFull=S.pendingFull;
   S.custom.push(card);
@@ -2145,7 +2194,7 @@ function mirrorCheck(force){
 /* the worker needs the mirror for vendor files too — tell it on start and whenever the setting changes */
 function tellMirror(){ const c=navigator.serviceWorker&&navigator.serviceWorker.controller; if(c) c.postMessage({type:"mirror",mirror:mirrorURL()}); }
 /* the reader's files (OCR engine, language data, dictionary): cached once, then offline for good */
-const OCR_FILES=["tesseract.min.js","worker.min.js","tesseract-core-simd-lstm.wasm.js","tesseract-core-simd-lstm.wasm","chi_sim.traineddata.gz","pinyin-pro.js","cedict.tsv.gz"];
+const OCR_FILES=["tesseract.min.js","worker.min.js","tesseract-core-simd-lstm.wasm.js","tesseract-core-simd-lstm.wasm","chi_sim.traineddata.gz","chi_tra.traineddata.gz","t2s.txt","pinyin-pro.js","cedict.tsv.gz"];
 async function ocrCached(){
   if(!window.caches) return 0;
   let n=0; for(const f of OCR_FILES){ try{ if(await caches.match(new URL("./vendor/"+f,location.href).href)) n++; }catch(e){} }
@@ -2155,7 +2204,7 @@ async function renderOcrRow(){
   const st=$("#ocr-status"), btn=$("#ocr-btn"); if(!st||!btn) return;
   const n=await ocrCached(); if(!$("#ocr-status")) return;
   if(n===OCR_FILES.length){ st.textContent="ready — text recognition works offline and without a VPN"; btn.hidden=true; return; }
-  st.textContent=`${OCR_FILES.length-n} of ${OCR_FILES.length} files not on the phone yet (≈12 MB once). Downloads by itself on first use, or now:`;
+  st.textContent=`${OCR_FILES.length-n} of ${OCR_FILES.length} files not on the phone yet (≈14 MB once). Downloads by itself on first use, or now:`;
   btn.hidden=false; btn.disabled=false; btn.textContent="Download";
   btn.onclick=async()=>{
     btn.disabled=true; let done=0;
