@@ -1596,10 +1596,18 @@ function openDrawSheet(id,k,i,apply){
     <div class="cands" id="ds-cands"></div>
     <div class="ckacts"><button class="del" id="ds-undo">Undo</button><button class="del" id="ds-clear">Clear</button><span class="grow"></span><button class="btn primary" id="ds-done">Done</button></div>`;
   document.body.appendChild(el); document.body.classList.add("noscroll");
-  drawCharRef(el.querySelector(".ckref"),sg,k,i,{h:150,side:0.25}); /* large, tight crop: the original must be readable while drawing */
+  /* the photo character as big as the screen allows: it takes all the height left beside the pad, the status line and the buttons */
+  const fitRef=()=>{ const rc=el.querySelector(".ckref"); if(!rc||!rc.isConnected) return;
+    rc.style.height="0px"; rc.style.width="auto";
+    const cs=getComputedStyle(el), gap=parseFloat(cs.rowGap)||0, kids=[...el.children];
+    const used=kids.reduce((a,c)=>a+c.getBoundingClientRect().height,0)+gap*(kids.length-1)+parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);
+    const h=Math.max(140,Math.floor(el.clientHeight-used)); rc.style.height=h+"px";
+    if(rc.getBoundingClientRect().width>el.clientWidth-32){ rc.style.width="100%"; rc.style.height="auto"; } };
+  drawCharRef(el.querySelector(".ckref"),sg,k,i,{h:300,side:0.25}).then(fitRef); /* tight crop (H: "as big as possible") */
+  el.fitRef=fitRef; window.addEventListener("resize",fitRef);
   const cv=el.querySelector(".pad"), ctx=cv.getContext("2d"), strokes=[]; let cur=null, seq=0;
   const status=t=>{ const st=el.querySelector("#ds-st"); if(st) st.textContent=t; };
-  const close=()=>{ seq++; el.remove(); document.body.classList.remove("noscroll"); };
+  const close=()=>{ seq++; el.remove(); document.body.classList.remove("noscroll"); window.removeEventListener("resize",fitRef); };
   const paint=()=>{
     ctx.clearRect(0,0,cv.width,cv.height);
     ctx.strokeStyle="rgba(237,230,214,.16)"; ctx.lineWidth=2; ctx.setLineDash([10,10]);
