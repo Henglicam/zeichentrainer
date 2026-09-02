@@ -310,14 +310,14 @@ function renderStudy(main){
     back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}<div class="grades">${grds}</div>
       <button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?"⚑ Flagged for review · clear":"⚑ Flag for review"}</button></div>`;
   } else {
-    back=`<button class="btn wide" id="reveal">Reveal</button>`;
+    back=`<div class="hint">Tap the character to reveal</div>`;
   }
+  /* front: no tag row (theme / new / custom is noise while learning); tapping the photo or the character reveals */
   main.innerHTML=`<div class="card">
     ${S.single?`<div class="topline"><button class="del" id="back-cards">← Cards</button><span class="badge">testing one card</span></div>`:""}
-    ${tagsHTML(d,isNew)}
-    ${frontHTML(d)}
+    <div class="front${S.revealed?"":" tap"}" id="reveal">${frontHTML(d)}</div>
     ${back}</div>`;
-  const rv=$("#reveal"); if(rv) rv.onclick=()=>{ S.revealed=true; render(); };
+  const rv=$("#reveal"); if(rv && !S.revealed) rv.onclick=()=>{ S.revealed=true; render(); };
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   document.querySelectorAll(".grade").forEach(b=> b.onclick=()=>grade(b.dataset.g));
@@ -379,9 +379,9 @@ const THUMB={};
 function thumbURL(d){ return THUMB[d.c]||(THUMB[d.c]=URL.createObjectURL(d.img)); }
 function dropThumb(c){ if(THUMB[c]){ URL.revokeObjectURL(THUMB[c]); delete THUMB[c]; } }
 function cardStatus(d){
-  const p=S.progress[d.c]; if(!p) return `<span class="st new">new</span>`;
+  const p=S.progress[d.c]; if(!p) return "";
   const days=Math.round((p.due-today())/DAY);
-  return `<span class="st">${days<=0?"due":"in "+days+" d"}</span>`;
+  return `<span class="st${days<=0?" due":""}">${days<=0?"due":"in "+days+" d"}</span>`;
 }
 function cardsListHTML(){
   const q=S.query.trim().toLowerCase();
@@ -393,7 +393,7 @@ function cardsListHTML(){
   const rows=list.map(d=>`<button class="crow" data-c="${esc(d.c)}">
       ${d.img?`<img class="thumb" src="${thumbURL(d)}" alt="">`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`}
       <span class="ct"><span class="c">${esc(d.c.replace(/\n/g," / "))}</span><span class="p">${esc(d.p)}</span><span class="m">${esc(d.m)}</span></span>
-      <span class="cs">${d.flag?'<span class="pill flagged">⚑ review</span>':""}${d.kind==="sign"?'<span class="pill">sign</span>':customSet.has(d.c)?'<span class="pill">custom</span>':""}${cardStatus(d)}</span></button>`).join("");
+      <span class="cs">${d.flag?'<span class="pill flagged">⚑ review</span>':""}${cardStatus(d)}</span></button>`).join("");
   return {html:rows||`<div class="badge" style="margin-top:20px">No cards match.</div>`, n:list.length};
 }
 function renderCards(main){
