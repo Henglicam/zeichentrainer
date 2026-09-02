@@ -1548,14 +1548,11 @@ async function openCharPick(id,k,i,btn){
   const render=(dict,ai,aiBusy)=>{
     const seen=new Set(drawn);
     box.innerHTML=`<div class="ckhead"><canvas class="ckref" width="1" height="1" title="the character in the photo"></canvas><div class="badge">Replace <b class="hanzi">${esc(ch)}</b> with:</div></div>
-      <div class="cands">${drawn.map(c=>`<button class="ck draw" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${ai.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!drawn.length&&!aiBusy?`<span class="badge">no dictionary match — draw it, type it or ask the AI</span>`:""}${aiBusy?`<span class="badge">asking the AI …</span>`:""}</div>
-      <div class="ckacts">${pad?"":`<button class="btn mini" id="ck-draw-${id}">Not here? Draw it</button>`}${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}</div>
-      <div class="ckacts"><input class="hanzi one" id="ck-type-${id}" maxlength="2" placeholder="type"><button class="btn mini" id="ck-ok-${id}">Use</button><span class="grow"></span><button class="del" id="ck-del-${id}">Remove</button><button class="del" id="ck-x-${id}">close</button></div>
+      <div class="cands">${drawn.map(c=>`<button class="ck draw" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${ai.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!drawn.length&&!aiBusy?`<span class="badge">no dictionary match — draw it or ask the AI</span>`:""}${aiBusy?`<span class="badge">asking the AI …</span>`:""}</div>
+      <div class="ckacts">${pad?"":`<button class="btn mini" id="ck-draw-${id}">Not here? Draw it</button>`}${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}<span class="grow"></span><button class="del" id="ck-del-${id}">Remove</button><button class="del" id="ck-x-${id}">close</button></div>
       <div class="ckdraw-slot"></div>`;
     drawCharRef(box.querySelector(".ckref"),sg,k,i);
     box.querySelectorAll("[data-rep]").forEach(b=> b.onclick=()=>apply(b.dataset.rep));
-    $("#ck-ok-"+id).onclick=()=>{ const v=[...$("#ck-type-"+id).value.trim()].filter(c=>CJK.test(c))[0]; if(v) apply(v); };
-    $("#ck-type-"+id).onkeydown=e=>{ if(e.key==="Enter") $("#ck-ok-"+id).click(); };
     $("#ck-del-"+id).onclick=()=>apply(null);
     $("#ck-x-"+id).onclick=()=>{ box.remove(); btn.classList.remove("on"); };
     const ab=$("#ck-ai-"+id); if(ab) ab.onclick=()=>askAI(dict);
@@ -1616,7 +1613,7 @@ function drawPad(id,k,i,onResult,onClose){
       const alts=await recognizeStrokes(w,strokes,p=>{ if(my===seq) status("reading … "+p+"%"); }); if(my!==seq||!el.isConnected) return;
       const sg=SIGN[id], ctxc=sg?charCandidates(sg.lines[k],i):[];
       const ranked=alts.slice().sort((a,b)=>(ctxc.includes(b)?1:0)-(ctxc.includes(a)?1:0)); /* what fits the neighbours first, otherwise the reader's order */
-      status(ranked.length?"Read as: tap the right one above, or keep drawing.":"Not recognized — try cleaner strokes, or type it.");
+      status(ranked.length?"Read as: tap the right one above, or keep drawing.":"Not recognized — try cleaner strokes.");
       onResult(ranked);
     }catch(err){ if(my===seq) status("Reading failed: "+(err&&err.message||err)); }
   };
