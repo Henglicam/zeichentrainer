@@ -44,7 +44,7 @@ Firefox Translations `zh-Hans→en` v2.0a2 (Mozilla, MPL-2.0; model 44 MB + shor
 - **Export/import** (More): progress + cards as JSON, `zeichentrainer-YYYY-MM-DD.json.txt` via the share sheet; import validates by content and upserts, keeping local images. The Export row shows **"Last export: N days ago"** (setting `lastExport`), red after 30 days or when never exported — the cards exist only on this phone. **Photos** row: inbox count, and a **Delete N** button for photos older than 30 days that already became a card (cards carry `shot:<inbox id>`; the cards keep their own crop). **Reset** wipes cards, progress and photos.
 
 ### Field lessons that shaped the UI (keep)
-No tab switching for the AI (v31/v32) · button always visible, never replaced by the auto result (v32) · one action after framing (v39) · plain words instead of jargon and `·` shorthand (v25/v39) · three top-bar pills overflow at 390 px, so Deck only shows off the Learn tab (v25) · Chrome/Android does not repaint after the camera until touched (v34) · the card text keeps the photo's lines, a horizontal word is one line (v42) · Android shares `.txt` but not `.json` (v3) · a cached 404 poisoned the dictionary once (SW caches only OK responses) · status text written into a DOM node captured before a re-render disappears silently — keep status in state and re-query (v47) · reading starts by itself after the frame is released, no Read tap (v47) · github.io is unreliable from China, jsDelivr is not (v48/v49).
+No tab switching for the AI (v31/v32) · button always visible, never replaced by the auto result (v32) · one action after framing (v39) · plain words instead of jargon and `·` shorthand (v25/v39) · three top-bar pills overflow at 390 px, so Deck only shows off the Learn tab (v25) · Chrome/Android does not repaint after the camera until touched (v34) · the card text keeps the photo's lines, a horizontal word is one line (v42) · Android shares `.txt` but not `.json` (v3) · a cached 404 poisoned the dictionary once (SW caches only OK responses) · status text written into a DOM node captured before a re-render disappears silently — keep status in state and re-query (v47) · reading starts by itself after the frame is released, no Read tap (v47) · github.io is unreliable from China, jsDelivr is not (v48/v49) · the crop frame stays on the photo until Save (v50).
 
 ## Hard constraints (learned in the field — do not violate)
 1. **No external dependencies / CDNs.** Must run offline and behind the GFW. System CJK fonts only. Libraries and data go into `vendor/` (licenses in `vendor/LICENSES.txt`).
@@ -64,7 +64,7 @@ Material language: 漆器 (lacquerware) + seal red. Deliberately not the default
 - The crop frame must stay visible on any photo color: bright dashed edge with a dark outline (red-on-red lesson); nothing is dimmed, inside or outside.
 
 ## Didactics / SRS
-- Loop: photo + character/word → tap to reveal → pinyin (+ pronunciation), meaning, (context word). No example sentences (H, v41).
+- Loop: photo + character/word → tap to reveal → pinyin (+ pronunciation), meaning, (context word). No example sentences (H's decision).
 - SM-2 light, grades `again / hard / good / easy` with interval preview. `again` re-queues the card within the same session.
 - Session = due cards + max. 8 new ones. "Pull forward" pulls future cards when nothing is due.
 
