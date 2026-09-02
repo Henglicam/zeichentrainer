@@ -192,7 +192,9 @@ function frontHTML(d){
       <div class="signtext" style="font-size:${fs}px">${lines.map((l,i)=>`<div>${(segs[i]||[l]).map(esc).join("<wbr>")}</div>`).join("")}</div></div>`;
   }
   const single=glyphs(d.c)<=1;
-  return `<div class="reticle">${reticleSVG(single)}<div class="glyph" style="font-size:${headFont(d.c)}px">${d.seg?d.seg.map(esc).join("<wbr>"):esc(d.c)}</div></div>`;
+  /* the photo is the cue — it belongs on the front, before reveal */
+  const pic=d.img?`<img class="signimg" src="${URL.createObjectURL(d.img)}" alt="photo">`:"";
+  return `${pic}<div class="reticle">${reticleSVG(single)}<div class="glyph" style="font-size:${headFont(d.c)}px">${d.seg?d.seg.map(esc).join("<wbr>"):esc(d.c)}</div></div>`;
 }
 function backHTML(d){
   const wordBlock = d.w ? `<div class="rule"></div>
@@ -201,12 +203,11 @@ function backHTML(d){
   const exBlock = d.ex ? `<div class="ex"><div class="zh">${esc(d.ex)}</div>
     ${d.exp?`<div class="exp">${esc(d.exp)}</div>`:""}
     ${d.exm?`<div class="exm">${esc(d.exm)}</div>`:""}</div>` : "";
-  const imgBlock = d.img ? `<div class="cardimg"><img src="${URL.createObjectURL(d.img)}" alt="source"></div>` : "";
   const glossBlock = d.kind==="sign" ? `<div class="gtable">${(d.gloss||[]).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("")}</div>
     ${d.mt&&!d.mt.verified?`<span class="flag">meaning: auto · unverified</span>`:""}
     ${d.imgFull?`<div class="cardimg"><img src="${URL.createObjectURL(d.imgFull)}" alt="context"></div>`:""}` : "";
   return `<div class="pin">${esc(d.p)}</div><div class="mean">${esc(d.m)}</div>
-    ${d.kind==="sign"?glossBlock:wordBlock+exBlock+imgBlock}`;
+    ${d.kind==="sign"?glossBlock:wordBlock+exBlock}`;
 }
 function endSingle(){
   /* leave single-card test mode and restore the session queue */
@@ -361,11 +362,13 @@ function renderCardDetail(main,c){
 }
 function renderEdit(main,c){
   const d=cardOf(c); if(!d){ S.editing=null; return renderCards(main); }
-  const isSign=d.kind==="sign";
+  const isSign=d.kind==="sign", isCustom=S.custom.some(x=>x.c===c);
   let removeImg=false;
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back">← Back</button><span class="badge">edit</span></div>
-    <div class="field"><label>${isSign?"Sign text":"词 · Word"}</label><div class="ro hanzi">${esc(d.c).replace(/\n/g,"<br>")}</div></div>
+    <div class="field"><label>${isSign?"Sign text · one line per row":"词 · Word"}${isCustom?"":" · base deck, fixed"}</label>
+      ${isCustom?(isSign?`<textarea id="e-word" class="hanzi" rows="${d.c.split("\n").length+1}">${esc(d.c)}</textarea>`:`<input id="e-word" class="hanzi" value="${esc(d.c)}">`)
+               :`<div class="ro hanzi">${esc(d.c).replace(/\n/g,"<br>")}</div>`}</div>
     <div class="row">
       <div class="field narrow"><label>Pinyin</label><input id="e-pin" class="mono" value="${esc(d.p)}"></div>
       <div class="field"><label>Meaning</label><input id="e-mean" value="${esc(d.m)}"></div>
@@ -382,9 +385,41 @@ function renderEdit(main,c){
   $("#back").onclick=()=>{ S.editing=null; render(); };
   const ni=$("#e-noimg"); if(ni) ni.onclick=()=>{ removeImg=true; $("#e-imgfield").remove(); };
   $("#e-save").onclick=async()=>{
-    const pin=$("#e-pin").value.trim(), mean=$("#e-mean").value.trim();
-    if(!pin||!mean){ const e=$("#e-err"); e.textContent="Pinyin and meaning are required."; e.style.display=""; return; }
+    const fail=m=>{ const e=$("#e-err"); e.textContent=m; e.style.display=""; };
+    let pin=$("#e-pin").value.trim(); const mean=$("#e-mean").value.trim();
+    if(!pin||!mean) return fail("Pinyin and meaning are required.");
+    /* the Chinese text itself may be corrected (OCR slip) — progress and images move with it */
+    let newC=c;
+    const we=$("#e-word");
+    if(we){
+      newC=isSign?we.value.split("\n").map(l=>l.trim()).filter(l=>CJK.test(l)).join("\n"):we.value.replace(/\s+/g,"");
+      if(!CJK.test(newC)) return fail("Please enter Chinese text.");
+      if(newC!==c && deck().some(x=>x.c===newC)) return fail("“"+newC.replace(/\n/g," / ")+"” is already in the deck.");
+    }
     const upd={...d, p:pin, m:mean, ex:$("#e-ex").value.trim(), exp:$("#e-exp").value.trim(), exm:$("#e-exm").value.trim()};
+    if(newC!==c){
+      upd.c=newC;
+      try{
+        if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
+        await loadDict().catch(()=>{}); if(isSign) await loadSigns().catch(()=>{});
+        if(isSign){
+          const res=newC.split("\n").map(lineMeaning);
+          upd.segs=res.map(r=>r.segs); upd.gloss=res.flatMap(r=>r.gloss.map(g=>({w:g.w,p:g.p,m:g.m})));
+          if(pin===d.p) upd.p=res.map(r=>r.py).join(" / ");
+        }else{
+          const chars=[...newC].filter(ch=>CJK.test(ch)).map(ch=>({ch}));
+          const segs=segmentChars(chars).map(seg=>seg.map(x=>x.ch).join(""));
+          if(segs.length>1) upd.seg=segs; else delete upd.seg;
+          if(pin===d.p) upd.p=pinyinPro.pinyin(newC,{type:"array",toneType:"symbol"}).join(" ");
+        }
+      }catch(e){}
+      /* move progress, custom record, thumbnail and queue entries to the new key */
+      if(S.progress[c]){ S.progress[newC]=S.progress[c]; delete S.progress[c];
+        try{ await idbDel("progress",c); await idbPut("progress",{c:newC,...S.progress[newC]}); }catch(e){} }
+      try{ await idbDel("custom",c); }catch(e){}
+      if(THUMB[c]){ THUMB[newC]=THUMB[c]; delete THUMB[c]; }
+      S.queue=S.queue.map(x=>x===c?newC:x); if(S.saved) S.saved.queue=S.saved.queue.map(x=>x===c?newC:x);
+    }
     if(!isSign){ upd.w=$("#e-w").value.trim(); upd.wp=$("#e-wp").value.trim(); upd.wm=$("#e-wm").value.trim();
       if(!upd.w){ delete upd.w; delete upd.wp; delete upd.wm; } }
     if(removeImg){ delete upd.img; delete upd.imgFull; dropThumb(c); }
@@ -392,7 +427,7 @@ function renderEdit(main,c){
     const i=S.custom.findIndex(x=>x.c===c);
     if(i>=0) S.custom[i]=upd; else S.custom.push(upd); /* base card -> local override */
     try{ await idbPut("custom",upd); }catch(e){}
-    S.editing=null; S.detail=c; render();
+    S.editing=null; S.detail=upd.c; render();
   };
 }
 function renderCustomList(){
