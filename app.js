@@ -1470,15 +1470,19 @@ async function cropSign(id){
     const {data}=await w.recognize(dk.blob,{},{blocks:true,text:true});
     const lines=[];
     (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>{
-      let t=""; const cfs=[];
+      let syms=[];
       (l.words||[]).forEach(wd=>(wd.symbols||[]).forEach(sy=>{
-        if(sy.confidence>=35 && (CJK.test(sy.text)||SIGN_PUNCT.test(sy.text))){ t+=sy.text; if(CJK.test(sy.text)) cfs.push(sy.confidence); }
+        if(sy.confidence>=35 && (CJK.test(sy.text)||SIGN_PUNCT.test(sy.text))) syms.push({ch:sy.text,cf:sy.confidence,b:sy.bbox});
       }));
-      t=t.replace(/^[、，。：:,.]+|[、，。：:,.]+$/g,"");
-      if(CJK.test(t)) lines.push({t,cf:cfs});
+      const edge=x=>/[、，。：:,.]/.test(x.ch);
+      while(syms.length&&edge(syms[0])) syms.shift();
+      while(syms.length&&edge(syms[syms.length-1])) syms.pop();
+      const t=syms.map(x=>x.ch).join("");
+      if(CJK.test(t)) lines.push({t,cf:syms.filter(x=>CJK.test(x.ch)).map(x=>x.cf),bx:syms.map(x=>x.b?{x0:x.b.x0,y0:x.b.y0,x1:x.b.x1,y1:x.b.y1}:null)});
     })));
     if(!lines.length){ status("No Chinese characters recognized."); return; }
-    SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), region:r};
+    /* img = the (straightened) crop the text was read from, boxes = where each character sits in it: the picker shows the original */
+    SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:dk.blob, region:r};
     delete READING[id]; renderShots();
     if(aiAutoOn()) signAskAI(id); /* every reading is checked without a tap */
   }catch(err){ status("OCR failed: "+(err&&err.message||err)); }
@@ -1537,16 +1541,22 @@ async function openCharPick(id,k,i,btn){
   let box=$("#ckpick-"+id); if(!box){ box=document.createElement("div"); box.className="ckpick"; box.id="ckpick-"+id; }
   btn.closest(".sline").appendChild(box);
   const apply=async(rep)=>{ const cs=[...sg.lines[k]]; if(rep===null) cs.splice(i,1); else cs[i]=rep; sg.lines[k]=cs.join(""); delete sg.ai; delete sg.aiErr; renderShots(); if(aiLive()) signAskAI(id); };
+  let drawn=[], pad=null; /* candidates read from the drawing pad; the pad survives re-renders of the candidate row */
   const render=(dict,ai,aiBusy)=>{
-    box.innerHTML=`<div class="badge">Replace <b class="hanzi">${esc(ch)}</b> with:</div>
-      <div class="cands">${ai.map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!ai.includes(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!aiBusy?`<span class="badge">no dictionary match — type it or ask the AI</span>`:""}${aiBusy?`<span class="badge">asking the AI …</span>`:""}</div>
-      <div class="cropacts"><input class="hanzi one" id="ck-type-${id}" maxlength="2" placeholder="type"><button class="btn mini" id="ck-ok-${id}">Use</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}<button class="del" id="ck-del-${id}">Remove</button><button class="del" id="ck-x-${id}">close</button></div>`;
+    const seen=new Set(drawn);
+    box.innerHTML=`<div class="ckhead"><canvas class="ckref" width="1" height="1" title="the character in the photo"></canvas><div class="badge">Replace <b class="hanzi">${esc(ch)}</b> with:</div></div>
+      <div class="cands">${drawn.map(c=>`<button class="ck draw" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${ai.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!drawn.length&&!aiBusy?`<span class="badge">no dictionary match — draw it, type it or ask the AI</span>`:""}${aiBusy?`<span class="badge">asking the AI …</span>`:""}</div>
+      <div class="cropacts"><button class="btn mini" id="ck-draw-${id}">Draw it</button><input class="hanzi one" id="ck-type-${id}" maxlength="2" placeholder="type"><button class="btn mini" id="ck-ok-${id}">Use</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}<button class="del" id="ck-del-${id}">Remove</button><button class="del" id="ck-x-${id}">close</button></div>
+      <div class="ckdraw-slot"></div>`;
+    drawCharRef(box.querySelector(".ckref"),sg,k,i);
     box.querySelectorAll("[data-rep]").forEach(b=> b.onclick=()=>apply(b.dataset.rep));
     $("#ck-ok-"+id).onclick=()=>{ const v=[...$("#ck-type-"+id).value.trim()].filter(c=>CJK.test(c))[0]; if(v) apply(v); };
     $("#ck-type-"+id).onkeydown=e=>{ if(e.key==="Enter") $("#ck-ok-"+id).click(); };
     $("#ck-del-"+id).onclick=()=>apply(null);
     $("#ck-x-"+id).onclick=()=>{ box.remove(); btn.classList.remove("on"); };
     const ab=$("#ck-ai-"+id); if(ab) ab.onclick=()=>askAI(dict);
+    $("#ck-draw-"+id).onclick=()=>{ if(!pad) pad=drawPad(id,k,i,alts=>{ drawn=alts; render(dict,ai,false); }, ()=>{ pad=null; render(dict,ai,false); }); box.querySelector(".ckdraw-slot").appendChild(pad); };
+    if(pad) box.querySelector(".ckdraw-slot").appendChild(pad);
   };
   const askAI=async(dict)=>{ render(dict,[],true); try{ const alts=await aiCharAlternatives(line,i); if(!box.isConnected) return; render(dict,alts,false); if(!alts.length) box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">the AI has no better idea</span>`); }catch(err){ if(!box.isConnected) return; render(dict,[],false); box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">AI: ${esc(err.message||err)}</span>`); } };
   render([],[],false);
@@ -1554,6 +1564,88 @@ async function openCharPick(id,k,i,btn){
   const dict=charCandidates(line,i);
   /* AI-first: while the AI is live it is asked at once, the dictionary candidates are the fallback */
   if(aiLive()) askAI(dict); else render(dict,[],false);
+}
+/* the tapped character as it looks in the photo — the original stays visible while drawing or typing (H: the keyboard hid it) */
+async function drawCharRef(cv,sg,k,i){
+  if(!cv||!sg.img) { if(cv) cv.remove(); return; }
+  try{
+    const bmp=await createImageBitmap(sg.img);
+    const line=[...sg.lines[k]], bx=(sg.boxes||[])[k]||[];
+    let b=(sg.orig&&sg.orig[k]===sg.lines[k].trim()&&bx.length===line.length)?bx[i]:null;
+    if(!b){ const all=bx.filter(Boolean); b=all.length?{x0:Math.min(...all.map(x=>x.x0)),y0:Math.min(...all.map(x=>x.y0)),x1:Math.max(...all.map(x=>x.x1)),y1:Math.max(...all.map(x=>x.y1))}:{x0:0,y0:0,x1:bmp.width,y1:bmp.height}; }
+    const h=Math.max(8,b.y1-b.y0), w=Math.max(8,b.x1-b.x0), padX=w*0.6, padY=h*0.25; /* a bit of the neighbours for orientation */
+    const sx=Math.max(0,b.x0-padX), sy=Math.max(0,b.y0-padY), sw=Math.min(bmp.width-sx,w+2*padX), sh=Math.min(bmp.height-sy,h+2*padY);
+    const H=64, W=Math.max(48,Math.min(200,Math.round(sw*H/sh)));
+    cv.width=W*2; cv.height=H*2; cv.style.width=W+"px"; cv.style.height=H+"px";
+    cv.getContext("2d").drawImage(bmp,sx,sy,sw,sh,0,0,cv.width,cv.height); bmp.close();
+  }catch(e){ cv.remove(); }
+}
+/* ---------- drawing pad: write the character with a finger, the on-device reader names it ----------
+   Strokes are rendered black on white at ~80 px and read by the same Tesseract model in single-character mode;
+   its alternatives are re-ranked by the dictionary context. Reading starts by itself after the finger lifts. */
+const DRAW_TIMER=900, DRAW_SIZE=240;
+function drawPad(id,k,i,onResult,onClose){
+  const el=document.createElement("div"); el.className="ckdraw";
+  el.innerHTML=`<canvas class="pad" width="${DRAW_SIZE*2}" height="${DRAW_SIZE*2}"></canvas>
+    <div class="cropacts"><span class="badge" id="ckd-st-${id}">Draw the character here.</span><button class="del" id="ckd-undo-${id}">Undo</button><button class="del" id="ckd-clear-${id}">Clear</button><button class="del" id="ckd-x-${id}">close pad</button></div>`;
+  const cv=el.querySelector(".pad"), ctx=cv.getContext("2d"), strokes=[]; let cur=null, timer=null, seq=0;
+  const status=t=>{ const st=el.querySelector("#ckd-st-"+id); if(st) st.textContent=t; };
+  const paint=()=>{
+    ctx.clearRect(0,0,cv.width,cv.height);
+    /* faint 田字格 */
+    ctx.strokeStyle="rgba(237,230,214,.16)"; ctx.lineWidth=2; ctx.setLineDash([8,8]);
+    ctx.beginPath(); ctx.moveTo(cv.width/2,0); ctx.lineTo(cv.width/2,cv.height); ctx.moveTo(0,cv.height/2); ctx.lineTo(cv.width,cv.height/2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle="#EDE6D6"; ctx.lineWidth=14; ctx.lineCap="round"; ctx.lineJoin="round";
+    for(const st of strokes.concat(cur?[cur]:[])){ if(!st.length) continue; ctx.beginPath(); ctx.moveTo(st[0][0],st[0][1]); for(const p of st) ctx.lineTo(p[0],p[1]); if(st.length===1) ctx.lineTo(st[0][0]+0.1,st[0][1]); ctx.stroke(); }
+  };
+  const pt=e=>{ const r=cv.getBoundingClientRect(); return [(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height]; };
+  cv.onpointerdown=e=>{ e.preventDefault(); cv.setPointerCapture(e.pointerId); clearTimeout(timer); cur=[pt(e)]; paint(); };
+  cv.onpointermove=e=>{ if(!cur) return; e.preventDefault(); cur.push(pt(e)); paint(); };
+  cv.onpointerup=cv.onpointercancel=e=>{ if(!cur) return; strokes.push(cur); cur=null; paint(); schedule(); };
+  const schedule=()=>{ clearTimeout(timer); timer=setTimeout(()=>recognize(),DRAW_TIMER); };
+  const recognize=async()=>{
+    const my=++seq; if(!strokes.length){ status("Draw the character here."); return; }
+    try{
+      const w=await ocrWorker(status); if(my!==seq) return;
+      status("reading …");
+      const alts=await recognizeStrokes(w,strokes); if(my!==seq||!el.isConnected) return;
+      const sg=SIGN[id], ctxc=sg?charCandidates(sg.lines[k],i):[];
+      const ranked=alts.slice().sort((a,b)=>(ctxc.includes(b)?1:0)-(ctxc.includes(a)?1:0)); /* what fits the neighbours first, otherwise the reader's order */
+      status(ranked.length?"Read as: tap the right one above, or keep drawing.":"Not recognized — try cleaner strokes, or type it.");
+      onResult(ranked);
+    }catch(err){ if(my===seq) status("Reading failed: "+(err&&err.message||err)); }
+  };
+  el.querySelector("#ckd-undo-"+id).onclick=()=>{ strokes.pop(); paint(); if(strokes.length) schedule(); else { seq++; onResult([]); status("Draw the character here."); } };
+  el.querySelector("#ckd-clear-"+id).onclick=()=>{ strokes.length=0; seq++; paint(); onResult([]); status("Draw the character here."); };
+  el.querySelector("#ckd-x-"+id).onclick=()=>{ seq++; el.remove(); onClose(); };
+  el.strokes=strokes; el.recognize=recognize; el.paint=paint; /* used by the tests */
+  paint();
+  return el;
+}
+async function recognizeStrokes(w,strokes){
+  const pts=strokes.flat(); if(!pts.length) return [];
+  const x0=Math.min(...pts.map(p=>p[0])), x1=Math.max(...pts.map(p=>p[0])), y0=Math.min(...pts.map(p=>p[1])), y1=Math.max(...pts.map(p=>p[1]));
+  const side=Math.max(x1-x0,y1-y0,40);
+  const render=async(T,lw)=>{ /* strokes black on white, the character T px tall like the print the model knows */
+    const sc=T/side, PAD=24;
+    const cv=document.createElement("canvas"); cv.width=Math.round((x1-x0)*sc)+2*PAD; cv.height=Math.round((y1-y0)*sc)+2*PAD;
+    const ctx=cv.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.strokeStyle="#000"; ctx.lineWidth=Math.max(3,Math.round(lw*T/80)); ctx.lineCap="round"; ctx.lineJoin="round";
+    for(const st of strokes){ ctx.beginPath(); ctx.moveTo((st[0][0]-x0)*sc+PAD,(st[0][1]-y0)*sc+PAD); for(const p of st) ctx.lineTo((p[0]-x0)*sc+PAD,(p[1]-y0)*sc+PAD); if(st.length===1) ctx.lineTo((st[0][0]-x0)*sc+PAD+0.1,(st[0][1]-y0)*sc+PAD); ctx.stroke(); }
+    return new Promise(res=>cv.toBlob(res,"image/png"));
+  };
+  /* The model gives no alternatives for a symbol, so a few readings are combined: single word (best on hand strokes) and
+     single character, at two sizes and stroke widths. Ranked by confidence; each character once. */
+  const seen=new Map();
+  for(const [psm,T,lw] of [["8",80,7],["10",80,7],["8",50,11]]){
+    const blob=await render(T,lw);
+    await w.setParameters({tessedit_pageseg_mode:psm});
+    const {data}=await w.recognize(blob,{},{blocks:true,text:true});
+    (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>(l.words||[]).forEach(wd=>(wd.symbols||[]).forEach(sy=>{
+      for(const c of [...sy.text]) if(CJK.test(c)&&(seen.get(c)||0)<sy.confidence) seen.set(c,sy.confidence);
+    })))));
+  }
+  return [...seen.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]).slice(0,5);
 }
 function signEditorHTML(id){
   const sg=SIGN[id]; if(!sg) return "";
