@@ -794,7 +794,7 @@ async function ocrWorker(status){
 }
 
 /* per-photo result (session only): characters with box + auto pinyin; tap to select */
-const OCRRES={}, SELS={}, QSNOTE={}, AIFIX={}, QSCARD={}; /* QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) */ /* AIFIX[id][text] = AI check of an OCR selection before saving */
+const OCRRES={}, SELS={}, QSNOTE={}, AIFIX={}, QSCARD={}, SHOWBOX={}; /* SHOWBOX[id]: word boxes shown although the AI is live */ /* QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) */ /* AIFIX[id][text] = AI check of an OCR selection before saving */
 /* greedy longest-match segmentation against CC-CEDICT (max word length 8) */
 function segmentChars(chars){
   const out=[]; let k=0;
@@ -880,13 +880,15 @@ async function onOcr(id,region){
     });
     OCRRES[id]={w:W,h:H,flat};
     /* a tight single-line frame IS the word or phrase the user wants — pre-select it */
-    SELS[id]=new Set((lines.length===1||flat.length<=4)?flat.map(c=>c.i):[]);
+    /* with the AI live the whole frame is the card — everything pre-selected, no boxes to tap */
+    SELS[id]=new Set((lines.length===1||flat.length<=4||aiLive())?flat.map(c=>c.i):[]);
     delete QSNOTE[id];
     renderShots();
   }catch(err){ status("OCR failed: "+(err&&err.message||err)); }
 }
 function overlayHTML(id){
   const R=OCRRES[id]; if(!R) return "";
+  if(aiLive() && !SHOWBOX[id]) return ""; /* the AI reads the text — no pinyin boxes on the photo */
   const sel=SELS[id];
   return R.flat.map(c=>{
     const st=`left:${(c.b.x0/R.w*100).toFixed(2)}%;top:${(c.b.y0/R.h*100).toFixed(2)}%;`+
@@ -899,7 +901,7 @@ function selbarHTML(id){
   const chars=R.flat.filter(c=>SELS[id].has(c.i));
   const note=QSNOTE[id]?`<div class="ok" style="margin:0 0 8px">${QSNOTE[id]}</div>${qsAiBox(id)}`:"";
   if(!chars.length){
-    return `${note}<span class="badge">Tap a word in the image — one tap selects the whole dictionary word.</span>`;
+    return `${note}<span class="badge">Tap a word in the image — one tap selects the whole dictionary word.</span>${aiLive()&&!SHOWBOX[id]?`<button class="del" data-boxes="${id}">Show the word boxes</button>`:""}`;
   }
   /* selection can span several dictionary words — one row per word */
   const groups=[];
@@ -927,7 +929,8 @@ function selbarHTML(id){
       <button class="btn mini" data-qs="${id}" data-g="${gr[0].g}" data-w="${esc(w)}" data-p="${esc(p)}" data-m="${esc(m)}" data-ai="${f?1:0}">Save</button>
       <button class="btn mini" data-mkcard="${esc(w)}" data-p="${esc(p)}" data-m="${esc(m)}">Edit…</button>${aiPart(w0,p0,m0)}</div>`;
   }).join("");
-  if(groups.length<2) return `${note}${rows}<button class="del" style="margin-top:6px" data-clearsel="${id}">clear selection</button>`;
+  const boxes=aiLive()?`<button class="del" style="margin-top:6px" data-boxes="${id}">${SHOWBOX[id]?"Hide the word boxes":"Pick words on the photo"}</button>`:"";
+  if(groups.length<2) return `${note}${rows}${boxes}<button class="del" style="margin-top:6px" data-clearsel="${id}">clear selection</button>`;
   /* several words selected: the whole string is ONE card — meaning composed word by word */
   const pw0=chars.map(c=>c.ch).join("");
   const pp0=pinyinPro.pinyin(pw0,{type:"array",toneType:"symbol"}).join(" ");
@@ -941,7 +944,7 @@ function selbarHTML(id){
       <button class="btn mini primary" data-qs="${id}" data-g="-1" data-w="${esc(pw)}" data-p="${esc(pp)}" data-m="${esc(pm)}" data-ai="${pf?1:0}">Save phrase</button>
       <button class="btn mini" data-mkcard="${esc(pw)}" data-p="${esc(pp)}" data-m="${esc(pm)}">Edit…</button>${aiPart(pw0,pp0,pm0)}</div>
     <div class="badge" style="margin:4px 0 6px">single words:</div>`;
-  return `${note}${phrase}${rows}<button class="del" style="margin-top:6px" data-clearsel="${id}">clear selection</button>`;
+  return `${note}${phrase}${rows}${boxes}<button class="del" style="margin-top:6px" data-clearsel="${id}">clear selection</button>`;
 }
 
 /* the AI's answer for the card just saved from this photo, with one-tap Accept */
@@ -1374,7 +1377,8 @@ function renderShots(){
     S.prefill={w:b.dataset.mkcard,p:b.dataset.p,m:b.dataset.m||""};
     S.mode="add"; render();
   });
-  box.querySelectorAll("[data-clearsel]").forEach(b=> b.onclick=()=>{ SELS[b.dataset.clearsel].clear(); renderShots(); });
+  box.querySelectorAll("[data-clearsel]").forEach(b=> b.onclick=()=>{ SELS[b.dataset.clearsel].clear(); SHOWBOX[b.dataset.clearsel]=true; renderShots(); });
+  box.querySelectorAll("[data-boxes]").forEach(b=> b.onclick=()=>{ SHOWBOX[b.dataset.boxes]=!SHOWBOX[b.dataset.boxes]; renderShots(); });
   box.querySelectorAll("[data-qs]").forEach(b=> b.onclick=()=>quickSave(b.dataset.qs,b.dataset.w,b.dataset.p,b.dataset.m,+b.dataset.g,b.dataset.ai==="1"));
   box.querySelectorAll("[data-aiq]").forEach(b=> b.onclick=()=>aiOverlayAsk(b.dataset.aiq,b.dataset.w,b.dataset.p,b.dataset.m));
   box.querySelectorAll("[data-signai]").forEach(b=> b.onclick=()=>signAskAI(b.dataset.signai));
