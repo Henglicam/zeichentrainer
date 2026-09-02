@@ -1,0 +1,76 @@
+# Fetches the Mozilla Firefox Translations zh→en "base-memory" model (MPL-2.0,
+# ~38 MB gzipped, Git LFS) and opens a PR that adds it to vendor/nmt/.
+# The build sandbox cannot reach Git LFS, and Mozilla's CDN is unreliable from
+# China, so the model is committed to the repo and served like the OCR bundle.
+# Run it from the phone: Actions → "Fetch zh→en translation model" → Run workflow.
+name: Fetch zh→en translation model
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sparse-clone the model directory from Mozilla (LFS)
+        env:
+          GIT_LFS_SKIP_SMUDGE: "1"
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --filter=blob:none --sparse --no-checkout https://github.com/mozilla/firefox-translations-models.git mozilla
+          cd mozilla
+          git sparse-checkout set models/base-memory/zhen
+          git checkout
+          git lfs pull --include="models/base-memory/zhen/*"
+          ls -la models/base-memory/zhen
+      - name: Copy, verify and write the manifest
+        run: |
+          set -euo pipefail
+          SRC=mozilla/models/base-memory/zhen
+          mkdir -p vendor/nmt
+          for f in model.zhen.intgemm.alphas.bin.gz lex.50.50.zhen.s2t.bin.gz vocab.zhen.spm.gz; do
+            test -s "$SRC/$f"
+            if head -c 64 "$SRC/$f" | grep -q "git-lfs"; then echo "LFS pointer not resolved: $f"; exit 1; fi
+            gzip -t "$SRC/$f"
+            cp "$SRC/$f" vendor/nmt/
+          done
+          python3 - <<'PY'
+          import json, hashlib, os
+          src = "mozilla/models/base-memory/zhen"
+          files = {"model": "model.zhen.intgemm.alphas.bin.gz", "lex": "lex.50.50.zhen.s2t.bin.gz", "vocab": "vocab.zhen.spm.gz"}
+          meta = json.load(open(os.path.join(src, "metadata.json")))
+          out = {"name": "Firefox Translations zh→en base-memory", "from": "zh", "to": "en",
+                 "license": "MPL-2.0", "source": "https://github.com/mozilla/firefox-translations-models/tree/main/models/base-memory/zhen",
+                 "flores": meta.get("flores"), "byteSize": meta.get("byteSize"), "files": files,
+                 "sizes": {k: os.path.getsize(os.path.join("vendor/nmt", v)) for k, v in files.items()},
+                 "sha256": {k: hashlib.sha256(open(os.path.join("vendor/nmt", v), "rb").read()).hexdigest() for k, v in files.items()}}
+          out["downloadBytes"] = sum(out["sizes"].values())
+          out["available"] = True
+          json.dump(out, open("nmt-model.json", "w"), indent=1, ensure_ascii=False)
+          # bump both version markers so installed apps refresh the shell (and this manifest)
+          import re
+          sw = open("sw.js").read(); n = int(re.search(r'zt-v(\d+)', sw).group(1)) + 1
+          open("sw.js", "w").write(re.sub(r'zt-v\d+', f'zt-v{n}', sw, count=1))
+          ix = open("index.html").read(); open("index.html", "w").write(re.sub(r'PWA v\d+', f'PWA v{n}', ix, count=1))
+          print("bumped to v", n)
+          print(json.dumps(out, indent=1, ensure_ascii=False))
+          PY
+          rm -rf mozilla
+          du -sh vendor/nmt
+      - name: Commit to branch nmt-model and open a PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B nmt-model
+          git add vendor/nmt nmt-model.json sw.js index.html
+          git commit -m "Add Mozilla zh→en base-memory translation model (vendor/nmt)"
+          git push -f origin nmt-model
+          gh pr create --base main --head nmt-model \
+            --title "Add zh→en offline translation model (vendor/nmt, 38 MB)" \
+            --body "Fetched by the *Fetch zh→en translation model* workflow from mozilla/firefox-translations-models (models/base-memory/zhen, MPL-2.0). Adds model + shortlist + vocab (gzipped), fills nmt-model.json and bumps the PWA version. The app offers the download under More → Offline translation." \
+            || echo "Could not open the PR automatically — open it from branch nmt-model."
