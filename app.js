@@ -34,7 +34,7 @@ const DECK_BASE = [
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
-const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:58; };
+const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
 /* ---------- SRS (SM-2 light) ---------- */
 const DAY = 86400000;
@@ -376,8 +376,8 @@ async function quickSave(id,w,p,m,grp){
     S.queue=buildQueue(false);
     QSNOTE[id]=`“${w}” saved — ${esc(p)}. Auto values, verify when in doubt.`;
   }
-  /* deselect only this word's characters — other rows stay available */
-  R.flat.forEach(c=>{ if(c.g===grp) SELS[id].delete(c.i); });
+  /* deselect this word's characters (phrase: everything) — other rows stay available */
+  if(grp<0) SELS[id].clear(); else R.flat.forEach(c=>{ if(c.g===grp) SELS[id].delete(c.i); });
   setStats(); renderShots();
 }
 async function onOcr(id,region){
@@ -422,8 +422,8 @@ async function onOcr(id,region){
       segmentChars(cs).forEach(seg=>{ seg.forEach(c=>{ c.g=g; }); g++; });
     });
     OCRRES[id]={w:W,h:H,flat};
-    /* a tight frame usually IS the word — pre-select it */
-    SELS[id]=new Set(flat.length<=4?flat.map(c=>c.i):[]);
+    /* a tight single-line frame IS the word or phrase the user wants — pre-select it */
+    SELS[id]=new Set((lines.length===1||flat.length<=4)?flat.map(c=>c.i):[]);
     delete QSNOTE[id];
     renderShots();
   }catch(err){ status("OCR failed: "+(err&&err.message||err)); }
@@ -459,7 +459,21 @@ function selbarHTML(id){
       <button class="btn mini" data-qs="${id}" data-g="${gr[0].g}" data-w="${esc(w)}" data-p="${esc(p)}" data-m="${esc(m)}">Save</button>
       <button class="btn mini" data-mkcard="${esc(w)}" data-p="${esc(p)}" data-m="${esc(m)}">Edit…</button></div>`;
   }).join("");
-  return `${note}${rows}<button class="del" style="margin-top:6px" data-clearsel="${id}">clear selection</button>`;
+  if(groups.length<2) return `${note}${rows}<button class="del" style="margin-top:6px" data-clearsel="${id}">clear selection</button>`;
+  /* several words selected: the whole string is ONE card — meaning composed word by word */
+  const pw=chars.map(c=>c.ch).join("");
+  const pp=pinyinPro.pinyin(pw,{type:"array",toneType:"symbol"}).join(" ");
+  const pm=groups.map(gr=>{
+    const w=gr.map(c=>c.ch).join("");
+    const g=(DICT&&DICT.get(w))||"";
+    return w+" "+(g?g.split(";")[0].trim():"?");
+  }).join(" · ");
+  const phrase=`<div class="selbar phrase"><span class="sw">${esc(pw)}</span><span class="sp">${esc(pp)}</span>
+      <span class="sm">${esc(pm)}</span>
+      <button class="btn mini primary" data-qs="${id}" data-g="-1" data-w="${esc(pw)}" data-p="${esc(pp)}" data-m="${esc(pm)}">Save phrase</button>
+      <button class="btn mini" data-mkcard="${esc(pw)}" data-p="${esc(pp)}" data-m="${esc(pm)}">Edit…</button></div>
+    <div class="badge" style="margin:4px 0 6px">single words:</div>`;
+  return `${note}${phrase}${rows}<button class="del" style="margin-top:6px" data-clearsel="${id}">clear selection</button>`;
 }
 
 /* ---------- Cropping (crop → OCR or card image) ---------- */
@@ -560,7 +574,7 @@ async function cropOcr(id){
 /* ---------- Kamera / Inbox ---------- */
 function renderInbox(main){
   main.innerHTML=`<div class="pane">
-    <div class="lead">Take a photo — it stays on this device. After shooting you land in crop mode: draw a frame → OCR overlays pinyin; recognized text is split into dictionary words — one tap selects a whole word, "Save" stores it with pinyin, meaning and image ("Edit…" opens the form). First OCR use downloads ~12 MB once, works offline afterwards; verify tones + meaning via chat.</div>
+    <div class="lead">Take a photo — it stays on this device. After shooting you land in crop mode: draw a frame → OCR overlays pinyin; a single-line frame comes fully selected: "Save phrase" stores the whole string as one card (meaning composed word by word); tap words to select single ones instead ("Edit…" opens the form). First OCR use downloads ~12 MB once, works offline afterwards; verify tones + meaning via chat.</div>
     <button class="btn primary block" id="snap">Take photo</button>
     <div id="shots"></div>
   </div>`;
