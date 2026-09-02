@@ -94,7 +94,7 @@ button{font:inherit;color:inherit}
 .field input,.field textarea{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px;
   color:var(--bone);font-family:var(--sans);font-size:16px;padding:12px 14px;outline:none}
 .field input:focus{border-color:var(--mute)}
-.field input.hanzi{font-family:var(--hanzi);font-size:20px}
+.field input.hanzi,.field textarea.hanzi{font-family:var(--hanzi);font-size:20px;line-height:1.4;resize:vertical}
 .field input.hanzi.big{font-size:24px}
 .field input.mono{font-family:var(--mono)}
 .row{display:flex;gap:10px}
