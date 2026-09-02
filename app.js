@@ -60,7 +60,7 @@ function previewInterval(card, grade){
 }
 
 /* ---------- IndexedDB (persistent) ---------- */
-const DB_NAME="zeichentrainer", DB_VER=1;
+const DB_NAME="zeichentrainer", DB_VER=2;
 let _db=null;
 function openDB(){
   return new Promise((res,rej)=>{
@@ -71,6 +71,7 @@ function openDB(){
       if(!db.objectStoreNames.contains("progress")) db.createObjectStore("progress",{keyPath:"c"});
       if(!db.objectStoreNames.contains("custom"))   db.createObjectStore("custom",{keyPath:"c"});
       if(!db.objectStoreNames.contains("inbox"))    db.createObjectStore("inbox",{keyPath:"id"});
+      if(!db.objectStoreNames.contains("settings")) db.createObjectStore("settings",{keyPath:"k"}); /* v2: opt-ins, keys */
     };
     r.onsuccess=()=>{ _db=r.result; res(_db); };
     r.onerror=()=>rej(r.error);
@@ -86,7 +87,7 @@ function idbClear(store){ return _os(store,"readwrite").then(os=>new Promise((re
 const S = { mode:"study", progress:{}, custom:[], inbox:[],
   queue:[], idx:0, revealed:false, done:0, ahead:false, ready:false,
   pendingImg:null, pendingFull:null, pendingUse:"crop", prefill:null, persist:null,
-  detail:null, query:"", filterUnv:false, filterFlag:false, single:null, saved:null, editing:null };
+  detail:null, query:"", filterUnv:false, filterFlag:false, settings:{}, single:null, saved:null, editing:null };
 
 function deck(){
   /* custom entries override base cards with the same key (edited base cards) */
@@ -104,12 +105,14 @@ function buildQueue(includeAhead){
   return q;
 }
 const cardOf = c => deck().find(d=>d.c===c);
+async function setSetting(k,v){ S.settings[k]=v; try{ await idbPut("settings",{k,v}); }catch(e){} }
 
 /* ---------- Boot ---------- */
 async function boot(){
   try{
-    const [prog, cust, inb] = await Promise.all([idbAll("progress"), idbAll("custom"), idbAll("inbox")]);
+    const [prog, cust, inb, sett] = await Promise.all([idbAll("progress"), idbAll("custom"), idbAll("inbox"), idbAll("settings").catch(()=>[])]);
     S.progress = {}; prog.forEach(r=>{ const {c,...s}=r; S.progress[c]=s; });
+    sett.forEach(r=>{ S.settings[r.k]=r.v; });
     S.custom = cust;
     S.inbox = inb.sort((a,b)=>b.ts-a.ts);
   }catch(e){ console.warn("IndexedDB unavailable, session only:", e); }
@@ -162,6 +165,35 @@ function render(){
   if(S.mode==="more")  return renderMore(main);
   if(S.mode==="cards") return S.editing?renderEdit(main,S.editing):S.detail?renderCardDetail(main,S.detail):renderCards(main);
 }
+/* More → Offline translation: not in build / enable (size prompt) / on + pending count */
+async function renderNmtRow(){
+  const st=$("#nmt-status"), btn=$("#nmt-btn"); if(!st||!btn) return;
+  const info=await nmtInfo(); if(!$("#nmt-status")) return;
+  const mb=info?Math.round((info.downloadBytes||0)/1e6):0;
+  const pend=S.custom.filter(d=>d.kind==="sign"&&d.mt&&d.mt.pending).length;
+  const setBtn=(label,fn)=>{ btn.hidden=false; btn.disabled=false; btn.textContent=label; btn.onclick=fn; };
+  if(!info){ st.textContent="zh→en model not in this build yet (run the “Fetch zh→en translation model” action on GitHub)"; btn.hidden=true; return; }
+  if(!nmtOn()){
+    st.textContent=`zh→en neural model (Mozilla, ${mb} MB, downloaded once and cached like OCR). Signs the phrasebook does not cover get a full-sentence meaning.`;
+    setBtn("Enable",async()=>{
+      if(!confirm(`Download the zh→en translation model (${mb} MB) now? It stays cached on this phone.`)) return;
+      await setSetting("nmt",true); btn.disabled=true;
+      try{ await nmtLoad(t=>{ st.textContent=t; }); st.textContent="ready"; }
+      catch(err){ st.textContent="download failed: "+(err&&err.message||err); await setSetting("nmt",false); }
+      renderNmtRow();
+    });
+    return;
+  }
+  const cached=await nmtCached();
+  st.textContent=(NMT.ready?"loaded":cached?"on, model cached":"on, model downloads on first use")+(pend?`, ${pend} card${pend>1?"s":""} pending`:"");
+  if(pend) setBtn("Translate pending",async()=>{
+    btn.disabled=true;
+    try{ const n=await translatePending(t=>{ st.textContent=t; }); st.textContent=`translated ${n} card${n===1?"":"s"}`; }
+    catch(err){ st.textContent="failed: "+(err&&err.message||err); }
+    setTimeout(renderNmtRow,1500);
+  });
+  else setBtn("Turn off",async()=>{ await setSetting("nmt",false); renderNmtRow(); });
+}
 function renderMore(main){
   const ver=($(".ver")||{}).textContent||"";
   const st=S.persist===true?"persistent on this device":S.persist===false?"local — the system may evict it; install the app to be safe":"checking…";
@@ -170,6 +202,8 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">Export</div><div class="s">progress + custom cards, via the share sheet</div></div><button class="btn mini" id="export">Export</button></div>
     <div class="mrow"><div><div class="t">Import</div><div class="s">a zeichentrainer-…json.txt file; same words are overwritten</div></div><button class="btn mini" id="import">Import</button></div>
     <div class="mrow"><div><div class="t">Flagged cards</div><div class="s">${deck().filter(d=>d.flag).length} flagged for review, share the list as text (e.g. with a teacher)</div></div><button class="btn mini" id="share-flag">Share</button></div>
+    <div class="listhead">Translation</div>
+    <div class="mrow"><div><div class="t">Offline translation</div><div class="s" id="nmt-status">checking …</div></div><button class="btn mini" id="nmt-btn" hidden></button></div>
     <div class="mrow"><div><div class="t">Storage</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
     <div class="listhead">Danger zone</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">deletes progress, custom cards and photos</div></div><button class="btn mini danger" id="reset">Reset</button></div>
@@ -179,6 +213,7 @@ function renderMore(main){
   $("#export").onclick=exportData;
   $("#import").onclick=()=>$("#imp").click();
   $("#share-flag").onclick=shareFlagged;
+  renderNmtRow();
   $("#reset").onclick=resetAll;
 }
 
@@ -243,7 +278,7 @@ function backHTML(d){
     ${d.exp?`<div class="exp">${esc(d.exp)}</div>`:""}
     ${d.exm?`<div class="exm">${esc(d.exm)}</div>`:""}</div>` : "";
   const glossBlock = d.kind==="sign" ? `<div class="gtable">${(d.gloss||[]).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("")}</div>
-    ${d.mt&&!d.mt.verified?`<span class="flag">meaning auto-generated, unverified</span>`:""}
+    ${d.mt&&!d.mt.verified?`<span class="flag">meaning ${d.mt.src==="nmt"?"from the offline translation":d.mt.src==="phrasebook"?"from the phrasebook":d.mt.src==="llm"?"from the online AI":"composed word by word"}, unverified${d.mt.pending?" (translation pending)":""}</span>`:""}
     ${d.imgFull?`<div class="cardimg"><img src="${URL.createObjectURL(d.imgFull)}" alt="context"></div>`:""}` : "";
   return `<div class="pin">${esc(d.p)}</div><div class="mean">${esc(d.m)}</div>
     ${d.kind==="sign"?glossBlock:wordBlock+exBlock}`;
@@ -383,7 +418,7 @@ function renderCardDetail(main,c){
   const p=S.progress[c];
   const stat=p?`interval ${p.interval} d · ease ${p.ease.toFixed(2)} · ${p.reps} review${p.reps===1?"":"s"} · next ${new Date(p.due).toLocaleDateString("en-GB")}`:"not studied yet";
   main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${d.kind==="sign"?"sign card":isCustom?"custom card":"base deck"}${d.mt&&!d.mt.verified?", unverified":""}</span></div>
+    <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${d.kind==="sign"?"sign card":isCustom?"custom card":"base deck"}${d.mt&&!d.mt.verified?", unverified":""}${d.mt&&d.mt.pending?", translation pending":""}</span></div>
     <div class="card">${tagsHTML(d,!p)}${frontHTML(d)}<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}</div>
     <div class="detailacts">
       <button class="btn primary" id="d-test">Test this card</button>
@@ -470,7 +505,7 @@ function renderEdit(main,c){
     if(!isSign){ upd.w=$("#e-w").value.trim(); upd.wp=$("#e-wp").value.trim(); upd.wm=$("#e-wm").value.trim();
       if(!upd.w){ delete upd.w; delete upd.wp; delete upd.wm; } }
     if(removeImg){ delete upd.img; delete upd.imgFull; dropThumb(c); }
-    if(upd.mt) upd.mt={...upd.mt, verified:true}; /* a human edited it */
+    if(upd.mt) upd.mt={...upd.mt, verified:true, pending:false}; /* a human edited it */
     if($("#e-flag").checked){ upd.flag=true; const note=$("#e-note").value.trim(); if(note) upd.flagNote=note; else delete upd.flagNote; }
     else { delete upd.flag; delete upd.flagNote; }
     const i=S.custom.findIndex(x=>x.c===c);
@@ -813,6 +848,85 @@ async function cropOcr(id){
 }
 
 /* ---------- Sign cards: phrasebook meaning + transcript editor ---------- */
+/* ---------- offline translation (T2): Firefox Translations zh→en in WASM ----------
+   Engine + model live in vendor/nmt (model arrives via the fetch-nmt-model
+   GitHub Action, ~38 MB gzipped). Opt-in: S.settings.nmt. Loaded lazily in a
+   worker; the gz files are runtime-cached by the SW like the OCR bundle. */
+const NMT={worker:null, ready:null, info:undefined, pending:{}, seq:0};
+const NMT_DIR="./vendor/nmt/";
+async function nmtInfo(){
+  if(NMT.info!==undefined) return NMT.info;
+  /* manifest lives in the shell (./nmt-model.json, placeholder until the action fills it) so no 404 and no stale vendor cache */
+  try{ const r=await fetch("./nmt-model.json"); const j=r.ok?await r.json():null; NMT.info=j&&j.files?j:null; }catch(e){ NMT.info=null; }
+  return NMT.info;
+}
+function nmtOn(){ return S.settings.nmt===true; }
+function nmtCall(name,args,transfer){
+  return new Promise((res,rej)=>{
+    const id=++NMT.seq; NMT.pending[id]={res,rej};
+    NMT.worker.postMessage({id,name,args},transfer||[]);
+  });
+}
+async function fetchGz(url){
+  const r=await fetch(url); if(!r.ok) throw new Error("download failed ("+r.status+")");
+  return new Response(r.body.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
+}
+function nmtLoad(status){
+  if(NMT.ready) return NMT.ready;
+  const say=t=>{ if(status) status(t); };
+  NMT.ready=(async()=>{
+    const info=await nmtInfo(); if(!info) throw new Error("translation model not in this build");
+    say("starting translation engine …");
+    NMT.worker=new Worker(NMT_DIR+"translator-worker.js");
+    NMT.worker.onmessage=e=>{ const {id,result,error}=e.data; const p=NMT.pending[id]; if(!p) return; delete NMT.pending[id];
+      if(error) p.rej(Object.assign(new Error(error.message||"worker error"),{name:error.name})); else p.res(result); };
+    NMT.worker.onerror=e=>{ const err=new Error(e.message||"translation worker failed"); Object.values(NMT.pending).forEach(p=>p.rej(err)); NMT.pending={}; };
+    await nmtCall("initialize",[{cacheSize:0}]);
+    say("loading model ("+Math.round((info.downloadBytes||0)/1e6)+" MB, downloaded once) …");
+    const [model,shortlist,vocab]=await Promise.all([fetchGz(NMT_DIR+info.files.model), fetchGz(NMT_DIR+info.files.lex), fetchGz(NMT_DIR+info.files.vocab)]);
+    await nmtCall("loadTranslationModel",[{from:"zh",to:"en"},{model,shortlist,vocabs:[vocab]}],[model,shortlist,vocab]);
+    return true;
+  })().catch(err=>{ NMT.ready=null; if(NMT.worker){ NMT.worker.terminate(); NMT.worker=null; } NMT.pending={}; throw err; });
+  return NMT.ready;
+}
+async function nmtTranslate(texts,status){
+  if(!texts.length) return [];
+  await nmtLoad(status);
+  const r=await nmtCall("translate",[{models:[{from:"zh",to:"en"}],texts:texts.map(t=>({text:t,html:false}))}]);
+  return r.map(x=>(x.target.text||"").trim());
+}
+/* was the model already fetched into the SW cache? (cheap check for the More tab) */
+async function nmtCached(){
+  try{ const info=await nmtInfo(); if(!info||!window.caches) return false;
+    const hit=await caches.match(new URL(NMT_DIR+info.files.model,location.href).href); return !!hit; }catch(e){ return false; }
+}
+/* meaning of a sign card's lines: phrasebook line → offline translation → word gloss.
+   Returns {m, src, pending}; pending = some line still has only a gloss. */
+async function signMeaning(lines,status){
+  if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
+  await Promise.all([loadDict().catch(()=>{}), loadSigns().catch(()=>{})]);
+  const res=lines.map(lineMeaning);
+  const todo=res.map((r,i)=>r.full?null:i).filter(i=>i!==null);
+  let out=res.map(r=>r.en), src=todo.length?"gloss":"phrasebook", pending=todo.length>0;
+  if(todo.length && nmtOn() && await nmtInfo()){
+    try{
+      const tr=await nmtTranslate(todo.map(i=>lines[i]),status);
+      todo.forEach((i,k)=>{ if(tr[k]) out[i]=tr[k]; });
+      if(tr.some(Boolean)){ src="nmt"; pending=tr.some(t=>!t); }
+    }catch(err){ console.warn("offline translation failed:",err); }
+  }
+  return {m:out.filter(Boolean).join(" / "), src, pending, res};
+}
+/* complete cards whose meaning is still word-by-word (mt.pending) with the offline model */
+async function translatePending(status){
+  const list=S.custom.filter(d=>d.kind==="sign"&&d.mt&&d.mt.pending);
+  let n=0;
+  for(const d of list){
+    const r=await signMeaning(d.c.split("\n"),status);
+    if(r.src==="nmt"){ d.m=r.m; d.mt={...d.mt,src:"nmt",pending:r.pending,verified:false}; try{ await idbPut("custom",d); }catch(e){} n++; }
+  }
+  return n;
+}
 let SIGNS=null, _signsLoading=null;
 function loadSigns(){
   if(SIGNS) return Promise.resolve(SIGNS);
@@ -905,6 +1019,23 @@ function signPreview(id){
   const sm=$(`#smean-${id}`); if(sm) sm.innerHTML=`<span class="badge">Meaning ${full?"from the phrasebook":"composed word by word"}, unverified</span><div>${esc(mean)||"—"}</div>`;
   const gl=$(`#sgloss-${id}`); if(gl) gl.innerHTML=live.flatMap(r=>r.gloss).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("");
   sg.res=res; sg.full=full; sg.mean=mean;
+  signTranslate(id);
+}
+/* offline translation of the lines the phrasebook did not cover — async so
+   typing stays responsive; a token drops stale results */
+async function signTranslate(id){
+  const sg=SIGN[id]; if(!sg||!nmtOn()) return;
+  if(!(await nmtInfo())) return;
+  const lines=sg.lines.map(l=>l.trim()).filter(l=>CJK.test(l));
+  const tok=sg.tok=(sg.tok||0)+1;
+  const sm=$(`#smean-${id}`);
+  try{
+    const r=await signMeaning(lines,t=>{ const el=$(`#smean-${id} .badge`); if(el) el.textContent=t; });
+    if(sg.tok!==tok||!SIGN[id]) return;
+    sg.tr=r;
+    const box=$(`#smean-${id}`);
+    if(box) box.innerHTML=`<span class="badge">Meaning ${r.src==="nmt"?"from the offline translation":r.src==="phrasebook"?"from the phrasebook":"composed word by word"}, unverified</span><div>${esc(r.m)||"—"}</div>`;
+  }catch(err){ if(sm) sm.querySelector(".badge").textContent="Offline translation failed, meaning composed word by word"; }
 }
 async function saveSign(id){
   const sg=SIGN[id]; if(!sg) return;
@@ -913,21 +1044,26 @@ async function saveSign(id){
   if(!keep.length) return;
   const c=keep.map(x=>x.l).join("\n");
   if(deck().some(d=>d.c===c)){ alert("This sign is already in the deck."); return; }
-  const card={ kind:"sign", c, p:keep.map(x=>x.r.py).join(" / "), m:sg.mean||"", ex:"",exp:"",exm:"", t:"Sign",
-    segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))),
-    mt:{src:sg.full?"phrasebook":"gloss",verified:false} };
+  /* meaning: phrasebook → offline translation (if enabled) → word gloss (then pending) */
+  let mt={src:sg.full?"phrasebook":"gloss",verified:false,pending:!sg.full}, mean=sg.mean||"";
+  if(!sg.full && nmtOn()){
+    const btn=document.querySelector(`[data-signsave="${id}"]`); if(btn){ btn.disabled=true; btn.textContent="Translating …"; }
+    try{ const r=await signMeaning(keep.map(x=>x.l)); mean=r.m||mean; mt={src:r.src,verified:false,pending:r.pending}; }catch(e){}
+  }
+  const card={ kind:"sign", c, p:keep.map(x=>x.r.py).join(" / "), m:mean, ex:"",exp:"",exm:"", t:"Sign",
+    segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
   if(S.pendingImg) card.img=S.pendingImg;
   if(S.pendingFull) card.imgFull=S.pendingFull;
   S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
   S.queue=buildQueue(false);
   delete SIGN[id];
-  QSNOTE[id]=`Sign card saved — ${keep.length} line${keep.length>1?"s":""}, meaning ${sg.full?"from the phrasebook":"composed word by word"} (unverified).`;
+  QSNOTE[id]=`Sign card saved — ${keep.length} line${keep.length>1?"s":""}, meaning ${mt.src==="nmt"?"from the offline translation":mt.src==="phrasebook"?"from the phrasebook":"composed word by word"} (unverified${mt.pending?", translation pending":""}).`;
   setStats(); renderShots();
 }
 async function confirmCard(c){
   const d=S.custom.find(x=>x.c===c); if(!d||!d.mt) return;
-  d.mt.verified=true;
+  d.mt.verified=true; d.mt.pending=false;
   try{ await idbPut("custom",d); }catch(e){}
   if(S.mode==="cards") render(); else renderCustomList();
 }

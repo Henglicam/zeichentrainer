@@ -26,5 +26,19 @@ offline and without any CDN):
   https://www.mdbg.net/chinese/dictionary?page=cc-cedict
   This derived file is likewise licensed under CC BY-SA 4.0.
 
+- nmt/bergamot-translator-worker.js, nmt/bergamot-translator-worker.wasm,
+  nmt/translator-worker.js
+  @browsermt/bergamot-translator 0.4.9 (Bergamot / Firefox Translations
+  engine, marian-nmt compiled to WebAssembly) — Mozilla Public License 2.0
+  https://github.com/browsermt/bergamot-translator
+  https://www.npmjs.com/package/@browsermt/bergamot-translator
+
+- nmt/model.zhen.intgemm.alphas.bin.gz, nmt/lex.50.50.zhen.s2t.bin.gz,
+  nmt/vocab.zhen.spm.gz (added by the "Fetch zh→en translation model"
+  GitHub Action)
+  Firefox Translations zh→en "base-memory" model — Mozilla Public License 2.0
+  https://github.com/mozilla/firefox-translations-models
+
 Apache License 2.0 full text: https://www.apache.org/licenses/LICENSE-2.0
 CC BY-SA 4.0 full text: https://creativecommons.org/licenses/by-sa/4.0/
+MPL 2.0 full text: https://www.mozilla.org/MPL/2.0/
