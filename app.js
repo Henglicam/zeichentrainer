@@ -254,6 +254,18 @@ async function aiAccept(c){
   if(newC!==c && deck().some(x=>x.c===newC)){ alert("“"+newC.replace(/\n/g," / ")+"” is already in the deck — merge by hand."); return; }
   await applyCardUpdate(c,upd,newC,true);
   if(S.detail===c) S.detail=upd.c;
+  Object.keys(QSCARD).forEach(k=>{ if(QSCARD[k]===c) QSCARD[k]=upd.c; });
+}
+/* one tap for everything waiting: accept every suggestion (a rename that collides is left for a manual look) */
+async function aiAcceptAll(){
+  const list=deck().filter(d=>d.ai), skipped=[];
+  for(const d of list){
+    const a=d.ai, newC=a.zh&&CJK.test(a.zh)?a.zh.replace(/\r/g,""):d.c;
+    if(newC!==d.c && deck().some(x=>x.c===newC)){ skipped.push(d.c.replace(/\n/g," / ")); continue; }
+    await aiAccept(d.c);
+  }
+  if(skipped.length) alert("Left for a manual look (the corrected text is already in the deck): "+skipped.join(", "));
+  return list.length-skipped.length;
 }
 async function aiDismiss(c){
   const d=cardOf(c); if(!d||!d.ai) return;
@@ -281,7 +293,7 @@ async function aiAuto(){
   if(!aiOn()||S.settings.aiAuto!==true||!navigator.onLine||_aiAutoRan) return;
   const list=S.custom.filter(d=>d.mt&&(d.mt.pending||d.mt.suspect)&&!d.ai); if(!list.length) return;
   _aiAutoRan=true;
-  try{ await aiReview(list); if(S.mode==="more"||S.mode==="cards") render(); }catch(e){ console.warn("AI auto review:",e); }
+  try{ await aiReview(list); if(S.mode==="more"||S.mode==="cards"||S.mode==="inbox") render(); }catch(e){ console.warn("AI auto review:",e); }
 }
 /* More → Online AI review row + inline setup form */
 function renderAiRow(){
@@ -557,10 +569,11 @@ function cardsListHTML(){
   return {html:rows||`<div class="badge" style="margin-top:20px">No cards match.</div>`, n:list.length};
 }
 function renderCards(main){
-  const unv=S.custom.filter(d=>d.mt&&!d.mt.verified).length, flg=S.custom.filter(d=>d.flag||d.ai).length;
+  const unv=S.custom.filter(d=>d.mt&&!d.mt.verified).length, flg=S.custom.filter(d=>d.flag||d.ai).length, nAi=deck().filter(d=>d.ai).length;
   const {html,n}=cardsListHTML();
   main.innerHTML=`<div class="pane">
     <div class="cardsbar"><input id="q" type="search" placeholder="Search hanzi, pinyin, meaning" value="${esc(S.query)}" autocomplete="off"><button class="btn mini primary" id="newcard">+ New</button></div>
+    ${nAi?`<div class="aibar"><span>${nAi} AI suggestion${nAi>1?"s":""} waiting</span><button class="btn mini primary" id="ai-acceptall">Accept all</button></div>`:""}
     <div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">⚑ Review (${flg})</button><button class="chip${S.filterUnv?" on":""}" id="chip-unv">Unverified (${unv})</button></span><span class="badge" id="cnt">${n} of ${deck().length}</span></div>
     <div class="clist" id="clist">${html}</div>
   </div>`;
@@ -569,6 +582,7 @@ function renderCards(main){
   $("#q").oninput=e=>{ S.query=e.target.value; refresh(); };
   $("#chip-unv").onclick=()=>{ S.filterUnv=!S.filterUnv; render(); };
   $("#chip-flag").onclick=()=>{ S.filterFlag=!S.filterFlag; render(); };
+  const aa=$("#ai-acceptall"); if(aa) aa.onclick=async()=>{ aa.disabled=true; await aiAcceptAll(); render(); };
   $("#newcard").onclick=()=>{ S.mode="add"; render(); };
   wire();
 }
@@ -786,7 +800,7 @@ async function ocrWorker(status){
 }
 
 /* per-photo result (session only): characters with box + auto pinyin; tap to select */
-const OCRRES={}, SELS={}, QSNOTE={}, AIFIX={}; /* AIFIX[id][text] = AI check of an OCR selection before saving */
+const OCRRES={}, SELS={}, QSNOTE={}, AIFIX={}, QSCARD={}; /* QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) */ /* AIFIX[id][text] = AI check of an OCR selection before saving */
 /* greedy longest-match segmentation against CC-CEDICT (max word length 8) */
 function segmentChars(chars){
   const out=[]; let k=0;
@@ -821,7 +835,7 @@ async function quickSave(id,w,p,m,grp,ai){
     if(img) card.img=img;
     S.custom.push(card);
     try{ await idbPut("custom",card); }catch(e){}
-    S.queue=buildQueue(false);
+    S.queue=buildQueue(false); QSCARD[id]=w;
     QSNOTE[id]=`“${w}” saved — ${esc(p)}. `+(ai?"Checked by the AI.":"Auto values, verify when in doubt.")+(card.mt.suspect?` OCR doubtful (${esc(card.mt.suspect)})${aiAutoOn()?", the AI will check it":""}.`:"");
     aiAutoSoon();
   }
@@ -889,7 +903,7 @@ function overlayHTML(id){
 function selbarHTML(id){
   const R=OCRRES[id]; if(!R) return "";
   const chars=R.flat.filter(c=>SELS[id].has(c.i));
-  const note=QSNOTE[id]?`<div class="ok" style="margin:0 0 8px">${QSNOTE[id]}</div>`:"";
+  const note=QSNOTE[id]?`<div class="ok" style="margin:0 0 8px">${QSNOTE[id]}</div>${qsAiBox(id)}`:"";
   if(!chars.length){
     return `${note}<span class="badge">Tap a word in the image — one tap selects the whole dictionary word.</span>`;
   }
@@ -904,9 +918,10 @@ function selbarHTML(id){
   const aiPart=(w0,p0,m0)=>{
     const f=AIFIX[id]&&AIFIX[id][w0], busy=AIFIX[id]&&AIFIX[id]["~"+w0];
     if(busy) return `<span class="ainote">${esc(busy)}</span>`;
-    if(f&&!f.err) return `<span class="ainote">AI${f.zh&&f.zh!==w0?`: ${esc(w0)} → ${esc(f.zh)}`:""}${f.note&&f.note.toLowerCase()!=="ok"?` — ${esc(f.note)}`:" ✓ looks right"}</span>`;
     if(!aiOn()) return "";
-    return `<button class="btn mini" data-aiq="${id}" data-w="${esc(w0)}" data-p="${esc(p0)}" data-m="${esc(m0)}">Ask AI</button>${f&&f.err?`<span class="ainote err">${esc(f.err)}</span>`:""}`;
+    const btn=`<button class="btn mini" data-aiq="${id}" data-w="${esc(w0)}" data-p="${esc(p0)}" data-m="${esc(m0)}">${f?"Ask again":"Ask AI"}</button>`;
+    if(f&&!f.err) return `${btn}<span class="ainote">AI${f.zh&&f.zh!==w0?`: ${esc(w0)} → ${esc(f.zh)}`:""}${f.note&&f.note.toLowerCase()!=="ok"?` — ${esc(f.note)}`:" ✓ looks right"}</span>`;
+    return `${btn}${f&&f.err?`<span class="ainote err">${esc(f.err)}</span>`:""}`;
   };
   const rows=groups.map(gr=>{
     const w0=gr.map(c=>c.ch).join("");
@@ -935,10 +950,12 @@ function selbarHTML(id){
   return `${note}${phrase}${rows}<button class="del" style="margin-top:6px" data-clearsel="${id}">clear selection</button>`;
 }
 
+/* the AI's answer for the card just saved from this photo, with one-tap Accept */
+function qsAiBox(id){ const c=QSCARD[id], d=c&&cardOf(c); return d&&d.ai?aiBoxHTML(d):""; }
 /* AI check of the current OCR selection, right in the selection bar (no tab change) */
 async function aiOverlayAsk(id,w,p,m){
   AIFIX[id]=AIFIX[id]||{}; if(AIFIX[id]["~"+w]) return;
-  AIFIX[id]["~"+w]="asking the AI …"; renderShots();
+  delete AIFIX[id][w]; AIFIX[id]["~"+w]="asking the AI …"; renderShots();
   try{
     const [r]=await aiAsk([{c:w,p,m,kind:"word",mt:{src:"dict",verified:false,suspect:"read from a photo by OCR"}}]);
     AIFIX[id][w]={zh:r.zh&&CJK.test(r.zh)?r.zh.replace(/\s+/g,""):w,p:r.p,m:r.m,note:r.note,ok:r.ok};
@@ -1297,7 +1314,7 @@ async function saveSign(id){
   if(S.pendingFull) card.imgFull=S.pendingFull;
   S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
-  S.queue=buildQueue(false);
+  S.queue=buildQueue(false); QSCARD[id]=c;
   delete SIGN[id];
   QSNOTE[id]=`Sign card saved — ${keep.length} line${keep.length>1?"s":""}, meaning ${mt.src==="llm"?"checked by the AI":mt.src==="nmt"?"from the offline translation":mt.src==="phrasebook"?"from the phrasebook":"composed word by word"}${mt.src==="llm"?"":" (unverified"+(mt.pending?", translation pending":"")+")"}.`+(mt.suspect?` OCR doubtful (${esc(mt.suspect)})${aiAutoOn()?", the AI will check it":""}.`:"");
   aiAutoSoon();
@@ -1340,7 +1357,7 @@ function renderShots(){
           :`<button class="ocr-btn" data-crop="${s.id}">CROP</button><button class="del" data-del="${s.id}">delete</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${cropping
           ?`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it.</span>`
-          :(SIGN[s.id]?signEditorHTML(s.id):OCRRES[s.id]?selbarHTML(s.id):QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>`:"")}</div>
+          :(SIGN[s.id]?signEditorHTML(s.id):OCRRES[s.id]?selbarHTML(s.id):QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:"")}</div>
       </div>`;
     }).join("");
   box.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>delShot(b.dataset.del));
@@ -1365,6 +1382,7 @@ function renderShots(){
   box.querySelectorAll("[data-aiq]").forEach(b=> b.onclick=()=>aiOverlayAsk(b.dataset.aiq,b.dataset.w,b.dataset.p,b.dataset.m));
   box.querySelectorAll("[data-signai]").forEach(b=> b.onclick=()=>signAskAI(b.dataset.signai));
   Object.keys(OCRRES).forEach(aiOverlayAuto);
+  wireAi(box);
   box.querySelectorAll(".croplayer").forEach(wireCrop);
   box.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{
     const sg=SIGN[inp.dataset.sid]; if(!sg) return;
