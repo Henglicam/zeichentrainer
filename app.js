@@ -7,7 +7,7 @@
 
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
-const APP_V=78; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=79; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -797,21 +797,27 @@ function renderEdit(main,c){
   const d=cardOf(c); if(!d){ S.editing=null; S.editFrom=null; return render(); }
   const isSign=d.kind==="sign";
   let removeImg=false, aiApplied=false;
+  /* the text is edited like the Read preview (H): a character strip per line, tap a character for the picker and the
+     drawing sheet; SIGN carries the lines and the card's crop as the photo reference (no boxes: the whole crop) */
+  const eid="edit"+(S.editSeq=(S.editSeq||0)+1), lines0=isSign?d.c.split("\n"):frontLines(d); /* plain id: it goes into selectors */
+  const sg=SIGN[eid]={lines:lines0.slice(),orig:lines0.slice(),img:d.img||null,onChange:null};
   const leave=newC=>{ /* back to where the edit started: study back or card detail */
+    delete SIGN[eid];
     const from=S.editFrom; S.editing=null; S.editFrom=null;
     if(from==="study"){ S.mode="study"; S.revealed=true; } else { S.mode="cards"; if(newC) S.detail=newC; }
     render();
   };
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back">← Back</button><span class="badge">edit</span></div>
-    <div class="field"><label>${isSign?"Sign text, one line per row":"Word"}</label>
-      <textarea id="e-word" class="hanzi" rows="${(isSign?d.c.split("\n"):frontLines(d)).length+1}">${esc(isSign?d.c:frontLines(d).join("\n"))}</textarea>
-      <div class="badge" style="margin-top:4px">One line per line in the photo.</div></div>
+    <div class="field"><label>${isSign?"Sign text":"Word"}</label>
+      <div class="signed" id="e-lines"></div>
+      <textarea id="e-word" class="hanzi" hidden>${esc(lines0.join("\n"))}</textarea>
+      <div class="badge" style="margin-top:4px">Tap a character to change it. One line per line in the photo.</div></div>
     <div class="row">
       <div class="field narrow"><label>Pinyin</label><input id="e-pin" class="mono" value="${esc(d.p)}"></div>
       <div class="field"><label>Meaning</label><input id="e-mean" value="${esc(d.m)}"></div>
     </div>
-    ${isSign?"":`<div class="field"><label>Context word, pinyin, meaning (optional)</label>
+    ${isSign||!d.w?"":`<div class="field"><label>Context word, pinyin, meaning (optional)</label>
       <div class="row"><input id="e-w" class="hanzi" value="${esc(d.w||"")}" placeholder="学习"><input id="e-wp" class="mono" value="${esc(d.wp||"")}" placeholder="xuéxí"><input id="e-wm" value="${esc(d.wm||"")}" placeholder="to learn"></div></div>`}
     ${d.img?`<div class="field" id="e-imgfield"><label>Image (stays on this phone)</label><div class="pimg"><img src="${thumbURL(d)}" alt=""><button class="del" id="e-noimg">Remove image</button></div></div>`:""}
     <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> Flag for review (text, pinyin or meaning looks wrong)</label>
@@ -821,13 +827,26 @@ function renderEdit(main,c){
     <button class="btn primary block" id="e-save">Save changes</button>
   </div>`;
   $("#back").onclick=()=>leave();
+  /* the strip: rows like the Read preview, kept in sync with the hidden text field the save reads */
+  const syncWord=()=>{ $("#e-word").value=sg.lines.join("\n"); };
+  const drawLines=()=>{
+    const box=$("#e-lines"); if(!box) return;
+    box.innerHTML=sg.lines.map((l,k)=>`<div class="sline">${charStripHTML(eid,k)}<input class="hanzi" data-sid="${eid}" data-sline="${k}" value="${esc(l)}" autocomplete="off"></div>`).join("");
+    box.querySelectorAll("[data-ck]").forEach(b=> b.onclick=()=>{ const [k,i]=b.dataset.ck.split(",").map(Number); openCharPick(eid,k,i,b); });
+    box.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{ sg.lines[+inp.dataset.sline]=inp.value; syncWord(); pinyinFollow(); });
+  };
+  /* pinyin follows the text unless it was edited by hand */
+  let pinTouched=false; $("#e-pin").oninput=()=>{ pinTouched=true; };
+  const pinyinFollow=()=>{ if(pinTouched||!window.pinyinPro) return; const t=sg.lines.join("").replace(/\s+/g,""); if(CJK.test(t)) $("#e-pin").value=pinyinPro.pinyin(t,{toneType:"symbol"}); };
+  sg.onChange=()=>{ syncWord(); drawLines(); pinyinFollow(); const ab=$("#e-ai"); if(ab&&aiLive()) ab.click(); };
+  drawLines();
   /* the AI fills the fields in place; nothing is stored until Save */
   const ab=$("#e-ai"); if(ab) ab.onclick=async()=>{
     const st=$("#e-aistatus"), box=$("#e-aibox"); ab.disabled=true; box.hidden=true;
     const zh=$("#e-word").value, pin=$("#e-pin").value.trim(), mean=$("#e-mean").value.trim(), note=$("#e-note").value.trim();
     try{
       const [r]=await aiAsk([{kind:d.kind||"word",c:isSign?zh.split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):zh.replace(/\s+/g,""),p:pin,m:mean,flagNote:note,gloss:d.gloss,mt:{src:"dict",verified:false,suspect:"please check"}}],t=>{ st.textContent=t; });
-      if(r.zh&&CJK.test(r.zh)) $("#e-word").value=r.zh.replace(/\r/g,"");
+      if(r.zh&&CJK.test(r.zh)){ const zh=r.zh.replace(/\r/g,""); sg.lines=(isSign?zh:recutLines(zh.replace(/\s+/g,""),sg.lines)).split("\n").map(l=>l.trim()).filter(Boolean); sg.orig=sg.lines.slice(); syncWord(); drawLines(); }
       if(r.p) $("#e-pin").value=r.p;
       if(r.m) $("#e-mean").value=r.m;
       aiApplied=true; st.textContent="";
@@ -850,8 +869,8 @@ function renderEdit(main,c){
       if(newC!==c && deck().some(x=>x.c===newC)) return fail("“"+newC.replace(/\n/g," / ")+"” is already in the deck.");
     }
     const upd={...d, p:pin, m:mean}; delete upd.ex; delete upd.exp; delete upd.exm; /* example sentences were dropped in v41 */
-    if(!isSign){ upd.w=$("#e-w").value.trim(); upd.wp=$("#e-wp").value.trim(); upd.wm=$("#e-wm").value.trim();
-      if(!upd.w){ delete upd.w; delete upd.wp; delete upd.wm; } }
+    if(!isSign&&$("#e-w")){ upd.w=$("#e-w").value.trim(); upd.wp=$("#e-wp").value.trim(); upd.wm=$("#e-wm").value.trim();
+      if(!upd.w){ delete upd.w; delete upd.wp; delete upd.wm; } } /* the context fields show only on cards that have one */
     if(removeImg){ delete upd.img; delete upd.imgFull; dropThumb(c); }
     if(upd.mt){ upd.mt={...upd.mt, verified:true, pending:false}; delete upd.mt.suspect; } /* a human edited it */
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
@@ -1686,7 +1705,9 @@ async function openCharPick(id,k,i,btn){
   document.querySelectorAll(".ck.on").forEach(b=>b.classList.remove("on")); btn.classList.add("on");
   let box=$("#ckpick-"+id); if(!box){ box=document.createElement("div"); box.className="ckpick"; box.id="ckpick-"+id; }
   btn.closest(".sline").appendChild(box);
-  const apply=async(rep)=>{ const cs=[...sg.lines[k]]; if(rep===null) cs.splice(i,1); else cs[i]=rep; sg.lines[k]=cs.join(""); delete sg.ai; delete sg.aiErr; renderShots(); if(aiLive()) signAskAI(id); };
+  const apply=async(rep)=>{ const cs=[...sg.lines[k]]; if(rep===null) cs.splice(i,1); else cs[i]=rep; sg.lines[k]=cs.join(""); delete sg.ai; delete sg.aiErr;
+    if(sg.onChange){ sg.onChange(); return; } /* the Edit form owns the re-render and the AI check */
+    renderShots(); if(aiLive()) signAskAI(id); };
   const render=(dict,ai,aiBusy)=>{
     const seen=new Set();
     box.innerHTML=`<div class="ckhead"><canvas class="ckref" width="1" height="1" title="the character in the photo"></canvas><div class="badge">Replace <b class="hanzi">${esc(ch)}</b> with:</div></div>
