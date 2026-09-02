@@ -583,15 +583,20 @@ async function charInfo(w,btn,d){
   }catch(e){ box.innerHTML=`<span class="badge">dictionary not available</span>`; }
 }
 function wireChars(d){ document.querySelectorAll(".chars:not(.sub) .ch").forEach(b=> b.onclick=e=>{ e.stopPropagation(); charInfo(b.dataset.ch,b,d); }); }
+/* the whole photo under the back: the stored full picture, or the inbox photo the card came from */
+function contextHTML(d){
+  const full=d.imgFull||(d.shot&&(S.inbox.find(x=>x.id===d.shot)||{}).blob);
+  return full?`<div class="cardimg"><img src="${URL.createObjectURL(full)}" alt="context"></div>`:"";
+}
 function backHTML(d){
   const wordBlock = d.w ? `<div class="rule"></div>
     <div class="word"><span class="w">${esc(d.w)}</span><span class="wp">${esc(d.wp||"")}</span></div>
     <div class="wm">${esc(d.wm||"")}</div>` : "";
   const glossBlock = d.kind==="sign" ? `
     ${d.mt&&!d.mt.verified?`<span class="flag">meaning ${d.mt.src==="nmt"?"from the offline translation":d.mt.src==="phrasebook"?"from the phrasebook":d.mt.src==="llm"?"from the online AI":d.mt.src==="dict"?"from the dictionary":"composed word by word"}, unverified${d.mt.pending?" (translation pending)":""}${d.mt.suspect?" (reading uncertain: "+esc(d.mt.suspect)+")":""}</span>`:""}
-    ${d.imgFull?`<div class="cardimg"><img src="${URL.createObjectURL(d.imgFull)}" alt="context"></div>`:""}` : "";
+` : "";
   return `<div class="pin">${esc(d.p)}${sayBtn(d)}</div><div class="mean">${esc(d.m)}</div>${charsHTML(d)}
-    ${d.kind==="sign"?glossBlock:wordBlock}`;
+    ${d.kind==="sign"?glossBlock:wordBlock}${contextHTML(d)}`;
 }
 function endSingle(){
   /* leave single-card test mode and restore the session queue */
@@ -635,7 +640,7 @@ function renderStudy(main){
   }
   /* front: no tag row (theme / new / custom is noise while learning); tapping the photo or the character reveals */
   main.innerHTML=`<div class="card">
-    ${S.single?`<div class="topline"><button class="del" id="back-cards">← Cards</button><span class="badge">testing one card</span></div>`:""}
+    ${S.single?`<div class="topline"><button class="del" id="back-cards">← Cards</button><span class="badge">testing from the list</span></div>`:""}
     <div class="front tap" id="reveal">${frontHTML(d)}</div>
     ${back}</div>`;
   const rv=$("#reveal"); if(rv) rv.onclick=()=>{ S.revealed=!S.revealed; render(); }; /* tap toggles the back on and off */
@@ -656,9 +661,16 @@ async function grade(g){
   if(s.fails>=LEECH_FAILS && d && !d.flag) await setFlag(c,true,`failed ${s.fails} times in a row — check text, meaning and photo`);
   const day=dayKey(), days=S.settings.days||[];
   if(days[days.length-1]!==day){ days.push(day); if(days.length>400) days.shift(); await setSetting("days",days); }
-  if(S.single){ endSingle(); return; }
+  if(S.single){ nextSingle(c); return; }
   if(g==="again") S.queue.push(c); else S.done++;
-  S.idx++; S.revealed=false; render();
+  S.idx++; S.revealed=false; render(); window.scrollTo({top:0});
+}
+/* "Test this card" continues with the next card of the list (newest first); ← Cards stops */
+function nextSingle(c){
+  const list=S.custom.slice().sort((a,b)=>(b.at||0)-(a.at||0)).map(d=>d.c);
+  const next=list[list.indexOf(c)+1];
+  if(!next){ endSingle(); return; }
+  S.single=next; S.queue=[next]; S.idx=0; S.revealed=false; render(); window.scrollTo({top:0});
 }
 
 /* ---------- Add ---------- */
@@ -998,6 +1010,7 @@ async function quickSave(id,w,p,m,grp,ai){
     }
     const img=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
     if(img) card.img=img;
+    if(S.pendingFull) card.imgFull=S.pendingFull; /* whole photo as context on the back */
     S.custom.push(card);
     try{ await idbPut("custom",card); }catch(e){}
     S.queue=buildQueue(false); QSCARD[id]=w;
@@ -1499,7 +1512,7 @@ async function saveSign(id){
     : { kind:"sign", c, p:pin, m:mean, t:"Sign", at:Date.now(), shot:id,
         segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
   if(S.pendingImg) card.img=S.pendingImg;
-  if(S.pendingFull && !word) card.imgFull=S.pendingFull;
+  if(S.pendingFull) card.imgFull=S.pendingFull;
   S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
   S.queue=buildQueue(false); QSCARD[id]=c;
