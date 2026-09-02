@@ -786,7 +786,7 @@ async function ocrWorker(status){
 }
 
 /* per-photo result (session only): characters with box + auto pinyin; tap to select */
-const OCRRES={}, SELS={}, QSNOTE={};
+const OCRRES={}, SELS={}, QSNOTE={}, AIFIX={}; /* AIFIX[id][text] = AI check of an OCR selection before saving */
 /* greedy longest-match segmentation against CC-CEDICT (max word length 8) */
 function segmentChars(chars){
   const out=[]; let k=0;
@@ -798,7 +798,7 @@ function segmentChars(chars){
   }
   return out;
 }
-async function quickSave(id,w,p,m,grp){
+async function quickSave(id,w,p,m,grp,ai){
   const R=OCRRES[id]; if(!R) return;
   if(!m){ /* no dictionary meaning — the form is needed to fill it in */
     S.prefill={w,p,m:""}; S.mode="add"; render(); return;
@@ -806,12 +806,13 @@ async function quickSave(id,w,p,m,grp){
   if(deck().some(d=>d.c===w)){
     QSNOTE[id]=`“${w}” is already in the deck.`;
   }else{
-    const card={c:w,p,m,ex:"",exp:"",exm:"",t:"Custom",mt:{src:"dict",verified:false}};
+    /* checked by the AI in the selection bar → verified; otherwise a dictionary prefill */
+    const card={c:w,p,m,ex:"",exp:"",exm:"",t:"Custom",mt:ai?{src:"llm",verified:true}:{src:"dict",verified:false}};
     /* doubtful OCR (low symbol confidence) → the online AI checks it automatically when enabled */
     const chars=R.flat.filter(c=>grp<0?SELS[id].has(c.i):c.g===grp);
-    const why=ocrDoubt(chars.map(c=>c.cf),m);
+    const why=ai?"":ocrDoubt(chars.map(c=>c.cf),m);
     if(why) card.mt.suspect=why;
-    if(grp<0){ /* phrase: keep word boundaries so the card front never breaks inside a word */
+    if(grp<0 && chars.map(c=>c.ch).join("")===w){ /* phrase: keep word boundaries so the card front never breaks inside a word */
       const segs=[]; R.flat.filter(c=>SELS[id].has(c.i)).forEach(c=>{
         const last=segs[segs.length-1]; if(last&&last.g===c.g) last.w+=c.ch; else segs.push({g:c.g,w:c.ch}); });
       card.seg=segs.map(x=>x.w);
@@ -821,7 +822,7 @@ async function quickSave(id,w,p,m,grp){
     S.custom.push(card);
     try{ await idbPut("custom",card); }catch(e){}
     S.queue=buildQueue(false);
-    QSNOTE[id]=`“${w}” saved — ${esc(p)}. Auto values, verify when in doubt.`+(card.mt.suspect?` OCR doubtful (${esc(card.mt.suspect)})${aiAutoOn()?", the AI will check it":""}.`:"");
+    QSNOTE[id]=`“${w}” saved — ${esc(p)}. `+(ai?"Checked by the AI.":"Auto values, verify when in doubt.")+(card.mt.suspect?` OCR doubtful (${esc(card.mt.suspect)})${aiAutoOn()?", the AI will check it":""}.`:"");
     aiAutoSoon();
   }
   /* deselect this word's characters (phrase: everything) — other rows stay available */
@@ -898,30 +899,64 @@ function selbarHTML(id){
     const last=groups[groups.length-1];
     if(last && last[0].g===c.g) last.push(c); else groups.push([c]);
   });
+  /* inline AI check: the row shows the AI's text/pinyin/meaning (jade) and Save stores them as verified */
+  const fixOf=w0=>{ const f=AIFIX[id]&&AIFIX[id][w0]; return f&&!f.err?f:null; };
+  const aiPart=(w0,p0,m0)=>{
+    const f=AIFIX[id]&&AIFIX[id][w0], busy=AIFIX[id]&&AIFIX[id]["~"+w0];
+    if(busy) return `<span class="ainote">${esc(busy)}</span>`;
+    if(f&&!f.err) return `<span class="ainote">AI${f.zh&&f.zh!==w0?`: ${esc(w0)} → ${esc(f.zh)}`:""}${f.note&&f.note.toLowerCase()!=="ok"?` — ${esc(f.note)}`:" ✓ looks right"}</span>`;
+    if(!aiOn()) return "";
+    return `<button class="btn mini" data-aiq="${id}" data-w="${esc(w0)}" data-p="${esc(p0)}" data-m="${esc(m0)}">Ask AI</button>${f&&f.err?`<span class="ainote err">${esc(f.err)}</span>`:""}`;
+  };
   const rows=groups.map(gr=>{
-    const w=gr.map(c=>c.ch).join("");
-    const p=pinyinPro.pinyin(w,{type:"array",toneType:"symbol"}).join(" ");
-    const m=(DICT&&DICT.get(w))||"";
-    return `<div class="selbar"><span class="sw">${esc(w)}</span><span class="sp">${esc(p)}</span>
+    const w0=gr.map(c=>c.ch).join("");
+    const p0=pinyinPro.pinyin(w0,{type:"array",toneType:"symbol"}).join(" ");
+    const m0=(DICT&&DICT.get(w0))||"";
+    const f=fixOf(w0), w=f&&f.zh?f.zh:w0, p=f&&f.p?f.p:p0, m=f&&f.m?f.m:m0;
+    return `<div class="selbar${f?" ai":""}"><span class="sw">${esc(w)}</span><span class="sp">${esc(p)}</span>
       ${m?`<span class="sm">${esc(m)}</span>`:`<span class="sm none">${DICT?"not in dictionary":"dictionary not loaded"}</span>`}
-      <button class="btn mini" data-qs="${id}" data-g="${gr[0].g}" data-w="${esc(w)}" data-p="${esc(p)}" data-m="${esc(m)}">Save</button>
-      <button class="btn mini" data-mkcard="${esc(w)}" data-p="${esc(p)}" data-m="${esc(m)}">Edit…</button></div>`;
+      <button class="btn mini" data-qs="${id}" data-g="${gr[0].g}" data-w="${esc(w)}" data-p="${esc(p)}" data-m="${esc(m)}" data-ai="${f?1:0}">Save</button>
+      <button class="btn mini" data-mkcard="${esc(w)}" data-p="${esc(p)}" data-m="${esc(m)}">Edit…</button>${aiPart(w0,p0,m0)}</div>`;
   }).join("");
   if(groups.length<2) return `${note}${rows}<button class="del" style="margin-top:6px" data-clearsel="${id}">clear selection</button>`;
   /* several words selected: the whole string is ONE card — meaning composed word by word */
-  const pw=chars.map(c=>c.ch).join("");
-  const pp=pinyinPro.pinyin(pw,{type:"array",toneType:"symbol"}).join(" ");
-  const pm=groups.map(gr=>{
+  const pw0=chars.map(c=>c.ch).join("");
+  const pp0=pinyinPro.pinyin(pw0,{type:"array",toneType:"symbol"}).join(" ");
+  const pm0=groups.map(gr=>{
     const w=gr.map(c=>c.ch).join("");
-    const g=(DICT&&DICT.get(w))||"";
     return w+" "+(bestSense(w)||"?");
   }).join(" · ");
-  const phrase=`<div class="selbar phrase"><span class="sw">${esc(pw)}</span><span class="sp">${esc(pp)}</span>
+  const pf=fixOf(pw0), pw=pf&&pf.zh?pf.zh:pw0, pp=pf&&pf.p?pf.p:pp0, pm=pf&&pf.m?pf.m:pm0;
+  const phrase=`<div class="selbar phrase${pf?" ai":""}"><span class="sw">${esc(pw)}</span><span class="sp">${esc(pp)}</span>
       <span class="sm">${esc(pm)}</span>
-      <button class="btn mini primary" data-qs="${id}" data-g="-1" data-w="${esc(pw)}" data-p="${esc(pp)}" data-m="${esc(pm)}">Save phrase</button>
-      <button class="btn mini" data-mkcard="${esc(pw)}" data-p="${esc(pp)}" data-m="${esc(pm)}">Edit…</button></div>
+      <button class="btn mini primary" data-qs="${id}" data-g="-1" data-w="${esc(pw)}" data-p="${esc(pp)}" data-m="${esc(pm)}" data-ai="${pf?1:0}">Save phrase</button>
+      <button class="btn mini" data-mkcard="${esc(pw)}" data-p="${esc(pp)}" data-m="${esc(pm)}">Edit…</button>${aiPart(pw0,pp0,pm0)}</div>
     <div class="badge" style="margin:4px 0 6px">single words:</div>`;
   return `${note}${phrase}${rows}<button class="del" style="margin-top:6px" data-clearsel="${id}">clear selection</button>`;
+}
+
+/* AI check of the current OCR selection, right in the selection bar (no tab change) */
+async function aiOverlayAsk(id,w,p,m){
+  AIFIX[id]=AIFIX[id]||{}; if(AIFIX[id]["~"+w]) return;
+  AIFIX[id]["~"+w]="asking the AI …"; renderShots();
+  try{
+    const [r]=await aiAsk([{c:w,p,m,kind:"word",mt:{src:"dict",verified:false,suspect:"read from a photo by OCR"}}]);
+    AIFIX[id][w]={zh:r.zh&&CJK.test(r.zh)?r.zh.replace(/\s+/g,""):w,p:r.p,m:r.m,note:r.note,ok:r.ok};
+  }catch(err){ AIFIX[id][w]={err:err&&err.message||String(err)}; }
+  delete AIFIX[id]["~"+w]; renderShots();
+}
+/* automatic: a doubtful selection (low confidence / no meaning) is checked without a tap */
+let _ovAuto=null;
+function aiOverlayAuto(id){
+  const R=OCRRES[id], sel=SELS[id]; if(!aiAutoOn()||!R||!sel||!sel.size) return;
+  const chars=R.flat.filter(c=>sel.has(c.i)), w=chars.map(c=>c.ch).join("");
+  if(AIFIX[id]&&(AIFIX[id][w]||AIFIX[id]["~"+w])) return;
+  const single=new Set(chars.map(c=>c.g)).size===1;
+  const m=single?((DICT&&DICT.get(w))||""):"";
+  if(!ocrDoubt(chars.map(c=>c.cf),single?m:"x")) return;
+  clearTimeout(_ovAuto);
+  _ovAuto=setTimeout(()=>{ if(!OCRRES[id]||!SELS[id]) return;
+    const p=pinyinPro.pinyin(w,{type:"array",toneType:"symbol"}).join(" "); aiOverlayAsk(id,w,p,m); },1200);
 }
 
 /* ---------- Cropping (crop → OCR or card image) ---------- */
@@ -1175,6 +1210,7 @@ async function cropSign(id){
     if(!lines.length){ status("No Chinese characters recognized."); return; }
     SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf)};
     renderShots();
+    if(aiAutoOn() && ocrDoubt(lines.flatMap(x=>x.cf),"x")) signAskAI(id); /* doubtful → checked without a tap */
   }catch(err){ status("OCR failed: "+(err&&err.message||err)); }
 }
 function signEditorHTML(id){
@@ -1184,7 +1220,8 @@ function signEditorHTML(id){
   const doubt=low<OCR_DOUBT?` OCR looks doubtful here (confidence ${Math.round(low)}%)${aiAutoOn()?" — the AI will check the card":""}.`:"";
   return `<div class="signed"><div class="badge" style="margin-bottom:8px">Sign transcript — fix any OCR slip, then save.${doubt}</div>${rows}
     <div class="smean" id="smean-${id}"></div><div class="sgloss" id="sgloss-${id}"></div>
-    <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save sign card</button><button class="del" data-signcancel="${id}">cancel</button></div></div>`;
+    <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save sign card</button>${aiOn()&&!sg.ai?(sg.aiBusy?`<span class="ainote">${esc(sg.aiBusy)}</span>`:`<button class="btn mini" data-signai="${id}">Ask AI</button>`):""}<button class="del" data-signcancel="${id}">cancel</button></div>
+    ${sg.aiErr?`<div class="err" style="margin-top:6px">${esc(sg.aiErr)}</div>`:""}</div>`;
 }
 /* recompute pinyin / meaning / gloss for the current lines without re-rendering (keeps input focus) */
 function signPreview(id){
@@ -1194,10 +1231,31 @@ function signPreview(id){
   const live=res.filter(Boolean);
   const full=live.length>0 && live.every(r=>r.full);
   const mean=live.map(r=>r.en).filter(Boolean).join(" / ");
-  const sm=$(`#smean-${id}`); if(sm) sm.innerHTML=`<span class="badge">Meaning ${full?"from the phrasebook":"composed word by word"}, unverified</span><div>${esc(mean)||"—"}</div>`;
+  /* an AI check applies as long as the text was not edited afterwards */
+  if(sg.ai && sg.lines.map(l=>l.trim()).filter(l=>CJK.test(l)).join("\n")!==sg.ai.zh) delete sg.ai;
+  const sm=$(`#smean-${id}`);
+  if(sm) sm.innerHTML=sg.ai
+    ?`<span class="badge ai">Checked by the AI${sg.ai.note&&sg.ai.note.toLowerCase()!=="ok"?": "+esc(sg.ai.note):""}</span><div class="mono" style="font-size:14px">${esc(sg.ai.p||"")}</div><div>${esc(sg.ai.m)||"—"}</div>`
+    :`<span class="badge">Meaning ${full?"from the phrasebook":"composed word by word"}, unverified</span><div>${esc(mean)||"—"}</div>`;
   const gl=$(`#sgloss-${id}`); if(gl) gl.innerHTML=live.flatMap(r=>r.gloss).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("");
   sg.res=res; sg.full=full; sg.mean=mean;
-  signTranslate(id);
+  if(!sg.ai) signTranslate(id);
+}
+/* ask the online AI about the transcript right here; the corrected text lands in the editor */
+async function signAskAI(id){
+  const sg=SIGN[id]; if(!sg||sg.aiBusy) return;
+  signPreview(id);
+  const lines=sg.lines.map(l=>l.trim()).filter(l=>CJK.test(l)); if(!lines.length) return;
+  sg.aiBusy="asking the AI …"; delete sg.aiErr; renderShots();
+  try{
+    const c=lines.join("\n"), res=(sg.res||[]).filter(Boolean);
+    const [r]=await aiAsk([{kind:"sign",c,p:res.map(x=>x.py).join(" / "),m:sg.mean||"",gloss:res.flatMap(x=>x.gloss),mt:{src:"gloss",verified:false,suspect:"read from a photo by OCR"}}]);
+    if(!SIGN[id]) return;
+    const zh=r.zh&&CJK.test(r.zh)?r.zh.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):c;
+    sg.lines=zh.split("\n"); sg.ai={zh,p:r.p,m:r.m,note:r.note,ok:r.ok};
+  }catch(err){ if(SIGN[id]) sg.aiErr=err&&err.message||String(err); }
+  if(SIGN[id]) delete sg.aiBusy;
+  renderShots();
 }
 /* offline translation of the lines the phrasebook did not cover — async so
    typing stays responsive; a token drops stale results */
@@ -1222,17 +1280,18 @@ async function saveSign(id){
   if(!keep.length) return;
   const c=keep.map(x=>x.l).join("\n");
   if(deck().some(d=>d.c===c)){ alert("This sign is already in the deck."); return; }
-  /* meaning: phrasebook → offline translation (if enabled) → word gloss (then pending) */
-  let mt={src:sg.full?"phrasebook":"gloss",verified:false,pending:!sg.full}, mean=sg.mean||"";
-  if(!sg.full && nmtOn()){
+  /* meaning: AI check (if done here) → phrasebook → offline translation (if enabled) → word gloss (then pending) */
+  let mt={src:sg.full?"phrasebook":"gloss",verified:false,pending:!sg.full}, mean=sg.mean||"", pin=keep.map(x=>x.r.py).join(" / ");
+  if(sg.ai && c===sg.ai.zh){ mean=sg.ai.m||mean; pin=sg.ai.p||pin; mt={src:"llm",verified:true,pending:false}; }
+  else if(!sg.full && nmtOn()){
     const btn=document.querySelector(`[data-signsave="${id}"]`); if(btn){ btn.disabled=true; btn.textContent="Translating …"; }
     try{ const r=await signMeaning(keep.map(x=>x.l)); mean=r.m||mean; mt={src:r.src,verified:false,pending:r.pending}; }catch(e){}
   }
   /* doubtful OCR: low confidence on a line H did not correct, or words the dictionary does not know */
   const cfs=sg.lines.flatMap((l,k)=>(sg.orig&&sg.orig[k]===l.trim()&&sg.conf&&sg.conf[k])||[]);
   const unknown=keep.flatMap(x=>x.r.gloss.filter(g=>!g.ph&&!g.m).map(g=>g.w));
-  const why=ocrDoubt(cfs,null,unknown); if(why) mt.suspect=why;
-  const card={ kind:"sign", c, p:keep.map(x=>x.r.py).join(" / "), m:mean, ex:"",exp:"",exm:"", t:"Sign",
+  const why=mt.src==="llm"?"":ocrDoubt(cfs,null,unknown); if(why) mt.suspect=why;
+  const card={ kind:"sign", c, p:pin, m:mean, ex:"",exp:"",exm:"", t:"Sign",
     segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
   if(S.pendingImg) card.img=S.pendingImg;
   if(S.pendingFull) card.imgFull=S.pendingFull;
@@ -1240,7 +1299,7 @@ async function saveSign(id){
   try{ await idbPut("custom",card); }catch(e){}
   S.queue=buildQueue(false);
   delete SIGN[id];
-  QSNOTE[id]=`Sign card saved — ${keep.length} line${keep.length>1?"s":""}, meaning ${mt.src==="nmt"?"from the offline translation":mt.src==="phrasebook"?"from the phrasebook":"composed word by word"} (unverified${mt.pending?", translation pending":""}).`+(mt.suspect?` OCR doubtful (${esc(mt.suspect)})${aiAutoOn()?", the AI will check it":""}.`:"");
+  QSNOTE[id]=`Sign card saved — ${keep.length} line${keep.length>1?"s":""}, meaning ${mt.src==="llm"?"checked by the AI":mt.src==="nmt"?"from the offline translation":mt.src==="phrasebook"?"from the phrasebook":"composed word by word"}${mt.src==="llm"?"":" (unverified"+(mt.pending?", translation pending":"")+")"}.`+(mt.suspect?` OCR doubtful (${esc(mt.suspect)})${aiAutoOn()?", the AI will check it":""}.`:"");
   aiAutoSoon();
   setStats(); renderShots();
 }
@@ -1302,7 +1361,10 @@ function renderShots(){
     S.mode="add"; render();
   });
   box.querySelectorAll("[data-clearsel]").forEach(b=> b.onclick=()=>{ SELS[b.dataset.clearsel].clear(); renderShots(); });
-  box.querySelectorAll("[data-qs]").forEach(b=> b.onclick=()=>quickSave(b.dataset.qs,b.dataset.w,b.dataset.p,b.dataset.m,+b.dataset.g));
+  box.querySelectorAll("[data-qs]").forEach(b=> b.onclick=()=>quickSave(b.dataset.qs,b.dataset.w,b.dataset.p,b.dataset.m,+b.dataset.g,b.dataset.ai==="1"));
+  box.querySelectorAll("[data-aiq]").forEach(b=> b.onclick=()=>aiOverlayAsk(b.dataset.aiq,b.dataset.w,b.dataset.p,b.dataset.m));
+  box.querySelectorAll("[data-signai]").forEach(b=> b.onclick=()=>signAskAI(b.dataset.signai));
+  Object.keys(OCRRES).forEach(aiOverlayAuto);
   box.querySelectorAll(".croplayer").forEach(wireCrop);
   box.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{
     const sg=SIGN[inp.dataset.sid]; if(!sg) return;
