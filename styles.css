@@ -193,9 +193,9 @@ button{font:inherit;color:inherit}
 /* cropping */
 .croplayer{position:absolute;inset:0;touch-action:none;cursor:crosshair}
 /* the frame must be visible on any photo color (red on red!):
-   bright dashed edge with dark outline, area outside gets dimmed */
+   bright dashed edge with a dark outline; nothing is dimmed (H, v47) */
 .croprect{position:absolute;display:none;border:2px dashed var(--bone);
-  box-shadow:0 0 0 1px rgba(20,20,16,.85), 0 0 0 9999px rgba(20,20,16,.5);
+  box-shadow:0 0 0 1px rgba(20,20,16,.85), inset 0 0 0 1px rgba(20,20,16,.6);
   pointer-events:none}
 .croprect .h{position:absolute;width:16px;height:16px;background:var(--bone);
   border:1px solid rgba(20,20,16,.85);border-radius:1px}
