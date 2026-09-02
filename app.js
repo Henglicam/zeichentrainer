@@ -7,7 +7,7 @@
 
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
-const APP_V=74; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=75; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1465,6 +1465,25 @@ async function deskewBlob(blob,forced){ /* forced: rotate by this angle instead 
     return {blob:rot||blob,angle};
   }catch(e){ return {blob,angle:0}; }
 }
+/* Where a text row really starts and ends: within the row's vertical band, a column is "ink" when enough of its pixels
+   differ from the band's median colour. From the reader's span, walk outward over the columns until a gap wider than
+   1.3 text heights or the edge; the last ink column is the end. Characters the reader missed are inside that span. */
+function textRowExtent(bmp,bx0,bx1,y0,y1,H){
+  const W=bmp.width, h=Math.max(1,Math.round(y1-y0));
+  const cv=document.createElement("canvas"); cv.width=W; cv.height=h;
+  const ctx=cv.getContext("2d",{alpha:false,willReadFrequently:true}); ctx.drawImage(bmp,0,y0,W,h,0,0,W,h);
+  const d=ctx.getImageData(0,0,W,h).data;
+  const ch=[[],[],[]]; for(let i=0;i<d.length;i+=4*13){ ch[0].push(d[i]); ch[1].push(d[i+1]); ch[2].push(d[i+2]); }
+  const med=a=>{ a.sort((p,q)=>p-q); return a[a.length>>1]; }; const m=[med(ch[0]),med(ch[1]),med(ch[2])];
+  const step=Math.max(1,Math.floor(h/40)), need=Math.max(2,Math.round(h/step*0.06)); /* ~6 % of the sampled rows */
+  const ink=x=>{ let n=0; for(let y=0;y<h;y+=step){ const i=(y*W+x)*4; if(Math.abs(d[i]-m[0])+Math.abs(d[i+1]-m[1])+Math.abs(d[i+2]-m[2])>150) n++; } return n>=need; };
+  const gap=Math.round(1.3*H); /* wider than any gap inside a line, punctuation included (、 to the next character measured at 0.9 H) */
+  let x1=Math.min(W-1,Math.round(bx1)), last=x1, x=x1;
+  while(x<W){ if(ink(x)) last=x; else if(x-last>gap) break; x++; }
+  let x0=Math.max(0,Math.round(bx0)), first=x0; x=x0;
+  while(x>=0){ if(ink(x)) first=x; else if(first-x>gap) break; x--; }
+  return {x0:first,x1:last+1};
+}
 async function cropSign(id){
   const r=await cropBlob(id);
   if(!r) return; /* no frame yet — nothing to do */
@@ -1524,8 +1543,11 @@ async function cropSign(id){
       /* the boxes' heights are right, their horizontal ends are not (they drift along the line and end early on the last
          character — H: 骑 cut in half), so one full text height sideways, half a height above and below */
       const mX=H, mY=H/2, pad=Math.round(1.5*H);
-      const x0=Math.max(0,Math.min(...boxes.map(b=>b.x0))-mX), y0=Math.max(0,Math.min(...boxes.map(b=>b.y0))-mY);
-      const x1=Math.min(bmp.width,Math.max(...boxes.map(b=>b.x1))+mX), y1=Math.min(bmp.height,Math.max(...boxes.map(b=>b.y1))+mY);
+      const y0=Math.max(0,Math.min(...boxes.map(b=>b.y0))-mY), y1=Math.min(bmp.height,Math.max(...boxes.map(b=>b.y1))+mY);
+      /* the line's ends come from the image, not from the boxes: the first pass may have lost a character altogether
+         (H: 首都铁骑 read as 次都铁, and the crop ended after 铁) */
+      const ext=textRowExtent(bmp,Math.min(...boxes.map(b=>b.x0)),Math.max(...boxes.map(b=>b.x1)),y0,y1,H);
+      const x0=Math.max(0,ext.x0-mX), x1=Math.min(bmp.width,ext.x1+mX);
       const frac=((x1-x0)*(y1-y0))/(bmp.width*bmp.height); r.tightFrac=frac;
       if((frac<0.6||meanCf(passes[0].lines)<92) && x1-x0>=24 && y1-y0>=24){
         status("found text, reading it closely …");
@@ -1537,13 +1559,28 @@ async function cropSign(id){
         const med=a=>{ a.sort((p,q)=>p-q); return a[a.length>>1]; }; c2.fillStyle=`rgb(${med(ch[0])},${med(ch[1])},${med(ch[2])})`;
         c2.fillRect(0,0,cv.width,pad); c2.fillRect(0,cv.height-pad,cv.width,pad); c2.fillRect(0,0,pad,cv.height); c2.fillRect(cv.width-pad,0,pad,cv.height);
         const tight=await new Promise(res=>cv.toBlob(res,"image/png")); /* lossless intermediate — deskewBlob hands the reader a JPEG */
-        const dk2=await deskewBlob(tight), bmp2=await createImageBitmap(dk2.blob);
-        const scales=[50/H,70/H,90/H].filter(k=>k<0.92); if(H<=110) scales.push(1); /* three character heights; native too while it is cheap */
+        const dk2=await deskewBlob(tight), bmp2=await createImageBitmap(dk2.blob); r.tightBlob=dk2.blob; /* kept for diagnosis */
+        const scales=[45/H,60/H,75/H,90/H].filter(k=>k<0.92); if(H<=110) scales.push(1); /* four character heights; native too while it is cheap */
+        const tightLines=[];
         for(const k of scales){
           const lines=await readPass(k===1?dk2.blob:await toJpeg(bmp2,k));
-          passes.push({lines:k===1?lines:scaleBoxes(lines,k),img:dk2.blob,angle:dk2.angle,tightened:true,scale:k});
+          const sc=k===1?lines:scaleBoxes(lines,k);
+          passes.push({lines:sc,img:dk2.blob,angle:dk2.angle,tightened:true,scale:k});
+          tightLines.push(...sc);
         }
         bmp2.close();
+        /* Merge line by line: every reading tends to get some line right and lose another, so the lines of all tight
+           passes are clustered by their vertical band and the most confident reading of each band is kept (v75). */
+        const band=l=>{ const bs=l.bx.filter(Boolean); return bs.length?{y0:Math.min(...bs.map(b=>b.y0)),y1:Math.max(...bs.map(b=>b.y1))}:null; };
+        const lineScore=l=>score([l]);
+        const clusters=[];
+        for(const l of tightLines){ const b=band(l); if(!b) continue;
+          let c=clusters.find(c=>{ const ov=Math.min(c.y1,b.y1)-Math.max(c.y0,b.y0); return ov>0.5*Math.min(c.y1-c.y0,b.y1-b.y0); });
+          if(!c){ c={y0:b.y0,y1:b.y1,best:l}; clusters.push(c); }
+          else if(lineScore(l)>lineScore(c.best)){ c.best=l; c.y0=b.y0; c.y1=b.y1; }
+        }
+        const merged=clusters.sort((a,b)=>a.y0-b.y0).map(c=>c.best).filter(l=>l.cf.length>2||meanCf([l])>=80); /* a short low-confidence stray is decoration */
+        if(merged.length) passes.push({lines:merged,img:dk2.blob,angle:dk2.angle,tightened:true,scale:"merged"});
         /* the card image: the same area with a real margin of one text height all round, rotated like the reading crop */
         const cx0=Math.max(0,x0-H/2), cy0=Math.max(0,y0-H/2), cx1=Math.min(bmp.width,x1+H/2), cy1=Math.min(bmp.height,y1+H/2);
         const cc=document.createElement("canvas"); cc.width=cx1-cx0; cc.height=cy1-cy0;
@@ -1554,7 +1591,7 @@ async function cropSign(id){
       bmp.close();
     }
     passes.sort((a,b)=>score(b.lines)-score(a.lines));
-    r.passes=passes.map(p=>({s:Math.round(score(p.lines)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:+(p.scale||1).toFixed(2),tight:p.tightened}));
+    r.passes=passes.map(p=>({s:Math.round(score(p.lines)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),tight:p.tightened}));
     const best=passes[0], lines=best.lines, img=best.img, tightened=best.tightened; dk=best;
     if(tightened) S.pendingImg=cardBlob||best.img;
     if(!lines.length){ status("No Chinese characters recognized — frame the characters tightly and try again."); return; }
