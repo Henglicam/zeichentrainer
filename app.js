@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=84; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=85; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -831,8 +831,18 @@ function renderEdit(main,c){
     ${aiOn()?`<div class="field"><button class="btn block" id="e-ai">Ask AI to check text, pinyin and meaning</button><div class="badge" id="e-aistatus" style="margin-top:6px"></div><div id="e-aibox" hidden class="aibox"></div></div>`:""}
     <div id="e-err" class="err" style="display:none"></div>
     <button class="btn primary block" id="e-save">Save changes</button>
+    <button class="btn danger block" id="e-del" style="margin-top:10px">Delete card</button>
   </div>`;
   $("#back").onclick=()=>leave();
+  /* delete from here too (H): from the study back the session goes on with the next card, otherwise back to the list */
+  $("#e-del").onclick=async()=>{
+    if(!confirm("Delete “"+c.replace(/\n/g," / ")+"” and its progress?")) return;
+    await delCustom(c); delete SIGN[eid];
+    const from=S.editFrom; S.editing=null; S.editFrom=null;
+    if(from==="study"){ S.queue=S.queue.filter(x=>x!==c); if(S.single===c) S.single=null; S.revealed=false; S.fullPic=false; S.mode="study"; }
+    else { S.mode="cards"; S.detail=null; }
+    render();
+  };
   /* the strip: rows like the Read preview, kept in sync with the hidden text field the save reads */
   const syncWord=()=>{ $("#e-word").value=sg.lines.join("\n"); };
   const drawLines=()=>{
