@@ -169,7 +169,7 @@ function ocrDoubt(confs,meaning,unknown){
   const cf=(confs||[]).filter(x=>typeof x==="number");
   const mean=cf.length?cf.reduce((a,b)=>a+b,0)/cf.length:100;
   const why=[];
-  if(mean<OCR_DOUBT) why.push(`OCR confidence ${Math.round(mean)}%`);
+  if(mean<OCR_DOUBT) why.push(`reading confidence ${Math.round(mean)}%`);
   if(unknown&&unknown.length) why.push(`unknown ${unknown.slice(0,3).join(" ")}`);
   if(meaning!==null&&meaning!==undefined&&!meaning) why.push("no dictionary meaning");
   return why.join(", ");
@@ -178,7 +178,7 @@ function ocrDoubt(confs,meaning,unknown){
 let _aiSoon=null;
 function aiAutoSoon(){ if(!aiAutoOn()) return; clearTimeout(_aiSoon); _aiSoon=setTimeout(()=>{ _aiAutoRan=false; aiAuto(); },1500); }
 function aiCardPayload(d){
-  return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"OCR looks doubtful ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
+  return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"the reading looks uncertain ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
     gloss:d.kind==="sign"?(d.gloss||[]).map(g=>g.w+" "+(g.m||"?")).join(" · "):undefined };
 }
 const AI_SYSTEM=`You review flashcards for an adult learning to read Chinese in Beijing. Cards come from OCR of photos (signs, menus, packaging), so the Chinese text may contain OCR slips, the pinyin is auto-generated and the meaning may be a crude word-by-word gloss.
@@ -280,7 +280,7 @@ function renderAiRow(){
   btn.textContent=aiOn()?"Settings":"Set up";
   run.hidden=!aiOn(); run.disabled=!q;
   run.textContent=q?`Ask AI about ${q} card${q>1?"s":""}`:"Nothing to review";
-  const rs=$("#ai-runstatus"); if(rs) rs.textContent=q?`${fl} flagged, ${sp} doubtful OCR, ${pd} pending translation${pd===1?"":"s"}`:"flag a card, or save an OCR result that looks doubtful";
+  const rs=$("#ai-runstatus"); if(rs) rs.textContent=q?`${fl} flagged, ${sp} uncertain reading${sp===1?"":"s"}, ${pd} pending translation${pd===1?"":"s"}`:"flag a card, or save a reading that looks uncertain";
   btn.onclick=()=>{ form.hidden=!form.hidden; if(!form.hidden) $("#ai-key").focus(); };
   const sel=$("#ai-provider"), showPv=()=>{ const pv=AI_PROVIDERS[sel.value]||AI_PROVIDERS[AI_PROVIDER_DEFAULT];
     $("#ai-basefield").hidden=sel.value!=="custom"; $("#ai-where").textContent=pv.where; $("#ai-key").placeholder=pv.hint;
@@ -416,7 +416,8 @@ function frontHTML(d){
   const single=glyphs(d.c)<=1;
   /* the photo is the cue — it belongs on the front, before reveal */
   const pic=d.img?`<img class="signimg" src="${URL.createObjectURL(d.img)}" alt="photo">`:"";
-  return `${pic}<div class="reticle">${reticleSVG(single)}<div class="glyph" style="font-size:${headFont(d.c)}px">${d.seg?d.seg.map(esc).join("<wbr>"):esc(d.c)}</div></div>`;
+  /* phrase fronts wrap only between words, and break where the photo did */
+  return `${pic}<div class="reticle">${reticleSVG(single)}<div class="glyph" style="font-size:${headFont(d.c)}px">${d.seg?d.seg.map(x=>x==="\n"?"<br>":esc(x)).join("<wbr>"):esc(d.c)}</div></div>`;
 }
 function backHTML(d){
   const wordBlock = d.w ? `<div class="rule"></div>
@@ -426,7 +427,7 @@ function backHTML(d){
     ${d.exp?`<div class="exp">${esc(d.exp)}</div>`:""}
     ${d.exm?`<div class="exm">${esc(d.exm)}</div>`:""}</div>` : "";
   const glossBlock = d.kind==="sign" ? `<div class="gtable">${(d.gloss||[]).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("")}</div>
-    ${d.mt&&!d.mt.verified?`<span class="flag">meaning ${d.mt.src==="nmt"?"from the offline translation":d.mt.src==="phrasebook"?"from the phrasebook":d.mt.src==="llm"?"from the online AI":d.mt.src==="dict"?"from the dictionary":"composed word by word"}, unverified${d.mt.pending?" (translation pending)":""}${d.mt.suspect?" (OCR doubtful: "+esc(d.mt.suspect)+")":""}</span>`:""}
+    ${d.mt&&!d.mt.verified?`<span class="flag">meaning ${d.mt.src==="nmt"?"from the offline translation":d.mt.src==="phrasebook"?"from the phrasebook":d.mt.src==="llm"?"from the online AI":d.mt.src==="dict"?"from the dictionary":"composed word by word"}, unverified${d.mt.pending?" (translation pending)":""}${d.mt.suspect?" (reading uncertain: "+esc(d.mt.suspect)+")":""}</span>`:""}
     ${d.imgFull?`<div class="cardimg"><img src="${URL.createObjectURL(d.imgFull)}" alt="context"></div>`:""}` : "";
   return `<div class="pin">${esc(d.p)}</div><div class="mean">${esc(d.m)}</div>
     ${d.kind==="sign"?glossBlock:wordBlock+exBlock}`;
@@ -578,7 +579,7 @@ function renderCardDetail(main,c){
   const p=S.progress[c];
   const stat=p?`interval ${p.interval} d · ease ${p.ease.toFixed(2)} · ${p.reps} review${p.reps===1?"":"s"} · next ${new Date(p.due).toLocaleDateString("en-GB")}`:"not studied yet";
   main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${d.kind==="sign"?"sign card":"word card"}${d.mt&&!d.mt.verified?", unverified":""}${d.mt&&d.mt.pending?", translation pending":""}${d.mt&&d.mt.suspect?", OCR doubtful":""}</span></div>
+    <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${d.kind==="sign"?"sign card":"word card"}${d.mt&&!d.mt.verified?", unverified":""}${d.mt&&d.mt.pending?", translation pending":""}${d.mt&&d.mt.suspect?", reading uncertain":""}</span></div>
     <div class="card">${tagsHTML(d,!p)}${frontHTML(d)}<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}</div>
     <div class="detailacts">
       <button class="btn primary" id="d-test">Test this card</button>
@@ -624,7 +625,7 @@ function renderEdit(main,c){
     <div class="field"><label>Example pinyin (optional)</label><input id="e-exp" class="mono" value="${esc(d.exp||"")}"></div>
     <div class="field"><label>Translation (optional)</label><input id="e-exm" value="${esc(d.exm||"")}"></div>
     ${d.img?`<div class="field" id="e-imgfield"><label>Image (stays on this phone)</label><div class="pimg"><img src="${thumbURL(d)}" alt=""><button class="del" id="e-noimg">Remove image</button></div></div>`:""}
-    <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> Flag for review (OCR, pinyin or meaning looks wrong)</label>
+    <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> Flag for review (text, pinyin or meaning looks wrong)</label>
       <input id="e-note" value="${esc(d.flagNote||"")}" placeholder="Note for the reviewer (optional)"></div>
     ${aiOn()?`<div class="field"><button class="btn block" id="e-ai">Ask AI to check text, pinyin and meaning</button><div class="badge" id="e-aistatus" style="margin-top:6px"></div><div id="e-aibox" hidden class="aibox"></div></div>`:""}
     <div id="e-err" class="err" style="display:none"></div>
@@ -821,8 +822,11 @@ async function quickSave(id,w,p,m,grp,ai){
     const why=ai?"":ocrDoubt(chars.map(c=>c.cf),m);
     if(why) card.mt.suspect=why;
     if(grp<0 && chars.map(c=>c.ch).join("")===w){ /* phrase: keep word boundaries so the card front never breaks inside a word */
-      const segs=[]; R.flat.filter(c=>SELS[id].has(c.i)).forEach(c=>{
-        const last=segs[segs.length-1]; if(last&&last.g===c.g) last.w+=c.ch; else segs.push({g:c.g,w:c.ch}); });
+      const segs=[]; let ln=null;
+      R.flat.filter(c=>SELS[id].has(c.i)).forEach(c=>{
+        if(ln!==null && c.ln!==ln) segs.push({g:-1,w:"\n"}); /* line break as in the photo */
+        ln=c.ln;
+        const last=segs[segs.length-1]; if(last&&last.g===c.g&&last.w!=="\n") last.w+=c.ch; else segs.push({g:c.g,w:c.ch}); });
       card.seg=segs.map(x=>x.w);
     }
     const img=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
@@ -830,7 +834,7 @@ async function quickSave(id,w,p,m,grp,ai){
     S.custom.push(card);
     try{ await idbPut("custom",card); }catch(e){}
     S.queue=buildQueue(false); QSCARD[id]=w;
-    QSNOTE[id]=`“${w}” saved — ${esc(p)}. `+(ai?"Checked by the AI.":"Auto values, verify when in doubt.")+(card.mt.suspect?` OCR doubtful (${esc(card.mt.suspect)})${aiAutoOn()?", the AI will check it":""}.`:"");
+    QSNOTE[id]=`“${w}” saved — ${esc(p)}. `+(ai?"Checked by the AI.":"Auto values, verify when in doubt.")+(card.mt.suspect?` Reading uncertain (${esc(card.mt.suspect)})${aiAutoOn()?", the AI will check it":""}.`:"");
     aiAutoSoon();
   }
   /* deselect this word's characters (phrase: everything) — other rows stay available */
@@ -871,7 +875,7 @@ async function onOcr(id,region){
     })));
     if(!lines.length){ status("No Chinese characters recognized."); return; }
     let i=0, g=0; const flat=[];
-    lines.forEach(cs=>{
+    lines.forEach((cs,ln)=>{ cs.forEach(c=>{ c.ln=ln; });
       /* pinyin per line — pinyin-pro resolves 多音字 in word context */
       const ps=pinyinPro.pinyin(cs.map(c=>c.ch).join(""),{type:"array",toneType:"symbol"});
       cs.forEach((c,j)=>{ c.i=i++; c.py=ps[j]||""; flat.push(c); });
@@ -1030,12 +1034,10 @@ async function showCropPreview(id){
     <img src="${_prevURL}" alt="selected area">
     <div class="badge" style="margin:6px 0 8px">Selected area — drag a corner to resize, drag inside to move, drag elsewhere to redraw.</div>
     <div class="cropacts">
-      <button class="btn mini" data-cropocr="${id}">OCR this area</button>
-      <button class="btn mini" data-cropsign="${id}">Read sign</button>
-      <button class="btn mini" data-cropok="${id}">Image only</button>
+      <button class="btn mini primary" data-cropread="${id}">Read</button>
+      <button class="del" data-cropok="${id}">Image only</button>
     </div></div>`;
-  box.querySelector("[data-cropocr]").onclick=()=>cropOcr(id);
-  box.querySelector("[data-cropsign]").onclick=()=>cropSign(id);
+  box.querySelector("[data-cropread]").onclick=()=>cropSign(id);
   box.querySelector("[data-cropok]").onclick=()=>cropOk(id);
 }
 async function cropBlob(id){
@@ -1209,7 +1211,7 @@ async function cropSign(id){
   try{
     const w=await ocrWorker(status);
     await loadSigns().catch(()=>{}); /* phrasebook optional — falls back to word gloss */
-    status("reading sign …");
+    status("reading the text …");
     await w.setParameters({tessedit_pageseg_mode:"6"});
     const {data}=await w.recognize(r.blob,{},{blocks:true,text:true});
     const lines=[];
@@ -1222,19 +1224,20 @@ async function cropSign(id){
       if(CJK.test(t)) lines.push({t,cf:cfs});
     })));
     if(!lines.length){ status("No Chinese characters recognized."); return; }
-    SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf)};
+    SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), region:r};
     renderShots();
-    if(aiAutoOn()) signAskAI(id); /* every transcript is checked without a tap */
+    if(aiAutoOn()) signAskAI(id); /* every reading is checked without a tap */
   }catch(err){ status("OCR failed: "+(err&&err.message||err)); }
 }
 function signEditorHTML(id){
   const sg=SIGN[id]; if(!sg) return "";
   const rows=sg.lines.map((l,k)=>`<div class="sline"><input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(l)}" autocomplete="off"><div class="sp" id="sp-${id}-${k}"></div></div>`).join("");
   const low=sg.conf?Math.min(...sg.conf.flat().concat([100])):100;
-  const doubt=low<OCR_DOUBT?` OCR looks doubtful here (confidence ${Math.round(low)}%)${aiAutoOn()?" — the AI will check the card":""}.`:"";
-  return `<div class="signed"><div class="badge" style="margin-bottom:8px">Sign transcript — fix any OCR slip, then save.${doubt}</div>${rows}
+  const doubt=!aiLive()&&low<OCR_DOUBT?` The reading looks uncertain (confidence ${Math.round(low)}%) — check the text.`:"";
+  const head=sg.aiBusy?"Reading with the AI …":sg.ai?"Read and checked by the AI. Tap the text to correct it.":`Text read from the photo. Tap to correct it.${doubt}`;
+  return `<div class="signed"><div class="badge${sg.ai?" ai":""}" style="margin-bottom:8px">${head}</div>${rows}
     <div class="smean" id="smean-${id}"></div><div class="sgloss" id="sgloss-${id}"></div>
-    <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save sign card</button>${aiOn()&&!sg.ai?(sg.aiBusy?`<span class="ainote">${esc(sg.aiBusy)}</span>`:`<button class="btn mini" data-signai="${id}">Ask AI</button>`):""}<button class="del" data-signcancel="${id}">cancel</button></div>
+    <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save card</button>${aiOn()&&!sg.ai&&!sg.aiBusy?`<button class="btn mini" data-signai="${id}">Ask AI</button>`:""}<button class="del" data-splitwords="${id}">Split into words</button><button class="del" data-signcancel="${id}">cancel</button></div>
     ${sg.aiErr?`<div class="err" style="margin-top:6px">${esc(sg.aiErr)}</div>`:""}</div>`;
 }
 /* recompute pinyin / meaning / gloss for the current lines without re-rendering (keeps input focus) */
@@ -1251,7 +1254,7 @@ function signPreview(id){
   if(sm) sm.innerHTML=sg.ai
     ?`<span class="badge ai">Checked by the AI${sg.ai.note&&sg.ai.note.toLowerCase()!=="ok"?": "+esc(sg.ai.note):""}</span><div class="mono" style="font-size:14px">${esc(sg.ai.p||"")}</div><div>${esc(sg.ai.m)||"—"}</div>`
     :`<span class="badge">Meaning ${full?"from the phrasebook":"composed word by word"}, unverified</span><div>${esc(mean)||"—"}</div>`;
-  const gl=$(`#sgloss-${id}`); if(gl) gl.innerHTML=live.flatMap(r=>r.gloss).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("");
+  const gl=$(`#sgloss-${id}`); if(gl) gl.innerHTML=sg.ai?"":live.flatMap(r=>r.gloss).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("");
   sg.res=res; sg.full=full; sg.mean=mean;
   if(!sg.ai && !(aiLive()&&!sg.aiErr)) signTranslate(id); /* offline model only as fallback */
 }
@@ -1295,7 +1298,7 @@ async function saveSign(id){
   const keep=sg.lines.map((l,k)=>({l:l.trim(),r:sg.res[k]})).filter(x=>x.r);
   if(!keep.length) return;
   const c=keep.map(x=>x.l).join("\n");
-  if(deck().some(d=>d.c===c)){ alert("This sign is already in the deck."); return; }
+  if(deck().some(d=>d.c===c)){ alert("This text is already in the deck."); return; }
   /* meaning: AI check (if done here) → phrasebook → offline translation (if enabled) → word gloss (then pending) */
   let mt={src:sg.full?"phrasebook":"gloss",verified:false,pending:!sg.full}, mean=sg.mean||"", pin=keep.map(x=>x.r.py).join(" / ");
   if(sg.ai && c===sg.ai.zh){ mean=sg.ai.m||mean; pin=sg.ai.p||pin; mt={src:"llm",verified:true,pending:false}; }
@@ -1307,15 +1310,19 @@ async function saveSign(id){
   const cfs=sg.lines.flatMap((l,k)=>(sg.orig&&sg.orig[k]===l.trim()&&sg.conf&&sg.conf[k])||[]);
   const unknown=keep.flatMap(x=>x.r.gloss.filter(g=>!g.ph&&!g.m).map(g=>g.w));
   const why=mt.src==="llm"?"":ocrDoubt(cfs,null,unknown); if(why) mt.suspect=why;
-  const card={ kind:"sign", c, p:pin, m:mean, ex:"",exp:"",exm:"", t:"Sign", at:Date.now(),
-    segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
+  /* a short single line is a word card (reticle front); anything longer is a sign card */
+  const word=keep.length===1 && glyphs(c)<=4;
+  const card=word
+    ? { c, p:pin, m:mean, ex:"",exp:"",exm:"", t:"Custom", at:Date.now(), mt, ...(keep[0].r.segs.filter(x=>CJK.test(x)).length>1?{seg:keep[0].r.segs.filter(x=>CJK.test(x))}:{}) }
+    : { kind:"sign", c, p:pin, m:mean, ex:"",exp:"",exm:"", t:"Sign", at:Date.now(),
+        segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
   if(S.pendingImg) card.img=S.pendingImg;
-  if(S.pendingFull) card.imgFull=S.pendingFull;
+  if(S.pendingFull && !word) card.imgFull=S.pendingFull;
   S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
   S.queue=buildQueue(false); QSCARD[id]=c;
   delete SIGN[id];
-  QSNOTE[id]=`Sign card saved — ${keep.length} line${keep.length>1?"s":""}, meaning ${mt.src==="llm"?"checked by the AI":mt.src==="nmt"?"from the offline translation":mt.src==="phrasebook"?"from the phrasebook":"composed word by word"}${mt.src==="llm"?"":" (unverified"+(mt.pending?", translation pending":"")+")"}.`+(mt.suspect?` OCR doubtful (${esc(mt.suspect)})${aiAutoOn()?", the AI will check it":""}.`:"");
+  QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}, ${mt.src==="llm"?"checked by the AI":mt.src==="nmt"?"meaning from the offline translation":mt.src==="phrasebook"?"meaning from the phrasebook":"meaning composed word by word"}${mt.src==="llm"?"":" (unverified"+(mt.pending?", translation pending":"")+")"}.`+(mt.suspect?` Reading uncertain (${esc(mt.suspect)})${aiAutoOn()?", the AI will check it":""}.`:"");
   aiAutoSoon();
   setStats(); renderShots();
 }
@@ -1329,7 +1336,7 @@ async function confirmCard(c){
 /* ---------- Kamera / Inbox ---------- */
 function renderInbox(main){
   main.innerHTML=`<div class="pane">
-    <div class="lead">Photos stay on this phone. Frame the text, then OCR it or read it as a sign.</div>
+    <div class="lead">Photos stay on this phone. Frame the text and tap Read — the card is made for you.</div>
     <button class="btn primary block" id="snap">Take photo</button>
     <div id="shots"></div>
   </div>`;
@@ -1390,6 +1397,8 @@ function renderShots(){
     sg.lines[+inp.dataset.sline]=inp.value; signPreview(inp.dataset.sid);
   });
   box.querySelectorAll("[data-signsave]").forEach(b=> b.onclick=()=>saveSign(b.dataset.signsave));
+  box.querySelectorAll("[data-splitwords]").forEach(b=> b.onclick=()=>{ const id=b.dataset.splitwords, sg=SIGN[id]; if(!sg||!sg.region) return;
+    delete SIGN[id]; SHOWBOX[id]=true; renderShots(); onOcr(id,sg.region); });
   box.querySelectorAll("[data-signcancel]").forEach(b=> b.onclick=()=>{ delete SIGN[b.dataset.signcancel]; renderShots(); });
   Object.keys(SIGN).forEach(signPreview);
 }
