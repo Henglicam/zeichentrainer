@@ -1544,20 +1544,17 @@ async function openCharPick(id,k,i,btn){
   let box=$("#ckpick-"+id); if(!box){ box=document.createElement("div"); box.className="ckpick"; box.id="ckpick-"+id; }
   btn.closest(".sline").appendChild(box);
   const apply=async(rep)=>{ const cs=[...sg.lines[k]]; if(rep===null) cs.splice(i,1); else cs[i]=rep; sg.lines[k]=cs.join(""); delete sg.ai; delete sg.aiErr; renderShots(); if(aiLive()) signAskAI(id); };
-  let drawn=[], pad=null; /* candidates read from the drawing pad; the pad survives re-renders of the candidate row */
   const render=(dict,ai,aiBusy)=>{
-    const seen=new Set(drawn);
+    const seen=new Set();
     box.innerHTML=`<div class="ckhead"><canvas class="ckref" width="1" height="1" title="the character in the photo"></canvas><div class="badge">Replace <b class="hanzi">${esc(ch)}</b> with:</div></div>
-      <div class="cands">${drawn.map(c=>`<button class="ck draw" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${ai.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!drawn.length&&!aiBusy?`<span class="badge">no dictionary match — draw it or ask the AI</span>`:""}${aiBusy?`<span class="badge">asking the AI …</span>`:""}</div>
-      <div class="ckacts">${pad?"":`<button class="btn mini" id="ck-draw-${id}">Not here? Draw it</button>`}${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}<span class="grow"></span><button class="del" id="ck-del-${id}">Remove</button><button class="del" id="ck-x-${id}">close</button></div>
-      <div class="ckdraw-slot"></div>`;
+      <div class="cands">${ai.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!aiBusy?`<span class="badge">no match — draw it or ask the AI</span>`:""}${aiBusy?`<span class="badge">asking the AI …</span>`:""}</div>
+      <div class="ckacts"><button class="btn mini" id="ck-draw-${id}">Not here? Draw it</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}<span class="grow"></span><button class="del" id="ck-del-${id}">Remove</button><button class="del" id="ck-x-${id}">close</button></div>`;
     drawCharRef(box.querySelector(".ckref"),sg,k,i);
     box.querySelectorAll("[data-rep]").forEach(b=> b.onclick=()=>apply(b.dataset.rep));
     $("#ck-del-"+id).onclick=()=>apply(null);
     $("#ck-x-"+id).onclick=()=>{ box.remove(); btn.classList.remove("on"); };
     const ab=$("#ck-ai-"+id); if(ab) ab.onclick=()=>askAI(dict);
-    const db=$("#ck-draw-"+id); if(db) db.onclick=()=>{ pad=drawPad(id,k,i,alts=>{ drawn=alts; render(dict,ai,false); }, ()=>{ pad=null; drawn=[]; render(dict,ai,false); }); render(dict,ai,false); };
-    if(pad) box.querySelector(".ckdraw-slot").appendChild(pad);
+    $("#ck-draw-"+id).onclick=()=>openDrawSheet(id,k,i,apply);
   };
   const askAI=async(dict)=>{ render(dict,[],true); try{ const alts=await aiCharAlternatives(line,i); if(!box.isConnected) return; render(dict,alts,false); if(!alts.length) box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">the AI has no better idea</span>`); }catch(err){ if(!box.isConnected) return; render(dict,[],false); box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">AI: ${esc(err.message||err)}</span>`); } };
   render([],[],false);
@@ -1581,47 +1578,60 @@ async function drawCharRef(cv,sg,k,i){
     cv.getContext("2d").drawImage(bmp,sx,sy,sw,sh,0,0,cv.width,cv.height); bmp.close();
   }catch(e){ cv.remove(); }
 }
-/* ---------- drawing pad: write the character with a finger, the on-device reader names it ----------
-   Strokes are rendered black on white at ~80 px and read by the same Tesseract model in single-character mode;
-   its alternatives are re-ranked by the dictionary context. Reading starts by itself after the finger lifts. */
-const DRAW_TIMER=900, DRAW_SIZE=240;
-function drawPad(id,k,i,onResult,onClose){
-  const el=document.createElement("div"); el.className="ckdraw";
-  el.innerHTML=`<div class="padrow"><canvas class="ckref" width="1" height="1" title="the character in the photo"></canvas><canvas class="pad" width="${DRAW_SIZE*2}" height="${DRAW_SIZE*2}"></canvas></div>
-    <div class="badge" id="ckd-st-${id}">Draw the character here.</div>
-    <div class="ckacts"><button class="del" id="ckd-undo-${id}">Undo</button><button class="del" id="ckd-clear-${id}">Clear</button><button class="del" id="ckd-x-${id}">close pad</button></div>`;
-  const cv=el.querySelector(".pad"), ctx=cv.getContext("2d"), strokes=[]; let cur=null, timer=null, seq=0;
-  const status=t=>{ const st=el.querySelector("#ckd-st-"+id); if(st) st.textContent=t; };
+/* ---------- drawing sheet: write the character with a finger, the on-device reader names it ----------
+   Opens over the whole screen (H: the inline pad sat below the fold, unseen). The photo character is at the top,
+   the pad fills the width, and nothing is read until Done is tapped (H: "it already takes it without me confirming").
+   Strokes are rendered black on white at ~80 px and read by the same Tesseract model; ranked by confidence,
+   then by what fits the neighbours. Tap a result to replace the character; the sheet closes. */
+const DRAW_SIZE=720;
+function openDrawSheet(id,k,i,apply){
+  const sg=SIGN[id]; if(!sg) return;
+  const ch=[...sg.lines[k]][i]||"";
+  document.querySelectorAll(".drawsheet").forEach(x=>x.remove());
+  const el=document.createElement("div"); el.className="drawsheet";
+  el.innerHTML=`<div class="dshead"><canvas class="ckref" width="1" height="1" title="the character in the photo"></canvas><div class="badge">Draw the character that replaces <b class="hanzi">${esc(ch)}</b></div><button class="del" id="ds-x">Cancel</button></div>
+    <canvas class="pad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas>
+    <div class="badge" id="ds-st">Draw all strokes, then tap Done.</div>
+    <div class="cands" id="ds-cands"></div>
+    <div class="ckacts"><button class="del" id="ds-undo">Undo</button><button class="del" id="ds-clear">Clear</button><span class="grow"></span><button class="btn primary" id="ds-done">Done</button></div>`;
+  document.body.appendChild(el); document.body.classList.add("noscroll");
+  drawCharRef(el.querySelector(".ckref"),sg,k,i);
+  const cv=el.querySelector(".pad"), ctx=cv.getContext("2d"), strokes=[]; let cur=null, seq=0;
+  const status=t=>{ const st=el.querySelector("#ds-st"); if(st) st.textContent=t; };
+  const close=()=>{ seq++; el.remove(); document.body.classList.remove("noscroll"); };
   const paint=()=>{
     ctx.clearRect(0,0,cv.width,cv.height);
-    /* faint 田字格 */
-    ctx.strokeStyle="rgba(237,230,214,.16)"; ctx.lineWidth=2; ctx.setLineDash([8,8]);
+    ctx.strokeStyle="rgba(237,230,214,.16)"; ctx.lineWidth=2; ctx.setLineDash([10,10]);
     ctx.beginPath(); ctx.moveTo(cv.width/2,0); ctx.lineTo(cv.width/2,cv.height); ctx.moveTo(0,cv.height/2); ctx.lineTo(cv.width,cv.height/2); ctx.stroke(); ctx.setLineDash([]);
-    ctx.strokeStyle="#EDE6D6"; ctx.lineWidth=14; ctx.lineCap="round"; ctx.lineJoin="round";
+    ctx.strokeStyle="#EDE6D6"; ctx.lineWidth=22; ctx.lineCap="round"; ctx.lineJoin="round";
     for(const st of strokes.concat(cur?[cur]:[])){ if(!st.length) continue; ctx.beginPath(); ctx.moveTo(st[0][0],st[0][1]); for(const p of st) ctx.lineTo(p[0],p[1]); if(st.length===1) ctx.lineTo(st[0][0]+0.1,st[0][1]); ctx.stroke(); }
   };
   const pt=e=>{ const r=cv.getBoundingClientRect(); return [(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height]; };
-  cv.onpointerdown=e=>{ e.preventDefault(); cv.setPointerCapture(e.pointerId); clearTimeout(timer); cur=[pt(e)]; paint(); };
+  cv.onpointerdown=e=>{ e.preventDefault(); cv.setPointerCapture(e.pointerId); cur=[pt(e)]; paint(); };
   cv.onpointermove=e=>{ if(!cur) return; e.preventDefault(); cur.push(pt(e)); paint(); };
-  cv.onpointerup=cv.onpointercancel=e=>{ if(!cur) return; strokes.push(cur); cur=null; paint(); schedule(); };
-  const schedule=()=>{ clearTimeout(timer); timer=setTimeout(()=>recognize(),DRAW_TIMER); };
+  cv.onpointerup=cv.onpointercancel=e=>{ if(!cur) return; strokes.push(cur); cur=null; paint(); };
+  const showCands=alts=>{
+    const c=el.querySelector("#ds-cands"); c.innerHTML=alts.map(x=>`<button class="ck draw" data-rep="${esc(x)}">${esc(x)}</button>`).join("");
+    c.querySelectorAll("[data-rep]").forEach(b=> b.onclick=()=>{ close(); apply(b.dataset.rep); });
+  };
   const recognize=async()=>{
-    const my=++seq; if(!strokes.length){ status("Draw the character here."); return; }
+    const my=++seq; showCands([]);
+    if(!strokes.length){ status("Draw the character first."); return; }
     try{
       const w=await ocrWorker(status); if(my!==seq) return;
       status("reading …");
       const alts=await recognizeStrokes(w,strokes,p=>{ if(my===seq) status("reading … "+p+"%"); }); if(my!==seq||!el.isConnected) return;
-      const sg=SIGN[id], ctxc=sg?charCandidates(sg.lines[k],i):[];
+      const ctxc=SIGN[id]?charCandidates(SIGN[id].lines[k],i):[];
       const ranked=alts.slice().sort((a,b)=>(ctxc.includes(b)?1:0)-(ctxc.includes(a)?1:0)); /* what fits the neighbours first, otherwise the reader's order */
-      status(ranked.length?"Read as: tap the right one above, or keep drawing.":"Not recognized — try cleaner strokes.");
-      onResult(ranked);
+      showCands(ranked);
+      status(ranked.length?"Read as — tap the right one. Not there? Clear and draw again.":"Not recognized — try cleaner, well-separated strokes.");
     }catch(err){ if(my===seq) status("Reading failed: "+(err&&err.message||err)); }
   };
-  el.querySelector("#ckd-undo-"+id).onclick=()=>{ strokes.pop(); paint(); if(strokes.length) schedule(); else { seq++; onResult([]); status("Draw the character here."); } };
-  el.querySelector("#ckd-clear-"+id).onclick=()=>{ strokes.length=0; seq++; paint(); onResult([]); status("Draw the character here."); };
-  el.querySelector("#ckd-x-"+id).onclick=()=>{ seq++; el.remove(); onClose(); };
+  el.querySelector("#ds-undo").onclick=()=>{ strokes.pop(); seq++; showCands([]); paint(); status("Draw all strokes, then tap Done."); };
+  el.querySelector("#ds-clear").onclick=()=>{ strokes.length=0; seq++; showCands([]); paint(); status("Draw all strokes, then tap Done."); };
+  el.querySelector("#ds-done").onclick=recognize;
+  el.querySelector("#ds-x").onclick=close;
   el.strokes=strokes; el.recognize=recognize; el.paint=paint; /* used by the tests */
-  if(SIGN[id]) drawCharRef(el.querySelector(".ckref"),SIGN[id],k,i); else el.querySelector(".ckref").remove();
   paint();
   return el;
 }
