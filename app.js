@@ -184,18 +184,30 @@ function renderStudy(main){
       ${d.exp?`<div class="exp">${esc(d.exp)}</div>`:""}
       ${d.exm?`<div class="exm">${esc(d.exm)}</div>`:""}</div>` : "";
     const imgBlock = d.img ? `<div class="cardimg"><img src="${URL.createObjectURL(d.img)}" alt="source"></div>` : "";
+    const glossBlock = d.kind==="sign" ? `<div class="gtable">${(d.gloss||[]).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("")}</div>
+      ${d.mt&&!d.mt.verified?`<span class="flag">meaning: auto · unverified</span>`:""}
+      ${d.imgFull?`<div class="cardimg"><img src="${URL.createObjectURL(d.imgFull)}" alt="context"></div>`:""}` : "";
     const grds=[["again","Again"],["hard","Hard"],["good","Good"],["easy","Easy"]].map(([g,l])=>
       `<button class="grade" data-g="${g}"><span class="lbl">${l}</span><span class="iv">${previewInterval(sched,g)}</span></button>`).join("");
     back=`<div style="margin-top:26px">
       <div class="pin">${esc(d.p)}</div><div class="mean">${esc(d.m)}</div>
-      ${wordBlock}${exBlock}${imgBlock}
+      ${d.kind==="sign"?glossBlock:wordBlock+exBlock+imgBlock}
       <div class="grades">${grds}</div></div>`;
   } else {
     back=`<button class="btn wide" id="reveal">Reveal</button>`;
   }
+  let front=`<div class="reticle">${reticleSVG(single)}<div class="glyph" style="font-size:${headFont(d.c)}px">${d.seg?d.seg.map(esc).join("<wbr>"):esc(d.c)}</div></div>`;
+  if(d.kind==="sign"){
+    /* sign card: the picture is the exercise, text underneath wrapped only between words */
+    const lines=d.c.split("\n"), segs=d.segs||lines.map(l=>[l]);
+    const longest=Math.max(...lines.map(glyphs));
+    const fs=longest<=6?40:longest<=9?30:24;
+    front=`<div class="signfront">${d.img?`<img class="signimg" src="${URL.createObjectURL(d.img)}" alt="sign">`:""}
+      <div class="signtext" style="font-size:${fs}px">${lines.map((l,i)=>`<div>${(segs[i]||[l]).map(esc).join("<wbr>")}</div>`).join("")}</div></div>`;
+  }
   main.innerHTML=`<div class="card">
     <div class="tags"><span class="t">${esc(d.t||"")}</span><span class="${isNew?"n":"r"}">${isNew?"new":"review"}</span></div>
-    <div class="reticle">${reticleSVG(single)}<div class="glyph" style="font-size:${headFont(d.c)}px">${d.seg?d.seg.map(esc).join("<wbr>"):esc(d.c)}</div></div>
+    ${front}
     ${back}</div>`;
   const rv=$("#reveal"); if(rv) rv.onclick=()=>{ S.revealed=true; render(); };
   document.querySelectorAll(".grade").forEach(b=> b.onclick=()=>grade(b.dataset.g));
@@ -253,9 +265,14 @@ function renderAdd(main){
 function renderCustomList(){
   const box=$("#c-list"); if(!box) return;
   if(!S.custom.length){ box.innerHTML=""; return; }
-  box.innerHTML=`<div class="listhead">Custom cards · ${S.custom.length}</div>`+
-    S.custom.map(d=>`<div class="item"><div class="left"><span class="c">${esc(d.c)}</span><span class="p">${esc(d.p)}</span><span class="m">${esc(d.m)}</span></div><button class="del" data-c="${esc(d.c)}">delete</button></div>`).join("");
+  const unv=S.custom.filter(d=>d.mt&&!d.mt.verified);
+  const line=d=>esc(d.c.replace(/\n/g," / "));
+  box.innerHTML=(unv.length?`<div class="listhead">Review · ${unv.length} unverified</div>`+
+    unv.map(d=>`<div class="item"><div class="left"><span class="c">${line(d)}</span><span class="m">${esc(d.m)}</span></div><button class="ocr-btn" data-ok="${esc(d.c)}">CONFIRM</button></div>`).join(""):"")+
+    `<div class="listhead">Custom cards · ${S.custom.length}</div>`+
+    S.custom.map(d=>`<div class="item"><div class="left"><span class="c">${line(d)}${d.kind==="sign"?'<span class="pill">sign</span>':""}</span><span class="p">${esc(d.p)}</span><span class="m">${esc(d.m)}</span></div><button class="del" data-c="${esc(d.c)}">delete</button></div>`).join("");
   box.querySelectorAll(".del").forEach(b=> b.onclick=()=>delCustom(b.dataset.c));
+  box.querySelectorAll("[data-ok]").forEach(b=> b.onclick=()=>confirmCard(b.dataset.ok));
 }
 async function addManual(){
   const word=$("#f-word").value.trim(), pin=$("#f-pin").value.trim(), mean=$("#f-mean").value.trim();
@@ -471,7 +488,7 @@ function selbarHTML(id){
   const pm=groups.map(gr=>{
     const w=gr.map(c=>c.ch).join("");
     const g=(DICT&&DICT.get(w))||"";
-    return w+" "+(g?g.split(";")[0].trim():"?");
+    return w+" "+(bestSense(w)||"?");
   }).join(" · ");
   const phrase=`<div class="selbar phrase"><span class="sw">${esc(pw)}</span><span class="sp">${esc(pp)}</span>
       <span class="sm">${esc(pm)}</span>
@@ -539,9 +556,11 @@ async function showCropPreview(id){
     <div class="badge" style="margin:6px 0 8px">Selected area — drag a corner to resize, drag inside to move, drag elsewhere to redraw.</div>
     <div class="cropacts">
       <button class="btn mini" data-cropocr="${id}">OCR this area</button>
+      <button class="btn mini" data-cropsign="${id}">Read sign</button>
       <button class="btn mini" data-cropok="${id}">Image only</button>
     </div></div>`;
   box.querySelector("[data-cropocr]").onclick=()=>cropOcr(id);
+  box.querySelector("[data-cropsign]").onclick=()=>cropSign(id);
   box.querySelector("[data-cropok]").onclick=()=>cropOk(id);
 }
 async function cropBlob(id){
@@ -576,6 +595,125 @@ async function cropOcr(id){
   onOcr(id,r);
 }
 
+/* ---------- Sign cards: phrasebook meaning + transcript editor ---------- */
+let SIGNS=null, _signsLoading=null;
+function loadSigns(){
+  if(SIGNS) return Promise.resolve(SIGNS);
+  if(!_signsLoading){
+    _signsLoading=fetch("./signs.json")
+      .then(r=>{ if(!r.ok) throw new Error("phrasebook not available"); return r.json(); })
+      .then(list=>{
+        SIGNS=list.map(e=>Array.isArray(e)?{zh:e[0],py:e[1],en:e[2],cat:e[3]||""}:e)
+          .filter(e=>e.zh&&e.en).sort((a,b)=>b.zh.length-a.zh.length); /* longest first */
+        return SIGNS;
+      })
+      .catch(err=>{ _signsLoading=null; throw err; });
+  }
+  return _signsLoading;
+}
+const SIGN_PUNCT=/[、，。：:,.!！?？;；·]/;
+/* first dictionary sense that is not a surname / bound-form / variant note */
+function bestSense(w){
+  const senses=((DICT&&DICT.get(w))||"").split(";").map(x=>x.trim()).filter(Boolean);
+  return senses.find(x=>!/^(surname |\(bound form\)|old variant|variant of|\(archaic\))/i.test(x))||senses[0]||"";
+}
+/* meaning of one transcript line: longest phrasebook phrases first, dictionary
+   words for the rest; punctuation kept as its own token for wrapping */
+function lineMeaning(line){
+  const raw=line.replace(/\s+/g,"");
+  const parts=[]; let k=0;
+  while(k<raw.length){
+    const ch=raw[k];
+    if(SIGN_PUNCT.test(ch)){ parts.push({w:ch,p:"",m:"",punct:true}); k++; continue; }
+    const hit=(SIGNS||[]).find(e=>raw.startsWith(e.zh,k));
+    if(hit){ parts.push({w:hit.zh,p:hit.py,m:hit.en,ph:true}); k+=hit.zh.length; continue; }
+    const rest=raw.slice(k).split(SIGN_PUNCT)[0]; let len=Math.min(8,rest.length)||1;
+    while(len>1 && !(DICT&&DICT.has(rest.slice(0,len)))) len--;
+    const w=rest.slice(0,len)||ch;
+    parts.push({w,p:pinyinPro.pinyin(w,{type:"array",toneType:"symbol"}).join(" "),m:bestSense(w),ph:false});
+    k+=w.length;
+  }
+  const words=parts.filter(x=>!x.punct);
+  const full=words.length>0 && words.every(x=>x.ph);
+  const en=words.map(x=>x.ph?x.m:(x.w+" "+(x.m||"?"))).join(" · ");
+  const py=pinyinPro.pinyin(words.map(x=>x.w).join(""),{type:"array",toneType:"symbol"}).join(" ");
+  return {en,full,gloss:words,segs:parts.map(x=>x.w),py};
+}
+const SIGN={}; /* id -> {lines:[...], res, full, mean} while the transcript editor is open */
+async function cropSign(id){
+  const r=await cropBlob(id);
+  if(!r){ alert("Draw a frame with your finger first."); return; }
+  const rec=S.inbox.find(x=>x.id===id);
+  S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null;
+  CROP=null; delete OCRRES[id]; delete SELS[id]; delete SIGN[id]; delete QSNOTE[id];
+  renderShots();
+  const box=$("#ocr-"+id); if(!box) return;
+  const status=t=>{ box.innerHTML=`<span class="badge">${esc(t)}</span>`; };
+  try{
+    const w=await ocrWorker(status);
+    await loadSigns().catch(()=>{}); /* phrasebook optional — falls back to word gloss */
+    status("reading sign …");
+    await w.setParameters({tessedit_pageseg_mode:"6"});
+    const {data}=await w.recognize(r.blob,{},{blocks:true,text:true});
+    const lines=[];
+    (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>{
+      let t="";
+      (l.words||[]).forEach(wd=>(wd.symbols||[]).forEach(sy=>{
+        if(sy.confidence>=35 && (CJK.test(sy.text)||SIGN_PUNCT.test(sy.text))) t+=sy.text;
+      }));
+      t=t.replace(/^[、，。：:,.]+|[、，。：:,.]+$/g,"");
+      if(CJK.test(t)) lines.push(t);
+    })));
+    if(!lines.length){ status("No Chinese characters recognized."); return; }
+    SIGN[id]={lines};
+    renderShots();
+  }catch(err){ status("OCR failed: "+(err&&err.message||err)); }
+}
+function signEditorHTML(id){
+  const sg=SIGN[id]; if(!sg) return "";
+  const rows=sg.lines.map((l,k)=>`<div class="sline"><input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(l)}" autocomplete="off"><div class="sp" id="sp-${id}-${k}"></div></div>`).join("");
+  return `<div class="signed"><div class="badge" style="margin-bottom:8px">Sign transcript — fix any OCR slip, then save.</div>${rows}
+    <div class="smean" id="smean-${id}"></div><div class="sgloss" id="sgloss-${id}"></div>
+    <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save sign card</button><button class="del" data-signcancel="${id}">cancel</button></div></div>`;
+}
+/* recompute pinyin / meaning / gloss for the current lines without re-rendering (keeps input focus) */
+function signPreview(id){
+  const sg=SIGN[id]; if(!sg) return;
+  const res=sg.lines.map(l=>CJK.test(l)?lineMeaning(l):null);
+  res.forEach((r,k)=>{ const el=$(`#sp-${id}-${k}`); if(el) el.textContent=r?r.py:""; });
+  const live=res.filter(Boolean);
+  const full=live.length>0 && live.every(r=>r.full);
+  const mean=live.map(r=>r.en).filter(Boolean).join(" / ");
+  const sm=$(`#smean-${id}`); if(sm) sm.innerHTML=`<span class="badge">meaning · ${full?"phrasebook":"composed word by word"} · unverified</span><div>${esc(mean)||"—"}</div>`;
+  const gl=$(`#sgloss-${id}`); if(gl) gl.innerHTML=live.flatMap(r=>r.gloss).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("");
+  sg.res=res; sg.full=full; sg.mean=mean;
+}
+async function saveSign(id){
+  const sg=SIGN[id]; if(!sg) return;
+  signPreview(id);
+  const keep=sg.lines.map((l,k)=>({l:l.trim(),r:sg.res[k]})).filter(x=>x.r);
+  if(!keep.length) return;
+  const c=keep.map(x=>x.l).join("\n");
+  if(deck().some(d=>d.c===c)){ alert("This sign is already in the deck."); return; }
+  const card={ kind:"sign", c, p:keep.map(x=>x.r.py).join(" / "), m:sg.mean||"", ex:"",exp:"",exm:"", t:"Sign",
+    segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))),
+    mt:{src:sg.full?"phrasebook":"gloss",verified:false} };
+  if(S.pendingImg) card.img=S.pendingImg;
+  if(S.pendingFull) card.imgFull=S.pendingFull;
+  S.custom.push(card);
+  try{ await idbPut("custom",card); }catch(e){}
+  S.queue=buildQueue(false);
+  delete SIGN[id];
+  QSNOTE[id]=`Sign card saved — ${keep.length} line${keep.length>1?"s":""}, meaning ${sg.full?"from the phrasebook":"composed word by word"} (unverified).`;
+  setStats(); renderShots();
+}
+async function confirmCard(c){
+  const d=S.custom.find(x=>x.c===c); if(!d||!d.mt) return;
+  d.mt.verified=true;
+  try{ await idbPut("custom",d); }catch(e){}
+  renderCustomList();
+}
+
 /* ---------- Kamera / Inbox ---------- */
 function renderInbox(main){
   main.innerHTML=`<div class="pane">
@@ -606,7 +744,7 @@ function renderShots(){
           :`<button class="ocr-btn" data-crop="${s.id}">CROP</button><button class="del" data-del="${s.id}">delete</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${cropping
           ?`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it.</span>`
-          :(OCRRES[s.id]?selbarHTML(s.id):"")}</div>
+          :(SIGN[s.id]?signEditorHTML(s.id):OCRRES[s.id]?selbarHTML(s.id):QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>`:"")}</div>
       </div>`;
     }).join("");
   box.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>delShot(b.dataset.del));
@@ -629,6 +767,13 @@ function renderShots(){
   box.querySelectorAll("[data-clearsel]").forEach(b=> b.onclick=()=>{ SELS[b.dataset.clearsel].clear(); renderShots(); });
   box.querySelectorAll("[data-qs]").forEach(b=> b.onclick=()=>quickSave(b.dataset.qs,b.dataset.w,b.dataset.p,b.dataset.m,+b.dataset.g));
   box.querySelectorAll(".croplayer").forEach(wireCrop);
+  box.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{
+    const sg=SIGN[inp.dataset.sid]; if(!sg) return;
+    sg.lines[+inp.dataset.sline]=inp.value; signPreview(inp.dataset.sid);
+  });
+  box.querySelectorAll("[data-signsave]").forEach(b=> b.onclick=()=>saveSign(b.dataset.signsave));
+  box.querySelectorAll("[data-signcancel]").forEach(b=> b.onclick=()=>{ delete SIGN[b.dataset.signcancel]; renderShots(); });
+  Object.keys(SIGN).forEach(signPreview);
 }
 async function onPhoto(e){
   const file=e.target.files && e.target.files[0];
@@ -666,7 +811,7 @@ async function delShot(id){
 async function exportData(){
   const data={ app:"zeichentrainer", version:1, exported:new Date().toISOString(),
     progress:Object.entries(S.progress).map(([c,s])=>({c,...s})),
-    custom:S.custom.map(({img,...rest})=>rest) }; // images stay local (privacy + JSON)
+    custom:S.custom.map(({img,imgFull,...rest})=>rest) }; // images stay local (privacy + JSON)
   const json=JSON.stringify(data,null,2);
   /* Android/MIUI silently blocks programmatic blob downloads — the share
      sheet is the reliable path, download link only as fallback.
@@ -700,7 +845,7 @@ async function importData(e){
   if(!prog.length && !cust.length){ alert("Export is empty — nothing to import."); return; }
   if(!confirm("Import "+prog.length+" progress entries and "+cust.length+" custom cards?\nEntries for the same characters will be overwritten.")) return;
   /* card images only exist locally — keep the existing image when overwriting */
-  const merged=cust.map(r=>{ const ex=S.custom.find(x=>x.c===r.c); return ex&&ex.img?{...r,img:ex.img}:r; });
+  const merged=cust.map(r=>{ const ex=S.custom.find(x=>x.c===r.c); return ex?{...r,...(ex.img?{img:ex.img}:{}),...(ex.imgFull?{imgFull:ex.imgFull}:{})}:r; });
   try{
     await Promise.all([...prog.map(r=>idbPut("progress",r)), ...merged.map(r=>idbPut("custom",r))]);
   }catch(err){ alert("Import failed ("+err+")"); return; }
