@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=90; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=91; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -71,7 +71,7 @@ async function putCard(upd,key){
 /* ---------- State ---------- */
 const S = { mode:"study", progress:{}, custom:[], inbox:[],
   queue:[], idx:0, revealed:false, done:0, ahead:false, ready:false,
-  pendingImg:null, pendingFull:null, pendingUse:"crop", prefill:null, persist:null,
+  pendingImg:null, pendingFull:null, pendingUse:"crop", persist:null,
   detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, settings:{}, single:null, saved:null,
   editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null };
 
@@ -712,10 +712,6 @@ function renderAdd(main){
   const uc=$("#f-usecrop"); if(uc) uc.onclick=()=>{ S.pendingUse="crop"; renderAdd(main); };
   const uf=$("#f-usefull"); if(uf) uf.onclick=()=>{ S.pendingUse="full"; renderAdd(main); };
   /* Draft survives tab switches (e.g. pick word → back to cropping) */
-  if(S.prefill){
-    S.draft={...(S.draft||{}), w:S.prefill.w||"", p:S.prefill.p||"", m:S.prefill.m||"", autoPin:!!S.prefill.p};
-    S.prefill=null;
-  }
   const d0=S.draft||{};
   $("#f-word").value=d0.w||""; $("#f-pin").value=d0.p||""; $("#f-mean").value=d0.m||""; wireGrow(main);
   if(d0.autoPin) $("#f-pinhint").style.display="";
@@ -1020,7 +1016,7 @@ async function ocrWorker(status){
 }
 
 /* per-photo result (session only): characters with box + auto pinyin; tap to select */
-const OCRRES={}, SELS={}, QSNOTE={}, AIFIX={}, QSCARD={}, SHOWBOX={}, READING={}; /* READING[id]: status text while the photo is being read */ /* SHOWBOX[id]: word boxes shown although the AI is live */ /* QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) */ /* AIFIX[id][text] = AI check of an OCR selection before saving */
+const QSNOTE={}, QSCARD={}, READING={}; /* READING[id]: status text while the photo is being read · QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) · QSNOTE[id] = the note under the photo after saving */
 /* greedy longest-match segmentation against CC-CEDICT (max word length 8) */
 function segmentChars(chars){
   const out=[]; let k=0;
@@ -1032,179 +1028,11 @@ function segmentChars(chars){
   }
   return out;
 }
-async function quickSave(id,w,p,m,grp,ai){
-  const R=OCRRES[id]; if(!R) return;
-  if(!m){ /* no dictionary meaning — the form is needed to fill it in */
-    S.prefill={w,p,m:""}; S.mode="add"; render(); return;
-  }
-  if(deck().some(d=>d.c===w)){
-    QSNOTE[id]=`“${esc(w)}” is already in the deck.`;
-  }else{
-    /* checked by the AI in the selection bar → verified; otherwise a dictionary prefill */
-    const card={c:w,p,m,t:"Custom",at:Date.now(),shot:id,lb:"photo",mt:ai?{src:"llm",verified:true}:{src:"dict",verified:false}};
-    /* doubtful OCR (low symbol confidence) → the online AI checks it automatically when enabled */
-    const chars=R.flat.filter(c=>grp<0?SELS[id].has(c.i):c.g===grp);
-    const why=ai?"":ocrDoubt(chars.map(c=>c.cf),m);
-    if(why) card.mt.suspect=why;
-    if(grp<0 && chars.map(c=>c.ch).join("")===w){ /* phrase: keep word boundaries so the card front never breaks inside a word */
-      const segs=[]; let ln=null;
-      R.flat.filter(c=>SELS[id].has(c.i)).forEach(c=>{
-        if(ln!==null && c.ln!==ln) segs.push({g:-1,w:"\n"}); /* line break as in the photo */
-        ln=c.ln;
-        const last=segs[segs.length-1]; if(last&&last.g===c.g&&last.w!=="\n") last.w+=c.ch; else segs.push({g:c.g,w:c.ch}); });
-      card.seg=segs.map(x=>x.w);
-      card.gloss=segs.filter(x=>x.w!=="\n").map(x=>({w:x.w,p:pinyinPro.pinyin(x.w,{toneType:"symbol"}),m:bestSense(x.w)})); /* word-by-word for the back */
-    }
-    const img=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
-    if(img) card.img=await jpegOf(img);
-    if(S.pendingFull) card.imgFull=S.pendingFull; /* whole photo as context on the back */
-    S.custom.push(card);
-    try{ await idbPut("custom",card); }catch(e){}
-    S.queue=buildQueue(false); QSCARD[id]=w;
-    QSNOTE[id]=`“${esc(w)}” saved — ${esc(p)}. `+(ai?"Checked by the AI.":"Auto values, verify when in doubt.")+(card.mt.suspect?` Reading uncertain (${esc(card.mt.suspect)})${aiAutoOn()?", the AI will check it":""}.`:"");
-    aiAutoSoon();
-  }
-  /* deselect this word's characters (phrase: everything) — other rows stay available */
-  if(grp<0) SELS[id].clear(); else R.flat.forEach(c=>{ if(c.g===grp) SELS[id].delete(c.i); });
-  setStats(); renderShots();
-}
-async function onOcr(id,region){
-  /* region (optional): {blob,X,Y} — OCR only on the crop, boxes shifted
-     back into full-image coordinates */
-  const rec=S.inbox.find(s=>s.id===id); if(!rec) return;
-  /* drop any previous result immediately — stale boxes over the photo read
-     as wrong output while the new recognition is still running */
-  delete OCRRES[id]; delete SELS[id];
-  renderShots();
-  const box=$("#ocr-"+id); if(!box) return;
-  const status=readingStatus(id);
-  try{
-    const w=await ocrWorker(status);
-    status("recognizing …");
-    /* crops are a single text block — PSM 6 is far more robust there than auto layout */
-    await w.setParameters({tessedit_pageseg_mode:region?"6":"3"});
-    _ocrLog=p=>status("recognizing … "+p+"%");
-    const [{data},bmp]=await Promise.all([
-      w.recognize(region?region.blob:rec.blob,{},{blocks:true,text:true}).finally(()=>{ _ocrLog=null; }),
-      createImageBitmap(rec.blob)
-    ]);
-    const W=bmp.width,H=bmp.height; bmp.close();
-    const dx=region?region.X:0, dy=region?region.Y:0;
-    const lines=[];
-    eachLine(data,symbols=>{
-      const cs=[];
-      symbols.forEach(sy=>{
-        /* confidence gate: photo clutter (fences, foliage) produces phantom
-           characters with low certainty — drop them */
-        if(CJK.test(sy.text) && sy.confidence>=35)
-          cs.push({ch:sy.text,cf:sy.confidence,b:{x0:sy.bbox.x0+dx,y0:sy.bbox.y0+dy,x1:sy.bbox.x1+dx,y1:sy.bbox.y1+dy}});
-      });
-      if(cs.length) lines.push(cs);
-    });
-    if(!lines.length){ status("No Chinese characters recognized."); return; }
-    let i=0, g=0; const flat=[];
-    lines.forEach((cs,ln)=>{ cs.forEach(c=>{ c.ln=ln; });
-      /* pinyin per line — pinyin-pro resolves 多音字 in word context */
-      const ps=pinyinPro.pinyin(cs.map(c=>c.ch).join(""),{type:"array",toneType:"symbol"});
-      cs.forEach((c,j)=>{ c.i=i++; c.py=ps[j]||""; flat.push(c); });
-      /* dictionary word groups: tapping one character selects the whole word */
-      segmentChars(cs).forEach(seg=>{ seg.forEach(c=>{ c.g=g; }); g++; });
-    });
-    OCRRES[id]={w:W,h:H,flat}; delete READING[id];
-    /* a tight single-line frame IS the word or phrase the user wants — pre-select it */
-    /* with the AI live the whole frame is the card — everything pre-selected, no boxes to tap */
-    SELS[id]=new Set((lines.length===1||flat.length<=4||aiLive())?flat.map(c=>c.i):[]);
-    delete QSNOTE[id];
-    renderShots();
-  }catch(err){ status("OCR failed: "+(err&&err.message||err)); }
-}
-function overlayHTML(id){
-  const R=OCRRES[id]; if(!R) return "";
-  if(aiLive() && !SHOWBOX[id]) return ""; /* the AI reads the text — no pinyin boxes on the photo */
-  const sel=SELS[id];
-  return R.flat.map(c=>{
-    const st=`left:${(c.b.x0/R.w*100).toFixed(2)}%;top:${(c.b.y0/R.h*100).toFixed(2)}%;`+
-             `width:${((c.b.x1-c.b.x0)/R.w*100).toFixed(2)}%;height:${((c.b.y1-c.b.y0)/R.h*100).toFixed(2)}%`;
-    return `<button class="ovbox${sel.has(c.i)?" sel":""}" data-sid="${id}" data-i="${c.i}" style="${st}"><span class="py">${esc(c.py)}</span></button>`;
-  }).join("");
-}
-function selbarHTML(id){
-  const R=OCRRES[id]; if(!R) return "";
-  const chars=R.flat.filter(c=>SELS[id].has(c.i));
-  const note=QSNOTE[id]?`<div class="ok" style="margin:0 0 8px">${QSNOTE[id]} <button class="del" data-nextshot="1">Next photo</button></div>${qsAiBox(id)}`:"";
-  if(!chars.length){
-    return `${note}<span class="badge">Tap a word in the image — one tap selects the whole dictionary word.</span>${aiLive()&&!SHOWBOX[id]?`<button class="del" data-boxes="${id}">Show the word boxes</button>`:""}`;
-  }
-  /* selection can span several dictionary words — one row per word */
-  const groups=[];
-  chars.forEach(c=>{
-    const last=groups[groups.length-1];
-    if(last && last[0].g===c.g) last.push(c); else groups.push([c]);
-  });
-  /* inline AI check: the row shows the AI's text/pinyin/meaning (jade) and Save stores them as verified */
-  const fixOf=w0=>{ const f=AIFIX[id]&&AIFIX[id][w0]; return f&&!f.err?f:null; };
-  const aiPart=(w0,p0,m0)=>{
-    const f=AIFIX[id]&&AIFIX[id][w0], busy=AIFIX[id]&&AIFIX[id]["~"+w0];
-    if(busy) return `<span class="ainote">${esc(busy)}</span>`;
-    if(!aiOn()) return "";
-    const btn=`<button class="btn mini" data-aiq="${id}" data-w="${esc(w0)}" data-p="${esc(p0)}" data-m="${esc(m0)}">${f?"Ask again":"Ask AI"}</button>`;
-    if(f&&!f.err) return `${btn}<span class="ainote">AI${f.zh&&f.zh!==w0?`: ${esc(w0)} → ${esc(f.zh)}`:""}${f.note&&f.note.toLowerCase()!=="ok"?` — ${esc(f.note)}`:" ✓ looks right"}</span>`;
-    return `${btn}${f&&f.err?`<span class="ainote err">${esc(f.err)}</span>`:""}`;
-  };
-  const rows=groups.map(gr=>{
-    const w0=gr.map(c=>c.ch).join("");
-    const p0=pySpaced(w0);
-    const m0=(DICT&&DICT.get(w0))||"";
-    const f=fixOf(w0), w=f&&f.zh?f.zh:w0, p=f&&f.p?f.p:p0, m=f&&f.m?f.m:m0;
-    return `<div class="selbar${f?" ai":""}"><span class="sw">${esc(w)}</span><span class="sp">${esc(p)}</span>
-      ${m?`<span class="sm">${esc(m)}</span>`:`<span class="sm none">${DICT?"not in dictionary":"dictionary not loaded"}</span>`}
-      <button class="btn mini" data-qs="${id}" data-g="${gr[0].g}" data-w="${esc(w)}" data-p="${esc(p)}" data-m="${esc(m)}" data-ai="${f?1:0}">Save</button>
-      <button class="btn mini" data-mkcard="${esc(w)}" data-p="${esc(p)}" data-m="${esc(m)}">Edit…</button>${aiPart(w0,p0,m0)}</div>`;
-  }).join("");
-  const boxes=aiLive()?`<button class="del" style="margin-top:6px" data-boxes="${id}">${SHOWBOX[id]?"Hide the word boxes":"Pick words on the photo"}</button>`:"";
-  if(groups.length<2) return `${note}${rows}${boxes}<button class="del" style="margin-top:6px" data-clearsel="${id}">clear selection</button>`;
-  /* several words selected: the whole string is ONE card — meaning composed word by word */
-  const pw0=chars.map(c=>c.ch).join("");
-  const pp0=pySpaced(pw0);
-  const pm0=groups.map(gr=>{
-    const w=gr.map(c=>c.ch).join("");
-    return w+" "+(bestSense(w)||"?");
-  }).join(" · ");
-  const pf=fixOf(pw0), pw=pf&&pf.zh?pf.zh:pw0, pp=pf&&pf.p?pf.p:pp0, pm=pf&&pf.m?pf.m:pm0;
-  const phrase=`<div class="selbar phrase${pf?" ai":""}"><span class="sw">${esc(pw)}</span><span class="sp">${esc(pp)}</span>
-      <span class="sm">${esc(pm)}</span>
-      <button class="btn mini primary" data-qs="${id}" data-g="-1" data-w="${esc(pw)}" data-p="${esc(pp)}" data-m="${esc(pm)}" data-ai="${pf?1:0}">Save phrase</button>
-      <button class="btn mini" data-mkcard="${esc(pw)}" data-p="${esc(pp)}" data-m="${esc(pm)}">Edit…</button>${aiPart(pw0,pp0,pm0)}</div>
-    <div class="badge" style="margin:4px 0 6px">single words:</div>`;
-  return `${note}${phrase}${rows}${boxes}<button class="del" style="margin-top:6px" data-clearsel="${id}">clear selection</button>`;
-}
-
 /* the AI's answer for the card just saved from this photo, with one-tap Accept */
 function qsAiBox(id){ const c=QSCARD[id], d=c&&cardOf(c); return d&&d.ai?aiBoxHTML(d):""; }
 /* AI check of the current OCR selection, right in the selection bar (no tab change) */
-async function aiOverlayAsk(id,w,p,m){
-  AIFIX[id]=AIFIX[id]||{}; if(AIFIX[id]["~"+w]) return;
-  delete AIFIX[id][w]; AIFIX[id]["~"+w]="asking the AI …"; renderShots();
-  try{
-    const [r]=await aiAsk([{c:w,p,m,kind:"word",mt:{src:"dict",verified:false,suspect:"read from a photo by OCR"}}]);
-    AIFIX[id][w]={zh:r.zh&&CJK.test(r.zh)?r.zh.replace(/\s+/g,""):w,p:r.p,m:r.m,note:r.note,ok:r.ok};
-  }catch(err){ AIFIX[id][w]={err:err&&err.message||String(err)}; }
-  delete AIFIX[id]["~"+w]; renderShots();
-}
 /* automatic: every selection is checked without a tap (a few hundred tokens per card —
    fractions of a fen at DeepSeek); debounced so tapping through words fires one request per text */
-let _ovAuto=null;
-function aiOverlayAuto(id){
-  const R=OCRRES[id], sel=SELS[id]; if(!aiAutoOn()||!R||!sel||!sel.size) return;
-  const chars=R.flat.filter(c=>sel.has(c.i)), w=chars.map(c=>c.ch).join("");
-  if(AIFIX[id]&&(AIFIX[id][w]||AIFIX[id]["~"+w])) return;
-  const single=new Set(chars.map(c=>c.g)).size===1;
-  const m=single?((DICT&&DICT.get(w))||""):"";
-  clearTimeout(_ovAuto);
-  _ovAuto=setTimeout(()=>{ if(!OCRRES[id]||!SELS[id]) return;
-    const p=pySpaced(w); aiOverlayAsk(id,w,p,m); },1200);
-}
-
 /* ---------- Cropping (crop → OCR or card image) ---------- */
 let CROP=null; // {id, rect:{x,y,w,h,lw,lh}} while cropping — stays until the card is saved (H, v50)
 function cropRectStyle(){
@@ -1513,7 +1341,11 @@ function wireGrow(root){ root.querySelectorAll("textarea.grow").forEach(el=>{ au
 /* ---------- reading helpers (shared by the passes of cropSign) ---------- */
 const median=a=>{ const t=a.slice().sort((p,q)=>p-q); return t[t.length>>1]; };
 /* status text of a photo's reading: kept in state and re-queried, so a re-render cannot swallow it */
-const readingStatus=id=>t=>{ READING[id]=t; const b=$("#ocr-"+id); if(b) b.innerHTML=`<span class="badge">${esc(t)}</span>`; };
+/* progress texts show as one line with a moving bar — the steps themselves (straightening, second look, percentages)
+   are of no use to the user (H); only failures show as text */
+const READ_FAIL=/^(No Chinese|OCR failed|Reading failed|Frame too|nothing read)/;
+const readingHTML=t=>READ_FAIL.test(t)?`<span class="badge">${esc(t)}</span>`:`<div class="reading"><div class="bar"><i></i></div><span class="badge">Reading the text …</span></div>`;
+const readingStatus=id=>t=>{ READING[id]=t; const b=$("#ocr-"+id); if(b) b.innerHTML=readingHTML(t); };
 /* a canvas with the bitmap drawn at a scale (opaque — the reader is handed JPEGs) */
 function scaledCanvas(bmp,scale,readable){
   const cv=document.createElement("canvas"); cv.width=Math.max(1,Math.round(bmp.width*scale)); cv.height=Math.max(1,Math.round(bmp.height*scale));
@@ -1644,7 +1476,7 @@ async function cropSign(id){
   if(!r) return; /* no frame yet — nothing to do */
   const rec=S.inbox.find(x=>x.id===id);
   S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null;
-  delete OCRRES[id]; delete SELS[id]; delete SIGN[id]; delete QSNOTE[id]; /* the frame stays visible while reading */
+  delete SIGN[id]; delete QSNOTE[id]; /* the frame stays visible while reading */
   renderShots();
   const box=$("#ocr-"+id); if(!box) return;
   const status=readingStatus(id);
@@ -1676,8 +1508,9 @@ async function cropSign(id){
    Candidates come from the dictionary (words that fit the neighbouring characters), from the AI
    (asked for that position); a character can also be removed. */
 let CHARFREQ=null;
-function charCandidates(line,i){
-  const chars=[...line]; if(!DICT||!CJK.test(chars[i]||"")) return [];
+function charCandidates(line,i,insert){
+  const chars=[...line]; if(insert) chars.splice(i,0,"\u3007"); /* a placeholder where the new character goes */
+  if(!DICT||(!insert&&!CJK.test(chars[i]||""))) return [];
   if(!CHARFREQ){ /* how many dictionary words a character appears in: a crude frequency proxy for ranking */
     CHARFREQ=new Map();
     for(const key of DICT.keys()) for(const ch of new Set(key)) CHARFREQ.set(ch,(CHARFREQ.get(ch)||0)+1);
@@ -1699,11 +1532,13 @@ function charCandidates(line,i){
   }
   return [...out.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]).slice(0,8);
 }
-async function aiCharAlternatives(line,i){
+async function aiCharAlternatives(line,i,insert){
   const key=S.settings.aiKey; if(!key) throw new Error("no API key");
   const pv=aiProvider(), model=aiModel(), chars=[...line];
   const sys="You correct OCR of Chinese signs, menus and packaging. Answer with a JSON array of single Chinese characters only, most likely first, no prose.";
-  const user=`OCR read this line: "${line}". Character ${i+1} ("${chars[i]}") is probably misread. Give up to 4 likely correct characters for that position, judging from the context.`;
+  const user=insert
+    ?`OCR read this line: "${line}". One character is missing ${i===0?"at the start":i>=chars.length?"at the end":`between "${chars[i-1]}" and "${chars[i]}"`}. Give up to 4 likely characters for that gap, judging from the context.`
+    :`OCR read this line: "${line}". Character ${i+1} ("${chars[i]}") is probably misread. Give up to 4 likely correct characters for that position, judging from the context.`;
   let r;
   if(pv==="claude") r=await fetch(aiBase(),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model,max_tokens:100,system:sys,messages:[{role:"user",content:user}]})});
   else r=await fetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify({model,max_tokens:100,temperature:0,messages:[{role:"system",content:sys},{role:"user",content:user}]})});
@@ -1717,32 +1552,37 @@ function charStripHTML(id,k){
   const sg=SIGN[id], line=sg.lines[k], same=sg.orig&&sg.orig[k]===line.trim(), cf=(same&&sg.conf&&sg.conf[k])||[];
   let ci=0;
   return `<div class="cstrip">${[...line].map((ch,i)=>{ const isC=CJK.test(ch); const c=isC?cf[ci++]:100;
-    return `<button class="ck${isC&&c<OCR_DOUBT?" low":""}" data-ck="${k},${i}" data-sid="${id}" title="${isC&&c<100?Math.round(c)+"%":""}">${esc(ch)}</button>`; }).join("")}</div>`;
+    return `<button class="ck${isC&&c<OCR_DOUBT?" low":""}" data-ck="${k},${i}" data-sid="${id}" title="${isC&&c<100?Math.round(c)+"%":""}">${esc(ch)}</button>`; }).join("")}<button class="ck add" data-ckadd="${k},${[...line].length}" data-sid="${id}" title="Add a character at the end">+</button></div>`;
 }
-async function openCharPick(id,k,i,btn){
+/* mode "ins": a new character goes in before index i (i = length: at the end) — H: "add a character at any place" */
+async function openCharPick(id,k,i,btn,mode){
   const sg=SIGN[id]; if(!sg) return;
-  const line=sg.lines[k], chars=[...line], ch=chars[i];
+  const ins=mode==="ins", line=sg.lines[k], chars=[...line], ch=ins?"":chars[i];
   document.querySelectorAll(".ck.on").forEach(b=>b.classList.remove("on")); btn.classList.add("on");
   let box=$("#ckpick-"+id); if(!box){ box=document.createElement("div"); box.className="ckpick"; box.id="ckpick-"+id; }
   btn.closest(".sline").appendChild(box);
-  const apply=async(rep)=>{ const cs=[...sg.lines[k]]; if(rep===null) cs.splice(i,1); else cs[i]=rep; sg.lines[k]=cs.join(""); delete sg.ai; delete sg.aiErr;
+  const apply=async(rep)=>{ const cs=[...sg.lines[k]]; if(ins){ if(rep!==null) cs.splice(i,0,rep); } else if(rep===null) cs.splice(i,1); else cs[i]=rep; sg.lines[k]=cs.join(""); delete sg.ai; delete sg.aiErr;
     if(sg.onChange){ sg.onChange(); return; } /* the Edit form owns the re-render and the AI check */
     renderShots(); if(aiLive()) signAskAI(id); };
   const render=(dict,ai,aiBusy)=>{
     const seen=new Set();
-    box.innerHTML=`<div class="badge">Replace <b class="hanzi">${esc(ch)}</b> with:</div>
+    const where=ins?(i===0?"at the start":i>=chars.length?"at the end":`between <b class="hanzi">${esc(chars[i-1])}</b> and <b class="hanzi">${esc(chars[i])}</b>`):"";
+    box.innerHTML=`<div class="badge">${ins?`Add a character ${where}:`:`Replace <b class="hanzi">${esc(ch)}</b> with:`}</div>
       <div class="cands">${ai.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!aiBusy?`<span class="badge">no match — draw it or ask the AI</span>`:""}${aiBusy?`<span class="badge">asking the AI …</span>`:""}</div>
-      <div class="ckacts"><button class="btn mini" id="ck-draw-${id}">Not here? Draw it</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}<span class="grow"></span><button class="del" id="ck-del-${id}">Remove</button><button class="del" id="ck-x-${id}">close</button></div>`;
+      <div class="ckacts"><button class="btn mini" id="ck-draw-${id}">Not here? Draw it</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}</div>
+      <div class="ckacts">${ins?"":`<button class="del" id="ck-ins0-${id}" title="Add a character before this one">+ before</button><button class="del" id="ck-ins1-${id}" title="Add a character after this one">+ after</button><button class="del" id="ck-del-${id}">Remove</button>`}<span class="grow"></span><button class="del" id="ck-x-${id}">close</button></div>`;
     box.querySelectorAll("[data-rep]").forEach(b=> b.onclick=()=>apply(b.dataset.rep));
-    $("#ck-del-"+id).onclick=()=>apply(null);
+    const del=$("#ck-del-"+id); if(del) del.onclick=()=>apply(null);
+    const i0=$("#ck-ins0-"+id); if(i0) i0.onclick=()=>openCharPick(id,k,i,btn,"ins");
+    const i1=$("#ck-ins1-"+id); if(i1) i1.onclick=()=>openCharPick(id,k,i+1,btn,"ins");
     $("#ck-x-"+id).onclick=()=>{ box.remove(); btn.classList.remove("on"); };
     const ab=$("#ck-ai-"+id); if(ab) ab.onclick=()=>askAI(dict);
-    $("#ck-draw-"+id).onclick=()=>openDrawSheet(id,k,i,apply);
+    $("#ck-draw-"+id).onclick=()=>openDrawSheet(id,k,i,apply,ins);
   };
-  const askAI=async(dict)=>{ render(dict,[],true); try{ const alts=await aiCharAlternatives(line,i); if(!box.isConnected) return; render(dict,alts,false); if(!alts.length) box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">the AI has no better idea</span>`); }catch(err){ if(!box.isConnected) return; render(dict,[],false); box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">AI: ${esc(err.message||err)}</span>`); } };
+  const askAI=async(dict)=>{ render(dict,[],true); try{ const alts=await aiCharAlternatives(line,i,ins); if(!box.isConnected) return; render(dict,alts,false); if(!alts.length) box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">the AI has no better idea</span>`); }catch(err){ if(!box.isConnected) return; render(dict,[],false); box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">AI: ${esc(err.message||err)}</span>`); } };
   render([],[],false);
   await loadDict().catch(()=>{});
-  const dict=charCandidates(line,i);
+  const dict=charCandidates(line,i,ins);
   /* AI-first: while the AI is live it is asked at once, the dictionary candidates are the fallback */
   if(aiLive()) askAI(dict); else render(dict,[],false);
 }
@@ -1803,9 +1643,9 @@ function attachRefView(cv,sg,k,i){
   return {ready, view:v, draw, close:()=>{ if(v.bmp) v.bmp.close(); v.bmp=null; }};
 }
 const DRAW_SIZE=720;
-function openDrawSheet(id,k,i,apply){
+function openDrawSheet(id,k,i,apply,ins){
   const sg=SIGN[id]; if(!sg) return;
-  const ch=[...sg.lines[k]][i]||"";
+  const ch=ins?"":([...sg.lines[k]][i]||"");
   document.querySelectorAll(".drawsheet").forEach(x=>x.remove());
   const el=document.createElement("div"); el.className="drawsheet";
   el.innerHTML=`<div class="dshead"><div class="badge">The character in the photo (drag to move, pinch to zoom) — draw it below.</div><button class="del" id="ds-x">Cancel</button></div>
@@ -1896,6 +1736,7 @@ function slineHTML(id,k,line,withPinyin){
 /* the strip's character buttons open the picker; typing in a line calls onInput(sg, k, input) */
 function wireSlines(root,onInput){
   root.querySelectorAll("[data-ck]").forEach(b=> b.onclick=()=>{ const [k,i]=b.dataset.ck.split(",").map(Number); openCharPick(b.dataset.sid,k,i,b); });
+  root.querySelectorAll("[data-ckadd]").forEach(b=> b.onclick=()=>{ const [k,i]=b.dataset.ckadd.split(",").map(Number); openCharPick(b.dataset.sid,k,i,b,"ins"); });
   root.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{ const sg=SIGN[inp.dataset.sid]; if(!sg) return; sg.lines[+inp.dataset.sline]=inp.value; onInput(sg,inp.dataset.sid); });
   root.querySelectorAll("[data-spin]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.spin]; if(sg){ sg.pinTouched=true; sg.pinEdit=t.value; } });
   root.querySelectorAll("[data-smean]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.smean]; if(sg){ sg.meanTouched=true; sg.meanEdit=t.value; } });
@@ -1916,7 +1757,7 @@ function signEditorHTML(id){
     <div class="field"><label>Text</label>${rows}</div>
     <div class="field"><label>Pinyin</label><textarea class="mono grow" id="spin-${id}" rows="1" data-spin="${id}">${esc(sg.pinEdit||"")}</textarea></div>
     <div class="field"><label>Meaning</label><textarea class="grow" id="smeanf-${id}" rows="1" data-smean="${id}">${esc(sg.meanEdit||"")}</textarea><div class="smean badge" id="smean-${id}" style="margin-top:4px"></div></div>
-    <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save card</button>${aiOn()&&!sg.ai&&!sg.aiBusy?`<button class="btn mini" data-signai="${id}">Ask AI</button>`:""}<button class="del" data-splitwords="${id}">Split into words</button><button class="del" data-signcancel="${id}">cancel</button></div>
+    <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save card</button>${aiOn()&&!sg.ai&&!sg.aiBusy?`<button class="btn mini" data-signai="${id}">Ask AI</button>`:""}<button class="del" data-signcancel="${id}">cancel</button></div>
     ${sg.aiErr?`<div class="err" style="margin-top:6px">${esc(sg.aiErr)}</div>`:""}</div>`;
 }
 /* recompute pinyin / meaning / gloss for the current lines without re-rendering (keeps input focus) */
@@ -2036,13 +1877,12 @@ function renderShots(){
       return `<div class="shot">
         <div class="shotwrap">
           <img src="${shotURL(s)}" alt="photo">
-          ${cropping?"":overlayHTML(s.id)}
           ${cropping?`<div class="croplayer" data-id="${s.id}"><div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div></div></div>`:""}
         </div>
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">CANCEL</button>`
           :`<button class="ocr-btn" data-crop="${s.id}">CROP</button><button class="del" data-del="${s.id}">delete</button>`}</span></div>
-        <div class="ocr" id="ocr-${s.id}">${SIGN[s.id]?signEditorHTML(s.id):OCRRES[s.id]?selbarHTML(s.id):READING[s.id]?`<span class="badge">${esc(READING[s.id])}</span>`:cropping
+        <div class="ocr" id="ocr-${s.id}">${SIGN[s.id]?signEditorHTML(s.id):READING[s.id]?readingHTML(READING[s.id]):cropping
           ?`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it.</span>`
           :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]} <button class="del" data-nextshot="1">Next photo</button></div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
@@ -2051,30 +1891,11 @@ function renderShots(){
   box.querySelectorAll("[data-nextshot]").forEach(b=> b.onclick=()=>$("#cam").click());
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
   box.querySelectorAll("[data-cropcancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.cropcancel; clearTimeout(READ_TIMER[id]); CROP=null; delete SIGN[id]; delete READING[id]; renderShots(); });
-  box.querySelectorAll(".ovbox").forEach(b=> b.onclick=()=>{
-    const id=b.dataset.sid, sel=SELS[id], i=+b.dataset.i;
-    const ch=OCRRES[id].flat.find(c=>c.i===i);
-    const grp=OCRRES[id].flat.filter(c=>c.g===ch.g);
-    const on=sel.has(i);
-    grp.forEach(c=>{ on?sel.delete(c.i):sel.add(c.i); });
-    renderShots();
-  });
-  box.querySelectorAll("[data-mkcard]").forEach(b=> b.onclick=()=>{
-    S.prefill={w:b.dataset.mkcard,p:b.dataset.p,m:b.dataset.m||""};
-    S.mode="add"; render();
-  });
-  box.querySelectorAll("[data-clearsel]").forEach(b=> b.onclick=()=>{ SELS[b.dataset.clearsel].clear(); SHOWBOX[b.dataset.clearsel]=true; renderShots(); });
-  box.querySelectorAll("[data-boxes]").forEach(b=> b.onclick=()=>{ SHOWBOX[b.dataset.boxes]=!SHOWBOX[b.dataset.boxes]; renderShots(); });
-  box.querySelectorAll("[data-qs]").forEach(b=> b.onclick=()=>quickSave(b.dataset.qs,b.dataset.w,b.dataset.p,b.dataset.m,+b.dataset.g,b.dataset.ai==="1"));
-  box.querySelectorAll("[data-aiq]").forEach(b=> b.onclick=()=>aiOverlayAsk(b.dataset.aiq,b.dataset.w,b.dataset.p,b.dataset.m));
   box.querySelectorAll("[data-signai]").forEach(b=> b.onclick=()=>signAskAI(b.dataset.signai));
-  Object.keys(OCRRES).forEach(aiOverlayAuto);
   wireAi(box);
   box.querySelectorAll(".croplayer").forEach(wireCrop);
   wireSlines(box,(sg,id)=>signPreview(id));
   box.querySelectorAll("[data-signsave]").forEach(b=> b.onclick=()=>saveSign(b.dataset.signsave));
-  box.querySelectorAll("[data-splitwords]").forEach(b=> b.onclick=()=>{ const id=b.dataset.splitwords, sg=SIGN[id]; if(!sg||!sg.region) return;
-    delete SIGN[id]; SHOWBOX[id]=true; if(CROP&&CROP.id===id) CROP=null; /* the boxes need the taps */ renderShots(); onOcr(id,sg.region); });
   box.querySelectorAll("[data-signcancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.signcancel; delete SIGN[id]; if(CROP&&CROP.id===id) CROP=null; renderShots(); });
   Object.keys(SIGN).forEach(signPreview);
 }
@@ -2118,7 +1939,6 @@ async function delShot(id){
   S.inbox=S.inbox.filter(s=>s.id!==id);
   try{ await idbDel("inbox",id); }catch(e){}
   if(IMGURL[id]){ URL.revokeObjectURL(IMGURL[id]); delete IMGURL[id]; }
-  delete OCRRES[id]; delete SELS[id];
   if(CROP && CROP.id===id) CROP=null;
   renderShots(); setStats();
 }

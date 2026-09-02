@@ -184,22 +184,9 @@ button{font:inherit;color:inherit}
 .ocr:not(:empty){margin-top:10px}
 #shots .aibox{margin-top:8px}
 
-/* OCR overlay: pinyin over recognized characters, tappable */
 .shotwrap{position:relative;margin-bottom:8px}
 .shotwrap img{margin-bottom:0;border-radius:10px}
-.ovbox{position:absolute;padding:0;background:rgba(0,0,0,.35);cursor:pointer;border:1px solid rgba(255,255,255,.4);border-radius:2px;
-  display:flex;align-items:center;justify-content:center;overflow:visible}
-.ovbox .py{font-family:var(--mono);font-size:11px;line-height:1.2;color:#fff;background:rgba(0,0,0,.7);padding:0 3px;border-radius:2px;white-space:nowrap;pointer-events:none}
-.ovbox.sel{background:rgba(200,55,45,.45);border-color:var(--tint)}
-.selbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px;padding:10px 12px;background:var(--card2);border-radius:var(--r)}
-.selbar .sw{font-family:var(--hanzi);font-size:22px}
-.selbar .sp{font-size:14px;color:var(--label2)}
-.selbar .sm{font-size:15px;color:var(--label2)}
-.selbar .sm.none{color:var(--label3);font-style:italic}
-.selbar.phrase{box-shadow:inset 3px 0 0 var(--tint)}
-.selbar.phrase .sm{flex-basis:100%}
-.selbar.ai{background:var(--ok-soft)} .selbar .ainote{flex-basis:100%;font-size:13px;color:var(--ok)} .selbar .ainote.err{color:var(--tint)}
-.smean .badge.ai,.signed .badge.ai{color:var(--ok)}
+.signed .badge.ai{color:var(--ok)}
 .cropacts .del{padding:10px 6px}
 
 /* cropping: the frame must be visible on any photo colour (red on red!): bright dashed edge with a dark outline */
@@ -227,6 +214,11 @@ button{font:inherit;color:inherit}
 .signed .ck.on,.ckpick .ck.on{background:var(--tint);color:#fff} /* the chosen character stays filled whatever the surface */
 .ckpick .cands{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 .ckacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px} .ckacts .grow{flex:1}
+.ck.add{font-family:var(--sans);font-size:22px;color:var(--tint);min-width:36px}
+.reading{display:flex;flex-direction:column;gap:8px;padding:4px 0}
+.reading .bar{position:relative;height:4px;border-radius:2px;background:var(--fill);overflow:hidden}
+.reading .bar i{position:absolute;top:0;bottom:0;width:40%;border-radius:2px;background:var(--tint);animation:slide 1.2s ease-in-out infinite}
+@keyframes slide{0%{left:-40%}100%{left:100%}}
 
 /* drawing sheet */
 .drawsheet{position:fixed;inset:0;z-index:20;background:var(--bg);overflow-y:auto;display:flex;flex-direction:column;gap:10px;
