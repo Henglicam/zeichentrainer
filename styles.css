@@ -142,6 +142,26 @@ nav{display:flex;gap:14px}
   border:1px solid var(--line);border-radius:2px}
 .cropacts{display:flex;gap:10px}
 
+/* sign cards: transcript editor, front, back */
+.signed .sline{margin-bottom:8px}
+.signed .sline input{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:2px;
+  color:var(--bone);font-family:var(--hanzi);font-size:20px;padding:8px 10px;outline:none}
+.signed .sp{font-family:var(--mono);font-size:12px;color:var(--mute);margin-top:3px}
+.smean{margin-top:8px;font-size:15px}
+.sgloss,.gtable{display:grid;grid-template-columns:auto auto 1fr;gap:2px 12px;font-size:13px;color:var(--mute);margin-top:8px;text-align:left}
+.sgloss .w,.gtable .w{font-family:var(--hanzi);color:var(--bone)} .sgloss .p,.gtable .p{font-family:var(--mono);font-size:12px}
+.gtable{margin-top:16px} .gtable .w{font-size:16px}
+.signfront{width:100%;max-width:440px;margin:0 auto}
+.signimg{max-width:100%;max-height:220px;display:block;margin:0 auto 10px;border:1px solid var(--line);border-radius:2px}
+.signtext{position:relative;font-family:var(--hanzi);line-height:1.3;color:var(--bone);padding:16px 14px;
+  word-break:keep-all;overflow-wrap:anywhere;border:1px solid var(--line);text-align:center}
+.signtext::before,.signtext::after{content:"";position:absolute;width:14px;height:14px;border-color:var(--bone);border-style:solid}
+.signtext::before{left:-1px;top:-1px;border-width:2px 0 0 2px} .signtext::after{right:-1px;bottom:-1px;border-width:0 2px 2px 0}
+.flag{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;
+  padding:2px 6px;border:1px solid var(--verm);border-radius:2px;color:var(--verm);margin-top:12px}
+.pill{font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--line);
+  border-radius:2px;padding:0 4px;color:var(--faint);margin-left:6px;vertical-align:middle}
+
 /* card image (crop) */
 .pimg img{max-width:100%;display:block;border:1px solid var(--line);border-radius:2px;margin-bottom:6px}
 .pimg .imgacts{display:flex;gap:14px}
