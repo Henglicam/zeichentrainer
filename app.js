@@ -123,14 +123,30 @@ function setStats(){
 }
 
 const CLR={verm:"#B23A2E",bone:"#EDE6D6",line:"#2E2E24"};
-function reticleSVG(single){
-  const Sz=260,tick=14,cx=Sz/2;
+function reticleSVG(single,W=260,H=260){
+  const tick=14,cx=W/2,cy=H/2;
   const cross = single ? `
-    <line x1="${cx}" y1="0" x2="${cx}" y2="${Sz}" stroke="${CLR.verm}" stroke-width="1" stroke-dasharray="2 6" opacity="${S.revealed?0.5:0.16}"/>
-    <line x1="0" y1="${cx}" x2="${Sz}" y2="${cx}" stroke="${CLR.verm}" stroke-width="1" stroke-dasharray="2 6" opacity="${S.revealed?0.5:0.16}"/>` : "";
-  const corners=[[0,0,1,1],[Sz,0,-1,1],[0,Sz,1,-1],[Sz,Sz,-1,-1]].map(([x,y,dx,dy])=>
+    <line x1="${cx}" y1="0" x2="${cx}" y2="${H}" stroke="${CLR.verm}" stroke-width="1" stroke-dasharray="2 6" opacity="${S.revealed?0.5:0.16}"/>
+    <line x1="0" y1="${cy}" x2="${W}" y2="${cy}" stroke="${CLR.verm}" stroke-width="1" stroke-dasharray="2 6" opacity="${S.revealed?0.5:0.16}"/>` : "";
+  const corners=[[0,0,1,1],[W,0,-1,1],[0,H,1,-1],[W,H,-1,-1]].map(([x,y,dx,dy])=>
     `<g stroke="${CLR.bone}" stroke-width="1.25" opacity="0.8"><line x1="${x}" y1="${y}" x2="${x+dx*tick}" y2="${y}"/><line x1="${x}" y1="${y}" x2="${x}" y2="${y+dy*tick}"/></g>`).join("");
-  return `<svg width="${Sz}" height="${Sz}"><rect x="0.5" y="0.5" width="${Sz-1}" height="${Sz-1}" fill="none" stroke="${CLR.line}"/>${cross}${corners}</svg>`;
+  return `<svg width="${W}" height="${H}"><rect x="0.5" y="0.5" width="${W-1}" height="${H-1}" fill="none" stroke="${CLR.line}"/>${cross}${corners}</svg>`;
+}
+/* the text keeps the photo's lines: a horizontal word stays on one line, so the box goes
+   wide and the font shrinks to fit instead of wrapping (H: "the image is one line") */
+function frontLines(d){
+  if(!d.seg) return [d.c];
+  const lines=[]; let cur="";
+  d.seg.forEach(x=>{ if(x==="\n"){ lines.push(cur); cur=""; } else cur+=x; });
+  lines.push(cur); return lines.filter(Boolean);
+}
+function frontBox(lines,base){
+  const longest=Math.max(...lines.map(glyphs));
+  const wide=longest>3;
+  const W=wide?Math.min(440,Math.max(260,(window.innerWidth||390)-32)):260;
+  const fs=Math.min(base,Math.floor((W-28)/longest));
+  const H=wide?Math.max(150,Math.round(fs*1.3*lines.length+56)):260;
+  return {W,H,fs};
 }
 
 function render(){
@@ -430,17 +446,18 @@ async function shareFlagged(){
 function frontHTML(d){
   if(d.kind==="sign"){
     /* sign card: the picture is the exercise, text underneath wrapped only between words */
-    const lines=d.c.split("\n"), segs=d.segs||lines.map(l=>[l]);
+    const lines=d.c.split("\n");
     const longest=Math.max(...lines.map(glyphs));
-    const fs=longest<=6?40:longest<=9?30:24;
+    const W=Math.min(440,Math.max(260,(window.innerWidth||390)-32));
+    const fs=Math.min(longest<=6?40:longest<=9?30:24,Math.floor((W-28)/longest));
     return `<div class="signfront">${d.img?`<img class="signimg" src="${URL.createObjectURL(d.img)}" alt="sign">`:""}
-      <div class="signtext" style="font-size:${fs}px">${lines.map((l,i)=>`<div>${(segs[i]||[l]).map(esc).join("<wbr>")}</div>`).join("")}</div></div>`;
+      <div class="signtext" style="font-size:${fs}px">${lines.map(l=>`<div>${esc(l)}</div>`).join("")}</div></div>`;
   }
   const single=glyphs(d.c)<=1;
   /* the photo is the cue — it belongs on the front, before reveal */
   const pic=d.img?`<img class="signimg" src="${URL.createObjectURL(d.img)}" alt="photo">`:"";
-  /* phrase fronts wrap only between words, and break where the photo did */
-  return `${pic}<div class="reticle">${reticleSVG(single)}<div class="glyph" style="font-size:${headFont(d.c)}px">${d.seg?d.seg.map(x=>x==="\n"?"<br>":esc(x)).join("<wbr>"):esc(d.c)}</div></div>`;
+  const lines=frontLines(d), {W,H,fs}=frontBox(lines,headFont(d.c));
+  return `${pic}<div class="reticle" style="width:${W}px;height:${H}px">${reticleSVG(single,W,H)}<div class="glyph" style="font-size:${fs}px">${lines.map(esc).join("<br>")}</div></div>`;
 }
 /* ---------- pronunciation: the phone's own Chinese voice (nothing downloaded, works offline) ---------- */
 let TTS_VOICE;
