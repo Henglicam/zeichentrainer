@@ -7,7 +7,7 @@
 
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
-const APP_V=75; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=76; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1847,12 +1847,11 @@ function signEditorHTML(id){
   const low=sg.conf?Math.min(...sg.conf.flat().concat([100])):100;
   const doubt=!aiLive()&&low<OCR_DOUBT?` The reading looks uncertain (confidence ${Math.round(low)}%) — check the text.`:"";
   const head=sg.aiBusy?"Reading with the AI …":sg.ai?"Read and checked by the AI. Tap a character to change it.":`Text read from the photo. Tap a character to change it.${doubt}`;
-  /* what the reader actually looked at (H: "the wrong section is read") — the straightened, maybe tightened crop */
+  /* the reading crop is not shown (H: "the user doesn't have to see it") — it serves the picker's reference only */
   const nChars=sg.lines.join("").replace(/[^\u4e00-\u9fff]/g,"").length, meanCf=(sg.conf||[]).flat().reduce((a,c,_,arr)=>a+c/arr.length,0);
   const weak=nChars<=2&&meanCf<85?`<div class="err" style="margin:4px 0 8px">Only ${nChars} character${nChars===1?"":"s"} found — if the photo shows more, frame the characters tightly and drag a corner to read again.</div>`:"";
-  if(sg.img&&!sg.imgURL) sg.imgURL=URL.createObjectURL(sg.img); /* once per reading — revoking on re-render broke the image still on screen */
-  const readArea=sg.imgURL?`<div class="readarea"><img src="${sg.imgURL}" alt="area read"><div class="badge">Read from this area${sg.angle?` (straightened by ${Math.round(sg.angle)}°)`:""}${sg.tightened?", cut to the text":""}.</div></div>`:"";
-  return `<div class="signed">${readArea}${weak}<div class="badge${sg.ai?" ai":""}" style="margin-bottom:8px">${head}</div>${rows}
+
+  return `<div class="signed">${weak}<div class="badge${sg.ai?" ai":""}" style="margin-bottom:8px">${head}</div>${rows}
     <div class="smean" id="smean-${id}"></div><div class="sgloss" id="sgloss-${id}"></div>
     <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save card</button>${aiOn()&&!sg.ai&&!sg.aiBusy?`<button class="btn mini" data-signai="${id}">Ask AI</button>`:""}<button class="del" data-splitwords="${id}">Split into words</button><button class="del" data-signcancel="${id}">cancel</button></div>
     ${sg.aiErr?`<div class="err" style="margin-top:6px">${esc(sg.aiErr)}</div>`:""}</div>`;
