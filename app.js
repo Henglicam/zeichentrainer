@@ -7,6 +7,7 @@
 
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
+const APP_V=72; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2016,10 +2017,12 @@ if("serviceWorker" in navigator){
       reg.update();
       /* installed PWAs rarely check for updates on their own — check when brought to foreground */
       document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ reg.update().catch(()=>{}); mirrorCheck(); } });
-      mirrorCheck(); tellMirror();
+      mirrorCheck(); tellMirror(); shellCheck();
     }).catch(()=>{});
     navigator.serviceWorker.addEventListener("message",e=>{
-      const d=e.data||{}; if(d.type!=="mirror-update") return;
+      const d=e.data||{};
+      if(d.type==="refreshed"){ if(d.ok) location.reload(); return; }
+      if(d.type!=="mirror-update") return;
       MIRROR.busy=false; MIRROR.last=d;
       const st=$("#mirror-status"); if(st) st.textContent=mirrorText();
       if(d.status==="updated") setTimeout(()=>location.reload(),600);
@@ -2028,10 +2031,22 @@ if("serviceWorker" in navigator){
        First install (no controller before) does not trigger a reload. */
     let hadCtrl=!!navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener("controllerchange",()=>{
-      if(!hadCtrl){ hadCtrl=true; return; }
+      if(!hadCtrl){ hadCtrl=true; shellCheck(); return; } /* first install: no reload, but the shell check can run now */
       location.reload();
     });
   });
+}
+/* ---------- mixed shell: the page and the script at different versions ----------
+   GitHub Pages caches for ten minutes and jsDelivr per file, so after quick successive deploys a worker once served
+   the v70 page with the v69 script (H: "I was on 70" — and the drag was missing). If the label and APP_V differ,
+   the worker refills its cache from the server and the page reloads; at most once every ten minutes, no loops. */
+async function shellCheck(){
+  const label=+((($(".ver")||{}).textContent||"").match(/v(\d+)/)||[])[1]||0;
+  if(!label||label===APP_V) return;
+  const ctrl=navigator.serviceWorker&&navigator.serviceWorker.controller; if(!ctrl||!navigator.onLine) return;
+  const last=+S.settings.shellFixAt||0; if(Date.now()-last<600000) return;
+  await setSetting("shellFixAt",Date.now());
+  ctrl.postMessage({type:"refresh"});
 }
 /* ---------- updates without a VPN: ask the worker to pull a newer shell from a mirror ---------- */
 const MIRROR_DEFAULT="https://cdn.jsdelivr.net/gh/henglicam/zeichentrainer@main/";

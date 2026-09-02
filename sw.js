@@ -1,4 +1,4 @@
-const CACHE = "zt-v71";
+const CACHE = "zt-v72";
 /* OCR assets (./vendor/, ~12 MB) live in their own cache that survives shell
    updates — otherwise every cache version bump would re-download all of
    Tesseract. Only bump this when vendor files change. */
@@ -33,6 +33,9 @@ self.addEventListener("message", e => {
   const d = e.data || {};
   if (d.type === "mirror" && d.mirror) MIRROR = d.mirror;
   if (d.type === "mirror-update" && d.mirror) { MIRROR = d.mirror; e.waitUntil(mirrorUpdate(d.mirror, e.source, +d.local || 0)); }
+  /* the page found its script and its label at different versions (a mixed shell): refill from the server, then it reloads */
+  if (d.type === "refresh") e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: "reload" }))))
+    .then(() => { if (e.source) e.source.postMessage({ type: "refreshed", ok: true }); }, err => { if (e.source) e.source.postMessage({ type: "refreshed", ok: false, error: String(err && err.message || err) }); }));
 });
 /* vendor files (OCR, dictionaries — all under jsDelivr's 20 MB cap) can come from the mirror when
    github.io is unreachable: text recognition must not need the VPN either */
