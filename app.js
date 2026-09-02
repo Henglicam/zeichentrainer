@@ -95,6 +95,7 @@ async function boot(){
   S.ready=true;
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
   wireChrome(); render();
+  autoBreaks(); /* old cards get their photo lines estimated once */
   aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); });
 }
 
@@ -164,6 +165,34 @@ function frontLines(d){
   const lines=[]; let cur="";
   d.seg.forEach(x=>{ if(x==="\n"){ lines.push(cur); cur=""; } else cur+=x; });
   lines.push(cur); return lines.filter(Boolean);
+}
+/* cards from before line data existed (or whose lines got lost): estimate the photo's lines from
+   the crop's shape — L lines of n/L characters give height/width ≈ L²/n — and cut at word
+   boundaries. Runs once at boot per card (marked lb:"auto"); cards saved with real line data
+   are lb:"photo" and never touched. */
+function estimateLines(n,w,h){ return Math.max(1,Math.min(n,Math.round(Math.sqrt(n*h/w)))); }
+function splitByLines(segs,L){
+  const n=segs.join("").length, per=Math.ceil(n/L), out=[]; let cur=0;
+  segs.forEach(sg=>{
+    const chars=[...sg];
+    if(cur>0 && cur+chars.length>per){ out.push("\n"); cur=0; }
+    if(chars.length>per){ let k=0; while(k<chars.length){ const piece=chars.slice(k,k+per-cur).join(""); out.push(piece); k+=piece.length; cur+=piece.length; if(k<chars.length){ out.push("\n"); cur=0; } } }
+    else { out.push(sg); cur+=chars.length; }
+  });
+  return out;
+}
+async function autoBreaks(){
+  const todo=S.custom.filter(d=>d.kind!=="sign" && d.img && !d.lb && glyphs(d.c)>3);
+  for(const d of todo){
+    try{
+      const bmp=await createImageBitmap(d.img); const L=estimateLines(glyphs(d.c),bmp.width,bmp.height); bmp.close();
+      const base=(d.seg||[d.c]).filter(x=>x!=="\n");
+      const segs=L>1?splitByLines(base,L):base;
+      if(segs.length>1) d.seg=segs; else delete d.seg;
+    }catch(e){}
+    d.lb="auto"; try{ await idbPut("custom",d); }catch(e){}
+  }
+  if(todo.length && S.mode==="study") render();
 }
 function frontBox(lines,base){
   const longest=Math.max(...lines.map(glyphs));
@@ -782,6 +811,7 @@ async function applyCardUpdate(c,upd,newC,pinByHand,lines){
     if(S.single===c) S.single=newC;
   }
   if(lines && !isSign && (!newC||newC===c)){ const segs=segWithBreaks(lines); if(segs.length>1) upd.seg=segs; else delete upd.seg; }
+  if(lines && !isSign) upd.lb="photo"; /* lines set by hand count as the photo's */
   const i=S.custom.findIndex(x=>x.c===c);
   if(i>=0) S.custom[i]=upd; else S.custom.push(upd);
   try{ await idbPut("custom",upd); }catch(e){}
@@ -899,7 +929,7 @@ async function quickSave(id,w,p,m,grp,ai){
     QSNOTE[id]=`“${w}” is already in the deck.`;
   }else{
     /* checked by the AI in the selection bar → verified; otherwise a dictionary prefill */
-    const card={c:w,p,m,t:"Custom",at:Date.now(),shot:id,mt:ai?{src:"llm",verified:true}:{src:"dict",verified:false}};
+    const card={c:w,p,m,t:"Custom",at:Date.now(),shot:id,lb:"photo",mt:ai?{src:"llm",verified:true}:{src:"dict",verified:false}};
     /* doubtful OCR (low symbol confidence) → the online AI checks it automatically when enabled */
     const chars=R.flat.filter(c=>grp<0?SELS[id].has(c.i):c.g===grp);
     const why=ai?"":ocrDoubt(chars.map(c=>c.cf),m);
@@ -1401,7 +1431,7 @@ async function saveSign(id){
   /* a short single line is a word card (reticle front); anything longer is a sign card */
   const word=keep.length===1 && glyphs(c)<=4;
   const card=word
-    ? { c, p:pin, m:mean, t:"Custom", at:Date.now(), shot:id, mt, ...(keep[0].r.segs.filter(x=>CJK.test(x)).length>1?{seg:keep[0].r.segs.filter(x=>CJK.test(x))}:{}) }
+    ? { c, p:pin, m:mean, t:"Custom", at:Date.now(), shot:id, lb:"photo", mt, ...(keep[0].r.segs.filter(x=>CJK.test(x)).length>1?{seg:keep[0].r.segs.filter(x=>CJK.test(x))}:{}) }
     : { kind:"sign", c, p:pin, m:mean, t:"Sign", at:Date.now(), shot:id,
         segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
   if(S.pendingImg) card.img=S.pendingImg;
