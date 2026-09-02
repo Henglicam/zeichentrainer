@@ -1571,7 +1571,15 @@ async function drawCharRef(cv,sg,k,i,opt){ /* opt: {h: display height, side: nei
     const line=[...sg.lines[k]], bx=(sg.boxes||[])[k]||[];
     let b=(sg.orig&&sg.orig[k]===sg.lines[k].trim()&&bx.length===line.length)?bx[i]:null;
     if(!b){ const all=bx.filter(Boolean); b=all.length?{x0:Math.min(...all.map(x=>x.x0)),y0:Math.min(...all.map(x=>x.y0)),x1:Math.max(...all.map(x=>x.x1)),y1:Math.max(...all.map(x=>x.y1))}:{x0:0,y0:0,x1:bmp.width,y1:bmp.height}; }
-    const o=opt||{}, h=Math.max(8,b.y1-b.y0), w=Math.max(8,b.x1-b.x0), padX=w*(o.side??0.6), padY=h*0.25; /* a bit of the neighbours for orientation */
+    const o=opt||{}, h=Math.max(8,b.y1-b.y0), w=Math.max(8,b.x1-b.x0);
+    if(o.square){ /* a square around the character (side = 1.5 × its larger dimension), the photo's edge padded in INK */
+      const side=Math.max(w,h)*1.5, cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2, sx=cx-side/2, sy=cy-side/2, N=o.h||600;
+      cv.width=N; cv.height=N; const ctx=cv.getContext("2d"); ctx.fillStyle="#141410"; ctx.fillRect(0,0,N,N);
+      const ix=Math.max(0,sx), iy=Math.max(0,sy), ex=Math.min(bmp.width,sx+side), ey=Math.min(bmp.height,sy+side), k=N/side;
+      if(ex>ix&&ey>iy) ctx.drawImage(bmp,ix,iy,ex-ix,ey-iy,(ix-sx)*k,(iy-sy)*k,(ex-ix)*k,(ey-iy)*k);
+      bmp.close(); return;
+    }
+    const padX=w*(o.side??0.6), padY=h*0.25; /* a bit of the neighbours for orientation */
     const sx=Math.max(0,b.x0-padX), sy=Math.max(0,b.y0-padY), sw=Math.min(bmp.width-sx,w+2*padX), sh=Math.min(bmp.height-sy,h+2*padY);
     const H=o.h||64, W=Math.max(48,Math.min(o.h?Math.round(o.h*2.6):200,Math.round(sw*H/sh)));
     cv.width=W*2; cv.height=H*2; cv.style.width=W+"px"; cv.style.height=H+"px";
@@ -1596,14 +1604,14 @@ function openDrawSheet(id,k,i,apply){
     <div class="cands" id="ds-cands"></div>
     <div class="ckacts"><button class="del" id="ds-undo">Undo</button><button class="del" id="ds-clear">Clear</button><span class="grow"></span><button class="btn primary" id="ds-done">Done</button></div>`;
   document.body.appendChild(el); document.body.classList.add("noscroll");
-  /* the photo character as big as the screen allows: it takes all the height left beside the pad, the status line and the buttons */
-  const fitRef=()=>{ const rc=el.querySelector(".ckref"); if(!rc||!rc.isConnected) return;
-    rc.style.height="0px"; rc.style.width="auto";
+  /* symmetric: the photo character and the pad are two squares of the same side, as big as the screen allows (H) */
+  const fitRef=()=>{ const rc=el.querySelector(".ckref"), pd=el.querySelector(".pad"); if(!pd||!pd.isConnected) return;
+    const sq=[rc,pd].filter(Boolean); sq.forEach(c=>{ c.style.width="0px"; c.style.height="0px"; });
     const cs=getComputedStyle(el), gap=parseFloat(cs.rowGap)||0, kids=[...el.children];
     const used=kids.reduce((a,c)=>a+c.getBoundingClientRect().height,0)+gap*(kids.length-1)+parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);
-    const h=Math.max(140,Math.floor(el.clientHeight-used)); rc.style.height=h+"px";
-    if(rc.getBoundingClientRect().width>el.clientWidth-32){ rc.style.width="100%"; rc.style.height="auto"; } };
-  drawCharRef(el.querySelector(".ckref"),sg,k,i,{h:300,side:0.25}).then(fitRef); /* tight crop (H: "as big as possible") */
+    const S=Math.max(160,Math.min(el.clientWidth-32,Math.floor((el.clientHeight-used)/sq.length)));
+    sq.forEach(c=>{ c.style.width=S+"px"; c.style.height=S+"px"; }); };
+  fitRef(); drawCharRef(el.querySelector(".ckref"),sg,k,i,{square:true,h:600}).then(fitRef);
   el.fitRef=fitRef; window.addEventListener("resize",fitRef);
   const cv=el.querySelector(".pad"), ctx=cv.getContext("2d"), strokes=[]; let cur=null, seq=0;
   const status=t=>{ const st=el.querySelector("#ds-st"); if(st) st.textContent=t; };
