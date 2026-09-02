@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=93; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=94; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -730,6 +730,8 @@ function renderAdd(main){
     <div class="field"><label>Word</label><input id="f-word" class="hanzi big" placeholder="快门"></div>
       <div class="field"><label>Pinyin</label><textarea id="f-pin" class="mono grow" rows="1" placeholder="kuàimén"></textarea></div>
       <div class="field"><label>Meaning</label><textarea id="f-mean" class="grow" rows="1" placeholder="shutter"></textarea></div>
+    <div class="field"><label class="check"><input type="checkbox" id="f-flag"> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
+      <input id="f-note" placeholder="Note for the reviewer (optional)" hidden></div>
     <div id="f-pinhint" class="err" style="display:none">Auto pinyin/meaning from OCR — unverified. Check the tones (多音字!) and adjust the meaning.</div>
     <div id="f-err" class="err" style="display:none"></div>
     <button class="btn primary block" id="f-add">Add card</button>
@@ -742,11 +744,12 @@ function renderAdd(main){
   const uf=$("#f-usefull"); if(uf) uf.onclick=()=>{ S.pendingUse="full"; renderAdd(main); };
   /* Draft survives tab switches (e.g. pick word → back to cropping) */
   const d0=S.draft||{};
-  $("#f-word").value=d0.w||""; $("#f-pin").value=d0.p||""; $("#f-mean").value=d0.m||""; wireGrow(main);
+  $("#f-word").value=d0.w||""; $("#f-pin").value=d0.p||""; $("#f-mean").value=d0.m||""; $("#f-flag").checked=!!d0.flag; $("#f-note").value=d0.note||""; $("#f-note").hidden=!d0.flag; wireGrow(main);
   if(d0.autoPin) $("#f-pinhint").style.display="";
-  const saveDraft=()=>{ S.draft={ w:$("#f-word").value, p:$("#f-pin").value, m:$("#f-mean").value,
+  const saveDraft=()=>{ S.draft={ w:$("#f-word").value, p:$("#f-pin").value, m:$("#f-mean").value, flag:$("#f-flag").checked, note:$("#f-note").value,
     autoPin:$("#f-pinhint").style.display!=="none" }; };
-  ["f-word","f-pin","f-mean"].forEach(id=>$("#"+id).oninput=saveDraft);
+  ["f-word","f-pin","f-mean","f-note"].forEach(id=>$("#"+id).oninput=saveDraft);
+  $("#f-flag").onchange=()=>{ $("#f-note").hidden=!$("#f-flag").checked; if($("#f-flag").checked) $("#f-note").focus(); saveDraft(); };
 }
 /* ---------- Cards: library with photos, detail, single-card test, edit ---------- */
 const THUMB={};
@@ -961,6 +964,7 @@ async function addManual(){
   if(!pin||!mean) return fail("Pinyin and meaning are required.");
   if(deck().some(d=>d.c===word)) return fail("“"+word+"” is already in the deck.");
   const card={c:word,p:pin,m:mean,t:"Custom",at:Date.now()};
+  if($("#f-flag").checked){ card.flag=true; const note=$("#f-note").value.trim(); if(note) card.flagNote=note; }
   if(S.pendingShot){ card.shot=S.pendingShot; S.pendingShot=null; }
   const chosenImg=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
   if(chosenImg){ card.img=await jpegOf(chosenImg); }
@@ -968,7 +972,7 @@ async function addManual(){
   S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
   S.queue=buildQueue(false);
-  ["f-word","f-pin","f-mean"].forEach(id=>$("#"+id).value="");
+  ["f-word","f-pin","f-mean","f-note"].forEach(id=>$("#"+id).value=""); $("#f-flag").checked=false; $("#f-note").hidden=true;
   const fi=$("#f-imgfield"); if(fi) fi.remove();
   $("#f-pinhint").style.display="none";
   S.draft=null;
@@ -1769,6 +1773,8 @@ function wireSlines(root,onInput){
   root.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{ const sg=SIGN[inp.dataset.sid]; if(!sg) return; sg.lines[+inp.dataset.sline]=inp.value; onInput(sg,inp.dataset.sid); });
   root.querySelectorAll("[data-spin]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.spin]; if(sg){ sg.pinTouched=true; sg.pinEdit=t.value; } });
   root.querySelectorAll("[data-smean]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.smean]; if(sg){ sg.meanTouched=true; sg.meanEdit=t.value; } });
+  root.querySelectorAll("[data-sflag]").forEach(cb=> cb.onchange=()=>{ const sg=SIGN[cb.dataset.sflag]; if(!sg) return; sg.flag=cb.checked; const n=root.querySelector(`[data-snote="${cb.dataset.sflag}"]`); if(n){ n.hidden=!cb.checked; if(cb.checked) n.focus(); } });
+  root.querySelectorAll("[data-snote]").forEach(n=> n.oninput=()=>{ const sg=SIGN[n.dataset.snote]; if(sg) sg.flagNote=n.value; });
   wireGrow(root);
 }
 function signEditorHTML(id){
@@ -1786,6 +1792,8 @@ function signEditorHTML(id){
     <div class="field"><label>Text</label>${rows}</div>
     <div class="field"><label>Pinyin</label><textarea class="mono grow" id="spin-${id}" rows="1" data-spin="${id}">${esc(sg.pinEdit||"")}</textarea></div>
     <div class="field"><label>Meaning</label><textarea class="grow" id="smeanf-${id}" rows="1" data-smean="${id}">${esc(sg.meanEdit||"")}</textarea><div class="smean badge" id="smean-${id}" style="margin-top:4px"></div></div>
+    <div class="field"><label class="check"><input type="checkbox" data-sflag="${id}"${sg.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
+      <input data-snote="${id}" value="${esc(sg.flagNote||"")}" placeholder="Note for the reviewer (optional)"${sg.flag?"":" hidden"}></div>
     <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save card</button>${aiOn()&&!sg.ai&&!sg.aiBusy?`<button class="btn mini" data-signai="${id}">Ask AI</button>`:""}<button class="del" data-signcancel="${id}">cancel</button></div>
     ${sg.aiErr?`<div class="err" style="margin-top:6px">${esc(sg.aiErr)}</div>`:""}</div>`;
 }
@@ -1872,13 +1880,14 @@ async function saveSign(id){
     ? { c, p:pin, m:mean, t:"Custom", at:Date.now(), shot:id, lb:"photo", mt, ...(keep[0].r.segs.filter(x=>CJK.test(x)).length>1?{seg:keep[0].r.segs.filter(x=>CJK.test(x)), gloss:keep[0].r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))}:{}) }
     : { kind:"sign", c, p:pin, m:mean, t:"Sign", at:Date.now(), shot:id,
         segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
+  if(sg.flag){ card.flag=true; const note=(sg.flagNote||"").trim(); if(note) card.flagNote=note; } /* H: flag a new card at once, without opening it again */
   if(S.pendingImg) card.img=await jpegOf(S.pendingImg);
   if(S.pendingFull) card.imgFull=S.pendingFull;
   S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
   S.queue=buildQueue(false); QSCARD[id]=c;
   delete SIGN[id]; if(CROP&&CROP.id===id) CROP=null; /* saved — the frame has done its job */
-  QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}, ${mt.src==="llm"?"checked by the AI":mt.src==="nmt"?"meaning from the offline translation":mt.src==="phrasebook"?"meaning from the phrasebook":"meaning composed word by word"}${mt.src==="llm"?"":" (unverified"+(mt.pending?", translation pending":"")+")"}.`+(mt.suspect?` Reading uncertain (${esc(mt.suspect)})${aiAutoOn()?", the AI will check it":""}.`:"");
+  QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}, ${mt.src==="llm"?"checked by the AI":mt.src==="nmt"?"meaning from the offline translation":mt.src==="phrasebook"?"meaning from the phrasebook":"meaning composed word by word"}${mt.src==="llm"?"":" (unverified"+(mt.pending?", translation pending":"")+")"}.`+(mt.suspect?` Reading uncertain (${esc(mt.suspect)})${aiAutoOn()?", the AI will check it":""}.`:"")+(card.flag?" Flagged for review.":"");
   aiAutoSoon();
   setStats(); renderShots();
 }
@@ -1913,11 +1922,10 @@ function renderShots(){
           :`<button class="ocr-btn" data-crop="${s.id}">CROP</button><button class="del" data-del="${s.id}">delete</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${SIGN[s.id]?signEditorHTML(s.id):READING[s.id]?readingHTML(READING[s.id],s.id):cropping
           ?`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it.</span>`
-          :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]} <button class="del" data-nextshot="1">Next photo</button></div>${qsAiBox(s.id)}`:""}</div>
+          :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
     }).join("");
   box.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>delShot(b.dataset.del));
-  box.querySelectorAll("[data-nextshot]").forEach(b=> b.onclick=()=>$("#cam").click());
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
   box.querySelectorAll("[data-cropcancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.cropcancel; clearTimeout(READ_TIMER[id]); CROP=null; delete SIGN[id]; delete READING[id]; renderShots(); });
   box.querySelectorAll("[data-signai]").forEach(b=> b.onclick=()=>signAskAI(b.dataset.signai));
