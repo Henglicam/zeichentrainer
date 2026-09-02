@@ -195,7 +195,7 @@ function renderStudy(main){
   }
   main.innerHTML=`<div class="card">
     <div class="tags"><span class="t">${esc(d.t||"")}</span><span class="${isNew?"n":"r"}">${isNew?"new":"review"}</span></div>
-    <div class="reticle">${reticleSVG(single)}<div class="glyph" style="font-size:${headFont(d.c)}px">${esc(d.c)}</div></div>
+    <div class="reticle">${reticleSVG(single)}<div class="glyph" style="font-size:${headFont(d.c)}px">${d.seg?d.seg.map(esc).join("<wbr>"):esc(d.c)}</div></div>
     ${back}</div>`;
   const rv=$("#reveal"); if(rv) rv.onclick=()=>{ S.revealed=true; render(); };
   document.querySelectorAll(".grade").forEach(b=> b.onclick=()=>grade(b.dataset.g));
@@ -369,6 +369,11 @@ async function quickSave(id,w,p,m,grp){
     QSNOTE[id]=`“${w}” is already in the deck.`;
   }else{
     const card={c:w,p,m,ex:"",exp:"",exm:"",t:"Custom"};
+    if(grp<0){ /* phrase: keep word boundaries so the card front never breaks inside a word */
+      const segs=[]; R.flat.filter(c=>SELS[id].has(c.i)).forEach(c=>{
+        const last=segs[segs.length-1]; if(last&&last.g===c.g) last.w+=c.ch; else segs.push({g:c.g,w:c.ch}); });
+      card.seg=segs.map(x=>x.w);
+    }
     const img=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
     if(img) card.img=img;
     S.custom.push(card);
