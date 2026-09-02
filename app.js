@@ -549,56 +549,48 @@ function say(text){
 const SAY_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15 9.2a3.6 3.6 0 0 1 0 5.6"/><path d="M17.3 6.6a7 7 0 0 1 0 10.8"/></svg>';
 function sayBtn(d){ return ttsVoice()?`<button class="say" data-say="${esc(d.c)}" aria-label="Pronounce">${SAY_SVG}</button>`:""; }
 function wireSay(root){ (root||document).querySelectorAll("[data-say]").forEach(b=> b.onclick=e=>{ e.stopPropagation(); say(b.dataset.say); }); }
-/* the words inside a phrase, each with pinyin and dictionary meaning — stored as gloss when the card is
-   saved, computed on the fly (dictionary loaded once) for older cards */
-function glossRows(gloss){ return gloss.map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join(""); }
-function wordsHTML(d){
-  if(d.kind==="sign") return "";
-  const words=(d.seg||[]).filter(x=>x!=="\n");
-  if(d.gloss&&d.gloss.length>1) return `<div class="gtable words">${glossRows(d.gloss)}</div>`;
-  if(words.length<2 && glyphs(d.c)<=2) return "";
-  return `<div class="gtable words" id="wtable" data-c="${esc(d.c)}"><span class="badge">loading the words …</span></div>`;
+/* dictionary meanings without CC-CEDICT clutter: "[Tian1 jin1 shi4]" pinyin, "CL:…" classifiers */
+function cleanSense(m){ return String(m||"").replace(/\[[^\]]*\]/g,"").replace(/\s*CL:[^;,)]*/g,"").replace(/\(\s*\)/g,"").replace(/\s{2,}/g," ").trim(); }
+/* the words of the card as buttons on the back — tap one for its pinyin and meaning; a word of
+   several characters then offers its characters too. Replaces the old word/gloss tables (H: redundant). */
+function cardParts(d){
+  let words=d.gloss&&d.gloss.length?d.gloss.map(g=>g.w):(d.kind==="sign"?(d.segs||[]).flat():(d.seg||[]).filter(x=>x!=="\n"));
+  words=words.filter(w=>CJK.test(w));
+  if(words.length<2) words=[...d.c].filter(ch=>CJK.test(ch)); /* one word → its characters */
+  return [...new Set(words)];
 }
-async function fillWords(){
-  const box=$("#wtable"); if(!box) return;
-  const d=cardOf(box.dataset.c); if(!d) return;
-  try{
-    if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
-    await loadDict().catch(()=>{});
-    let words=(d.seg||[]).filter(x=>x!=="\n");
-    if(words.length<2){ const chars=[...d.c].filter(ch=>CJK.test(ch)).map(ch=>({ch})); words=segmentChars(chars).map(sg=>sg.map(x=>x.ch).join("")); }
-    if(words.length<2){ box.remove(); return; }
-    const gloss=words.map(w=>({w,p:pinyinPro.pinyin(w,{toneType:"symbol"}),m:bestSense(w)}));
-    box.innerHTML=glossRows(gloss);
-    d.gloss=gloss; try{ await idbPut("custom",d); }catch(e){} /* remembered for next time */
-  }catch(e){ box.innerHTML=`<span class="badge">dictionary not available</span>`; }
-}
-/* every character of a word on the back, tap one for its own pinyin and meaning (dictionary, offline) */
 function charsHTML(d){
-  const chars=[...new Set([...d.c].filter(ch=>CJK.test(ch)))];
-  if(chars.length<2||chars.length>14) return "";
-  return `<div class="chars">${chars.map(ch=>`<button class="ch" data-ch="${ch}">${ch}</button>`).join("")}</div><div class="chinfo" id="chinfo" hidden></div>`;
+  const parts=cardParts(d);
+  if(parts.length<2||parts.length>16) return "";
+  return `<div class="chars">${parts.map(w=>`<button class="ch" data-ch="${esc(w)}">${esc(w)}</button>`).join("")}</div><div class="chinfo" id="chinfo" hidden></div>`;
 }
-async function charInfo(ch,btn){
+async function charInfo(w,btn,d){
   const box=$("#chinfo"); if(!box) return;
   document.querySelectorAll(".chars .ch").forEach(b=>b.classList.toggle("on",b===btn));
   box.hidden=false; box.innerHTML=`<span class="badge">loading the dictionary …</span>`;
   try{
     if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
     await loadDict().catch(()=>{});
-    const py=pinyinPro.pinyin(ch,{toneType:"symbol"}), m=bestSense(ch)||((DICT&&DICT.get(ch))||"");
-    box.innerHTML=`<span class="hanzi">${ch}</span><span class="mono">${esc(py)}</span><span>${esc(m||"not in the dictionary")}</span>`;
+    const known=d&&d.gloss&&d.gloss.find(g=>g.w===w);
+    const py=known&&known.p?known.p:pinyinPro.pinyin(w,{toneType:"symbol"});
+    const m=cleanSense((known&&known.m)||bestSense(w)||((DICT&&DICT.get(w))||""));
+    const chars=[...w].filter(ch=>CJK.test(ch));
+    const sub=chars.length>1?`<div class="chars sub">${chars.map(ch=>`<button class="ch" data-sub="${ch}">${ch}</button>`).join("")}</div>`:"";
+    box.innerHTML=`<div class="chline"><span class="hanzi">${esc(w)}</span><span class="mono">${esc(py)}</span><span>${esc(m||"not in the dictionary")}</span></div>${sub}`;
+    box.querySelectorAll("[data-sub]").forEach(b=> b.onclick=async e=>{ e.stopPropagation(); const ch=b.dataset.sub;
+      box.querySelectorAll(".sub .ch").forEach(x=>x.classList.toggle("on",x===b));
+      const line=box.querySelector(".chline"); line.innerHTML=`<span class="hanzi">${esc(ch)}</span><span class="mono">${esc(pinyinPro.pinyin(ch,{toneType:"symbol"}))}</span><span>${esc(cleanSense(bestSense(ch)||((DICT&&DICT.get(ch))||""))||"not in the dictionary")}</span>`; });
   }catch(e){ box.innerHTML=`<span class="badge">dictionary not available</span>`; }
 }
-function wireChars(){ document.querySelectorAll(".chars .ch").forEach(b=> b.onclick=e=>{ e.stopPropagation(); charInfo(b.dataset.ch,b); }); }
+function wireChars(d){ document.querySelectorAll(".chars:not(.sub) .ch").forEach(b=> b.onclick=e=>{ e.stopPropagation(); charInfo(b.dataset.ch,b,d); }); }
 function backHTML(d){
   const wordBlock = d.w ? `<div class="rule"></div>
     <div class="word"><span class="w">${esc(d.w)}</span><span class="wp">${esc(d.wp||"")}</span></div>
     <div class="wm">${esc(d.wm||"")}</div>` : "";
-  const glossBlock = d.kind==="sign" ? `<div class="gtable">${(d.gloss||[]).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("")}</div>
+  const glossBlock = d.kind==="sign" ? `
     ${d.mt&&!d.mt.verified?`<span class="flag">meaning ${d.mt.src==="nmt"?"from the offline translation":d.mt.src==="phrasebook"?"from the phrasebook":d.mt.src==="llm"?"from the online AI":d.mt.src==="dict"?"from the dictionary":"composed word by word"}, unverified${d.mt.pending?" (translation pending)":""}${d.mt.suspect?" (reading uncertain: "+esc(d.mt.suspect)+")":""}</span>`:""}
     ${d.imgFull?`<div class="cardimg"><img src="${URL.createObjectURL(d.imgFull)}" alt="context"></div>`:""}` : "";
-  return `<div class="pin">${esc(d.p)}${sayBtn(d)}</div><div class="mean">${esc(d.m)}</div>${wordsHTML(d)}${charsHTML(d)}
+  return `<div class="pin">${esc(d.p)}${sayBtn(d)}</div><div class="mean">${esc(d.m)}</div>${charsHTML(d)}
     ${d.kind==="sign"?glossBlock:wordBlock}`;
 }
 function endSingle(){
@@ -650,7 +642,7 @@ function renderStudy(main){
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   const ed=$("#edit-card"); if(ed) ed.onclick=()=>{ S.editFrom="study"; S.editing=c; render(); };
-  wireSay(); wireChars(); fillWords();
+  wireSay(); wireChars(d);
   wireAi();
   document.querySelectorAll(".grade").forEach(b=> b.onclick=()=>grade(b.dataset.g));
 }
@@ -768,7 +760,7 @@ function renderCardDetail(main,c){
   };
   $("#d-edit").onclick=()=>{ S.editing=c; render(); };
   $("#d-flag").onclick=async()=>{ await setFlag(c,!d.flag); render(); };
-  wireSay(); wireChars(); fillWords();
+  wireSay(); wireChars(d);
   wireAi();
   const del=$("#d-del"); if(del) del.onclick=async()=>{
     if(!confirm("Delete “"+c.replace(/\n/g," / ")+"” and its progress?")) return;
