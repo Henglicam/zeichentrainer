@@ -3,33 +3,7 @@
    Persistence via IndexedDB (survives restarts). Camera inbox. Offline. */
 
 /* ---------- Deck (in code, survives everything) ---------- */
-const DECK_BASE = [
-  { c:"学", p:"xué", m:"to learn, to study", w:"学习", wp:"xuéxí", wm:"to learn", ex:"我在学中文。", exp:"Wǒ zài xué Zhōngwén.", exm:"I am learning Chinese.", t:"Everyday" },
-  { c:"识", p:"shí", m:"to recognize, to know", w:"认识", wp:"rènshi", wm:"to know (someone)", ex:"很高兴认识你。", exp:"Hěn gāoxìng rènshi nǐ.", exm:"Nice to meet you.", t:"Everyday" },
-  { c:"需", p:"xū", m:"to need, to require", w:"需要", wp:"xūyào", wm:"to need", ex:"我需要帮助。", exp:"Wǒ xūyào bāngzhù.", exm:"I need help.", t:"Everyday" },
-  { c:"供", p:"gōng", m:"to supply, to provide", w:"供应", wp:"gōngyìng", wm:"supply", ex:"供应很稳定。", exp:"Gōngyìng hěn wěndìng.", exm:"The supply is stable.", t:"Everyday" },
-  { c:"议", p:"yì", m:"to discuss, to confer", w:"会议", wp:"huìyì", wm:"meeting", ex:"会议开始了。", exp:"Huìyì kāishǐ le.", exm:"The meeting has started.", t:"Everyday" },
-  { c:"合", p:"hé", m:"to combine, to fit", w:"合同", wp:"hétong", wm:"contract", ex:"我们签了合同。", exp:"Wǒmen qiān le hétong.", exm:"We signed the contract.", t:"Contract" },
-  { c:"同", p:"tóng", m:"same, together", w:"同意", wp:"tóngyì", wm:"to agree", ex:"我同意你的看法。", exp:"Wǒ tóngyì nǐ de kànfǎ.", exm:"I agree with your view.", t:"Contract" },
-  { c:"续", p:"xù", m:"to continue, to extend", w:"续签", wp:"xùqiān", wm:"to renew (a contract)", ex:"合同需要续签。", exp:"Hétong xūyào xùqiān.", exm:"The contract needs to be renewed.", t:"Contract" },
-  { c:"签", p:"qiān", m:"to sign", w:"签字", wp:"qiānzì", wm:"to sign one's name", ex:"请在这里签字。", exp:"Qǐng zài zhèlǐ qiānzì.", exm:"Please sign here.", t:"Contract" },
-  { c:"谈", p:"tán", m:"to talk, to negotiate", w:"谈判", wp:"tánpàn", wm:"negotiation", ex:"谈判很顺利。", exp:"Tánpàn hěn shùnlì.", exm:"The negotiation went smoothly.", t:"Contract" },
-  { c:"判", p:"pàn", m:"to judge, to assess", w:"判断", wp:"pànduàn", wm:"judgment, to assess", ex:"这很难判断。", exp:"Zhè hěn nán pànduàn.", exm:"That is hard to judge.", t:"Contract" },
-  { c:"延", p:"yán", m:"to extend, to delay", w:"延期", wp:"yánqī", wm:"to postpone", ex:"会议延期了。", exp:"Huìyì yánqī le.", exm:"The meeting was postponed.", t:"Contract" },
-  { c:"补", p:"bǔ", m:"to supplement, to compensate", w:"补偿", wp:"bǔcháng", wm:"compensation", ex:"公司给了补偿。", exp:"Gōngsī gěi le bǔcháng.", exm:"The company paid compensation.", t:"Contract" },
-  { c:"条", p:"tiáo", m:"strip; clause", w:"条件", wp:"tiáojiàn", wm:"condition", ex:"条件可以接受。", exp:"Tiáojiàn kěyǐ jiēshòu.", exm:"The conditions are acceptable.", t:"Contract" },
-  { c:"效", p:"xiào", m:"effect, effective", w:"效率", wp:"xiàolǜ", wm:"efficiency", ex:"他工作效率很高。", exp:"Tā gōngzuò xiàolǜ hěn gāo.", exm:"He works very efficiently.", t:"Contract" },
-  { c:"镜", p:"jìng", m:"lens, mirror", w:"镜头", wp:"jìngtóu", wm:"camera lens", ex:"这个镜头很贵。", exp:"Zhège jìngtóu hěn guì.", exm:"This lens is expensive.", t:"Optics" },
-  { c:"光", p:"guāng", m:"light", w:"光线", wp:"guāngxiàn", wm:"light ray, lighting", ex:"光线不够。", exp:"Guāngxiàn bùgòu.", exm:"There is not enough light.", t:"Optics" },
-  { c:"精", p:"jīng", m:"fine, precise", w:"精密", wp:"jīngmì", wm:"precision", ex:"这是精密仪器。", exp:"Zhè shì jīngmì yíqì.", exm:"This is a precision instrument.", t:"Optics" },
-  { c:"密", p:"mì", m:"dense; secret", w:"密度", wp:"mìdù", wm:"density", ex:"密度很高。", exp:"Mìdù hěn gāo.", exm:"The density is high.", t:"Optics" },
-  { c:"快", p:"kuài", m:"fast", w:"快门", wp:"kuàimén", wm:"shutter", ex:"快门速度很快。", exp:"Kuàimén sùdù hěn kuài.", exm:"The shutter speed is very fast.", t:"Optics" },
-  { c:"门", p:"mén", m:"door, gate", w:"快门", wp:"kuàimén", wm:"shutter", ex:"门关上了。", exp:"Mén guānshàng le.", exm:"The door is closed.", t:"Optics" },
-  { c:"决", p:"jué", m:"to decide", w:"决定", wp:"juédìng", wm:"decision", ex:"我还没决定。", exp:"Wǒ hái méi juédìng.", exm:"I have not decided yet.", t:"Everyday" },
-  { c:"每日", p:"měirì", m:"daily, every day (formal/written)", w:"每天", wp:"měitiān", wm:"every day (colloquial)", ex:"每日更新。", exp:"Měirì gēngxīn.", exm:"Updated daily.", t:"Food" },
-  { c:"坚果", p:"jiānguǒ", m:"nuts", ex:"坚果很有营养。", exp:"Jiānguǒ hěn yǒu yíngyǎng.", exm:"Nuts are very nutritious.", t:"Food" },
-  { c:"果干", p:"guǒgān", m:"dried fruit", ex:"我喜欢吃果干。", exp:"Wǒ xǐhuān chī guǒgān.", exm:"I like eating dried fruit.", t:"Food" },
-];
+/* No built-in deck any more (v33): every card comes from H's photos or the Add form. */
 
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
@@ -89,12 +63,7 @@ const S = { mode:"study", progress:{}, custom:[], inbox:[],
   pendingImg:null, pendingFull:null, pendingUse:"crop", prefill:null, persist:null,
   detail:null, query:"", filterUnv:false, filterFlag:false, settings:{}, single:null, saved:null, editing:null };
 
-function deck(){
-  /* custom entries override base cards with the same key (edited base cards) */
-  const byC=new Map(DECK_BASE.map(d=>[d.c,d]));
-  S.custom.forEach(d=>byC.set(d.c,d));
-  return [...byC.values()];
-}
+function deck(){ return S.custom; }
 function buildQueue(includeAhead){
   const p=S.progress, t=today(), d=deck();
   const due = d.filter(x=>p[x.c] && p[x.c].due<=t).sort((a,b)=>p[a.c].due-p[b.c].due).map(x=>x.c);
@@ -113,7 +82,11 @@ async function boot(){
     const [prog, cust, inb, sett] = await Promise.all([idbAll("progress"), idbAll("custom"), idbAll("inbox"), idbAll("settings").catch(()=>[])]);
     S.progress = {}; prog.forEach(r=>{ const {c,...s}=r; S.progress[c]=s; });
     sett.forEach(r=>{ S.settings[r.k]=r.v; });
-    S.custom = cust;
+    /* progress of cards that no longer exist (the built-in deck of v1–v32) is dropped */
+    const have=new Set(cust.map(d=>d.c));
+    for(const c of Object.keys(S.progress)) if(!have.has(c)){ delete S.progress[c]; idbDel("progress",c).catch(()=>{}); }
+    /* creation order (cards without a timestamp, from before v33, come first in key order) */
+    S.custom = cust.sort((a,b)=>(a.at||0)-(b.at||0));
     S.inbox = inb.sort((a,b)=>b.ts-a.ts);
   }catch(e){ console.warn("IndexedDB unavailable, session only:", e); }
   S.ready=true;
@@ -240,7 +213,7 @@ async function aiReview(list,status){
     const upd={...d, ai:{...sg, c:d.c}};
     if(!sg.zh) upd.ai.zh=d.c;
     const k=S.custom.findIndex(x=>x.c===d.c);
-    if(k>=0) S.custom[k]=upd; else S.custom.push(upd); /* base card -> local override */
+    if(k>=0) S.custom[k]=upd; else S.custom.push(upd);
     try{ await idbPut("custom",upd); }catch(e){} n++;
   }
   return n;
@@ -394,7 +367,7 @@ function tagsHTML(d,isNew){
 /* ---------- review flag ----------
    Any card can be flagged when the OCR text, pinyin or meaning looks odd and
    someone (a teacher, later maybe an online model) should check it. The flag
-   lives on the card record; for base-deck cards it creates a local override. */
+   lives on the card record. */
 async function setFlag(c,on,note){
   const d=cardOf(c); if(!d) return;
   const upd={...d};
@@ -462,6 +435,16 @@ function endSingle(){
 }
 function renderStudy(main){
   if(!S.ready){ main.innerHTML=`<div class="badge">loading…</div>`; return; }
+  if(!deck().length){
+    main.innerHTML=`<div class="done">
+      <div class="mark">始</div>
+      <h2>No cards yet.</h2>
+      <p>Photograph a sign, a menu or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.</p>
+      <button class="btn" id="go-cam">Take a photo</button>
+    </div>`;
+    $("#go-cam").onclick=()=>{ S.mode="inbox"; render(); };
+    return;
+  }
   const finished = S.idx>=S.queue.length;
   if(finished){
     main.innerHTML=`<div class="done">
@@ -544,7 +527,6 @@ function renderAdd(main){
   const saveDraft=()=>{ S.draft={ w:$("#f-word").value, p:$("#f-pin").value, m:$("#f-mean").value,
     ex:$("#f-ex").value, exm:$("#f-exm").value, autoPin:$("#f-pinhint").style.display!=="none" }; };
   ["f-word","f-pin","f-mean","f-ex","f-exm"].forEach(id=>$("#"+id).oninput=saveDraft);
-  renderCustomList();
 }
 /* ---------- Cards: library with photos, detail, single-card test, edit ---------- */
 const THUMB={};
@@ -557,8 +539,7 @@ function cardStatus(d){
 }
 function cardsListHTML(){
   const q=S.query.trim().toLowerCase();
-  const customSet=new Set(S.custom.map(d=>d.c));
-  let list=[...S.custom.slice().reverse(), ...DECK_BASE.filter(d=>!customSet.has(d.c))];
+  let list=S.custom.slice().sort((a,b)=>(b.at||0)-(a.at||0)); /* newest first */
   if(S.filterUnv) list=list.filter(d=>d.mt&&!d.mt.verified);
   if(S.filterFlag) list=list.filter(d=>d.flag||d.ai);
   if(q) list=list.filter(d=>[d.c,d.p,d.m,d.w,d.wp,d.wm,d.flagNote].filter(Boolean).join(" ").toLowerCase().includes(q));
@@ -566,7 +547,8 @@ function cardsListHTML(){
       ${d.img?`<img class="thumb" src="${thumbURL(d)}" alt="">`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`}
       <span class="ct"><span class="c">${esc(d.c.replace(/\n/g," / "))}</span><span class="p">${esc(d.p)}</span><span class="m">${esc(d.m)}</span></span>
       <span class="cs">${d.ai?'<span class="pill ai">AI</span>':""}${d.flag?'<span class="pill flagged">⚑ review</span>':""}${cardStatus(d)}</span></button>`).join("");
-  return {html:rows||`<div class="badge" style="margin-top:20px">No cards match.</div>`, n:list.length};
+  const empty=S.custom.length?"No cards match.":"No cards yet — take a photo under Camera, or tap + New.";
+  return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length};
 }
 function renderCards(main){
   const unv=S.custom.filter(d=>d.mt&&!d.mt.verified).length, flg=S.custom.filter(d=>d.flag||d.ai).length, nAi=deck().filter(d=>d.ai).length;
@@ -588,17 +570,16 @@ function renderCards(main){
 }
 function renderCardDetail(main,c){
   const d=cardOf(c); if(!d){ S.detail=null; return renderCards(main); }
-  const isCustom=S.custom.some(x=>x.c===c);
   const p=S.progress[c];
   const stat=p?`interval ${p.interval} d · ease ${p.ease.toFixed(2)} · ${p.reps} review${p.reps===1?"":"s"} · next ${new Date(p.due).toLocaleDateString("en-GB")}`:"not studied yet";
   main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${d.kind==="sign"?"sign card":isCustom?"custom card":"base deck"}${d.mt&&!d.mt.verified?", unverified":""}${d.mt&&d.mt.pending?", translation pending":""}${d.mt&&d.mt.suspect?", OCR doubtful":""}</span></div>
+    <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${d.kind==="sign"?"sign card":"word card"}${d.mt&&!d.mt.verified?", unverified":""}${d.mt&&d.mt.pending?", translation pending":""}${d.mt&&d.mt.suspect?", OCR doubtful":""}</span></div>
     <div class="card">${tagsHTML(d,!p)}${frontHTML(d)}<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}</div>
     <div class="detailacts">
       <button class="btn primary" id="d-test">Test this card</button>
       <button class="btn" id="d-edit">Edit</button>
       <button class="btn${d.flag?" on":""}" id="d-flag">${d.flag?"⚑ Clear flag":"⚑ Flag for review"}</button>
-      ${isCustom?`<button class="btn danger" id="d-del">Delete</button>`:""}
+      <button class="btn danger" id="d-del">Delete</button>
     </div>
     <div class="badge" style="margin-top:14px">${esc(stat)}</div>
   </div>`;
@@ -617,13 +598,12 @@ function renderCardDetail(main,c){
 }
 function renderEdit(main,c){
   const d=cardOf(c); if(!d){ S.editing=null; return renderCards(main); }
-  const isSign=d.kind==="sign", isCustom=S.custom.some(x=>x.c===c);
+  const isSign=d.kind==="sign";
   let removeImg=false;
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back">← Back</button><span class="badge">edit</span></div>
-    <div class="field"><label>${isSign?"Sign text, one line per row":"Word"}${isCustom?"":" (base deck, fixed)"}</label>
-      ${isCustom?(isSign?`<textarea id="e-word" class="hanzi" rows="${d.c.split("\n").length+1}">${esc(d.c)}</textarea>`:`<input id="e-word" class="hanzi" value="${esc(d.c)}">`)
-               :`<div class="ro hanzi">${esc(d.c).replace(/\n/g,"<br>")}</div>`}</div>
+    <div class="field"><label>${isSign?"Sign text, one line per row":"Word"}</label>
+      ${isSign?`<textarea id="e-word" class="hanzi" rows="${d.c.split("\n").length+1}">${esc(d.c)}</textarea>`:`<input id="e-word" class="hanzi" value="${esc(d.c)}">`}</div>
     <div class="row">
       <div class="field narrow"><label>Pinyin</label><input id="e-pin" class="mono" value="${esc(d.p)}"></div>
       <div class="field"><label>Meaning</label><input id="e-mean" value="${esc(d.m)}"></div>
@@ -666,7 +646,7 @@ function renderEdit(main,c){
 }
 /* persist an edited card; when the Chinese text changes (OCR slip), recompute
    pinyin/segmentation/gloss (unless pinyin was set by hand) and move progress,
-   thumbnail and queue entries to the new key. Base cards become a local override. */
+   thumbnail and queue entries to the new key. */
 async function applyCardUpdate(c,upd,newC,pinByHand){
   const isSign=upd.kind==="sign";
   if(newC && newC!==c){
@@ -697,18 +677,6 @@ async function applyCardUpdate(c,upd,newC,pinByHand){
   try{ await idbPut("custom",upd); }catch(e){}
   return upd;
 }
-function renderCustomList(){
-  const box=$("#c-list"); if(!box) return;
-  if(!S.custom.length){ box.innerHTML=""; return; }
-  const unv=S.custom.filter(d=>d.mt&&!d.mt.verified);
-  const line=d=>esc(d.c.replace(/\n/g," / "));
-  box.innerHTML=(unv.length?`<div class="listhead">Review: ${unv.length} unverified</div>`+
-    unv.map(d=>`<div class="item"><div class="left"><span class="c">${line(d)}</span><span class="m">${esc(d.m)}</span></div><button class="ocr-btn" data-ok="${esc(d.c)}">CONFIRM</button></div>`).join(""):"")+
-    `<div class="listhead">Custom cards (${S.custom.length})</div>`+
-    S.custom.map(d=>`<div class="item"><div class="left"><span class="c">${line(d)}${d.kind==="sign"?'<span class="pill">sign</span>':""}</span><span class="p">${esc(d.p)}</span><span class="m">${esc(d.m)}</span></div><button class="del" data-c="${esc(d.c)}">delete</button></div>`).join("");
-  box.querySelectorAll(".del").forEach(b=> b.onclick=()=>delCustom(b.dataset.c));
-  box.querySelectorAll("[data-ok]").forEach(b=> b.onclick=()=>confirmCard(b.dataset.ok));
-}
 async function addManual(){
   const word=$("#f-word").value.trim(), pin=$("#f-pin").value.trim(), mean=$("#f-mean").value.trim();
   const ex=$("#f-ex").value.trim(), exm=$("#f-exm").value.trim();
@@ -717,7 +685,7 @@ async function addManual(){
   if(!CJK.test(word)) return fail("Please enter a Chinese word.");
   if(!pin||!mean) return fail("Pinyin and meaning are required.");
   if(deck().some(d=>d.c===word)) return fail("“"+word+"” is already in the deck.");
-  const card={c:word,p:pin,m:mean,ex,exp:"",exm,t:"Custom"};
+  const card={c:word,p:pin,m:mean,ex,exp:"",exm,t:"Custom",at:Date.now()};
   const chosenImg=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
   if(chosenImg){ card.img=chosenImg; }
   S.pendingImg=null; S.pendingFull=null;
@@ -729,13 +697,13 @@ async function addManual(){
   $("#f-pinhint").style.display="none";
   S.draft=null;
   ok.textContent="“"+word+"” added."; ok.style.display="";
-  setStats(); renderCustomList();
+  setStats();
 }
 async function delCustom(c){
   S.custom=S.custom.filter(x=>x.c!==c);
   try{ await idbDel("custom",c); await idbDel("progress",c); }catch(e){}
   delete S.progress[c]; dropThumb(c);
-  setStats(); renderCustomList();
+  setStats();
 }
 
 /* ---------- OCR (Tesseract.js + pinyin-pro + CC-CEDICT, fully local from ./vendor — no CDN) ---------- */
@@ -821,7 +789,7 @@ async function quickSave(id,w,p,m,grp,ai){
     QSNOTE[id]=`“${w}” is already in the deck.`;
   }else{
     /* checked by the AI in the selection bar → verified; otherwise a dictionary prefill */
-    const card={c:w,p,m,ex:"",exp:"",exm:"",t:"Custom",mt:ai?{src:"llm",verified:true}:{src:"dict",verified:false}};
+    const card={c:w,p,m,ex:"",exp:"",exm:"",t:"Custom",at:Date.now(),mt:ai?{src:"llm",verified:true}:{src:"dict",verified:false}};
     /* doubtful OCR (low symbol confidence) → the online AI checks it automatically when enabled */
     const chars=R.flat.filter(c=>grp<0?SELS[id].has(c.i):c.g===grp);
     const why=ai?"":ocrDoubt(chars.map(c=>c.cf),m);
@@ -1308,7 +1276,7 @@ async function saveSign(id){
   const cfs=sg.lines.flatMap((l,k)=>(sg.orig&&sg.orig[k]===l.trim()&&sg.conf&&sg.conf[k])||[]);
   const unknown=keep.flatMap(x=>x.r.gloss.filter(g=>!g.ph&&!g.m).map(g=>g.w));
   const why=mt.src==="llm"?"":ocrDoubt(cfs,null,unknown); if(why) mt.suspect=why;
-  const card={ kind:"sign", c, p:pin, m:mean, ex:"",exp:"",exm:"", t:"Sign",
+  const card={ kind:"sign", c, p:pin, m:mean, ex:"",exp:"",exm:"", t:"Sign", at:Date.now(),
     segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
   if(S.pendingImg) card.img=S.pendingImg;
   if(S.pendingFull) card.imgFull=S.pendingFull;
@@ -1324,7 +1292,7 @@ async function confirmCard(c){
   const d=S.custom.find(x=>x.c===c); if(!d||!d.mt) return;
   d.mt.verified=true; d.mt.pending=false; delete d.mt.suspect;
   try{ await idbPut("custom",d); }catch(e){}
-  if(S.mode==="cards") render(); else renderCustomList();
+  if(S.mode==="cards") render();
 }
 
 /* ---------- Kamera / Inbox ---------- */
