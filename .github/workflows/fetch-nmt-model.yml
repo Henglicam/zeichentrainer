@@ -27,12 +27,26 @@ jobs:
               req = urllib.request.Request(url, headers={"User-Agent": "zeichentrainer-model-fetch"})
               with urllib.request.urlopen(req, timeout=120) as r: return r.read()
           base = json.loads(get(RS + "/"))["capabilities"]["attachments"]["base_url"]
-          recs = json.loads(get(RS + "/buckets/main/collections/translations-models/records?fromLang=zh&toLang=en"))["data"]
-          print(f"{len(recs)} zh→en records; attachment base {base}")
+          # all records, paginated (Kinto: _limit + Next-Page); filter in python so tags like "zh-Hans" match too
+          allrecs, url = [], RS + "/buckets/main/collections/translations-models/records?_limit=500"
+          while url:
+              req = urllib.request.Request(url, headers={"User-Agent": "zeichentrainer-model-fetch"})
+              with urllib.request.urlopen(req, timeout=120) as r:
+                  allrecs += json.loads(r.read())["data"]; url = r.headers.get("Next-Page")
+          pairs = sorted({(r.get("fromLang"), r.get("toLang")) for r in allrecs}, key=str)
+          print(f"{len(allrecs)} records, {len(pairs)} language pairs; attachment base {base}")
+          print("pairs:", ", ".join(f"{a}->{b}" for a, b in pairs))
+          print("record keys:", sorted(allrecs[0].keys()) if allrecs else "none")
+          def lang(x): return str(x or "").lower()
+          recs = [r for r in allrecs if lang(r.get("fromLang")).startswith("zh") and lang(r.get("toLang")).split("-")[0] == "en"]
+          # prefer Simplified (zh / zh-Hans / zh-CN) when several zh variants exist
+          simp = [r for r in recs if lang(r.get("fromLang")) in ("zh", "zh-hans", "zh-cn", "zh-hans-cn")]
+          if simp: recs = simp
+          print(f"{len(recs)} zh→en records:")
           for r in recs:
               a = r.get("attachment", {})
-              print(f"  {r.get('fileType'):9} v{r.get('version')} {r.get('architecture','')} {a.get('size')} {r.get('name')} {a.get('filename')}")
-          if not recs: sys.exit("no zh→en records in Remote Settings")
+              print(f"  {r.get('fromLang')}->{r.get('toLang')} {r.get('fileType'):9} v{r.get('version')} {r.get('architecture','')} {a.get('size')} {r.get('name')} {a.get('filename')}")
+          if not recs: sys.exit("no zh→en records in Remote Settings — see the pairs above")
           def vkey(v): return tuple(int(x) if x.isdigit() else 0 for x in str(v).replace("a","").replace("b","").split("."))
           # newest version; if several architectures share it, prefer the smallest model (base-memory)
           top = max(vkey(r["version"]) for r in recs)
@@ -59,7 +73,7 @@ jobs:
               name = r["name"]; name = name if name.endswith(".gz") else name + ".gz"
               open(os.path.join("vendor/nmt", name), "wb").write(data)
               files[ft] = name; sizes[ft] = len(data); sha[ft] = hashlib.sha256(data).hexdigest()
-          out = {"available": True, "name": f"Firefox Translations zh→en {arch or ''} v{model['version']}".strip(), "from": "zh", "to": "en",
+          out = {"available": True, "name": f"Firefox Translations {model.get('fromLang')}→{model.get('toLang')} {arch or ''} v{model['version']}".strip(), "from": model.get("fromLang"), "to": "en",
                  "license": "MPL-2.0", "source": "Mozilla Remote Settings, collection translations-models (https://github.com/mozilla/firefox-translations-models)",
                  "version": model["version"], "architecture": arch, "files": files, "sizes": sizes, "sha256": sha, "downloadBytes": sum(sizes.values())}
           json.dump(out, open("nmt-model.json", "w"), indent=1, ensure_ascii=False)

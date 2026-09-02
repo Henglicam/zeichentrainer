@@ -1,1 +1,26 @@
-{"available": false, "note": "placeholder — the Fetch zh→en translation model action writes the real manifest here"}
+{
+ "available": true,
+ "name": "Firefox Translations zh-Hans→en  v2.0a2",
+ "from": "zh-Hans",
+ "to": "en",
+ "license": "MPL-2.0",
+ "source": "Mozilla Remote Settings, collection translations-models (https://github.com/mozilla/firefox-translations-models)",
+ "version": "2.0a2",
+ "architecture": null,
+ "files": {
+  "model": "model.zhen.intgemm.alphas.bin.gz",
+  "lex": "lex.50.50.zhen.s2t.bin.gz",
+  "vocab": "vocab.zhen.spm.gz"
+ },
+ "sizes": {
+  "model": 44359714,
+  "lex": 4720138,
+  "vocab": 731199
+ },
+ "sha256": {
+  "model": "a30474ce5dcc3e58b298ee47d4b872ade505f8043158e225371c9acfd455ab77",
+  "lex": "7152ef5102aed49f40fc6c5aba4a593a68639d00607e317cfc3946d259478327",
+  "vocab": "b33fcf9710a85f9fa841df73e3871239ebf05c2dc6124118a85f7267cb8ebf6e"
+ },
+ "downloadBytes": 49811051
+}
