@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=83; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=84; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -699,10 +699,8 @@ function renderAdd(main){
     <div class="lead">Add a card by hand. Pinyin and meaning filled from OCR are unverified until you check them.</div>
     ${imgField}
     <div class="field"><label>Word</label><input id="f-word" class="hanzi big" placeholder="快门"></div>
-    <div class="row">
-      <div class="field narrow"><label>Pinyin</label><input id="f-pin" class="mono" placeholder="kuàimén"></div>
-      <div class="field"><label>Meaning</label><input id="f-mean" placeholder="shutter"></div>
-    </div>
+      <div class="field"><label>Pinyin</label><textarea id="f-pin" class="mono grow" rows="1" placeholder="kuàimén"></textarea></div>
+      <div class="field"><label>Meaning</label><textarea id="f-mean" class="grow" rows="1" placeholder="shutter"></textarea></div>
     <div id="f-pinhint" class="err" style="display:none">Auto pinyin/meaning from OCR — unverified. Check the tones (多音字!) and adjust the meaning.</div>
     <div id="f-err" class="err" style="display:none"></div>
     <button class="btn primary block" id="f-add">Add card</button>
@@ -719,7 +717,7 @@ function renderAdd(main){
     S.prefill=null;
   }
   const d0=S.draft||{};
-  $("#f-word").value=d0.w||""; $("#f-pin").value=d0.p||""; $("#f-mean").value=d0.m||"";
+  $("#f-word").value=d0.w||""; $("#f-pin").value=d0.p||""; $("#f-mean").value=d0.m||""; wireGrow(main);
   if(d0.autoPin) $("#f-pinhint").style.display="";
   const saveDraft=()=>{ S.draft={ w:$("#f-word").value, p:$("#f-pin").value, m:$("#f-mean").value,
     autoPin:$("#f-pinhint").style.display!=="none" }; };
@@ -823,10 +821,8 @@ function renderEdit(main,c){
       <div class="signed" id="e-lines"></div>
       <textarea id="e-word" class="hanzi" hidden>${esc(lines0.join("\n"))}</textarea>
       <div class="badge" style="margin-top:4px">Tap a character to change it. One line per line in the photo.</div></div>
-    <div class="row">
-      <div class="field narrow"><label>Pinyin</label><input id="e-pin" class="mono" value="${esc(d.p)}"></div>
-      <div class="field"><label>Meaning</label><input id="e-mean" value="${esc(d.m)}"></div>
-    </div>
+      <div class="field"><label>Pinyin</label><textarea id="e-pin" class="mono grow" rows="1">${esc(d.p)}</textarea></div>
+      <div class="field"><label>Meaning</label><textarea id="e-mean" class="grow" rows="1">${esc(d.m)}</textarea></div>
     ${isSign||!d.w?"":`<div class="field"><label>Context word, pinyin, meaning (optional)</label>
       <div class="row"><input id="e-w" class="hanzi" value="${esc(d.w||"")}" placeholder="学习"><input id="e-wp" class="mono" value="${esc(d.wp||"")}" placeholder="xuéxí"><input id="e-wm" value="${esc(d.wm||"")}" placeholder="to learn"></div></div>`}
     ${d.img?`<div class="field" id="e-imgfield"><label>Image (stays on this phone)</label><div class="pimg"><img src="${cropURL}" alt=""><button class="del" id="e-noimg">Remove image</button></div></div>`:""}
@@ -845,7 +841,7 @@ function renderEdit(main,c){
     wireSlines(box,()=>{ syncWord(); pinyinFollow(); });
   };
   /* pinyin follows the text unless it was edited by hand */
-  let pinTouched=false; $("#e-pin").oninput=()=>{ pinTouched=true; };
+  let pinTouched=false; $("#e-pin").addEventListener("input",()=>{ pinTouched=true; }); wireGrow(main);
   const pinyinFollow=()=>{ if(pinTouched||!window.pinyinPro) return; const t=sg.lines.join("").replace(/\s+/g,""); if(CJK.test(t)) $("#e-pin").value=pinyinPro.pinyin(t,{toneType:"symbol"}); };
   sg.onChange=()=>{ syncWord(); drawLines(); pinyinFollow(); const ab=$("#e-ai"); if(ab&&aiLive()) ab.click(); };
   drawLines();
@@ -866,7 +862,7 @@ function renderEdit(main,c){
   const ni=$("#e-noimg"); if(ni) ni.onclick=()=>{ removeImg=true; $("#e-imgfield").remove(); };
   $("#e-save").onclick=async()=>{
     const fail=m=>{ const e=$("#e-err"); e.textContent=m; e.style.display=""; };
-    let pin=$("#e-pin").value.trim(); const mean=$("#e-mean").value.trim();
+    let pin=$("#e-pin").value.replace(/\s+/g," ").trim(); const mean=$("#e-mean").value.replace(/\s+/g," ").trim();
     if(!pin||!mean) return fail("Pinyin and meaning are required.");
     /* the Chinese text itself may be corrected (OCR slip) — progress and images move with it */
     let newC=c;
@@ -923,7 +919,7 @@ async function applyCardUpdate(c,upd,newC,pinByHand,lines){
   return upd;
 }
 async function addManual(){
-  const word=$("#f-word").value.trim(), pin=$("#f-pin").value.trim(), mean=$("#f-mean").value.trim();
+  const word=$("#f-word").value.trim(), pin=$("#f-pin").value.replace(/\s+/g," ").trim(), mean=$("#f-mean").value.replace(/\s+/g," ").trim();
   const err=$("#f-err"), ok=$("#f-ok"); err.style.display="none"; ok.style.display="none";
   const fail=m=>{ err.textContent=m; err.style.display=""; };
   if(!CJK.test(word)) return fail("Please enter a Chinese word.");
@@ -1501,6 +1497,9 @@ function textRowExtent(bmp,bx0,bx1,y0,y1,H){
   while(x>=0){ if(ink(x)) first=x; else if(first-x>gap) break; x--; }
   return {x0:first,x1:last+1};
 }
+/* text fields that grow with their content instead of cutting it off (H: pinyin and meaning on two lines) */
+function autoGrow(el){ el.style.height="auto"; el.style.height=el.scrollHeight+"px"; }
+function wireGrow(root){ root.querySelectorAll("textarea.grow").forEach(el=>{ autoGrow(el); el.addEventListener("input",()=>autoGrow(el)); }); }
 /* ---------- reading helpers (shared by the passes of cropSign) ---------- */
 const median=a=>{ const t=a.slice().sort((p,q)=>p-q); return t[t.length>>1]; };
 /* status text of a photo's reading: kept in state and re-queried, so a re-render cannot swallow it */
