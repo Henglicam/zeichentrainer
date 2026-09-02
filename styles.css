@@ -138,10 +138,10 @@ button{font:inherit;color:inherit}
 .ckref{height:64px;border:1px solid var(--line);border-radius:8px;background:var(--ink);flex:none}
 .ck.draw{border-color:var(--bone)}
 .ckacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px} .ckacts .grow{flex:1}
-.drawsheet{position:fixed;inset:0;z-index:20;background:var(--ink);overflow-y:auto;display:flex;flex-direction:column;gap:12px;
+.drawsheet{position:fixed;inset:0;z-index:20;background:var(--ink);overflow-y:auto;display:flex;flex-direction:column;gap:10px;
   padding:calc(14px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom))}
 .drawsheet .dshead{display:flex;align-items:center;gap:12px} .drawsheet .dshead .badge{flex:1}
-.drawsheet .ckref{max-width:120px;max-height:80px;height:auto}
+.drawsheet .ckref{display:block;margin:0 auto;max-width:100%;height:150px;width:auto}
 .drawsheet .pad{display:block;width:min(100%,420px);aspect-ratio:1;margin:0 auto;border:1px solid var(--line);border-radius:12px;background:var(--panel2);touch-action:none}
 .drawsheet #ds-st{text-align:center} .drawsheet .cands{justify-content:center;min-height:8px}
 .drawsheet .ck.draw{min-width:56px;height:56px;font-size:30px}

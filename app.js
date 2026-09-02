@@ -1564,16 +1564,16 @@ async function openCharPick(id,k,i,btn){
   if(aiLive()) askAI(dict); else render(dict,[],false);
 }
 /* the tapped character as it looks in the photo — the original stays visible while drawing or typing (H: the keyboard hid it) */
-async function drawCharRef(cv,sg,k,i){
+async function drawCharRef(cv,sg,k,i,opt){ /* opt: {h: display height, side: neighbour fraction shown left/right} */
   if(!cv||!sg.img) { if(cv) cv.remove(); return; }
   try{
     const bmp=await createImageBitmap(sg.img);
     const line=[...sg.lines[k]], bx=(sg.boxes||[])[k]||[];
     let b=(sg.orig&&sg.orig[k]===sg.lines[k].trim()&&bx.length===line.length)?bx[i]:null;
     if(!b){ const all=bx.filter(Boolean); b=all.length?{x0:Math.min(...all.map(x=>x.x0)),y0:Math.min(...all.map(x=>x.y0)),x1:Math.max(...all.map(x=>x.x1)),y1:Math.max(...all.map(x=>x.y1))}:{x0:0,y0:0,x1:bmp.width,y1:bmp.height}; }
-    const h=Math.max(8,b.y1-b.y0), w=Math.max(8,b.x1-b.x0), padX=w*0.6, padY=h*0.25; /* a bit of the neighbours for orientation */
+    const o=opt||{}, h=Math.max(8,b.y1-b.y0), w=Math.max(8,b.x1-b.x0), padX=w*(o.side??0.6), padY=h*0.25; /* a bit of the neighbours for orientation */
     const sx=Math.max(0,b.x0-padX), sy=Math.max(0,b.y0-padY), sw=Math.min(bmp.width-sx,w+2*padX), sh=Math.min(bmp.height-sy,h+2*padY);
-    const H=64, W=Math.max(48,Math.min(200,Math.round(sw*H/sh)));
+    const H=o.h||64, W=Math.max(48,Math.min(o.h?Math.round(o.h*2.6):200,Math.round(sw*H/sh)));
     cv.width=W*2; cv.height=H*2; cv.style.width=W+"px"; cv.style.height=H+"px";
     cv.getContext("2d").drawImage(bmp,sx,sy,sw,sh,0,0,cv.width,cv.height); bmp.close();
   }catch(e){ cv.remove(); }
@@ -1589,13 +1589,14 @@ function openDrawSheet(id,k,i,apply){
   const ch=[...sg.lines[k]][i]||"";
   document.querySelectorAll(".drawsheet").forEach(x=>x.remove());
   const el=document.createElement("div"); el.className="drawsheet";
-  el.innerHTML=`<div class="dshead"><canvas class="ckref" width="1" height="1" title="the character in the photo"></canvas><div class="badge">Draw the character that replaces <b class="hanzi">${esc(ch)}</b></div><button class="del" id="ds-x">Cancel</button></div>
+  el.innerHTML=`<div class="dshead"><div class="badge">The character in the photo — draw it below.</div><button class="del" id="ds-x">Cancel</button></div>
+    <canvas class="ckref" width="1" height="1" title="the character in the photo"></canvas>
     <canvas class="pad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas>
     <div class="badge" id="ds-st">Draw all strokes, then tap Done.</div>
     <div class="cands" id="ds-cands"></div>
     <div class="ckacts"><button class="del" id="ds-undo">Undo</button><button class="del" id="ds-clear">Clear</button><span class="grow"></span><button class="btn primary" id="ds-done">Done</button></div>`;
   document.body.appendChild(el); document.body.classList.add("noscroll");
-  drawCharRef(el.querySelector(".ckref"),sg,k,i);
+  drawCharRef(el.querySelector(".ckref"),sg,k,i,{h:150,side:0.25}); /* large, tight crop: the original must be readable while drawing */
   const cv=el.querySelector(".pad"), ctx=cv.getContext("2d"), strokes=[]; let cur=null, seq=0;
   const status=t=>{ const st=el.querySelector("#ds-st"); if(st) st.textContent=t; };
   const close=()=>{ seq++; el.remove(); document.body.classList.remove("noscroll"); };
