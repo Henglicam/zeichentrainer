@@ -958,6 +958,7 @@ function loadDict(){
   }
   return _dictLoading;
 }
+let _ocrLog=null; /* progress handler of the job currently running (v63: the pad's reading once overwrote the photo's editor) */
 async function ocrWorker(status){
   if(_ocrWorker) return _ocrWorker;
   if(!_ocrLoading){
@@ -973,7 +974,7 @@ async function ocrWorker(status){
         corePath:base+"tesseract-core-simd-lstm.wasm.js",
         langPath:base.replace(/\/$/,""),
         cacheMethod:"none", /* SW cache covers offline; tesseract's IndexedDB cache is a known corruption source */
-        logger:m=>{ if(m.status==="recognizing text") status("recognizing … "+Math.round(m.progress*100)+"%"); }
+        logger:m=>{ if(m.status==="recognizing text"&&_ocrLog) _ocrLog(Math.round(m.progress*100)); } /* one worker, many callers: the running job's handler */
       });
       _ocrWorker=w; return w;
     })().catch(err=>{ _ocrLoading=null; throw err; });
@@ -1045,8 +1046,9 @@ async function onOcr(id,region){
     status("recognizing …");
     /* crops are a single text block — PSM 6 is far more robust there than auto layout */
     await w.setParameters({tessedit_pageseg_mode:region?"6":"3"});
+    _ocrLog=p=>status("recognizing … "+p+"%");
     const [{data},bmp]=await Promise.all([
-      w.recognize(region?region.blob:rec.blob,{},{blocks:true,text:true}),
+      w.recognize(region?region.blob:rec.blob,{},{blocks:true,text:true}).finally(()=>{ _ocrLog=null; }),
       createImageBitmap(rec.blob)
     ]);
     const W=bmp.width,H=bmp.height; bmp.close();
@@ -1467,7 +1469,8 @@ async function cropSign(id){
     status("reading the text …");
     const dk=await deskewBlob(r.blob); if(dk.angle){ S.pendingImg=dk.blob; status(`straightened by ${Math.round(dk.angle)}°, reading the text …`); }
     await w.setParameters({tessedit_pageseg_mode:"6"});
-    const {data}=await w.recognize(dk.blob,{},{blocks:true,text:true});
+    _ocrLog=p=>status("recognizing … "+p+"%");
+    const {data}=await w.recognize(dk.blob,{},{blocks:true,text:true}).finally(()=>{ _ocrLog=null; });
     const lines=[];
     (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>{
       let syms=[];
@@ -1546,7 +1549,8 @@ async function openCharPick(id,k,i,btn){
     const seen=new Set(drawn);
     box.innerHTML=`<div class="ckhead"><canvas class="ckref" width="1" height="1" title="the character in the photo"></canvas><div class="badge">Replace <b class="hanzi">${esc(ch)}</b> with:</div></div>
       <div class="cands">${drawn.map(c=>`<button class="ck draw" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${ai.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!drawn.length&&!aiBusy?`<span class="badge">no dictionary match — draw it, type it or ask the AI</span>`:""}${aiBusy?`<span class="badge">asking the AI …</span>`:""}</div>
-      <div class="cropacts"><button class="btn mini" id="ck-draw-${id}">Draw it</button><input class="hanzi one" id="ck-type-${id}" maxlength="2" placeholder="type"><button class="btn mini" id="ck-ok-${id}">Use</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}<button class="del" id="ck-del-${id}">Remove</button><button class="del" id="ck-x-${id}">close</button></div>
+      <div class="ckacts">${pad?"":`<button class="btn mini" id="ck-draw-${id}">Not here? Draw it</button>`}${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}</div>
+      <div class="ckacts"><input class="hanzi one" id="ck-type-${id}" maxlength="2" placeholder="type"><button class="btn mini" id="ck-ok-${id}">Use</button><span class="grow"></span><button class="del" id="ck-del-${id}">Remove</button><button class="del" id="ck-x-${id}">close</button></div>
       <div class="ckdraw-slot"></div>`;
     drawCharRef(box.querySelector(".ckref"),sg,k,i);
     box.querySelectorAll("[data-rep]").forEach(b=> b.onclick=()=>apply(b.dataset.rep));
@@ -1555,7 +1559,7 @@ async function openCharPick(id,k,i,btn){
     $("#ck-del-"+id).onclick=()=>apply(null);
     $("#ck-x-"+id).onclick=()=>{ box.remove(); btn.classList.remove("on"); };
     const ab=$("#ck-ai-"+id); if(ab) ab.onclick=()=>askAI(dict);
-    $("#ck-draw-"+id).onclick=()=>{ if(!pad) pad=drawPad(id,k,i,alts=>{ drawn=alts; render(dict,ai,false); }, ()=>{ pad=null; render(dict,ai,false); }); box.querySelector(".ckdraw-slot").appendChild(pad); };
+    const db=$("#ck-draw-"+id); if(db) db.onclick=()=>{ pad=drawPad(id,k,i,alts=>{ drawn=alts; render(dict,ai,false); }, ()=>{ pad=null; drawn=[]; render(dict,ai,false); }); render(dict,ai,false); };
     if(pad) box.querySelector(".ckdraw-slot").appendChild(pad);
   };
   const askAI=async(dict)=>{ render(dict,[],true); try{ const alts=await aiCharAlternatives(line,i); if(!box.isConnected) return; render(dict,alts,false); if(!alts.length) box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">the AI has no better idea</span>`); }catch(err){ if(!box.isConnected) return; render(dict,[],false); box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">AI: ${esc(err.message||err)}</span>`); } };
@@ -1586,8 +1590,9 @@ async function drawCharRef(cv,sg,k,i){
 const DRAW_TIMER=900, DRAW_SIZE=240;
 function drawPad(id,k,i,onResult,onClose){
   const el=document.createElement("div"); el.className="ckdraw";
-  el.innerHTML=`<canvas class="pad" width="${DRAW_SIZE*2}" height="${DRAW_SIZE*2}"></canvas>
-    <div class="cropacts"><span class="badge" id="ckd-st-${id}">Draw the character here.</span><button class="del" id="ckd-undo-${id}">Undo</button><button class="del" id="ckd-clear-${id}">Clear</button><button class="del" id="ckd-x-${id}">close pad</button></div>`;
+  el.innerHTML=`<div class="padrow"><canvas class="ckref" width="1" height="1" title="the character in the photo"></canvas><canvas class="pad" width="${DRAW_SIZE*2}" height="${DRAW_SIZE*2}"></canvas></div>
+    <div class="badge" id="ckd-st-${id}">Draw the character here.</div>
+    <div class="ckacts"><button class="del" id="ckd-undo-${id}">Undo</button><button class="del" id="ckd-clear-${id}">Clear</button><button class="del" id="ckd-x-${id}">close pad</button></div>`;
   const cv=el.querySelector(".pad"), ctx=cv.getContext("2d"), strokes=[]; let cur=null, timer=null, seq=0;
   const status=t=>{ const st=el.querySelector("#ckd-st-"+id); if(st) st.textContent=t; };
   const paint=()=>{
@@ -1608,7 +1613,7 @@ function drawPad(id,k,i,onResult,onClose){
     try{
       const w=await ocrWorker(status); if(my!==seq) return;
       status("reading …");
-      const alts=await recognizeStrokes(w,strokes); if(my!==seq||!el.isConnected) return;
+      const alts=await recognizeStrokes(w,strokes,p=>{ if(my===seq) status("reading … "+p+"%"); }); if(my!==seq||!el.isConnected) return;
       const sg=SIGN[id], ctxc=sg?charCandidates(sg.lines[k],i):[];
       const ranked=alts.slice().sort((a,b)=>(ctxc.includes(b)?1:0)-(ctxc.includes(a)?1:0)); /* what fits the neighbours first, otherwise the reader's order */
       status(ranked.length?"Read as: tap the right one above, or keep drawing.":"Not recognized — try cleaner strokes, or type it.");
@@ -1619,10 +1624,11 @@ function drawPad(id,k,i,onResult,onClose){
   el.querySelector("#ckd-clear-"+id).onclick=()=>{ strokes.length=0; seq++; paint(); onResult([]); status("Draw the character here."); };
   el.querySelector("#ckd-x-"+id).onclick=()=>{ seq++; el.remove(); onClose(); };
   el.strokes=strokes; el.recognize=recognize; el.paint=paint; /* used by the tests */
+  if(SIGN[id]) drawCharRef(el.querySelector(".ckref"),SIGN[id],k,i); else el.querySelector(".ckref").remove();
   paint();
   return el;
 }
-async function recognizeStrokes(w,strokes){
+async function recognizeStrokes(w,strokes,log){
   const pts=strokes.flat(); if(!pts.length) return [];
   const x0=Math.min(...pts.map(p=>p[0])), x1=Math.max(...pts.map(p=>p[0])), y0=Math.min(...pts.map(p=>p[1])), y1=Math.max(...pts.map(p=>p[1]));
   const side=Math.max(x1-x0,y1-y0,40);
@@ -1640,7 +1646,8 @@ async function recognizeStrokes(w,strokes){
   for(const [psm,T,lw] of [["8",80,7],["10",80,7],["8",50,11]]){
     const blob=await render(T,lw);
     await w.setParameters({tessedit_pageseg_mode:psm});
-    const {data}=await w.recognize(blob,{},{blocks:true,text:true});
+    _ocrLog=log||null;
+    const {data}=await w.recognize(blob,{},{blocks:true,text:true}).finally(()=>{ _ocrLog=null; });
     (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>(l.words||[]).forEach(wd=>(wd.symbols||[]).forEach(sy=>{
       for(const c of [...sy.text]) if(CJK.test(c)&&(seen.get(c)||0)<sy.confidence) seen.set(c,sy.confidence);
     })))));
