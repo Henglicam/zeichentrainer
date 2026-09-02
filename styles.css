@@ -10,7 +10,7 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;height:100%}
-body{background:var(--ink);color:var(--bone);font-family:var(--sans);font-size:17px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{background:var(--ink);color:var(--bone);font-family:var(--sans);font-size:17px;line-height:1.5;-webkit-font-smoothing:antialiased;overscroll-behavior-y:contain}
 button{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--jade);outline-offset:2px}
 #app{min-height:100%;display:flex;flex-direction:column}
@@ -151,6 +151,8 @@ button{font:inherit;color:inherit}
 .row input{flex:1;min-width:0}
 
 /* inbox photos */
+.shot.pending{padding:26px 14px;text-align:center;border:1px dashed var(--line);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
 .shot{border:1px solid var(--line);border-radius:14px;padding:10px;margin-bottom:14px;background:var(--panel)}
 .shot img{width:100%;border-radius:10px;display:block;margin-bottom:8px}
 .shot .meta{display:flex;justify-content:space-between;align-items:center;gap:8px}

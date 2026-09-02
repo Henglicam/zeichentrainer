@@ -104,6 +104,7 @@ function wireChrome(){
     b.onclick=()=>{ S.mode=b.dataset.mode; render(); };
   });
   $("#cam").onchange=onPhoto;
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden && S.mode==="inbox") renderShots(); });
   $("#imp").onchange=importData;
 }
 function setStats(){
@@ -1309,8 +1310,9 @@ const IMGURL={}; // cache object URLs per photo — renderShots re-runs on every
 function shotURL(s){ return IMGURL[s.id]||(IMGURL[s.id]=URL.createObjectURL(s.blob)); }
 function renderShots(){
   const box=$("#shots"); if(!box) return;
-  if(!S.inbox.length){ box.innerHTML=`<div class="badge" style="margin-top:18px">No photos yet.</div>`; return; }
-  box.innerHTML=`<div class="listhead">Inbox (${S.inbox.length})</div>`+
+  const pending=PENDING_SHOT?`<div class="shot pending"><div class="badge">Processing photo …</div></div>`:"";
+  if(!S.inbox.length){ box.innerHTML=pending||`<div class="badge" style="margin-top:18px">No photos yet.</div>`; return; }
+  box.innerHTML=`<div class="listhead">Inbox (${S.inbox.length})</div>`+pending+
     S.inbox.map(s=>{
       const dt=new Date(s.ts).toLocaleString("en-GB");
       const cropping=CROP && CROP.id===s.id;
@@ -1360,10 +1362,17 @@ function renderShots(){
   box.querySelectorAll("[data-signcancel]").forEach(b=> b.onclick=()=>{ delete SIGN[b.dataset.signcancel]; renderShots(); });
   Object.keys(SIGN).forEach(signPreview);
 }
+let PENDING_SHOT=false; /* a photo is being processed — the inbox shows a placeholder right away */
 async function onPhoto(e){
   const file=e.target.files && e.target.files[0];
   e.target.value="";
   if(!file) return;
+  /* show something immediately: downscaling a 12-MP photo takes 1–3 s on the phone,
+     and Chrome often does not repaint after the camera until the page is touched */
+  PENDING_SHOT=true;
+  if(S.mode!=="inbox"){ S.mode="inbox"; render(); } else renderShots();
+  window.scrollTo({top:0});
+  await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0))); /* let the placeholder paint first */
   /* bake in EXIF rotation + downscale to max 1600px: keeps the inbox small
      and the OCR boxes aligned with the displayed image */
   let blob=file;
@@ -1380,8 +1389,9 @@ async function onPhoto(e){
   S.inbox.unshift(rec);
   try{ await idbPut("inbox",rec); }catch(err){}
   /* next step is always framing the text — go straight into crop mode */
-  CROP={id:rec.id,rect:null};
+  CROP={id:rec.id,rect:null}; PENDING_SHOT=false;
   if(S.mode!=="inbox"){ S.mode="inbox"; render(); } else renderShots();
+  window.scrollTo({top:0});
 }
 async function delShot(id){
   S.inbox=S.inbox.filter(s=>s.id!==id);
