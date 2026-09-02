@@ -176,6 +176,8 @@ button{font:inherit;color:inherit}
 .selbar .sm.none{color:var(--mute);font-style:italic}
 .selbar.phrase{border-color:var(--verm);border-left-width:3px}
 .selbar.phrase .sm{flex-basis:100%}
+.selbar.ai{border-color:var(--jade)} .selbar .ainote{flex-basis:100%;font-size:13px;color:var(--jade)} .selbar .ainote.err{color:var(--verm)}
+.smean .badge.ai{color:var(--jade)}
 
 /* cropping */
 .croplayer{position:absolute;inset:0;touch-action:none;cursor:crosshair}
