@@ -104,7 +104,10 @@ const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 
 function wireChrome(){
   document.querySelectorAll(".tab").forEach(b=>{
-    b.onclick=()=>{ S.mode=b.dataset.mode; render(); };
+    b.onclick=()=>{ const m=b.dataset.mode;
+      S.editing=null; S.editFrom=null;                       /* a tab tap always leaves the edit form */
+      if(m==="cards" && (S.mode==="cards"||S.mode==="add")) S.detail=null; /* Cards again → back to the list */
+      S.mode=m; render(); };
   });
   $("#cam").onchange=onPhoto;
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden && S.mode==="inbox") renderShots(); });
@@ -131,6 +134,28 @@ function reticleSVG(single,W=260,H=260){
   const corners=[[0,0,1,1],[W,0,-1,1],[0,H,1,-1],[W,H,-1,-1]].map(([x,y,dx,dy])=>
     `<g stroke="${CLR.bone}" stroke-width="1.25" opacity="0.8"><line x1="${x}" y1="${y}" x2="${x+dx*tick}" y2="${y}"/><line x1="${x}" y1="${y}" x2="${x}" y2="${y+dy*tick}"/></g>`).join("");
   return `<svg width="${W}" height="${H}"><rect x="0.5" y="0.5" width="${W-1}" height="${H-1}" fill="none" stroke="${CLR.line}"/>${cross}${corners}</svg>`;
+}
+/* text that lost its line breaks (AI answer, rename) is re-cut where the original broke,
+   as long as the character count still matches */
+function recutLines(text,origLines){
+  if(text.includes("\n")||origLines.length<2) return text;
+  const lens=origLines.map(l=>[...l.replace(/\s+/g,"")].length), flat=[...text];
+  /* cut at the old offsets as long as they still fall inside the text (a fixed character keeps
+     the count; an added one shifts the last line only) */
+  const cuts=[]; let k=0; lens.slice(0,-1).forEach(n=>{ k+=n; cuts.push(k); });
+  if(!cuts.length||cuts[cuts.length-1]>=flat.length) return text;
+  const out=[]; let from=0; cuts.forEach(c=>{ out.push(flat.slice(from,c).join("")); from=c; }); out.push(flat.slice(from).join(""));
+  return out.join("\n");
+}
+/* word cards: seg tokens with "\n" mark the photo's line breaks — rebuild them for new text */
+function segWithBreaks(lines){
+  const out=[];
+  lines.forEach((line,i)=>{
+    if(i) out.push("\n");
+    const chars=[...line].filter(ch=>CJK.test(ch)).map(ch=>({ch}));
+    segmentChars(chars).forEach(seg=>out.push(seg.map(x=>x.ch).join("")));
+  });
+  return out;
 }
 /* the text keeps the photo's lines: a horizontal word stays on one line, so the box goes
    wide and the font shrinks to fit instead of wrapping (H: "the image is one line") */
@@ -672,7 +697,8 @@ function renderEdit(main,c){
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back">← Back</button><span class="badge">edit</span></div>
     <div class="field"><label>${isSign?"Sign text, one line per row":"Word"}</label>
-      ${isSign?`<textarea id="e-word" class="hanzi" rows="${d.c.split("\n").length+1}">${esc(d.c)}</textarea>`:`<input id="e-word" class="hanzi" value="${esc(d.c)}">`}</div>
+      <textarea id="e-word" class="hanzi" rows="${(isSign?d.c.split("\n"):frontLines(d)).length+1}">${esc(isSign?d.c:frontLines(d).join("\n"))}</textarea>
+      <div class="badge" style="margin-top:4px">One line per line in the photo.</div></div>
     <div class="row">
       <div class="field narrow"><label>Pinyin</label><input id="e-pin" class="mono" value="${esc(d.p)}"></div>
       <div class="field"><label>Meaning</label><input id="e-mean" value="${esc(d.m)}"></div>
@@ -710,7 +736,8 @@ function renderEdit(main,c){
     let newC=c;
     const we=$("#e-word");
     if(we){
-      newC=isSign?we.value.split("\n").map(l=>l.trim()).filter(l=>CJK.test(l)).join("\n"):we.value.replace(/\s+/g,"");
+      var wordLines=we.value.split("\n").map(l=>l.replace(/\s+/g,"")).filter(l=>CJK.test(l));
+      newC=isSign?wordLines.join("\n"):wordLines.join("");
       if(!CJK.test(newC)) return fail("Please enter Chinese text.");
       if(newC!==c && deck().some(x=>x.c===newC)) return fail("“"+newC.replace(/\n/g," / ")+"” is already in the deck.");
     }
@@ -722,14 +749,14 @@ function renderEdit(main,c){
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
     if($("#e-flag").checked){ upd.flag=true; const note=$("#e-note").value.trim(); if(note) upd.flagNote=note; else delete upd.flagNote; }
     else { delete upd.flag; delete upd.flagNote; }
-    await applyCardUpdate(c,upd,newC,pin!==d.p);
+    await applyCardUpdate(c,upd,newC,pin!==d.p,isSign?undefined:wordLines);
     leave(upd.c);
   };
 }
 /* persist an edited card; when the Chinese text changes (OCR slip), recompute
    pinyin/segmentation/gloss (unless pinyin was set by hand) and move progress,
    thumbnail and queue entries to the new key. */
-async function applyCardUpdate(c,upd,newC,pinByHand){
+async function applyCardUpdate(c,upd,newC,pinByHand,lines){
   const isSign=upd.kind==="sign";
   if(newC && newC!==c){
     upd.c=newC;
@@ -741,8 +768,8 @@ async function applyCardUpdate(c,upd,newC,pinByHand){
         upd.segs=res.map(r=>r.segs); upd.gloss=res.flatMap(r=>r.gloss.map(g=>({w:g.w,p:g.p,m:g.m})));
         if(!pinByHand) upd.p=res.map(r=>r.py).join(" / ");
       }else{
-        const chars=[...newC].filter(ch=>CJK.test(ch)).map(ch=>({ch}));
-        const segs=segmentChars(chars).map(seg=>seg.map(x=>x.ch).join(""));
+        const oldLines=lines||frontLines(upd); /* keep the photo's breaks when only characters changed */
+        const segs=segWithBreaks(recutLines(newC,oldLines).split("\n"));
         if(segs.length>1) upd.seg=segs; else delete upd.seg;
         if(!pinByHand) upd.p=pinyinPro.pinyin(newC,{type:"array",toneType:"symbol"}).join(" ");
       }
@@ -754,6 +781,7 @@ async function applyCardUpdate(c,upd,newC,pinByHand){
     S.queue=S.queue.map(x=>x===c?newC:x); if(S.saved) S.saved.queue=S.saved.queue.map(x=>x===c?newC:x);
     if(S.single===c) S.single=newC;
   }
+  if(lines && !isSign && (!newC||newC===c)){ const segs=segWithBreaks(lines); if(segs.length>1) upd.seg=segs; else delete upd.seg; }
   const i=S.custom.findIndex(x=>x.c===c);
   if(i>=0) S.custom[i]=upd; else S.custom.push(upd);
   try{ await idbPut("custom",upd); }catch(e){}
@@ -1327,7 +1355,8 @@ async function signAskAI(id){
     const c=lines.join("\n"), res=(sg.res||[]).filter(Boolean);
     const [r]=await aiAsk([{kind:"sign",c,p:res.map(x=>x.py).join(" / "),m:sg.mean||"",gloss:res.flatMap(x=>x.gloss),mt:{src:"gloss",verified:false,suspect:"read from a photo by OCR"}}]);
     if(!SIGN[id]) return;
-    const zh=r.zh&&CJK.test(r.zh)?r.zh.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):c;
+    let zh=r.zh&&CJK.test(r.zh)?r.zh.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):c;
+    zh=recutLines(zh,lines); /* the model often drops the line breaks — the photo's lines win */
     sg.lines=zh.split("\n"); sg.ai={zh,p:r.p,m:r.m,note:r.note,ok:r.ok};
   }catch(err){ if(SIGN[id]) sg.aiErr=err&&err.message||String(err); } /* → signPreview falls back to the offline model */
   if(SIGN[id]){ delete sg.aiBusy; delete sg.aiPromise; }
