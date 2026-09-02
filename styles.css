@@ -105,11 +105,6 @@ button{font:inherit;color:inherit}
 .ok{font-size:14px;color:var(--jade);margin-top:12px}
 .badge{font-size:14px;color:var(--text2);line-height:1.45}
 .listhead{font-size:13px;font-weight:500;letter-spacing:.2px;color:var(--text2);margin:28px 0 8px}
-.item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
-.item .left{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.item .c{font-family:var(--hanzi);font-size:20px}
-.item .p{font-family:var(--mono);font-size:13px;color:var(--text2)}
-.item .m{font-size:14px;color:var(--text2)}
 .del{background:none;border:none;cursor:pointer;font-size:14px;color:var(--text2);padding:10px 6px;min-height:40px;border-radius:8px}
 .del:active{background:var(--panel2)}
 .more .mrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
@@ -233,9 +228,8 @@ body.noscroll{overflow:hidden}
   color:var(--bone);font-family:var(--hanzi);font-size:20px;padding:10px 12px;outline:none;border-radius:10px}
 .signed .sp{font-family:var(--mono);font-size:14px;color:var(--text2);margin-top:3px}
 .smean{margin-top:8px;font-size:16px}
-.sgloss,.gtable{display:grid;grid-template-columns:auto auto 1fr;gap:4px 12px;font-size:15px;color:var(--text2);margin-top:8px;text-align:left}
-.sgloss .w,.gtable .w{font-family:var(--hanzi);color:var(--bone)} .sgloss .p,.gtable .p{font-family:var(--mono);font-size:13px}
-.gtable{margin-top:16px} .gtable .w{font-size:16px}
+.sgloss{display:grid;grid-template-columns:auto auto 1fr;gap:4px 12px;font-size:15px;color:var(--text2);margin-top:8px;text-align:left}
+.sgloss .w{font-family:var(--hanzi);color:var(--bone)} .sgloss .p{font-family:var(--mono);font-size:13px}
 .signfront{width:100%;max-width:440px;margin:0 auto}
 .signimg{max-width:100%;max-height:220px;display:block;margin:0 auto 10px;border:1px solid var(--line);border-radius:10px}
 .signimg.full{max-height:420px}
@@ -269,5 +263,4 @@ body.noscroll{overflow:hidden}
 .pimg img{max-width:100%;display:block;border:1px solid var(--line);border-radius:10px;margin-bottom:6px}
 .pimg .imgacts{display:flex;gap:14px}
 .pimg .del.on{color:var(--jade)}
-.cardimg img{max-width:100%;border:1px solid var(--line);border-radius:10px;margin-top:18px}
 
