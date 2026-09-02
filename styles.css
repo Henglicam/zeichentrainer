@@ -75,6 +75,7 @@ button{font:inherit;color:inherit}
 .front.tap{cursor:pointer;-webkit-tap-highlight-color:transparent} .front.tap:active .reticle{opacity:.75}
 .hint{margin-top:22px;font-size:13px;color:var(--faint)}
 .btn.block{width:100%}
+.snaprow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .btn.primary{background:var(--verm);border-color:var(--verm)}
 .btn.danger{background:none;border-color:var(--verm);color:var(--verm)}
 .btn.mini{min-height:44px;padding:10px 14px;font-size:14px}
