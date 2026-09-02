@@ -7,7 +7,7 @@
 
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
-const APP_V=76; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=77; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1524,6 +1524,19 @@ async function cropSign(id){
       return cov/ch.length; };
     const score=ls=>{ const n=ls.flatMap(l=>l.cf).length; if(!n) return 0; const frag=Math.min(1,(n/ls.length)/4); /* many one- and two-character lines = fragments */
       return meanCf(ls)*Math.pow(n,0.35)*frag*(0.75+0.5*dictCover(ls)); };
+    /* Black-on-white copy (Otsu threshold on the grey image, polarity so that the majority is white): the reader's own
+       thresholding fails on light text on a strong colour — white on red behind glass read as nothing at any size,
+       the binarised copy read 业主直租 at 93 % (v77). */
+    const toBW=(bmp,scale)=>{ const cv=document.createElement("canvas"); cv.width=Math.max(1,Math.round(bmp.width*scale)); cv.height=Math.max(1,Math.round(bmp.height*scale));
+      const ctx=cv.getContext("2d",{alpha:false,willReadFrequently:true}); ctx.drawImage(bmp,0,0,cv.width,cv.height);
+      const im=ctx.getImageData(0,0,cv.width,cv.height), d=im.data, hist=new Array(256).fill(0), n=d.length/4;
+      for(let i=0;i<d.length;i+=4){ const g=(d[i]*299+d[i+1]*587+d[i+2]*114)/1000|0; d[i]=g; hist[g]++; }
+      let sum=0; for(let g=0;g<256;g++) sum+=g*hist[g];
+      let sumB=0, wB=0, best=0, thr=128; for(let g=0;g<256;g++){ wB+=hist[g]; if(!wB) continue; const wF=n-wB; if(!wF) break; sumB+=g*hist[g]; const mB=sumB/wB, mF=(sum-sumB)/wF, v=wB*wF*(mB-mF)*(mB-mF); if(v>best){ best=v; thr=g; } }
+      let dark=0; for(let i=0;i<d.length;i+=4) if(d[i]<=thr) dark++;
+      const textDark=dark<n/2; /* the minority is the text */
+      for(let i=0;i<d.length;i+=4){ const v=(d[i]<=thr)===textDark?0:255; d[i]=d[i+1]=d[i+2]=v; }
+      ctx.putImageData(im,0,0); return new Promise(res=>cv.toBlob(res,"image/jpeg",READ_JPEG)); };
     const toJpeg=(bmp,scale)=>{ const cv=document.createElement("canvas"); cv.width=Math.max(1,Math.round(bmp.width*scale)); cv.height=Math.max(1,Math.round(bmp.height*scale));
       cv.getContext("2d",{alpha:false}).drawImage(bmp,0,0,cv.width,cv.height); return new Promise(res=>cv.toBlob(res,"image/jpeg",READ_JPEG)); };
     const scaleBoxes=(ls,k)=>ls.map(l=>({...l,bx:l.bx.map(b=>b&&{x0:b.x0/k,y0:b.y0/k,x1:b.x1/k,y1:b.y1/k})}));
@@ -1568,6 +1581,15 @@ async function cropSign(id){
           passes.push({lines:sc,img:dk2.blob,angle:dk2.angle,tightened:true,scale:k});
           tightLines.push(...sc);
         }
+        /* colour readings weak? read the binarised copy at the same sizes */
+        const colourBest=Math.max(...passes.map(p=>score(p.lines)));
+        if(colourBest<180){
+          for(const k of scales){
+            const lines=await readPass(await toBW(bmp2,k)), sc=k===1?lines:scaleBoxes(lines,k);
+            passes.push({lines:sc,img:dk2.blob,angle:dk2.angle,tightened:true,scale:k,bw:true});
+            tightLines.push(...sc);
+          }
+        }
         bmp2.close();
         /* Merge line by line: every reading tends to get some line right and lose another, so the lines of all tight
            passes are clustered by their vertical band and the most confident reading of each band is kept (v75). */
@@ -1590,8 +1612,14 @@ async function cropSign(id){
       }
       bmp.close();
     }
+    if(!passes.some(p=>p.lines.length)){
+      status("nothing read yet, trying a black-and-white copy …");
+      const bmp=await createImageBitmap(dk.blob), guessH=bmp.height/1.6; /* one or two lines in the frame */
+      for(const t of [45,65,90]){ const k=Math.min(1,t/guessH); const lines=await readPass(await toBW(bmp,k)); passes.push({lines:scaleBoxes(lines,k),img:dk.blob,angle:dk.angle,tightened:false,scale:k,bw:true}); }
+      bmp.close();
+    }
     passes.sort((a,b)=>score(b.lines)-score(a.lines));
-    r.passes=passes.map(p=>({s:Math.round(score(p.lines)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),tight:p.tightened}));
+    r.passes=passes.map(p=>({s:Math.round(score(p.lines)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),tight:p.tightened,bw:!!p.bw}));
     const best=passes[0], lines=best.lines, img=best.img, tightened=best.tightened; dk=best;
     if(tightened) S.pendingImg=cardBlob||best.img;
     if(!lines.length){ status("No Chinese characters recognized — frame the characters tightly and try again."); return; }
