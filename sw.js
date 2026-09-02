@@ -1,4 +1,4 @@
-const CACHE = "zt-v55";
+const CACHE = "zt-v56";
 /* OCR assets (./vendor/, ~12 MB) live in their own cache that survives shell
    updates — otherwise every cache version bump would re-download all of
    Tesseract. Only bump this when vendor files change. */
@@ -23,10 +23,24 @@ self.addEventListener("activate", e => {
    worker to pull a newer shell from a mirror (jsDelivr serves the repo). The files land in the
    current cache and are served from there; the worker script itself stays until github.io is
    reachable again — it only carries the cache name. Model files (> 20 MB) are not mirrored. */
+let MIRROR = "https://cdn.jsdelivr.net/gh/henglicam/zeichentrainer@main/"; /* the page sends its setting on start */
+const TYPES = { html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8", css: "text/css; charset=utf-8", json: "application/json", webmanifest: "application/manifest+json", png: "image/png", wasm: "application/wasm", gz: "application/gzip", txt: "text/plain; charset=utf-8" };
+const typeOf = path => TYPES[path.split(".").pop()] || "application/octet-stream";
 self.addEventListener("message", e => {
   const d = e.data || {};
-  if (d.type === "mirror-update" && d.mirror) e.waitUntil(mirrorUpdate(d.mirror, e.source, +d.local || 0));
+  if (d.type === "mirror" && d.mirror) MIRROR = d.mirror;
+  if (d.type === "mirror-update" && d.mirror) { MIRROR = d.mirror; e.waitUntil(mirrorUpdate(d.mirror, e.source, +d.local || 0)); }
 });
+/* vendor files (OCR, dictionaries — all under jsDelivr's 20 MB cap) can come from the mirror when
+   github.io is unreachable: text recognition must not need the VPN either */
+function relPath(url) { const scope = new URL(self.registration.scope).pathname; const p = new URL(url).pathname; return p.startsWith(scope) ? p.slice(scope.length) : p.replace(/^\//, ""); }
+async function fromMirror(req) {
+  const path = relPath(req.url);
+  const res = await fetch(MIRROR + path, { cache: "no-store" });
+  if (!res.ok) throw new Error("mirror " + res.status);
+  const body = await res.blob();
+  return new Response(body, { headers: { "Content-Type": typeOf(path) } });
+}
 async function mirrorUpdate(mirror, client, pageVersion) {
   const say = msg => { if (client) client.postMessage({ type: "mirror-update", ...msg }); };
   try {
@@ -44,7 +58,7 @@ async function mirrorUpdate(mirror, client, pageVersion) {
       if (!res.ok) throw new Error("mirror " + res.status + " for " + path);
       const body = await res.blob();
       /* type by extension, never from the mirror: jsDelivr hands HTML out as text/plain */
-      const type = { html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8", css: "text/css; charset=utf-8", json: "application/json", webmanifest: "application/manifest+json", png: "image/png" }[path.split(".").pop()] || "application/octet-stream";
+      const type = typeOf(path);
       puts.push([new Request(new URL(a, self.registration.scope).href), new Response(body, { headers: { "Content-Type": type } })]);
     }
     for (const [req, res] of puts) await cache.put(req, res); /* only after every file arrived */
@@ -63,8 +77,16 @@ self.addEventListener("fetch", e => {
       if (res.ok) {
         const copy = res.clone();
         caches.open(isVendor ? OCR_CACHE : CACHE).then(c => c.put(req, copy)).catch(() => {});
+        return res;
       }
+      if (isVendor) throw new Error("origin " + res.status); /* → mirror */
       return res;
-    }).catch(() => isVendor ? Response.error() : caches.match("./index.html")))
+    }).catch(async err => {
+      if (isVendor) {
+        try { const res = await fromMirror(req); try { const c = await caches.open(OCR_CACHE); await c.put(req, res.clone()); } catch (e3) {} return res; } /* cached before answering, so "ready" is true at once */
+        catch (e2) { return Response.error(); }
+      }
+      return caches.match("./index.html");
+    }))
   );
 });

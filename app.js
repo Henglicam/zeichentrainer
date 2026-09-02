@@ -454,6 +454,7 @@ function renderMore(main){
     </div>
     <div class="mrow"><div><div class="t">Review queue</div><div class="s" id="ai-runstatus"></div></div><button class="btn mini" id="ai-run" hidden></button></div>
     <div class="mrow"><div><div class="t">Storage</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
+    <div class="mrow"><div><div class="t">Text recognition</div><div class="s" id="ocr-status">checking …</div></div><button class="btn mini" id="ocr-btn" hidden></button></div>
     <div class="listhead">Updates without a VPN</div>
     <div class="mrow"><div><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div></div><button class="btn mini" id="mirror-check">Check now</button></div>
     <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>
@@ -468,7 +469,8 @@ function renderMore(main){
   $("#import").onclick=()=>$("#imp").click();
   $("#share-flag").onclick=shareFlagged;
   const cs=$("#cleanshots"); if(cs) cs.onclick=cleanupShots;
-  $("#mirror-url").onchange=async e=>{ await setSetting("mirror",e.target.value.trim()); };
+  $("#mirror-url").onchange=async e=>{ await setSetting("mirror",e.target.value.trim()); tellMirror(); };
+  renderOcrRow();
   $("#mirror-check").onclick=()=>{ mirrorCheck(true); };
   renderNmtRow(); renderAiRow();
   $("#reset").onclick=resetAll;
@@ -589,11 +591,6 @@ async function charInfo(w,btn,d){
   }catch(e){ box.innerHTML=`<span class="badge">dictionary not available</span>`; }
 }
 function wireChars(d){ document.querySelectorAll(".chars:not(.sub) .ch").forEach(b=> b.onclick=e=>{ e.stopPropagation(); charInfo(b.dataset.ch,b,d); }); }
-/* the whole photo under the back: the stored full picture, or the inbox photo the card came from */
-function contextHTML(d){
-  const full=d.imgFull||(d.shot&&(S.inbox.find(x=>x.id===d.shot)||{}).blob);
-  return full?`<div class="cardimg"><img src="${URL.createObjectURL(full)}" alt="context"></div>`:"";
-}
 function backHTML(d){
   const wordBlock = d.w ? `<div class="rule"></div>
     <div class="word"><span class="w">${esc(d.w)}</span><span class="wp">${esc(d.wp||"")}</span></div>
@@ -602,7 +599,7 @@ function backHTML(d){
     ${d.mt&&!d.mt.verified?`<span class="flag">meaning ${d.mt.src==="nmt"?"from the offline translation":d.mt.src==="phrasebook"?"from the phrasebook":d.mt.src==="llm"?"from the online AI":d.mt.src==="dict"?"from the dictionary":"composed word by word"}, unverified${d.mt.pending?" (translation pending)":""}${d.mt.suspect?" (reading uncertain: "+esc(d.mt.suspect)+")":""}</span>`:""}
 ` : "";
   return `<div class="pin">${esc(d.p)}${sayBtn(d)}</div><div class="mean">${esc(d.m)}</div>${charsHTML(d)}
-    ${d.kind==="sign"?glossBlock:wordBlock}${contextHTML(d)}`;
+    ${d.kind==="sign"?glossBlock:wordBlock}`;
 }
 function endSingle(){
   /* leave single-card test mode and restore the session queue */
@@ -1717,7 +1714,7 @@ if("serviceWorker" in navigator){
       reg.update();
       /* installed PWAs rarely check for updates on their own — check when brought to foreground */
       document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ reg.update().catch(()=>{}); mirrorCheck(); } });
-      mirrorCheck();
+      mirrorCheck(); tellMirror();
     }).catch(()=>{});
     navigator.serviceWorker.addEventListener("message",e=>{
       const d=e.data||{}; if(d.type!=="mirror-update") return;
@@ -1747,6 +1744,29 @@ function mirrorCheck(force){
   ctrl.postMessage({type:"mirror-update",mirror:mirrorURL(),local});
   const st=$("#mirror-status"); if(st) st.textContent="checking the mirror …";
   setTimeout(()=>{ if(MIRROR.busy){ MIRROR.busy=false; MIRROR.last={status:"error",error:"no answer from the mirror"}; const s2=$("#mirror-status"); if(s2) s2.textContent=mirrorText(); } },30000);
+}
+/* the worker needs the mirror for vendor files too — tell it on start and whenever the setting changes */
+function tellMirror(){ const c=navigator.serviceWorker&&navigator.serviceWorker.controller; if(c) c.postMessage({type:"mirror",mirror:mirrorURL()}); }
+/* the reader's files (OCR engine, language data, dictionary): cached once, then offline for good */
+const OCR_FILES=["tesseract.min.js","worker.min.js","tesseract-core-simd-lstm.wasm.js","tesseract-core-simd-lstm.wasm","chi_sim.traineddata.gz","pinyin-pro.js","cedict.tsv.gz"];
+async function ocrCached(){
+  if(!window.caches) return 0;
+  let n=0; for(const f of OCR_FILES){ try{ if(await caches.match(new URL("./vendor/"+f,location.href).href)) n++; }catch(e){} }
+  return n;
+}
+async function renderOcrRow(){
+  const st=$("#ocr-status"), btn=$("#ocr-btn"); if(!st||!btn) return;
+  const n=await ocrCached(); if(!$("#ocr-status")) return;
+  if(n===OCR_FILES.length){ st.textContent="ready — text recognition works offline and without a VPN"; btn.hidden=true; return; }
+  st.textContent=`${OCR_FILES.length-n} of ${OCR_FILES.length} files not on the phone yet (≈12 MB once). Downloads by itself on first use, or now:`;
+  btn.hidden=false; btn.disabled=false; btn.textContent="Download";
+  btn.onclick=async()=>{
+    btn.disabled=true; let done=0;
+    for(const f of OCR_FILES){ st.textContent=`downloading ${f} (${done+1}/${OCR_FILES.length}) …`;
+      try{ const r=await fetch("./vendor/"+f); if(!r.ok) throw new Error(r.status); await r.blob(); done++; }
+      catch(e){ st.textContent="download failed at "+f+" — no connection to github.io or the mirror"; btn.disabled=false; return; } }
+    renderOcrRow();
+  };
 }
 function mirrorText(){
   const d=MIRROR.last; if(!d) return "checks github.io and the mirror on every start";
