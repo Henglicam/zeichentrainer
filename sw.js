@@ -1,4 +1,4 @@
-const CACHE = "zt-v80";
+const CACHE = "zt-v81";
 /* OCR assets (./vendor/, ~12 MB) live in their own cache that survives shell
    updates — otherwise every cache version bump would re-download all of
    Tesseract. Only bump this when vendor files change. */
@@ -8,11 +8,14 @@ const ASSETS = [
   "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png"
 ];
 
+/* the shell assets, straight from the server (cache:"reload") into the current cache */
+const fillShell = () => caches.open(CACHE).then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: "reload" }))));
+
 self.addEventListener("install", e => {
   /* cache:"reload" — straight from the server, past the browser's HTTP cache. GitHub Pages sends max-age=600, so
      after two deploys within ten minutes a new worker could otherwise fill its cache with the previous shell
      (v70: the phone kept showing v69 with the v70 worker installed). */
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting()));
+  e.waitUntil(fillShell().then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", e => {
@@ -34,7 +37,7 @@ self.addEventListener("message", e => {
   if (d.type === "mirror" && d.mirror) MIRROR = d.mirror;
   if (d.type === "mirror-update" && d.mirror) { MIRROR = d.mirror; e.waitUntil(mirrorUpdate(d.mirror, e.source, +d.local || 0)); }
   /* the page found its script and its label at different versions (a mixed shell): refill from the server, then it reloads */
-  if (d.type === "refresh") e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: "reload" }))))
+  if (d.type === "refresh") e.waitUntil(fillShell()
     .then(() => { if (e.source) e.source.postMessage({ type: "refreshed", ok: true }); }, err => { if (e.source) e.source.postMessage({ type: "refreshed", ok: false, error: String(err && err.message || err) }); }));
 });
 /* vendor files (OCR, dictionaries — all under jsDelivr's 20 MB cap) can come from the mirror when
