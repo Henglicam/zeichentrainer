@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" "); /* syllables with tone marks, space-separated */
-const APP_V=81; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=82; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -135,15 +135,16 @@ function setStats(){
   document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.mode===S.mode||(b.dataset.mode==="cards"&&S.mode==="add")));
 }
 
-const CLR={verm:"#B23A2E",bone:"#EDE6D6",line:"#2E2E24"};
+/* colours the script draws itself come from the stylesheet's tokens, so canvases and inline SVG follow light and dark */
+const cssVar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 function reticleSVG(single,W=260,H=260){
   const tick=14,cx=W/2,cy=H/2;
   const cross = single ? `
-    <line x1="${cx}" y1="0" x2="${cx}" y2="${H}" stroke="${CLR.verm}" stroke-width="1" stroke-dasharray="2 6" opacity="${S.revealed?0.5:0.16}"/>
-    <line x1="0" y1="${cy}" x2="${W}" y2="${cy}" stroke="${CLR.verm}" stroke-width="1" stroke-dasharray="2 6" opacity="${S.revealed?0.5:0.16}"/>` : "";
+    <line x1="${cx}" y1="0" x2="${cx}" y2="${H}" style="stroke:var(--tint)" stroke-width="1" stroke-dasharray="2 6" opacity="${S.revealed?0.5:0.16}"/>
+    <line x1="0" y1="${cy}" x2="${W}" y2="${cy}" style="stroke:var(--tint)" stroke-width="1" stroke-dasharray="2 6" opacity="${S.revealed?0.5:0.16}"/>` : "";
   const corners=[[0,0,1,1],[W,0,-1,1],[0,H,1,-1],[W,H,-1,-1]].map(([x,y,dx,dy])=>
-    `<g stroke="${CLR.bone}" stroke-width="1.25" opacity="0.8"><line x1="${x}" y1="${y}" x2="${x+dx*tick}" y2="${y}"/><line x1="${x}" y1="${y}" x2="${x}" y2="${y+dy*tick}"/></g>`).join("");
-  return `<svg width="${W}" height="${H}"><rect x="0.5" y="0.5" width="${W-1}" height="${H-1}" fill="none" stroke="${CLR.line}"/>${cross}${corners}</svg>`;
+    `<g style="stroke:var(--label3)" stroke-width="1.25" opacity="0.8"><line x1="${x}" y1="${y}" x2="${x+dx*tick}" y2="${y}"/><line x1="${x}" y1="${y}" x2="${x}" y2="${y+dy*tick}"/></g>`).join("");
+  return `<svg width="${W}" height="${H}"><rect x="0.5" y="0.5" width="${W-1}" height="${H-1}" fill="none" style="stroke:var(--sep)"/>${cross}${corners}</svg>`;
 }
 /* text that lost its line breaks (AI answer, rename) is re-cut where the original broke,
    as long as the character count still matches */
@@ -1768,7 +1769,7 @@ function attachRefView(cv,sg,k,i){
   const N=600; cv.width=N; cv.height=N; const ctx=cv.getContext("2d");
   const v={cx:0,cy:0,side:1,bmp:null};
   const draw=()=>{
-    ctx.fillStyle="#141410"; ctx.fillRect(0,0,N,N); if(!v.bmp) return;
+    ctx.fillStyle=cssVar("--fill")||"#888"; ctx.fillRect(0,0,N,N); if(!v.bmp) return;
     const sx=v.cx-v.side/2, sy=v.cy-v.side/2, kk=N/v.side;
     const ix=Math.max(0,sx), iy=Math.max(0,sy), ex=Math.min(v.bmp.width,sx+v.side), ey=Math.min(v.bmp.height,sy+v.side);
     if(ex>ix&&ey>iy) ctx.drawImage(v.bmp,ix,iy,ex-ix,ey-iy,(ix-sx)*kk,(iy-sy)*kk,(ex-ix)*kk,(ey-iy)*kk);
@@ -1826,9 +1827,9 @@ function openDrawSheet(id,k,i,apply){
   const close=()=>{ seq++; el.remove(); document.body.classList.remove("noscroll"); window.removeEventListener("resize",fitRef); refView.close(); };
   const paint=()=>{
     ctx.clearRect(0,0,cv.width,cv.height);
-    ctx.strokeStyle="rgba(237,230,214,.16)"; ctx.lineWidth=2; ctx.setLineDash([10,10]);
+    ctx.strokeStyle=cssVar("--sep")||"#ccc"; ctx.lineWidth=2; ctx.setLineDash([10,10]);
     ctx.beginPath(); ctx.moveTo(cv.width/2,0); ctx.lineTo(cv.width/2,cv.height); ctx.moveTo(0,cv.height/2); ctx.lineTo(cv.width,cv.height/2); ctx.stroke(); ctx.setLineDash([]);
-    ctx.strokeStyle="#EDE6D6"; ctx.lineWidth=22; ctx.lineCap="round"; ctx.lineJoin="round";
+    ctx.strokeStyle=cssVar("--label")||"#000"; ctx.lineWidth=22; ctx.lineCap="round"; ctx.lineJoin="round";
     for(const st of strokes.concat(cur?[cur]:[])){ if(!st.length) continue; ctx.beginPath(); ctx.moveTo(st[0][0],st[0][1]); for(const p of st) ctx.lineTo(p[0],p[1]); if(st.length===1) ctx.lineTo(st[0][0]+0.1,st[0][1]); ctx.stroke(); }
   };
   const pt=e=>{ const r=cv.getBoundingClientRect(); return [(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height]; };
