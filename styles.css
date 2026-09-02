@@ -72,7 +72,6 @@ button{font:inherit;color:inherit}
 .btn{background:var(--panel2);color:var(--bone);border:1px solid var(--line);border-radius:var(--r);
   cursor:pointer;font-family:var(--sans);font-size:15px;min-height:48px;padding:12px 18px;letter-spacing:.2px}
 .btn:active{filter:brightness(1.15)}
-.btn.wide{width:220px;margin-top:28px}
 .front.tap{cursor:pointer;-webkit-tap-highlight-color:transparent} .front.tap:active .reticle{opacity:.75}
 .hint{margin-top:22px;font-size:13px;color:var(--faint)}
 .btn.block{width:100%}
@@ -167,8 +166,6 @@ body.noscroll{overflow:hidden}
 .st{font-size:12px;font-weight:500;color:var(--text2)} .st.due{color:var(--verm)}
 .detailacts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px}
 .detailacts .primary{grid-column:1/-1}
-.ro{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--mute);line-height:1.4}
-.ro.hanzi{font-family:var(--hanzi);font-size:20px;color:var(--bone)}
 .row input{flex:1;min-width:0}
 
 /* inbox photos */

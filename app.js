@@ -7,6 +7,7 @@
 
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
+const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" "); /* syllables with tone marks, space-separated */
 const APP_V=81; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -61,11 +62,18 @@ function idbDel(store,key){ return _os(store,"readwrite").then(os=>new Promise((
 function idbAll(store){ return _os(store,"readonly").then(os=>new Promise((res,rej)=>{const r=os.getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error);})); }
 function idbClear(store){ return _os(store,"readwrite").then(os=>new Promise((res,rej)=>{const r=os.clear();r.onsuccess=()=>res();r.onerror=()=>rej(r.error);})); }
 
+/* a card into the deck and the store: replace by key or append; storage errors are swallowed like everywhere else */
+async function putCard(upd,key){
+  const k=key||upd.c, i=S.custom.findIndex(x=>x.c===k);
+  if(i>=0) S.custom[i]=upd; else S.custom.push(upd);
+  try{ await idbPut("custom",upd); }catch(e){}
+}
 /* ---------- State ---------- */
 const S = { mode:"study", progress:{}, custom:[], inbox:[],
   queue:[], idx:0, revealed:false, done:0, ahead:false, ready:false,
   pendingImg:null, pendingFull:null, pendingUse:"crop", prefill:null, persist:null,
-  detail:null, query:"", filterUnv:false, filterFlag:false, filterAi:false, settings:{}, single:null, saved:null, editing:null };
+  detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, settings:{}, single:null, saved:null,
+  editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null };
 
 function deck(){ return S.custom; }
 function buildQueue(includeAhead){
@@ -213,7 +221,7 @@ function render(){
   if(S.mode==="add")   return renderAdd(main);
   if(S.mode==="inbox") return renderInbox(main);
   if(S.mode==="more")  return renderMore(main);
-  if(S.mode==="cards") return S.editing?renderEdit(main,S.editing):S.detail?renderCardDetail(main,S.detail):renderCards(main);
+  if(S.mode==="cards") return S.detail?renderCardDetail(main,S.detail):renderCards(main);
 }
 /* ---------- online AI review (T3, opt-in) ----------
    Flagged cards, doubtful OCR and pending translations can be checked by an
@@ -290,9 +298,7 @@ async function aiReview(list,status){
     const d=list[i], sg=sugg[i]; if(!d||!sg) continue;
     const upd={...d, ai:{...sg, c:d.c}};
     if(!sg.zh) upd.ai.zh=d.c;
-    const k=S.custom.findIndex(x=>x.c===d.c);
-    if(k>=0) S.custom[k]=upd; else S.custom.push(upd);
-    try{ await idbPut("custom",upd); }catch(e){} n++;
+    await putCard(upd); n++;
   }
   return n;
 }
@@ -321,8 +327,7 @@ async function aiAcceptAll(){
 async function aiDismiss(c){
   const d=cardOf(c); if(!d||!d.ai) return;
   const upd={...d}; delete upd.ai; if(upd.mt&&upd.mt.suspect){ upd.mt={...upd.mt}; delete upd.mt.suspect; } /* seen by a human */
-  const k=S.custom.findIndex(x=>x.c===c); if(k>=0) S.custom[k]=upd; else S.custom.push(upd);
-  try{ await idbPut("custom",upd); }catch(e){}
+  await putCard(upd);
 }
 function aiBoxHTML(d){
   if(!d.ai) return "";
@@ -490,9 +495,7 @@ async function setFlag(c,on,note){
   const upd={...d};
   if(on){ upd.flag=true; if(note!==undefined){ if(note) upd.flagNote=note; else delete upd.flagNote; } }
   else { delete upd.flag; delete upd.flagNote; }
-  const i=S.custom.findIndex(x=>x.c===c);
-  if(i>=0) S.custom[i]=upd; else S.custom.push(upd);
-  try{ await idbPut("custom",upd); }catch(e){}
+  await putCard(upd,c);
 }
 function flagNoteHTML(d){
   return d.flag?`<div class="flagbox">⚑ Flagged for review${d.flagNote?`: ${esc(d.flagNote)}`:""}</div>`:"";
@@ -517,11 +520,16 @@ async function shareFlagged(){
   try{ await navigator.clipboard.writeText(text); alert("Copied "+n+" flagged cards to the clipboard."); }
   catch(err){ alert("Sharing is not available here."); }
 }
+/* one object URL per blob, for images that re-render on every tap (the study front, the Add form) — never revoked while the blob lives */
+const BLOBURL=new WeakMap();
+function urlOf(blob){ let u=BLOBURL.get(blob); if(!u){ u=URL.createObjectURL(blob); BLOBURL.set(blob,u); } return u; }
+/* the whole photo of a card: stored with it, or still in the inbox */
+const fullPhoto=d=>d.imgFull||(d.shot&&(S.inbox.find(x=>x.id===d.shot)||{}).blob)||null;
 /* the photo on the front: the crop, or — after a tap on it — the whole photo (S.fullPic) */
 function frontPic(d){
-  const full=d.imgFull||(d.shot&&(S.inbox.find(x=>x.id===d.shot)||{}).blob);
+  const full=fullPhoto(d);
   const blob=S.fullPic&&full?full:d.img; if(!blob) return "";
-  return `<img class="signimg${S.fullPic&&full?" full":""}" data-pic="1" src="${URL.createObjectURL(blob)}" alt="photo">`;
+  return `<img class="signimg${S.fullPic&&full?" full":""}" data-pic="1" src="${urlOf(blob)}" alt="photo">`;
 }
 function frontHTML(d){
   if(d.kind==="sign"){
@@ -683,7 +691,7 @@ function nextSingle(c){
 function renderAdd(main){
   const curImg=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
   const imgField=curImg?`<div class="field" id="f-imgfield"><label>Image (stays on this phone)</label>
-      <div class="pimg"><img src="${URL.createObjectURL(curImg)}" alt="card image">
+      <div class="pimg"><img src="${urlOf(curImg)}" alt="card image">
       <span class="imgacts">${S.pendingFull&&S.pendingImg?`<button class="del${S.pendingUse!=="full"?" on":""}" id="f-usecrop">CROP</button><button class="del${S.pendingUse==="full"?" on":""}" id="f-usefull">FULL PHOTO</button>`:""}<button class="del" id="f-noimg">Remove image</button></span></div></div>`:"";
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back-cards">← Cards</button></div>
@@ -719,7 +727,7 @@ function renderAdd(main){
 /* ---------- Cards: library with photos, detail, single-card test, edit ---------- */
 const THUMB={};
 /* list thumbnail: the whole photo when the card has one (H), otherwise the crop */
-function thumbBlob(d){ return d.imgFull||(d.shot&&(S.inbox.find(x=>x.id===d.shot)||{}).blob)||d.img; }
+function thumbBlob(d){ return fullPhoto(d)||d.img; }
 function thumbURL(d){ return THUMB[d.c]||(THUMB[d.c]=URL.createObjectURL(thumbBlob(d))); }
 function dropThumb(c){ if(THUMB[c]){ URL.revokeObjectURL(THUMB[c]); delete THUMB[c]; } }
 function cardStatus(d){
@@ -832,9 +840,8 @@ function renderEdit(main,c){
   const syncWord=()=>{ $("#e-word").value=sg.lines.join("\n"); };
   const drawLines=()=>{
     const box=$("#e-lines"); if(!box) return;
-    box.innerHTML=sg.lines.map((l,k)=>`<div class="sline">${charStripHTML(eid,k)}<input class="hanzi" data-sid="${eid}" data-sline="${k}" value="${esc(l)}" autocomplete="off"></div>`).join("");
-    box.querySelectorAll("[data-ck]").forEach(b=> b.onclick=()=>{ const [k,i]=b.dataset.ck.split(",").map(Number); openCharPick(eid,k,i,b); });
-    box.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{ sg.lines[+inp.dataset.sline]=inp.value; syncWord(); pinyinFollow(); });
+    box.innerHTML=sg.lines.map((l,k)=>slineHTML(eid,k,l,false)).join("");
+    wireSlines(box,()=>{ syncWord(); pinyinFollow(); });
   };
   /* pinyin follows the text unless it was edited by hand */
   let pinTouched=false; $("#e-pin").oninput=()=>{ pinTouched=true; };
@@ -899,7 +906,7 @@ async function applyCardUpdate(c,upd,newC,pinByHand,lines){
         const oldLines=lines||frontLines(upd); /* keep the photo's breaks when only characters changed */
         const segs=segWithBreaks(recutLines(newC,oldLines).split("\n"));
         if(segs.length>1) upd.seg=segs; else delete upd.seg;
-        if(!pinByHand) upd.p=pinyinPro.pinyin(newC,{type:"array",toneType:"symbol"}).join(" ");
+        if(!pinByHand) upd.p=pySpaced(newC);
       }
     }catch(e){}
     if(S.progress[c]){ S.progress[newC]=S.progress[c]; delete S.progress[c];
@@ -911,9 +918,7 @@ async function applyCardUpdate(c,upd,newC,pinByHand,lines){
   }
   if(lines && !isSign && (!newC||newC===c)){ const segs=segWithBreaks(lines); if(segs.length>1) upd.seg=segs; else delete upd.seg; }
   if(lines && !isSign) upd.lb="photo"; /* lines set by hand count as the photo's */
-  const i=S.custom.findIndex(x=>x.c===c);
-  if(i>=0) S.custom[i]=upd; else S.custom.push(upd);
-  try{ await idbPut("custom",upd); }catch(e){}
+  await putCard(upd,c);
   return upd;
 }
 async function addManual(){
@@ -1026,7 +1031,7 @@ async function quickSave(id,w,p,m,grp,ai){
     S.prefill={w,p,m:""}; S.mode="add"; render(); return;
   }
   if(deck().some(d=>d.c===w)){
-    QSNOTE[id]=`“${w}” is already in the deck.`;
+    QSNOTE[id]=`“${esc(w)}” is already in the deck.`;
   }else{
     /* checked by the AI in the selection bar → verified; otherwise a dictionary prefill */
     const card={c:w,p,m,t:"Custom",at:Date.now(),shot:id,lb:"photo",mt:ai?{src:"llm",verified:true}:{src:"dict",verified:false}};
@@ -1049,7 +1054,7 @@ async function quickSave(id,w,p,m,grp,ai){
     S.custom.push(card);
     try{ await idbPut("custom",card); }catch(e){}
     S.queue=buildQueue(false); QSCARD[id]=w;
-    QSNOTE[id]=`“${w}” saved — ${esc(p)}. `+(ai?"Checked by the AI.":"Auto values, verify when in doubt.")+(card.mt.suspect?` Reading uncertain (${esc(card.mt.suspect)})${aiAutoOn()?", the AI will check it":""}.`:"");
+    QSNOTE[id]=`“${esc(w)}” saved — ${esc(p)}. `+(ai?"Checked by the AI.":"Auto values, verify when in doubt.")+(card.mt.suspect?` Reading uncertain (${esc(card.mt.suspect)})${aiAutoOn()?", the AI will check it":""}.`:"");
     aiAutoSoon();
   }
   /* deselect this word's characters (phrase: everything) — other rows stay available */
@@ -1079,16 +1084,16 @@ async function onOcr(id,region){
     const W=bmp.width,H=bmp.height; bmp.close();
     const dx=region?region.X:0, dy=region?region.Y:0;
     const lines=[];
-    (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>{
+    eachLine(data,symbols=>{
       const cs=[];
-      (l.words||[]).forEach(wd=>(wd.symbols||[]).forEach(sy=>{
+      symbols.forEach(sy=>{
         /* confidence gate: photo clutter (fences, foliage) produces phantom
            characters with low certainty — drop them */
         if(CJK.test(sy.text) && sy.confidence>=35)
           cs.push({ch:sy.text,cf:sy.confidence,b:{x0:sy.bbox.x0+dx,y0:sy.bbox.y0+dy,x1:sy.bbox.x1+dx,y1:sy.bbox.y1+dy}});
-      }));
+      });
       if(cs.length) lines.push(cs);
-    })));
+    });
     if(!lines.length){ status("No Chinese characters recognized."); return; }
     let i=0, g=0; const flat=[];
     lines.forEach((cs,ln)=>{ cs.forEach(c=>{ c.ln=ln; });
@@ -1141,7 +1146,7 @@ function selbarHTML(id){
   };
   const rows=groups.map(gr=>{
     const w0=gr.map(c=>c.ch).join("");
-    const p0=pinyinPro.pinyin(w0,{type:"array",toneType:"symbol"}).join(" ");
+    const p0=pySpaced(w0);
     const m0=(DICT&&DICT.get(w0))||"";
     const f=fixOf(w0), w=f&&f.zh?f.zh:w0, p=f&&f.p?f.p:p0, m=f&&f.m?f.m:m0;
     return `<div class="selbar${f?" ai":""}"><span class="sw">${esc(w)}</span><span class="sp">${esc(p)}</span>
@@ -1153,7 +1158,7 @@ function selbarHTML(id){
   if(groups.length<2) return `${note}${rows}${boxes}<button class="del" style="margin-top:6px" data-clearsel="${id}">clear selection</button>`;
   /* several words selected: the whole string is ONE card — meaning composed word by word */
   const pw0=chars.map(c=>c.ch).join("");
-  const pp0=pinyinPro.pinyin(pw0,{type:"array",toneType:"symbol"}).join(" ");
+  const pp0=pySpaced(pw0);
   const pm0=groups.map(gr=>{
     const w=gr.map(c=>c.ch).join("");
     return w+" "+(bestSense(w)||"?");
@@ -1190,7 +1195,7 @@ function aiOverlayAuto(id){
   const m=single?((DICT&&DICT.get(w))||""):"";
   clearTimeout(_ovAuto);
   _ovAuto=setTimeout(()=>{ if(!OCRRES[id]||!SELS[id]) return;
-    const p=pinyinPro.pinyin(w,{type:"array",toneType:"symbol"}).join(" "); aiOverlayAsk(id,w,p,m); },1200);
+    const p=pySpaced(w); aiOverlayAsk(id,w,p,m); },1200);
 }
 
 /* ---------- Cropping (crop → OCR or card image) ---------- */
@@ -1287,18 +1292,7 @@ async function cropOk(id){
   CROP=null; S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null; S.pendingShot=id;
   S.mode="add"; render();
 }
-async function cropOcr(id){
-  const r=await cropBlob(id);
-  if(!r) return; /* no frame yet — nothing to do */
-  /* the framed area doubles as the card image — '-> Card' carries it along;
-     the full photo stays available as context via the toggle in the Add form */
-  const rec=S.inbox.find(x=>x.id===id);
-  S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null;
-  CROP=null; renderShots();
-  onOcr(id,r);
-}
 
-/* ---------- Sign cards: phrasebook meaning + transcript editor ---------- */
 /* ---------- offline translation (T2): Firefox Translations zh→en in WASM ----------
    Engine + model live in vendor/nmt (model arrives via the fetch-nmt-model
    GitHub Action, ~38 MB gzipped). Opt-in: S.settings.nmt. Loaded lazily in a
@@ -1418,14 +1412,14 @@ function lineMeaning(line){
     const rest=raw.slice(k).split(SIGN_PUNCT)[0]; let len=Math.min(8,rest.length)||1;
     while(len>1 && !(DICT&&DICT.has(rest.slice(0,len)))) len--;
     const w=rest.slice(0,len)||ch;
-    parts.push({w,p:pinyinPro.pinyin(w,{type:"array",toneType:"symbol"}).join(" "),m:bestSense(w),ph:false});
+    parts.push({w,p:pySpaced(w),m:bestSense(w),ph:false});
     k+=w.length;
   }
   const words=parts.filter(x=>!x.punct);
   const full=words.length>0 && words.every(x=>x.ph);
   /* fully phrasebook-matched line reads as English; a composed line shows word + gloss for every part */
   const en=full?words.map(x=>x.m).join(" · "):words.map(x=>x.w+" "+(x.m||"?")).join(" · ");
-  const py=pinyinPro.pinyin(words.map(x=>x.w).join(""),{type:"array",toneType:"symbol"}).join(" ");
+  const py=pySpaced(words.map(x=>x.w).join(""));
   return {en,full,gloss:words,segs:parts.map(x=>x.w),py};
 }
 const SIGN={}; /* id -> {lines:[...], res, full, mean} while the transcript editor is open */
@@ -1441,22 +1435,19 @@ function estimateSkew(imgData,W,H){
   for(let y=0;y<H;y++) for(let x=0;x<W;x++){ if(Math.abs(lum[y*W+x]-med)>60){ xs.push(x); ys.push(y); } }
   if(xs.length<200) return 0;
   const step=Math.max(1,Math.floor(xs.length/20000)); /* sample for speed */
-  let best=0,bestV=-1;
-  for(let a=-20;a<=20;a+=1){
+  /* how peaked the row profile is when the text pixels are rotated by a degrees: text lines give sharp peaks */
+  const profileVar=a=>{
     const r=a*Math.PI/180, c=Math.cos(r), sn=Math.sin(r), hist=new Float64Array(H*2+W*2), off=W;
     let n=0,sum=0;
     for(let i=0;i<xs.length;i+=step){ const yy=Math.round(ys[i]*c-xs[i]*sn)+off; if(yy>=0&&yy<hist.length){ hist[yy]++; n++; } }
     for(let i=0;i<hist.length;i++) sum+=hist[i]*hist[i];
-    const v=sum/n; if(v>bestV){ bestV=v; best=a; }
-  }
+    return sum/n;
+  };
+  let best=0,bestV=-1;
+  for(let a=-20;a<=20;a+=1){ const v=profileVar(a); if(v>bestV){ bestV=v; best=a; } }
   /* refine to half degrees around the best */
   let fine=best,fineV=bestV;
-  for(const a of [best-0.5,best+0.5]){
-    const r=a*Math.PI/180, c=Math.cos(r), sn=Math.sin(r), hist=new Float64Array(H*2+W*2), off=W; let n=0,sum=0;
-    for(let i=0;i<xs.length;i+=step){ const yy=Math.round(ys[i]*c-xs[i]*sn)+off; if(yy>=0&&yy<hist.length){ hist[yy]++; n++; } }
-    for(let i=0;i<hist.length;i++) sum+=hist[i]*hist[i];
-    if(sum/n>fineV){ fineV=sum/n; fine=a; }
-  }
+  for(const a of [best-0.5,best+0.5]){ const v=profileVar(a); if(v>fineV){ fineV=v; fine=a; } }
   return fine;
 }
 /* the reader gets lossless images (PNG); the card keeps a JPEG so a crop stays ~100 KB in IndexedDB */
@@ -1539,19 +1530,21 @@ async function readPass(w,blob,status){
   _ocrLog=p=>status("recognizing … "+p+"%");
   const {data}=await w.recognize(blob,{},{blocks:true,text:true}).finally(()=>{ _ocrLog=null; });
   const lines=[];
-  (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>{
+  eachLine(data,symbols=>{
     let syms=[];
-    (l.words||[]).forEach(wd=>(wd.symbols||[]).forEach(sy=>{
+    symbols.forEach(sy=>{
       if(sy.confidence>=35 && (CJK.test(sy.text)||SIGN_PUNCT.test(sy.text))) syms.push({ch:sy.text,cf:sy.confidence,b:sy.bbox});
-    }));
+    });
     const edge=x=>/[、，。：:,.]/.test(x.ch);
     while(syms.length&&edge(syms[0])) syms.shift();
     while(syms.length&&edge(syms[syms.length-1])) syms.pop();
     const t=syms.map(x=>x.ch).join("");
     if(CJK.test(t)) lines.push({t,cf:syms.filter(x=>CJK.test(x.ch)).map(x=>x.cf),bx:syms.map(x=>x.b?{x0:x.b.x0,y0:x.b.y0,x1:x.b.x1,y1:x.b.y1}:null)});
-  })));
+  });
   return lines;
 }
+/* walk a Tesseract result line by line: cb(symbols, line) */
+const eachLine=(data,cb)=>(data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>cb((l.words||[]).flatMap(w=>w.symbols||[]),l))));
 const scaleBoxes=(ls,k)=>ls.map(l=>({...l,bx:l.bx.map(b=>b&&{x0:b.x0/k,y0:b.y0/k,x1:b.x1/k,y1:b.y1/k})}));
 /* readings compete by confidence, a mild weight on length, and how much of the text forms dictionary words —
    garbage comes as many characters that are each plausible but form no words (加罗, 区和和, 二门花二人人) */
@@ -1586,7 +1579,7 @@ async function secondLook(w,dk,passes,status,r){
        (H: 首都铁骑 read as 次都铁, and the crop ended after 铁) */
     const ext=textRowExtent(bmp,Math.min(...boxes.map(b=>b.x0)),Math.max(...boxes.map(b=>b.x1)),y0,y1,H);
     const x0=Math.max(0,ext.x0-mX), x1=Math.min(bmp.width,ext.x1+mX);
-    const frac=((x1-x0)*(y1-y0))/(bmp.width*bmp.height); r.tightFrac=frac;
+    const frac=((x1-x0)*(y1-y0))/(bmp.width*bmp.height);
     if(!((frac<0.6||meanCf(first)<92) && x1-x0>=24 && y1-y0>=24)) return null;
     status("found text, reading it closely …");
     /* the text area with 1.5 text heights of plain margin in the crop's median colour: the reader wants margins, real
@@ -1662,7 +1655,7 @@ async function cropSign(id){
 }
 /* ---------- fixing one misread character: tap it, pick a replacement ----------
    Candidates come from the dictionary (words that fit the neighbouring characters), from the AI
-   (asked for that position), or are typed; a character can also be removed. */
+   (asked for that position); a character can also be removed. */
 let CHARFREQ=null;
 function charCandidates(line,i){
   const chars=[...line]; if(!DICT||!CJK.test(chars[i]||"")) return [];
@@ -1749,24 +1742,16 @@ function charBox(sg,k,i){
   return {x0:cx-side/2,y0:cy-side/2,x1:cx+side/2,y1:cy+side/2};
 }
 /* the tapped character as it looks in the photo — the original stays visible while drawing or typing (H: the keyboard hid it) */
-async function drawCharRef(cv,sg,k,i,opt){ /* opt: {h: display height, side: neighbour fraction shown left/right} */
+async function drawCharRef(cv,sg,k,i){ /* the picker's small reference (64 px tall); the drawing sheet has its own movable view */
   if(!cv||!sg.img) { if(cv) cv.remove(); return; }
   try{
     const bmp=await createImageBitmap(sg.img);
-    const bx=(sg.boxes||[])[k]||[];
     let b=charBox(sg,k,i);
     if(!b) b={x0:0,y0:0,x1:bmp.width,y1:bmp.height}; /* no usable geometry: the whole crop */
-    const o=opt||{}, h=Math.max(8,b.y1-b.y0), w=Math.max(8,b.x1-b.x0);
-    if(o.square){ /* a square around the character (side = 1.5 × its larger dimension), the photo's edge padded in INK */
-      const side=Math.max(w,h)*1.5, cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2, sx=cx-side/2, sy=cy-side/2, N=o.h||600;
-      cv.width=N; cv.height=N; const ctx=cv.getContext("2d"); ctx.fillStyle="#141410"; ctx.fillRect(0,0,N,N);
-      const ix=Math.max(0,sx), iy=Math.max(0,sy), ex=Math.min(bmp.width,sx+side), ey=Math.min(bmp.height,sy+side), k=N/side;
-      if(ex>ix&&ey>iy) ctx.drawImage(bmp,ix,iy,ex-ix,ey-iy,(ix-sx)*k,(iy-sy)*k,(ex-ix)*k,(ey-iy)*k);
-      bmp.close(); return;
-    }
-    const padX=w*(o.side??0.6), padY=h*0.25; /* a bit of the neighbours for orientation */
+    const h=Math.max(8,b.y1-b.y0), w=Math.max(8,b.x1-b.x0);
+    const padX=w*0.6, padY=h*0.25; /* a bit of the neighbours for orientation */
     const sx=Math.max(0,b.x0-padX), sy=Math.max(0,b.y0-padY), sw=Math.min(bmp.width-sx,w+2*padX), sh=Math.min(bmp.height-sy,h+2*padY);
-    const H=o.h||64, W=Math.max(48,Math.min(o.h?Math.round(o.h*2.6):200,Math.round(sw*H/sh)));
+    const H=64, W=Math.max(48,Math.min(200,Math.round(sw*H/sh)));
     cv.width=W*2; cv.height=H*2; cv.style.width=W+"px"; cv.style.height=H+"px";
     cv.getContext("2d").drawImage(bmp,sx,sy,sw,sh,0,0,cv.width,cv.height); bmp.close();
   }catch(e){ cv.remove(); }
@@ -1834,8 +1819,8 @@ function openDrawSheet(id,k,i,apply){
     const used=kids.reduce((a,c)=>a+c.getBoundingClientRect().height,0)+gap*(kids.length-1)+parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);
     const S=Math.max(160,Math.min(el.clientWidth-32,Math.floor((el.clientHeight-used)/sq.length)));
     sq.forEach(c=>{ c.style.width=S+"px"; c.style.height=S+"px"; }); };
-  fitRef(); const refView=attachRefView(el.querySelector(".ckref"),sg,k,i); refView.ready.then(fitRef); el.refView=refView;
-  el.fitRef=fitRef; window.addEventListener("resize",fitRef);
+  fitRef(); const refView=attachRefView(el.querySelector(".ckref"),sg,k,i); refView.ready.then(fitRef); el.refView=refView; /* used by the tests */
+  window.addEventListener("resize",fitRef);
   const cv=el.querySelector(".pad"), ctx=cv.getContext("2d"), strokes=[]; let cur=null, seq=0;
   const status=t=>{ const st=el.querySelector("#ds-st"); if(st) st.textContent=t; };
   const close=()=>{ seq++; el.remove(); document.body.classList.remove("noscroll"); window.removeEventListener("resize",fitRef); refView.close(); };
@@ -1895,15 +1880,24 @@ async function recognizeStrokes(w,strokes,log){
     await w.setParameters({tessedit_pageseg_mode:psm});
     _ocrLog=log||null;
     const {data}=await w.recognize(blob,{},{blocks:true,text:true}).finally(()=>{ _ocrLog=null; });
-    (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>(l.words||[]).forEach(wd=>(wd.symbols||[]).forEach(sy=>{
+    eachLine(data,symbols=>symbols.forEach(sy=>{
       for(const c of [...sy.text]) if(CJK.test(c)&&(seen.get(c)||0)<sy.confidence) seen.set(c,sy.confidence);
-    })))));
+    }));
   }
   return [...seen.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]).slice(0,5);
 }
+/* one editable line: the character strip, the input, optionally the pinyin slot below */
+function slineHTML(id,k,line,withPinyin){
+  return `<div class="sline">${charStripHTML(id,k)}<input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(line)}" autocomplete="off">${withPinyin?`<div class="sp" id="sp-${id}-${k}"></div>`:""}</div>`;
+}
+/* the strip's character buttons open the picker; typing in a line calls onInput(sg, k, input) */
+function wireSlines(root,onInput){
+  root.querySelectorAll("[data-ck]").forEach(b=> b.onclick=()=>{ const [k,i]=b.dataset.ck.split(",").map(Number); openCharPick(b.dataset.sid,k,i,b); });
+  root.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{ const sg=SIGN[inp.dataset.sid]; if(!sg) return; sg.lines[+inp.dataset.sline]=inp.value; onInput(sg,inp.dataset.sid); });
+}
 function signEditorHTML(id){
   const sg=SIGN[id]; if(!sg) return "";
-  const rows=sg.lines.map((l,k)=>`<div class="sline">${charStripHTML(id,k)}<input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(l)}" autocomplete="off"><div class="sp" id="sp-${id}-${k}"></div></div>`).join("");
+  const rows=sg.lines.map((l,k)=>slineHTML(id,k,l,true)).join("");
   const low=sg.conf?Math.min(...sg.conf.flat().concat([100])):100;
   const doubt=!aiLive()&&low<OCR_DOUBT?` The reading looks uncertain (confidence ${Math.round(low)}%) — check the text.`:"";
   const head=sg.aiBusy?"Reading with the AI …":sg.ai?"Read and checked by the AI. Tap a character to change it.":`Text read from the photo. Tap a character to change it.${doubt}`;
@@ -1963,7 +1957,6 @@ async function signTranslate(id){
   try{
     const r=await signMeaning(lines,t=>{ const el=$(`#smean-${id} .badge`); if(el) el.textContent=t; });
     if(sg.tok!==tok||!SIGN[id]) return;
-    sg.tr=r;
     const box=$(`#smean-${id}`);
     if(box) box.innerHTML=`<span class="badge">Meaning ${r.src==="nmt"?"from the offline translation":r.src==="phrasebook"?"from the phrasebook":"composed word by word"}, unverified</span><div>${esc(r.m)||"—"}</div>`;
   }catch(err){ if(sm) sm.querySelector(".badge").textContent="Offline translation failed, meaning composed word by word"; }
@@ -2006,7 +1999,7 @@ async function saveSign(id){
 /* ---------- Kamera / Inbox ---------- */
 function renderInbox(main){
   main.innerHTML=`<div class="pane">
-    <div class="lead">Photos stay on this phone. Frame the text and tap Read — the card is made for you.</div>
+    <div class="lead">Photos stay on this phone. Frame the text — the card is made for you.</div>
     <div class="snaprow"><button class="btn primary" id="snap">Take photo</button><button class="btn" id="pick">From album</button></div>
     <div id="shots"></div>
   </div>`;
@@ -2041,8 +2034,6 @@ function renderShots(){
   box.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>delShot(b.dataset.del));
   box.querySelectorAll("[data-nextshot]").forEach(b=> b.onclick=()=>$("#cam").click());
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
-  box.querySelectorAll("[data-cropok]").forEach(b=> b.onclick=()=>cropOk(b.dataset.cropok));
-  box.querySelectorAll("[data-cropocr]").forEach(b=> b.onclick=()=>cropOcr(b.dataset.cropocr));
   box.querySelectorAll("[data-cropcancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.cropcancel; clearTimeout(READ_TIMER[id]); CROP=null; delete SIGN[id]; delete READING[id]; renderShots(); });
   box.querySelectorAll(".ovbox").forEach(b=> b.onclick=()=>{
     const id=b.dataset.sid, sel=SELS[id], i=+b.dataset.i;
@@ -2064,11 +2055,7 @@ function renderShots(){
   Object.keys(OCRRES).forEach(aiOverlayAuto);
   wireAi(box);
   box.querySelectorAll(".croplayer").forEach(wireCrop);
-  box.querySelectorAll("[data-ck]").forEach(b=> b.onclick=()=>{ const [k,i]=b.dataset.ck.split(",").map(Number); openCharPick(b.dataset.sid,k,i,b); });
-  box.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{
-    const sg=SIGN[inp.dataset.sid]; if(!sg) return;
-    sg.lines[+inp.dataset.sline]=inp.value; signPreview(inp.dataset.sid);
-  });
+  wireSlines(box,(sg,id)=>signPreview(id));
   box.querySelectorAll("[data-signsave]").forEach(b=> b.onclick=()=>saveSign(b.dataset.signsave));
   box.querySelectorAll("[data-splitwords]").forEach(b=> b.onclick=()=>{ const id=b.dataset.splitwords, sg=SIGN[id]; if(!sg||!sg.region) return;
     delete SIGN[id]; SHOWBOX[id]=true; if(CROP&&CROP.id===id) CROP=null; /* the boxes need the taps */ renderShots(); onOcr(id,sg.region); });
@@ -2207,8 +2194,9 @@ if("serviceWorker" in navigator){
    GitHub Pages caches for ten minutes and jsDelivr per file, so after quick successive deploys a worker once served
    the v70 page with the v69 script (H: "I was on 70" — and the drag was missing). If the label and APP_V differ,
    the worker refills its cache from the server and the page reloads; at most once every ten minutes, no loops. */
+const pageVersion=()=>+((($(".ver")||{}).textContent||"").match(/v(\d+)/)||[])[1]||0; /* the PWA vN label */
 async function shellCheck(){
-  const label=+((($(".ver")||{}).textContent||"").match(/v(\d+)/)||[])[1]||0;
+  const label=pageVersion();
   if(!label||label===APP_V) return;
   const ctrl=navigator.serviceWorker&&navigator.serviceWorker.controller; if(!ctrl||!navigator.onLine) return;
   const last=+S.settings.shellFixAt||0; if(Date.now()-last<600000) return;
@@ -2224,7 +2212,7 @@ function mirrorCheck(force){
   if(!force && Date.now()-MIRROR.at<3600000) return; /* at most once an hour by itself */
   const ctrl=navigator.serviceWorker&&navigator.serviceWorker.controller; if(!ctrl) return;
   MIRROR.busy=true; MIRROR.at=Date.now();
-  const local=+((($(".ver")||{}).textContent||"").match(/v(\d+)/)||[])[1]||0;
+  const local=pageVersion();
   ctrl.postMessage({type:"mirror-update",mirror:mirrorURL(),local});
   const st=$("#mirror-status"); if(st) st.textContent="checking the mirror …";
   setTimeout(()=>{ if(MIRROR.busy){ MIRROR.busy=false; MIRROR.last={status:"error",error:"no answer from the mirror"}; const s2=$("#mirror-status"); if(s2) s2.textContent=mirrorText(); } },30000);
