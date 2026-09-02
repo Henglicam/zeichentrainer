@@ -218,8 +218,6 @@ button{font:inherit;color:inherit}
 .signed .sline input:focus{box-shadow:inset 0 0 0 2px var(--tint)}
 .signed .sp{font-size:14px;color:var(--label2);margin-top:3px}
 .smean{margin-top:8px;font-size:16px}
-.sgloss{display:grid;grid-template-columns:auto auto 1fr;gap:4px 12px;font-size:15px;color:var(--label2);margin-top:8px;text-align:left}
-.sgloss .w{font-family:var(--hanzi);color:var(--label)} .sgloss .p{font-size:13px}
 .cstrip{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
 .ck{font-family:var(--hanzi);font-size:22px;min-width:40px;height:40px;padding:0 6px;border:none;border-radius:8px;background:var(--card);box-shadow:inset 0 0 0 1px var(--sep);color:var(--label);cursor:pointer}
 .ck.low{box-shadow:inset 0 0 0 1.5px var(--tint)} .ck.on{background:var(--tint);color:#fff} .ck.ai{box-shadow:inset 0 0 0 1.5px var(--ok)}

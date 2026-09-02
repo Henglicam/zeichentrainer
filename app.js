@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=89; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=90; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1897,10 +1897,13 @@ function slineHTML(id,k,line,withPinyin){
 function wireSlines(root,onInput){
   root.querySelectorAll("[data-ck]").forEach(b=> b.onclick=()=>{ const [k,i]=b.dataset.ck.split(",").map(Number); openCharPick(b.dataset.sid,k,i,b); });
   root.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{ const sg=SIGN[inp.dataset.sid]; if(!sg) return; sg.lines[+inp.dataset.sline]=inp.value; onInput(sg,inp.dataset.sid); });
+  root.querySelectorAll("[data-spin]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.spin]; if(sg){ sg.pinTouched=true; sg.pinEdit=t.value; } });
+  root.querySelectorAll("[data-smean]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.smean]; if(sg){ sg.meanTouched=true; sg.meanEdit=t.value; } });
+  wireGrow(root);
 }
 function signEditorHTML(id){
   const sg=SIGN[id]; if(!sg) return "";
-  const rows=sg.lines.map((l,k)=>slineHTML(id,k,l,true)).join("");
+  const rows=sg.lines.map((l,k)=>slineHTML(id,k,l,false)).join("");
   const low=sg.conf?Math.min(...sg.conf.flat().concat([100])):100;
   const doubt=!aiLive()&&low<OCR_DOUBT?` The reading looks uncertain (confidence ${Math.round(low)}%) — check the text.`:"";
   const head=sg.aiBusy?"Reading with the AI …":sg.ai?"Read and checked by the AI. Tap a character to change it.":`Text read from the photo. Tap a character to change it.${doubt}`;
@@ -1908,8 +1911,11 @@ function signEditorHTML(id){
   const nChars=sg.lines.join("").replace(/[^\u4e00-\u9fff]/g,"").length, meanCf=(sg.conf||[]).flat().reduce((a,c,_,arr)=>a+c/arr.length,0);
   const weak=nChars<=2&&meanCf<85?`<div class="err" style="margin:4px 0 8px">Only ${nChars} character${nChars===1?"":"s"} found — if the photo shows more, frame the characters tightly and drag a corner to read again.</div>`:"";
 
-  return `<div class="signed">${weak}<div class="badge${sg.ai?" ai":""}" style="margin-bottom:8px">${head}</div>${rows}
-    <div class="smean" id="smean-${id}"></div><div class="sgloss" id="sgloss-${id}"></div>
+  /* the same layout as the Edit form (H): Text, Pinyin, Meaning — pinyin and meaning can be corrected before saving */
+  return `<div class="signed">${weak}<div class="badge${sg.ai?" ai":""}" style="margin-bottom:8px">${head}</div>
+    <div class="field"><label>Text</label>${rows}</div>
+    <div class="field"><label>Pinyin</label><textarea class="mono grow" id="spin-${id}" rows="1" data-spin="${id}">${esc(sg.pinEdit||"")}</textarea></div>
+    <div class="field"><label>Meaning</label><textarea class="grow" id="smeanf-${id}" rows="1" data-smean="${id}">${esc(sg.meanEdit||"")}</textarea><div class="smean badge" id="smean-${id}" style="margin-top:4px"></div></div>
     <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save card</button>${aiOn()&&!sg.ai&&!sg.aiBusy?`<button class="btn mini" data-signai="${id}">Ask AI</button>`:""}<button class="del" data-splitwords="${id}">Split into words</button><button class="del" data-signcancel="${id}">cancel</button></div>
     ${sg.aiErr?`<div class="err" style="margin-top:6px">${esc(sg.aiErr)}</div>`:""}</div>`;
 }
@@ -1923,11 +1929,14 @@ function signPreview(id){
   const mean=live.map(r=>r.en).filter(Boolean).join(" / ");
   /* an AI check applies as long as the text was not edited afterwards */
   if(sg.ai && sg.lines.map(l=>l.trim()).filter(l=>CJK.test(l)).join("\n")!==sg.ai.zh) delete sg.ai;
+  const py=live.map(r=>r.py).join(" / ");
+  const pinF=$(`#spin-${id}`), meanF=$(`#smeanf-${id}`);
+  if(pinF&&!sg.pinTouched){ pinF.value=sg.ai&&sg.ai.p?sg.ai.p:py; autoGrow(pinF); }
+  if(meanF&&!sg.meanTouched){ meanF.value=sg.ai?(sg.ai.m||mean):mean; autoGrow(meanF); }
   const sm=$(`#smean-${id}`);
-  if(sm) sm.innerHTML=sg.ai
-    ?`<span class="badge ai">Checked by the AI${sg.ai.note&&sg.ai.note.toLowerCase()!=="ok"?": "+esc(sg.ai.note):""}</span><div class="mono" style="font-size:14px">${esc(sg.ai.p||"")}</div><div>${esc(sg.ai.m)||"—"}</div>`
-    :`<span class="badge">Meaning ${full?"from the phrasebook":"composed word by word"}, unverified</span><div>${esc(mean)||"—"}</div>`;
-  const gl=$(`#sgloss-${id}`); if(gl) gl.innerHTML=sg.ai?"":live.flatMap(r=>r.gloss).map(g=>`<span class="w">${esc(g.w)}</span><span class="p">${esc(g.p)}</span><span>${esc(g.m||"?")}</span>`).join("");
+  if(sm){ sm.className="smean badge"+(sg.ai?" ai":""); sm.textContent=sg.ai
+    ?`Checked by the AI${sg.ai.note&&sg.ai.note.toLowerCase()!=="ok"?": "+sg.ai.note:""}`
+    :`Meaning ${full?"from the phrasebook":"composed word by word"}, unverified`; }
   sg.res=res; sg.full=full; sg.mean=mean;
   if(!sg.ai && !(aiLive()&&!sg.aiErr)) signTranslate(id); /* offline model only as fallback */
 }
@@ -1958,11 +1967,12 @@ async function signTranslate(id){
   const tok=sg.tok=(sg.tok||0)+1;
   const sm=$(`#smean-${id}`);
   try{
-    const r=await signMeaning(lines,t=>{ const el=$(`#smean-${id} .badge`); if(el) el.textContent=t; });
+    const r=await signMeaning(lines,t=>{ const el=$(`#smean-${id}`); if(el) el.textContent=t; });
     if(sg.tok!==tok||!SIGN[id]) return;
-    const box=$(`#smean-${id}`);
-    if(box) box.innerHTML=`<span class="badge">Meaning ${r.src==="nmt"?"from the offline translation":r.src==="phrasebook"?"from the phrasebook":"composed word by word"}, unverified</span><div>${esc(r.m)||"—"}</div>`;
-  }catch(err){ if(sm) sm.querySelector(".badge").textContent="Offline translation failed, meaning composed word by word"; }
+    const box=$(`#smean-${id}`), mf=$(`#smeanf-${id}`);
+    if(box) box.textContent=`Meaning ${r.src==="nmt"?"from the offline translation":r.src==="phrasebook"?"from the phrasebook":"composed word by word"}, unverified`;
+    if(mf&&!sg.meanTouched&&r.m){ mf.value=r.m; autoGrow(mf); }
+  }catch(err){ if(sm) sm.textContent="Offline translation failed, meaning composed word by word"; }
 }
 async function saveSign(id){
   const sg=SIGN[id]; if(!sg) return;
@@ -1975,7 +1985,10 @@ async function saveSign(id){
   /* meaning: AI check (if done here) → phrasebook → offline translation (if enabled) → word gloss (then pending) */
   let mt={src:sg.full?"phrasebook":"gloss",verified:false,pending:!sg.full}, mean=sg.mean||"", pin=keep.map(x=>x.r.py).join(" / ");
   if(sg.ai && c===sg.ai.zh){ mean=sg.ai.m||mean; pin=sg.ai.p||pin; mt={src:"llm",verified:true,pending:false}; }
-  else if(!sg.full && nmtOn() && !(aiLive()&&!sg.aiErr)){ /* no connection (or AI failed): offline model */
+  const pinHand=sg.pinTouched&&(sg.pinEdit||"").replace(/\s+/g," ").trim(), meanHand=sg.meanTouched&&(sg.meanEdit||"").replace(/\s+/g," ").trim();
+  if(pinHand) pin=pinHand;
+  if(meanHand){ mean=meanHand; mt={...mt,verified:true,pending:false}; } /* H wrote the meaning: no offline model, no pending */
+  else if(!meanHand && !sg.full && nmtOn() && !(aiLive()&&!sg.aiErr)){ /* no connection (or AI failed): offline model */
     const btn=document.querySelector(`[data-signsave="${id}"]`); if(btn){ btn.disabled=true; btn.textContent="Translating …"; }
     try{ const r=await signMeaning(keep.map(x=>x.l)); mean=r.m||mean; mt={src:r.src,verified:false,pending:r.pending}; }catch(e){}
   }
