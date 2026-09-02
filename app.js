@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=87; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=88; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1620,7 +1620,9 @@ async function secondLook(w,dk,passes,status,r){
     bmp2.close();
     /* Merge line by line: every reading tends to get some line right and lose another, so the lines of all tight
        passes are clustered by their vertical band and the most confident reading of each band is kept. */
-    const band=l=>{ const bs=l.bx.filter(Boolean); return bs.length?{y0:Math.min(...bs.map(b=>b.y0)),y1:Math.max(...bs.map(b=>b.y1))}:null; };
+    /* a line's band from the median centre and height of its boxes — the boxes' extremes are inflated (on a two-line
+       sign single boxes spanned both lines), and min/max once folded the two lines into one cluster (H: the first line vanished) */
+    const band=l=>{ const bs=l.bx.filter(Boolean); if(!bs.length) return null; const cy=median(bs.map(b=>(b.y0+b.y1)/2)), h=median(bs.map(b=>b.y1-b.y0)); return {y0:cy-h/2,y1:cy+h/2}; };
     const clusters=[];
     for(const l of tightLines){ const b=band(l); if(!b) continue;
       let c=clusters.find(c=>{ const ov=Math.min(c.y1,b.y1)-Math.max(c.y0,b.y0); return ov>0.5*Math.min(c.y1-c.y0,b.y1-b.y0); });
