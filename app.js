@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=106; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=107; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -870,7 +870,7 @@ function renderEdit(main,c){
       <div class="signed" id="e-lines"></div>
       <textarea id="e-word" class="hanzi" hidden>${esc(lines0.join("\n"))}</textarea>
       <div class="badge" style="margin-top:4px">Tap a character to change it.</div></div>
-      <div class="field"><label>Traditional characters (leave empty when the photo is in simplified characters)</label><input id="e-trad" class="hanzi" value="${esc((d.trad||"").replace(/\n/g," / "))}" placeholder="養樂多"></div>
+      ${d.trad?`<div class="field"><label>Traditional characters, as on the photo (clear this field if the photo is in simplified characters)</label><input id="e-trad" class="hanzi" value="${esc(d.trad.replace(/\n/g," / "))}" placeholder="養樂多"></div>`:""}
       <div class="field"><label>Pinyin</label><textarea id="e-pin" class="mono grow" rows="1">${esc(d.p)}</textarea></div>
       <div class="field"><label>Meaning</label><textarea id="e-mean" class="grow" rows="1">${esc(d.m)}</textarea></div>
     ${isSign||!d.w?"":`<div class="field"><label>Context word, pinyin, meaning (optional)</label>
@@ -941,7 +941,7 @@ function renderEdit(main,c){
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
     if($("#e-flag").checked){ upd.flag=true; const note=$("#e-note").value.trim(); if(note) upd.flagNote=note; else delete upd.flagNote; }
     else { delete upd.flag; delete upd.flagNote; }
-    const trad=$("#e-trad").value.split("/").map(x=>x.trim()).filter(Boolean).join("\n"); if(trad) upd.trad=trad; else delete upd.trad;
+    const tf=$("#e-trad"); if(tf){ const trad=tf.value.split("/").map(x=>x.trim()).filter(Boolean).join("\n"); if(trad) upd.trad=trad; else delete upd.trad; } /* the field exists only on a traditional card (H, v107) */
     await applyCardUpdate(c,upd,newC,pin!==d.p,isSign?undefined:wordLines);
     leave(upd.c);
   };
