@@ -138,7 +138,7 @@ button{font:inherit;color:inherit}
 .cardsbar input:focus{box-shadow:inset 0 0 0 2px var(--tint)}
 .field select{width:100%;background:var(--card);border:none;box-shadow:inset 0 0 0 1px var(--sep);border-radius:10px;color:var(--label);font-family:var(--sans);font-size:17px;padding:11px 14px;outline:none;-webkit-appearance:none;appearance:none}
 .chips{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px} .chips #cnt{white-space:nowrap;flex:none}
-.chipset{display:flex;gap:6px;flex-wrap:wrap}
+.chipset{display:flex;gap:6px;flex-wrap:wrap} .orderchips{margin-top:8px}
 .btnrow{display:flex;gap:6px;flex:none}
 .chip{background:var(--fill);border:none;border-radius:999px;color:var(--label);font-size:13px;font-weight:500;padding:8px 13px;min-height:36px;cursor:pointer}
 .chip.on{background:var(--tint);color:#fff}
