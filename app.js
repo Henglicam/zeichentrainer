@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=132; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=133; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -80,12 +80,12 @@ async function putCard(upd,key){
 const S = { mode:"study", progress:{}, custom:[], inbox:[],
   queue:[], idx:0, revealed:false, done:0, ahead:false, ready:false,
   pendingImg:null, pendingFull:null, pendingUse:"crop", persist:null,
-  detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, settings:{}, single:null, saved:null,
+  detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterTag:null, settings:{}, single:null, saved:null,
   editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null };
 
 function deck(){ return S.custom; }
 function buildQueue(includeAhead){
-  const p=S.progress, t=today(), d=deck();
+  const lt=learnTag(), p=S.progress, t=today(), d=lt?deck().filter(x=>(x.tags||[]).includes(lt)):deck(); /* Learn: all cards or one tag (v133) */
   const due = d.filter(x=>p[x.id] && p[x.id].due<=t).sort((a,b)=>p[a.id].due-p[b.id].due).map(x=>x.id);
   const fresh = d.filter(x=>!p[x.id]).slice(0,NEW_PER_SESSION).map(x=>x.id);
   let q=[...due,...fresh];
@@ -94,6 +94,22 @@ function buildQueue(includeAhead){
   return q;
 }
 const cardOf = id => deck().find(d=>d.id===id); /* cards are addressed by id everywhere; the text is c */
+/* Tags (v133, H: "make the cards sortable, for Chinese class, HSK …"): free labels on a card, several allowed; the
+   forms offer the labels already in use as chips, the Cards tab filters by one, the Learn tab studies one */
+const parseTags=str=>[...new Set(String(str||"").split(/[,，;；]/).map(t=>t.trim()).filter(Boolean))];
+const allTags=()=>[...new Set(deck().flatMap(d=>d.tags||[]))].sort((a,b)=>a.localeCompare(b));
+function tagsFieldHTML(id,tags){ const cur=tags||[], known=allTags();
+  return `<div class="field"><label>Tags</label><input id="${id}" class="tags" value="${esc(cur.join(", "))}" placeholder="Chinese class, HSK 3 …" autocomplete="off">${known.length?`<div class="tagchips" data-tagsfor="${id}">${known.map(t=>`<button type="button" class="chip${cur.includes(t)?" on":""}" data-tag="${esc(t)}">${esc(t)}</button>`).join("")}</div>`:""}</div>`; }
+function wireTags(root,onChange){
+  root.querySelectorAll("input.tags").forEach(inp=>{ const box=root.querySelector(`[data-tagsfor="${inp.id}"]`);
+    const sync=()=>{ const cur=parseTags(inp.value); if(box) box.querySelectorAll("[data-tag]").forEach(b=>b.classList.toggle("on",cur.includes(b.dataset.tag))); if(onChange) onChange(cur,inp); };
+    if(box) box.querySelectorAll("[data-tag]").forEach(b=> b.onclick=()=>{ const cur=parseTags(inp.value), i=cur.indexOf(b.dataset.tag); if(i>=0) cur.splice(i,1); else cur.push(b.dataset.tag); inp.value=cur.join(", "); sync(); });
+    inp.oninput=sync; });
+}
+const learnTag=()=>S.settings.learnTag||"";
+function learnChipsHTML(){ const tags=allTags(); if(!tags.length) return ""; const lt=learnTag();
+  return `<div class="chipset learnchips">${[["","All cards"],...tags.map(t=>[t,t])].map(([v,l])=>`<button class="chip${lt===v?" on":""}" data-learntag="${esc(v)}">${esc(l)}</button>`).join("")}</div>`; }
+function wireLearnChips(){ document.querySelectorAll("[data-learntag]").forEach(b=> b.onclick=async()=>{ await setSetting("learnTag",b.dataset.learntag||""); S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false; S.single=null; S.saved=null; setStats(); render(); }); }
 /* the id of a new card: the text itself while it is free (readable in exports), else text plus a timestamp */
 const cardId = c => deck().some(d=>d.id===c) ? c+"#"+Date.now() : c;
 async function setSetting(k,v){ S.settings[k]=v; try{ await idbPut("settings",{k,v}); }catch(e){} }
@@ -693,7 +709,7 @@ function renderStudy(main){
   }
   const finished = S.idx>=S.queue.length;
   if(finished){
-    main.innerHTML=`<div class="done">
+    main.innerHTML=learnChipsHTML()+`<div class="done">
       <div class="mark">净</div>
       <h2>All clear.</h2>
       <p>${S.ahead?"Pulled-forward round finished.":"Nothing due today. Come back tomorrow — or pull the next cards forward."}</p>
@@ -701,6 +717,7 @@ function renderStudy(main){
       <button class="btn" id="ahead">Pull the next cards forward</button>
     </div>`;
     const a=$("#ahead"); if(a) a.onclick=()=>{ const q=buildQueue(true); if(q.length){S.queue=q;S.idx=0;S.done=0;S.ahead=true;S.revealed=false;render();} };
+    wireLearnChips();
     return;
   }
   const c=S.queue[S.idx], d=cardOf(c), sched=S.progress[c]||null, isNew=!S.progress[c];
@@ -714,7 +731,7 @@ function renderStudy(main){
     back=`<div class="hint">Tap the character to reveal${d.imgFull||d.shot?" · tap the photo for the whole picture":""}</div>`;
   }
   /* front: no tag row (theme / new / custom is noise while learning); tapping the photo or the character reveals */
-  main.innerHTML=`<div class="card">
+  main.innerHTML=learnChipsHTML()+`<div class="card">
     ${S.single?`<div class="topline"><button class="del" id="back-cards">← Cards</button><span class="badge">testing from the list</span></div>`:""}
     <div class="front tap" id="reveal">${frontHTML(d)}</div>
     ${back}</div>`;
@@ -723,7 +740,7 @@ function renderStudy(main){
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   const ed=$("#edit-card"); if(ed) ed.onclick=()=>{ S.editFrom="study"; S.editing=c; render(); };
-  wireSay(); wireChars(d); wireLinks();
+  wireSay(); wireChars(d); wireLinks(); wireLearnChips();
   wireAi();
   document.querySelectorAll(".grade").forEach(b=> b.onclick=()=>grade(b.dataset.g));
 }
@@ -765,6 +782,7 @@ function renderAdd(main){
       <div class="field"><label>Meaning</label><textarea id="f-mean" class="grow" rows="1" placeholder="shutter"></textarea></div>
     <div class="field"><label class="check"><input type="checkbox" id="f-flag"> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
       <input id="f-note" placeholder="Note for the reviewer (optional)" hidden></div>
+    ${tagsFieldHTML("f-tags",(S.draft||{}).tags)}
     <div id="f-pinhint" class="err" style="display:none">Pinyin and meaning were filled in from the photo and are unverified — check the tones and the meaning.</div>
     <div id="f-err" class="err" style="display:none"></div>
     <button class="btn primary block" id="f-add">Add card</button>
@@ -780,9 +798,10 @@ function renderAdd(main){
   const d0=S.draft||{};
   $("#f-word").value=d0.w||""; $("#f-pin").value=d0.p||""; $("#f-mean").value=d0.m||""; $("#f-flag").checked=!!d0.flag; $("#f-note").value=d0.note||""; $("#f-note").hidden=!d0.flag; wireGrow(main);
   if(d0.autoPin) $("#f-pinhint").style.display="";
-  const saveDraft=()=>{ S.draft={ w:$("#f-word").value, p:$("#f-pin").value, m:$("#f-mean").value, flag:$("#f-flag").checked, note:$("#f-note").value,
+  const saveDraft=()=>{ S.draft={ w:$("#f-word").value, p:$("#f-pin").value, m:$("#f-mean").value, flag:$("#f-flag").checked, note:$("#f-note").value, tags:parseTags($("#f-tags").value),
     autoPin:$("#f-pinhint").style.display!=="none" }; };
   ["f-word","f-pin","f-mean","f-note"].forEach(id=>$("#"+id).oninput=saveDraft);
+  wireTags(main,saveDraft);
   $("#f-flag").onchange=()=>{ $("#f-note").hidden=!$("#f-flag").checked; if($("#f-flag").checked) $("#f-note").focus(); saveDraft(); };
 }
 /* ---------- Cards: library with photos, detail, single-card test, edit ---------- */
@@ -803,10 +822,11 @@ function cardsListHTML(){
   if(S.filterUnv) list=list.filter(d=>d.mt&&!d.mt.verified);
   if(S.filterFlag) list=list.filter(d=>d.flag);
   if(S.filterAi) list=list.filter(d=>d.ai);
-  if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,d.w,d.wp,d.wm,d.flagNote].filter(Boolean).join(" ").toLowerCase().includes(q));
+  if(S.filterTag) list=list.filter(d=>(d.tags||[]).includes(S.filterTag));
+  if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,d.w,d.wp,d.wm,d.flagNote,...(d.tags||[])].filter(Boolean).join(" ").toLowerCase().includes(q));
   const rows=list.map(d=>`<button class="crow" data-id="${esc(d.id)}">
       ${d.img?`<img class="thumb" src="${thumbURL(d)}" alt="">`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`}
-      <span class="ct"><span class="c">${esc((d.trad||d.c).replace(/\n/g," / "))}</span>${d.trad?`<span class="simpref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}${d.trad?`<span class="pill trad">Traditional</span>`:""}${byText.get(d.c)>1?`<span class="pill">${byText.get(d.c)} photos</span>`:""}</span><span class="m">${esc(d.m)}</span></span>
+      <span class="ct"><span class="c">${esc((d.trad||d.c).replace(/\n/g," / "))}</span>${d.trad?`<span class="simpref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}${d.trad?`<span class="pill trad">Traditional</span>`:""}${byText.get(d.c)>1?`<span class="pill">${byText.get(d.c)} photos</span>`:""}${(d.tags||[]).map(t=>`<span class="pill tag">${esc(t)}</span>`).join("")}</span><span class="m">${esc(d.m)}</span></span>
       <span class="cs">${d.ai?'<span class="pill ai">AI</span>':""}${d.flag?'<span class="pill flagged">⚑ review</span>':""}${cardStatus(d)}</span></button>`).join("");
   const empty=S.custom.length?"No cards match.":"No cards yet — take a photo under Camera, or tap + New.";
   return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length};
@@ -817,7 +837,7 @@ function renderCards(main){
   main.innerHTML=`<div class="pane">
     <div class="cardsbar"><input id="q" type="search" placeholder="Search hanzi, pinyin, meaning" value="${esc(S.query)}" autocomplete="off"><button class="btn mini primary" id="newcard">+ New</button></div>
     ${nAi?`<div class="aibar"><span>${nAi} AI suggestion${nAi>1?"s":""} waiting</span><button class="btn mini primary" id="ai-acceptall">Accept all</button></div>`:""}
-    <div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">⚑ Flagged (${flg})</button>${nAi?`<button class="chip${S.filterAi?" on":""}" id="chip-ai">AI (${nAi})</button>`:""}<button class="chip${S.filterUnv?" on":""}" id="chip-unv">Unverified (${unv})</button></span><span class="badge" id="cnt">${n} of ${deck().length}</span></div>
+    <div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">⚑ Flagged (${flg})</button>${nAi?`<button class="chip${S.filterAi?" on":""}" id="chip-ai">AI (${nAi})</button>`:""}<button class="chip${S.filterUnv?" on":""}" id="chip-unv">Unverified (${unv})</button>${allTags().map(t=>`<button class="chip tag${S.filterTag===t?" on":""}" data-tagchip="${esc(t)}">${esc(t)}</button>`).join("")}</span><span class="badge" id="cnt">${n} of ${deck().length}</span></div>
     <div class="clist" id="clist">${html}</div>
   </div>`;
   const wire=()=>{ document.querySelectorAll(".crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.id; S.detailHide=false; S.fullPic=false; render(); }); };
@@ -826,6 +846,7 @@ function renderCards(main){
   $("#chip-unv").onclick=()=>{ S.filterUnv=!S.filterUnv; render(); };
   $("#chip-flag").onclick=()=>{ S.filterFlag=!S.filterFlag; render(); };
   const ca=$("#chip-ai"); if(ca) ca.onclick=()=>{ S.filterAi=!S.filterAi; render(); };
+  document.querySelectorAll("[data-tagchip]").forEach(b=> b.onclick=()=>{ S.filterTag=S.filterTag===b.dataset.tagchip?null:b.dataset.tagchip; render(); });
   const aa=$("#ai-acceptall"); if(aa) aa.onclick=async()=>{ aa.disabled=true; await aiAcceptAll(); render(); };
   $("#newcard").onclick=()=>{ S.mode="add"; render(); };
   wire();
@@ -893,13 +914,14 @@ function renderEdit(main,c){
     ${d.img?`<div class="field" id="e-imgfield"><label>Image (stays on this phone)</label><div class="pimg"><img src="${cropURL}" alt=""><button class="del" id="e-noimg">Remove image</button></div></div>`:""}
     <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
       <input id="e-note" value="${esc(d.flagNote||"")}" placeholder="Note for the reviewer (optional)"></div>
+    ${tagsFieldHTML("e-tags",d.tags)}
     ${aiOn()?`<div class="field"><button class="btn block" id="e-ai">Ask AI to check text, pinyin and meaning</button><div class="badge" id="e-aistatus" style="margin-top:6px"></div><div id="e-aibox" hidden class="aibox"></div></div>`:""}
     <div id="e-err" class="err" style="display:none"></div>
     <button class="btn primary block" id="e-save">Save changes</button>
     </div>
     <button class="btn danger block" id="e-del" style="margin-top:14px">Delete card</button>
   </div>`;
-  $("#back").onclick=()=>leave();
+  $("#back").onclick=()=>leave(); wireTags(main);
   /* delete from here too (H): from the study back the session goes on with the next card, otherwise back to the list */
   $("#e-del").onclick=async()=>{
     if(!confirm("Delete “"+d.c.replace(/\n/g," / ")+"” and its progress?")) return;
@@ -954,6 +976,7 @@ function renderEdit(main,c){
     if(removeImg){ delete upd.img; delete upd.imgFull; dropThumb(c); }
     if(upd.mt){ upd.mt={...upd.mt, verified:true, pending:false}; delete upd.mt.suspect; } /* a human edited it */
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
+    const tags=parseTags($("#e-tags").value); if(tags.length) upd.tags=tags; else delete upd.tags;
     if($("#e-flag").checked){ upd.flag=true; const note=$("#e-note").value.trim(); if(note) upd.flagNote=note; else delete upd.flagNote; }
     else { delete upd.flag; delete upd.flagNote; }
     if(sg.trad){ const trad=(sg.tradText||"").trim(); if(trad) upd.trad=trad; } /* the strip's line carries the traditional form; no separate field (H, v110) */
@@ -996,6 +1019,7 @@ async function addManual(){
   if(!pin||!mean) return fail("Pinyin and meaning are required.");
   if(deck().some(d=>d.c===word&&(!S.pendingShot||d.shot===S.pendingShot))) return fail("“"+word+"” is already in the deck."); /* with a new photo the same text is a new card (v118) */
   const card={id:cardId(word),c:word,p:pin,m:mean,t:"Custom",at:Date.now()};
+  const tags=parseTags($("#f-tags").value); if(tags.length) card.tags=tags;
   if($("#f-flag").checked){ card.flag=true; const note=$("#f-note").value.trim(); if(note) card.flagNote=note; }
   if(S.pendingShot){ card.shot=S.pendingShot; S.pendingShot=null; }
   const chosenImg=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
@@ -1004,7 +1028,7 @@ async function addManual(){
   S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
   S.queue=buildQueue(false);
-  ["f-word","f-pin","f-mean","f-note"].forEach(id=>$("#"+id).value=""); $("#f-flag").checked=false; $("#f-note").hidden=true;
+  ["f-word","f-pin","f-mean","f-note","f-tags"].forEach(id=>$("#"+id).value=""); $("#f-flag").checked=false; $("#f-note").hidden=true;
   const fi=$("#f-imgfield"); if(fi) fi.remove();
   $("#f-pinhint").style.display="none";
   S.draft=null;
@@ -2016,6 +2040,7 @@ function signEditorHTML(id){
     <div class="field"><label>Characters${sg.trad?" (traditional, as on the photo)":""}</label>${rows}${sg.trad?`<div class="scriptref" id="ssimp-${id}"><span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span></div>`:""}</div>
     <div class="field"><label>Pinyin</label><textarea class="grow" id="spin-${id}" rows="1" data-spin="${id}">${esc(sg.pinEdit||"")}</textarea></div>
     <div class="field"><label>Meaning</label><textarea class="grow" id="smeanf-${id}" rows="1" data-smean="${id}">${esc(sg.meanEdit||"")}</textarea><div class="smean badge" id="smean-${id}" style="margin-top:4px"></div></div>
+    ${tagsFieldHTML("stags-"+id,sg.tags)}
     <div class="field"><label class="check"><input type="checkbox" data-sflag="${id}"${sg.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
       <input data-snote="${id}" value="${esc(sg.flagNote||"")}" placeholder="Note for the reviewer (optional)"${sg.flag?"":" hidden"}></div>
     <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save card</button>${aiOn()&&!sg.ai&&!sg.aiBusy?`<button class="btn mini" data-signai="${id}">Ask AI</button>`:""}<button class="del" data-signcancel="${id}">Cancel</button></div>
@@ -2115,6 +2140,7 @@ async function saveSign(id){
     : { id:cardId(c), kind:"sign", c, p:pin, m:mean, t:"Sign", at:Date.now(), shot:id,
         segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
   if(sg.flag){ card.flag=true; const note=(sg.flagNote||"").trim(); if(note) card.flagNote=note; } /* H: flag a new card at once, without opening it again */
+  if(sg.tags&&sg.tags.length) card.tags=sg.tags.slice();
   if(sg.alts&&sg.alts.length) card.alts=sg.alts.slice(0,5); /* the other readings stay with the card for a later AI check */
   if(sg.trad&&(sg.tradText||"").trim()) card.trad=sg.tradText.trim(); /* the text as it stands on the photo, in traditional characters (v101) */
   if(S.pendingImg) card.img=await jpegOf(S.pendingImg);
@@ -2168,6 +2194,7 @@ function renderShots(){
   wireAi(box);
   box.querySelectorAll(".croplayer").forEach(wireCrop);
   wireSlines(box,(sg,id)=>signPreview(id),(sg,id)=>{ delete sg.ai; delete sg.aiErr; signPreview(id); if(aiLive()) signAskAI(id); }); /* a typed line is checked like a picked character */
+  wireTags(box,(cur,inp)=>{ const sg=SIGN[inp.id.slice(6)]; if(sg) sg.tags=cur; });
   box.querySelectorAll("[data-signsave]").forEach(b=> b.onclick=()=>saveSign(b.dataset.signsave));
   box.querySelectorAll("[data-signcancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.signcancel; delete SIGN[id]; if(CROP&&CROP.id===id) CROP=null; renderShots(); });
   /* only the inbox's readings: the Edit form's text state (SIGN["editN"]) survives a tab tap, and previewing it here before
