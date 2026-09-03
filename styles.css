@@ -114,8 +114,7 @@ button{font:inherit;color:inherit}
 .field input.mono,.field textarea.mono{font-family:var(--mono)}
 .field textarea.grow{resize:none;overflow:hidden;line-height:1.35;min-height:46px;display:block}
 .row{display:flex;gap:10px}
-.row .field{flex:1} .row .field.narrow{flex:0 0 150px}
-.row input{flex:1;min-width:0}
+.row .field{flex:1} .row .field.row input{flex:1;min-width:0}
 .err{font-size:14px;color:var(--tint);margin-bottom:12px}
 .ok{font-size:14px;color:var(--ok);margin-top:12px}
 .badge{font-size:14px;color:var(--label2);line-height:1.45}
@@ -169,8 +168,7 @@ button{font:inherit;color:inherit}
 .crow .pill{font-family:var(--sans);font-weight:600}
 .linked{margin-top:16px} .linked .lbl{font-size:13px;color:var(--label2);margin-bottom:6px} .linked .thumbs{display:flex;flex-wrap:wrap;gap:8px} .card .linked .thumbs{justify-content:center}
 .linked .lnk{width:78px;height:50px;padding:0;border:1px solid var(--sep);border-radius:10px;background:var(--card2);overflow:hidden;display:flex;align-items:center;justify-content:center} .linked .lnk img{width:100%;height:100%;object-fit:contain} .linked .glyph{font-size:26px;color:var(--label)}
-.field .scriptref{margin-top:8px}
-.scriptline{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:8px} .scriptline .scriptref{margin-top:0}
+.scriptline{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:8px}
 .seg{display:inline-flex;background:var(--fill);border-radius:999px;padding:3px;margin-left:auto} .segbtn{background:none;border:none;border-radius:999px;color:var(--label);font-size:13px;font-weight:500;padding:6px 13px;min-height:30px;cursor:pointer} .segbtn.on{background:var(--tint);color:#fff} .segbtn:disabled{color:var(--label3);cursor:default}
 .lbl{font-family:var(--sans);font-size:13px;font-weight:500;color:var(--label2);margin-right:8px}
 .scriptref{display:inline-flex;align-items:baseline;gap:0}

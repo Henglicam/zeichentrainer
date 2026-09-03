@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=150; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=151; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -657,7 +657,7 @@ function charsHTML(d){
 async function charInfo(w,btn,d){
   const box=$("#chinfo"); if(!box) return;
   document.querySelectorAll(".chars .ch").forEach(b=>b.classList.toggle("on",b===btn));
-  box.hidden=false; box.innerHTML=`<span class="badge">loading the dictionary …</span>`;
+  box.hidden=false; box.innerHTML=`<span class="badge">Loading the dictionary …</span>`;
   try{
     if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
     await loadDict().catch(()=>{});
@@ -670,7 +670,7 @@ async function charInfo(w,btn,d){
     box.querySelectorAll("[data-sub]").forEach(b=> b.onclick=async e=>{ e.stopPropagation(); const ch=b.dataset.sub;
       box.querySelectorAll(".sub .ch").forEach(x=>x.classList.toggle("on",x===b));
       const line=box.querySelector(".chline"); line.innerHTML=`<span class="hanzi">${esc(ch)}</span><span class="mono">${esc(pinyinPro.pinyin(ch,{toneType:"symbol"}))}</span><span>${esc(cleanSense(bestSense(ch)||((DICT&&DICT.get(ch))||""))||"not in the dictionary")}</span>`; });
-  }catch(e){ box.innerHTML=`<span class="badge">dictionary not available</span>`; }
+  }catch(e){ box.innerHTML=`<span class="badge">Dictionary not available.</span>`; }
 }
 function wireChars(d){ document.querySelectorAll(".chars:not(.sub) .ch").forEach(b=> b.onclick=e=>{ e.stopPropagation(); charInfo(b.dataset.ch,b,d); }); }
 function backHTML(d){
@@ -698,7 +698,7 @@ function endSingle(){
   S.revealed=false; S.mode="cards"; S.detail=c; render();
 }
 function renderStudy(main){
-  if(!S.ready){ main.innerHTML=`<div class="badge">loading…</div>`; return; }
+  if(!S.ready){ main.innerHTML=`<div class="badge">Loading …</div>`; return; }
   if(!deck().length){
     main.innerHTML=`<div class="done">
       <div class="mark">始</div>
@@ -1091,7 +1091,7 @@ async function ocrWorker(status){
   if(_ocrWorker) return _ocrWorker;
   if(!_ocrLoading){
     _ocrLoading=(async()=>{
-      status("Loading OCR … (one-time ~12 MB, works offline afterwards)");
+      status("Loading the reader … (one-time ~12 MB, works offline afterwards)");
       if(!window.Tesseract) await loadScript("./vendor/tesseract.min.js");
       if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
       await loadDict().catch(()=>{}); /* meanings are optional — OCR works without */
@@ -1483,7 +1483,7 @@ const median=a=>{ const t=a.slice().sort((p,q)=>p-q); return t[t.length>>1]; };
 /* status text of a photo's reading: kept in state and re-queried, so a re-render cannot swallow it */
 /* progress texts show as one line with a moving bar — the steps themselves (straightening, second look, percentages)
    are of no use to the user (H); only failures show as text */
-const READ_FAIL=/^(No Chinese|OCR failed|Reading failed|Frame too)/;
+const READ_FAIL=/^(No Chinese|Reading failed|Frame too)/;
 /* a step that lasts longer than READ_STUCK shows its own text under the bar — a stuck step is a failure, not a step (v93) */
 const READ_STUCK=20000, READ_AT={}, READ_RUN={}; /* READ_RUN[id] = the number of the latest reading of a photo: an older one still running is superseded and abandons (v116 — a corner drag during a reading started a second one, both finished with the same text and the AI was asked twice) */
 const readingHTML=(t,id)=>READ_FAIL.test(t)?`<span class="badge">${esc(t)}</span>`
@@ -1773,7 +1773,7 @@ async function cropSign(id){
     SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r, alts, trad:tradPhoto, tradDetected:tradPhoto, tradText:tradPhoto?s2t(bestT):""};
     delete READING[id]; renderShots();
     if(aiAutoOn()) signAskAI(id); /* every reading is checked without a tap */
-  }catch(err){ if(stale()) return; status("OCR failed: "+(err&&err.message||err)); logErr("read",err&&(err.stack||err.message)||err); }
+  }catch(err){ if(stale()) return; status("Reading failed: "+(err&&err.message||err)); logErr("read",err&&(err.stack||err.message)||err); }
 }
 /* ---------- fixing one misread character: tap it, pick a replacement ----------
    Candidates come from the dictionary (words that fit the neighbouring characters), from the AI
@@ -1882,7 +1882,7 @@ async function openCharPick(id,k,i,btn,mode){
     const seen=new Set();
     const where=ins?(i===0?"at the start":i>=chars.length?"at the end":`between <b class="hanzi">${esc(chars[i-1])}</b> and <b class="hanzi">${esc(chars[i])}</b>`):"";
     box.innerHTML=`<div class="ckhead"><span class="badge">${ins?`Add a character ${where}:`:`Replace <b class="hanzi">${esc(ch)}</b> with:`}</span><button class="ckx" id="ck-x-${id}" aria-label="Close">×</button></div>
-      <div class="cands">${ai.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!aiBusy?`<span class="badge">no match — draw it or ask the AI</span>`:""}${aiBusy?`<span class="badge">asking the AI …</span>`:""}</div>
+      <div class="cands">${ai.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!aiBusy?`<span class="badge">No match — draw it or ask the AI.</span>`:""}${aiBusy?`<span class="badge">Asking the AI …</span>`:""}</div>
       <div class="ckacts">${ins||chars.length<=1?"":`<button class="btn mini danger" id="ck-del-${id}">Remove <span class="hanzi">${esc(ch)}</span></button>`}<button class="btn mini" id="ck-draw-${id}">Not here? Draw it</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}</div>
       ${ins?"":`<div class="ckacts ckadd"><span class="badge">Add a character:</span><button class="del" id="ck-ins0-${id}">+ before <span class="hanzi">${esc(ch)}</span></button><button class="del" id="ck-ins1-${id}">+ after <span class="hanzi">${esc(ch)}</span></button></div>`}`;
     box.querySelectorAll("[data-rep]").forEach(b=> b.onclick=()=>apply(b.dataset.rep));
@@ -1893,7 +1893,7 @@ async function openCharPick(id,k,i,btn,mode){
     const ab=$("#ck-ai-"+id); if(ab) ab.onclick=()=>askAI(dict);
     $("#ck-draw-"+id).onclick=()=>openDrawSheet(id,k,i,apply,ins);
   };
-  const askAI=async(dict)=>{ render(dict,[],true); try{ const alts=await aiCharAlternatives(line,i,ins); if(!box.isConnected) return; render(dict,alts,false); if(!alts.length) box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">the AI has no better idea</span>`); }catch(err){ if(!box.isConnected) return; render(dict,[],false); box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">The AI could not be reached.</span>`); } };
+  const askAI=async(dict)=>{ render(dict,[],true); try{ const alts=await aiCharAlternatives(line,i,ins); if(!box.isConnected) return; render(dict,alts,false); if(!alts.length) box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">The AI has no better idea.</span>`); }catch(err){ if(!box.isConnected) return; render(dict,[],false); box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">The AI could not be reached.</span>`); } };
   render([],[],false);
   await loadDict().catch(()=>{});
   const dict=ins?charCandidates(line,i,true):[...new Set([...altCharsAt(sg,k,i),...charCandidates(line,i)])];
@@ -2239,7 +2239,7 @@ async function signAskAI(id){
   const sg=SIGN[id]; if(!sg||sg.aiBusy) return;
   signPreview(id);
   const lines=sg.lines.map(l=>l.trim()).filter(l=>CJK.test(l)); if(!lines.length) return;
-  sg.aiBusy="asking the AI …"; delete sg.aiErr; renderShots();
+  sg.aiBusy="Asking the AI …"; delete sg.aiErr; renderShots();
   sg.aiPromise=(async()=>{ try{
     const c=lines.join("\n"), res=(sg.res||[]).filter(Boolean);
     const [r]=await aiAsk([{kind:"sign",c,p:res.map(x=>x.py).join(" / "),m:sg.mean||"",gloss:res.flatMap(x=>x.gloss),alts:sg.alts,trad:!!sg.trad,mt:{src:"gloss",verified:false,suspect:"read from a photo by OCR"}}]);
