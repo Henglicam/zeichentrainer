@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=139; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=140; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -127,6 +127,8 @@ function diagText(){
   out.push(`Last reading (${READLOG.length} steps):`);
   READLOG.forEach(x=>out.push(`  ${ago(x.t)}  ${x.text}`));
   if(LAST_READ.passes) out.push("  passes: "+JSON.stringify(LAST_READ.passes));
+  out.push("", `Drawings (${DRAWLOG.length}, newest last):`);
+  DRAWLOG.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.strokes.length} stroke${x.strokes.length===1?"":"s"} → ${x.alts.join(" ")||"nothing"}`); out.push("    strokes: "+JSON.stringify(x.strokes)); });
   out.push("", `AI exchanges (${AILOG.length}, newest last):`);
   AILOG.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.model||""} → ${x.status||""}`); out.push("    request: "+x.req); out.push("    reply: "+(x.res||x.err||"")); });
   out.push("", `Errors (${ERRLOG.length}):`);
@@ -1926,7 +1928,7 @@ function attachRefView(cv,sg,k,i){
   cv.onwheel=e=>{ e.preventDefault(); v.side*=Math.pow(1.1,e.deltaY/100); clamp(); draw(); };
   return {ready, view:v, draw, close:()=>{ if(v.bmp) v.bmp.close(); v.bmp=null; }};
 }
-const DRAW_SIZE=720;
+const DRAW_SIZE=720, DRAWLOG=[]; /* the last three drawings — the strokes as drawn and what the model answered — for More → Diagnostics (v140, H: "I feel no improvement" — the synthetic test did not reflect a finger) */
 function openDrawSheet(id,k,i,apply,ins){
   const sg=SIGN[id]; if(!sg) return;
   const ch=ins?"":([...sg.lines[k]][i]||"");
@@ -1972,7 +1974,9 @@ function openDrawSheet(id,k,i,apply,ins){
     try{
       const w=await ocrWorker(status); if(my!==seq) return;
       status("reading …");
-      const alts=await recognizeStrokes(w,strokes,p=>{ if(my===seq) status("reading … "+p+"%"); }); if(my!==seq||!el.isConnected) return;
+      const alts=await recognizeStrokes(w,strokes,p=>{ if(my===seq) status("reading … "+p+"%"); });
+      DRAWLOG.push({t:Date.now(),strokes:strokes.map(st=>st.map(p=>[Math.round(p[0]),Math.round(p[1])])),alts}); while(DRAWLOG.length>3) DRAWLOG.shift(); /* the phone's real strokes for the diagnostics (v140) */
+      if(my!==seq||!el.isConnected) return;
       const ctxc=SIGN[id]?charCandidates(SIGN[id].lines[k],i,ins):[];
       const ranked=alts.slice().sort((a,b)=>(ctxc.includes(b)?1:0)-(ctxc.includes(a)?1:0)); /* what fits the neighbours first, otherwise the reader's order */
       showCands(ranked);
