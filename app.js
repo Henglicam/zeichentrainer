@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=124; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=125; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1796,8 +1796,11 @@ function charStripHTML(id,k){
 async function openCharPick(id,k,i,btn,mode){
   const sg=SIGN[id]; if(!sg) return;
   const ins=mode==="ins", line=sg.lines[k], chars=[...line], ch=ins?"":chars[i];
+  let box=$("#ckpick-"+id);
+  if(!ins&&box&&box.dataset.mode==="rep"&&btn.classList.contains("on")){ box.remove(); btn.classList.remove("on"); return; } /* the open character tapped again: the picker closes (v125); from insert mode it goes back to replacing */
   document.querySelectorAll(".ck.on").forEach(b=>b.classList.remove("on")); btn.classList.add("on");
-  let box=$("#ckpick-"+id); if(!box){ box=document.createElement("div"); box.className="ckpick"; box.id="ckpick-"+id; }
+  if(!box){ box=document.createElement("div"); box.className="ckpick"; box.id="ckpick-"+id; }
+  box.dataset.mode=ins?"ins":"rep";
   btn.closest(".sline").appendChild(box);
   const apply=async(rep)=>{ const cs=[...sg.lines[k]], n0=cs.length; if(ins){ if(rep===null) return; cs.splice(i,0,rep); } else if(rep===null) cs.splice(i,1); else cs[i]=rep; sg.lines[k]=cs.join(""); delete sg.ai; delete sg.aiErr;
     if(sg.trad&&sg.tradTouched){ const tl=(sg.tradText||"").split("\n"), tc=[...(tl[k]||"")]; if(tc.length===n0){ if(ins) tc.splice(i,0,s2t(rep)); else if(rep===null) tc.splice(i,1); else tc[i]=s2t(rep); tl[k]=tc.join(""); } else tl[k]=s2t(sg.lines[k]); sg.tradText=tl.join("\n"); }
@@ -1806,9 +1809,9 @@ async function openCharPick(id,k,i,btn,mode){
   const render=(dict,ai,aiBusy)=>{
     const seen=new Set();
     const where=ins?(i===0?"at the start":i>=chars.length?"at the end":`between <b class="hanzi">${esc(chars[i-1])}</b> and <b class="hanzi">${esc(chars[i])}</b>`):"";
-    box.innerHTML=`<div class="badge">${ins?`Add a character ${where}:`:`Replace <b class="hanzi">${esc(ch)}</b> with:`}</div>
+    box.innerHTML=`<div class="ckhead"><span class="badge">${ins?`Add a character ${where}:`:`Replace <b class="hanzi">${esc(ch)}</b> with:`}</span><button class="ckx" id="ck-x-${id}" aria-label="Close">×</button></div>
       <div class="cands">${ai.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!aiBusy?`<span class="badge">no match — draw it or ask the AI</span>`:""}${aiBusy?`<span class="badge">asking the AI …</span>`:""}</div>
-      <div class="ckacts">${ins||chars.length<=1?"":`<button class="btn mini danger" id="ck-del-${id}">Remove <span class="hanzi">${esc(ch)}</span></button>`}<button class="btn mini" id="ck-draw-${id}">Not here? Draw it</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}<span class="grow"></span><button class="del" id="ck-x-${id}">close</button></div>
+      <div class="ckacts">${ins||chars.length<=1?"":`<button class="btn mini danger" id="ck-del-${id}">Remove <span class="hanzi">${esc(ch)}</span></button>`}<button class="btn mini" id="ck-draw-${id}">Not here? Draw it</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}</div>
       ${ins?"":`<div class="ckacts ckadd"><span class="badge">Add a character:</span><button class="del" id="ck-ins0-${id}">+ before <span class="hanzi">${esc(ch)}</span></button><button class="del" id="ck-ins1-${id}">+ after <span class="hanzi">${esc(ch)}</span></button></div>`}`;
     box.querySelectorAll("[data-rep]").forEach(b=> b.onclick=()=>apply(b.dataset.rep));
     const del=$("#ck-del-"+id); if(del) del.onclick=()=>apply(null);
