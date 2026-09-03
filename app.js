@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=115; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=116; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1537,10 +1537,15 @@ function dictCover(ls){
   while(i<ch.length){ let hit=0; for(let len=Math.min(4,ch.length-i);len>=2;len--){ if(DICT.has(ch.slice(i,i+len).join(""))){ hit=len; break; } } if(hit){ cov+=hit; i+=hit; } else i++; }
   return cov/ch.length;
 }
-function readingScore(ls){
+const boxHeight=lines=>{ const hs=lines.flatMap(l=>l.bx.filter(Boolean).map(b=>b.y1-b.y0)); return hs.length?median(hs):0; };
+function readingScore(ls,Hink){
   const n=ls.flatMap(l=>l.cf).length; if(!n) return 0;
-  const frag=Math.min(1,(n/ls.length)/3); /* lines under three characters = fragments (v96: /4 punished a real three-character logo against four garbage characters) */
-  const short=ls.filter(l=>l.cf.length<=2).length/ls.length; /* v95: a soup of seven short lines (n = 15) once outscored the real three characters */
+  /* one line whose characters are as tall as the frame's ink is the text itself, however short (v116: a single 推 on a
+     door plate, read at 99 % by ten passes, scored 18 as a "fragment" and lost to a merged soup of eight garbage
+     characters at 34 — the chromaticity copies of a white character on a black plate are noise) */
+  const whole=ls.length===1&&Hink&&boxHeight(ls)>=0.75*Hink;
+  const frag=whole?1:Math.min(1,(n/ls.length)/3); /* lines under three characters = fragments (v96: /4 punished a real three-character logo against four garbage characters) */
+  const short=whole?0:ls.filter(l=>l.cf.length<=2).length/ls.length; /* v95: a soup of seven short lines (n = 15) once outscored the real three characters */
   const cf=meanCf(ls);
   /* confidence counts cubically: real text reads at 90–97 %, the reader's garbage at 79–86 %, and a linear weight let one more character outweigh that (v96) */
   return cf*Math.pow(cf/100,2)*Math.pow(n,0.35)*frag*(1-0.5*short)*(0.75+0.5*dictCover(ls));
@@ -1553,8 +1558,8 @@ function readingScore(ls){
 /* readings whose boxes are far smaller than the frame's ink height are fragments of the decoration (v98); the gates use
    the effective score too (v100, H's granite sign: a soup of seventy fragments scored 183 raw, so neither the copies nor
    the traditional reader nor the whole-frame passes ever ran — five passes instead of forty) */
-function sizeFitOf(lines,Hink){ if(!Hink) return 1; const hs=lines.flatMap(l=>l.bx.filter(Boolean).map(b=>b.y1-b.y0)); if(!hs.length) return 1; const q=median(hs)/Hink; return q>=0.5?1:Math.pow(q/0.5,2); } /* from half the ink height down: decoration taller than the text (stripes, a ribbon) inflates the ink height by up to 2× */
-const effScore=(lines,Hink)=>readingScore(lines)*sizeFitOf(lines,Hink);
+function sizeFitOf(lines,Hink){ if(!Hink) return 1; const h=boxHeight(lines); if(!h) return 1; const q=h/Hink; return q>=0.5?1:Math.pow(q/0.5,2); } /* from half the ink height down: decoration taller than the text (stripes, a ribbon) inflates the ink height by up to 2× */
+const effScore=(lines,Hink)=>readingScore(lines,Hink)*sizeFitOf(lines,Hink);
 async function secondLook(w,dk,passes,status,r,Hink){
   const first=passes[0].lines, boxes=first.flatMap(l=>l.bx).filter(Boolean);
   if(!boxes.length) return null;
@@ -1651,9 +1656,9 @@ async function cropSign(id){
     }
     /* agreement counts: a text several passes produced beats a single pass's near-equal score (v96: 业主直租 ×3 lost a tie to 业主直祖 ×1) */
     const textOf=p=>p.lines.map(x=>x.t).join("\n"), agree=new Map(); passes.forEach(p=>{ const t=textOf(p); if(t) agree.set(t,(agree.get(t)||0)+1); });
-    const hOfPass=p=>{ const hs=p.lines.flatMap(l=>l.bx.filter(Boolean).map(b=>b.y1-b.y0)); return hs.length?median(hs):0; };
+    const hOfPass=p=>boxHeight(p.lines);
     const sizeFit=p=>sizeFitOf(p.lines,Hink);
-    const score=p=>readingScore(p.lines)*Math.min(1.5,1+0.1*((agree.get(textOf(p))||1)-1))*sizeFit(p);
+    const score=p=>readingScore(p.lines,Hink)*Math.min(1.5,1+0.1*((agree.get(textOf(p))||1)-1))*sizeFit(p);
     passes.sort((a,b)=>score(b)-score(a));
     r.passes=passes.map(p=>({s:Math.round(score(p)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),h:Hink?+(hOfPass(p)/Hink).toFixed(2):null,tight:p.tightened,bw:!!p.bw,ch:!!p.chroma,tra:!!p.tra}));
     LAST_READ.passes=r.passes;
@@ -1681,9 +1686,9 @@ async function cropSign(id){
     /* always among them: the traditional reader's best (it knows glyphs the other one lacks) and the best reading of another
        length (two characters fused into one, or one lost — 专业冰矫正 beside 专业脊柱矫正 — is what the AI needs to see) */
     const glyphsOf=t=>[...t].filter(c=>CJK.test(c)).length, nBest=glyphsOf(bestT);
-    for(const pick of [passes.find(p=>p.lines.some(l=>l.tra)&&textOf(p)!==bestT), passes.find(p=>textOf(p)&&glyphsOf(textOf(p))!==nBest&&readingScore(p.lines)>=0.6*readingScore(lines))]){
+    for(const pick of [passes.find(p=>p.lines.some(l=>l.tra)&&textOf(p)!==bestT), passes.find(p=>textOf(p)&&glyphsOf(textOf(p))!==nBest&&readingScore(p.lines,Hink)>=0.6*readingScore(lines,Hink))]){
       if(pick&&!alts.includes(textOf(pick))){ if(alts.length>=6) alts.pop(); alts.push(textOf(pick)); } }
-    const tradPhoto=tradPhotoOf(lines.map(x=>x.t),passes,score); r.trad=tradPhoto;
+    const tradPhoto=s2t(bestT)!==bestT&&tradPhotoOf(lines.map(x=>x.t),passes,score); r.trad=tradPhoto; /* a text without a traditional form (推) has nothing to vote on */
     SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r, alts, trad:tradPhoto, tradText:tradPhoto?s2t(bestT):""};
     delete READING[id]; renderShots();
     if(aiAutoOn()) signAskAI(id); /* every reading is checked without a tap */
