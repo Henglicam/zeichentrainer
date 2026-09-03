@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=137; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=138; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1441,7 +1441,13 @@ async function deskewBlob(blob,forced){ /* forced: rotate by this angle instead 
     const nw=Math.round(Math.abs(W*Math.cos(r))+Math.abs(H*Math.sin(r))), nh=Math.round(Math.abs(W*Math.sin(r))+Math.abs(H*Math.cos(r)));
     const out=document.createElement("canvas"); out.width=nw; out.height=nh;
     const o=out.getContext("2d",{alpha:false}); /* opaque: the reader misreads a PNG that carries an alpha channel */
-    const e=ctx.getImageData(1,1,1,1).data; o.fillStyle=`rgb(${e[0]},${e[1]},${e[2]})`; o.fillRect(0,0,nw,nh);
+    /* the corners take the crop's dominant colour — the most frequent colour bin, then the mean of its pixels (v138:
+       one edge pixel once was the dark logo frame on H's 美团 crop, the dark corners became the "ink" of the
+       chromaticity copy and the black characters fell on its background side; a channel-wise median is no real colour
+       and a border colour is the frame line again — measured on 美团 and 业主直租) */
+    const px=ctx.getImageData(0,0,w,h).data, bins=new Map(); let top=null;
+    for(let i=0;i<w*h*4;i+=4){ const key=(px[i]>>4)<<8|(px[i+1]>>4)<<4|(px[i+2]>>4); const b=bins.get(key)||{n:0,r:0,g:0,b:0}; b.n++; b.r+=px[i]; b.g+=px[i+1]; b.b+=px[i+2]; bins.set(key,b); if(!top||b.n>top.n) top=b; }
+    o.fillStyle=`rgb(${Math.round(top.r/top.n)},${Math.round(top.g/top.n)},${Math.round(top.b/top.n)})`; o.fillRect(0,0,nw,nh);
     o.translate(nw/2,nh/2); o.rotate(r); o.drawImage(bmp,-W/2,-H/2); bmp.close();
     const rot=await new Promise(res=>out.toBlob(res,"image/jpeg",READ_JPEG));
     return {blob:rot||blob,angle};
@@ -1533,7 +1539,7 @@ function inkHeight(bmp){
   for(let y=1;y<cv.height-1;y++){ let ink=0, edges=0, prev=false; for(let x=0;x<W;x++){ const on=d[(y*W+x)*4]<128; if(on) ink++; if(on!==prev){ edges++; prev=on; } }
     /* a text row: some ink, not solid, and many stroke edges — a stripe, a ribbon or the oval of a logo is solid or has
        only a few edges, and once made the ink height the frame height (v100: the real text then looked like fragments) */
-    const textRow=ink/W>0.03&&ink/W<0.7&&edges>=6;
+    const textRow=ink/W>0.03&&ink/W<0.7&&edges>=6; /* four edges were tried in v138 for big characters (拉, 美团) and reverted: 业主直租 in its light-on-red version lost its winning small-scale pass when the ink height fell from 308 to 140 */
     if(textRow){ run++; if(run>best) best=run; } else run=0; }
   return best>=4?best/k:0;
 }
