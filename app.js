@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=151; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=152; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -260,13 +260,40 @@ async function autoBreaks(){
   }
   if(todo.length && S.mode==="study") render();
 }
-function frontBox(lines,base){
+/* the width the front's text box may take: the card's inner width, measured (v152 — until v151 it was guessed from the
+   window and overflowed the card on H's phone) */
+function frontWidth(){
+  const main=$("#main"); if(!main) return Math.max(200,(window.innerWidth||390)-68);
+  const cs=getComputedStyle(main), inner=main.clientWidth-parseFloat(cs.paddingLeft||0)-parseFloat(cs.paddingRight||0);
+  return Math.max(200,Math.min(440,inner)-36); /* .card: max-width 440, padding 18 each side */
+}
+/* A photo line too long for the box goes on two (or more) lines instead of past the card (v152, H's 16-character
+   escalator sign: "statt überlaufende Zeile bitte zweizeilig"): while the fitted font would fall under minFs, the longest
+   line is cut nearest its middle, between words where the card knows them (words[k] = the words of line k) */
+function fitLines(lines,words,W,cap,minFs){
+  lines=lines.slice(); words=(words||[]).slice();
+  const fsOf=()=>Math.min(cap,Math.floor((W-28)/Math.max(1,...lines.map(glyphs))));
+  for(let guard=0;guard<6&&fsOf()<minFs;guard++){
+    let k=0; lines.forEach((l,i)=>{ if(glyphs(l)>glyphs(lines[k])) k=i; });
+    const cs=[...lines[k]]; if(cs.length<4) break;
+    const mid=cs.length/2; let cut=Math.round(mid);
+    const ws=words[k]; if(ws&&ws.length>1){ let pos=0, best=null; for(const w of ws.slice(0,-1)){ pos+=[...w].length; if(best===null||Math.abs(pos-mid)<Math.abs(best-mid)) best=pos; } if(best&&Math.abs(best-mid)<=mid*0.5) cut=best; }
+    lines.splice(k,1,cs.slice(0,cut).join(""),cs.slice(cut).join(""));
+    if(ws){ let pos=0; const wa=[], wb=[]; for(const w of ws){ const n=[...w].length; if(pos+n<=cut) wa.push(w); else if(pos>=cut) wb.push(w); else { wa.push([...w].slice(0,cut-pos).join("")); wb.push([...w].slice(cut-pos).join("")); } pos+=n; } words.splice(k,1,wa,wb); }
+    else words.splice(k,1,null,null);
+  }
+  return {lines,fs:fsOf()};
+}
+function frontWords(d){ /* the words of each photo line of a word card, from seg */
+  if(!d.seg) return null; const out=[[]]; d.seg.forEach(x=>{ if(x==="\n") out.push([]); else out[out.length-1].push(x); }); return out.filter(w=>w.length);
+}
+function frontBox(lines,base,words){
   const longest=Math.max(...lines.map(glyphs));
   const wide=longest>3;
-  const W=wide?Math.min(440,Math.max(260,(window.innerWidth||390)-32)):260;
-  const fs=Math.min(base,Math.floor((W-28)/longest));
-  const H=wide?Math.max(150,Math.round(fs*1.3*lines.length+56)):260;
-  return {W,H,fs};
+  const W=wide?Math.max(260,frontWidth()):260;
+  const fit=wide?fitLines(lines,words,W,base,30):{lines,fs:Math.min(base,Math.floor((W-28)/longest))};
+  const H=wide?Math.max(150,Math.round(fit.fs*1.3*fit.lines.length+56)):260;
+  return {W,H,fs:fit.fs,lines:fit.lines};
 }
 
 function render(){
@@ -606,17 +633,16 @@ function frontHTML(d){
   const scriptNote=d.trad?`<div class="script"><div class="lbl">Traditional characters, as on the photo</div><div class="scriptref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></div></div>`:""; /* the simplified form for reference (H, v102); plain words, no 简/繁 shorthand (H, v106); the back repeats nothing */
   if(d.kind==="sign"){
     /* sign card: the picture is the exercise, text underneath wrapped only between words */
-    const lines=(d.trad||d.c).split("\n");
-    const longest=Math.max(...lines.map(glyphs));
-    const W=Math.min(440,Math.max(260,(window.innerWidth||390)-32));
-    const fs=Math.min(longest<=6?40:longest<=9?30:24,Math.floor((W-28)/longest));
+    const lines0=(d.trad||d.c).split("\n");
+    const longest=Math.max(...lines0.map(glyphs));
+    const {lines,fs}=fitLines(lines0,d.segs,Math.max(260,frontWidth()),longest<=6?40:longest<=9?30:24,22);
     return `<div class="signfront">${frontPic(d)}
       <div class="signtext" style="font-size:${fs}px">${lines.map(l=>`<div>${esc(l)}</div>`).join("")}</div>${scriptNote}</div>`;
   }
   const single=glyphs(d.c)<=1;
   /* the photo is the cue — it belongs on the front, before reveal */
   const pic=frontPic(d);
-  const lines=d.trad?d.trad.split("\n"):frontLines(d), {W,H,fs}=frontBox(lines,headFont(d.c)); /* the front shows the photo's script; the card's key stays simplified */
+  const lines0=d.trad?d.trad.split("\n"):frontLines(d), {W,H,fs,lines}=frontBox(lines0,headFont(d.c),frontWords(d)); /* the front shows the photo's script; the card's key stays simplified */
   return `${pic}<div class="reticle" style="width:${W}px;height:${H}px">${reticleSVG(single,W,H)}<div class="glyph" style="font-size:${fs}px">${lines.map(esc).join("<br>")}</div></div>${scriptNote}`;
 }
 /* ---------- pronunciation: the phone's own Chinese voice (nothing downloaded, works offline) ---------- */
