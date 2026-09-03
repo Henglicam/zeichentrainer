@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=108; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=109; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1934,9 +1934,9 @@ async function recognizeStrokes(w,strokes,log){
 /* the line as shown: on a traditional photo the traditional form (H, v104: "show the text in traditional and add simplified
    for reference" — the edits underneath stay simplified, the card's key), else the simplified line itself */
 function tradLine(sg,k){ const line=sg.lines[k]; if(!sg.trad) return line; const t=(sg.tradText||"").split("\n")[k]; return t&&[...t].length===[...line].length?t:s2t(line); }
-function slineHTML(id,k,line,withPinyin){
-  const sg=SIGN[id];
-  return `<div class="sline">${charStripHTML(id,k)}<input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(sg&&sg.trad?tradLine(sg,k):line)}" autocomplete="off">${withPinyin?`<div class="sp" id="sp-${id}-${k}"></div>`:""}</div>`;
+function slineHTML(id,k,line,withPinyin,withInput=true){
+  const sg=SIGN[id]; /* withInput=false: the Read preview shows the strip alone (H, v109: the line field under it was one thing too many); the Edit form keeps it for retyping */
+  return `<div class="sline">${charStripHTML(id,k)}${withInput?`<input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(sg&&sg.trad?tradLine(sg,k):line)}" autocomplete="off">`:""}${withPinyin?`<div class="sp" id="sp-${id}-${k}"></div>`:""}</div>`;
 }
 /* the strip's character buttons open the picker; typing in a line calls onInput(sg, k, input) */
 function wireSlines(root,onInput){
@@ -1953,7 +1953,7 @@ function wireSlines(root,onInput){
 }
 function signEditorHTML(id){
   const sg=SIGN[id]; if(!sg) return "";
-  const rows=sg.lines.map((l,k)=>slineHTML(id,k,l,false)).join("");
+  const rows=sg.lines.map((l,k)=>slineHTML(id,k,l,false,false)).join("");
   const low=sg.conf?Math.min(...sg.conf.flat().concat([100])):100;
   const doubt=!aiLive()&&low<OCR_DOUBT?` The reading looks uncertain (confidence ${Math.round(low)}%) — check the text.`:"";
   const bad=sg.ai&&sg.ai.bad;
