@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=148; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=149; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2128,11 +2128,11 @@ async function recognizeStrokes(w,strokes,log,guide=true){
 /* The traditional mark by hand (v146, H's 9楼 marked traditional by the vote: "make it changeable in crop mode and under
    Edit"; v147: a two-way switch instead of a link — "could be misunderstood"): a switch "Simplified | Traditional" under
    the characters in the Read preview and the Edit form; the strip and the line switch form, the reference line comes
-   and goes, the key stays simplified. A text without a traditional form (推) shows no switch. */
+   and goes, the key stays simplified. A text without a traditional form (工作, 推) keeps the switch, with the Traditional
+   side greyed out (v149, H: the vanishing switch "looks like a bug"). */
 function scriptSwitchHTML(id,sg){
-  const txt=sg.lines.map(l=>l.trim()).filter(Boolean).join("\n");
-  if(!sg.trad&&S2T&&s2t(txt)===txt) return "";
-  return `<div class="seg" data-scriptseg="${id}"><button type="button" class="segbtn${sg.trad?"":" on"}" data-scriptset="0">Simplified</button><button type="button" class="segbtn${sg.trad?" on":""}" data-scriptset="1">Traditional</button></div>`;
+  const txt=sg.lines.map(l=>l.trim()).filter(Boolean).join("\n"), same=!sg.trad&&S2T&&s2t(txt)===txt;
+  return `<div class="seg" data-scriptseg="${id}"><button type="button" class="segbtn${sg.trad?"":" on"}" data-scriptset="0">Simplified</button><button type="button" class="segbtn${sg.trad?" on":""}" data-scriptset="1"${same?" disabled":""}>Traditional</button></div>`;
 }
 async function setScript(sg,on){
   sg.tradUser=true; sg.tradTouched=false;
