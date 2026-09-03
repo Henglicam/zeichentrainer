@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=154; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=155; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -80,6 +80,7 @@ async function putCard(upd,key){
 const S = { mode:"study", progress:{}, custom:[], inbox:[],
   queue:[], idx:0, revealed:false, done:0, ahead:false, ready:false,
   pendingImg:null, pendingFull:null, pendingUse:"crop", persist:null,
+  peek:null, /* Learn: the id of a linked card whose photo is shown on the front instead (v155) */
   detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterTag:null, settings:{}, single:null, saved:null,
   editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null };
 
@@ -639,8 +640,9 @@ function urlOf(blob){ let u=BLOBURL.get(blob); if(!u){ u=URL.createObjectURL(blo
 const fullPhoto=d=>d.imgFull||(d.shot&&(S.inbox.find(x=>x.id===d.shot)||{}).blob)||null;
 /* the photo on the front: the crop, or — after a tap on it — the whole photo (S.fullPic) */
 function frontPic(d){
-  const full=fullPhoto(d);
-  const blob=S.fullPic&&full?full:d.img; if(!blob) return "";
+  const pk=S.peek&&S.peek!==d.id?cardOf(S.peek):null; /* Learn: a linked card's photo, tapped in the "Also on another photo" row (v155) */
+  const full=pk?fullPhoto(pk):fullPhoto(d);
+  const blob=pk?(pk.img||full):(S.fullPic&&full?full:d.img); if(!blob) return "";
   return `<img class="signimg${S.fullPic&&full?" full":""}" data-pic="1" src="${urlOf(blob)}" alt="photo">`;
 }
 function frontHTML(d){
@@ -728,9 +730,13 @@ function backHTML(d){
 const sameText=d=>deck().filter(x=>x.id!==d.id&&x.c===d.c).sort((a,b)=>(b.at||0)-(a.at||0));
 function linkedHTML(d){
   const others=sameText(d); if(!others.length) return "";
-  return `<div class="linked"><div class="lbl">Also on ${others.length===1?"another photo":others.length+" other photos"}</div><div class="thumbs">${others.map(x=>`<button class="lnk" data-link="${esc(x.id)}" aria-label="Open this card">${x.img||fullPhoto(x)?`<img src="${thumbURL(x)}" alt="">`:`<span class="glyph hanzi">${esc([...x.c][0])}</span>`}</button>`).join("")}</div></div>`;
+  return `<div class="linked"><div class="lbl">Also on ${others.length===1?"another photo":others.length+" other photos"}</div><div class="thumbs">${others.map(x=>`<button class="lnk${S.mode==="study"&&S.peek===x.id?" on":""}" data-link="${esc(x.id)}" aria-label="${S.mode==="study"?"Show this photo":"Open this card"}">${x.img||fullPhoto(x)?`<img src="${thumbURL(x)}" alt="">`:`<span class="glyph hanzi">${esc([...x.c][0])}</span>`}</button>`).join("")}</div></div>`;
 }
-function wireLinks(root){ (root||document).querySelectorAll("[data-link]").forEach(b=> b.onclick=()=>{ S.mode="cards"; S.detail=b.dataset.link; S.detailHide=false; S.fullPic=false; S.editing=null; render(); window.scrollTo({top:0}); }); }
+function wireLinks(root){ (root||document).querySelectorAll("[data-link]").forEach(b=> b.onclick=()=>{
+  /* in Learn the tap shows that photo on the card in place, a second tap returns — the session goes on (v155, H: "I'm
+     getting out of the learn mode. That should not happen"); in the Cards detail it opens the other card as before */
+  if(S.mode==="study"){ S.peek=S.peek===b.dataset.link?null:b.dataset.link; S.fullPic=false; render(); return; }
+  S.mode="cards"; S.detail=b.dataset.link; S.detailHide=false; S.fullPic=false; S.editing=null; render(); window.scrollTo({top:0}); }); }
 function endSingle(){
   /* leave single-card test mode and restore the session queue */
   const c=S.single; S.single=null;
@@ -798,14 +804,14 @@ async function grade(g){
   if(days[days.length-1]!==day){ days.push(day); if(days.length>400) days.shift(); await setSetting("days",days); }
   if(S.single){ nextSingle(c); return; }
   if(g==="again") S.queue.push(c); else S.done++;
-  S.idx++; S.revealed=false; S.fullPic=false; render(); window.scrollTo({top:0});
+  S.idx++; S.revealed=false; S.fullPic=false; S.peek=null; render(); window.scrollTo({top:0});
 }
 /* "Test this card" continues with the next card of the list (newest first); ← Cards stops */
 function nextSingle(c){
   const list=S.custom.slice().sort((a,b)=>(b.at||0)-(a.at||0)).map(d=>d.id);
   const next=list[list.indexOf(c)+1];
   if(!next){ endSingle(); return; }
-  S.single=next; S.queue=[next]; S.idx=0; S.revealed=false; S.fullPic=false; render(); window.scrollTo({top:0});
+  S.single=next; S.queue=[next]; S.idx=0; S.revealed=false; S.fullPic=false; S.peek=null; render(); window.scrollTo({top:0});
 }
 
 /* ---------- Add ---------- */
