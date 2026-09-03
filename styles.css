@@ -41,6 +41,8 @@ button{font:inherit;color:inherit}
 #main{flex:1;display:flex;flex-direction:column;align-items:center;
   padding:16px 16px calc(var(--nav) + 28px + env(safe-area-inset-bottom));overflow-y:auto}
 #main.center{justify-content:center}
+/* Learn: the chip row stays at the top edge, the card is centred in the space below it (v158, H: "chips should always be on the upper edge, to avoid distraction from the cards") */
+#main.center>.learnchips{margin-bottom:auto} #main.center>.learnchips~.card,#main.center>.learnchips~.done{margin-bottom:auto}
 
 /* bottom tab bar */
 #tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;display:grid;grid-template-columns:repeat(4,1fr);gap:0;
