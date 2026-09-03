@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=152; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=153; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -84,10 +84,21 @@ const S = { mode:"study", progress:{}, custom:[], inbox:[],
   editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null };
 
 function deck(){ return S.custom; }
+/* the order of a Learn session (v153, H: "provide choices for the order in which the flash cards are shown"): due cards
+   still come before new ones; inside each group "oldest" is the old order (due by due date, new by creation), "newest"
+   is by creation newest first, "random" a fresh shuffle per session — setting learnOrder, chosen in More → Learning */
+const LEARN_ORDERS=[["oldest","Oldest first"],["newest","Newest first"],["random","Random"]];
+const learnOrder=()=>LEARN_ORDERS.some(([v])=>v===S.settings.learnOrder)?S.settings.learnOrder:"oldest";
+function orderCards(list,order,byDue){
+  if(order==="random"){ const a=list.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+  if(order==="newest") return list.slice().sort((a,b)=>(b.at||0)-(a.at||0));
+  return byDue?list.slice().sort((a,b)=>S.progress[a.id].due-S.progress[b.id].due):list.slice(); /* the deck is oldest first already */
+}
 function buildQueue(includeAhead){
   const lt=learnTag(), p=S.progress, t=today(), d=lt?deck().filter(x=>(x.tags||[]).includes(lt)):deck(); /* Learn: all cards or one tag (v133) */
-  const due = d.filter(x=>p[x.id] && p[x.id].due<=t).sort((a,b)=>p[a.id].due-p[b.id].due).map(x=>x.id);
-  const fresh = d.filter(x=>!p[x.id]).slice(0,NEW_PER_SESSION).map(x=>x.id);
+  const order=learnOrder();
+  const due = orderCards(d.filter(x=>p[x.id] && p[x.id].due<=t),order,true).map(x=>x.id);
+  const fresh = orderCards(d.filter(x=>!p[x.id]),order,false).slice(0,NEW_PER_SESSION).map(x=>x.id);
   let q=[...due,...fresh];
   if(includeAhead && q.length===0)
     q = d.filter(x=>p[x.id]).sort((a,b)=>p[a.id].due-p[b.id].due).slice(0,8).map(x=>x.id);
@@ -553,6 +564,8 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">Review queue</div><div class="s" id="ai-runstatus"></div></div><button class="btn mini" id="ai-run" hidden></button></div>
     <div class="mrow"><div><div class="t">Storage</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
     <div class="mrow"><div><div class="t">Text recognition</div><div class="s" id="ocr-status">Checking …</div></div><button class="btn mini" id="ocr-btn" hidden></button></div>
+    <div class="listhead">Learning</div>
+    <div class="mrow"><div><div class="t">Card order</div><div class="s">Due cards come first, then up to ${NEW_PER_SESSION} new ones. This sets the order inside each group.</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${l}</button>`).join("")}</div></div></div>
     <div class="listhead">Updates without a VPN</div>
     <div class="mrow"><div><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div></div><button class="btn mini" id="mirror-check">Check now</button></div>
     <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>
@@ -577,6 +590,7 @@ function renderMore(main){
   $("#mirror-url").onchange=async e=>{ await setSetting("mirror",e.target.value.trim()); tellMirror(); };
   renderOcrRow();
   $("#mirror-check").onclick=()=>{ mirrorCheck(true); };
+  main.querySelectorAll("[data-learnorder]").forEach(b=> b.onclick=async()=>{ await setSetting("learnOrder",b.dataset.learnorder); S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false; S.single=null; S.saved=null; setStats(); main.querySelectorAll("[data-learnorder]").forEach(x=>x.classList.toggle("on",x===b)); }); /* the Learn session follows at once (v153) */
   renderNmtRow(); renderAiRow();
   $("#reset").onclick=resetAll;
 }
