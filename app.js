@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=112; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=113; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1664,10 +1664,7 @@ async function cropSign(id){
     /* the other readings (distinct texts, best first): the AI sees them all (the truth is often a mix, or a name they circle
        around — 养兴多 / 义乐多 / 和准浴多 → 养乐多), the picker offers their characters at the same position */
     let bestT=lines.map(x=>x.t).join("\n"), alts=[];
-    /* the photo shows traditional characters when the traditional reader won and the simplified reader read something
-       else (v101 — on a simplified sign both read the same text, the traditional one in traditional forms) */
-    const bestSim=passes.find(p=>textOf(p)&&!p.lines.some(l=>l.tra));
-    const tradPhoto=best.lines.some(l=>l.tra)&&(!bestSim||textOf(bestSim)!==bestT); r.trad=tradPhoto;
+
     /* Dictionary consensus (v99, from H's phone: the Yakult logo's passes gave 养浴多, 次乐多, 开乐多, 养举多, 养座多 —
        each one character away from 养乐多, an entry of the dictionary, and the AI still refused): when the readings of a
        single line circle around one dictionary word of the same length, that word is the reading and the others are
@@ -1686,6 +1683,7 @@ async function cropSign(id){
     const glyphsOf=t=>[...t].filter(c=>CJK.test(c)).length, nBest=glyphsOf(bestT);
     for(const pick of [passes.find(p=>p.lines.some(l=>l.tra)&&textOf(p)!==bestT), passes.find(p=>textOf(p)&&glyphsOf(textOf(p))!==nBest&&readingScore(p.lines)>=0.6*readingScore(lines))]){
       if(pick&&!alts.includes(textOf(pick))){ if(alts.length>=6) alts.pop(); alts.push(textOf(pick)); } }
+    const tradPhoto=tradPhotoOf(lines.map(x=>x.t),passes,score); r.trad=tradPhoto;
     SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r, alts, trad:tradPhoto, tradText:tradPhoto?s2t(bestT):""};
     delete READING[id]; renderShots();
     if(aiAutoOn()) signAskAI(id); /* every reading is checked without a tap */
@@ -1750,6 +1748,19 @@ function dictConsensus(texts){
       if(diff<=1){ const e=support.get(key)||{word:key,support:[]}; e.support.push(cs.join("")); support.set(key,e); } } }
   let best=null; for(const e of support.values()){ e.support=[...new Set(e.support)]; if(e.support.length>=2&&(!best||e.support.length>best.support.length||(e.support.length===best.support.length&&[...e.word].length>[...best.word].length))) best=e; }
   return best;
+}
+/* Does the photo show traditional characters? A vote (v113): every pass that read a line of the final text (the same
+   line, or one character off) casts its effective score for its reader; the merged composite abstains. Traditional
+   only when the traditional reader's votes outweigh the simplified reader's by half. On a simplified sign both readers
+   read the same lines (H's escalator sign: 17 lines, one line from the traditional reader inside the merged winner was
+   enough for the old rule — v113); on a traditional logo the simplified reader can only approximate (养兴多 / 和准兴多
+   against 次乐多 / 义乐多 — it never produces 乐, the simplified form of 樂). */
+function tradPhotoOf(finalLines,passes,score){
+  const near=(a,b)=>{ const A=[...a],B=[...b]; if(A.length!==B.length) return false; let d=0; for(let i=0;i<A.length;i++) if(A[i]!==B[i]) d++; return d<=(A.length>=3?1:0); };
+  let tra=0, sim=0;
+  for(const p of passes){ if(p.scale==="merged") continue; const sc=score(p); if(!sc) continue; const isTra=p.lines.some(l=>l.tra);
+    for(const fl of finalLines){ if(p.lines.some(l=>near(l.t,fl))){ if(isTra) tra+=sc; else sim+=sc; } } }
+  return tra>0&&(sim===0||tra>1.5*sim);
 }
 function charStripHTML(id,k){
   const sg=SIGN[id], line=sg.lines[k], same=sg.orig&&sg.orig[k]===line.trim(), cf=(same&&sg.conf&&sg.conf[k])||[];
