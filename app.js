@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=98; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=99; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1634,7 +1634,19 @@ async function cropSign(id){
     /* img = the (straightened, maybe tightened) crop the text was read from, boxes = where each character sits in it: the picker shows the original */
     /* the other readings (distinct texts, best first): the AI sees them all (the truth is often a mix, or a name they circle
        around — 养兴多 / 义乐多 / 和准浴多 → 养乐多), the picker offers their characters at the same position */
-    const bestT=lines.map(x=>x.t).join("\n"), alts=[];
+    let bestT=lines.map(x=>x.t).join("\n"), alts=[];
+    /* Dictionary consensus (v99, from H's phone: the Yakult logo's passes gave 养浴多, 次乐多, 开乐多, 养举多, 养座多 —
+       each one character away from 养乐多, an entry of the dictionary, and the AI still refused): when the readings of a
+       single line circle around one dictionary word of the same length, that word is the reading and the others are
+       its alternatives. Only when the best reading is no dictionary word itself, and only with two or more readings
+       pointing the same way. */
+    if(lines.length===1&&DICT){
+      const texts=[...new Set(passes.map(textOf).filter(t=>t&&!t.includes("\n")))];
+      const fix=dictConsensus(texts);
+      if(fix&&fix.word!==bestT&&!DICT.has(bestT)){
+        alts.push(bestT); lines[0]={...lines[0],t:fix.word}; bestT=fix.word; r.consensus={word:fix.word,from:fix.support};
+      }
+    }
     for(const p of passes){ const t=textOf(p); if(t&&t!==bestT&&!alts.includes(t)) alts.push(t); if(alts.length>=5) break; }
     /* always among them: the traditional reader's best (it knows glyphs the other one lacks) and the best reading of another
        length (two characters fused into one, or one lost — 专业冰矫正 beside 专业脊柱矫正 — is what the AI needs to see) */
@@ -1693,6 +1705,18 @@ function altCharsAt(sg,k,i){
   const line=sg.lines[k], n=[...line].length, out=[];
   for(const t of sg.alts||[]){ const l=t.split("\n")[k]; if(!l) continue; const cs=[...l]; if(cs.length!==n) continue; const c=cs[i]; if(CJK.test(c)&&c!==[...line][i]&&!out.includes(c)) out.push(c); }
   return out;
+}
+/* the dictionary word (2–6 characters) that the most readings are within one character of; null without two supporters */
+function dictConsensus(texts){
+  const cands=texts.map(t=>[...t]).filter(cs=>cs.length>=2&&cs.length<=6&&cs.every(c=>CJK.test(c)));
+  if(cands.length<2) return null;
+  const byLen=new Map(); for(const cs of cands){ const a=byLen.get(cs.length)||[]; a.push(cs); byLen.set(cs.length,a); }
+  const support=new Map();
+  for(const key of DICT.keys()){ const group=byLen.get(key.length); if(!group||!CJK.test(key)) continue; const ks=[...key]; if(ks.length!==key.length) continue;
+    for(const cs of group){ let diff=0; for(let i=0;i<ks.length&&diff<2;i++) if(ks[i]!==cs[i]) diff++;
+      if(diff<=1){ const e=support.get(key)||{word:key,support:[]}; e.support.push(cs.join("")); support.set(key,e); } } }
+  let best=null; for(const e of support.values()){ e.support=[...new Set(e.support)]; if(e.support.length>=2&&(!best||e.support.length>best.support.length||(e.support.length===best.support.length&&[...e.word].length>[...best.word].length))) best=e; }
+  return best;
 }
 function charStripHTML(id,k){
   const sg=SIGN[id], line=sg.lines[k], same=sg.orig&&sg.orig[k]===line.trim(), cf=(same&&sg.conf&&sg.conf[k])||[];
