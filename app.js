@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=134; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=135; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -915,7 +915,7 @@ function renderEdit(main,c){
     <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
       <input id="e-note" value="${esc(d.flagNote||"")}" placeholder="Note for the reviewer (optional)"></div>
     ${tagsFieldHTML("e-tags",d.tags)}
-    ${aiOn()?`<div class="field"><button class="btn block" id="e-ai">Ask AI to check text, pinyin and meaning</button><div class="badge" id="e-aistatus" style="margin-top:6px"></div><div id="e-aibox" hidden class="aibox"></div></div>`:""}
+    ${aiOn()?`<div class="field" id="e-aifield"${d.mt&&d.mt.src==="llm"&&d.mt.verified?" hidden":""}><button class="btn block" id="e-ai">Ask AI to check text, pinyin and meaning</button><div class="badge" id="e-aistatus" style="margin-top:6px"></div><div id="e-aibox" hidden class="aibox"></div></div>`:""}
     <div id="e-err" class="err" style="display:none"></div>
     <button class="btn primary block" id="e-save">Save changes</button>
     </div>
@@ -936,12 +936,14 @@ function renderEdit(main,c){
   const drawLines=()=>{
     const box=$("#e-lines"); if(!box) return;
     box.innerHTML=sg.lines.map((l,k)=>slineHTML(eid,k,l,false)).join("")+(sg.trad?`<div class="scriptref"><span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span></div>`:"");
-    wireSlines(box,()=>{ syncWord(); pinyinFollow(); const ref=box.querySelector(".scriptref .hanzi"); if(ref) ref.textContent=sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "); });
+    wireSlines(box,()=>{ syncWord(); pinyinFollow(); showAi(); const ref=box.querySelector(".scriptref .hanzi"); if(ref) ref.textContent=sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "); });
   };
   /* pinyin follows the text unless it was edited by hand */
   let pinTouched=false; $("#e-pin").addEventListener("input",()=>{ pinTouched=true; }); wireGrow(main);
   const pinyinFollow=()=>{ if(pinTouched||!window.pinyinPro) return; const t=sg.lines.join("").replace(/\s+/g,""); if(CJK.test(t)) $("#e-pin").value=pinyinPro.pinyin(t,{toneType:"symbol"}); };
-  sg.onChange=()=>{ syncWord(); drawLines(); pinyinFollow(); const ab=$("#e-ai"); if(ab&&aiLive()) ab.click(); };
+  /* the AI button only where it adds something: a card the AI did not verify, or a verified one whose text was changed here (H, v135) */
+  const showAi=()=>{ const f=$("#e-aifield"); if(f) f.hidden=false; };
+  sg.onChange=()=>{ syncWord(); drawLines(); pinyinFollow(); showAi(); const ab=$("#e-ai"); if(ab&&aiLive()) ab.click(); };
   drawLines();
   /* the AI fills the fields in place; nothing is stored until Save */
   const ab=$("#e-ai"); if(ab) ab.onclick=async()=>{
