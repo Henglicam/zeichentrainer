@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=122; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=123; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1787,7 +1787,8 @@ function charStripHTML(id,k){
     return `<button class="ck${isC&&c<OCR_DOUBT?" low":""}" data-ck="${k},${i}" data-sid="${id}" title="${isC&&c<100?Math.round(c)+"%":""}">${esc(shown?shown[i]:ch)}</button>`; }).join("")}</div>`; /* no + tile at the end (H, v121) — adding goes through the picker's "+ before / + after" or the line input */
 }
 /* mode "ins": a new character goes in before index i (i = length: at the end) — v91, taken out in v92, back in v119
-   (H: a misread 拉 became 人人, one character was drawn and the other could not be deleted — "add and delete characters") */
+   (H: a misread 拉 became 人人, one character was drawn and the other could not be deleted — "add and delete characters").
+   The last character of a line has no Remove (v123, H): an empty strip leaves nothing to tap, so no way to draw. */
 async function openCharPick(id,k,i,btn,mode){
   const sg=SIGN[id]; if(!sg) return;
   const ins=mode==="ins", line=sg.lines[k], chars=[...line], ch=ins?"":chars[i];
@@ -1803,7 +1804,7 @@ async function openCharPick(id,k,i,btn,mode){
     const where=ins?(i===0?"at the start":i>=chars.length?"at the end":`between <b class="hanzi">${esc(chars[i-1])}</b> and <b class="hanzi">${esc(chars[i])}</b>`):"";
     box.innerHTML=`<div class="badge">${ins?`Add a character ${where}:`:`Replace <b class="hanzi">${esc(ch)}</b> with:`}</div>
       <div class="cands">${ai.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!aiBusy?`<span class="badge">no match — draw it or ask the AI</span>`:""}${aiBusy?`<span class="badge">asking the AI …</span>`:""}</div>
-      <div class="ckacts">${ins?"":`<button class="btn mini danger" id="ck-del-${id}">Remove <span class="hanzi">${esc(ch)}</span></button>`}<button class="btn mini" id="ck-draw-${id}">Not here? Draw it</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}<span class="grow"></span><button class="del" id="ck-x-${id}">close</button></div>
+      <div class="ckacts">${ins||chars.length<=1?"":`<button class="btn mini danger" id="ck-del-${id}">Remove <span class="hanzi">${esc(ch)}</span></button>`}<button class="btn mini" id="ck-draw-${id}">Not here? Draw it</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}<span class="grow"></span><button class="del" id="ck-x-${id}">close</button></div>
       ${ins?"":`<div class="ckacts ckadd"><span class="badge">Add a character:</span><button class="del" id="ck-ins0-${id}">+ before <span class="hanzi">${esc(ch)}</span></button><button class="del" id="ck-ins1-${id}">+ after <span class="hanzi">${esc(ch)}</span></button></div>`}`;
     box.querySelectorAll("[data-rep]").forEach(b=> b.onclick=()=>apply(b.dataset.rep));
     const del=$("#ck-del-"+id); if(del) del.onclick=()=>apply(null);
