@@ -205,6 +205,8 @@ button{font:inherit;color:inherit}
 
 /* cropping: the frame must be visible on any photo colour (red on red!): bright dashed edge with a dark outline */
 .croplayer{position:absolute;inset:0;touch-action:none;cursor:crosshair}
+/* while a reading runs no new frame can be drawn, so a swipe outside the frame scrolls the page; the frame itself and its corners keep taking the finger (v131) */
+.croplayer.reading{touch-action:pan-y;cursor:default} .croplayer.reading .croprect{pointer-events:auto;touch-action:none;cursor:move} .croplayer.reading .croprect .h{cursor:nwse-resize}
 .croprect{position:absolute;display:none;border:2px dashed #fff;
   box-shadow:0 0 0 1px rgba(0,0,0,.8), inset 0 0 0 1px rgba(0,0,0,.6);pointer-events:none}
 .croprect .h{position:absolute;width:18px;height:18px;background:#fff;border:1px solid rgba(0,0,0,.8);border-radius:4px}
