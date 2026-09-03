@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Privacy policy — 识字 Zeichentrainer</title>
+<style>
+  :root { color-scheme: light dark;
+    --bg:#F2F2F7; --card:#FFF; --label:#000; --label2:#6E6E73; --sep:rgba(60,60,67,.29); --tint:#C8372D; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#000; --card:#1C1C1E; --label:#FFF; --label2:#A1A1A6; --sep:rgba(84,84,88,.6); --tint:#E0483E; }
+  }
+  html { background: var(--bg); }
+  body { margin:0; padding:16px; padding-bottom:calc(24px + env(safe-area-inset-bottom));
+    font:17px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",Roboto,system-ui,sans-serif;
+    color:var(--label); background:var(--bg); }
+  main { max-width:600px; margin:0 auto; background:var(--card); border-radius:16px; padding:20px 18px; }
+  h1 { font-size:24px; margin:0 0 4px; }
+  h2 { font-size:17px; margin:22px 0 6px; }
+  p, li { margin:8px 0; }
+  ul { padding-left:20px; }
+  .sub { color:var(--label2); font-size:14px; margin-bottom:16px; }
+  a { color:var(--tint); }
+  hr { border:none; border-top:1px solid var(--sep); margin:20px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Privacy policy</h1>
+  <p class="sub">识字 Zeichentrainer · Last updated 3 September 2026</p>
+
+  <p>识字 Zeichentrainer is a Chinese character trainer. It is built so that your data stays on your device.</p>
+
+  <h2>What the app stores, and where</h2>
+  <p>Everything you create in the app — your cards, your photos, the cropped card images, your learning progress, and your settings — is stored only on your own device, in the browser's local database. The app has no user accounts, no sign-in, and no server of its own. We cannot see, collect, or access any of your data.</p>
+
+  <h2>What leaves your device</h2>
+  <ul>
+    <li><strong>Nothing, by default.</strong> Photos you take never leave your device. Text recognition and handwriting recognition run entirely on the device.</li>
+    <li><strong>Online AI review (optional, off by default).</strong> If you enable it and enter your own API key, the app sends the text of a card — the characters, pinyin, meaning, and note, never photos — to the AI provider you chose (for example DeepSeek, Alibaba, Zhipu, or Anthropic). That request is between your device and the provider and is governed by that provider's privacy policy. Your API key is stored only on your device.</li>
+    <li><strong>Downloads.</strong> The app fetches its own files (the app itself, recognition data, the optional translation model) from its hosting (GitHub Pages) or a public mirror (jsDelivr). These are ordinary web requests; like any web server, the hosts may log standard technical data such as your IP address. We do not receive or store any of it.</li>
+    <li><strong>Exports and sharing.</strong> Your data leaves the device only when you choose to export or share it through your phone's share sheet. You decide where it goes.</li>
+  </ul>
+
+  <h2>Analytics and tracking</h2>
+  <p>The app contains no analytics, no advertising, no tracking, and no third-party scripts.</p>
+
+  <h2>Deleting your data</h2>
+  <p>Your data belongs to you and lives only on your device. You can delete individual cards and photos in the app, wipe everything under More → Start over, or remove all data by uninstalling the app or clearing its site data.</p>
+
+  <h2>Children</h2>
+  <p>The app is a general-audience learning tool for adults. It does not knowingly collect any personal information — from children or anyone else.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes, the new version will be published at this address with an updated date.</p>
+
+  <hr>
+  <p class="sub">Contact: via the project page at <a href="https://github.com/henglicam/zeichentrainer">github.com/henglicam/zeichentrainer</a>.</p>
+</main>
+</body>
+</html>
