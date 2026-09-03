@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=141; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=142; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1822,10 +1822,15 @@ function dictConsensus(texts){
    against 次乐多 / 义乐多 — it never produces 乐, the simplified form of 樂). */
 function tradPhotoOf(finalLines,passes,score){
   const near=(a,b)=>{ const A=[...a],B=[...b]; if(A.length!==B.length) return false; let d=0; for(let i=0;i<A.length;i++) if(A[i]!==B[i]) d++; return d<=(A.length>=3?1:0); };
-  let tra=0, sim=0;
+  let tra=0, sim=0, traPasses=0;
   for(const p of passes){ if(p.scale==="merged") continue; const sc=score(p); if(!sc) continue; const isTra=p.lines.some(l=>l.tra);
-    for(const fl of finalLines){ if(p.lines.some(l=>near(l.t,fl))){ if(isTra) tra+=sc; else sim+=sc; } } }
-  return tra>0&&(sim===0||tra>1.5*sim);
+    for(const fl of finalLines){ if(p.lines.some(l=>near(l.t,fl))){ if(isTra){ tra+=sc; traPasses++; } else sim+=sc; } } }
+  /* the simplified reader silent on the text is no vote for traditional (v142, H's 美团 logo: the traditional reader's
+     lone 国 was the whole reading, nothing else came near it, and the card went traditional); without a simplified
+     vote only a text of three characters or more that two traditional passes agree on counts */
+  if(tra<=0) return false;
+  if(sim>0) return tra>1.5*sim;
+  return traPasses>=2&&[...finalLines.join("")].filter(c=>CJK.test(c)).length>=3;
 }
 function charStripHTML(id,k){
   const sg=SIGN[id], line=sg.lines[k], same=sg.orig&&sg.orig[k]===line.trim(), cf=(same&&sg.conf&&sg.conf[k])||[];
@@ -2112,7 +2117,7 @@ function wireSlines(root,onInput,onCommit){ /* onCommit(sg,id): the line input w
     onInput(sg,inp.dataset.sid); });
   root.querySelectorAll("[data-sline]").forEach(inp=> inp.onchange=()=>{ const sg=SIGN[inp.dataset.sid]; if(!sg) return; const k=+inp.dataset.sline, sl=inp.closest(".sline"), strip=sl&&sl.querySelector(".cstrip");
     if(strip){ strip.outerHTML=charStripHTML(inp.dataset.sid,k); wireSlines(sl,onInput,onCommit); } /* the buttons follow the typed line */
-    if(onCommit) onCommit(sg,inp.dataset.sid); });
+    if(onCommit) onCommit(sg,inp.dataset.sid,k); });
   root.querySelectorAll("[data-spin]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.spin]; if(sg){ sg.pinTouched=true; sg.pinEdit=t.value; } });
   root.querySelectorAll("[data-smean]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.smean]; if(sg){ sg.meanTouched=true; sg.meanEdit=t.value; } });
   root.querySelectorAll("[data-sflag]").forEach(cb=> cb.onchange=()=>{ const sg=SIGN[cb.dataset.sflag]; if(!sg) return; sg.flag=cb.checked; const n=root.querySelector(`[data-snote="${cb.dataset.sflag}"]`); if(n){ n.hidden=!cb.checked; if(cb.checked) n.focus(); } });
@@ -2289,7 +2294,10 @@ function renderShots(){
   box.querySelectorAll("[data-signai]").forEach(b=> b.onclick=()=>signAskAI(b.dataset.signai));
   wireAi(box);
   box.querySelectorAll(".croplayer").forEach(wireCrop);
-  wireSlines(box,(sg,id)=>signPreview(id),(sg,id)=>{ delete sg.ai; delete sg.aiErr; signPreview(id); if(aiLive()) signAskAI(id); }); /* a typed line is checked like a picked character */
+  wireSlines(box,(sg,id)=>signPreview(id),(sg,id,k)=>{ delete sg.ai; delete sg.aiErr;
+    /* a typed line that keeps nothing of the reading is a new text: the reader's traditional verdict was about the old one (v142, H typed 美团 over a lone 国 and got 美團) */
+    if(sg.trad){ const o=[...((sg.orig&&sg.orig[k])||"")], n=sg.lines[k]||""; if(!o.some(ch=>CJK.test(ch)&&n.includes(ch))){ sg.trad=false; sg.tradText=""; sg.tradTouched=false; renderShots(); } }
+    signPreview(id); if(aiLive()) signAskAI(id); }); /* a typed line is checked like a picked character */
   wireTags(box,(cur,inp)=>{ const sg=SIGN[inp.id.slice(6)]; if(sg) sg.tags=cur; });
   box.querySelectorAll("[data-signsave]").forEach(b=> b.onclick=()=>saveSign(b.dataset.signsave));
   box.querySelectorAll("[data-signcancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.signcancel; delete SIGN[id]; if(CROP&&CROP.id===id) CROP=null; renderShots(); });
