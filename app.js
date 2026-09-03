@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=114; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=115; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -747,7 +747,7 @@ function renderAdd(main){
     <div class="topline"><button class="del" id="back-cards">← Cards</button></div>
     <div class="lead">Add a card by hand. Pinyin and meaning filled from OCR are unverified until you check them.</div>
     ${imgField}
-    <div class="field"><label>Word</label><input id="f-word" class="hanzi big" placeholder="快门"></div>
+    <div class="field"><label>Characters</label><input id="f-word" class="hanzi big" placeholder="快门"></div>
       <div class="field"><label>Pinyin</label><textarea id="f-pin" class="mono grow" rows="1" placeholder="kuàimén"></textarea></div>
       <div class="field"><label>Meaning</label><textarea id="f-mean" class="grow" rows="1" placeholder="shutter"></textarea></div>
     <div class="field"><label class="check"><input type="checkbox" id="f-flag"> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
