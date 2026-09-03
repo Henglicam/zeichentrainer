@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=144; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=145; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1429,14 +1429,14 @@ async function jpegOf(blob,q){
    composite: JPEG 0.95 → 本区域禁止违规 99 %, the same pixels as PNG → one character). Intermediate crops stay PNG so the
    only lossy step is the last one — two JPEG generations in a row lost the line too. */
 const READ_JPEG=0.95, WEAK_READ=180; /* a reading below this score gets the whole-frame copies, both readers (v95: garbage at 58 on the Yakult logo; v96: 180 like the second look — H: time is no issue) */
-async function deskewBlob(blob,forced){ /* forced: rotate by this angle instead of estimating (the card crop follows the reading crop) */
+async function deskewBlob(blob){
   try{
     const bmp=await createImageBitmap(blob);
     const sc=Math.min(1,360/Math.max(bmp.width,bmp.height));
     const w=Math.max(1,Math.round(bmp.width*sc)), h=Math.max(1,Math.round(bmp.height*sc));
     const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
     const ctx=cv.getContext("2d",{willReadFrequently:true}); ctx.drawImage(bmp,0,0,w,h);
-    const angle=forced!=null?forced:estimateSkew(ctx.getImageData(0,0,w,h),w,h);
+    const angle=estimateSkew(ctx.getImageData(0,0,w,h),w,h);
     if(Math.abs(angle)<1.5){ bmp.close(); return {blob:await jpegOf(blob,READ_JPEG),angle:0}; }
     /* rotate the full crop back to horizontal; the corners are filled with the edge colour */
     const r=-angle*Math.PI/180, W=bmp.width, H=bmp.height;
@@ -1669,13 +1669,28 @@ async function secondLook(w,dk,passes,status,r,Hink){
     const hmax=Math.max(0,...clusters.map(c=>c.y1-c.y0)); /* a band of tiny "characters" beside big ones is an edge or a stroke of the decoration (the oval of the Yakult logo read as 和一一) */
     const merged=clusters.sort((a,b)=>a.y0-b.y0).filter(c=>(c.n>=2||meanCf([c.best])>=85)&&c.y1-c.y0>=0.45*hmax).map(c=>c.best).filter(l=>l.cf.length>2||meanCf([l])>=80);
     if(merged.length) passes.push({lines:merged,img:dk2.blob,angle:dk2.angle,tightened:true,scale:"merged"});
-    /* the card image: the same area with a real margin of one text height all round, rotated like the reading crop */
-    const cx0=Math.max(0,x0-H/2), cy0=Math.max(0,y0-H/2), cx1=Math.min(bmp.width,x1+H/2), cy1=Math.min(bmp.height,y1+H/2);
-    const cc=document.createElement("canvas"); cc.width=cx1-cx0; cc.height=cy1-cy0;
-    cc.getContext("2d",{alpha:false}).drawImage(bmp,cx0,cy0,cc.width,cc.height,0,0,cc.width,cc.height);
-    const cardPng=await new Promise(res=>cc.toBlob(res,"image/png"));
-    return dk2.angle?(await deskewBlob(cardPng,dk2.angle)).blob:await jpegOf(cardPng,READ_JPEG);
+    /* the card image: the same area with a real margin of one text height all round — as a rectangle in the straightened
+       crop's coordinates; cropSign cuts it from the crop as framed, unrotated (v145, H: no rotated images with filled
+       corners on the card) */
+    return {x0:Math.max(0,x0-H/2), y0:Math.max(0,y0-H/2), x1:Math.min(bmp.width,x1+H/2), y1:Math.min(bmp.height,y1+H/2)};
   } finally { bmp.close(); }
+}
+/* A rectangle of the straightened crop, cut from the crop as framed: the rectangle's corners are turned back by the
+   straightening angle about the centre, their bounding box is cut (v145 — the rotated, corner-filled crop is for the
+   reader only; H: "don't show the corrupt images rotated in the preview, I don't want to see that gray frame") */
+async function cutUnrotated(orig,rect,angle){
+  const bmp=await createImageBitmap(orig);
+  try{
+    const W=bmp.width, Hh=bmp.height, r=-angle*Math.PI/180;
+    const nw=Math.abs(W*Math.cos(r))+Math.abs(Hh*Math.sin(r)), nh=Math.abs(W*Math.sin(r))+Math.abs(Hh*Math.cos(r));
+    const pts=[[rect.x0,rect.y0],[rect.x1,rect.y0],[rect.x0,rect.y1],[rect.x1,rect.y1]].map(([x,y])=>{ const dx=x-nw/2, dy=y-nh/2; return [dx*Math.cos(-r)-dy*Math.sin(-r)+W/2, dx*Math.sin(-r)+dy*Math.cos(-r)+Hh/2]; });
+    const x0=Math.max(0,Math.floor(Math.min(...pts.map(p=>p[0])))), x1=Math.min(W,Math.ceil(Math.max(...pts.map(p=>p[0]))));
+    const y0=Math.max(0,Math.floor(Math.min(...pts.map(p=>p[1])))), y1=Math.min(Hh,Math.ceil(Math.max(...pts.map(p=>p[1]))));
+    if(!(x1-x0>=8&&y1-y0>=8)) return null;
+    const cc=document.createElement("canvas"); cc.width=x1-x0; cc.height=y1-y0;
+    cc.getContext("2d",{alpha:false}).drawImage(bmp,x0,y0,cc.width,cc.height,0,0,cc.width,cc.height);
+    return await new Promise(res=>cc.toBlob(res,"image/jpeg",READ_JPEG));
+  }catch(e){ return null; } finally{ bmp.close(); }
 }
 async function cropSign(id){
   const run=READ_RUN[id]=(READ_RUN[id]||0)+1, stale=()=>READ_RUN[id]!==run; /* a newer reading of this photo has started: leave everything to it */
@@ -1694,14 +1709,14 @@ async function cropSign(id){
     const w=await ocrWorker(status);
     await loadSigns().catch(()=>{}); /* phrasebook optional — falls back to word gloss */
     status("reading the text …");
-    let dk=await deskewBlob(r.blob); if(stale()) return; if(dk.angle){ S.pendingImg=dk.blob; status(`straightened by ${Math.round(dk.angle)}°, reading the text …`); }
+    let dk=await deskewBlob(r.blob); if(stale()) return; if(dk.angle) status(`straightened by ${Math.round(dk.angle)}°, reading the text …`); /* the card keeps the crop as framed (v145) */
     /* the text height of the frame from its ink (v97): readings whose boxes are far smaller are fragments of the decoration
        — H's phone read the Yakult logo as a four-line soup of 17 stroke-sized "characters" and the count outweighed
        ten passes agreeing on a three-character reading */
     const Hink=await (async()=>{ const b=await createImageBitmap(dk.blob); try{ r.frameH=b.height; return inkHeight(b); } finally{ b.close(); } })(); r.ink=Math.round(Hink);
     const passes=[{lines:await readPass(w,dk.blob,status),img:dk.blob,angle:dk.angle,tightened:false}];
     if(stale()) return;
-    const cardBlob=await secondLook(w,dk,passes,status,r,Hink);
+    const cardRect=await secondLook(w,dk,passes,status,r,Hink);
     if(stale()) return;
     if(Math.max(0,...passes.map(p=>effScore(p.lines,Hink)))<WEAK_READ){ /* weak or nothing: the whole frame as black-and-white and chromaticity copies, sizes from the ink */
       status("trying a black-and-white copy …");
@@ -1728,7 +1743,7 @@ async function cropSign(id){
     r.passes=passes.map(p=>({s:Math.round(score(p)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),h:Hink?+(hOfPass(p)/Hink).toFixed(2):null,tight:p.tightened,bw:!!p.bw,ch:!!p.chroma,tra:!!p.tra,...(lineFit(p)<1?{over:p.lines.length-maxLines}:{})}));
     LAST_READ.passes=r.passes;
     const best=passes[0], lines=best.lines;
-    if(best.tightened) S.pendingImg=cardBlob||best.img;
+    if(best.tightened&&cardRect){ const cut=await cutUnrotated(r.blob,cardRect,dk.angle||0); if(cut) S.pendingImg=cut; } /* the text area with its margin, from the crop as framed */
     if(!lines.length){ status("No Chinese characters recognized — frame the characters tightly and try again."); return; }
     /* img = the (straightened, maybe tightened) crop the text was read from, boxes = where each character sits in it: the picker shows the original */
     /* the other readings (distinct texts, best first): the AI sees them all (the truth is often a mix, or a name they circle
