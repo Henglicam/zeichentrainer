@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=133; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=134; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -533,7 +533,7 @@ function renderMore(main){
     <div class="listhead">Diagnostics</div>
     <div class="mrow"><div><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${READLOG.length} step${READLOG.length===1?"":"s"}.</div></div><span class="btnrow"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button></span></div>
     <pre class="diag" id="diag-out" hidden></pre>
-    <div class="listhead">Danger zone</div>
+    <div class="listhead">Start over</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>
     <div class="listhead">About</div>
     <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s">${esc(ver)}. Works offline; everything stays on this phone.</div></div></div>
@@ -553,7 +553,7 @@ function renderMore(main){
 }
 
 function tagsHTML(d,isNew){
-  return `<div class="tags">${d.flag?`<span class="f">⚑ review</span>`:""}<span class="${isNew?"n":"r"}">${isNew?"new":"review"}</span></div>`; /* no card type (H, v105) */
+  return `<div class="tags">${d.flag?`<span class="f">⚑ Review</span>`:""}<span class="${isNew?"n":"r"}">${isNew?"New":"Review"}</span></div>`; /* no card type (H, v105) */
 }
 /* ---------- review flag ----------
    Any card can be flagged when the OCR text, pinyin or meaning looks odd and
@@ -726,9 +726,9 @@ function renderStudy(main){
     const grds=[["again","Again"],["hard","Hard"],["good","Good"],["easy","Easy"]].map(([g,l])=>
       `<button class="grade" data-g="${g}"><span class="lbl">${l}</span><span class="iv">${previewInterval(sched,g)}</span></button>`).join("");
     back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="grades">${grds}</div>
-      <div class="backacts"><button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?"⚑ Flagged for review · clear":"⚑ Flag for review"}</button><button class="del" id="edit-card">✎ Edit</button></div></div>`;
+      <div class="backacts"><button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?"⚑ Clear flag":"⚑ Flag for review"}</button><button class="del" id="edit-card">✎ Edit</button></div></div>`;
   } else {
-    back=`<div class="hint">Tap the character to reveal${d.imgFull||d.shot?" · tap the photo for the whole picture":""}</div>`;
+    back=`<div class="hint">Tap the character to reveal${d.imgFull||d.shot?", or the photo for the whole picture":""}.</div>`;
   }
   /* front: no tag row (theme / new / custom is noise while learning); tapping the photo or the character reveals */
   main.innerHTML=learnChipsHTML()+`<div class="card">
@@ -826,8 +826,8 @@ function cardsListHTML(){
   if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,d.w,d.wp,d.wm,d.flagNote,...(d.tags||[])].filter(Boolean).join(" ").toLowerCase().includes(q));
   const rows=list.map(d=>`<button class="crow" data-id="${esc(d.id)}">
       ${d.img?`<img class="thumb" src="${thumbURL(d)}" alt="">`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`}
-      <span class="ct"><span class="c">${esc((d.trad||d.c).replace(/\n/g," / "))}</span>${d.trad?`<span class="simpref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}${d.trad?`<span class="pill trad">Traditional</span>`:""}${byText.get(d.c)>1?`<span class="pill">${byText.get(d.c)} photos</span>`:""}${(d.tags||[]).map(t=>`<span class="pill tag">${esc(t)}</span>`).join("")}</span><span class="m">${esc(d.m)}</span></span>
-      <span class="cs">${d.ai?'<span class="pill ai">AI</span>':""}${d.flag?'<span class="pill flagged">⚑ review</span>':""}${cardStatus(d)}</span></button>`).join("");
+      <span class="ct"><span class="c">${esc((d.trad||d.c).replace(/\n/g," / "))}</span>${d.trad?`<span class="simpref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">Traditional</span>`:""}${byText.get(d.c)>1?`<span class="pill">${byText.get(d.c)} photos</span>`:""}${(d.tags||[]).map(t=>`<span class="pill tag">${esc(t)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
+      <span class="cs">${d.ai?'<span class="pill ai">AI</span>':""}${d.flag?'<span class="pill flagged">⚑ Review</span>':""}${cardStatus(d)}</span></button>`).join("");
   const empty=S.custom.length?"No cards match.":"No cards yet — take a photo under Camera, or tap + New.";
   return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length};
 }
@@ -835,7 +835,7 @@ function renderCards(main){
   const unv=S.custom.filter(d=>d.mt&&!d.mt.verified).length, flg=S.custom.filter(d=>d.flag).length, nAi=deck().filter(d=>d.ai).length;
   const {html,n}=cardsListHTML();
   main.innerHTML=`<div class="pane">
-    <div class="cardsbar"><input id="q" type="search" placeholder="Search hanzi, pinyin, meaning" value="${esc(S.query)}" autocomplete="off"><button class="btn mini primary" id="newcard">+ New</button></div>
+    <div class="cardsbar"><input id="q" type="search" placeholder="Search" value="${esc(S.query)}" autocomplete="off"><button class="btn mini primary" id="newcard">+ New</button></div>
     ${nAi?`<div class="aibar"><span>${nAi} AI suggestion${nAi>1?"s":""} waiting</span><button class="btn mini primary" id="ai-acceptall">Accept all</button></div>`:""}
     <div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">⚑ Flagged (${flg})</button>${nAi?`<button class="chip${S.filterAi?" on":""}" id="chip-ai">AI (${nAi})</button>`:""}<button class="chip${S.filterUnv?" on":""}" id="chip-unv">Unverified (${unv})</button>${allTags().map(t=>`<button class="chip tag${S.filterTag===t?" on":""}" data-tagchip="${esc(t)}">${esc(t)}</button>`).join("")}</span><span class="badge" id="cnt">${n} of ${deck().length}</span></div>
     <div class="clist" id="clist">${html}</div>
@@ -854,12 +854,12 @@ function renderCards(main){
 function renderCardDetail(main,c){
   const d=cardOf(c); if(!d){ S.detail=null; return renderCards(main); }
   const p=S.progress[c];
-  const stat=p?`interval ${p.interval} d · ease ${p.ease.toFixed(2)} · ${p.reps} review${p.reps===1?"":"s"} · next ${new Date(p.due).toLocaleDateString("en-GB")}`:"not studied yet";
+  const stat=p?`Interval ${p.interval} d, ease ${p.ease.toFixed(2)}, ${p.reps} review${p.reps===1?"":"s"}, next ${new Date(p.due).toLocaleDateString("en-GB")}.`:"Not studied yet.";
   main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${[d.mt&&!d.mt.verified?"unverified":"",d.mt&&d.mt.pending?"translation pending":"",d.mt&&d.mt.suspect?"reading uncertain":""].filter(Boolean).join(", ")}</span></div>
+    <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${(t=>t?t[0].toUpperCase()+t.slice(1):"")([d.mt&&!d.mt.verified?"unverified":"",d.mt&&d.mt.pending?"translation pending":"",d.mt&&d.mt.suspect?"reading uncertain":""].filter(Boolean).join(", "))}</span></div>
     <div class="card">${tagsHTML(d,!p)}<div class="front tap" id="d-reveal">${frontHTML(d)}</div>
-      ${S.detailHide?`<div class="hint">Tap the character to show the answer${d.imgFull||d.shot?" · tap the photo for the whole picture":""}</div>`
-        :`<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="hint">Tap the character to hide the answer${d.imgFull||d.shot?" · tap the photo for the whole picture":""}</div>`}</div>
+      ${S.detailHide?`<div class="hint">Tap the character to show the answer${d.imgFull||d.shot?", or the photo for the whole picture":""}.</div>`
+        :`<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="hint">Tap the character to hide the answer${d.imgFull||d.shot?", or the photo for the whole picture":""}.</div>`}</div>
     <div class="detailacts">
       <button class="btn primary" id="d-test">Test this card</button>
       <button class="btn" id="d-edit">Edit</button>
@@ -901,7 +901,7 @@ function renderEdit(main,c){
     render();
   };
   main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">← Back</button><span class="badge">edit</span></div>
+    <div class="topline"><button class="del" id="back">← Back</button><span class="badge">Edit</span></div>
     <div class="form">
     <div class="field"><label>Characters${d.trad?" (traditional, as on the photo)":""}</label>
       <div class="signed" id="e-lines"></div>
@@ -954,7 +954,7 @@ function renderEdit(main,c){
       if(r.m) $("#e-mean").value=r.m;
       aiApplied=true; st.textContent="";
       box.hidden=false; box.innerHTML=`<div class="aihead">AI${r.ok?": looks right":" filled in its suggestion — check, then Save"}</div>${r.note&&r.note.toLowerCase()!=="ok"?`<div class="ainote">${esc(r.note)}</div>`:""}`;
-    }catch(err){ st.textContent="AI: "+(err&&err.message||err); }
+    }catch(err){ st.textContent="The AI could not be reached: "+(err&&err.message||err); }
     ab.disabled=false;
   };
   const ni=$("#e-noimg"); if(ni) ni.onclick=()=>{ removeImg=true; $("#e-imgfield").remove(); };
@@ -1376,7 +1376,7 @@ function lineMeaning(line){
     const rest=raw.slice(k).split(SIGN_PUNCT)[0]; let len=Math.min(8,rest.length)||1;
     while(len>1 && !(DICT&&DICT.has(rest.slice(0,len)))) len--;
     const w=rest.slice(0,len)||ch;
-    parts.push({w,p:pySpaced(w),m:bestSense(w),ph:false});
+    parts.push({w,p:pySpaced(w),m:cleanSense(bestSense(w)),ph:false}); /* no dictionary clutter in the composed meaning (v134) */
     k+=w.length;
   }
   const words=parts.filter(x=>!x.punct);
@@ -1848,7 +1848,7 @@ async function openCharPick(id,k,i,btn,mode){
     const ab=$("#ck-ai-"+id); if(ab) ab.onclick=()=>askAI(dict);
     $("#ck-draw-"+id).onclick=()=>openDrawSheet(id,k,i,apply,ins);
   };
-  const askAI=async(dict)=>{ render(dict,[],true); try{ const alts=await aiCharAlternatives(line,i,ins); if(!box.isConnected) return; render(dict,alts,false); if(!alts.length) box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">the AI has no better idea</span>`); }catch(err){ if(!box.isConnected) return; render(dict,[],false); box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">AI: ${esc(err.message||err)}</span>`); } };
+  const askAI=async(dict)=>{ render(dict,[],true); try{ const alts=await aiCharAlternatives(line,i,ins); if(!box.isConnected) return; render(dict,alts,false); if(!alts.length) box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">the AI has no better idea</span>`); }catch(err){ if(!box.isConnected) return; render(dict,[],false); box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">The AI could not be reached.</span>`); } };
   render([],[],false);
   await loadDict().catch(()=>{});
   const dict=ins?charCandidates(line,i,true):[...new Set([...altCharsAt(sg,k,i),...charCandidates(line,i)])];
@@ -2040,9 +2040,9 @@ function signEditorHTML(id){
     <div class="field"><label>Characters${sg.trad?" (traditional, as on the photo)":""}</label>${rows}${sg.trad?`<div class="scriptref" id="ssimp-${id}"><span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span></div>`:""}</div>
     <div class="field"><label>Pinyin</label><textarea class="grow" id="spin-${id}" rows="1" data-spin="${id}">${esc(sg.pinEdit||"")}</textarea></div>
     <div class="field"><label>Meaning</label><textarea class="grow" id="smeanf-${id}" rows="1" data-smean="${id}">${esc(sg.meanEdit||"")}</textarea><div class="smean badge" id="smean-${id}" style="margin-top:4px"></div></div>
-    ${tagsFieldHTML("stags-"+id,sg.tags)}
     <div class="field"><label class="check"><input type="checkbox" data-sflag="${id}"${sg.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
       <input data-snote="${id}" value="${esc(sg.flagNote||"")}" placeholder="Note for the reviewer (optional)"${sg.flag?"":" hidden"}></div>
+    ${tagsFieldHTML("stags-"+id,sg.tags)}
     <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save card</button>${aiOn()&&!sg.ai&&!sg.aiBusy?`<button class="btn mini" data-signai="${id}">Ask AI</button>`:""}<button class="del" data-signcancel="${id}">Cancel</button></div>
     ${sg.aiErr?`<div class="err" style="margin-top:6px">${esc(sg.aiErr)}</div>`:""}</div>`;
 }

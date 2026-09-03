@@ -155,7 +155,7 @@ button{font:inherit;color:inherit}
 .thumb{width:104px;height:58px;border-radius:8px;object-fit:contain;object-position:center;background:var(--card2)}
 .thumb.glyph{display:flex;align-items:center;justify-content:center;font-family:var(--hanzi);font-size:26px;color:var(--label3)}
 .ct{display:flex;flex-direction:column;min-width:0}
-.ct .c{font-family:var(--hanzi);font-size:19px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .ct .p .pill{margin-left:6px} /* the pills sit on the pinyin line, the text keeps its room (v126) */
+.ct .c{font-family:var(--hanzi);font-size:19px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .ct .pills{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0} .ct .pills .pill{margin-left:0;font-size:10px;padding:1px 7px} /* the pills have their own line under the pinyin, the text keeps its room (v126/v134) */
 .ct .p{font-size:13px;color:var(--label2)}
 .ct .m{font-size:14px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cs{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
@@ -197,6 +197,7 @@ button{font:inherit;color:inherit}
 .ocr-btn{background:var(--tint-soft);border:none;border-radius:999px;cursor:pointer;font-size:13px;font-weight:600;color:var(--tint);padding:9px 14px;min-height:38px}
 .ocr-btn:active{opacity:.6}
 .ocr:not(:empty){margin-top:10px}
+.ocr .field input,.ocr .field textarea{background:var(--card2);box-shadow:none} .ocr .field input:focus,.ocr .field textarea:focus{box-shadow:inset 0 0 0 2px var(--tint)} /* the preview's fields sit on the photo's card like the form's (v134) */
 #shots .aibox{margin-top:8px}
 
 .shotwrap{position:relative;margin-bottom:8px}
