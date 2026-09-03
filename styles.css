@@ -222,6 +222,7 @@ button{font:inherit;color:inherit}
 .signed .ck.on,.ckpick .ck.on{background:var(--tint);color:#fff} /* the chosen character stays filled whatever the surface */
 .ckpick .cands{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 .ckacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px} .ckacts .grow{flex:1}
+.ckhint{margin:2px 0 8px}
 .reading{display:flex;flex-direction:column;gap:8px;padding:4px 0}
 .diag{font-family:var(--mono);font-size:12px;line-height:1.4;white-space:pre-wrap;word-break:break-word;background:var(--card);color:var(--label2);border-radius:var(--rc);padding:12px 14px;margin:0 0 10px;max-height:50vh;overflow:auto}
 .reading .bar{position:relative;height:4px;border-radius:2px;background:var(--fill);overflow:hidden}
