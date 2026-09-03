@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=123; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=124; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -757,6 +757,7 @@ function renderAdd(main){
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back-cards">← Cards</button></div>
     <div class="lead">Add a card by hand. Pinyin and meaning filled from OCR are unverified until you check them.</div>
+    <div class="form">
     ${imgField}
     <div class="field"><label>Characters</label><input id="f-word" class="hanzi big" placeholder="快门"></div>
       <div class="field"><label>Pinyin</label><textarea id="f-pin" class="mono grow" rows="1" placeholder="kuàimén"></textarea></div>
@@ -767,6 +768,7 @@ function renderAdd(main){
     <div id="f-err" class="err" style="display:none"></div>
     <button class="btn primary block" id="f-add">Add card</button>
     <div id="f-ok" class="ok" style="display:none"></div>
+    </div>
   </div>`;
   $("#f-add").onclick=addManual;
   $("#back-cards").onclick=()=>{ S.mode="cards"; S.detail=null; render(); };
@@ -878,6 +880,7 @@ function renderEdit(main,c){
   };
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back">← Back</button><span class="badge">edit</span></div>
+    <div class="form">
     <div class="field"><label>Characters${d.trad?" (traditional, as on the photo)":""}</label>
       <div class="signed" id="e-lines"></div>
       <textarea id="e-word" class="hanzi" hidden>${esc(lines0.join("\n"))}</textarea>
@@ -892,7 +895,8 @@ function renderEdit(main,c){
     ${aiOn()?`<div class="field"><button class="btn block" id="e-ai">Ask AI to check text, pinyin and meaning</button><div class="badge" id="e-aistatus" style="margin-top:6px"></div><div id="e-aibox" hidden class="aibox"></div></div>`:""}
     <div id="e-err" class="err" style="display:none"></div>
     <button class="btn primary block" id="e-save">Save changes</button>
-    <button class="btn danger block" id="e-del" style="margin-top:10px">Delete card</button>
+    </div>
+    <button class="btn danger block" id="e-del" style="margin-top:14px">Delete card</button>
   </div>`;
   $("#back").onclick=()=>leave();
   /* delete from here too (H): from the study back the session goes on with the next card, otherwise back to the list */

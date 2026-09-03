@@ -101,6 +101,10 @@ button{font:inherit;color:inherit}
 .pane{width:100%;max-width:460px}
 .lead{font-size:15px;color:var(--label2);line-height:1.5;margin:0 0 16px}
 .field{margin-bottom:14px}
+/* a form is one card (v124, H: the Edit screen "doesn't look like one thing"): fields on the card surface, inputs and strip tiles on --card2 */
+.form{background:var(--card);border-radius:var(--rc);padding:16px 16px 16px;box-shadow:var(--shadow);margin-bottom:4px}
+.form .field:last-of-type{margin-bottom:14px} .form .field input,.form .field textarea,.form .field select{background:var(--card2);box-shadow:none} .form .field input:focus,.form .field textarea:focus{box-shadow:inset 0 0 0 2px var(--tint)}
+.form .signed .ck{background:var(--card2)} .form .ckpick{background:var(--fill)} .form .ckpick .ck{background:var(--card)} .form .field label{margin-left:2px}
 .field label{display:block;font-size:13px;font-weight:500;color:var(--label2);margin:0 0 6px 4px}
 .field input,.field textarea{width:100%;background:var(--card);border:none;border-radius:10px;
   color:var(--label);font-family:var(--sans);font-size:17px;padding:12px 14px;outline:none;box-shadow:inset 0 0 0 1px var(--sep)}
@@ -224,7 +228,7 @@ button{font:inherit;color:inherit}
 .signed .ck.on,.ckpick .ck.on{background:var(--tint);color:#fff} /* the chosen character stays filled whatever the surface */
 .ckpick .cands{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 .ckacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px} .ckacts .grow{flex:1}
-.ckadd .del{padding:6px 4px} .ckadd .badge{margin-right:2px}
+.ckacts.ckadd{gap:4px} .ckadd .del{padding:6px 3px;font-size:14px;min-height:36px} .ckadd .badge{margin-right:2px}
 .ckhint{margin:2px 0 8px}
 .reading{display:flex;flex-direction:column;gap:8px;padding:4px 0}
 .diag{font-family:var(--mono);font-size:12px;line-height:1.4;white-space:pre-wrap;word-break:break-word;background:var(--card);color:var(--label2);border-radius:var(--rc);padding:12px 14px;margin:0 0 10px;max-height:50vh;overflow:auto}
