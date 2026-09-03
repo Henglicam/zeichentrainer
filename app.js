@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=129; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=130; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1145,9 +1145,7 @@ function cropRectStyle(){
 function wireCrop(layer){
   const rect=layer.querySelector(".croprect");
   layer.onpointerdown=e=>{
-    if(READING[layer.dataset.id]){ e.preventDefault(); return; } /* a reading is running: the frame is locked and the reading goes on — Cancel stops it (H, v129) */
     e.preventDefault();
-    clearTimeout(READ_TIMER[layer.dataset.id]); /* adjusting the frame — read after the next release */
     const r=layer.getBoundingClientRect();
     const px=e.clientX-r.left, py=e.clientY-r.top;
     const cur=CROP.rect;
@@ -1169,6 +1167,8 @@ function wireCrop(layer){
         mode="move"; grab=[px-cur.x,py-cur.y]; mw=cur.w; mh=cur.h;
       }
     }
+    if(mode==="draw"&&READING[layer.dataset.id]) return; /* a reading is running: no new frame — adjusting the existing one is allowed and re-reads; Cancel stops it (H, v129/v130) */
+    clearTimeout(READ_TIMER[layer.dataset.id]); /* adjusting the frame — read after the next release */
     if(mode==="draw") setRect(px,py,0,0);
     layer.setPointerCapture(e.pointerId);
     layer.onpointermove=ev=>{
