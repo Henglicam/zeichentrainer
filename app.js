@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=100; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=101; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -290,10 +290,10 @@ function aiAutoSoon(){ if(!aiAutoOn()) return; clearTimeout(_aiSoon); _aiSoon=se
 function aiCardPayload(d){
   return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"the reading looks uncertain ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
     gloss:d.kind==="sign"?(d.gloss||[]).map(g=>g.w+" "+(g.m||"?")).join(" · "):undefined,
-    alt:d.alts&&d.alts.length?d.alts:undefined };
+    alt:d.alts&&d.alts.length?d.alts:undefined, script:d.trad?"traditional":undefined };
 }
 const AI_SYSTEM=`You review flashcards for an adult learning to read Chinese in Beijing. Cards come from OCR of photos (signs, menus, packaging), so the Chinese text may contain OCR slips, the pinyin is auto-generated and the meaning may be a crude word-by-word gloss.
-For every card return the corrected card. Rules: "zh" = the Chinese text, fixed only if it is clearly an OCR slip (keep line breaks); "p" = pinyin with tone marks, correct for this context (多音字!), one space between syllables, " / " between lines; "m" = natural English meaning of the whole text as a sign or word (short, in English only, no explanations); the text is usually a real sign, menu item, product name or brand — when the readings circle around a well-known brand or product name, "zh" is that name; "note" = one short sentence on what was wrong, or "ok"; "ok" = true when zh, pinyin and meaning were already right; "alt" (when present) = other readings of the same photo by other OCR passes and models — the true text is often a mix of them, or a well-known name or phrase they all circle around; prefer a real sign, menu or product text that every reading could be a misreading of; "bad" = true when the Chinese text is OCR garbage — no plausible sign, menu or product text can be made of it — then keep "zh" as given, leave "m" empty and say so in the note. Before calling a text bad, try the "alt" readings: when one of them, or a mix of them, is a plausible text or a well-known name (a brand on a bottle, a shop name), answer with that as "zh", "bad" false, and say in the note which reading you used. Never replace an unreadable text with a mere guess.
+For every card return the corrected card. Rules: "zh" = the Chinese text, fixed only if it is clearly an OCR slip (keep line breaks); "p" = pinyin with tone marks, correct for this context (多音字!), one space between syllables, " / " between lines; "m" = natural English meaning of the whole text as a sign or word (short, in English only, no explanations); the text is usually a real sign, menu item, product name or brand — when the readings circle around a well-known brand or product name, "zh" is that name; "note" = one short sentence on what was wrong, or "ok"; "ok" = true when zh, pinyin and meaning were already right; "zht" = only when the input has "script":"traditional" (the photo shows traditional characters): "zh" written in traditional characters as it stands on the sign; "alt" (when present) = other readings of the same photo by other OCR passes and models — the true text is often a mix of them, or a well-known name or phrase they all circle around; prefer a real sign, menu or product text that every reading could be a misreading of; "bad" = true when the Chinese text is OCR garbage — no plausible sign, menu or product text can be made of it — then keep "zh" as given, leave "m" empty and say so in the note. Before calling a text bad, try the "alt" readings: when one of them, or a mix of them, is a plausible text or a well-known name (a brand on a bottle, a shop name), answer with that as "zh", "bad" false, and say in the note which reading you used. Never replace an unreadable text with a mere guess.
 Answer with a JSON array only, one object per input card in the same order: [{"c":"<input c>","zh":"…","p":"…","m":"…","note":"…","ok":true|false,"bad":true|false}]. No prose, no code fences.`;
 async function aiAsk(cards,status){
   const key=S.settings.aiKey; if(!key) throw new Error("no API key");
@@ -319,7 +319,7 @@ async function aiAsk(cards,status){
   if(!Array.isArray(arr)) throw new Error("unexpected answer");
   return arr.map(x=>{ let m=String(x.m||"").trim();
     if(/[\u4e00-\u9fff]/.test(m)&&!/[A-Za-z]{2}/.test(m)){ logErr("ai","meaning answered in Chinese: "+m); m=""; } /* v97: the model once echoed the Chinese text as the meaning — an English meaning or none */
-    return {zh:String(x.zh||"").trim(),p:String(x.p||"").trim(),m,note:String(x.note||"").trim(),ok:!!x.ok,bad:!!x.bad,at:Date.now(),model}; });
+    return {zh:String(x.zh||"").trim(),zht:String(x.zht||"").trim(),p:String(x.p||"").trim(),m,note:String(x.note||"").trim(),ok:!!x.ok,bad:!!x.bad,at:Date.now(),model}; });
 }
 /* run the review over the whole queue (or the given cards) and store suggestions on the cards */
 async function aiReview(list,status){
@@ -579,20 +579,21 @@ function frontPic(d){
   return `<img class="signimg${S.fullPic&&full?" full":""}" data-pic="1" src="${urlOf(blob)}" alt="photo">`;
 }
 function frontHTML(d){
+  const scriptNote=d.trad?`<div class="script">繁 traditional characters, as on the photo</div>`:"";
   if(d.kind==="sign"){
     /* sign card: the picture is the exercise, text underneath wrapped only between words */
-    const lines=d.c.split("\n");
+    const lines=(d.trad||d.c).split("\n");
     const longest=Math.max(...lines.map(glyphs));
     const W=Math.min(440,Math.max(260,(window.innerWidth||390)-32));
     const fs=Math.min(longest<=6?40:longest<=9?30:24,Math.floor((W-28)/longest));
     return `<div class="signfront">${frontPic(d)}
-      <div class="signtext" style="font-size:${fs}px">${lines.map(l=>`<div>${esc(l)}</div>`).join("")}</div></div>`;
+      <div class="signtext" style="font-size:${fs}px">${lines.map(l=>`<div>${esc(l)}</div>`).join("")}</div>${scriptNote}</div>`;
   }
   const single=glyphs(d.c)<=1;
   /* the photo is the cue — it belongs on the front, before reveal */
   const pic=frontPic(d);
-  const lines=frontLines(d), {W,H,fs}=frontBox(lines,headFont(d.c));
-  return `${pic}<div class="reticle" style="width:${W}px;height:${H}px">${reticleSVG(single,W,H)}<div class="glyph" style="font-size:${fs}px">${lines.map(esc).join("<br>")}</div></div>`;
+  const lines=d.trad?d.trad.split("\n"):frontLines(d), {W,H,fs}=frontBox(lines,headFont(d.c)); /* the front shows the photo's script; the card's key stays simplified */
+  return `${pic}<div class="reticle" style="width:${W}px;height:${H}px">${reticleSVG(single,W,H)}<div class="glyph" style="font-size:${fs}px">${lines.map(esc).join("<br>")}</div></div>${scriptNote}`;
 }
 /* ---------- pronunciation: the phone's own Chinese voice (nothing downloaded, works offline) ---------- */
 let TTS_VOICE;
@@ -655,7 +656,7 @@ function backHTML(d){
   const glossBlock = d.kind==="sign" ? `
     ${d.mt&&!d.mt.verified?`<span class="flag">meaning ${d.mt.src==="nmt"?"from the offline translation":d.mt.src==="phrasebook"?"from the phrasebook":d.mt.src==="llm"?"from the online AI":d.mt.src==="dict"?"from the dictionary":"composed word by word"}, unverified${d.mt.pending?" (translation pending)":""}${d.mt.suspect?" (reading uncertain: "+esc(d.mt.suspect)+")":""}</span>`:""}
 ` : "";
-  return `<div class="pin">${esc(d.p)}${sayBtn(d)}</div><div class="mean">${esc(d.m)}</div>${charsHTML(d)}
+  return `${d.trad?`<div class="simp">简 ${esc(d.c.replace(/\n/g," / "))}</div>`:""}<div class="pin">${esc(d.p)}${sayBtn(d)}</div><div class="mean">${esc(d.m)}</div>${charsHTML(d)}
     ${d.kind==="sign"?glossBlock:wordBlock}`;
 }
 function endSingle(){
@@ -785,10 +786,10 @@ function cardsListHTML(){
   if(S.filterUnv) list=list.filter(d=>d.mt&&!d.mt.verified);
   if(S.filterFlag) list=list.filter(d=>d.flag);
   if(S.filterAi) list=list.filter(d=>d.ai);
-  if(q) list=list.filter(d=>[d.c,d.p,d.m,d.w,d.wp,d.wm,d.flagNote].filter(Boolean).join(" ").toLowerCase().includes(q));
+  if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,d.w,d.wp,d.wm,d.flagNote].filter(Boolean).join(" ").toLowerCase().includes(q));
   const rows=list.map(d=>`<button class="crow" data-c="${esc(d.c)}">
       ${d.img?`<img class="thumb" src="${thumbURL(d)}" alt="">`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`}
-      <span class="ct"><span class="c">${esc(d.c.replace(/\n/g," / "))}</span><span class="p">${esc(d.p)}</span><span class="m">${esc(d.m)}</span></span>
+      <span class="ct"><span class="c">${esc((d.trad||d.c).replace(/\n/g," / "))}${d.trad?'<span class="pill trad">繁</span>':""}</span><span class="p">${esc(d.p)}</span><span class="m">${esc(d.m)}</span></span>
       <span class="cs">${d.ai?'<span class="pill ai">AI</span>':""}${d.flag?'<span class="pill flagged">⚑ review</span>':""}${cardStatus(d)}</span></button>`).join("");
   const empty=S.custom.length?"No cards match.":"No cards yet — take a photo under Camera, or tap + New.";
   return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length};
@@ -866,6 +867,7 @@ function renderEdit(main,c){
       <div class="signed" id="e-lines"></div>
       <textarea id="e-word" class="hanzi" hidden>${esc(lines0.join("\n"))}</textarea>
       <div class="badge" style="margin-top:4px">Tap a character to change it.</div></div>
+      <div class="field"><label>Traditional characters as on the photo (繁, optional)</label><input id="e-trad" class="hanzi" value="${esc((d.trad||"").replace(/\n/g," / "))}" placeholder="養樂多"></div>
       <div class="field"><label>Pinyin</label><textarea id="e-pin" class="mono grow" rows="1">${esc(d.p)}</textarea></div>
       <div class="field"><label>Meaning</label><textarea id="e-mean" class="grow" rows="1">${esc(d.m)}</textarea></div>
     ${isSign||!d.w?"":`<div class="field"><label>Context word, pinyin, meaning (optional)</label>
@@ -936,6 +938,7 @@ function renderEdit(main,c){
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
     if($("#e-flag").checked){ upd.flag=true; const note=$("#e-note").value.trim(); if(note) upd.flagNote=note; else delete upd.flagNote; }
     else { delete upd.flag; delete upd.flagNote; }
+    const trad=$("#e-trad").value.split("/").map(x=>x.trim()).filter(Boolean).join("\n"); if(trad) upd.trad=trad; else delete upd.trad;
     await applyCardUpdate(c,upd,newC,pin!==d.p,isSign?undefined:wordLines);
     leave(upd.c);
   };
@@ -1070,19 +1073,32 @@ function makeWorker(lang){
 /* The traditional-character reader (v96, H's Yakult bottle: 養樂多 is a traditional logo, and the simplified model can only
    answer with the nearest simplified shapes — 养兴多, 和准浴多; chi_tra reads 義樂多). Loaded on first need, its lines are
    converted to simplified characters (`t2s`, OpenCC's character table) and compete like any other reading. */
-let _traWorker=null, _traLoading=null, T2S=null;
+let _traWorker=null, _traLoading=null, T2S=null, S2T=null, _tablesLoading=null;
+/* OpenCC's character tables both ways: traditional → simplified for the reader, simplified → traditional for the card's
+   traditional form (v101, H: "the hanzi doesn't match the image" — a character-level table, so 头发 becomes 頭發 where
+   the AI would write 頭髮; the AI's "zht" wins when it answers) */
+function loadScriptTables(){
+  if(T2S&&S2T) return Promise.resolve();
+  if(!_tablesLoading) _tablesLoading=(async()=>{
+    const mk=txt=>{ const m=new Map(); for(const line of txt.split("\n")){ const cs=[...line]; if(cs.length>=2) m.set(cs[0],cs[1]); } return m; };
+    const [a,b]=await Promise.all([fetch("./vendor/t2s.txt").then(r=>r.text()),fetch("./vendor/s2t.txt").then(r=>r.text())]);
+    T2S=mk(a); S2T=mk(b);
+  })().catch(err=>{ _tablesLoading=null; throw err; });
+  return _tablesLoading;
+}
 async function traWorker(status){
   if(_traWorker) return _traWorker;
   if(!_traLoading){
     _traLoading=(async()=>{
       status("loading the traditional-character reader …");
-      if(!T2S){ const txt=await (await fetch("./vendor/t2s.txt")).text(); T2S=new Map(); for(const line of txt.split("\n")){ const cs=[...line]; if(cs.length>=2) T2S.set(cs[0],cs[1]); } }
+      await loadScriptTables();
       const w=await makeWorker("chi_tra"); _traWorker=w; return w;
     })().catch(err=>{ _traLoading=null; throw err; });
   }
   return _traLoading;
 }
 const t2s=str=>T2S?[...str].map(c=>T2S.get(c)||c).join(""):str;
+const s2t=str=>S2T?[...str].map(c=>S2T.get(c)||c).join(""):str;
 /* the traditional reader's lines, converted; null when that reader cannot be had (offline before its first download) */
 async function readPassTra(blob,status){
   let w; try{ w=await traWorker(status); }catch(err){ logErr("tra",err&&err.message||err); return null; }
@@ -1646,6 +1662,10 @@ async function cropSign(id){
     /* the other readings (distinct texts, best first): the AI sees them all (the truth is often a mix, or a name they circle
        around — 养兴多 / 义乐多 / 和准浴多 → 养乐多), the picker offers their characters at the same position */
     let bestT=lines.map(x=>x.t).join("\n"), alts=[];
+    /* the photo shows traditional characters when the traditional reader won and the simplified reader read something
+       else (v101 — on a simplified sign both read the same text, the traditional one in traditional forms) */
+    const bestSim=passes.find(p=>textOf(p)&&!p.lines.some(l=>l.tra));
+    const tradPhoto=best.lines.some(l=>l.tra)&&(!bestSim||textOf(bestSim)!==bestT); r.trad=tradPhoto;
     /* Dictionary consensus (v99, from H's phone: the Yakult logo's passes gave 养浴多, 次乐多, 开乐多, 养举多, 养座多 —
        each one character away from 养乐多, an entry of the dictionary, and the AI still refused): when the readings of a
        single line circle around one dictionary word of the same length, that word is the reading and the others are
@@ -1664,7 +1684,7 @@ async function cropSign(id){
     const glyphsOf=t=>[...t].filter(c=>CJK.test(c)).length, nBest=glyphsOf(bestT);
     for(const pick of [passes.find(p=>p.lines.some(l=>l.tra)&&textOf(p)!==bestT), passes.find(p=>textOf(p)&&glyphsOf(textOf(p))!==nBest&&readingScore(p.lines)>=0.6*readingScore(lines))]){
       if(pick&&!alts.includes(textOf(pick))){ if(alts.length>=6) alts.pop(); alts.push(textOf(pick)); } }
-    SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r, alts};
+    SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r, alts, trad:tradPhoto, tradText:tradPhoto?s2t(bestT):""};
     delete READING[id]; renderShots();
     if(aiAutoOn()) signAskAI(id); /* every reading is checked without a tap */
   }catch(err){ status("OCR failed: "+(err&&err.message||err)); logErr("read",err&&(err.stack||err.message)||err); }
@@ -1917,6 +1937,9 @@ function wireSlines(root,onInput){
   root.querySelectorAll("[data-smean]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.smean]; if(sg){ sg.meanTouched=true; sg.meanEdit=t.value; } });
   root.querySelectorAll("[data-sflag]").forEach(cb=> cb.onchange=()=>{ const sg=SIGN[cb.dataset.sflag]; if(!sg) return; sg.flag=cb.checked; const n=root.querySelector(`[data-snote="${cb.dataset.sflag}"]`); if(n){ n.hidden=!cb.checked; if(cb.checked) n.focus(); } });
   root.querySelectorAll("[data-snote]").forEach(n=> n.oninput=()=>{ const sg=SIGN[n.dataset.snote]; if(sg) sg.flagNote=n.value; });
+  root.querySelectorAll("[data-strad]").forEach(cb=> cb.onchange=async()=>{ const id=cb.dataset.strad, sg=SIGN[id]; if(!sg) return; sg.trad=cb.checked; const inp=root.querySelector(`[data-stradtext="${id}"]`); if(inp) inp.hidden=!cb.checked;
+    if(cb.checked){ delete sg.ai; try{ await loadScriptTables(); }catch(e){} if(SIGN[id]){ signPreview(id); if(aiLive()) signAskAI(id); } } });
+  root.querySelectorAll("[data-stradtext]").forEach(inp=> inp.oninput=()=>{ const sg=SIGN[inp.dataset.stradtext]; if(sg){ sg.tradTouched=true; sg.tradText=inp.value.split("/").map(x=>x.trim()).filter(Boolean).join("\n"); } });
   wireGrow(root);
 }
 function signEditorHTML(id){
@@ -1933,6 +1956,8 @@ function signEditorHTML(id){
   /* the same layout as the Edit form (H): Text, Pinyin, Meaning — pinyin and meaning can be corrected before saving */
   return `<div class="signed">${weak}<div class="badge${bad?" bad":sg.ai?" ai":""}" style="margin-bottom:8px">${head}</div>
     <div class="field"><label>Text</label>${rows}</div>
+    <div class="field"><label class="check"><input type="checkbox" data-strad="${id}"${sg.trad?" checked":""}> 繁 The photo shows traditional characters</label>
+      <input class="hanzi" data-stradtext="${id}" value="${esc((sg.tradText||"").replace(/\n/g," / "))}" placeholder="養樂多"${sg.trad?"":" hidden"}></div>
     <div class="field"><label>Pinyin</label><textarea class="mono grow" id="spin-${id}" rows="1" data-spin="${id}">${esc(sg.pinEdit||"")}</textarea></div>
     <div class="field"><label>Meaning</label><textarea class="grow" id="smeanf-${id}" rows="1" data-smean="${id}">${esc(sg.meanEdit||"")}</textarea><div class="smean badge" id="smean-${id}" style="margin-top:4px"></div></div>
     <div class="field"><label class="check"><input type="checkbox" data-sflag="${id}"${sg.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
@@ -1960,6 +1985,9 @@ function signPreview(id){
     ?`Checked by the AI${sg.ai.note&&sg.ai.note.toLowerCase()!=="ok"?": "+sg.ai.note:""}`
     :sg.ai?`The AI could not make sense of this text${sg.ai.note?": "+sg.ai.note:""} — unverified`
     :`Meaning ${full?"from the phrasebook":"composed word by word"}, unverified`; }
+  /* the traditional form follows the text (the AI's "zht" when it matches, else the character table) unless edited by hand */
+  if(sg.trad&&!sg.tradTouched){ const zh=sg.lines.map(l=>l.trim()).filter(l=>CJK.test(l)).join("\n"), zht=good&&sg.ai.zht&&[...sg.ai.zht].length===[...zh].length?sg.ai.zht:s2t(zh);
+    sg.tradText=zht; const tf=document.querySelector(`[data-stradtext="${id}"]`); if(tf) tf.value=zht.replace(/\n/g," / "); }
   sg.res=res; sg.full=full; sg.mean=mean;
   if(!sg.ai && !(aiLive()&&!sg.aiErr)) signTranslate(id); /* offline model only as fallback */
 }
@@ -1971,11 +1999,11 @@ async function signAskAI(id){
   sg.aiBusy="asking the AI …"; delete sg.aiErr; renderShots();
   sg.aiPromise=(async()=>{ try{
     const c=lines.join("\n"), res=(sg.res||[]).filter(Boolean);
-    const [r]=await aiAsk([{kind:"sign",c,p:res.map(x=>x.py).join(" / "),m:sg.mean||"",gloss:res.flatMap(x=>x.gloss),alts:sg.alts,mt:{src:"gloss",verified:false,suspect:"read from a photo by OCR"}}]);
+    const [r]=await aiAsk([{kind:"sign",c,p:res.map(x=>x.py).join(" / "),m:sg.mean||"",gloss:res.flatMap(x=>x.gloss),alts:sg.alts,trad:!!sg.trad,mt:{src:"gloss",verified:false,suspect:"read from a photo by OCR"}}]);
     if(!SIGN[id]) return;
     let zh=r.zh&&CJK.test(r.zh)&&!r.bad?r.zh.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):c;
     zh=recutLines(zh,lines); /* the model often drops the line breaks — the photo's lines win */
-    sg.lines=zh.split("\n"); sg.ai={zh,p:r.p,m:r.m,note:r.note,ok:r.ok,bad:!!r.bad};
+    sg.lines=zh.split("\n"); sg.ai={zh,zht:r.zht&&CJK.test(r.zht)?recutLines(r.zht.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"),lines):"",p:r.p,m:r.m,note:r.note,ok:r.ok,bad:!!r.bad};
     if(r.bad&&!sg.flag){ sg.flag=true; sg.flagNote=sg.flagNote||"AI: the reading looks wrong"; } /* H's rule: when unsure, flag instead of inventing */
   }catch(err){ if(SIGN[id]) sg.aiErr=err&&err.message||String(err); } /* → signPreview falls back to the offline model */
   if(SIGN[id]){ delete sg.aiBusy; delete sg.aiPromise; }
@@ -2029,6 +2057,7 @@ async function saveSign(id){
         segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
   if(sg.flag){ card.flag=true; const note=(sg.flagNote||"").trim(); if(note) card.flagNote=note; } /* H: flag a new card at once, without opening it again */
   if(sg.alts&&sg.alts.length) card.alts=sg.alts.slice(0,5); /* the other readings stay with the card for a later AI check */
+  if(sg.trad&&(sg.tradText||"").trim()) card.trad=sg.tradText.trim(); /* the text as it stands on the photo, in traditional characters (v101) */
   if(S.pendingImg) card.img=await jpegOf(S.pendingImg);
   if(S.pendingFull) card.imgFull=S.pendingFull;
   S.custom.push(card);
@@ -2241,7 +2270,7 @@ function mirrorCheck(force){
 /* the worker needs the mirror for vendor files too — tell it on start and whenever the setting changes */
 function tellMirror(){ const c=navigator.serviceWorker&&navigator.serviceWorker.controller; if(c) c.postMessage({type:"mirror",mirror:mirrorURL()}); }
 /* the reader's files (OCR engine, language data, dictionary): cached once, then offline for good */
-const OCR_FILES=["tesseract.min.js","worker.min.js","tesseract-core-simd-lstm.wasm.js","tesseract-core-simd-lstm.wasm","chi_sim.traineddata.gz","chi_tra.traineddata.gz","t2s.txt","pinyin-pro.js","cedict.tsv.gz"];
+const OCR_FILES=["tesseract.min.js","worker.min.js","tesseract-core-simd-lstm.wasm.js","tesseract-core-simd-lstm.wasm","chi_sim.traineddata.gz","chi_tra.traineddata.gz","t2s.txt","s2t.txt","pinyin-pro.js","cedict.tsv.gz"];
 async function ocrCached(){
   if(!window.caches) return 0;
   let n=0; for(const f of OCR_FILES){ try{ if(await caches.match(new URL("./vendor/"+f,location.href).href)) n++; }catch(e){} }
