@@ -159,12 +159,13 @@ button{font:inherit;color:inherit}
 .pill{font-size:11px;font-weight:600;border-radius:999px;padding:2px 8px;color:var(--label2);background:var(--card2);margin-left:6px;vertical-align:middle}
 .pill.flagged{color:var(--tint);background:var(--tint-soft)}
 .pill.ai{color:var(--ok);background:var(--ok-soft)}
-.pill.trad{font-family:var(--hanzi);font-weight:400}
-.simpref{color:var(--label2);font-weight:400;margin-left:6px}
-.simpref2{font-family:var(--hanzi);font-size:18px;color:var(--label2);margin-top:6px}
-.script .hanzi{font-family:var(--hanzi);font-size:14px;color:var(--label)}
-.script{font-size:12px;color:var(--label2);text-align:center;margin:8px 0 0}
-.simp{font-family:var(--hanzi);font-size:20px;color:var(--label2);margin-bottom:6px}
+.crow .simpref{display:block;font-size:14px;color:var(--label2);margin:-2px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .crow .simpref .lbl{font-size:12px;margin-right:6px} .crow .simpref .hanzi{font-family:var(--hanzi);font-size:15px;color:var(--label2)}
+.crow .pill{font-family:var(--sans);font-weight:600}
+.field .scriptref{margin-top:8px}
+.lbl{font-family:var(--sans);font-size:13px;font-weight:500;color:var(--label2);margin-right:8px}
+.scriptref{display:inline-flex;align-items:baseline;gap:0}
+.scriptref .hanzi{font-family:var(--hanzi);font-size:18px;color:var(--label)}
+.script{margin:10px 0 0;text-align:center} .script>.lbl{display:block;margin:0 0 2px}
 .flag{display:inline-block;font-size:13px;font-weight:500;padding:4px 10px;border-radius:999px;color:var(--tint);background:var(--tint-soft);margin-top:12px}
 .aibar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;padding:8px 8px 8px 14px;border-radius:var(--r);background:var(--ok-soft);color:var(--ok);font-size:14px;font-weight:600}
 

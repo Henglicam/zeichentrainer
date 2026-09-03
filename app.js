@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=105; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=106; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -581,7 +581,7 @@ function frontPic(d){
   return `<img class="signimg${S.fullPic&&full?" full":""}" data-pic="1" src="${urlOf(blob)}" alt="photo">`;
 }
 function frontHTML(d){
-  const scriptNote=d.trad?`<div class="script">繁 traditional characters, as on the photo · 简 <span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></div>`:""; /* the simplified form for reference (H, v102) */
+  const scriptNote=d.trad?`<div class="script"><div class="lbl">Traditional characters, as on the photo</div><div class="scriptref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></div></div>`:""; /* the simplified form for reference (H, v102); plain words, no 简/繁 shorthand (H, v106); the back repeats nothing */
   if(d.kind==="sign"){
     /* sign card: the picture is the exercise, text underneath wrapped only between words */
     const lines=(d.trad||d.c).split("\n");
@@ -658,7 +658,7 @@ function backHTML(d){
   const glossBlock = d.kind==="sign" ? `
     ${d.mt&&!d.mt.verified?`<span class="flag">meaning unverified${d.mt.pending?" (translation pending)":""}${d.mt.suspect?" (reading uncertain: "+esc(d.mt.suspect)+")":""}</span>`:""}
 ` : "";
-  return `${d.trad?`<div class="simp">简 ${esc(d.c.replace(/\n/g," / "))}</div>`:""}<div class="pin">${esc(d.p)}${sayBtn(d)}</div><div class="mean">${esc(d.m)}</div>${charsHTML(d)}
+  return `<div class="pin">${esc(d.p)}${sayBtn(d)}</div><div class="mean">${esc(d.m)}</div>${charsHTML(d)}
     ${d.kind==="sign"?glossBlock:wordBlock}`;
 }
 function endSingle(){
@@ -791,7 +791,7 @@ function cardsListHTML(){
   if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,d.w,d.wp,d.wm,d.flagNote].filter(Boolean).join(" ").toLowerCase().includes(q));
   const rows=list.map(d=>`<button class="crow" data-c="${esc(d.c)}">
       ${d.img?`<img class="thumb" src="${thumbURL(d)}" alt="">`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`}
-      <span class="ct"><span class="c">${esc((d.trad||d.c).replace(/\n/g," / "))}${d.trad?`<span class="pill trad">繁</span><span class="simpref">${esc(d.c.replace(/\n/g," / "))}</span>`:""}</span><span class="p">${esc(d.p)}</span><span class="m">${esc(d.m)}</span></span>
+      <span class="ct"><span class="c">${esc((d.trad||d.c).replace(/\n/g," / "))}${d.trad?`<span class="pill trad">Traditional</span>`:""}</span>${d.trad?`<span class="simpref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span><span class="m">${esc(d.m)}</span></span>
       <span class="cs">${d.ai?'<span class="pill ai">AI</span>':""}${d.flag?'<span class="pill flagged">⚑ review</span>':""}${cardStatus(d)}</span></button>`).join("");
   const empty=S.custom.length?"No cards match.":"No cards yet — take a photo under Camera, or tap + New.";
   return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length};
@@ -866,11 +866,11 @@ function renderEdit(main,c){
   };
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back">← Back</button><span class="badge">edit</span></div>
-    <div class="field"><label>${isSign?"Sign text":"Word"}</label>
+    <div class="field"><label>${isSign?"Sign text":"Word"}${d.trad?" (traditional characters, as on the photo)":""}</label>
       <div class="signed" id="e-lines"></div>
       <textarea id="e-word" class="hanzi" hidden>${esc(lines0.join("\n"))}</textarea>
       <div class="badge" style="margin-top:4px">Tap a character to change it.</div></div>
-      <div class="field"><label>Traditional characters as on the photo (繁, optional)</label><input id="e-trad" class="hanzi" value="${esc((d.trad||"").replace(/\n/g," / "))}" placeholder="養樂多"></div>
+      <div class="field"><label>Traditional characters (leave empty when the photo is in simplified characters)</label><input id="e-trad" class="hanzi" value="${esc((d.trad||"").replace(/\n/g," / "))}" placeholder="養樂多"></div>
       <div class="field"><label>Pinyin</label><textarea id="e-pin" class="mono grow" rows="1">${esc(d.p)}</textarea></div>
       <div class="field"><label>Meaning</label><textarea id="e-mean" class="grow" rows="1">${esc(d.m)}</textarea></div>
     ${isSign||!d.w?"":`<div class="field"><label>Context word, pinyin, meaning (optional)</label>
@@ -897,8 +897,8 @@ function renderEdit(main,c){
   const syncWord=()=>{ $("#e-word").value=sg.lines.join("\n"); };
   const drawLines=()=>{
     const box=$("#e-lines"); if(!box) return;
-    box.innerHTML=sg.lines.map((l,k)=>slineHTML(eid,k,l,false)).join("");
-    wireSlines(box,()=>{ syncWord(); pinyinFollow(); });
+    box.innerHTML=sg.lines.map((l,k)=>slineHTML(eid,k,l,false)).join("")+(sg.trad?`<div class="scriptref"><span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span></div>`:"");
+    wireSlines(box,()=>{ syncWord(); pinyinFollow(); const ref=box.querySelector(".scriptref .hanzi"); if(ref) ref.textContent=sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "); });
   };
   /* pinyin follows the text unless it was edited by hand */
   let pinTouched=false; $("#e-pin").addEventListener("input",()=>{ pinTouched=true; }); wireGrow(main);
@@ -1965,7 +1965,7 @@ function signEditorHTML(id){
 
   /* the same layout as the Edit form (H): Text, Pinyin, Meaning — pinyin and meaning can be corrected before saving */
   return `<div class="signed">${weak}<div class="badge${bad?" bad":sg.ai?" ai":""}" style="margin-bottom:8px">${head}</div>
-    <div class="field"><label>Text${sg.trad?" (繁 traditional, as on the photo)":""}</label>${rows}${sg.trad?`<div class="badge simpref2" id="ssimp-${id}">简 ${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</div>`:""}</div>
+    <div class="field"><label>Text${sg.trad?" (traditional characters, as on the photo)":""}</label>${rows}${sg.trad?`<div class="scriptref" id="ssimp-${id}"><span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span></div>`:""}</div>
     <div class="field"><label>Pinyin</label><textarea class="mono grow" id="spin-${id}" rows="1" data-spin="${id}">${esc(sg.pinEdit||"")}</textarea></div>
     <div class="field"><label>Meaning</label><textarea class="grow" id="smeanf-${id}" rows="1" data-smean="${id}">${esc(sg.meanEdit||"")}</textarea><div class="smean badge" id="smean-${id}" style="margin-top:4px"></div></div>
     <div class="field"><label class="check"><input type="checkbox" data-sflag="${id}"${sg.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
@@ -1997,7 +1997,7 @@ function signPreview(id){
   if(sg.trad){
     if(!sg.tradTouched){ const zh=sg.lines.map(l=>l.trim()).filter(l=>CJK.test(l)).join("\n"), zht=good&&sg.ai.zht&&[...sg.ai.zht].length===[...zh].length?sg.ai.zht:s2t(zh); sg.tradText=zht; }
     document.querySelectorAll(`[data-sid="${id}"][data-sline]`).forEach(inp=>{ if(document.activeElement!==inp){ const v=tradLine(sg,+inp.dataset.sline); if(inp.value!==v) inp.value=v; } });
-    const ref=$(`#ssimp-${id}`); if(ref) ref.textContent="简 "+sg.lines.map(l=>l.trim()).filter(Boolean).join(" / ");
+    const ref=$(`#ssimp-${id}`); if(ref) ref.innerHTML=`<span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span>`;
   }
   sg.res=res; sg.full=full; sg.mean=mean;
   if(!sg.ai && !(aiLive()&&!sg.aiErr)) signTranslate(id); /* offline model only as fallback */
