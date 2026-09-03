@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=136; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=137; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1698,13 +1698,19 @@ async function cropSign(id){
       bmp.close();
       if(stale()) return;
     }
+    /* the frame can hold only so many lines of its own text height (v137, H's bicycle sticker 减震单车: a whole-frame
+       pass read the sticker's wave pattern as a second line 一一八位, the count doubled and the soup beat four passes
+       that agreed on 减震): a pass with more lines than fit is penalised quadratically — its text stays as read (cutting
+       the extra lines instead once removed a soup's fragment penalty and let a three-character wave line win) */
+    const maxLines=Hink?Math.max(1,Math.floor(r.frameH/(0.9*Hink))):99; r.maxLines=maxLines;
+    const lineFit=p=>p.lines.length>maxLines?Math.pow(maxLines/p.lines.length,2):1;
     /* agreement counts: a text several passes produced beats a single pass's near-equal score (v96: 业主直租 ×3 lost a tie to 业主直祖 ×1) */
     const textOf=p=>p.lines.map(x=>x.t).join("\n"), agree=new Map(); passes.forEach(p=>{ const t=textOf(p); if(t) agree.set(t,(agree.get(t)||0)+1); });
     const hOfPass=p=>boxHeight(p.lines);
     const sizeFit=p=>sizeFitOf(p.lines,Hink);
-    const score=p=>readingScore(p.lines,Hink)*Math.min(1.5,1+0.1*((agree.get(textOf(p))||1)-1))*sizeFit(p);
+    const score=p=>readingScore(p.lines,Hink)*Math.min(1.5,1+0.1*((agree.get(textOf(p))||1)-1))*sizeFit(p)*lineFit(p);
     passes.sort((a,b)=>score(b)-score(a));
-    r.passes=passes.map(p=>({s:Math.round(score(p)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),h:Hink?+(hOfPass(p)/Hink).toFixed(2):null,tight:p.tightened,bw:!!p.bw,ch:!!p.chroma,tra:!!p.tra}));
+    r.passes=passes.map(p=>({s:Math.round(score(p)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),h:Hink?+(hOfPass(p)/Hink).toFixed(2):null,tight:p.tightened,bw:!!p.bw,ch:!!p.chroma,tra:!!p.tra,...(lineFit(p)<1?{over:p.lines.length-maxLines}:{})}));
     LAST_READ.passes=r.passes;
     const best=passes[0], lines=best.lines;
     if(best.tightened) S.pendingImg=cardBlob||best.img;
