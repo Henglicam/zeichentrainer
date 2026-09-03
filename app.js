@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=119; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=120; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1960,17 +1960,20 @@ async function recognizeStrokes(w,strokes,log){
 function tradLine(sg,k){ const line=sg.lines[k]; if(!sg.trad) return line; const t=(sg.tradText||"").split("\n")[k]; return t&&[...t].length===[...line].length?t:s2t(line); }
 function slineHTML(id,k,line,withPinyin,withInput=true){
   const sg=SIGN[id]; /* withInput=false: the Read preview shows the strip alone (H, v109: the line field under it was one thing too many); the Edit form keeps it for retyping */
-  const hint=k===0?`<div class="badge ckhint">Tap a character to change it.</div>`:""; /* right under the strip (H, v112) */
+  const hint=k===0?`<div class="badge ckhint">Tap a character to change it${withInput?", or type the line below":""}.</div>`:""; /* right under the strip (H, v112) */
   return `<div class="sline">${charStripHTML(id,k)}${hint}${withInput?`<input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(sg&&sg.trad?tradLine(sg,k):line)}" autocomplete="off">`:""}${withPinyin?`<div class="sp" id="sp-${id}-${k}"></div>`:""}</div>`;
 }
 /* the strip's character buttons open the picker; typing in a line calls onInput(sg, k, input) */
-function wireSlines(root,onInput){
+function wireSlines(root,onInput,onCommit){ /* onCommit(sg,id): the line input was left after typing — the strip is redrawn from the text, the caller re-checks */
   root.querySelectorAll("[data-ck]").forEach(b=> b.onclick=()=>{ const [k,i]=b.dataset.ck.split(",").map(Number); openCharPick(b.dataset.sid,k,i,b); });
   root.querySelectorAll("[data-ckadd]").forEach(b=> b.onclick=()=>{ const [k,i]=b.dataset.ckadd.split(",").map(Number); openCharPick(b.dataset.sid,k,i,b,"ins"); });
   root.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{ const sg=SIGN[inp.dataset.sid]; if(!sg) return; const k=+inp.dataset.sline;
     if(sg.trad){ sg.tradTouched=true; const tl=(sg.tradText||"").split("\n"); while(tl.length<=k) tl.push(""); tl[k]=inp.value; sg.tradText=tl.join("\n"); sg.lines[k]=t2s(inp.value); }
     else sg.lines[k]=inp.value;
     onInput(sg,inp.dataset.sid); });
+  root.querySelectorAll("[data-sline]").forEach(inp=> inp.onchange=()=>{ const sg=SIGN[inp.dataset.sid]; if(!sg) return; const k=+inp.dataset.sline, sl=inp.closest(".sline"), strip=sl&&sl.querySelector(".cstrip");
+    if(strip){ strip.outerHTML=charStripHTML(inp.dataset.sid,k); wireSlines(sl,onInput,onCommit); } /* the buttons follow the typed line */
+    if(onCommit) onCommit(sg,inp.dataset.sid); });
   root.querySelectorAll("[data-spin]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.spin]; if(sg){ sg.pinTouched=true; sg.pinEdit=t.value; } });
   root.querySelectorAll("[data-smean]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.smean]; if(sg){ sg.meanTouched=true; sg.meanEdit=t.value; } });
   root.querySelectorAll("[data-sflag]").forEach(cb=> cb.onchange=()=>{ const sg=SIGN[cb.dataset.sflag]; if(!sg) return; sg.flag=cb.checked; const n=root.querySelector(`[data-snote="${cb.dataset.sflag}"]`); if(n){ n.hidden=!cb.checked; if(cb.checked) n.focus(); } });
@@ -1979,7 +1982,7 @@ function wireSlines(root,onInput){
 }
 function signEditorHTML(id){
   const sg=SIGN[id]; if(!sg) return "";
-  const rows=sg.lines.map((l,k)=>slineHTML(id,k,l,false,false)).join("");
+  const rows=sg.lines.map((l,k)=>slineHTML(id,k,l,false,true)).join(""); /* the line input is back under the strip (v120, H: "type the correct hanzi in a text field, like in Edit mode" — it went in v109) */
   const low=sg.conf?Math.min(...sg.conf.flat().concat([100])):100;
   const doubt=!aiLive()&&low<OCR_DOUBT?` The reading looks uncertain (confidence ${Math.round(low)}%) — check the text.`:"";
   const bad=sg.ai&&sg.ai.bad;
@@ -2145,7 +2148,7 @@ function renderShots(){
   box.querySelectorAll("[data-signai]").forEach(b=> b.onclick=()=>signAskAI(b.dataset.signai));
   wireAi(box);
   box.querySelectorAll(".croplayer").forEach(wireCrop);
-  wireSlines(box,(sg,id)=>signPreview(id));
+  wireSlines(box,(sg,id)=>signPreview(id),(sg,id)=>{ delete sg.ai; delete sg.aiErr; signPreview(id); if(aiLive()) signAskAI(id); }); /* a typed line is checked like a picked character */
   box.querySelectorAll("[data-signsave]").forEach(b=> b.onclick=()=>saveSign(b.dataset.signsave));
   box.querySelectorAll("[data-signcancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.signcancel; delete SIGN[id]; if(CROP&&CROP.id===id) CROP=null; renderShots(); });
   /* only the inbox's readings: the Edit form's text state (SIGN["editN"]) survives a tab tap, and previewing it here before
