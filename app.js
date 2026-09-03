@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=142; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=143; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2131,7 +2131,7 @@ function signEditorHTML(id){
   const doubt=!aiLive()&&low<OCR_DOUBT?` The reading looks uncertain (confidence ${Math.round(low)}%) — check the text.`:"";
   const bad=sg.ai&&sg.ai.bad;
   /* no status about the AI (H, v105: "not relevant for user") — the text is either fine, or it needs a hand */
-  const head=sg.aiBusy?"Checking the text …":bad?"This reading looks wrong — frame the text tightly and read again, or fix the characters.":sg.ai?"":doubt.trim(); /* the tap hint sits under the strip (H, v111) */
+  const head=sg.aiBusy?"Checking the text …":bad?"This reading looks wrong — frame the text tightly and read again, or fix the characters.":sg.ai&&!sg.ai.kept?"":doubt.trim(); /* the tap hint sits under the strip (H, v111) */
   /* the reading crop is not shown (H: "the user doesn't have to see it") — it serves the picker's reference only */
   const nChars=sg.lines.join("").replace(/[^\u4e00-\u9fff]/g,"").length, meanCf=(sg.conf||[]).flat().reduce((a,c,_,arr)=>a+c/arr.length,0);
   const weak=nChars<=2&&meanCf<85?`<div class="err" style="margin:4px 0 8px">Only ${nChars} character${nChars===1?"":"s"} found — if the photo shows more, frame the characters tightly and drag a corner to read again.</div>`:"";
@@ -2159,12 +2159,13 @@ function signPreview(id){
   if(sg.ai && sg.lines.map(l=>l.trim()).filter(l=>CJK.test(l)).join("\n")!==sg.ai.zh) delete sg.ai;
   const py=live.map(r=>r.py).join(" / ");
   const pinF=$(`#spin-${id}`), meanF=$(`#smeanf-${id}`);
-  const good=sg.ai&&!sg.ai.bad; /* a "bad" answer (OCR garbage) changes nothing — the fields keep the reading's own values */
+  const good=sg.ai&&!sg.ai.bad&&!sg.ai.kept; /* a "bad" answer (OCR garbage) or a kept reading (v143) changes nothing — the fields keep the reading's own values */
   if(pinF&&!sg.pinTouched){ pinF.value=good&&sg.ai.p?sg.ai.p:py; autoGrow(pinF); }
   if(meanF&&!sg.meanTouched){ meanF.value=good?(sg.ai.m||mean):mean; autoGrow(meanF); }
   const sm=$(`#smean-${id}`);
-  if(sm){ sm.className="smean badge"+(good?" ai":sg.ai?" bad":""); sm.textContent=good
+  if(sm){ sm.className="smean badge"+(good?" ai":sg.ai&&!sg.ai.kept?" bad":""); sm.textContent=good
     ?(sg.ai.note&&sg.ai.note.toLowerCase()!=="ok"?sg.ai.note:"") /* a remark only, no "checked by the AI" (H, v104/v105) */
+    :sg.ai&&sg.ai.kept?`The AI suggested ${sg.ai.proposed.replace(/\n/g," / ")}, but ${sg.ai.kept} was read clearly, so the reading stays. Meaning ${full?"from the phrasebook":"composed word by word"}, unverified.`
     :sg.ai?`This text looks misread${sg.ai.note?": "+sg.ai.note:""} — unverified`
     :`Meaning ${full?"from the phrasebook":"composed word by word"}, unverified`; }
   /* the traditional form follows the text (the AI's "zht" when it matches, else the character table) unless edited by hand */
@@ -2177,6 +2178,24 @@ function signPreview(id){
   if(!sg.ai && !(aiLive()&&!sg.aiErr)) signTranslate(id); /* offline model only as fallback */
 }
 /* ask the online AI about the transcript right here; the corrected text lands in the editor */
+/* The AI may not overwrite a character that was read clearly (v143, H's bicycle sticker 减震单车: every pass read 减 at 98 %,
+   DeepSeek answered 共享单车 "shared bicycle" — a common phrase, not the sign — and the preview swapped the right 减 for 共).
+   A changed position is open only when the reading's confidence there is under AI_SETTLED, or another reading of the same
+   line length saw the AI's character at that position (养兴多 → 养乐多 with 义乐多 among the alternatives; 和 → 活 with the alt
+   活菌型…). Otherwise the answer is not applied: the reading stays, the remark names the AI's proposal, and the fields keep
+   the reading's own pinyin and gloss. A line edited by hand before the check has no confidences left and is never guarded;
+   an answer of another length (two characters fused into one) is not guarded either. Returns the first settled character. */
+const AI_SETTLED=90;
+function aiSettled(sg,lines,zh){
+  const zl=zh.split("\n"); if(zl.length!==lines.length) return "";
+  const alts=(sg.alts||[]).map(t=>t.split("\n"));
+  for(let k=0;k<lines.length;k++){ const a=[...lines[k]], b=[...zl[k]]; if(a.length!==b.length) continue;
+    const ki=sg.lines.findIndex(l=>l.trim()===lines[k]), cf=(ki>=0&&sg.orig&&sg.orig[ki]===lines[k]&&sg.conf&&sg.conf[ki])||[]; if(cf.length!==a.length) continue;
+    for(let i=0;i<a.length;i++){ if(a[i]===b[i]||!CJK.test(a[i])||cf[i]<AI_SETTLED) continue;
+      const seen=alts.some(al=>{ const l=al[k]; if(!l) return false; const cs=[...l]; return cs.length===a.length&&cs[i]===b[i]; });
+      if(!seen) return a[i]; } }
+  return "";
+}
 async function signAskAI(id){
   const sg=SIGN[id]; if(!sg||sg.aiBusy) return;
   signPreview(id);
@@ -2188,8 +2207,10 @@ async function signAskAI(id){
     if(!SIGN[id]) return;
     let zh=r.zh&&CJK.test(r.zh)&&!r.bad?r.zh.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):c;
     zh=recutLines(zh,lines); /* the model often drops the line breaks — the photo's lines win */
-    sg.lines=zh.split("\n"); sg.ai={zh,zht:r.zht&&CJK.test(r.zht)?recutLines(r.zht.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"),lines):"",p:r.p,m:r.m,note:r.note,ok:r.ok,bad:!!r.bad};
-    if(r.bad&&!sg.flag){ sg.flag=true; sg.flagNote=sg.flagNote||"the reading looks wrong"; } /* H's rule: when unsure, flag instead of inventing */
+    const kept=zh!==c?aiSettled(sg,lines,zh):"";
+    if(kept){ sg.ai={zh:c,proposed:zh,kept,zht:"",p:"",m:"",note:r.note,ok:false,bad:false}; }
+    else { sg.lines=zh.split("\n"); sg.ai={zh,zht:r.zht&&CJK.test(r.zht)?recutLines(r.zht.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"),lines):"",p:r.p,m:r.m,note:r.note,ok:r.ok,bad:!!r.bad};
+    if(r.bad&&!sg.flag){ sg.flag=true; sg.flagNote=sg.flagNote||"the reading looks wrong"; } } /* H's rule: when unsure, flag instead of inventing */
   }catch(err){ if(SIGN[id]) sg.aiErr=err&&err.message||String(err); } /* → signPreview falls back to the offline model */
   if(SIGN[id]){ delete sg.aiBusy; delete sg.aiPromise; }
   renderShots(); })();
@@ -2221,7 +2242,7 @@ async function saveSign(id){
   if(deck().some(d=>d.c===c&&d.shot===id)){ sg.aiErr="This text is already saved from this photo."; renderShots(); return; } /* the same text from another photo is a new card (H, v118) */
   /* meaning: AI check (if done here) → phrasebook → offline translation (if enabled) → word gloss (then pending) */
   let mt={src:sg.full?"phrasebook":"gloss",verified:false,pending:!sg.full}, mean=sg.mean||"", pin=keep.map(x=>x.r.py).join(" / ");
-  if(sg.ai && c===sg.ai.zh && !sg.ai.bad){ mean=sg.ai.m||mean; pin=sg.ai.p||pin; mt={src:"llm",verified:true,pending:false}; }
+  if(sg.ai && c===sg.ai.zh && !sg.ai.bad && !sg.ai.kept){ mean=sg.ai.m||mean; pin=sg.ai.p||pin; mt={src:"llm",verified:true,pending:false}; }
   const pinHand=sg.pinTouched&&(sg.pinEdit||"").replace(/\s+/g," ").trim(), meanHand=sg.meanTouched&&(sg.meanEdit||"").replace(/\s+/g," ").trim();
   if(pinHand) pin=pinHand;
   if(meanHand){ mean=meanHand; mt={...mt,verified:true,pending:false}; } /* H wrote the meaning: no offline model, no pending */
