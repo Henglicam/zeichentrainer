@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=126; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=127; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1136,48 +1136,51 @@ function qsAiBox(id){ const c=QSCARD[id], d=c&&cardOf(c); return d&&d.ai?aiBoxHT
 /* automatic: every selection is checked without a tap (a few hundred tokens per card —
    fractions of a fen at DeepSeek); debounced so tapping through words fires one request per text */
 /* ---------- Cropping (crop → OCR or card image) ---------- */
-let CROP=null; // {id, rect:{x,y,w,h,lw,lh}} while cropping — stays until the card is saved (H, v50)
-function cropRectStyle(){
-  const r=CROP&&CROP.rect; if(!r||!r.lw||!r.lh) return "";
-  const pc=v=>(v*100).toFixed(2)+"%";
-  return ` style="display:block;left:${pc(r.x/r.lw)};top:${pc(r.y/r.lh)};width:${pc(r.w/r.lw)};height:${pc(r.h/r.lh)}"`;
+let CROP=null; // {id, rect:{x,y,w,h,lw,lh}, quad:[[x,y]×4 tl,tr,br,bl]} while cropping — stays until the card is saved (H, v50)
+/* The frame is a quadrilateral (v127, H: a sign photographed from the side is foreshortened and the reader gives up):
+   each corner moves on its own, and a frame that is not a rectangle is warped into one before reading, the way a
+   scanner app does. `rect` stays the bounding box (the tests and the size checks use it); `quad` is the truth. */
+const quadOf=r=>CROP&&CROP.quad||(r?[[r.x,r.y],[r.x+r.w,r.y],[r.x+r.w,r.y+r.h],[r.x,r.y+r.h]]:null);
+const bboxOf=q=>{ const xs=q.map(p=>p[0]), ys=q.map(p=>p[1]); const x=Math.min(...xs), y=Math.min(...ys); return {x,y,w:Math.max(...xs)-x,h:Math.max(...ys)-y}; };
+const isRect=q=>Math.abs(q[0][0]-q[3][0])<2&&Math.abs(q[1][0]-q[2][0])<2&&Math.abs(q[0][1]-q[1][1])<2&&Math.abs(q[3][1]-q[2][1])<2;
+function cropFrameHTML(){
+  const r=CROP&&CROP.rect; if(!r||!r.lw||!r.lh) return `<div class="cropframe" hidden></div>`;
+  const q=quadOf(r), pc=v=>(v*100).toFixed(2), pts=q.map(p=>`${pc(p[0]/r.lw)},${pc(p[1]/r.lh)}`).join(" ");
+  return `<div class="cropframe" style="display:block"><svg viewBox="0 0 100 100" preserveAspectRatio="none"><polygon class="edge" points="${pts}"/><polygon class="dash" points="${pts}"/></svg>${["tl","tr","br","bl"].map((k,i)=>`<div class="h ${k}" style="left:${pc(q[i][0]/r.lw)}%;top:${pc(q[i][1]/r.lh)}%"></div>`).join("")}</div>`;
 }
+const cropRectStyle=()=>""; /* kept for the markup: the frame is drawn by cropFrameHTML */
 function wireCrop(layer){
-  const rect=layer.querySelector(".croprect");
+  const inQuad=(q,x,y)=>{ let inside=false; for(let i=0,j=3;i<4;j=i++){ const [xi,yi]=q[i],[xj,yj]=q[j]; if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi) inside=!inside; } return inside; };
   layer.onpointerdown=e=>{
     e.preventDefault();
     clearTimeout(READ_TIMER[layer.dataset.id]); /* adjusting the frame — read after the next release */
     const r=layer.getBoundingClientRect();
     const px=e.clientX-r.left, py=e.clientY-r.top;
-    const cur=CROP.rect;
-    const setRect=(x,y,w,h)=>{
-      Object.assign(rect.style,{left:x+"px",top:y+"px",width:w+"px",height:h+"px",display:"block"});
-      CROP.rect={x,y,w,h,lw:r.width,lh:r.height};
+    const cur=CROP.rect, curQ=cur?quadOf(cur).map(p=>p.slice()):null;
+    const setQuad=q=>{
+      const b=bboxOf(q); CROP.quad=q.map(p=>p.slice()); CROP.rect={...b,lw:r.width,lh:r.height};
+      const old=layer.querySelector(".cropframe"); if(old) old.outerHTML=cropFrameHTML(); else layer.insertAdjacentHTML("beforeend",cropFrameHTML());
     };
-    /* three modes: grab a corner -> resize (opposite corner anchored),
-       press inside the frame -> move it, anywhere else -> draw a new frame */
-    let mode="draw", anchor=[px,py], grab=null, mw=0, mh=0;
-    if(cur){
-      const corners={tl:[cur.x,cur.y],tr:[cur.x+cur.w,cur.y],bl:[cur.x,cur.y+cur.h],br:[cur.x+cur.w,cur.y+cur.h]};
-      for(const k of ["tl","tr","bl","br"]){
-        if(Math.hypot(px-corners[k][0],py-corners[k][1])<=22){
-          mode="resize"; anchor=corners[{tl:"br",tr:"bl",bl:"tr",br:"tl"}[k]]; break;
-        }
-      }
-      if(mode==="draw" && px>=cur.x&&px<=cur.x+cur.w&&py>=cur.y&&py<=cur.y+cur.h){
-        mode="move"; grab=[px-cur.x,py-cur.y]; mw=cur.w; mh=cur.h;
-      }
+    /* three modes: grab a corner -> move that corner alone (v127; the others stay),
+       press inside the frame -> move it, anywhere else -> draw a new rectangle */
+    let mode="draw", corner=-1, anchor=[px,py], grab=null;
+    if(curQ){
+      for(let i=0;i<4;i++) if(Math.hypot(px-curQ[i][0],py-curQ[i][1])<=22){ mode="corner"; corner=i; break; }
+      if(mode==="draw" && inQuad(curQ,px,py)){ mode="move"; grab=[px,py]; }
     }
-    if(mode==="draw") setRect(px,py,0,0);
+    if(mode==="draw") setQuad([[px,py],[px,py],[px,py],[px,py]]);
     layer.setPointerCapture(e.pointerId);
     layer.onpointermove=ev=>{
       const x=Math.min(Math.max(ev.clientX-r.left,0),r.width);
       const y=Math.min(Math.max(ev.clientY-r.top,0),r.height);
       if(mode==="move"){
-        setRect(Math.min(Math.max(x-grab[0],0),r.width-mw),
-                Math.min(Math.max(y-grab[1],0),r.height-mh), mw, mh);
+        const b=bboxOf(curQ), dx=Math.min(Math.max(x-grab[0],-b.x),r.width-b.x-b.w), dy=Math.min(Math.max(y-grab[1],-b.y),r.height-b.y-b.h);
+        setQuad(curQ.map(p=>[p[0]+dx,p[1]+dy]));
+      }else if(mode==="corner"){
+        const q=curQ.map(p=>p.slice()); q[corner]=[x,y]; setQuad(q);
       }else{
-        setRect(Math.min(anchor[0],x),Math.min(anchor[1],y),Math.abs(x-anchor[0]),Math.abs(y-anchor[1]));
+        const x0=Math.min(anchor[0],x), y0=Math.min(anchor[1],y), x1=Math.max(anchor[0],x), y1=Math.max(anchor[1],y);
+        setQuad([[x0,y0],[x1,y0],[x1,y1],[x0,y1]]);
       }
     };
     layer.onpointerup=()=>{
@@ -1198,7 +1201,7 @@ async function showCropPreview(id){
   _prevURL=URL.createObjectURL(r.blob);
   box.innerHTML=`<div class="croppreview">
     <img src="${_prevURL}" alt="selected area">
-    <div class="badge" style="margin:6px 0 8px">Reading in a moment — drag a corner first if the frame is off.</div>
+    <div class="badge" style="margin:6px 0 8px">Reading in a moment — drag a corner first if the frame is off. Each corner moves on its own: put them on the sign's corners and a slanted sign is straightened.</div>
     <div class="cropacts">
       <button class="del" data-cropread="${id}">Read now</button>
       <button class="del" data-cropok="${id}">Image only</button>
@@ -1208,19 +1211,55 @@ async function showCropPreview(id){
   clearTimeout(READ_TIMER[id]);
   READ_TIMER[id]=setTimeout(()=>{ if(CROP&&CROP.id===id&&CROP.rect) cropSign(id); },READ_WAIT);
 }
+/* the 3×3 map from the unit square (0,0)(1,0)(1,1)(0,1) onto a quadrilateral (tl,tr,br,bl) — the standard
+   four-point solution; used backwards: for every pixel of the straight output, where in the photo it comes from */
+function unitToQuad(q){
+  const [[x0,y0],[x1,y1],[x2,y2],[x3,y3]]=q;
+  const dx1=x1-x2, dx2=x3-x2, dx3=x0-x1+x2-x3, dy1=y1-y2, dy2=y3-y2, dy3=y0-y1+y2-y3;
+  const det=dx1*dy2-dx2*dy1; if(!det) return null;
+  const g=(dx3*dy2-dx2*dy3)/det, h=(dx1*dy3-dx3*dy1)/det;
+  return {a:x1-x0+g*x1, b:x3-x0+h*x3, c:x0, d:y1-y0+g*y1, e:y3-y0+h*y3, f:y0, g, h};
+}
+/* the framed area as an upright image: a rectangle is cut straight; any other quadrilateral is warped into a
+   rectangle whose sides are the mean lengths of the frame's sides (bilinear sampling, done pixel by pixel) */
+function warpQuad(bmp,q){
+  const len=(p,r)=>Math.hypot(p[0]-r[0],p[1]-r[1]);
+  const W=Math.max(1,Math.round(Math.sqrt(len(q[0],q[1])*len(q[3],q[2])))), H=Math.max(1,Math.round(Math.sqrt(len(q[0],q[3])*len(q[1],q[2])))); /* geometric means: the near side is enlarged, the far side shrunk, the truth is in between */
+  const b=bboxOf(q), sx=Math.max(0,Math.floor(b.x)), sy=Math.max(0,Math.floor(b.y));
+  const sw=Math.min(bmp.width-sx,Math.ceil(b.x+b.w)-sx+1), sh=Math.min(bmp.height-sy,Math.ceil(b.y+b.h)-sy+1);
+  const src=document.createElement("canvas"); src.width=sw; src.height=sh;
+  src.getContext("2d",{alpha:false}).drawImage(bmp,sx,sy,sw,sh,0,0,sw,sh);
+  const sd=src.getContext("2d").getImageData(0,0,sw,sh).data;
+  const out=document.createElement("canvas"); out.width=W; out.height=H;
+  const octx=out.getContext("2d",{alpha:false}), od=octx.createImageData(W,H), o=od.data;
+  const m=unitToQuad(q.map(p=>[p[0]-sx,p[1]-sy])); if(!m) return null;
+  for(let j=0;j<H;j++){ const v=(j+0.5)/H;
+    for(let i=0;i<W;i++){ const u=(i+0.5)/W, den=m.g*u+m.h*v+1;
+      const x=(m.a*u+m.b*v+m.c)/den-0.5, y=(m.d*u+m.e*v+m.f)/den-0.5;
+      const x0=Math.floor(x), y0=Math.floor(y), fx=x-x0, fy=y-y0, k=(j*W+i)*4;
+      if(x0<0||y0<0||x0>=sw-1||y0>=sh-1){ const cx=Math.min(sw-1,Math.max(0,Math.round(x))), cy=Math.min(sh-1,Math.max(0,Math.round(y))), p=(cy*sw+cx)*4; o[k]=sd[p]; o[k+1]=sd[p+1]; o[k+2]=sd[p+2]; o[k+3]=255; continue; }
+      const p00=(y0*sw+x0)*4, p10=p00+4, p01=p00+sw*4, p11=p01+4;
+      for(let c=0;c<3;c++) o[k+c]=(sd[p00+c]*(1-fx)+sd[p10+c]*fx)*(1-fy)+(sd[p01+c]*(1-fx)+sd[p11+c]*fx)*fy;
+      o[k+3]=255; } }
+  octx.putImageData(od,0,0); return out;
+}
 async function cropBlob(id){
   const rec=S.inbox.find(s=>s.id===id);
   if(!rec||!CROP||!CROP.rect||CROP.rect.w<8||CROP.rect.h<8) return null;
-  const {x,y,w,h,lw}=CROP.rect;
+  const {x,y,w,h,lw}=CROP.rect, q=quadOf(CROP.rect);
   const bmp=await createImageBitmap(rec.blob);
   const sc=bmp.width/lw;
   const X=Math.round(x*sc), Y=Math.round(y*sc);
-  const cv=document.createElement("canvas");
-  cv.width=Math.max(1,Math.round(w*sc)); cv.height=Math.max(1,Math.round(h*sc));
-  cv.getContext("2d").drawImage(bmp,X,Y,cv.width,cv.height,0,0,cv.width,cv.height);
+  let cv;
+  if(isRect(q)){
+    cv=document.createElement("canvas");
+    cv.width=Math.max(1,Math.round(w*sc)); cv.height=Math.max(1,Math.round(h*sc));
+    cv.getContext("2d").drawImage(bmp,X,Y,cv.width,cv.height,0,0,cv.width,cv.height);
+  } else cv=warpQuad(bmp,q.map(p=>[p[0]*sc,p[1]*sc])); /* four free corners: straightened like a scan (v127) */
   bmp.close();
+  if(!cv) return null;
   const blob=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
-  return blob?{blob,X,Y}:null;
+  return blob?{blob,X,Y,warped:!isRect(q)}:null;
 }
 async function cropOk(id){
   const r=await cropBlob(id);
@@ -2149,7 +2188,7 @@ function renderShots(){
       return `<div class="shot">
         <div class="shotwrap">
           <img src="${shotURL(s)}" alt="photo">
-          ${cropping?`<div class="croplayer" data-id="${s.id}"><div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div></div></div>`:""}
+          ${cropping?`<div class="croplayer" data-id="${s.id}">${cropFrameHTML()}</div>`:""}
         </div>
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">Cancel</button>`
