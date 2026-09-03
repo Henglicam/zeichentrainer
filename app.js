@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=101; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=102; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -579,7 +579,7 @@ function frontPic(d){
   return `<img class="signimg${S.fullPic&&full?" full":""}" data-pic="1" src="${urlOf(blob)}" alt="photo">`;
 }
 function frontHTML(d){
-  const scriptNote=d.trad?`<div class="script">繁 traditional characters, as on the photo</div>`:"";
+  const scriptNote=d.trad?`<div class="script">繁 traditional characters, as on the photo · 简 <span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></div>`:""; /* the simplified form for reference (H, v102) */
   if(d.kind==="sign"){
     /* sign card: the picture is the exercise, text underneath wrapped only between words */
     const lines=(d.trad||d.c).split("\n");
@@ -789,7 +789,7 @@ function cardsListHTML(){
   if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,d.w,d.wp,d.wm,d.flagNote].filter(Boolean).join(" ").toLowerCase().includes(q));
   const rows=list.map(d=>`<button class="crow" data-c="${esc(d.c)}">
       ${d.img?`<img class="thumb" src="${thumbURL(d)}" alt="">`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`}
-      <span class="ct"><span class="c">${esc((d.trad||d.c).replace(/\n/g," / "))}${d.trad?'<span class="pill trad">繁</span>':""}</span><span class="p">${esc(d.p)}</span><span class="m">${esc(d.m)}</span></span>
+      <span class="ct"><span class="c">${esc((d.trad||d.c).replace(/\n/g," / "))}${d.trad?`<span class="pill trad">繁</span><span class="simpref">${esc(d.c.replace(/\n/g," / "))}</span>`:""}</span><span class="p">${esc(d.p)}</span><span class="m">${esc(d.m)}</span></span>
       <span class="cs">${d.ai?'<span class="pill ai">AI</span>':""}${d.flag?'<span class="pill flagged">⚑ review</span>':""}${cardStatus(d)}</span></button>`).join("");
   const empty=S.custom.length?"No cards match.":"No cards yet — take a photo under Camera, or tap + New.";
   return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length};
