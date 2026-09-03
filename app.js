@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=146; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=147; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -938,9 +938,9 @@ function renderEdit(main,c){
   const syncWord=()=>{ $("#e-word").value=sg.lines.join("\n"); };
   const drawLines=()=>{
     const box=$("#e-lines"); if(!box) return;
-    box.innerHTML=sg.lines.map((l,k)=>slineHTML(eid,k,l,false)).join("")+`<div class="scriptline">${sg.trad?`<div class="scriptref"><span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span></div>`:""}${scriptLinkHTML(eid,sg)}</div>`;
+    box.innerHTML=sg.lines.map((l,k)=>slineHTML(eid,k,l,false)).join("")+`<div class="scriptline">${sg.trad?`<div class="scriptref"><span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span></div>`:""}${scriptSwitchHTML(eid,sg)}</div>`;
     wireSlines(box,()=>{ syncWord(); pinyinFollow(); showAi(); const ref=box.querySelector(".scriptref .hanzi"); if(ref) ref.textContent=sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "); });
-    box.querySelectorAll("[data-scripttoggle]").forEach(b=> b.onclick=async()=>{ await setScript(sg,!sg.trad); drawLines(); const lab=box.closest(".field").querySelector("label"); if(lab) lab.textContent="Characters"+(sg.trad?" (traditional, as on the photo)":""); }); /* the mark by hand (v146) */
+    box.querySelectorAll("[data-scriptset]").forEach(b=> b.onclick=async()=>{ const on=b.dataset.scriptset==="1"; if(on===!!sg.trad) return; await setScript(sg,on); drawLines(); const lab=box.closest(".field").querySelector("label"); if(lab) lab.textContent="Characters"+(sg.trad?" (traditional, as on the photo)":""); }); /* the mark by hand (v146) */
   };
   /* pinyin follows the text unless it was edited by hand */
   let pinTouched=false; $("#e-pin").addEventListener("input",()=>{ pinTouched=true; }); wireGrow(main);
@@ -2126,13 +2126,13 @@ async function recognizeStrokes(w,strokes,log,guide=true){
 /* the line as shown: on a traditional photo the traditional form (H, v104: "show the text in traditional and add simplified
    for reference" — the edits underneath stay simplified, the card's key), else the simplified line itself */
 /* The traditional mark by hand (v146, H's 9楼 marked traditional by the vote: "make it changeable in crop mode and under
-   Edit"): a link under the characters in the Read preview and the Edit form — "Not traditional" on a marked text drops
-   the mark, "Traditional on the photo" on a plain one sets it (the strip and the line switch form, the reference line
-   comes and goes, the key stays simplified). A text without a traditional form (推) shows no link. */
-function scriptLinkHTML(id,sg){
+   Edit"; v147: a two-way switch instead of a link — "could be misunderstood"): a switch "Simplified | Traditional" under
+   the characters in the Read preview and the Edit form; the strip and the line switch form, the reference line comes
+   and goes, the key stays simplified. A text without a traditional form (推) shows no switch. */
+function scriptSwitchHTML(id,sg){
   const txt=sg.lines.map(l=>l.trim()).filter(Boolean).join("\n");
   if(!sg.trad&&S2T&&s2t(txt)===txt) return "";
-  return `<button type="button" class="del scriptlink" data-scripttoggle="${id}">${sg.trad?"Not traditional":"Traditional on the photo"}</button>`;
+  return `<div class="seg" data-scriptseg="${id}"><button type="button" class="segbtn${sg.trad?"":" on"}" data-scriptset="0">Simplified</button><button type="button" class="segbtn${sg.trad?" on":""}" data-scriptset="1">Traditional</button></div>`;
 }
 async function setScript(sg,on){
   sg.tradUser=true; sg.tradTouched=false;
@@ -2175,7 +2175,7 @@ function signEditorHTML(id){
 
   /* the same layout as the Edit form (H): Text, Pinyin, Meaning — pinyin and meaning can be corrected before saving */
   return `<div class="signed">${weak}${head?`<div class="badge${bad?" bad":""}" style="margin-bottom:8px">${head}</div>`:""}
-    <div class="field"><label>Characters${sg.trad?" (traditional, as on the photo)":""}</label>${rows}<div class="scriptline">${sg.trad?`<div class="scriptref" id="ssimp-${id}"><span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span></div>`:""}${scriptLinkHTML(id,sg)}</div></div>
+    <div class="field"><label>Characters${sg.trad?" (traditional, as on the photo)":""}</label>${rows}<div class="scriptline">${sg.trad?`<div class="scriptref" id="ssimp-${id}"><span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span></div>`:""}${scriptSwitchHTML(id,sg)}</div></div>
     <div class="field"><label>Pinyin</label><textarea class="grow" id="spin-${id}" rows="1" data-spin="${id}">${esc(sg.pinEdit||"")}</textarea></div>
     <div class="field"><label>Meaning</label><textarea class="grow" id="smeanf-${id}" rows="1" data-smean="${id}">${esc(sg.meanEdit||"")}</textarea><div class="smean badge" id="smean-${id}" style="margin-top:4px"></div></div>
     <div class="field"><label class="check"><input type="checkbox" data-sflag="${id}"${sg.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
@@ -2350,7 +2350,7 @@ function renderShots(){
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
   box.querySelectorAll("[data-cropcancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.cropcancel; clearTimeout(READ_TIMER[id]); READ_RUN[id]=(READ_RUN[id]||0)+1; /* a running reading abandons instead of delivering a result after Cancel */ CROP=null; delete SIGN[id]; delete READING[id]; renderShots(); });
   box.querySelectorAll("[data-signai]").forEach(b=> b.onclick=()=>signAskAI(b.dataset.signai));
-  box.querySelectorAll("[data-scripttoggle]").forEach(b=> b.onclick=async()=>{ const sg=SIGN[b.dataset.scripttoggle]; if(!sg) return; await setScript(sg,!sg.trad); renderShots(); }); /* the mark by hand (v146); the AI is not asked again */
+  box.querySelectorAll("[data-scriptset]").forEach(b=> b.onclick=async()=>{ const sg=SIGN[b.closest("[data-scriptseg]").dataset.scriptseg], on=b.dataset.scriptset==="1"; if(!sg||on===!!sg.trad) return; await setScript(sg,on); renderShots(); }); /* the mark by hand (v146); the AI is not asked again */
   wireAi(box);
   box.querySelectorAll(".croplayer").forEach(wireCrop);
   wireSlines(box,(sg,id)=>signPreview(id),(sg,id,k)=>{ delete sg.ai; delete sg.aiErr;
