@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=145; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=146; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -938,8 +938,9 @@ function renderEdit(main,c){
   const syncWord=()=>{ $("#e-word").value=sg.lines.join("\n"); };
   const drawLines=()=>{
     const box=$("#e-lines"); if(!box) return;
-    box.innerHTML=sg.lines.map((l,k)=>slineHTML(eid,k,l,false)).join("")+(sg.trad?`<div class="scriptref"><span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span></div>`:"");
+    box.innerHTML=sg.lines.map((l,k)=>slineHTML(eid,k,l,false)).join("")+`<div class="scriptline">${sg.trad?`<div class="scriptref"><span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span></div>`:""}${scriptLinkHTML(eid,sg)}</div>`;
     wireSlines(box,()=>{ syncWord(); pinyinFollow(); showAi(); const ref=box.querySelector(".scriptref .hanzi"); if(ref) ref.textContent=sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "); });
+    box.querySelectorAll("[data-scripttoggle]").forEach(b=> b.onclick=async()=>{ await setScript(sg,!sg.trad); drawLines(); const lab=box.closest(".field").querySelector("label"); if(lab) lab.textContent="Characters"+(sg.trad?" (traditional, as on the photo)":""); }); /* the mark by hand (v146) */
   };
   /* pinyin follows the text unless it was edited by hand */
   let pinTouched=false; $("#e-pin").addEventListener("input",()=>{ pinTouched=true; }); wireGrow(main);
@@ -984,7 +985,7 @@ function renderEdit(main,c){
     const tags=parseTags($("#e-tags").value); if(tags.length) upd.tags=tags; else delete upd.tags;
     if($("#e-flag").checked){ upd.flag=true; const note=$("#e-note").value.trim(); if(note) upd.flagNote=note; else delete upd.flagNote; }
     else { delete upd.flag; delete upd.flagNote; }
-    if(sg.trad){ const trad=(sg.tradText||"").trim(); if(trad) upd.trad=trad; } /* the strip's line carries the traditional form; no separate field (H, v110) */
+    if(sg.trad){ const trad=(sg.tradText||"").trim(); if(trad) upd.trad=trad; else delete upd.trad; } else delete upd.trad; /* the strip's line carries the traditional form; no separate field (H, v110); the link drops the mark (v146) */
     await applyCardUpdate(c,upd,newC,pin!==d.p,isSign?undefined:wordLines);
     leave(c);
   };
@@ -2124,6 +2125,20 @@ async function recognizeStrokes(w,strokes,log,guide=true){
 /* one editable line: the character strip, the input, optionally the pinyin slot below */
 /* the line as shown: on a traditional photo the traditional form (H, v104: "show the text in traditional and add simplified
    for reference" — the edits underneath stay simplified, the card's key), else the simplified line itself */
+/* The traditional mark by hand (v146, H's 9楼 marked traditional by the vote: "make it changeable in crop mode and under
+   Edit"): a link under the characters in the Read preview and the Edit form — "Not traditional" on a marked text drops
+   the mark, "Traditional on the photo" on a plain one sets it (the strip and the line switch form, the reference line
+   comes and goes, the key stays simplified). A text without a traditional form (推) shows no link. */
+function scriptLinkHTML(id,sg){
+  const txt=sg.lines.map(l=>l.trim()).filter(Boolean).join("\n");
+  if(!sg.trad&&S2T&&s2t(txt)===txt) return "";
+  return `<button type="button" class="del scriptlink" data-scripttoggle="${id}">${sg.trad?"Not traditional":"Traditional on the photo"}</button>`;
+}
+async function setScript(sg,on){
+  sg.tradUser=true; sg.tradTouched=false;
+  if(on){ await loadScriptTables(); const txt=sg.lines.join("\n"), t=s2t(txt); if(t===txt){ sg.trad=false; sg.tradText=""; return; } sg.trad=true; sg.tradText=t; }
+  else { sg.trad=false; sg.tradText=""; }
+}
 function tradLine(sg,k){ const line=sg.lines[k]; if(!sg.trad) return line; const t=(sg.tradText||"").split("\n")[k]; return t&&[...t].length===[...line].length?t:s2t(line); }
 function slineHTML(id,k,line,withPinyin,withInput=true){
   const sg=SIGN[id]; /* withInput=false: the Read preview shows the strip alone (H, v109: the line field under it was one thing too many); the Edit form keeps it for retyping */
@@ -2160,7 +2175,7 @@ function signEditorHTML(id){
 
   /* the same layout as the Edit form (H): Text, Pinyin, Meaning — pinyin and meaning can be corrected before saving */
   return `<div class="signed">${weak}${head?`<div class="badge${bad?" bad":""}" style="margin-bottom:8px">${head}</div>`:""}
-    <div class="field"><label>Characters${sg.trad?" (traditional, as on the photo)":""}</label>${rows}${sg.trad?`<div class="scriptref" id="ssimp-${id}"><span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span></div>`:""}</div>
+    <div class="field"><label>Characters${sg.trad?" (traditional, as on the photo)":""}</label>${rows}<div class="scriptline">${sg.trad?`<div class="scriptref" id="ssimp-${id}"><span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span></div>`:""}${scriptLinkHTML(id,sg)}</div></div>
     <div class="field"><label>Pinyin</label><textarea class="grow" id="spin-${id}" rows="1" data-spin="${id}">${esc(sg.pinEdit||"")}</textarea></div>
     <div class="field"><label>Meaning</label><textarea class="grow" id="smeanf-${id}" rows="1" data-smean="${id}">${esc(sg.meanEdit||"")}</textarea><div class="smean badge" id="smean-${id}" style="margin-top:4px"></div></div>
     <div class="field"><label class="check"><input type="checkbox" data-sflag="${id}"${sg.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
@@ -2335,11 +2350,12 @@ function renderShots(){
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
   box.querySelectorAll("[data-cropcancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.cropcancel; clearTimeout(READ_TIMER[id]); READ_RUN[id]=(READ_RUN[id]||0)+1; /* a running reading abandons instead of delivering a result after Cancel */ CROP=null; delete SIGN[id]; delete READING[id]; renderShots(); });
   box.querySelectorAll("[data-signai]").forEach(b=> b.onclick=()=>signAskAI(b.dataset.signai));
+  box.querySelectorAll("[data-scripttoggle]").forEach(b=> b.onclick=async()=>{ const sg=SIGN[b.dataset.scripttoggle]; if(!sg) return; await setScript(sg,!sg.trad); renderShots(); }); /* the mark by hand (v146); the AI is not asked again */
   wireAi(box);
   box.querySelectorAll(".croplayer").forEach(wireCrop);
   wireSlines(box,(sg,id)=>signPreview(id),(sg,id,k)=>{ delete sg.ai; delete sg.aiErr;
     /* a typed line that keeps nothing of the reading is a new text: the reader's traditional verdict was about the old one (v142, H typed 美团 over a lone 国 and got 美團) */
-    if(sg.trad){ const o=[...((sg.orig&&sg.orig[k])||"")], n=sg.lines[k]||""; if(!o.some(ch=>CJK.test(ch)&&n.includes(ch))){ sg.trad=false; sg.tradText=""; sg.tradTouched=false; renderShots(); } }
+    if(sg.trad&&!sg.tradUser){ const o=[...((sg.orig&&sg.orig[k])||"")], n=sg.lines[k]||""; if(!o.some(ch=>CJK.test(ch)&&n.includes(ch))){ sg.trad=false; sg.tradText=""; sg.tradTouched=false; renderShots(); } }
     signPreview(id); if(aiLive()) signAskAI(id); }); /* a typed line is checked like a picked character */
   wireTags(box,(cur,inp)=>{ const sg=SIGN[inp.id.slice(6)]; if(sg) sg.tags=cur; });
   box.querySelectorAll("[data-signsave]").forEach(b=> b.onclick=()=>saveSign(b.dataset.signsave));
