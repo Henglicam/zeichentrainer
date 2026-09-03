@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=155; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=156; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -96,7 +96,7 @@ function orderCards(list,order,byDue){
   return byDue?list.slice().sort((a,b)=>S.progress[a.id].due-S.progress[b.id].due):list.slice(); /* the deck is oldest first already */
 }
 function buildQueue(includeAhead){
-  const lt=learnTag(), p=S.progress, t=today(), d=lt?deck().filter(x=>(x.tags||[]).includes(lt)):deck(); /* Learn: all cards or one tag (v133) */
+  const lt=learnTag(), p=S.progress, t=today(), d=lt?deck().filter(x=>hasTag(x,lt)):deck(); /* Learn: all cards, one tag, or the untagged ones (v133, v156) */
   const order=learnOrder();
   const due = orderCards(d.filter(x=>p[x.id] && p[x.id].due<=t),order,true).map(x=>x.id);
   const fresh = orderCards(d.filter(x=>!p[x.id]),order,false).slice(0,NEW_PER_SESSION).map(x=>x.id);
@@ -110,6 +110,12 @@ const cardOf = id => deck().find(d=>d.id===id); /* cards are addressed by id eve
    forms offer the labels already in use as chips, the Cards tab filters by one, the Learn tab studies one */
 const parseTags=str=>[...new Set(String(str||"").split(/[,，;；]/).map(t=>t.trim()).filter(Boolean))];
 const allTags=()=>[...new Set(deck().flatMap(d=>d.tags||[]))].sort((a,b)=>a.localeCompare(b));
+/* "Untagged" (v156, H: "provide a default tag for not-tagged cards"): a group, not a label written on the cards — the
+   Cards tab and the Learn tab offer it as a chip while tags exist and some cards carry none; a card that gets a tag
+   leaves the group by itself, exports are untouched */
+const UNTAGGED="__untagged__";
+const hasTag=(d,t)=>t===UNTAGGED?!(d.tags&&d.tags.length):(d.tags||[]).includes(t);
+const untaggedCount=()=>deck().filter(d=>hasTag(d,UNTAGGED)).length;
 function tagsFieldHTML(id,tags){ const cur=tags||[], known=allTags();
   return `<div class="field"><label>Tags</label><input id="${id}" class="tags" value="${esc(cur.join(", "))}" placeholder="Chinese class, HSK 3 …" autocomplete="off">${known.length?`<div class="tagchips" data-tagsfor="${id}">${known.map(t=>`<button type="button" class="chip${cur.includes(t)?" on":""}" data-tag="${esc(t)}">${esc(t)}</button>`).join("")}</div>`:""}</div>`; }
 function wireTags(root,onChange){
@@ -120,7 +126,7 @@ function wireTags(root,onChange){
 }
 const learnTag=()=>S.settings.learnTag||"";
 function learnChipsHTML(){ const tags=allTags(); if(!tags.length) return ""; const lt=learnTag();
-  return `<div class="chipset learnchips">${[["","All cards"],...tags.map(t=>[t,t])].map(([v,l])=>`<button class="chip${lt===v?" on":""}" data-learntag="${esc(v)}">${esc(l)}</button>`).join("")}</div>`; }
+  return `<div class="chipset learnchips">${[["","All cards"],...tags.map(t=>[t,t]),...(untaggedCount()?[[UNTAGGED,"Untagged"]]:[])].map(([v,l])=>`<button class="chip${lt===v?" on":""}" data-learntag="${esc(v)}">${esc(l)}</button>`).join("")}</div>`; }
 function wireLearnChips(){ document.querySelectorAll("[data-learntag]").forEach(b=> b.onclick=async()=>{ await setSetting("learnTag",b.dataset.learntag||""); S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false; S.single=null; S.saved=null; setStats(); render(); }); }
 /* the id of a new card: the text itself while it is free (readable in exports), else text plus a timestamp */
 const cardId = c => deck().some(d=>d.id===c) ? c+"#"+Date.now() : c;
@@ -870,7 +876,7 @@ function cardsListHTML(){
   if(S.filterUnv) list=list.filter(d=>d.mt&&!d.mt.verified);
   if(S.filterFlag) list=list.filter(d=>d.flag);
   if(S.filterAi) list=list.filter(d=>d.ai);
-  if(S.filterTag) list=list.filter(d=>(d.tags||[]).includes(S.filterTag));
+  if(S.filterTag) list=list.filter(d=>hasTag(d,S.filterTag));
   if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,d.w,d.wp,d.wm,d.flagNote,...(d.tags||[])].filter(Boolean).join(" ").toLowerCase().includes(q));
   const rows=list.map(d=>`<button class="crow" data-id="${esc(d.id)}">
       ${d.img?`<img class="thumb" src="${thumbURL(d)}" alt="">`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`}
@@ -885,7 +891,7 @@ function renderCards(main){
   main.innerHTML=`<div class="pane">
     <div class="cardsbar"><input id="q" type="search" placeholder="Search" value="${esc(S.query)}" autocomplete="off"><button class="btn mini primary" id="newcard">+ New</button></div>
     ${nAi?`<div class="aibar"><span>${nAi} AI suggestion${nAi>1?"s":""} waiting</span><button class="btn mini primary" id="ai-acceptall">Accept all</button></div>`:""}
-    <div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">⚑ Flagged (${flg})</button>${nAi?`<button class="chip${S.filterAi?" on":""}" id="chip-ai">AI (${nAi})</button>`:""}<button class="chip${S.filterUnv?" on":""}" id="chip-unv">Unverified (${unv})</button>${allTags().map(t=>`<button class="chip tag${S.filterTag===t?" on":""}" data-tagchip="${esc(t)}">${esc(t)}</button>`).join("")}</span><span class="badge" id="cnt">${n} of ${deck().length}</span></div>
+    <div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">⚑ Flagged (${flg})</button>${nAi?`<button class="chip${S.filterAi?" on":""}" id="chip-ai">AI (${nAi})</button>`:""}<button class="chip${S.filterUnv?" on":""}" id="chip-unv">Unverified (${unv})</button>${allTags().map(t=>`<button class="chip tag${S.filterTag===t?" on":""}" data-tagchip="${esc(t)}">${esc(t)}</button>`).join("")}${allTags().length&&untaggedCount()?`<button class="chip tag${S.filterTag===UNTAGGED?" on":""}" data-tagchip="${UNTAGGED}">Untagged (${untaggedCount()})</button>`:""}</span><span class="badge" id="cnt">${n} of ${deck().length}</span></div>
     <div class="clist" id="clist">${html}</div>
   </div>`;
   const wire=()=>{ document.querySelectorAll(".crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.id; S.detailHide=false; S.fullPic=false; render(); }); };
