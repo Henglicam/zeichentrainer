@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=109; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=110; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -870,7 +870,6 @@ function renderEdit(main,c){
       <div class="signed" id="e-lines"></div>
       <textarea id="e-word" class="hanzi" hidden>${esc(lines0.join("\n"))}</textarea>
       <div class="badge" style="margin-top:4px">Tap a character to change it.</div></div>
-      ${d.trad?`<div class="field"><label>Traditional characters, as on the photo (clear this field if the photo is in simplified characters)</label><input id="e-trad" class="hanzi" value="${esc(d.trad.replace(/\n/g," / "))}" placeholder="養樂多"></div>`:""}
       <div class="field"><label>Pinyin</label><textarea id="e-pin" class="mono grow" rows="1">${esc(d.p)}</textarea></div>
       <div class="field"><label>Meaning</label><textarea id="e-mean" class="grow" rows="1">${esc(d.m)}</textarea></div>
     ${isSign||!d.w?"":`<div class="field"><label>Context word, pinyin, meaning (optional)</label>
@@ -941,7 +940,7 @@ function renderEdit(main,c){
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
     if($("#e-flag").checked){ upd.flag=true; const note=$("#e-note").value.trim(); if(note) upd.flagNote=note; else delete upd.flagNote; }
     else { delete upd.flag; delete upd.flagNote; }
-    const tf=$("#e-trad"); if(tf){ const trad=tf.value.split("/").map(x=>x.trim()).filter(Boolean).join("\n"); if(trad) upd.trad=trad; else delete upd.trad; } /* the field exists only on a traditional card (H, v107) */
+    if(sg.trad){ const trad=(sg.tradText||"").trim(); if(trad) upd.trad=trad; } /* the strip's line carries the traditional form; no separate field (H, v110) */
     await applyCardUpdate(c,upd,newC,pin!==d.p,isSign?undefined:wordLines);
     leave(upd.c);
   };
@@ -1942,7 +1941,7 @@ function slineHTML(id,k,line,withPinyin,withInput=true){
 function wireSlines(root,onInput){
   root.querySelectorAll("[data-ck]").forEach(b=> b.onclick=()=>{ const [k,i]=b.dataset.ck.split(",").map(Number); openCharPick(b.dataset.sid,k,i,b); });
   root.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{ const sg=SIGN[inp.dataset.sid]; if(!sg) return; const k=+inp.dataset.sline;
-    if(sg.trad){ sg.tradTouched=true; const tl=(sg.tradText||"").split("\n"); while(tl.length<=k) tl.push(""); tl[k]=inp.value; sg.tradText=tl.join("\n"); sg.lines[k]=t2s(inp.value); const f=$("#e-trad"); if(f) f.value=sg.tradText.replace(/\n/g," / "); }
+    if(sg.trad){ sg.tradTouched=true; const tl=(sg.tradText||"").split("\n"); while(tl.length<=k) tl.push(""); tl[k]=inp.value; sg.tradText=tl.join("\n"); sg.lines[k]=t2s(inp.value); }
     else sg.lines[k]=inp.value;
     onInput(sg,inp.dataset.sid); });
   root.querySelectorAll("[data-spin]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.spin]; if(sg){ sg.pinTouched=true; sg.pinEdit=t.value; } });
