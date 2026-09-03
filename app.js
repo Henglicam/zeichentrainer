@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=149; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=150; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -893,7 +893,7 @@ function renderEdit(main,c){
   /* the text is edited like the Read preview (H): a character strip per line, tap a character for the picker and the
      drawing sheet; SIGN carries the lines and the card's crop as the photo reference (no boxes: the whole crop) */
   const eid="edit"+(S.editSeq=(S.editSeq||0)+1), lines0=isSign?d.c.split("\n"):frontLines(d); /* plain id: it goes into selectors */
-  const sg=SIGN[eid]={lines:lines0.slice(),orig:lines0.slice(),img:d.img||null,onChange:null,trad:!!d.trad,tradText:d.trad||"",tradTouched:!!d.trad};
+  const sg=SIGN[eid]={lines:lines0.slice(),orig:lines0.slice(),img:d.img||null,onChange:null,trad:!!d.trad,tradDetected:!!d.trad,tradText:d.trad||"",tradTouched:!!d.trad};
   if(d.trad) loadScriptTables().catch(()=>{});
   const cropURL=d.img?URL.createObjectURL(d.img):""; /* the crop itself, not the whole-photo thumbnail (H: "only the cropped image, not with context") */
   const leave=newC=>{ /* back to where the edit started: study back or card detail */
@@ -1770,7 +1770,7 @@ async function cropSign(id){
     for(const pick of [passes.find(p=>p.lines.some(l=>l.tra)&&textOf(p)!==bestT), passes.find(p=>textOf(p)&&glyphsOf(textOf(p))!==nBest&&readingScore(p.lines,Hink)>=0.6*readingScore(lines,Hink))]){
       if(pick&&!alts.includes(textOf(pick))){ if(alts.length>=6) alts.pop(); alts.push(textOf(pick)); } }
     const tradPhoto=s2t(bestT)!==bestT&&tradPhotoOf(lines.map(x=>x.t),passes,score); r.trad=tradPhoto; /* a text without a traditional form (推) has nothing to vote on */
-    SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r, alts, trad:tradPhoto, tradText:tradPhoto?s2t(bestT):""};
+    SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r, alts, trad:tradPhoto, tradDetected:tradPhoto, tradText:tradPhoto?s2t(bestT):""};
     delete READING[id]; renderShots();
     if(aiAutoOn()) signAskAI(id); /* every reading is checked without a tap */
   }catch(err){ if(stale()) return; status("OCR failed: "+(err&&err.message||err)); logErr("read",err&&(err.stack||err.message)||err); }
@@ -2128,9 +2128,12 @@ async function recognizeStrokes(w,strokes,log,guide=true){
 /* The traditional mark by hand (v146, H's 9楼 marked traditional by the vote: "make it changeable in crop mode and under
    Edit"; v147: a two-way switch instead of a link — "could be misunderstood"): a switch "Simplified | Traditional" under
    the characters in the Read preview and the Edit form; the strip and the line switch form, the reference line comes
-   and goes, the key stays simplified. A text without a traditional form (工作, 推) keeps the switch, with the Traditional
-   side greyed out (v149, H: the vanishing switch "looks like a bug"). */
+   and goes, the key stays simplified. Shown only when the reader detected traditional characters on the photo, or the
+   card carries the traditional form (`sg.tradDetected`; v150, H: "show the toggle option only if traditional chinese was
+   detected in the photo" — v149 had shown it everywhere, greyed where both scripts are the same); once shown it stays,
+   so a switch to Simplified can be undone. */
 function scriptSwitchHTML(id,sg){
+  if(!sg.trad&&!sg.tradDetected) return "";
   const txt=sg.lines.map(l=>l.trim()).filter(Boolean).join("\n"), same=!sg.trad&&S2T&&s2t(txt)===txt;
   return `<div class="seg" data-scriptseg="${id}"><button type="button" class="segbtn${sg.trad?"":" on"}" data-scriptset="0">Simplified</button><button type="button" class="segbtn${sg.trad?" on":""}" data-scriptset="1"${same?" disabled":""}>Traditional</button></div>`;
 }
