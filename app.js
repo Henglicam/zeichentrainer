@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=138; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=139; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1987,7 +1987,23 @@ function openDrawSheet(id,k,i,apply,ins){
   paint();
   return el;
 }
-async function recognizeStrokes(w,strokes,log){
+/* Guide the lines (v139, H): the print model knows straight strokes and clean corners, a finger draws wobbles. Every
+   stroke is smoothed, reduced to its corners (Douglas–Peucker, tolerance 3.5 % of the character), and segments within
+   12° of horizontal or vertical are snapped to the axis; diagonals and curves keep their shape. */
+function guideStrokes(strokes,size){
+  const eps=Math.max(3,size*0.035);
+  const segDist=(p,a,b)=>{ const dx=b[0]-a[0], dy=b[1]-a[1], l2=dx*dx+dy*dy; if(!l2) return Math.hypot(p[0]-a[0],p[1]-a[1]); const t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/l2)); return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy); };
+  const simplify=pts=>{ if(pts.length<3) return pts.slice(); const a=pts[0], b=pts[pts.length-1]; let md=0, mi=0; for(let i=1;i<pts.length-1;i++){ const d=segDist(pts[i],a,b); if(d>md){ md=d; mi=i; } }
+    if(md<=eps) return [a,b]; return simplify(pts.slice(0,mi+1)).slice(0,-1).concat(simplify(pts.slice(mi))); };
+  const smooth=pts=>pts.map((p,i)=>{ const a=pts[Math.max(0,i-2)], b=pts[Math.max(0,i-1)], c=pts[Math.min(pts.length-1,i+1)], d=pts[Math.min(pts.length-1,i+2)]; return [(a[0]+b[0]+p[0]+c[0]+d[0])/5,(a[1]+b[1]+p[1]+c[1]+d[1])/5]; });
+  return strokes.map(st=>{ if(st.length<3) return st.map(p=>p.slice());
+    const s=simplify(smooth(st)).map(p=>p.slice());
+    for(let i=1;i<s.length;i++){ const dx=s[i][0]-s[i-1][0], dy=s[i][1]-s[i-1][1], ang=Math.abs(Math.atan2(dy,dx)*180/Math.PI);
+      if(ang<12||ang>168) s[i][1]=s[i-1][1]; else if(Math.abs(ang-90)<12) s[i][0]=s[i-1][0]; }
+    return s; });
+}
+async function recognizeStrokes(w,strokes,log,guide=true){
+  if(guide&&strokes.length){ const all=strokes.flat(); const w0=Math.max(...all.map(p=>p[0]))-Math.min(...all.map(p=>p[0])), h0=Math.max(...all.map(p=>p[1]))-Math.min(...all.map(p=>p[1])); strokes=guideStrokes(strokes,Math.max(w0,h0,40)); }
   const pts=strokes.flat(); if(!pts.length) return [];
   const x0=Math.min(...pts.map(p=>p[0])), x1=Math.max(...pts.map(p=>p[0])), y0=Math.min(...pts.map(p=>p[1])), y1=Math.max(...pts.map(p=>p[1]));
   const side=Math.max(x1-x0,y1-y0,40);
