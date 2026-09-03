@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=118; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=119; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1699,9 +1699,9 @@ async function cropSign(id){
    Candidates come from the dictionary (words that fit the neighbouring characters), from the AI
    (asked for that position); a character can also be removed. */
 let CHARFREQ=null;
-function charCandidates(line,i){
-  const chars=[...line];
-  if(!DICT||!CJK.test(chars[i]||"")) return [];
+function charCandidates(line,i,insert){ /* insert: candidates for a new character before index i (i = length: at the end) */
+  const chars=[...line]; if(insert) chars.splice(i,0,"\u3007"); /* a placeholder where the new character goes */
+  if(!DICT||(!insert&&!CJK.test(chars[i]||""))) return [];
   if(!CHARFREQ){ /* how many dictionary words a character appears in: a crude frequency proxy for ranking */
     CHARFREQ=new Map();
     for(const key of DICT.keys()) for(const ch of new Set(key)) CHARFREQ.set(ch,(CHARFREQ.get(ch)||0)+1);
@@ -1723,11 +1723,13 @@ function charCandidates(line,i){
   }
   return [...out.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]).slice(0,8);
 }
-async function aiCharAlternatives(line,i){
+async function aiCharAlternatives(line,i,insert){
   const key=S.settings.aiKey; if(!key) throw new Error("no API key");
   const pv=aiProvider(), model=aiModel(), chars=[...line];
   const sys="You correct OCR of Chinese signs, menus and packaging. Answer with a JSON array of single Chinese characters only, most likely first, no prose.";
-  const user=`OCR read this line: "${line}". Character ${i+1} ("${chars[i]}") is probably misread. Give up to 4 likely correct characters for that position, judging from the context.`;
+  const user=insert
+    ?`OCR read this line: "${line}". One character is missing ${i===0?"at the start":i>=chars.length?"at the end":`between "${chars[i-1]}" and "${chars[i]}"`}. Give up to 4 likely characters for that gap, judging from the context.`
+    :`OCR read this line: "${line}". Character ${i+1} ("${chars[i]}") is probably misread. Give up to 4 likely correct characters for that position, judging from the context.`;
   let r;
   if(pv==="claude") r=await fetch(aiBase(),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model,max_tokens:100,system:sys,messages:[{role:"user",content:user}]})});
   else r=await fetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify({model,max_tokens:100,temperature:0,messages:[{role:"system",content:sys},{role:"user",content:user}]})});
@@ -1735,7 +1737,7 @@ async function aiCharAlternatives(line,i){
   const data=await r.json();
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
   let arr=[]; try{ arr=JSON.parse(raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,"")); }catch(e){ arr=[...raw].filter(ch=>CJK.test(ch)); }
-  return [...new Set(arr.map(x=>String(x).trim()).filter(x=>[...x].length===1&&CJK.test(x)&&x!==chars[i]))].slice(0,4);
+  return [...new Set(arr.map(x=>String(x).trim()).filter(x=>[...x].length===1&&CJK.test(x)&&(insert||x!==chars[i])))].slice(0,4);
 }
 /* what the other readings saw at this position (v96): only readings with the same number of characters in that line */
 function altCharsAt(sg,k,i){
@@ -1773,33 +1775,39 @@ function charStripHTML(id,k){
   const shown=sg.trad?[...tradLine(sg,k)]:null; /* the buttons show the photo's script, the taps act on the simplified line */
   let ci=0;
   return `<div class="cstrip">${[...line].map((ch,i)=>{ const isC=CJK.test(ch); const c=isC?cf[ci++]:100;
-    return `<button class="ck${isC&&c<OCR_DOUBT?" low":""}" data-ck="${k},${i}" data-sid="${id}" title="${isC&&c<100?Math.round(c)+"%":""}">${esc(shown?shown[i]:ch)}</button>`; }).join("")}</div>`;
+    return `<button class="ck${isC&&c<OCR_DOUBT?" low":""}" data-ck="${k},${i}" data-sid="${id}" title="${isC&&c<100?Math.round(c)+"%":""}">${esc(shown?shown[i]:ch)}</button>`; }).join("")}<button class="ck add" data-ckadd="${k},${[...line].length}" data-sid="${id}" title="Add a character at the end" aria-label="Add a character at the end">+</button></div>`;
 }
-async function openCharPick(id,k,i,btn){
+/* mode "ins": a new character goes in before index i (i = length: at the end) — v91, taken out in v92, back in v119
+   (H: a misread 拉 became 人人, one character was drawn and the other could not be deleted — "add and delete characters") */
+async function openCharPick(id,k,i,btn,mode){
   const sg=SIGN[id]; if(!sg) return;
-  const line=sg.lines[k], chars=[...line], ch=chars[i];
+  const ins=mode==="ins", line=sg.lines[k], chars=[...line], ch=ins?"":chars[i];
   document.querySelectorAll(".ck.on").forEach(b=>b.classList.remove("on")); btn.classList.add("on");
   let box=$("#ckpick-"+id); if(!box){ box=document.createElement("div"); box.className="ckpick"; box.id="ckpick-"+id; }
   btn.closest(".sline").appendChild(box);
-  const apply=async(rep)=>{ const cs=[...sg.lines[k]]; if(rep===null) cs.splice(i,1); else cs[i]=rep; sg.lines[k]=cs.join(""); delete sg.ai; delete sg.aiErr;
-    if(sg.trad&&sg.tradTouched){ const tl=(sg.tradText||"").split("\n"), tc=[...(tl[k]||"")]; if(tc.length===cs.length+(rep===null?1:0)){ if(rep===null) tc.splice(i,1); else tc[i]=s2t(rep); tl[k]=tc.join(""); } else tl[k]=s2t(sg.lines[k]); sg.tradText=tl.join("\n"); }
+  const apply=async(rep)=>{ const cs=[...sg.lines[k]], n0=cs.length; if(ins){ if(rep===null) return; cs.splice(i,0,rep); } else if(rep===null) cs.splice(i,1); else cs[i]=rep; sg.lines[k]=cs.join(""); delete sg.ai; delete sg.aiErr;
+    if(sg.trad&&sg.tradTouched){ const tl=(sg.tradText||"").split("\n"), tc=[...(tl[k]||"")]; if(tc.length===n0){ if(ins) tc.splice(i,0,s2t(rep)); else if(rep===null) tc.splice(i,1); else tc[i]=s2t(rep); tl[k]=tc.join(""); } else tl[k]=s2t(sg.lines[k]); sg.tradText=tl.join("\n"); }
     if(sg.onChange){ sg.onChange(); return; } /* the Edit form owns the re-render and the AI check */
     renderShots(); if(aiLive()) signAskAI(id); };
   const render=(dict,ai,aiBusy)=>{
     const seen=new Set();
-    box.innerHTML=`<div class="badge">Replace <b class="hanzi">${esc(ch)}</b> with:</div>
+    const where=ins?(i===0?"at the start":i>=chars.length?"at the end":`between <b class="hanzi">${esc(chars[i-1])}</b> and <b class="hanzi">${esc(chars[i])}</b>`):"";
+    box.innerHTML=`<div class="badge">${ins?`Add a character ${where}:`:`Replace <b class="hanzi">${esc(ch)}</b> with:`}</div>
       <div class="cands">${ai.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!aiBusy?`<span class="badge">no match — draw it or ask the AI</span>`:""}${aiBusy?`<span class="badge">asking the AI …</span>`:""}</div>
-      <div class="ckacts"><button class="btn mini" id="ck-draw-${id}">Not here? Draw it</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}<span class="grow"></span><button class="del" id="ck-del-${id}">Remove</button><button class="del" id="ck-x-${id}">close</button></div>`;
+      <div class="ckacts">${ins?"":`<button class="btn mini danger" id="ck-del-${id}">Remove <span class="hanzi">${esc(ch)}</span></button>`}<button class="btn mini" id="ck-draw-${id}">Not here? Draw it</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}<span class="grow"></span><button class="del" id="ck-x-${id}">close</button></div>
+      ${ins?"":`<div class="ckacts ckadd"><span class="badge">Add a character:</span><button class="del" id="ck-ins0-${id}">+ before <span class="hanzi">${esc(ch)}</span></button><button class="del" id="ck-ins1-${id}">+ after <span class="hanzi">${esc(ch)}</span></button></div>`}`;
     box.querySelectorAll("[data-rep]").forEach(b=> b.onclick=()=>apply(b.dataset.rep));
-    $("#ck-del-"+id).onclick=()=>apply(null);
+    const del=$("#ck-del-"+id); if(del) del.onclick=()=>apply(null);
+    const i0=$("#ck-ins0-"+id); if(i0) i0.onclick=()=>openCharPick(id,k,i,btn,"ins");
+    const i1=$("#ck-ins1-"+id); if(i1) i1.onclick=()=>openCharPick(id,k,i+1,btn,"ins");
     $("#ck-x-"+id).onclick=()=>{ box.remove(); btn.classList.remove("on"); };
     const ab=$("#ck-ai-"+id); if(ab) ab.onclick=()=>askAI(dict);
-    $("#ck-draw-"+id).onclick=()=>openDrawSheet(id,k,i,apply);
+    $("#ck-draw-"+id).onclick=()=>openDrawSheet(id,k,i,apply,ins);
   };
-  const askAI=async(dict)=>{ render(dict,[],true); try{ const alts=await aiCharAlternatives(line,i); if(!box.isConnected) return; render(dict,alts,false); if(!alts.length) box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">the AI has no better idea</span>`); }catch(err){ if(!box.isConnected) return; render(dict,[],false); box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">AI: ${esc(err.message||err)}</span>`); } };
+  const askAI=async(dict)=>{ render(dict,[],true); try{ const alts=await aiCharAlternatives(line,i,ins); if(!box.isConnected) return; render(dict,alts,false); if(!alts.length) box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">the AI has no better idea</span>`); }catch(err){ if(!box.isConnected) return; render(dict,[],false); box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">AI: ${esc(err.message||err)}</span>`); } };
   render([],[],false);
   await loadDict().catch(()=>{});
-  const dict=[...new Set([...altCharsAt(sg,k,i),...charCandidates(line,i)])];
+  const dict=ins?charCandidates(line,i,true):[...new Set([...altCharsAt(sg,k,i),...charCandidates(line,i)])];
   /* AI-first: while the AI is live it is asked at once, the dictionary candidates are the fallback */
   if(aiLive()) askAI(dict); else render(dict,[],false);
 }
@@ -1809,7 +1817,7 @@ async function openCharPick(id,k,i,btn){
    among the characters (signs are monospaced), the size and vertical position come from the median box height. */
 function charBox(sg,k,i){
   const raw=(sg.boxes||[])[k]||[], n=[...(sg.lines[k]||"")].length;
-  if(!raw.length||raw.length!==n||i>=n||n<2) return null; /* one character: its box alone is unreliable, the whole crop is shown */
+  if(i<0||!raw.length||raw.length!==n||i>=n||n<2) return null; /* one character: its box alone is unreliable, the whole crop is shown; i<0: a new character has no box */
   const ok=raw.filter(Boolean); if(!ok.length) return null;
   const H=median(ok.map(b=>b.y1-b.y0)), cy=median(ok.map(b=>(b.y0+b.y1)/2));
   const x0=Math.min(...ok.map(b=>b.x0)), x1=Math.max(...ok.map(b=>b.x1)), cell=(x1-x0)/n;
@@ -1860,9 +1868,9 @@ function attachRefView(cv,sg,k,i){
   return {ready, view:v, draw, close:()=>{ if(v.bmp) v.bmp.close(); v.bmp=null; }};
 }
 const DRAW_SIZE=720;
-function openDrawSheet(id,k,i,apply){
+function openDrawSheet(id,k,i,apply,ins){
   const sg=SIGN[id]; if(!sg) return;
-  const ch=[...sg.lines[k]][i]||"";
+  const ch=ins?"":([...sg.lines[k]][i]||"");
   document.querySelectorAll(".drawsheet").forEach(x=>x.remove());
   const el=document.createElement("div"); el.className="drawsheet";
   el.innerHTML=`<div class="dshead"><div class="badge">The character in the photo (drag to move, pinch to zoom) — draw it below.</div><button class="del" id="ds-x">Cancel</button></div>
@@ -1879,7 +1887,7 @@ function openDrawSheet(id,k,i,apply){
     const used=kids.reduce((a,c)=>a+c.getBoundingClientRect().height,0)+gap*(kids.length-1)+parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);
     const S=Math.max(160,Math.min(el.clientWidth-32,Math.floor((el.clientHeight-used)/sq.length)));
     sq.forEach(c=>{ c.style.width=S+"px"; c.style.height=S+"px"; }); };
-  fitRef(); const refView=attachRefView(el.querySelector(".ckref"),sg,k,i); refView.ready.then(fitRef); el.refView=refView; /* used by the tests */
+  fitRef(); const refView=attachRefView(el.querySelector(".ckref"),sg,k,ins?-1:i); refView.ready.then(fitRef); /* a new character has no box: the whole crop */ el.refView=refView; /* used by the tests */
   window.addEventListener("resize",fitRef);
   const cv=el.querySelector(".pad"), ctx=cv.getContext("2d"), strokes=[]; let cur=null, seq=0;
   const status=t=>{ const st=el.querySelector("#ds-st"); if(st) st.textContent=t; };
@@ -1906,7 +1914,7 @@ function openDrawSheet(id,k,i,apply){
       const w=await ocrWorker(status); if(my!==seq) return;
       status("reading …");
       const alts=await recognizeStrokes(w,strokes,p=>{ if(my===seq) status("reading … "+p+"%"); }); if(my!==seq||!el.isConnected) return;
-      const ctxc=SIGN[id]?charCandidates(SIGN[id].lines[k],i):[];
+      const ctxc=SIGN[id]?charCandidates(SIGN[id].lines[k],i,ins):[];
       const ranked=alts.slice().sort((a,b)=>(ctxc.includes(b)?1:0)-(ctxc.includes(a)?1:0)); /* what fits the neighbours first, otherwise the reader's order */
       showCands(ranked);
       status(ranked.length?"Read as — tap the right one. Not there? Clear and draw again.":"Not recognized — try cleaner, well-separated strokes.");
@@ -1958,6 +1966,7 @@ function slineHTML(id,k,line,withPinyin,withInput=true){
 /* the strip's character buttons open the picker; typing in a line calls onInput(sg, k, input) */
 function wireSlines(root,onInput){
   root.querySelectorAll("[data-ck]").forEach(b=> b.onclick=()=>{ const [k,i]=b.dataset.ck.split(",").map(Number); openCharPick(b.dataset.sid,k,i,b); });
+  root.querySelectorAll("[data-ckadd]").forEach(b=> b.onclick=()=>{ const [k,i]=b.dataset.ckadd.split(",").map(Number); openCharPick(b.dataset.sid,k,i,b,"ins"); });
   root.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{ const sg=SIGN[inp.dataset.sid]; if(!sg) return; const k=+inp.dataset.sline;
     if(sg.trad){ sg.tradTouched=true; const tl=(sg.tradText||"").split("\n"); while(tl.length<=k) tl.push(""); tl[k]=inp.value; sg.tradText=tl.join("\n"); sg.lines[k]=t2s(inp.value); }
     else sg.lines[k]=inp.value;
