@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=125; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=126; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -402,11 +402,11 @@ async function aiAuto(){
 function renderAiRow(){
   const st=$("#ai-status"), btn=$("#ai-btn"), run=$("#ai-run"), form=$("#ai-form"); if(!st) return;
   const all=aiQueue(), q=all.length, fl=all.filter(d=>d.flag).length, sp=all.filter(d=>!d.flag&&d.mt.suspect).length, pd=q-fl-sp;
-  st.textContent=aiOn()?`on: ${AI_PROVIDERS[aiProvider()].name}, ${aiModel()}. Sends card text only, never photos`:"off — needs your own API key (DeepSeek, Qwen, GLM or Claude), text only";
+  st.textContent=aiOn()?`On: ${AI_PROVIDERS[aiProvider()].name}, ${aiModel()}. Sends card text only, never photos.`:"Off. Needs your own API key (DeepSeek, Qwen, GLM or Claude); sends text only.";
   btn.textContent=aiOn()?"Settings":"Set up";
   run.hidden=!aiOn(); run.disabled=!q;
-  run.textContent=q?`Ask AI about ${q} card${q>1?"s":""}`:"Nothing to review";
-  const rs=$("#ai-runstatus"); if(rs) rs.textContent=q?`${fl} flagged, ${sp} uncertain reading${sp===1?"":"s"}, ${pd} pending translation${pd===1?"":"s"}`:"flag a card, or save a reading that looks uncertain";
+  run.textContent=q?"Ask AI":"Nothing to review";
+  const rs=$("#ai-runstatus"); if(rs) rs.textContent=q?`${q} card${q>1?"s":""} waiting: ${fl} flagged, ${sp} uncertain reading${sp===1?"":"s"}, ${pd} pending translation${pd===1?"":"s"}.`:"Nothing waiting. Flag a card, or save a reading that looks uncertain.";
   btn.onclick=()=>{ form.hidden=!form.hidden; if(!form.hidden) $("#ai-key").focus(); };
   const sel=$("#ai-provider"), showPv=()=>{ const pv=AI_PROVIDERS[sel.value]||AI_PROVIDERS[AI_PROVIDER_DEFAULT];
     $("#ai-basefield").hidden=sel.value!=="custom"; $("#ai-where").textContent=pv.where; $("#ai-key").placeholder=pv.hint;
@@ -422,7 +422,7 @@ function renderAiRow(){
   $("#ai-remove").onclick=async()=>{ await setSetting("aiKey",""); await setSetting("aiAuto",false); $("#ai-key").value=""; form.hidden=true; renderAiRow(); };
   run.onclick=async()=>{
     run.disabled=true; const rs=$("#ai-runstatus");
-    try{ const n=await aiReview(null,t=>{ rs.textContent=t; }); rs.textContent=`${n} suggestion${n===1?"":"s"} ready — open the cards (Cards → Review) to accept or dismiss`; }
+    try{ const n=await aiReview(null,t=>{ rs.textContent=t; }); rs.textContent=`${n} suggestion${n===1?"":"s"} ready. Accept or dismiss them under Cards.`; }
     catch(err){ rs.textContent="failed: "+(err&&err.message||err); run.disabled=false; }
   };
 }
@@ -461,13 +461,13 @@ async function renderNmtRow(){
   const mb=info?Math.round((info.downloadBytes||0)/1e6):0;
   const pend=S.custom.filter(d=>d.kind==="sign"&&d.mt&&d.mt.pending).length;
   const setBtn=(label,fn)=>{ btn.hidden=false; btn.disabled=false; btn.textContent=label; btn.onclick=fn; };
-  if(!info){ st.textContent="zh→en model not in this build yet (run the “Fetch zh→en translation model” action on GitHub)"; btn.hidden=true; return; }
+  if(!info){ st.textContent="The translation model is not in this build yet (run the “Fetch zh→en translation model” action on GitHub)."; btn.hidden=true; return; }
   if(!nmtOn()){
-    st.textContent=`zh→en neural model (Mozilla, ${mb} MB, downloaded once and cached like OCR). Used when there is no connection; online, the AI does it.`;
-    setBtn(`Download ${mb} MB`,async()=>{
+    st.textContent=`Chinese to English on the phone (Mozilla, ${mb} MB, downloaded once). Used when there is no connection; online, the AI does it.`;
+    setBtn("Download",async()=>{
       await setSetting("nmt",true); btn.disabled=true; /* the button says the size — no extra question */
-      try{ await nmtLoad(t=>{ st.textContent=t; }); st.textContent=`ready — loaded in ${(NMT.loadMs/1000).toFixed(1)} s`; }
-      catch(err){ st.textContent="download failed: "+(err&&err.message||err); await setSetting("nmt",false); }
+      try{ await nmtLoad(t=>{ st.textContent=t; }); st.textContent=`Ready. Loaded in ${(NMT.loadMs/1000).toFixed(1)} s.`; }
+      catch(err){ st.textContent="Download failed: "+(err&&err.message||err); await setSetting("nmt",false); }
       renderNmtRow();
     });
     return;
@@ -485,14 +485,14 @@ async function renderNmtRow(){
 }
 function renderMore(main){
   const ver=($(".ver")||{}).textContent||"";
-  const st=S.persist===true?"persistent on this device":S.persist===false?"local — the system may evict it; install the app to be safe":"checking…";
+  const st=S.persist===true?"Persistent on this phone.":S.persist===false?"Not persistent yet. Install the app so the system keeps the data.":"Checking …";
   main.innerHTML=`<div class="pane more">
     <div class="listhead">Your data</div>
-    <div class="mrow"><div><div class="t">Export</div><div class="s">progress + cards, via the share sheet. ${backupNote()}</div></div><button class="btn mini" id="export">Export</button></div>
-    <div class="mrow"><div><div class="t">Import</div><div class="s">a zeichentrainer-…json.txt file; same words are overwritten</div></div><button class="btn mini" id="import">Import</button></div>
-    <div class="mrow"><div><div class="t">Flagged cards</div><div class="s">${deck().filter(d=>d.flag).length} flagged for review, share the list as text (e.g. with a teacher)</div></div><span class="btnrow"><button class="btn mini" id="show-flag">Show</button><button class="btn mini" id="share-flag">Share</button></span></div>
+    <div class="mrow"><div><div class="t">Export</div><div class="s">Progress and cards as one file, via the share sheet. ${backupNote()}</div></div><button class="btn mini" id="export">Export</button></div>
+    <div class="mrow"><div><div class="t">Import</div><div class="s">A zeichentrainer-….json.txt file. Existing cards are overwritten.</div></div><button class="btn mini" id="import">Import</button></div>
+    <div class="mrow"><div><div class="t">Flagged cards</div><div class="s">${deck().filter(d=>d.flag).length} flagged for review. Share the list as text, for a teacher.</div></div><span class="btnrow"><button class="btn mini" id="show-flag">Show</button><button class="btn mini" id="share-flag">Share</button></span></div>
     <div class="listhead">Translation</div>
-    <div class="mrow"><div><div class="t">Offline translation</div><div class="s" id="nmt-status">checking …</div></div><button class="btn mini" id="nmt-btn" hidden></button></div>
+    <div class="mrow"><div><div class="t">Offline translation</div><div class="s" id="nmt-status">Checking …</div></div><button class="btn mini" id="nmt-btn" hidden></button></div>
     <div class="listhead">Online AI review</div>
     <div class="mrow"><div><div class="t">AI review</div><div class="s" id="ai-status"></div></div><button class="btn mini" id="ai-btn">Set up</button></div>
     <div class="aiform" id="ai-form" hidden>
@@ -507,19 +507,20 @@ function renderMore(main){
     </div>
     <div class="mrow"><div><div class="t">Review queue</div><div class="s" id="ai-runstatus"></div></div><button class="btn mini" id="ai-run" hidden></button></div>
     <div class="mrow"><div><div class="t">Storage</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
-    <div class="mrow"><div><div class="t">Text recognition</div><div class="s" id="ocr-status">checking …</div></div><button class="btn mini" id="ocr-btn" hidden></button></div>
+    <div class="mrow"><div><div class="t">Text recognition</div><div class="s" id="ocr-status">Checking …</div></div><button class="btn mini" id="ocr-btn" hidden></button></div>
     <div class="listhead">Updates without a VPN</div>
     <div class="mrow"><div><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div></div><button class="btn mini" id="mirror-check">Check now</button></div>
     <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>
+    <div class="listhead">On this phone</div>
     <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}</div></div></div>
     <div class="mrow"><div><div class="t">Photos</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">Delete ${oldShots().length}</button>`:""}</div>
     <div class="listhead">Diagnostics</div>
-    <div class="mrow"><div><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged · last reading: ${READLOG.length} step${READLOG.length===1?"":"s"}</div></div><span class="btnrow"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button></span></div>
+    <div class="mrow"><div><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${READLOG.length} step${READLOG.length===1?"":"s"}.</div></div><span class="btnrow"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button></span></div>
     <pre class="diag" id="diag-out" hidden></pre>
     <div class="listhead">Danger zone</div>
-    <div class="mrow"><div><div class="t">Reset</div><div class="s">deletes progress, custom cards and photos</div></div><button class="btn mini danger" id="reset">Reset</button></div>
+    <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>
     <div class="listhead">About</div>
-    <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s">${esc(ver)} · offline · everything stays on this phone</div></div></div>
+    <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s">${esc(ver)}. Works offline; everything stays on this phone.</div></div></div>
   </div>`;
   $("#export").onclick=exportData;
   $("#import").onclick=()=>$("#imp").click();
@@ -621,7 +622,7 @@ const SAY_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5
 function sayBtn(d){ return ttsVoice()?`<button class="say" data-say="${esc(d.c)}" aria-label="Pronounce">${SAY_SVG}</button>`:""; }
 function wireSay(root){ (root||document).querySelectorAll("[data-say]").forEach(b=> b.onclick=e=>{ e.stopPropagation(); say(b.dataset.say); }); }
 /* dictionary meanings without CC-CEDICT clutter: "[Tian1 jin1 shi4]" pinyin, "CL:…" classifiers */
-function cleanSense(m){ return String(m||"").replace(/\[[^\]]*\]/g,"").replace(/\s*CL:[^;,)]*/g,"").replace(/\(\s*\)/g,"").replace(/\s{2,}/g," ").trim(); }
+function cleanSense(m){ return String(m||"").replace(/\(Taiwan pr\.[^)]*\)/g,"").replace(/\[[^\]]*\]/g,"").replace(/\s*CL:[^;,)]*/g,"").replace(/\(\s*\)/g,"").replace(/\s{2,}/g," ").trim(); }
 /* the words of the card as buttons on the back — tap one for its pinyin and meaning; a word of
    several characters then offers its characters too. Replaces the old word/gloss tables (H: redundant). */
 function cardParts(d){
@@ -697,7 +698,7 @@ function renderStudy(main){
       <h2>All clear.</h2>
       <p>${S.ahead?"Pulled-forward round finished.":"Nothing due today. Come back tomorrow — or pull the next cards forward."}</p>
       <div class="badge" style="margin-bottom:18px">${statsLine()}</div>
-      <button class="btn" id="ahead">Pull forward · next cards</button>
+      <button class="btn" id="ahead">Pull the next cards forward</button>
     </div>`;
     const a=$("#ahead"); if(a) a.onclick=()=>{ const q=buildQueue(true); if(q.length){S.queue=q;S.idx=0;S.done=0;S.ahead=true;S.revealed=false;render();} };
     return;
@@ -753,18 +754,18 @@ function renderAdd(main){
   const curImg=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
   const imgField=curImg?`<div class="field" id="f-imgfield"><label>Image (stays on this phone)</label>
       <div class="pimg"><img src="${urlOf(curImg)}" alt="card image">
-      <span class="imgacts">${S.pendingFull&&S.pendingImg?`<button class="del${S.pendingUse!=="full"?" on":""}" id="f-usecrop">CROP</button><button class="del${S.pendingUse==="full"?" on":""}" id="f-usefull">FULL PHOTO</button>`:""}<button class="del" id="f-noimg">Remove image</button></span></div></div>`:"";
+      <span class="imgacts">${S.pendingFull&&S.pendingImg?`<button class="del${S.pendingUse!=="full"?" on":""}" id="f-usecrop">Crop</button><button class="del${S.pendingUse==="full"?" on":""}" id="f-usefull">Whole photo</button>`:""}<button class="del" id="f-noimg">Remove image</button></span></div></div>`:"";
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back-cards">← Cards</button></div>
-    <div class="lead">Add a card by hand. Pinyin and meaning filled from OCR are unverified until you check them.</div>
+    <div class="lead">Add a card by hand.</div>
     <div class="form">
     ${imgField}
     <div class="field"><label>Characters</label><input id="f-word" class="hanzi big" placeholder="快门"></div>
-      <div class="field"><label>Pinyin</label><textarea id="f-pin" class="mono grow" rows="1" placeholder="kuàimén"></textarea></div>
+      <div class="field"><label>Pinyin</label><textarea id="f-pin" class="grow" rows="1" placeholder="kuàimén"></textarea></div>
       <div class="field"><label>Meaning</label><textarea id="f-mean" class="grow" rows="1" placeholder="shutter"></textarea></div>
     <div class="field"><label class="check"><input type="checkbox" id="f-flag"> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
       <input id="f-note" placeholder="Note for the reviewer (optional)" hidden></div>
-    <div id="f-pinhint" class="err" style="display:none">Auto pinyin/meaning from OCR — unverified. Check the tones (多音字!) and adjust the meaning.</div>
+    <div id="f-pinhint" class="err" style="display:none">Pinyin and meaning were filled in from the photo and are unverified — check the tones and the meaning.</div>
     <div id="f-err" class="err" style="display:none"></div>
     <button class="btn primary block" id="f-add">Add card</button>
     <div id="f-ok" class="ok" style="display:none"></div>
@@ -805,7 +806,7 @@ function cardsListHTML(){
   if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,d.w,d.wp,d.wm,d.flagNote].filter(Boolean).join(" ").toLowerCase().includes(q));
   const rows=list.map(d=>`<button class="crow" data-id="${esc(d.id)}">
       ${d.img?`<img class="thumb" src="${thumbURL(d)}" alt="">`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`}
-      <span class="ct"><span class="c">${esc((d.trad||d.c).replace(/\n/g," / "))}${d.trad?`<span class="pill trad">Traditional</span>`:""}${byText.get(d.c)>1?`<span class="pill">${byText.get(d.c)} photos</span>`:""}</span>${d.trad?`<span class="simpref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span><span class="m">${esc(d.m)}</span></span>
+      <span class="ct"><span class="c">${esc((d.trad||d.c).replace(/\n/g," / "))}</span>${d.trad?`<span class="simpref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}${d.trad?`<span class="pill trad">Traditional</span>`:""}${byText.get(d.c)>1?`<span class="pill">${byText.get(d.c)} photos</span>`:""}</span><span class="m">${esc(d.m)}</span></span>
       <span class="cs">${d.ai?'<span class="pill ai">AI</span>':""}${d.flag?'<span class="pill flagged">⚑ review</span>':""}${cardStatus(d)}</span></button>`).join("");
   const empty=S.custom.length?"No cards match.":"No cards yet — take a photo under Camera, or tap + New.";
   return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length};
@@ -842,7 +843,7 @@ function renderCardDetail(main,c){
       <button class="btn primary" id="d-test">Test this card</button>
       <button class="btn" id="d-edit">Edit</button>
       <button class="btn${d.flag?" on":""}" id="d-flag">${d.flag?"⚑ Clear flag":"⚑ Flag for review"}</button>
-      <button class="btn danger" id="d-del">Delete</button>
+      <button class="btn danger" id="d-del">Delete card</button>
     </div>
     <div class="badge" style="margin-top:14px">${esc(stat)}</div>
   </div>`;
@@ -885,12 +886,12 @@ function renderEdit(main,c){
       <div class="signed" id="e-lines"></div>
       <textarea id="e-word" class="hanzi" hidden>${esc(lines0.join("\n"))}</textarea>
       </div>
-      <div class="field"><label>Pinyin</label><textarea id="e-pin" class="mono grow" rows="1">${esc(d.p)}</textarea></div>
+      <div class="field"><label>Pinyin</label><textarea id="e-pin" class="grow" rows="1">${esc(d.p)}</textarea></div>
       <div class="field"><label>Meaning</label><textarea id="e-mean" class="grow" rows="1">${esc(d.m)}</textarea></div>
     ${isSign||!d.w?"":`<div class="field"><label>Context word, pinyin, meaning (optional)</label>
-      <div class="row"><input id="e-w" class="hanzi" value="${esc(d.w||"")}" placeholder="学习"><input id="e-wp" class="mono" value="${esc(d.wp||"")}" placeholder="xuéxí"><input id="e-wm" value="${esc(d.wm||"")}" placeholder="to learn"></div></div>`}
+      <div class="row"><input id="e-w" class="hanzi" value="${esc(d.w||"")}" placeholder="学习"><input id="e-wp" value="${esc(d.wp||"")}" placeholder="xuéxí"><input id="e-wm" value="${esc(d.wm||"")}" placeholder="to learn"></div></div>`}
     ${d.img?`<div class="field" id="e-imgfield"><label>Image (stays on this phone)</label><div class="pimg"><img src="${cropURL}" alt=""><button class="del" id="e-noimg">Remove image</button></div></div>`:""}
-    <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> Flag for review (text, pinyin or meaning looks wrong)</label>
+    <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
       <input id="e-note" value="${esc(d.flagNote||"")}" placeholder="Note for the reviewer (optional)"></div>
     ${aiOn()?`<div class="field"><button class="btn block" id="e-ai">Ask AI to check text, pinyin and meaning</button><div class="badge" id="e-aistatus" style="margin-top:6px"></div><div id="e-aibox" hidden class="aibox"></div></div>`:""}
     <div id="e-err" class="err" style="display:none"></div>
@@ -2011,11 +2012,11 @@ function signEditorHTML(id){
   /* the same layout as the Edit form (H): Text, Pinyin, Meaning — pinyin and meaning can be corrected before saving */
   return `<div class="signed">${weak}${head?`<div class="badge${bad?" bad":""}" style="margin-bottom:8px">${head}</div>`:""}
     <div class="field"><label>Characters${sg.trad?" (traditional, as on the photo)":""}</label>${rows}${sg.trad?`<div class="scriptref" id="ssimp-${id}"><span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span></div>`:""}</div>
-    <div class="field"><label>Pinyin</label><textarea class="mono grow" id="spin-${id}" rows="1" data-spin="${id}">${esc(sg.pinEdit||"")}</textarea></div>
+    <div class="field"><label>Pinyin</label><textarea class="grow" id="spin-${id}" rows="1" data-spin="${id}">${esc(sg.pinEdit||"")}</textarea></div>
     <div class="field"><label>Meaning</label><textarea class="grow" id="smeanf-${id}" rows="1" data-smean="${id}">${esc(sg.meanEdit||"")}</textarea><div class="smean badge" id="smean-${id}" style="margin-top:4px"></div></div>
     <div class="field"><label class="check"><input type="checkbox" data-sflag="${id}"${sg.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
       <input data-snote="${id}" value="${esc(sg.flagNote||"")}" placeholder="Note for the reviewer (optional)"${sg.flag?"":" hidden"}></div>
-    <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save card</button>${aiOn()&&!sg.ai&&!sg.aiBusy?`<button class="btn mini" data-signai="${id}">Ask AI</button>`:""}<button class="del" data-signcancel="${id}">cancel</button></div>
+    <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save card</button>${aiOn()&&!sg.ai&&!sg.aiBusy?`<button class="btn mini" data-signai="${id}">Ask AI</button>`:""}<button class="del" data-signcancel="${id}">Cancel</button></div>
     ${sg.aiErr?`<div class="err" style="margin-top:6px">${esc(sg.aiErr)}</div>`:""}</div>`;
 }
 /* recompute pinyin / meaning / gloss for the current lines without re-rendering (keeps input focus) */
@@ -2151,8 +2152,8 @@ function renderShots(){
           ${cropping?`<div class="croplayer" data-id="${s.id}"><div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div></div></div>`:""}
         </div>
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
-          ?`<button class="del" data-cropcancel="${s.id}">CANCEL</button>`
-          :`<button class="ocr-btn" data-crop="${s.id}">CROP</button><button class="del" data-del="${s.id}">delete</button>`}</span></div>
+          ?`<button class="del" data-cropcancel="${s.id}">Cancel</button>`
+          :`<button class="ocr-btn" data-crop="${s.id}">Crop</button><button class="del" data-del="${s.id}">Delete</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${SIGN[s.id]?signEditorHTML(s.id):READING[s.id]?readingHTML(READING[s.id],s.id):cropping
           ?`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it.</span>`
           :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:""}</div>
@@ -2323,7 +2324,7 @@ function mirrorCheck(force){
   MIRROR.busy=true; MIRROR.at=Date.now();
   const local=pageVersion();
   ctrl.postMessage({type:"mirror-update",mirror:mirrorURL(),local});
-  const st=$("#mirror-status"); if(st) st.textContent="checking the mirror …";
+  const st=$("#mirror-status"); if(st) st.textContent="Checking the mirror …";
   setTimeout(()=>{ if(MIRROR.busy){ MIRROR.busy=false; MIRROR.last={status:"error",error:"no answer from the mirror"}; const s2=$("#mirror-status"); if(s2) s2.textContent=mirrorText(); } },30000);
 }
 /* the worker needs the mirror for vendor files too — tell it on start and whenever the setting changes */
@@ -2338,22 +2339,22 @@ async function ocrCached(){
 async function renderOcrRow(){
   const st=$("#ocr-status"), btn=$("#ocr-btn"); if(!st||!btn) return;
   const n=await ocrCached(); if(!$("#ocr-status")) return;
-  if(n===OCR_FILES.length){ st.textContent="ready — text recognition works offline and without a VPN"; btn.hidden=true; return; }
-  st.textContent=`${OCR_FILES.length-n} of ${OCR_FILES.length} files not on the phone yet (≈14 MB once). Downloads by itself on first use, or now:`;
+  if(n===OCR_FILES.length){ st.textContent="Ready. Text recognition works offline and without a VPN."; btn.hidden=true; return; }
+  st.textContent=`${OCR_FILES.length-n} of ${OCR_FILES.length} reader files are not on the phone yet (14 MB, once). They download on first use, or now.`;
   btn.hidden=false; btn.disabled=false; btn.textContent="Download";
   btn.onclick=async()=>{
     btn.disabled=true; let done=0;
-    for(const f of OCR_FILES){ st.textContent=`downloading ${f} (${done+1}/${OCR_FILES.length}) …`;
+    for(const f of OCR_FILES){ st.textContent=`Downloading ${f} (${done+1} of ${OCR_FILES.length}) …`;
       try{ const r=await fetch("./vendor/"+f); if(!r.ok) throw new Error(r.status); await r.blob(); done++; }
-      catch(e){ st.textContent="download failed at "+f+" — no connection to github.io or the mirror"; btn.disabled=false; return; } }
+      catch(e){ st.textContent="Download failed at "+f+": no connection to github.io or the mirror."; btn.disabled=false; return; } }
     renderOcrRow();
   };
 }
 function mirrorText(){
-  const d=MIRROR.last; if(!d) return "checks github.io and the mirror on every start";
-  if(d.status==="current") return `up to date (mirror has v${d.remote})`;
-  if(d.status==="updated") return `updated to v${d.remote} from the mirror — reloading`;
-  return "mirror not reachable: "+(d.error||"");
+  const d=MIRROR.last; if(!d) return "Checks github.io and the mirror on every start.";
+  if(d.status==="current") return `Up to date. The mirror has v${d.remote}.`;
+  if(d.status==="updated") return `Updated to v${d.remote} from the mirror. Reloading …`;
+  return "The mirror is not reachable: "+(d.error||"");
 }
 /* MIUI/Chrome evicts storage of non-installed sites — request persistent storage */
 if(navigator.storage && navigator.storage.persist){
@@ -2362,7 +2363,7 @@ if(navigator.storage && navigator.storage.persist){
     .then(granted=>{
       S.persist=!!granted;
       const b=document.querySelector("#storage-status");
-      if(b) b.textContent=granted?"persistent on this device":"local — the system may evict it; install the app to be safe";
+      if(b) b.textContent=granted?"Persistent on this phone.":"Not persistent yet. Install the app so the system keeps the data.";
     }).catch(()=>{});
 }
 
