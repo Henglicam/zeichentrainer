@@ -51,3 +51,10 @@ offline and without any CDN):
 Apache License 2.0 full text: https://www.apache.org/licenses/LICENSE-2.0
 CC BY-SA 4.0 full text: https://creativecommons.org/licenses/by-sa/4.0/
 MPL 2.0 full text: https://www.mozilla.org/MPL/2.0/
+
+strokes.txt.gz — stroke medians of 9,534 characters, extracted from graphics.txt of Make Me a Hanzi
+(https://github.com/skishore/makemeahanzi, Shaunak Kishore), which derives them from the Arphic PL KaitiM GB
+and Arphic PL UKai fonts (Arphic Technology). Licensed under the Arphic Public License (1999): the fonts and
+derived data may be used, copied, modified and distributed freely, provided this notice and the license terms
+are kept; the full license text is in the makemeahanzi repository and with the Arphic PL font packages.
+Only the character, the per-stroke median points (y flipped to screen coordinates, rounded) are kept here.

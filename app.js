@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=140; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=141; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -128,7 +128,7 @@ function diagText(){
   READLOG.forEach(x=>out.push(`  ${ago(x.t)}  ${x.text}`));
   if(LAST_READ.passes) out.push("  passes: "+JSON.stringify(LAST_READ.passes));
   out.push("", `Drawings (${DRAWLOG.length}, newest last):`);
-  DRAWLOG.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.strokes.length} stroke${x.strokes.length===1?"":"s"} → ${x.alts.join(" ")||"nothing"}`); out.push("    strokes: "+JSON.stringify(x.strokes)); });
+  DRAWLOG.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.strokes.length} stroke${x.strokes.length===1?"":"s"} → ${x.alts.join(" ")||"nothing"}${x.strokes_best?` · strokes ${x.strokes_best.join(" ")} · print ${(x.ocr||[]).join(" ")||"nothing"}`:""}`); out.push("    strokes: "+JSON.stringify(x.strokes)); });
   out.push("", `AI exchanges (${AILOG.length}, newest last):`);
   AILOG.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.model||""} → ${x.status||""}`); out.push("    request: "+x.req); out.push("    reply: "+(x.res||x.err||"")); });
   out.push("", `Errors (${ERRLOG.length}):`);
@@ -1974,11 +1974,15 @@ function openDrawSheet(id,k,i,apply,ins){
     try{
       const w=await ocrWorker(status); if(my!==seq) return;
       status("reading …");
-      const alts=await recognizeStrokes(w,strokes,p=>{ if(my===seq) status("reading … "+p+"%"); });
-      DRAWLOG.push({t:Date.now(),strokes:strokes.map(st=>st.map(p=>[Math.round(p[0]),Math.round(p[1])])),alts}); while(DRAWLOG.length>3) DRAWLOG.shift(); /* the phone's real strokes for the diagnostics (v140) */
+      /* stroke matching first (v141), the print model's readings after it; the database may be missing on a first use offline */
+      let sm=[]; try{ sm=await strokeMatch(strokes); }catch(err){ logErr("strokes",err&&err.message||err); }
+      const good=sm.filter(x=>x.cost<0.4).slice(0,5).map(x=>x.ch);
+      const ocr=await recognizeStrokes(w,strokes,p=>{ if(my===seq) status("reading … "+p+"%"); });
+      const alts=[...new Set([...good,...ocr])].slice(0,6);
+      DRAWLOG.push({t:Date.now(),strokes:strokes.map(st=>st.map(p=>[Math.round(p[0]),Math.round(p[1])])),alts,strokes_best:sm.slice(0,5).map(x=>x.ch+":"+x.cost.toFixed(2)),ocr}); while(DRAWLOG.length>3) DRAWLOG.shift(); /* the phone's real strokes for the diagnostics (v140) */
       if(my!==seq||!el.isConnected) return;
       const ctxc=SIGN[id]?charCandidates(SIGN[id].lines[k],i,ins):[];
-      const ranked=alts.slice().sort((a,b)=>(ctxc.includes(b)?1:0)-(ctxc.includes(a)?1:0)); /* what fits the neighbours first, otherwise the reader's order */
+      const ranked=alts.slice().sort((a,b)=>(ctxc.includes(b)?1:0)-(ctxc.includes(a)?1:0)); /* what fits the neighbours first, otherwise the stroke match's order */
       showCands(ranked);
       status(ranked.length?"Read as — tap the right one. Not there? Clear and draw again.":"Not recognized — try cleaner, well-separated strokes.");
     }catch(err){ if(my===seq) status("Reading failed: "+(err&&err.message||err)); }
@@ -1990,6 +1994,63 @@ function openDrawSheet(id,k,i,apply,ins){
   el.strokes=strokes; el.recognize=recognize; el.paint=paint; /* used by the tests */
   paint();
   return el;
+}
+/* ---------- stroke matching (v141, H: "Go!") ----------
+   The drawn strokes are matched against the stroke medians of 9,534 characters (Make Me a Hanzi, derived from the
+   Arphic fonts, `vendor/strokes.txt.gz`): every stroke is scaled into the unit square with the whole character and
+   resampled to eight points; a character with a stroke count within one (two from eight strokes on) is scored by the
+   best assignment of drawn strokes to its strokes — order-free, so H's own stroke order does not matter (he closes the
+   box of 团 third, the standard order closes it last); a missing or extra stroke costs a fixed skip. The print model
+   stays as the fallback and for characters the database lacks. */
+let STROKES=null, _strokesLoading=null;
+function loadStrokes(){
+  if(STROKES) return Promise.resolve(STROKES);
+  if(!_strokesLoading) _strokesLoading=(async()=>{
+    const url=new URL("./vendor/strokes.txt.gz",location.href).href;
+    let r=await fetch(url);
+    if(!r.ok){ try{ const c=await caches.open("zt-ocr-v1"); await c.delete(url); }catch(e){} r=await fetch(url,{cache:"reload"}); if(!r.ok) throw new Error("stroke data not available ("+r.status+")"); }
+    const buf=new Uint8Array(await r.arrayBuffer());
+    const text=(buf[0]===0x1f&&buf[1]===0x8b)?await new Response(new Response(buf).body.pipeThrough(new DecompressionStream("gzip"))).text():new TextDecoder().decode(buf);
+    const byCount=new Map();
+    for(const line of text.split("\n")){ const i=line.indexOf("\t"); if(i<1) continue; const ch=line.slice(0,i); let st; try{ st=JSON.parse(line.slice(i+1)); }catch(e){ continue; }
+      const prep=prepStrokes(st); if(!prep) continue; const a=byCount.get(prep.length)||[]; a.push({ch,st:prep}); byCount.set(prep.length,a); }
+    STROKES=byCount; return STROKES;
+  })().catch(err=>{ _strokesLoading=null; throw err; });
+  return _strokesLoading;
+}
+const STROKE_PTS=8, STROKE_SKIP=0.32;
+/* the strokes scaled into the unit square as a whole (aspect kept, centred) and resampled to STROKE_PTS points each */
+function prepStrokes(strokes){
+  const all=strokes.flat(); if(!all.length) return null;
+  const x0=Math.min(...all.map(p=>p[0])), x1=Math.max(...all.map(p=>p[0])), y0=Math.min(...all.map(p=>p[1])), y1=Math.max(...all.map(p=>p[1]));
+  const side=Math.max(x1-x0,y1-y0,1), cx=(x0+x1)/2, cy=(y0+y1)/2;
+  return strokes.map(st=>{ const pts=st.map(p=>[(p[0]-cx)/side+0.5,(p[1]-cy)/side+0.5]);
+    if(pts.length===1) return Array(STROKE_PTS).fill(pts[0]);
+    const seg=[0]; for(let i=1;i<pts.length;i++) seg.push(seg[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
+    const L=seg[seg.length-1]||1e-6, out=[];
+    for(let k=0;k<STROKE_PTS;k++){ const t=L*k/(STROKE_PTS-1); let i=1; while(i<seg.length-1&&seg[i]<t) i++; const a=pts[i-1], b=pts[i], f=seg[i]===seg[i-1]?0:(t-seg[i-1])/(seg[i]-seg[i-1]); out.push([a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f]); }
+    return out; });
+}
+const strokeDist=(a,b)=>{ let f=0, r=0; for(let k=0;k<STROKE_PTS;k++){ f+=Math.hypot(a[k][0]-b[k][0],a[k][1]-b[k][1]); const q=b[STROKE_PTS-1-k]; r+=Math.hypot(a[k][0]-q[0],a[k][1]-q[1]); } return Math.min(f/STROKE_PTS,r/STROKE_PTS+0.12); }; /* a stroke drawn backwards costs a little extra */
+/* the cheapest assignment of the rows to the columns of a square cost matrix (Hungarian method) */
+function assignCost(C){
+  const n=C.length, INF=1e9, u=new Array(n+1).fill(0), v=new Array(n+1).fill(0), p=new Array(n+1).fill(0), way=new Array(n+1).fill(0);
+  for(let i=1;i<=n;i++){ p[0]=i; let j0=0; const minv=new Array(n+1).fill(INF), used=new Array(n+1).fill(false);
+    do{ used[j0]=true; const i0=p[j0]; let delta=INF, j1=0;
+      for(let j=1;j<=n;j++) if(!used[j]){ const cur=C[i0-1][j-1]-u[i0]-v[j]; if(cur<minv[j]){ minv[j]=cur; way[j]=j0; } if(minv[j]<delta){ delta=minv[j]; j1=j; } }
+      for(let j=0;j<=n;j++){ if(used[j]){ u[p[j]]+=delta; v[j]-=delta; } else minv[j]-=delta; }
+      j0=j1; }while(p[j0]!==0);
+    do{ const j1=way[j0]; p[j0]=p[j1]; j0=j1; }while(j0); }
+  let total=0; for(let j=1;j<=n;j++) total+=C[p[j]-1][j-1]; return total;
+}
+/* the characters whose strokes the drawing fits best: [{ch,cost}], cheapest first */
+async function strokeMatch(strokes){
+  const db=await loadStrokes(); const U=prepStrokes(strokes); if(!U) return [];
+  const n=U.length, tol=n>=8?2:1, out=[];
+  for(let m=Math.max(1,n-tol);m<=n+tol;m++){ for(const {ch,st} of db.get(m)||[]){
+      const N=Math.max(n,m), C=[]; for(let i=0;i<N;i++){ const row=[]; for(let j=0;j<N;j++) row.push(i<n&&j<m?strokeDist(U[i],st[j]):STROKE_SKIP); C.push(row); }
+      out.push({ch,cost:assignCost(C)/N}); } }
+  return out.sort((a,b)=>a.cost-b.cost).slice(0,8);
 }
 /* Guide the lines (v139, H): the print model knows straight strokes and clean corners, a finger draws wobbles. Every
    stroke is smoothed, reduced to its corners (Douglas–Peucker, tolerance 3.5 % of the character), and segments within
@@ -2394,7 +2455,7 @@ function mirrorCheck(force){
 /* the worker needs the mirror for vendor files too — tell it on start and whenever the setting changes */
 function tellMirror(){ const c=navigator.serviceWorker&&navigator.serviceWorker.controller; if(c) c.postMessage({type:"mirror",mirror:mirrorURL()}); }
 /* the reader's files (OCR engine, language data, dictionary): cached once, then offline for good */
-const OCR_FILES=["tesseract.min.js","worker.min.js","tesseract-core-simd-lstm.wasm.js","tesseract-core-simd-lstm.wasm","chi_sim.traineddata.gz","chi_tra.traineddata.gz","t2s.txt","s2t.txt","pinyin-pro.js","cedict.tsv.gz"];
+const OCR_FILES=["tesseract.min.js","worker.min.js","tesseract-core-simd-lstm.wasm.js","tesseract-core-simd-lstm.wasm","chi_sim.traineddata.gz","chi_tra.traineddata.gz","t2s.txt","s2t.txt","pinyin-pro.js","cedict.tsv.gz","strokes.txt.gz"];
 async function ocrCached(){
   if(!window.caches) return 0;
   let n=0; for(const f of OCR_FILES){ try{ if(await caches.match(new URL("./vendor/"+f,location.href).href)) n++; }catch(e){} }
