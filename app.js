@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=147; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=148; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -938,8 +938,8 @@ function renderEdit(main,c){
   const syncWord=()=>{ $("#e-word").value=sg.lines.join("\n"); };
   const drawLines=()=>{
     const box=$("#e-lines"); if(!box) return;
-    box.innerHTML=sg.lines.map((l,k)=>slineHTML(eid,k,l,false)).join("")+`<div class="scriptline">${sg.trad?`<div class="scriptref"><span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span></div>`:""}${scriptSwitchHTML(eid,sg)}</div>`;
-    wireSlines(box,()=>{ syncWord(); pinyinFollow(); showAi(); const ref=box.querySelector(".scriptref .hanzi"); if(ref) ref.textContent=sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "); });
+    box.innerHTML=sg.lines.map((l,k)=>slineHTML(eid,k,l,false)).join("")+`<div class="scriptline">${scriptSwitchHTML(eid,sg)}</div>`; /* no "Simplified …" reference line beside the switch (v148, H: the switch says it) */
+    wireSlines(box,()=>{ syncWord(); pinyinFollow(); showAi(); });
     box.querySelectorAll("[data-scriptset]").forEach(b=> b.onclick=async()=>{ const on=b.dataset.scriptset==="1"; if(on===!!sg.trad) return; await setScript(sg,on); drawLines(); const lab=box.closest(".field").querySelector("label"); if(lab) lab.textContent="Characters"+(sg.trad?" (traditional, as on the photo)":""); }); /* the mark by hand (v146) */
   };
   /* pinyin follows the text unless it was edited by hand */
@@ -2175,7 +2175,7 @@ function signEditorHTML(id){
 
   /* the same layout as the Edit form (H): Text, Pinyin, Meaning — pinyin and meaning can be corrected before saving */
   return `<div class="signed">${weak}${head?`<div class="badge${bad?" bad":""}" style="margin-bottom:8px">${head}</div>`:""}
-    <div class="field"><label>Characters${sg.trad?" (traditional, as on the photo)":""}</label>${rows}<div class="scriptline">${sg.trad?`<div class="scriptref" id="ssimp-${id}"><span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span></div>`:""}${scriptSwitchHTML(id,sg)}</div></div>
+    <div class="field"><label>Characters${sg.trad?" (traditional, as on the photo)":""}</label>${rows}<div class="scriptline">${scriptSwitchHTML(id,sg)}</div></div>
     <div class="field"><label>Pinyin</label><textarea class="grow" id="spin-${id}" rows="1" data-spin="${id}">${esc(sg.pinEdit||"")}</textarea></div>
     <div class="field"><label>Meaning</label><textarea class="grow" id="smeanf-${id}" rows="1" data-smean="${id}">${esc(sg.meanEdit||"")}</textarea><div class="smean badge" id="smean-${id}" style="margin-top:4px"></div></div>
     <div class="field"><label class="check"><input type="checkbox" data-sflag="${id}"${sg.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
@@ -2209,7 +2209,6 @@ function signPreview(id){
   if(sg.trad){
     if(!sg.tradTouched){ const zh=sg.lines.map(l=>l.trim()).filter(l=>CJK.test(l)).join("\n"), zht=good&&sg.ai.zht&&[...sg.ai.zht].length===[...zh].length?sg.ai.zht:s2t(zh); sg.tradText=zht; }
     document.querySelectorAll(`[data-sid="${id}"][data-sline]`).forEach(inp=>{ if(document.activeElement!==inp){ const v=tradLine(sg,+inp.dataset.sline); if(inp.value!==v) inp.value=v; } });
-    const ref=$(`#ssimp-${id}`); if(ref) ref.innerHTML=`<span class="lbl">Simplified</span><span class="hanzi">${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</span>`;
   }
   sg.res=res; sg.full=full; sg.mean=mean;
   if(!sg.ai && !(aiLive()&&!sg.aiErr)) signTranslate(id); /* offline model only as fallback */
