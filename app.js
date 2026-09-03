@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=107; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=108; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1975,7 +1975,7 @@ function signEditorHTML(id){
 }
 /* recompute pinyin / meaning / gloss for the current lines without re-rendering (keeps input focus) */
 function signPreview(id){
-  const sg=SIGN[id]; if(!sg) return;
+  const sg=SIGN[id]; if(!sg||!window.pinyinPro) return; /* pinyin and gloss need the reader's libraries — loaded before any reading */
   const res=sg.lines.map(l=>CJK.test(l)?lineMeaning(l):null);
   res.forEach((r,k)=>{ const el=$(`#sp-${id}-${k}`); if(el) el.textContent=r?r.py:""; });
   const live=res.filter(Boolean);
@@ -2122,7 +2122,9 @@ function renderShots(){
   wireSlines(box,(sg,id)=>signPreview(id));
   box.querySelectorAll("[data-signsave]").forEach(b=> b.onclick=()=>saveSign(b.dataset.signsave));
   box.querySelectorAll("[data-signcancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.signcancel; delete SIGN[id]; if(CROP&&CROP.id===id) CROP=null; renderShots(); });
-  Object.keys(SIGN).forEach(signPreview);
+  /* only the inbox's readings: the Edit form's text state (SIGN["editN"]) survives a tab tap, and previewing it here before
+     the pinyin library is loaded threw "pinyinPro is not defined" into every reading (v108, H's phone) */
+  S.inbox.forEach(s=>{ if(SIGN[s.id]) signPreview(s.id); });
 }
 let PENDING_SHOT=false; /* a photo is being processed — the inbox shows a placeholder right away */
 async function onPhoto(e){
