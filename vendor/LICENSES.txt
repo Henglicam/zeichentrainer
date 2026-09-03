@@ -24,9 +24,9 @@ offline and without any CDN):
   tessdata_fast (Traditional Chinese) — Apache License 2.0
   https://github.com/tesseract-ocr/tessdata_fast
 
-- t2s.txt
-  Traditional→simplified character pairs derived from OpenCC's
-  TSCharacters.txt — Apache License 2.0
+- t2s.txt, s2t.txt
+  Traditional→simplified and simplified→traditional character pairs
+  derived from OpenCC's TSCharacters.txt and STCharacters.txt — Apache License 2.0
   https://github.com/BYVoid/OpenCC
 
 - cedict.tsv.gz
