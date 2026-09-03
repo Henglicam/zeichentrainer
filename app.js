@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=104; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=105; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -339,7 +339,7 @@ async function aiReview(list,status){
 /* the AI called the text garbage: the card is flagged with the AI's note, the suggestion is done */
 async function aiFlag(c){
   const d=cardOf(c); if(!d||!d.ai) return;
-  const upd={...d, flag:true, flagNote:d.flagNote||("AI: "+(d.ai.note||"the text looks misread"))}; delete upd.ai;
+  const upd={...d, flag:true, flagNote:d.flagNote||d.ai.note||"the text looks misread"}; delete upd.ai;
   await putCard(upd,c);
 }
 async function aiAccept(c){
@@ -533,7 +533,7 @@ function renderMore(main){
 }
 
 function tagsHTML(d,isNew){
-  return `<div class="tags"><span class="t">${esc(d.t||"")}</span>${d.flag?`<span class="f">⚑ review</span>`:""}<span class="${isNew?"n":"r"}">${isNew?"new":"review"}</span></div>`;
+  return `<div class="tags">${d.flag?`<span class="f">⚑ review</span>`:""}<span class="${isNew?"n":"r"}">${isNew?"new":"review"}</span></div>`; /* no card type (H, v105) */
 }
 /* ---------- review flag ----------
    Any card can be flagged when the OCR text, pinyin or meaning looks odd and
@@ -656,7 +656,7 @@ function backHTML(d){
     <div class="word"><span class="w">${esc(d.w)}</span><span class="wp">${esc(d.wp||"")}</span></div>
     <div class="wm">${esc(d.wm||"")}</div>` : "";
   const glossBlock = d.kind==="sign" ? `
-    ${d.mt&&!d.mt.verified?`<span class="flag">meaning ${d.mt.src==="nmt"?"from the offline translation":d.mt.src==="phrasebook"?"from the phrasebook":d.mt.src==="llm"?"from the online AI":d.mt.src==="dict"?"from the dictionary":"composed word by word"}, unverified${d.mt.pending?" (translation pending)":""}${d.mt.suspect?" (reading uncertain: "+esc(d.mt.suspect)+")":""}</span>`:""}
+    ${d.mt&&!d.mt.verified?`<span class="flag">meaning unverified${d.mt.pending?" (translation pending)":""}${d.mt.suspect?" (reading uncertain: "+esc(d.mt.suspect)+")":""}</span>`:""}
 ` : "";
   return `${d.trad?`<div class="simp">简 ${esc(d.c.replace(/\n/g," / "))}</div>`:""}<div class="pin">${esc(d.p)}${sayBtn(d)}</div><div class="mean">${esc(d.m)}</div>${charsHTML(d)}
     ${d.kind==="sign"?glossBlock:wordBlock}`;
@@ -820,7 +820,7 @@ function renderCardDetail(main,c){
   const p=S.progress[c];
   const stat=p?`interval ${p.interval} d · ease ${p.ease.toFixed(2)} · ${p.reps} review${p.reps===1?"":"s"} · next ${new Date(p.due).toLocaleDateString("en-GB")}`:"not studied yet";
   main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${d.kind==="sign"?"sign card":"word card"}${d.mt&&!d.mt.verified?", unverified":""}${d.mt&&d.mt.pending?", translation pending":""}${d.mt&&d.mt.suspect?", reading uncertain":""}</span></div>
+    <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${[d.mt&&!d.mt.verified?"unverified":"",d.mt&&d.mt.pending?"translation pending":"",d.mt&&d.mt.suspect?"reading uncertain":""].filter(Boolean).join(", ")}</span></div>
     <div class="card">${tagsHTML(d,!p)}<div class="front tap" id="d-reveal">${frontHTML(d)}</div>
       ${S.detailHide?`<div class="hint">Tap the character to show the answer${d.imgFull||d.shot?" · tap the photo for the whole picture":""}</div>`
         :`<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="hint">Tap the character to hide the answer${d.imgFull||d.shot?" · tap the photo for the whole picture":""}</div>`}</div>
@@ -1957,7 +1957,8 @@ function signEditorHTML(id){
   const low=sg.conf?Math.min(...sg.conf.flat().concat([100])):100;
   const doubt=!aiLive()&&low<OCR_DOUBT?` The reading looks uncertain (confidence ${Math.round(low)}%) — check the text.`:"";
   const bad=sg.ai&&sg.ai.bad;
-  const head=sg.aiBusy?"Reading with the AI …":bad?"The AI cannot make sense of this reading — frame the text tightly and read again, or fix the characters.":sg.ai?"Read and checked by the AI. Tap a character to change it.":`Text read from the photo. Tap a character to change it.${doubt}`;
+  /* no status about the AI (H, v105: "not relevant for user") — the text is either fine, or it needs a hand */
+  const head=sg.aiBusy?"Checking the text …":bad?"This reading looks wrong — frame the text tightly and read again, or fix the characters.":`Tap a character to change it.${sg.ai?"":doubt}`;
   /* the reading crop is not shown (H: "the user doesn't have to see it") — it serves the picker's reference only */
   const nChars=sg.lines.join("").replace(/[^\u4e00-\u9fff]/g,"").length, meanCf=(sg.conf||[]).flat().reduce((a,c,_,arr)=>a+c/arr.length,0);
   const weak=nChars<=2&&meanCf<85?`<div class="err" style="margin:4px 0 8px">Only ${nChars} character${nChars===1?"":"s"} found — if the photo shows more, frame the characters tightly and drag a corner to read again.</div>`:"";
@@ -1989,8 +1990,8 @@ function signPreview(id){
   if(meanF&&!sg.meanTouched){ meanF.value=good?(sg.ai.m||mean):mean; autoGrow(meanF); }
   const sm=$(`#smean-${id}`);
   if(sm){ sm.className="smean badge"+(good?" ai":sg.ai?" bad":""); sm.textContent=good
-    ?(sg.ai.note&&sg.ai.note.toLowerCase()!=="ok"?"AI: "+sg.ai.note:"") /* the head already says "checked by the AI" (H, v104) */
-    :sg.ai?`The AI could not make sense of this text${sg.ai.note?": "+sg.ai.note:""} — unverified`
+    ?(sg.ai.note&&sg.ai.note.toLowerCase()!=="ok"?sg.ai.note:"") /* a remark only, no "checked by the AI" (H, v104/v105) */
+    :sg.ai?`This text looks misread${sg.ai.note?": "+sg.ai.note:""} — unverified`
     :`Meaning ${full?"from the phrasebook":"composed word by word"}, unverified`; }
   /* the traditional form follows the text (the AI's "zht" when it matches, else the character table) unless edited by hand */
   if(sg.trad){
@@ -2014,7 +2015,7 @@ async function signAskAI(id){
     let zh=r.zh&&CJK.test(r.zh)&&!r.bad?r.zh.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):c;
     zh=recutLines(zh,lines); /* the model often drops the line breaks — the photo's lines win */
     sg.lines=zh.split("\n"); sg.ai={zh,zht:r.zht&&CJK.test(r.zht)?recutLines(r.zht.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"),lines):"",p:r.p,m:r.m,note:r.note,ok:r.ok,bad:!!r.bad};
-    if(r.bad&&!sg.flag){ sg.flag=true; sg.flagNote=sg.flagNote||"AI: the reading looks wrong"; } /* H's rule: when unsure, flag instead of inventing */
+    if(r.bad&&!sg.flag){ sg.flag=true; sg.flagNote=sg.flagNote||"the reading looks wrong"; } /* H's rule: when unsure, flag instead of inventing */
   }catch(err){ if(SIGN[id]) sg.aiErr=err&&err.message||String(err); } /* → signPreview falls back to the offline model */
   if(SIGN[id]){ delete sg.aiBusy; delete sg.aiPromise; }
   renderShots(); })();
@@ -2038,7 +2039,7 @@ async function signTranslate(id){
 }
 async function saveSign(id){
   const sg=SIGN[id]; if(!sg) return;
-  if(sg.aiPromise){ const b=document.querySelector(`[data-signsave="${id}"]`); if(b){ b.disabled=true; b.textContent="Waiting for the AI …"; } await sg.aiPromise; if(!SIGN[id]) return; }
+  if(sg.aiPromise){ const b=document.querySelector(`[data-signsave="${id}"]`); if(b){ b.disabled=true; b.textContent="Checking …"; } await sg.aiPromise; if(!SIGN[id]) return; }
   signPreview(id);
   const keep=sg.lines.map((l,k)=>({l:l.trim(),r:sg.res[k]})).filter(x=>x.r);
   if(!keep.length) return;
@@ -2058,7 +2059,7 @@ async function saveSign(id){
   const cfs=sg.lines.flatMap((l,k)=>(sg.orig&&sg.orig[k]===l.trim()&&sg.conf&&sg.conf[k])||[]);
   const unknown=keep.flatMap(x=>x.r.gloss.filter(g=>!g.ph&&!g.m).map(g=>g.w));
   const why=mt.src==="llm"?"":ocrDoubt(cfs,null,unknown); if(why) mt.suspect=why;
-  if(sg.ai&&sg.ai.bad) mt.suspect="the AI could not make sense of the reading";
+  if(sg.ai&&sg.ai.bad) mt.suspect="the text looks misread";
   /* a short single line is a word card (reticle front); anything longer is a sign card */
   const word=keep.length===1 && glyphs(c)<=4;
   const card=word
@@ -2074,7 +2075,7 @@ async function saveSign(id){
   try{ await idbPut("custom",card); }catch(e){}
   S.queue=buildQueue(false); QSCARD[id]=c;
   delete SIGN[id]; if(CROP&&CROP.id===id) CROP=null; /* saved — the frame has done its job */
-  QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}, ${mt.src==="llm"?"checked by the AI":mt.src==="nmt"?"meaning from the offline translation":mt.src==="phrasebook"?"meaning from the phrasebook":"meaning composed word by word"}${mt.src==="llm"?"":" (unverified"+(mt.pending?", translation pending":"")+")"}.`+(mt.suspect?` Reading uncertain (${esc(mt.suspect)})${aiAutoOn()?", the AI will check it":""}.`:"")+(card.flag?" Flagged for review.":"");
+  QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}.`+(mt.pending?" Translation pending.":"")+(card.flag?" Flagged for review.":""); /* no word about sources or the AI (H, v105) */
   aiAutoSoon();
   setStats(); renderShots();
 }
