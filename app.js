@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=103; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=104; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -855,7 +855,8 @@ function renderEdit(main,c){
   /* the text is edited like the Read preview (H): a character strip per line, tap a character for the picker and the
      drawing sheet; SIGN carries the lines and the card's crop as the photo reference (no boxes: the whole crop) */
   const eid="edit"+(S.editSeq=(S.editSeq||0)+1), lines0=isSign?d.c.split("\n"):frontLines(d); /* plain id: it goes into selectors */
-  const sg=SIGN[eid]={lines:lines0.slice(),orig:lines0.slice(),img:d.img||null,onChange:null};
+  const sg=SIGN[eid]={lines:lines0.slice(),orig:lines0.slice(),img:d.img||null,onChange:null,trad:!!d.trad,tradText:d.trad||"",tradTouched:!!d.trad};
+  if(d.trad) loadScriptTables().catch(()=>{});
   const cropURL=d.img?URL.createObjectURL(d.img):""; /* the crop itself, not the whole-photo thumbnail (H: "only the cropped image, not with context") */
   const leave=newC=>{ /* back to where the edit started: study back or card detail */
     delete SIGN[eid]; if(cropURL) URL.revokeObjectURL(cropURL);
@@ -1753,9 +1754,10 @@ function dictConsensus(texts){
 }
 function charStripHTML(id,k){
   const sg=SIGN[id], line=sg.lines[k], same=sg.orig&&sg.orig[k]===line.trim(), cf=(same&&sg.conf&&sg.conf[k])||[];
+  const shown=sg.trad?[...tradLine(sg,k)]:null; /* the buttons show the photo's script, the taps act on the simplified line */
   let ci=0;
   return `<div class="cstrip">${[...line].map((ch,i)=>{ const isC=CJK.test(ch); const c=isC?cf[ci++]:100;
-    return `<button class="ck${isC&&c<OCR_DOUBT?" low":""}" data-ck="${k},${i}" data-sid="${id}" title="${isC&&c<100?Math.round(c)+"%":""}">${esc(ch)}</button>`; }).join("")}</div>`;
+    return `<button class="ck${isC&&c<OCR_DOUBT?" low":""}" data-ck="${k},${i}" data-sid="${id}" title="${isC&&c<100?Math.round(c)+"%":""}">${esc(shown?shown[i]:ch)}</button>`; }).join("")}</div>`;
 }
 async function openCharPick(id,k,i,btn){
   const sg=SIGN[id]; if(!sg) return;
@@ -1764,6 +1766,7 @@ async function openCharPick(id,k,i,btn){
   let box=$("#ckpick-"+id); if(!box){ box=document.createElement("div"); box.className="ckpick"; box.id="ckpick-"+id; }
   btn.closest(".sline").appendChild(box);
   const apply=async(rep)=>{ const cs=[...sg.lines[k]]; if(rep===null) cs.splice(i,1); else cs[i]=rep; sg.lines[k]=cs.join(""); delete sg.ai; delete sg.aiErr;
+    if(sg.trad&&sg.tradTouched){ const tl=(sg.tradText||"").split("\n"), tc=[...(tl[k]||"")]; if(tc.length===cs.length+(rep===null?1:0)){ if(rep===null) tc.splice(i,1); else tc[i]=s2t(rep); tl[k]=tc.join(""); } else tl[k]=s2t(sg.lines[k]); sg.tradText=tl.join("\n"); }
     if(sg.onChange){ sg.onChange(); return; } /* the Edit form owns the re-render and the AI check */
     renderShots(); if(aiLive()) signAskAI(id); };
   const render=(dict,ai,aiBusy)=>{
@@ -1928,20 +1931,24 @@ async function recognizeStrokes(w,strokes,log){
   return [...seen.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]).slice(0,5);
 }
 /* one editable line: the character strip, the input, optionally the pinyin slot below */
+/* the line as shown: on a traditional photo the traditional form (H, v104: "show the text in traditional and add simplified
+   for reference" — the edits underneath stay simplified, the card's key), else the simplified line itself */
+function tradLine(sg,k){ const line=sg.lines[k]; if(!sg.trad) return line; const t=(sg.tradText||"").split("\n")[k]; return t&&[...t].length===[...line].length?t:s2t(line); }
 function slineHTML(id,k,line,withPinyin){
-  return `<div class="sline">${charStripHTML(id,k)}<input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(line)}" autocomplete="off">${withPinyin?`<div class="sp" id="sp-${id}-${k}"></div>`:""}</div>`;
+  const sg=SIGN[id];
+  return `<div class="sline">${charStripHTML(id,k)}<input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(sg&&sg.trad?tradLine(sg,k):line)}" autocomplete="off">${withPinyin?`<div class="sp" id="sp-${id}-${k}"></div>`:""}</div>`;
 }
 /* the strip's character buttons open the picker; typing in a line calls onInput(sg, k, input) */
 function wireSlines(root,onInput){
   root.querySelectorAll("[data-ck]").forEach(b=> b.onclick=()=>{ const [k,i]=b.dataset.ck.split(",").map(Number); openCharPick(b.dataset.sid,k,i,b); });
-  root.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{ const sg=SIGN[inp.dataset.sid]; if(!sg) return; sg.lines[+inp.dataset.sline]=inp.value; onInput(sg,inp.dataset.sid); });
+  root.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{ const sg=SIGN[inp.dataset.sid]; if(!sg) return; const k=+inp.dataset.sline;
+    if(sg.trad){ sg.tradTouched=true; const tl=(sg.tradText||"").split("\n"); while(tl.length<=k) tl.push(""); tl[k]=inp.value; sg.tradText=tl.join("\n"); sg.lines[k]=t2s(inp.value); const f=$("#e-trad"); if(f) f.value=sg.tradText.replace(/\n/g," / "); }
+    else sg.lines[k]=inp.value;
+    onInput(sg,inp.dataset.sid); });
   root.querySelectorAll("[data-spin]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.spin]; if(sg){ sg.pinTouched=true; sg.pinEdit=t.value; } });
   root.querySelectorAll("[data-smean]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.smean]; if(sg){ sg.meanTouched=true; sg.meanEdit=t.value; } });
   root.querySelectorAll("[data-sflag]").forEach(cb=> cb.onchange=()=>{ const sg=SIGN[cb.dataset.sflag]; if(!sg) return; sg.flag=cb.checked; const n=root.querySelector(`[data-snote="${cb.dataset.sflag}"]`); if(n){ n.hidden=!cb.checked; if(cb.checked) n.focus(); } });
   root.querySelectorAll("[data-snote]").forEach(n=> n.oninput=()=>{ const sg=SIGN[n.dataset.snote]; if(sg) sg.flagNote=n.value; });
-  root.querySelectorAll("[data-strad]").forEach(cb=> cb.onchange=async()=>{ const id=cb.dataset.strad, sg=SIGN[id]; if(!sg) return; sg.trad=cb.checked; const inp=root.querySelector(`[data-stradtext="${id}"]`); if(inp) inp.hidden=!cb.checked;
-    if(cb.checked){ delete sg.ai; try{ await loadScriptTables(); }catch(e){} if(SIGN[id]){ signPreview(id); if(aiLive()) signAskAI(id); } } });
-  root.querySelectorAll("[data-stradtext]").forEach(inp=> inp.oninput=()=>{ const sg=SIGN[inp.dataset.stradtext]; if(sg){ sg.tradTouched=true; sg.tradText=inp.value.split("/").map(x=>x.trim()).filter(Boolean).join("\n"); } });
   wireGrow(root);
 }
 function signEditorHTML(id){
@@ -1957,9 +1964,7 @@ function signEditorHTML(id){
 
   /* the same layout as the Edit form (H): Text, Pinyin, Meaning — pinyin and meaning can be corrected before saving */
   return `<div class="signed">${weak}<div class="badge${bad?" bad":sg.ai?" ai":""}" style="margin-bottom:8px">${head}</div>
-    <div class="field"><label>Text</label>${rows}</div>
-    <div class="field"><label class="check"><input type="checkbox" data-strad="${id}"${sg.trad?" checked":""}> 繁 The photo shows traditional characters</label>
-      <input class="hanzi" data-stradtext="${id}" value="${esc((sg.tradText||"").replace(/\n/g," / "))}" placeholder="養樂多"${sg.trad?"":" hidden"}></div>
+    <div class="field"><label>Text${sg.trad?" (繁 traditional, as on the photo)":""}</label>${rows}${sg.trad?`<div class="badge simpref2" id="ssimp-${id}">简 ${esc(sg.lines.map(l=>l.trim()).filter(Boolean).join(" / "))}</div>`:""}</div>
     <div class="field"><label>Pinyin</label><textarea class="mono grow" id="spin-${id}" rows="1" data-spin="${id}">${esc(sg.pinEdit||"")}</textarea></div>
     <div class="field"><label>Meaning</label><textarea class="grow" id="smeanf-${id}" rows="1" data-smean="${id}">${esc(sg.meanEdit||"")}</textarea><div class="smean badge" id="smean-${id}" style="margin-top:4px"></div></div>
     <div class="field"><label class="check"><input type="checkbox" data-sflag="${id}"${sg.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
@@ -1984,12 +1989,15 @@ function signPreview(id){
   if(meanF&&!sg.meanTouched){ meanF.value=good?(sg.ai.m||mean):mean; autoGrow(meanF); }
   const sm=$(`#smean-${id}`);
   if(sm){ sm.className="smean badge"+(good?" ai":sg.ai?" bad":""); sm.textContent=good
-    ?`Checked by the AI${sg.ai.note&&sg.ai.note.toLowerCase()!=="ok"?": "+sg.ai.note:""}`
+    ?(sg.ai.note&&sg.ai.note.toLowerCase()!=="ok"?"AI: "+sg.ai.note:"") /* the head already says "checked by the AI" (H, v104) */
     :sg.ai?`The AI could not make sense of this text${sg.ai.note?": "+sg.ai.note:""} — unverified`
     :`Meaning ${full?"from the phrasebook":"composed word by word"}, unverified`; }
   /* the traditional form follows the text (the AI's "zht" when it matches, else the character table) unless edited by hand */
-  if(sg.trad&&!sg.tradTouched){ const zh=sg.lines.map(l=>l.trim()).filter(l=>CJK.test(l)).join("\n"), zht=good&&sg.ai.zht&&[...sg.ai.zht].length===[...zh].length?sg.ai.zht:s2t(zh);
-    sg.tradText=zht; const tf=document.querySelector(`[data-stradtext="${id}"]`); if(tf) tf.value=zht.replace(/\n/g," / "); }
+  if(sg.trad){
+    if(!sg.tradTouched){ const zh=sg.lines.map(l=>l.trim()).filter(l=>CJK.test(l)).join("\n"), zht=good&&sg.ai.zht&&[...sg.ai.zht].length===[...zh].length?sg.ai.zht:s2t(zh); sg.tradText=zht; }
+    document.querySelectorAll(`[data-sid="${id}"][data-sline]`).forEach(inp=>{ if(document.activeElement!==inp){ const v=tradLine(sg,+inp.dataset.sline); if(inp.value!==v) inp.value=v; } });
+    const ref=$(`#ssimp-${id}`); if(ref) ref.textContent="简 "+sg.lines.map(l=>l.trim()).filter(Boolean).join(" / ");
+  }
   sg.res=res; sg.full=full; sg.mean=mean;
   if(!sg.ai && !(aiLive()&&!sg.aiErr)) signTranslate(id); /* offline model only as fallback */
 }

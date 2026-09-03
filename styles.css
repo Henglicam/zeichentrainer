@@ -161,6 +161,7 @@ button{font:inherit;color:inherit}
 .pill.ai{color:var(--ok);background:var(--ok-soft)}
 .pill.trad{font-family:var(--hanzi);font-weight:400}
 .simpref{color:var(--label2);font-weight:400;margin-left:6px}
+.simpref2{font-family:var(--hanzi);font-size:18px;color:var(--label2);margin-top:6px}
 .script .hanzi{font-family:var(--hanzi);font-size:14px;color:var(--label)}
 .script{font-size:12px;color:var(--label2);text-align:center;margin:8px 0 0}
 .simp{font-family:var(--hanzi);font-size:20px;color:var(--label2);margin-bottom:6px}
