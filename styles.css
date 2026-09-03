@@ -138,12 +138,14 @@ button{font:inherit;color:inherit}
 .cardsbar input:focus{box-shadow:inset 0 0 0 2px var(--tint)}
 .field select{width:100%;background:var(--card);border:none;box-shadow:inset 0 0 0 1px var(--sep);border-radius:10px;color:var(--label);font-family:var(--sans);font-size:17px;padding:11px 14px;outline:none;-webkit-appearance:none;appearance:none}
 .chips{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px} .chips #cnt{white-space:nowrap;flex:none}
+/* the chip rows stay on one line and scroll sideways (v157, H: "tag list is now 2 lines, takes too much space") */
+.chips .chipset,.chipset.learnchips{flex-wrap:nowrap;overflow-x:auto;min-width:0;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px} .chips .chipset::-webkit-scrollbar,.chipset.learnchips::-webkit-scrollbar{display:none} .chips .chip,.learnchips .chip{flex:none;white-space:nowrap}
 .chipset{display:flex;gap:6px;flex-wrap:wrap} .orderchips{margin-top:8px}
 .btnrow{display:flex;gap:6px;flex:none}
 .chip{background:var(--fill);border:none;border-radius:999px;color:var(--label);font-size:13px;font-weight:500;padding:8px 13px;min-height:36px;cursor:pointer}
 .chip.on{background:var(--tint);color:#fff}
 .tagchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px} .tagchips .chip{min-height:32px;padding:6px 11px;font-size:13px}
-.pill.tag{background:var(--tint-soft);color:var(--tint)} .learnchips{justify-content:center;margin:0 0 14px;width:100%;max-width:440px}
+.pill.tag{background:var(--tint-soft);color:var(--tint)} .learnchips{justify-content:safe center;margin:0 0 14px;width:100%;max-width:440px}
 .say{background:var(--fill);border:none;border-radius:999px;width:38px;height:38px;margin-left:10px;vertical-align:middle;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center}
 .say svg{width:20px;height:20px;fill:none;stroke:var(--tint);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round} .say:active{opacity:.6}
 .crow{display:grid;grid-template-columns:104px 1fr auto;gap:12px;align-items:center;width:100%;background:var(--card);border:none;
