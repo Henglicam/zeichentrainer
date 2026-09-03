@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=130; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=131; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1145,7 +1145,6 @@ function cropRectStyle(){
 function wireCrop(layer){
   const rect=layer.querySelector(".croprect");
   layer.onpointerdown=e=>{
-    e.preventDefault();
     const r=layer.getBoundingClientRect();
     const px=e.clientX-r.left, py=e.clientY-r.top;
     const cur=CROP.rect;
@@ -1167,7 +1166,8 @@ function wireCrop(layer){
         mode="move"; grab=[px-cur.x,py-cur.y]; mw=cur.w; mh=cur.h;
       }
     }
-    if(mode==="draw"&&READING[layer.dataset.id]) return; /* a reading is running: no new frame — adjusting the existing one is allowed and re-reads; Cancel stops it (H, v129/v130) */
+    if(mode==="draw"&&READING[layer.dataset.id]) return; /* a reading is running: no new frame — the swipe scrolls the page instead (`.croplayer.reading`, v131); adjusting the existing frame is allowed and re-reads; Cancel stops it (H, v129/v130) */
+    e.preventDefault();
     clearTimeout(READ_TIMER[layer.dataset.id]); /* adjusting the frame — read after the next release */
     if(mode==="draw") setRect(px,py,0,0);
     layer.setPointerCapture(e.pointerId);
@@ -1451,7 +1451,7 @@ const READ_FAIL=/^(No Chinese|OCR failed|Reading failed|Frame too)/;
 const READ_STUCK=20000, READ_AT={}, READ_RUN={}; /* READ_RUN[id] = the number of the latest reading of a photo: an older one still running is superseded and abandons (v116 — a corner drag during a reading started a second one, both finished with the same text and the AI was asked twice) */
 const readingHTML=(t,id)=>READ_FAIL.test(t)?`<span class="badge">${esc(t)}</span>`
   :`<div class="reading"><div class="bar"><i></i></div><span class="badge">Reading the text …${id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK?` still at: ${esc(t)}`:""}</span></div>`;
-const readingStatus=(id,run)=>t=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=t; READ_AT[id]=Date.now(); READLOG.push({t:Date.now(),text:t}); while(READLOG.length>40) READLOG.shift();
+const readingStatus=(id,run)=>t=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=t; const cl=document.querySelector(`.croplayer[data-id="${id}"]`); if(cl) cl.classList.add("reading"); READ_AT[id]=Date.now(); READLOG.push({t:Date.now(),text:t}); while(READLOG.length>40) READLOG.shift();
   const b=$("#ocr-"+id); if(b) b.innerHTML=readingHTML(t,id);
   setTimeout(()=>{ if(READING[id]!==t) return; const b2=$("#ocr-"+id); if(b2) b2.innerHTML=readingHTML(t,id); },READ_STUCK+50); };
 /* a canvas with the bitmap drawn at a scale (opaque — the reader is handed JPEGs) */
@@ -2150,7 +2150,7 @@ function renderShots(){
       return `<div class="shot">
         <div class="shotwrap">
           <img src="${shotURL(s)}" alt="photo">
-          ${cropping?`<div class="croplayer" data-id="${s.id}"><div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div></div></div>`:""}
+          ${cropping?`<div class="croplayer${READING[s.id]?" reading":""}" data-id="${s.id}"><div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div></div></div>`:""}
         </div>
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">Cancel</button>`
