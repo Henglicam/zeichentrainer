@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=116; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=117; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1437,10 +1437,10 @@ const median=a=>{ const t=a.slice().sort((p,q)=>p-q); return t[t.length>>1]; };
    are of no use to the user (H); only failures show as text */
 const READ_FAIL=/^(No Chinese|OCR failed|Reading failed|Frame too)/;
 /* a step that lasts longer than READ_STUCK shows its own text under the bar — a stuck step is a failure, not a step (v93) */
-const READ_STUCK=20000, READ_AT={};
+const READ_STUCK=20000, READ_AT={}, READ_RUN={}; /* READ_RUN[id] = the number of the latest reading of a photo: an older one still running is superseded and abandons (v116 — a corner drag during a reading started a second one, both finished with the same text and the AI was asked twice) */
 const readingHTML=(t,id)=>READ_FAIL.test(t)?`<span class="badge">${esc(t)}</span>`
   :`<div class="reading"><div class="bar"><i></i></div><span class="badge">Reading the text …${id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK?` still at: ${esc(t)}`:""}</span></div>`;
-const readingStatus=id=>t=>{ READING[id]=t; READ_AT[id]=Date.now(); READLOG.push({t:Date.now(),text:t}); while(READLOG.length>40) READLOG.shift();
+const readingStatus=(id,run)=>t=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=t; READ_AT[id]=Date.now(); READLOG.push({t:Date.now(),text:t}); while(READLOG.length>40) READLOG.shift();
   const b=$("#ocr-"+id); if(b) b.innerHTML=readingHTML(t,id);
   setTimeout(()=>{ if(READING[id]!==t) return; const b2=$("#ocr-"+id); if(b2) b2.innerHTML=readingHTML(t,id); },READ_STUCK+50); };
 /* a canvas with the bitmap drawn at a scale (opaque — the reader is handed JPEGs) */
@@ -1625,10 +1625,12 @@ async function secondLook(w,dk,passes,status,r,Hink){
   } finally { bmp.close(); }
 }
 async function cropSign(id){
-  const status=readingStatus(id);
+  const run=READ_RUN[id]=(READ_RUN[id]||0)+1, stale=()=>READ_RUN[id]!==run; /* a newer reading of this photo has started: leave everything to it */
+  const status=readingStatus(id,run);
   READLOG.length=0; LAST_READ.passes=null; status("cutting out the frame …");
   try{
     const r=await cropBlob(id);
+    if(stale()) return;
     if(!r){ delete READING[id]; renderShots(); return; } /* no frame yet — nothing to do */
     const rec=S.inbox.find(x=>x.id===id);
     S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null;
@@ -1639,13 +1641,15 @@ async function cropSign(id){
     const w=await ocrWorker(status);
     await loadSigns().catch(()=>{}); /* phrasebook optional — falls back to word gloss */
     status("reading the text …");
-    let dk=await deskewBlob(r.blob); if(dk.angle){ S.pendingImg=dk.blob; status(`straightened by ${Math.round(dk.angle)}°, reading the text …`); }
+    let dk=await deskewBlob(r.blob); if(stale()) return; if(dk.angle){ S.pendingImg=dk.blob; status(`straightened by ${Math.round(dk.angle)}°, reading the text …`); }
     /* the text height of the frame from its ink (v97): readings whose boxes are far smaller are fragments of the decoration
        — H's phone read the Yakult logo as a four-line soup of 17 stroke-sized "characters" and the count outweighed
        ten passes agreeing on a three-character reading */
     const Hink=await (async()=>{ const b=await createImageBitmap(dk.blob); try{ r.frameH=b.height; return inkHeight(b); } finally{ b.close(); } })(); r.ink=Math.round(Hink);
     const passes=[{lines:await readPass(w,dk.blob,status),img:dk.blob,angle:dk.angle,tightened:false}];
+    if(stale()) return;
     const cardBlob=await secondLook(w,dk,passes,status,r,Hink);
+    if(stale()) return;
     if(Math.max(0,...passes.map(p=>effScore(p.lines,Hink)))<WEAK_READ){ /* weak or nothing: the whole frame as black-and-white and chromaticity copies, sizes from the ink */
       status("trying a black-and-white copy …");
       const bmp=await createImageBitmap(dk.blob), H=Hink||bmp.height/1.6;
@@ -1653,6 +1657,7 @@ async function cropSign(id){
         for(const tra of [false,true]){ const lines=tra?await readPassTra(src,status):await readPass(w,src,status); if(!lines) continue;
           passes.push({lines:scaleBoxes(lines,k),img:dk.blob,angle:dk.angle,tightened:false,scale:k,bw:mode==="bw",chroma:mode==="chroma",tra}); } } }
       bmp.close();
+      if(stale()) return;
     }
     /* agreement counts: a text several passes produced beats a single pass's near-equal score (v96: 业主直租 ×3 lost a tie to 业主直祖 ×1) */
     const textOf=p=>p.lines.map(x=>x.t).join("\n"), agree=new Map(); passes.forEach(p=>{ const t=textOf(p); if(t) agree.set(t,(agree.get(t)||0)+1); });
@@ -1692,7 +1697,7 @@ async function cropSign(id){
     SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r, alts, trad:tradPhoto, tradText:tradPhoto?s2t(bestT):""};
     delete READING[id]; renderShots();
     if(aiAutoOn()) signAskAI(id); /* every reading is checked without a tap */
-  }catch(err){ status("OCR failed: "+(err&&err.message||err)); logErr("read",err&&(err.stack||err.message)||err); }
+  }catch(err){ if(stale()) return; status("OCR failed: "+(err&&err.message||err)); logErr("read",err&&(err.stack||err.message)||err); }
 }
 /* ---------- fixing one misread character: tap it, pick a replacement ----------
    Candidates come from the dictionary (words that fit the neighbouring characters), from the AI
