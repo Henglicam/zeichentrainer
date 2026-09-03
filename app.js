@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=143; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=144; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1542,7 +1542,13 @@ function inkHeight(bmp){
     /* a text row: some ink, not solid, and many stroke edges — a stripe, a ribbon or the oval of a logo is solid or has
        only a few edges, and once made the ink height the frame height (v100: the real text then looked like fragments) */
     const textRow=ink/W>0.03&&ink/W<0.7&&edges>=6; /* four edges were tried in v138 for big characters (拉, 美团) and reverted: 业主直租 in its light-on-red version lost its winning small-scale pass when the ink height fell from 308 to 140 */
-    if(textRow){ run++; if(run>best) best=run; } else run=0; }
+    /* a dense row inside a text band still counts (v144, H's bicycle sticker: bold blue characters with a white outline
+       fill 70–83 % of the middle rows of a tight frame, the band broke into slivers of 21 px on 130 px characters, every
+       fallback size clamped to the same scale and the second look never came): ink up to 92 % with at least eight
+       stroke edges — a stripe or a ribbon is solid with two edges — extends a run that a text row began; trailing dense
+       rows do not count, so the run still ends at the last text row */
+    const denseRow=!textRow&&ink/W>=0.7&&ink/W<0.92&&edges>=8;
+    if(textRow){ run++; if(run>best) best=run; } else if(denseRow&&run>0){ run++; } else run=0; }
   return best>=4?best/k:0;
 }
 /* one reading pass: the lines with their symbols (text, confidence, box) */
@@ -1700,7 +1706,8 @@ async function cropSign(id){
     if(Math.max(0,...passes.map(p=>effScore(p.lines,Hink)))<WEAK_READ){ /* weak or nothing: the whole frame as black-and-white and chromaticity copies, sizes from the ink */
       status("trying a black-and-white copy …");
       const bmp=await createImageBitmap(dk.blob), H=Hink||bmp.height/1.6;
-      for(const t of [45,65,90]){ const k=Math.min(1.5,t/H); for(const mode of ["bw","chroma"]){ const src=mode==="bw"?await toBW(bmp,k):await toChroma(bmp,k);
+      for(const k of [...new Set([45,65,90].map(t=>Math.min(1.5,t/H).toFixed(2)))].map(Number)){ /* distinct scales only (v144: with a tiny ink height all three clamped to 1.5, and one pass counted three times in the agreement bonus and the traditional vote) */
+        for(const mode of ["bw","chroma"]){ const src=mode==="bw"?await toBW(bmp,k):await toChroma(bmp,k);
         for(const tra of [false,true]){ const lines=tra?await readPassTra(src,status):await readPass(w,src,status); if(!lines) continue;
           passes.push({lines:scaleBoxes(lines,k),img:dk.blob,angle:dk.angle,tightened:false,scale:k,bw:mode==="bw",chroma:mode==="chroma",tra}); } } }
       bmp.close();
