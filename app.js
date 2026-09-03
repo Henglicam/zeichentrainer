@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=99; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=100; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1473,8 +1473,11 @@ const toChroma=(bmp,scale)=>new Promise(res=>chromaCanvas(bmp,scale).toBlob(res,
 function inkHeight(bmp){
   const k=Math.min(1,320/bmp.height), cv=chromaCanvas(bmp,k), W=cv.width, d=cv.getContext("2d").getImageData(0,0,W,cv.height).data;
   let run=0, best=0;
-  for(let y=1;y<cv.height-1;y++){ let ink=0; for(let x=0;x<W;x++) if(d[(y*W+x)*4]<128) ink++;
-    if(ink/W>0.03){ run++; if(run>best) best=run; } else run=0; }
+  for(let y=1;y<cv.height-1;y++){ let ink=0, edges=0, prev=false; for(let x=0;x<W;x++){ const on=d[(y*W+x)*4]<128; if(on) ink++; if(on!==prev){ edges++; prev=on; } }
+    /* a text row: some ink, not solid, and many stroke edges — a stripe, a ribbon or the oval of a logo is solid or has
+       only a few edges, and once made the ink height the frame height (v100: the real text then looked like fragments) */
+    const textRow=ink/W>0.03&&ink/W<0.7&&edges>=6;
+    if(textRow){ run++; if(run>best) best=run; } else run=0; }
   return best>=4?best/k:0;
 }
 /* one reading pass: the lines with their symbols (text, confidence, box) */
@@ -1529,12 +1532,20 @@ function readingScore(ls){
    small part of the frame, or was unsure, that part is cut out, straightened on its own and read at several character
    heights, because the model's output swings with scale even on a clean crop (measured: the same image read perfectly
    at 0.7× and as garbage at 1×). Adds its readings to `passes`; returns the card image for the tightened area. */
-async function secondLook(w,dk,passes,status,r){
+/* readings whose boxes are far smaller than the frame's ink height are fragments of the decoration (v98); the gates use
+   the effective score too (v100, H's granite sign: a soup of seventy fragments scored 183 raw, so neither the copies nor
+   the traditional reader nor the whole-frame passes ever ran — five passes instead of forty) */
+function sizeFitOf(lines,Hink){ if(!Hink) return 1; const hs=lines.flatMap(l=>l.bx.filter(Boolean).map(b=>b.y1-b.y0)); if(!hs.length) return 1; const q=median(hs)/Hink; return q>=0.5?1:Math.pow(q/0.5,2); } /* from half the ink height down: decoration taller than the text (stripes, a ribbon) inflates the ink height by up to 2× */
+const effScore=(lines,Hink)=>readingScore(lines)*sizeFitOf(lines,Hink);
+async function secondLook(w,dk,passes,status,r,Hink){
   const first=passes[0].lines, boxes=first.flatMap(l=>l.bx).filter(Boolean);
   if(!boxes.length) return null;
   const bmp=await createImageBitmap(dk.blob);
   try{
-    const H=median(boxes.map(b=>b.y1-b.y0));
+    const Hb=median(boxes.map(b=>b.y1-b.y0));
+    /* the boxes' height sets the sizes — unless it disagrees with the ink height of the frame by more than 2×: then the first
+       pass read fragments, and the ink is the better guess (v100: garbage boxes of 15 px on a 150 px sign left only the native scale; a striped frame's ink height is up to 2× the text, so only a 3× disagreement counts) */
+    const H=Hink&&(Hb<0.35*Hink||Hb>3*Hink)?Hink:Hb;
     /* the boxes' heights are right, their horizontal ends are not (they drift along the line and end early on the last
        character — H: 骑 cut in half), so the vertical band comes from the boxes plus half a height ... */
     const mX=H, mY=H/2, pad=Math.round(1.5*H);
@@ -1564,7 +1575,7 @@ async function secondLook(w,dk,passes,status,r){
       passes.push({lines:sc,img:dk2.blob,angle:dk2.angle,tightened:true,scale:k,bw:mode==="bw",chroma:mode==="chroma",tra:!!tra}); tightLines.push(...sc); } };
     await readTight("colour"); await readTight("bw"); await readTight("chroma"); /* the copies always (v96) */
     /* still weak? the traditional reader on all three — it knows glyphs the simplified one can only approximate */
-    if(Math.max(...passes.map(p=>readingScore(p.lines)))<180){ for(const mode of ["colour","bw","chroma"]) await readTight(mode,true); }
+    if(Math.max(...passes.map(p=>effScore(p.lines,Hink)))<180){ for(const mode of ["colour","bw","chroma"]) await readTight(mode,true); }
     bmp2.close();
     /* Merge line by line: every reading tends to get some line right and lose another, so the lines of all tight
        passes are clustered by their vertical band and the most confident reading of each band is kept. */
@@ -1609,10 +1620,10 @@ async function cropSign(id){
     /* the text height of the frame from its ink (v97): readings whose boxes are far smaller are fragments of the decoration
        — H's phone read the Yakult logo as a four-line soup of 17 stroke-sized "characters" and the count outweighed
        ten passes agreeing on a three-character reading */
-    const Hink=await (async()=>{ const b=await createImageBitmap(dk.blob); try{ return inkHeight(b); } finally{ b.close(); } })(); r.ink=Math.round(Hink);
+    const Hink=await (async()=>{ const b=await createImageBitmap(dk.blob); try{ r.frameH=b.height; return inkHeight(b); } finally{ b.close(); } })(); r.ink=Math.round(Hink);
     const passes=[{lines:await readPass(w,dk.blob,status),img:dk.blob,angle:dk.angle,tightened:false}];
-    const cardBlob=await secondLook(w,dk,passes,status,r);
-    if(Math.max(0,...passes.map(p=>readingScore(p.lines)))<WEAK_READ){ /* weak or nothing: the whole frame as black-and-white and chromaticity copies, sizes from the ink */
+    const cardBlob=await secondLook(w,dk,passes,status,r,Hink);
+    if(Math.max(0,...passes.map(p=>effScore(p.lines,Hink)))<WEAK_READ){ /* weak or nothing: the whole frame as black-and-white and chromaticity copies, sizes from the ink */
       status("trying a black-and-white copy …");
       const bmp=await createImageBitmap(dk.blob), H=Hink||bmp.height/1.6;
       for(const t of [45,65,90]){ const k=Math.min(1.5,t/H); for(const mode of ["bw","chroma"]){ const src=mode==="bw"?await toBW(bmp,k):await toChroma(bmp,k);
@@ -1623,7 +1634,7 @@ async function cropSign(id){
     /* agreement counts: a text several passes produced beats a single pass's near-equal score (v96: 业主直租 ×3 lost a tie to 业主直祖 ×1) */
     const textOf=p=>p.lines.map(x=>x.t).join("\n"), agree=new Map(); passes.forEach(p=>{ const t=textOf(p); if(t) agree.set(t,(agree.get(t)||0)+1); });
     const hOfPass=p=>{ const hs=p.lines.flatMap(l=>l.bx.filter(Boolean).map(b=>b.y1-b.y0)); return hs.length?median(hs):0; };
-    const sizeFit=p=>{ if(!Hink) return 1; const q=hOfPass(p)/Hink; return q>=0.7?1:Math.pow(q/0.7,2); }; /* boxes under 0.7 × the ink height: quadratic penalty */
+    const sizeFit=p=>sizeFitOf(p.lines,Hink);
     const score=p=>readingScore(p.lines)*Math.min(1.5,1+0.1*((agree.get(textOf(p))||1)-1))*sizeFit(p);
     passes.sort((a,b)=>score(b)-score(a));
     r.passes=passes.map(p=>({s:Math.round(score(p)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),h:Hink?+(hOfPass(p)/Hink).toFixed(2):null,tight:p.tightened,bw:!!p.bw,ch:!!p.chroma,tra:!!p.tra}));
@@ -1641,9 +1652,9 @@ async function cropSign(id){
        its alternatives. Only when the best reading is no dictionary word itself, and only with two or more readings
        pointing the same way. */
     if(lines.length===1&&DICT){
-      const texts=[...new Set(passes.map(textOf).filter(t=>t&&!t.includes("\n")))];
+      const n=[...bestT].length, texts=[...new Set(passes.map(textOf).filter(t=>t&&!t.includes("\n")&&[...t].length===n))]; /* the same length as the best: a correction, not a replacement (v100: 业主直租 once became 下人, a two-character word that garbage fragments circled) */
       const fix=dictConsensus(texts);
-      if(fix&&fix.word!==bestT&&!DICT.has(bestT)){
+      if(fix&&fix.word!==bestT&&!DICT.has(bestT)&&(fix.support.includes(bestT)||fix.support.length>=3)){
         alts.push(bestT); lines[0]={...lines[0],t:fix.word}; bestT=fix.word; r.consensus={word:fix.word,from:fix.support};
       }
     }
