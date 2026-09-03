@@ -143,6 +143,8 @@ button{font:inherit;color:inherit}
 .btnrow{display:flex;gap:6px;flex:none}
 .chip{background:var(--fill);border:none;border-radius:999px;color:var(--label);font-size:13px;font-weight:500;padding:8px 13px;min-height:36px;cursor:pointer}
 .chip.on{background:var(--tint);color:#fff}
+.tagchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px} .tagchips .chip{min-height:32px;padding:6px 11px;font-size:13px}
+.pill.tag{background:var(--tint-soft);color:var(--tint)} .learnchips{justify-content:center;margin:0 0 14px;width:100%;max-width:440px}
 .say{background:var(--fill);border:none;border-radius:999px;width:38px;height:38px;margin-left:10px;vertical-align:middle;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center}
 .say svg{width:20px;height:20px;fill:none;stroke:var(--tint);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round} .say:active{opacity:.6}
 .crow{display:grid;grid-template-columns:104px 1fr auto;gap:12px;align-items:center;width:100%;background:var(--card);border:none;
