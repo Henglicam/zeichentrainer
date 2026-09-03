@@ -227,6 +227,7 @@ button{font:inherit;color:inherit}
 .ckpick .ck{background:var(--card)} .signed .ck{background:var(--card2)} .pane .signed .ck{background:var(--card)}
 .signed .ck.on,.ckpick .ck.on{background:var(--tint);color:#fff} /* the chosen character stays filled whatever the surface */
 .ckpick .cands{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.ckhead{display:flex;justify-content:space-between;align-items:center;gap:8px} .ckx{flex:none;width:30px;height:30px;border-radius:50%;border:none;background:var(--fill);color:var(--label2);font-size:20px;line-height:30px;padding:0;cursor:pointer;font-family:var(--sans)} .form .ckpick .ckx{background:var(--card)} .ckx:active{opacity:.6}
 .ckacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px} .ckacts .grow{flex:1}
 .ckacts.ckadd{gap:4px} .ckadd .del{padding:6px 3px;font-size:14px;min-height:36px} .ckadd .badge{margin-right:2px}
 .ckhint{margin:2px 0 8px}
