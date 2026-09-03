@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=117; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=118; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -39,18 +39,26 @@ function previewInterval(card, grade){
 }
 
 /* ---------- IndexedDB (persistent) ---------- */
-const DB_NAME="zeichentrainer", DB_VER=2;
+const DB_NAME="zeichentrainer", DB_VER=3;
 let _db=null;
 function openDB(){
   return new Promise((res,rej)=>{
     if(_db) return res(_db);
     const r=indexedDB.open(DB_NAME,DB_VER);
-    r.onupgradeneeded=()=>{
-      const db=r.result;
-      if(!db.objectStoreNames.contains("progress")) db.createObjectStore("progress",{keyPath:"c"});
-      if(!db.objectStoreNames.contains("custom"))   db.createObjectStore("custom",{keyPath:"c"});
+    r.onupgradeneeded=e=>{
+      const db=r.result, tx=r.transaction;
       if(!db.objectStoreNames.contains("inbox"))    db.createObjectStore("inbox",{keyPath:"id"});
       if(!db.objectStoreNames.contains("settings")) db.createObjectStore("settings",{keyPath:"k"}); /* v2: opt-ins, keys */
+      /* v3 (v118): cards and progress are keyed by an id, not by the text — the same characters may be saved again from
+         another photo (H). Existing rows keep their text as the id, so nothing else changes for them. */
+      for(const name of ["progress","custom"]){
+        if(!db.objectStoreNames.contains(name)){ db.createObjectStore(name,{keyPath:"id"}); continue; }
+        if(e.oldVersion>=3) continue;
+        const rows=[]; const cur=tx.objectStore(name).openCursor();
+        cur.onsuccess=()=>{ const c=cur.result; if(c){ rows.push(c.value); c.continue(); return; }
+          db.deleteObjectStore(name); const os=db.createObjectStore(name,{keyPath:"id"});
+          for(const row of rows) os.put({...row,id:row.id||row.c}); };
+      }
     };
     r.onsuccess=()=>{ _db=r.result; res(_db); };
     r.onerror=()=>rej(r.error);
@@ -64,7 +72,7 @@ function idbClear(store){ return _os(store,"readwrite").then(os=>new Promise((re
 
 /* a card into the deck and the store: replace by key or append; storage errors are swallowed like everywhere else */
 async function putCard(upd,key){
-  const k=key||upd.c, i=S.custom.findIndex(x=>x.c===k);
+  const k=key||upd.id, i=S.custom.findIndex(x=>x.id===k);
   if(i>=0) S.custom[i]=upd; else S.custom.push(upd);
   try{ await idbPut("custom",upd); }catch(e){}
 }
@@ -78,14 +86,16 @@ const S = { mode:"study", progress:{}, custom:[], inbox:[],
 function deck(){ return S.custom; }
 function buildQueue(includeAhead){
   const p=S.progress, t=today(), d=deck();
-  const due = d.filter(x=>p[x.c] && p[x.c].due<=t).sort((a,b)=>p[a.c].due-p[b.c].due).map(x=>x.c);
-  const fresh = d.filter(x=>!p[x.c]).slice(0,NEW_PER_SESSION).map(x=>x.c);
+  const due = d.filter(x=>p[x.id] && p[x.id].due<=t).sort((a,b)=>p[a.id].due-p[b.id].due).map(x=>x.id);
+  const fresh = d.filter(x=>!p[x.id]).slice(0,NEW_PER_SESSION).map(x=>x.id);
   let q=[...due,...fresh];
   if(includeAhead && q.length===0)
-    q = d.filter(x=>p[x.c]).sort((a,b)=>p[a.c].due-p[b.c].due).slice(0,8).map(x=>x.c);
+    q = d.filter(x=>p[x.id]).sort((a,b)=>p[a.id].due-p[b.id].due).slice(0,8).map(x=>x.id);
   return q;
 }
-const cardOf = c => deck().find(d=>d.c===c);
+const cardOf = id => deck().find(d=>d.id===id); /* cards are addressed by id everywhere; the text is c */
+/* the id of a new card: the text itself while it is free (readable in exports), else text plus a timestamp */
+const cardId = c => deck().some(d=>d.id===c) ? c+"#"+Date.now() : c;
 async function setSetting(k,v){ S.settings[k]=v; try{ await idbPut("settings",{k,v}); }catch(e){} }
 /* diagnostics (H debugs alone on the phone): the last errors and the last reading's steps, shown and shared from More → Diagnostics */
 const ERRLOG=[], READLOG=[], LAST_READ={passes:null}, AILOG=[]; /* AILOG: the last three AI exchanges, request and raw reply, never the key (v97) */
@@ -118,12 +128,13 @@ async function shareDiag(){
 async function boot(){
   try{
     const [prog, cust, inb, sett] = await Promise.all([idbAll("progress"), idbAll("custom"), idbAll("inbox"), idbAll("settings").catch(()=>[])]);
-    S.progress = {}; prog.forEach(r=>{ const {c,...s}=r; S.progress[c]=s; });
+    S.progress = {}; prog.forEach(r=>{ const {id,c,...s}=r; S.progress[id||c]=s; });
     sett.forEach(r=>{ S.settings[r.k]=r.v; });
     if(Array.isArray(S.settings.errlog)) ERRLOG.unshift(...S.settings.errlog.slice(-20));
     /* progress of cards that no longer exist (the built-in deck of v1–v32) is dropped */
-    const have=new Set(cust.map(d=>d.c));
-    for(const c of Object.keys(S.progress)) if(!have.has(c)){ delete S.progress[c]; idbDel("progress",c).catch(()=>{}); }
+    cust.forEach(d=>{ if(!d.id) d.id=d.c; });
+    const have=new Set(cust.map(d=>d.id));
+    for(const id of Object.keys(S.progress)) if(!have.has(id)){ delete S.progress[id]; idbDel("progress",id).catch(()=>{}); }
     /* creation order (cards without a timestamp, from before v33, come first in key order) */
     S.custom = cust.sort((a,b)=>(a.at||0)-(b.at||0));
     S.inbox = inb.sort((a,b)=>b.ts-a.ts);
@@ -337,36 +348,28 @@ async function aiReview(list,status){
   return n;
 }
 /* the AI called the text garbage: the card is flagged with the AI's note, the suggestion is done */
-async function aiFlag(c){
-  const d=cardOf(c); if(!d||!d.ai) return;
+async function aiFlag(id){
+  const d=cardOf(id); if(!d||!d.ai) return;
   const upd={...d, flag:true, flagNote:d.flagNote||d.ai.note||"the text looks misread"}; delete upd.ai;
-  await putCard(upd,c);
+  await putCard(upd,id);
 }
-async function aiAccept(c){
-  const d=cardOf(c); if(!d||!d.ai) return;
-  if(d.ai.bad) return aiFlag(c); /* never applies an empty meaning */
+async function aiAccept(id){
+  const d=cardOf(id); if(!d||!d.ai) return;
+  if(d.ai.bad) return aiFlag(id); /* never applies an empty meaning */
   const a=d.ai, upd={...d, p:a.p||d.p, m:a.m||d.m};
   delete upd.ai; delete upd.flag; delete upd.flagNote;
   upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false}; delete upd.mt.suspect;
-  const newC=a.zh&&CJK.test(a.zh)?a.zh.replace(/\r/g,""):c;
-  if(newC!==c && deck().some(x=>x.c===newC)){ alert("“"+newC.replace(/\n/g," / ")+"” is already in the deck — merge by hand."); return; }
-  await applyCardUpdate(c,upd,newC,true);
-  if(S.detail===c) S.detail=upd.c;
-  Object.keys(QSCARD).forEach(k=>{ if(QSCARD[k]===c) QSCARD[k]=upd.c; });
+  const newC=a.zh&&CJK.test(a.zh)?a.zh.replace(/\r/g,""):d.c;
+  await applyCardUpdate(id,upd,newC,true);
 }
-/* one tap for everything waiting: accept every suggestion (a rename that collides is left for a manual look) */
+/* one tap for everything waiting: accept every suggestion */
 async function aiAcceptAll(){
-  const list=deck().filter(d=>d.ai), skipped=[];
-  for(const d of list){
-    const a=d.ai, newC=a.zh&&CJK.test(a.zh)?a.zh.replace(/\r/g,""):d.c;
-    if(newC!==d.c && deck().some(x=>x.c===newC)){ skipped.push(d.c.replace(/\n/g," / ")); continue; }
-    await aiAccept(d.c);
-  }
-  if(skipped.length) alert("Left for a manual look (the corrected text is already in the deck): "+skipped.join(", "));
-  return list.length-skipped.length;
+  const list=deck().filter(d=>d.ai);
+  for(const d of list) await aiAccept(d.id);
+  return list.length;
 }
-async function aiDismiss(c){
-  const d=cardOf(c); if(!d||!d.ai) return;
+async function aiDismiss(id){
+  const d=cardOf(id); if(!d||!d.ai) return;
   const upd={...d}; delete upd.ai; if(upd.mt&&upd.mt.suspect){ upd.mt={...upd.mt}; delete upd.mt.suspect; } /* seen by a human */
   await putCard(upd);
 }
@@ -374,13 +377,13 @@ function aiBoxHTML(d){
   if(!d.ai) return "";
   const a=d.ai, chg=[];
   if(a.bad) return `<div class="aibox bad"><div class="aihead">AI: this text looks misread</div>${a.note?`<div class="ainote">${esc(a.note)}</div>`:""}
-    <div class="aiacts"><button class="btn mini primary" data-aiflag="${esc(d.c)}">⚑ Flag for review</button><button class="btn mini" data-aino="${esc(d.c)}">Dismiss</button></div></div>`;
+    <div class="aiacts"><button class="btn mini primary" data-aiflag="${esc(d.id)}">⚑ Flag for review</button><button class="btn mini" data-aino="${esc(d.id)}">Dismiss</button></div></div>`;
   if(a.zh&&a.zh!==d.c) chg.push(`<div class="hanzi">${esc(a.zh).replace(/\n/g,"<br>")}</div>`);
   if(a.p&&a.p!==d.p) chg.push(`<div class="mono">${esc(a.p)}</div>`);
   if(a.m&&a.m!==d.m) chg.push(`<div>${esc(a.m)}</div>`);
   return `<div class="aibox"><div class="aihead">AI suggestion${a.ok&&!chg.length?": looks right":""}</div>
     ${chg.join("")}${a.note&&a.note.toLowerCase()!=="ok"?`<div class="ainote">${esc(a.note)}</div>`:""}
-    <div class="aiacts"><button class="btn mini primary" data-aiok="${esc(d.c)}">${chg.length?"Accept":"Mark verified"}</button><button class="btn mini" data-aino="${esc(d.c)}">Dismiss</button></div></div>`;
+    <div class="aiacts"><button class="btn mini primary" data-aiok="${esc(d.id)}">${chg.length?"Accept":"Mark verified"}</button><button class="btn mini" data-aino="${esc(d.id)}">Dismiss</button></div></div>`;
 }
 function wireAi(root){
   (root||document).querySelectorAll("[data-aiok]").forEach(b=> b.onclick=async()=>{ b.disabled=true; await aiAccept(b.dataset.aiok); render(); });
@@ -539,12 +542,12 @@ function tagsHTML(d,isNew){
    Any card can be flagged when the OCR text, pinyin or meaning looks odd and
    someone (a teacher, later maybe an online model) should check it. The flag
    lives on the card record. */
-async function setFlag(c,on,note){
-  const d=cardOf(c); if(!d) return;
+async function setFlag(id,on,note){
+  const d=cardOf(id); if(!d) return;
   const upd={...d};
   if(on){ upd.flag=true; if(note!==undefined){ if(note) upd.flagNote=note; else delete upd.flagNote; } }
   else { delete upd.flag; delete upd.flagNote; }
-  await putCard(upd,c);
+  await putCard(upd,id);
 }
 function flagNoteHTML(d){
   return d.flag?`<div class="flagbox">⚑ Flagged for review${d.flagNote?`: ${esc(d.flagNote)}`:""}</div>`:"";
@@ -720,7 +723,7 @@ async function grade(g){
   const c=S.queue[S.idx], sched=S.progress[c]||null;
   const s=schedule(sched,g);
   S.progress[c]=s;
-  try{ await idbPut("progress",{c,...s}); }catch(e){}
+  try{ await idbPut("progress",{id:c,...s}); }catch(e){}
   const d=cardOf(c);
   if(s.fails>=LEECH_FAILS && d && !d.flag) await setFlag(c,true,`failed ${s.fails} times in a row — check text, meaning and photo`);
   const day=dayKey(), days=S.settings.days||[];
@@ -731,7 +734,7 @@ async function grade(g){
 }
 /* "Test this card" continues with the next card of the list (newest first); ← Cards stops */
 function nextSingle(c){
-  const list=S.custom.slice().sort((a,b)=>(b.at||0)-(a.at||0)).map(d=>d.c);
+  const list=S.custom.slice().sort((a,b)=>(b.at||0)-(a.at||0)).map(d=>d.id);
   const next=list[list.indexOf(c)+1];
   if(!next){ endSingle(); return; }
   S.single=next; S.queue=[next]; S.idx=0; S.revealed=false; S.fullPic=false; render(); window.scrollTo({top:0});
@@ -775,10 +778,10 @@ function renderAdd(main){
 const THUMB={};
 /* list thumbnail: the whole photo when the card has one (H), otherwise the crop */
 function thumbBlob(d){ return d.img||fullPhoto(d); } /* the crop (H, v86); the whole photo only for cards without one */
-function thumbURL(d){ return THUMB[d.c]||(THUMB[d.c]=URL.createObjectURL(thumbBlob(d))); }
-function dropThumb(c){ if(THUMB[c]){ URL.revokeObjectURL(THUMB[c]); delete THUMB[c]; } }
+function thumbURL(d){ return THUMB[d.id]||(THUMB[d.id]=URL.createObjectURL(thumbBlob(d))); }
+function dropThumb(id){ if(THUMB[id]){ URL.revokeObjectURL(THUMB[id]); delete THUMB[id]; } }
 function cardStatus(d){
-  const p=S.progress[d.c]; if(!p) return "";
+  const p=S.progress[d.id]; if(!p) return "";
   const days=Math.round((p.due-today())/DAY);
   return `<span class="st${days<=0?" due":""}">${days<=0?"due":"in "+days+" d"}</span>`;
 }
@@ -789,7 +792,7 @@ function cardsListHTML(){
   if(S.filterFlag) list=list.filter(d=>d.flag);
   if(S.filterAi) list=list.filter(d=>d.ai);
   if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,d.w,d.wp,d.wm,d.flagNote].filter(Boolean).join(" ").toLowerCase().includes(q));
-  const rows=list.map(d=>`<button class="crow" data-c="${esc(d.c)}">
+  const rows=list.map(d=>`<button class="crow" data-id="${esc(d.id)}">
       ${d.img?`<img class="thumb" src="${thumbURL(d)}" alt="">`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`}
       <span class="ct"><span class="c">${esc((d.trad||d.c).replace(/\n/g," / "))}${d.trad?`<span class="pill trad">Traditional</span>`:""}</span>${d.trad?`<span class="simpref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span><span class="m">${esc(d.m)}</span></span>
       <span class="cs">${d.ai?'<span class="pill ai">AI</span>':""}${d.flag?'<span class="pill flagged">⚑ review</span>':""}${cardStatus(d)}</span></button>`).join("");
@@ -805,7 +808,7 @@ function renderCards(main){
     <div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">⚑ Flagged (${flg})</button>${nAi?`<button class="chip${S.filterAi?" on":""}" id="chip-ai">AI (${nAi})</button>`:""}<button class="chip${S.filterUnv?" on":""}" id="chip-unv">Unverified (${unv})</button></span><span class="badge" id="cnt">${n} of ${deck().length}</span></div>
     <div class="clist" id="clist">${html}</div>
   </div>`;
-  const wire=()=>{ document.querySelectorAll(".crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.c; S.detailHide=false; S.fullPic=false; render(); }); };
+  const wire=()=>{ document.querySelectorAll(".crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.id; S.detailHide=false; S.fullPic=false; render(); }); };
   const refresh=()=>{ const r=cardsListHTML(); $("#clist").innerHTML=r.html; $("#cnt").textContent=`${r.n} of ${deck().length}`; wire(); };
   $("#q").oninput=e=>{ S.query=e.target.value; refresh(); };
   $("#chip-unv").onclick=()=>{ S.filterUnv=!S.filterUnv; render(); };
@@ -844,7 +847,7 @@ function renderCardDetail(main,c){
   wireSay(); wireChars(d);
   wireAi();
   const del=$("#d-del"); if(del) del.onclick=async()=>{
-    if(!confirm("Delete “"+c.replace(/\n/g," / ")+"” and its progress?")) return;
+    if(!confirm("Delete “"+d.c.replace(/\n/g," / ")+"” and its progress?")) return;
     await delCustom(c); S.detail=null; render();
   };
 }
@@ -885,7 +888,7 @@ function renderEdit(main,c){
   $("#back").onclick=()=>leave();
   /* delete from here too (H): from the study back the session goes on with the next card, otherwise back to the list */
   $("#e-del").onclick=async()=>{
-    if(!confirm("Delete “"+c.replace(/\n/g," / ")+"” and its progress?")) return;
+    if(!confirm("Delete “"+d.c.replace(/\n/g," / ")+"” and its progress?")) return;
     await delCustom(c); delete SIGN[eid];
     const from=S.editFrom; S.editing=null; S.editFrom=null;
     if(from==="study"){ S.queue=S.queue.filter(x=>x!==c); if(S.single===c) S.single=null; S.revealed=false; S.fullPic=false; S.mode="study"; }
@@ -924,13 +927,12 @@ function renderEdit(main,c){
     let pin=$("#e-pin").value.replace(/\s+/g," ").trim(); const mean=$("#e-mean").value.replace(/\s+/g," ").trim();
     if(!pin||!mean) return fail("Pinyin and meaning are required.");
     /* the Chinese text itself may be corrected (OCR slip) — progress and images move with it */
-    let newC=c;
+    let newC=d.c;
     const we=$("#e-word");
     if(we){
       var wordLines=we.value.split("\n").map(l=>l.replace(/\s+/g,"")).filter(l=>CJK.test(l));
       newC=isSign?wordLines.join("\n"):wordLines.join("");
       if(!CJK.test(newC)) return fail("Please enter Chinese text.");
-      if(newC!==c && deck().some(x=>x.c===newC)) return fail("“"+newC.replace(/\n/g," / ")+"” is already in the deck.");
     }
     const upd={...d, p:pin, m:mean}; delete upd.ex; delete upd.exp; delete upd.exm; /* example sentences were dropped in v41 */
     if(!isSign&&$("#e-w")){ upd.w=$("#e-w").value.trim(); upd.wp=$("#e-wp").value.trim(); upd.wm=$("#e-wm").value.trim();
@@ -942,14 +944,14 @@ function renderEdit(main,c){
     else { delete upd.flag; delete upd.flagNote; }
     if(sg.trad){ const trad=(sg.tradText||"").trim(); if(trad) upd.trad=trad; } /* the strip's line carries the traditional form; no separate field (H, v110) */
     await applyCardUpdate(c,upd,newC,pin!==d.p,isSign?undefined:wordLines);
-    leave(upd.c);
+    leave(c);
   };
 }
 /* persist an edited card; when the Chinese text changes (OCR slip), recompute
-   pinyin/segmentation/gloss (unless pinyin was set by hand) and move progress,
-   thumbnail and queue entries to the new key. */
-async function applyCardUpdate(c,upd,newC,pinByHand,lines){
-  const isSign=upd.kind==="sign";
+   pinyin/segmentation/gloss (unless pinyin was set by hand). The id stays, so
+   progress, thumbnail and queue entries need no move (v118). */
+async function applyCardUpdate(id,upd,newC,pinByHand,lines){
+  const isSign=upd.kind==="sign", c=upd.c;
   if(newC && newC!==c){
     upd.c=newC;
     try{
@@ -966,16 +968,10 @@ async function applyCardUpdate(c,upd,newC,pinByHand,lines){
         if(!pinByHand) upd.p=pySpaced(newC);
       }
     }catch(e){}
-    if(S.progress[c]){ S.progress[newC]=S.progress[c]; delete S.progress[c];
-      try{ await idbDel("progress",c); await idbPut("progress",{c:newC,...S.progress[newC]}); }catch(e){} }
-    try{ await idbDel("custom",c); }catch(e){}
-    if(THUMB[c]){ THUMB[newC]=THUMB[c]; delete THUMB[c]; }
-    S.queue=S.queue.map(x=>x===c?newC:x); if(S.saved) S.saved.queue=S.saved.queue.map(x=>x===c?newC:x);
-    if(S.single===c) S.single=newC;
   }
   if(lines && !isSign && (!newC||newC===c)){ const segs=segWithBreaks(lines); if(segs.length>1) upd.seg=segs; else delete upd.seg; }
   if(lines && !isSign) upd.lb="photo"; /* lines set by hand count as the photo's */
-  await putCard(upd,c);
+  await putCard(upd,id);
   return upd;
 }
 async function addManual(){
@@ -984,8 +980,8 @@ async function addManual(){
   const fail=m=>{ err.textContent=m; err.style.display=""; };
   if(!CJK.test(word)) return fail("Please enter a Chinese word.");
   if(!pin||!mean) return fail("Pinyin and meaning are required.");
-  if(deck().some(d=>d.c===word)) return fail("“"+word+"” is already in the deck.");
-  const card={c:word,p:pin,m:mean,t:"Custom",at:Date.now()};
+  if(deck().some(d=>d.c===word&&(!S.pendingShot||d.shot===S.pendingShot))) return fail("“"+word+"” is already in the deck."); /* with a new photo the same text is a new card (v118) */
+  const card={id:cardId(word),c:word,p:pin,m:mean,t:"Custom",at:Date.now()};
   if($("#f-flag").checked){ card.flag=true; const note=$("#f-note").value.trim(); if(note) card.flagNote=note; }
   if(S.pendingShot){ card.shot=S.pendingShot; S.pendingShot=null; }
   const chosenImg=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
@@ -1001,10 +997,10 @@ async function addManual(){
   ok.textContent="“"+word+"” added."; ok.style.display="";
   setStats();
 }
-async function delCustom(c){
-  S.custom=S.custom.filter(x=>x.c!==c);
-  try{ await idbDel("custom",c); await idbDel("progress",c); }catch(e){}
-  delete S.progress[c]; dropThumb(c);
+async function delCustom(id){
+  S.custom=S.custom.filter(x=>x.id!==id);
+  try{ await idbDel("custom",id); await idbDel("progress",id); }catch(e){}
+  delete S.progress[id]; dropThumb(id);
   setStats();
 }
 
@@ -2065,7 +2061,7 @@ async function saveSign(id){
   const keep=sg.lines.map((l,k)=>({l:l.trim(),r:sg.res[k]})).filter(x=>x.r);
   if(!keep.length) return;
   const c=keep.map(x=>x.l).join("\n");
-  if(deck().some(d=>d.c===c)){ sg.aiErr="This text is already in the deck."; renderShots(); return; }
+  if(deck().some(d=>d.c===c&&d.shot===id)){ sg.aiErr="This text is already saved from this photo."; renderShots(); return; } /* the same text from another photo is a new card (H, v118) */
   /* meaning: AI check (if done here) → phrasebook → offline translation (if enabled) → word gloss (then pending) */
   let mt={src:sg.full?"phrasebook":"gloss",verified:false,pending:!sg.full}, mean=sg.mean||"", pin=keep.map(x=>x.r.py).join(" / ");
   if(sg.ai && c===sg.ai.zh && !sg.ai.bad){ mean=sg.ai.m||mean; pin=sg.ai.p||pin; mt={src:"llm",verified:true,pending:false}; }
@@ -2084,8 +2080,8 @@ async function saveSign(id){
   /* a short single line is a word card (reticle front); anything longer is a sign card */
   const word=keep.length===1 && glyphs(c)<=4;
   const card=word
-    ? { c, p:pin, m:mean, t:"Custom", at:Date.now(), shot:id, lb:"photo", mt, ...(keep[0].r.segs.filter(x=>CJK.test(x)).length>1?{seg:keep[0].r.segs.filter(x=>CJK.test(x)), gloss:keep[0].r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))}:{}) }
-    : { kind:"sign", c, p:pin, m:mean, t:"Sign", at:Date.now(), shot:id,
+    ? { id:cardId(c), c, p:pin, m:mean, t:"Custom", at:Date.now(), shot:id, lb:"photo", mt, ...(keep[0].r.segs.filter(x=>CJK.test(x)).length>1?{seg:keep[0].r.segs.filter(x=>CJK.test(x)), gloss:keep[0].r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))}:{}) }
+    : { id:cardId(c), kind:"sign", c, p:pin, m:mean, t:"Sign", at:Date.now(), shot:id,
         segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
   if(sg.flag){ card.flag=true; const note=(sg.flagNote||"").trim(); if(note) card.flagNote=note; } /* H: flag a new card at once, without opening it again */
   if(sg.alts&&sg.alts.length) card.alts=sg.alts.slice(0,5); /* the other readings stay with the card for a later AI check */
@@ -2094,7 +2090,7 @@ async function saveSign(id){
   if(S.pendingFull) card.imgFull=S.pendingFull;
   S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
-  S.queue=buildQueue(false); QSCARD[id]=c;
+  S.queue=buildQueue(false); QSCARD[id]=card.id;
   delete SIGN[id]; if(CROP&&CROP.id===id) CROP=null; /* saved — the frame has done its job */
   QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}.`+(mt.pending?" Translation pending.":"")+(card.flag?" Flagged for review.":""); /* no word about sources or the AI (H, v105) */
   aiAutoSoon();
@@ -2194,7 +2190,7 @@ async function delShot(id){
 /* ---------- Export / import (device migration; photos stay local) ---------- */
 async function exportData(){
   const data={ app:"zeichentrainer", version:1, exported:new Date().toISOString(),
-    progress:Object.entries(S.progress).map(([c,s])=>({c,...s})),
+    progress:Object.entries(S.progress).map(([id,s])=>({id,...s})),
     custom:S.custom.map(({img,imgFull,...rest})=>rest) }; // images stay local (privacy + JSON)
   const json=JSON.stringify(data,null,2);
   /* Android/MIUI silently blocks programmatic blob downloads — the share
@@ -2224,17 +2220,18 @@ async function importData(e){
   if(!data || data.app!=="zeichentrainer" || !Array.isArray(data.progress) || !Array.isArray(data.custom)){
     alert("Not a Zeichentrainer export (JSON)."); return;
   }
-  const prog=data.progress.filter(r=>r && typeof r.c==="string" && typeof r.due==="number");
-  const cust=data.custom.filter(r=>r && typeof r.c==="string" && typeof r.p==="string" && typeof r.m==="string");
+  /* exports before v118 carry the text as the key; the id is the text then */
+  const prog=data.progress.filter(r=>r && typeof (r.id||r.c)==="string" && typeof r.due==="number").map(({id,c,...s})=>({id:id||c,...s}));
+  const cust=data.custom.filter(r=>r && typeof r.c==="string" && typeof r.p==="string" && typeof r.m==="string").map(r=>({...r,id:r.id||r.c}));
   if(!prog.length && !cust.length){ alert("Export is empty — nothing to import."); return; }
-  if(!confirm("Import "+prog.length+" progress entries and "+cust.length+" custom cards?\nEntries for the same characters will be overwritten.")) return;
+  if(!confirm("Import "+prog.length+" progress entries and "+cust.length+" custom cards?\nExisting entries of the same cards will be overwritten.")) return;
   /* card images only exist locally — keep the existing image when overwriting */
-  const merged=cust.map(r=>{ const ex=S.custom.find(x=>x.c===r.c); return ex?{...r,...(ex.img?{img:ex.img}:{}),...(ex.imgFull?{imgFull:ex.imgFull}:{})}:r; });
+  const merged=cust.map(r=>{ const ex=S.custom.find(x=>x.id===r.id); return ex?{...r,...(ex.img?{img:ex.img}:{}),...(ex.imgFull?{imgFull:ex.imgFull}:{})}:r; });
   try{
     await Promise.all([...prog.map(r=>idbPut("progress",r)), ...merged.map(r=>idbPut("custom",r))]);
   }catch(err){ alert("Import failed ("+err+")"); return; }
-  prog.forEach(r=>{ const {c,...s}=r; S.progress[c]=s; });
-  merged.forEach(r=>{ const i=S.custom.findIndex(x=>x.c===r.c); if(i>=0) S.custom[i]=r; else S.custom.push(r); });
+  prog.forEach(r=>{ const {id,...s}=r; S.progress[id]=s; });
+  merged.forEach(r=>{ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; else S.custom.push(r); });
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
   S.mode="study"; render();
 }
