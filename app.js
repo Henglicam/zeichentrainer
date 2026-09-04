@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=166; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=167; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2627,12 +2627,13 @@ async function importData(e){
   if(!prog.length && !cust.length){ alert("Export is empty — nothing to import."); return; }
   if(!confirm("Import "+prog.length+" progress entries and "+cust.length+" custom cards?\nExisting entries of the same cards will be overwritten.")) return;
   /* the photos come with the file when it carries them (v166); otherwise the existing image is kept when overwriting */
-  const merged=[];
+  const merged=[]; let nPhotos=0, nInFile=0;
   for(const r0 of cust){ const {imgB64,imgFullB64,...r}=r0; const ex=S.custom.find(x=>x.id===r.id);
+    if(imgB64&&imgB64.d) nInFile++;
     const img=imgB64&&imgB64.d?await b64ToBlob(imgB64):null, imgFull=imgFullB64&&imgFullB64.d?await b64ToBlob(imgFullB64):null;
     if(img) r.img=img; else if(ex&&ex.img) r.img=ex.img;
     if(imgFull) r.imgFull=imgFull; else if(ex&&ex.imgFull) r.imgFull=ex.imgFull;
-    if(img) dropThumb(r.id);
+    if(img){ dropThumb(r.id); nPhotos++; }
     merged.push(r); }
   try{
     await Promise.all([...prog.map(r=>idbPut("progress",r)), ...merged.map(r=>idbPut("custom",r))]);
@@ -2641,6 +2642,9 @@ async function importData(e){
   merged.forEach(r=>{ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; else S.custom.push(r); });
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
   S.mode="study"; render();
+  /* what the import did, in one sentence (v167, H: an older app had dropped the photos without a word) */
+  const n=(k,w)=>`${k} ${w}${k===1?"":"s"}`;
+  alert(`Imported ${n(cust.length,"card")} and ${n(prog.length,"progress entr").replace(/entrs$/,"entries").replace(/entr$/,"entry")}${nInFile?`, ${nPhotos} with photos${nPhotos<nInFile?` (${nInFile-nPhotos} could not be read)`:""}`:". The file carries no photos; the photos on this phone were kept"}.`);
 }
 
 /* ---------- Reset ---------- */
