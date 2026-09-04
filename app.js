@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=172; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=173; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -337,9 +337,9 @@ function render(){
 /* providers: Chinese ones take WeChat Pay / Alipay and need no VPN; all but Claude speak the OpenAI-style chat API */
 const AI_PROVIDERS={
   deepseek:{name:"DeepSeek", short:"DeepSeek", base:"https://api.deepseek.com", model:"deepseek-chat", hint:"sk-…", where:"Key: platform.deepseek.com → API keys. Top up with WeChat Pay or Alipay (a few yuan last months). No VPN needed."},
-  qwen:{name:"Qwen (Alibaba Bailian)", short:"Qwen", base:"https://dashscope.aliyuncs.com/compatible-mode/v1", model:"qwen3.7-plus", hint:"sk-…", where:"Key: bailian.console.aliyun.com → API-KEY (Alipay account). No VPN needed."},
-  glm:{name:"GLM (Zhipu)", short:"GLM", base:"https://open.bigmodel.cn/api/paas/v4", model:"glm-4-flash", hint:"….…", where:"Key: open.bigmodel.cn → API keys. WeChat Pay or Alipay; glm-4-flash is free. No VPN needed."},
-  claude:{name:"Claude (Anthropic)", short:"Claude", base:"https://api.anthropic.com/v1/messages", model:"claude-sonnet-5", hint:"sk-ant-…", where:"Key: console.anthropic.com → API keys. Needs the VPN and a card from outside China."},
+  qwen:{name:"Qwen (Alibaba Bailian)", short:"Qwen", vision:true, base:"https://dashscope.aliyuncs.com/compatible-mode/v1", model:"qwen3.7-plus", hint:"sk-…", where:"Key: bailian.console.aliyun.com → API-KEY (Alipay account). No VPN needed."},
+  glm:{name:"GLM (Zhipu)", short:"GLM", vision:true, vmodel:"glm-4v-flash", base:"https://open.bigmodel.cn/api/paas/v4", model:"glm-4-flash", hint:"….…", where:"Key: open.bigmodel.cn → API keys. WeChat Pay or Alipay; glm-4-flash is free. No VPN needed."},
+  claude:{name:"Claude (Anthropic)", short:"Claude", vision:true, base:"https://api.anthropic.com/v1/messages", model:"claude-sonnet-5", hint:"sk-ant-…", where:"Key: console.anthropic.com → API keys. Needs the VPN and a card from outside China."},
   custom:{name:"Other (OpenAI-style API)", short:"Other", base:"", model:"", hint:"API key", where:"Any provider with an OpenAI-compatible /chat/completions endpoint: enter its base URL and model name."}
 };
 const AI_PROVIDER_DEFAULT="deepseek";
@@ -359,6 +359,49 @@ async function migrateAi(){
   if(!S.settings.aiKey) return; const pv=aiProvider();
   await setAiAccount(pv,{key:S.settings.aiKey, model:S.settings.aiModel||AI_PROVIDERS[pv].model, base:S.settings.aiBase||""});
   for(const k of ["aiKey","aiModel","aiBase"]){ delete S.settings[k]; idbDel("settings",k).catch(()=>{}); }
+}
+/* ---------- the framed area to the AI when the reading is weak (v173, H: "Send the crop to the AI when the reading is
+   weak" — the one exception to "photos never leave the phone", under H's own switch) ----------
+   A provider that takes pictures (vision: Qwen with its multimodal model, GLM with glm-4v-flash, Claude) reads the
+   straightened reading crop — a JPEG of at most 800 px, never the whole photo — when the reader's best pass scores under
+   WEAK_READ or found nothing. The active provider is used when it takes pictures, else the first one with a key that
+   does. Setting "aiPicture" (absent = on). */
+const pictureOn=()=>S.settings.aiPicture!==false;
+function pictureProvider(){ if(!pictureOn()) return null; return [aiProvider(),...Object.keys(AI_PROVIDERS)].find(pv=>AI_PROVIDERS[pv].vision&&aiKey(pv)&&aiBase(pv))||null; }
+const pictureModel=pv=>AI_PROVIDERS[pv].vmodel||aiModel(pv);
+const PIC_MAX=800;
+async function pictureJpeg(blob){
+  const bmp=await createImageBitmap(blob); const k=Math.min(1,PIC_MAX/Math.max(bmp.width,bmp.height));
+  const cv=scaledCanvas(bmp,k); bmp.close();
+  const out=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
+  const b64=(await blobToB64(out)).d; return {b64,w:cv.width,h:cv.height,kb:Math.round(out.size/1024)};
+}
+const PIC_SYSTEM=`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","bad":true|false}. "zh" = the Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without Latin letters, numbers of the decoration or anything you cannot see; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural English meaning of the text as a sign or name (short, English only); "note" = one short remark if needed; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty. An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`;
+async function aiReadPicture(blob,alts,status){
+  const pv=pictureProvider(); if(!pv) throw new Error("no picture provider");
+  const key=aiKey(pv), model=pictureModel(pv), pic=await pictureJpeg(blob);
+  const text=`Read the Chinese text on this picture. The reader's guesses: ${alts.length?alts.map(a=>a.replace(/\n/g," / ")).join(" | "):"none"}.`;
+  const req=`[picture ${pic.w}×${pic.h} JPEG, ${pic.kb} KB] ${text}`; /* the log never carries the picture */
+  status&&status("Asking the AI about the picture …");
+  let r;
+  try{
+    if(pv==="claude")
+      r=await fetch(aiBase(pv),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({model,max_tokens:1000,system:PIC_SYSTEM,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:pic.b64}},{type:"text",text}]}]})});
+    else { const body={model,max_tokens:1000,temperature:0,messages:[{role:"system",content:PIC_SYSTEM},{role:"user",content:[{type:"text",text},{type:"image_url",image_url:{url:"data:image/jpeg;base64,"+pic.b64}}]}]};
+      if(pv==="qwen"&&/^qwen3/.test(model)) body.enable_thinking=false; /* the hybrid models think by default — the short JSON must not wait for that */
+      r=await fetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
+  }catch(err){ logAi({model,req,err:"no connection: "+(err&&err.message||err)}); throw new Error("no connection"); }
+  if(!r.ok){ let t=""; try{ const j=await r.json(); t=(j.error&&(j.error.message||j.error))||j.message||""; }catch(e){} logAi({model,status:r.status,req,err:t}); throw new Error("API error "+r.status+(t?": "+t:"")); }
+  const data=await r.json(); countTokens(pv,data);
+  const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
+  logAi({model,status:r.status,req,res:raw.slice(0,1500)});
+  await loadScriptTables().catch(()=>{});
+  const t=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,""); let x; try{ x=JSON.parse(t); if(Array.isArray(x)) x=x[0]; }catch(e){ throw new Error("could not read the model's answer"); }
+  if(!x||typeof x!=="object") throw new Error("unexpected answer");
+  let m=String(x.m||"").trim(); if(/[\u4e00-\u9fff]/.test(m)&&!/[A-Za-z]{2}/.test(m)) m="";
+  const zhRaw=String(x.zh||"").replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"), zh=t2s(zhRaw);
+  return {zh,zht:zh!==zhRaw?zhRaw:"",p:String(x.p||"").trim(),m,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv};
 }
 function aiQueue(){ return deck().filter(d=>d.flag||(d.mt&&(d.mt.pending||d.mt.suspect))); }
 function aiAutoOn(){ return aiOn()&&S.settings.aiAuto!==false; }
@@ -478,11 +521,14 @@ async function aiAuto(){
   _aiAutoRan=true;
   try{ await aiReview(list); if(S.mode==="more"||S.mode==="cards"||S.mode==="inbox") render(); }catch(e){ console.warn("AI auto review:",e); }
 }
+/* About: what leaves the phone, live with the AI settings (v173) */
+function aboutText(){ const ver=($(".ver")||{}).textContent||""; return `${ver}. Works offline. Cards and photos stay on this phone; anonymous usage counts go to the app's owner.${pictureProvider()?" The framed area of a photo goes to your AI provider only when the reading is weak.":""}`; }
 /* More → Online AI review row + inline setup form */
 function renderAiRow(){
   const st=$("#ai-status"), btn=$("#ai-btn"), run=$("#ai-run"), form=$("#ai-form"); if(!st) return;
   const all=aiQueue(), q=all.length, fl=all.filter(d=>d.flag).length, sp=all.filter(d=>!d.flag&&d.mt.suspect).length, pd=q-fl-sp;
-  st.textContent=aiOn()?`On: ${AI_PROVIDERS[aiProvider()].name}, ${aiModel()}. Sends card text only, never photos.`:"Off. Needs your own API key (DeepSeek, Qwen, GLM or Claude); sends text only.";
+  const ppv=pictureProvider(); const ab=$("#about-s"); if(ab) ab.textContent=aboutText();
+  st.textContent=aiOn()?`On: ${AI_PROVIDERS[aiProvider()].name}, ${aiModel()}. Sends card text${ppv?`, and the framed area of a photo when the reading is weak (${AI_PROVIDERS[ppv].short}, ${pictureModel(ppv)})`:" only, never photos"}.`:"Off. Needs your own API key (DeepSeek, Qwen, GLM or Claude); sends text only.";
   btn.textContent=aiOn()?"Settings":"Set up";
   run.hidden=!aiOn(); run.disabled=!q;
   run.textContent=q?"Ask AI":"Nothing to review";
@@ -493,7 +539,7 @@ function renderAiRow(){
      without a key only shows its empty form — the active provider keeps working until a key is saved here */
   const chips=[...form.querySelectorAll("[data-aipv]")], showPv=pv=>{ form.dataset.pv=pv; const P=AI_PROVIDERS[pv];
     chips.forEach(c=>c.classList.toggle("on",c.dataset.aipv===pv));
-    $("#ai-basefield").hidden=pv!=="custom"; $("#ai-where").textContent=P.where; $("#ai-key").placeholder=P.hint;
+    $("#ai-basefield").hidden=pv!=="custom"; $("#ai-picfield").hidden=!P.vision; $("#ai-where").textContent=P.where; $("#ai-key").placeholder=P.hint;
     $("#ai-key").value=aiKey(pv); $("#ai-model").value=aiModel(pv); $("#ai-base").value=aiAcct(pv).base||(pv==="custom"?S.settings.aiBase||"":""); delete $("#ai-model").dataset.hand;
     $("#ai-acct").textContent=aiKey(pv)?`${P.name}: key saved${pv===aiProvider()?", in use":""}.`:`${P.name}: no key yet.`; };
   chips.forEach(c=>c.onclick=async()=>{ const pv=c.dataset.aipv; if(aiKey(pv)&&pv!==aiProvider()){ await setSetting("aiProvider",pv); renderAiRow(); } showPv(pv); });
@@ -502,6 +548,7 @@ function renderAiRow(){
     const key=$("#ai-key").value.trim(), model=$("#ai-model").value.trim(), pv=form.dataset.pv;
     await setAiAccount(pv,{key:key||aiKey(pv), model:model||AI_PROVIDERS[pv].model, base:$("#ai-base").value.trim()});
     if(key||aiKey(pv)) await setSetting("aiProvider",pv); await setSetting("aiAuto",$("#ai-auto").checked);
+    if(AI_PROVIDERS[pv].vision) await setSetting("aiPicture",$("#ai-picture").checked);
     form.hidden=true; renderAiRow();
   };
   /* Remove key takes the shown provider's key only; when that was the active one, the next provider with a key takes
@@ -660,8 +707,9 @@ function renderMore(main){
       <div class="field" id="ai-basefield" hidden><label>API base URL</label><input id="ai-base" class="mono" autocomplete="off" placeholder="https://…/v1"></div>
       <div class="field"><label>API key (stays on this phone)</label><input id="ai-key" type="password" autocomplete="off"></div>
       <div class="field"><label>Model</label><input id="ai-model" class="mono" autocomplete="off"></div>
+      <div class="field" id="ai-picfield" hidden><label class="check"><input type="checkbox" id="ai-picture"${pictureOn()?" checked":""}> Send the framed area to the AI when the reading is weak</label></div>
       <div class="field"><label class="check"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> Check every new card with the AI automatically (when online)</label></div>
-      <div class="badge">What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. Never photos.</div>
+      <div class="badge">What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. The framed area of a photo only when the reading is weak, to a provider that takes pictures, and only while the switch above is on.</div>
       <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" id="ai-save">Save</button><button class="del" id="ai-remove">Remove key</button></div>
     </div>
     <div class="mrow"><div><div class="t">Review queue</div><div class="s" id="ai-runstatus"></div></div><button class="btn mini" id="ai-run" hidden></button></div>
@@ -686,7 +734,7 @@ function renderMore(main){
     :`<div class="mrow"><div><div class="t">Locked</div><div class="s">Reset, Diagnostics, Mirror and the downloads are for the app's owner.</div></div></div>
     <div class="field"><label>Password</label><div class="btnrow"><input id="admin-pw" type="password" autocomplete="off"><button class="btn mini" id="admin-unlock">Unlock</button></div><div class="err" id="admin-err" style="display:none">Wrong password.</div></div>`}
     <div class="listhead">About</div>
-    <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s">${esc(ver)}. Works offline. Cards and photos stay on this phone; anonymous usage counts go to the app's owner.</div></div></div>
+    <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s" id="about-s">${esc(aboutText())}</div></div></div>
   </div>`;
   $("#export").onclick=exportData;
   $("#export-photos").onchange=e=>setSetting("exportPhotos",!!e.target.checked);
@@ -1978,6 +2026,21 @@ async function cropSign(id){
     LAST_READ.passes=r.passes;
     const best=passes[0], lines=best.lines;
     if(best.tightened&&cardRect){ const cut=await cutUnrotated(r.blob,cardRect,dk.angle||0); if(cut) S.pendingImg=cut; } /* the text area with its margin, from the crop as framed */
+    /* a weak reading, or none: the picture goes to the AI when a provider that takes pictures is set (v173) */
+    const weak=!lines.length||effScore(lines,Hink)<WEAK_READ; let pic=null;
+    if(weak&&pictureProvider()&&navigator.onLine){
+      const guesses=[...new Set(passes.map(textOf).filter(Boolean))].slice(0,6);
+      try{ pic=await aiReadPicture(best.img||dk.blob,guesses,status); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
+      if(stale()) return; r.pic=pic?{zh:pic.zh,bad:pic.bad,model:pic.model}:null;
+    }
+    if(pic&&!pic.bad){
+      /* the AI's lines replace the reading: no confidences (every character is open in the picker), no boxes (the sheet
+         shows the whole crop), the reader's texts become the alternatives; the answer is the check, no text check follows */
+      const zh=pic.zh.split("\n"), guesses=[...new Set(passes.map(textOf).filter(t=>t&&t!==pic.zh))].slice(0,6);
+      SIGN[id]={lines:zh, orig:zh.slice(), conf:[], boxes:zh.map(()=>[]), img:best.img||dk.blob, angle:best.angle||dk.angle||0, tightened:!!best.tightened, region:r, alts:guesses, trad:!!pic.zht, tradDetected:!!pic.zht, tradText:pic.zht||"",
+        ai:{zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,note:pic.note,ok:true,bad:false,pic:true}};
+      delete READING[id]; renderShots(); return;
+    }
     if(!lines.length){ status("No Chinese characters recognized — frame the characters tightly and try again."); return; }
     /* img = the (straightened, maybe tightened) crop the text was read from, boxes = where each character sits in it: the picker shows the original */
     /* the other readings (distinct texts, best first): the AI sees them all (the truth is often a mix, or a name they circle
@@ -2004,8 +2067,9 @@ async function cropSign(id){
       if(pick&&!alts.includes(textOf(pick))){ if(alts.length>=6) alts.pop(); alts.push(textOf(pick)); } }
     const tradPhoto=s2t(bestT)!==bestT&&tradPhotoOf(lines.map(x=>x.t),passes,score); r.trad=tradPhoto; /* a text without a traditional form (推) has nothing to vote on */
     SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r, alts, trad:tradPhoto, tradDetected:tradPhoto, tradText:tradPhoto?s2t(bestT):""};
+    if(pic&&pic.bad){ const sg=SIGN[id]; sg.ai={zh:bestT,zht:"",p:"",m:"",note:pic.note,ok:false,bad:true,pic:true}; sg.flag=true; sg.flagNote="the reading looks wrong"; } /* the AI saw the picture and found no readable text: the reading is marked wrong, no text check on it */
     delete READING[id]; renderShots();
-    if(aiAutoOn()) signAskAI(id); /* every reading is checked without a tap */
+    if(aiAutoOn()&&!(pic&&pic.bad)) signAskAI(id); /* every reading is checked without a tap */
   }catch(err){ if(stale()) return; status("Reading failed: "+(err&&err.message||err)); logErr("read",err&&(err.stack||err.message)||err); }
 }
 /* ---------- fixing one misread character: tap it, pick a replacement ----------
@@ -2438,7 +2502,7 @@ function signPreview(id){
   if(meanF&&!sg.meanTouched){ meanF.value=good?(sg.ai.m||mean):mean; autoGrow(meanF); }
   const sm=$(`#smean-${id}`);
   if(sm){ sm.className="smean badge"+(good?" ai":sg.ai&&!sg.ai.kept?" bad":""); sm.textContent=good
-    ?"" /* a good answer shows nothing: no "checked by the AI" (H, v104/v105) and no remark of the model either (v154, H: "don't show the OCR slip message to the user") */
+    ?(sg.ai.pic?"Read from the picture by the AI.":"") /* a good answer shows nothing: no "checked by the AI" (H, v104/v105) and no remark of the model either (v154, H: "don't show the OCR slip message to the user") — except the picture path, which H must see (v173) */
     :sg.ai&&sg.ai.kept?`The AI suggested ${sg.ai.proposed.replace(/\n/g," / ")}, but ${sg.ai.kept} was read clearly, so the reading stays. Meaning ${full?"from the phrasebook":"composed word by word"}, unverified.`
     :sg.ai?`This text looks misread${sg.ai.note?": "+sg.ai.note:""} — unverified`
     :`Meaning ${full?"from the phrasebook":"composed word by word"}, unverified`; }
