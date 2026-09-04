@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=178; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=179; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -393,7 +393,7 @@ async function aiReadPicture(blob,alts,status){
       r=await fetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
   }catch(err){ logAi({model,req,err:"no connection: "+(err&&err.message||err)}); throw new Error("no connection"); }
   if(!r.ok){ let t=""; try{ const j=await r.json(); t=(j.error&&(j.error.message||j.error))||j.message||""; }catch(e){} logAi({model,status:r.status,req,err:t}); throw new Error("API error "+r.status+(t?": "+t:"")); }
-  const data=await r.json(); countTokens(pv,data); bump("pics"); /* the usage counters and the daily row count the picture readings (v178, H) */
+  const data=await r.json(); countTokens(pv,data); bump("pics"); bumpModel(model); /* the usage counters and the daily row count the picture readings (v178, H) and the model (v179) */
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
   logAi({model,status:r.status,req,res:raw.slice(0,1500)});
   await loadScriptTables().catch(()=>{});
@@ -445,7 +445,7 @@ async function aiAsk(cards,status){
   if(r.status===401||r.status===403) throw new Error("API key rejected ("+r.status+")");
   if(r.status===402) throw new Error("no credit left at "+AI_PROVIDERS[pv].name);
   if(!r.ok){ let t=""; try{ const j=await r.json(); t=(j.error&&(j.error.message||j.error))||j.message||""; }catch(e){} throw new Error("API error "+r.status+(t?": "+t:"")); }
-  const data=await r.json(); countTokens(pv,data);
+  const data=await r.json(); countTokens(pv,data); bumpModel(model);
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
   logAi({model,status:r.status,req:user.slice(0,1500),res:raw.slice(0,1500)});
   await loadScriptTables().catch(()=>{}); /* v103: the model answered a traditional sign with traditional "zh" — the card's key is always simplified */
@@ -566,12 +566,16 @@ function renderAiRow(){
 function dayKey(t){ const d=new Date(t||Date.now()); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 /* ---------- usage counters and the owner's report (v162, H: "track who is using the app, how many times, how many words,
    how many tokens") ---------- counted on the phone only, in setting "usage": opens, reviews, byPhoto, byHand, deleted,
-   aiCalls, aiIn, aiOut, pics (readings from the picture, v178) — all time and in m{} for the current month. The report leaves the phone through the share sheet
+   aiCalls, aiIn, aiOut, pics (readings from the picture, v178), models{} (the reader and each AI model by name, v179) — all time and in m{} for the current month. The report leaves the phone through the share sheet
    on Share report, and once a day as an anonymous row to the owner's table while Usage sharing is on (v170). */
 const monthKey=()=>new Date().toISOString().slice(0,7);
 function usage(){ const u=S.settings.usage||{}; if(!u.first) u.first=Date.now(); if(u.month!==monthKey()){ u.month=monthKey(); u.m={}; } if(!u.m) u.m={}; return u; }
 let _usageTimer=null;
 function bump(key,n){ n=n||1; const u=usage(); u[key]=(u[key]||0)+n; u.m[key]=(u.m[key]||0)+n; S.settings.usage=u; clearTimeout(_usageTimer); _usageTimer=setTimeout(()=>{ setSetting("usage",u).catch(()=>{}); },500); }
+/* which analysis did the work (v179, H: "record all the models used — the reader, DeepSeek, Qwen"): usage.models and usage.m.models
+   count the on-device reader ("reader", one per reading) and every AI model by name, all time and this month */
+function bumpModel(name){ const u=usage(); u.models=u.models||{}; u.m.models=u.m.models||{}; u.models[name]=(u.models[name]||0)+1; u.m.models[name]=(u.m.models[name]||0)+1; S.settings.usage=u; clearTimeout(_usageTimer); _usageTimer=setTimeout(()=>{ setSetting("usage",u).catch(()=>{}); },500); }
+const modelsText=o=>{ const e=Object.entries(o||{}); return e.length?e.map(([k,v])=>`${k==="reader"?"on-device reader":k} ${v}`).join(", "):"none"; };
 function countTokens(pv,data){ const g=(data&&data.usage)||{}; const i=pv==="claude"?g.input_tokens:g.prompt_tokens, o=pv==="claude"?g.output_tokens:g.completion_tokens; bump("aiCalls"); if(i) bump("aiIn",+i); if(o) bump("aiOut",+o); }
 function usageText(){
   const u=usage(), m=u.m||{}, st=learnStats(), n=k=>u[k]||0, mn=k=>m[k]||0, day=t=>new Date(t).toISOString().slice(0,10);
@@ -583,6 +587,7 @@ function usageText(){
     `Cards created: ${n("byPhoto")} by photo, ${n("byHand")} by hand (this month ${mn("byPhoto")} and ${mn("byHand")}) · deleted ${n("deleted")}`,
     `AI: ${n("aiCalls")} calls, ${n("aiIn")} input + ${n("aiOut")} output tokens (this month ${mn("aiCalls")} calls, ${mn("aiIn")} + ${mn("aiOut")} tokens) · ${aiOn()?AI_PROVIDERS[aiProvider()].name+", "+aiModel():"AI not set up"}`,
     `Pictures read by the AI: ${n("pics")} (${mn("pics")} this month)`,
+    `Analyses by model: ${modelsText(u.models)} (this month ${modelsText(m.models)})`,
     `Photos in the inbox: ${S.inbox.length} · tags: ${allTags().length}`].join("\n")+"\n";
 }
 async function shareUsage(){
@@ -608,7 +613,7 @@ function reportData(){
     days:(S.settings.days||[]).length, streak:st.streak, opens:n("opens"), opensMonth:mn("opens"),
     reviews:n("reviews"), reviewsMonth:mn("reviews"), learned:st.total, cards:deck().length,
     byPhoto:n("byPhoto"), byHand:n("byHand"), deleted:n("deleted"),
-    aiCalls:n("aiCalls"), aiIn:n("aiIn"), aiOut:n("aiOut"), aiCallsMonth:mn("aiCalls"), aiInMonth:mn("aiIn"), aiOutMonth:mn("aiOut"), pics:n("pics"), picsMonth:mn("pics"),
+    aiCalls:n("aiCalls"), aiIn:n("aiIn"), aiOut:n("aiOut"), aiCallsMonth:mn("aiCalls"), aiInMonth:mn("aiIn"), aiOutMonth:mn("aiOut"), pics:n("pics"), picsMonth:mn("pics"), models:u.models||{}, modelsMonth:m.models||{},
     ai:aiOn()?aiProvider()+" "+aiModel():null, inbox:S.inbox.length, tags:allTags().length, lang:navigator.language||null};
 }
 let _reporting=false;
@@ -722,7 +727,7 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div></div><button class="btn mini" id="mirror-check">Check now</button></div>
     <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>`:""}
     <div class="listhead">On this phone</div>
-    <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}. Opened ${nOf(usage().opens,"time")}, ${nOf(usage().reviews,"review")}, ${nOf(usage().aiCalls,"AI call")}, ${nOf(usage().pics,"picture")} read by the AI.</div></div><button class="btn mini" id="usage-share">Share report</button></div>
+    <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}. Opened ${nOf(usage().opens,"time")}, ${nOf(usage().reviews,"review")}, ${nOf(usage().aiCalls,"AI call")}, ${nOf(usage().pics,"picture")} read by the AI. Analyses: ${modelsText(usage().models)}.</div></div><button class="btn mini" id="usage-share">Share report</button></div>
     <div class="mrow"><div><div class="t">Usage sharing</div><div class="s">Sends anonymous usage counts to the app's owner once a day: days used, reviews, cards, AI calls. No card text, no photos. <span id="share-status">${esc(shareNote())}</span> Your id: <span id="share-id">${esc(installId())}</span>.<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> Send once a day</label></div></div></div>
     <div class="mrow"><div><div class="t">Photos</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">Delete ${oldShots().length}</button>`:""}</div>
     ${S.admin?`<div class="listhead">Diagnostics</div>
@@ -1989,7 +1994,7 @@ async function cropSign(id){
     renderShots();
     const box=$("#ocr-"+id); if(!box) return;
     status("loading the reader …");
-    const w=await ocrWorker(status);
+    const w=await ocrWorker(status); bumpModel("reader");
     await loadSigns().catch(()=>{}); /* phrasebook optional — falls back to word gloss */
     status("reading the text …");
     let dk=await deskewBlob(r.blob); if(stale()) return; if(dk.angle) status(`straightened by ${Math.round(dk.angle)}°, reading the text …`); /* the card keeps the crop as framed (v145) */
@@ -2114,7 +2119,7 @@ async function aiCharAlternatives(line,i,insert){
   if(pv==="claude") r=await fetch(aiBase(),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model,max_tokens:100,system:sys,messages:[{role:"user",content:user}]})});
   else r=await fetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify({model,max_tokens:100,temperature:0,messages:[{role:"system",content:sys},{role:"user",content:user}]})});
   if(!r.ok) throw new Error("API error "+r.status);
-  const data=await r.json(); countTokens(pv,data);
+  const data=await r.json(); countTokens(pv,data); bumpModel(model);
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
   let arr=[]; try{ arr=JSON.parse(raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,"")); }catch(e){ arr=[...raw].filter(ch=>CJK.test(ch)); }
   return [...new Set(arr.map(x=>String(x).trim()).filter(x=>[...x].length===1&&CJK.test(x)&&(insert||x!==chars[i])))].slice(0,4);
