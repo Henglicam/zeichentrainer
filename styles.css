@@ -45,7 +45,7 @@ button{font:inherit;color:inherit}
 #main.center>.learnchips{margin-bottom:auto} #main.center>.learnchips~.card,#main.center>.learnchips~.done{margin-bottom:auto}
 
 /* bottom tab bar */
-#tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+#tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;display:grid;grid-template-columns:repeat(5,1fr);gap:0;
   padding:6px 8px calc(6px + env(safe-area-inset-bottom));
   background:var(--bar);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-top:1px solid var(--sep)}
 .tab{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;
@@ -287,3 +287,10 @@ body.noscroll{overflow:hidden}
 .pimg .del.on{color:var(--ok)}
 /* the picture-read mark under the meaning (v176): quiet, in the tertiary label colour */
 .picmark{display:inline-flex;align-items:center;gap:4px;color:var(--ok);background:var(--ok-soft);border-radius:999px;padding:2px 8px 2px 6px;font-size:11px;font-weight:600;letter-spacing:.02em;float:right;margin-top:-2px;line-height:16px} .picmark svg{width:13px;height:13px}
+/* the start screen (v181): two tiles in the card look, the links in the tint text style */
+.home{width:100%;max-width:440px;display:flex;flex-direction:column;gap:14px;padding:0 4px}
+.tile{display:flex;align-items:center;gap:18px;width:100%;text-align:left;background:var(--card);color:var(--label);border:none;border-radius:var(--rc);padding:24px 22px;box-shadow:var(--shadow);cursor:pointer;font:inherit}
+.tile svg{flex:none;width:44px;height:44px;stroke:var(--tint);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.tile>span{display:flex;flex-direction:column;min-width:0} .tile .t{font-size:22px;font-weight:700;letter-spacing:-.2px} .tile .s{font-size:15px;color:var(--label2);line-height:1.4;margin-top:3px}
+.tile:active{background:var(--card2)}
+.homelinks{display:flex;justify-content:center;gap:24px;margin-top:4px} .homelinks .del{font-size:16px;min-height:44px}

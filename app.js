@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=180; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=181; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -77,7 +77,7 @@ async function putCard(upd,key){
   try{ await idbPut("custom",upd); }catch(e){}
 }
 /* ---------- State ---------- */
-const S = { mode:"study", progress:{}, custom:[], inbox:[],
+const S = { mode:"home", progress:{}, custom:[], inbox:[], /* the app opens on the start screen (v181) */
   queue:[], idx:0, revealed:false, done:0, ahead:false, ready:false,
   pendingImg:null, pendingFull:null, pendingUse:"crop", persist:null,
   peek:null, /* Learn: the id of a linked card whose photo is shown on the front instead (v155) */
@@ -321,13 +321,38 @@ function frontBox(lines,base,words){
 function render(){
   setStats();
   const main=$("#main");
-  main.classList.toggle("center", S.mode==="study"&&!S.editing);
+  main.classList.toggle("center", (S.mode==="study"||S.mode==="home")&&!S.editing);
   if(S.editing) return renderEdit(main,S.editing); /* from the card detail or the study back */
+  if(S.mode==="home")  return renderHome(main);
   if(S.mode==="study") return renderStudy(main);
   if(S.mode==="add")   return renderAdd(main);
   if(S.mode==="inbox") return renderInbox(main);
   if(S.mode==="more")  return renderMore(main);
   if(S.mode==="cards") return S.detail?renderCardDetail(main,S.detail):renderCards(main);
+}
+/* ---------- the start screen (v181, H: "you either want to take a picture or you want to use flash cards — a more
+   user-friendly entry page"): two tiles, Learn and Take a photo, with one line of state each; the tab bar has a Home
+   tab at the left; the Deck capsule stays in the top bar ---------- */
+function homeState(){
+  const p=S.progress, t=today(), d=deck();
+  const due=d.filter(x=>p[x.id]&&p[x.id].due<=t).length, fresh=d.filter(x=>!p[x.id]).length, {streak}=learnStats();
+  const learn=!d.length?"No cards yet. Take a photo to make the first one.":due?`${nOf(due,"card")} due${fresh?`, ${fresh} new`:""}.`:fresh?`Nothing due. ${nOf(fresh,"new card")} waiting.`:"Nothing due today.";
+  const n=S.inbox.length;
+  /* the photo tile comes first while nothing is due (H: "especially in the beginning, when the app is new, the user takes more photos"); Learn first when cards wait */
+  return {learn:learn+(streak?` Streak ${nOf(streak,"day")}.`:""), photo:n?`${nOf(n,"photo")} in the inbox.`:"Frame the text, the card is made for you.", photoFirst:!due};
+}
+function renderHome(main){
+  const st=homeState();
+  const learn=`<button class="tile" id="home-learn"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 9.5h8M8 14h5"/></svg><span><span class="t">Learn</span><span class="s">${esc(st.learn)}</span></span></button>`;
+  const cam=`<button class="tile" id="home-cam"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3.2l1.8-2.5h6l1.8 2.5H20v11H4z"/><circle cx="12" cy="13.2" r="3.4"/></svg><span><span class="t">Take a photo</span><span class="s">${esc(st.photo)}</span></span></button>`;
+  main.innerHTML=`<div class="home">
+    ${st.photoFirst?cam+learn:learn+cam}
+    <div class="homelinks"><button class="del" id="home-album">From album</button>${S.inbox.length?`<button class="del" id="home-inbox">Open the inbox</button>`:""}</div>
+  </div>`;
+  $("#home-learn").onclick=()=>{ S.mode="study"; render(); };
+  $("#home-cam").onclick=()=>$("#cam").click();
+  $("#home-album").onclick=()=>$("#album").click();
+  const hi=$("#home-inbox"); if(hi) hi.onclick=()=>{ S.mode="inbox"; render(); };
 }
 /* ---------- online AI review (T3, opt-in) ----------
    Flagged cards, doubtful OCR and pending translations can be checked by an
