@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=177; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=178; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -393,7 +393,7 @@ async function aiReadPicture(blob,alts,status){
       r=await fetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
   }catch(err){ logAi({model,req,err:"no connection: "+(err&&err.message||err)}); throw new Error("no connection"); }
   if(!r.ok){ let t=""; try{ const j=await r.json(); t=(j.error&&(j.error.message||j.error))||j.message||""; }catch(e){} logAi({model,status:r.status,req,err:t}); throw new Error("API error "+r.status+(t?": "+t:"")); }
-  const data=await r.json(); countTokens(pv,data);
+  const data=await r.json(); countTokens(pv,data); bump("pics"); /* the usage counters and the daily row count the picture readings (v178, H) */
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
   logAi({model,status:r.status,req,res:raw.slice(0,1500)});
   await loadScriptTables().catch(()=>{});
@@ -566,7 +566,7 @@ function renderAiRow(){
 function dayKey(t){ const d=new Date(t||Date.now()); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 /* ---------- usage counters and the owner's report (v162, H: "track who is using the app, how many times, how many words,
    how many tokens") ---------- counted on the phone only, in setting "usage": opens, reviews, byPhoto, byHand, deleted,
-   aiCalls, aiIn, aiOut — all time and in m{} for the current month. The report leaves the phone through the share sheet
+   aiCalls, aiIn, aiOut, pics (readings from the picture, v178) — all time and in m{} for the current month. The report leaves the phone through the share sheet
    on Share report, and once a day as an anonymous row to the owner's table while Usage sharing is on (v170). */
 const monthKey=()=>new Date().toISOString().slice(0,7);
 function usage(){ const u=S.settings.usage||{}; if(!u.first) u.first=Date.now(); if(u.month!==monthKey()){ u.month=monthKey(); u.m={}; } if(!u.m) u.m={}; return u; }
@@ -582,6 +582,7 @@ function usageText(){
     `Reviews: ${n("reviews")} (${mn("reviews")} this month) · cards learned: ${st.total} of ${deck().length}`,
     `Cards created: ${n("byPhoto")} by photo, ${n("byHand")} by hand (this month ${mn("byPhoto")} and ${mn("byHand")}) · deleted ${n("deleted")}`,
     `AI: ${n("aiCalls")} calls, ${n("aiIn")} input + ${n("aiOut")} output tokens (this month ${mn("aiCalls")} calls, ${mn("aiIn")} + ${mn("aiOut")} tokens) · ${aiOn()?AI_PROVIDERS[aiProvider()].name+", "+aiModel():"AI not set up"}`,
+    `Pictures read by the AI: ${n("pics")} (${mn("pics")} this month)`,
     `Photos in the inbox: ${S.inbox.length} · tags: ${allTags().length}`].join("\n")+"\n";
 }
 async function shareUsage(){
@@ -607,7 +608,7 @@ function reportData(){
     days:(S.settings.days||[]).length, streak:st.streak, opens:n("opens"), opensMonth:mn("opens"),
     reviews:n("reviews"), reviewsMonth:mn("reviews"), learned:st.total, cards:deck().length,
     byPhoto:n("byPhoto"), byHand:n("byHand"), deleted:n("deleted"),
-    aiCalls:n("aiCalls"), aiIn:n("aiIn"), aiOut:n("aiOut"), aiCallsMonth:mn("aiCalls"), aiInMonth:mn("aiIn"), aiOutMonth:mn("aiOut"),
+    aiCalls:n("aiCalls"), aiIn:n("aiIn"), aiOut:n("aiOut"), aiCallsMonth:mn("aiCalls"), aiInMonth:mn("aiIn"), aiOutMonth:mn("aiOut"), pics:n("pics"), picsMonth:mn("pics"),
     ai:aiOn()?aiProvider()+" "+aiModel():null, inbox:S.inbox.length, tags:allTags().length, lang:navigator.language||null};
 }
 let _reporting=false;
@@ -721,7 +722,7 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div></div><button class="btn mini" id="mirror-check">Check now</button></div>
     <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>`:""}
     <div class="listhead">On this phone</div>
-    <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}. Opened ${nOf(usage().opens,"time")}, ${nOf(usage().reviews,"review")}, ${nOf(usage().aiCalls,"AI call")}.</div></div><button class="btn mini" id="usage-share">Share report</button></div>
+    <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}. Opened ${nOf(usage().opens,"time")}, ${nOf(usage().reviews,"review")}, ${nOf(usage().aiCalls,"AI call")}, ${nOf(usage().pics,"picture")} read by the AI.</div></div><button class="btn mini" id="usage-share">Share report</button></div>
     <div class="mrow"><div><div class="t">Usage sharing</div><div class="s">Sends anonymous usage counts to the app's owner once a day: days used, reviews, cards, AI calls. No card text, no photos. <span id="share-status">${esc(shareNote())}</span> Your id: <span id="share-id">${esc(installId())}</span>.<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> Send once a day</label></div></div></div>
     <div class="mrow"><div><div class="t">Photos</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">Delete ${oldShots().length}</button>`:""}</div>
     ${S.admin?`<div class="listhead">Diagnostics</div>
