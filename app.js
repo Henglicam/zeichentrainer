@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=161; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=162; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -81,6 +81,7 @@ const S = { mode:"study", progress:{}, custom:[], inbox:[],
   queue:[], idx:0, revealed:false, done:0, ahead:false, ready:false,
   pendingImg:null, pendingFull:null, pendingUse:"crop", persist:null,
   peek:null, /* Learn: the id of a linked card whose photo is shown on the front instead (v155) */
+  admin:false, /* the owner's rows in More unlocked for this session (v162) */
   detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterTag:null, settings:{}, single:null, saved:null,
   editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null };
 
@@ -167,6 +168,7 @@ async function boot(){
     S.progress = {}; prog.forEach(r=>{ const {id,c,...s}=r; S.progress[id||c]=s; });
     sett.forEach(r=>{ S.settings[r.k]=r.v; });
     if(Array.isArray(S.settings.errlog)) ERRLOG.unshift(...S.settings.errlog.slice(-20));
+    bump("opens");
     /* progress of cards that no longer exist (the built-in deck of v1–v32) is dropped */
     cust.forEach(d=>{ if(!d.id) d.id=d.c; });
     const have=new Set(cust.map(d=>d.id));
@@ -385,7 +387,7 @@ async function aiAsk(cards,status){
   if(r.status===401||r.status===403) throw new Error("API key rejected ("+r.status+")");
   if(r.status===402) throw new Error("no credit left at "+AI_PROVIDERS[pv].name);
   if(!r.ok){ let t=""; try{ const j=await r.json(); t=(j.error&&(j.error.message||j.error))||j.message||""; }catch(e){} throw new Error("API error "+r.status+(t?": "+t:"")); }
-  const data=await r.json();
+  const data=await r.json(); countTokens(pv,data);
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
   logAi({model,status:r.status,req:user.slice(0,1500),res:raw.slice(0,1500)});
   await loadScriptTables().catch(()=>{}); /* v103: the model answered a traditional sign with traditional "zh" — the card's key is always simplified */
@@ -491,6 +493,37 @@ function renderAiRow(){
 }
 /* ---------- progress: cards learned, this week, streak of days ---------- */
 function dayKey(t){ const d=new Date(t||Date.now()); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+/* ---------- usage counters and the owner's report (v162, H: "track who is using the app, how many times, how many words,
+   how many tokens") ---------- counted on the phone only, in setting "usage": opens, reviews, byPhoto, byHand, deleted,
+   aiCalls, aiIn, aiOut — all time and in m{} for the current month. Nothing is sent anywhere; the report leaves the phone
+   through the share sheet when its owner taps Share. */
+const monthKey=()=>new Date().toISOString().slice(0,7);
+function usage(){ const u=S.settings.usage||{}; if(!u.first) u.first=Date.now(); if(u.month!==monthKey()){ u.month=monthKey(); u.m={}; } if(!u.m) u.m={}; return u; }
+let _usageTimer=null;
+function bump(key,n){ n=n||1; const u=usage(); u[key]=(u[key]||0)+n; u.m[key]=(u.m[key]||0)+n; S.settings.usage=u; clearTimeout(_usageTimer); _usageTimer=setTimeout(()=>{ setSetting("usage",u).catch(()=>{}); },500); }
+function countTokens(pv,data){ const g=(data&&data.usage)||{}; const i=pv==="claude"?g.input_tokens:g.prompt_tokens, o=pv==="claude"?g.output_tokens:g.completion_tokens; bump("aiCalls"); if(i) bump("aiIn",+i); if(o) bump("aiOut",+o); }
+function usageText(){
+  const u=usage(), m=u.m||{}, st=learnStats(), n=k=>u[k]||0, mn=k=>m[k]||0, day=t=>new Date(t).toISOString().slice(0,10);
+  const ua=navigator.userAgent, dev=(ua.match(/\(([^)]*)\)/)||[])[1]||"";
+  return [`识字 Zeichentrainer — usage report, ${day(Date.now())}`,
+    `App v${APP_V} · first used ${day(u.first)} · ${dev}`,
+    `Days used: ${(S.settings.days||[]).length} (streak ${st.streak}) · app opened ${n("opens")} times, ${mn("opens")} this month`,
+    `Reviews: ${n("reviews")} (${mn("reviews")} this month) · cards learned: ${st.total} of ${deck().length}`,
+    `Cards created: ${n("byPhoto")} by photo, ${n("byHand")} by hand (this month ${mn("byPhoto")} and ${mn("byHand")}) · deleted ${n("deleted")}`,
+    `AI: ${n("aiCalls")} calls, ${n("aiIn")} input + ${n("aiOut")} output tokens (this month ${mn("aiCalls")} calls, ${mn("aiIn")} + ${mn("aiOut")} tokens) · ${aiOn()?AI_PROVIDERS[aiProvider()].name+", "+aiModel():"AI not set up"}`,
+    `Photos in the inbox: ${S.inbox.length} · tags: ${allTags().length}`].join("\n")+"\n";
+}
+async function shareUsage(){
+  const text=usageText(), name="zeichentrainer-usage-"+new Date().toISOString().slice(0,10)+".txt", file=new File([text],name,{type:"text/plain"});
+  if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name,text:"Zeichentrainer usage report"}); return; }catch(err){ if(err && err.name==="AbortError") return; } }
+  if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err && err.name==="AbortError") return; } }
+  try{ await navigator.clipboard.writeText(text); alert("Copied the usage report to the clipboard."); }catch(err){ alert("Sharing is not available here."); }
+}
+/* the owner's rows in More (Reset, Diagnostics, Mirror, the downloads, the usage report) open with a password (v162, H:
+   "protect all those administrative functions with a password" — one master password, its SHA-256 in the code; it
+   stops taps, not a reader of the source; unlocked for the session only) */
+const ADMIN_HASH="ee3467fab5716e0f004d387a016bddadc4570c2336c58fc6c872c351fd23a7d6";
+async function sha256(str){ const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(str)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }
 function learnStats(){
   const rows=Object.values(S.progress), weekAgo=today()-6*DAY;
   const total=rows.filter(r=>r.reps>0).length, week=rows.filter(r=>r.last&&r.last>=weekAgo).length;
@@ -554,8 +587,8 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">Export</div><div class="s">Progress and cards as one file, via the share sheet. ${backupNote()}</div></div><button class="btn mini" id="export">Export</button></div>
     <div class="mrow"><div><div class="t">Import</div><div class="s">A zeichentrainer-….json.txt file. Existing cards are overwritten.</div></div><button class="btn mini" id="import">Import</button></div>
     <div class="mrow"><div><div class="t">Flagged cards</div><div class="s">${deck().filter(d=>d.flag).length} flagged for review. Share the list as text, for a teacher.</div></div><span class="btnrow"><button class="btn mini" id="show-flag">Show</button><button class="btn mini" id="share-flag">Share</button></span></div>
-    <div class="listhead">Translation</div>
-    <div class="mrow"><div><div class="t">Offline translation</div><div class="s" id="nmt-status">Checking …</div></div><button class="btn mini" id="nmt-btn" hidden></button></div>
+    ${S.admin?`<div class="listhead">Translation</div>
+    <div class="mrow"><div><div class="t">Offline translation</div><div class="s" id="nmt-status">Checking …</div></div><button class="btn mini" id="nmt-btn" hidden></button></div>`:""}
     <div class="listhead">Online AI review</div>
     <div class="mrow"><div><div class="t">AI review</div><div class="s" id="ai-status"></div></div><button class="btn mini" id="ai-btn">Set up</button></div>
     <div class="aiform" id="ai-form" hidden>
@@ -570,20 +603,24 @@ function renderMore(main){
     </div>
     <div class="mrow"><div><div class="t">Review queue</div><div class="s" id="ai-runstatus"></div></div><button class="btn mini" id="ai-run" hidden></button></div>
     <div class="mrow"><div><div class="t">Storage</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
-    <div class="mrow"><div><div class="t">Text recognition</div><div class="s" id="ocr-status">Checking …</div></div><button class="btn mini" id="ocr-btn" hidden></button></div>
+    ${S.admin?`<div class="mrow"><div><div class="t">Text recognition</div><div class="s" id="ocr-status">Checking …</div></div><button class="btn mini" id="ocr-btn" hidden></button></div>`:""}
     <div class="listhead">Learning</div>
     <div class="mrow"><div><div class="t">Card order</div><div class="s">Due cards come first, then up to ${NEW_PER_SESSION} new ones. This sets the order inside each group.</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${l}</button>`).join("")}</div></div></div>
-    <div class="listhead">Updates without a VPN</div>
+    ${S.admin?`<div class="listhead">Updates without a VPN</div>
     <div class="mrow"><div><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div></div><button class="btn mini" id="mirror-check">Check now</button></div>
-    <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>
+    <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>`:""}
     <div class="listhead">On this phone</div>
-    <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}</div></div></div>
+    <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}${S.admin?` Opened ${usage().opens||0} times, ${usage().reviews||0} reviews, ${usage().aiCalls||0} AI calls.`:""}</div></div>${S.admin?`<button class="btn mini" id="usage-share">Share report</button>`:""}</div>
     <div class="mrow"><div><div class="t">Photos</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">Delete ${oldShots().length}</button>`:""}</div>
-    <div class="listhead">Diagnostics</div>
+    ${S.admin?`<div class="listhead">Diagnostics</div>
     <div class="mrow"><div><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${READLOG.length} step${READLOG.length===1?"":"s"}.</div></div><span class="btnrow"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button></span></div>
     <pre class="diag" id="diag-out" hidden></pre>
     <div class="listhead">Start over</div>
-    <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>
+    <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>`:""}
+    <div class="listhead">Advanced settings</div>
+    ${S.admin?`<div class="mrow"><div><div class="t">Unlocked</div><div class="s">Reset, Diagnostics, Mirror, the downloads and the usage report are shown until the app is closed.</div></div><button class="btn mini" id="admin-lock">Lock</button></div>`
+    :`<div class="mrow"><div><div class="t">Locked</div><div class="s">Reset, Diagnostics, Mirror, the downloads and the usage report are for the app's owner.</div></div></div>
+    <div class="field"><label>Password</label><div class="btnrow"><input id="admin-pw" type="password" autocomplete="off"><button class="btn mini" id="admin-unlock">Unlock</button></div><div class="err" id="admin-err" style="display:none">Wrong password.</div></div>`}
     <div class="listhead">About</div>
     <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s">${esc(ver)}. Works offline; everything stays on this phone.</div></div></div>
   </div>`;
@@ -592,14 +629,21 @@ function renderMore(main){
   $("#share-flag").onclick=shareFlagged;
   $("#show-flag").onclick=()=>{ S.mode="cards"; S.detail=null; S.editing=null; S.query=""; S.filterUnv=false; S.filterAi=false; S.filterFlag=true; render(); };
   const cs=$("#cleanshots"); if(cs) cs.onclick=cleanupShots;
-  $("#diag-show").onclick=()=>{ const o=$("#diag-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=diagText(); };
-  $("#diag-share").onclick=shareDiag;
-  $("#mirror-url").onchange=async e=>{ await setSetting("mirror",e.target.value.trim()); tellMirror(); };
-  renderOcrRow();
-  $("#mirror-check").onclick=()=>{ mirrorCheck(true); };
+  if(S.admin){
+    $("#diag-show").onclick=()=>{ const o=$("#diag-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=diagText(); };
+    $("#diag-share").onclick=shareDiag;
+    $("#mirror-url").onchange=async e=>{ await setSetting("mirror",e.target.value.trim()); tellMirror(); };
+    renderOcrRow();
+    $("#mirror-check").onclick=()=>{ mirrorCheck(true); };
+    $("#usage-share").onclick=shareUsage;
+    $("#reset").onclick=resetAll;
+    $("#admin-lock").onclick=()=>{ S.admin=false; render(); };
+  } else {
+    const pw=$("#admin-pw"), go=async()=>{ const h=await sha256(pw.value); if(h===ADMIN_HASH){ S.admin=true; render(); window.scrollTo({top:0}); } else { $("#admin-err").style.display=""; pw.value=""; } };
+    $("#admin-unlock").onclick=go; pw.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
+  }
   main.querySelectorAll("[data-learnorder]").forEach(b=> b.onclick=async()=>{ await setSetting("learnOrder",b.dataset.learnorder); S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false; S.single=null; S.saved=null; setStats(); main.querySelectorAll("[data-learnorder]").forEach(x=>x.classList.toggle("on",x===b)); }); /* the Learn session follows at once (v153) */
   renderNmtRow(); renderAiRow();
-  $("#reset").onclick=resetAll;
 }
 
 function tagsHTML(d,isNew){
@@ -800,6 +844,7 @@ function renderStudy(main){
 }
 
 async function grade(g){
+  bump("reviews");
   const c=S.queue[S.idx], sched=S.progress[c]||null;
   const s=schedule(sched,g);
   S.progress[c]=s;
@@ -863,7 +908,8 @@ function renderAdd(main){
   $("#f-pin").addEventListener("input",()=>{ pinTouched=!!$("#f-pin").value.trim(); });
   $("#f-mean").addEventListener("input",()=>{ meanTouched=!!$("#f-mean").value.trim(); });
   const autoFill=async()=>{
-    const word=$("#f-word").value.replace(/\s+/g,""), st=$("#f-aistatus"); if(!CJK.test(word)||(pinTouched&&meanTouched)) return;
+    const fw=$("#f-word"), st=$("#f-aistatus"); if(!fw||!st) return; /* the form was left before the timer fired */
+    const word=fw.value.replace(/\s+/g,""); if(!CJK.test(word)||(pinTouched&&meanTouched)) return;
     const run=++fillRun, same=()=>run===fillRun&&$("#f-word")&&$("#f-word").value.replace(/\s+/g,"")===word;
     if(S.draft) delete S.draft.ai;
     if(aiLive()){
@@ -1130,9 +1176,10 @@ async function addManual(){
   $("#f-pinhint").style.display="none";
   S.draft=null;
   ok.textContent="“"+word+"” added."; ok.style.display="";
-  setStats();
+  bump("byHand"); setStats();
 }
 async function delCustom(id){
+  bump("deleted");
   S.custom=S.custom.filter(x=>x.id!==id);
   try{ await idbDel("custom",id); await idbDel("progress",id); }catch(e){}
   delete S.progress[id]; dropThumb(id);
@@ -1905,7 +1952,7 @@ async function aiCharAlternatives(line,i,insert){
   if(pv==="claude") r=await fetch(aiBase(),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model,max_tokens:100,system:sys,messages:[{role:"user",content:user}]})});
   else r=await fetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify({model,max_tokens:100,temperature:0,messages:[{role:"system",content:sys},{role:"user",content:user}]})});
   if(!r.ok) throw new Error("API error "+r.status);
-  const data=await r.json();
+  const data=await r.json(); countTokens(pv,data);
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
   let arr=[]; try{ arr=JSON.parse(raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,"")); }catch(e){ arr=[...raw].filter(ch=>CJK.test(ch)); }
   return [...new Set(arr.map(x=>String(x).trim()).filter(x=>[...x].length===1&&CJK.test(x)&&(insert||x!==chars[i])))].slice(0,4);
@@ -2398,7 +2445,7 @@ async function saveSign(id){
   if(sg.trad&&(sg.tradText||"").trim()) card.trad=sg.tradText.trim(); /* the text as it stands on the photo, in traditional characters (v101) */
   if(S.pendingImg) card.img=await jpegOf(S.pendingImg);
   if(S.pendingFull) card.imgFull=S.pendingFull;
-  S.custom.push(card);
+  bump("byPhoto"); S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
   S.queue=buildQueue(false); QSCARD[id]=card.id;
   delete SIGN[id]; if(CROP&&CROP.id===id) CROP=null; /* saved — the frame has done its job */
