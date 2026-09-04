@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=195; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=196; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -555,7 +555,10 @@ function renderAiRow(){
   const all=aiQueue(), q=all.length, fl=all.filter(d=>d.flag).length, sp=all.filter(d=>!d.flag&&d.mt.suspect).length, pd=q-fl-sp;
   const ppv=pictureProvider(); const ab=$("#about-s"); if(ab) ab.textContent=aboutText();
   const relayed=viaRelay()||(ppv&&viaRelay(ppv)); /* the first line names the models and says which one does what (v195, H: "I liked the previous text more — revert and polish the first paragraph") */
-  st.textContent=aiOn()?`On${relayed?", through the app owner's relay":""}: ${AI_PROVIDERS[aiProvider()].short} (${aiModel()}) checks the text${ppv?`, ${AI_PROVIDERS[ppv].short} (${pictureModel(ppv)}) reads the framed area when the reading is weak.`:". Photos never leave the phone."}`:"Off. The app's owner sets it up under Advanced settings.";
+  const who=`${AI_PROVIDERS[aiProvider()].short} (${aiModel()})`, pic=ppv?`${AI_PROVIDERS[ppv].short} (${pictureModel(ppv)})`:"";
+  st.textContent=!aiOn()?"Off. The app's owner sets it up under Advanced settings."
+    :S.settings.aiAuto===false?`Off. ${who}${pic?` and ${pic}`:""} ${pic?"are":"is"} set up${relayed?" through the app owner's relay":""} — tick the box to check new cards.` /* the line follows the switch (v196, H: "it cannot say On when I've unticked the checkbox") */
+    :`On${relayed?", through the app owner's relay":""}: ${who} checks the text${pic?`, ${pic} reads the framed area when the reading is weak.`:". Photos never leave the phone."}`;
   if(btn) btn.textContent=aiOn()?"Settings":"Set up";
   run.hidden=!aiOn(); run.disabled=!q;
   run.textContent=q?"Ask AI":"Nothing to review";
