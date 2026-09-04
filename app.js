@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=191; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=192; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -582,7 +582,7 @@ function renderAiRow(){
   /* Remove key takes the shown provider's key only; when that was the active one, the next provider with a key takes
      over, and without any the AI is off */
   $("#ai-remove").onclick=async()=>{ const pv=form.dataset.pv; await setAiAccount(pv,null);
-    if(pv===aiProvider()){ delete S.settings.aiKey; idbDel("settings","aiKey").catch(()=>{}); const next=Object.keys(AI_PROVIDERS).find(k=>aiKey(k)); if(next) await setSetting("aiProvider",next); else await setSetting("aiAuto",false); }
+    if(pv===aiProvider()){ delete S.settings.aiKey; idbDel("settings","aiKey").catch(()=>{}); const next=Object.keys(AI_PROVIDERS).find(k=>aiKey(k)); if(next) await setSetting("aiProvider",next); else if(!aiOn()) await setSetting("aiAuto",false); } /* the automatic check goes off only when no AI is left — with the relay it stays (v192: H's phone lost its checks after Remove key while the relay still read pictures) */
     form.hidden=true; renderAiRow(); };
   run.onclick=async()=>{
     run.disabled=true; const rs=$("#ai-runstatus");
