@@ -222,6 +222,7 @@ button{font:inherit;color:inherit}
 .croprect .h{position:absolute;width:18px;height:18px;background:#fff;border:1px solid rgba(0,0,0,.8);border-radius:4px}
 .croprect .h.tl{left:-9px;top:-9px} .croprect .h.tr{right:-9px;top:-9px}
 .croprect .h.bl{left:-9px;bottom:-9px} .croprect .h.br{right:-9px;bottom:-9px}
+.croprect{transform-origin:center center} .croprect .h.rot{left:calc(50% - 9px);top:-43px;border-radius:50%;cursor:grab} .croprect .h.rot::after{content:"";position:absolute;left:8px;top:18px;width:1px;height:23px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.6)} /* the turn handle above the top edge with its stem (v185) */
 .croppreview img{width:auto;max-width:100%;max-height:120px;display:block;border-radius:8px}
 .cropacts{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;align-items:center}
 
