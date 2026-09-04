@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=158; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=159; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -831,13 +831,13 @@ function renderAdd(main){
     <div class="lead">Add a card by hand.</div>
     <div class="form">
     ${imgField}
-    <div class="field"><label>Characters</label><input id="f-word" class="hanzi big" placeholder="快门"></div>
+    <div class="field"><label>Characters</label><input id="f-word" class="hanzi big" placeholder="快门"><div class="scriptline"><button type="button" class="del scriptlink" id="f-draw">Draw a character</button></div></div>
       <div class="field"><label>Pinyin</label><textarea id="f-pin" class="grow" rows="1" placeholder="kuàimén"></textarea></div>
-      <div class="field"><label>Meaning</label><textarea id="f-mean" class="grow" rows="1" placeholder="shutter"></textarea></div>
+      <div class="field"><label>Meaning</label><textarea id="f-mean" class="grow" rows="1" placeholder="shutter"></textarea><div class="smean badge" id="f-aistatus" style="margin-top:4px"></div></div>
     <div class="field"><label class="check"><input type="checkbox" id="f-flag"> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
       <input id="f-note" placeholder="Note for the reviewer (optional)" hidden></div>
     ${tagsFieldHTML("f-tags",(S.draft||{}).tags)}
-    <div id="f-pinhint" class="err" style="display:none">Pinyin and meaning were filled in from the photo and are unverified — check the tones and the meaning.</div>
+    <div id="f-pinhint" class="err" style="display:none">Pinyin and meaning were filled in automatically and are unverified — check the tones and the meaning.</div>
     <div id="f-err" class="err" style="display:none"></div>
     <button class="btn primary block" id="f-add">Add card</button>
     <div id="f-ok" class="ok" style="display:none"></div>
@@ -852,9 +852,46 @@ function renderAdd(main){
   const d0=S.draft||{};
   $("#f-word").value=d0.w||""; $("#f-pin").value=d0.p||""; $("#f-mean").value=d0.m||""; $("#f-flag").checked=!!d0.flag; $("#f-note").value=d0.note||""; $("#f-note").hidden=!d0.flag; wireGrow(main);
   if(d0.autoPin) $("#f-pinhint").style.display="";
-  const saveDraft=()=>{ S.draft={ w:$("#f-word").value, p:$("#f-pin").value, m:$("#f-mean").value, flag:$("#f-flag").checked, note:$("#f-note").value, tags:parseTags($("#f-tags").value),
+  const saveDraft=()=>{ S.draft={ ...(S.draft||{}), w:$("#f-word").value, p:$("#f-pin").value, m:$("#f-mean").value, flag:$("#f-flag").checked, note:$("#f-note").value, tags:parseTags($("#f-tags").value),
     autoPin:$("#f-pinhint").style.display!=="none" }; };
   ["f-word","f-pin","f-mean","f-note"].forEach(id=>$("#"+id).oninput=saveDraft);
+  /* Pinyin and meaning fill in by themselves (v159, H: "add an automatic AI translation function"): a second after the
+     last change to the characters the AI is asked when it is live, else the dictionary and the phrasebook fill the fields
+     as with a photo, marked unverified. Fields typed by hand are not overwritten; a stale answer (the word changed
+     meanwhile) is dropped. */
+  let pinTouched=!!$("#f-pin").value, meanTouched=!!$("#f-mean").value, fillTimer=null, fillRun=0;
+  $("#f-pin").addEventListener("input",()=>{ pinTouched=!!$("#f-pin").value.trim(); });
+  $("#f-mean").addEventListener("input",()=>{ meanTouched=!!$("#f-mean").value.trim(); });
+  const autoFill=async()=>{
+    const word=$("#f-word").value.replace(/\s+/g,""), st=$("#f-aistatus"); if(!CJK.test(word)||(pinTouched&&meanTouched)) return;
+    const run=++fillRun, same=()=>run===fillRun&&$("#f-word")&&$("#f-word").value.replace(/\s+/g,"")===word;
+    if(S.draft) delete S.draft.ai;
+    if(aiLive()){
+      st.textContent="Checking the text …";
+      try{
+        const [r]=await aiAsk([{kind:"word",c:word,p:"",m:"",mt:{src:"dict",verified:false,suspect:"typed by hand, please check"}}]);
+        if(!same()) return;
+        if(r&&!r.bad&&(r.p||r.m)){
+          if(r.p&&!pinTouched) $("#f-pin").value=r.p;
+          if(r.m&&!meanTouched) $("#f-mean").value=r.m;
+          wireGrow(main); st.textContent=""; $("#f-pinhint").style.display="none";
+          saveDraft(); S.draft.ai={c:word,p:r.p||"",m:r.m||""}; return;
+        }
+      }catch(err){ if(!same()) return; st.textContent="The AI could not be reached."; }
+    }
+    try{
+      await loadDict(); await loadSigns().catch(()=>{}); if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
+      if(!same()) return;
+      const r=lineMeaning(word), one=(r.gloss||[]).filter(g=>!g.punct&&!g.num);
+      if(r.py&&!pinTouched) $("#f-pin").value=r.py;
+      if(r.en&&!meanTouched) $("#f-mean").value=cleanSense(one.length===1&&one[0].m?one[0].m:r.en); /* one dictionary word: its meaning alone, not "快门 shutter" */
+      wireGrow(main); if(!aiLive()) st.textContent=""; $("#f-pinhint").style.display=""; saveDraft();
+    }catch(err){ if(same()) st.textContent=""; }
+  };
+  $("#f-word").addEventListener("input",()=>{ clearTimeout(fillTimer); fillTimer=setTimeout(autoFill,1000); });
+  /* "Draw a character" (v159, H): the drawing sheet with the pad alone, the chosen character is appended */
+  $("#f-draw").onclick=()=>{ const word=$("#f-word").value; SIGN["add"]={lines:[word],orig:[word],img:null,boxes:[[]]};
+    openDrawSheet("add",0,[...word].length,ch=>{ const f=$("#f-word"); if(!f||ch==null) return; f.value=f.value+ch; f.dispatchEvent(new Event("input",{bubbles:true})); },true); };
   wireTags(main,saveDraft);
   $("#f-flag").onchange=()=>{ $("#f-note").hidden=!$("#f-flag").checked; if($("#f-flag").checked) $("#f-note").focus(); saveDraft(); };
 }
@@ -1077,6 +1114,8 @@ async function addManual(){
   if(!pin||!mean) return fail("Pinyin and meaning are required.");
   if(deck().some(d=>d.c===word&&(!S.pendingShot||d.shot===S.pendingShot))) return fail("“"+word+"” is already in the deck."); /* with a new photo the same text is a new card (v118) */
   const card={id:cardId(word),c:word,p:pin,m:mean,t:"Custom",at:Date.now()};
+  const ai=S.draft&&S.draft.ai; if(ai&&ai.c===word&&(!ai.p||ai.p===pin)&&(!ai.m||ai.m===mean)) card.mt={src:"llm",verified:true,pending:false}; /* filled in by the AI and left as it was (v159) */
+  else if($("#f-pinhint").style.display!=="none") card.mt={src:"dict",verified:false,pending:true}; /* filled in from the dictionary: the AI completes it when it can */
   const tags=parseTags($("#f-tags").value); if(tags.length) card.tags=tags;
   if($("#f-flag").checked){ card.flag=true; const note=$("#f-note").value.trim(); if(note) card.flagNote=note; }
   if(S.pendingShot){ card.shot=S.pendingShot; S.pendingShot=null; }
@@ -2014,8 +2053,9 @@ function openDrawSheet(id,k,i,apply,ins){
   const ch=ins?"":([...sg.lines[k]][i]||"");
   document.querySelectorAll(".drawsheet").forEach(x=>x.remove());
   const el=document.createElement("div"); el.className="drawsheet";
-  el.innerHTML=`<div class="dshead"><div class="badge">The character in the photo (drag to move, pinch to zoom) — draw it below.</div><button class="del" id="ds-x">Cancel</button></div>
-    <canvas class="ckref" width="1" height="1" title="the character in the photo"></canvas>
+  const noRef=!sg.img; /* a card without a photo (the Add form's "Draw a character", an Edit form without an image): the pad alone (v159) */
+  el.innerHTML=`<div class="dshead"><div class="badge">${noRef?"Draw the character below.":"The character in the photo (drag to move, pinch to zoom) — draw it below."}</div><button class="del" id="ds-x">Cancel</button></div>
+    ${noRef?"":`<canvas class="ckref" width="1" height="1" title="the character in the photo"></canvas>`}
     <canvas class="pad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas>
     <div class="badge" id="ds-st">Draw all strokes, then tap Done.</div>
     <div class="cands" id="ds-cands"></div>
@@ -2028,7 +2068,7 @@ function openDrawSheet(id,k,i,apply,ins){
     const used=kids.reduce((a,c)=>a+c.getBoundingClientRect().height,0)+gap*(kids.length-1)+parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);
     const S=Math.max(160,Math.min(el.clientWidth-32,Math.floor((el.clientHeight-used)/sq.length)));
     sq.forEach(c=>{ c.style.width=S+"px"; c.style.height=S+"px"; }); };
-  fitRef(); const refView=attachRefView(el.querySelector(".ckref"),sg,k,ins?-1:i); refView.ready.then(fitRef); /* a new character has no box: the whole crop */ el.refView=refView; /* used by the tests */
+  fitRef(); const refView=noRef?{ready:Promise.resolve(),close(){}}:attachRefView(el.querySelector(".ckref"),sg,k,ins?-1:i); refView.ready.then(fitRef); /* a new character has no box: the whole crop */ el.refView=refView; /* used by the tests */
   window.addEventListener("resize",fitRef);
   const cv=el.querySelector(".pad"), ctx=cv.getContext("2d"), strokes=[]; let cur=null, seq=0;
   const status=t=>{ const st=el.querySelector("#ds-st"); if(st) st.textContent=t; };
