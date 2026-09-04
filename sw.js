@@ -1,4 +1,4 @@
-const CACHE = "zt-v188";
+const CACHE = "zt-v189";
 /* OCR assets (./vendor/, ~12 MB) live in their own cache that survives shell
    updates — otherwise every cache version bump would re-download all of
    Tesseract. Only bump this when vendor files change. */
@@ -42,6 +42,11 @@ self.addEventListener("message", e => {
 });
 /* vendor files (OCR, dictionaries — all under jsDelivr's 20 MB cap) can come from the mirror when
    github.io is unreachable: text recognition must not need the VPN either */
+/* a silent origin: github.io behind the wall does not answer with an error, it answers with nothing (v189, H's phone without
+   the VPN: "Reading the text … still at: loading the reader …" for good) — a vendor fetch from the origin gets ORIGIN_WAIT,
+   then the mirror takes over, and after one such failure the mirror is asked first for ORIGIN_DOWN */
+const ORIGIN_WAIT = 6000, ORIGIN_DOWN = 5 * 60 * 1000; let originDownUntil = 0;
+function withTimeout(p, ms) { return new Promise((res, rej) => { const t = setTimeout(() => rej(new Error("origin timeout")), ms); p.then(v => { clearTimeout(t); res(v); }, e => { clearTimeout(t); rej(e); }); }); }
 function relPath(url) { const scope = new URL(self.registration.scope).pathname; const p = new URL(url).pathname; return p.startsWith(scope) ? p.slice(scope.length) : p.replace(/^\//, ""); }
 async function fromMirror(req) {
   const path = relPath(req.url);
@@ -89,8 +94,13 @@ self.addEventListener("fetch", e => {
   if (req.method === "POST" && new URL(req.url).pathname.endsWith("/share")) { e.respondWith(shareIn(req)); return; }
   if (req.method !== "GET") return;
   const isVendor = new URL(req.url).pathname.includes("/vendor/");
+  const origin = () => (isVendor ? withTimeout(fetch(req), ORIGIN_WAIT) : fetch(req));
   e.respondWith(
-    caches.match(req).then(hit => hit || fetch(req).then(res => {
+    caches.match(req).then(async hit => { if (hit) return hit;
+      if (isVendor && Date.now() < originDownUntil) { /* the origin was silent a moment ago: the mirror first */
+        try { const res = await fromMirror(req); try { const c = await caches.open(OCR_CACHE); await c.put(req, res.clone()); } catch (e3) {} return res; } catch (e2) {}
+      }
+      return origin().then(res => {
       /* never cache error responses — a cached 404 (e.g. fetched before a
          deploy finished) would poison the cache permanently */
       if (res.ok) {
@@ -102,10 +112,11 @@ self.addEventListener("fetch", e => {
       return res;
     }).catch(async err => {
       if (isVendor) {
+        originDownUntil = Date.now() + ORIGIN_DOWN;
         try { const res = await fromMirror(req); try { const c = await caches.open(OCR_CACHE); await c.put(req, res.clone()); } catch (e3) {} return res; } /* cached before answering, so "ready" is true at once */
         catch (e2) { return Response.error(); }
       }
       return caches.match("./index.html");
-    }))
+    }); })
   );
 });
