@@ -286,4 +286,4 @@ body.noscroll{overflow:hidden}
 .pimg .imgacts{display:flex;gap:14px}
 .pimg .del.on{color:var(--ok)}
 /* the picture-read mark under the meaning (v176): quiet, in the tertiary label colour */
-.picmark{display:inline-flex;align-items:center;gap:3px;color:var(--label3);font-size:11px;font-weight:600;letter-spacing:.02em} .picmark svg{width:14px;height:14px}
+.picmark{display:inline-flex;align-items:center;gap:3px;color:var(--label3);font-size:11px;font-weight:600;letter-spacing:.02em;float:right;margin-top:2px} .picmark svg{width:14px;height:14px}
