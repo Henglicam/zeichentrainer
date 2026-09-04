@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=174; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=175; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2030,14 +2030,16 @@ async function cropSign(id){
     const weak=!lines.length||effScore(lines,Hink)<WEAK_READ; let pic=null;
     if(weak&&pictureProvider()&&navigator.onLine){
       const guesses=[...new Set(passes.map(textOf).filter(Boolean))].slice(0,6);
-      try{ pic=await aiReadPicture(best.img||dk.blob,guesses,status); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
+      /* the whole straightened frame, never the second look's band (v175, H's two-line sticker 骑车勿盯 / 还车勿忘: the tight band held the lower line only, and the AI read that line alone) */
+      try{ pic=await aiReadPicture(dk.blob,guesses,status); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
       if(stale()) return; r.pic=pic?{zh:pic.zh,bad:pic.bad,model:pic.model}:null;
     }
     if(pic&&!pic.bad){
       /* the AI's lines replace the reading: no confidences (every character is open in the picker), no boxes (the sheet
          shows the whole crop), the reader's texts become the alternatives; the answer is the check, no text check follows */
       const zh=pic.zh.split("\n"), guesses=[...new Set(passes.map(textOf).filter(t=>t&&t!==pic.zh))].slice(0,6);
-      SIGN[id]={lines:zh, orig:zh.slice(), conf:[], boxes:zh.map(()=>[]), img:best.img||dk.blob, angle:best.angle||dk.angle||0, tightened:!!best.tightened, region:r, alts:guesses, trad:!!pic.zht, tradDetected:!!pic.zht, tradText:pic.zht||"",
+      S.pendingImg=r.blob; /* the card image is the crop as framed, not the second look's band */
+      SIGN[id]={lines:zh, orig:zh.slice(), conf:[], boxes:zh.map(()=>[]), img:dk.blob, angle:dk.angle||0, tightened:false, region:r, alts:guesses, trad:!!pic.zht, tradDetected:!!pic.zht, tradText:pic.zht||"",
         ai:{zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,note:pic.note,ok:true,bad:false,pic:true}};
       delete READING[id]; renderShots(); return;
     }
