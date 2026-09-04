@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=168; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=169; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1324,9 +1324,25 @@ function cropRectStyle(){
   const pc=v=>(v*100).toFixed(2)+"%";
   return ` style="display:block;left:${pc(r.x/r.lw)};top:${pc(r.y/r.lh)};width:${pc(r.w/r.lw)};height:${pc(r.h/r.lh)}"`;
 }
+/* the framed area alone, enlarged to the box's width (v169, H: "toggle between full image display and only cropped area
+   display by tipping with a finger outside the cropped area"): CROP.zoom, a tap outside the frame switches, a tap on
+   the enlarged view switches back, a swipe still scrolls; the frame's handles are hidden while enlarged */
+function zoomStyle(s){
+  const r=CROP.rect, m=0.04; if(!r||!r.lw||!r.lh) return "";
+  const x0=Math.max(0,(r.x-m*r.w)/r.lw), y0=Math.max(0,(r.y-m*r.h)/r.lh), x1=Math.min(1,(r.x+r.w*(1+m))/r.lw), y1=Math.min(1,(r.y+r.h*(1+m))/r.lh);
+  const fw=Math.max(0.01,x1-x0), fh=Math.max(0.01,y1-y0);
+  const pos=(f,fw)=>fw>=1?0:f/(1-fw)*100;
+  return `aspect-ratio:${(fw*r.lw).toFixed(1)}/${(fh*r.lh).toFixed(1)};background-image:url(${shotURL(s)});background-size:${(100/fw).toFixed(2)}% ${(100/fh).toFixed(2)}%;background-position:${pos(x0,fw).toFixed(2)}% ${pos(y0,fh).toFixed(2)}%`;
+}
 function wireCrop(layer){
   const rect=layer.querySelector(".croprect");
+  /* a short tap without movement toggles the enlarged view; a swipe is left to the page */
+  const tapOrScroll=e=>{ const t0=Date.now(), sx=e.clientX, sy=e.clientY;
+    const off=()=>{ layer.removeEventListener("pointerup",up); layer.removeEventListener("pointercancel",off); };
+    const up=ev=>{ off(); if(Math.hypot(ev.clientX-sx,ev.clientY-sy)<8&&Date.now()-t0<600){ CROP.zoom=!CROP.zoom; renderShots(); } };
+    layer.addEventListener("pointerup",up); layer.addEventListener("pointercancel",off); };
   layer.onpointerdown=e=>{
+    if(layer.classList.contains("zoomed")){ tapOrScroll(e); return; }
     const r=layer.getBoundingClientRect();
     const px=e.clientX-r.left, py=e.clientY-r.top;
     const cur=CROP.rect;
@@ -1348,7 +1364,7 @@ function wireCrop(layer){
         mode="move"; grab=[px-cur.x,py-cur.y]; mw=cur.w; mh=cur.h;
       }
     }
-    if(mode==="draw"&&cur) return; /* a frame exists: no new frame — the swipe scrolls the page instead (`.croplayer.framed`, v131/v132); adjusting the frame is allowed and re-reads, Cancel removes it (H, v129–v132) */
+    if(mode==="draw"&&cur){ tapOrScroll(e); return; } /* a frame exists: no new frame — the swipe scrolls the page instead (`.croplayer.framed`, v131/v132), a tap enlarges the framed area (v169); adjusting the frame is allowed and re-reads, Cancel removes it (H, v129–v132) */
     e.preventDefault();
     clearTimeout(READ_TIMER[layer.dataset.id]); /* adjusting the frame — read after the next release */
     if(mode==="draw") setRect(px,py,0,0);
@@ -2487,11 +2503,11 @@ function renderShots(){
   box.innerHTML=`<div class="listhead">Inbox (${S.inbox.length})</div>`+pending+
     S.inbox.map(s=>{
       const dt=new Date(s.ts).toLocaleString("en-GB");
-      const cropping=CROP && CROP.id===s.id;
+      const cropping=CROP && CROP.id===s.id, zoomed=!!(cropping&&CROP.rect&&CROP.zoom);
       return `<div class="shot">
         <div class="shotwrap">
-          <img src="${shotURL(s)}" alt="photo">
-          ${cropping?`<div class="croplayer${CROP.rect?" framed":""}" data-id="${s.id}"><div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div></div></div>`:""}
+          ${zoomed?`<div class="shotzoom" style="${zoomStyle(s)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(s)}" alt="photo">`}
+          ${cropping?`<div class="croplayer${CROP.rect?" framed":""}${zoomed?" zoomed":""}" data-id="${s.id}">${zoomed?"":`<div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div></div>`}</div>`:""}
         </div>
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">Cancel</button>`
