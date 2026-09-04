@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=190; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=191; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -353,7 +353,19 @@ function aiAcct(pv){ return aiAccounts()[pv]||{}; }
 function aiKey(pv){ return aiAcct(pv||aiProvider()).key||((pv||aiProvider())===aiProvider()&&S.settings.aiKey)||""; }
 function aiModel(pv){ pv=pv||aiProvider(); return aiAcct(pv).model||AI_PROVIDERS[pv].model; }
 function aiBase(pv){ pv=pv||aiProvider(); return (pv==="custom"?(aiAcct(pv).base||S.settings.aiBase||""):AI_PROVIDERS[pv].base).replace(/\/+$/,""); }
-function aiOn(){ return !!aiKey()&&!!aiBase(); }
+/* the owner's relay (v191, H: "go with the relay" — a friend's phone has no key, and the key must not live in the public
+   code): a Supabase edge function of H's holds the provider keys and forwards OpenAI-style requests; a phone without a
+   key of its own for a provider sends its requests there, with its installation id, and the function counts and caps
+   them per phone and per day. The phone's own key always wins. Providers the relay carries: RELAY_PROVIDERS. */
+const relayUrl=()=>SHARE_URL+"/functions/v1/ai-relay", RELAY_PROVIDERS=["deepseek","qwen"]; /* SHARE_URL is declared further down, hence a function */
+const relayOn=()=>S.settings.aiRelay!==false;
+function viaRelay(pv){ pv=pv||aiProvider(); return !aiKey(pv)&&relayOn()&&RELAY_PROVIDERS.includes(pv); }
+function aiOn(){ return (!!aiKey()||viaRelay())&&!!aiBase(); }
+/* one OpenAI-style request through the relay: the function adds the key and answers with the provider's JSON as it is */
+async function relayFetch(pv,body){
+  return fetch(relayUrl(),{method:"POST",headers:{"content-type":"application/json","apikey":SHARE_KEY,"authorization":"Bearer "+SHARE_KEY,"x-install":installId()},body:JSON.stringify({provider:pv,body})});
+}
+function relayError(r,t){ return r.status===429?"the daily limit of the owner's relay is reached — try again tomorrow":r.status===404||r.status===503?"the owner's relay is not set up":"relay error "+r.status+(t?": "+t:""); }
 async function setAiAccount(pv,acct){ const all={...aiAccounts()}; if(acct) all[pv]={...aiAcct(pv),...acct}; else delete all[pv]; await setSetting("aiAccounts",all); }
 async function migrateAi(){
   if(!S.settings.aiKey) return; const pv=aiProvider();
@@ -367,7 +379,7 @@ async function migrateAi(){
    WEAK_READ or found nothing. The active provider is used when it takes pictures, else the first one with a key that
    does. Setting "aiPicture" (absent = on). */
 const pictureOn=()=>S.settings.aiPicture!==false;
-function pictureProvider(){ if(!pictureOn()) return null; return [aiProvider(),...Object.keys(AI_PROVIDERS)].find(pv=>AI_PROVIDERS[pv].vision&&aiKey(pv)&&aiBase(pv))||null; }
+function pictureProvider(){ if(!pictureOn()) return null; return [aiProvider(),...Object.keys(AI_PROVIDERS)].find(pv=>AI_PROVIDERS[pv].vision&&(aiKey(pv)||viaRelay(pv))&&aiBase(pv))||null; }
 const pictureModel=pv=>AI_PROVIDERS[pv].vmodel||aiModel(pv);
 const PIC_MAX=800;
 async function pictureJpeg(blob){
@@ -379,7 +391,7 @@ async function pictureJpeg(blob){
 const PIC_SYSTEM=`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","bad":true|false}. "zh" = the Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without Latin letters, numbers of the decoration or anything you cannot see; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural English meaning of the text as a sign or name (short, English only); "note" = one short remark if needed; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty. An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`;
 async function aiReadPicture(blob,alts,status){
   const pv=pictureProvider(); if(!pv) throw new Error("no picture provider");
-  const key=aiKey(pv), model=pictureModel(pv), pic=await pictureJpeg(blob);
+  const key=aiKey(pv), model=pictureModel(pv), pic=await pictureJpeg(blob), relay=!key&&viaRelay(pv);
   const text=`Read the Chinese text on this picture. The reader's guesses: ${alts.length?alts.map(a=>a.replace(/\n/g," / ")).join(" | "):"none"}.`;
   const req=`[picture ${pic.w}×${pic.h} JPEG, ${pic.kb} KB] ${text}`; /* the log never carries the picture */
   status&&status("Asking the AI about the picture …");
@@ -390,9 +402,9 @@ async function aiReadPicture(blob,alts,status){
         body:JSON.stringify({model,max_tokens:1000,system:PIC_SYSTEM,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:pic.b64}},{type:"text",text}]}]})});
     else { const body={model,max_tokens:1000,temperature:0,messages:[{role:"system",content:PIC_SYSTEM},{role:"user",content:[{type:"text",text},{type:"image_url",image_url:{url:"data:image/jpeg;base64,"+pic.b64}}]}]};
       if(pv==="qwen"&&/^qwen3/.test(model)) body.enable_thinking=false; /* the hybrid models think by default — the short JSON must not wait for that */
-      r=await fetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
+      r=relay?await relayFetch(pv,body):await fetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
   }catch(err){ logAi({model,req,err:"no connection: "+(err&&err.message||err)}); throw new Error("no connection"); }
-  if(!r.ok){ let t=""; try{ const j=await r.json(); t=(j.error&&(j.error.message||j.error))||j.message||""; }catch(e){} logAi({model,status:r.status,req,err:t}); throw new Error("API error "+r.status+(t?": "+t:"")); }
+  if(!r.ok){ let t=""; try{ const j=await r.json(); t=(j.error&&(j.error.message||j.error))||j.message||""; }catch(e){} logAi({model,status:r.status,req,err:t}); throw new Error(relay?relayError(r,t):"API error "+r.status+(t?": "+t:"")); }
   const data=await r.json(); countTokens(pv,data); bump("pics"); bumpModel(model); /* the usage counters and the daily row count the picture readings (v178, H) and the model (v179) */
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
   logAi({model,status:r.status,req,res:raw.slice(0,1500)});
@@ -442,18 +454,19 @@ const AI_SYSTEM=`You review flashcards for an adult learning to read Chinese in 
 For every card return the corrected card. Rules: "zh" = the Chinese text in simplified characters (always simplified, even when the sign is traditional), fixed only if it is clearly an OCR slip (keep line breaks); "p" = pinyin with tone marks, correct for this context (多音字!), one space between syllables, " / " between lines; "m" = natural English meaning of the whole text as a sign or word (short, in English only, no explanations); the text is usually a real sign, menu item, product name or brand — when the readings circle around a well-known brand or product name, "zh" is that name; "note" = one short sentence on what was wrong, or "ok"; "ok" = true when zh, pinyin and meaning were already right; "zht" = only when the input has "script":"traditional" (the photo shows traditional characters): "zh" written in traditional characters as it stands on the sign; "alt" (when present) = other readings of the same photo by other OCR passes and models — the true text is often a mix of them, or a well-known name or phrase they all circle around; prefer a real sign, menu or product text that every reading could be a misreading of; "bad" = true when the Chinese text is OCR garbage — no plausible sign, menu or product text can be made of it — then keep "zh" as given, leave "m" empty and say so in the note. Before calling a text bad, try the "alt" readings: when one of them, or a mix of them, is a plausible text or a well-known name (a brand on a bottle, a shop name), answer with that as "zh", "bad" false, and say in the note which reading you used. Never replace an unreadable text with a mere guess.
 Answer with a JSON array only, one object per input card in the same order: [{"c":"<input c>","zh":"…","p":"…","m":"…","note":"…","ok":true|false,"bad":true|false}]. No prose, no code fences.`;
 async function aiAsk(cards,status){
-  const key=aiKey(); if(!key) throw new Error("no API key");
-  const pv=aiProvider(), model=aiModel(), user=JSON.stringify(cards.map(aiCardPayload));
+  const pv=aiProvider(), key=aiKey(), relay=!key&&viaRelay(pv); if(!key&&!relay) throw new Error("no API key");
+  const model=aiModel(), user=JSON.stringify(cards.map(aiCardPayload));
   status&&status(`asking ${model} about ${cards.length} card${cards.length>1?"s":""} …`);
   let r;
   try{
     if(pv==="claude")
       r=await fetch(aiBase(),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({model,max_tokens:4000,system:AI_SYSTEM,messages:[{role:"user",content:user}]})});
-    else /* OpenAI-style chat completions (DeepSeek, Qwen, GLM, …) */
-      r=await fetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},
-        body:JSON.stringify({model,max_tokens:4000,temperature:0,messages:[{role:"system",content:AI_SYSTEM},{role:"user",content:user}]})});
+    else { /* OpenAI-style chat completions (DeepSeek, Qwen, GLM, …), direct with the phone's key or through the owner's relay */
+      const body={model,max_tokens:4000,temperature:0,messages:[{role:"system",content:AI_SYSTEM},{role:"user",content:user}]};
+      r=relay?await relayFetch(pv,body):await fetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
   }catch(err){ logAi({model,req:user.slice(0,1500),err:"no connection: "+(err&&err.message||err)}); throw new Error("no connection (offline"+(pv==="claude"?", or the API is blocked — VPN?":", or this provider refuses calls from a browser — try another provider")+")"); }
+  if(!r.ok&&relay){ let t=""; try{ const j=await r.json(); t=(j.error&&(j.error.message||j.error))||j.message||""; }catch(e){} logAi({model,status:r.status,req:user.slice(0,1500),err:t}); throw new Error(relayError(r,t)); }
   if(r.status===401||r.status===403) throw new Error("API key rejected ("+r.status+")");
   if(r.status===402) throw new Error("no credit left at "+AI_PROVIDERS[pv].name);
   if(!r.ok){ let t=""; try{ const j=await r.json(); t=(j.error&&(j.error.message||j.error))||j.message||""; }catch(e){} throw new Error("API error "+r.status+(t?": "+t:"")); }
@@ -541,7 +554,7 @@ function renderAiRow(){
   const st=$("#ai-status"), btn=$("#ai-btn"), run=$("#ai-run"), form=$("#ai-form"); if(!st) return;
   const all=aiQueue(), q=all.length, fl=all.filter(d=>d.flag).length, sp=all.filter(d=>!d.flag&&d.mt.suspect).length, pd=q-fl-sp;
   const ppv=pictureProvider(); const ab=$("#about-s"); if(ab) ab.textContent=aboutText();
-  st.textContent=aiOn()?`On: ${AI_PROVIDERS[aiProvider()].name}, ${aiModel()}. Sends card text${ppv?`, and the framed area of a photo when the reading is weak (${AI_PROVIDERS[ppv].short}, ${pictureModel(ppv)})`:" only, never photos"}.`:"Off. The app's owner sets it up under Advanced settings.";
+  st.textContent=aiOn()?`On: ${AI_PROVIDERS[aiProvider()].name}, ${aiModel()}${viaRelay()?", through the app owner's relay":""}. Sends card text${ppv?`, and the framed area of a photo when the reading is weak (${AI_PROVIDERS[ppv].short}, ${pictureModel(ppv)}${viaRelay(ppv)?", through the relay":""})`:" only, never photos"}.`:"Off. The app's owner sets it up under Advanced settings.";
   if(btn) btn.textContent=aiOn()?"Settings":"Set up";
   run.hidden=!aiOn(); run.disabled=!q;
   run.textContent=q?"Ask AI":"Nothing to review";
@@ -556,7 +569,7 @@ function renderAiRow(){
     chips.forEach(c=>c.classList.toggle("on",c.dataset.aipv===pv));
     $("#ai-basefield").hidden=pv!=="custom"; $("#ai-picfield").hidden=!P.vision; $("#ai-where").textContent=P.where; $("#ai-key").placeholder=P.hint;
     $("#ai-key").value=aiKey(pv); $("#ai-model").value=aiModel(pv); $("#ai-base").value=aiAcct(pv).base||(pv==="custom"?S.settings.aiBase||"":""); delete $("#ai-model").dataset.hand;
-    $("#ai-acct").textContent=aiKey(pv)?`${P.name}: key saved${pv===aiProvider()?", in use":""}.`:`${P.name}: no key yet.`; };
+    $("#ai-acct").textContent=aiKey(pv)?`${P.name}: key saved${pv===aiProvider()?", in use":""}.`:viaRelay(pv)?`${P.name}: no key on this phone — the owner's relay is used.`:`${P.name}: no key yet.`; };
   chips.forEach(c=>c.onclick=async()=>{ const pv=c.dataset.aipv; if(aiKey(pv)&&pv!==aiProvider()){ await setSetting("aiProvider",pv); renderAiRow(); } showPv(pv); });
   showPv(form.dataset.pv&&AI_PROVIDERS[form.dataset.pv]?form.dataset.pv:aiProvider());
   $("#ai-save").onclick=async()=>{
@@ -720,7 +733,7 @@ function renderMore(main){
     ${S.admin?`<div class="listhead">Translation</div>
     <div class="mrow"><div><div class="t">Offline translation</div><div class="s" id="nmt-status">Checking …</div></div><button class="btn mini" id="nmt-btn" hidden></button></div>`:""}
     <div class="listhead">Online AI review</div>
-    <div class="mrow"><div><div class="t">AI review</div><div class="s" id="ai-status"></div><div class="s" style="margin-top:6px">What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. The framed area of a photo only when the reading is weak, to a provider that takes pictures.</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> Check every new card with the AI automatically (when online)</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
+    <div class="mrow"><div><div class="t">AI review</div><div class="s" id="ai-status"></div><div class="s" style="margin-top:6px">What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. The framed area of a photo only when the reading is weak, to a provider that takes pictures. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> Check every new card with the AI automatically (when online)</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
     ${S.admin?`<div class="aiform" id="ai-form" hidden>
       <div class="field"><label>Provider</label><div class="chipset" id="ai-providers">${Object.entries(AI_PROVIDERS).map(([k,v])=>`<button class="chip" data-aipv="${k}">${esc(v.short)}</button>`).join("")}</div>
         <div class="badge" id="ai-acct" style="margin-top:8px"></div>
@@ -2152,16 +2165,17 @@ function charCandidates(line,i,insert){ /* insert: candidates for a new characte
   return [...out.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]).slice(0,8);
 }
 async function aiCharAlternatives(line,i,insert){
-  const key=aiKey(); if(!key) throw new Error("no API key");
-  const pv=aiProvider(), model=aiModel(), chars=[...line];
+  const pv=aiProvider(), key=aiKey(), relay=!key&&viaRelay(pv); if(!key&&!relay) throw new Error("no API key");
+  const model=aiModel(), chars=[...line];
   const sys="You correct OCR of Chinese signs, menus and packaging. Answer with a JSON array of single Chinese characters only, most likely first, no prose.";
   const user=insert
     ?`OCR read this line: "${line}". One character is missing ${i===0?"at the start":i>=chars.length?"at the end":`between "${chars[i-1]}" and "${chars[i]}"`}. Give up to 4 likely characters for that gap, judging from the context.`
     :`OCR read this line: "${line}". Character ${i+1} ("${chars[i]}") is probably misread. Give up to 4 likely correct characters for that position, judging from the context.`;
   let r;
   if(pv==="claude") r=await fetch(aiBase(),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model,max_tokens:100,system:sys,messages:[{role:"user",content:user}]})});
-  else r=await fetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify({model,max_tokens:100,temperature:0,messages:[{role:"system",content:sys},{role:"user",content:user}]})});
-  if(!r.ok) throw new Error("API error "+r.status);
+  else { const body={model,max_tokens:100,temperature:0,messages:[{role:"system",content:sys},{role:"user",content:user}]};
+    r=relay?await relayFetch(pv,body):await fetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
+  if(!r.ok) throw new Error(relay?relayError(r):"API error "+r.status);
   const data=await r.json(); countTokens(pv,data); bumpModel(model);
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
   let arr=[]; try{ arr=JSON.parse(raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,"")); }catch(e){ arr=[...raw].filter(ch=>CJK.test(ch)); }
