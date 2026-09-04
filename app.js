@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=185; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=186; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -195,8 +195,7 @@ function wireChrome(){
     b.onclick=()=>{ const m=b.dataset.mode;
       S.editing=null; S.editFrom=null;                       /* a tab tap always leaves the edit form */
       if(m==="cards" && (S.mode==="cards"||S.mode==="add")) S.detail=null; /* Cards again → back to the list */
-      S.mode=m; render();
-      if(m==="inbox") $("#cam").click(); }; /* the Camera tab is the shutter (v184, H: "if I tap the camera icon I should immediately be using the camera") — the inbox page sits behind, so cancelling the camera lands there with the album and the waiting photos */
+      S.mode=m; render(); }; /* the Camera tab opens the inbox page with Take photo and From album — a tab that fired the camera at once (v184) went in v186, H: "I don't like the direct capture, revert" */
   });
   $("#cam").onchange=onPhoto; $("#album").onchange=onPhoto; /* camera, or photos already on the phone */
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden && S.mode==="inbox") renderShots(); });
