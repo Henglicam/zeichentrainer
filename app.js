@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=169; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=170; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -181,7 +181,8 @@ async function boot(){
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
   wireChrome(); render();
   autoBreaks(); /* old cards get their photo lines estimated once */
-  aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); });
+  aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); });
+  sendReport(); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) sendReport(); });
 }
 
 /* ---------- Rendering ---------- */
@@ -495,8 +496,8 @@ function renderAiRow(){
 function dayKey(t){ const d=new Date(t||Date.now()); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 /* ---------- usage counters and the owner's report (v162, H: "track who is using the app, how many times, how many words,
    how many tokens") ---------- counted on the phone only, in setting "usage": opens, reviews, byPhoto, byHand, deleted,
-   aiCalls, aiIn, aiOut — all time and in m{} for the current month. Nothing is sent anywhere; the report leaves the phone
-   through the share sheet when its owner taps Share. */
+   aiCalls, aiIn, aiOut — all time and in m{} for the current month. The report leaves the phone through the share sheet
+   on Share report, and once a day as an anonymous row to the owner's table while Usage sharing is on (v170). */
 const monthKey=()=>new Date().toISOString().slice(0,7);
 function usage(){ const u=S.settings.usage||{}; if(!u.first) u.first=Date.now(); if(u.month!==monthKey()){ u.month=monthKey(); u.m={}; } if(!u.m) u.m={}; return u; }
 let _usageTimer=null;
@@ -519,6 +520,43 @@ async function shareUsage(){
   if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err && err.name==="AbortError") return; } }
   try{ await navigator.clipboard.writeText(text); alert("Copied the usage report to the clipboard."); }catch(err){ alert("Sharing is not available here."); }
 }
+/* ---------- usage sharing (v170, H: "I want to share the app and get user stats" — automatic reports from every phone):
+   once a day, while online and the switch in More is on, the same counts as the report go to a table of H's own in a
+   free Supabase project (REST insert with the publishable key, which can only insert into "reports" — row level security,
+   H reads the rows in the dashboard): a random installation id, the app version, the phone model from the user agent,
+   days used, streak, opens, reviews, cards learned and created, deleted, AI calls and tokens, provider and model —
+   never card text, never photos, never the API key. Reachable from H's phone without a VPN (field-checked 2026-09-04).
+   Setting "shareUsage" (absent = on), "installId", "lastReport" (the day of the last successful send). */
+const SHARE_URL="https://xttuotninuwxnpcbyejn.supabase.co", SHARE_KEY="sb_publishable_UZrXhhKAckqkda4-r02qdA_tgilndum";
+const shareOn=()=>S.settings.shareUsage!==false;
+function installId(){ let id=S.settings.installId; if(!id){ const b=crypto.getRandomValues(new Uint8Array(8)); id=[...b].map(x=>x.toString(16).padStart(2,"0")).join(""); setSetting("installId",id); } return id; }
+function reportData(){
+  const u=usage(), m=u.m||{}, st=learnStats(), n=k=>u[k]||0, mn=k=>m[k]||0;
+  const ua=navigator.userAgent, dev=(ua.match(/\(([^)]*)\)/)||[])[1]||"";
+  return {install:installId(), version:APP_V, device:dev, first:u.first?new Date(u.first).toISOString().slice(0,10):null,
+    days:(S.settings.days||[]).length, streak:st.streak, opens:n("opens"), opensMonth:mn("opens"),
+    reviews:n("reviews"), reviewsMonth:mn("reviews"), learned:st.total, cards:deck().length,
+    byPhoto:n("byPhoto"), byHand:n("byHand"), deleted:n("deleted"),
+    aiCalls:n("aiCalls"), aiIn:n("aiIn"), aiOut:n("aiOut"), aiCallsMonth:mn("aiCalls"), aiInMonth:mn("aiIn"), aiOutMonth:mn("aiOut"),
+    ai:aiOn()?aiProvider()+" "+aiModel():null, inbox:S.inbox.length, tags:allTags().length, lang:navigator.language||null};
+}
+let _reporting=false;
+/* one report per day; a failed send is retried at the next start, foreground or reconnect */
+async function sendReport(force){
+  if(!S.ready||!shareOn()||!navigator.onLine||_reporting) return false;
+  if(!force&&S.settings.lastReport===dayKey()) return false;
+  _reporting=true;
+  try{
+    const r=await fetch(SHARE_URL+"/rest/v1/reports",{method:"POST",headers:{"apikey":SHARE_KEY,"Authorization":"Bearer "+SHARE_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({data:reportData()})});
+    if(!r.ok) throw new Error("report "+r.status);
+    await setSetting("lastReport",dayKey()); const el=$("#share-status"); if(el) el.textContent=shareNote(); return true;
+  }catch(e){ return false; }
+  finally{ _reporting=false; }
+}
+function shareNote(){
+  if(!shareOn()) return "Off. Nothing is sent.";
+  const d=S.settings.lastReport; return d?(d===dayKey()?"Last sent today.":"Last sent "+d+"."):"Not sent yet.";
+}
 /* the owner's rows in More (Reset, Diagnostics, Mirror, the downloads, the usage report) open with a password (v162, H:
    "protect all those administrative functions with a password" — one master password, its SHA-256 in the code; it
    stops taps, not a reader of the source; unlocked for the session only) */
@@ -532,6 +570,7 @@ function learnStats(){
   while(days.has(dayKey(d))){ streak++; d.setDate(d.getDate()-1); }
   return {total,week,streak};
 }
+const nOf=(n,w)=>`${n||0} ${w}${(n||0)===1?"":"s"}`;
 function statsLine(){ const {total,week,streak}=learnStats(); return `${total} card${total===1?"":"s"} learned, ${week} reviewed this week, streak ${streak} day${streak===1?"":"s"}`; }
 /* ---------- backup nudge + photo cleanup: everything lives on one phone ---------- */
 const OLD_DAYS=30;
@@ -584,7 +623,7 @@ function renderMore(main){
   const st=S.persist===true?"Persistent on this phone.":S.persist===false?"Not persistent yet. Install the app so the system keeps the data.":"Checking …";
   main.innerHTML=`<div class="pane more">
     <div class="listhead">Your data</div>
-    <div class="mrow"><div><div class="t">Export</div><div class="s">Progress and cards as one file, via the share sheet. ${backupNote()}</div><label class="check" style="margin-top:8px"><input type="checkbox" id="export-photos"${exportPhotos()?" checked":""}> Include photos (adds about ${(photoBytes()*1.37/1048576).toFixed(1)} MB)</label></div><button class="btn mini" id="export">Export</button></div>
+    <div class="mrow"><div><div class="t">Export</div><div class="s">Progress and cards as one file, via the share sheet. ${backupNote()}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="export-photos"${exportPhotos()?" checked":""}> Include photos (adds about ${(photoBytes()*1.37/1048576).toFixed(1)} MB)</label></div><button class="btn mini" id="export">Export</button></div>
     <div class="mrow"><div><div class="t">Import</div><div class="s">A zeichentrainer-….json.txt file. Existing cards are overwritten.</div></div><button class="btn mini" id="import">Import</button></div>
     <div class="mrow"><div><div class="t">Flagged cards</div><div class="s">${deck().filter(d=>d.flag).length} flagged for review. Share the list as text, for a teacher.</div></div><span class="btnrow"><button class="btn mini" id="show-flag">Show</button><button class="btn mini" id="share-flag">Share</button></span></div>
     ${S.admin?`<div class="listhead">Translation</div>
@@ -610,7 +649,8 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div></div><button class="btn mini" id="mirror-check">Check now</button></div>
     <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>`:""}
     <div class="listhead">On this phone</div>
-    <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}${S.admin?` Opened ${usage().opens||0} times, ${usage().reviews||0} reviews, ${usage().aiCalls||0} AI calls.`:""}</div></div>${S.admin?`<button class="btn mini" id="usage-share">Share report</button>`:""}</div>
+    <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}. Opened ${nOf(usage().opens,"time")}, ${nOf(usage().reviews,"review")}, ${nOf(usage().aiCalls,"AI call")}.</div></div><button class="btn mini" id="usage-share">Share report</button></div>
+    <div class="mrow"><div><div class="t">Usage sharing</div><div class="s">Sends anonymous usage counts to the app's owner once a day: days used, reviews, cards, AI calls. No card text, no photos. <span id="share-status">${esc(shareNote())}</span><label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> Send once a day</label></div></div></div>
     <div class="mrow"><div><div class="t">Photos</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">Delete ${oldShots().length}</button>`:""}</div>
     ${S.admin?`<div class="listhead">Diagnostics</div>
     <div class="mrow"><div><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${READLOG.length} step${READLOG.length===1?"":"s"}.</div></div><span class="btnrow"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button></span></div>
@@ -618,14 +658,16 @@ function renderMore(main){
     <div class="listhead">Start over</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>`:""}
     <div class="listhead">Advanced settings</div>
-    ${S.admin?`<div class="mrow"><div><div class="t">Unlocked</div><div class="s">Reset, Diagnostics, Mirror, the downloads and the usage report are shown until the app is closed.</div></div><button class="btn mini" id="admin-lock">Lock</button></div>`
-    :`<div class="mrow"><div><div class="t">Locked</div><div class="s">Reset, Diagnostics, Mirror, the downloads and the usage report are for the app's owner.</div></div></div>
+    ${S.admin?`<div class="mrow"><div><div class="t">Unlocked</div><div class="s">Reset, Diagnostics, Mirror and the downloads are shown until the app is closed.</div></div><button class="btn mini" id="admin-lock">Lock</button></div>`
+    :`<div class="mrow"><div><div class="t">Locked</div><div class="s">Reset, Diagnostics, Mirror and the downloads are for the app's owner.</div></div></div>
     <div class="field"><label>Password</label><div class="btnrow"><input id="admin-pw" type="password" autocomplete="off"><button class="btn mini" id="admin-unlock">Unlock</button></div><div class="err" id="admin-err" style="display:none">Wrong password.</div></div>`}
     <div class="listhead">About</div>
-    <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s">${esc(ver)}. Works offline; everything stays on this phone.</div></div></div>
+    <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s">${esc(ver)}. Works offline. Cards and photos stay on this phone; anonymous usage counts go to the app's owner.</div></div></div>
   </div>`;
   $("#export").onclick=exportData;
   $("#export-photos").onchange=e=>setSetting("exportPhotos",!!e.target.checked);
+  $("#usage-share").onclick=shareUsage;
+  $("#share-usage").onchange=async e=>{ await setSetting("shareUsage",!!e.target.checked); $("#share-status").textContent=shareNote(); sendReport(); };
   $("#import").onclick=()=>$("#imp").click();
   $("#share-flag").onclick=shareFlagged;
   $("#show-flag").onclick=()=>{ S.mode="cards"; S.detail=null; S.editing=null; S.query=""; S.filterUnv=false; S.filterAi=false; S.filterFlag=true; render(); };
@@ -636,7 +678,6 @@ function renderMore(main){
     $("#mirror-url").onchange=async e=>{ await setSetting("mirror",e.target.value.trim()); tellMirror(); };
     renderOcrRow();
     $("#mirror-check").onclick=()=>{ mirrorCheck(true); };
-    $("#usage-share").onclick=shareUsage;
     $("#reset").onclick=resetAll;
     $("#admin-lock").onclick=()=>{ S.admin=false; render(); };
   } else {
