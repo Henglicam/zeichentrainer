@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=197; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=198; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -162,9 +162,13 @@ const reportUrl=()=>SHARE_URL+"/functions/v1/usage-report";
 let USERS=null; /* the last answer: {at, rows} */
 async function fetchAllUsers(){
   const r=await fetch(reportUrl(),{method:"POST",headers:{"content-type":"application/json","apikey":SHARE_KEY,"authorization":"Bearer "+SHARE_KEY},body:JSON.stringify({password:S.adminPw||""})});
-  if(r.status===401) throw new Error("the password was not accepted by the report function");
-  if(r.status===404||r.status===503) throw new Error("the report function is not set up");
-  if(!r.ok) throw new Error("report error "+r.status);
+  if(!r.ok){ /* v198 — the phone showed a 401 that the function's own "wrong password" could not be told from Supabase's JWT gate: name the sender */
+    const body=await r.text().catch(()=>""); logErr("report",r.status+": "+body.slice(0,300));
+    if(r.status===401){ if(/jwt/i.test(body)) throw new Error("the report function still checks the JWT — switch off \"Verify JWT\" under its Settings in the dashboard");
+      if(/wrong password/i.test(body)) throw new Error("the secret REPORT_PASSWORD of the report function is missing or differs from the app password");
+      throw new Error("the report function refused the call (401): "+(body.slice(0,120)||"no details")); }
+    if(r.status===404||r.status===503) throw new Error("the report function is not set up");
+    throw new Error("report error "+r.status+": "+(body.slice(0,120)||"no details")); }
   const rows=await r.json(); if(!Array.isArray(rows)) throw new Error("unexpected answer");
   USERS={at:Date.now(),rows}; return USERS;
 }
