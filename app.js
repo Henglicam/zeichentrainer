@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=187; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=188; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1131,7 +1131,7 @@ function renderCards(main){
   const ca=$("#chip-ai"); if(ca) ca.onclick=()=>{ S.filterAi=!S.filterAi; render(); };
   document.querySelectorAll("[data-tagchip]").forEach(b=> b.onclick=()=>{ S.filterTag=S.filterTag===b.dataset.tagchip?null:b.dataset.tagchip; render(); });
   const aa=$("#ai-acceptall"); if(aa) aa.onclick=async()=>{ aa.disabled=true; await aiAcceptAll(); render(); };
-  $("#newcard").onclick=()=>{ S.mode="add"; render(); };
+  $("#newcard").onclick=()=>{ S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; S.mode="add"; render(); }; /* a card from scratch starts without a picture (v188); the photo path comes in through cropOk with its own pending image */
   wire();
 }
 function renderCardDetail(main,c){
@@ -2658,6 +2658,7 @@ async function saveSign(id){
   if(sg.trad&&(sg.tradText||"").trim()) card.trad=sg.tradText.trim(); /* the text as it stands on the photo, in traditional characters (v101) */
   if(S.pendingImg) card.img=await jpegOf(S.pendingImg);
   if(S.pendingFull) card.imgFull=S.pendingFull;
+  S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; /* used up — the Add form once showed the last photo's crop on a card made from scratch (v188) */
   bump("byPhoto"); S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
   S.queue=buildQueue(false); QSCARD[id]=card.id;
