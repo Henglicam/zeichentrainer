@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=171; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=172; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -168,6 +168,7 @@ async function boot(){
     S.progress = {}; prog.forEach(r=>{ const {id,c,...s}=r; S.progress[id||c]=s; });
     sett.forEach(r=>{ S.settings[r.k]=r.v; });
     if(Array.isArray(S.settings.errlog)) ERRLOG.unshift(...S.settings.errlog.slice(-20));
+    await migrateAi();
     bump("opens");
     /* progress of cards that no longer exist (the built-in deck of v1–v32) is dropped */
     cust.forEach(d=>{ if(!d.id) d.id=d.c; });
@@ -335,17 +336,30 @@ function render(){
    photos. The key lives in the settings store. */
 /* providers: Chinese ones take WeChat Pay / Alipay and need no VPN; all but Claude speak the OpenAI-style chat API */
 const AI_PROVIDERS={
-  deepseek:{name:"DeepSeek", base:"https://api.deepseek.com", model:"deepseek-chat", hint:"sk-…", where:"Key: platform.deepseek.com → API keys. Top up with WeChat Pay or Alipay (a few yuan last months). No VPN needed."},
-  qwen:{name:"Qwen (Alibaba Bailian)", base:"https://dashscope.aliyuncs.com/compatible-mode/v1", model:"qwen-plus", hint:"sk-…", where:"Key: bailian.console.aliyun.com → API-KEY (Alipay account). No VPN needed."},
-  glm:{name:"GLM (Zhipu)", base:"https://open.bigmodel.cn/api/paas/v4", model:"glm-4-flash", hint:"….…", where:"Key: open.bigmodel.cn → API keys. WeChat Pay or Alipay; glm-4-flash is free. No VPN needed."},
-  claude:{name:"Claude (Anthropic)", base:"https://api.anthropic.com/v1/messages", model:"claude-sonnet-5", hint:"sk-ant-…", where:"Key: console.anthropic.com → API keys. Needs the VPN and a card from outside China."},
-  custom:{name:"Other (OpenAI-style API)", base:"", model:"", hint:"API key", where:"Any provider with an OpenAI-compatible /chat/completions endpoint: enter its base URL and model name."}
+  deepseek:{name:"DeepSeek", short:"DeepSeek", base:"https://api.deepseek.com", model:"deepseek-chat", hint:"sk-…", where:"Key: platform.deepseek.com → API keys. Top up with WeChat Pay or Alipay (a few yuan last months). No VPN needed."},
+  qwen:{name:"Qwen (Alibaba Bailian)", short:"Qwen", base:"https://dashscope.aliyuncs.com/compatible-mode/v1", model:"qwen3.7-plus", hint:"sk-…", where:"Key: bailian.console.aliyun.com → API-KEY (Alipay account). No VPN needed."},
+  glm:{name:"GLM (Zhipu)", short:"GLM", base:"https://open.bigmodel.cn/api/paas/v4", model:"glm-4-flash", hint:"….…", where:"Key: open.bigmodel.cn → API keys. WeChat Pay or Alipay; glm-4-flash is free. No VPN needed."},
+  claude:{name:"Claude (Anthropic)", short:"Claude", base:"https://api.anthropic.com/v1/messages", model:"claude-sonnet-5", hint:"sk-ant-…", where:"Key: console.anthropic.com → API keys. Needs the VPN and a card from outside China."},
+  custom:{name:"Other (OpenAI-style API)", short:"Other", base:"", model:"", hint:"API key", where:"Any provider with an OpenAI-compatible /chat/completions endpoint: enter its base URL and model name."}
 };
 const AI_PROVIDER_DEFAULT="deepseek";
 function aiProvider(){ return AI_PROVIDERS[S.settings.aiProvider]?S.settings.aiProvider:AI_PROVIDER_DEFAULT; }
-function aiModel(){ return S.settings.aiModel||AI_PROVIDERS[aiProvider()].model; }
-function aiBase(){ const pv=aiProvider(); return (pv==="custom"?(S.settings.aiBase||""):AI_PROVIDERS[pv].base).replace(/\/+$/,""); }
-function aiOn(){ return !!(S.settings.aiKey)&&!!aiBase(); }
+/* one account per provider (v172, H: "several AI providers to switch between" — "I don't want to delete DeepSeek"):
+   setting "aiAccounts" = {deepseek:{key,model,base}, qwen:{…}, …}; "aiProvider" names the active one. Until v171 the
+   app held one key (settings aiKey, aiModel, aiBase); boot moves them into the active provider's account (migrateAi),
+   and a bare aiKey still counts as the active provider's key so nothing is lost on the way. */
+const aiAccounts=()=>S.settings.aiAccounts||{};
+function aiAcct(pv){ return aiAccounts()[pv]||{}; }
+function aiKey(pv){ return aiAcct(pv||aiProvider()).key||((pv||aiProvider())===aiProvider()&&S.settings.aiKey)||""; }
+function aiModel(pv){ pv=pv||aiProvider(); return aiAcct(pv).model||AI_PROVIDERS[pv].model; }
+function aiBase(pv){ pv=pv||aiProvider(); return (pv==="custom"?(aiAcct(pv).base||S.settings.aiBase||""):AI_PROVIDERS[pv].base).replace(/\/+$/,""); }
+function aiOn(){ return !!aiKey()&&!!aiBase(); }
+async function setAiAccount(pv,acct){ const all={...aiAccounts()}; if(acct) all[pv]={...aiAcct(pv),...acct}; else delete all[pv]; await setSetting("aiAccounts",all); }
+async function migrateAi(){
+  if(!S.settings.aiKey) return; const pv=aiProvider();
+  await setAiAccount(pv,{key:S.settings.aiKey, model:S.settings.aiModel||AI_PROVIDERS[pv].model, base:S.settings.aiBase||""});
+  for(const k of ["aiKey","aiModel","aiBase"]){ delete S.settings[k]; idbDel("settings",k).catch(()=>{}); }
+}
 function aiQueue(){ return deck().filter(d=>d.flag||(d.mt&&(d.mt.pending||d.mt.suspect))); }
 function aiAutoOn(){ return aiOn()&&S.settings.aiAuto!==false; }
 /* the online AI is the meaning source whenever it can be reached; the offline model is the fallback */
@@ -373,7 +387,7 @@ const AI_SYSTEM=`You review flashcards for an adult learning to read Chinese in 
 For every card return the corrected card. Rules: "zh" = the Chinese text in simplified characters (always simplified, even when the sign is traditional), fixed only if it is clearly an OCR slip (keep line breaks); "p" = pinyin with tone marks, correct for this context (多音字!), one space between syllables, " / " between lines; "m" = natural English meaning of the whole text as a sign or word (short, in English only, no explanations); the text is usually a real sign, menu item, product name or brand — when the readings circle around a well-known brand or product name, "zh" is that name; "note" = one short sentence on what was wrong, or "ok"; "ok" = true when zh, pinyin and meaning were already right; "zht" = only when the input has "script":"traditional" (the photo shows traditional characters): "zh" written in traditional characters as it stands on the sign; "alt" (when present) = other readings of the same photo by other OCR passes and models — the true text is often a mix of them, or a well-known name or phrase they all circle around; prefer a real sign, menu or product text that every reading could be a misreading of; "bad" = true when the Chinese text is OCR garbage — no plausible sign, menu or product text can be made of it — then keep "zh" as given, leave "m" empty and say so in the note. Before calling a text bad, try the "alt" readings: when one of them, or a mix of them, is a plausible text or a well-known name (a brand on a bottle, a shop name), answer with that as "zh", "bad" false, and say in the note which reading you used. Never replace an unreadable text with a mere guess.
 Answer with a JSON array only, one object per input card in the same order: [{"c":"<input c>","zh":"…","p":"…","m":"…","note":"…","ok":true|false,"bad":true|false}]. No prose, no code fences.`;
 async function aiAsk(cards,status){
-  const key=S.settings.aiKey; if(!key) throw new Error("no API key");
+  const key=aiKey(); if(!key) throw new Error("no API key");
   const pv=aiProvider(), model=aiModel(), user=JSON.stringify(cards.map(aiCardPayload));
   status&&status(`asking ${model} about ${cards.length} card${cards.length>1?"s":""} …`);
   let r;
@@ -473,19 +487,28 @@ function renderAiRow(){
   run.hidden=!aiOn(); run.disabled=!q;
   run.textContent=q?"Ask AI":"Nothing to review";
   const rs=$("#ai-runstatus"); if(rs) rs.textContent=q?`${q} card${q>1?"s":""} waiting: ${fl} flagged, ${sp} uncertain reading${sp===1?"":"s"}, ${pd} pending translation${pd===1?"":"s"}.`:"Nothing waiting. Flag a card, or save a reading that looks uncertain.";
-  btn.onclick=()=>{ form.hidden=!form.hidden; if(!form.hidden) $("#ai-key").focus(); };
-  const sel=$("#ai-provider"), showPv=()=>{ const pv=AI_PROVIDERS[sel.value]||AI_PROVIDERS[AI_PROVIDER_DEFAULT];
-    $("#ai-basefield").hidden=sel.value!=="custom"; $("#ai-where").textContent=pv.where; $("#ai-key").placeholder=pv.hint;
-    /* model follows the provider unless typed by hand in this form */
-    if(!$("#ai-model").dataset.hand) $("#ai-model").value=(sel.value===S.settings.aiProvider&&S.settings.aiModel)||pv.model; };
-  sel.onchange=showPv; $("#ai-model").oninput=e=>{ e.target.dataset.hand="1"; }; showPv();
+  btn.onclick=()=>{ form.hidden=!form.hidden; if(!form.hidden&&!aiKey(form.dataset.pv)) $("#ai-key").focus(); };
+  /* the form shows one provider at a time (form.dataset.pv, the active one at first); its chip is lit, its key, model
+     and base come from its account; a tap on a chip with a key makes that provider active at once, a tap on one
+     without a key only shows its empty form — the active provider keeps working until a key is saved here */
+  const chips=[...form.querySelectorAll("[data-aipv]")], showPv=pv=>{ form.dataset.pv=pv; const P=AI_PROVIDERS[pv];
+    chips.forEach(c=>c.classList.toggle("on",c.dataset.aipv===pv));
+    $("#ai-basefield").hidden=pv!=="custom"; $("#ai-where").textContent=P.where; $("#ai-key").placeholder=P.hint;
+    $("#ai-key").value=aiKey(pv); $("#ai-model").value=aiModel(pv); $("#ai-base").value=aiAcct(pv).base||(pv==="custom"?S.settings.aiBase||"":""); delete $("#ai-model").dataset.hand;
+    $("#ai-acct").textContent=aiKey(pv)?`${P.name}: key saved${pv===aiProvider()?", in use":""}.`:`${P.name}: no key yet.`; };
+  chips.forEach(c=>c.onclick=async()=>{ const pv=c.dataset.aipv; if(aiKey(pv)&&pv!==aiProvider()){ await setSetting("aiProvider",pv); renderAiRow(); } showPv(pv); });
+  showPv(form.dataset.pv&&AI_PROVIDERS[form.dataset.pv]?form.dataset.pv:aiProvider());
   $("#ai-save").onclick=async()=>{
-    const key=$("#ai-key").value.trim(), model=$("#ai-model").value.trim(), pv=sel.value;
-    await setSetting("aiProvider",pv); await setSetting("aiBase",$("#ai-base").value.trim());
-    if(key) await setSetting("aiKey",key); await setSetting("aiModel",model||AI_PROVIDERS[pv].model); await setSetting("aiAuto",$("#ai-auto").checked);
+    const key=$("#ai-key").value.trim(), model=$("#ai-model").value.trim(), pv=form.dataset.pv;
+    await setAiAccount(pv,{key:key||aiKey(pv), model:model||AI_PROVIDERS[pv].model, base:$("#ai-base").value.trim()});
+    if(key||aiKey(pv)) await setSetting("aiProvider",pv); await setSetting("aiAuto",$("#ai-auto").checked);
     form.hidden=true; renderAiRow();
   };
-  $("#ai-remove").onclick=async()=>{ await setSetting("aiKey",""); await setSetting("aiAuto",false); $("#ai-key").value=""; form.hidden=true; renderAiRow(); };
+  /* Remove key takes the shown provider's key only; when that was the active one, the next provider with a key takes
+     over, and without any the AI is off */
+  $("#ai-remove").onclick=async()=>{ const pv=form.dataset.pv; await setAiAccount(pv,null);
+    if(pv===aiProvider()){ delete S.settings.aiKey; idbDel("settings","aiKey").catch(()=>{}); const next=Object.keys(AI_PROVIDERS).find(k=>aiKey(k)); if(next) await setSetting("aiProvider",next); else await setSetting("aiAuto",false); }
+    form.hidden=true; renderAiRow(); };
   run.onclick=async()=>{
     run.disabled=true; const rs=$("#ai-runstatus");
     try{ const n=await aiReview(null,t=>{ rs.textContent=t; }); rs.textContent=`${n} suggestion${n===1?"":"s"} ready. Accept or dismiss them under Cards.`; }
@@ -631,11 +654,12 @@ function renderMore(main){
     <div class="listhead">Online AI review</div>
     <div class="mrow"><div><div class="t">AI review</div><div class="s" id="ai-status"></div></div><button class="btn mini" id="ai-btn">Set up</button></div>
     <div class="aiform" id="ai-form" hidden>
-      <div class="field"><label>Provider</label><select id="ai-provider">${Object.entries(AI_PROVIDERS).map(([k,v])=>`<option value="${k}"${aiProvider()===k?" selected":""}>${esc(v.name)}</option>`).join("")}</select>
+      <div class="field"><label>Provider</label><div class="chipset" id="ai-providers">${Object.entries(AI_PROVIDERS).map(([k,v])=>`<button class="chip" data-aipv="${k}">${esc(v.short)}</button>`).join("")}</div>
+        <div class="badge" id="ai-acct" style="margin-top:8px"></div>
         <div class="badge" id="ai-where" style="margin-top:6px"></div></div>
-      <div class="field" id="ai-basefield" hidden><label>API base URL</label><input id="ai-base" class="mono" autocomplete="off" placeholder="https://…/v1" value="${esc(S.settings.aiBase||"")}"></div>
-      <div class="field"><label>API key (stays on this phone)</label><input id="ai-key" type="password" autocomplete="off" value="${esc(S.settings.aiKey||"")}"></div>
-      <div class="field"><label>Model</label><input id="ai-model" class="mono" autocomplete="off" value="${esc(aiModel())}"></div>
+      <div class="field" id="ai-basefield" hidden><label>API base URL</label><input id="ai-base" class="mono" autocomplete="off" placeholder="https://…/v1"></div>
+      <div class="field"><label>API key (stays on this phone)</label><input id="ai-key" type="password" autocomplete="off"></div>
+      <div class="field"><label>Model</label><input id="ai-model" class="mono" autocomplete="off"></div>
       <div class="field"><label class="check"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> Check every new card with the AI automatically (when online)</label></div>
       <div class="badge">What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. Never photos.</div>
       <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" id="ai-save">Save</button><button class="del" id="ai-remove">Remove key</button></div>
@@ -2013,7 +2037,7 @@ function charCandidates(line,i,insert){ /* insert: candidates for a new characte
   return [...out.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]).slice(0,8);
 }
 async function aiCharAlternatives(line,i,insert){
-  const key=S.settings.aiKey; if(!key) throw new Error("no API key");
+  const key=aiKey(); if(!key) throw new Error("no API key");
   const pv=aiProvider(), model=aiModel(), chars=[...line];
   const sys="You correct OCR of Chinese signs, menus and packaging. Answer with a JSON array of single Chinese characters only, most likely first, no prose.";
   const user=insert
