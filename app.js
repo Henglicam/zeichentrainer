@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=162; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=163; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2323,7 +2323,7 @@ function signEditorHTML(id){
     <div class="field"><label class="check"><input type="checkbox" data-sflag="${id}"${sg.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
       <input data-snote="${id}" value="${esc(sg.flagNote||"")}" placeholder="Note for the reviewer (optional)"${sg.flag?"":" hidden"}></div>
     ${tagsFieldHTML("stags-"+id,sg.tags)}
-    <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save card</button>${aiOn()&&!sg.ai&&!sg.aiBusy?`<button class="btn mini" data-signai="${id}">Ask AI</button>`:""}<button class="del" data-signcancel="${id}">Cancel</button></div>
+    <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save card</button>${aiOn()&&!sg.ai&&!sg.aiBusy?`<button class="btn mini" data-signai="${id}">Ask AI</button>`:""}<button class="del" data-signcancel="${id}">Cancel</button><button class="del" data-signdone="${id}">Done, no card</button></div>
     ${sg.aiErr?`<div class="err" style="margin-top:6px">${esc(sg.aiErr)}</div>`:""}</div>`;
 }
 /* recompute pinyin / meaning / gloss for the current lines without re-rendering (keeps input focus) */
@@ -2501,6 +2501,7 @@ function renderShots(){
   wireTags(box,(cur,inp)=>{ const sg=SIGN[inp.id.slice(6)]; if(sg) sg.tags=cur; });
   box.querySelectorAll("[data-signsave]").forEach(b=> b.onclick=()=>saveSign(b.dataset.signsave));
   box.querySelectorAll("[data-signcancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.signcancel; delete SIGN[id]; if(CROP&&CROP.id===id) CROP=null; renderShots(); });
+  box.querySelectorAll("[data-signdone]").forEach(b=> b.onclick=()=>{ const id=b.dataset.signdone; delete SIGN[id]; if(CROP&&CROP.id===id) CROP=null; delShot(id); }); /* only the translation was wanted (v163): the photo goes */
   /* only the inbox's readings: the Edit form's text state (SIGN["editN"]) survives a tab tap, and previewing it here before
      the pinyin library is loaded threw "pinyinPro is not defined" into every reading (v108, H's phone) */
   S.inbox.forEach(s=>{ if(SIGN[s.id]) signPreview(s.id); });
@@ -2509,6 +2510,21 @@ let PENDING_SHOT=false; /* a photo is being processed — the inbox shows a plac
 async function onPhoto(e){
   const files=[...(e.target.files||[])].filter(f=>f&&f.type.startsWith("image/"));
   e.target.value="";
+  await importPhotos(files);
+}
+/* A screenshot shared to the app from another app (v163, H: "a fast and easy function to translate screenshots"): the
+   manifest's share target posts the files to ./share, the worker parks them in the cache "zt-share" and opens the app
+   with ?share=1, the page picks them up here — they land in the inbox like photos from the album, the first in crop mode */
+async function takeShared(){
+  if(!/[?&]share=1/.test(location.search)) return;
+  history.replaceState(null,"",location.pathname);
+  try{
+    const c=await caches.open("zt-share"), keys=await c.keys(), files=[];
+    for(const k of keys){ const r=await c.match(k); if(r){ const b=await r.blob(); if(b.size) files.push(b); } await c.delete(k); }
+    if(files.length) await importPhotos(files);
+  }catch(err){ logErr("share",err&&(err.stack||err.message)||err); }
+}
+async function importPhotos(files){
   if(!files.length) return;
   /* show something immediately: downscaling a 12-MP photo takes 1–3 s on the phone,
      and Chrome often does not repaint after the camera until the page is touched */
@@ -2616,6 +2632,7 @@ if("serviceWorker" in navigator){
       document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ reg.update().catch(()=>{}); mirrorCheck(); } });
       mirrorCheck(); tellMirror(); shellCheck();
     }).catch(()=>{});
+    takeShared(); /* photos shared to the app (v163) — after boot, S.inbox is loaded by then */
     navigator.serviceWorker.addEventListener("message",e=>{
       const d=e.data||{};
       if(d.type==="refreshed"){ if(d.ok) location.reload(); return; }
