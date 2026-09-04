@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=184; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=185; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1442,13 +1442,19 @@ let CROP=null; // {id, rect:{x,y,w,h,lw,lh}} while cropping — stays until the 
 function cropRectStyle(){
   const r=CROP&&CROP.rect; if(!r||!r.lw||!r.lh) return "";
   const pc=v=>(v*100).toFixed(2)+"%";
-  return ` style="display:block;left:${pc(r.x/r.lw)};top:${pc(r.y/r.lh)};width:${pc(r.w/r.lw)};height:${pc(r.h/r.lh)}"`;
+  return ` style="display:block;left:${pc(r.x/r.lw)};top:${pc(r.y/r.lh)};width:${pc(r.w/r.lw)};height:${pc(r.h/r.lh)}${r.a?`;transform:rotate(${r.a.toFixed(1)}deg)`:""}"`;
 }
+/* the frame can be turned (v185, H: "enable rotating the crop rectangle"): CROP.rect.a is the angle in degrees around the
+   frame's centre; a round handle above the top edge turns it, the corners and the inside work in the frame's own turned
+   coordinates, and the cut is the frame's content drawn upright — the reader and the card get the upright cut */
+const rotPt=(x,y,cx,cy,deg)=>{ const r=deg*Math.PI/180, c=Math.cos(r), s=Math.sin(r), dx=x-cx, dy=y-cy; return [cx+dx*c-dy*s, cy+dx*s+dy*c]; };
+const ROT_HANDLE=34; /* the handle's distance above the top edge, in layer pixels */
 /* the framed area alone, enlarged to the box's width (v169, H: "toggle between full image display and only cropped area
    display by tipping with a finger outside the cropped area"): CROP.zoom, a tap outside the frame switches, a tap on
    the enlarged view switches back, a swipe still scrolls; the frame's handles are hidden while enlarged */
 function zoomStyle(s){
   const r=CROP.rect, m=0.04; if(!r||!r.lw||!r.lh) return "";
+  if(r.a&&_prevURL) return `aspect-ratio:${r.w.toFixed(1)}/${r.h.toFixed(1)};background-image:url(${_prevURL});background-size:100% 100%`; /* a turned frame: the upright cut itself */
   const x0=Math.max(0,(r.x-m*r.w)/r.lw), y0=Math.max(0,(r.y-m*r.h)/r.lh), x1=Math.min(1,(r.x+r.w*(1+m))/r.lw), y1=Math.min(1,(r.y+r.h*(1+m))/r.lh);
   const fw=Math.max(0.01,x1-x0), fh=Math.max(0.01,y1-y0);
   const pos=(f,fw)=>fw>=1?0:f/(1-fw)*100;
@@ -1464,24 +1470,32 @@ function wireCrop(layer){
   layer.onpointerdown=e=>{
     if(layer.classList.contains("zoomed")){ tapOrScroll(e); return; }
     const r=layer.getBoundingClientRect();
-    const px=e.clientX-r.left, py=e.clientY-r.top;
-    const cur=CROP.rect;
-    const setRect=(x,y,w,h)=>{
-      Object.assign(rect.style,{left:x+"px",top:y+"px",width:w+"px",height:h+"px",display:"block"});
-      CROP.rect={x,y,w,h,lw:r.width,lh:r.height};
+    const wx=e.clientX-r.left, wy=e.clientY-r.top;
+    const cur=CROP.rect, a0=cur&&cur.a||0, c0=cur?[cur.x+cur.w/2,cur.y+cur.h/2]:[0,0];
+    /* the pointer in the frame's own turned coordinates (around the centre it had at the press) */
+    const toLocal=(x,y)=>a0?rotPt(x,y,c0[0],c0[1],-a0):[x,y];
+    const [px,py]=toLocal(wx,wy);
+    const setRect=(x,y,w,h,a)=>{
+      a=a||0;
+      if(a&&mode!=="move"&&mode!=="rotate"){ /* a rect resized in the old centre's turned system: shift it so that turning it around its own centre lands on the same spot */
+        const c1=[x+w/2,y+h/2], [rx,ry]=rotPt(c1[0],c1[1],c0[0],c0[1],a); x+=rx-c1[0]; y+=ry-c1[1]; }
+      Object.assign(rect.style,{left:x+"px",top:y+"px",width:w+"px",height:h+"px",display:"block",transform:a?`rotate(${a.toFixed(1)}deg)`:""});
+      CROP.rect={x,y,w,h,a,lw:r.width,lh:r.height};
     };
-    /* three modes: grab a corner -> resize (opposite corner anchored),
+    /* four modes: the round handle above the frame -> turn it, grab a corner -> resize (opposite corner anchored),
        press inside the frame -> move it, anywhere else -> draw a new frame */
     let mode="draw", anchor=[px,py], grab=null, mw=0, mh=0;
     if(cur){
+      const hp=[cur.x+cur.w/2,cur.y-ROT_HANDLE];
+      if(Math.hypot(px-hp[0],py-hp[1])<=22) mode="rotate";
       const corners={tl:[cur.x,cur.y],tr:[cur.x+cur.w,cur.y],bl:[cur.x,cur.y+cur.h],br:[cur.x+cur.w,cur.y+cur.h]};
-      for(const k of ["tl","tr","bl","br"]){
+      if(mode==="draw") for(const k of ["tl","tr","bl","br"]){
         if(Math.hypot(px-corners[k][0],py-corners[k][1])<=22){
           mode="resize"; anchor=corners[{tl:"br",tr:"bl",bl:"tr",br:"tl"}[k]]; break;
         }
       }
       if(mode==="draw" && px>=cur.x&&px<=cur.x+cur.w&&py>=cur.y&&py<=cur.y+cur.h){
-        mode="move"; grab=[px-cur.x,py-cur.y]; mw=cur.w; mh=cur.h;
+        mode="move"; grab=[wx-cur.x,wy-cur.y]; mw=cur.w; mh=cur.h;
       }
     }
     if(mode==="draw"&&cur){ tapOrScroll(e); return; } /* a frame exists: no new frame — the swipe scrolls the page instead (`.croplayer.framed`, v131/v132), a tap enlarges the framed area (v169); adjusting the frame is allowed and re-reads, Cancel removes it (H, v129–v132) */
@@ -1490,13 +1504,17 @@ function wireCrop(layer){
     if(mode==="draw") setRect(px,py,0,0);
     layer.setPointerCapture(e.pointerId);
     layer.onpointermove=ev=>{
-      const x=Math.min(Math.max(ev.clientX-r.left,0),r.width);
-      const y=Math.min(Math.max(ev.clientY-r.top,0),r.height);
-      if(mode==="move"){
-        setRect(Math.min(Math.max(x-grab[0],0),r.width-mw),
-                Math.min(Math.max(y-grab[1],0),r.height-mh), mw, mh);
+      const X=Math.min(Math.max(ev.clientX-r.left,0),r.width);
+      const Y=Math.min(Math.max(ev.clientY-r.top,0),r.height);
+      if(mode==="rotate"){ /* the raw pointer, not the clamped one: the finger may leave the photo while turning */
+        let a=Math.atan2(ev.clientY-r.top-c0[1],ev.clientX-r.left-c0[0])*180/Math.PI+90; if(a>180) a-=360; if(Math.abs(a)<1.5) a=0; /* the handle sits straight above the centre at 0° */
+        setRect(cur.x,cur.y,cur.w,cur.h,a);
+      }else if(mode==="move"){
+        setRect(Math.min(Math.max(X-grab[0],0),r.width-mw),
+                Math.min(Math.max(Y-grab[1],0),r.height-mh), mw, mh, a0);
       }else{
-        setRect(Math.min(anchor[0],x),Math.min(anchor[1],y),Math.abs(x-anchor[0]),Math.abs(y-anchor[1]));
+        const [x,y]=toLocal(X,Y);
+        setRect(Math.min(anchor[0],x),Math.min(anchor[1],y),Math.abs(x-anchor[0]),Math.abs(y-anchor[1]),a0);
       }
     };
     layer.onpointerup=()=>{
@@ -1531,13 +1549,21 @@ async function showCropPreview(id){
 async function cropBlob(id){
   const rec=S.inbox.find(s=>s.id===id);
   if(!rec||!CROP||!CROP.rect||CROP.rect.w<8||CROP.rect.h<8) return null;
-  const {x,y,w,h,lw}=CROP.rect;
+  const {x,y,w,h,lw,a}=CROP.rect;
   const bmp=await createImageBitmap(rec.blob);
   const sc=bmp.width/lw;
   const X=Math.round(x*sc), Y=Math.round(y*sc);
   const cv=document.createElement("canvas");
   cv.width=Math.max(1,Math.round(w*sc)); cv.height=Math.max(1,Math.round(h*sc));
-  cv.getContext("2d").drawImage(bmp,X,Y,cv.width,cv.height,0,0,cv.width,cv.height);
+  const ctx=cv.getContext("2d");
+  if(a){ /* a turned frame: the photo drawn turned back around the frame's centre, so the frame's content comes out upright (v185); what the frame covers outside the photo takes the area's dominant colour */
+    const cx=(x+w/2)*sc, cy=(y+h/2)*sc, R=Math.ceil(Math.hypot(w,h)*sc/2);
+    const sx0=Math.max(0,cx-R), sy0=Math.max(0,cy-R), sw=Math.min(bmp.width,cx+R)-sx0, sh=Math.min(bmp.height,cy+R)-sy0; /* only real pixels: outside the photo the canvas is black, and black once filled the corners of a whole-photo frame */
+    const probe=document.createElement("canvas"); const pk=Math.min(1,160/Math.max(sw,sh)); probe.width=Math.max(1,Math.round(sw*pk)); probe.height=Math.max(1,Math.round(sh*pk));
+    probe.getContext("2d").drawImage(bmp,sx0,sy0,sw,sh,0,0,probe.width,probe.height);
+    ctx.fillStyle=dominantRGB(probe.getContext("2d").getImageData(0,0,probe.width,probe.height).data); ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.translate(cv.width/2,cv.height/2); ctx.rotate(-a*Math.PI/180); ctx.drawImage(bmp,-cx,-cy);
+  } else ctx.drawImage(bmp,X,Y,cv.width,cv.height,0,0,cv.width,cv.height);
   bmp.close();
   const blob=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
   return blob?{blob,X,Y}:null;
@@ -1718,6 +1744,12 @@ async function jpegOf(blob,q){
    composite: JPEG 0.95 → 本区域禁止违规 99 %, the same pixels as PNG → one character). Intermediate crops stay PNG so the
    only lossy step is the last one — two JPEG generations in a row lost the line too. */
 const READ_JPEG=0.95, WEAK_READ=180; /* a reading below this score gets the whole-frame copies, both readers (v95: garbage at 58 on the Yakult logo; v96: 180 like the second look — H: time is no issue) */
+/* the most frequent 4-bit colour bin of an image, then the mean of its pixels — the fill for corners a rotation opens (v138) */
+function dominantRGB(px){
+  const bins=new Map(); let top=null;
+  for(let i=0;i<px.length;i+=4){ const key=(px[i]>>4)<<8|(px[i+1]>>4)<<4|(px[i+2]>>4); const b=bins.get(key)||{n:0,r:0,g:0,b:0}; b.n++; b.r+=px[i]; b.g+=px[i+1]; b.b+=px[i+2]; bins.set(key,b); if(!top||b.n>top.n) top=b; }
+  return top?`rgb(${Math.round(top.r/top.n)},${Math.round(top.g/top.n)},${Math.round(top.b/top.n)})`:"#808080";
+}
 async function deskewBlob(blob){
   try{
     const bmp=await createImageBitmap(blob);
@@ -1736,9 +1768,7 @@ async function deskewBlob(blob){
        one edge pixel once was the dark logo frame on H's 美团 crop, the dark corners became the "ink" of the
        chromaticity copy and the black characters fell on its background side; a channel-wise median is no real colour
        and a border colour is the frame line again — measured on 美团 and 业主直租) */
-    const px=ctx.getImageData(0,0,w,h).data, bins=new Map(); let top=null;
-    for(let i=0;i<w*h*4;i+=4){ const key=(px[i]>>4)<<8|(px[i+1]>>4)<<4|(px[i+2]>>4); const b=bins.get(key)||{n:0,r:0,g:0,b:0}; b.n++; b.r+=px[i]; b.g+=px[i+1]; b.b+=px[i+2]; bins.set(key,b); if(!top||b.n>top.n) top=b; }
-    o.fillStyle=`rgb(${Math.round(top.r/top.n)},${Math.round(top.g/top.n)},${Math.round(top.b/top.n)})`; o.fillRect(0,0,nw,nh);
+    o.fillStyle=dominantRGB(ctx.getImageData(0,0,w,h).data); o.fillRect(0,0,nw,nh);
     o.translate(nw/2,nh/2); o.rotate(r); o.drawImage(bmp,-W/2,-H/2); bmp.close();
     const rot=await new Promise(res=>out.toBlob(res,"image/jpeg",READ_JPEG));
     return {blob:rot||blob,angle};
@@ -2648,13 +2678,13 @@ function renderShots(){
       return `<div class="shot">
         <div class="shotwrap">
           ${zoomed?`<div class="shotzoom" style="${zoomStyle(s)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(s)}" alt="photo">`}
-          ${cropping?`<div class="croplayer${CROP.rect?" framed":""}${zoomed?" zoomed":""}" data-id="${s.id}">${zoomed?"":`<div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div></div>`}</div>`:""}
+          ${cropping?`<div class="croplayer${CROP.rect?" framed":""}${zoomed?" zoomed":""}" data-id="${s.id}">${zoomed?"":`<div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="Turn the frame"></div></div>`}</div>`:""}
         </div>
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">Cancel</button>`
           :`<button class="ocr-btn" data-crop="${s.id}">Crop</button><button class="del" data-del="${s.id}">Delete</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${SIGN[s.id]?signEditorHTML(s.id):READING[s.id]?readingHTML(READING[s.id],s.id):cropping
-          ?`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it.</span>`
+          ?`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.</span>`
           :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
     }).join("");
