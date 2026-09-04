@@ -1,4 +1,4 @@
-const CACHE = "zt-v162";
+const CACHE = "zt-v163";
 /* OCR assets (./vendor/, ~12 MB) live in their own cache that survives shell
    updates — otherwise every cache version bump would re-download all of
    Tesseract. Only bump this when vendor files change. */
@@ -75,8 +75,18 @@ async function mirrorUpdate(mirror, client, pageVersion) {
   } catch (err) { say({ status: "error", error: String(err && err.message || err) }); }
 }
 
+/* Web Share Target (v163): a screenshot shared to the app from another app arrives as a POST to ./share; the files are
+   parked in the cache "zt-share" and the app opens with ?share=1, where the page picks them up (takeShared in app.js) */
+async function shareIn(req) {
+  try {
+    const fd = await req.formData(), files = fd.getAll("photos").filter(f => f && f.size), c = await caches.open("zt-share");
+    for (const f of files) await c.put(new URL("./share/" + Date.now() + "_" + Math.random().toString(36).slice(2), self.registration.scope).href, new Response(f, { headers: { "content-type": f.type || "image/jpeg" } }));
+  } catch (e) {}
+  return Response.redirect(new URL("./?share=1", self.registration.scope).href, 303);
+}
 self.addEventListener("fetch", e => {
   const req = e.request;
+  if (req.method === "POST" && new URL(req.url).pathname.endsWith("/share")) { e.respondWith(shareIn(req)); return; }
   if (req.method !== "GET") return;
   const isVendor = new URL(req.url).pathname.includes("/vendor/");
   e.respondWith(
