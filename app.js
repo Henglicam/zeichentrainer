@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=201; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=202; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -421,6 +421,8 @@ async function aiFetch(url,opts){
 async function relayFetch(pv,body){
   return aiFetch(relayUrl(),{method:"POST",headers:{"content-type":"application/json","apikey":SHARE_KEY,"authorization":"Bearer "+SHARE_KEY,"x-install":installId()},body:JSON.stringify({provider:pv,body})});
 }
+/* the provider's or the relay's error text from a failed answer's JSON body ("" when there is none) */
+async function apiErrText(r){ try{ const j=await r.json(); return String((j.error&&(j.error.message||j.error))||j.message||""); }catch(e){ return ""; } }
 function relayError(r,t){ return r.status===429?"the daily limit of the owner's relay is reached — try again tomorrow":r.status===404||r.status===503?"the owner's relay is not set up":"relay error "+r.status+(t?": "+t:""); }
 async function setAiAccount(pv,acct){ const all={...aiAccounts()}; if(acct) all[pv]={...aiAcct(pv),...acct}; else delete all[pv]; await setSetting("aiAccounts",all); }
 async function migrateAi(){
@@ -460,7 +462,7 @@ async function aiReadPicture(blob,alts,status){
       if(pv==="qwen"&&/^qwen3/.test(model)) body.enable_thinking=false; /* the hybrid models think by default — the short JSON must not wait for that */
       r=relay?await relayFetch(pv,body):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
   }catch(err){ logAi({model,req,err:"no connection: "+(err&&err.message||err)}); throw new Error(AI_NET_ERR); }
-  if(!r.ok){ let t=""; try{ const j=await r.json(); t=(j.error&&(j.error.message||j.error))||j.message||""; }catch(e){} logAi({model,status:r.status,req,err:t}); throw new Error(relay?relayError(r,t):"API error "+r.status+(t?": "+t:"")); }
+  if(!r.ok){ const t=await apiErrText(r); logAi({model,status:r.status,req,err:t}); throw new Error(relay?relayError(r,t):"API error "+r.status+(t?": "+t:"")); }
   const data=await r.json(); countTokens(pv,data); bump("pics"); bumpModel(model); /* the usage counters and the daily row count the picture readings (v178, H) and the model (v179) */
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
   logAi({model,status:r.status,req,res:raw.slice(0,1500)});
@@ -522,10 +524,10 @@ async function aiAsk(cards,status){
       const body={model,max_tokens:4000,temperature:0,messages:[{role:"system",content:AI_SYSTEM},{role:"user",content:user}]};
       r=relay?await relayFetch(pv,body):await aiFetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
   }catch(err){ logAi({model,req:user.slice(0,1500),err:"no connection: "+(err&&err.message||err)+(pv==="claude"?" — the API may be blocked without a VPN":" — offline, or this provider refuses calls from a browser")}); throw new Error(AI_NET_ERR); }
-  if(!r.ok&&relay){ let t=""; try{ const j=await r.json(); t=(j.error&&(j.error.message||j.error))||j.message||""; }catch(e){} logAi({model,status:r.status,req:user.slice(0,1500),err:t}); throw new Error(relayError(r,t)); }
+  if(!r.ok&&relay){ const t=await apiErrText(r); logAi({model,status:r.status,req:user.slice(0,1500),err:t}); throw new Error(relayError(r,t)); }
   if(r.status===401||r.status===403) throw new Error("API key rejected ("+r.status+")");
   if(r.status===402) throw new Error("no credit left at "+AI_PROVIDERS[pv].name);
-  if(!r.ok){ let t=""; try{ const j=await r.json(); t=(j.error&&(j.error.message||j.error))||j.message||""; }catch(e){} throw new Error("API error "+r.status+(t?": "+t:"")); }
+  if(!r.ok){ const t=await apiErrText(r); throw new Error("API error "+r.status+(t?": "+t:"")); }
   const data=await r.json(); countTokens(pv,data); bumpModel(model);
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
   logAi({model,status:r.status,req:user.slice(0,1500),res:raw.slice(0,1500)});
@@ -647,7 +649,7 @@ function renderAiRow(){
   run.onclick=async()=>{
     run.disabled=true; const rs=$("#ai-runstatus");
     try{ const n=await aiReview(null,t=>{ rs.textContent=t; }); rs.textContent=`${n} suggestion${n===1?"":"s"} ready. Accept or dismiss them under Cards.`; }
-    catch(err){ rs.textContent="failed: "+(err&&err.message||err); run.disabled=false; }
+    catch(err){ rs.textContent="Failed: "+(err&&err.message||err); run.disabled=false; }
   };
 }
 /* ---------- progress: cards learned, this week, streak of days ---------- */
@@ -776,8 +778,8 @@ async function renderNmtRow(){
   st.textContent=(NMT.ready?"loaded"+timing:cached?"on, model cached":"on, model downloads on first use")+(aiAutoOn()?", used only without a connection":"")+(pend?`, ${pend} card${pend>1?"s":""} pending`:"");
   if(pend) setBtn("Translate pending",async()=>{
     btn.disabled=true;
-    try{ const n=await translatePending(t=>{ st.textContent=t; }); st.textContent=`translated ${n} card${n===1?"":"s"}`; }
-    catch(err){ st.textContent="failed: "+(err&&err.message||err); }
+    try{ const n=await translatePending(t=>{ st.textContent=t; }); st.textContent=`Translated ${n} card${n===1?"":"s"}.`; }
+    catch(err){ st.textContent="Failed: "+(err&&err.message||err); }
     setTimeout(renderNmtRow,1500);
   });
   else setBtn("Turn off",async()=>{ await setSetting("nmt",false); renderNmtRow(); });
@@ -1055,7 +1057,7 @@ function renderStudy(main){
   }
   /* front: no tag row (theme / new / custom is noise while learning); tapping the photo or the character reveals */
   main.innerHTML=learnChipsHTML()+`<div class="card">
-    ${S.single?`<div class="topline"><button class="del" id="back-cards">← Cards</button><span class="badge">testing from the list</span></div>`:""}
+    ${S.single?`<div class="topline"><button class="del" id="back-cards">← Cards</button><span class="badge">Testing from the list</span></div>`:""}
     <div class="front tap" id="reveal">${frontHTML(d)}</div>
     ${back}</div>`;
   /* tap on the photo: crop ⇄ whole photo; tap on the character: back on and off */
@@ -1525,9 +1527,6 @@ function segmentChars(chars){
 }
 /* the AI's answer for the card just saved from this photo, with one-tap Accept */
 function qsAiBox(id){ const c=QSCARD[id], d=c&&cardOf(c); return d&&d.ai?aiBoxHTML(d):""; }
-/* AI check of the current OCR selection, right in the selection bar (no tab change) */
-/* automatic: every selection is checked without a tap (a few hundred tokens per card —
-   fractions of a fen at DeepSeek); debounced so tapping through words fires one request per text */
 /* ---------- Cropping (crop → OCR or card image) ---------- */
 let CROP=null; // {id, rect:{x,y,w,h,lw,lh}} while cropping — stays until the card is saved (H, v50)
 function cropRectStyle(){
@@ -2044,7 +2043,6 @@ async function secondLook(w,dk,passes,status,r,Hink){
        (H: 首都铁骑 read as 次都铁, and the crop ended after 铁) */
     const ext=textRowExtent(bmp,Math.min(...boxes.map(b=>b.x0)),Math.max(...boxes.map(b=>b.x1)),y0,y1,H);
     const x0=Math.max(0,ext.x0-mX), x1=Math.min(bmp.width,ext.x1+mX);
-    const frac=((x1-x0)*(y1-y0))/(bmp.width*bmp.height);
     if(!(x1-x0>=24 && y1-y0>=24)) return null; /* v96: always, not only on a loose frame or an unsure pass — H: time is no issue, and the copies read 脊 where the first pass had 疹 */
     status("found text, reading it closely …");
     /* the text area with 1.5 text heights of plain margin in the crop's median colour: the reader wants margins, real
