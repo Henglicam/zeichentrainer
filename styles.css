@@ -217,12 +217,12 @@ button{font:inherit;color:inherit}
 /* once a frame exists no new one can be drawn, so a swipe outside the frame scrolls the page; the frame itself and its corners keep taking the finger (v131/v132) */
 .shotzoom{width:100%;border-radius:10px;display:block;margin-bottom:8px;background-repeat:no-repeat;background-color:var(--fill)} .croplayer.zoomed{touch-action:pan-y;cursor:pointer}
 .croplayer.framed{touch-action:pan-y;cursor:default} .croplayer.framed .croprect{pointer-events:auto;touch-action:none;cursor:move} .croplayer.framed .croprect .h{cursor:nwse-resize}
-.croprect{position:absolute;display:none;border:2px dashed #fff;
+.croprect{position:absolute;display:none;transform-origin:center center;border:2px dashed #fff;
   box-shadow:0 0 0 1px rgba(0,0,0,.8), inset 0 0 0 1px rgba(0,0,0,.6);pointer-events:none}
 .croprect .h{position:absolute;width:18px;height:18px;background:#fff;border:1px solid rgba(0,0,0,.8);border-radius:4px}
 .croprect .h.tl{left:-9px;top:-9px} .croprect .h.tr{right:-9px;top:-9px}
 .croprect .h.bl{left:-9px;bottom:-9px} .croprect .h.br{right:-9px;bottom:-9px}
-.croprect{transform-origin:center center} .croprect .h.rot{left:calc(50% - 9px);top:-43px;border-radius:50%;cursor:grab} .croprect .h.rot::after{content:"";position:absolute;left:8px;top:18px;width:1px;height:23px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.6)} /* the turn handle above the top edge with its stem (v185) */
+.croprect .h.rot{left:calc(50% - 9px);top:-43px;border-radius:50%;cursor:grab} .croprect .h.rot::after{content:"";position:absolute;left:8px;top:18px;width:1px;height:23px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.6)} /* the turn handle above the top edge with its stem (v185) */
 .croppreview img{width:auto;max-width:100%;max-height:120px;display:block;border-radius:8px}
 .cropacts{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;align-items:center}
 
@@ -286,5 +286,5 @@ body.noscroll{overflow:hidden}
 .pimg img{max-width:100%;display:block;border-radius:10px;margin-bottom:6px}
 .pimg .imgacts{display:flex;gap:14px}
 .pimg .del.on{color:var(--ok)}
-/* the picture-read mark under the meaning (v176): quiet, in the tertiary label colour */
+/* the picture-read mark at the right end of the Characters label (v176–v180): the green AI capsule of the Cards list */
 .picmark{display:inline-flex;align-items:center;gap:4px;color:var(--ok);background:var(--ok-soft);border-radius:999px;padding:2px 8px 2px 6px;font-size:11px;font-weight:600;letter-spacing:.02em;float:right;margin-top:-2px;line-height:16px} .picmark svg{width:13px;height:13px}
