@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=165; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=166; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -584,7 +584,7 @@ function renderMore(main){
   const st=S.persist===true?"Persistent on this phone.":S.persist===false?"Not persistent yet. Install the app so the system keeps the data.":"Checking …";
   main.innerHTML=`<div class="pane more">
     <div class="listhead">Your data</div>
-    <div class="mrow"><div><div class="t">Export</div><div class="s">Progress and cards as one file, via the share sheet. ${backupNote()}</div></div><button class="btn mini" id="export">Export</button></div>
+    <div class="mrow"><div><div class="t">Export</div><div class="s">Progress and cards as one file, via the share sheet. ${backupNote()}</div><label class="check" style="margin-top:8px"><input type="checkbox" id="export-photos"${exportPhotos()?" checked":""}> Include photos (adds about ${(photoBytes()*1.37/1048576).toFixed(1)} MB)</label></div><button class="btn mini" id="export">Export</button></div>
     <div class="mrow"><div><div class="t">Import</div><div class="s">A zeichentrainer-….json.txt file. Existing cards are overwritten.</div></div><button class="btn mini" id="import">Import</button></div>
     <div class="mrow"><div><div class="t">Flagged cards</div><div class="s">${deck().filter(d=>d.flag).length} flagged for review. Share the list as text, for a teacher.</div></div><span class="btnrow"><button class="btn mini" id="show-flag">Show</button><button class="btn mini" id="share-flag">Share</button></span></div>
     ${S.admin?`<div class="listhead">Translation</div>
@@ -625,6 +625,7 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s">${esc(ver)}. Works offline; everything stays on this phone.</div></div></div>
   </div>`;
   $("#export").onclick=exportData;
+  $("#export-photos").onchange=e=>setSetting("exportPhotos",!!e.target.checked);
   $("#import").onclick=()=>$("#imp").click();
   $("#share-flag").onclick=shareFlagged;
   $("#show-flag").onclick=()=>{ S.mode="cards"; S.detail=null; S.editing=null; S.query=""; S.filterUnv=false; S.filterAi=false; S.filterFlag=true; render(); };
@@ -2579,11 +2580,20 @@ async function delShot(id){
 }
 
 /* ---------- Export / import (device migration; photos stay local) ---------- */
+/* the photos in the export (v166, H: "could you also export photos? Now only text"): with the checkbox under Export on,
+   every card's crop and whole photo travel as base64 (imgB64/imgFullB64 with their type) and Import puts them back;
+   the row shows the size they add. Off, the export stays text only and Import keeps the photos already on the phone. */
+const exportPhotos=()=>!!S.settings.exportPhotos;
+function photoBytes(){ return S.custom.reduce((a,d)=>a+((d.img&&d.img.size)||0)+((d.imgFull&&d.imgFull.size)||0),0); }
+const blobToB64=blob=>new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res({t:blob.type||"image/jpeg",d:String(fr.result).split(",")[1]||""}); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(blob); });
+async function b64ToBlob(x){ try{ return await (await fetch(`data:${x.t||"image/jpeg"};base64,${x.d}`)).blob(); }catch(e){ return null; } }
 async function exportData(){
-  const data={ app:"zeichentrainer", version:1, exported:new Date().toISOString(),
+  const withPhotos=exportPhotos(), custom=[];
+  for(const {img,imgFull,...rest} of S.custom){ const r={...rest}; if(withPhotos){ if(img) r.imgB64=await blobToB64(img); if(imgFull) r.imgFullB64=await blobToB64(imgFull); } custom.push(r); }
+  const data={ app:"zeichentrainer", version:1, exported:new Date().toISOString(), photos:withPhotos,
     progress:Object.entries(S.progress).map(([id,s])=>({id,...s})),
-    custom:S.custom.map(({img,imgFull,...rest})=>rest) }; // images stay local (privacy + JSON)
-  const json=JSON.stringify(data,null,2);
+    custom };
+  const json=JSON.stringify(data,null,withPhotos?0:2);
   /* Android/MIUI silently blocks programmatic blob downloads — the share
      sheet is the reliable path, download link only as fallback.
      Chrome/Android only shares whitelisted file types (.txt yes, .json no),
@@ -2616,8 +2626,14 @@ async function importData(e){
   const cust=data.custom.filter(r=>r && typeof r.c==="string" && typeof r.p==="string" && typeof r.m==="string").map(r=>({...r,id:r.id||r.c}));
   if(!prog.length && !cust.length){ alert("Export is empty — nothing to import."); return; }
   if(!confirm("Import "+prog.length+" progress entries and "+cust.length+" custom cards?\nExisting entries of the same cards will be overwritten.")) return;
-  /* card images only exist locally — keep the existing image when overwriting */
-  const merged=cust.map(r=>{ const ex=S.custom.find(x=>x.id===r.id); return ex?{...r,...(ex.img?{img:ex.img}:{}),...(ex.imgFull?{imgFull:ex.imgFull}:{})}:r; });
+  /* the photos come with the file when it carries them (v166); otherwise the existing image is kept when overwriting */
+  const merged=[];
+  for(const r0 of cust){ const {imgB64,imgFullB64,...r}=r0; const ex=S.custom.find(x=>x.id===r.id);
+    const img=imgB64&&imgB64.d?await b64ToBlob(imgB64):null, imgFull=imgFullB64&&imgFullB64.d?await b64ToBlob(imgFullB64):null;
+    if(img) r.img=img; else if(ex&&ex.img) r.img=ex.img;
+    if(imgFull) r.imgFull=imgFull; else if(ex&&ex.imgFull) r.imgFull=ex.imgFull;
+    if(img) dropThumb(r.id);
+    merged.push(r); }
   try{
     await Promise.all([...prog.map(r=>idbPut("progress",r)), ...merged.map(r=>idbPut("custom",r))]);
   }catch(err){ alert("Import failed ("+err+")"); return; }
