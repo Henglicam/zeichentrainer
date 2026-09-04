@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=173; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=174; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2502,7 +2502,7 @@ function signPreview(id){
   if(meanF&&!sg.meanTouched){ meanF.value=good?(sg.ai.m||mean):mean; autoGrow(meanF); }
   const sm=$(`#smean-${id}`);
   if(sm){ sm.className="smean badge"+(good?" ai":sg.ai&&!sg.ai.kept?" bad":""); sm.textContent=good
-    ?(sg.ai.pic?"Read from the picture by the AI.":"") /* a good answer shows nothing: no "checked by the AI" (H, v104/v105) and no remark of the model either (v154, H: "don't show the OCR slip message to the user") — except the picture path, which H must see (v173) */
+    ?"" /* a good answer shows nothing: no "checked by the AI" (H, v104/v105), no remark of the model (v154, H: "don't show the OCR slip message to the user"), and since v174 not "Read from the picture by the AI." either (H: "not relevant to the user") */
     :sg.ai&&sg.ai.kept?`The AI suggested ${sg.ai.proposed.replace(/\n/g," / ")}, but ${sg.ai.kept} was read clearly, so the reading stays. Meaning ${full?"from the phrasebook":"composed word by word"}, unverified.`
     :sg.ai?`This text looks misread${sg.ai.note?": "+sg.ai.note:""} — unverified`
     :`Meaning ${full?"from the phrasebook":"composed word by word"}, unverified`; }
