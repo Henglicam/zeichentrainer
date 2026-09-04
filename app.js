@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=179; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=180; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2543,7 +2543,7 @@ function aiSettled(sg,lines,zh){
   return "";
 }
 /* a small quiet mark on the Characters label when the AI read the text from the picture (v176; under the meaning at first, moved in v177 — H: "the icon belongs under the Chinese characters, not the translation") */
-const PIC_MARK=`<span class="picmark" title="Read from the picture by the AI"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linejoin="round" style="stroke:var(--label3)"><path d="M12 3l2 5.5L19.5 10.5 14 12.5 12 18l-2-5.5L4.5 10.5 10 8.5z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg>AI</span>`;
+const PIC_MARK=`<span class="picmark" title="Read from the picture by the AI"><svg viewBox="0 0 24 24" style="fill:var(--ok)"><path d="M12 2.5l2.3 6.2 6.2 2.3-6.2 2.3L12 19.5l-2.3-6.2-6.2-2.3 6.2-2.3z"/><path d="M19.5 15.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9z"/></svg>AI</span>`; /* the green AI capsule of the Cards list, with a sparkle (v180, H: "place the AI icon more sexy") */
 async function signAskAI(id){
   const sg=SIGN[id]; if(!sg||sg.aiBusy) return;
   signPreview(id);
