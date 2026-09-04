@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=200; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=201; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -400,8 +400,26 @@ const relayOn=()=>S.settings.aiRelay!==false;
 function viaRelay(pv){ pv=pv||aiProvider(); return !aiKey(pv)&&relayOn()&&RELAY_PROVIDERS.includes(pv); }
 function aiOn(){ return (!!aiKey()||viaRelay())&&!!aiBase(); }
 /* one OpenAI-style request through the relay: the function adds the key and answers with the provider's JSON as it is */
+/* Every AI request goes through aiFetch (v201 — H switched apps during "Checking pinyin and meaning …" and came back to
+   "no connection (offline, or this provider refuses calls from a browser …)": Android cuts a page's requests when it goes
+   to the background, and the text named a provider problem the user cannot do anything about). A request that fails is
+   tried once more — after the page is back in the foreground when it went to the background meanwhile, else after 1.5 s;
+   a second failure is reported as AI_NET_ERR, the detail (and the retry) goes to the AI log only. */
+let HIDDEN_AT=0; document.addEventListener("visibilitychange",()=>{ if(document.hidden) HIDDEN_AT=Date.now(); });
+const whenVisible=()=>document.hidden?new Promise(res=>document.addEventListener("visibilitychange",function f(){ if(!document.hidden){ document.removeEventListener("visibilitychange",f); res(); } })):Promise.resolve();
+const AI_NET_ERR="The AI could not be reached", AI_RETRY_MS=1500;
+async function aiFetch(url,opts){
+  const t0=Date.now();
+  try{ return await fetch(url,opts); }
+  catch(err){
+    const bg=document.hidden||HIDDEN_AT>=t0;
+    if(bg) await whenVisible(); else await new Promise(r=>setTimeout(r,AI_RETRY_MS));
+    try{ return await fetch(url,opts); }
+    catch(err2){ throw new Error((err2&&err2.message||err2)+(bg?" (tried again after the app came back to the foreground)":" (tried twice)")); }
+  }
+}
 async function relayFetch(pv,body){
-  return fetch(relayUrl(),{method:"POST",headers:{"content-type":"application/json","apikey":SHARE_KEY,"authorization":"Bearer "+SHARE_KEY,"x-install":installId()},body:JSON.stringify({provider:pv,body})});
+  return aiFetch(relayUrl(),{method:"POST",headers:{"content-type":"application/json","apikey":SHARE_KEY,"authorization":"Bearer "+SHARE_KEY,"x-install":installId()},body:JSON.stringify({provider:pv,body})});
 }
 function relayError(r,t){ return r.status===429?"the daily limit of the owner's relay is reached — try again tomorrow":r.status===404||r.status===503?"the owner's relay is not set up":"relay error "+r.status+(t?": "+t:""); }
 async function setAiAccount(pv,acct){ const all={...aiAccounts()}; if(acct) all[pv]={...aiAcct(pv),...acct}; else delete all[pv]; await setSetting("aiAccounts",all); }
@@ -436,12 +454,12 @@ async function aiReadPicture(blob,alts,status){
   let r;
   try{
     if(pv==="claude")
-      r=await fetch(aiBase(pv),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      r=await aiFetch(aiBase(pv),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({model,max_tokens:1000,system:PIC_SYSTEM,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:pic.b64}},{type:"text",text}]}]})});
     else { const body={model,max_tokens:1000,temperature:0,messages:[{role:"system",content:PIC_SYSTEM},{role:"user",content:[{type:"text",text},{type:"image_url",image_url:{url:"data:image/jpeg;base64,"+pic.b64}}]}]};
       if(pv==="qwen"&&/^qwen3/.test(model)) body.enable_thinking=false; /* the hybrid models think by default — the short JSON must not wait for that */
-      r=relay?await relayFetch(pv,body):await fetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
-  }catch(err){ logAi({model,req,err:"no connection: "+(err&&err.message||err)}); throw new Error("no connection"); }
+      r=relay?await relayFetch(pv,body):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
+  }catch(err){ logAi({model,req,err:"no connection: "+(err&&err.message||err)}); throw new Error(AI_NET_ERR); }
   if(!r.ok){ let t=""; try{ const j=await r.json(); t=(j.error&&(j.error.message||j.error))||j.message||""; }catch(e){} logAi({model,status:r.status,req,err:t}); throw new Error(relay?relayError(r,t):"API error "+r.status+(t?": "+t:"")); }
   const data=await r.json(); countTokens(pv,data); bump("pics"); bumpModel(model); /* the usage counters and the daily row count the picture readings (v178, H) and the model (v179) */
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
@@ -498,12 +516,12 @@ async function aiAsk(cards,status){
   let r;
   try{
     if(pv==="claude")
-      r=await fetch(aiBase(),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      r=await aiFetch(aiBase(),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({model,max_tokens:4000,system:AI_SYSTEM,messages:[{role:"user",content:user}]})});
     else { /* OpenAI-style chat completions (DeepSeek, Qwen, GLM, …), direct with the phone's key or through the owner's relay */
       const body={model,max_tokens:4000,temperature:0,messages:[{role:"system",content:AI_SYSTEM},{role:"user",content:user}]};
-      r=relay?await relayFetch(pv,body):await fetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
-  }catch(err){ logAi({model,req:user.slice(0,1500),err:"no connection: "+(err&&err.message||err)}); throw new Error("no connection (offline"+(pv==="claude"?", or the API is blocked — VPN?":", or this provider refuses calls from a browser — try another provider")+")"); }
+      r=relay?await relayFetch(pv,body):await aiFetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
+  }catch(err){ logAi({model,req:user.slice(0,1500),err:"no connection: "+(err&&err.message||err)+(pv==="claude"?" — the API may be blocked without a VPN":" — offline, or this provider refuses calls from a browser")}); throw new Error(AI_NET_ERR); }
   if(!r.ok&&relay){ let t=""; try{ const j=await r.json(); t=(j.error&&(j.error.message||j.error))||j.message||""; }catch(e){} logAi({model,status:r.status,req:user.slice(0,1500),err:t}); throw new Error(relayError(r,t)); }
   if(r.status===401||r.status===403) throw new Error("API key rejected ("+r.status+")");
   if(r.status===402) throw new Error("no credit left at "+AI_PROVIDERS[pv].name);
@@ -1302,7 +1320,7 @@ function renderEdit(main,c){
       if(r.m) $("#e-mean").value=r.m;
       aiApplied=true; st.textContent="";
       box.hidden=false; box.innerHTML=`<div class="aihead">AI${r.ok?": looks right":" filled in its suggestion — check, then Save"}</div>${r.note&&r.note.toLowerCase()!=="ok"?`<div class="ainote">${esc(r.note)}</div>`:""}`;
-    }catch(err){ st.textContent="The AI could not be reached: "+(err&&err.message||err); }
+    }catch(err){ const m=err&&err.message||String(err); st.textContent=m===AI_NET_ERR?m+". Tap the button to try again.":"The AI check failed: "+m; }
     ab.disabled=false;
   };
   const ni=$("#e-noimg"); if(ni) ni.onclick=()=>{ removeImg=true; $("#e-imgfield").remove(); };
@@ -2224,9 +2242,9 @@ async function aiCharAlternatives(line,i,insert){
     ?`OCR read this line: "${line}". One character is missing ${i===0?"at the start":i>=chars.length?"at the end":`between "${chars[i-1]}" and "${chars[i]}"`}. Give up to 4 likely characters for that gap, judging from the context.`
     :`OCR read this line: "${line}". Character ${i+1} ("${chars[i]}") is probably misread. Give up to 4 likely correct characters for that position, judging from the context.`;
   let r;
-  if(pv==="claude") r=await fetch(aiBase(),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model,max_tokens:100,system:sys,messages:[{role:"user",content:user}]})});
+  if(pv==="claude") r=await aiFetch(aiBase(),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model,max_tokens:100,system:sys,messages:[{role:"user",content:user}]})});
   else { const body={model,max_tokens:100,temperature:0,messages:[{role:"system",content:sys},{role:"user",content:user}]};
-    r=relay?await relayFetch(pv,body):await fetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
+    r=relay?await relayFetch(pv,body):await aiFetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
   if(!r.ok) throw new Error(relay?relayError(r):"API error "+r.status);
   const data=await r.json(); countTokens(pv,data); bumpModel(model);
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
@@ -2579,6 +2597,8 @@ function wireSlines(root,onInput,onCommit){ /* onCommit(sg,id): the line input w
   root.querySelectorAll("[data-snote]").forEach(n=> n.oninput=()=>{ const sg=SIGN[n.dataset.snote]; if(sg) sg.flagNote=n.value; });
   wireGrow(root);
 }
+/* the AI's failure as a sentence for the user (v201): the network case says what to do, a provider's answer is named as the check's failure */
+const aiErrText=e=>e===AI_NET_ERR?e+". Tap Ask AI to try again.":/^[a-z]/.test(e)?"The AI check failed: "+e:e;
 function signEditorHTML(id){
   const sg=SIGN[id]; if(!sg) return "";
   const rows=sg.lines.map((l,k)=>slineHTML(id,k,l,false,true)).join(""); /* the line input is back under the strip (v120, H: "type the correct hanzi in a text field, like in Edit mode" — it went in v109) */
@@ -2600,7 +2620,7 @@ function signEditorHTML(id){
       <input data-snote="${id}" value="${esc(sg.flagNote||"")}" placeholder="Note for the reviewer (optional)"${sg.flag?"":" hidden"}></div>
     ${tagsFieldHTML("stags-"+id,sg.tags)}
     <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save card</button>${aiOn()&&!sg.ai&&!sg.aiBusy?`<button class="btn mini" data-signai="${id}">Ask AI</button>`:""}<button class="del" data-signcancel="${id}">Cancel</button></div>
-    ${sg.aiErr?`<div class="err" style="margin-top:6px">${esc(sg.aiErr)}</div>`:""}</div>`;
+    ${sg.aiErr?`<div class="err" style="margin-top:6px">${esc(aiErrText(sg.aiErr))}</div>`:""}</div>`;
 }
 /* recompute pinyin / meaning / gloss for the current lines without re-rendering (keeps input focus) */
 function signPreview(id){
