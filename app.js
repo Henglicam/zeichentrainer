@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=164; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=165; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -724,10 +724,20 @@ function ttsVoice(){
   TTS_VOICE=vs.find(v=>/^zh[-_]?CN/i.test(v.lang))||vs.find(v=>/^(zh|cmn)/i.test(v.lang))||null;
   return TTS_VOICE;
 }
+let SAY_TIMER=null;
 function say(text){
-  const v=ttsVoice();
-  try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text.replace(/\n/g,"，")); if(v){ u.voice=v; u.lang=v.lang; } else u.lang="zh-CN"; u.rate=0.85; speechSynthesis.speak(u); }catch(e){}
-  if(!v){ const h=$("#say-hint"); if(h) h.hidden=false; } /* the engine may still speak Chinese; the hint says what to install if not */
+  const v=ttsVoice(), hint=on=>{ const h=$("#say-hint"); if(h) h.hidden=!on; };
+  /* the hint comes only when speaking fails, never from the voice list: H's Xiaomi reports no voices at all through
+     getVoices() and still speaks Chinese through the system engine (v165, diagnostics "voices (0)"); an utterance that
+     neither starts nor errors within three seconds counts as failed too */
+  try{
+    speechSynthesis.cancel(); clearTimeout(SAY_TIMER);
+    const u=new SpeechSynthesisUtterance(text.replace(/\n/g,"，")); if(v){ u.voice=v; u.lang=v.lang; } else u.lang="zh-CN"; u.rate=0.85;
+    u.onstart=()=>{ clearTimeout(SAY_TIMER); hint(false); };
+    u.onerror=e=>{ clearTimeout(SAY_TIMER); if(!e||e.error!=="interrupted"&&e.error!=="canceled") hint(true); };
+    SAY_TIMER=setTimeout(()=>hint(true),3000);
+    speechSynthesis.speak(u);
+  }catch(e){ hint(true); }
 }
 function voiceList(){ try{ return ("speechSynthesis" in window)?speechSynthesis.getVoices().map(v=>v.lang+" "+v.name):[]; }catch(e){ return []; } }
 const SAY_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15 9.2a3.6 3.6 0 0 1 0 5.6"/><path d="M17.3 6.6a7 7 0 0 1 0 10.8"/></svg>';
