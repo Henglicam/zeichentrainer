@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=196; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=197; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -153,6 +153,40 @@ function diagText(){
   out.push("", `Errors (${ERRLOG.length}):`);
   ERRLOG.forEach(x=>out.push(`  ${ago(x.t)}  [${x.kind}] ${x.msg}`));
   return out.join("\n")+"\n";
+}
+/* ---------- the owner's report of all phones (v197, H: "show an all-users report, password protected") ----------
+   the edge function usage-report (supabase/functions/usage-report) checks the app password against its secret and
+   answers with the latest row of every phone plus today's relay calls; the app keeps the password only in memory after
+   the unlock (S.adminPw) and sends it with the request — the table itself stays unreadable for the publishable key */
+const reportUrl=()=>SHARE_URL+"/functions/v1/usage-report";
+let USERS=null; /* the last answer: {at, rows} */
+async function fetchAllUsers(){
+  const r=await fetch(reportUrl(),{method:"POST",headers:{"content-type":"application/json","apikey":SHARE_KEY,"authorization":"Bearer "+SHARE_KEY},body:JSON.stringify({password:S.adminPw||""})});
+  if(r.status===401) throw new Error("the password was not accepted by the report function");
+  if(r.status===404||r.status===503) throw new Error("the report function is not set up");
+  if(!r.ok) throw new Error("report error "+r.status);
+  const rows=await r.json(); if(!Array.isArray(rows)) throw new Error("unexpected answer");
+  USERS={at:Date.now(),rows}; return USERS;
+}
+function allUsersText(rows){
+  const day=t=>String(t||"").slice(0,10), week=Date.now()-7*DAY, n=(o,k)=>+(o&&o[k])||0;
+  const tot={}; const add=(o,k,v)=>{ o[k]=(o[k]||0)+v; };
+  let active=0; const models={};
+  for(const r of rows){ const d=r.data||{}; if(new Date(r.created_at).getTime()>=week) active++;
+    for(const k of ["cards","reviews","aiCalls","pics","byPhoto","byHand"]) add(tot,k,n(d,k));
+    for(const [m,v] of Object.entries(d.models||{})) add(models,m,+v||0); add(tot,"relay",n(r,"relay_today")); }
+  const head=[`识字 Zeichentrainer — all users, ${day(new Date().toISOString())}`,
+    `${nOf(rows.length,"phone")}, ${active} active in the last 7 days. Cards ${tot.cards||0} (${tot.byPhoto||0} by photo, ${tot.byHand||0} by hand), reviews ${tot.reviews||0}, AI calls ${tot.aiCalls||0} (pictures ${tot.pics||0}). Relay today: ${nOf(tot.relay,"call")}.`,
+    `Analyses: ${modelsText(models)}.`,""];
+  const lines=rows.map(r=>{ const d=r.data||{}; return `${d.install||"?"}  v${d.version||"?"}  last ${day(r.created_at)}  days ${n(d,"days")}  cards ${n(d,"cards")}  reviews ${n(d,"reviews")}  AI ${n(d,"aiCalls")} (pics ${n(d,"pics")})  relay today ${n(r,"relay_today")}${d.device?"  "+d.device:""}`; });
+  return head.concat(lines.length?lines:["No rows yet."]).join("\n")+"\n";
+}
+async function shareUsers(){
+  const rows=(USERS&&USERS.rows)||(await fetchAllUsers()).rows;
+  const text=allUsersText(rows), name="zeichentrainer-users-"+new Date().toISOString().slice(0,10)+".txt", file=new File([text],name,{type:"text/plain"});
+  if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
+  if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
+  try{ await navigator.clipboard.writeText(text); alert("Copied to the clipboard."); }catch(err){ alert("Sharing is not available here."); }
 }
 async function shareDiag(){
   const text=diagText(), name="zeichentrainer-diagnostics.txt", file=new File([text],name,{type:"text/plain"});
@@ -763,11 +797,13 @@ function renderMore(main){
     ${S.admin?`<div class="listhead">Diagnostics</div>
     <div class="mrow"><div><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${READLOG.length} step${READLOG.length===1?"":"s"}.</div></div><span class="btnrow"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button></span></div>
     <pre class="diag" id="diag-out" hidden></pre>
+    <div class="mrow"><div><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"phone")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div></div><span class="btnrow"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button></span></div>
+    <pre class="diag" id="users-out" hidden></pre>
     <div class="listhead">Start over</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>`:""}
     <div class="listhead">Advanced settings</div>
-    ${S.admin?`<div class="mrow"><div><div class="t">Unlocked</div><div class="s">Reset, Diagnostics, Mirror, the downloads and the AI setup are shown until the app is closed.</div></div><button class="btn mini" id="admin-lock">Lock</button></div>`
-    :`<div class="mrow"><div><div class="t">Locked</div><div class="s">Reset, Diagnostics, Mirror, the downloads and the AI setup are for the app's owner.</div></div></div>
+    ${S.admin?`<div class="mrow"><div><div class="t">Unlocked</div><div class="s">Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are shown until the app is closed.</div></div><button class="btn mini" id="admin-lock">Lock</button></div>`
+    :`<div class="mrow"><div><div class="t">Locked</div><div class="s">Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are for the app's owner.</div></div></div>
     <div class="field"><label>Password</label><div class="btnrow"><input id="admin-pw" type="password" autocomplete="off"><button class="btn mini" id="admin-unlock">Unlock</button></div><div class="err" id="admin-err" style="display:none">Wrong password.</div></div>`}
     <div class="listhead">About</div>
     <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s" id="about-s">${esc(aboutText())}</div></div></div>
@@ -783,13 +819,17 @@ function renderMore(main){
   if(S.admin){
     $("#diag-show").onclick=()=>{ const o=$("#diag-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=diagText(); };
     $("#diag-share").onclick=shareDiag;
+    $("#users-show").onclick=async()=>{ const o=$("#users-out"), st=$("#users-status"); if(!o.hidden&&USERS){ o.hidden=true; return; }
+      st.textContent="Fetching …"; try{ const u=await fetchAllUsers(); o.textContent=allUsersText(u.rows); o.hidden=false; st.textContent=`${nOf(u.rows.length,"phone")}, fetched ${new Date(u.at).toLocaleTimeString()}.`; }
+      catch(err){ st.textContent="Could not fetch: "+(err&&err.message||err); } };
+    $("#users-share").onclick=async()=>{ const st=$("#users-status"); try{ await shareUsers(); }catch(err){ st.textContent="Could not fetch: "+(err&&err.message||err); } };
     $("#mirror-url").onchange=async e=>{ await setSetting("mirror",e.target.value.trim()); tellMirror(); };
     renderOcrRow();
     $("#mirror-check").onclick=()=>{ mirrorCheck(true); };
     $("#reset").onclick=resetAll;
-    $("#admin-lock").onclick=()=>{ S.admin=false; render(); };
+    $("#admin-lock").onclick=()=>{ S.admin=false; S.adminPw=null; USERS=null; render(); };
   } else {
-    const pw=$("#admin-pw"), go=async()=>{ const h=await sha256(pw.value); if(h===ADMIN_HASH){ S.admin=true; render(); window.scrollTo({top:0}); } else { $("#admin-err").style.display=""; pw.value=""; } };
+    const pw=$("#admin-pw"), go=async()=>{ const h=await sha256(pw.value); if(h===ADMIN_HASH){ S.admin=true; S.adminPw=pw.value; render(); window.scrollTo({top:0}); } else { $("#admin-err").style.display=""; pw.value=""; } };
     $("#admin-unlock").onclick=go; pw.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
   }
   main.querySelectorAll("[data-learnorder]").forEach(b=> b.onclick=async()=>{ await setSetting("learnOrder",b.dataset.learnorder); S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false; S.single=null; S.saved=null; setStats(); main.querySelectorAll("[data-learnorder]").forEach(x=>x.classList.toggle("on",x===b)); }); /* the Learn session follows at once (v153) */
