@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=189; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=190; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -541,11 +541,13 @@ function renderAiRow(){
   const st=$("#ai-status"), btn=$("#ai-btn"), run=$("#ai-run"), form=$("#ai-form"); if(!st) return;
   const all=aiQueue(), q=all.length, fl=all.filter(d=>d.flag).length, sp=all.filter(d=>!d.flag&&d.mt.suspect).length, pd=q-fl-sp;
   const ppv=pictureProvider(); const ab=$("#about-s"); if(ab) ab.textContent=aboutText();
-  st.textContent=aiOn()?`On: ${AI_PROVIDERS[aiProvider()].name}, ${aiModel()}. Sends card text${ppv?`, and the framed area of a photo when the reading is weak (${AI_PROVIDERS[ppv].short}, ${pictureModel(ppv)})`:" only, never photos"}.`:"Off. Needs your own API key (DeepSeek, Qwen, GLM or Claude); sends text only.";
-  btn.textContent=aiOn()?"Settings":"Set up";
+  st.textContent=aiOn()?`On: ${AI_PROVIDERS[aiProvider()].name}, ${aiModel()}. Sends card text${ppv?`, and the framed area of a photo when the reading is weak (${AI_PROVIDERS[ppv].short}, ${pictureModel(ppv)})`:" only, never photos"}.`:"Off. The app's owner sets it up under Advanced settings.";
+  if(btn) btn.textContent=aiOn()?"Settings":"Set up";
   run.hidden=!aiOn(); run.disabled=!q;
   run.textContent=q?"Ask AI":"Nothing to review";
   const rs=$("#ai-runstatus"); if(rs) rs.textContent=q?`${q} card${q>1?"s":""} waiting: ${fl} flagged, ${sp} uncertain reading${sp===1?"":"s"}, ${pd} pending translation${pd===1?"":"s"}.`:"Nothing waiting. Flag a card, or save a reading that looks uncertain.";
+  const auto=$("#ai-auto"); if(auto) auto.onchange=async e=>{ await setSetting("aiAuto",!!e.target.checked); renderAiRow(); }; /* the one AI setting everyone sees (v190); the setup form is the owner's */
+  if(!btn||!form) return;
   btn.onclick=()=>{ form.hidden=!form.hidden; if(!form.hidden&&!aiKey(form.dataset.pv)) $("#ai-key").focus(); };
   /* the form shows one provider at a time (form.dataset.pv, the active one at first); its chip is lit, its key, model
      and base come from its account; a tap on a chip with a key makes that provider active at once, a tap on one
@@ -560,7 +562,7 @@ function renderAiRow(){
   $("#ai-save").onclick=async()=>{
     const key=$("#ai-key").value.trim(), model=$("#ai-model").value.trim(), pv=form.dataset.pv;
     await setAiAccount(pv,{key:key||aiKey(pv), model:model||AI_PROVIDERS[pv].model, base:$("#ai-base").value.trim()});
-    if(key||aiKey(pv)) await setSetting("aiProvider",pv); await setSetting("aiAuto",$("#ai-auto").checked);
+    if(key||aiKey(pv)) await setSetting("aiProvider",pv);
     if(AI_PROVIDERS[pv].vision) await setSetting("aiPicture",$("#ai-picture").checked);
     form.hidden=true; renderAiRow();
   };
@@ -718,8 +720,8 @@ function renderMore(main){
     ${S.admin?`<div class="listhead">Translation</div>
     <div class="mrow"><div><div class="t">Offline translation</div><div class="s" id="nmt-status">Checking …</div></div><button class="btn mini" id="nmt-btn" hidden></button></div>`:""}
     <div class="listhead">Online AI review</div>
-    <div class="mrow"><div><div class="t">AI review</div><div class="s" id="ai-status"></div></div><button class="btn mini" id="ai-btn">Set up</button></div>
-    <div class="aiform" id="ai-form" hidden>
+    <div class="mrow"><div><div class="t">AI review</div><div class="s" id="ai-status"></div><div class="s" style="margin-top:6px">What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. The framed area of a photo only when the reading is weak, to a provider that takes pictures.</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> Check every new card with the AI automatically (when online)</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
+    ${S.admin?`<div class="aiform" id="ai-form" hidden>
       <div class="field"><label>Provider</label><div class="chipset" id="ai-providers">${Object.entries(AI_PROVIDERS).map(([k,v])=>`<button class="chip" data-aipv="${k}">${esc(v.short)}</button>`).join("")}</div>
         <div class="badge" id="ai-acct" style="margin-top:8px"></div>
         <div class="badge" id="ai-where" style="margin-top:6px"></div></div>
@@ -727,10 +729,8 @@ function renderMore(main){
       <div class="field"><label>API key (stays on this phone)</label><input id="ai-key" type="password" autocomplete="off"></div>
       <div class="field"><label>Model</label><input id="ai-model" class="mono" autocomplete="off"></div>
       <div class="field" id="ai-picfield" hidden><label class="check"><input type="checkbox" id="ai-picture"${pictureOn()?" checked":""}> Send the framed area to the AI when the reading is weak</label></div>
-      <div class="field"><label class="check"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> Check every new card with the AI automatically (when online)</label></div>
-      <div class="badge">What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. The framed area of a photo only when the reading is weak, to a provider that takes pictures, and only while the switch above is on.</div>
       <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" id="ai-save">Save</button><button class="del" id="ai-remove">Remove key</button></div>
-    </div>
+    </div>`:""}
     <div class="mrow"><div><div class="t">Review queue</div><div class="s" id="ai-runstatus"></div></div><button class="btn mini" id="ai-run" hidden></button></div>
     <div class="mrow"><div><div class="t">Storage</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
     ${S.admin?`<div class="mrow"><div><div class="t">Text recognition</div><div class="s" id="ocr-status">Checking …</div></div><button class="btn mini" id="ocr-btn" hidden></button></div>`:""}
@@ -749,8 +749,8 @@ function renderMore(main){
     <div class="listhead">Start over</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>`:""}
     <div class="listhead">Advanced settings</div>
-    ${S.admin?`<div class="mrow"><div><div class="t">Unlocked</div><div class="s">Reset, Diagnostics, Mirror and the downloads are shown until the app is closed.</div></div><button class="btn mini" id="admin-lock">Lock</button></div>`
-    :`<div class="mrow"><div><div class="t">Locked</div><div class="s">Reset, Diagnostics, Mirror and the downloads are for the app's owner.</div></div></div>
+    ${S.admin?`<div class="mrow"><div><div class="t">Unlocked</div><div class="s">Reset, Diagnostics, Mirror, the downloads and the AI setup are shown until the app is closed.</div></div><button class="btn mini" id="admin-lock">Lock</button></div>`
+    :`<div class="mrow"><div><div class="t">Locked</div><div class="s">Reset, Diagnostics, Mirror, the downloads and the AI setup are for the app's owner.</div></div></div>
     <div class="field"><label>Password</label><div class="btnrow"><input id="admin-pw" type="password" autocomplete="off"><button class="btn mini" id="admin-unlock">Unlock</button></div><div class="err" id="admin-err" style="display:none">Wrong password.</div></div>`}
     <div class="listhead">About</div>
     <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s" id="about-s">${esc(aboutText())}</div></div></div>
