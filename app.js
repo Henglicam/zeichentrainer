@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=194; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=195; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -554,7 +554,8 @@ function renderAiRow(){
   const st=$("#ai-status"), btn=$("#ai-btn"), run=$("#ai-run"), form=$("#ai-form"); if(!st) return;
   const all=aiQueue(), q=all.length, fl=all.filter(d=>d.flag).length, sp=all.filter(d=>!d.flag&&d.mt.suspect).length, pd=q-fl-sp;
   const ppv=pictureProvider(); const ab=$("#about-s"); if(ab) ab.textContent=aboutText();
-  st.textContent=aiOn()?`On. Text by ${AI_PROVIDERS[aiProvider()].short}${ppv?`, pictures by ${AI_PROVIDERS[ppv].short}`:""}${viaRelay()||(ppv&&viaRelay(ppv))?", through the app owner's relay":""}.`:"Off. The app's owner sets it up under Advanced settings."; /* short for users (v193); the model names stay in the owner's form */
+  const relayed=viaRelay()||(ppv&&viaRelay(ppv)); /* the first line names the models and says which one does what (v195, H: "I liked the previous text more — revert and polish the first paragraph") */
+  st.textContent=aiOn()?`On${relayed?", through the app owner's relay":""}: ${AI_PROVIDERS[aiProvider()].short} (${aiModel()}) checks the text${ppv?`, ${AI_PROVIDERS[ppv].short} (${pictureModel(ppv)}) reads the framed area when the reading is weak.`:". Photos never leave the phone."}`:"Off. The app's owner sets it up under Advanced settings.";
   if(btn) btn.textContent=aiOn()?"Settings":"Set up";
   run.hidden=!aiOn(); run.disabled=!q;
   run.textContent=q?"Ask AI":"Nothing to review";
@@ -733,7 +734,7 @@ function renderMore(main){
     ${S.admin?`<div class="listhead">Translation</div>
     <div class="mrow"><div><div class="t">Offline translation</div><div class="s" id="nmt-status">Checking …</div></div><button class="btn mini" id="nmt-btn" hidden></button></div>`:""}
     <div class="listhead">Online AI review</div>
-    <div class="mrow"><div><div class="t">AI review</div><div class="s" id="ai-status"></div><div class="s" style="margin-top:6px">Sent to the AI: the characters, pinyin and meaning of a new card, and the framed part of a photo when the reader is unsure. Never the whole photo. The owner's relay passes requests on and keeps only a count.</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> Check new cards with the AI</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
+    <div class="mrow"><div><div class="t">AI review</div><div class="s" id="ai-status"></div><div class="s" style="margin-top:6px">What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. The framed area of a photo only when the reading is weak, to a provider that takes pictures. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> Check every new card with the AI automatically (when online)</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
     ${S.admin?`<div class="aiform" id="ai-form" hidden>
       <div class="field"><label>Provider</label><div class="chipset" id="ai-providers">${Object.entries(AI_PROVIDERS).map(([k,v])=>`<button class="chip" data-aipv="${k}">${esc(v.short)}</button>`).join("")}</div>
         <div class="badge" id="ai-acct" style="margin-top:8px"></div>
