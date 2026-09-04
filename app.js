@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=193; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=194; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2627,6 +2627,7 @@ async function signTranslate(id){
   const sg=SIGN[id]; if(!sg||!nmtOn()) return;
   if(!(await nmtInfo())) return;
   const lines=sg.lines.map(l=>l.trim()).filter(l=>CJK.test(l));
+  if(sg.nmt&&sg.nmt.lines===lines.join("\n")){ const mf=$(`#smeanf-${id}`); if(mf&&!sg.meanTouched&&sg.nmt.m) mf.value=sg.nmt.m; return; } /* already translated these lines (v194) */
   const tok=sg.tok=(sg.tok||0)+1;
   const sm=$(`#smean-${id}`);
   try{
@@ -2635,6 +2636,7 @@ async function signTranslate(id){
     const box=$(`#smean-${id}`), mf=$(`#smeanf-${id}`);
     if(box) box.textContent=`Meaning ${r.src==="nmt"?"from the offline translation":r.src==="phrasebook"?"from the phrasebook":"composed word by word"}, unverified`;
     if(mf&&!sg.meanTouched&&r.m){ mf.value=r.m; autoGrow(mf); }
+    sg.nmt={lines:lines.join("\n"),m:r.m,src:r.src,pending:r.pending}; /* Save reuses it for the same lines (v194, H: the Save button read "Translating …" — the model ran a second time) */
   }catch(err){ if(sm) sm.textContent="Offline translation failed, meaning composed word by word"; }
 }
 async function saveSign(id){
@@ -2652,8 +2654,10 @@ async function saveSign(id){
   if(pinHand) pin=pinHand;
   if(meanHand){ mean=meanHand; mt={...mt,verified:true,pending:false}; } /* H wrote the meaning: no offline model, no pending */
   else if(!meanHand && !sg.full && nmtOn() && !(aiLive()&&!sg.aiErr)){ /* no connection (or AI failed): offline model */
-    const btn=document.querySelector(`[data-signsave="${id}"]`); if(btn){ btn.disabled=true; btn.textContent="Translating …"; }
-    try{ const r=await signMeaning(keep.map(x=>x.l)); mean=r.m||mean; mt={src:r.src,verified:false,pending:r.pending}; }catch(e){}
+    const done=sg.nmt&&sg.nmt.lines===keep.map(x=>x.l).join("\n")?sg.nmt:null; /* the preview's translation of these very lines */
+    if(done){ mean=done.m||mean; mt={src:done.src,verified:false,pending:done.pending}; }
+    else { const btn=document.querySelector(`[data-signsave="${id}"]`); if(btn){ btn.disabled=true; btn.textContent="Translating …"; }
+      try{ const r=await signMeaning(keep.map(x=>x.l)); mean=r.m||mean; mt={src:r.src,verified:false,pending:r.pending}; }catch(e){} }
   }
   /* doubtful OCR: low confidence on a line H did not correct, or words the dictionary does not know */
   const cfs=sg.lines.flatMap((l,k)=>(sg.orig&&sg.orig[k]===l.trim()&&sg.conf&&sg.conf[k])||[]);
