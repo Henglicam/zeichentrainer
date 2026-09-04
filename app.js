@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=170; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=171; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -650,7 +650,7 @@ function renderMore(main){
     <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>`:""}
     <div class="listhead">On this phone</div>
     <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}. Opened ${nOf(usage().opens,"time")}, ${nOf(usage().reviews,"review")}, ${nOf(usage().aiCalls,"AI call")}.</div></div><button class="btn mini" id="usage-share">Share report</button></div>
-    <div class="mrow"><div><div class="t">Usage sharing</div><div class="s">Sends anonymous usage counts to the app's owner once a day: days used, reviews, cards, AI calls. No card text, no photos. <span id="share-status">${esc(shareNote())}</span><label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> Send once a day</label></div></div></div>
+    <div class="mrow"><div><div class="t">Usage sharing</div><div class="s">Sends anonymous usage counts to the app's owner once a day: days used, reviews, cards, AI calls. No card text, no photos. <span id="share-status">${esc(shareNote())}</span> Your id: <span id="share-id">${esc(installId())}</span>.<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> Send once a day</label></div></div></div>
     <div class="mrow"><div><div class="t">Photos</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">Delete ${oldShots().length}</button>`:""}</div>
     ${S.admin?`<div class="listhead">Diagnostics</div>
     <div class="mrow"><div><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${READLOG.length} step${READLOG.length===1?"":"s"}.</div></div><span class="btnrow"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button></span></div>
