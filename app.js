@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=186; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=187; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -401,7 +401,7 @@ async function aiReadPicture(blob,alts,status){
   if(!x||typeof x!=="object") throw new Error("unexpected answer");
   let m=String(x.m||"").trim(); if(/[\u4e00-\u9fff]/.test(m)&&!/[A-Za-z]{2}/.test(m)) m="";
   const zhRaw=String(x.zh||"").replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"), zh=t2s(zhRaw);
-  return {zh,zht:zh!==zhRaw?zhRaw:"",p:String(x.p||"").trim(),m,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv};
+  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(x.p,zh),m,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv};
 }
 function aiQueue(){ return deck().filter(d=>d.flag||(d.mt&&(d.mt.pending||d.mt.suspect))); }
 function aiAutoOn(){ return aiOn()&&S.settings.aiAuto!==false; }
@@ -425,6 +425,18 @@ function aiCardPayload(d){
   return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"the reading looks uncertain ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
     gloss:d.kind==="sign"?(d.gloss||[]).map(g=>g.w+" "+(g.m||"?")).join(" · "):undefined,
     alt:d.alts&&d.alts.length?d.alts:undefined, script:d.trad?"traditional":undefined };
+}
+/* the model's pinyin is taken only when it fits the characters (v187, H's 志在千里: Qwen answered "zhì zài qiān l" twice, the
+   ǐ lost, and the card showed it): one syllable per character, each with a vowel — else the app's own pinyin for the text */
+const PY_VOWELS=/[aeiouüāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]+/gi;
+async function saneP(p,zh){
+  const lines=String(zh||"").split("\n").filter(l=>CJK.test(l)); if(!lines.length) return String(p||"").trim();
+  const given=String(p||"").split("/").map(l=>l.trim().split(/\s+/).filter(Boolean));
+  /* one vowel group per character (syllables may be joined into words, as some models write them), digits aside; a token without a vowel is a broken syllable */
+  const nuclei=toks=>toks.filter(x=>!/^\d+$/.test(x)).reduce((a,x)=>a+(x.match(PY_VOWELS)||[]).length,0);
+  const ok=given.length===lines.length&&given.every((toks,k)=>toks.length>0&&nuclei(toks)===[...lines[k]].filter(c=>CJK.test(c)).length&&toks.every(x=>/^\d+$/.test(x)||(x.match(PY_VOWELS)||[]).length>0));
+  if(ok) return given.map(l=>l.join(" ")).join(" / ");
+  try{ if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); return lines.map(pySpaced).join(" / "); }catch(e){ return String(p||"").trim(); }
 }
 const AI_SYSTEM=`You review flashcards for an adult learning to read Chinese in Beijing. Cards come from OCR of photos (signs, menus, packaging), so the Chinese text may contain OCR slips, the pinyin is auto-generated and the meaning may be a crude word-by-word gloss.
 For every card return the corrected card. Rules: "zh" = the Chinese text in simplified characters (always simplified, even when the sign is traditional), fixed only if it is clearly an OCR slip (keep line breaks); "p" = pinyin with tone marks, correct for this context (多音字!), one space between syllables, " / " between lines; "m" = natural English meaning of the whole text as a sign or word (short, in English only, no explanations); the text is usually a real sign, menu item, product name or brand — when the readings circle around a well-known brand or product name, "zh" is that name; "note" = one short sentence on what was wrong, or "ok"; "ok" = true when zh, pinyin and meaning were already right; "zht" = only when the input has "script":"traditional" (the photo shows traditional characters): "zh" written in traditional characters as it stands on the sign; "alt" (when present) = other readings of the same photo by other OCR passes and models — the true text is often a mix of them, or a well-known name or phrase they all circle around; prefer a real sign, menu or product text that every reading could be a misreading of; "bad" = true when the Chinese text is OCR garbage — no plausible sign, menu or product text can be made of it — then keep "zh" as given, leave "m" empty and say so in the note. Before calling a text bad, try the "alt" readings: when one of them, or a mix of them, is a plausible text or a well-known name (a brand on a bottle, a shop name), answer with that as "zh", "bad" false, and say in the note which reading you used. Never replace an unreadable text with a mere guess.
@@ -452,10 +464,11 @@ async function aiAsk(cards,status){
   const text=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,"");
   let arr; try{ arr=JSON.parse(text); }catch(e){ throw new Error("could not read the model's answer"); }
   if(!Array.isArray(arr)) throw new Error("unexpected answer");
-  return arr.map(x=>{ let m=String(x.m||"").trim();
+  const out=[]; for(const x of arr){ let m=String(x.m||"").trim();
     if(/[\u4e00-\u9fff]/.test(m)&&!/[A-Za-z]{2}/.test(m)){ logErr("ai","meaning answered in Chinese: "+m); m=""; } /* v97: the model once echoed the Chinese text as the meaning — an English meaning or none */
     const zhRaw=String(x.zh||"").trim(), zh=t2s(zhRaw), zht=String(x.zht||"").trim()||(zh!==zhRaw?zhRaw:"");
-    return {zh,zht,p:String(x.p||"").trim(),m,note:String(x.note||"").trim(),ok:!!x.ok,bad:!!x.bad,at:Date.now(),model}; });
+    out.push({zh,zht,p:x.bad?String(x.p||"").trim():await saneP(x.p,zh),m,note:String(x.note||"").trim(),ok:!!x.ok,bad:!!x.bad,at:Date.now(),model}); }
+  return out;
 }
 /* run the review over the whole queue (or the given cards) and store suggestions on the cards */
 async function aiReview(list,status){
