@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=163; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=164; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -142,7 +142,7 @@ function diagText(){
   const ago=t=>{ const d=Math.round((Date.now()-t)/1000); return d<60?d+" s ago":d<3600?Math.round(d/60)+" min ago":Math.round(d/3600)+" h ago"; };
   const out=[`Zeichentrainer diagnostics — ${new Date().toLocaleString("en-GB")}`,
     `page ${pageVersion()||"?"} · script ${APP_V} · online ${navigator.onLine} · AI ${aiOn()?aiProvider()+(aiLive()?" live":" off"):"none"} · SW ${navigator.serviceWorker&&navigator.serviceWorker.controller?"yes":"no"}`,
-    navigator.userAgent, ""];
+    navigator.userAgent, `voices (${voiceList().length}): ${voiceList().join("; ")||"none reported"}`, ""];
   out.push(`Last reading (${READLOG.length} steps):`);
   READLOG.forEach(x=>out.push(`  ${ago(x.t)}  ${x.text}`));
   if(LAST_READ.passes) out.push("  passes: "+JSON.stringify(LAST_READ.passes));
@@ -712,24 +712,27 @@ function frontHTML(d){
   return `${pic}<div class="reticle" style="width:${W}px;height:${H}px">${reticleSVG(single,W,H)}<div class="glyph" style="font-size:${fs}px">${lines.map(esc).join("<br>")}</div></div>${scriptNote}`;
 }
 /* ---------- pronunciation: the phone's own Chinese voice (nothing downloaded, works offline) ---------- */
-let TTS_VOICE;
+let TTS_VOICE=null;
+/* the phone's Chinese voice: looked up afresh whenever none was found yet — Android hands the voice list over late and
+   sometimes in two parts, and a "no voice" answer must not stick for the session (v164, H: "the speaker icon doesn't
+   appear on my Android phone"; until v163 the button showed only with a voice found, so a late list hid it for good) */
 function ttsVoice(){
   if(!("speechSynthesis" in window)) return null;
-  if(TTS_VOICE!==undefined) return TTS_VOICE;
+  if(TTS_VOICE) return TTS_VOICE;
   const vs=speechSynthesis.getVoices();
-  if(!vs.length){ /* Android hands the voice list over a moment later */
-    speechSynthesis.addEventListener("voiceschanged",()=>{ TTS_VOICE=undefined; if(ttsVoice()&&S.revealed) render(); },{once:true});
-    return null;
-  }
+  if(!vs.length) speechSynthesis.addEventListener("voiceschanged",()=>{ if(ttsVoice()&&S.revealed) render(); },{once:true});
   TTS_VOICE=vs.find(v=>/^zh[-_]?CN/i.test(v.lang))||vs.find(v=>/^(zh|cmn)/i.test(v.lang))||null;
   return TTS_VOICE;
 }
 function say(text){
-  const v=ttsVoice(); if(!v) return;
-  try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text.replace(/\n/g,"，")); u.voice=v; u.lang=v.lang; u.rate=0.85; speechSynthesis.speak(u); }catch(e){}
+  const v=ttsVoice();
+  try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text.replace(/\n/g,"，")); if(v){ u.voice=v; u.lang=v.lang; } else u.lang="zh-CN"; u.rate=0.85; speechSynthesis.speak(u); }catch(e){}
+  if(!v){ const h=$("#say-hint"); if(h) h.hidden=false; } /* the engine may still speak Chinese; the hint says what to install if not */
 }
+function voiceList(){ try{ return ("speechSynthesis" in window)?speechSynthesis.getVoices().map(v=>v.lang+" "+v.name):[]; }catch(e){ return []; } }
 const SAY_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15 9.2a3.6 3.6 0 0 1 0 5.6"/><path d="M17.3 6.6a7 7 0 0 1 0 10.8"/></svg>';
-function sayBtn(d){ return ttsVoice()?`<button class="say" data-say="${esc(d.c)}" aria-label="Pronounce">${SAY_SVG}</button>`:""; }
+function sayBtn(d){ return ("speechSynthesis" in window)?`<button class="say" data-say="${esc(d.c)}" aria-label="Pronounce">${SAY_SVG}</button>`:""; } /* shown whenever the phone can speak at all (v164) */
+const SAY_HINT=`<div class="badge" id="say-hint" hidden>No Chinese voice on this phone — add one under Settings, Text-to-speech output.</div>`;
 function wireSay(root){ (root||document).querySelectorAll("[data-say]").forEach(b=> b.onclick=e=>{ e.stopPropagation(); say(b.dataset.say); }); }
 /* dictionary meanings without CC-CEDICT clutter: "[Tian1 jin1 shi4]" pinyin, "CL:…" classifiers */
 function cleanSense(m){ return String(m||"").replace(/\(Taiwan pr\.[^)]*\)/g,"").replace(/\[[^\]]*\]/g,"").replace(/\s*CL:[^;,)]*/g,"").replace(/\(\s*\)/g,"").replace(/\s{2,}/g," ").trim(); }
@@ -772,7 +775,7 @@ function backHTML(d){
   const glossBlock = d.kind==="sign" ? `
     ${d.mt&&!d.mt.verified?`<span class="flag">meaning unverified${d.mt.pending?" (translation pending)":""}${d.mt.suspect?" (reading uncertain: "+esc(d.mt.suspect)+")":""}</span>`:""}
 ` : "";
-  return `<div class="pin">${esc(d.p)}${sayBtn(d)}</div><div class="mean">${esc(d.m)}</div>${charsHTML(d)}
+  return `<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${SAY_HINT}<div class="mean">${esc(d.m)}</div>${charsHTML(d)}
     ${d.kind==="sign"?glossBlock:wordBlock}${linkedHTML(d)}`;
 }
 /* the other cards with the same text (v122, H: "if one character connects to various photos, then link them"): their
