@@ -215,6 +215,7 @@ button{font:inherit;color:inherit}
 /* cropping: the frame must be visible on any photo colour (red on red!): bright dashed edge with a dark outline */
 .croplayer{position:absolute;inset:0;touch-action:none;cursor:crosshair}
 /* once a frame exists no new one can be drawn, so a swipe outside the frame scrolls the page; the frame itself and its corners keep taking the finger (v131/v132) */
+.shotzoom{width:100%;border-radius:10px;display:block;margin-bottom:8px;background-repeat:no-repeat;background-color:var(--fill)} .croplayer.zoomed{touch-action:pan-y;cursor:pointer}
 .croplayer.framed{touch-action:pan-y;cursor:default} .croplayer.framed .croprect{pointer-events:auto;touch-action:none;cursor:move} .croplayer.framed .croprect .h{cursor:nwse-resize}
 .croprect{position:absolute;display:none;border:2px dashed #fff;
   box-shadow:0 0 0 1px rgba(0,0,0,.8), inset 0 0 0 1px rgba(0,0,0,.6);pointer-events:none}
