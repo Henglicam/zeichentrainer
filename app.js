@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=199; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=200; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1120,7 +1120,7 @@ function renderAdd(main){
     const run=++fillRun, same=()=>run===fillRun&&$("#f-word")&&$("#f-word").value.replace(/\s+/g,"")===word;
     if(S.draft) delete S.draft.ai;
     if(aiLive()){
-      st.textContent="Checking the text …";
+      st.innerHTML=busyHTML(AI_BUSY_TEXT);
       try{
         const [r]=await aiAsk([{kind:"word",c:word,p:"",m:"",mt:{src:"dict",verified:false,suspect:"typed by hand, please check"}}]);
         if(!same()) return;
@@ -1296,7 +1296,7 @@ function renderEdit(main,c){
     const st=$("#e-aistatus"), box=$("#e-aibox"); ab.disabled=true; box.hidden=true;
     const zh=$("#e-word").value, pin=$("#e-pin").value.trim(), mean=$("#e-mean").value.trim(), note=$("#e-note").value.trim();
     try{
-      const [r]=await aiAsk([{kind:d.kind||"word",c:isSign?zh.split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):zh.replace(/\s+/g,""),p:pin,m:mean,flagNote:note,gloss:d.gloss,mt:{src:"dict",verified:false,suspect:"please check"}}],t=>{ st.textContent=t; });
+      const [r]=await aiAsk([{kind:d.kind||"word",c:isSign?zh.split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):zh.replace(/\s+/g,""),p:pin,m:mean,flagNote:note,gloss:d.gloss,mt:{src:"dict",verified:false,suspect:"please check"}}],()=>{ st.innerHTML=busyHTML(AI_BUSY_TEXT); });
       if(r.zh&&CJK.test(r.zh)){ const zh=r.zh.replace(/\r/g,""); sg.lines=(isSign?zh:recutLines(zh.replace(/\s+/g,""),sg.lines)).split("\n").map(l=>l.trim()).filter(Boolean); sg.orig=sg.lines.slice(); syncWord(); drawLines(); }
       if(r.p) $("#e-pin").value=r.p;
       if(r.m) $("#e-mean").value=r.m;
@@ -1877,8 +1877,12 @@ const median=a=>{ const t=a.slice().sort((p,q)=>p-q); return t[t.length>>1]; };
 const READ_FAIL=/^(No Chinese|Reading failed|Frame too)/;
 /* a step that lasts longer than READ_STUCK shows its own text under the bar — a stuck step is a failure, not a step (v93) */
 const READ_STUCK=20000, READ_AT={}, READ_RUN={}; /* READ_RUN[id] = the number of the latest reading of a photo: an older one still running is superseded and abandons (v116 — a corner drag during a reading started a second one, both finished with the same text and the AI was asked twice) */
+/* the moving bar with one line of text — the reading's status, and since v200 the AI check under the Meaning field (H: the meaning
+   changes late and nothing said the app was still at it: "kann man anzeigen, dass er noch dran arbeitet?") */
+const busyHTML=t=>`<div class="reading"><div class="bar"><i></i></div><span class="badge">${esc(t)}</span></div>`;
+const AI_BUSY_TEXT="Checking pinyin and meaning …";
 const readingHTML=(t,id)=>READ_FAIL.test(t)?`<span class="badge">${esc(t)}</span>`
-  :`<div class="reading"><div class="bar"><i></i></div><span class="badge">Reading the text …${id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK?` still at: ${esc(t)}`:""}</span></div>`;
+  :busyHTML(`Reading the text …${id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK?` still at: ${t}`:""}`);
 const readingStatus=(id,run)=>t=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=t; READ_AT[id]=Date.now(); READLOG.push({t:Date.now(),text:t}); while(READLOG.length>40) READLOG.shift();
   const b=$("#ocr-"+id); if(b) b.innerHTML=readingHTML(t,id);
   setTimeout(()=>{ if(READING[id]!==t) return; const b2=$("#ocr-"+id); if(b2) b2.innerHTML=readingHTML(t,id); },READ_STUCK+50); };
@@ -2582,7 +2586,7 @@ function signEditorHTML(id){
   const doubt=!aiLive()&&low<OCR_DOUBT?` The reading looks uncertain (confidence ${Math.round(low)}%) — check the text.`:"";
   const bad=sg.ai&&sg.ai.bad;
   /* no status about the AI (H, v105: "not relevant for user") — the text is either fine, or it needs a hand */
-  const head=sg.aiBusy?"Checking the text …":bad?"This reading looks wrong — frame the text tightly and read again, or fix the characters.":sg.ai&&!sg.ai.kept?"":doubt.trim(); /* the tap hint sits under the strip (H, v111) */
+  const head=sg.aiBusy?"":bad?"This reading looks wrong — frame the text tightly and read again, or fix the characters.":sg.ai&&!sg.ai.kept?"":doubt.trim(); /* the tap hint sits under the strip (H, v111) */
   /* the reading crop is not shown (H: "the user doesn't have to see it") — it serves the picker's reference only */
   const nChars=sg.lines.join("").replace(/[^\u4e00-\u9fff]/g,"").length, meanCf=(sg.conf||[]).flat().reduce((a,c,_,arr)=>a+c/arr.length,0);
   const weak=nChars<=2&&meanCf<85?`<div class="err" style="margin:4px 0 8px">Only ${nChars} character${nChars===1?"":"s"} found — if the photo shows more, frame the characters tightly and drag a corner to read again.</div>`:"";
@@ -2614,7 +2618,8 @@ function signPreview(id){
   if(pinF&&!sg.pinTouched){ pinF.value=good&&sg.ai.p?sg.ai.p:py; autoGrow(pinF); }
   if(meanF&&!sg.meanTouched){ meanF.value=good?(sg.ai.m||mean):mean; autoGrow(meanF); }
   const sm=$(`#smean-${id}`);
-  if(sm){ sm.className="smean badge"+(good?" ai":sg.ai&&!sg.ai.kept?" bad":"");
+  if(sm&&sg.aiBusy){ sm.className="smean badge"; sm.innerHTML=busyHTML(AI_BUSY_TEXT); } /* the bar under the meaning while the AI runs (v200) */
+  else if(sm){ sm.className="smean badge"+(good?" ai":sg.ai&&!sg.ai.kept?" bad":"");
     sm.textContent=good
     ?"" /* a good answer shows nothing: no "checked by the AI" (H, v104/v105), no remark of the model (v154, H: "don't show the OCR slip message to the user"), and since v174 not "Read from the picture by the AI." either (H: "not relevant to the user") — a picture answer shows a small mark on the Characters label instead (v176/v177) */
     :sg.ai&&sg.ai.kept?`The AI suggested ${sg.ai.proposed.replace(/\n/g," / ")}, but ${sg.ai.kept} was read clearly, so the reading stays. Meaning ${full?"from the phrasebook":"composed word by word"}, unverified.`
