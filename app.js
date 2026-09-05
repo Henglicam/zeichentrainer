@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=219; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=220; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -197,12 +197,13 @@ async function shareFeedback(){
 function allUsersText(rows){
   const day=t=>String(t||"").slice(0,10), week=Date.now()-7*DAY, n=(o,k)=>+(o&&o[k])||0;
   const tot={}; const add=(o,k,v)=>{ o[k]=(o[k]||0)+v; };
-  let active=0; const models={};
+  let active=0, withCards=0, tried=0, wx=0; const models={}; /* installs sorted by what they did (v220, H: "18 phones is incorrect" — a row is a browser storage, not a person; WeChat's browser makes a new one per tap) */
   for(const r of rows){ const d=r.data||{}; if(new Date(r.created_at).getTime()>=week) active++;
+    if(n(d,"cards")>0) withCards++; else if(n(d,"aiCalls")>0||n(r,"relay_today")>0) tried++; if(/WeChat/.test(d.device||"")) wx++;
     for(const k of ["cards","reviews","aiCalls","pics","byPhoto","byHand"]) add(tot,k,n(d,k));
     for(const [m,v] of Object.entries(d.models||{})) add(models,m,+v||0); add(tot,"relay",n(r,"relay_today")); }
   const head=[`识字 Zeichentrainer — all users, ${day(new Date().toISOString())}`,
-    `${nOf(rows.length,"phone")}, ${active} active in the last 7 days. Cards ${tot.cards||0} (${tot.byPhoto||0} by photo, ${tot.byHand||0} by hand), reviews ${tot.reviews||0}, AI calls ${tot.aiCalls||0} (pictures ${tot.pics||0}). Relay today: ${nOf(tot.relay,"call")}.`,
+    `${nOf(rows.length,"install")} (one per browser storage, not per person): ${withCards} with cards, ${tried} that only tried the reader, ${rows.length-withCards-tried} that only opened the page${wx?`; ${wx} inside WeChat's browser`:""}. ${active} reported in the last 7 days. Cards ${tot.cards||0} (${tot.byPhoto||0} by photo, ${tot.byHand||0} by hand), reviews ${tot.reviews||0}, AI calls ${tot.aiCalls||0} (pictures ${tot.pics||0}). Relay today: ${nOf(tot.relay,"call")}.`,
     `Analyses: ${modelsText(models)}.`,""];
   const lines=rows.map(r=>{ const d=r.data||{}; return `${d.install||"?"}  v${d.version||"?"}  last ${day(r.created_at)}  days ${n(d,"days")}  cards ${n(d,"cards")}  reviews ${n(d,"reviews")}  AI ${n(d,"aiCalls")} (pics ${n(d,"pics")})  relay today ${n(r,"relay_today")}${d.device?"  "+d.device:""}`; });
   return head.concat(lines.length?lines:["No rows yet."]).join("\n")+"\n";
@@ -869,7 +870,7 @@ function renderMore(main){
     ${S.admin?`<div class="listhead">Diagnostics</div>
     <div class="mrow"><div><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${READLOG.length} step${READLOG.length===1?"":"s"}.</div></div><span class="btnrow"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button></span></div>
     <pre class="diag" id="diag-out" hidden></pre>
-    <div class="mrow"><div><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"phone")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div></div><span class="btnrow"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button></span></div>
+    <div class="mrow"><div><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"install")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div></div><span class="btnrow"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button></span></div>
     <pre class="diag" id="users-out" hidden></pre>
     <div class="mrow"><div><div class="t">Feedback</div><div class="s" id="fb-in-status">${FEEDBACK?`${nOf(FEEDBACK.rows.length,"message")}, fetched ${new Date(FEEDBACK.at).toLocaleTimeString()}.`:"The messages users sent from the app, newest first."}</div></div><span class="btnrow"><button class="btn mini" id="fb-show">Show</button><button class="btn mini" id="fb-share">Share</button></span></div>
     <pre class="diag" id="fb-out" hidden></pre>
@@ -899,7 +900,7 @@ function renderMore(main){
     $("#diag-show").onclick=()=>{ const o=$("#diag-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=diagText(); };
     $("#diag-share").onclick=shareDiag;
     $("#users-show").onclick=async()=>{ const o=$("#users-out"), st=$("#users-status"); if(!o.hidden&&USERS){ o.hidden=true; return; }
-      st.textContent="Fetching …"; try{ const u=await fetchAllUsers(); o.textContent=allUsersText(u.rows); o.hidden=false; st.textContent=`${nOf(u.rows.length,"phone")}, fetched ${new Date(u.at).toLocaleTimeString()}.`; }
+      st.textContent="Fetching …"; try{ const u=await fetchAllUsers(); o.textContent=allUsersText(u.rows); o.hidden=false; st.textContent=`${nOf(u.rows.length,"install")}, fetched ${new Date(u.at).toLocaleTimeString()}.`; }
       catch(err){ st.textContent="Could not fetch: "+(err&&err.message||err); } };
     $("#users-share").onclick=async()=>{ const st=$("#users-status"); try{ await shareUsers(); }catch(err){ st.textContent="Could not fetch: "+(err&&err.message||err); } };
     $("#fb-show").onclick=async()=>{ const o=$("#fb-out"), st=$("#fb-in-status"); if(!o.hidden&&FEEDBACK){ o.hidden=true; return; }
