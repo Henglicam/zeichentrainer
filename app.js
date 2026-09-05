@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=202; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=203; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1636,6 +1636,45 @@ async function showCropPreview(id){
   clearTimeout(READ_TIMER[id]);
   READ_TIMER[id]=setTimeout(()=>{ if(CROP&&CROP.id===id&&CROP.rect) cropSign(id); },READ_WAIT);
 }
+/* ---------- the proposed frame (v203, H's poster photo that needed no framing: "do an automatic image analysis and
+   suggest a crop, which the user can change if needed — or apply no crop at all") ----------
+   A photo that opens by itself (taken, the first from the album, shared) gets its frame drawn by the app: `textRegion`
+   takes the ink of a small chromaticity copy, the rows that look like text (the inkHeight rule, four stroke edges),
+   the first and last of them, the columns holding ink inside that band, padded by one text height — and the whole
+   photo when nothing stands out or the text fills it (H's "no crop at all"). Then the usual wait and the reading. The
+   frame is adjustable like a drawn one; the Crop button never proposes, so Cancel, then Crop, gives the empty layer
+   to draw on as before. On the phone only, no upload: about 100 ms on a 360 px copy. */
+function textRegion(bmp){
+  const k=Math.min(1,360/Math.max(bmp.width,bmp.height)), cv=chromaCanvas(bmp,k), W=cv.width, Hh=cv.height, d=cv.getContext("2d").getImageData(0,0,W,Hh).data;
+  const on=(x,y)=>d[(y*W+x)*4]<128;
+  const rows=[]; for(let y=0;y<Hh;y++){ let ink=0,edges=0,prev=false; for(let x=0;x<W;x++){ const o=on(x,y); if(o) ink++; if(o!==prev){ edges++; prev=o; } } rows.push(ink/W>0.02&&ink/W<0.7&&edges>=4); }
+  let y0=-1,y1=-1,run=0; const heights=[];
+  for(let y=0;y<=Hh;y++){ if(y<Hh&&rows[y]) run++; else { if(run>=3){ if(y0<0) y0=y-run; y1=y; heights.push(run); } run=0; } }
+  if(y0<0) return null;
+  const lineH=median(heights), need=Math.max(2,0.03*(y1-y0));
+  let x0=-1,x1=-1; run=0;
+  for(let x=0;x<=W;x++){ let ink=0; if(x<W) for(let y=y0;y<y1;y++) if(on(x,y)) ink++; if(x<W&&ink>=need) run++; else { if(run>=3){ if(x0<0) x0=x-run; x1=x; } run=0; } }
+  if(x0<0) return null;
+  const pad=Math.max(lineH,0.03*Math.max(W,Hh));
+  return {x:Math.max(0,x0-pad)/W, y:Math.max(0,y0-pad)/Hh, x1:Math.min(W,x1+pad)/W, y1:Math.min(Hh,y1+pad)/Hh, lineH:lineH/k};
+}
+async function proposeFrame(id){
+  const rec=S.inbox.find(s=>s.id===id); if(!rec||!CROP||CROP.id!==id||CROP.auto!==true) return;
+  CROP.auto="running";
+  let reg=null;
+  try{ const bmp=await createImageBitmap(rec.blob); try{ reg=textRegion(bmp); } finally{ bmp.close(); } }catch(err){ logErr("frame",err&&err.message||err); }
+  const same=()=>CROP&&CROP.id===id&&CROP.auto==="running"&&!CROP.rect; /* Cancel, another photo or a finger meanwhile: the proposal is dropped */
+  if(!same()) return;
+  const layer=document.querySelector(`.croplayer[data-id="${id}"]`), img=layer&&layer.parentElement.querySelector("img"); if(!layer) return;
+  if(img&&!img.complete) await new Promise(r=>{ img.onload=r; img.onerror=r; });
+  if(!same()) return;
+  const r=layer.getBoundingClientRect(); if(!r.width||!r.height) return;
+  const full=!reg||(reg.x1-reg.x>=0.9&&reg.y1-reg.y>=0.9), b=full?{x:0,y:0,x1:1,y1:1}:reg;
+  CROP.rect={x:b.x*r.width,y:b.y*r.height,w:(b.x1-b.x)*r.width,h:(b.y1-b.y)*r.height,a:0,lw:r.width,lh:r.height};
+  CROP.proposed=full?"whole":"text"; delete CROP.auto;
+  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`frame proposed by the app: ${full?"the whole photo":`${pc(b.x)}–${pc(b.x1)} % across, ${pc(b.y)}–${pc(b.y1)} % down`}${reg?`, text rows ${pc(reg.y)}–${pc(reg.y1)} %`:", no text rows found"}`}); while(READLOG.length>40) READLOG.shift();
+  renderShots(); showCropPreview(id);
+}
 async function cropBlob(id){
   const rec=S.inbox.find(s=>s.id===id);
   if(!rec||!CROP||!CROP.rect||CROP.rect.w<8||CROP.rect.h<8) return null;
@@ -2786,7 +2825,7 @@ function renderShots(){
           ?`<button class="del" data-cropcancel="${s.id}">Cancel</button>`
           :`<button class="ocr-btn" data-crop="${s.id}">Crop</button><button class="del" data-del="${s.id}">Delete</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${SIGN[s.id]?signEditorHTML(s.id):READING[s.id]?readingHTML(READING[s.id],s.id):cropping
-          ?`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.</span>`
+          ?CROP.auto?busyHTML("Finding the text …"):`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.</span>`
           :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
     }).join("");
@@ -2797,6 +2836,7 @@ function renderShots(){
   box.querySelectorAll("[data-scriptset]").forEach(b=> b.onclick=async()=>{ const sg=SIGN[b.closest("[data-scriptseg]").dataset.scriptseg], on=b.dataset.scriptset==="1"; if(!sg||on===!!sg.trad) return; await setScript(sg,on); renderShots(); }); /* the mark by hand (v146); the AI is not asked again */
   wireAi(box);
   box.querySelectorAll(".croplayer").forEach(wireCrop);
+  if(CROP&&CROP.auto===true) proposeFrame(CROP.id);
   wireSlines(box,(sg,id)=>signPreview(id),(sg,id,k)=>{ delete sg.ai; delete sg.aiErr;
     /* a typed line that keeps nothing of the reading is a new text: the reader's traditional verdict was about the old one (v142, H typed 美团 over a lone 国 and got 美團) */
     if(sg.trad&&!sg.tradUser){ const o=[...((sg.orig&&sg.orig[k])||"")], n=sg.lines[k]||""; if(!o.some(ch=>CJK.test(ch)&&n.includes(ch))){ sg.trad=false; sg.tradText=""; sg.tradTouched=false; renderShots(); } }
@@ -2837,7 +2877,7 @@ async function importPhotos(files){
   /* several photos from the album: all land in the inbox, the first one opens in crop mode */
   let first=null;
   for(const file of files){ const id=await addPhoto(file); if(!first) first=id; }
-  CROP=first?{id:first,rect:null}:null; PENDING_SHOT=false;
+  CROP=first?{id:first,rect:null,auto:true}:null; PENDING_SHOT=false; /* the frame is proposed by the app (v203) */
   if(S.mode!=="inbox"){ S.mode="inbox"; render(); } else renderShots();
   window.scrollTo({top:0});
 }
