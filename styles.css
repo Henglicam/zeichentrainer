@@ -31,7 +31,7 @@ button{font:inherit;color:inherit}
   background:var(--bar);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--sep)}
 .brand{display:flex;align-items:baseline;gap:8px;white-space:nowrap}
 .logo{font-family:var(--hanzi);font-size:30px;font-weight:700;letter-spacing:1px;line-height:1.1}
-.ver{font-family:var(--mono);font-size:11px;color:var(--label3)}
+.ver{display:none} /* the PWA vN label stays in the page for the shell check, the mirror and About, but is not shown in the header (v225, H's "Go" on the design review: a developer's line, not a user's) */
 .stats{display:flex;gap:6px;font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums;padding-bottom:3px}
 .stats span{display:inline-flex;align-items:baseline;gap:5px;padding:5px 11px;border-radius:999px;background:var(--fill)}
 .stats b{font-weight:600;font-size:11px;color:var(--label2);text-transform:capitalize}
