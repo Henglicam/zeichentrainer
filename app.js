@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=212; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=213; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -390,10 +390,12 @@ function render(){
   if(S.mode==="cards") return S.detail?renderCardDetail(main,S.detail):renderCards(main);
 }
 /* ---------- online AI review (T3, opt-in) ----------
-   Flagged cards, doubtful OCR and pending translations can be checked by an
+   Flagged cards, uncertain readings and pending translations can be checked by an
    online model (DeepSeek / Qwen / GLM via the OpenAI-style API, or Claude).
-   Only text leaves the phone: hanzi, pinyin, meaning and the note — never
-   photos. The key lives in the settings store. */
+   What leaves the phone: hanzi, pinyin, meaning and the note — and, when the reading
+   is weak and H's switch is on, the straightened framed area to a provider that takes
+   pictures (v173). A phone without a key of its own sends through the owner's relay
+   (v191). Keys live in the settings store. */
 /* providers: Chinese ones take WeChat Pay / Alipay and need no VPN; all but Claude speak the OpenAI-style chat API */
 const AI_PROVIDERS={
   deepseek:{name:"DeepSeek", short:"DeepSeek", base:"https://api.deepseek.com", model:"deepseek-chat", hint:"sk-…", where:"Key: platform.deepseek.com → API keys. Top up with WeChat Pay or Alipay (a few yuan last months). No VPN needed."},
@@ -759,7 +761,7 @@ function shareNote(){
   if(!shareOn()) return "Off. Nothing is sent.";
   const d=S.settings.lastReport; return d?(d===dayKey()?"Last sent today.":"Last sent "+d+"."):"Not sent yet.";
 }
-/* the owner's rows in More (Reset, Diagnostics, Mirror, the downloads, the usage report) open with a password (v162, H:
+/* the owner's rows in More (Reset, Diagnostics, All users, Feedback, Mirror, the downloads, the AI setup) open with a password (v162, H:
    "protect all those administrative functions with a password" — one master password, its SHA-256 in the code; it
    stops taps, not a reader of the source; unlocked for the session only) */
 const ADMIN_HASH="ee3467fab5716e0f004d387a016bddadc4570c2336c58fc6c872c351fd23a7d6";
@@ -1219,7 +1221,6 @@ function renderAdd(main){
 }
 /* ---------- Cards: library with photos, detail, single-card test, edit ---------- */
 const THUMB={};
-/* list thumbnail: the whole photo when the card has one (H), otherwise the crop */
 function thumbBlob(d){ return d.img||fullPhoto(d); } /* the crop (H, v86); the whole photo only for cards without one */
 function thumbURL(d){ return THUMB[d.id]||(THUMB[d.id]=URL.createObjectURL(thumbBlob(d))); }
 function dropThumb(id){ if(THUMB[id]){ URL.revokeObjectURL(THUMB[id]); delete THUMB[id]; } }
@@ -1238,7 +1239,7 @@ function cardsListHTML(){
   if(S.filterTag) list=list.filter(d=>hasTag(d,S.filterTag));
   if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,d.w,d.wp,d.wm,d.flagNote,...(d.tags||[])].filter(Boolean).join(" ").toLowerCase().includes(q));
   const rows=list.map(d=>`<button class="crow" data-id="${esc(d.id)}">
-      ${d.img?`<img class="thumb" src="${thumbURL(d)}" alt="">`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`}
+      ${d.img?`<img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`}
       <span class="ct"><span class="c">${esc((d.trad||d.c).replace(/\n/g," / "))}</span>${d.trad?`<span class="simpref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">Traditional</span>`:""}${byText.get(d.c)>1?`<span class="pill">${byText.get(d.c)} photos</span>`:""}${(d.tags||[]).map(t=>`<span class="pill tag">${esc(t)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
       <span class="cs">${d.ai?'<span class="pill ai">AI</span>':""}${d.flag?'<span class="pill flagged">⚑ Review</span>':""}${cardStatus(d)}</span></button>`).join("");
   const empty=S.custom.length?"No cards match.":"No cards yet — take a photo under Camera, or tap + New.";
@@ -1597,7 +1598,7 @@ function segmentChars(chars){
 /* the AI's answer for the card just saved from this photo, with one-tap Accept */
 function qsAiBox(id){ const c=QSCARD[id], d=c&&cardOf(c); return d&&d.ai?aiBoxHTML(d):""; }
 /* ---------- Cropping (crop → OCR or card image) ---------- */
-let CROP=null; // {id, rect:{x,y,w,h,lw,lh}} while cropping — stays until the card is saved (H, v50)
+let CROP=null; /* {id, rect:{x,y,w,h,lw,lh,a}, auto, proposed, zoom} while cropping — stays until the card is saved (H, v50); a = the frame's angle (v185), auto/proposed = the frame proposed by the app (v203), zoom = the framed area enlarged (v169) */
 function cropRectStyle(){
   const r=CROP&&CROP.rect; if(!r||!r.lw||!r.lh) return "";
   const pc=v=>(v*100).toFixed(2)+"%";
