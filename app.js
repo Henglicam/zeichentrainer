@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=214; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=215; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -713,11 +713,11 @@ function usageText(){
    through the share sheet; without one the link is copied. Nothing is sent by the app itself. A friend behind the wall needs
    github.io for the first install — the mirror only serves an installed app. */
 const APP_URL="https://henglicam.github.io/zeichentrainer/";
-const APP_SHARE_TEXT="识字 Zeichentrainer — learn the Chinese characters you see around you. Take a photo of a sign, get the card. Open the link on your phone and add it to the home screen: "+APP_URL;
+const APP_SHARE_TEXT="识字 Zeichentrainer — learn the Chinese characters you see around you. Take a photo of a sign, get the card. Open the link on your phone and add it to the home screen:"; /* no link in the text: the share sheet appends the url field itself (v215, H's WeChat screenshot showed the link twice) */
 async function shareApp(){
   const st=$("#app-share-status");
   if(navigator.share){ try{ await navigator.share({title:"识字 Zeichentrainer",text:APP_SHARE_TEXT,url:APP_URL}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
-  try{ await navigator.clipboard.writeText(APP_SHARE_TEXT); if(st) st.textContent="Link copied."; }catch(err){ if(st) st.textContent="Sharing is not available here. The link: "+APP_URL; }
+  try{ await navigator.clipboard.writeText(APP_SHARE_TEXT+" "+APP_URL); if(st) st.textContent="Link copied."; }catch(err){ if(st) st.textContent="Sharing is not available here. The link: "+APP_URL; }
 }
 async function shareUsage(){
   const text=usageText(), name="zeichentrainer-usage-"+new Date().toISOString().slice(0,10)+".txt", file=new File([text],name,{type:"text/plain"});
