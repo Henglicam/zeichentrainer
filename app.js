@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=216; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=217; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -634,7 +634,7 @@ async function aiAuto(){
   try{ await aiReview(list); if(S.mode==="more"||S.mode==="cards"||S.mode==="inbox") render(); }catch(e){ console.warn("AI auto review:",e); }
 }
 /* About: what leaves the phone, live with the AI settings (v173) */
-function aboutText(){ const ver=($(".ver")||{}).textContent||""; return `${ver}. Works offline. Cards and photos stay on this phone; anonymous usage counts go to the app's owner.${(pv=>pv?` Only when the reading is weak, the framed area of a photo goes to ${AI_PROVIDERS[pv].short}${viaRelay(pv)?" through the app owner's relay":""}.`:"")(pictureProvider())}`; } /* names the AI and the relay (v216, H: "goes to your AI provider" is wrong — a friend's phone has no provider of its own) */
+function aboutText(){ const ver=($(".ver")||{}).textContent||""; return `${ver}. Works offline. Cards and photos stay on this phone; anonymous usage counts go to the app's owner.${(pv=>pv?` Only when the reading is weak, the framed area of a photo goes to ${AI_PROVIDERS[pv].short}.`:"")(pictureProvider())}`; } /* names the AI (v216, H: "goes to your AI provider" is wrong — a friend's phone has no provider of its own); the relay stays out of About (v217, H) — the AI row's What-is-sent line and privacy.html describe it */
 /* More → Online AI review row + inline setup form */
 function renderAiRow(){
   const st=$("#ai-status"), btn=$("#ai-btn"), run=$("#ai-run"), form=$("#ai-form"); if(!st) return;
