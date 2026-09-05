@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=211; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=212; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -159,9 +159,11 @@ function diagText(){
    answers with the latest row of every phone plus today's relay calls; the app keeps the password only in memory after
    the unlock (S.adminPw) and sends it with the request — the table itself stays unreadable for the publishable key */
 const reportUrl=()=>SHARE_URL+"/functions/v1/usage-report";
-let USERS=null; /* the last answer: {at, rows} */
-async function fetchAllUsers(){
-  const r=await fetch(reportUrl(),{method:"POST",headers:{"content-type":"application/json","apikey":SHARE_KEY,"authorization":"Bearer "+SHARE_KEY},body:JSON.stringify({password:S.adminPw||""})});
+let USERS=null, FEEDBACK=null; /* the last answers: {at, rows} */
+async function fetchAllUsers(){ return USERS=await fetchReport("users"); }
+async function fetchFeedback(){ return FEEDBACK=await fetchReport("feedback"); }
+async function fetchReport(what){
+  const r=await fetch(reportUrl(),{method:"POST",headers:{"content-type":"application/json","apikey":SHARE_KEY,"authorization":"Bearer "+SHARE_KEY},body:JSON.stringify({password:S.adminPw||"",what})});
   if(!r.ok){ /* v198 — the phone showed a 401 that the function's own "wrong password" could not be told from Supabase's JWT gate: name the sender */
     const body=await r.text().catch(()=>""); logErr("report",r.status+": "+body.slice(0,300));
     if(r.status===401){ if(/jwt/i.test(body)) throw new Error("the report function still checks the JWT — switch off \"Verify JWT\" under its Settings in the dashboard");
@@ -170,7 +172,27 @@ async function fetchAllUsers(){
     if(r.status===404||r.status===503) throw new Error("the report function is not set up");
     throw new Error("report error "+r.status+": "+(body.slice(0,120)||"no details")); }
   const rows=await r.json(); if(!Array.isArray(rows)) throw new Error("unexpected answer");
-  USERS={at:Date.now(),rows}; return USERS;
+  return {at:Date.now(),rows};
+}
+/* Feedback (v212, H: "add a provide feedback function — of course I must receive this feedback", described first and built on
+   "Go"): a user's message goes as one row into the table `feedback` of H's project (insert only for the publishable key,
+   with the installation id and the app version — no name, no cards, no photos); H reads them through the report function
+   with what:"feedback" (supabase/feedback.sql, the function's second branch). */
+async function sendFeedback(text){
+  const r=await fetch(SHARE_URL+"/rest/v1/feedback",{method:"POST",headers:{"apikey":SHARE_KEY,"Authorization":"Bearer "+SHARE_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({install:installId(),version:APP_V,text})});
+  if(!r.ok){ const body=await r.text().catch(()=>""); logErr("feedback",r.status+": "+body.slice(0,300)); throw new Error(r.status===404?"the feedback table is not set up":"error "+r.status); }
+}
+function feedbackText(rows){
+  const day=t=>String(t||"").replace("T"," ").slice(0,16);
+  const lines=rows.map(r=>`${day(r.created_at)}  v${r.version||"?"}  ${r.install||"?"}\n  ${String(r.text||"").replace(/\s*\n\s*/g,"\n  ")}`);
+  return [`识字 Zeichentrainer — feedback, ${nOf(rows.length,"message")}`,""].concat(lines.length?lines:["No messages yet."]).join("\n")+"\n";
+}
+async function shareFeedback(){
+  const rows=(FEEDBACK&&FEEDBACK.rows)||(await fetchFeedback()).rows;
+  const text=feedbackText(rows), name="zeichentrainer-feedback-"+new Date().toISOString().slice(0,10)+".txt", file=new File([text],name,{type:"text/plain"});
+  if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
+  if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
+  try{ await navigator.clipboard.writeText(text); alert("Copied to the clipboard."); }catch(err){ alert("Sharing is not available here."); }
 }
 function allUsersText(rows){
   const day=t=>String(t||"").slice(0,10), week=Date.now()-7*DAY, n=(o,k)=>+(o&&o[k])||0;
@@ -804,6 +826,7 @@ function renderMore(main){
   main.innerHTML=`<div class="pane more">
     <div class="listhead">Share</div>
     <div class="mrow"><div><div class="t">Share the app</div><div class="s" id="app-share-status">Send the link to a friend. The app installs from any browser, no store.</div></div><button class="btn mini" id="app-share">Share</button></div>
+    <div class="mrow"><div style="flex:1"><div class="t">Feedback</div><div class="s" id="fb-status">Tell the app's owner what works and what does not.</div><textarea class="grow" id="fb-text" rows="2" placeholder="Your message" style="margin-top:8px;width:100%"></textarea><div class="fieldacts"><button class="btn mini" id="fb-send">Send</button></div></div></div>
     <div class="listhead">Your data</div>
     <div class="mrow"><div><div class="t">Export</div><div class="s">Progress and cards as one file, via the share sheet. ${backupNote()}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="export-photos"${exportPhotos()?" checked":""}> Include photos (adds about ${(photoBytes()*1.37/1048576).toFixed(1)} MB)</label></div><button class="btn mini" id="export">Export</button></div>
     <div class="mrow"><div><div class="t">Import</div><div class="s">A zeichentrainer-….json.txt file. Existing cards are overwritten.</div></div><button class="btn mini" id="import">Import</button></div>
@@ -839,6 +862,8 @@ function renderMore(main){
     <pre class="diag" id="diag-out" hidden></pre>
     <div class="mrow"><div><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"phone")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div></div><span class="btnrow"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button></span></div>
     <pre class="diag" id="users-out" hidden></pre>
+    <div class="mrow"><div><div class="t">Feedback</div><div class="s" id="fb-in-status">${FEEDBACK?`${nOf(FEEDBACK.rows.length,"message")}, fetched ${new Date(FEEDBACK.at).toLocaleTimeString()}.`:"The messages users sent from the app, newest first."}</div></div><span class="btnrow"><button class="btn mini" id="fb-show">Show</button><button class="btn mini" id="fb-share">Share</button></span></div>
+    <pre class="diag" id="fb-out" hidden></pre>
     <div class="listhead">Start over</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>`:""}
     <div class="listhead">Advanced settings</div>
@@ -851,6 +876,10 @@ function renderMore(main){
   $("#export").onclick=exportData;
   $("#export-photos").onchange=e=>setSetting("exportPhotos",!!e.target.checked);
   $("#usage-share").onclick=shareUsage; $("#app-share").onclick=shareApp;
+  $("#fb-send").onclick=async()=>{ const t=$("#fb-text"), st=$("#fb-status"), b=$("#fb-send"), text=t.value.trim(); if(!text){ st.textContent="Write a few words first."; return; }
+    if(!navigator.onLine){ st.textContent="No connection. Try again when online."; return; }
+    b.disabled=true; st.textContent="Sending …";
+    try{ await sendFeedback(text); t.value=""; st.textContent="Thank you, sent."; }catch(err){ st.textContent="Could not send: "+(err&&err.message||err); } b.disabled=false; };
   $("#share-usage").onchange=async e=>{ await setSetting("shareUsage",!!e.target.checked); $("#share-status").textContent=shareNote(); sendReport(); };
   $("#import").onclick=()=>$("#imp").click();
   $("#share-flag").onclick=shareFlagged;
@@ -863,11 +892,15 @@ function renderMore(main){
       st.textContent="Fetching …"; try{ const u=await fetchAllUsers(); o.textContent=allUsersText(u.rows); o.hidden=false; st.textContent=`${nOf(u.rows.length,"phone")}, fetched ${new Date(u.at).toLocaleTimeString()}.`; }
       catch(err){ st.textContent="Could not fetch: "+(err&&err.message||err); } };
     $("#users-share").onclick=async()=>{ const st=$("#users-status"); try{ await shareUsers(); }catch(err){ st.textContent="Could not fetch: "+(err&&err.message||err); } };
+    $("#fb-show").onclick=async()=>{ const o=$("#fb-out"), st=$("#fb-in-status"); if(!o.hidden&&FEEDBACK){ o.hidden=true; return; }
+      st.textContent="Fetching …"; try{ const f=await fetchFeedback(); o.textContent=feedbackText(f.rows); o.hidden=false; st.textContent=`${nOf(f.rows.length,"message")}, fetched ${new Date(f.at).toLocaleTimeString()}.`; }
+      catch(err){ st.textContent="Could not fetch: "+(err&&err.message||err); } };
+    $("#fb-share").onclick=async()=>{ const st=$("#fb-in-status"); try{ await shareFeedback(); }catch(err){ st.textContent="Could not fetch: "+(err&&err.message||err); } };
     $("#mirror-url").onchange=async e=>{ await setSetting("mirror",e.target.value.trim()); tellMirror(); };
     renderOcrRow();
     $("#mirror-check").onclick=()=>{ mirrorCheck(true); };
     $("#reset").onclick=resetAll;
-    $("#admin-lock").onclick=()=>{ S.admin=false; S.adminPw=null; USERS=null; render(); };
+    $("#admin-lock").onclick=()=>{ S.admin=false; S.adminPw=null; USERS=null; FEEDBACK=null; render(); };
   } else {
     const pw=$("#admin-pw"), go=async()=>{ const h=await sha256(pw.value); if(h===ADMIN_HASH){ S.admin=true; S.adminPw=pw.value; render(); window.scrollTo({top:0}); } else { $("#admin-err").style.display=""; pw.value=""; } };
     $("#admin-unlock").onclick=go; pw.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
