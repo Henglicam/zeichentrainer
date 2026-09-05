@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=220; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=221; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -197,15 +197,23 @@ async function shareFeedback(){
 function allUsersText(rows){
   const day=t=>String(t||"").slice(0,10), week=Date.now()-7*DAY, n=(o,k)=>+(o&&o[k])||0;
   const tot={}; const add=(o,k,v)=>{ o[k]=(o[k]||0)+v; };
-  let active=0, withCards=0, tried=0, wx=0; const models={}; /* installs sorted by what they did (v220, H: "18 phones is incorrect" — a row is a browser storage, not a person; WeChat's browser makes a new one per tap) */
+  /* installs sorted by what they did (v220, H: "18 phones is incorrect" — a row is a browser storage, not a person; WeChat's browser
+     makes a new one per tap); since v221 the real users come first, by cards, and the rows that only opened the page fold into one line */
+  let active=0, wx=0, installed=0; const models={}, users=[], tried=[], lookers=[];
   for(const r of rows){ const d=r.data||{}; if(new Date(r.created_at).getTime()>=week) active++;
-    if(n(d,"cards")>0) withCards++; else if(n(d,"aiCalls")>0||n(r,"relay_today")>0) tried++; if(/WeChat/.test(d.device||"")) wx++;
+    if(/WeChat/.test(d.device||"")) wx++; if(d.installed) installed++;
+    if(n(d,"cards")>0) users.push(r); else if(n(d,"aiCalls")>0||n(r,"relay_today")>0) tried.push(r); else lookers.push(r);
     for(const k of ["cards","reviews","aiCalls","pics","byPhoto","byHand"]) add(tot,k,n(d,k));
     for(const [m,v] of Object.entries(d.models||{})) add(models,m,+v||0); add(tot,"relay",n(r,"relay_today")); }
+  users.sort((a,b)=>n(b.data,"cards")-n(a.data,"cards")); tried.sort((a,b)=>n(b,"relay_today")-n(a,"relay_today"));
   const head=[`识字 Zeichentrainer — all users, ${day(new Date().toISOString())}`,
-    `${nOf(rows.length,"install")} (one per browser storage, not per person): ${withCards} with cards, ${tried} that only tried the reader, ${rows.length-withCards-tried} that only opened the page${wx?`; ${wx} inside WeChat's browser`:""}. ${active} reported in the last 7 days. Cards ${tot.cards||0} (${tot.byPhoto||0} by photo, ${tot.byHand||0} by hand), reviews ${tot.reviews||0}, AI calls ${tot.aiCalls||0} (pictures ${tot.pics||0}). Relay today: ${nOf(tot.relay,"call")}.`,
+    `${nOf(rows.length,"install")} (one per browser storage, not per person): ${users.length} with cards, ${tried.length} that only tried the reader, ${lookers.length} that only opened the page${wx?`; ${wx} inside WeChat's browser`:""}. ${installed} installed on a home screen, ${active} reported in the last 7 days. Cards ${tot.cards||0} (${tot.byPhoto||0} by photo, ${tot.byHand||0} by hand), reviews ${tot.reviews||0}, AI calls ${tot.aiCalls||0} (pictures ${tot.pics||0}). Relay today: ${nOf(tot.relay,"call")}.`,
     `Analyses: ${modelsText(models)}.`,""];
-  const lines=rows.map(r=>{ const d=r.data||{}; return `${d.install||"?"}  v${d.version||"?"}  last ${day(r.created_at)}  days ${n(d,"days")}  cards ${n(d,"cards")}  reviews ${n(d,"reviews")}  AI ${n(d,"aiCalls")} (pics ${n(d,"pics")})  relay today ${n(r,"relay_today")}${d.device?"  "+d.device:""}`; });
+  const line=r=>{ const d=r.data||{}, reader=n(d.models,"reader"); return `${d.install||"?"}  v${d.version||"?"}  ${d.installed?"installed":"browser"}  first ${d.first||"?"}  last ${day(r.created_at)}  days ${n(d,"days")}  opens ${n(d,"opens")}  cards ${n(d,"cards")}  reviews ${n(d,"reviews")}  AI ${n(d,"aiCalls")} (pics ${n(d,"pics")})  reader ${reader}${reader?`, weak ${n(d,"pics")} of ${reader}`:""}  relay today ${n(r,"relay_today")}${d.device?"  "+d.device:""}`; };
+  const lines=users.map(line).concat(tried.length?["",`${nOf(tried.length,"install")} that only tried the reader:`].concat(tried.map(line)):[]);
+  if(lookers.length){ const plat=d=>{ const v=d.device||""; return /iPhone|iPad/.test(v)?"iPhone":/Android/.test(v)?"Android":/Windows/.test(v)?"Windows":/Mac/.test(v)?"Mac":/Linux|X11/.test(v)?"Linux":"other"; };
+    const by={}; let lwx=0; for(const r of lookers){ const d=r.data||{}; add(by,plat(d),1); if(/WeChat/.test(d.device||"")) lwx++; }
+    lines.push("",`${nOf(lookers.length,"install")} only opened the page: ${Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${v} ${k}`).join(", ")}${lwx?` (${lwx} in WeChat)`:""}.`); }
   return head.concat(lines.length?lines:["No rows yet."]).join("\n")+"\n";
 }
 async function shareUsers(){
@@ -707,6 +715,7 @@ function usageText(){
     `AI: ${n("aiCalls")} calls, ${n("aiIn")} input + ${n("aiOut")} output tokens (this month ${mn("aiCalls")} calls, ${mn("aiIn")} + ${mn("aiOut")} tokens) · ${aiOn()?AI_PROVIDERS[aiProvider()].name+", "+aiModel():"AI not set up"}`,
     `Pictures read by the AI: ${n("pics")} (${mn("pics")} this month)`,
     `Analyses by model: ${modelsText(u.models)} (this month ${modelsText(m.models)})`,
+    `Installed on the home screen: ${isInstalled()?"yes":"no"}`,
     `Photos in the inbox: ${S.inbox.length} · tags: ${allTags().length}`].join("\n")+"\n";
 }
 /* Share the app (v210, H: "add a share app function", described first and built on "Go"; v211: the first row of More, and the
@@ -740,12 +749,13 @@ function installId(){ let id=S.settings.installId; if(!id){ const b=crypto.getRa
    WeChat, which cannot install the app and may hand out a fresh storage on the next tap): Learn shows a line that says so,
    and the daily row's device carries "WeChat" so the rows can be told apart */
 const inWeChat=()=>/MicroMessenger/i.test(navigator.userAgent);
+const isInstalled=()=>{ try{ return matchMedia("(display-mode: standalone)").matches||navigator.standalone===true; }catch(e){ return false; } }; /* runs from the home screen — the strongest sign of a real user (v221) */
 const WX_NOTE="You are inside WeChat. Open this page in your browser to install the app and keep your cards.";
 function wxNoteHTML(){ return inWeChat()?`<div class="wxnote">${WX_NOTE}</div>`:""; }
 function reportData(){
   const u=usage(), m=u.m||{}, st=learnStats(), n=k=>u[k]||0, mn=k=>m[k]||0;
   const ua=navigator.userAgent, dev=((ua.match(/\(([^)]*)\)/)||[])[1]||"")+(inWeChat()?"; WeChat":"");
-  return {install:installId(), version:APP_V, device:dev, first:u.first?new Date(u.first).toISOString().slice(0,10):null,
+  return {install:installId(), version:APP_V, device:dev, installed:isInstalled(), first:u.first?new Date(u.first).toISOString().slice(0,10):null,
     days:(S.settings.days||[]).length, streak:st.streak, opens:n("opens"), opensMonth:mn("opens"),
     reviews:n("reviews"), reviewsMonth:mn("reviews"), learned:st.total, cards:deck().length,
     byPhoto:n("byPhoto"), byHand:n("byHand"), deleted:n("deleted"),
