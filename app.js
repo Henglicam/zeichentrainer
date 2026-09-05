@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=204; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=205; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2328,7 +2328,7 @@ function charStripHTML(id,k){
   const sg=SIGN[id], line=sg.lines[k], same=sg.orig&&sg.orig[k]===line.trim(), cf=(same&&sg.conf&&sg.conf[k])||[];
   const shown=sg.trad?[...tradLine(sg,k)]:null; /* the buttons show the photo's script, the taps act on the simplified line */
   let ci=0;
-  return `<div class="cstrip">${[...line].map((ch,i)=>{ const isC=CJK.test(ch); const c=isC?cf[ci++]:100;
+  return `<div class="cstrip${sg.sel?" selecting":""}">${[...line].map((ch,i)=>{ const isC=CJK.test(ch); const c=isC?cf[ci++]:100;
     return `<button class="ck${isC&&c<OCR_DOUBT?" low":""}${sg.sel&&sg.sel.has(k+","+i)?" on":""}" data-ck="${k},${i}" data-sid="${id}" title="${isC&&c<100?Math.round(c)+"%":""}">${esc(shown?shown[i]:ch)}</button>`; }).join("")}</div>`; /* no + tile at the end (H, v121) — adding goes through the picker's "+ before / + after" or the line input */
 }
 /* mode "ins": a new character goes in before index i (i = length: at the end) — v91, taken out in v92, back in v119
@@ -2637,6 +2637,7 @@ function selRowRefresh(root,id){
   row.innerHTML=selRowInner(id);
   const h=root.querySelector(`[data-hint="${id}"]`); if(h) h.textContent=sg.sel?SEL_HINT:h.dataset.text;
   if(!sg.sel) root.querySelectorAll(`[data-ck][data-sid="${id}"]`).forEach(b=>b.classList.remove("on"));
+  root.querySelectorAll(".cstrip").forEach(st=>{ const f=st.querySelector("[data-ck]"); if(f&&f.dataset.sid===id) st.classList.toggle("selecting",!!sg.sel); }); /* the strip takes the finger while selecting (v205) */
   wireSel(root);
 }
 function wireSel(root){
@@ -2659,9 +2660,18 @@ function removeSelected(sg,id){
 /* the strip's character buttons open the picker (or mark, while selecting); typing in a line calls onInput(sg, k, input) */
 function wireSlines(root,onInput,onCommit){
   wireSel(root); /* onCommit(sg,id): the line input was left after typing — the strip is redrawn from the text, the caller re-checks */
-  root.querySelectorAll("[data-ck]").forEach(b=> b.onclick=()=>{ const [k,i]=b.dataset.ck.split(",").map(Number), sg=SIGN[b.dataset.sid];
-    if(sg&&sg.sel){ const key=k+","+i; if(sg.sel.has(key)) sg.sel.delete(key); else sg.sel.add(key); b.classList.toggle("on",sg.sel.has(key)); selRowRefresh(root,b.dataset.sid); return; }
-    openCharPick(b.dataset.sid,k,i,b); });
+  root.querySelectorAll("[data-ck]").forEach(b=>{
+    b.onclick=()=>{ const sg=SIGN[b.dataset.sid]; if(sg&&sg.sel) return; /* while selecting, the pointer marks (below) */ const [k,i]=b.dataset.ck.split(",").map(Number); openCharPick(b.dataset.sid,k,i,b); };
+    /* a finger drawn along the strip marks every character it passes (v205, H: "swipe over multiple characters in select
+       mode and select them all"): the first character decides — starting on a marked one, the stroke unmarks; the strips
+       carry touch-action:none while selecting, so the stroke does not scroll; a tap is a stroke of one character */
+    b.onpointerdown=e=>{ const sg=SIGN[b.dataset.sid]; if(!sg||!sg.sel) return; e.preventDefault();
+      const id=b.dataset.sid, paint=!sg.sel.has(b.dataset.ck), seen=new Set();
+      const mark=el=>{ if(!el||el.dataset.sid!==id||!el.dataset.ck||seen.has(el.dataset.ck)) return; seen.add(el.dataset.ck); if(paint) sg.sel.add(el.dataset.ck); else sg.sel.delete(el.dataset.ck); el.classList.toggle("on",paint); selRowRefresh(root,id); };
+      mark(b); try{ b.setPointerCapture(e.pointerId); }catch(err){}
+      b.onpointermove=ev=>{ const el=document.elementFromPoint(ev.clientX,ev.clientY); mark(el&&el.closest?el.closest("[data-ck]"):null); };
+      b.onpointerup=b.onpointercancel=()=>{ b.onpointermove=null; b.onpointerup=b.onpointercancel=null; }; };
+  });
   root.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{ const sg=SIGN[inp.dataset.sid]; if(!sg) return; const k=+inp.dataset.sline;
     if(sg.sel){ sg.sel=null; selRowRefresh(root,inp.dataset.sid); } /* typing shifts the positions — the selection is dropped */
     if(sg.trad){ sg.tradTouched=true; const tl=(sg.tradText||"").split("\n"); while(tl.length<=k) tl.push(""); tl[k]=inp.value; sg.tradText=tl.join("\n"); sg.lines[k]=t2s(inp.value); }
