@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=209; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=210; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -683,6 +683,16 @@ function usageText(){
     `Analyses by model: ${modelsText(u.models)} (this month ${modelsText(m.models)})`,
     `Photos in the inbox: ${S.inbox.length} · tags: ${allTags().length}`].join("\n")+"\n";
 }
+/* Share the app (v210, H: "add a share app function", described first and built on "Go"): the link with a one-line text through
+   the share sheet; without one the link is copied. Nothing is sent by the app itself. A friend behind the wall needs
+   github.io for the first install — the mirror only serves an installed app. */
+const APP_URL="https://henglicam.github.io/zeichentrainer/";
+const APP_SHARE_TEXT="识字 Zeichentrainer — learn the Chinese characters you see around you. Take a photo of a sign, get the card. Open the link in Chrome, then Install app: "+APP_URL;
+async function shareApp(){
+  const st=$("#app-share-status");
+  if(navigator.share){ try{ await navigator.share({title:"识字 Zeichentrainer",text:APP_SHARE_TEXT,url:APP_URL}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
+  try{ await navigator.clipboard.writeText(APP_SHARE_TEXT); if(st) st.textContent="Link copied."; }catch(err){ if(st) st.textContent="Sharing is not available here. The link: "+APP_URL; }
+}
 async function shareUsage(){
   const text=usageText(), name="zeichentrainer-usage-"+new Date().toISOString().slice(0,10)+".txt", file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name,text:"Zeichentrainer usage report"}); return; }catch(err){ if(err && err.name==="AbortError") return; } }
@@ -818,6 +828,7 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div></div><button class="btn mini" id="mirror-check">Check now</button></div>
     <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>`:""}
     <div class="listhead">On this phone</div>
+    <div class="mrow"><div><div class="t">Share the app</div><div class="s" id="app-share-status">Send the link to a friend. The app installs from the browser, no store.</div></div><button class="btn mini" id="app-share">Share</button></div>
     <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}. Opened ${nOf(usage().opens,"time")}, ${nOf(usage().reviews,"review")}, ${nOf(usage().aiCalls,"AI call")}, ${nOf(usage().pics,"picture")} read by the AI. Analyses: ${modelsText(usage().models)}.</div></div><button class="btn mini" id="usage-share">Share report</button></div>
     <div class="mrow"><div><div class="t">Usage sharing</div><div class="s">Sends anonymous usage counts to the app's owner once a day: days used, reviews, cards, AI calls. No card text, no photos. <span id="share-status">${esc(shareNote())}</span> Your id: <span id="share-id">${esc(installId())}</span>.<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> Send once a day</label></div></div></div>
     <div class="mrow"><div><div class="t">Photos</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">Delete ${oldShots().length}</button>`:""}</div>
@@ -837,7 +848,7 @@ function renderMore(main){
   </div>`;
   $("#export").onclick=exportData;
   $("#export-photos").onchange=e=>setSetting("exportPhotos",!!e.target.checked);
-  $("#usage-share").onclick=shareUsage;
+  $("#usage-share").onclick=shareUsage; $("#app-share").onclick=shareApp;
   $("#share-usage").onchange=async e=>{ await setSetting("shareUsage",!!e.target.checked); $("#share-status").textContent=shareNote(); sendReport(); };
   $("#import").onclick=()=>$("#imp").click();
   $("#share-flag").onclick=shareFlagged;
