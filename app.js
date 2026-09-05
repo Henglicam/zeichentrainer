@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=207; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=208; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -134,7 +134,7 @@ const cardId = c => deck().some(d=>d.id===c) ? c+"#"+Date.now() : c;
 async function setSetting(k,v){ S.settings[k]=v; try{ await idbPut("settings",{k,v}); }catch(e){} }
 /* diagnostics (H debugs alone on the phone): the last errors and the last reading's steps, shown and shared from More → Diagnostics */
 const ERRLOG=[], READLOG=[], LAST_READ={passes:null}, AILOG=[]; /* AILOG: the last three AI exchanges, request and raw reply, never the key (v97) */
-function logAi(entry){ AILOG.push({t:Date.now(),...entry}); while(AILOG.length>3) AILOG.shift(); }
+function logAi(entry){ AILOG.push({t:Date.now(),...entry}); while(AILOG.length>3) AILOG.shift(); } /* entry.ms: how long the call took (v208, H: the check "takes way too long" — Diagnostics now shows it) */
 function logErr(kind,msg){ ERRLOG.push({t:Date.now(),kind,msg:String(msg||"").slice(0,400)}); while(ERRLOG.length>20) ERRLOG.shift(); setSetting("errlog",ERRLOG.slice()).catch(()=>{}); }
 window.addEventListener("error",e=>logErr("error",(e.message||"")+(e.filename?` @${String(e.filename).split("/").pop()}:${e.lineno}`:"")));
 window.addEventListener("unhandledrejection",e=>{ const r=e.reason; logErr("promise",r&&(r.stack||r.message)||r); });
@@ -149,7 +149,7 @@ function diagText(){
   out.push("", `Drawings (${DRAWLOG.length}, newest last):`);
   DRAWLOG.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.strokes.length} stroke${x.strokes.length===1?"":"s"} → ${x.alts.join(" ")||"nothing"}${x.strokes_best?` · strokes ${x.strokes_best.join(" ")} · print ${(x.ocr||[]).join(" ")||"nothing"}`:""}`); out.push("    strokes: "+JSON.stringify(x.strokes)); });
   out.push("", `AI exchanges (${AILOG.length}, newest last):`);
-  AILOG.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.model||""} → ${x.status||""}`); out.push("    request: "+x.req); out.push("    reply: "+(x.res||x.err||"")); });
+  AILOG.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.model||""} → ${x.status||""}${x.ms?` in ${(x.ms/1000).toFixed(1)} s`:""}`); out.push("    request: "+x.req); out.push("    reply: "+(x.res||x.err||"")); });
   out.push("", `Errors (${ERRLOG.length}):`);
   ERRLOG.forEach(x=>out.push(`  ${ago(x.t)}  [${x.kind}] ${x.msg}`));
   return out.join("\n")+"\n";
@@ -447,25 +447,28 @@ async function pictureJpeg(blob){
   const b64=(await blobToB64(out)).d; return {b64,w:cv.width,h:cv.height,kb:Math.round(out.size/1024)};
 }
 const PIC_SYSTEM=`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","bad":true|false}. "zh" = the Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without Latin letters, numbers of the decoration or anything you cannot see; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural English meaning of the text as a sign or name (short, English only); "note" = one short remark if needed; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty. An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`;
+/* Qwen's hybrid models think by default, and the thinking takes many seconds before the short JSON comes (v208, H with Qwen
+   as the active provider: "Check pinyin and meaning takes way too long" — until v207 only the picture path switched it off) */
+function noThinking(pv,model,body){ if(pv==="qwen"&&/^qwen3/.test(model)) body.enable_thinking=false; return body; }
 async function aiReadPicture(blob,alts,status){
   const pv=pictureProvider(); if(!pv) throw new Error("no picture provider");
   const key=aiKey(pv), model=pictureModel(pv), pic=await pictureJpeg(blob), relay=!key&&viaRelay(pv);
   const text=`Read the Chinese text on this picture. The reader's guesses: ${alts.length?alts.map(a=>a.replace(/\n/g," / ")).join(" | "):"none"}.`;
   const req=`[picture ${pic.w}×${pic.h} JPEG, ${pic.kb} KB] ${text}`; /* the log never carries the picture */
   status&&status("Asking the AI about the picture …");
-  let r;
+  let r; const t0=Date.now();
   try{
     if(pv==="claude")
       r=await aiFetch(aiBase(pv),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({model,max_tokens:1000,system:PIC_SYSTEM,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:pic.b64}},{type:"text",text}]}]})});
     else { const body={model,max_tokens:1000,temperature:0,messages:[{role:"system",content:PIC_SYSTEM},{role:"user",content:[{type:"text",text},{type:"image_url",image_url:{url:"data:image/jpeg;base64,"+pic.b64}}]}]};
-      if(pv==="qwen"&&/^qwen3/.test(model)) body.enable_thinking=false; /* the hybrid models think by default — the short JSON must not wait for that */
+      noThinking(pv,model,body);
       r=relay?await relayFetch(pv,body):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
   }catch(err){ logAi({model,req,err:"no connection: "+(err&&err.message||err)}); throw new Error(AI_NET_ERR); }
   if(!r.ok){ const t=await apiErrText(r); logAi({model,status:r.status,req,err:t}); throw new Error(relay?relayError(r,t):"API error "+r.status+(t?": "+t:"")); }
   const data=await r.json(); countTokens(pv,data); bump("pics"); bumpModel(model); /* the usage counters and the daily row count the picture readings (v178, H) and the model (v179) */
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
-  logAi({model,status:r.status,req,res:raw.slice(0,1500)});
+  logAi({model,status:r.status,ms:Date.now()-t0,req,res:raw.slice(0,1500)});
   await loadScriptTables().catch(()=>{});
   const t=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,""); let x; try{ x=JSON.parse(t); if(Array.isArray(x)) x=x[0]; }catch(e){ throw new Error("could not read the model's answer"); }
   if(!x||typeof x!=="object") throw new Error("unexpected answer");
@@ -515,13 +518,13 @@ async function aiAsk(cards,status){
   const pv=aiProvider(), key=aiKey(), relay=!key&&viaRelay(pv); if(!key&&!relay) throw new Error("no API key");
   const model=aiModel(), user=JSON.stringify(cards.map(aiCardPayload));
   status&&status(`asking ${model} about ${cards.length} card${cards.length>1?"s":""} …`);
-  let r;
+  let r; const t0=Date.now();
   try{
     if(pv==="claude")
       r=await aiFetch(aiBase(),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({model,max_tokens:4000,system:AI_SYSTEM,messages:[{role:"user",content:user}]})});
     else { /* OpenAI-style chat completions (DeepSeek, Qwen, GLM, …), direct with the phone's key or through the owner's relay */
-      const body={model,max_tokens:4000,temperature:0,messages:[{role:"system",content:AI_SYSTEM},{role:"user",content:user}]};
+      const body=noThinking(pv,model,{model,max_tokens:4000,temperature:0,messages:[{role:"system",content:AI_SYSTEM},{role:"user",content:user}]});
       r=relay?await relayFetch(pv,body):await aiFetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
   }catch(err){ logAi({model,req:user.slice(0,1500),err:"no connection: "+(err&&err.message||err)+(pv==="claude"?" — the API may be blocked without a VPN":" — offline, or this provider refuses calls from a browser")}); throw new Error(AI_NET_ERR); }
   if(!r.ok&&relay){ const t=await apiErrText(r); logAi({model,status:r.status,req:user.slice(0,1500),err:t}); throw new Error(relayError(r,t)); }
@@ -530,7 +533,7 @@ async function aiAsk(cards,status){
   if(!r.ok){ const t=await apiErrText(r); throw new Error("API error "+r.status+(t?": "+t:"")); }
   const data=await r.json(); countTokens(pv,data); bumpModel(model);
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
-  logAi({model,status:r.status,req:user.slice(0,1500),res:raw.slice(0,1500)});
+  logAi({model,status:r.status,ms:Date.now()-t0,req:user.slice(0,1500),res:raw.slice(0,1500)});
   await loadScriptTables().catch(()=>{}); /* v103: the model answered a traditional sign with traditional "zh" — the card's key is always simplified */
   const text=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,"");
   let arr; try{ arr=JSON.parse(text); }catch(e){ throw new Error("could not read the model's answer"); }
@@ -2296,7 +2299,7 @@ async function aiCharAlternatives(line,i,insert){
     :`OCR read this line: "${line}". Character ${i+1} ("${chars[i]}") is probably misread. Give up to 4 likely correct characters for that position, judging from the context.`;
   let r;
   if(pv==="claude") r=await aiFetch(aiBase(),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model,max_tokens:100,system:sys,messages:[{role:"user",content:user}]})});
-  else { const body={model,max_tokens:100,temperature:0,messages:[{role:"system",content:sys},{role:"user",content:user}]};
+  else { const body=noThinking(pv,model,{model,max_tokens:100,temperature:0,messages:[{role:"system",content:sys},{role:"user",content:user}]});
     r=relay?await relayFetch(pv,body):await aiFetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
   if(!r.ok) throw new Error(relay?relayError(r):"API error "+r.status);
   const data=await r.json(); countTokens(pv,data); bumpModel(model);
