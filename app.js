@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=203; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=204; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1300,7 +1300,7 @@ function renderEdit(main,c){
   const syncWord=()=>{ $("#e-word").value=sg.lines.join("\n"); };
   const drawLines=()=>{
     const box=$("#e-lines"); if(!box) return;
-    box.innerHTML=sg.lines.map((l,k)=>slineHTML(eid,k,l,false)).join("")+`<div class="scriptline">${scriptSwitchHTML(eid,sg)}</div>`; /* no "Simplified …" reference line beside the switch (v148, H: the switch says it) */
+    box.innerHTML=sg.lines.map((l,k)=>slineHTML(eid,k,l,false)).join("")+`<div class="scriptline">${scriptSwitchHTML(eid,sg)}</div>`+selRowHTML(eid); /* no "Simplified …" reference line beside the switch (v148, H: the switch says it) */
     wireSlines(box,()=>{ syncWord(); pinyinFollow(); showAi(); });
     box.querySelectorAll("[data-scriptset]").forEach(b=> b.onclick=async()=>{ const on=b.dataset.scriptset==="1"; if(on===!!sg.trad) return; await setScript(sg,on); drawLines(); const lab=box.closest(".field").querySelector("label"); if(lab) lab.textContent="Characters"+(sg.trad?" (traditional, as on the photo)":""); }); /* the mark by hand (v146) */
   };
@@ -2329,7 +2329,7 @@ function charStripHTML(id,k){
   const shown=sg.trad?[...tradLine(sg,k)]:null; /* the buttons show the photo's script, the taps act on the simplified line */
   let ci=0;
   return `<div class="cstrip">${[...line].map((ch,i)=>{ const isC=CJK.test(ch); const c=isC?cf[ci++]:100;
-    return `<button class="ck${isC&&c<OCR_DOUBT?" low":""}" data-ck="${k},${i}" data-sid="${id}" title="${isC&&c<100?Math.round(c)+"%":""}">${esc(shown?shown[i]:ch)}</button>`; }).join("")}</div>`; /* no + tile at the end (H, v121) — adding goes through the picker's "+ before / + after" or the line input */
+    return `<button class="ck${isC&&c<OCR_DOUBT?" low":""}${sg.sel&&sg.sel.has(k+","+i)?" on":""}" data-ck="${k},${i}" data-sid="${id}" title="${isC&&c<100?Math.round(c)+"%":""}">${esc(shown?shown[i]:ch)}</button>`; }).join("")}</div>`; /* no + tile at the end (H, v121) — adding goes through the picker's "+ before / + after" or the line input */
 }
 /* mode "ins": a new character goes in before index i (i = length: at the end) — v91, taken out in v92, back in v119
    (H: a misread 拉 became 人人, one character was drawn and the other could not be deleted — "add and delete characters").
@@ -2615,13 +2615,55 @@ async function setScript(sg,on){
 function tradLine(sg,k){ const line=sg.lines[k]; if(!sg.trad) return line; const t=(sg.tradText||"").split("\n")[k]; return t&&[...t].length===[...line].length?t:s2t(line); }
 function slineHTML(id,k,line,withPinyin,withInput=true){
   const sg=SIGN[id]; /* withInput=false: the Read preview shows the strip alone (H, v109: the line field under it was one thing too many); the Edit form keeps it for retyping */
-  const hint=k===0?`<div class="badge ckhint">Tap a character to change it${withInput?", or type the line below":""}.</div>`:""; /* right under the strip (H, v112) */
+  const t=`Tap a character to change it${withInput?", or type the line below":""}.`;
+  const hint=k===0?`<div class="badge ckhint" data-hint="${id}" data-text="${t}">${sg&&sg.sel?SEL_HINT:t}</div>`:""; /* right under the strip (H, v112) */
   return `<div class="sline">${charStripHTML(id,k)}${hint}${withInput?`<input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(sg&&sg.trad?tradLine(sg,k):line)}" autocomplete="off">`:""}${withPinyin?`<div class="sp" id="sp-${id}-${k}"></div>`:""}</div>`;
 }
-/* the strip's character buttons open the picker; typing in a line calls onInput(sg, k, input) */
-function wireSlines(root,onInput,onCommit){ /* onCommit(sg,id): the line input was left after typing — the strip is redrawn from the text, the caller re-checks */
-  root.querySelectorAll("[data-ck]").forEach(b=> b.onclick=()=>{ const [k,i]=b.dataset.ck.split(",").map(Number); openCharPick(b.dataset.sid,k,i,b); });
+/* Several characters removed at once (v204, H: "select them first and then remove them all together", described first and
+   built on "Go"): a Select button under the strips puts the reading into selection (sg.sel, the set of "k,i" positions) —
+   the strip's taps then mark and unmark instead of opening the picker, the row shows "Remove N" (disabled while nothing
+   or everything is marked — the text can never be emptied) and Done; Remove drops the positions, an emptied line with
+   them, and re-checks like the picker's apply. The same row sits in the Edit form, whose strips are the same component. */
+const SEL_HINT="Tap the characters to remove, then Remove.";
+function selRowHTML(id){ return `<div class="fieldacts selrow" data-selrow="${id}">${selRowInner(id)}</div>`; }
+function selRowInner(id){
+  const sg=SIGN[id]; if(!sg) return "";
+  if(!sg.sel) return `<button class="btn mini" data-selstart="${id}">Select</button>`;
+  const n=sg.sel.size, all=n>=sg.lines.reduce((a,l)=>a+[...l].length,0);
+  return `<button class="btn mini danger" data-selremove="${id}"${!n||all?" disabled":""}>Remove${n?" "+n:""}</button><button class="btn mini" data-seldone="${id}">Done</button>`;
+}
+function selRowRefresh(root,id){
+  const sg=SIGN[id], row=root.querySelector(`[data-selrow="${id}"]`); if(!sg||!row) return;
+  row.innerHTML=selRowInner(id);
+  const h=root.querySelector(`[data-hint="${id}"]`); if(h) h.textContent=sg.sel?SEL_HINT:h.dataset.text;
+  if(!sg.sel) root.querySelectorAll(`[data-ck][data-sid="${id}"]`).forEach(b=>b.classList.remove("on"));
+  wireSel(root);
+}
+function wireSel(root){
+  root.querySelectorAll("[data-selstart]").forEach(b=> b.onclick=()=>{ const id=b.dataset.selstart, sg=SIGN[id]; if(!sg) return; sg.sel=new Set(); root.querySelectorAll(".ckpick").forEach(p=>p.remove()); selRowRefresh(root,id); });
+  root.querySelectorAll("[data-seldone]").forEach(b=> b.onclick=()=>{ const id=b.dataset.seldone, sg=SIGN[id]; if(!sg) return; sg.sel=null; selRowRefresh(root,id); });
+  root.querySelectorAll("[data-selremove]").forEach(b=> b.onclick=()=>{ const id=b.dataset.selremove, sg=SIGN[id]; if(sg) removeSelected(sg,id); });
+}
+function removeSelected(sg,id){
+  const sel=sg.sel; if(!sel||!sel.size) return; sg.sel=null;
+  const tl=sg.trad&&sg.tradTouched?(sg.tradText||"").split("\n"):null, L=[], O=[], C=[], B=[], T=[];
+  sg.lines.forEach((line,k)=>{ const cs=[...line], keep=cs.map((_,i)=>!sel.has(k+","+i)), out=cs.filter((_,i)=>keep[i]); if(!out.length) return; /* an emptied line goes */
+    L.push(out.join("")); O.push((sg.orig||[])[k]); C.push((sg.conf||[])[k]); B.push((sg.boxes||[])[k]);
+    if(tl){ const tc=[...(tl[k]||"")]; T.push(tc.length===cs.length?tc.filter((_,i)=>keep[i]).join(""):s2t(out.join(""))); } });
+  if(!L.length) return; /* never everything — the button is disabled then */
+  sg.lines=L; if(sg.orig) sg.orig=O; if(sg.conf) sg.conf=C; if(sg.boxes) sg.boxes=B; if(tl) sg.tradText=T.join("\n");
+  delete sg.ai; delete sg.aiErr;
+  if(sg.onChange){ sg.onChange(); return; } /* the Edit form owns the re-render and the AI check */
+  renderShots(); if(aiLive()) signAskAI(id);
+}
+/* the strip's character buttons open the picker (or mark, while selecting); typing in a line calls onInput(sg, k, input) */
+function wireSlines(root,onInput,onCommit){
+  wireSel(root); /* onCommit(sg,id): the line input was left after typing — the strip is redrawn from the text, the caller re-checks */
+  root.querySelectorAll("[data-ck]").forEach(b=> b.onclick=()=>{ const [k,i]=b.dataset.ck.split(",").map(Number), sg=SIGN[b.dataset.sid];
+    if(sg&&sg.sel){ const key=k+","+i; if(sg.sel.has(key)) sg.sel.delete(key); else sg.sel.add(key); b.classList.toggle("on",sg.sel.has(key)); selRowRefresh(root,b.dataset.sid); return; }
+    openCharPick(b.dataset.sid,k,i,b); });
   root.querySelectorAll("[data-sline]").forEach(inp=> inp.oninput=()=>{ const sg=SIGN[inp.dataset.sid]; if(!sg) return; const k=+inp.dataset.sline;
+    if(sg.sel){ sg.sel=null; selRowRefresh(root,inp.dataset.sid); } /* typing shifts the positions — the selection is dropped */
     if(sg.trad){ sg.tradTouched=true; const tl=(sg.tradText||"").split("\n"); while(tl.length<=k) tl.push(""); tl[k]=inp.value; sg.tradText=tl.join("\n"); sg.lines[k]=t2s(inp.value); }
     else sg.lines[k]=inp.value;
     onInput(sg,inp.dataset.sid); });
@@ -2650,7 +2692,7 @@ function signEditorHTML(id){
 
   /* the same layout as the Edit form (H): Text, Pinyin, Meaning — pinyin and meaning can be corrected before saving */
   return `<div class="signed">${weak}${head?`<div class="badge${bad?" bad":""}" style="margin-bottom:8px">${head}</div>`:""}
-    <div class="field"><label>Characters${sg.trad?" (traditional, as on the photo)":""}${sg.ai&&sg.ai.pic&&!sg.ai.bad?PIC_MARK:""}</label>${rows}<div class="scriptline">${scriptSwitchHTML(id,sg)}</div></div>
+    <div class="field"><label>Characters${sg.trad?" (traditional, as on the photo)":""}${sg.ai&&sg.ai.pic&&!sg.ai.bad?PIC_MARK:""}</label>${rows}<div class="scriptline">${scriptSwitchHTML(id,sg)}</div>${selRowHTML(id)}</div>
     <div class="field"><label>Pinyin</label><textarea class="grow" id="spin-${id}" rows="1" data-spin="${id}">${esc(sg.pinEdit||"")}</textarea></div>
     <div class="field"><label>Meaning</label><textarea class="grow" id="smeanf-${id}" rows="1" data-smean="${id}">${esc(sg.meanEdit||"")}</textarea><div class="smean badge" id="smean-${id}" style="margin-top:4px"></div></div>
     <div class="field"><label class="check"><input type="checkbox" data-sflag="${id}"${sg.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
