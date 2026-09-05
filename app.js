@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=208; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=209; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1470,6 +1470,26 @@ async function ocrWorker(status){
   }
   return _ocrLoading;
 }
+/* Several readers at once (v209, H: "wherever possible try to improve speed"): the passes of a reading are independent, so
+   the second look and the whole-frame fallback hand them to a pool of simplified readers — the first worker plus up to two
+   more, made on first need, one fewer than the phone's cores and only one on a phone with 3 GB or less (each worker holds
+   the model in memory); the results are kept in the jobs' order, so the competition sees the same passes as before.
+   The traditional reader stays a single worker. Measured in headless Chromium: a reading with 19–31 passes in roughly
+   half the wall time. */
+let _pool=null, _poolLoading=null;
+function poolSize(){ const c=navigator.hardwareConcurrency||2, m=navigator.deviceMemory||4; return m<=3?1:Math.max(1,Math.min(3,c-1)); }
+async function ocrPool(status){
+  if(_pool) return _pool;
+  if(!_poolLoading) _poolLoading=(async()=>{ const w0=await ocrWorker(status); const n=poolSize();
+    const extra=n>1?await Promise.all(Array.from({length:n-1},()=>makeWorker("chi_sim").catch(()=>null))):[]; _pool=[w0,...extra.filter(Boolean)]; return _pool; })().catch(err=>{ _poolLoading=null; throw err; });
+  return _poolLoading;
+}
+/* jobs: async (worker) => result; every free worker takes the next job, the results come back in the jobs' order */
+async function runPasses(jobs,status){
+  const pool=await ocrPool(status), out=new Array(jobs.length); let i=0;
+  await Promise.all(pool.map(async w=>{ while(i<jobs.length){ const j=i++; out[j]=await jobs[j](w); } }));
+  return out;
+}
 function makeWorker(lang){
   const base=new URL("./vendor/",location.href).href;
   return Tesseract.createWorker(lang,1,{
@@ -2115,11 +2135,20 @@ async function secondLook(w,dk,passes,status,r,Hink){
     const dk2=await deskewBlob(tight), bmp2=await createImageBitmap(dk2.blob); r.tightBlob=dk2.blob; /* kept for diagnosis */
     const scales=[45/H,60/H,75/H,90/H,110/H].filter(k=>k<0.92); if(H<=200) scales.push(1); /* five character heights; native too while it is cheap (v96: 脊柱 fused into one glyph below 90 px) */
     const tightLines=[];
-    const readTight=async(mode,tra)=>{ for(const k of scales){
-      const src=mode==="bw"?await toBW(bmp2,k):mode==="chroma"?await toChroma(bmp2,k):k===1?dk2.blob:await toJpeg(bmp2,k);
-      const lines=tra?await readPassTra(src,status):await readPass(w,src,status); if(!lines) return; const sc=k===1?lines:scaleBoxes(lines,k);
-      passes.push({lines:sc,img:dk2.blob,angle:dk2.angle,tightened:true,scale:k,bw:mode==="bw",chroma:mode==="chroma",tra:!!tra}); tightLines.push(...sc); } };
-    await readTight("colour"); await readTight("bw"); await readTight("chroma"); /* the copies always (v96) */
+    const srcOf=async(mode,k)=>mode==="bw"?await toBW(bmp2,k):mode==="chroma"?await toChroma(bmp2,k):k===1?dk2.blob:await toJpeg(bmp2,k);
+    const keep=(mode,tra,k,lines)=>{ const sc=k===1?lines:scaleBoxes(lines,k); passes.push({lines:sc,img:dk2.blob,angle:dk2.angle,tightened:true,scale:k,bw:mode==="bw",chroma:mode==="chroma",tra:!!tra}); tightLines.push(...sc); };
+    const readTight=async(mode,tra)=>{
+      if(tra){ for(const k of scales){ const lines=await readPassTra(await srcOf(mode,k),status); if(!lines) return; keep(mode,tra,k,lines); } return; }
+      const res=await runPasses(scales.map(k=>async ww=>readPass(ww,await srcOf(mode,k),status)),status); /* the simplified passes side by side (v209) */
+      res.forEach((lines,i)=>{ if(lines) keep(mode,false,scales[i],lines); }); };
+    await readTight("colour");
+    /* a clear reading skips the copies (v209): two colour passes agreeing on the same text of dictionary words at 95 % or
+       more — the black-and-white and chromaticity copies exist for light-on-colour and shaded text, where the colour
+       passes are not clear; on a clean print sign they only lose (measured: the ten regression images read the same) */
+    const clear=p=>meanCf(p.lines)>=95&&dictCover(p.lines)>=1&&p.lines.map(l=>l.t).join("").replace(/[^\u4e00-\u9fff]/g,"").length>=2;
+    const texts=passes.filter(p=>p.tightened&&clear(p)).map(p=>p.lines.map(l=>l.t).join("\n")), agreed=texts.some((t,i)=>texts.indexOf(t)!==i);
+    if(agreed){ r.clear=true; status("the reading is clear …"); }
+    else { await readTight("bw"); await readTight("chroma"); } /* the copies otherwise (v96) */
     /* still weak? the traditional reader on all three — it knows glyphs the simplified one can only approximate */
     if(Math.max(...passes.map(p=>effScore(p.lines,Hink)))<180){ for(const mode of ["colour","bw","chroma"]) await readTight(mode,true); }
     bmp2.close();
@@ -2191,10 +2220,12 @@ async function cropSign(id){
     if(Math.max(0,...passes.map(p=>effScore(p.lines,Hink)))<WEAK_READ){ /* weak or nothing: the whole frame as black-and-white and chromaticity copies, sizes from the ink */
       status("trying a black-and-white copy …");
       const bmp=await createImageBitmap(dk.blob), H=Hink||bmp.height/1.6;
-      for(const k of [...new Set([45,65,90].map(t=>Math.min(1.5,t/H).toFixed(2)))].map(Number)){ /* distinct scales only (v144: with a tiny ink height all three clamped to 1.5, and one pass counted three times in the agreement bonus and the traditional vote) */
-        for(const mode of ["bw","chroma"]){ const src=mode==="bw"?await toBW(bmp,k):await toChroma(bmp,k);
-        for(const tra of [false,true]){ const lines=tra?await readPassTra(src,status):await readPass(w,src,status); if(!lines) continue;
-          passes.push({lines:scaleBoxes(lines,k),img:dk.blob,angle:dk.angle,tightened:false,scale:k,bw:mode==="bw",chroma:mode==="chroma",tra}); } } }
+      const combos=[]; for(const k of [...new Set([45,65,90].map(t=>Math.min(1.5,t/H).toFixed(2)))].map(Number)) for(const mode of ["bw","chroma"]) combos.push({k,mode}); /* distinct scales only (v144: with a tiny ink height all three clamped to 1.5, and one pass counted three times in the agreement bonus and the traditional vote) */
+      for(const c of combos) c.src=c.mode==="bw"?await toBW(bmp,c.k):await toChroma(bmp,c.k);
+      /* the simplified passes side by side on the pool, the traditional ones on their own worker at the same time (v209) */
+      const [sim,tra]=await Promise.all([runPasses(combos.map(c=>async ww=>readPass(ww,c.src,status)),status),(async()=>{ const out=[]; for(const c of combos) out.push(await readPassTra(c.src,status)); return out; })()]);
+      for(let i=0;i<combos.length;i++){ const c=combos[i];
+        for(const [lines,isTra] of [[sim[i],false],[tra[i],true]]){ if(!lines) continue; passes.push({lines:scaleBoxes(lines,c.k),img:dk.blob,angle:dk.angle,tightened:false,scale:c.k,bw:c.mode==="bw",chroma:c.mode==="chroma",tra:isTra}); } }
       bmp.close();
       if(stale()) return;
     }
