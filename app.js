@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=217; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=218; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -829,7 +829,7 @@ function renderMore(main){
   main.innerHTML=`<div class="pane more">
     <div class="listhead">Share</div>
     <div class="mrow"><div><div class="t">Share the app</div><div class="s" id="app-share-status">Send the link to a friend. The app installs from any browser, no store.</div></div><button class="btn mini" id="app-share">Share</button></div>
-    <div class="mrow"><div style="flex:1"><div class="t">Feedback</div><div class="s" id="fb-status">Tell the app's owner what works and what does not.</div><textarea class="grow" id="fb-text" rows="2" placeholder="Your message" style="margin-top:8px;width:100%"></textarea><div class="fieldacts"><button class="btn mini" id="fb-send">Send</button></div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">Feedback</div><div class="s" id="fb-status">Tell the app's owner what works and what does not.</div><textarea class="grow" id="fb-text" rows="2" placeholder="Your message"></textarea><div class="fieldacts"><button class="btn mini" id="fb-send">Send</button></div></div></div>
     <div class="listhead">Your data</div>
     <div class="mrow"><div><div class="t">Export</div><div class="s">Progress and cards as one file, via the share sheet. ${backupNote()}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="export-photos"${exportPhotos()?" checked":""}> Include photos (adds about ${(photoBytes()*1.37/1048576).toFixed(1)} MB)</label></div><button class="btn mini" id="export">Export</button></div>
     <div class="mrow"><div><div class="t">Import</div><div class="s">A zeichentrainer-….json.txt file. Existing cards are overwritten.</div></div><button class="btn mini" id="import">Import</button></div>
@@ -879,6 +879,7 @@ function renderMore(main){
   $("#export").onclick=exportData;
   $("#export-photos").onchange=e=>setSetting("exportPhotos",!!e.target.checked);
   $("#usage-share").onclick=shareUsage; $("#app-share").onclick=shareApp;
+  wireGrow(main); /* the feedback box grows with its text like the forms' fields (v218, H: "looks a little bit old school") */
   $("#fb-send").onclick=async()=>{ const t=$("#fb-text"), st=$("#fb-status"), b=$("#fb-send"), text=t.value.trim(); if(!text){ st.textContent="Write a few words first."; return; }
     if(!navigator.onLine){ st.textContent="No connection. Try again when online."; return; }
     b.disabled=true; st.textContent="Sending …";
