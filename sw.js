@@ -1,4 +1,4 @@
-const CACHE = "zt-v221";
+const CACHE = "zt-v222";
 /* OCR assets (./vendor/, ~12 MB) live in their own cache that survives shell
    updates — otherwise every cache version bump would re-download all of
    Tesseract. Only bump this when vendor files change. */
