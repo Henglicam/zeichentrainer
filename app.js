@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=218; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=219; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -244,7 +244,7 @@ async function boot(){
   autoBreaks(); /* old cards get their photo lines estimated once */
   dedupePhotos(); /* cards from before v214 drop the whole photo they hold twice */
   aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); });
-  sendReport(); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) sendReport(); });
+  sendReport(); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) sendReport(); else if(REPORT_DIRTY) sendReport(true); }); /* the day's first row on foreground, a second one on background when cards changed (v219) */
 }
 
 /* ---------- Rendering ---------- */
@@ -689,7 +689,7 @@ function dayKey(t){ const d=new Date(t||Date.now()); return d.getFullYear()+"-"+
 const monthKey=()=>new Date().toISOString().slice(0,7);
 function usage(){ const u=S.settings.usage||{}; if(!u.first) u.first=Date.now(); if(u.month!==monthKey()){ u.month=monthKey(); u.m={}; } if(!u.m) u.m={}; return u; }
 let _usageTimer=null;
-function bump(key,n){ n=n||1; const u=usage(); u[key]=(u[key]||0)+n; u.m[key]=(u.m[key]||0)+n; S.settings.usage=u; clearTimeout(_usageTimer); _usageTimer=setTimeout(()=>{ setSetting("usage",u).catch(()=>{}); },500); }
+function bump(key,n){ n=n||1; if(key==="byPhoto"||key==="byHand"||key==="deleted") REPORT_DIRTY=true; const u=usage(); u[key]=(u[key]||0)+n; u.m[key]=(u.m[key]||0)+n; S.settings.usage=u; clearTimeout(_usageTimer); _usageTimer=setTimeout(()=>{ setSetting("usage",u).catch(()=>{}); },500); }
 /* which analysis did the work (v179, H: "record all the models used — the reader, DeepSeek, Qwen"): usage.models and usage.m.models
    count the on-device reader ("reader", one per reading) and every AI model by name, all time and this month */
 function bumpModel(name){ const u=usage(); u.models=u.models||{}; u.m.models=u.m.models||{}; u.models[name]=(u.models[name]||0)+1; u.m.models[name]=(u.m.models[name]||0)+1; S.settings.usage=u; clearTimeout(_usageTimer); _usageTimer=setTimeout(()=>{ setSetting("usage",u).catch(()=>{}); },500); }
@@ -713,7 +713,7 @@ function usageText(){
    through the share sheet; without one the link is copied. Nothing is sent by the app itself. A friend behind the wall needs
    github.io for the first install — the mirror only serves an installed app. */
 const APP_URL="https://henglicam.github.io/zeichentrainer/";
-const APP_SHARE_TEXT="识字 Zeichentrainer — learn the Chinese characters you see around you. Take a photo of a sign, get the card. Open the link on your phone and add it to the home screen:"; /* no link in the text: the share sheet appends the url field itself (v215, H's WeChat screenshot showed the link twice) */
+const APP_SHARE_TEXT="识字 Zeichentrainer — learn the Chinese characters you see around you. Take a photo of a sign, get the card. Open the link in Safari or Chrome, not inside WeChat, and add it to the home screen:"; /* v219: friends tapped the link inside WeChat's browser, which cannot install the app */ /* no link in the text: the share sheet appends the url field itself (v215, H's WeChat screenshot showed the link twice) */
 async function shareApp(){
   const st=$("#app-share-status");
   if(navigator.share){ try{ await navigator.share({title:"识字 Zeichentrainer",text:APP_SHARE_TEXT,url:APP_URL}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
@@ -735,9 +735,15 @@ async function shareUsage(){
 const SHARE_URL="https://xttuotninuwxnpcbyejn.supabase.co", SHARE_KEY="sb_publishable_UZrXhhKAckqkda4-r02qdA_tgilndum";
 const shareOn=()=>S.settings.shareUsage!==false;
 function installId(){ let id=S.settings.installId; if(!id){ const b=crypto.getRandomValues(new Uint8Array(8)); id=[...b].map(x=>x.toString(16).padStart(2,"0")).join(""); setSetting("installId",id); } return id; }
+/* the page runs inside WeChat's built-in browser (v219, from the first all-users report: most rows were link taps inside
+   WeChat, which cannot install the app and may hand out a fresh storage on the next tap): Learn shows a line that says so,
+   and the daily row's device carries "WeChat" so the rows can be told apart */
+const inWeChat=()=>/MicroMessenger/i.test(navigator.userAgent);
+const WX_NOTE="You are inside WeChat. Open this page in your browser to install the app and keep your cards.";
+function wxNoteHTML(){ return inWeChat()?`<div class="wxnote">${WX_NOTE}</div>`:""; }
 function reportData(){
   const u=usage(), m=u.m||{}, st=learnStats(), n=k=>u[k]||0, mn=k=>m[k]||0;
-  const ua=navigator.userAgent, dev=(ua.match(/\(([^)]*)\)/)||[])[1]||"";
+  const ua=navigator.userAgent, dev=((ua.match(/\(([^)]*)\)/)||[])[1]||"")+(inWeChat()?"; WeChat":"");
   return {install:installId(), version:APP_V, device:dev, first:u.first?new Date(u.first).toISOString().slice(0,10):null,
     days:(S.settings.days||[]).length, streak:st.streak, opens:n("opens"), opensMonth:mn("opens"),
     reviews:n("reviews"), reviewsMonth:mn("reviews"), learned:st.total, cards:deck().length,
@@ -745,16 +751,16 @@ function reportData(){
     aiCalls:n("aiCalls"), aiIn:n("aiIn"), aiOut:n("aiOut"), aiCallsMonth:mn("aiCalls"), aiInMonth:mn("aiIn"), aiOutMonth:mn("aiOut"), pics:n("pics"), picsMonth:mn("pics"), models:u.models||{}, modelsMonth:m.models||{},
     ai:aiOn()?aiProvider()+" "+aiModel():null, inbox:S.inbox.length, tags:allTags().length, lang:navigator.language||null};
 }
-let _reporting=false;
+let _reporting=false, REPORT_DIRTY=false; /* a card was made or deleted since the day's row (v219): a second row goes when the app leaves the foreground, so the All users list shows the day's cards the same day */
 /* one report per day; a failed send is retried at the next start, foreground or reconnect */
 async function sendReport(force){
   if(!S.ready||!shareOn()||!navigator.onLine||_reporting) return false;
   if(!force&&S.settings.lastReport===dayKey()) return false;
   _reporting=true;
   try{
-    const r=await fetch(SHARE_URL+"/rest/v1/reports",{method:"POST",headers:{"apikey":SHARE_KEY,"Authorization":"Bearer "+SHARE_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({data:reportData()})});
+    const r=await fetch(SHARE_URL+"/rest/v1/reports",{method:"POST",keepalive:true,headers:{"apikey":SHARE_KEY,"Authorization":"Bearer "+SHARE_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({data:reportData()})}); /* keepalive: the second row is sent as the app goes to the background (v219) */
     if(!r.ok) throw new Error("report "+r.status);
-    await setSetting("lastReport",dayKey()); const el=$("#share-status"); if(el) el.textContent=shareNote(); return true;
+    REPORT_DIRTY=false; await setSetting("lastReport",dayKey()); const el=$("#share-status"); if(el) el.textContent=shareNote(); return true;
   }catch(e){ return false; }
   finally{ _reporting=false; }
 }
@@ -1090,7 +1096,7 @@ function endSingle(){
 function renderStudy(main){
   if(!S.ready){ main.innerHTML=`<div class="badge">Loading …</div>`; return; }
   if(!deck().length){
-    main.innerHTML=`<div class="done">
+    main.innerHTML=wxNoteHTML()+`<div class="done">
       <div class="mark">始</div>
       <h2>No cards yet.</h2>
       <p>Photograph a sign, a menu or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.</p>
@@ -1101,7 +1107,7 @@ function renderStudy(main){
   }
   const finished = S.idx>=S.queue.length;
   if(finished){
-    main.innerHTML=learnChipsHTML()+`<div class="done">
+    main.innerHTML=wxNoteHTML()+learnChipsHTML()+`<div class="done">
       <div class="mark">净</div>
       <h2>All clear.</h2>
       <p>${S.ahead?"Pulled-forward round finished.":"Nothing due today. Come back tomorrow — or pull the next cards forward."}</p>
@@ -1123,7 +1129,7 @@ function renderStudy(main){
     back=`<div class="hint">Tap the character to reveal${fullPhoto(d)?", or the photo for the whole picture":""}.</div>`;
   }
   /* front: no tag row (theme / new / custom is noise while learning); tapping the photo or the character reveals */
-  main.innerHTML=learnChipsHTML()+`<div class="card">
+  main.innerHTML=wxNoteHTML()+learnChipsHTML()+`<div class="card">
     ${S.single?`<div class="topline"><button class="del" id="back-cards">← Cards</button><span class="badge">Testing from the list</span></div>`:""}
     <div class="front tap" id="reveal">${frontHTML(d)}</div>
     ${back}</div>`;
