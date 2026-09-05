@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=213; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=214; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -242,6 +242,7 @@ async function boot(){
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
   wireChrome(); render();
   autoBreaks(); /* old cards get their photo lines estimated once */
+  dedupePhotos(); /* cards from before v214 drop the whole photo they hold twice */
   aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); });
   sendReport(); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) sendReport(); });
 }
@@ -953,6 +954,20 @@ const BLOBURL=new WeakMap();
 function urlOf(blob){ let u=BLOBURL.get(blob); if(!u){ u=URL.createObjectURL(blob); BLOBURL.set(blob,u); } return u; }
 /* the whole photo of a card: stored with it, or still in the inbox */
 const fullPhoto=d=>d.imgFull||(d.shot&&(S.inbox.find(x=>x.id===d.shot)||{}).blob)||null;
+/* The whole photo is stored once (v214, H: "Go" on the storage saving of the v213 audit): a card keeps no imgFull while its
+   inbox photo exists — fullPhoto finds it through shot —, the copy is made into every card that references a photo just
+   before the photo goes (keepPhoto, from delShot), and cards from before v214, which carry the duplicate, drop it at boot
+   while their inbox photo is still there (dedupePhotos). Until v213 saveSign copied the inbox blob into the card, and
+   IndexedDB stored it twice — half of a phone's photo bytes. */
+async function keepPhoto(id){
+  const sh=S.inbox.find(x=>x.id===id); if(!sh||!sh.blob) return;
+  for(const d of S.custom) if(d.shot===id&&!d.imgFull){ d.imgFull=sh.blob; try{ await idbPut("custom",d); }catch(e){} }
+}
+async function dedupePhotos(){
+  const dup=S.custom.filter(d=>d.imgFull&&d.shot&&S.inbox.some(x=>x.id===d.shot&&x.blob));
+  for(const d of dup){ delete d.imgFull; try{ await idbPut("custom",d); }catch(e){} }
+  return dup.length;
+}
 /* the photo on the front: the crop, or — after a tap on it — the whole photo (S.fullPic) */
 function frontPic(d){
   const pk=S.peek&&S.peek!==d.id?cardOf(S.peek):null; /* Learn: a linked card's photo, tapped in the "Also on another photo" row (v155) */
@@ -1104,7 +1119,7 @@ function renderStudy(main){
     back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="grades">${grds}</div>
       <div class="backacts"><button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?"⚑ Clear flag":"⚑ Flag for review"}</button><button class="del" id="edit-card">✎ Edit</button></div></div>`;
   } else {
-    back=`<div class="hint">Tap the character to reveal${d.imgFull||d.shot?", or the photo for the whole picture":""}.</div>`;
+    back=`<div class="hint">Tap the character to reveal${fullPhoto(d)?", or the photo for the whole picture":""}.</div>`;
   }
   /* front: no tag row (theme / new / custom is noise while learning); tapping the photo or the character reveals */
   main.innerHTML=learnChipsHTML()+`<div class="card">
@@ -1272,8 +1287,8 @@ function renderCardDetail(main,c){
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${(t=>t?t[0].toUpperCase()+t.slice(1):"")([d.mt&&!d.mt.verified?"unverified":"",d.mt&&d.mt.pending?"translation pending":"",d.mt&&d.mt.suspect?"reading uncertain":""].filter(Boolean).join(", "))}</span></div>
     <div class="card">${tagsHTML(d,!p)}<div class="front tap" id="d-reveal">${frontHTML(d)}</div>
-      ${S.detailHide?`<div class="hint">Tap the character to show the answer${d.imgFull||d.shot?", or the photo for the whole picture":""}.</div>`
-        :`<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="hint">Tap the character to hide the answer${d.imgFull||d.shot?", or the photo for the whole picture":""}.</div>`}</div>
+      ${S.detailHide?`<div class="hint">Tap the character to show the answer${fullPhoto(d)?", or the photo for the whole picture":""}.</div>`
+        :`<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="hint">Tap the character to hide the answer${fullPhoto(d)?", or the photo for the whole picture":""}.</div>`}</div>
     <div class="detailacts">
       <button class="btn primary" id="d-test">Test this card</button>
       <button class="btn" id="d-edit">Edit</button>
@@ -1391,7 +1406,7 @@ function renderEdit(main,c){
     const upd={...d, p:pin, m:mean}; delete upd.ex; delete upd.exp; delete upd.exm; /* example sentences were dropped in v41 */
     if(!isSign&&$("#e-w")){ upd.w=$("#e-w").value.trim(); upd.wp=$("#e-wp").value.trim(); upd.wm=$("#e-wm").value.trim();
       if(!upd.w){ delete upd.w; delete upd.wp; delete upd.wm; } } /* the context fields show only on cards that have one */
-    if(removeImg){ delete upd.img; delete upd.imgFull; dropThumb(c); }
+    if(removeImg){ delete upd.img; delete upd.imgFull; delete upd.shot; dropThumb(c); } /* shot too — without it the front would still show the inbox photo through fullPhoto (v214) */
     if(upd.mt){ upd.mt={...upd.mt, verified:true, pending:false}; delete upd.mt.suspect; } /* a human edited it */
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
     const tags=parseTags($("#e-tags").value); if(tags.length) upd.tags=tags; else delete upd.tags;
@@ -2934,7 +2949,7 @@ async function saveSign(id){
   if(sg.alts&&sg.alts.length) card.alts=sg.alts.slice(0,5); /* the other readings stay with the card for a later AI check */
   if(sg.trad&&(sg.tradText||"").trim()) card.trad=sg.tradText.trim(); /* the text as it stands on the photo, in traditional characters (v101) */
   if(S.pendingImg) card.img=await jpegOf(S.pendingImg);
-  if(S.pendingFull) card.imgFull=S.pendingFull;
+  if(S.pendingFull&&!S.inbox.some(x=>x.id===id)) card.imgFull=S.pendingFull; /* the whole photo stays in the inbox, not twice (v214) */
   S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; /* used up — the Add form once showed the last photo's crop on a card made from scratch (v188) */
   bump("byPhoto"); S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
@@ -3049,6 +3064,7 @@ async function addPhoto(file){
   return rec.id;
 }
 async function delShot(id){
+  await keepPhoto(id); /* the cards made from it keep the whole photo (v214) */
   S.inbox=S.inbox.filter(s=>s.id!==id);
   try{ await idbDel("inbox",id); }catch(e){}
   if(IMGURL[id]){ URL.revokeObjectURL(IMGURL[id]); delete IMGURL[id]; }
@@ -3061,12 +3077,12 @@ async function delShot(id){
    every card's crop and whole photo travel as base64 (imgB64/imgFullB64 with their type) and Import puts them back;
    the row shows the size they add. Off, the export stays text only and Import keeps the photos already on the phone. */
 const exportPhotos=()=>!!S.settings.exportPhotos;
-function photoBytes(){ return S.custom.reduce((a,d)=>a+((d.img&&d.img.size)||0)+((d.imgFull&&d.imgFull.size)||0),0); }
+function photoBytes(){ return S.custom.reduce((a,d)=>a+((d.img&&d.img.size)||0)+((fullPhoto(d)||{}).size||0),0); }
 const blobToB64=blob=>new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res({t:blob.type||"image/jpeg",d:String(fr.result).split(",")[1]||""}); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(blob); });
 async function b64ToBlob(x){ try{ return await (await fetch(`data:${x.t||"image/jpeg"};base64,${x.d}`)).blob(); }catch(e){ return null; } }
 async function exportData(){
   const withPhotos=exportPhotos(), custom=[];
-  for(const {img,imgFull,...rest} of S.custom){ const r={...rest}; if(withPhotos){ if(img) r.imgB64=await blobToB64(img); if(imgFull) r.imgFullB64=await blobToB64(imgFull); } custom.push(r); }
+  for(const d of S.custom){ const {img,imgFull,...rest}=d, r={...rest}, full=fullPhoto(d); if(withPhotos){ if(img) r.imgB64=await blobToB64(img); if(full) r.imgFullB64=await blobToB64(full); } custom.push(r); } /* the whole photo from the inbox when the card holds none (v214) */
   const data={ app:"zeichentrainer", version:1, exported:new Date().toISOString(), photos:withPhotos,
     progress:Object.entries(S.progress).map(([id,s])=>({id,...s})),
     custom };
@@ -3110,6 +3126,7 @@ async function importData(e){
     const img=imgB64&&imgB64.d?await b64ToBlob(imgB64):null, imgFull=imgFullB64&&imgFullB64.d?await b64ToBlob(imgFullB64):null;
     if(img) r.img=img; else if(ex&&ex.img) r.img=ex.img;
     if(imgFull) r.imgFull=imgFull; else if(ex&&ex.imgFull) r.imgFull=ex.imgFull;
+    if(r.imgFull&&r.shot&&S.inbox.some(x=>x.id===r.shot&&x.blob)) delete r.imgFull; /* the inbox photo is on this phone: stored once (v214) */
     if(img){ dropThumb(r.id); nPhotos++; }
     merged.push(r); }
   try{
