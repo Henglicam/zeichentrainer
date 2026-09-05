@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=221; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=222; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -748,6 +748,19 @@ function installId(){ let id=S.settings.installId; if(!id){ const b=crypto.getRa
 /* the page runs inside WeChat's built-in browser (v219, from the first all-users report: most rows were link taps inside
    WeChat, which cannot install the app and may hand out a fresh storage on the next tap): Learn shows a line that says so,
    and the daily row's device carries "WeChat" so the rows can be told apart */
+/* A question as the app's own sheet instead of the browser's dialog (v222, H: the browser's box said "henglicam.github.io says"
+   — "Gehts auch etwas professioneller?"): a dimmed backdrop, a card that slides up from the bottom with a bold title, one line of
+   consequence in the secondary colour, a neutral Cancel and the action button named for what it does (red on soft for a
+   deletion, the filled tint for an import); Cancel, the backdrop or Escape answer no. askSheet({title,text,ok,danger}) → true/false. */
+function askSheet(o){ return new Promise(res=>{
+  const el=document.createElement("div"); el.className="ask"; el.setAttribute("role","dialog"); el.setAttribute("aria-modal","true");
+  el.innerHTML=`<div class="sheet"><div class="t">${esc(o.title)}</div>${o.text?`<div class="s">${esc(o.text)}</div>`:""}<div class="row"><button class="btn plain" id="ask-cancel">Cancel</button><button class="btn ${o.danger===false?"primary":"danger"}" id="ask-ok">${esc(o.ok)}</button></div></div>`;
+  const onKey=e=>{ if(e.key==="Escape") done(false); };
+  const done=v=>{ el.remove(); document.removeEventListener("keydown",onKey); res(v); };
+  el.onclick=e=>{ if(e.target===el) done(false); };
+  el.querySelector("#ask-cancel").onclick=()=>done(false); el.querySelector("#ask-ok").onclick=()=>done(true);
+  document.addEventListener("keydown",onKey); document.body.appendChild(el); el.querySelector("#ask-cancel").focus();
+}); }
 const inWeChat=()=>/MicroMessenger/i.test(navigator.userAgent);
 const isInstalled=()=>{ try{ return matchMedia("(display-mode: standalone)").matches||navigator.standalone===true; }catch(e){ return false; } }; /* runs from the home screen — the strongest sign of a real user (v221) */
 const WX_NOTE="You are inside WeChat. Open this page in your browser to install the app and keep your cards.";
@@ -792,7 +805,7 @@ function learnStats(){
   while(days.has(dayKey(d))){ streak++; d.setDate(d.getDate()-1); }
   return {total,week,streak};
 }
-const nOf=(n,w)=>`${n||0} ${w}${(n||0)===1?"":"s"}`;
+const nOf=(n,w,pl)=>`${n||0} ${(n||0)===1?w:(pl||w+"s")}`; /* pl: an irregular plural (v222, "progress entries") */
 function statsLine(){ const {total,week,streak}=learnStats(); return `${total} card${total===1?"":"s"} learned, ${week} reviewed this week, streak ${streak} day${streak===1?"":"s"}`; }
 /* ---------- backup nudge + photo cleanup: everything lives on one phone ---------- */
 const OLD_DAYS=30;
@@ -807,7 +820,7 @@ function oldShots(){ const cut=Date.now()-OLD_DAYS*DAY; return S.inbox.filter(sh
 function shotsNote(){ const n=S.inbox.length, o=oldShots().length; return `${n} photo${n===1?"":"s"} in the inbox${o?`, ${o} older than ${OLD_DAYS} days and already turned into cards`:""}.`; }
 async function cleanupShots(){
   const list=oldShots(); if(!list.length) return;
-  if(!confirm(`Delete ${list.length} old photo${list.length>1?"s":""}? The cards keep their own picture.`)) return;
+  if(!await askSheet({title:`Delete ${list.length} old photo${list.length>1?"s":""}?`,text:"The cards keep their own picture.",ok:"Delete"})) return;
   for(const sh of list) await delShot(sh.id);
   const st=$("#shots-status"); if(st) st.textContent=shotsNote(); const b=$("#cleanshots"); if(b) b.remove();
 }
@@ -1327,7 +1340,7 @@ function renderCardDetail(main,c){
   wireSay(); wireChars(d); wireLinks();
   wireAi();
   const del=$("#d-del"); if(del) del.onclick=async()=>{
-    if(!confirm("Delete “"+d.c.replace(/\n/g," / ")+"” and its progress?")) return;
+    if(!await askSheet({title:"Delete “"+d.c.replace(/\n/g," / ")+"”?",text:"The card and its learning progress will be removed.",ok:"Delete"})) return;
     await delCustom(c); S.detail=null; render();
   };
 }
@@ -1372,7 +1385,7 @@ function renderEdit(main,c){
   $("#e-flag").onchange=()=>{ $("#e-note").hidden=!$("#e-flag").checked; if($("#e-flag").checked) $("#e-note").focus(); }; /* the note only with the flag, as in the Add form and the preview (v136) */
   /* delete from here too (H): from the study back the session goes on with the next card, otherwise back to the list */
   $("#e-del").onclick=async()=>{
-    if(!confirm("Delete “"+d.c.replace(/\n/g," / ")+"” and its progress?")) return;
+    if(!await askSheet({title:"Delete “"+d.c.replace(/\n/g," / ")+"”?",text:"The card and its learning progress will be removed.",ok:"Delete"})) return;
     await delCustom(c); delete SIGN[eid];
     const from=S.editFrom; S.editing=null; S.editFrom=null;
     if(from==="study"){ S.queue=S.queue.filter(x=>x!==c); if(S.single===c) S.single=null; S.revealed=false; S.fullPic=false; S.mode="study"; }
@@ -3136,7 +3149,7 @@ async function importData(e){
   const prog=data.progress.filter(r=>r && typeof (r.id||r.c)==="string" && typeof r.due==="number").map(({id,c,...s})=>({id:id||c,...s}));
   const cust=data.custom.filter(r=>r && typeof r.c==="string" && typeof r.p==="string" && typeof r.m==="string").map(r=>({...r,id:r.id||r.c}));
   if(!prog.length && !cust.length){ alert("Export is empty — nothing to import."); return; }
-  if(!confirm("Import "+prog.length+" progress entries and "+cust.length+" custom cards?\nExisting entries of the same cards will be overwritten.")) return;
+  if(!await askSheet({title:`Import ${nOf(cust.length,"card")} and ${nOf(prog.length,"progress entry","progress entries")}?`,text:"Existing entries of the same cards will be overwritten.",ok:"Import",danger:false})) return;
   /* the photos come with the file when it carries them (v166); otherwise the existing image is kept when overwriting */
   const merged=[]; let nPhotos=0, nInFile=0;
   for(const r0 of cust){ const {imgB64,imgFullB64,...r}=r0; const ex=S.custom.find(x=>x.id===r.id);
@@ -3161,7 +3174,7 @@ async function importData(e){
 
 /* ---------- Reset ---------- */
 async function resetAll(){
-  if(!confirm("Delete progress, custom cards, and inbox photos?")) return;
+  if(!await askSheet({title:"Start over?",text:"All progress, cards and inbox photos on this phone will be deleted.",ok:"Delete everything"})) return;
   try{ await Promise.all([idbClear("progress"),idbClear("custom"),idbClear("inbox")]); }catch(e){}
   S.progress={}; S.custom=[]; S.inbox=[];
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
