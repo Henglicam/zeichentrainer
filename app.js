@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=223; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=224; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1007,7 +1007,11 @@ function frontPic(d){
   const pk=S.peek&&S.peek!==d.id?cardOf(S.peek):null; /* Learn: a linked card's photo, tapped in the "Also on another photo" row (v155) */
   const full=pk?fullPhoto(pk):fullPhoto(d);
   const blob=pk?(pk.img||full):(S.fullPic&&full?full:d.img); if(!blob) return "";
-  return `<img class="signimg${S.fullPic&&full?" full":""}" data-pic="1" src="${urlOf(blob)}" alt="photo">`;
+  /* the crop sits in a fixed 16:9 box at the card's width, fitted inside on the card's grey surface, so every card has the
+     same height whatever shape the frame had (v224, H's "Go" on the design review after "Bitte consistency!"); the whole
+     photo, a deliberate tap, keeps its own shape */
+  const img=`<img class="signimg${S.fullPic&&full?" full":""}" data-pic="1" src="${urlOf(blob)}" alt="photo">`;
+  return S.fullPic&&full?img:`<div class="picbox" data-pic="1">${img}</div>`;
 }
 function frontHTML(d){
   const scriptNote=d.trad?`<div class="script"><div class="lbl">Traditional characters, as on the photo</div><div class="scriptref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></div></div>`:""; /* the simplified form for reference (H, v102); plain words, no 简/繁 shorthand (H, v106); the back repeats nothing */
