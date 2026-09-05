@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=206; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=207; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1663,6 +1663,16 @@ function textRegion(bmp){
   const pad=Math.max(lineH,0.03*Math.max(W,Hh));
   return {x:Math.max(0,x0-pad)/W, y:Math.max(0,y0-pad)/Hh, x1:Math.min(W,x1+pad)/W, y1:Math.min(Hh,y1+pad)/Hh, lineH:lineH/k};
 }
+/* the proposed frame's shape (v207, H: "propose a certain aspect ratio that fits for most images — uniformity across image
+   previews"): the padded text box is widened, never narrowed, to FRAME_RATIO 16:9 — the Cards list's 104×58 thumbnails —
+   centred on the text and kept inside the photo; a text the photo cannot hold at that shape keeps its own box */
+const FRAME_RATIO=16/9;
+function shapeBox(b,W,H){
+  let x=b.x*W, y=b.y*H, w=(b.x1-b.x)*W, h=(b.y1-b.y)*H;
+  if(w/h<FRAME_RATIO){ const w2=h*FRAME_RATIO; if(w2>W) return null; x=Math.min(Math.max(0,x-(w2-w)/2),W-w2); w=w2; }
+  else { const h2=w/FRAME_RATIO; if(h2>H) return null; y=Math.min(Math.max(0,y-(h2-h)/2),H-h2); h=h2; }
+  return {x,y,w,h};
+}
 async function proposeFrame(id){
   const rec=S.inbox.find(s=>s.id===id); if(!rec||!CROP||CROP.id!==id||CROP.auto!==true) return;
   CROP.auto="running";
@@ -1675,9 +1685,10 @@ async function proposeFrame(id){
   if(!same()) return;
   const r=layer.getBoundingClientRect(); if(!r.width||!r.height) return;
   const full=!reg||(reg.x1-reg.x>=0.9&&reg.y1-reg.y>=0.9), b=full?{x:0,y:0,x1:1,y1:1}:reg;
-  CROP.rect={x:b.x*r.width,y:b.y*r.height,w:(b.x1-b.x)*r.width,h:(b.y1-b.y)*r.height,a:0,lw:r.width,lh:r.height};
-  CROP.proposed=full?"whole":"text"; delete CROP.auto;
-  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`frame proposed by the app: ${full?"the whole photo":`${pc(b.x)}–${pc(b.x1)} % across, ${pc(b.y)}–${pc(b.y1)} % down`}${reg?`, text rows ${pc(reg.y)}–${pc(reg.y1)} %`:", no text rows found"}`}); while(READLOG.length>40) READLOG.shift();
+  const shaped=full?null:shapeBox(b,r.width,r.height), f=shaped||{x:b.x*r.width,y:b.y*r.height,w:(b.x1-b.x)*r.width,h:(b.y1-b.y)*r.height};
+  CROP.rect={x:f.x,y:f.y,w:f.w,h:f.h,a:0,lw:r.width,lh:r.height};
+  CROP.proposed=full?"whole":shaped?"16:9":"text"; delete CROP.auto;
+  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`frame proposed by the app: ${full?"the whole photo":`${pc(f.x/r.width)}–${pc((f.x+f.w)/r.width)} % across, ${pc(f.y/r.height)}–${pc((f.y+f.h)/r.height)} % down${shaped?" (16:9)":" (the text's own box, 16:9 does not fit)"}`}${reg?`, text rows ${pc(reg.y)}–${pc(reg.y1)} %`:", no text rows found"}`}); while(READLOG.length>40) READLOG.shift();
   renderShots(); showCropPreview(id);
 }
 async function cropBlob(id){
