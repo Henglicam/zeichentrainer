@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=210; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=211; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -683,11 +683,12 @@ function usageText(){
     `Analyses by model: ${modelsText(u.models)} (this month ${modelsText(m.models)})`,
     `Photos in the inbox: ${S.inbox.length} · tags: ${allTags().length}`].join("\n")+"\n";
 }
-/* Share the app (v210, H: "add a share app function", described first and built on "Go"): the link with a one-line text through
-   the share sheet; without one the link is copied. Nothing is sent by the app itself. A friend behind the wall needs
+/* Share the app (v210, H: "add a share app function", described first and built on "Go"; v211: the first row of More, and the
+   text names no browser — it installs from Safari, Chrome, Edge, Samsung Internet alike): the link with a one-line text
+   through the share sheet; without one the link is copied. Nothing is sent by the app itself. A friend behind the wall needs
    github.io for the first install — the mirror only serves an installed app. */
 const APP_URL="https://henglicam.github.io/zeichentrainer/";
-const APP_SHARE_TEXT="识字 Zeichentrainer — learn the Chinese characters you see around you. Take a photo of a sign, get the card. Open the link in Chrome, then Install app: "+APP_URL;
+const APP_SHARE_TEXT="识字 Zeichentrainer — learn the Chinese characters you see around you. Take a photo of a sign, get the card. Open the link on your phone and add it to the home screen: "+APP_URL;
 async function shareApp(){
   const st=$("#app-share-status");
   if(navigator.share){ try{ await navigator.share({title:"识字 Zeichentrainer",text:APP_SHARE_TEXT,url:APP_URL}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
@@ -801,6 +802,8 @@ function renderMore(main){
   const ver=($(".ver")||{}).textContent||"";
   const st=S.persist===true?"Persistent on this phone.":S.persist===false?"Not persistent yet. Install the app so the system keeps the data.":"Checking …";
   main.innerHTML=`<div class="pane more">
+    <div class="listhead">Share</div>
+    <div class="mrow"><div><div class="t">Share the app</div><div class="s" id="app-share-status">Send the link to a friend. The app installs from any browser, no store.</div></div><button class="btn mini" id="app-share">Share</button></div>
     <div class="listhead">Your data</div>
     <div class="mrow"><div><div class="t">Export</div><div class="s">Progress and cards as one file, via the share sheet. ${backupNote()}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="export-photos"${exportPhotos()?" checked":""}> Include photos (adds about ${(photoBytes()*1.37/1048576).toFixed(1)} MB)</label></div><button class="btn mini" id="export">Export</button></div>
     <div class="mrow"><div><div class="t">Import</div><div class="s">A zeichentrainer-….json.txt file. Existing cards are overwritten.</div></div><button class="btn mini" id="import">Import</button></div>
@@ -828,7 +831,6 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div></div><button class="btn mini" id="mirror-check">Check now</button></div>
     <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>`:""}
     <div class="listhead">On this phone</div>
-    <div class="mrow"><div><div class="t">Share the app</div><div class="s" id="app-share-status">Send the link to a friend. The app installs from the browser, no store.</div></div><button class="btn mini" id="app-share">Share</button></div>
     <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}. Opened ${nOf(usage().opens,"time")}, ${nOf(usage().reviews,"review")}, ${nOf(usage().aiCalls,"AI call")}, ${nOf(usage().pics,"picture")} read by the AI. Analyses: ${modelsText(usage().models)}.</div></div><button class="btn mini" id="usage-share">Share report</button></div>
     <div class="mrow"><div><div class="t">Usage sharing</div><div class="s">Sends anonymous usage counts to the app's owner once a day: days used, reviews, cards, AI calls. No card text, no photos. <span id="share-status">${esc(shareNote())}</span> Your id: <span id="share-id">${esc(installId())}</span>.<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> Send once a day</label></div></div></div>
     <div class="mrow"><div><div class="t">Photos</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">Delete ${oldShots().length}</button>`:""}</div>
