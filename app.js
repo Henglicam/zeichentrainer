@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=222; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=223; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -379,12 +379,15 @@ function fitLines(lines,words,W,cap,minFs){
 function frontWords(d){ /* the words of each photo line of a word card, from seg */
   if(!d.seg) return null; const out=[[]]; d.seg.forEach(x=>{ if(x==="\n") out.push([]); else out[out.length-1].push(x); }); return out.filter(w=>w.length);
 }
+/* one shape for every word card (v223, H: "why are some boxes square and others wide? Consistency!" — until v222 up to
+   three characters sat in a 260 px square, which took too much of the screen): the wide box at the card's width, FRONT_H
+   tall for one photo line, the font capped at FRONT_FS so a short word fills the box without growing it; a second photo
+   line adds its height */
+const FRONT_H=150, FRONT_FS=72;
 function frontBox(lines,base,words){
-  const longest=Math.max(...lines.map(glyphs));
-  const wide=longest>3;
-  const W=wide?Math.max(260,frontWidth()):260;
-  const fit=wide?fitLines(lines,words,W,base,30):{lines,fs:Math.min(base,Math.floor((W-28)/longest))};
-  const H=wide?Math.max(150,Math.round(fit.fs*1.3*fit.lines.length+56)):260;
+  const W=Math.max(260,frontWidth());
+  const fit=fitLines(lines,words,W,Math.min(base,FRONT_FS),30);
+  const H=Math.max(FRONT_H,Math.round(fit.fs*1.3*fit.lines.length+56));
   return {W,H,fs:fit.fs,lines:fit.lines};
 }
 
