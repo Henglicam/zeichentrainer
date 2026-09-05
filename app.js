@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=205; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=206; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1552,11 +1552,16 @@ function zoomStyle(s){
 }
 function wireCrop(layer){
   const rect=layer.querySelector(".croprect");
-  /* a short tap without movement toggles the enlarged view; a swipe is left to the page */
-  const tapOrScroll=e=>{ const t0=Date.now(), sx=e.clientX, sy=e.clientY;
-    const off=()=>{ layer.removeEventListener("pointerup",up); layer.removeEventListener("pointercancel",off); };
-    const up=ev=>{ off(); if(Math.hypot(ev.clientX-sx,ev.clientY-sy)<8&&Date.now()-t0<600){ CROP.zoom=!CROP.zoom; renderShots(); } };
-    layer.addEventListener("pointerup",up); layer.addEventListener("pointercancel",off); };
+  /* a short tap without movement toggles the enlarged view; a swipe is left to the page. The tap is taken from the
+     click event (v206, H: the tap did nothing on an iPhone — until v205 it was read from pointerup with a distance and
+     time check, and on a layer that lets the page scroll iOS Safari turns the touch into a scroll gesture and sends
+     pointercancel, so no pointerup ever came; a click is the platform's own "tap, not a scroll", on every browser).
+     The press position is kept so that a mouse drag outside the frame, which also ends in a click, does not toggle;
+     a frame gesture (draw, resize, move, turn) marks the layer so its closing click is ignored. */
+  let press=null; /* {x,y,t} of the last press outside the frame */
+  const tapOrScroll=e=>{ press={x:e.clientX,y:e.clientY,t:Date.now()}; };
+  layer.onclick=e=>{ if(layer._gesture){ layer._gesture=false; return; } const p=press; press=null; if(!p||!CROP||!CROP.rect) return;
+    if(Math.hypot(e.clientX-p.x,e.clientY-p.y)<8&&Date.now()-p.t<600){ CROP.zoom=!CROP.zoom; renderShots(); } };
   layer.onpointerdown=e=>{
     if(layer.classList.contains("zoomed")){ tapOrScroll(e); return; }
     const r=layer.getBoundingClientRect();
@@ -1589,7 +1594,7 @@ function wireCrop(layer){
       }
     }
     if(mode==="draw"&&cur){ tapOrScroll(e); return; } /* a frame exists: no new frame — the swipe scrolls the page instead (`.croplayer.framed`, v131/v132), a tap enlarges the framed area (v169); adjusting the frame is allowed and re-reads, Cancel removes it (H, v129–v132) */
-    e.preventDefault();
+    e.preventDefault(); layer._gesture=true; /* the click that closes this gesture is not a tap */
     clearTimeout(READ_TIMER[layer.dataset.id]); /* adjusting the frame — read after the next release */
     if(mode==="draw") setRect(px,py,0,0);
     layer.setPointerCapture(e.pointerId);
