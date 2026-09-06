@@ -274,9 +274,9 @@ body.noscroll{overflow:hidden}
 
 /* sign card front */
 .signfront{width:100%;max-width:440px;margin:0 auto}
-/* the crop in a fixed 16:9 box inside the card (v224; the edge-to-edge box of v228 went in v229 — H: "Bild in der Box gefiel mir besser"), with the text box's hairline edge, and a blurred copy of the crop filling the box behind it (v229); the copy carries the photo's own colours at full strength — no dimming, no desaturation (v230, H: "match the soft blurred fill with the color of the photo"; v229 had it at 45 % over the grey, which washed a red crop to pink) */
+/* the crop in a fixed 16:9 box inside the card (v224; the edge-to-edge box of v228 went in v229 — H: "Bild in der Box gefiel mir besser"), with the text box's hairline edge, and a blurred copy of the crop filling the box behind it (v229); the copy carries the photo's own colours (v230, H: "match the soft blurred fill with the color of the photo"; v229 had it at 45 % over the grey, which washed a red crop to pink), darkened the way photo apps letterbox a picture — the blurred image at full opacity, brightness 65 %, slightly enlarged so the blur's edges never show (v231, H: "Dimming would be OK. Please do it how it's usually done.") */
 .picbox{position:relative;width:100%;aspect-ratio:16/9;background:var(--card2);border-radius:var(--rc);margin:0 auto 10px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--sep)}
-.picbox .picbg{position:absolute;left:-10%;top:-10%;width:120%;height:120%;object-fit:cover;filter:blur(22px);pointer-events:none}
+.picbox .picbg{position:absolute;left:-10%;top:-10%;width:120%;height:120%;object-fit:cover;filter:blur(24px) brightness(.65);pointer-events:none}
 .picbox .signimg{position:relative;width:100%;height:100%;object-fit:contain;margin:0;max-height:none;border-radius:0}
 .signimg{max-width:100%;max-height:220px;display:block;margin:0 auto 10px;border-radius:10px}
 .signimg.full{max-height:420px}
