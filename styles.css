@@ -259,7 +259,7 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 .ckacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px} .ckacts .grow{flex:1}
 .ckacts.ckadd{gap:4px} .ckadd .del{padding:6px 3px;font-size:14px;min-height:36px} .ckadd .badge{margin-right:2px}
 .ckhint{margin:2px 0 8px}
-.ckrow{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:flex-end;gap:6px 10px;margin:2px 0 8px} .ckrow .ckhint{margin:0;flex:1 1 210px} .ckrow .selrow{margin:0 0 0 auto;flex:none} /* Select fits beside the hint; Remove and Done, wider, drop under it, right-aligned */ /* the hint with Select (or Remove and Done) at its right, under the strip (v272) */
+.labelrow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 10px;margin-bottom:6px} .labelrow label{margin-bottom:0;flex:1 1 60px} .labelrow .selrow{margin:0 0 0 auto;flex:none} /* Select (or Remove and Done) at the right end of the Characters label, for all lines at once (v272) */
 .reading{display:flex;flex-direction:column;gap:8px;padding:4px 0}
 .diag{font-family:var(--mono);font-size:12px;line-height:1.4;white-space:pre-wrap;word-break:break-word;background:var(--card);color:var(--label2);border-radius:var(--rc);padding:12px 14px;margin:0 0 10px;max-height:50vh;overflow:auto}
 .reading .readrow{display:flex;align-items:center;justify-content:space-between;gap:10px} /* the reading's text with Save now at the right (v237) */

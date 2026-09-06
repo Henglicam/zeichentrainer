@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=272; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=273; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1584,7 +1584,7 @@ function renderEdit(main,c){
     <div class="topline"><button class="del" id="back">${t("← Back")}</button><span class="badge">${t("Edit")}</span></div>
     <div class="form">
     ${d.img||full?`<div class="field" id="e-imgfield"><label>${t("Image (stays on this phone)")}</label><div class="pimg" id="e-pimg"></div></div>`:""} <!-- the photo first, then the text, as in the Camera tab (v245) -->
-    <div class="field"><label>${d.trad?t("Characters (traditional, as on the photo)"):t("Characters")}</label>
+    <div class="field"><div class="labelrow"><label>${d.trad?t("Characters (traditional, as on the photo)"):t("Characters")}</label>${selRowHTML(eid)}</div> <!-- Select on the label's line, for all lines at once (v272) -->
       <div class="signed" id="e-lines"></div>
       <textarea id="e-word" class="hanzi" hidden>${esc(lines0.join("\n"))}</textarea>
       </div>
@@ -1615,7 +1615,8 @@ function renderEdit(main,c){
   const syncWord=()=>{ $("#e-word").value=sg.lines.join("\n"); };
   const drawLines=()=>{
     const box=$("#e-lines"); if(!box) return;
-    box.innerHTML=sg.lines.map((l,k)=>slineHTML(eid,k,l,false)).join("")+`<div class="scriptline">${scriptSwitchHTML(eid,sg)}</div>`; /* no "Simplified …" reference line beside the switch (v148, H: the switch says it); Select sits on the first strip's hint line (v272) */
+    box.innerHTML=sg.lines.map((l,k)=>slineHTML(eid,k,l,false)).join("")+`<div class="scriptline">${scriptSwitchHTML(eid,sg)}</div>`; /* no "Simplified …" reference line beside the switch (v148, H: the switch says it) */
+    selRowRefresh(box,eid); /* Select sits on the Characters label's line outside this box (v272) — after a Remove it must show Select again */
     wireSlines(box,()=>{ syncWord(); pinyinFollow(); showAi(); });
     box.querySelectorAll("[data-scriptset]").forEach(b=> b.onclick=async()=>{ const on=b.dataset.scriptset==="1"; if(on===!!sg.trad) return; await setScript(sg,on); drawLines(); const lab=box.closest(".field").querySelector("label"); if(lab) lab.textContent=sg.trad?t("Characters (traditional, as on the photo)"):t("Characters"); }); /* the mark by hand (v146) */
   };
@@ -3314,7 +3315,7 @@ function slineHTML(id,k,line,withPinyin,withInput=true){
   const sg=SIGN[id]; /* withInput=false: the Read preview shows the strip alone (H, v109: the line field under it was one thing too many); the Edit form keeps it for retyping */
   const empty=!(line||"").trim(); /* a card saved before its reading and never read (v238): nothing to tap yet */
   const tx=empty?t("Type the text below."):t("Tap a character to change it")+(withInput?t(", or type the line below"):"")+".";
-  const hint=k===0?`<div class="ckrow"><div class="badge ckhint" data-hint="${id}" data-text="${tx}">${sg&&sg.sel?t(SEL_HINT):tx}</div>${selRowHTML(id)}</div>`:""; /* right under the strip (H, v112); Select at the right of that line since v272 — under the script switch it looked like part of it (H) */
+  const hint=k===0?`<div class="badge ckhint" data-hint="${id}" data-text="${tx}">${sg&&sg.sel?t(SEL_HINT):tx}</div>`:""; /* right under the strip (H, v112) */
   return `<div class="sline">${empty?"":charStripHTML(id,k)}${hint}${withInput?`<input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(sg&&sg.trad?tradLine(sg,k):line)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">`:""}${withPinyin?`<div class="sp" id="sp-${id}-${k}"></div>`:""}</div>`;
 }
 /* Several characters removed at once (v204, H: "select them first and then remove them all together", described first and
@@ -3330,8 +3331,9 @@ function selRowInner(id){
   const n=sg.sel.size, all=n>=sg.lines.reduce((a,l)=>a+[...l].length,0);
   return `<button class="btn mini danger" data-selremove="${id}"${!n||all?" disabled":""}>${n?t("Remove {0}",n):t("Remove")}</button><button class="btn mini" data-seldone="${id}">${t("Done")}</button>`;
 }
+const selScope=root=>(root.closest&&root.closest(".field"))||root; /* the row sits on the Characters label's line (v272) — outside the Edit form's strip box, so the wiring looks in the whole field */
 function selRowRefresh(root,id){
-  const sg=SIGN[id], row=root.querySelector(`[data-selrow="${id}"]`); if(!sg||!row) return;
+  const sg=SIGN[id], row=selScope(root).querySelector(`[data-selrow="${id}"]`); if(!sg||!row) return;
   row.innerHTML=selRowInner(id);
   const h=root.querySelector(`[data-hint="${id}"]`); if(h) h.textContent=sg.sel?t(SEL_HINT):h.dataset.text;
   if(!sg.sel) root.querySelectorAll(`[data-ck][data-sid="${id}"]`).forEach(b=>b.classList.remove("on"));
@@ -3339,9 +3341,10 @@ function selRowRefresh(root,id){
   wireSel(root);
 }
 function wireSel(root){
-  root.querySelectorAll("[data-selstart]").forEach(b=> b.onclick=()=>{ const id=b.dataset.selstart, sg=SIGN[id]; if(!sg) return; sg.sel=new Set(); root.querySelectorAll(".ckpick").forEach(p=>p.remove()); selRowRefresh(root,id); });
-  root.querySelectorAll("[data-seldone]").forEach(b=> b.onclick=()=>{ const id=b.dataset.seldone, sg=SIGN[id]; if(!sg) return; sg.sel=null; selRowRefresh(root,id); });
-  root.querySelectorAll("[data-selremove]").forEach(b=> b.onclick=()=>{ const id=b.dataset.selremove, sg=SIGN[id]; if(sg) removeSelected(sg,id); });
+  const sc=selScope(root);
+  sc.querySelectorAll("[data-selstart]").forEach(b=> b.onclick=()=>{ const id=b.dataset.selstart, sg=SIGN[id]; if(!sg) return; sg.sel=new Set(); root.querySelectorAll(".ckpick").forEach(p=>p.remove()); selRowRefresh(root,id); });
+  sc.querySelectorAll("[data-seldone]").forEach(b=> b.onclick=()=>{ const id=b.dataset.seldone, sg=SIGN[id]; if(!sg) return; sg.sel=null; selRowRefresh(root,id); });
+  sc.querySelectorAll("[data-selremove]").forEach(b=> b.onclick=()=>{ const id=b.dataset.selremove, sg=SIGN[id]; if(sg) removeSelected(sg,id); });
 }
 function removeSelected(sg,id){
   const sel=sg.sel; if(!sel||!sel.size) return; sg.sel=null;
@@ -3378,7 +3381,7 @@ function wireSlines(root,onInput,onCommit){
   root.querySelectorAll("[data-sline]").forEach(inp=> inp.onchange=()=>{ const sg=SIGN[inp.dataset.sid]; if(!sg) return; const k=+inp.dataset.sline, sl=inp.closest(".sline"), strip=sl&&sl.querySelector(".cstrip");
     if(strip){ strip.outerHTML=charStripHTML(inp.dataset.sid,k); wireSlines(sl,onInput,onCommit); } /* the buttons follow the typed line */
     else if(sl&&inp.value.trim()){ sl.insertAdjacentHTML("afterbegin",charStripHTML(inp.dataset.sid,k)); const h=sl.querySelector(".ckhint"); if(h) h.dataset.text=h.textContent=t("Tap a character to change it")+t(", or type the line below")+"."; /* the first text of a card saved before its reading (v238): the strip appears with it */
-      if(!root.querySelector("[data-selrow]")){ const cr=sl.querySelector(".ckrow"); (cr||root).insertAdjacentHTML("beforeend",selRowHTML(inp.dataset.sid)); } wireSlines(sl,onInput,onCommit); wireSel(root); }
+      if(!selScope(root).querySelector("[data-selrow]")){ const lr=selScope(root).querySelector(".labelrow"); (lr||root).insertAdjacentHTML("beforeend",selRowHTML(inp.dataset.sid)); } wireSlines(sl,onInput,onCommit); wireSel(root); }
     if(onCommit) onCommit(sg,inp.dataset.sid,k); });
   root.querySelectorAll("[data-spin]").forEach(el=> el.oninput=()=>{ const sg=SIGN[el.dataset.spin]; if(sg){ sg.pinTouched=true; sg.pinEdit=el.value; } });
   root.querySelectorAll("[data-smean]").forEach(el=> el.oninput=()=>{ const sg=SIGN[el.dataset.smean]; if(sg){ sg.meanTouched=true; sg.meanEdit=el.value; } });
@@ -3402,7 +3405,7 @@ function signEditorHTML(id){
 
   /* the same layout as the Edit form (H): Text, Pinyin, Meaning — pinyin and meaning can be corrected before saving */
   return `<div class="signed">${weak}${head?`<div class="badge${bad?" bad":""}" style="margin-bottom:8px">${head}</div>`:""}
-    <div class="field"><label>${t("Characters")}${sg.trad?t(" (traditional, as on the photo)"):""}${sg.ai&&sg.ai.pic&&!sg.ai.bad?picMark():""}</label>${rows}<div class="scriptline">${scriptSwitchHTML(id,sg)}</div></div>
+    <div class="field"><div class="labelrow"><label>${t("Characters")}${sg.trad?t(" (traditional, as on the photo)"):""}${sg.ai&&sg.ai.pic&&!sg.ai.bad?picMark():""}</label>${selRowHTML(id)}</div>${rows}<div class="scriptline">${scriptSwitchHTML(id,sg)}</div></div>
     <div class="field"><label>${t("Pinyin")}</label><textarea class="grow" id="spin-${id}" rows="1" data-spin="${id}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">${esc(sg.pinEdit||"")}</textarea></div>
     <div class="field"><label>${t("Meaning")}</label><textarea class="grow" id="smeanf-${id}" rows="1" data-smean="${id}">${esc(sg.meanEdit||"")}</textarea><div class="smean badge" id="smean-${id}" style="margin-top:4px"></div></div>
     <div class="field"><label class="check"><input type="checkbox" data-sflag="${id}"${sg.flag?" checked":""}> ${t("⚑ Flag for review (text, pinyin or meaning looks wrong)")}</label>
