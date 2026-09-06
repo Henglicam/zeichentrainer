@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=237; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=238; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1014,6 +1014,8 @@ function frontPic(d){
   const img=`<img class="signimg${S.fullPic&&full?" full":""}" data-pic="1" src="${urlOf(blob)}" alt="photo">`;
   return S.fullPic&&full?img:`<div class="picbox" data-pic="1"><img class="picbg" src="${urlOf(blob)}" alt="" aria-hidden="true">${img}</div>`; /* the blurred fill behind the fitted crop, in the photo's colours (v229/v230) */
 }
+/* a card saved before its reading is done (v237): the box shows the reading bar, or one plain line once the reading failed */
+const waitingHTML=d=>d.reading&&d.reading.failed?`<span class="wait failed">Nothing could be read.</span>`:`<span class="wait">${busyHTML("Reading the text …")}</span>`;
 function frontHTML(d){
   const scriptNote=d.trad?`<div class="script"><span class="pill trad">Traditional</span></div>`:""; /* one pill under the box (v227, H's "Go" on the design review — until v226 two lines, "Traditional characters, as on the photo" and "Simplified 养乐多"); the simplified form sits on the back now (simpRefHTML), plain words, no 简/繁 shorthand (H, v106) */
   if(d.kind==="sign"){
@@ -1024,11 +1026,11 @@ function frontHTML(d){
     return `<div class="signfront">${frontPic(d)}
       <div class="signtext" style="font-size:${fs}px">${lines.map(l=>`<div>${esc(l)}</div>`).join("")}</div>${scriptNote}</div>`;
   }
-  const single=glyphs(d.c)<=1;
+  const single=!!d.c&&glyphs(d.c)<=1; /* an empty text gets no crosshair (v237) */
   /* the photo is the cue — it belongs on the front, before reveal */
   const pic=frontPic(d);
   const lines0=d.trad?d.trad.split("\n"):frontLines(d), {W,H,fs,lines}=frontBox(lines0,headFont(d.c),frontWords(d)); /* the front shows the photo's script; the card's key stays simplified */
-  return `${pic}<div class="reticle" style="width:${W}px;height:${H}px">${reticleSVG(single,W,H)}<div class="glyph" style="font-size:${fs}px">${d.c?lines.map(esc).join("<br>"):`<span class="lbl">${d.reading&&d.reading.failed?"Nothing read yet":"Reading …"}</span>`}</div></div>${scriptNote}`;
+  return `${pic}<div class="reticle" style="width:${W}px;height:${H}px">${reticleSVG(single,W,H)}<div class="glyph" style="font-size:${fs}px">${d.c?lines.map(esc).join("<br>"):waitingHTML(d)}</div></div>${scriptNote}`;
 }
 /* ---------- pronunciation: the phone's own Chinese voice (nothing downloaded, works offline) ---------- */
 let TTS_VOICE=null;
@@ -1120,7 +1122,7 @@ function backHTML(d){
 }
 /* the other cards with the same text (v122, H: "if one character connects to various photos, then link them"): their
    crops in a row on the back and in the card detail; a tap opens that card */
-const sameText=d=>deck().filter(x=>x.id!==d.id&&x.c===d.c).sort((a,b)=>(b.at||0)-(a.at||0));
+const sameText=d=>deck().filter(x=>x.id!==d.id&&d.c&&x.c===d.c).sort((a,b)=>(b.at||0)-(a.at||0));
 function linkedHTML(d){
   const others=sameText(d); if(!others.length) return "";
   return `<div class="linked"><div class="lbl">Also on ${others.length===1?"another photo":others.length+" other photos"}</div><div class="thumbs">${others.map(x=>`<button class="lnk${S.mode==="study"&&S.peek===x.id?" on":""}" data-link="${esc(x.id)}" aria-label="${S.mode==="study"?"Show this photo":"Open this card"}">${x.img||fullPhoto(x)?`<img src="${thumbURL(x)}" alt="">`:`<span class="glyph hanzi">${esc([...x.c][0])}</span>`}</button>`).join("")}</div></div>`;
@@ -1298,7 +1300,7 @@ function cardStatus(d){
 function cardsListHTML(){
   const q=S.query.trim().toLowerCase();
   let list=S.custom.slice().sort((a,b)=>(b.at||0)-(a.at||0)); /* newest first */
-  const byText=new Map(); S.custom.forEach(x=>byText.set(x.c,(byText.get(x.c)||0)+1)); /* the same text from several photos (v122) */
+  const byText=new Map(); S.custom.forEach(x=>{ if(x.c) byText.set(x.c,(byText.get(x.c)||0)+1); }); /* the same text from several photos (v122) */
   if(S.filterUnv) list=list.filter(d=>d.mt&&!d.mt.verified);
   if(S.filterFlag) list=list.filter(d=>d.flag);
   if(S.filterAi) list=list.filter(d=>d.ai);
@@ -1306,7 +1308,7 @@ function cardsListHTML(){
   if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,d.w,d.wp,d.wm,d.flagNote,...(d.tags||[])].filter(Boolean).join(" ").toLowerCase().includes(q));
   const rows=list.map(d=>`<button class="crow" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
-      <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?"Nothing read yet":"Reading …"}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">Traditional</span>`:""}${byText.get(d.c)>1?`<span class="pill">${byText.get(d.c)} photos</span>`:""}${(d.tags||[]).map(t=>`<span class="pill tag">${esc(t)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
+      <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?"Nothing read":"Reading …"}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">Traditional</span>`:""}${byText.get(d.c)>1?`<span class="pill">${byText.get(d.c)} photos</span>`:""}${(d.tags||[]).map(t=>`<span class="pill tag">${esc(t)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
       <span class="cs">${d.ai?'<span class="pill ai">AI</span>':""}${d.flag?'<span class="pill flagged">⚑ Review</span>':""}${cardStatus(d)}</span></button>`).join("");
   const empty=S.custom.length?"No cards match.":"No cards yet — take a photo under Camera, or tap + New.";
   return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length};
@@ -1336,12 +1338,13 @@ function renderCardDetail(main,c){
   const p=S.progress[c];
   const stat=p?`Interval ${p.interval} d, ease ${p.ease.toFixed(2)}, ${p.reps} review${p.reps===1?"":"s"}, next ${new Date(p.due).toLocaleDateString("en-GB")}.`:"Not studied yet.";
   main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${(t=>t?t[0].toUpperCase()+t.slice(1):"")([d.mt&&!d.mt.verified?"unverified":"",d.mt&&d.mt.pending?"translation pending":"",d.mt&&d.mt.suspect?"reading uncertain":""].filter(Boolean).join(", "))}</span></div>
+    <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${!d.c?(d.reading&&d.reading.failed?"Nothing read yet":"Reading …"):(t=>t?t[0].toUpperCase()+t.slice(1):"")([d.mt&&!d.mt.verified?"unverified":"",d.mt&&d.mt.pending?"translation pending":"",d.mt&&d.mt.suspect?"reading uncertain":""].filter(Boolean).join(", "))}</span></div>
     <div class="card">${tagsHTML(d,!p)}<div class="front tap" id="d-reveal">${frontHTML(d)}</div>
-      ${S.detailHide?(showHints()?`<div class="hint">Tap the character to show the answer${fullPhoto(d)?", or the photo for the whole picture":""}.</div>`:"")
+      ${!d.c?`${d.reading&&d.reading.failed?"":`<div class="hint">The text, pinyin and meaning follow when the reading is done.</div>`}${flagNoteHTML(d)}` /* a card still waiting for its reading has no back (v237) */
+        :S.detailHide?(showHints()?`<div class="hint">Tap the character to show the answer${fullPhoto(d)?", or the photo for the whole picture":""}.</div>`:"")
         :`<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}${showHints()?`<div class="hint">Tap the character to hide the answer${fullPhoto(d)?", or the photo for the whole picture":""}.</div>`:""}`}</div>
     <div class="detailacts">
-      <button class="btn primary" id="d-test">Test this card</button>
+      ${d.c?`<button class="btn primary" id="d-test">Test this card</button>`:""}
       <button class="btn" id="d-edit">Edit</button>
       <button class="btn${d.flag?" on":""}" id="d-flag">${d.flag?"⚑ Clear flag":"⚑ Flag for review"}</button>
       <button class="btn danger" id="d-del">Delete card</button>
@@ -1350,9 +1353,9 @@ function renderCardDetail(main,c){
   </div>`;
   $("#back").onclick=()=>{ S.detail=null; S.detailHide=false; S.fullPic=false; render(); };
   /* the preview behaves like the test: tap the photo for the whole picture, tap the character to hide and show the answer (H) */
-  if(!S.detailHide) warmParts();
+  if(!S.detailHide&&d.c) warmParts();
   const rv=$("#d-reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); return; } S.detailHide=!S.detailHide; render(); };
-  $("#d-test").onclick=()=>{
+  const test=$("#d-test"); if(test) test.onclick=()=>{
     S.saved={queue:S.queue,idx:S.idx,done:S.done,ahead:S.ahead};
     S.single=c; S.queue=[c]; S.idx=0; S.revealed=false; S.mode="study"; render();
   };
@@ -1361,7 +1364,7 @@ function renderCardDetail(main,c){
   wireSay(); wireChars(d); wireLinks();
   wireAi();
   const del=$("#d-del"); if(del) del.onclick=async()=>{
-    if(!await askSheet({title:"Delete “"+d.c.replace(/\n/g," / ")+"”?",text:"The card and its learning progress will be removed.",ok:"Delete"})) return;
+    if(!await askSheet({title:d.c?"Delete “"+d.c.replace(/\n/g," / ")+"”?":"Delete this card?",text:"The card and its learning progress will be removed.",ok:"Delete"})) return;
     await delCustom(c); S.detail=null; render();
   };
 }
@@ -1406,7 +1409,7 @@ function renderEdit(main,c){
   $("#e-flag").onchange=()=>{ $("#e-note").hidden=!$("#e-flag").checked; if($("#e-flag").checked) $("#e-note").focus(); }; /* the note only with the flag, as in the Add form and the preview (v136) */
   /* delete from here too (H): from the study back the session goes on with the next card, otherwise back to the list */
   $("#e-del").onclick=async()=>{
-    if(!await askSheet({title:"Delete “"+d.c.replace(/\n/g," / ")+"”?",text:"The card and its learning progress will be removed.",ok:"Delete"})) return;
+    if(!await askSheet({title:d.c?"Delete “"+d.c.replace(/\n/g," / ")+"”?":"Delete this card?",text:"The card and its learning progress will be removed.",ok:"Delete"})) return;
     await delCustom(c); delete SIGN[eid];
     const from=S.editFrom; S.editing=null; S.editFrom=null;
     if(from==="study"){ S.queue=S.queue.filter(x=>x!==c); if(S.single===c) S.single=null; S.revealed=false; S.fullPic=false; S.mode="study"; }
@@ -2095,9 +2098,10 @@ const AI_BUSY_TEXT="Checking pinyin and meaning …";
 /* while a photo is read: the bar, and beside it Save now (v237, H: "take a photo, crop in a rush, hit Save and move on" —
    the card is made at once with the crop, the reading fills it in in the background); once saved, the note instead */
 const readingHTML=(t,id)=>READ_FAIL.test(t)?`<span class="badge">${esc(t)}</span>`
-  :busyHTML(`Reading the text …${id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK?` still at: ${t}`:""}`)
-   +(id&&PENDING[id]?`<div class="ok" style="margin:8px 0 0">Card saved — the text follows when the reading is done.</div>`
-     :id&&CROP&&CROP.id===id&&CROP.rect?`<div class="fieldacts"><button class="btn mini" data-savenow="${id}">Save now</button></div>`:"");
+  :(stuck=>id&&PENDING[id]
+    ?`<div class="reading"><div class="bar"><i></i></div><span class="ok" style="margin:0">Card saved — the text follows when the reading is done.${stuck}</span></div>`
+    :`<div class="reading"><div class="bar"><i></i></div><div class="readrow"><span class="badge">Reading the text …${stuck}</span>${id&&CROP&&CROP.id===id&&CROP.rect?`<button class="btn mini" data-savenow="${id}">Save now</button>`:""}</div></div>`)
+   (id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK?` Still at: ${esc(t)}`:"");
 const readingStatus=(id,run)=>t=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=t; READ_AT[id]=Date.now(); READLOG.push({t:Date.now(),text:t}); while(READLOG.length>40) READLOG.shift();
   const b=$("#ocr-"+id); if(b) b.innerHTML=readingHTML(t,id);
   setTimeout(()=>{ if(READING[id]!==t) return; const b2=$("#ocr-"+id); if(b2) b2.innerHTML=readingHTML(t,id); },READ_STUCK+50); };
@@ -2472,7 +2476,7 @@ async function finishPending(id){
     const built=sg&&SIGN[id]===sg?await readingCard(id,sg):null;
     if(!built){ return failPending(id,"nothing to save"); }
     const {card,c,mt}=built;
-    for(const k of Object.keys(ph)) if(!["id","at","img","shot","tags"].includes(k)) delete ph[k];
+    for(const k of Object.keys(ph)) if(!["id","at","img","imgFull","shot","tags"].includes(k)) delete ph[k];
     const {id:_i,at:_a,img:_m,shot:_s,...fields}=card; Object.assign(ph,fields);
     if(sg.cardImg) ph.img=await jpegOf(sg.cardImg);
     if(mt.suspect||sg.weak||(sg.ai&&sg.ai.bad)){ ph.flag=true; ph.flagNote=ph.flagNote||"check the reading"; } /* nobody saw the preview: a doubtful reading asks to be looked at */
@@ -2869,9 +2873,10 @@ async function setScript(sg,on){
 function tradLine(sg,k){ const line=sg.lines[k]; if(!sg.trad) return line; const t=(sg.tradText||"").split("\n")[k]; return t&&[...t].length===[...line].length?t:s2t(line); }
 function slineHTML(id,k,line,withPinyin,withInput=true){
   const sg=SIGN[id]; /* withInput=false: the Read preview shows the strip alone (H, v109: the line field under it was one thing too many); the Edit form keeps it for retyping */
-  const t=`Tap a character to change it${withInput?", or type the line below":""}.`;
+  const empty=!(line||"").trim(); /* a card saved before its reading and never read (v238): nothing to tap yet */
+  const t=empty?"Type the text below.":`Tap a character to change it${withInput?", or type the line below":""}.`;
   const hint=k===0?`<div class="badge ckhint" data-hint="${id}" data-text="${t}">${sg&&sg.sel?SEL_HINT:t}</div>`:""; /* right under the strip (H, v112) */
-  return `<div class="sline">${charStripHTML(id,k)}${hint}${withInput?`<input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(sg&&sg.trad?tradLine(sg,k):line)}" autocomplete="off">`:""}${withPinyin?`<div class="sp" id="sp-${id}-${k}"></div>`:""}</div>`;
+  return `<div class="sline">${empty?"":charStripHTML(id,k)}${hint}${withInput?`<input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(sg&&sg.trad?tradLine(sg,k):line)}" autocomplete="off">`:""}${withPinyin?`<div class="sp" id="sp-${id}-${k}"></div>`:""}</div>`;
 }
 /* Several characters removed at once (v204, H: "select them first and then remove them all together", described first and
    built on "Go"): a Select button under the strips puts the reading into selection (sg.sel, the set of "k,i" positions) —
@@ -2879,7 +2884,7 @@ function slineHTML(id,k,line,withPinyin,withInput=true){
    or everything is marked — the text can never be emptied) and Done; Remove drops the positions, an emptied line with
    them, and re-checks like the picker's apply. The same row sits in the Edit form, whose strips are the same component. */
 const SEL_HINT="Tap the characters to remove, then Remove.";
-function selRowHTML(id){ return `<div class="fieldacts selrow" data-selrow="${id}">${selRowInner(id)}</div>`; }
+function selRowHTML(id){ const sg=SIGN[id]; if(!sg||!sg.lines.some(l=>l.trim())) return ""; return `<div class="fieldacts selrow" data-selrow="${id}">${selRowInner(id)}</div>`; }
 function selRowInner(id){
   const sg=SIGN[id]; if(!sg) return "";
   if(!sg.sel) return `<button class="btn mini" data-selstart="${id}">Select</button>`;
@@ -2933,6 +2938,8 @@ function wireSlines(root,onInput,onCommit){
     onInput(sg,inp.dataset.sid); });
   root.querySelectorAll("[data-sline]").forEach(inp=> inp.onchange=()=>{ const sg=SIGN[inp.dataset.sid]; if(!sg) return; const k=+inp.dataset.sline, sl=inp.closest(".sline"), strip=sl&&sl.querySelector(".cstrip");
     if(strip){ strip.outerHTML=charStripHTML(inp.dataset.sid,k); wireSlines(sl,onInput,onCommit); } /* the buttons follow the typed line */
+    else if(sl&&inp.value.trim()){ sl.insertAdjacentHTML("afterbegin",charStripHTML(inp.dataset.sid,k)); const h=sl.querySelector(".ckhint"); if(h) h.dataset.text=h.textContent="Tap a character to change it, or type the line below."; /* the first text of a card saved before its reading (v238): the strip appears with it */
+      if(!root.querySelector("[data-selrow]")) root.insertAdjacentHTML("beforeend",selRowHTML(inp.dataset.sid)); wireSlines(sl,onInput,onCommit); wireSel(root); }
     if(onCommit) onCommit(sg,inp.dataset.sid,k); });
   root.querySelectorAll("[data-spin]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.spin]; if(sg){ sg.pinTouched=true; sg.pinEdit=t.value; } });
   root.querySelectorAll("[data-smean]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.smean]; if(sg){ sg.meanTouched=true; sg.meanEdit=t.value; } });
@@ -3135,7 +3142,7 @@ function renderShots(){
         </div>
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">Cancel</button>`
-          :`<button class="ocr-btn" data-crop="${s.id}">Crop</button><button class="del" data-del="${s.id}">Delete</button>`}</span></div>
+          :`${PENDING[s.id]?"":`<button class="ocr-btn" data-crop="${s.id}">Crop</button>`}<button class="del" data-del="${s.id}">Delete</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${PENDING[s.id]?readingHTML(READING[s.id]||AI_BUSY_TEXT,s.id):SIGN[s.id]?signEditorHTML(s.id):READING[s.id]?readingHTML(READING[s.id],s.id):cropping
           ?CROP.auto?busyHTML("Finding the text …"):`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.</span>`
           :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:""}</div>
