@@ -166,7 +166,7 @@ de:{
   "Show":"Anzeigen","Online AI review":"KI-Prüfung online","AI review":"KI-Prüfung","What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. The framed area of a photo only when the reading is weak, to a provider that takes pictures. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Was gesendet wird: der chinesische Text, Pinyin, Bedeutung und deine Notiz von markierten, unsicheren oder unübersetzten Karten. Der eingerahmte Bereich eines Fotos nur, wenn die Erkennung schwach ist, an einen Anbieter, der Bilder annimmt. Ohne eigenen Schlüssel sendet dieses Telefon über das Relais des App-Besitzers, das an den Anbieter weiterleitet und nur eine Zahl behält.",
   "Check every new card with the AI automatically (when online)":"Jede neue Karte automatisch mit der KI prüfen (wenn online)","Review queue":"Warteschlange","Storage":"Speicher","Learning":"Lernen",
   "Card order":"Reihenfolge der Karten","Due cards come first, then up to {0} new ones. This sets the order inside each group.":"Fällige Karten kommen zuerst, dann bis zu {0} neue. Das hier legt die Reihenfolge innerhalb jeder Gruppe fest.",
-  "On this phone":"Auf diesem Telefon","Progress":"Fortschritt","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"App {0} geöffnet, {1} wiederholt, {2}, {3} von der KI geprüft.","Work done by {0}.":"Arbeit erledigt von {0}.",
+  "Progress":"Fortschritt","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"App {0} geöffnet, {1} wiederholt, {2}, {3} von der KI geprüft.","Work done by {0}.":"Arbeit erledigt von {0}.",
   "on-device reader":"Texterkennung im Telefon","none yet":"noch nichts","Share report":"Bericht teilen","Usage sharing":"Nutzungsdaten",
   "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks. No card text, no photos.":"Sendet einmal am Tag anonyme Nutzungszahlen an den Besitzer der App: genutzte Tage, erstellte und wiederholte Karten, KI-Prüfungen. Kein Kartentext, keine Fotos.",
   "Your id: {0}.":"Deine Kennung: {0}.","Send once a day":"Einmal am Tag senden","Photos":"Fotos","Delete {0}":"{0} löschen",
@@ -187,7 +187,9 @@ de:{
   "suggestion":"{0} Vorschlag","suggestions":"{0} Vorschläge","progress entry":"{0} Lerneintrag","progress entries":"{0} Lerneinträge",
   "reading":"{0} Erkennung","readings":"{0} Erkennungen","check":"{0} Prüfung","checks":"{0} Prüfungen",
   /* the meaning in the app's language and the Translate-all row (v256) */
-  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"Die Texte der App und, mit der KI, die Bedeutung neuer Karten. Karten behalten Chinesisch und Pinyin.","Meanings":"Bedeutungen","{0} have their meaning in another language.":"{0} haben ihre Bedeutung in einer anderen Sprache.","Translate all cards into {0}":"Alle Karten auf {0} übersetzen","Translating {0} of {1} …":"Übersetze {0} von {1} …","{0} translated, {1} left.":"{0} übersetzt, {1} übrig.","Done — {0} translated.":"Fertig — {0} übersetzt."
+  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"Die Texte der App und, mit der KI, die Bedeutung neuer Karten. Karten behalten Chinesisch und Pinyin.","Meanings":"Bedeutungen","{0} have their meaning in another language.":"{0} haben ihre Bedeutung in einer anderen Sprache.","Translate all cards into {0}":"Alle Karten auf {0} übersetzen","Translating {0} of {1} …":"Übersetze {0} von {1} …","{0} translated, {1} left.":"{0} übersetzt, {1} übrig.","Done — {0} translated.":"Fertig — {0} übersetzt.",
+  /* the More screen in the learner's order (v257) */
+  "Privacy":"Privatsphäre"
 },
 fr:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"Les photos restent sur ce téléphone. Cadre le texte – la carte est créée pour toi.",
@@ -341,7 +343,7 @@ fr:{
   "Show":"Afficher","Online AI review":"Vérification par l'IA en ligne","AI review":"Vérification par l'IA","What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. The framed area of a photo only when the reading is weak, to a provider that takes pictures. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Ce qui est envoyé : le texte chinois, le pinyin, le sens et ta note des cartes signalées, douteuses ou en attente. La zone cadrée d'une photo seulement quand la lecture est faible, à un fournisseur qui accepte les images. Sans clé propre, ce téléphone envoie via le relais du propriétaire de l'appli, qui transmet au fournisseur et ne garde qu'un compteur.",
   "Check every new card with the AI automatically (when online)":"Vérifier chaque nouvelle carte automatiquement avec l'IA (en ligne)","Review queue":"File de vérification","Storage":"Stockage","Learning":"Apprentissage",
   "Card order":"Ordre des cartes","Due cards come first, then up to {0} new ones. This sets the order inside each group.":"Les cartes à revoir viennent d'abord, puis jusqu'à {0} nouvelles. Ceci règle l'ordre dans chaque groupe.",
-  "On this phone":"Sur ce téléphone","Progress":"Progression","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"Appli ouverte {0}, {1} revues, {2}, {3} vérifiées par l'IA.","Work done by {0}.":"Travail effectué par {0}.",
+  "Progress":"Progression","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"Appli ouverte {0}, {1} revues, {2}, {3} vérifiées par l'IA.","Work done by {0}.":"Travail effectué par {0}.",
   "on-device reader":"lecteur sur le téléphone","none yet":"rien encore","Share report":"Partager le rapport","Usage sharing":"Partage d'utilisation",
   "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks. No card text, no photos.":"Envoie une fois par jour des comptages anonymes au propriétaire de l'appli : jours d'utilisation, cartes créées et revues, vérifications par l'IA. Pas de texte des cartes, pas de photos.",
   "Your id: {0}.":"Ton identifiant : {0}.","Send once a day":"Envoyer une fois par jour","Photos":"Photos","Delete {0}":"Supprimer {0}",
@@ -362,7 +364,9 @@ fr:{
   "suggestion":"{0} suggestion","suggestions":"{0} suggestions","progress entry":"{0} entrée de progression","progress entries":"{0} entrées de progression",
   "reading":"{0} lecture","readings":"{0} lectures","check":"{0} vérification","checks":"{0} vérifications",
   /* the meaning in the app's language and the Translate-all row (v256) */
-  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"Les textes de l'appli et, avec l'IA, le sens des nouvelles cartes. Les cartes gardent le chinois et le pinyin.","Meanings":"Sens","{0} have their meaning in another language.":"{0} ont leur sens dans une autre langue.","Translate all cards into {0}":"Traduire toutes les cartes en {0}","Translating {0} of {1} …":"Traduction {0} sur {1} …","{0} translated, {1} left.":"{0} traduites, {1} restantes.","Done — {0} translated.":"Terminé – {0} traduites."
+  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"Les textes de l'appli et, avec l'IA, le sens des nouvelles cartes. Les cartes gardent le chinois et le pinyin.","Meanings":"Sens","{0} have their meaning in another language.":"{0} ont leur sens dans une autre langue.","Translate all cards into {0}":"Traduire toutes les cartes en {0}","Translating {0} of {1} …":"Traduction {0} sur {1} …","{0} translated, {1} left.":"{0} traduites, {1} restantes.","Done — {0} translated.":"Terminé – {0} traduites.",
+  /* the More screen in the learner's order (v257) */
+  "Privacy":"Confidentialité"
 },
 es:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"Las fotos se quedan en este teléfono. Encuadra el texto y la tarjeta se crea sola.",
@@ -516,7 +520,7 @@ es:{
   "Show":"Mostrar","Online AI review":"Revisión con IA en línea","AI review":"Revisión con IA","What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. The framed area of a photo only when the reading is weak, to a provider that takes pictures. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Qué se envía: el texto chino, el pinyin, el significado y tu nota de las tarjetas marcadas, dudosas o pendientes. La zona enmarcada de una foto solo cuando la lectura es débil, a un proveedor que acepta imágenes. Sin clave propia, este teléfono envía a través del relé del propietario de la app, que reenvía al proveedor y solo guarda un recuento.",
   "Check every new card with the AI automatically (when online)":"Revisar cada tarjeta nueva automáticamente con la IA (con conexión)","Review queue":"Cola de revisión","Storage":"Almacenamiento","Learning":"Aprendizaje",
   "Card order":"Orden de las tarjetas","Due cards come first, then up to {0} new ones. This sets the order inside each group.":"Primero las tarjetas pendientes, luego hasta {0} nuevas. Esto fija el orden dentro de cada grupo.",
-  "On this phone":"En este teléfono","Progress":"Progreso","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"App abierta {0}, {1} repasadas, {2}, {3} revisadas por la IA.","Work done by {0}.":"Trabajo realizado por {0}.",
+  "Progress":"Progreso","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"App abierta {0}, {1} repasadas, {2}, {3} revisadas por la IA.","Work done by {0}.":"Trabajo realizado por {0}.",
   "on-device reader":"lector en el teléfono","none yet":"nada aún","Share report":"Compartir informe","Usage sharing":"Datos de uso",
   "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks. No card text, no photos.":"Envía una vez al día recuentos de uso anónimos al propietario de la app: días de uso, tarjetas creadas y repasadas, revisiones con IA. Sin texto de las tarjetas, sin fotos.",
   "Your id: {0}.":"Tu identificador: {0}.","Send once a day":"Enviar una vez al día","Photos":"Fotos","Delete {0}":"Eliminar {0}",
@@ -537,7 +541,9 @@ es:{
   "suggestion":"{0} sugerencia","suggestions":"{0} sugerencias","progress entry":"{0} entrada de progreso","progress entries":"{0} entradas de progreso",
   "reading":"{0} lectura","readings":"{0} lecturas","check":"{0} revisión","checks":"{0} revisiones",
   /* the meaning in the app's language and the Translate-all row (v256) */
-  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"Los textos de la app y, con la IA, el significado de las tarjetas nuevas. Las tarjetas conservan el chino y el pinyin.","Meanings":"Significados","{0} have their meaning in another language.":"{0} tienen su significado en otro idioma.","Translate all cards into {0}":"Traducir todas las tarjetas al {0}","Translating {0} of {1} …":"Traduciendo {0} de {1} …","{0} translated, {1} left.":"{0} traducidas, {1} pendientes.","Done — {0} translated.":"Listo — {0} traducidas."
+  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"Los textos de la app y, con la IA, el significado de las tarjetas nuevas. Las tarjetas conservan el chino y el pinyin.","Meanings":"Significados","{0} have their meaning in another language.":"{0} tienen su significado en otro idioma.","Translate all cards into {0}":"Traducir todas las tarjetas al {0}","Translating {0} of {1} …":"Traduciendo {0} de {1} …","{0} translated, {1} left.":"{0} traducidas, {1} pendientes.","Done — {0} translated.":"Listo — {0} traducidas.",
+  /* the More screen in the learner's order (v257) */
+  "Privacy":"Privacidad"
 },
 ja:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"写真はこの端末に残ります。文字を枠で囲むと、カードが作られます。",
@@ -691,7 +697,7 @@ ja:{
   "Show":"表示","Online AI review":"オンラインAI確認","AI review":"AI確認","What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. The framed area of a photo only when the reading is weak, to a provider that takes pictures. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"送信されるもの：要確認・不確か・翻訳待ちのカードの中国語テキスト、ピンイン、意味、メモ。写真の枠内は読み取りが弱いときだけ、画像を受け付ける提供元に送られます。自分のキーがない端末はアプリ所有者の中継を通して送り、中継は提供元に転送して回数だけを記録します。",
   "Check every new card with the AI automatically (when online)":"新しいカードを自動でAIに確認させる（オンライン時）","Review queue":"確認待ち","Storage":"ストレージ","Learning":"学習",
   "Card order":"カードの順序","Due cards come first, then up to {0} new ones. This sets the order inside each group.":"復習カードが先、その後に新しいカードが最大{0}枚。ここでは各グループ内の順序を決めます。",
-  "On this phone":"この端末","Progress":"進み具合","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"アプリを{0}開き、{1}を復習、{2}、{3}をAIが確認。","Work done by {0}.":"作業の内訳：{0}。",
+  "Progress":"進み具合","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"アプリを{0}開き、{1}を復習、{2}、{3}をAIが確認。","Work done by {0}.":"作業の内訳：{0}。",
   "on-device reader":"端末内の読み取り","none yet":"まだありません","Share report":"レポートを共有","Usage sharing":"利用状況の送信",
   "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks. No card text, no photos.":"1日1回、匿名の利用回数をアプリの所有者に送ります：使用日数、作成・復習したカード、AI確認。カードの内容や写真は送りません。",
   "Your id: {0}.":"あなたのID：{0}","Send once a day":"1日1回送信","Photos":"写真","Delete {0}":"{0}枚を削除",
@@ -712,7 +718,9 @@ ja:{
   "suggestion":"候補{0}件","suggestions":"候補{0}件","progress entry":"学習記録{0}件","progress entries":"学習記録{0}件",
   "reading":"読み取り{0}回","readings":"読み取り{0}回","check":"確認{0}回","checks":"確認{0}回",
   /* the meaning in the app's language and the Translate-all row (v256) */
-  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"アプリの表示と、AIを使うときは新しいカードの意味。カードの中国語とピンインはそのままです。","Meanings":"意味","{0} have their meaning in another language.":"{0}の意味が別の言語になっています。","Translate all cards into {0}":"すべてのカードを{0}に翻訳","Translating {0} of {1} …":"翻訳中 {0} / {1}…","{0} translated, {1} left.":"{0}枚を翻訳、残り{1}枚。","Done — {0} translated.":"完了。{0}を翻訳しました。"
+  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"アプリの表示と、AIを使うときは新しいカードの意味。カードの中国語とピンインはそのままです。","Meanings":"意味","{0} have their meaning in another language.":"{0}の意味が別の言語になっています。","Translate all cards into {0}":"すべてのカードを{0}に翻訳","Translating {0} of {1} …":"翻訳中 {0} / {1}…","{0} translated, {1} left.":"{0}枚を翻訳、残り{1}枚。","Done — {0} translated.":"完了。{0}を翻訳しました。",
+  /* the More screen in the learner's order (v257) */
+  "Privacy":"プライバシー"
 },
 ko:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"사진은 이 기기에만 남아요. 글자를 틀로 감싸면 카드가 만들어져요.",
@@ -866,7 +874,7 @@ ko:{
   "Show":"보기","Online AI review":"온라인 AI 확인","AI review":"AI 확인","What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. The framed area of a photo only when the reading is weak, to a provider that takes pictures. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"전송되는 것: 표시됨·불확실·번역 대기 카드의 중국어 텍스트, 병음, 뜻, 메모. 사진의 테두리 안 영역은 읽기가 약할 때만, 이미지를 받는 제공자에게 전송돼요. 자체 키가 없는 휴대폰은 앱 소유자의 중계를 통해 보내며, 중계는 제공자에게 전달하고 횟수만 기록해요.",
   "Check every new card with the AI automatically (when online)":"새 카드를 자동으로 AI로 확인 (온라인일 때)","Review queue":"확인 대기열","Storage":"저장 공간","Learning":"학습",
   "Card order":"카드 순서","Due cards come first, then up to {0} new ones. This sets the order inside each group.":"복습할 카드가 먼저, 그다음 새 카드 최대 {0}장. 여기서는 각 그룹 안의 순서를 정해요.",
-  "On this phone":"이 휴대폰","Progress":"진행 상황","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"앱 {0} 열림, {1} 복습, {2}, {3} AI 확인.","Work done by {0}.":"작업 수행: {0}.",
+  "Progress":"진행 상황","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"앱 {0} 열림, {1} 복습, {2}, {3} AI 확인.","Work done by {0}.":"작업 수행: {0}.",
   "on-device reader":"기기 내 읽기","none yet":"아직 없음","Share report":"보고서 공유","Usage sharing":"사용 정보 공유",
   "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks. No card text, no photos.":"하루 한 번 익명의 사용 횟수를 앱 소유자에게 보내요: 사용 일수, 만들고 복습한 카드, AI 확인. 카드 내용과 사진은 보내지 않아요.",
   "Your id: {0}.":"내 ID: {0}.","Send once a day":"하루 한 번 보내기","Photos":"사진","Delete {0}":"{0}장 삭제",
@@ -887,6 +895,8 @@ ko:{
   "suggestion":"제안 {0}개","suggestions":"제안 {0}개","progress entry":"학습 기록 {0}개","progress entries":"학습 기록 {0}개",
   "reading":"읽기 {0}회","readings":"읽기 {0}회","check":"확인 {0}회","checks":"확인 {0}회",
   /* the meaning in the app's language and the Translate-all row (v256) */
-  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"앱의 표시 언어와, AI를 쓸 때는 새 카드의 뜻. 카드의 중국어와 병음은 그대로예요.","Meanings":"뜻","{0} have their meaning in another language.":"{0}의 뜻이 다른 언어로 되어 있어요.","Translate all cards into {0}":"모든 카드를 {0}(으)로 번역","Translating {0} of {1} …":"번역 중 {0} / {1}…","{0} translated, {1} left.":"{0}장 번역됨, {1}장 남음.","Done — {0} translated.":"완료. {0}을(를) 번역했어요."
+  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"앱의 표시 언어와, AI를 쓸 때는 새 카드의 뜻. 카드의 중국어와 병음은 그대로예요.","Meanings":"뜻","{0} have their meaning in another language.":"{0}의 뜻이 다른 언어로 되어 있어요.","Translate all cards into {0}":"모든 카드를 {0}(으)로 번역","Translating {0} of {1} …":"번역 중 {0} / {1}…","{0} translated, {1} left.":"{0}장 번역됨, {1}장 남음.","Done — {0} translated.":"완료. {0}을(를) 번역했어요.",
+  /* the More screen in the learner's order (v257) */
+  "Privacy":"개인정보"
 }
 };
