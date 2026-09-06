@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=274; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=275; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1055,14 +1055,14 @@ function renderMore(main){
   const ver=($(".ver")||{}).textContent||"";
   const st=S.persist===true?t("Persistent on this phone."):S.persist===false?t("Not persistent yet. Install the app so the system keeps the data."):t("Checking …");
   main.innerHTML=`<div class="pane more">
+    <div class="listhead">${t("Learning")}</div> <!-- first since v275 (H: the dashboard belongs "ganz nach oben, an erste Stelle") -->
+    <div class="mrow"><div style="flex:1"><div class="t">${t("Progress")}</div><div class="s">${progressHTML()}</div><div class="fieldacts"><button class="btn mini" id="usage-share">${t("Share report")}</button></div></div></div>
+    <div class="mrow"><div><div class="t">${t("Card order")}</div><div class="s">${t("Due cards come first, then up to {0} new ones. This sets the order inside each group.",NEW_PER_SESSION)}</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${t(l)}</button>`).join("")}</div></div></div>
     <div class="listhead">${t("Share")}</div>
     <div class="mrow"><div><div class="t">${t("Share the app")}</div><div class="s" id="app-share-status">${t("Send the link to a friend. The app installs from any browser, no store.")}</div></div><button class="btn mini" id="app-share">${t("Share")}</button></div>
     <div class="mrow"><div style="flex:1"><div class="t">${t("Feedback")}</div><div class="s" id="fb-status">${t("Tell the app's owner what works and what does not.")}</div><textarea class="grow" id="fb-text" rows="2" placeholder="${t("Your message")}"></textarea><div class="fieldacts"><button class="btn mini" id="fb-send">${t("Send")}</button></div></div></div>
     <div class="listhead">${t("Help")}</div>
     <div class="mrow"><div><div class="t">${t("How to use the app")}</div><div class="s">${t("Six short sections: photo, characters, learning, cards, language, what stays on the phone.")}</div></div><button class="btn mini" id="guide-open">${t("Open")}</button></div>
-    <div class="listhead">${t("Learning")}</div>
-    <div class="mrow"><div style="flex:1"><div class="t">${t("Progress")}</div><div class="s">${progressHTML()}</div><div class="fieldacts"><button class="btn mini" id="usage-share">${t("Share report")}</button></div></div></div>
-    <div class="mrow"><div><div class="t">${t("Card order")}</div><div class="s">${t("Due cards come first, then up to {0} new ones. This sets the order inside each group.",NEW_PER_SESSION)}</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${t(l)}</button>`).join("")}</div></div></div>
     <div class="listhead">${t("Language")}</div>
     <div class="mrow"><div style="flex:1"><div class="t">${t("Language")}</div><div class="s">${t("The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.")}</div><div class="chipset" id="lang-chips" style="margin-top:8px">${LANGS.map(([c,n])=>`<button class="chip${LANG===c?" on":""}" data-lang="${c}">${n}</button>`).join("")}</div></div></div>
     ${translateRowHTML()}
