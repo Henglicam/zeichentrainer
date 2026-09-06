@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=254; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=255; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -192,7 +192,7 @@ async function shareFeedback(){
   const text=feedbackText(rows), name="zeichentrainer-feedback-"+new Date().toISOString().slice(0,10)+".txt", file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
   if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
-  try{ await navigator.clipboard.writeText(text); alert("Copied to the clipboard."); }catch(err){ alert("Sharing is not available here."); }
+  try{ await navigator.clipboard.writeText(text); alert(t("Copied to the clipboard.")); }catch(err){ alert(t("Sharing is not available here.")); }
 }
 function allUsersText(rows){
   const day=t=>String(t||"").slice(0,10), week=Date.now()-7*DAY, n=(o,k)=>+(o&&o[k])||0;
@@ -240,13 +240,13 @@ async function shareUsers(){
   const text=allUsersText(rows), name="zeichentrainer-users-"+new Date().toISOString().slice(0,10)+".txt", file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
   if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
-  try{ await navigator.clipboard.writeText(text); alert("Copied to the clipboard."); }catch(err){ alert("Sharing is not available here."); }
+  try{ await navigator.clipboard.writeText(text); alert(t("Copied to the clipboard.")); }catch(err){ alert(t("Sharing is not available here.")); }
 }
 async function shareDiag(){
   const text=diagText(), name="zeichentrainer-diagnostics.txt", file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
   if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
-  try{ await navigator.clipboard.writeText(text); alert("Copied to the clipboard."); }catch(err){ alert("Sharing is not available here."); }
+  try{ await navigator.clipboard.writeText(text); alert(t("Copied to the clipboard.")); }catch(err){ alert(t("Sharing is not available here.")); }
 }
 
 /* ---------- Boot ---------- */
@@ -670,7 +670,7 @@ async function aiAuto(){
   try{ await aiReview(list); if(S.mode==="more"||S.mode==="cards"||S.mode==="inbox") render(); }catch(e){ console.warn("AI auto review:",e); }
 }
 /* About: what leaves the phone, live with the AI settings (v173) */
-function aboutText(){ const ver=($(".ver")||{}).textContent||""; return `${ver}. Works offline. Cards and photos stay on this phone; anonymous usage counts go to the app's owner.${(pv=>pv?` Only when the reading is weak, the framed area of a photo goes to ${AI_PROVIDERS[pv].short}.`:"")(pictureProvider())}`; } /* names the AI (v216, H: "goes to your AI provider" is wrong — a friend's phone has no provider of its own); the relay stays out of About (v217, H) — the AI row's What-is-sent line and privacy.html describe it */
+function aboutText(){ const ver=($(".ver")||{}).textContent||""; return `${ver}. ${t("Works offline. Cards and photos stay on this phone; anonymous usage counts go to the app's owner.")}${(pv=>pv?" "+t("Only when the reading is weak, the framed area of a photo goes to {0}.",AI_PROVIDERS[pv].short):"")(pictureProvider())}`; } /* names the AI (v216, H: "goes to your AI provider" is wrong — a friend's phone has no provider of its own); the relay stays out of About (v217, H) — the AI row's What-is-sent line and privacy.html describe it */
 /* More → Online AI review row + inline setup form */
 function renderAiRow(){
   const st=$("#ai-status"), btn=$("#ai-btn"), run=$("#ai-run"), form=$("#ai-form"); if(!st) return;
@@ -678,13 +678,13 @@ function renderAiRow(){
   const ppv=pictureProvider(); const ab=$("#about-s"); if(ab) ab.textContent=aboutText();
   const relayed=viaRelay()||(ppv&&viaRelay(ppv)); /* the first line names the models and says which one does what (v195, H: "I liked the previous text more — revert and polish the first paragraph") */
   const who=`${AI_PROVIDERS[aiProvider()].short} (${aiModel()})`, pic=ppv?`${AI_PROVIDERS[ppv].short} (${pictureModel(ppv)})`:"";
-  st.textContent=!aiOn()?"Off. The app's owner sets it up under Advanced settings."
-    :S.settings.aiAuto===false?`Off. ${who}${pic?` and ${pic}`:""} ${pic?"are":"is"} set up${relayed?" through the app owner's relay":""} — tick the box to check new cards.` /* the line follows the switch (v196, H: "it cannot say On when I've unticked the checkbox") */
-    :`On${relayed?", through the app owner's relay":""}: ${who} checks the text${pic?`, ${pic} reads the framed area when the reading is weak.`:". Photos never leave the phone."}`;
+  st.textContent=!aiOn()?t("Off. The app's owner sets it up under Advanced settings.")
+    :S.settings.aiAuto===false?(pic?t("Off. {0} and {1} are set up{2} — tick the box to check new cards.",who,pic,relayed?t(" through the app owner's relay"):""):t("Off. {0} is set up{1} — tick the box to check new cards.",who,relayed?t(" through the app owner's relay"):"")) /* the line follows the switch (v196, H: "it cannot say On when I've unticked the checkbox") */
+    :(pic?t("On{0}: {1} checks the text, {2} reads the framed area when the reading is weak.",relayed?t(", through the app owner's relay"):"",who,pic):t("On{0}: {1} checks the text. Photos never leave the phone.",relayed?t(", through the app owner's relay"):"",who));
   if(btn) btn.textContent=aiOn()?"Settings":"Set up";
   run.hidden=!aiOn(); run.disabled=!q;
-  run.textContent=q?"Ask AI":"Nothing to review";
-  const rs=$("#ai-runstatus"); if(rs) rs.textContent=q?`${q} card${q>1?"s":""} waiting: ${fl} flagged, ${sp} uncertain reading${sp===1?"":"s"}, ${pd} pending translation${pd===1?"":"s"}.`:"Nothing waiting. Flag a card, or save a reading that looks uncertain.";
+  run.textContent=q?t("Ask AI"):t("Nothing to review");
+  const rs=$("#ai-runstatus"); if(rs) rs.textContent=q?t("{0} waiting: {1} flagged, {2} uncertain, {3} pending translation.",nOf(q,"card"),fl,sp,pd):t("Nothing waiting. Flag a card, or save a reading that looks uncertain.");
   const auto=$("#ai-auto"); if(auto) auto.onchange=async e=>{ await setSetting("aiAuto",!!e.target.checked); renderAiRow(); }; /* the one AI setting everyone sees (v190); the setup form is the owner's */
   if(!btn||!form) return;
   btn.onclick=()=>{ form.hidden=!form.hidden; if(!form.hidden&&!aiKey(form.dataset.pv)) $("#ai-key").focus(); };
@@ -712,8 +712,8 @@ function renderAiRow(){
     form.hidden=true; renderAiRow(); };
   run.onclick=async()=>{
     run.disabled=true; const rs=$("#ai-runstatus");
-    try{ const n=await aiReview(null,t=>{ rs.textContent=t; }); rs.textContent=`${n} suggestion${n===1?"":"s"} ready. Accept or dismiss them under Cards.`; }
-    catch(err){ rs.textContent="Failed: "+(err&&err.message||err); run.disabled=false; }
+    try{ const n=await aiReview(null,t=>{ rs.textContent=t; }); rs.textContent=t("{0} ready. Accept or dismiss them under Cards.",nOf(n,"suggestion")); }
+    catch(err){ rs.textContent=t("Failed: {0}",err&&err.message||err); run.disabled=false; }
   };
 }
 /* ---------- progress: cards learned, this week, streak of days ---------- */
@@ -730,7 +730,7 @@ function bump(key,n){ n=n||1; if(key==="byPhoto"||key==="byHand"||key==="deleted
    count the on-device reader ("reader", one per reading) and every AI model by name, all time and this month */
 function bumpModel(name){ const u=usage(); u.models=u.models||{}; u.m.models=u.m.models||{}; u.models[name]=(u.models[name]||0)+1; u.m.models[name]=(u.m.models[name]||0)+1; S.settings.usage=u; clearTimeout(_usageTimer); _usageTimer=setTimeout(()=>{ setSetting("usage",u).catch(()=>{}); },500); }
 const modelsText=o=>{ const e=Object.entries(o||{}); return e.length?e.map(([k,v])=>`${k==="reader"?"on-device reader":k} ${v}`).join(", "):"none"; };
-const workLines=o=>{ const e=Object.entries(o||{}); return e.length?e.map(([k,v])=>k==="reader"?`on-device reader ${nOf(v,"reading")}`:`${k} ${nOf(v,"check")}`):["none yet"]; }; /* "work done by": who read and checked, with a unit each (v252, H: "Make all labels easy to understand") */
+const workLines=o=>{ const e=Object.entries(o||{}); return e.length?e.map(([k,v])=>k==="reader"?`${t("on-device reader")} ${nOf(v,"reading")}`:`${k} ${nOf(v,"check")}`):[t("none yet")]; }; /* "work done by": who read and checked, with a unit each (v252, H: "Make all labels easy to understand") */
 function countTokens(pv,data){ const g=(data&&data.usage)||{}; const i=pv==="claude"?g.input_tokens:g.prompt_tokens, o=pv==="claude"?g.output_tokens:g.completion_tokens; bump("aiCalls"); if(i) bump("aiIn",+i); if(o) bump("aiOut",+o); }
 function usageText(){ /* laid out in short blocks with plain labels since v252 (H: "Make all labels easy to understand") */
   const u=usage(), m=u.m||{}, st=learnStats(), n=k=>u[k]||0, mn=k=>m[k]||0, day=t=>new Date(t).toISOString().slice(0,10);
@@ -765,13 +765,13 @@ const APP_SHARE_TEXT="识字 Zeichentrainer — learn the Chinese characters you
 async function shareApp(){
   const st=$("#app-share-status");
   if(navigator.share){ try{ await navigator.share({title:"识字 Zeichentrainer",text:APP_SHARE_TEXT,url:APP_URL}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
-  try{ await navigator.clipboard.writeText(APP_SHARE_TEXT+" "+APP_URL); if(st) st.textContent="Link copied."; }catch(err){ if(st) st.textContent="Sharing is not available here. The link: "+APP_URL; }
+  try{ await navigator.clipboard.writeText(APP_SHARE_TEXT+" "+APP_URL); if(st) st.textContent=t("Link copied."); }catch(err){ if(st) st.textContent=t("Sharing is not available here.")+" "+t("The link: {0}",APP_URL); }
 }
 async function shareUsage(){
   const text=usageText(), name="zeichentrainer-usage-"+new Date().toISOString().slice(0,10)+".txt", file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name,text:"Zeichentrainer usage report"}); return; }catch(err){ if(err && err.name==="AbortError") return; } }
   if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err && err.name==="AbortError") return; } }
-  try{ await navigator.clipboard.writeText(text); alert("Copied the usage report to the clipboard."); }catch(err){ alert("Sharing is not available here."); }
+  try{ await navigator.clipboard.writeText(text); alert(t("Copied to the clipboard.")); }catch(err){ alert(t("Sharing is not available here.")); }
 }
 /* ---------- usage sharing (v170, H: "I want to share the app and get user stats" — automatic reports from every phone):
    once a day, while online and the switch in More is on, the same counts as the report go to a table of H's own in a
@@ -834,8 +834,8 @@ async function sendReport(force){
   finally{ _reporting=false; }
 }
 function shareNote(){
-  if(!shareOn()) return "Off. Nothing is sent.";
-  const d=S.settings.lastReport; return d?(d===dayKey()?"Last sent today.":"Last sent "+d+"."):"Not sent yet.";
+  if(!shareOn()) return t("Off. Nothing is sent.");
+  const d=S.settings.lastReport; return d?(d===dayKey()?t("Last sent today."):t("Last sent {0}.",d)):t("Not sent yet.");
 }
 /* the owner's rows in More (Reset, Diagnostics, All users, Feedback, Mirror, the downloads, the AI setup) open with a password (v162, H:
    "protect all those administrative functions with a password" — one master password, its SHA-256 in the code; it
@@ -854,17 +854,17 @@ function statsLine(){ const {total,week,streak}=learnStats(); return t("{0} lear
 /* ---------- backup nudge + photo cleanup: everything lives on one phone ---------- */
 const OLD_DAYS=30;
 function backupNote(){
-  const t=S.settings.lastExport, days=t?Math.floor((Date.now()-t)/DAY):null;
-  const txt=t?(days===0?"Last export: today.":`Last export: ${days} day${days===1?"":"s"} ago.`):"Never exported.";
-  const warn=S.custom.length && (!t||days>=OLD_DAYS);
-  return warn?`<span class="warn">${txt} Export now — the cards exist only on this phone.</span>`:txt;
+  const last=S.settings.lastExport, days=last?Math.floor((Date.now()-last)/DAY):null;
+  const txt=last?(days===0?t("Last export: today."):t("Last export: {0} ago.",nOf(days,"day"))):t("Never exported.");
+  const warn=S.custom.length && (!last||days>=OLD_DAYS);
+  return warn?`<span class="warn">${txt} ${t("Export now — the cards exist only on this phone.")}</span>`:txt;
 }
 /* inbox photos older than 30 days that already became a card */
 function oldShots(){ const cut=Date.now()-OLD_DAYS*DAY; return S.inbox.filter(sh=>sh.ts<cut && S.custom.some(d=>d.shot===sh.id)); }
-function shotsNote(){ const n=S.inbox.length, o=oldShots().length; return `${n} photo${n===1?"":"s"} in the inbox${o?`, ${o} older than ${OLD_DAYS} days and already turned into cards`:""}.`; }
+function shotsNote(){ const n=S.inbox.length, o=oldShots().length; return t("{0} in the inbox",nOf(n,"photo"))+(o?t(", {0} older than {1} days and already turned into cards",o,OLD_DAYS):"")+"."; }
 async function cleanupShots(){
   const list=oldShots(); if(!list.length) return;
-  if(!await askSheet({title:`Delete ${list.length} old photo${list.length>1?"s":""}?`,text:"The cards keep their own picture.",ok:"Delete"})) return;
+  if(!await askSheet({title:list.length>1?t("Delete {0} old photos?",list.length):t("Delete one old photo?"),text:t("The cards keep their own picture."),ok:t("Delete")})) return;
   for(const sh of list) await delShot(sh.id);
   const st=$("#shots-status"); if(st) st.textContent=shotsNote(); const b=$("#cleanshots"); if(b) b.remove();
 }
@@ -899,19 +899,19 @@ async function renderNmtRow(){
 }
 function renderMore(main){
   const ver=($(".ver")||{}).textContent||"";
-  const st=S.persist===true?"Persistent on this phone.":S.persist===false?"Not persistent yet. Install the app so the system keeps the data.":"Checking …";
+  const st=S.persist===true?t("Persistent on this phone."):S.persist===false?t("Not persistent yet. Install the app so the system keeps the data."):t("Checking …");
   main.innerHTML=`<div class="pane more">
-    <div class="listhead">Share</div>
-    <div class="mrow"><div><div class="t">Share the app</div><div class="s" id="app-share-status">Send the link to a friend. The app installs from any browser, no store.</div></div><button class="btn mini" id="app-share">Share</button></div>
-    <div class="mrow"><div style="flex:1"><div class="t">Feedback</div><div class="s" id="fb-status">Tell the app's owner what works and what does not.</div><textarea class="grow" id="fb-text" rows="2" placeholder="Your message"></textarea><div class="fieldacts"><button class="btn mini" id="fb-send">Send</button></div></div></div>
-    <div class="listhead">Your data</div>
-    <div class="mrow"><div><div class="t">Export</div><div class="s">Progress and cards as one file, via the share sheet. ${backupNote()}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="export-photos"${exportPhotos()?" checked":""}> Include photos (adds about ${(photoBytes()*1.37/1048576).toFixed(1)} MB)</label></div><button class="btn mini" id="export">Export</button></div>
-    <div class="mrow"><div><div class="t">Import</div><div class="s">A zeichentrainer-….json.txt file. Existing cards are overwritten.</div></div><button class="btn mini" id="import">Import</button></div>
-    <div class="mrow"><div><div class="t">Flagged cards</div><div class="s">${deck().filter(d=>d.flag).length} flagged for review. Share the list as text, for a teacher.</div></div><span class="btnrow"><button class="btn mini" id="show-flag">Show</button><button class="btn mini" id="share-flag">Share</button></span></div>
+    <div class="listhead">${t("Share")}</div>
+    <div class="mrow"><div><div class="t">${t("Share the app")}</div><div class="s" id="app-share-status">${t("Send the link to a friend. The app installs from any browser, no store.")}</div></div><button class="btn mini" id="app-share">${t("Share")}</button></div>
+    <div class="mrow"><div style="flex:1"><div class="t">${t("Feedback")}</div><div class="s" id="fb-status">${t("Tell the app's owner what works and what does not.")}</div><textarea class="grow" id="fb-text" rows="2" placeholder="${t("Your message")}"></textarea><div class="fieldacts"><button class="btn mini" id="fb-send">${t("Send")}</button></div></div></div>
+    <div class="listhead">${t("Your data")}</div>
+    <div class="mrow"><div><div class="t">${t("Export")}</div><div class="s">${t("Progress and cards as one file, via the share sheet.")} ${backupNote()}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="export-photos"${exportPhotos()?" checked":""}> ${t("Include photos (adds about {0} MB)",(photoBytes()*1.37/1048576).toFixed(1))}</label></div><button class="btn mini" id="export">${t("Export")}</button></div>
+    <div class="mrow"><div><div class="t">${t("Import")}</div><div class="s">${t("A zeichentrainer-….json.txt file. Existing cards are overwritten.")}</div></div><button class="btn mini" id="import">${t("Import")}</button></div>
+    <div class="mrow"><div><div class="t">${t("Flagged cards")}</div><div class="s">${t("{0} flagged for review. Share the list as text, for a teacher.",deck().filter(d=>d.flag).length)}</div></div><span class="btnrow"><button class="btn mini" id="show-flag">${t("Show")}</button><button class="btn mini" id="share-flag">${t("Share")}</button></span></div>
     ${S.admin?`<div class="listhead">Translation</div>
     <div class="mrow"><div><div class="t">Offline translation</div><div class="s" id="nmt-status">Checking …</div></div><button class="btn mini" id="nmt-btn" hidden></button></div>`:""}
-    <div class="listhead">Online AI review</div>
-    <div class="mrow"><div><div class="t">AI review</div><div class="s" id="ai-status"></div><div class="s" style="margin-top:6px">What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. The framed area of a photo only when the reading is weak, to a provider that takes pictures. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> Check every new card with the AI automatically (when online)</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
+    <div class="listhead">${t("Online AI review")}</div>
+    <div class="mrow"><div><div class="t">${t("AI review")}</div><div class="s" id="ai-status"></div><div class="s" style="margin-top:6px">${t("What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. The framed area of a photo only when the reading is weak, to a provider that takes pictures. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.")}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> ${t("Check every new card with the AI automatically (when online)")}</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
     ${S.admin?`<div class="aiform" id="ai-form" hidden>
       <div class="field"><label>Provider</label><div class="chipset" id="ai-providers">${Object.entries(AI_PROVIDERS).map(([k,v])=>`<button class="chip" data-aipv="${k}">${esc(v.short)}</button>`).join("")}</div>
         <div class="badge" id="ai-acct" style="margin-top:8px"></div>
@@ -922,20 +922,20 @@ function renderMore(main){
       <div class="field" id="ai-picfield" hidden><label class="check"><input type="checkbox" id="ai-picture"${pictureOn()?" checked":""}> Send the framed area to the AI when the reading is weak</label></div>
       <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" id="ai-save">Save</button><button class="del" id="ai-remove">Remove key</button></div>
     </div>`:""}
-    <div class="mrow"><div><div class="t">Review queue</div><div class="s" id="ai-runstatus"></div></div><button class="btn mini" id="ai-run" hidden></button></div>
-    <div class="mrow"><div><div class="t">Storage</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
+    <div class="mrow"><div><div class="t">${t("Review queue")}</div><div class="s" id="ai-runstatus"></div></div><button class="btn mini" id="ai-run" hidden></button></div>
+    <div class="mrow"><div><div class="t">${t("Storage")}</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
     ${S.admin?`<div class="mrow"><div><div class="t">Text recognition</div><div class="s" id="ocr-status">Checking …</div></div><button class="btn mini" id="ocr-btn" hidden></button></div>`:""}
-    <div class="listhead">Learning</div>
-    <div class="mrow"><div><div class="t">Card order</div><div class="s">Due cards come first, then up to ${NEW_PER_SESSION} new ones. This sets the order inside each group.</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${l}</button>`).join("")}</div></div></div>
+    <div class="listhead">${t("Learning")}</div>
+    <div class="mrow"><div><div class="t">${t("Card order")}</div><div class="s">${t("Due cards come first, then up to {0} new ones. This sets the order inside each group.",NEW_PER_SESSION)}</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${t(l)}</button>`).join("")}</div></div></div>
     ${S.admin?`<div class="listhead">Updates without a VPN</div>
     <div class="mrow"><div><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div></div><button class="btn mini" id="mirror-check">Check now</button></div>
     <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>`:""}
     <div class="listhead">${t("Language")}</div>
     <div class="mrow"><div style="flex:1"><div class="t">${t("Language")}</div><div class="s">${t("The app's own texts. Cards keep their Chinese, pinyin and meaning.")}</div><div class="chipset" id="lang-chips" style="margin-top:8px">${LANGS.map(([c,n])=>`<button class="chip${LANG===c?" on":""}" data-lang="${c}">${n}</button>`).join("")}</div></div></div>
-    <div class="listhead">On this phone</div>
-    <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}. App opened ${nOf(usage().opens,"time")}, ${nOf(usage().reviews,"card")} reviewed, ${nOf(usage().aiCalls,"AI check")}, ${nOf(usage().pics,"photo")} checked by the AI. Work done by ${workLines(usage().models).join(", ")}.</div></div><button class="btn mini" id="usage-share">Share report</button></div>
-    <div class="mrow"><div><div class="t">Usage sharing</div><div class="s">Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks. No card text, no photos. <span id="share-status">${esc(shareNote())}</span> Your id: <span id="share-id">${esc(installId())}</span>.<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> Send once a day</label></div></div></div>
-    <div class="mrow"><div><div class="t">Photos</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">Delete ${oldShots().length}</button>`:""}</div>
+    <div class="listhead">${t("On this phone")}</div>
+    <div class="mrow"><div><div class="t">${t("Progress")}</div><div class="s">${statsLine()}. ${t("App opened {0}, {1} reviewed, {2}, {3} checked by the AI.",nOf(usage().opens,"time"),nOf(usage().reviews,"card"),nOf(usage().aiCalls,"AI check"),nOf(usage().pics,"photo"))} ${t("Work done by {0}.",workLines(usage().models).join(", "))}</div></div><button class="btn mini" id="usage-share">${t("Share report")}</button></div>
+    <div class="mrow"><div><div class="t">${t("Usage sharing")}</div><div class="s">${t("Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks. No card text, no photos.")} <span id="share-status">${esc(shareNote())}</span> ${t("Your id: {0}.",`<span id="share-id">${esc(installId())}</span>`)}<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> ${t("Send once a day")}</label></div></div></div>
+    <div class="mrow"><div><div class="t">${t("Photos")}</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">${t("Delete {0}",oldShots().length)}</button>`:""}</div>
     ${S.admin?`<div class="listhead">Diagnostics</div>
     <div class="mrow"><div><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${READLOG.length} step${READLOG.length===1?"":"s"}.</div></div><span class="btnrow"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button></span></div>
     <pre class="diag" id="diag-out" hidden></pre>
@@ -945,11 +945,11 @@ function renderMore(main){
     <pre class="diag" id="fb-out" hidden></pre>
     <div class="listhead">Start over</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>`:""}
-    <div class="listhead">Advanced settings</div>
+    <div class="listhead">${t("Advanced settings")}</div>
     ${S.admin?`<div class="mrow"><div><div class="t">Unlocked</div><div class="s">Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are shown until the app is closed.</div></div><button class="btn mini" id="admin-lock">Lock</button></div>`
-    :`<div class="mrow"><div><div class="t">Locked</div><div class="s">Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are for the app's owner.</div></div></div>
-    <div class="field"><label>Password</label><div class="btnrow"><input id="admin-pw" type="password" autocomplete="off"><button class="btn mini" id="admin-unlock">Unlock</button></div><div class="err" id="admin-err" style="display:none">Wrong password.</div></div>`}
-    <div class="listhead">About</div>
+    :`<div class="mrow"><div><div class="t">${t("Locked")}</div><div class="s">${t("Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are for the app's owner.")}</div></div></div>
+    <div class="field"><label>${t("Password")}</label><div class="btnrow"><input id="admin-pw" type="password" autocomplete="off"><button class="btn mini" id="admin-unlock">${t("Unlock")}</button></div><div class="err" id="admin-err" style="display:none">${t("Wrong password.")}</div></div>`}
+    <div class="listhead">${t("About")}</div>
     <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s" id="about-s">${esc(aboutText())}</div></div></div>
   </div>`;
   $("#export").onclick=exportData;
@@ -957,10 +957,10 @@ function renderMore(main){
   $("#usage-share").onclick=shareUsage; $("#app-share").onclick=shareApp;
   document.querySelectorAll("[data-lang]").forEach(b=> b.onclick=()=>setLang(b.dataset.lang));
   wireGrow(main); /* the feedback box grows with its text like the forms' fields (v218, H: "looks a little bit old school") */
-  $("#fb-send").onclick=async()=>{ const t=$("#fb-text"), st=$("#fb-status"), b=$("#fb-send"), text=t.value.trim(); if(!text){ st.textContent="Write a few words first."; return; }
-    if(!navigator.onLine){ st.textContent="No connection. Try again when online."; return; }
-    b.disabled=true; st.textContent="Sending …";
-    try{ await sendFeedback(text); t.value=""; st.textContent="Thank you, sent."; }catch(err){ st.textContent="Could not send: "+(err&&err.message||err); } b.disabled=false; };
+  $("#fb-send").onclick=async()=>{ const tx=$("#fb-text"), st=$("#fb-status"), b=$("#fb-send"), text=tx.value.trim(); if(!text){ st.textContent=t("Write a few words first."); return; }
+    if(!navigator.onLine){ st.textContent=t("No connection. Try again when online."); return; }
+    b.disabled=true; st.textContent=t("Sending …");
+    try{ await sendFeedback(text); tx.value=""; st.textContent=t("Thank you, sent."); }catch(err){ st.textContent=t("Could not send: {0}",err&&err.message||err); } b.disabled=false; };
   $("#share-usage").onchange=async e=>{ await setSetting("shareUsage",!!e.target.checked); $("#share-status").textContent=shareNote(); sendReport(); };
   $("#import").onclick=()=>$("#imp").click();
   $("#share-flag").onclick=shareFlagged;
@@ -1015,7 +1015,7 @@ function flaggedText(){
 }
 async function shareFlagged(){
   const n=deck().filter(d=>d.flag).length;
-  if(!n){ alert("No flagged cards."); return; }
+  if(!n){ alert(t("No flagged cards.")); return; }
   const text=flaggedText();
   const name="zeichentrainer-review-"+new Date().toISOString().slice(0,10)+".txt";
   const file=new File([text],name,{type:"text/plain"});
@@ -1024,8 +1024,8 @@ async function shareFlagged(){
     catch(err){ if(err && err.name==="AbortError") return; }
   }
   if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err && err.name==="AbortError") return; } }
-  try{ await navigator.clipboard.writeText(text); alert("Copied "+n+" flagged cards to the clipboard."); }
-  catch(err){ alert("Sharing is not available here."); }
+  try{ await navigator.clipboard.writeText(text); alert(t("Copied to the clipboard.")); }
+  catch(err){ alert(t("Sharing is not available here.")); }
 }
 /* one object URL per blob, for images that re-render on every tap (the study front, the Add form) — never revoked while the blob lives */
 const BLOBURL=new WeakMap();
@@ -1257,23 +1257,23 @@ function nextSingle(c){
 /* ---------- Add ---------- */
 function renderAdd(main){
   const curImg=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
-  const imgField=curImg?`<div class="field" id="f-imgfield"><label>Image (stays on this phone)</label>
+  const imgField=curImg?`<div class="field" id="f-imgfield"><label>${t("Image (stays on this phone)")}</label>
       <div class="pimg"><img src="${urlOf(curImg)}" alt="card image">
-      <span class="imgacts">${S.pendingFull&&S.pendingImg?`<button class="del${S.pendingUse!=="full"?" on":""}" id="f-usecrop">Crop</button><button class="del${S.pendingUse==="full"?" on":""}" id="f-usefull">Whole photo</button>`:""}<button class="del" id="f-noimg">Remove image</button></span></div></div>`:"";
+      <span class="imgacts">${S.pendingFull&&S.pendingImg?`<button class="del${S.pendingUse!=="full"?" on":""}" id="f-usecrop">${t("Crop")}</button><button class="del${S.pendingUse==="full"?" on":""}" id="f-usefull">${t("Whole photo")}</button>`:""}<button class="del" id="f-noimg">${t("Remove image")}</button></span></div></div>`:"";
   main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back-cards">← Cards</button></div>
-    <div class="lead">Add a card by hand.</div>
+    <div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button></div>
+    <div class="lead">${t("Add a card by hand.")}</div>
     <div class="form">
     ${imgField}
-    <div class="field"><label>Characters</label><input id="f-word" class="hanzi big" placeholder="你好" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><div class="fieldacts"><button type="button" class="btn mini" id="f-draw">Draw a character</button></div></div>
-      <div class="field"><label>Pinyin</label><textarea id="f-pin" class="grow" rows="1" placeholder="nǐ hǎo" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea></div>
-      <div class="field"><label>Meaning</label><textarea id="f-mean" class="grow" rows="1" placeholder="hello"></textarea><div class="smean badge" id="f-aistatus" style="margin-top:4px"></div></div>
-    <div class="field"><label class="check"><input type="checkbox" id="f-flag"> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
-      <input id="f-note" placeholder="Note for the reviewer (optional)" hidden></div>
+    <div class="field"><label>${t("Characters")}</label><input id="f-word" class="hanzi big" placeholder="你好" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><div class="fieldacts"><button type="button" class="btn mini" id="f-draw">${t("Draw a character")}</button></div></div>
+      <div class="field"><label>${t("Pinyin")}</label><textarea id="f-pin" class="grow" rows="1" placeholder="nǐ hǎo" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea></div>
+      <div class="field"><label>${t("Meaning")}</label><textarea id="f-mean" class="grow" rows="1" placeholder="${t("hello")}"></textarea><div class="smean badge" id="f-aistatus" style="margin-top:4px"></div></div>
+    <div class="field"><label class="check"><input type="checkbox" id="f-flag"> ${t("⚑ Flag for review (text, pinyin or meaning looks wrong)")}</label>
+      <input id="f-note" placeholder="${t("Note for the reviewer (optional)")}" hidden></div>
     ${tagsFieldHTML("f-tags",(S.draft||{}).tags)}
-    <div id="f-pinhint" class="err" style="display:none">Pinyin and meaning were filled in automatically and are unverified — check the tones and the meaning.</div>
+    <div id="f-pinhint" class="err" style="display:none">${t("Pinyin and meaning were filled in automatically and are unverified — check the tones and the meaning.")}</div>
     <div id="f-err" class="err" style="display:none"></div>
-    <button class="btn primary block" id="f-add">Add card</button>
+    <button class="btn primary block" id="f-add">${t("Add card")}</button>
     <div id="f-ok" class="ok" style="display:none"></div>
     </div>
   </div>`;
@@ -1312,7 +1312,7 @@ function renderAdd(main){
           wireGrow(main); st.textContent=""; $("#f-pinhint").style.display="none";
           saveDraft(); S.draft.ai={c:word,p:r.p||"",m:r.m||""}; return;
         }
-      }catch(err){ if(!same()) return; st.textContent="The AI could not be reached."; }
+      }catch(err){ if(!same()) return; st.textContent=t(AI_NET_ERR)+"."; }
     }
     try{
       await loadDict(); await loadSigns().catch(()=>{}); if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
@@ -1429,31 +1429,31 @@ function renderEdit(main,c){
     render();
   };
   main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">← Back</button><span class="badge">Edit</span></div>
+    <div class="topline"><button class="del" id="back">${t("← Back")}</button><span class="badge">${t("Edit")}</span></div>
     <div class="form">
-    ${d.img||full?`<div class="field" id="e-imgfield"><label>Image (stays on this phone)</label><div class="pimg" id="e-pimg"></div></div>`:""} <!-- the photo first, then the text, as in the Camera tab (v245) -->
-    <div class="field"><label>Characters${d.trad?" (traditional, as on the photo)":""}</label>
+    ${d.img||full?`<div class="field" id="e-imgfield"><label>${t("Image (stays on this phone)")}</label><div class="pimg" id="e-pimg"></div></div>`:""} <!-- the photo first, then the text, as in the Camera tab (v245) -->
+    <div class="field"><label>${d.trad?t("Characters (traditional, as on the photo)"):t("Characters")}</label>
       <div class="signed" id="e-lines"></div>
       <textarea id="e-word" class="hanzi" hidden>${esc(lines0.join("\n"))}</textarea>
       </div>
-      <div class="field"><label>Pinyin</label><textarea id="e-pin" class="grow" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">${esc(d.p)}</textarea></div>
-      <div class="field"><label>Meaning</label><textarea id="e-mean" class="grow" rows="1">${esc(d.m)}</textarea><div class="smean badge" id="e-aistatus" style="margin-top:4px"></div></div>
-    ${isSign||!d.w?"":`<div class="field"><label>Context word, pinyin, meaning (optional)</label>
-      <div class="row"><input id="e-w" class="hanzi" value="${esc(d.w||"")}" placeholder="学习" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><input id="e-wp" value="${esc(d.wp||"")}" placeholder="xuéxí" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><input id="e-wm" value="${esc(d.wm||"")}" placeholder="to learn"></div></div>`}
-    <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
-      <input id="e-note" value="${esc(d.flagNote||"")}" placeholder="Note for the reviewer (optional)"${d.flag?"":" hidden"}></div>
+      <div class="field"><label>${t("Pinyin")}</label><textarea id="e-pin" class="grow" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">${esc(d.p)}</textarea></div>
+      <div class="field"><label>${t("Meaning")}</label><textarea id="e-mean" class="grow" rows="1">${esc(d.m)}</textarea><div class="smean badge" id="e-aistatus" style="margin-top:4px"></div></div>
+    ${isSign||!d.w?"":`<div class="field"><label>${t("Context word, pinyin, meaning (optional)")}</label>
+      <div class="row"><input id="e-w" class="hanzi" value="${esc(d.w||"")}" placeholder="学习" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><input id="e-wp" value="${esc(d.wp||"")}" placeholder="xuéxí" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><input id="e-wm" value="${esc(d.wm||"")}" placeholder="${t("to learn")}"></div></div>`}
+    <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> ${t("⚑ Flag for review (text, pinyin or meaning looks wrong)")}</label>
+      <input id="e-note" value="${esc(d.flagNote||"")}" placeholder="${t("Note for the reviewer (optional)")}"${d.flag?"":" hidden"}></div>
     ${tagsFieldHTML("e-tags",d.tags)}
-    ${aiOn()?`<div class="field" id="e-aifield"${d.mt&&d.mt.src==="llm"&&d.mt.verified?" hidden":""}><button class="btn block" id="e-ai">Ask AI to check text, pinyin and meaning</button></div>`:""}
+    ${aiOn()?`<div class="field" id="e-aifield"${d.mt&&d.mt.src==="llm"&&d.mt.verified?" hidden":""}><button class="btn block" id="e-ai">${t("Ask AI to check text, pinyin and meaning")}</button></div>`:""}
     <div id="e-err" class="err" style="display:none"></div>
-    <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" id="e-save">Save changes</button><button class="del" id="e-cancel">Cancel</button></div>
+    <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" id="e-save">${t("Save changes")}</button><button class="del" id="e-cancel">${t("Cancel")}</button></div>
     </div>
-    <button class="btn danger block" id="e-del" style="margin-top:14px">Delete card</button>
+    <button class="btn danger block" id="e-del" style="margin-top:14px">${t("Delete card")}</button>
   </div>`;
   $("#back").onclick=()=>leave(); $("#e-cancel").onclick=()=>leave(); wireTags(main); /* Cancel beside Save, as the preview's row (v245) */
   $("#e-flag").onchange=()=>{ $("#e-note").hidden=!$("#e-flag").checked; if($("#e-flag").checked) $("#e-note").focus(); }; /* the note only with the flag, as in the Add form and the preview (v136) */
   /* delete from here too (H): from the study back the session goes on with the next card, otherwise back to the list */
   $("#e-del").onclick=async()=>{
-    if(!await askSheet({title:d.c?"Delete “"+d.c.replace(/\n/g," / ")+"”?":"Delete this card?",text:"The card and its learning progress will be removed.",ok:"Delete"})) return;
+    if(!await askSheet({title:d.c?t("Delete “{0}”?",d.c.replace(/\n/g," / ")):t("Delete this card?"),text:t("The card and its learning progress will be removed."),ok:t("Delete")})) return;
     await delCustom(c); endRecrop(); delete SIGN[eid];
     const from=S.editFrom; S.editing=null; S.editFrom=null;
     if(from==="study"){ S.queue=S.queue.filter(x=>x!==c); if(S.single===c) S.single=null; S.revealed=false; S.fullPic=false; S.mode="study"; }
@@ -1466,7 +1466,7 @@ function renderEdit(main,c){
     const box=$("#e-lines"); if(!box) return;
     box.innerHTML=sg.lines.map((l,k)=>slineHTML(eid,k,l,false)).join("")+`<div class="scriptline">${scriptSwitchHTML(eid,sg)}</div>`+selRowHTML(eid); /* no "Simplified …" reference line beside the switch (v148, H: the switch says it) */
     wireSlines(box,()=>{ syncWord(); pinyinFollow(); showAi(); });
-    box.querySelectorAll("[data-scriptset]").forEach(b=> b.onclick=async()=>{ const on=b.dataset.scriptset==="1"; if(on===!!sg.trad) return; await setScript(sg,on); drawLines(); const lab=box.closest(".field").querySelector("label"); if(lab) lab.textContent="Characters"+(sg.trad?" (traditional, as on the photo)":""); }); /* the mark by hand (v146) */
+    box.querySelectorAll("[data-scriptset]").forEach(b=> b.onclick=async()=>{ const on=b.dataset.scriptset==="1"; if(on===!!sg.trad) return; await setScript(sg,on); drawLines(); const lab=box.closest(".field").querySelector("label"); if(lab) lab.textContent=sg.trad?t("Characters (traditional, as on the photo)"):t("Characters"); }); /* the mark by hand (v146) */
   };
   /* pinyin follows the text unless it was edited by hand */
   let pinTouched=false; $("#e-pin").addEventListener("input",()=>{ pinTouched=true; }); $("#e-mean").addEventListener("input",()=>{ meanTouched=true; }); wireGrow(main);
@@ -1485,7 +1485,7 @@ function renderEdit(main,c){
       if(r.p) $("#e-pin").value=r.p;
       if(r.m) $("#e-mean").value=r.m;
       aiApplied=true; st.textContent=""; /* a good answer shows nothing, the fields just fill — as in the Read preview (H, v105; the green "AI: looks right" box went in v245) */
-    }catch(err){ const m=err&&err.message||String(err); st.textContent=m===AI_NET_ERR?m+". Tap the button to try again.":"The AI check failed: "+m; }
+    }catch(err){ const m=err&&err.message||String(err); st.textContent=m===AI_NET_ERR?t(m)+t(". Tap the button to try again."):t("The AI check failed: {0}",m); }
     ab.disabled=false;
   };
   /* ---------- the image field: the crop, Remove image, and Crop again (v239, H: "allow to re-crop a photo in edit mode",
@@ -1497,7 +1497,7 @@ function renderEdit(main,c){
   const showPimg=()=>{ const box=$("#e-pimg"); if(!box) return;
     if(recropURL){ URL.revokeObjectURL(recropURL); recropURL=null; }
     const url=recropImg?(recropURL=URL.createObjectURL(recropImg)):cropURL;
-    box.innerHTML=`${url?`<img src="${url}" alt="">`:""}<div class="imgacts">${full?`<button class="del" id="e-recrop">Crop again</button>`:""}${url?`<button class="del" id="e-noimg">Remove image</button>`:""}</div>`;
+    box.innerHTML=`${url?`<img src="${url}" alt="">`:""}<div class="imgacts">${full?`<button class="del" id="e-recrop">${t("Crop again")}</button>`:""}${url?`<button class="del" id="e-noimg">${t("Remove image")}</button>`:""}</div>`;
     const ni=$("#e-noimg"); if(ni) ni.onclick=()=>{ removeImg=true; $("#e-imgfield").remove(); };
     const rc=$("#e-recrop"); if(rc) rc.onclick=startRecrop; };
   const drawRecrop=()=>{ const box=$("#e-pimg"), rec=SHOTS_EXTRA[rid]; if(!box||!rec||!CROP||CROP.id!==rid) return;
@@ -1577,14 +1577,14 @@ function renderEdit(main,c){
   $("#e-save").onclick=async()=>{
     const fail=m=>{ const e=$("#e-err"); e.textContent=m; e.style.display=""; };
     let pin=$("#e-pin").value.replace(/\s+/g," ").trim(); const mean=$("#e-mean").value.replace(/\s+/g," ").trim();
-    if(!pin||!mean) return fail("Pinyin and meaning are required.");
+    if(!pin||!mean) return fail(t("Pinyin and meaning are required."));
     /* the Chinese text itself may be corrected (OCR slip) — progress and images move with it */
     let newC=d.c;
     const we=$("#e-word");
     if(we){
       var wordLines=we.value.split("\n").map(l=>l.replace(/\s+/g,"")).filter(l=>CJK.test(l));
       newC=isSign?wordLines.join("\n"):wordLines.join("");
-      if(!CJK.test(newC)) return fail("Please enter Chinese text.");
+      if(!CJK.test(newC)) return fail(t("Please enter Chinese text."));
     }
     const upd={...d, p:pin, m:mean}; delete upd.ex; delete upd.exp; delete upd.exm; /* example sentences were dropped in v41 */
     if(!isSign&&$("#e-w")){ upd.w=$("#e-w").value.trim(); upd.wp=$("#e-wp").value.trim(); upd.wm=$("#e-wm").value.trim();
@@ -1642,9 +1642,9 @@ async function addManual(){
   const word=$("#f-word").value.trim(), pin=$("#f-pin").value.replace(/\s+/g," ").trim(), mean=$("#f-mean").value.replace(/\s+/g," ").trim();
   const err=$("#f-err"), ok=$("#f-ok"); err.style.display="none"; ok.style.display="none";
   const fail=m=>{ err.textContent=m; err.style.display=""; };
-  if(!CJK.test(word)) return fail("Please enter a Chinese word.");
-  if(!pin||!mean) return fail("Pinyin and meaning are required.");
-  if(deck().some(d=>d.c===word&&(!S.pendingShot||d.shot===S.pendingShot))) return fail("“"+word+"” is already in the deck."); /* with a new photo the same text is a new card (v118) */
+  if(!CJK.test(word)) return fail(t("Please enter a Chinese word."));
+  if(!pin||!mean) return fail(t("Pinyin and meaning are required."));
+  if(deck().some(d=>d.c===word&&(!S.pendingShot||d.shot===S.pendingShot))) return fail(t("“{0}” is already in the deck.",word)); /* with a new photo the same text is a new card (v118) */
   const card={id:cardId(word),c:word,p:pin,m:mean,t:"Custom",at:Date.now()};
   const ai=S.draft&&S.draft.ai; if(ai&&ai.c===word&&(!ai.p||ai.p===pin)&&(!ai.m||ai.m===mean)) card.mt={src:"llm",verified:true,pending:false}; /* filled in by the AI and left as it was (v159) */
   else if($("#f-pinhint").style.display!=="none") card.mt={src:"dict",verified:false,pending:true}; /* filled in from the dictionary: the AI completes it when it can */
@@ -1661,7 +1661,7 @@ async function addManual(){
   const fi=$("#f-imgfield"); if(fi) fi.remove();
   $("#f-pinhint").style.display="none";
   S.draft=null;
-  ok.textContent="“"+word+"” added."; ok.style.display="";
+  ok.textContent=t("“{0}” added.",word); ok.style.display="";
   bump("byHand"); setStats();
 }
 async function delCustom(id){
@@ -3449,7 +3449,7 @@ async function exportData(){
     a.href=url; a.download=name;
     document.body.appendChild(a); a.click(); a.remove(); await setSetting("lastExport",Date.now());
     setTimeout(()=>URL.revokeObjectURL(url),60000);
-  }catch(err){ alert("Export failed: "+err); }
+  }catch(err){ alert(t("Export failed: {0}",err)); }
 }
 async function importData(e){
   const file=e.target.files && e.target.files[0];
@@ -3458,13 +3458,13 @@ async function importData(e){
   let data=null;
   try{ data=JSON.parse(await file.text()); }catch(err){}
   if(!data || data.app!=="zeichentrainer" || !Array.isArray(data.progress) || !Array.isArray(data.custom)){
-    alert("Not a Zeichentrainer export (JSON)."); return;
+    alert(t("Not a Zeichentrainer export (JSON).")); return;
   }
   /* exports before v118 carry the text as the key; the id is the text then */
   const prog=data.progress.filter(r=>r && typeof (r.id||r.c)==="string" && typeof r.due==="number").map(({id,c,...s})=>({id:id||c,...s}));
   const cust=data.custom.filter(r=>r && typeof r.c==="string" && typeof r.p==="string" && typeof r.m==="string").map(r=>({...r,id:r.id||r.c}));
-  if(!prog.length && !cust.length){ alert("Export is empty — nothing to import."); return; }
-  if(!await askSheet({title:`Import ${nOf(cust.length,"card")} and ${nOf(prog.length,"progress entry","progress entries")}?`,text:"Existing entries of the same cards will be overwritten.",ok:"Import",danger:false})) return;
+  if(!prog.length && !cust.length){ alert(t("Export is empty — nothing to import.")); return; }
+  if(!await askSheet({title:t("Import {0} and {1}?",nOf(cust.length,"card"),nOf(prog.length,"progress entry","progress entries")),text:t("Existing entries of the same cards will be overwritten."),ok:t("Import"),danger:false})) return;
   /* the photos come with the file when it carries them (v166); otherwise the existing image is kept when overwriting */
   const merged=[]; let nPhotos=0, nInFile=0;
   for(const r0 of cust){ const {imgB64,imgFullB64,...r}=r0; const ex=S.custom.find(x=>x.id===r.id);
@@ -3477,19 +3477,18 @@ async function importData(e){
     merged.push(r); }
   try{
     await Promise.all([...prog.map(r=>idbPut("progress",r)), ...merged.map(r=>idbPut("custom",r))]);
-  }catch(err){ alert("Import failed ("+err+")"); return; }
+  }catch(err){ alert(t("Import failed ({0})",err)); return; }
   prog.forEach(r=>{ const {id,...s}=r; S.progress[id]=s; });
   merged.forEach(r=>{ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; else S.custom.push(r); });
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
   S.mode="study"; render();
   /* what the import did, in one sentence (v167, H: an older app had dropped the photos without a word) */
-  const n=(k,w)=>`${k} ${w}${k===1?"":"s"}`;
-  alert(`Imported ${n(cust.length,"card")} and ${n(prog.length,"progress entr").replace(/entrs$/,"entries").replace(/entr$/,"entry")}${nInFile?`, ${nPhotos} with photos${nPhotos<nInFile?` (${nInFile-nPhotos} could not be read)`:""}`:". The file carries no photos; the photos on this phone were kept"}.`);
+  alert(t("Imported {0} and {1}",nOf(cust.length,"card"),nOf(prog.length,"progress entry","progress entries"))+(nInFile?t(", {0} with photos",nPhotos)+(nPhotos<nInFile?" "+t("({0} could not be read)",nInFile-nPhotos):""):". "+t("The file carries no photos; the photos on this phone were kept"))+".");
 }
 
 /* ---------- Reset ---------- */
 async function resetAll(){
-  if(!await askSheet({title:"Start over?",text:"All progress, cards and inbox photos on this phone will be deleted.",ok:"Delete everything"})) return;
+  if(!await askSheet({title:t("Start over?"),text:t("All progress, cards and inbox photos on this phone will be deleted."),ok:t("Delete everything")})) return;
   try{ await Promise.all([idbClear("progress"),idbClear("custom"),idbClear("inbox")]); }catch(e){}
   S.progress={}; S.custom=[]; S.inbox=[];
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
