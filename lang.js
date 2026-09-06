@@ -187,7 +187,7 @@ de:{
   "suggestion":"{0} Vorschlag","suggestions":"{0} Vorschläge","progress entry":"{0} Lerneintrag","progress entries":"{0} Lerneinträge",
   "reading":"{0} Erkennung","readings":"{0} Erkennungen","check":"{0} Prüfung","checks":"{0} Prüfungen",
   /* the meaning in the app's language and the Translate-all row (v256) */
-  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"Die Texte der App und, mit der KI, die Bedeutung neuer Karten. Karten behalten Chinesisch und Pinyin.","Meanings":"Bedeutungen","{0} have their meaning in another language.":"{0} haben ihre Bedeutung in einer anderen Sprache.","Translate all cards into {0}":"Alle Karten auf {0} übersetzen","Translating {0} of {1} …":"Übersetze {0} von {1} …","{0} translated, {1} left.":"{0} übersetzt, {1} übrig.","Done — {0} translated.":"Fertig — {0} übersetzt.",
+  "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Die Texte der App und die Bedeutung neuer Karten. Karten behalten Chinesisch und Pinyin.","Meanings":"Bedeutungen","{0} have their meaning in another language.":"{0} haben ihre Bedeutung in einer anderen Sprache.","Translate all cards into {0}":"Alle Karten auf {0} übersetzen","Translating {0} of {1} …":"Übersetze {0} von {1} …","{0} translated, {1} left.":"{0} übersetzt, {1} übrig.","Done — {0} translated.":"Fertig — {0} übersetzt.",
   /* the More screen in the learner's order (v257) */
   "Privacy":"Privatsphäre",
   /* the pill for a meaning in another language (v258) */
@@ -394,7 +394,7 @@ fr:{
   "suggestion":"{0} suggestion","suggestions":"{0} suggestions","progress entry":"{0} entrée de progression","progress entries":"{0} entrées de progression",
   "reading":"{0} lecture","readings":"{0} lectures","check":"{0} vérification","checks":"{0} vérifications",
   /* the meaning in the app's language and the Translate-all row (v256) */
-  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"Les textes de l'appli et, avec l'IA, le sens des nouvelles cartes. Les cartes gardent le chinois et le pinyin.","Meanings":"Sens","{0} have their meaning in another language.":"{0} ont leur sens dans une autre langue.","Translate all cards into {0}":"Traduire toutes les cartes en {0}","Translating {0} of {1} …":"Traduction {0} sur {1} …","{0} translated, {1} left.":"{0} traduites, {1} restantes.","Done — {0} translated.":"Terminé – {0} traduites.",
+  "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Les textes de l'appli et le sens des nouvelles cartes. Les cartes gardent le chinois et le pinyin.","Meanings":"Sens","{0} have their meaning in another language.":"{0} ont leur sens dans une autre langue.","Translate all cards into {0}":"Traduire toutes les cartes en {0}","Translating {0} of {1} …":"Traduction {0} sur {1} …","{0} translated, {1} left.":"{0} traduites, {1} restantes.","Done — {0} translated.":"Terminé – {0} traduites.",
   /* the More screen in the learner's order (v257) */
   "Privacy":"Confidentialité",
   /* the pill for a meaning in another language (v258) */
@@ -602,7 +602,7 @@ es:{
   "suggestion":"{0} sugerencia","suggestions":"{0} sugerencias","progress entry":"{0} entrada de progreso","progress entries":"{0} entradas de progreso",
   "reading":"{0} lectura","readings":"{0} lecturas","check":"{0} revisión","checks":"{0} revisiones",
   /* the meaning in the app's language and the Translate-all row (v256) */
-  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"Los textos de la app y, con la IA, el significado de las tarjetas nuevas. Las tarjetas conservan el chino y el pinyin.","Meanings":"Significados","{0} have their meaning in another language.":"{0} tienen su significado en otro idioma.","Translate all cards into {0}":"Traducir todas las tarjetas al {0}","Translating {0} of {1} …":"Traduciendo {0} de {1} …","{0} translated, {1} left.":"{0} traducidas, {1} pendientes.","Done — {0} translated.":"Listo — {0} traducidas.",
+  "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Los textos de la app y el significado de las tarjetas nuevas. Las tarjetas conservan el chino y el pinyin.","Meanings":"Significados","{0} have their meaning in another language.":"{0} tienen su significado en otro idioma.","Translate all cards into {0}":"Traducir todas las tarjetas al {0}","Translating {0} of {1} …":"Traduciendo {0} de {1} …","{0} translated, {1} left.":"{0} traducidas, {1} pendientes.","Done — {0} translated.":"Listo — {0} traducidas.",
   /* the More screen in the learner's order (v257) */
   "Privacy":"Privacidad",
   /* the pill for a meaning in another language (v258) */
@@ -810,7 +810,7 @@ ja:{
   "suggestion":"候補{0}件","suggestions":"候補{0}件","progress entry":"学習記録{0}件","progress entries":"学習記録{0}件",
   "reading":"読み取り{0}回","readings":"読み取り{0}回","check":"確認{0}回","checks":"確認{0}回",
   /* the meaning in the app's language and the Translate-all row (v256) */
-  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"アプリの表示と、AIを使うときは新しいカードの意味。カードの中国語とピンインはそのままです。","Meanings":"意味","{0} have their meaning in another language.":"{0}の意味が別の言語になっています。","Translate all cards into {0}":"すべてのカードを{0}に翻訳","Translating {0} of {1} …":"翻訳中 {0} / {1}…","{0} translated, {1} left.":"{0}枚を翻訳、残り{1}枚。","Done — {0} translated.":"完了。{0}を翻訳しました。",
+  "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"アプリの表示と新しいカードの意味。カードの中国語とピンインはそのままです。","Meanings":"意味","{0} have their meaning in another language.":"{0}の意味が別の言語になっています。","Translate all cards into {0}":"すべてのカードを{0}に翻訳","Translating {0} of {1} …":"翻訳中 {0} / {1}…","{0} translated, {1} left.":"{0}枚を翻訳、残り{1}枚。","Done — {0} translated.":"完了。{0}を翻訳しました。",
   /* the More screen in the learner's order (v257) */
   "Privacy":"プライバシー",
   /* the pill for a meaning in another language (v258) */
@@ -1018,7 +1018,7 @@ ko:{
   "suggestion":"제안 {0}개","suggestions":"제안 {0}개","progress entry":"학습 기록 {0}개","progress entries":"학습 기록 {0}개",
   "reading":"읽기 {0}회","readings":"읽기 {0}회","check":"확인 {0}회","checks":"확인 {0}회",
   /* the meaning in the app's language and the Translate-all row (v256) */
-  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"앱의 표시 언어와, AI를 쓸 때는 새 카드의 뜻. 카드의 중국어와 병음은 그대로예요.","Meanings":"뜻","{0} have their meaning in another language.":"{0}의 뜻이 다른 언어로 되어 있어요.","Translate all cards into {0}":"모든 카드를 {0}(으)로 번역","Translating {0} of {1} …":"번역 중 {0} / {1}…","{0} translated, {1} left.":"{0}장 번역됨, {1}장 남음.","Done — {0} translated.":"완료. {0}을(를) 번역했어요.",
+  "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"앱의 표시 언어와 새 카드의 뜻. 카드의 중국어와 병음은 그대로예요.","Meanings":"뜻","{0} have their meaning in another language.":"{0}의 뜻이 다른 언어로 되어 있어요.","Translate all cards into {0}":"모든 카드를 {0}(으)로 번역","Translating {0} of {1} …":"번역 중 {0} / {1}…","{0} translated, {1} left.":"{0}장 번역됨, {1}장 남음.","Done — {0} translated.":"완료. {0}을(를) 번역했어요.",
   /* the More screen in the learner's order (v257) */
   "Privacy":"개인정보",
   /* the pill for a meaning in another language (v258) */
