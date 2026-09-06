@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=244; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=245; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1389,6 +1389,7 @@ function renderEdit(main,c){
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back">← Back</button><span class="badge">Edit</span></div>
     <div class="form">
+    ${d.img||full?`<div class="field" id="e-imgfield"><label>Image (stays on this phone)</label><div class="pimg" id="e-pimg"></div></div>`:""} <!-- the photo first, then the text, as in the Camera tab (v245) -->
     <div class="field"><label>Characters${d.trad?" (traditional, as on the photo)":""}</label>
       <div class="signed" id="e-lines"></div>
       <textarea id="e-word" class="hanzi" hidden>${esc(lines0.join("\n"))}</textarea>
@@ -1397,17 +1398,16 @@ function renderEdit(main,c){
       <div class="field"><label>Meaning</label><textarea id="e-mean" class="grow" rows="1">${esc(d.m)}</textarea><div class="smean badge" id="e-aistatus" style="margin-top:4px"></div></div>
     ${isSign||!d.w?"":`<div class="field"><label>Context word, pinyin, meaning (optional)</label>
       <div class="row"><input id="e-w" class="hanzi" value="${esc(d.w||"")}" placeholder="学习"><input id="e-wp" value="${esc(d.wp||"")}" placeholder="xuéxí"><input id="e-wm" value="${esc(d.wm||"")}" placeholder="to learn"></div></div>`}
-    ${d.img||full?`<div class="field" id="e-imgfield"><label>Image (stays on this phone)</label><div class="pimg" id="e-pimg"></div></div>`:""}
     <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
       <input id="e-note" value="${esc(d.flagNote||"")}" placeholder="Note for the reviewer (optional)"${d.flag?"":" hidden"}></div>
     ${tagsFieldHTML("e-tags",d.tags)}
-    ${aiOn()?`<div class="field" id="e-aifield"${d.mt&&d.mt.src==="llm"&&d.mt.verified?" hidden":""}><button class="btn block" id="e-ai">Ask AI to check text, pinyin and meaning</button><div id="e-aibox" hidden class="aibox"></div></div>`:""}
+    ${aiOn()?`<div class="field" id="e-aifield"${d.mt&&d.mt.src==="llm"&&d.mt.verified?" hidden":""}><button class="btn block" id="e-ai">Ask AI to check text, pinyin and meaning</button></div>`:""}
     <div id="e-err" class="err" style="display:none"></div>
-    <button class="btn primary block" id="e-save">Save changes</button>
+    <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" id="e-save">Save changes</button><button class="del" id="e-cancel">Cancel</button></div>
     </div>
     <button class="btn danger block" id="e-del" style="margin-top:14px">Delete card</button>
   </div>`;
-  $("#back").onclick=()=>leave(); wireTags(main);
+  $("#back").onclick=()=>leave(); $("#e-cancel").onclick=()=>leave(); wireTags(main); /* Cancel beside Save, as the preview's row (v245) */
   $("#e-flag").onchange=()=>{ $("#e-note").hidden=!$("#e-flag").checked; if($("#e-flag").checked) $("#e-note").focus(); }; /* the note only with the flag, as in the Add form and the preview (v136) */
   /* delete from here too (H): from the study back the session goes on with the next card, otherwise back to the list */
   $("#e-del").onclick=async()=>{
@@ -1435,15 +1435,14 @@ function renderEdit(main,c){
   drawLines();
   /* the AI fills the fields in place; nothing is stored until Save */
   const ab=$("#e-ai"); if(ab) ab.onclick=async()=>{
-    const st=$("#e-aistatus"), box=$("#e-aibox"); ab.disabled=true; box.hidden=true;
+    const st=$("#e-aistatus"); ab.disabled=true;
     const zh=$("#e-word").value, pin=$("#e-pin").value.trim(), mean=$("#e-mean").value.trim(), note=$("#e-note").value.trim();
     try{
       const [r]=await aiAsk([{kind:d.kind||"word",c:isSign?zh.split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):zh.replace(/\s+/g,""),p:pin,m:mean,flagNote:note,gloss:d.gloss,mt:{src:"dict",verified:false,suspect:"please check"}}],()=>{ st.innerHTML=busyHTML(AI_BUSY_TEXT); });
       if(r.zh&&CJK.test(r.zh)){ const zh=r.zh.replace(/\r/g,""); sg.lines=(isSign?zh:recutLines(zh.replace(/\s+/g,""),sg.lines)).split("\n").map(l=>l.trim()).filter(Boolean); sg.orig=sg.lines.slice(); syncWord(); drawLines(); }
       if(r.p) $("#e-pin").value=r.p;
       if(r.m) $("#e-mean").value=r.m;
-      aiApplied=true; st.textContent="";
-      box.hidden=false; box.innerHTML=`<div class="aihead">AI${r.ok?": looks right":" filled in its suggestion — check, then Save"}</div>${r.note&&r.note.toLowerCase()!=="ok"?`<div class="ainote">${esc(r.note)}</div>`:""}`;
+      aiApplied=true; st.textContent=""; /* a good answer shows nothing, the fields just fill — as in the Read preview (H, v105; the green "AI: looks right" box went in v245) */
     }catch(err){ const m=err&&err.message||String(err); st.textContent=m===AI_NET_ERR?m+". Tap the button to try again.":"The AI check failed: "+m; }
     ab.disabled=false;
   };
@@ -1465,8 +1464,8 @@ function renderEdit(main,c){
         ${zoomed?`<div class="shotzoom" style="${zoomStyle(rec)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(rec)}" alt="photo">`}
         <div class="croplayer${CROP.rect?" framed":""}${zoomed?" zoomed":""}" data-id="${rid}">${zoomed?"":`<div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="Turn the frame"></div></div>`}</div>
       </div>
-      <div class="ocr" id="ocr-${rid}">${READING[rid]?readingHTML(READING[rid],rid):res&&res.key===rectKey(CROP.rect)?`<div class="croppreview"><img src="${res.url}" alt="the new crop"><div class="badge" style="margin:6px 0 0">${res.text?`Read as “${esc(res.text)}”. `:"Picture taken, the text stays. "}Adjust the frame to read again, or save.</div></div>`:CROP.auto?busyHTML("Finding the text …"):`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.</span>`}</div>
-      <div class="imgacts"><button class="del" id="e-cropcancel">Cancel</button></div></div>`;
+      <div class="imgacts"><button class="del" id="e-cropcancel">Cancel</button></div>
+      <div class="ocr" id="ocr-${rid}">${READING[rid]?readingHTML(READING[rid],rid):res&&res.key===rectKey(CROP.rect)?`<div class="croppreview"><img src="${res.url}" alt="the new crop"><div class="badge" style="margin:6px 0 0">${res.text?`Read as “${esc(res.text)}”. `:"Picture taken, the text stays. "}Adjust the frame to read again, or save.</div></div>`:CROP.auto?busyHTML("Finding the text …"):`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.</span>`}</div></div>`;
     box.querySelectorAll(".croplayer").forEach(wireCrop);
     $("#e-cropcancel").onclick=()=>{ restoreBefore(); endRecrop(); showPimg(); }; };
   /* the reading's result stays under the photo with the frame (v244, H: "don't exit crop mode so fast, do as in the initial crop screen") — the view goes on Save changes or Cancel */
@@ -1489,7 +1488,7 @@ function renderEdit(main,c){
         setResult(sg2.cardImg||recropImg,sg.lines.join(" / ")); /* the tightened cut when there is one, else the crop as framed; the frame stays on the photo */
         const lab=$("#e-lines").closest(".field").querySelector("label"); if(lab) lab.textContent="Characters"+(sg.trad?" (traditional, as on the photo)":"");
         syncWord(); drawLines(); pinyinFollow();
-        if(!meanTouched){ const r2=sg.lines.filter(l=>CJK.test(l)).map(lineMeaning), m=r2.map(r=>r.en).filter(Boolean).join(" / "); if(m) $("#e-mean").value=m; } /* the word-by-word gloss until the AI answers; a meaning typed here stays */
+        if(!meanTouched){ const r2=sg.lines.filter(l=>CJK.test(l)).map(lineMeaning), m=r2.map(r=>r.en).filter(Boolean).join(" / "); if(m){ $("#e-mean").value=m; $("#e-aistatus").textContent=`Meaning ${r2.length&&r2.every(r=>r.full)?"from the phrasebook":"composed word by word"}, unverified`; } } /* the word-by-word gloss with its source line until the AI answers, as in the Read preview (v245); a meaning typed here stays */
         showAi(); const ab=$("#e-ai"); if(ab&&aiLive()) ab.click(); } };
     /* the frame the card was cut with, without a reading until it is moved (v244, H: "use the previous cropping area as starting point"); a card without one gets the app's proposal at once (v241) */
     if(d.frame&&d.frame.w){ CROP={id:rid,rect:null}; drawRecrop(); placeFrame(rid,d.frame,{noRead:true}); }
@@ -2556,7 +2555,7 @@ async function finishPending(id){
     for(const k of Object.keys(ph)) if(!["id","at","img","imgFull","shot","tags","frame"].includes(k)) delete ph[k];
     const {id:_i,at:_a,img:_m,shot:_s,...fields}=card; Object.assign(ph,fields);
     if(sg.cardImg){ ph.img=await jpegOf(sg.cardImg); dropThumb(ph.id); } /* the list's thumbnail was made from the crop saved first (v242, H: "the card with a photo before the re-crop remains") */
-    if(mt.suspect||sg.weak||(sg.ai&&sg.ai.bad)){ ph.flag=true; ph.flagNote=ph.flagNote||"check the reading"; } /* nobody saw the preview: a doubtful reading asks to be looked at */
+    ph.flag=true; ph.flagNote=(mt.suspect||sg.weak||(sg.ai&&sg.ai.bad))?"saved before the reading was done, and the reading is weak — check text, pinyin and meaning":"saved before the reading was done — check text, pinyin and meaning"; /* nobody saw the preview (v245, H: "flag cards that were saved before the final stage, with an appropriate comment") */
     try{ await idbPut("custom",ph); }catch(e){}
     QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}.`+(mt.pending?" Translation pending.":"")+(ph.flag?" Flagged for review.":"");
   }catch(err){ logErr("savenow",err&&(err.stack||err.message)||err); return failPending(id,"the reading failed"); }
