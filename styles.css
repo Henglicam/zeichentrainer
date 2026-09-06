@@ -331,3 +331,18 @@ body.noscroll{overflow:hidden}
 .undo .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .undo button{background:none;border:none;font-family:var(--sans);font-size:16px;font-weight:600;color:var(--tint);padding:0 10px;min-height:44px;cursor:pointer;flex:none}
 @keyframes undoup{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+/* the Progress dashboard (v274): four tiles on the row's grey surface, the 30-day strip in the tint, the deck bar in grey, tint and green */
+.prog{margin-top:8px}
+.ptiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ptile{background:var(--card2);border-radius:var(--r);padding:10px 12px}
+.ptile .n{font-size:28px;font-weight:700;color:var(--label);line-height:1.1;letter-spacing:-.02em}
+.ptile .l{font-size:12px;color:var(--label2);margin-top:2px;line-height:1.25}
+.prog .pl{font-size:13px;color:var(--label2);margin-top:12px}
+.pdots{display:flex;gap:3px;margin-top:6px}
+.pdots i{flex:1;height:10px;border-radius:3px;background:var(--fill)}
+.pdots i.d1{background:var(--tint);opacity:.3} .pdots i.d2{background:var(--tint);opacity:.5} .pdots i.d3{background:var(--tint);opacity:.75} .pdots i.d4{background:var(--tint)}
+.pbar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--fill);margin-top:14px;gap:2px}
+.pbar i{display:block;min-width:0}
+.pbar i.new,.plegend i.new{background:var(--label3)} .pbar i.learn,.plegend i.learn{background:var(--tint)} .pbar i.known,.plegend i.known{background:var(--ok)}
+.plegend{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:13px;color:var(--label2)}
+.plegend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}

@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=273; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=274; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -775,7 +775,9 @@ function dayKey(t){ const d=new Date(t||Date.now()); return d.getFullYear()+"-"+
    on Share report, and once a day as an anonymous row to the owner's table while Usage sharing is on (v170). */
 const monthKey=()=>new Date().toISOString().slice(0,7);
 function usage(){ const u=S.settings.usage||{}; if(!u.first) u.first=Date.now(); if(u.month!==monthKey()){ u.month=monthKey(); u.m={}; } if(!u.m) u.m={}; return u; }
-let _usageTimer=null;
+let _usageTimer=null, _dailyTimer=null;
+/* reviews per day (v274): setting daily = {day: count}, the last 60 days — the Progress row's 30-day strip shades busier days; the streak keeps its days list */
+function dailyBump(day){ const d=S.settings.daily||{}; d[day]=(d[day]||0)+1; const keys=Object.keys(d).sort(); while(keys.length>60) delete d[keys.shift()]; S.settings.daily=d; clearTimeout(_dailyTimer); _dailyTimer=setTimeout(()=>{ setSetting("daily",d).catch(()=>{}); },500); }
 function bump(key,n){ n=n||1; if(key==="byPhoto"||key==="byHand"||key==="deleted") REPORT_DIRTY=true; const u=usage(); u[key]=(u[key]||0)+n; u.m[key]=(u.m[key]||0)+n; S.settings.usage=u; clearTimeout(_usageTimer); _usageTimer=setTimeout(()=>{ setSetting("usage",u).catch(()=>{}); },500); }
 /* which analysis did the work (v179, H: "record all the models used — the reader, DeepSeek, Qwen"): usage.models and usage.m.models
    count the on-device reader ("reader", one per reading) and every AI model by name, all time and this month */
@@ -974,6 +976,34 @@ function learnStats(){
   while(days.has(dayKey(d))){ streak++; d.setDate(d.getDate()-1); }
   return {total,week,streak};
 }
+/* More → Progress as a small dashboard (v274, H: "Mach den learning process report mit mehr useful und sexy für die user" — described
+   first, "Go"): four tiles (day streak, cards learned, due today, reviews this week), a strip of the last 30 days shaded by the day's
+   reviews, the deck as a bar of new / still learning / known (an interval of 21 days and more), and the week ahead. The owner-ish counts
+   (opens, AI checks, the reader's work) stay in the shared report (usageText) and left the row. */
+const KNOWN_DAYS=21;
+function progressData(){
+  const st=learnStats(), t0=today(), endToday=t0+DAY, endTomorrow=t0+2*DAY, endWeek=t0+7*DAY;
+  let nw=0, learning=0, known=0, dueToday=0, dueTomorrow=0, dueWeek=0;
+  for(const d of deck()){ if(!d.c) continue; const p=S.progress[d.id]; if(!p||!p.reps){ nw++; continue; }
+    if(p.interval>=KNOWN_DAYS) known++; else learning++;
+    if(p.due<endToday) dueToday++; else if(p.due<endTomorrow) dueTomorrow++;
+    if(p.due>=endToday&&p.due<endWeek) dueWeek++; }
+  const daysSet=new Set(S.settings.days||[]), daily=S.settings.daily||{}, dots=[];
+  for(let i=29;i>=0;i--){ const k=dayKey(t0-i*DAY); dots.push({k,n:daily[k]||(daysSet.has(k)?1:0)}); }
+  return {streak:st.streak,learned:st.total,week:st.week,dueToday,dueTomorrow,dueWeek,nw,learning,known,dots};
+}
+function progressHTML(){
+  const p=progressData(), max=Math.max(1,...p.dots.map(x=>x.n)), lvl=n=>!n?0:max<2?4:1+Math.round(3*(n-1)/(max-1)); /* four shades: the busiest day full tint, a single review the lightest */
+  const tile=(n,l)=>`<div class="ptile"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  return `<div class="prog">
+    <div class="ptiles">${tile(p.streak,t("Day streak"))}${tile(p.learned,t("Cards learned"))}${tile(p.dueToday,t("Due today"))}${tile(p.week,t("Reviews this week"))}</div>
+    <div class="pl">${t("Last 30 days")}</div>
+    <div class="pdots">${p.dots.map(x=>`<i class="d${lvl(x.n)}" title="${x.k}${x.n?": "+nOf(x.n,"review"):""}"></i>`).join("")}</div>
+    <div class="pbar"><i class="new" style="flex:${p.nw}"></i><i class="learn" style="flex:${p.learning}"></i><i class="known" style="flex:${p.known}"></i></div>
+    <div class="plegend"><span><i class="new"></i>${t("New")} ${p.nw}</span><span><i class="learn"></i>${t("Still learning")} ${p.learning}</span><span><i class="known"></i>${t("Known")} ${p.known}</span></div>
+    <div class="pl">${t("Coming up: {0} due tomorrow, {1} this week.",p.dueTomorrow,p.dueWeek)}</div>
+  </div>`;
+}
 function statsLine(){ const {total,week,streak}=learnStats(); return t("{0} learned, {1} reviewed this week, streak {2}",nOf(total,"card"),week,nOf(streak,"day")); }
 /* ---------- backup nudge + photo cleanup: everything lives on one phone ---------- */
 const OLD_DAYS=30;
@@ -1031,7 +1061,7 @@ function renderMore(main){
     <div class="listhead">${t("Help")}</div>
     <div class="mrow"><div><div class="t">${t("How to use the app")}</div><div class="s">${t("Six short sections: photo, characters, learning, cards, language, what stays on the phone.")}</div></div><button class="btn mini" id="guide-open">${t("Open")}</button></div>
     <div class="listhead">${t("Learning")}</div>
-    <div class="mrow"><div style="flex:1"><div class="t">${t("Progress")}</div><div class="s">${statsLine()}. ${t("App opened {0}, {1} reviewed, {2}, {3} checked by the AI.",nOf(usage().opens,"time"),nOf(usage().reviews,"card"),nOf(usage().aiCalls,"AI check"),nOf(usage().pics,"photo"))} ${t("Work done by {0}.",workLines(usage().models).join(", "))}</div><div class="fieldacts"><button class="btn mini" id="usage-share">${t("Share report")}</button></div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">${t("Progress")}</div><div class="s">${progressHTML()}</div><div class="fieldacts"><button class="btn mini" id="usage-share">${t("Share report")}</button></div></div></div>
     <div class="mrow"><div><div class="t">${t("Card order")}</div><div class="s">${t("Due cards come first, then up to {0} new ones. This sets the order inside each group.",NEW_PER_SESSION)}</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${t(l)}</button>`).join("")}</div></div></div>
     <div class="listhead">${t("Language")}</div>
     <div class="mrow"><div style="flex:1"><div class="t">${t("Language")}</div><div class="s">${t("The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.")}</div><div class="chipset" id="lang-chips" style="margin-top:8px">${LANGS.map(([c,n])=>`<button class="chip${LANG===c?" on":""}" data-lang="${c}">${n}</button>`).join("")}</div></div></div>
@@ -1395,6 +1425,7 @@ async function grade(g){
   if(s.fails>=LEECH_FAILS && d && !d.flag) await setFlag(c,true,t("failed {0} times in a row — check text, meaning and photo",s.fails));
   const day=dayKey(), days=S.settings.days||[];
   if(days[days.length-1]!==day){ days.push(day); if(days.length>400) days.shift(); await setSetting("days",days); }
+  dailyBump(day);
   if(S.single){ nextSingle(c); return; }
   if(g==="again") S.queue.push(c); else S.done++;
   S.idx++; S.revealed=false; S.fullPic=false; S.peek=null; render(); window.scrollTo({top:0});
