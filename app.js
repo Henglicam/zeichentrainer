@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=276; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=277; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -784,39 +784,6 @@ function bump(key,n){ n=n||1; if(key==="byPhoto"||key==="byHand"||key==="deleted
 function bumpModel(name){ const u=usage(); u.models=u.models||{}; u.m.models=u.m.models||{}; u.models[name]=(u.models[name]||0)+1; u.m.models[name]=(u.m.models[name]||0)+1; S.settings.usage=u; clearTimeout(_usageTimer); _usageTimer=setTimeout(()=>{ setSetting("usage",u).catch(()=>{}); },500); }
 const workLines=o=>{ const e=Object.entries(o||{}); return e.length?e.map(([k,v])=>k==="reader"?`${t("on-device reader")} ${nOf(v,"reading")}`:`${k} ${nOf(v,"check")}`):[t("none yet")]; }; /* "work done by": who read and checked, with a unit each (v252, H: "Make all labels easy to understand") */
 function countTokens(pv,data){ const g=(data&&data.usage)||{}; const i=pv==="claude"?g.input_tokens:g.prompt_tokens, o=pv==="claude"?g.output_tokens:g.completion_tokens; bump("aiCalls"); if(i) bump("aiIn",+i); if(o) bump("aiOut",+o); }
-function usageText(){ /* laid out in short blocks with plain labels since v252 (H: "Make all labels easy to understand") */
-  const u=usage(), m=u.m||{}, st=learnStats(), n=k=>u[k]||0, mn=k=>m[k]||0, day=t=>new Date(t).toISOString().slice(0,10);
-  const ua=navigator.userAgent, dev=(ua.match(/\(([^)]*)\)/)||[])[1]||"";
-  const kv=(k,v)=>`  ${k} ${v}`;
-  const work=workLines(u.models), workM=workLines(m.models);
-  const pg=progressData(), active=pg.dots.filter(x=>x.n).length, month=pg.dots.reduce((a,x)=>a+x.n,0); /* the dashboard's figures first, in its order (v276, H: "Und beim Sharen bitte genauso") */
-  return [`识字 Zeichentrainer — usage report, ${day(Date.now())}`,"",
-    "Progress",
-    kv("day streak",pg.streak), kv("cards learned",`${pg.learned} of ${deck().length}`), kv("due today",pg.dueToday), kv("reviews this week",pg.week),
-    kv("last 30 days:",`reviewed on ${nOf(active,"day")}, ${nOf(month,"review")}`),
-    kv("deck:",`${pg.nw} new, ${pg.learning} still learning, ${pg.known} known`),
-    kv("coming up:",`${pg.dueTomorrow} due tomorrow, ${pg.dueWeek} this week`),"",
-    kv("app version",APP_V), kv("first used",day(u.first)), kv("device",dev), kv("installed on the home screen:",isInstalled()?"yes":"no"),"",
-    "Learning",
-    kv("days used",`${(S.settings.days||[]).length} (streak ${nOf(st.streak,"day")})`),
-    kv("app opened",`${nOf(n("opens"),"time")} (${mn("opens")} this month)`),
-    kv("cards reviewed",`${n("reviews")} (${mn("reviews")} this month)`),"",
-    "Cards",
-    kv("from photos",`${n("byPhoto")} (${mn("byPhoto")} this month)`),
-    kv("typed by hand",`${n("byHand")} (${mn("byHand")} this month)`),
-    kv("deleted",n("deleted")),
-    kv("photos waiting in the inbox",S.inbox.length), kv("tags",allTags().length),"",
-    "AI",
-    kv("set up:",aiOn()?AI_PROVIDERS[aiProvider()].name+", "+aiModel():"no"),
-    kv("checks",`${n("aiCalls")} (${mn("aiCalls")} this month)`),
-    kv("photos checked by the AI",`${n("pics")} (${mn("pics")} this month)`),
-    kv("tokens sent and received",`${n("aiIn")} + ${n("aiOut")} (this month ${mn("aiIn")} + ${mn("aiOut")})`),
-    kv("work done by",work[0])].concat(work.slice(1).map(l=>`               ${l}`)).concat([kv("this month",workM[0])]).concat(workM.slice(1).map(l=>`             ${l}`)).join("\n")+"\n";
-}
-/* Share the app (v210, H: "add a share app function", described first and built on "Go"; v211: the first row of More, and the
-   text names no browser — it installs from Safari, Chrome, Edge, Samsung Internet alike): the link with a one-line text
-   through the share sheet; without one the link is copied. Nothing is sent by the app itself. A friend behind the wall needs
-   github.io for the first install — the mirror only serves an installed app. */
 const APP_URL="https://henglicam.github.io/zeichentrainer/";
 const APP_SHARE_TEXT="识字 Zeichentrainer — learn the Chinese characters you see around you. Take a photo of a sign, get the card. Open the link in Safari or Chrome, not inside WeChat, and add it to the home screen:"; /* v219: friends tapped the link inside WeChat's browser, which cannot install the app */ /* no link in the text: the share sheet appends the url field itself (v215, H's WeChat screenshot showed the link twice) */
 async function shareApp(){
@@ -824,11 +791,41 @@ async function shareApp(){
   if(navigator.share){ try{ await navigator.share({title:"识字 Zeichentrainer",text:APP_SHARE_TEXT,url:APP_URL}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
   try{ await navigator.clipboard.writeText(APP_SHARE_TEXT+" "+APP_URL); if(st) st.textContent=t("Link copied."); }catch(err){ if(st) st.textContent=t("Sharing is not available here.")+" "+t("The link: {0}",APP_URL); }
 }
-async function shareUsage(){
-  const text=usageText(), name="zeichentrainer-usage-"+new Date().toISOString().slice(0,10)+".txt", file=new File([text],name,{type:"text/plain"});
-  if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name,text:"Zeichentrainer usage report"}); return; }catch(err){ if(err && err.name==="AbortError") return; } }
-  if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err && err.name==="AbortError") return; } }
-  try{ await navigator.clipboard.writeText(text); noteSheet(t("Copied to the clipboard.")); }catch(err){ noteSheet(t("Sharing is not available here.")); }
+/* Share report = one image of the dashboard (v277, H: "You're still sharing too much! Only this please, sexy! The rest goes to the user
+   reports"): the tiles, the 30-day strip, the deck bar with its legend and the week ahead, drawn on a canvas at 1080 px in the light
+   look like the shared card (v269), with the app's name and the day at the foot, handed to the share sheet as a PNG. The text report
+   of v162–v276 (version, device, opens, AI counts, the models' work) went — the owner's All users report carries those figures from
+   the daily row. Without a share sheet the notice says so. */
+async function progressImage(){
+  const p=progressData(), W=SHARE_W, PAD=SHARE_PAD, inner=W-2*PAD, cv=document.createElement("canvas"), ctx=cv.getContext("2d");
+  const sans=getComputedStyle(document.documentElement).getPropertyValue("--sans")||"sans-serif";
+  const rr=(x,y,w,h,r)=>{ ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(x,y,w,h,r); else ctx.rect(x,y,w,h); };
+  const max=Math.max(1,...p.dots.map(x=>x.n)), lvl=n=>!n?0:max<2?4:1+Math.round(3*(n-1)/(max-1)), alpha=[1,.3,.5,.75,1];
+  const legend=[[t("New"),p.nw,"#AEAEB2"],[t("Still learning"),p.learning,"#C8372D"],[t("Known"),p.known,"#2FA36B"]];
+  ctx.font=`34px ${sans}`; const legendW=legend.reduce((a,[l,n])=>a+32+ctx.measureText(`${l} ${n}`).width+40,0), legendRows=legendW>inner?3:1;
+  const H=PAD+92+424+44+48+68+56+(legendRows*48+22)+100+30+PAD; cv.width=W; cv.height=H;
+  ctx.fillStyle="#FFFFFF"; ctx.fillRect(0,0,W,H); ctx.textBaseline="alphabetic";
+  let y=PAD; ctx.fillStyle="#000000"; ctx.font=`700 60px ${sans}`; ctx.fillText(t("Progress"),PAD,y+56); y+=92;
+  const gap=24, tw=(inner-gap)/2, th=200, tiles=[[p.streak,t("Day streak")],[p.learned,t("Cards learned")],[p.dueToday,t("Due today")],[p.week,t("Reviews this week")]];
+  tiles.forEach((tl,i)=>{ const x=PAD+(i%2)*(tw+gap), ty=y+Math.floor(i/2)*(th+gap); ctx.fillStyle="#F2F2F7"; rr(x,ty,tw,th,28); ctx.fill();
+    ctx.fillStyle="#000000"; ctx.font=`700 88px ${sans}`; ctx.fillText(String(tl[0]),x+32,ty+112); ctx.fillStyle="#6E6E73"; ctx.font=`32px ${sans}`; ctx.fillText(tl[1],x+32,ty+164); });
+  y+=2*th+gap+44;
+  ctx.fillStyle="#6E6E73"; ctx.font=`34px ${sans}`; ctx.fillText(t("Last 30 days"),PAD,y+30); y+=48;
+  const bw=(inner-29*8)/30; p.dots.forEach((d,i)=>{ const l=lvl(d.n); ctx.globalAlpha=alpha[l]; ctx.fillStyle=l?"#C8372D":"#E9E9EE"; rr(PAD+i*(bw+8),y,bw,28,6); ctx.fill(); }); ctx.globalAlpha=1; y+=68;
+  const tot=p.nw+p.learning+p.known; ctx.fillStyle="#E9E9EE"; rr(PAD,y,inner,28,14); ctx.fill();
+  if(tot){ ctx.save(); rr(PAD,y,inner,28,14); ctx.clip(); let x=PAD; legend.forEach(([,n,c])=>{ const w=inner*n/tot; if(n){ ctx.fillStyle=c; ctx.fillRect(x,y,Math.max(0,w-2),28); } x+=w; }); ctx.restore(); }
+  y+=56;
+  ctx.font=`34px ${sans}`; let lx=PAD; legend.forEach(([l,n,c])=>{ const s=`${l} ${n}`, w=32+ctx.measureText(s).width; if(legendRows>1&&lx>PAD){ lx=PAD; y+=48; } ctx.fillStyle=c; ctx.beginPath(); ctx.arc(lx+11,y+19,11,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#6E6E73"; ctx.fillText(s,lx+32,y+30); lx+=w+40; });
+  y+=48+22;
+  ctx.fillStyle="#6E6E73"; ctx.fillText(t("Coming up: {0} due tomorrow, {1} this week.",p.dueTomorrow,p.dueWeek),PAD,y+30); y+=100;
+  ctx.fillStyle="#AEAEB2"; ctx.font=`32px ${sans}`; ctx.fillText("识字 Zeichentrainer",PAD,y+30); ctx.textAlign="right"; ctx.fillText(new Date().toLocaleDateString(LANG_LOCALE[LANG]),W-PAD,y+30); ctx.textAlign="left";
+  return new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error("no image")),"image/png"));
+}
+async function shareProgress(){
+  let blob; try{ blob=await progressImage(); }catch(err){ logErr("share",err); noteSheet(t("Sharing is not available here.")); return; }
+  const p=progressData(), file=new File([blob],"zeichentrainer-progress.png",{type:"image/png"}), text=`${t("Day streak")} ${p.streak}, ${t("Cards learned")} ${p.learned}`;
+  if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"识字 Zeichentrainer",text}); return; }catch(err){ if(err && err.name==="AbortError") return; logErr("share",err); } }
+  noteSheet(t("Sharing is not available here."));
 }
 /* ---------- usage sharing (v170, H: "I want to share the app and get user stats" — automatic reports from every phone):
    once a day, while online and the switch in More is on, the same counts as the report go to a table of H's own in a
@@ -984,7 +981,7 @@ function learnStats(){
 /* More → Progress as a small dashboard (v274, H: "Mach den learning process report mit mehr useful und sexy für die user" — described
    first, "Go"): four tiles (day streak, cards learned, due today, reviews this week), a strip of the last 30 days shaded by the day's
    reviews, the deck as a bar of new / still learning / known (an interval of 21 days and more), and the week ahead. The owner-ish counts
-   (opens, AI checks, the reader's work) stay in the shared report (usageText) and left the row. */
+   (opens, AI checks, the reader's work) left the row and, since v277, the shared report too — the owner's All users report has them. */
 const KNOWN_DAYS=21;
 function progressData(){
   const st=learnStats(), t0=today(), endToday=t0+DAY, endTomorrow=t0+2*DAY, endWeek=t0+7*DAY;
@@ -1116,7 +1113,7 @@ function renderMore(main){
   </div>`;
   $("#export").onclick=exportData;
   $("#export-photos").onchange=e=>setSetting("exportPhotos",!!e.target.checked);
-  $("#usage-share").onclick=shareUsage; $("#app-share").onclick=shareApp;
+  $("#usage-share").onclick=shareProgress; $("#app-share").onclick=shareApp;
   document.querySelectorAll("[data-lang]").forEach(b=> b.onclick=()=>setLang(b.dataset.lang));
   const tr=$("#translate-all"); if(tr) tr.onclick=translateAll;
   $("#guide-open").onclick=()=>{ S.mode="guide"; render(); window.scrollTo({top:0}); };
