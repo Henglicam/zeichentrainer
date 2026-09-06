@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=262; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=263; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -827,7 +827,7 @@ function wxNoteHTML(){ return inWeChat()?`<div class="wxnote">${t(WX_NOTE)}</div
 function applyLangStatic(){ document.documentElement.lang=LANG;
   [["#stat-open b","Due"],["#stat-done b","capsule:Done"],["#stat-deck b","Deck"]].forEach(([q,k])=>{ const e=$(q); if(e) e.textContent=t(k); });
   document.querySelectorAll("#tabs .tab").forEach(b=>{ const k={study:"Learn",cards:"Cards",inbox:"Camera",more:"More"}[b.dataset.mode]; const n=b.lastChild; if(k&&n&&n.nodeType===3) n.textContent=t(k); }); }
-async function setLang(code){ if(!LANGS.some(([c])=>c===code)) return; LANG=code; await setSetting("lang",code); if(TRANSLATE&&!TRANSLATE.running) TRANSLATE=null; /* a finished run's line belongs to the old language */ rememberTranslate(false); applyLangStatic(); render(); }
+async function setLang(code){ if(!LANGS.some(([c])=>c===code)) return; LANG=code; await setSetting("lang",code); if(TRANSLATE&&!TRANSLATE.running) TRANSLATE=null; /* a finished run's line belongs to the old language */ if(S.settings.translateRun||(TRANSLATE&&TRANSLATE.running)){ await rememberTranslate(true); resumeTranslate(); } /* a run under way or waiting goes on in the new language (v263) */ applyLangStatic(); render(); }
 /* Translate all cards into the app's language (v256, H chose the button over an automatic run — it costs an AI call per batch of
    cards): the cards whose meaning is in another language than the app's go to the AI in batches, only the meaning and its
    language are taken from the answer, the text and the pinyin stay. The row sits under the Language chips and shows only
@@ -843,7 +843,7 @@ let TRANSLATE=null; /* {running, done, at, total, failed, lang} — at = the car
    foreground — a failed call (Android cuts a background page's requests) no longer ends the run, the row says it continues */
 async function rememberTranslate(on){ if(on){ S.settings.translateRun={lang:LANG,at:Date.now()}; await setSetting("translateRun",S.settings.translateRun); } else if(S.settings.translateRun){ delete S.settings.translateRun; await idbDel("settings","translateRun").catch(()=>{}); } }
 function resumeTranslate(){ const r=S.settings.translateRun; if(!r||(TRANSLATE&&TRANSLATE.running)) return;
-  if(r.lang!==LANG||!toTranslate().length){ rememberTranslate(false); return; } /* the language changed meanwhile, or nothing is left */
+  if(!toTranslate().length){ rememberTranslate(false); return; } /* nothing is left for the app's language (a switched language just means other cards are left, v263) */
   if(!aiOn()||!navigator.onLine) return; translateAll(); }
 function translateRowHTML(){
   const n=toTranslate().length, tr=TRANSLATE; if(!(n||tr)||!aiOn()) return "";
@@ -863,15 +863,17 @@ async function translateAll(){
   TRANSLATE={running:true,done:0,at:0,total:list.length,failed:false,lang:LANG}; translateRefresh(); await rememberTranslate(true);
   try{
     for(let i=0;i<list.length;i+=TRANSLATE_BATCH){
-      if(LANG!==TRANSLATE.lang) break; /* the language was switched meanwhile: the rest would land in the wrong one */
-      const batch=list.slice(i,i+TRANSLATE_BATCH); TRANSLATE.at=Math.min(i+batch.length,list.length); translateRefresh();
+      if(LANG!==TRANSLATE.lang) break; /* the language was switched meanwhile: this run stops and a fresh one for the new language follows (v263, H: "then all the cards have to be translated into the new language") */
+      const batch=list.slice(i,i+TRANSLATE_BATCH), lang=TRANSLATE.lang; TRANSLATE.at=Math.min(i+batch.length,list.length); translateRefresh();
       const ans=await aiAsk(batch.map(d=>({...d,translate:true})));
       for(let k=0;k<batch.length;k++){ const d=cardOf(batch[k].id), a=ans[k]; if(!d||!a||!a.m||a.bad) continue;
-        const upd={...d, m:a.m}; setMl(upd,a.ml); await putCard(upd,d.id); TRANSLATE.done++; }
+        const upd={...d, m:a.m}; setMl(upd,lang); await putCard(upd,d.id); TRANSLATE.done++; } /* the language the batch was asked in — a switch meanwhile changes LANG, and the follow-up run translates these again (v263) */
       translateRefresh();
     }
   }catch(err){ TRANSLATE.failed=true; logErr("translate",err&&err.message||String(err)); }
-  TRANSLATE.running=false; if(!toTranslate().length||LANG!==TRANSLATE.lang) await rememberTranslate(false); translateRefresh(); /* remembered while cards are left, so the run goes on at the next chance */
+  TRANSLATE.running=false;
+  if(LANG!==TRANSLATE.lang&&!TRANSLATE.failed&&toTranslate().length) return translateAll(); /* the language was switched during the run: every card goes into the new one (v263) */
+  if(!toTranslate().length) await rememberTranslate(false); translateRefresh(); /* remembered while cards are left, so the run goes on at the next chance */
   if(S.mode==="study"||S.mode==="cards") render(); /* the meanings on screen follow */
 }
 function reportData(){
