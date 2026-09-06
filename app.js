@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=259; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=260; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -118,7 +118,7 @@ const UNTAGGED="__untagged__";
 const hasTag=(d,t)=>t===UNTAGGED?!(d.tags&&d.tags.length):(d.tags||[]).includes(t);
 const untaggedCount=()=>deck().filter(d=>hasTag(d,UNTAGGED)).length;
 function tagsFieldHTML(id,tags){ const cur=tags||[], known=allTags();
-  return `<div class="field"><label>${t("Tags")}</label><input id="${id}" class="tags" value="${esc(cur.join(", "))}" placeholder="${t("Chinese class, HSK 3 …")}" autocomplete="off">${known.length?`<div class="tagchips" data-tagsfor="${id}">${known.map(t=>`<button type="button" class="chip${cur.includes(t)?" on":""}" data-tag="${esc(t)}">${esc(t)}</button>`).join("")}</div>`:""}</div>`; }
+  return `<div class="field"><label>${t("Tags")}</label><input id="${id}" class="tags" value="${esc(cur.join(", "))}" placeholder="${t("Chinese class, HSK 3 …")}" autocomplete="off">${known.length?`<div class="tagchips" data-tagsfor="${id}">${known.map(tg=>`<button type="button" class="chip${cur.includes(tg)?" on":""}" data-tag="${esc(tg)}">${esc(tg)}</button>`).join("")}</div>`:""}</div>`; }
 function wireTags(root,onChange){
   root.querySelectorAll("input.tags").forEach(inp=>{ const box=root.querySelector(`[data-tagsfor="${inp.id}"]`);
     const sync=()=>{ const cur=parseTags(inp.value); if(box) box.querySelectorAll("[data-tag]").forEach(b=>b.classList.toggle("on",cur.includes(b.dataset.tag))); if(onChange) onChange(cur,inp); };
@@ -730,7 +730,7 @@ function renderAiRow(){
     form.hidden=true; renderAiRow(); };
   run.onclick=async()=>{
     run.disabled=true; const rs=$("#ai-runstatus");
-    try{ const n=await aiReview(null,t=>{ rs.textContent=t; }); rs.textContent=t("{0} ready. Accept or dismiss them under Cards.",nOf(n,"suggestion")); }
+    try{ const n=await aiReview(null,x=>{ rs.textContent=x; }); rs.textContent=t("{0} ready. Accept or dismiss them under Cards.",nOf(n,"suggestion")); }
     catch(err){ rs.textContent=t("Failed: {0}",err&&err.message||err); run.disabled=false; }
   };
 }
@@ -747,7 +747,6 @@ function bump(key,n){ n=n||1; if(key==="byPhoto"||key==="byHand"||key==="deleted
 /* which analysis did the work (v179, H: "record all the models used — the reader, DeepSeek, Qwen"): usage.models and usage.m.models
    count the on-device reader ("reader", one per reading) and every AI model by name, all time and this month */
 function bumpModel(name){ const u=usage(); u.models=u.models||{}; u.m.models=u.m.models||{}; u.models[name]=(u.models[name]||0)+1; u.m.models[name]=(u.m.models[name]||0)+1; S.settings.usage=u; clearTimeout(_usageTimer); _usageTimer=setTimeout(()=>{ setSetting("usage",u).catch(()=>{}); },500); }
-const modelsText=o=>{ const e=Object.entries(o||{}); return e.length?e.map(([k,v])=>`${k==="reader"?"on-device reader":k} ${v}`).join(", "):"none"; };
 const workLines=o=>{ const e=Object.entries(o||{}); return e.length?e.map(([k,v])=>k==="reader"?`${t("on-device reader")} ${nOf(v,"reading")}`:`${k} ${nOf(v,"check")}`):[t("none yet")]; }; /* "work done by": who read and checked, with a unit each (v252, H: "Make all labels easy to understand") */
 function countTokens(pv,data){ const g=(data&&data.usage)||{}; const i=pv==="claude"?g.input_tokens:g.prompt_tokens, o=pv==="claude"?g.output_tokens:g.completion_tokens; bump("aiCalls"); if(i) bump("aiIn",+i); if(o) bump("aiOut",+o); }
 function usageText(){ /* laid out in short blocks with plain labels since v252 (H: "Make all labels easy to understand") */
@@ -1434,7 +1433,7 @@ function cardsListHTML(){
   if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,d.w,d.wp,d.wm,d.flagNote,...(d.tags||[])].filter(Boolean).join(" ").toLowerCase().includes(q));
   const rows=list.map(d=>`<button class="crow" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
-      <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${(d.tags||[]).map(t=>`<span class="pill tag">${esc(t)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
+      <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
       <span class="cs">${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}${cardStatus(d)}</span></button>`).join("");
   const empty=S.custom.length?t("No cards match."):t("No cards yet — take a photo under Camera, or tap + New.");
   return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length};
@@ -1553,7 +1552,7 @@ function renderEdit(main,c){
   };
   /* pinyin follows the text unless it was edited by hand */
   let pinTouched=false; $("#e-pin").addEventListener("input",()=>{ pinTouched=true; }); $("#e-mean").addEventListener("input",()=>{ meanTouched=true; }); wireGrow(main);
-  const pinyinFollow=()=>{ if(pinTouched||!window.pinyinPro) return; const t=sg.lines.join("").replace(/\s+/g,""); if(CJK.test(t)) $("#e-pin").value=pinyinPro.pinyin(t,{toneType:"symbol"}); };
+  const pinyinFollow=()=>{ if(pinTouched||!window.pinyinPro) return; const txt=sg.lines.join("").replace(/\s+/g,""); if(CJK.test(txt)) $("#e-pin").value=pinyinPro.pinyin(txt,{toneType:"symbol"}); };
   /* the AI button only where it adds something: a card the AI did not verify, or a verified one whose text was changed here (H, v135) */
   const showAi=()=>{ const f=$("#e-aifield"); if(f) f.hidden=false; };
   sg.onChange=()=>{ syncWord(); drawLines(); pinyinFollow(); showAi(); const ab=$("#e-ai"); if(ab&&aiLive()) ab.click(); };
@@ -2636,7 +2635,7 @@ async function cropSign(id,opts){
     if(Math.max(0,...passes.map(p=>effScore(p.lines,Hink)))<WEAK_READ){ /* weak or nothing: the whole frame as black-and-white and chromaticity copies, sizes from the ink */
       status("trying a black-and-white copy …");
       const bmp=await createImageBitmap(dk.blob), H=Hink||bmp.height/1.6;
-      const combos=[]; for(const k of [...new Set([45,65,90].map(t=>Math.min(1.5,t/H).toFixed(2)))].map(Number)) for(const mode of ["bw","chroma"]) combos.push({k,mode}); /* distinct scales only (v144: with a tiny ink height all three clamped to 1.5, and one pass counted three times in the agreement bonus and the traditional vote) */
+      const combos=[]; for(const k of [...new Set([45,65,90].map(px=>Math.min(1.5,px/H).toFixed(2)))].map(Number)) for(const mode of ["bw","chroma"]) combos.push({k,mode}); /* distinct scales only (v144: with a tiny ink height all three clamped to 1.5, and one pass counted three times in the agreement bonus and the traditional vote) */
       const srcs=staged(combos.map(c=>()=>c.mode==="bw"?toBW(bmp,c.k):toChroma(bmp,c.k))); /* the first copy at once, the rest while the readers work (v236) */
       /* the simplified passes side by side on the pool, the traditional ones on their own worker at the same time (v209) */
       const [sim,tra]=await Promise.all([runPasses(combos.map((c,i)=>async ww=>readPass(ww,await srcs[i],status)),status),(async()=>{ const out=[]; for(let i=0;i<combos.length;i++) out.push(await readPassTra(await srcs[i],status)); return out; })()]);
@@ -2652,7 +2651,7 @@ async function cropSign(id,opts){
     const maxLines=Hink?Math.max(1,Math.floor(r.frameH/(0.9*Hink))):99; r.maxLines=maxLines;
     const lineFit=p=>p.lines.length>maxLines?Math.pow(maxLines/p.lines.length,2):1;
     /* agreement counts: a text several passes produced beats a single pass's near-equal score (v96: 业主直租 ×3 lost a tie to 业主直祖 ×1) */
-    const textOf=p=>p.lines.map(x=>x.t).join("\n"), agree=new Map(); passes.forEach(p=>{ const t=textOf(p); if(t) agree.set(t,(agree.get(t)||0)+1); });
+    const textOf=p=>p.lines.map(x=>x.t).join("\n"), agree=new Map(); passes.forEach(p=>{ const tx=textOf(p); if(tx) agree.set(tx,(agree.get(tx)||0)+1); });
     const hOfPass=p=>boxHeight(p.lines);
     const sizeFit=p=>sizeFitOf(p.lines,Hink);
     const score=p=>readingScore(p.lines,Hink)*Math.min(1.5,1+0.1*((agree.get(textOf(p))||1)-1))*sizeFit(p)*lineFit(p);
@@ -2672,7 +2671,7 @@ async function cropSign(id,opts){
     if(pic&&!pic.bad){
       /* the AI's lines replace the reading: no confidences (every character is open in the picker), no boxes (the sheet
          shows the whole crop), the reader's texts become the alternatives; the answer is the check, no text check follows */
-      const zh=pic.zh.split("\n"), guesses=[...new Set(passes.map(textOf).filter(t=>t&&t!==pic.zh))].slice(0,6);
+      const zh=pic.zh.split("\n"), guesses=[...new Set(passes.map(textOf).filter(tx=>tx&&tx!==pic.zh))].slice(0,6);
       cardImg=r.blob; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=r.blob; /* the card image is the crop as framed, not the second look's band */
       SIGN[id]={lines:zh, orig:zh.slice(), conf:[], boxes:zh.map(()=>[]), img:dk.blob, angle:dk.angle||0, tightened:false, region:r, alts:guesses, trad:!!pic.zht, tradDetected:!!pic.zht, tradText:pic.zht||"",
         ai:{zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,ml:pic.ml,note:pic.note,ok:true,bad:false,pic:true}, cardImg, weak:false};
@@ -2690,16 +2689,16 @@ async function cropSign(id,opts){
        its alternatives. Only when the best reading is no dictionary word itself, and only with two or more readings
        pointing the same way. */
     if(lines.length===1&&DICT){
-      const n=[...bestT].length, texts=[...new Set(passes.map(textOf).filter(t=>t&&!t.includes("\n")&&[...t].length===n))]; /* the same length as the best: a correction, not a replacement (v100: 业主直租 once became 下人, a two-character word that garbage fragments circled) */
+      const n=[...bestT].length, texts=[...new Set(passes.map(textOf).filter(tx=>tx&&!tx.includes("\n")&&[...tx].length===n))]; /* the same length as the best: a correction, not a replacement (v100: 业主直租 once became 下人, a two-character word that garbage fragments circled) */
       const fix=dictConsensus(texts);
       if(fix&&fix.word!==bestT&&!DICT.has(bestT)&&(fix.support.includes(bestT)||fix.support.length>=3)){
         alts.push(bestT); lines[0]={...lines[0],t:fix.word}; bestT=fix.word; r.consensus={word:fix.word,from:fix.support};
       }
     }
-    for(const p of passes){ const t=textOf(p); if(t&&t!==bestT&&!alts.includes(t)) alts.push(t); if(alts.length>=5) break; }
+    for(const p of passes){ const tx=textOf(p); if(tx&&tx!==bestT&&!alts.includes(tx)) alts.push(tx); if(alts.length>=5) break; }
     /* always among them: the traditional reader's best (it knows glyphs the other one lacks) and the best reading of another
        length (two characters fused into one, or one lost — 专业冰矫正 beside 专业脊柱矫正 — is what the AI needs to see) */
-    const glyphsOf=t=>[...t].filter(c=>CJK.test(c)).length, nBest=glyphsOf(bestT);
+    const glyphsOf=tx=>[...tx].filter(c=>CJK.test(c)).length, nBest=glyphsOf(bestT);
     for(const pick of [passes.find(p=>p.lines.some(l=>l.tra)&&textOf(p)!==bestT), passes.find(p=>textOf(p)&&glyphsOf(textOf(p))!==nBest&&readingScore(p.lines,Hink)>=0.6*readingScore(lines,Hink))]){
       if(pick&&!alts.includes(textOf(pick))){ if(alts.length>=6) alts.pop(); alts.push(textOf(pick)); } }
     const tradPhoto=s2t(bestT)!==bestT&&tradPhotoOf(lines.map(x=>x.t),passes,score); r.trad=tradPhoto; /* a text without a traditional form (推) has nothing to vote on */
@@ -2980,7 +2979,7 @@ function openDrawSheet(id,k,i,apply,ins){
   fitRef(); const refView=noRef?{ready:Promise.resolve(),close(){}}:attachRefView(el.querySelector(".ckref"),sg,k,ins?-1:i); refView.ready.then(fitRef); /* a new character has no box: the whole crop */ el.refView=refView; /* used by the tests */
   window.addEventListener("resize",fitRef);
   const cv=el.querySelector(".pad"), ctx=cv.getContext("2d"), strokes=[]; let cur=null, seq=0;
-  const status=t=>{ const st=el.querySelector("#ds-st"); if(st) st.textContent=t; };
+  const status=x=>{ const st=el.querySelector("#ds-st"); if(st) st.textContent=x; };
   const close=()=>{ seq++; el.remove(); document.body.classList.remove("noscroll"); window.removeEventListener("resize",fitRef); refView.close(); };
   const paint=()=>{
     ctx.clearRect(0,0,cv.width,cv.height);
@@ -3214,8 +3213,8 @@ function wireSlines(root,onInput,onCommit){
     else if(sl&&inp.value.trim()){ sl.insertAdjacentHTML("afterbegin",charStripHTML(inp.dataset.sid,k)); const h=sl.querySelector(".ckhint"); if(h) h.dataset.text=h.textContent=t("Tap a character to change it")+t(", or type the line below")+"."; /* the first text of a card saved before its reading (v238): the strip appears with it */
       if(!root.querySelector("[data-selrow]")) root.insertAdjacentHTML("beforeend",selRowHTML(inp.dataset.sid)); wireSlines(sl,onInput,onCommit); wireSel(root); }
     if(onCommit) onCommit(sg,inp.dataset.sid,k); });
-  root.querySelectorAll("[data-spin]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.spin]; if(sg){ sg.pinTouched=true; sg.pinEdit=t.value; } });
-  root.querySelectorAll("[data-smean]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.smean]; if(sg){ sg.meanTouched=true; sg.meanEdit=t.value; } });
+  root.querySelectorAll("[data-spin]").forEach(el=> el.oninput=()=>{ const sg=SIGN[el.dataset.spin]; if(sg){ sg.pinTouched=true; sg.pinEdit=el.value; } });
+  root.querySelectorAll("[data-smean]").forEach(el=> el.oninput=()=>{ const sg=SIGN[el.dataset.smean]; if(sg){ sg.meanTouched=true; sg.meanEdit=el.value; } });
   root.querySelectorAll("[data-sflag]").forEach(cb=> cb.onchange=()=>{ const sg=SIGN[cb.dataset.sflag]; if(!sg) return; sg.flag=cb.checked; const n=root.querySelector(`[data-snote="${cb.dataset.sflag}"]`); if(n){ n.hidden=!cb.checked; if(cb.checked) n.focus(); } });
   root.querySelectorAll("[data-snote]").forEach(n=> n.oninput=()=>{ const sg=SIGN[n.dataset.snote]; if(sg) sg.flagNote=n.value; });
   wireGrow(root);
@@ -3327,7 +3326,7 @@ async function signTranslate(id){
   const tok=sg.tok=(sg.tok||0)+1;
   const sm=$(`#smean-${id}`);
   try{
-    const r=await signMeaning(lines,t=>{ const el=$(`#smean-${id}`); if(el) el.textContent=t; });
+    const r=await signMeaning(lines,x=>{ const el=$(`#smean-${id}`); if(el) el.textContent=x; });
     if(sg.tok!==tok||!SIGN[id]) return;
     const box=$(`#smean-${id}`), mf=$(`#smeanf-${id}`);
     if(box) box.textContent=t("Meaning {0}, unverified",r.src==="nmt"?t("from the offline translation"):r.src==="phrasebook"?t("from the phrasebook"):t("composed word by word"));
