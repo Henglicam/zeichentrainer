@@ -218,7 +218,9 @@ de:{
   /* the notice sheet and the pointer to the guide (v266) */
   "OK":"OK","New here? The guide explains the app in six short sections.":"Neu hier? Die Anleitung erklärt die App in sechs kurzen Abschnitten.",
   /* Undo after Delete (v268) */
-  "Deleted “{0}”":"„{0}“ gelöscht","Card deleted":"Karte gelöscht","Photo deleted":"Foto gelöscht","Deleted {0}":"{0} gelöscht","Deleted {0} and {1}":"{0} und {1} gelöscht","Undo":"Rückgängig"
+  "Deleted “{0}”":"„{0}“ gelöscht","Card deleted":"Karte gelöscht","Photo deleted":"Foto gelöscht","Deleted {0}":"{0} gelöscht","Deleted {0} and {1}":"{0} und {1} gelöscht","Undo":"Rückgängig",
+  /* the Progress dashboard (v274) */
+  "Day streak":"Tage in Folge","Cards learned":"Karten gelernt","Due today":"Heute fällig","Reviews this week":"Wiederholungen diese Woche","Last 30 days":"Die letzten 30 Tage","Still learning":"Noch am Lernen","Known":"Sicher","Coming up: {0} due tomorrow, {1} this week.":"Demnächst: {0} morgen fällig, {1} diese Woche."
 },
 fr:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"Les photos restent sur ce téléphone. Cadre le texte – la carte est créée pour toi.",
@@ -424,7 +426,9 @@ fr:{
   /* the notice sheet and the pointer to the guide (v266) */
   "OK":"OK","New here? The guide explains the app in six short sections.":"Nouveau ici ? Le guide explique l'appli en six courtes sections.",
   /* Undo after Delete (v268) */
-  "Deleted “{0}”":"« {0} » supprimée","Card deleted":"Carte supprimée","Photo deleted":"Photo supprimée","Deleted {0}":"{0} supprimées","Deleted {0} and {1}":"{0} et {1} supprimées","Undo":"Annuler"
+  "Deleted “{0}”":"« {0} » supprimée","Card deleted":"Carte supprimée","Photo deleted":"Photo supprimée","Deleted {0}":"{0} supprimées","Deleted {0} and {1}":"{0} et {1} supprimées","Undo":"Annuler",
+  /* the Progress dashboard (v274) */
+  "Day streak":"Jours d'affilée","Cards learned":"Cartes apprises","Due today":"À revoir aujourd'hui","Reviews this week":"Révisions cette semaine","Last 30 days":"Les 30 derniers jours","Still learning":"En cours","Known":"Acquises","Coming up: {0} due tomorrow, {1} this week.":"À venir : {0} demain, {1} cette semaine."
 },
 es:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"Las fotos se quedan en este teléfono. Encuadra el texto y la tarjeta se crea sola.",
@@ -630,7 +634,9 @@ es:{
   /* the notice sheet and the pointer to the guide (v266) */
   "OK":"OK","New here? The guide explains the app in six short sections.":"¿Nuevo aquí? La guía explica la app en seis secciones cortas.",
   /* Undo after Delete (v268) */
-  "Deleted “{0}”":"«{0}» eliminada","Card deleted":"Tarjeta eliminada","Photo deleted":"Foto eliminada","Deleted {0}":"{0} eliminadas","Deleted {0} and {1}":"{0} y {1} eliminadas","Undo":"Deshacer"
+  "Deleted “{0}”":"«{0}» eliminada","Card deleted":"Tarjeta eliminada","Photo deleted":"Foto eliminada","Deleted {0}":"{0} eliminadas","Deleted {0} and {1}":"{0} y {1} eliminadas","Undo":"Deshacer",
+  /* the Progress dashboard (v274) */
+  "Day streak":"Días seguidos","Cards learned":"Tarjetas aprendidas","Due today":"Para hoy","Reviews this week":"Repasos esta semana","Last 30 days":"Últimos 30 días","Still learning":"En curso","Known":"Dominadas","Coming up: {0} due tomorrow, {1} this week.":"Próximamente: {0} mañana, {1} esta semana."
 },
 ja:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"写真はこの端末に残ります。文字を枠で囲むと、カードが作られます。",
@@ -836,7 +842,9 @@ ja:{
   /* the notice sheet and the pointer to the guide (v266) */
   "OK":"OK","New here? The guide explains the app in six short sections.":"はじめての方へ：使い方ガイドが6つの短い項目でアプリを説明します。",
   /* Undo after Delete (v268) */
-  "Deleted “{0}”":"「{0}」を削除しました","Card deleted":"カードを削除しました","Photo deleted":"写真を削除しました","Deleted {0}":"{0}を削除しました","Deleted {0} and {1}":"{0}と{1}を削除しました","Undo":"元に戻す"
+  "Deleted “{0}”":"「{0}」を削除しました","Card deleted":"カードを削除しました","Photo deleted":"写真を削除しました","Deleted {0}":"{0}を削除しました","Deleted {0} and {1}":"{0}と{1}を削除しました","Undo":"元に戻す",
+  /* the Progress dashboard (v274) */
+  "Day streak":"連続日数","Cards learned":"学んだカード","Due today":"今日の復習","Reviews this week":"今週の復習回数","Last 30 days":"過去30日","Still learning":"学習中","Known":"定着","Coming up: {0} due tomorrow, {1} this week.":"この先：明日{0}枚、今週{1}枚。"
 },
 ko:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"사진은 이 기기에만 남아요. 글자를 틀로 감싸면 카드가 만들어져요.",
@@ -1042,6 +1050,8 @@ ko:{
   /* the notice sheet and the pointer to the guide (v266) */
   "OK":"확인","New here? The guide explains the app in six short sections.":"처음이세요? 사용법이 짧은 여섯 항목으로 앱을 설명해요.",
   /* Undo after Delete (v268) */
-  "Deleted “{0}”":"“{0}” 삭제했어요","Card deleted":"카드를 삭제했어요","Photo deleted":"사진을 삭제했어요","Deleted {0}":"{0} 삭제했어요","Deleted {0} and {1}":"{0}과 {1} 삭제했어요","Undo":"실행 취소"
+  "Deleted “{0}”":"“{0}” 삭제했어요","Card deleted":"카드를 삭제했어요","Photo deleted":"사진을 삭제했어요","Deleted {0}":"{0} 삭제했어요","Deleted {0} and {1}":"{0}과 {1} 삭제했어요","Undo":"실행 취소",
+  /* the Progress dashboard (v274) */
+  "Day streak":"연속 일수","Cards learned":"배운 카드","Due today":"오늘 복습","Reviews this week":"이번 주 복습","Last 30 days":"지난 30일","Still learning":"학습 중","Known":"익힘","Coming up: {0} due tomorrow, {1} this week.":"다음: 내일 {0}장, 이번 주 {1}장."
 }
 };
