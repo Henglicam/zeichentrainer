@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=255; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=256; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -507,7 +507,7 @@ async function pictureJpeg(blob){
   const out=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
   const b64=(await blobToB64(out)).d; return {b64,w:cv.width,h:cv.height,kb:Math.round(out.size/1024)};
 }
-const PIC_SYSTEM=`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","bad":true|false}. "zh" = the Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without Latin letters, numbers of the decoration or anything you cannot see; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural English meaning of the text as a sign or name (short, English only); "note" = one short remark if needed; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty. An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`;
+const picSystem=()=>`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","bad":true|false}. "zh" = the Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without Latin letters, numbers of the decoration or anything you cannot see; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural ${meaningLangName()} meaning of the text as a sign or name (short, ${meaningLangName()} only); "note" = one short remark if needed; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty. An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`; /* the meaning in the app's language (v256) */
 /* Qwen's hybrid models think by default, and the thinking takes many seconds before the short JSON comes (v208, H with Qwen
    as the active provider: "Check pinyin and meaning takes way too long" — until v207 only the picture path switched it off) */
 function noThinking(pv,model,body){ if(pv==="qwen"&&/^qwen3/.test(model)) body.enable_thinking=false; return body; }
@@ -521,8 +521,8 @@ async function aiReadPicture(blob,alts,status){
   try{
     if(pv==="claude")
       r=await aiFetch(aiBase(pv),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-        body:JSON.stringify({model,max_tokens:1000,system:PIC_SYSTEM,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:pic.b64}},{type:"text",text}]}]})});
-    else { const body={model,max_tokens:1000,temperature:0,messages:[{role:"system",content:PIC_SYSTEM},{role:"user",content:[{type:"text",text},{type:"image_url",image_url:{url:"data:image/jpeg;base64,"+pic.b64}}]}]};
+        body:JSON.stringify({model,max_tokens:1000,system:picSystem(),messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:pic.b64}},{type:"text",text}]}]})});
+    else { const body={model,max_tokens:1000,temperature:0,messages:[{role:"system",content:picSystem()},{role:"user",content:[{type:"text",text},{type:"image_url",image_url:{url:"data:image/jpeg;base64,"+pic.b64}}]}]};
       noThinking(pv,model,body);
       r=relay?await relayFetch(pv,body):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
   }catch(err){ logAi({model,req,err:"no connection: "+(err&&err.message||err)}); throw new Error(AI_NET_ERR); }
@@ -531,11 +531,10 @@ async function aiReadPicture(blob,alts,status){
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
   logAi({model,status:r.status,ms:Date.now()-t0,req,res:raw.slice(0,1500)});
   await loadScriptTables().catch(()=>{});
-  const t=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,""); let x; try{ x=JSON.parse(t); if(Array.isArray(x)) x=x[0]; }catch(e){ throw new Error("could not read the model's answer"); }
+  const txt=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,""); let x; try{ x=JSON.parse(txt); if(Array.isArray(x)) x=x[0]; }catch(e){ throw new Error("could not read the model's answer"); }
   if(!x||typeof x!=="object") throw new Error("unexpected answer");
-  let m=String(x.m||"").trim(); if(/[\u4e00-\u9fff]/.test(m)&&!/[A-Za-z]{2}/.test(m)) m="";
-  const zhRaw=String(x.zh||"").replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"), zh=t2s(zhRaw);
-  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(x.p,zh),m,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv};
+  const zhRaw=String(x.zh||"").replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"), zh=t2s(zhRaw), m=saneM(x.m,zh);
+  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(x.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv};
 }
 function aiQueue(){ return deck().filter(d=>d.c&&(d.flag||(d.mt&&(d.mt.pending||d.mt.suspect)))); } /* a card still waiting for its reading has no text to check (v237) */
 function aiAutoOn(){ return aiOn()&&S.settings.aiAuto!==false; }
@@ -556,9 +555,26 @@ function ocrDoubt(confs,meaning,unknown){
 let _aiSoon=null;
 function aiAutoSoon(){ if(!aiAutoOn()) return; clearTimeout(_aiSoon); _aiSoon=setTimeout(()=>{ _aiAutoRan=false; aiAuto(); },1500); }
 function aiCardPayload(d){
-  return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"the reading looks uncertain ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
+  return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:d.translate?"translate the meaning into "+meaningLangName()+" (it is in "+(LANG_NAME[d.ml||"en"]||"another language")+" now); keep zh and p unless clearly wrong":[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"the reading looks uncertain ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
     gloss:d.kind==="sign"?(d.gloss||[]).map(g=>g.w+" "+(g.m||"?")).join(" · "):undefined,
     alt:d.alts&&d.alts.length?d.alts:undefined, script:d.trad?"traditional":undefined };
+}
+/* the meaning in the app's language (v256, PR 4 of the multi-language UI — H: "Go, with the button"): the prompts ask for the
+   meaning in the language of the app, every AI answer carries ml = that language, and a card stores the language of its
+   meaning as ml (absent = English: the dictionary, the phrasebook and the offline model speak English, and every card before
+   v256 does). meaningLangName() is the language's English name for the model. */
+const meaningLangName=()=>LANG_NAME[LANG]||"English";
+const mlOf=d=>d.ml||"en"; /* the language of a card's meaning */
+const setMl=(card,ml)=>{ if(ml&&ml!=="en") card.ml=ml; else delete card.ml; return card; }; /* English is the absent default */
+/* the model's meaning is taken only when it is a meaning and not the Chinese text echoed (v97; since v256 by language: a Japanese
+   meaning is kanji and kana, a Korean one hangul — Latin letters are no longer the test there; an all-Han answer that is the text itself is dropped) */
+function saneM(m,zh){
+  m=String(m||"").trim(); if(!m) return "";
+  const flat=x=>String(x||"").replace(/[\s\n/·,;。，、]/g,""); const echoed=flat(m)===flat(zh)||flat(t2s(m))===flat(zh);
+  const han=/[\u4e00-\u9fff]/.test(m), latin=/[A-Za-z\u00C0-\u024F]{2}/.test(m), kana=/[\u3040-\u30ff]/.test(m), hangul=/[\uAC00-\uD7AF]/.test(m);
+  const bad=echoed||(han&&!latin&&!kana&&!hangul&&LANG!=="ja");
+  if(bad){ logErr("ai","meaning answered in Chinese: "+m); return ""; }
+  return m;
 }
 /* the model's pinyin is taken only when it fits the characters (v187, H's 志在千里: Qwen answered "zhì zài qiān l" twice, the
    ǐ lost, and the card showed it): one syllable per character, each with a vowel — else the app's own pinyin for the text */
@@ -572,9 +588,9 @@ async function saneP(p,zh){
   if(ok) return given.map(l=>l.join(" ")).join(" / ");
   try{ if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); return lines.map(pySpaced).join(" / "); }catch(e){ return String(p||"").trim(); }
 }
-const AI_SYSTEM=`You review flashcards for an adult learning to read Chinese in Beijing. Cards come from OCR of photos (signs, menus, packaging), so the Chinese text may contain OCR slips, the pinyin is auto-generated and the meaning may be a crude word-by-word gloss.
-For every card return the corrected card. Rules: "zh" = the Chinese text in simplified characters (always simplified, even when the sign is traditional), fixed only if it is clearly an OCR slip (keep line breaks); "p" = pinyin with tone marks, correct for this context (多音字!), one space between syllables, " / " between lines; "m" = natural English meaning of the whole text as a sign or word (short, in English only, no explanations); the text is usually a real sign, menu item, product name or brand — when the readings circle around a well-known brand or product name, "zh" is that name; "note" = one short sentence on what was wrong, or "ok"; "ok" = true when zh, pinyin and meaning were already right; "zht" = only when the input has "script":"traditional" (the photo shows traditional characters): "zh" written in traditional characters as it stands on the sign; "alt" (when present) = other readings of the same photo by other OCR passes and models — the true text is often a mix of them, or a well-known name or phrase they all circle around; prefer a real sign, menu or product text that every reading could be a misreading of; "bad" = true when the Chinese text is OCR garbage — no plausible sign, menu or product text can be made of it — then keep "zh" as given, leave "m" empty and say so in the note. Before calling a text bad, try the "alt" readings: when one of them, or a mix of them, is a plausible text or a well-known name (a brand on a bottle, a shop name), answer with that as "zh", "bad" false, and say in the note which reading you used. Never replace an unreadable text with a mere guess.
-Answer with a JSON array only, one object per input card in the same order: [{"c":"<input c>","zh":"…","p":"…","m":"…","note":"…","ok":true|false,"bad":true|false}]. No prose, no code fences.`;
+const aiSystem=()=>`You review flashcards for an adult learning to read Chinese in Beijing. Cards come from OCR of photos (signs, menus, packaging), so the Chinese text may contain OCR slips, the pinyin is auto-generated and the meaning may be a crude word-by-word gloss.
+For every card return the corrected card. Rules: "zh" = the Chinese text in simplified characters (always simplified, even when the sign is traditional), fixed only if it is clearly an OCR slip (keep line breaks); "p" = pinyin with tone marks, correct for this context (多音字!), one space between syllables, " / " between lines; "m" = natural ${meaningLangName()} meaning of the whole text as a sign or word (short, in ${meaningLangName()} only, no explanations — the input meaning may be in another language, answer in ${meaningLangName()}); the text is usually a real sign, menu item, product name or brand — when the readings circle around a well-known brand or product name, "zh" is that name; "note" = one short sentence on what was wrong, or "ok" (in English); "ok" = true when zh, pinyin and meaning were already right; "zht" = only when the input has "script":"traditional" (the photo shows traditional characters): "zh" written in traditional characters as it stands on the sign; "alt" (when present) = other readings of the same photo by other OCR passes and models — the true text is often a mix of them, or a well-known name or phrase they all circle around; prefer a real sign, menu or product text that every reading could be a misreading of; "bad" = true when the Chinese text is OCR garbage — no plausible sign, menu or product text can be made of it — then keep "zh" as given, leave "m" empty and say so in the note. Before calling a text bad, try the "alt" readings: when one of them, or a mix of them, is a plausible text or a well-known name (a brand on a bottle, a shop name), answer with that as "zh", "bad" false, and say in the note which reading you used. Never replace an unreadable text with a mere guess.
+Answer with a JSON array only, one object per input card in the same order: [{"c":"<input c>","zh":"…","p":"…","m":"…","note":"…","ok":true|false,"bad":true|false}]. No prose, no code fences.`; /* the meaning in the app's language (v256) — meaningLangName() is read when the request goes out */
 async function aiAsk(cards,status){
   const pv=aiProvider(), key=aiKey(), relay=!key&&viaRelay(pv); if(!key&&!relay) throw new Error("no API key");
   const model=aiModel(), user=JSON.stringify(cards.map(aiCardPayload));
@@ -583,9 +599,9 @@ async function aiAsk(cards,status){
   try{
     if(pv==="claude")
       r=await aiFetch(aiBase(),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-        body:JSON.stringify({model,max_tokens:4000,system:AI_SYSTEM,messages:[{role:"user",content:user}]})});
+        body:JSON.stringify({model,max_tokens:4000,system:aiSystem(),messages:[{role:"user",content:user}]})});
     else { /* OpenAI-style chat completions (DeepSeek, Qwen, GLM, …), direct with the phone's key or through the owner's relay */
-      const body=noThinking(pv,model,{model,max_tokens:4000,temperature:0,messages:[{role:"system",content:AI_SYSTEM},{role:"user",content:user}]});
+      const body=noThinking(pv,model,{model,max_tokens:4000,temperature:0,messages:[{role:"system",content:aiSystem()},{role:"user",content:user}]});
       r=relay?await relayFetch(pv,body):await aiFetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
   }catch(err){ logAi({model,req:user.slice(0,1500),err:"no connection: "+(err&&err.message||err)+(pv==="claude"?" — the API may be blocked without a VPN":" — offline, or this provider refuses calls from a browser")}); throw new Error(AI_NET_ERR); }
   if(!r.ok&&relay){ const t=await apiErrText(r); logAi({model,status:r.status,req:user.slice(0,1500),err:t}); throw new Error(relayError(r,t)); }
@@ -599,10 +615,9 @@ async function aiAsk(cards,status){
   const text=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,"");
   let arr; try{ arr=JSON.parse(text); }catch(e){ throw new Error("could not read the model's answer"); }
   if(!Array.isArray(arr)) throw new Error("unexpected answer");
-  const out=[]; for(const x of arr){ let m=String(x.m||"").trim();
-    if(/[\u4e00-\u9fff]/.test(m)&&!/[A-Za-z]{2}/.test(m)){ logErr("ai","meaning answered in Chinese: "+m); m=""; } /* v97: the model once echoed the Chinese text as the meaning — an English meaning or none */
-    const zhRaw=String(x.zh||"").trim(), zh=t2s(zhRaw), zht=String(x.zht||"").trim()||(zh!==zhRaw?zhRaw:"");
-    out.push({zh,zht,p:x.bad?String(x.p||"").trim():await saneP(x.p,zh),m,note:String(x.note||"").trim(),ok:!!x.ok,bad:!!x.bad,at:Date.now(),model}); }
+  const out=[]; for(const x of arr){
+    const zhRaw=String(x.zh||"").trim(), zh=t2s(zhRaw), zht=String(x.zht||"").trim()||(zh!==zhRaw?zhRaw:""), m=saneM(x.m,zh);
+    out.push({zh,zht,p:x.bad?String(x.p||"").trim():await saneP(x.p,zh),m,ml:LANG,note:String(x.note||"").trim(),ok:!!x.ok,bad:!!x.bad,at:Date.now(),model}); }
   return out;
 }
 /* run the review over the whole queue (or the given cards) and store suggestions on the cards */
@@ -627,7 +642,7 @@ async function aiFlag(id){
 async function aiAccept(id){
   const d=cardOf(id); if(!d||!d.ai) return;
   if(d.ai.bad) return aiFlag(id); /* never applies an empty meaning */
-  const a=d.ai, upd={...d, p:a.p||d.p, m:a.m||d.m};
+  const a=d.ai, upd={...d, p:a.p||d.p, m:a.m||d.m}; if(a.m) setMl(upd,a.ml); /* the meaning's language comes with the suggestion (v256) */
   delete upd.ai; delete upd.flag; delete upd.flagNote;
   upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false}; delete upd.mt.suspect;
   const newC=a.zh&&CJK.test(a.zh)?a.zh.replace(/\r/g,""):d.c;
@@ -810,6 +825,36 @@ function applyLangStatic(){ document.documentElement.lang=LANG;
   [["#stat-open b","Due"],["#stat-done b","capsule:Done"],["#stat-deck b","Deck"]].forEach(([q,k])=>{ const e=$(q); if(e) e.textContent=t(k); });
   document.querySelectorAll("#tabs .tab").forEach(b=>{ const k={study:"Learn",cards:"Cards",inbox:"Camera",more:"More"}[b.dataset.mode]; const n=b.lastChild; if(k&&n&&n.nodeType===3) n.textContent=t(k); }); }
 async function setLang(code){ if(!LANGS.some(([c])=>c===code)) return; LANG=code; await setSetting("lang",code); applyLangStatic(); render(); }
+/* Translate all cards into the app's language (v256, H chose the button over an automatic run — it costs an AI call per batch of
+   cards): the cards whose meaning is in another language than the app's go to the AI in batches, only the meaning and its
+   language are taken from the answer, the text and the pinyin stay. The row sits under the Language chips and shows only
+   while such cards exist and an AI is set up. */
+const TRANSLATE_BATCH=20;
+const toTranslate=()=>deck().filter(d=>d.c&&d.m&&mlOf(d)!==LANG);
+function translateRowHTML(){
+  const n=toTranslate().length; if(!n||!aiOn()) return "";
+  const name=(LANGS.find(([c])=>c===LANG)||[])[1]||LANG;
+  return `<div class="mrow"><div style="flex:1"><div class="t">${t("Meanings")}</div><div class="s" id="translate-status">${t("{0} have their meaning in another language.",nOf(n,"card"))}</div><div class="fieldacts"><button class="btn mini" id="translate-all">${t("Translate all cards into {0}",name)}</button></div></div></div>`; /* the button under the sentence, as the Feedback row's Send — its label is long in every language */
+}
+let _translating=false;
+async function translateAll(){
+  if(_translating) return; const st=$("#translate-status"), b=$("#translate-all"); if(!st||!b) return;
+  if(!navigator.onLine){ st.textContent=t("No connection. Try again when online."); return; }
+  const list=toTranslate(); if(!list.length) return;
+  _translating=true; b.disabled=true; let done=0, failed=null;
+  try{
+    for(let i=0;i<list.length;i+=TRANSLATE_BATCH){
+      const batch=list.slice(i,i+TRANSLATE_BATCH); st.textContent=t("Translating {0} of {1} …",Math.min(i+batch.length,list.length),list.length);
+      const ans=await aiAsk(batch.map(d=>({...d,translate:true})));
+      for(let k=0;k<batch.length;k++){ const d=cardOf(batch[k].id), a=ans[k]; if(!d||!a||!a.m||a.bad) continue;
+        const upd={...d, m:a.m}; setMl(upd,a.ml); await putCard(upd,d.id); done++; }
+    }
+  }catch(err){ failed=err&&err.message||String(err); }
+  _translating=false;
+  const left=toTranslate().length;
+  st.textContent=failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",done,left):t("Done — {0} translated.",nOf(done,"card"));
+  if(!left){ b.remove(); } else b.disabled=false;
+}
 function reportData(){
   const u=usage(), m=u.m||{}, st=learnStats(), n=k=>u[k]||0, mn=k=>m[k]||0;
   const ua=navigator.userAgent, dev=((ua.match(/\(([^)]*)\)/)||[])[1]||"")+(inWeChat()?"; WeChat":"");
@@ -931,7 +976,8 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div></div><button class="btn mini" id="mirror-check">Check now</button></div>
     <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>`:""}
     <div class="listhead">${t("Language")}</div>
-    <div class="mrow"><div style="flex:1"><div class="t">${t("Language")}</div><div class="s">${t("The app's own texts. Cards keep their Chinese, pinyin and meaning.")}</div><div class="chipset" id="lang-chips" style="margin-top:8px">${LANGS.map(([c,n])=>`<button class="chip${LANG===c?" on":""}" data-lang="${c}">${n}</button>`).join("")}</div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">${t("Language")}</div><div class="s">${t("The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.")}</div><div class="chipset" id="lang-chips" style="margin-top:8px">${LANGS.map(([c,n])=>`<button class="chip${LANG===c?" on":""}" data-lang="${c}">${n}</button>`).join("")}</div></div></div>
+    ${translateRowHTML()}
     <div class="listhead">${t("On this phone")}</div>
     <div class="mrow"><div><div class="t">${t("Progress")}</div><div class="s">${statsLine()}. ${t("App opened {0}, {1} reviewed, {2}, {3} checked by the AI.",nOf(usage().opens,"time"),nOf(usage().reviews,"card"),nOf(usage().aiCalls,"AI check"),nOf(usage().pics,"photo"))} ${t("Work done by {0}.",workLines(usage().models).join(", "))}</div></div><button class="btn mini" id="usage-share">${t("Share report")}</button></div>
     <div class="mrow"><div><div class="t">${t("Usage sharing")}</div><div class="s">${t("Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks. No card text, no photos.")} <span id="share-status">${esc(shareNote())}</span> ${t("Your id: {0}.",`<span id="share-id">${esc(installId())}</span>`)}<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> ${t("Send once a day")}</label></div></div></div>
@@ -956,6 +1002,7 @@ function renderMore(main){
   $("#export-photos").onchange=e=>setSetting("exportPhotos",!!e.target.checked);
   $("#usage-share").onclick=shareUsage; $("#app-share").onclick=shareApp;
   document.querySelectorAll("[data-lang]").forEach(b=> b.onclick=()=>setLang(b.dataset.lang));
+  const tr=$("#translate-all"); if(tr) tr.onclick=translateAll;
   wireGrow(main); /* the feedback box grows with its text like the forms' fields (v218, H: "looks a little bit old school") */
   $("#fb-send").onclick=async()=>{ const tx=$("#fb-text"), st=$("#fb-status"), b=$("#fb-send"), text=tx.value.trim(); if(!text){ st.textContent=t("Write a few words first."); return; }
     if(!navigator.onLine){ st.textContent=t("No connection. Try again when online."); return; }
@@ -1310,7 +1357,7 @@ function renderAdd(main){
           if(r.p&&!pinTouched) $("#f-pin").value=r.p;
           if(r.m&&!meanTouched) $("#f-mean").value=r.m;
           wireGrow(main); st.textContent=""; $("#f-pinhint").style.display="none";
-          saveDraft(); S.draft.ai={c:word,p:r.p||"",m:r.m||""}; return;
+          saveDraft(); S.draft.ai={c:word,p:r.p||"",m:r.m||"",ml:r.ml}; return;
         }
       }catch(err){ if(!same()) return; st.textContent=t(AI_NET_ERR)+"."; }
     }
@@ -1414,7 +1461,7 @@ function renderCardDetail(main,c){
 function renderEdit(main,c){
   const d=cardOf(c); if(!d){ S.editing=null; S.editFrom=null; return render(); }
   const isSign=d.kind==="sign";
-  let removeImg=false, aiApplied=false, recropImg=null, recropRect=null, meanTouched=false; /* recropImg: the crop framed again in this form (v239), stored on Save with its frame (recropRect, v244) */
+  let removeImg=false, aiApplied=false, aiMl=null, recropImg=null, recropRect=null, meanTouched=false; /* aiMl: the language of the meaning the AI filled in (v256) */ /* recropImg: the crop framed again in this form (v239), stored on Save with its frame (recropRect, v244) */
   /* the text is edited like the Read preview (H): a character strip per line, tap a character for the picker and the
      drawing sheet; SIGN carries the lines and the card's crop as the photo reference (no boxes: the whole crop) */
   const eid="edit"+(S.editSeq=(S.editSeq||0)+1), lines0=isSign?d.c.split("\n"):frontLines(d); /* plain id: it goes into selectors */
@@ -1483,7 +1530,7 @@ function renderEdit(main,c){
       const [r]=await aiAsk([{kind:d.kind||"word",c:isSign?zh.split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):zh.replace(/\s+/g,""),p:pin,m:mean,flagNote:note,gloss:d.gloss,mt:{src:"dict",verified:false,suspect:"please check"}}],()=>{ st.innerHTML=busyHTML(t(AI_BUSY_TEXT)); });
       if(r.zh&&CJK.test(r.zh)){ const zh=r.zh.replace(/\r/g,""); sg.lines=(isSign?zh:recutLines(zh.replace(/\s+/g,""),sg.lines)).split("\n").map(l=>l.trim()).filter(Boolean); sg.orig=sg.lines.slice(); syncWord(); drawLines(); }
       if(r.p) $("#e-pin").value=r.p;
-      if(r.m) $("#e-mean").value=r.m;
+      if(r.m){ $("#e-mean").value=r.m; aiMl=r.ml||"en"; meanTouched=false; }
       aiApplied=true; st.textContent=""; /* a good answer shows nothing, the fields just fill — as in the Read preview (H, v105; the green "AI: looks right" box went in v245) */
     }catch(err){ const m=err&&err.message||String(err); st.textContent=m===AI_NET_ERR?t(m)+t(". Tap the button to try again."):t("The AI check failed: {0}",m); }
     ab.disabled=false;
@@ -1598,6 +1645,7 @@ function renderEdit(main,c){
     else if(recropImg){ upd.img=await jpegOf(recropImg); if(recropRect) upd.frame=photoFrame(recropRect); dropThumb(c); } /* the crop framed again in this form (v239) with its frame (v244), as fractions of the whole photo even when framed in the window (v247) */
     if(upd.mt){ upd.mt={...upd.mt, verified:true, pending:false}; delete upd.mt.suspect; } /* a human edited it */
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
+    if(aiMl&&!meanTouched) setMl(upd,aiMl); else if(meanTouched||mean!==d.m) setMl(upd,LANG); /* a meaning typed here is in the app's language, one the AI filled in carries its own; an untouched meaning keeps its language (v256) */
     const tags=parseTags($("#e-tags").value); if(tags.length) upd.tags=tags; else delete upd.tags;
     if($("#e-flag").checked){ upd.flag=true; const note=$("#e-note").value.trim(); if(note) upd.flagNote=note; else delete upd.flagNote; }
     else { delete upd.flag; delete upd.flagNote; }
@@ -1646,8 +1694,9 @@ async function addManual(){
   if(!pin||!mean) return fail(t("Pinyin and meaning are required."));
   if(deck().some(d=>d.c===word&&(!S.pendingShot||d.shot===S.pendingShot))) return fail(t("“{0}” is already in the deck.",word)); /* with a new photo the same text is a new card (v118) */
   const card={id:cardId(word),c:word,p:pin,m:mean,t:"Custom",at:Date.now()};
-  const ai=S.draft&&S.draft.ai; if(ai&&ai.c===word&&(!ai.p||ai.p===pin)&&(!ai.m||ai.m===mean)) card.mt={src:"llm",verified:true,pending:false}; /* filled in by the AI and left as it was (v159) */
+  const ai=S.draft&&S.draft.ai; if(ai&&ai.c===word&&(!ai.p||ai.p===pin)&&(!ai.m||ai.m===mean)){ card.mt={src:"llm",verified:true,pending:false}; if(ai.m) setMl(card,ai.ml); } /* filled in by the AI and left as it was (v159); the meaning's language with it (v256) */
   else if($("#f-pinhint").style.display!=="none") card.mt={src:"dict",verified:false,pending:true}; /* filled in from the dictionary: the AI completes it when it can */
+  else setMl(card,LANG); /* typed by hand: the app's language */
   const tags=parseTags($("#f-tags").value); if(tags.length) card.tags=tags;
   if($("#f-flag").checked){ card.flag=true; const note=$("#f-note").value.trim(); if(note) card.flagNote=note; }
   if(S.pendingShot){ card.shot=S.pendingShot; S.pendingShot=null; }
@@ -2590,7 +2639,7 @@ async function cropSign(id,opts){
       const zh=pic.zh.split("\n"), guesses=[...new Set(passes.map(textOf).filter(t=>t&&t!==pic.zh))].slice(0,6);
       cardImg=r.blob; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=r.blob; /* the card image is the crop as framed, not the second look's band */
       SIGN[id]={lines:zh, orig:zh.slice(), conf:[], boxes:zh.map(()=>[]), img:dk.blob, angle:dk.angle||0, tightened:false, region:r, alts:guesses, trad:!!pic.zht, tradDetected:!!pic.zht, tradText:pic.zht||"",
-        ai:{zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,note:pic.note,ok:true,bad:false,pic:true}, cardImg, weak:false};
+        ai:{zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,ml:pic.ml,note:pic.note,ok:true,bad:false,pic:true}, cardImg, weak:false};
       delete READING[id]; renderShots(); if(PENDING[id]) finishPending(id); if(RECROP[id]) RECROP[id].onRead(SIGN[id]); return;
     }
     if(!lines.length){ status("No Chinese characters recognized — frame the characters tightly and try again."); if(PENDING[id]) failPending(id,"no Chinese characters recognized"); return; }
@@ -3225,7 +3274,7 @@ async function signAskAI(id){
     zh=recutLines(zh,lines); /* the model often drops the line breaks — the photo's lines win */
     const kept=zh!==c?aiSettled(sg,lines,zh):"";
     if(kept){ sg.ai={zh:c,proposed:zh,kept,zht:"",p:"",m:"",note:r.note,ok:false,bad:false}; }
-    else { sg.lines=zh.split("\n"); sg.ai={zh,zht:r.zht&&CJK.test(r.zht)?recutLines(r.zht.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"),lines):"",p:r.p,m:r.m,note:r.note,ok:r.ok,bad:!!r.bad};
+    else { sg.lines=zh.split("\n"); sg.ai={zh,zht:r.zht&&CJK.test(r.zht)?recutLines(r.zht.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"),lines):"",p:r.p,m:r.m,ml:r.ml,note:r.note,ok:r.ok,bad:!!r.bad};
     if(r.bad&&!sg.flag){ sg.flag=true; sg.flagNote=sg.flagNote||t("the reading looks wrong"); } } /* H's rule: when unsure, flag instead of inventing */
   }catch(err){ if(SIGN[id]) sg.aiErr=err&&err.message||String(err); } /* → signPreview falls back to the offline model */
   if(SIGN[id]){ delete sg.aiBusy; delete sg.aiPromise; }
@@ -3258,10 +3307,11 @@ async function readingCard(id,sg){
   const c=keep.map(x=>x.l).join("\n");
   /* meaning: AI check (if done here) → phrasebook → offline translation (if enabled) → word gloss (then pending) */
   let mt={src:sg.full?"phrasebook":"gloss",verified:false,pending:!sg.full}, mean=sg.mean||"", pin=keep.map(x=>x.r.py).join(" / ");
-  if(sg.ai && c===sg.ai.zh && !sg.ai.bad && !sg.ai.kept){ mean=sg.ai.m||mean; pin=sg.ai.p||pin; mt={src:"llm",verified:true,pending:false}; }
+  let ml="en"; /* the meaning's language (v256): the AI answers in the app's language, a typed meaning counts as the app's language, the dictionary and the offline model are English */
+  if(sg.ai && c===sg.ai.zh && !sg.ai.bad && !sg.ai.kept){ mean=sg.ai.m||mean; pin=sg.ai.p||pin; mt={src:"llm",verified:true,pending:false}; if(sg.ai.m) ml=sg.ai.ml||"en"; }
   const pinHand=sg.pinTouched&&(sg.pinEdit||"").replace(/\s+/g," ").trim(), meanHand=sg.meanTouched&&(sg.meanEdit||"").replace(/\s+/g," ").trim();
   if(pinHand) pin=pinHand;
-  if(meanHand){ mean=meanHand; mt={...mt,verified:true,pending:false}; } /* H wrote the meaning: no offline model, no pending */
+  if(meanHand){ mean=meanHand; mt={...mt,verified:true,pending:false}; ml=LANG; } /* H wrote the meaning: no offline model, no pending */
   else if(!meanHand && !sg.full && nmtOn() && !(aiLive()&&!sg.aiErr)){ /* no connection (or AI failed): offline model */
     const done=sg.nmt&&sg.nmt.lines===keep.map(x=>x.l).join("\n")?sg.nmt:null; /* the preview's translation of these very lines */
     if(done){ mean=done.m||mean; mt={src:done.src,verified:false,pending:done.pending}; }
@@ -3279,6 +3329,7 @@ async function readingCard(id,sg){
     ? { id:cardId(c), c, p:pin, m:mean, t:"Custom", at:Date.now(), shot:id, lb:"photo", mt, ...(keep[0].r.segs.filter(x=>CJK.test(x)).length>1?{seg:keep[0].r.segs.filter(x=>CJK.test(x)), gloss:keep[0].r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))}:{}) }
     : { id:cardId(c), kind:"sign", c, p:pin, m:mean, t:"Sign", at:Date.now(), shot:id,
         segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
+  setMl(card,ml);
   if(sg.flag){ card.flag=true; const note=(sg.flagNote||"").trim(); if(note) card.flagNote=note; } /* H: flag a new card at once, without opening it again */
   if(sg.tags&&sg.tags.length) card.tags=sg.tags.slice();
   if(sg.alts&&sg.alts.length) card.alts=sg.alts.slice(0,5); /* the other readings stay with the card for a later AI check */

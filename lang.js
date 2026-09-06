@@ -6,6 +6,7 @@
    To add a language: one more entry in LANGS and one more column below. */
 const LANGS=[["en","English"],["de","Deutsch"],["fr","Français"],["es","Español"],["ja","日本語"],["ko","한국어"]];
 const LANG_LOCALE={en:"en-GB",de:"de-DE",fr:"fr-FR",es:"es-ES",ja:"ja-JP",ko:"ko-KR"};
+const LANG_NAME={en:"English",de:"German",fr:"French",es:"Spanish",ja:"Japanese",ko:"Korean"}; /* the languages' English names, for the AI's prompt (v256) */
 let LANG="en";
 function langDefault(){ const l=String(navigator.language||"").toLowerCase().slice(0,2); return LANGS.some(([c])=>c===l)?l:"en"; }
 function t(key,...args){ const d=L10N[LANG]; let s=d&&d[key]!=null?d[key]:null; if(s==null) s=L10N.en&&L10N.en[key]!=null?L10N.en[key]:key; /* a key with a prefix ("capsule:Done") has its English in the en column */ return args.length?s.replace(/\{(\d)\}/g,(m,i)=>args[+i]!=null?args[+i]:m):s; }
@@ -112,7 +113,7 @@ de:{
   "the reading looks wrong":"die Lesung scheint falsch",
   "time":"{0}-mal","times":"{0}-mal","AI check":"{0} KI-Prüfung","AI checks":"{0} KI-Prüfungen",
   "Due":"Fällig","capsule:Done":"Fertig","Deck":"Karten","Learn":"Lernen","Cards":"Karten","Camera":"Kamera","More":"Mehr",
-  "Language":"Sprache","The app's own texts. Cards keep their Chinese, pinyin and meaning.":"Die Texte der App. Die Karten behalten Chinesisch, Pinyin und Bedeutung.",
+  "Language":"Sprache",
   "Loading …":"Lädt …","No cards yet.":"Noch keine Karten.",
   "Photograph a sign, a menu or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.":"Fotografiere ein Schild, eine Speisekarte oder eine Verpackung unter <b>Kamera</b> – oder trage ein Wort von Hand ein unter <b>Karten → + Neu</b>.",
   "Take a photo":"Foto aufnehmen","All clear.":"Alles erledigt.","Pulled-forward round finished.":"Vorgezogene Runde beendet.",
@@ -184,7 +185,9 @@ de:{
   "Start over?":"Von vorn anfangen?","All progress, cards and inbox photos on this phone will be deleted.":"Aller Fortschritt, alle Karten und Fotos im Eingang auf diesem Telefon werden gelöscht.",
   "Delete everything":"Alles löschen","Oldest first":"Älteste zuerst","Newest first":"Neueste zuerst","Random":"Zufällig",
   "suggestion":"{0} Vorschlag","suggestions":"{0} Vorschläge","progress entry":"{0} Lerneintrag","progress entries":"{0} Lerneinträge",
-  "reading":"{0} Erkennung","readings":"{0} Erkennungen","check":"{0} Prüfung","checks":"{0} Prüfungen"
+  "reading":"{0} Erkennung","readings":"{0} Erkennungen","check":"{0} Prüfung","checks":"{0} Prüfungen",
+  /* the meaning in the app's language and the Translate-all row (v256) */
+  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"Die Texte der App und, mit der KI, die Bedeutung neuer Karten. Karten behalten Chinesisch und Pinyin.","Meanings":"Bedeutungen","{0} have their meaning in another language.":"{0} haben ihre Bedeutung in einer anderen Sprache.","Translate all cards into {0}":"Alle Karten auf {0} übersetzen","Translating {0} of {1} …":"Übersetze {0} von {1} …","{0} translated, {1} left.":"{0} übersetzt, {1} übrig.","Done — {0} translated.":"Fertig — {0} übersetzt."
 },
 fr:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"Les photos restent sur ce téléphone. Cadre le texte – la carte est créée pour toi.",
@@ -285,7 +288,7 @@ fr:{
   "the reading looks wrong":"la lecture semble fausse",
   "time":"{0} fois","times":"{0} fois","AI check":"{0} vérification par l'IA","AI checks":"{0} vérifications par l'IA",
   "Due":"À faire","capsule:Done":"Faites","Deck":"Cartes","Learn":"Apprendre","Cards":"Cartes","Camera":"Photo","More":"Plus",
-  "Language":"Langue","The app's own texts. Cards keep their Chinese, pinyin and meaning.":"Les textes de l'application. Les cartes gardent le chinois, le pinyin et le sens.",
+  "Language":"Langue",
   "Loading …":"Chargement …","No cards yet.":"Pas encore de cartes.",
   "Photograph a sign, a menu or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.":"Photographie un panneau, un menu ou un emballage sous <b>Photo</b> – ou ajoute un mot à la main sous <b>Cartes → + Nouvelle</b>.",
   "Take a photo":"Prendre une photo","All clear.":"Tout est fait.","Pulled-forward round finished.":"Tour anticipé terminé.",
@@ -357,7 +360,9 @@ fr:{
   "Start over?":"Tout recommencer ?","All progress, cards and inbox photos on this phone will be deleted.":"Toute la progression, les cartes et les photos de la boîte sur ce téléphone seront supprimées.",
   "Delete everything":"Tout supprimer","Oldest first":"Plus anciennes d'abord","Newest first":"Plus récentes d'abord","Random":"Aléatoire",
   "suggestion":"{0} suggestion","suggestions":"{0} suggestions","progress entry":"{0} entrée de progression","progress entries":"{0} entrées de progression",
-  "reading":"{0} lecture","readings":"{0} lectures","check":"{0} vérification","checks":"{0} vérifications"
+  "reading":"{0} lecture","readings":"{0} lectures","check":"{0} vérification","checks":"{0} vérifications",
+  /* the meaning in the app's language and the Translate-all row (v256) */
+  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"Les textes de l'appli et, avec l'IA, le sens des nouvelles cartes. Les cartes gardent le chinois et le pinyin.","Meanings":"Sens","{0} have their meaning in another language.":"{0} ont leur sens dans une autre langue.","Translate all cards into {0}":"Traduire toutes les cartes en {0}","Translating {0} of {1} …":"Traduction {0} sur {1} …","{0} translated, {1} left.":"{0} traduites, {1} restantes.","Done — {0} translated.":"Terminé – {0} traduites."
 },
 es:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"Las fotos se quedan en este teléfono. Encuadra el texto y la tarjeta se crea sola.",
@@ -458,7 +463,7 @@ es:{
   "the reading looks wrong":"la lectura parece incorrecta",
   "time":"{0} vez","times":"{0} veces","AI check":"{0} comprobación de la IA","AI checks":"{0} comprobaciones de la IA",
   "Due":"Pendientes","capsule:Done":"Hechas","Deck":"Tarjetas","Learn":"Aprender","Cards":"Tarjetas","Camera":"Cámara","More":"Más",
-  "Language":"Idioma","The app's own texts. Cards keep their Chinese, pinyin and meaning.":"Los textos de la app. Las tarjetas conservan el chino, el pinyin y el significado.",
+  "Language":"Idioma",
   "Loading …":"Cargando …","No cards yet.":"Aún no hay tarjetas.",
   "Photograph a sign, a menu or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.":"Fotografía un letrero, una carta o un envase en <b>Cámara</b>, o añade una palabra a mano en <b>Tarjetas → + Nueva</b>.",
   "Take a photo":"Hacer una foto","All clear.":"Todo hecho.","Pulled-forward round finished.":"Ronda adelantada terminada.",
@@ -530,7 +535,9 @@ es:{
   "Start over?":"¿Empezar de cero?","All progress, cards and inbox photos on this phone will be deleted.":"Se eliminarán todo el progreso, las tarjetas y las fotos de la bandeja en este teléfono.",
   "Delete everything":"Eliminar todo","Oldest first":"Más antiguas primero","Newest first":"Más recientes primero","Random":"Aleatorio",
   "suggestion":"{0} sugerencia","suggestions":"{0} sugerencias","progress entry":"{0} entrada de progreso","progress entries":"{0} entradas de progreso",
-  "reading":"{0} lectura","readings":"{0} lecturas","check":"{0} revisión","checks":"{0} revisiones"
+  "reading":"{0} lectura","readings":"{0} lecturas","check":"{0} revisión","checks":"{0} revisiones",
+  /* the meaning in the app's language and the Translate-all row (v256) */
+  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"Los textos de la app y, con la IA, el significado de las tarjetas nuevas. Las tarjetas conservan el chino y el pinyin.","Meanings":"Significados","{0} have their meaning in another language.":"{0} tienen su significado en otro idioma.","Translate all cards into {0}":"Traducir todas las tarjetas al {0}","Translating {0} of {1} …":"Traduciendo {0} de {1} …","{0} translated, {1} left.":"{0} traducidas, {1} pendientes.","Done — {0} translated.":"Listo — {0} traducidas."
 },
 ja:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"写真はこの端末に残ります。文字を枠で囲むと、カードが作られます。",
@@ -631,7 +638,7 @@ ja:{
   "the reading looks wrong":"読み取りが誤りのようです",
   "time":"{0}回","times":"{0}回","AI check":"AI確認{0}回","AI checks":"AI確認{0}回",
   "Due":"今日","capsule:Done":"済み","Deck":"カード","Learn":"学習","Cards":"カード","Camera":"カメラ","More":"その他",
-  "Language":"言語","The app's own texts. Cards keep their Chinese, pinyin and meaning.":"アプリの表示言語です。カードの中国語・ピンイン・意味は変わりません。",
+  "Language":"言語",
   "Loading …":"読み込み中 …","No cards yet.":"カードはまだありません。",
   "Photograph a sign, a menu or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.":"<b>カメラ</b>で看板・メニュー・パッケージを撮影するか、<b>カード → + 新規</b>で単語を手入力してください。",
   "Take a photo":"写真を撮る","All clear.":"今日の分は終わりました。","Pulled-forward round finished.":"前倒しの復習が終わりました。",
@@ -703,7 +710,9 @@ ja:{
   "Start over?":"最初からやり直しますか？","All progress, cards and inbox photos on this phone will be deleted.":"この端末の学習記録、カード、受信箱の写真がすべて削除されます。",
   "Delete everything":"すべて削除","Oldest first":"古い順","Newest first":"新しい順","Random":"ランダム",
   "suggestion":"候補{0}件","suggestions":"候補{0}件","progress entry":"学習記録{0}件","progress entries":"学習記録{0}件",
-  "reading":"読み取り{0}回","readings":"読み取り{0}回","check":"確認{0}回","checks":"確認{0}回"
+  "reading":"読み取り{0}回","readings":"読み取り{0}回","check":"確認{0}回","checks":"確認{0}回",
+  /* the meaning in the app's language and the Translate-all row (v256) */
+  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"アプリの表示と、AIを使うときは新しいカードの意味。カードの中国語とピンインはそのままです。","Meanings":"意味","{0} have their meaning in another language.":"{0}の意味が別の言語になっています。","Translate all cards into {0}":"すべてのカードを{0}に翻訳","Translating {0} of {1} …":"翻訳中 {0} / {1}…","{0} translated, {1} left.":"{0}枚を翻訳、残り{1}枚。","Done — {0} translated.":"完了。{0}を翻訳しました。"
 },
 ko:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"사진은 이 기기에만 남아요. 글자를 틀로 감싸면 카드가 만들어져요.",
@@ -804,7 +813,7 @@ ko:{
   "the reading looks wrong":"읽기가 틀린 것 같아요",
   "time":"{0}번","times":"{0}번","AI check":"AI 확인 {0}회","AI checks":"AI 확인 {0}회",
   "Due":"오늘","capsule:Done":"완료","Deck":"카드","Learn":"학습","Cards":"카드","Camera":"카메라","More":"더보기",
-  "Language":"언어","The app's own texts. Cards keep their Chinese, pinyin and meaning.":"앱의 표시 언어예요. 카드의 중국어, 병음, 뜻은 그대로예요.",
+  "Language":"언어",
   "Loading …":"불러오는 중 …","No cards yet.":"아직 카드가 없어요.",
   "Photograph a sign, a menu or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.":"<b>카메라</b>에서 간판, 메뉴, 포장을 찍거나 <b>카드 → + 새로 만들기</b>에서 단어를 직접 입력하세요.",
   "Take a photo":"사진 찍기","All clear.":"오늘 분량을 마쳤어요.","Pulled-forward round finished.":"앞당긴 복습을 마쳤어요.",
@@ -876,6 +885,8 @@ ko:{
   "Start over?":"처음부터 다시 시작할까요?","All progress, cards and inbox photos on this phone will be deleted.":"이 휴대폰의 모든 진행 상황, 카드, 받은 사진이 삭제돼요.",
   "Delete everything":"모두 삭제","Oldest first":"오래된 순","Newest first":"최신 순","Random":"무작위",
   "suggestion":"제안 {0}개","suggestions":"제안 {0}개","progress entry":"학습 기록 {0}개","progress entries":"학습 기록 {0}개",
-  "reading":"읽기 {0}회","readings":"읽기 {0}회","check":"확인 {0}회","checks":"확인 {0}회"
+  "reading":"읽기 {0}회","readings":"읽기 {0}회","check":"확인 {0}회","checks":"확인 {0}회",
+  /* the meaning in the app's language and the Translate-all row (v256) */
+  "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"앱의 표시 언어와, AI를 쓸 때는 새 카드의 뜻. 카드의 중국어와 병음은 그대로예요.","Meanings":"뜻","{0} have their meaning in another language.":"{0}의 뜻이 다른 언어로 되어 있어요.","Translate all cards into {0}":"모든 카드를 {0}(으)로 번역","Translating {0} of {1} …":"번역 중 {0} / {1}…","{0} translated, {1} left.":"{0}장 번역됨, {1}장 남음.","Done — {0} translated.":"완료. {0}을(를) 번역했어요."
 }
 };
