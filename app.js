@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=241; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=242; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2533,7 +2533,7 @@ async function finishPending(id){
     const {card,c,mt}=built;
     for(const k of Object.keys(ph)) if(!["id","at","img","imgFull","shot","tags"].includes(k)) delete ph[k];
     const {id:_i,at:_a,img:_m,shot:_s,...fields}=card; Object.assign(ph,fields);
-    if(sg.cardImg) ph.img=await jpegOf(sg.cardImg);
+    if(sg.cardImg){ ph.img=await jpegOf(sg.cardImg); dropThumb(ph.id); } /* the list's thumbnail was made from the crop saved first (v242, H: "the card with a photo before the re-crop remains") */
     if(mt.suspect||sg.weak||(sg.ai&&sg.ai.bad)){ ph.flag=true; ph.flagNote=ph.flagNote||"check the reading"; } /* nobody saw the preview: a doubtful reading asks to be looked at */
     try{ await idbPut("custom",ph); }catch(e){}
     QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}.`+(mt.pending?" Translation pending.":"")+(ph.flag?" Flagged for review.":"");
