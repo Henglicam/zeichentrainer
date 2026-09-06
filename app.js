@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=225; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=226; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1096,6 +1096,10 @@ async function charInfo(w,btn,d){
   }catch(e){ box.innerHTML=`<span class="badge">Dictionary not available.</span>`; }
 }
 function wireChars(d){ document.querySelectorAll(".chars:not(.sub) .ch").forEach(b=> b.onclick=e=>{ e.stopPropagation(); charInfo(b.dataset.ch,b,d); }); }
+/* the tap hints under the card ("Tap the character to reveal …") show only while the app is new — until the phone has
+   HINT_REVIEWS reviews all time (v226, H's "Go" on the design review: a line of instruction on every card forever is noise) */
+const HINT_REVIEWS=20;
+const showHints=()=>(usage().reviews||0)<HINT_REVIEWS;
 function backHTML(d){
   const wordBlock = d.w ? `<div class="rule"></div>
     <div class="word"><span class="w">${esc(d.w)}</span><span class="wp">${esc(d.wp||"")}</span></div>
@@ -1157,7 +1161,7 @@ function renderStudy(main){
     back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="grades">${grds}</div>
       <div class="backacts"><button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?"⚑ Clear flag":"⚑ Flag for review"}</button><button class="del" id="edit-card">✎ Edit</button></div></div>`;
   } else {
-    back=`<div class="hint">Tap the character to reveal${fullPhoto(d)?", or the photo for the whole picture":""}.</div>`;
+    back=showHints()?`<div class="hint">Tap the character to reveal${fullPhoto(d)?", or the photo for the whole picture":""}.</div>`:"";
   }
   /* front: no tag row (theme / new / custom is noise while learning); tapping the photo or the character reveals */
   main.innerHTML=wxNoteHTML()+learnChipsHTML()+`<div class="card">
@@ -1325,8 +1329,8 @@ function renderCardDetail(main,c){
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back">← Cards</button><span class="badge">${(t=>t?t[0].toUpperCase()+t.slice(1):"")([d.mt&&!d.mt.verified?"unverified":"",d.mt&&d.mt.pending?"translation pending":"",d.mt&&d.mt.suspect?"reading uncertain":""].filter(Boolean).join(", "))}</span></div>
     <div class="card">${tagsHTML(d,!p)}<div class="front tap" id="d-reveal">${frontHTML(d)}</div>
-      ${S.detailHide?`<div class="hint">Tap the character to show the answer${fullPhoto(d)?", or the photo for the whole picture":""}.</div>`
-        :`<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="hint">Tap the character to hide the answer${fullPhoto(d)?", or the photo for the whole picture":""}.</div>`}</div>
+      ${S.detailHide?(showHints()?`<div class="hint">Tap the character to show the answer${fullPhoto(d)?", or the photo for the whole picture":""}.</div>`:"")
+        :`<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}${showHints()?`<div class="hint">Tap the character to hide the answer${fullPhoto(d)?", or the photo for the whole picture":""}.</div>`:""}`}</div>
     <div class="detailacts">
       <button class="btn primary" id="d-test">Test this card</button>
       <button class="btn" id="d-edit">Edit</button>
