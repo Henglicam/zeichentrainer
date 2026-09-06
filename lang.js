@@ -189,7 +189,9 @@ de:{
   /* the meaning in the app's language and the Translate-all row (v256) */
   "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"Die Texte der App und, mit der KI, die Bedeutung neuer Karten. Karten behalten Chinesisch und Pinyin.","Meanings":"Bedeutungen","{0} have their meaning in another language.":"{0} haben ihre Bedeutung in einer anderen Sprache.","Translate all cards into {0}":"Alle Karten auf {0} übersetzen","Translating {0} of {1} …":"Übersetze {0} von {1} …","{0} translated, {1} left.":"{0} übersetzt, {1} übrig.","Done — {0} translated.":"Fertig — {0} übersetzt.",
   /* the More screen in the learner's order (v257) */
-  "Privacy":"Privatsphäre"
+  "Privacy":"Privatsphäre",
+  /* the pill for a meaning in another language (v258) */
+  "The meaning is in another language than the app.":"Die Bedeutung ist in einer anderen Sprache als die App."
 },
 fr:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"Les photos restent sur ce téléphone. Cadre le texte – la carte est créée pour toi.",
@@ -366,7 +368,9 @@ fr:{
   /* the meaning in the app's language and the Translate-all row (v256) */
   "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"Les textes de l'appli et, avec l'IA, le sens des nouvelles cartes. Les cartes gardent le chinois et le pinyin.","Meanings":"Sens","{0} have their meaning in another language.":"{0} ont leur sens dans une autre langue.","Translate all cards into {0}":"Traduire toutes les cartes en {0}","Translating {0} of {1} …":"Traduction {0} sur {1} …","{0} translated, {1} left.":"{0} traduites, {1} restantes.","Done — {0} translated.":"Terminé – {0} traduites.",
   /* the More screen in the learner's order (v257) */
-  "Privacy":"Confidentialité"
+  "Privacy":"Confidentialité",
+  /* the pill for a meaning in another language (v258) */
+  "The meaning is in another language than the app.":"Le sens est dans une autre langue que l'appli."
 },
 es:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"Las fotos se quedan en este teléfono. Encuadra el texto y la tarjeta se crea sola.",
@@ -543,7 +547,9 @@ es:{
   /* the meaning in the app's language and the Translate-all row (v256) */
   "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"Los textos de la app y, con la IA, el significado de las tarjetas nuevas. Las tarjetas conservan el chino y el pinyin.","Meanings":"Significados","{0} have their meaning in another language.":"{0} tienen su significado en otro idioma.","Translate all cards into {0}":"Traducir todas las tarjetas al {0}","Translating {0} of {1} …":"Traduciendo {0} de {1} …","{0} translated, {1} left.":"{0} traducidas, {1} pendientes.","Done — {0} translated.":"Listo — {0} traducidas.",
   /* the More screen in the learner's order (v257) */
-  "Privacy":"Privacidad"
+  "Privacy":"Privacidad",
+  /* the pill for a meaning in another language (v258) */
+  "The meaning is in another language than the app.":"El significado está en otro idioma que la app."
 },
 ja:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"写真はこの端末に残ります。文字を枠で囲むと、カードが作られます。",
@@ -720,7 +726,9 @@ ja:{
   /* the meaning in the app's language and the Translate-all row (v256) */
   "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"アプリの表示と、AIを使うときは新しいカードの意味。カードの中国語とピンインはそのままです。","Meanings":"意味","{0} have their meaning in another language.":"{0}の意味が別の言語になっています。","Translate all cards into {0}":"すべてのカードを{0}に翻訳","Translating {0} of {1} …":"翻訳中 {0} / {1}…","{0} translated, {1} left.":"{0}枚を翻訳、残り{1}枚。","Done — {0} translated.":"完了。{0}を翻訳しました。",
   /* the More screen in the learner's order (v257) */
-  "Privacy":"プライバシー"
+  "Privacy":"プライバシー",
+  /* the pill for a meaning in another language (v258) */
+  "The meaning is in another language than the app.":"意味がアプリと別の言語になっています。"
 },
 ko:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"사진은 이 기기에만 남아요. 글자를 틀로 감싸면 카드가 만들어져요.",
@@ -897,6 +905,8 @@ ko:{
   /* the meaning in the app's language and the Translate-all row (v256) */
   "The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.":"앱의 표시 언어와, AI를 쓸 때는 새 카드의 뜻. 카드의 중국어와 병음은 그대로예요.","Meanings":"뜻","{0} have their meaning in another language.":"{0}의 뜻이 다른 언어로 되어 있어요.","Translate all cards into {0}":"모든 카드를 {0}(으)로 번역","Translating {0} of {1} …":"번역 중 {0} / {1}…","{0} translated, {1} left.":"{0}장 번역됨, {1}장 남음.","Done — {0} translated.":"완료. {0}을(를) 번역했어요.",
   /* the More screen in the learner's order (v257) */
-  "Privacy":"개인정보"
+  "Privacy":"개인정보",
+  /* the pill for a meaning in another language (v258) */
+  "The meaning is in another language than the app.":"뜻이 앱과 다른 언어로 되어 있어요."
 }
 };
