@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=261; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=262; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -273,7 +273,8 @@ async function boot(){
   autoBreaks(); /* old cards get their photo lines estimated once */
   dedupePhotos(); /* cards from before v214 drop the whole photo they hold twice */
   setTimeout(resumePending,1500); /* cards saved before their reading finished get it now (v237) */
-  aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); });
+  aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); });
+  setTimeout(resumeTranslate,2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) resumeTranslate(); }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262) */
   sendReport(); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) sendReport(); else if(REPORT_DIRTY) sendReport(true); }); /* the day's first row on foreground, a second one on background when cards changed (v219) */
 }
 
@@ -826,7 +827,7 @@ function wxNoteHTML(){ return inWeChat()?`<div class="wxnote">${t(WX_NOTE)}</div
 function applyLangStatic(){ document.documentElement.lang=LANG;
   [["#stat-open b","Due"],["#stat-done b","capsule:Done"],["#stat-deck b","Deck"]].forEach(([q,k])=>{ const e=$(q); if(e) e.textContent=t(k); });
   document.querySelectorAll("#tabs .tab").forEach(b=>{ const k={study:"Learn",cards:"Cards",inbox:"Camera",more:"More"}[b.dataset.mode]; const n=b.lastChild; if(k&&n&&n.nodeType===3) n.textContent=t(k); }); }
-async function setLang(code){ if(!LANGS.some(([c])=>c===code)) return; LANG=code; await setSetting("lang",code); if(TRANSLATE&&!TRANSLATE.running) TRANSLATE=null; /* a finished run's line belongs to the old language */ applyLangStatic(); render(); }
+async function setLang(code){ if(!LANGS.some(([c])=>c===code)) return; LANG=code; await setSetting("lang",code); if(TRANSLATE&&!TRANSLATE.running) TRANSLATE=null; /* a finished run's line belongs to the old language */ rememberTranslate(false); applyLangStatic(); render(); }
 /* Translate all cards into the app's language (v256, H chose the button over an automatic run — it costs an AI call per batch of
    cards): the cards whose meaning is in another language than the app's go to the AI in batches, only the meaning and its
    language are taken from the answer, the text and the pinyin stay. The row sits under the Language chips and shows only
@@ -837,22 +838,29 @@ const toTranslate=()=>deck().filter(d=>d.c&&d.m&&mlOf(d)!==LANG);
    row had been re-rendered by the tab change, the loop wrote its progress into the old row, and the guard swallowed the second tap):
    the row is drawn from TRANSLATE, every step re-queries the row by id, and a tap while a run is on shows the progress */
 let TRANSLATE=null; /* {running, done, at, total, failed, lang} — at = the card the AI is on, so the line moves as soon as a batch goes out */
+/* a run goes on after an interruption (v262, H: "Please continue translating after being interrupted"): the run is remembered in
+   setting translateRun {lang, at} until every card is done, and resumeTranslate() picks it up again at boot, on reconnect and on
+   foreground — a failed call (Android cuts a background page's requests) no longer ends the run, the row says it continues */
+async function rememberTranslate(on){ if(on){ S.settings.translateRun={lang:LANG,at:Date.now()}; await setSetting("translateRun",S.settings.translateRun); } else if(S.settings.translateRun){ delete S.settings.translateRun; await idbDel("settings","translateRun").catch(()=>{}); } }
+function resumeTranslate(){ const r=S.settings.translateRun; if(!r||(TRANSLATE&&TRANSLATE.running)) return;
+  if(r.lang!==LANG||!toTranslate().length){ rememberTranslate(false); return; } /* the language changed meanwhile, or nothing is left */
+  if(!aiOn()||!navigator.onLine) return; translateAll(); }
 function translateRowHTML(){
   const n=toTranslate().length, tr=TRANSLATE; if(!(n||tr)||!aiOn()) return "";
   const name=(LANGS.find(([c])=>c===LANG)||[])[1]||LANG;
-  const line=tr&&tr.running?busyHTML(t("Translating {0} of {1} …",tr.at,tr.total)):tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n):tr?t("Done — {0} translated.",nOf(tr.done,"card")):t("{0} have their meaning in another language.",nOf(n,"card"));
+  const line=tr&&tr.running?busyHTML(t("Translating {0} of {1} …",tr.at,tr.total)):tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n)+" "+t("It goes on by itself when the AI can be reached again."):tr?t("Done — {0} translated.",nOf(tr.done,"card")):t("{0} have their meaning in another language.",nOf(n,"card"));
   return `<div class="mrow"><div style="flex:1"><div class="t">${t("Meanings")}</div><div class="s" id="translate-status">${line}</div>${n?`<div class="fieldacts"><button class="btn mini" id="translate-all"${tr&&tr.running?" disabled":""}>${t("Translate all cards into {0}",name)}</button></div>`:""}</div></div>`; /* the button under the sentence, as the Feedback row's Send — its label is long in every language */
 }
 function translateRefresh(){ const st=$("#translate-status"), b=$("#translate-all"), tr=TRANSLATE; if(!st) return; /* the row as it stands now, whatever page was shown meanwhile */
   const n=toTranslate().length;
   if(tr&&tr.running) st.innerHTML=busyHTML(t("Translating {0} of {1} …",tr.at,tr.total)); /* the moving bar with the count of the card the AI is on */
-  else st.textContent=tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n):tr?t("Done — {0} translated.",nOf(tr.done,"card")):t("{0} have their meaning in another language.",nOf(n,"card"));
+  else st.textContent=tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n)+" "+t("It goes on by itself when the AI can be reached again."):tr?t("Done — {0} translated.",nOf(tr.done,"card")):t("{0} have their meaning in another language.",nOf(n,"card"));
   if(b){ b.disabled=!!(tr&&tr.running); if(!n&&!(tr&&tr.running)) b.remove(); } }
 async function translateAll(){
   if(TRANSLATE&&TRANSLATE.running){ translateRefresh(); return; }
   if(!navigator.onLine){ const st=$("#translate-status"); if(st) st.textContent=t("No connection. Try again when online."); return; }
   const list=toTranslate(); if(!list.length) return;
-  TRANSLATE={running:true,done:0,at:0,total:list.length,failed:false,lang:LANG}; translateRefresh();
+  TRANSLATE={running:true,done:0,at:0,total:list.length,failed:false,lang:LANG}; translateRefresh(); await rememberTranslate(true);
   try{
     for(let i=0;i<list.length;i+=TRANSLATE_BATCH){
       if(LANG!==TRANSLATE.lang) break; /* the language was switched meanwhile: the rest would land in the wrong one */
@@ -863,7 +871,7 @@ async function translateAll(){
       translateRefresh();
     }
   }catch(err){ TRANSLATE.failed=true; logErr("translate",err&&err.message||String(err)); }
-  TRANSLATE.running=false; translateRefresh();
+  TRANSLATE.running=false; if(!toTranslate().length||LANG!==TRANSLATE.lang) await rememberTranslate(false); translateRefresh(); /* remembered while cards are left, so the run goes on at the next chance */
   if(S.mode==="study"||S.mode==="cards") render(); /* the meanings on screen follow */
 }
 function reportData(){

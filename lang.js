@@ -210,7 +210,9 @@ de:{
   "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"Mehr → Sprache schaltet die Texte der App um. Ist die KI an, bekommen neue Karten ihre Bedeutung in dieser Sprache, und Alle Karten übersetzen erledigt es für die vorhandenen. Eine kleine Pille nennt eine Bedeutung, die noch in einer anderen Sprache ist.",
   "What stays on the phone":"Was auf dem Telefon bleibt",
   "Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak.":"Karten und Fotos bleiben auf diesem Telefon und sonst nirgends — exportiere sie ab und zu unter Mehr → Deine Daten. Die KI-Prüfung sendet den chinesischen Text, Pinyin und Bedeutung einer Karte, und den eingerahmten Teil eines Fotos nur, wenn die Erkennung schwach ist.",
-  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"Einmal am Tag gehen anonyme Nutzungszahlen an den Besitzer der App; unter Privatsphäre kannst du das abschalten. Fragen oder Ideen? Mehr → Feedback."
+  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"Einmal am Tag gehen anonyme Nutzungszahlen an den Besitzer der App; unter Privatsphäre kannst du das abschalten. Fragen oder Ideen? Mehr → Feedback.",
+  /* the Translate-all run that goes on after an interruption (v262) */
+  "It goes on by itself when the AI can be reached again.":"Es geht von selbst weiter, sobald die KI wieder erreichbar ist."
 },
 fr:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"Les photos restent sur ce téléphone. Cadre le texte – la carte est créée pour toi.",
@@ -408,7 +410,9 @@ fr:{
   "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"Plus → Langue change les textes de l'appli. Avec l'IA, les nouvelles cartes reçoivent leur sens dans cette langue, et Traduire toutes les cartes le fait pour celles que tu as déjà. Une petite pastille nomme un sens encore dans une autre langue.",
   "What stays on the phone":"Ce qui reste sur le téléphone",
   "Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak.":"Les cartes et les photos restent sur ce téléphone et nulle part ailleurs – exporte-les de temps en temps sous Plus → Tes données. La vérification par l'IA envoie le texte chinois, le pinyin et le sens d'une carte, et la partie cadrée d'une photo seulement quand la lecture est faible.",
-  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"Une fois par jour, des comptages anonymes vont au propriétaire de l'appli ; désactive-les sous Confidentialité. Des questions ou des idées ? Plus → Commentaires."
+  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"Une fois par jour, des comptages anonymes vont au propriétaire de l'appli ; désactive-les sous Confidentialité. Des questions ou des idées ? Plus → Commentaires.",
+  /* the Translate-all run that goes on after an interruption (v262) */
+  "It goes on by itself when the AI can be reached again.":"Ça reprend tout seul dès que l'IA est à nouveau joignable."
 },
 es:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"Las fotos se quedan en este teléfono. Encuadra el texto y la tarjeta se crea sola.",
@@ -606,7 +610,9 @@ es:{
   "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"Más → Idioma cambia los textos de la app. Con la IA, las tarjetas nuevas reciben su significado en ese idioma, y Traducir todas las tarjetas lo hace con las que ya tienes. Una pequeña etiqueta nombra un significado que sigue en otro idioma.",
   "What stays on the phone":"Qué se queda en el teléfono",
   "Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak.":"Las tarjetas y las fotos se quedan en este teléfono y en ningún otro sitio — expórtalas de vez en cuando en Más → Tus datos. La revisión con IA envía el texto chino, el pinyin y el significado de una tarjeta, y la parte enmarcada de una foto solo cuando la lectura es débil.",
-  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"Una vez al día van recuentos de uso anónimos al propietario de la app; desactívalo en Privacidad. ¿Preguntas o ideas? Más → Comentarios."
+  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"Una vez al día van recuentos de uso anónimos al propietario de la app; desactívalo en Privacidad. ¿Preguntas o ideas? Más → Comentarios.",
+  /* the Translate-all run that goes on after an interruption (v262) */
+  "It goes on by itself when the AI can be reached again.":"Sigue solo en cuanto la IA vuelva a estar disponible."
 },
 ja:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"写真はこの端末に残ります。文字を枠で囲むと、カードが作られます。",
@@ -804,7 +810,9 @@ ja:{
   "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"その他 → 言語でアプリの表示が切り替わります。AIがオンなら新しいカードの意味はその言語になり、「すべてのカードを翻訳」で今あるカードも翻訳できます。まだ別の言語の意味には小さなラベルが付きます。",
   "What stays on the phone":"端末に残るもの",
   "Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak.":"カードと写真はこの端末にだけあります。ときどき「その他 → データ」からエクスポートしてください。AI確認ではカードの中国語、ピンイン、意味を送り、写真の枠内は読み取りが弱いときだけ送ります。",
-  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"1日1回、匿名の利用回数がアプリの所有者に送られます。プライバシーでオフにできます。質問やアイデアは「その他 → フィードバック」へ。"
+  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"1日1回、匿名の利用回数がアプリの所有者に送られます。プライバシーでオフにできます。質問やアイデアは「その他 → フィードバック」へ。",
+  /* the Translate-all run that goes on after an interruption (v262) */
+  "It goes on by itself when the AI can be reached again.":"AIにつながり次第、自動で続きます。"
 },
 ko:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"사진은 이 기기에만 남아요. 글자를 틀로 감싸면 카드가 만들어져요.",
@@ -1002,6 +1010,8 @@ ko:{
   "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"더보기 → 언어에서 앱의 표시를 바꿔요. AI가 켜져 있으면 새 카드의 뜻이 그 언어로 나오고, 모든 카드 번역으로 이미 있는 카드도 번역돼요. 아직 다른 언어인 뜻에는 작은 표시가 붙어요.",
   "What stays on the phone":"휴대폰에 남는 것",
   "Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak.":"카드와 사진은 이 휴대폰에만 있어요. 가끔 더보기 → 내 데이터에서 내보내 두세요. AI 확인은 카드의 중국어, 병음, 뜻을 보내고, 사진의 테두리 안은 읽기가 약할 때만 보내요.",
-  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"하루 한 번 익명의 사용 횟수가 앱 소유자에게 가요. 개인정보에서 끌 수 있어요. 질문이나 아이디어가 있으면 더보기 → 피드백."
+  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"하루 한 번 익명의 사용 횟수가 앱 소유자에게 가요. 개인정보에서 끌 수 있어요. 질문이나 아이디어가 있으면 더보기 → 피드백.",
+  /* the Translate-all run that goes on after an interruption (v262) */
+  "It goes on by itself when the AI can be reached again.":"AI에 다시 연결되면 저절로 이어져요."
 }
 };
