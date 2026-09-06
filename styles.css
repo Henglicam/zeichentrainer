@@ -20,8 +20,11 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;height:100%}
 html{background:var(--bg)}
-body{background:var(--bg);color:var(--label);font-family:var(--sans);font-size:17px;line-height:1.45;-webkit-font-smoothing:antialiased;overscroll-behavior-y:contain}
+body{background:var(--bg);color:var(--label);font-family:var(--sans);font-size:17px;line-height:1.45;-webkit-font-smoothing:antialiased;touch-action:manipulation;overscroll-behavior-y:contain}
 button{font:inherit;color:inherit}
+/* the browser's own touch behaviours kept off the app (v249, H after the image menu of v248: "Find all such useless behaviours and remove them"): no long-press image menu, drag ghost or selection on any picture or canvas; no selection toolbar on buttons, tabs, chips, strips, tiles, the picker, the drawing sheet and the crop layer; no double-tap zoom anywhere (touch-action on body, the crop layer and the pad keep their own stricter values); the callout is Safari's, for the iPhone */
+img,canvas{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-user-select:none}
+button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.drawsheet,.croplayer,.croprect,.reticle,.picbox,.thumbbox,.shotzoom,.linked{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 :focus-visible{outline:2px solid var(--tint);outline-offset:2px}
 #app{min-height:100%;display:flex;flex-direction:column}
 
@@ -220,7 +223,6 @@ button{font:inherit;color:inherit}
 
 .shotwrap{position:relative;margin-bottom:8px}
 .shotwrap img{margin-bottom:0;border-radius:10px}
-.shotwrap img,.shotwrap .shotzoom,.croplayer{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none} /* a finger held on the photo to adjust the frame must not open the browser's image menu (v248, H's screenshot: "Copy image / Download image / Share image" over the frame) */
 .signed .badge.ai{color:var(--ok)}
 .signed .badge.bad,.smean.bad{color:var(--tint)} .aibox.bad{background:var(--tint-soft)} .aibox.bad .aihead{color:var(--tint)}
 .cropacts .del{padding:10px 6px}

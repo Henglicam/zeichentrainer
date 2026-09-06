@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=248; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=249; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -271,6 +271,8 @@ function wireChrome(){
   });
   $("#cam").onchange=onPhoto; $("#album").onchange=onPhoto; /* camera, or photos already on the phone */
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden && S.mode==="inbox") renderShots(); });
+  /* a long press on a picture, a canvas or a control is never a request for the browser's menu — the image sheet came up over the crop frame (v248, H: "Don't make those things pop up while adjusting the crop"), and v249 keeps it off every picture and control (H: "Find all such useless behaviours and remove them"); plain text and the fields keep their menus, so a meaning can still be copied */
+  document.addEventListener("contextmenu",e=>{ const t=e.target; if(t&&t.closest&&t.closest("img,canvas,button,.croplayer,.shotwrap,.drawsheet,.picbox,.thumbbox,.reticle,.ck,.chip,.tab,.grade,.seg,.linked")) e.preventDefault(); });
   $("#imp").onchange=importData;
 }
 function setStats(){
@@ -1223,8 +1225,8 @@ function renderAdd(main){
     <div class="lead">Add a card by hand.</div>
     <div class="form">
     ${imgField}
-    <div class="field"><label>Characters</label><input id="f-word" class="hanzi big" placeholder="你好"><div class="fieldacts"><button type="button" class="btn mini" id="f-draw">Draw a character</button></div></div>
-      <div class="field"><label>Pinyin</label><textarea id="f-pin" class="grow" rows="1" placeholder="nǐ hǎo"></textarea></div>
+    <div class="field"><label>Characters</label><input id="f-word" class="hanzi big" placeholder="你好" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><div class="fieldacts"><button type="button" class="btn mini" id="f-draw">Draw a character</button></div></div>
+      <div class="field"><label>Pinyin</label><textarea id="f-pin" class="grow" rows="1" placeholder="nǐ hǎo" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea></div>
       <div class="field"><label>Meaning</label><textarea id="f-mean" class="grow" rows="1" placeholder="hello"></textarea><div class="smean badge" id="f-aistatus" style="margin-top:4px"></div></div>
     <div class="field"><label class="check"><input type="checkbox" id="f-flag"> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
       <input id="f-note" placeholder="Note for the reviewer (optional)" hidden></div>
@@ -1318,7 +1320,7 @@ function renderCards(main){
   const unv=S.custom.filter(d=>d.mt&&!d.mt.verified).length, flg=S.custom.filter(d=>d.flag).length, nAi=deck().filter(d=>d.ai).length;
   const {html,n}=cardsListHTML();
   main.innerHTML=`<div class="pane">
-    <div class="cardsbar"><input id="q" type="search" placeholder="Search" value="${esc(S.query)}" autocomplete="off"><button class="btn mini primary" id="newcard">+ New</button></div>
+    <div class="cardsbar"><input id="q" type="search" placeholder="Search" value="${esc(S.query)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="btn mini primary" id="newcard">+ New</button></div>
     ${nAi?`<div class="aibar"><span>${nAi} AI suggestion${nAi>1?"s":""} waiting</span><button class="btn mini primary" id="ai-acceptall">Accept all</button></div>`:""}
     <div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">⚑ Flagged (${flg})</button>${nAi?`<button class="chip${S.filterAi?" on":""}" id="chip-ai">AI (${nAi})</button>`:""}<button class="chip${S.filterUnv?" on":""}" id="chip-unv">Unverified (${unv})</button>${allTags().map(t=>`<button class="chip tag${S.filterTag===t?" on":""}" data-tagchip="${esc(t)}">${esc(t)}</button>`).join("")}${allTags().length&&untaggedCount()?`<button class="chip tag${S.filterTag===UNTAGGED?" on":""}" data-tagchip="${UNTAGGED}">Untagged (${untaggedCount()})</button>`:""}</span><span class="badge" id="cnt">${n} of ${deck().length}</span></div>
     <div class="clist" id="clist">${html}</div>
@@ -1394,10 +1396,10 @@ function renderEdit(main,c){
       <div class="signed" id="e-lines"></div>
       <textarea id="e-word" class="hanzi" hidden>${esc(lines0.join("\n"))}</textarea>
       </div>
-      <div class="field"><label>Pinyin</label><textarea id="e-pin" class="grow" rows="1">${esc(d.p)}</textarea></div>
+      <div class="field"><label>Pinyin</label><textarea id="e-pin" class="grow" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">${esc(d.p)}</textarea></div>
       <div class="field"><label>Meaning</label><textarea id="e-mean" class="grow" rows="1">${esc(d.m)}</textarea><div class="smean badge" id="e-aistatus" style="margin-top:4px"></div></div>
     ${isSign||!d.w?"":`<div class="field"><label>Context word, pinyin, meaning (optional)</label>
-      <div class="row"><input id="e-w" class="hanzi" value="${esc(d.w||"")}" placeholder="学习"><input id="e-wp" value="${esc(d.wp||"")}" placeholder="xuéxí"><input id="e-wm" value="${esc(d.wm||"")}" placeholder="to learn"></div></div>`}
+      <div class="row"><input id="e-w" class="hanzi" value="${esc(d.w||"")}" placeholder="学习" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><input id="e-wp" value="${esc(d.wp||"")}" placeholder="xuéxí" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><input id="e-wm" value="${esc(d.wm||"")}" placeholder="to learn"></div></div>`}
     <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
       <input id="e-note" value="${esc(d.flagNote||"")}" placeholder="Note for the reviewer (optional)"${d.flag?"":" hidden"}></div>
     ${tagsFieldHTML("e-tags",d.tags)}
@@ -1826,7 +1828,6 @@ function zoomStyle(s){
 }
 function wireCrop(layer){
   const rect=layer.querySelector(".croprect");
-  layer.oncontextmenu=e=>e.preventDefault(); const wrap=layer.parentElement; if(wrap) wrap.oncontextmenu=e=>e.preventDefault(); /* a long press while adjusting the frame is not a request for the browser's image menu (v248, H: "Don't make those things pop up while adjusting the crop") */
   /* a short tap without movement toggles the enlarged view; a swipe is left to the page. The tap is taken from the
      click event (v206, H: the tap did nothing on an iPhone — until v205 it was read from pointerup with a distance and
      time check, and on a layer that lets the page scroll iOS Safari turns the touch into a scroll gesture and sends
@@ -3022,7 +3023,7 @@ function slineHTML(id,k,line,withPinyin,withInput=true){
   const empty=!(line||"").trim(); /* a card saved before its reading and never read (v238): nothing to tap yet */
   const t=empty?"Type the text below.":`Tap a character to change it${withInput?", or type the line below":""}.`;
   const hint=k===0?`<div class="badge ckhint" data-hint="${id}" data-text="${t}">${sg&&sg.sel?SEL_HINT:t}</div>`:""; /* right under the strip (H, v112) */
-  return `<div class="sline">${empty?"":charStripHTML(id,k)}${hint}${withInput?`<input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(sg&&sg.trad?tradLine(sg,k):line)}" autocomplete="off">`:""}${withPinyin?`<div class="sp" id="sp-${id}-${k}"></div>`:""}</div>`;
+  return `<div class="sline">${empty?"":charStripHTML(id,k)}${hint}${withInput?`<input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(sg&&sg.trad?tradLine(sg,k):line)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">`:""}${withPinyin?`<div class="sp" id="sp-${id}-${k}"></div>`:""}</div>`;
 }
 /* Several characters removed at once (v204, H: "select them first and then remove them all together", described first and
    built on "Go"): a Select button under the strips puts the reading into selection (sg.sel, the set of "k,i" positions) —
@@ -3110,7 +3111,7 @@ function signEditorHTML(id){
   /* the same layout as the Edit form (H): Text, Pinyin, Meaning — pinyin and meaning can be corrected before saving */
   return `<div class="signed">${weak}${head?`<div class="badge${bad?" bad":""}" style="margin-bottom:8px">${head}</div>`:""}
     <div class="field"><label>Characters${sg.trad?" (traditional, as on the photo)":""}${sg.ai&&sg.ai.pic&&!sg.ai.bad?PIC_MARK:""}</label>${rows}<div class="scriptline">${scriptSwitchHTML(id,sg)}</div>${selRowHTML(id)}</div>
-    <div class="field"><label>Pinyin</label><textarea class="grow" id="spin-${id}" rows="1" data-spin="${id}">${esc(sg.pinEdit||"")}</textarea></div>
+    <div class="field"><label>Pinyin</label><textarea class="grow" id="spin-${id}" rows="1" data-spin="${id}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">${esc(sg.pinEdit||"")}</textarea></div>
     <div class="field"><label>Meaning</label><textarea class="grow" id="smeanf-${id}" rows="1" data-smean="${id}">${esc(sg.meanEdit||"")}</textarea><div class="smean badge" id="smean-${id}" style="margin-top:4px"></div></div>
     <div class="field"><label class="check"><input type="checkbox" data-sflag="${id}"${sg.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
       <input data-snote="${id}" value="${esc(sg.flagNote||"")}" placeholder="Note for the reviewer (optional)"${sg.flag?"":" hidden"}></div>
