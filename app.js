@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=243; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=244; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1372,7 +1372,7 @@ function renderCardDetail(main,c){
 function renderEdit(main,c){
   const d=cardOf(c); if(!d){ S.editing=null; S.editFrom=null; return render(); }
   const isSign=d.kind==="sign";
-  let removeImg=false, aiApplied=false, recropImg=null, meanTouched=false; /* recropImg: the crop framed again in this form (v239), stored on Save */
+  let removeImg=false, aiApplied=false, recropImg=null, recropRect=null, meanTouched=false; /* recropImg: the crop framed again in this form (v239), stored on Save with its frame (recropRect, v244) */
   /* the text is edited like the Read preview (H): a character strip per line, tap a character for the picker and the
      drawing sheet; SIGN carries the lines and the card's crop as the photo reference (no boxes: the whole crop) */
   const eid="edit"+(S.editSeq=(S.editSeq||0)+1), lines0=isSign?d.c.split("\n"):frontLines(d); /* plain id: it goes into selectors */
@@ -1465,27 +1465,35 @@ function renderEdit(main,c){
         ${zoomed?`<div class="shotzoom" style="${zoomStyle(rec)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(rec)}" alt="photo">`}
         <div class="croplayer${CROP.rect?" framed":""}${zoomed?" zoomed":""}" data-id="${rid}">${zoomed?"":`<div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="Turn the frame"></div></div>`}</div>
       </div>
-      <div class="ocr" id="ocr-${rid}">${READING[rid]?readingHTML(READING[rid],rid):CROP.auto?busyHTML("Finding the text …"):`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.</span>`}</div>
+      <div class="ocr" id="ocr-${rid}">${READING[rid]?readingHTML(READING[rid],rid):res&&res.key===rectKey(CROP.rect)?`<div class="croppreview"><img src="${res.url}" alt="the new crop"><div class="badge" style="margin:6px 0 0">${res.text?`Read as “${esc(res.text)}”. `:"Picture taken, the text stays. "}Adjust the frame to read again, or save.</div></div>`:CROP.auto?busyHTML("Finding the text …"):`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.</span>`}</div>
       <div class="imgacts"><button class="del" id="e-cropcancel">Cancel</button></div></div>`;
     box.querySelectorAll(".croplayer").forEach(wireCrop);
-    $("#e-cropcancel").onclick=()=>{ endRecrop(); showPimg(); }; };
+    $("#e-cropcancel").onclick=()=>{ restoreBefore(); endRecrop(); showPimg(); }; };
+  /* the reading's result stays under the photo with the frame (v244, H: "don't exit crop mode so fast, do as in the initial crop screen") — the view goes on Save changes or Cancel */
+  let res=null, before=null;
+  const setResult=(img,text)=>{ if(res&&res.url) URL.revokeObjectURL(res.url); recropImg=img; recropRect={...CROP.rect}; res={key:rectKey(CROP.rect),text,url:URL.createObjectURL(img)}; if(RECROP[rid]) RECROP[rid].stage="idle"; drawRecrop(); };
+  const restoreBefore=()=>{ if(!before) return; Object.assign(sg,before.sg); recropImg=null; recropRect=null; /* Cancel: the text, pinyin and meaning from before Crop again */
+    $("#e-pin").value=before.pin; $("#e-mean").value=before.mean; const lab=$("#e-lines").closest(".field").querySelector("label"); if(lab) lab.textContent=before.label; syncWord(); drawLines(); };
   const endRecrop=()=>{ if(PENDING[rid]) return; /* handed over to the background (Save changes during the reading, v241): the reading goes on and fills the card */
-    abandonReading(rid); if(CROP&&CROP.id===rid) CROP=null; delete RECROP[rid];
+    abandonReading(rid); if(CROP&&CROP.id===rid) CROP=null; delete RECROP[rid]; if(res&&res.url) URL.revokeObjectURL(res.url); res=null; before=null;
     if(SHOTS_EXTRA[rid]){ delete SHOTS_EXTRA[rid]; if(IMGURL[rid]){ URL.revokeObjectURL(IMGURL[rid]); delete IMGURL[rid]; } } };
   const startRecrop=()=>{ if(!full) return;
     SHOTS_EXTRA[rid]={id:rid,blob:full,ts:Date.now()};
-    RECROP[rid]={redraw:drawRecrop,end:()=>{ endRecrop(); },
-      onImage:blob=>{ recropImg=blob; endRecrop(); showPimg(); },
-      onRead:sg2=>{ if(!sg2) return; recropImg=sg2.cardImg||recropImg; /* the tightened cut when there is one, else the crop as framed */
+    before={sg:{lines:sg.lines.slice(),orig:sg.orig.slice(),conf:sg.conf,boxes:sg.boxes,img:sg.img,alts:sg.alts,trad:sg.trad,tradDetected:sg.tradDetected,tradText:sg.tradText,tradTouched:sg.tradTouched,tradUser:sg.tradUser,ai:sg.ai,sel:null},
+      pin:$("#e-pin").value,mean:$("#e-mean").value,label:$("#e-lines").closest(".field").querySelector("label").textContent};
+    RECROP[rid]={redraw:drawRecrop,stage:"idle",end:()=>{ endRecrop(); },
+      onImage:blob=>setResult(blob,""),
+      onRead:sg2=>{ if(!sg2) return;
         sg.lines=sg2.lines.slice(); sg.orig=sg2.orig.slice(); sg.conf=sg2.conf; sg.boxes=sg2.boxes; sg.img=sg2.img; sg.alts=sg2.alts;
         sg.trad=!!sg2.trad; sg.tradDetected=!!sg2.tradDetected||!!sg.tradDetected; sg.tradText=sg2.tradText||""; sg.tradTouched=false; sg.tradUser=false; sg.sel=null; delete sg.ai;
-        endRecrop(); showPimg();
+        setResult(sg2.cardImg||recropImg,sg.lines.join(" / ")); /* the tightened cut when there is one, else the crop as framed; the frame stays on the photo */
         const lab=$("#e-lines").closest(".field").querySelector("label"); if(lab) lab.textContent="Characters"+(sg.trad?" (traditional, as on the photo)":"");
         syncWord(); drawLines(); pinyinFollow();
-        if(!meanTouched){ const res=sg.lines.filter(l=>CJK.test(l)).map(lineMeaning), m=res.map(r=>r.en).filter(Boolean).join(" / "); if(m) $("#e-mean").value=m; } /* the word-by-word gloss until the AI answers; a meaning typed here stays */
-        showAi(); const ab=$("#e-ai"); if(ab&&aiLive()) ab.click();
-        window.scrollTo({top:0,behavior:"smooth"}); /* the new text sits at the top of the form */ } };
-    CROP={id:rid,rect:null,auto:true}; drawRecrop(); proposeFrame(rid); }; /* the app's frame at once, as with a fresh photo (v241, H: "show the crop frame instantly") — adjustable, the reading follows by itself */
+        if(!meanTouched){ const r2=sg.lines.filter(l=>CJK.test(l)).map(lineMeaning), m=r2.map(r=>r.en).filter(Boolean).join(" / "); if(m) $("#e-mean").value=m; } /* the word-by-word gloss until the AI answers; a meaning typed here stays */
+        showAi(); const ab=$("#e-ai"); if(ab&&aiLive()) ab.click(); } };
+    /* the frame the card was cut with, without a reading until it is moved (v244, H: "use the previous cropping area as starting point"); a card without one gets the app's proposal at once (v241) */
+    if(d.frame&&d.frame.w){ CROP={id:rid,rect:null}; drawRecrop(); placeFrame(rid,d.frame,{noRead:true}); }
+    else { CROP={id:rid,rect:null,auto:true}; drawRecrop(); proposeFrame(rid); } };
   showPimg();
   $("#e-save").onclick=async()=>{
     const fail=m=>{ const e=$("#e-err"); e.textContent=m; e.style.display=""; };
@@ -1505,10 +1513,10 @@ function renderEdit(main,c){
     /* Save changes while the new frame is still being read (v241, H: "allow instant saving"): the card takes the new crop now, the
        reading goes on in the background and fills text, pinyin and meaning when done — like Save now in the Camera tab */
     let handoff=null;
-    if(!removeImg&&RECROP[rid]&&CROP&&CROP.id===rid&&CROP.rect){ const rect={...CROP.rect}; const r=await cropBlob(rid,rect); if(r) handoff={rect,blob:r.blob}; }
-    if(removeImg){ delete upd.img; delete upd.imgFull; delete upd.shot; dropThumb(c); } /* shot too — without it the front would still show the inbox photo through fullPhoto (v214) */
-    else if(handoff){ upd.img=await jpegOf(handoff.blob); dropThumb(c); }
-    else if(recropImg){ upd.img=await jpegOf(recropImg); dropThumb(c); } /* the crop framed again in this form (v239) */
+    if(!removeImg&&RECROP[rid]&&CROP&&CROP.id===rid&&CROP.rect&&RECROP[rid].stage!=="idle"){ const rect={...CROP.rect}; const r=await cropBlob(rid,rect); if(r) handoff={rect,blob:r.blob}; } /* a reading still due or running for this frame (v244: an untouched or already read frame saves without one) */
+    if(removeImg){ delete upd.img; delete upd.imgFull; delete upd.shot; delete upd.frame; dropThumb(c); } /* shot too — without it the front would still show the inbox photo through fullPhoto (v214) */
+    else if(handoff){ upd.img=await jpegOf(handoff.blob); upd.frame=frameOf(handoff.rect); dropThumb(c); }
+    else if(recropImg){ upd.img=await jpegOf(recropImg); if(recropRect) upd.frame=frameOf(recropRect); dropThumb(c); } /* the crop framed again in this form (v239) with its frame (v244) */
     if(upd.mt){ upd.mt={...upd.mt, verified:true, pending:false}; delete upd.mt.suspect; } /* a human edited it */
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
     const tags=parseTags($("#e-tags").value); if(tags.length) upd.tags=tags; else delete upd.tags;
@@ -1705,6 +1713,15 @@ async function readPassTra(blob,status){
 
 /* per-photo result (session only): characters with box + auto pinyin; tap to select */
 const PENDING={}; /* shot id → the id of a card saved before its reading finished (v237, "Save now"): the reading fills it in when done */
+const frameOf=r=>({x:+(r.x/r.lw).toFixed(4),y:+(r.y/r.lh).toFixed(4),w:+(r.w/r.lw).toFixed(4),h:+(r.h/r.lh).toFixed(4),a:+(r.a||0).toFixed(1)}); /* the frame a card was cut with, as fractions of the photo (card.frame, v244) — Crop again starts from it */
+const rectKey=r=>r?[r.x,r.y,r.w,r.h,r.a||0].map(v=>Math.round(v)).join(","):""; /* the same frame, give or take a pixel */
+async function placeFrame(id,f,opts){ /* a stored frame onto the photo's layer, then the preview — without the automatic reading when asked (v244) */
+  const layer=document.querySelector(`.croplayer[data-id="${id}"]`), img=layer&&layer.parentElement.querySelector("img"); if(!layer) return;
+  if(img&&!img.complete) await new Promise(r=>{ img.onload=r; img.onerror=r; });
+  if(!CROP||CROP.id!==id||CROP.rect) return; const r=layer.getBoundingClientRect(); if(!r.width||!r.height) return;
+  CROP.rect={x:f.x*r.width,y:f.y*r.height,w:f.w*r.width,h:f.h*r.height,a:f.a||0,lw:r.width,lh:r.height};
+  renderShots(); showCropPreview(id,opts);
+}
 const abandonReading=id=>{ clearTimeout(READ_TIMER[id]); READ_RUN[id]=(READ_RUN[id]||0)+1; delete SIGN[id]; delete READING[id]; }; /* a running reading of this photo abandons at its next step instead of delivering a result (v117); the inbox's Cancel, the Edit form's Crop again and an edit over a pending reading share it (v243) */
 const SHOTS_EXTRA={}, RECROP={}; /* the Edit form's Crop again (v239): the card's whole photo as a photo record outside the inbox (SHOTS_EXTRA[id]={id,blob,ts}), and the form's hooks — redraw (the frame view in place of renderShots), onRead (the reading's result), onImage (Image only), end */
 const shotRec=id=>S.inbox.find(s=>s.id===id)||SHOTS_EXTRA[id]||null;
@@ -1818,23 +1835,23 @@ function wireCrop(layer){
    a corner drag within that moment restarts the wait */
 const READ_TIMER={}, READ_WAIT=1200;
 let _prevURL=null;
-async function showCropPreview(id){
-  const box=$("#ocr-"+id); if(!box) return;
+async function showCropPreview(id,opts){
+  const box=$("#ocr-"+id); if(!box) return; const noRead=!!(opts&&opts.noRead);
   let r=null; try{ r=await cropBlob(id); }catch(err){ box.innerHTML=`<span class="badge">Reading failed: ${esc(err&&err.message||err)}</span>`; logErr("crop",err&&(err.stack||err.message)||err); return; }
   if(!r){ box.innerHTML=`<span class="badge">Frame too small — draw again.</span>`; return; }
   if(_prevURL) URL.revokeObjectURL(_prevURL);
   _prevURL=URL.createObjectURL(r.blob);
   box.innerHTML=`<div class="croppreview">
     <img src="${_prevURL}" alt="selected area">
-    <div class="badge" style="margin:6px 0 8px">Reading in a moment — drag a corner first if the frame is off.</div>
+    <div class="badge" style="margin:6px 0 8px">${noRead?"The frame the card was cut with — adjust it to read again.":"Reading in a moment — drag a corner first if the frame is off."}</div>
     <div class="cropacts">
       <button class="del" data-cropread="${id}">Read now</button>
       <button class="del" data-cropok="${id}">Image only</button>
     </div></div>`;
   box.querySelector("[data-cropread]").onclick=()=>{ clearTimeout(READ_TIMER[id]); cropSign(id); };
   box.querySelector("[data-cropok]").onclick=()=>{ clearTimeout(READ_TIMER[id]); cropOk(id); };
-  clearTimeout(READ_TIMER[id]);
-  READ_TIMER[id]=setTimeout(()=>{ if(CROP&&CROP.id===id&&CROP.rect) cropSign(id); },READ_WAIT);
+  clearTimeout(READ_TIMER[id]); if(RECROP[id]) RECROP[id].stage=noRead?"idle":"waiting";
+  if(!noRead) READ_TIMER[id]=setTimeout(()=>{ if(CROP&&CROP.id===id&&CROP.rect) cropSign(id); },READ_WAIT);
 }
 /* ---------- the proposed frame (v203, H's poster photo that needed no framing: "do an automatic image analysis and
    suggest a crop, which the user can change if needed — or apply no crop at all") ----------
@@ -2400,6 +2417,7 @@ async function cutUnrotated(orig,rect,angle){
 }
 async function cropSign(id,opts){
   const run=READ_RUN[id]=(READ_RUN[id]||0)+1, stale=()=>READ_RUN[id]!==run; /* a newer reading of this photo has started: leave everything to it */
+  if(RECROP[id]) RECROP[id].stage="reading";
   const status=readingStatus(id,run);
   READLOG.length=0; LAST_READ.passes=null; status("cutting out the frame …");
   let cardImg=null; /* the card's picture from this reading — kept on the reading, not in the one global slot, so a reading finishing in the background cannot hand its picture to another photo's card (v237) */
@@ -2518,7 +2536,7 @@ async function cropSign(id,opts){
 async function saveNow(id){
   if(PENDING[id]||!CROP||CROP.id!==id||!CROP.rect) return;
   const rect={...CROP.rect}, r=await cropBlob(id,rect); if(!r) return;
-  const card={id:"reading#"+Date.now(), c:"", p:"", m:"", t:"Custom", at:Date.now(), shot:id, lb:"photo", img:await jpegOf(r.blob), mt:{src:"gloss",verified:false,pending:true}, reading:{rect,at:Date.now()}};
+  const card={id:"reading#"+Date.now(), c:"", p:"", m:"", t:"Custom", at:Date.now(), shot:id, lb:"photo", img:await jpegOf(r.blob), mt:{src:"gloss",verified:false,pending:true}, frame:frameOf(rect), reading:{rect,at:Date.now()}};
   bump("byPhoto"); S.custom.push(card); try{ await idbPut("custom",card); }catch(e){}
   PENDING[id]=card.id; QSCARD[id]=card.id; CROP=null; delete SIGN[id];
   QSNOTE[id]="Card saved — the text follows when the reading is done.";
@@ -2534,7 +2552,8 @@ async function finishPending(id){
     const built=sg&&SIGN[id]===sg?await readingCard(id,sg):null;
     if(!built){ return failPending(id,"nothing to save"); }
     const {card,c,mt}=built;
-    for(const k of Object.keys(ph)) if(!["id","at","img","imgFull","shot","tags"].includes(k)) delete ph[k];
+    if(ph.reading.rect&&ph.reading.rect.lw) ph.frame=frameOf(ph.reading.rect);
+    for(const k of Object.keys(ph)) if(!["id","at","img","imgFull","shot","tags","frame"].includes(k)) delete ph[k];
     const {id:_i,at:_a,img:_m,shot:_s,...fields}=card; Object.assign(ph,fields);
     if(sg.cardImg){ ph.img=await jpegOf(sg.cardImg); dropThumb(ph.id); } /* the list's thumbnail was made from the crop saved first (v242, H: "the card with a photo before the re-crop remains") */
     if(mt.suspect||sg.weak||(sg.ai&&sg.ai.bad)){ ph.flag=true; ph.flagNote=ph.flagNote||"check the reading"; } /* nobody saw the preview: a doubtful reading asks to be looked at */
@@ -3170,6 +3189,7 @@ async function saveSign(id){
   const pic=sg.cardImg||S.pendingImg; if(pic) card.img=await jpegOf(pic);
   if(S.pendingFull&&!S.inbox.some(x=>x.id===id)) card.imgFull=S.pendingFull; /* the whole photo stays in the inbox, not twice (v214) */
   S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; /* used up — the Add form once showed the last photo's crop on a card made from scratch (v188) */
+  if(CROP&&CROP.id===id&&CROP.rect) card.frame=frameOf(CROP.rect); /* the frame, for Crop again (v244) */
   bump("byPhoto"); S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
   S.queue=buildQueue(false); QSCARD[id]=card.id;
