@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=239; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=240; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1394,14 +1394,14 @@ function renderEdit(main,c){
       <textarea id="e-word" class="hanzi" hidden>${esc(lines0.join("\n"))}</textarea>
       </div>
       <div class="field"><label>Pinyin</label><textarea id="e-pin" class="grow" rows="1">${esc(d.p)}</textarea></div>
-      <div class="field"><label>Meaning</label><textarea id="e-mean" class="grow" rows="1">${esc(d.m)}</textarea></div>
+      <div class="field"><label>Meaning</label><textarea id="e-mean" class="grow" rows="1">${esc(d.m)}</textarea><div class="smean badge" id="e-aistatus" style="margin-top:4px"></div></div>
     ${isSign||!d.w?"":`<div class="field"><label>Context word, pinyin, meaning (optional)</label>
       <div class="row"><input id="e-w" class="hanzi" value="${esc(d.w||"")}" placeholder="学习"><input id="e-wp" value="${esc(d.wp||"")}" placeholder="xuéxí"><input id="e-wm" value="${esc(d.wm||"")}" placeholder="to learn"></div></div>`}
     ${d.img||full?`<div class="field" id="e-imgfield"><label>Image (stays on this phone)</label><div class="pimg" id="e-pimg"></div></div>`:""}
     <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
       <input id="e-note" value="${esc(d.flagNote||"")}" placeholder="Note for the reviewer (optional)"${d.flag?"":" hidden"}></div>
     ${tagsFieldHTML("e-tags",d.tags)}
-    ${aiOn()?`<div class="field" id="e-aifield"${d.mt&&d.mt.src==="llm"&&d.mt.verified?" hidden":""}><button class="btn block" id="e-ai">Ask AI to check text, pinyin and meaning</button><div class="badge" id="e-aistatus" style="margin-top:6px"></div><div id="e-aibox" hidden class="aibox"></div></div>`:""}
+    ${aiOn()?`<div class="field" id="e-aifield"${d.mt&&d.mt.src==="llm"&&d.mt.verified?" hidden":""}><button class="btn block" id="e-ai">Ask AI to check text, pinyin and meaning</button><div id="e-aibox" hidden class="aibox"></div></div>`:""}
     <div id="e-err" class="err" style="display:none"></div>
     <button class="btn primary block" id="e-save">Save changes</button>
     </div>
@@ -1483,7 +1483,8 @@ function renderEdit(main,c){
         const lab=$("#e-lines").closest(".field").querySelector("label"); if(lab) lab.textContent="Characters"+(sg.trad?" (traditional, as on the photo)":"");
         syncWord(); drawLines(); pinyinFollow();
         if(!meanTouched){ const res=sg.lines.filter(l=>CJK.test(l)).map(lineMeaning), m=res.map(r=>r.en).filter(Boolean).join(" / "); if(m) $("#e-mean").value=m; } /* the word-by-word gloss until the AI answers; a meaning typed here stays */
-        showAi(); const ab=$("#e-ai"); if(ab&&aiLive()) ab.click(); } };
+        showAi(); const ab=$("#e-ai"); if(ab&&aiLive()) ab.click();
+        window.scrollTo({top:0,behavior:"smooth"}); /* the new text sits at the top of the form */ } };
     CROP={id:rid,rect:null}; drawRecrop(); };
   showPimg();
   $("#e-save").onclick=async()=>{
