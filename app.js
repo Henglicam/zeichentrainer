@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=266; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=267; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -136,13 +136,16 @@ async function setSetting(k,v){ S.settings[k]=v; try{ await idbPut("settings",{k
 /* diagnostics (H debugs alone on the phone): the last errors and the last reading's steps, shown and shared from More → Diagnostics */
 const ERRLOG=[], READLOG=[], LAST_READ={passes:null}, AILOG=[]; /* AILOG: the last three AI exchanges, request and raw reply, never the key (v97) */
 function logAi(entry){ AILOG.push({t:Date.now(),...entry}); while(AILOG.length>3) AILOG.shift(); } /* entry.ms: how long the call took (v208, H: the check "takes way too long" — Diagnostics now shows it) */
+/* the last reading's steps and passes survive a restart (v267 — H's first diagnostics after the v266 update said "Last reading (0 steps)":
+   the update had reloaded the page and the log lived in memory only; the error log has been persisted since v93) */
+let _readlogT=null; const saveReadLog=()=>{ clearTimeout(_readlogT); _readlogT=setTimeout(()=>{ setSetting("readlog",{steps:READLOG.slice(),passes:LAST_READ.passes||null}).catch(()=>{}); },800); };
 function logErr(kind,msg){ ERRLOG.push({t:Date.now(),kind,msg:String(msg||"").slice(0,400)}); while(ERRLOG.length>20) ERRLOG.shift(); setSetting("errlog",ERRLOG.slice()).catch(()=>{}); }
 window.addEventListener("error",e=>logErr("error",(e.message||"")+(e.filename?` @${String(e.filename).split("/").pop()}:${e.lineno}`:"")));
 window.addEventListener("unhandledrejection",e=>{ const r=e.reason; logErr("promise",r&&(r.stack||r.message)||r); });
 function diagText(){
   const ago=t=>{ const d=Math.round((Date.now()-t)/1000); return d<60?d+" s ago":d<3600?Math.round(d/60)+" min ago":Math.round(d/3600)+" h ago"; };
   const out=[`Zeichentrainer diagnostics — ${new Date().toLocaleString("en-GB")}`,
-    `page ${pageVersion()||"?"} · script ${APP_V} · online ${navigator.onLine} · AI ${aiOn()?aiProvider()+(aiLive()?" live":" off"):"none"} · SW ${navigator.serviceWorker&&navigator.serviceWorker.controller?"yes":"no"}`,
+    `page ${pageVersion()||"?"} · script ${APP_V} · online ${navigator.onLine} · AI ${aiOn()?aiProvider()+(aiLive()?" live":" off")+(textProvider()!==aiProvider()?` (text ${textProvider()})`:""):"none"} · SW ${navigator.serviceWorker&&navigator.serviceWorker.controller?"yes":"no"}`,
     navigator.userAgent, `voices (${voiceList().length}): ${voiceList().join("; ")||"none reported"}`, ""];
   out.push(`Last reading (${READLOG.length} steps):`);
   READLOG.forEach(x=>out.push(`  ${ago(x.t)}  ${x.text}`));
@@ -257,6 +260,7 @@ async function boot(){
     S.progress = {}; prog.forEach(r=>{ const {id,c,...s}=r; S.progress[id||c]=s; });
     sett.forEach(r=>{ S.settings[r.k]=r.v; });
     if(Array.isArray(S.settings.errlog)) ERRLOG.unshift(...S.settings.errlog.slice(-20));
+    if(S.settings.readlog&&Array.isArray(S.settings.readlog.steps)&&!READLOG.length){ READLOG.push(...S.settings.readlog.steps.slice(-40)); LAST_READ.passes=S.settings.readlog.passes||null; } /* the last reading before the restart (v267) */
     await migrateAi();
     bump("opens");
     /* progress of cards that no longer exist (the built-in deck of v1–v32) is dropped */
@@ -2417,7 +2421,7 @@ const readingHTML=(x,id)=>READ_FAIL.test(x)?`<span class="badge">${failText(x)}<
     ?`<div class="reading"><div class="bar"><i></i></div><span class="ok" style="margin:0">${t("Card saved — the text follows when the reading is done.")}${stuck?t(" Still at: {0}",esc(x)):""}</span></div>`
     :`<div class="reading"><div class="bar"><i></i></div><div class="readrow"><span class="badge">${t("Reading the text …")}${stuck?t(" still at: {0}",esc(x)):""}</span>${id&&CROP&&CROP.id===id&&CROP.rect&&!RECROP[id]?`<button class="btn mini" data-savenow="${id}">${t("Save now")}</button>`:""}</div></div>`)
    (!!(id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK));
-const readingStatus=(id,run)=>x=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=x; READ_AT[id]=Date.now(); READLOG.push({t:Date.now(),text:x}); while(READLOG.length>40) READLOG.shift();
+const readingStatus=(id,run)=>x=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=x; READ_AT[id]=Date.now(); READLOG.push({t:Date.now(),text:x}); while(READLOG.length>40) READLOG.shift(); saveReadLog();
   const b=$("#ocr-"+id); if(b) b.innerHTML=readingHTML(x,id);
   setTimeout(()=>{ if(READING[id]!==x) return; const b2=$("#ocr-"+id); if(b2) b2.innerHTML=readingHTML(x,id); },READ_STUCK+50); };
 /* a canvas with the bitmap drawn at a scale (opaque — the reader is handed JPEGs) */
@@ -2711,7 +2715,7 @@ async function cropSign(id,opts){
     const score=p=>readingScore(p.lines,Hink)*Math.min(1.5,1+0.1*((agree.get(textOf(p))||1)-1))*sizeFit(p)*lineFit(p);
     passes.sort((a,b)=>score(b)-score(a));
     r.passes=passes.map(p=>({s:Math.round(score(p)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),h:Hink?+(hOfPass(p)/Hink).toFixed(2):null,tight:p.tightened,bw:!!p.bw,ch:!!p.chroma,tra:!!p.tra,...(lineFit(p)<1?{over:p.lines.length-maxLines}:{})}));
-    LAST_READ.passes=r.passes;
+    LAST_READ.passes=r.passes; saveReadLog();
     const best=passes[0], lines=best.lines;
     if(best.tightened&&cardRect){ const cut=await cutUnrotated(r.blob,cardRect,dk.angle||0); if(cut){ cardImg=cut; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=cut; } } /* the text area with its margin, from the crop as framed */
     /* a weak reading, or none: the picture goes to the AI when a provider that takes pictures is set (v173) */
