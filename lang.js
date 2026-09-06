@@ -168,7 +168,7 @@ de:{
   "Card order":"Reihenfolge der Karten","Due cards come first, then up to {0} new ones. This sets the order inside each group.":"Fällige Karten kommen zuerst, dann bis zu {0} neue. Das hier legt die Reihenfolge innerhalb jeder Gruppe fest.",
   "Progress":"Fortschritt","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"App {0} geöffnet, {1} wiederholt, {2}, {3} von der KI geprüft.","Work done by {0}.":"Arbeit erledigt von {0}.",
   "on-device reader":"Texterkennung im Telefon","none yet":"noch nichts","Share report":"Bericht teilen","Usage sharing":"Nutzungsdaten",
-  "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks. No card text, no photos.":"Sendet einmal am Tag anonyme Nutzungszahlen an den Besitzer der App: genutzte Tage, erstellte und wiederholte Karten, KI-Prüfungen. Kein Kartentext, keine Fotos.",
+  "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"Sendet einmal am Tag anonyme Nutzungszahlen an den Besitzer der App: genutzte Tage, erstellte und wiederholte Karten, KI-Prüfungen und die Fehlermeldungen der App. Kein Kartentext, keine Fotos.",
   "Your id: {0}.":"Deine Kennung: {0}.","Send once a day":"Einmal am Tag senden","Photos":"Fotos","Delete {0}":"{0} löschen",
   "Advanced settings":"Erweiterte Einstellungen","Locked":"Gesperrt","Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are for the app's owner.":"Zurücksetzen, Diagnose, Alle Nutzer, Spiegel, die Downloads und die KI-Einrichtung sind für den Besitzer der App.",
   "Password":"Passwort","Unlock":"Entsperren","Wrong password.":"Falsches Passwort.","About":"Über",
@@ -210,7 +210,7 @@ de:{
   "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"Mehr → Sprache schaltet die Texte der App um. Ist die KI an, bekommen neue Karten ihre Bedeutung in dieser Sprache, und Alle Karten übersetzen erledigt es für die vorhandenen. Eine kleine Pille nennt eine Bedeutung, die noch in einer anderen Sprache ist.",
   "What stays on the phone":"Was auf dem Telefon bleibt",
   "Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak.":"Karten und Fotos bleiben auf diesem Telefon und sonst nirgends — exportiere sie ab und zu unter Mehr → Deine Daten. Die KI-Prüfung sendet den chinesischen Text, Pinyin und Bedeutung einer Karte, und den eingerahmten Teil eines Fotos nur, wenn die Erkennung schwach ist.",
-  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"Einmal am Tag gehen anonyme Nutzungszahlen an den Besitzer der App; unter Privatsphäre kannst du das abschalten. Fragen oder Ideen? Mehr → Feedback.",
+  "Once a day anonymous usage counts and the app's error messages go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"Einmal am Tag gehen anonyme Nutzungszahlen und die Fehlermeldungen der App an den Besitzer der App; unter Privatsphäre kannst du das abschalten. Fragen oder Ideen? Mehr → Feedback.",
   /* the Translate-all run that goes on after an interruption (v262) */
   "It goes on by itself when the AI can be reached again.":"Es geht von selbst weiter, sobald die KI wieder erreichbar ist.",
   /* the staged translation (v264) */
@@ -373,7 +373,7 @@ fr:{
   "Card order":"Ordre des cartes","Due cards come first, then up to {0} new ones. This sets the order inside each group.":"Les cartes à revoir viennent d'abord, puis jusqu'à {0} nouvelles. Ceci règle l'ordre dans chaque groupe.",
   "Progress":"Progression","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"Appli ouverte {0}, {1} revues, {2}, {3} vérifiées par l'IA.","Work done by {0}.":"Travail effectué par {0}.",
   "on-device reader":"lecteur sur le téléphone","none yet":"rien encore","Share report":"Partager le rapport","Usage sharing":"Partage d'utilisation",
-  "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks. No card text, no photos.":"Envoie une fois par jour des comptages anonymes au propriétaire de l'appli : jours d'utilisation, cartes créées et revues, vérifications par l'IA. Pas de texte des cartes, pas de photos.",
+  "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"Envoie une fois par jour des comptages anonymes au propriétaire de l'appli : jours d'utilisation, cartes créées et revues, vérifications par l'IA et messages d'erreur de l'appli. Pas de texte des cartes, pas de photos.",
   "Your id: {0}.":"Ton identifiant : {0}.","Send once a day":"Envoyer une fois par jour","Photos":"Photos","Delete {0}":"Supprimer {0}",
   "Advanced settings":"Réglages avancés","Locked":"Verrouillé","Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are for the app's owner.":"Réinitialisation, diagnostic, tous les utilisateurs, miroir, téléchargements et configuration de l'IA sont réservés au propriétaire de l'appli.",
   "Password":"Mot de passe","Unlock":"Déverrouiller","Wrong password.":"Mot de passe incorrect.","About":"À propos",
@@ -416,7 +416,7 @@ fr:{
   "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"Plus → Langue change les textes de l'appli. Avec l'IA, les nouvelles cartes reçoivent leur sens dans cette langue, et Traduire toutes les cartes le fait pour celles que tu as déjà. Une petite pastille nomme un sens encore dans une autre langue.",
   "What stays on the phone":"Ce qui reste sur le téléphone",
   "Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak.":"Les cartes et les photos restent sur ce téléphone et nulle part ailleurs – exporte-les de temps en temps sous Plus → Tes données. La vérification par l'IA envoie le texte chinois, le pinyin et le sens d'une carte, et la partie cadrée d'une photo seulement quand la lecture est faible.",
-  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"Une fois par jour, des comptages anonymes vont au propriétaire de l'appli ; désactive-les sous Confidentialité. Des questions ou des idées ? Plus → Commentaires.",
+  "Once a day anonymous usage counts and the app's error messages go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"Une fois par jour, des comptages anonymes et les messages d'erreur de l'appli vont au propriétaire de l'appli ; désactive-les sous Confidentialité. Des questions ou des idées ? Plus → Commentaires.",
   /* the Translate-all run that goes on after an interruption (v262) */
   "It goes on by itself when the AI can be reached again.":"Ça reprend tout seul dès que l'IA est à nouveau joignable.",
   /* the staged translation (v264) */
@@ -579,7 +579,7 @@ es:{
   "Card order":"Orden de las tarjetas","Due cards come first, then up to {0} new ones. This sets the order inside each group.":"Primero las tarjetas pendientes, luego hasta {0} nuevas. Esto fija el orden dentro de cada grupo.",
   "Progress":"Progreso","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"App abierta {0}, {1} repasadas, {2}, {3} revisadas por la IA.","Work done by {0}.":"Trabajo realizado por {0}.",
   "on-device reader":"lector en el teléfono","none yet":"nada aún","Share report":"Compartir informe","Usage sharing":"Datos de uso",
-  "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks. No card text, no photos.":"Envía una vez al día recuentos de uso anónimos al propietario de la app: días de uso, tarjetas creadas y repasadas, revisiones con IA. Sin texto de las tarjetas, sin fotos.",
+  "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"Envía una vez al día recuentos de uso anónimos al propietario de la app: días de uso, tarjetas creadas y repasadas, revisiones con IA y los mensajes de error de la app. Sin texto de las tarjetas, sin fotos.",
   "Your id: {0}.":"Tu identificador: {0}.","Send once a day":"Enviar una vez al día","Photos":"Fotos","Delete {0}":"Eliminar {0}",
   "Advanced settings":"Ajustes avanzados","Locked":"Bloqueado","Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are for the app's owner.":"Restablecer, diagnóstico, todos los usuarios, espejo, las descargas y la configuración de la IA son para el propietario de la app.",
   "Password":"Contraseña","Unlock":"Desbloquear","Wrong password.":"Contraseña incorrecta.","About":"Acerca de",
@@ -622,7 +622,7 @@ es:{
   "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"Más → Idioma cambia los textos de la app. Con la IA, las tarjetas nuevas reciben su significado en ese idioma, y Traducir todas las tarjetas lo hace con las que ya tienes. Una pequeña etiqueta nombra un significado que sigue en otro idioma.",
   "What stays on the phone":"Qué se queda en el teléfono",
   "Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak.":"Las tarjetas y las fotos se quedan en este teléfono y en ningún otro sitio — expórtalas de vez en cuando en Más → Tus datos. La revisión con IA envía el texto chino, el pinyin y el significado de una tarjeta, y la parte enmarcada de una foto solo cuando la lectura es débil.",
-  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"Una vez al día van recuentos de uso anónimos al propietario de la app; desactívalo en Privacidad. ¿Preguntas o ideas? Más → Comentarios.",
+  "Once a day anonymous usage counts and the app's error messages go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"Una vez al día van recuentos de uso anónimos y los mensajes de error de la app al propietario de la app; desactívalo en Privacidad. ¿Preguntas o ideas? Más → Comentarios.",
   /* the Translate-all run that goes on after an interruption (v262) */
   "It goes on by itself when the AI can be reached again.":"Sigue solo en cuanto la IA vuelva a estar disponible.",
   /* the staged translation (v264) */
@@ -785,7 +785,7 @@ ja:{
   "Card order":"カードの順序","Due cards come first, then up to {0} new ones. This sets the order inside each group.":"復習カードが先、その後に新しいカードが最大{0}枚。ここでは各グループ内の順序を決めます。",
   "Progress":"進み具合","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"アプリを{0}開き、{1}を復習、{2}、{3}をAIが確認。","Work done by {0}.":"作業の内訳：{0}。",
   "on-device reader":"端末内の読み取り","none yet":"まだありません","Share report":"レポートを共有","Usage sharing":"利用状況の送信",
-  "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks. No card text, no photos.":"1日1回、匿名の利用回数をアプリの所有者に送ります：使用日数、作成・復習したカード、AI確認。カードの内容や写真は送りません。",
+  "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"1日1回、匿名の利用回数をアプリの所有者に送ります：使用日数、作成・復習したカード、AI確認、アプリのエラーメッセージ。カードの内容や写真は送りません。",
   "Your id: {0}.":"あなたのID：{0}","Send once a day":"1日1回送信","Photos":"写真","Delete {0}":"{0}枚を削除",
   "Advanced settings":"詳細設定","Locked":"ロック中","Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are for the app's owner.":"リセット、診断、全ユーザー、ミラー、ダウンロード、AI設定はアプリの所有者用です。",
   "Password":"パスワード","Unlock":"ロック解除","Wrong password.":"パスワードが違います。","About":"このアプリについて",
@@ -828,7 +828,7 @@ ja:{
   "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"その他 → 言語でアプリの表示が切り替わります。AIがオンなら新しいカードの意味はその言語になり、「すべてのカードを翻訳」で今あるカードも翻訳できます。まだ別の言語の意味には小さなラベルが付きます。",
   "What stays on the phone":"端末に残るもの",
   "Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak.":"カードと写真はこの端末にだけあります。ときどき「その他 → データ」からエクスポートしてください。AI確認ではカードの中国語、ピンイン、意味を送り、写真の枠内は読み取りが弱いときだけ送ります。",
-  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"1日1回、匿名の利用回数がアプリの所有者に送られます。プライバシーでオフにできます。質問やアイデアは「その他 → フィードバック」へ。",
+  "Once a day anonymous usage counts and the app's error messages go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"1日1回、匿名の利用回数とアプリのエラーメッセージがアプリの所有者に送られます。プライバシーでオフにできます。質問やアイデアは「その他 → フィードバック」へ。",
   /* the Translate-all run that goes on after an interruption (v262) */
   "It goes on by itself when the AI can be reached again.":"AIにつながり次第、自動で続きます。",
   /* the staged translation (v264) */
@@ -991,7 +991,7 @@ ko:{
   "Card order":"카드 순서","Due cards come first, then up to {0} new ones. This sets the order inside each group.":"복습할 카드가 먼저, 그다음 새 카드 최대 {0}장. 여기서는 각 그룹 안의 순서를 정해요.",
   "Progress":"진행 상황","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"앱 {0} 열림, {1} 복습, {2}, {3} AI 확인.","Work done by {0}.":"작업 수행: {0}.",
   "on-device reader":"기기 내 읽기","none yet":"아직 없음","Share report":"보고서 공유","Usage sharing":"사용 정보 공유",
-  "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks. No card text, no photos.":"하루 한 번 익명의 사용 횟수를 앱 소유자에게 보내요: 사용 일수, 만들고 복습한 카드, AI 확인. 카드 내용과 사진은 보내지 않아요.",
+  "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"하루 한 번 익명의 사용 횟수를 앱 소유자에게 보내요: 사용 일수, 만들고 복습한 카드, AI 확인, 앱의 오류 메시지. 카드 내용과 사진은 보내지 않아요.",
   "Your id: {0}.":"내 ID: {0}.","Send once a day":"하루 한 번 보내기","Photos":"사진","Delete {0}":"{0}장 삭제",
   "Advanced settings":"고급 설정","Locked":"잠김","Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are for the app's owner.":"초기화, 진단, 전체 사용자, 미러, 다운로드, AI 설정은 앱 소유자용이에요.",
   "Password":"비밀번호","Unlock":"잠금 해제","Wrong password.":"비밀번호가 틀렸어요.","About":"정보",
@@ -1034,7 +1034,7 @@ ko:{
   "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"더보기 → 언어에서 앱의 표시를 바꿔요. AI가 켜져 있으면 새 카드의 뜻이 그 언어로 나오고, 모든 카드 번역으로 이미 있는 카드도 번역돼요. 아직 다른 언어인 뜻에는 작은 표시가 붙어요.",
   "What stays on the phone":"휴대폰에 남는 것",
   "Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak.":"카드와 사진은 이 휴대폰에만 있어요. 가끔 더보기 → 내 데이터에서 내보내 두세요. AI 확인은 카드의 중국어, 병음, 뜻을 보내고, 사진의 테두리 안은 읽기가 약할 때만 보내요.",
-  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"하루 한 번 익명의 사용 횟수가 앱 소유자에게 가요. 개인정보에서 끌 수 있어요. 질문이나 아이디어가 있으면 더보기 → 피드백.",
+  "Once a day anonymous usage counts and the app's error messages go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"하루 한 번 익명의 사용 횟수와 앱의 오류 메시지가 앱 소유자에게 가요. 개인정보에서 끌 수 있어요. 질문이나 아이디어가 있으면 더보기 → 피드백.",
   /* the Translate-all run that goes on after an interruption (v262) */
   "It goes on by itself when the AI can be reached again.":"AI에 다시 연결되면 저절로 이어져요.",
   /* the staged translation (v264) */

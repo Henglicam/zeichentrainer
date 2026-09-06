@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=270; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=271; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -206,8 +206,9 @@ function allUsersText(rows){
      since v250 the report is laid out to be read at a glance (H: "ein bisschen übersichtlicher — das dauert immer, bis ich da durchsteige"):
      the head as two short tables with the counts aligned, one block of short lines per install instead of one long line, the sections
      with a heading and a count */
-  let active=0, wx=0, installed=0; const models={}, users=[], tried=[], lookers=[];
-  for(const r of rows){ const d=r.data||{}; if(new Date(r.created_at).getTime()>=week) active++;
+  let active=0, wx=0, installed=0; const models={}, users=[], tried=[], lookers=[], erring=[];
+  const errsOf=d=>Array.isArray(d.errors)?d.errors:[], recentErr=d=>errsOf(d).some(e=>new Date(String(e.t).replace(" ","T")+":00Z").getTime()>=week);
+  for(const r of rows){ const d=r.data||{}; if(new Date(r.created_at).getTime()>=week) active++; if(errsOf(d).length) erring.push(r);
     if(/WeChat/.test(d.device||"")) wx++; if(d.installed) installed++;
     if(n(d,"cards")>0) users.push(r); else if(n(d.models,"reader")>0||n(d,"aiCalls")>0||n(r,"relay_today")>0) tried.push(r); else lookers.push(r); /* read a photo without saving a card: the on-device reader ran, or an AI or relay call went out (v251 — the label "tried the reader" was H's question) */
     for(const k of ["cards","reviews","aiCalls","pics","byPhoto","byHand"]) add(tot,k,n(d,k));
@@ -218,6 +219,7 @@ function allUsersText(rows){
     `Phones ${rows.length}`,"  (one line per browser — a phone that","  opened the link in WeChat and Chrome","  is counted twice)",
     row("made cards",users.length), row("read a photo, saved no card",tried.length), row("only opened the app",lookers.length),
     wx?row("opened it inside WeChat",wx):null, row("installed on the home screen",installed), row("used in the last 7 days",active),
+    row("with errors in the last 7 days",rows.filter(r=>recentErr(r.data||{})).length),
     "","All phones together",
     row("cards",tot.cards||0), sub("from photos",tot.byPhoto||0), sub("typed by hand",tot.byHand||0), row("cards reviewed",tot.reviews||0),
     row("AI checks",tot.aiCalls||0), sub("with the photo",tot.pics||0), sub("via the owner's key today",tot.relay||0),
@@ -231,12 +233,16 @@ function allUsersText(rows){
     `  AI checks ${n(d,"aiCalls")}, ${n(d,"pics")} with the photo`,
     reader?`  photos read ${reader}, ${n(d,"pics")} of them poorly`:null,
     `  checks via the owner's key today ${n(r,"relay_today")}`,
+    errsOf(d).length?`  errors ${errsOf(d).length}, last ${day(errsOf(d)[errsOf(d).length-1].t)} ${errsOf(d)[errsOf(d).length-1].kind}`:null, /* the messages themselves in the section at the end (v271) */
     `  first used ${d.first||"?"}`, `  last report ${day(r.created_at)}`].filter(Boolean).join("\n"); };
   const section=(title,list)=>list.length?[`${title} (${list.length})`,""].concat(list.map(block).join("\n\n")).concat([""]):[];
   const lines=section("Phones with cards",users).concat(section("Read a photo, saved no card",tried));
   if(lookers.length){ const plat=d=>{ const v=d.device||""; return /iPhone|iPad/.test(v)?"iPhone":/Android/.test(v)?"Android":/Windows/.test(v)?"Windows":/Mac/.test(v)?"Mac":/Linux|X11/.test(v)?"Linux":"other"; };
     const by={}; let lwx=0; for(const r of lookers){ const d=r.data||{}; add(by,plat(d),1); if(/WeChat/.test(d.device||"")) lwx++; }
     lines.push(`Only opened the app (${lookers.length})`,`  ${Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${v} ${k}`).join(", ")}${lwx?` (${lwx} in WeChat)`:""}`); }
+  if(erring.length){ /* the error messages phone by phone, newest last as the phone logged them (v271) */
+    lines.push("",`Errors on phones (${erring.length})`,"");
+    lines.push(erring.map(r=>{ const d=r.data||{}; return [`Phone ${d.install||"?"}, app version ${d.version||"?"}`].concat(errsOf(d).map(e=>`  ${e.t} [${e.kind}] ${e.msg}`)).join("\n"); }).join("\n\n")); }
   return head.concat(lines.length?lines:["No rows yet."]).join("\n")+"\n";
 }
 async function shareUsers(){
@@ -929,8 +935,15 @@ function reportData(){
     reviews:n("reviews"), reviewsMonth:mn("reviews"), learned:st.total, cards:deck().length,
     byPhoto:n("byPhoto"), byHand:n("byHand"), deleted:n("deleted"),
     aiCalls:n("aiCalls"), aiIn:n("aiIn"), aiOut:n("aiOut"), aiCallsMonth:mn("aiCalls"), aiInMonth:mn("aiIn"), aiOutMonth:mn("aiOut"), pics:n("pics"), picsMonth:mn("pics"), models:u.models||{}, modelsMonth:m.models||{},
-    ai:aiOn()?aiProvider()+" "+aiModel():null, inbox:S.inbox.length, tags:allTags().length, lang:navigator.language||null};
+    ai:aiOn()?aiProvider()+" "+aiModel():null, inbox:S.inbox.length, tags:allTags().length, lang:navigator.language||null,
+    errors:reportErrors()};
 }
+/* the app's last errors ride in the daily row (v271, H: "Can the app send automatic error logs from other users?" → "Go"): the kind
+   and the message of the last 20 entries of the error log — a crash, a failed reading, a failed AI call or send —, the minute they
+   happened, and never card text: any Chinese characters in a message are replaced by an ellipsis before sending. A hang without an
+   error leaves no trace here; Diagnostics from the phone still tell those. */
+const noHan=s=>String(s||"").replace(/[\u3000-\u9fff\uf900-\ufaff\uff00-\uffef]+/g,"…");
+function reportErrors(){ return ERRLOG.slice(-20).map(x=>({t:new Date(x.t).toISOString().slice(0,16).replace("T"," "),kind:x.kind,msg:noHan(x.msg).slice(0,200)})); }
 let _reporting=false, REPORT_DIRTY=false; /* a card was made or deleted since the day's row (v219): a second row goes when the app leaves the foreground, so the All users list shows the day's cards the same day */
 /* one report per day; a failed send is retried at the next start, foreground or reconnect */
 async function sendReport(force){
@@ -1043,7 +1056,7 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">${t("Photos")}</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">${t("Delete {0}",oldShots().length)}</button>`:""}</div>
     <div class="mrow"><div><div class="t">${t("Storage")}</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
     <div class="listhead">${t("Privacy")}</div>
-    <div class="mrow"><div><div class="t">${t("Usage sharing")}</div><div class="s">${t("Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks. No card text, no photos.")} <span id="share-status">${esc(shareNote())}</span> ${t("Your id: {0}.",`<span id="share-id">${esc(installId())}</span>`)}<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> ${t("Send once a day")}</label></div></div></div>
+    <div class="mrow"><div><div class="t">${t("Usage sharing")}</div><div class="s">${t("Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.")} <span id="share-status">${esc(shareNote())}</span> ${t("Your id: {0}.",`<span id="share-id">${esc(installId())}</span>`)}<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> ${t("Send once a day")}</label></div></div></div>
     <div class="listhead">${t("Advanced settings")}</div>
     ${S.admin?`<div class="mrow"><div><div class="t">Unlocked</div><div class="s">Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are shown below until the app is closed.</div></div><button class="btn mini" id="admin-lock">Lock</button></div>`
     :`<div class="mrow"><div><div class="t">${t("Locked")}</div><div class="s">${t("Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are for the app's owner.")}</div></div></div>
@@ -1120,7 +1133,7 @@ const GUIDE=()=>[
     t("Tags group cards for a class or a level. Learn can show one tag at a time.")]},
   {h:t("Language and meanings"),p:[t("More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.")]},
   {h:t("What stays on the phone"),p:[t("Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak."),
-    t("Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.")]}];
+    t("Once a day anonymous usage counts and the app's error messages go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.")]}];
 function renderGuide(main){
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back-more">${t("← Back")}</button><span class="badge">${t("How to use the app")}</span></div>
