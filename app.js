@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=278; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=279; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -3798,21 +3798,29 @@ if("serviceWorker" in navigator){
     takeShared(); /* photos shared to the app (v163) — after boot, S.inbox is loaded by then */
     navigator.serviceWorker.addEventListener("message",e=>{
       const d=e.data||{};
-      if(d.type==="refreshed"){ if(d.ok) location.reload(); return; }
+      if(d.type==="refreshed"){ if(d.ok) reloadSoon(); return; }
       if(d.type!=="mirror-update") return;
-      MIRROR.busy=false; MIRROR.last=d;
+      MIRROR.busy=false; MIRROR.last=d; const forced=MIRROR.forced; MIRROR.forced=false;
       const st=$("#mirror-status"); if(st) st.textContent=mirrorText();
-      if(d.status==="updated") setTimeout(()=>location.reload(),600);
+      if(d.status==="updated") setTimeout(()=>forced?location.reload():reloadSoon(),600); /* Check now was a tap — reload at once; the hourly check waits (v279) */
     });
     /* new version activated (skipWaiting+claim) → reload once automatically.
        First install (no controller before) does not trigger a reload. */
     let hadCtrl=!!navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener("controllerchange",()=>{
       if(!hadCtrl){ hadCtrl=true; shellCheck(); return; } /* first install: no reload, but the shell check can run now */
-      location.reload();
+      reloadSoon();
     });
   });
 }
+/* The reload after an update waits until the app is idle (v279, H: after several builds in a row "flickert die App" — every
+   update reloaded the page the moment the new worker took over, in the middle of whatever H was doing): within RELOAD_GRACE
+   of the load (the user has just opened the app and sees the first screen) or while the app is in the background the page
+   reloads at once, as before; later, RELOAD_DUE is set and the reload comes when the app next comes to the foreground.
+   A tap on the mirror's Check now still reloads at once — the user asked for it. */
+const LOAD_AT=Date.now(), RELOAD_GRACE=3000; let RELOAD_DUE=false;
+function reloadSoon(){ if(Date.now()-LOAD_AT<RELOAD_GRACE||document.hidden){ location.reload(); return; } RELOAD_DUE=true; }
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&RELOAD_DUE){ RELOAD_DUE=false; location.reload(); } });
 /* ---------- mixed shell: the page and the script at different versions ----------
    GitHub Pages caches for ten minutes and jsDelivr per file, so after quick successive deploys a worker once served
    the v70 page with the v69 script (H: "I was on 70" — and the drag was missing). If the label and APP_V differ,
@@ -3834,7 +3842,7 @@ function mirrorCheck(force){
   if(!navigator.onLine||MIRROR.busy) return;
   if(!force && Date.now()-MIRROR.at<3600000) return; /* at most once an hour by itself */
   const ctrl=navigator.serviceWorker&&navigator.serviceWorker.controller; if(!ctrl) return;
-  MIRROR.busy=true; MIRROR.at=Date.now();
+  MIRROR.busy=true; MIRROR.at=Date.now(); MIRROR.forced=!!force;
   const local=pageVersion();
   ctrl.postMessage({type:"mirror-update",mirror:mirrorURL(),local});
   const st=$("#mirror-status"); if(st) st.textContent="Checking the mirror …";
