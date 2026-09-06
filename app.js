@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=280; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=281; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1655,7 +1655,7 @@ function renderEdit(main,c){
   };
   /* pinyin follows the text unless it was edited by hand */
   let pinTouched=false; $("#e-pin").addEventListener("input",()=>{ pinTouched=true; }); $("#e-mean").addEventListener("input",()=>{ meanTouched=true; }); wireGrow(main);
-  const pinyinFollow=()=>{ if(pinTouched||!window.pinyinPro) return; const txt=sg.lines.join("").replace(/\s+/g,""); if(CJK.test(txt)) $("#e-pin").value=pinyinPro.pinyin(txt,{toneType:"symbol"}); };
+  const pinyinFollow=()=>{ if(pinTouched||!window.pinyinPro) return; const txt=sg.lines.join("").replace(/\s+/g,""); if(CJK.test(txt)){ $("#e-pin").value=pinyinPro.pinyin(txt,{toneType:"symbol"}); autoGrow($("#e-pin")); } };
   /* the AI button only where it adds something: a card the AI did not verify, or a verified one whose text was changed here (H, v135) */
   const showAi=()=>{ const f=$("#e-aifield"); if(f) f.hidden=false; };
   sg.onChange=()=>{ syncWord(); drawLines(); pinyinFollow(); showAi(); const ab=$("#e-ai"); if(ab&&aiLive()) ab.click(); };
@@ -1667,8 +1667,8 @@ function renderEdit(main,c){
     try{
       const [r]=await aiAsk([{kind:d.kind||"word",c:isSign?zh.split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):zh.replace(/\s+/g,""),p:pin,m:mean,flagNote:note,gloss:d.gloss,mt:{src:"dict",verified:false,suspect:"please check"}}],()=>{ st.innerHTML=busyHTML(t(AI_BUSY_TEXT)); });
       if(r.zh&&CJK.test(r.zh)){ const zh=r.zh.replace(/\r/g,""); sg.lines=(isSign?zh:recutLines(zh.replace(/\s+/g,""),sg.lines)).split("\n").map(l=>l.trim()).filter(Boolean); sg.orig=sg.lines.slice(); syncWord(); drawLines(); }
-      if(r.p) $("#e-pin").value=r.p;
-      if(r.m){ $("#e-mean").value=r.m; aiMl=r.ml||"en"; meanTouched=false; }
+      if(r.p){ $("#e-pin").value=r.p; autoGrow($("#e-pin")); }
+      if(r.m){ $("#e-mean").value=r.m; autoGrow($("#e-mean")); aiMl=r.ml||"en"; meanTouched=false; } /* the fields grow with the answer — a filled value fires no input event (v281, H's two-line brand meaning cut off) */
       aiApplied=true; st.textContent=""; /* a good answer shows nothing, the fields just fill — as in the Read preview (H, v105; the green "AI: looks right" box went in v245) */
     }catch(err){ const m=err&&err.message||String(err); st.textContent=m===AI_NET_ERR?t(m)+t(". Tap the button to try again."):t("The AI check failed: {0}",m); }
     ab.disabled=false;
@@ -1699,7 +1699,7 @@ function renderEdit(main,c){
   let res=null, before=null;
   const setResult=(img,text)=>{ if(res&&res.url) URL.revokeObjectURL(res.url); recropImg=img; recropRect={...CROP.rect}; res={key:rectKey(CROP.rect),text,url:URL.createObjectURL(img)}; if(RECROP[rid]) RECROP[rid].stage="idle"; drawRecrop(); };
   const restoreBefore=()=>{ if(!before) return; Object.assign(sg,before.sg); recropImg=null; recropRect=null; /* Cancel: the text, pinyin and meaning from before Crop again */
-    $("#e-pin").value=before.pin; $("#e-mean").value=before.mean; const lab=$("#e-lines").closest(".field").querySelector("label"); if(lab) lab.textContent=before.label; syncWord(); drawLines(); };
+    $("#e-pin").value=before.pin; $("#e-mean").value=before.mean; autoGrow($("#e-pin")); autoGrow($("#e-mean")); const lab=$("#e-lines").closest(".field").querySelector("label"); if(lab) lab.textContent=before.label; syncWord(); drawLines(); };
   const endRecrop=()=>{ if(PENDING[rid]) return; /* handed over to the background (Save changes during the reading, v241): the reading goes on and fills the card */
     abandonReading(rid); if(CROP&&CROP.id===rid) CROP=null; delete RECROP[rid]; if(res&&res.url) URL.revokeObjectURL(res.url); res=null; before=null; win=null;
     if(SHOTS_EXTRA[rid]){ delete SHOTS_EXTRA[rid]; if(IMGURL[rid]){ URL.revokeObjectURL(IMGURL[rid]); delete IMGURL[rid]; } } };
@@ -1747,7 +1747,7 @@ function renderEdit(main,c){
         setResult(sg2.cardImg||recropImg,sg.lines.join(" / ")); /* the tightened cut when there is one, else the crop as framed; the frame stays on the photo */
         const lab=$("#e-lines").closest(".field").querySelector("label"); if(lab) lab.textContent="Characters"+(sg.trad?" (traditional, as on the photo)":"");
         syncWord(); drawLines(); pinyinFollow();
-        if(!meanTouched){ const r2=sg.lines.filter(l=>CJK.test(l)).map(lineMeaning), m=r2.map(r=>r.en).filter(Boolean).join(" / "); if(m){ $("#e-mean").value=m; $("#e-aistatus").textContent=`Meaning ${r2.length&&r2.every(r=>r.full)?"from the phrasebook":"composed word by word"}, unverified`; } } /* the word-by-word gloss with its source line until the AI answers, as in the Read preview (v245); a meaning typed here stays */
+        if(!meanTouched){ const r2=sg.lines.filter(l=>CJK.test(l)).map(lineMeaning), m=r2.map(r=>r.en).filter(Boolean).join(" / "); if(m){ $("#e-mean").value=m; autoGrow($("#e-mean")); $("#e-aistatus").textContent=`Meaning ${r2.length&&r2.every(r=>r.full)?"from the phrasebook":"composed word by word"}, unverified`; } } /* the word-by-word gloss with its source line until the AI answers, as in the Read preview (v245); a meaning typed here stays */
         showAi(); const ab=$("#e-ai"); if(ab&&aiLive()) ab.click(); } };
     /* the frame the card was cut with, without a reading until it is moved (v244, H: "use the previous cropping area as starting point");
        a card from before v244 has no frame stored — its crop is looked for in the photo (findFrame, v246) and the frame kept on the card;
