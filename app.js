@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=236; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=237; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -97,7 +97,7 @@ function orderCards(list,order,byDue){
   return byDue?list.slice().sort((a,b)=>S.progress[a.id].due-S.progress[b.id].due):list.slice(); /* the deck is oldest first already */
 }
 function buildQueue(includeAhead){
-  const lt=learnTag(), p=S.progress, t=today(), d=lt?deck().filter(x=>hasTag(x,lt)):deck(); /* Learn: all cards, one tag, or the untagged ones (v133, v156) */
+  const lt=learnTag(), p=S.progress, t=today(), d=(lt?deck().filter(x=>hasTag(x,lt)):deck()).filter(x=>x.c); /* Learn: all cards, one tag, or the untagged ones (v133, v156); a card still reading has no text yet (v237) */
   const order=learnOrder();
   const due = orderCards(d.filter(x=>p[x.id] && p[x.id].due<=t),order,true).map(x=>x.id);
   const fresh = orderCards(d.filter(x=>!p[x.id]),order,false).slice(0,NEW_PER_SESSION).map(x=>x.id);
@@ -252,6 +252,7 @@ async function boot(){
   wireChrome(); render();
   autoBreaks(); /* old cards get their photo lines estimated once */
   dedupePhotos(); /* cards from before v214 drop the whole photo they hold twice */
+  setTimeout(resumePending,1500); /* cards saved before their reading finished get it now (v237) */
   aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); });
   sendReport(); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) sendReport(); else if(REPORT_DIRTY) sendReport(true); }); /* the day's first row on foreground, a second one on background when cards changed (v219) */
 }
@@ -513,7 +514,7 @@ async function aiReadPicture(blob,alts,status){
   const zhRaw=String(x.zh||"").replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"), zh=t2s(zhRaw);
   return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(x.p,zh),m,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv};
 }
-function aiQueue(){ return deck().filter(d=>d.flag||(d.mt&&(d.mt.pending||d.mt.suspect))); }
+function aiQueue(){ return deck().filter(d=>d.c&&(d.flag||(d.mt&&(d.mt.pending||d.mt.suspect)))); } /* a card still waiting for its reading has no text to check (v237) */
 function aiAutoOn(){ return aiOn()&&S.settings.aiAuto!==false; }
 /* the online AI is the meaning source whenever it can be reached; the offline model is the fallback */
 function aiLive(){ return aiAutoOn()&&navigator.onLine; }
@@ -641,7 +642,7 @@ function wireAi(root){
 let _aiAutoRan=false;
 async function aiAuto(){
   if(!aiLive()||_aiAutoRan) return;
-  const list=S.custom.filter(d=>d.mt&&(d.mt.pending||d.mt.suspect)&&!d.ai); if(!list.length) return;
+  const list=S.custom.filter(d=>d.c&&d.mt&&(d.mt.pending||d.mt.suspect)&&!d.ai); if(!list.length) return; /* a card still waiting for its reading has no text yet (v237) */
   _aiAutoRan=true;
   try{ await aiReview(list); if(S.mode==="more"||S.mode==="cards"||S.mode==="inbox") render(); }catch(e){ console.warn("AI auto review:",e); }
 }
@@ -1027,7 +1028,7 @@ function frontHTML(d){
   /* the photo is the cue — it belongs on the front, before reveal */
   const pic=frontPic(d);
   const lines0=d.trad?d.trad.split("\n"):frontLines(d), {W,H,fs,lines}=frontBox(lines0,headFont(d.c),frontWords(d)); /* the front shows the photo's script; the card's key stays simplified */
-  return `${pic}<div class="reticle" style="width:${W}px;height:${H}px">${reticleSVG(single,W,H)}<div class="glyph" style="font-size:${fs}px">${lines.map(esc).join("<br>")}</div></div>${scriptNote}`;
+  return `${pic}<div class="reticle" style="width:${W}px;height:${H}px">${reticleSVG(single,W,H)}<div class="glyph" style="font-size:${fs}px">${d.c?lines.map(esc).join("<br>"):`<span class="lbl">${d.reading&&d.reading.failed?"Nothing read yet":"Reading …"}</span>`}</div></div>${scriptNote}`;
 }
 /* ---------- pronunciation: the phone's own Chinese voice (nothing downloaded, works offline) ---------- */
 let TTS_VOICE=null;
@@ -1305,7 +1306,7 @@ function cardsListHTML(){
   if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,d.w,d.wp,d.wm,d.flagNote,...(d.tags||[])].filter(Boolean).join(" ").toLowerCase().includes(q));
   const rows=list.map(d=>`<button class="crow" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
-      <span class="ct"><span class="c">${esc((d.trad||d.c).replace(/\n/g," / "))}</span>${d.trad?`<span class="simpref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">Traditional</span>`:""}${byText.get(d.c)>1?`<span class="pill">${byText.get(d.c)} photos</span>`:""}${(d.tags||[]).map(t=>`<span class="pill tag">${esc(t)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
+      <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?"Nothing read yet":"Reading …"}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">Traditional</span>`:""}${byText.get(d.c)>1?`<span class="pill">${byText.get(d.c)} photos</span>`:""}${(d.tags||[]).map(t=>`<span class="pill tag">${esc(t)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
       <span class="cs">${d.ai?'<span class="pill ai">AI</span>':""}${d.flag?'<span class="pill flagged">⚑ Review</span>':""}${cardStatus(d)}</span></button>`).join("");
   const empty=S.custom.length?"No cards match.":"No cards yet — take a photo under Camera, or tap + New.";
   return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length};
@@ -1472,6 +1473,7 @@ function renderEdit(main,c){
    pinyin/segmentation/gloss (unless pinyin was set by hand). The id stays, so
    progress, thumbnail and queue entries need no move (v118). */
 async function applyCardUpdate(id,upd,newC,pinByHand,lines){
+  { const d0=cardOf(id); if(d0&&d0.reading&&newC&&newC.trim()){ delete d0.reading; delete upd.reading; const k=Object.keys(PENDING).find(k=>PENDING[k]===id); if(k){ delete PENDING[k]; READ_RUN[k]=(READ_RUN[k]||0)+1; delete READING[k]; delete SIGN[k]; } } } /* H typed the text: the background reading is not needed (v237) */
   const isSign=upd.kind==="sign", c=upd.c;
   if(newC && newC!==c){
     upd.c=newC;
@@ -1649,6 +1651,7 @@ async function readPassTra(blob,status){
 }
 
 /* per-photo result (session only): characters with box + auto pinyin; tap to select */
+const PENDING={}; /* shot id → the id of a card saved before its reading finished (v237, "Save now"): the reading fills it in when done */
 const QSNOTE={}, QSCARD={}, READING={}; /* READING[id]: status text while the photo is being read · QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) · QSNOTE[id] = the note under the photo after saving */
 /* greedy longest-match segmentation against CC-CEDICT (max word length 8) */
 function segmentChars(chars){
@@ -1827,10 +1830,10 @@ async function proposeFrame(id){
   const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`frame proposed by the app: ${full?"the whole photo":`${pc(f.x/r.width)}–${pc((f.x+f.w)/r.width)} % across, ${pc(f.y/r.height)}–${pc((f.y+f.h)/r.height)} % down${shaped?" (16:9)":" (the text's own box, 16:9 does not fit)"}`}${reg?`, text rows ${pc(reg.y)}–${pc(reg.y1)} %`:", no text rows found"}`}); while(READLOG.length>40) READLOG.shift();
   renderShots(); showCropPreview(id);
 }
-async function cropBlob(id){
-  const rec=S.inbox.find(s=>s.id===id);
-  if(!rec||!CROP||!CROP.rect||CROP.rect.w<8||CROP.rect.h<8) return null;
-  const {x,y,w,h,lw,a}=CROP.rect;
+async function cropBlob(id,rectArg){
+  const rec=S.inbox.find(s=>s.id===id), rect=rectArg||(CROP&&CROP.id===id?CROP.rect:null);
+  if(!rec||!rect||rect.w<8||rect.h<8) return null;
+  const {x,y,w,h,lw,a}=rect;
   const bmp=await createImageBitmap(rec.blob);
   const sc=bmp.width/lw;
   const X=Math.round(x*sc), Y=Math.round(y*sc);
@@ -2089,8 +2092,12 @@ const READ_STUCK=20000, READ_AT={}, READ_RUN={}; /* READ_RUN[id] = the number of
    changes late and nothing said the app was still at it: "kann man anzeigen, dass er noch dran arbeitet?") */
 const busyHTML=t=>`<div class="reading"><div class="bar"><i></i></div><span class="badge">${esc(t)}</span></div>`;
 const AI_BUSY_TEXT="Checking pinyin and meaning …";
+/* while a photo is read: the bar, and beside it Save now (v237, H: "take a photo, crop in a rush, hit Save and move on" —
+   the card is made at once with the crop, the reading fills it in in the background); once saved, the note instead */
 const readingHTML=(t,id)=>READ_FAIL.test(t)?`<span class="badge">${esc(t)}</span>`
-  :busyHTML(`Reading the text …${id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK?` still at: ${t}`:""}`);
+  :busyHTML(`Reading the text …${id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK?` still at: ${t}`:""}`)
+   +(id&&PENDING[id]?`<div class="ok" style="margin:8px 0 0">Card saved — the text follows when the reading is done.</div>`
+     :id&&CROP&&CROP.id===id&&CROP.rect?`<div class="fieldacts"><button class="btn mini" data-savenow="${id}">Save now</button></div>`:"");
 const readingStatus=(id,run)=>t=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=t; READ_AT[id]=Date.now(); READLOG.push({t:Date.now(),text:t}); while(READLOG.length>40) READLOG.shift();
   const b=$("#ocr-"+id); if(b) b.innerHTML=readingHTML(t,id);
   setTimeout(()=>{ if(READING[id]!==t) return; const b2=$("#ocr-"+id); if(b2) b2.innerHTML=readingHTML(t,id); },READ_STUCK+50); };
@@ -2332,19 +2339,20 @@ async function cutUnrotated(orig,rect,angle){
     return await new Promise(res=>cc.toBlob(res,"image/jpeg",READ_JPEG));
   }catch(e){ return null; } finally{ bmp.close(); }
 }
-async function cropSign(id){
+async function cropSign(id,opts){
   const run=READ_RUN[id]=(READ_RUN[id]||0)+1, stale=()=>READ_RUN[id]!==run; /* a newer reading of this photo has started: leave everything to it */
   const status=readingStatus(id,run);
   READLOG.length=0; LAST_READ.passes=null; status("cutting out the frame …");
+  let cardImg=null; /* the card's picture from this reading — kept on the reading, not in the one global slot, so a reading finishing in the background cannot hand its picture to another photo's card (v237) */
   try{
-    const r=await cropBlob(id);
+    const r=opts&&opts.blob?{blob:opts.blob}:await cropBlob(id,opts&&opts.rect);
     if(stale()) return;
-    if(!r){ delete READING[id]; renderShots(); return; } /* no frame yet — nothing to do */
+    if(!r){ delete READING[id]; renderShots(); if(PENDING[id]) failPending(id,"no frame"); return; } /* no frame yet — nothing to do */
     const rec=S.inbox.find(x=>x.id===id);
-    S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null;
-    delete SIGN[id]; delete QSNOTE[id]; /* the frame stays visible while reading */
+    cardImg=r.blob; if(!PENDING[id]){ S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null; }
+    delete SIGN[id]; if(!PENDING[id]) delete QSNOTE[id]; /* the frame stays visible while reading */
     renderShots();
-    const box=$("#ocr-"+id); if(!box) return;
+    const box=$("#ocr-"+id); if(!box&&!PENDING[id]) return; /* a photo not on screen is not read — unless a saved card waits for it */
     status("loading the reader …");
     const w=await ocrWorker(status); bumpModel("reader");
     await loadSigns().catch(()=>{}); /* phrasebook optional — falls back to word gloss */
@@ -2385,7 +2393,7 @@ async function cropSign(id){
     r.passes=passes.map(p=>({s:Math.round(score(p)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),h:Hink?+(hOfPass(p)/Hink).toFixed(2):null,tight:p.tightened,bw:!!p.bw,ch:!!p.chroma,tra:!!p.tra,...(lineFit(p)<1?{over:p.lines.length-maxLines}:{})}));
     LAST_READ.passes=r.passes;
     const best=passes[0], lines=best.lines;
-    if(best.tightened&&cardRect){ const cut=await cutUnrotated(r.blob,cardRect,dk.angle||0); if(cut) S.pendingImg=cut; } /* the text area with its margin, from the crop as framed */
+    if(best.tightened&&cardRect){ const cut=await cutUnrotated(r.blob,cardRect,dk.angle||0); if(cut){ cardImg=cut; if(!PENDING[id]) S.pendingImg=cut; } } /* the text area with its margin, from the crop as framed */
     /* a weak reading, or none: the picture goes to the AI when a provider that takes pictures is set (v173) */
     const weak=!lines.length||effScore(lines,Hink)<WEAK_READ; let pic=null;
     if(weak&&pictureProvider()&&aiAutoOn()&&navigator.onLine){ /* the one switch covers text and pictures (v193, H: the picture went out while the check was off — "counterintuitive") */
@@ -2398,12 +2406,12 @@ async function cropSign(id){
       /* the AI's lines replace the reading: no confidences (every character is open in the picker), no boxes (the sheet
          shows the whole crop), the reader's texts become the alternatives; the answer is the check, no text check follows */
       const zh=pic.zh.split("\n"), guesses=[...new Set(passes.map(textOf).filter(t=>t&&t!==pic.zh))].slice(0,6);
-      S.pendingImg=r.blob; /* the card image is the crop as framed, not the second look's band */
+      cardImg=r.blob; if(!PENDING[id]) S.pendingImg=r.blob; /* the card image is the crop as framed, not the second look's band */
       SIGN[id]={lines:zh, orig:zh.slice(), conf:[], boxes:zh.map(()=>[]), img:dk.blob, angle:dk.angle||0, tightened:false, region:r, alts:guesses, trad:!!pic.zht, tradDetected:!!pic.zht, tradText:pic.zht||"",
-        ai:{zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,note:pic.note,ok:true,bad:false,pic:true}};
-      delete READING[id]; renderShots(); return;
+        ai:{zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,note:pic.note,ok:true,bad:false,pic:true}, cardImg, weak:false};
+      delete READING[id]; renderShots(); if(PENDING[id]) finishPending(id); return;
     }
-    if(!lines.length){ status("No Chinese characters recognized — frame the characters tightly and try again."); return; }
+    if(!lines.length){ status("No Chinese characters recognized — frame the characters tightly and try again."); if(PENDING[id]) failPending(id,"no Chinese characters recognized"); return; }
     /* img = the (straightened, maybe tightened) crop the text was read from, boxes = where each character sits in it: the picker shows the original */
     /* the other readings (distinct texts, best first): the AI sees them all (the truth is often a mix, or a name they circle
        around — 养兴多 / 义乐多 / 和准浴多 → 养乐多), the picker offers their characters at the same position */
@@ -2429,10 +2437,65 @@ async function cropSign(id){
       if(pick&&!alts.includes(textOf(pick))){ if(alts.length>=6) alts.pop(); alts.push(textOf(pick)); } }
     const tradPhoto=s2t(bestT)!==bestT&&tradPhotoOf(lines.map(x=>x.t),passes,score); r.trad=tradPhoto; /* a text without a traditional form (推) has nothing to vote on */
     SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r, alts, trad:tradPhoto, tradDetected:tradPhoto, tradText:tradPhoto?s2t(bestT):""};
+    SIGN[id].cardImg=cardImg; SIGN[id].weak=weak; /* for the card saved before the reading (v237): its picture, and the flag when the reading was weak */
     if(pic&&pic.bad){ const sg=SIGN[id]; sg.ai={zh:bestT,zht:"",p:"",m:"",note:pic.note,ok:false,bad:true,pic:true}; sg.flag=true; sg.flagNote="the reading looks wrong"; } /* the AI saw the picture and found no readable text: the reading is marked wrong, no text check on it */
     delete READING[id]; renderShots();
     if(aiAutoOn()&&!(pic&&pic.bad)) signAskAI(id); /* every reading is checked without a tap */
-  }catch(err){ if(stale()) return; status("Reading failed: "+(err&&err.message||err)); logErr("read",err&&(err.stack||err.message)||err); }
+    if(PENDING[id]) finishPending(id);
+  }catch(err){ if(stale()) return; status("Reading failed: "+(err&&err.message||err)); logErr("read",err&&(err.stack||err.message)||err); if(PENDING[id]) failPending(id,"the reading failed"); }
+}
+/* ---------- a card saved before its reading is done (v237, H: "take a photo and make a crop in a rush, hit Save and move on;
+   the app will finish everything in the background") ----------
+   Save now, beside the reading bar, makes the card at once with the crop as framed and no text ("Reading …" in the Cards
+   list, skipped by Learn); the reading and the AI check go on and fill it in — the text, pinyin, meaning, the tightened
+   picture — appended in the background while H takes the next photo or leaves the tab. A weak or doubtful reading is
+   saved with the review flag "check the reading" instead of the preview's red line; a reading that finds nothing or
+   fails leaves the card empty, flagged, for Edit or another framing. The work needs the page open: a card still waiting at
+   the next start gets its reading redone then (resumePending), from the photo with the frame it was saved with, or from
+   the crop itself when the photo is gone. The usual flow — wait for the preview, then Save card — is unchanged. */
+async function saveNow(id){
+  if(PENDING[id]||!CROP||CROP.id!==id||!CROP.rect) return;
+  const rect={...CROP.rect}, r=await cropBlob(id,rect); if(!r) return;
+  const card={id:"reading#"+Date.now(), c:"", p:"", m:"", t:"Custom", at:Date.now(), shot:id, lb:"photo", img:await jpegOf(r.blob), mt:{src:"gloss",verified:false,pending:true}, reading:{rect,at:Date.now()}};
+  bump("byPhoto"); S.custom.push(card); try{ await idbPut("custom",card); }catch(e){}
+  PENDING[id]=card.id; QSCARD[id]=card.id; CROP=null; delete SIGN[id];
+  QSNOTE[id]="Card saved — the text follows when the reading is done.";
+  clearTimeout(READ_TIMER[id]); if(!READING[id]) cropSign(id,{rect}); /* the reading had not started yet (the 1.2 s wait) — start it with the frame it was saved with */
+  setStats(); renderShots();
+}
+function pendingCard(id){ const cid=PENDING[id]; return cid?cardOf(cid):null; }
+async function finishPending(id){
+  const sg=SIGN[id], ph=pendingCard(id); if(!ph){ delete PENDING[id]; return; }
+  if(!ph.reading){ delete PENDING[id]; delete SIGN[id]; return; } /* H gave it a text meanwhile (Edit) — the reading is not needed */
+  try{
+    if(sg&&sg.aiPromise) await sg.aiPromise;
+    const built=sg&&SIGN[id]===sg?await readingCard(id,sg):null;
+    if(!built){ return failPending(id,"nothing to save"); }
+    const {card,c,mt}=built;
+    for(const k of Object.keys(ph)) if(!["id","at","img","shot","tags"].includes(k)) delete ph[k];
+    const {id:_i,at:_a,img:_m,shot:_s,...fields}=card; Object.assign(ph,fields);
+    if(sg.cardImg) ph.img=await jpegOf(sg.cardImg);
+    if(mt.suspect||sg.weak||(sg.ai&&sg.ai.bad)){ ph.flag=true; ph.flagNote=ph.flagNote||"check the reading"; } /* nobody saw the preview: a doubtful reading asks to be looked at */
+    try{ await idbPut("custom",ph); }catch(e){}
+    QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}.`+(mt.pending?" Translation pending.":"")+(ph.flag?" Flagged for review.":"");
+  }catch(err){ logErr("savenow",err&&(err.stack||err.message)||err); return failPending(id,"the reading failed"); }
+  finally{ delete PENDING[id]; delete SIGN[id]; }
+  S.queue=buildQueue(false); aiAutoSoon(); setStats();
+  if(S.mode==="cards"&&!S.detail&&!S.editing) render(); else renderShots();
+}
+async function failPending(id,why){
+  const ph=pendingCard(id); delete PENDING[id]; delete SIGN[id]; if(!ph||!ph.reading) return;
+  ph.reading.failed=why; ph.flag=true; ph.flagNote="the reading failed — edit the card or frame the photo again";
+  try{ await idbPut("custom",ph); }catch(e){}
+  QSNOTE[id]="Card saved, but nothing could be read — edit the card or frame the photo again."; setStats();
+  if(S.mode==="cards"&&!S.detail&&!S.editing) render(); else renderShots();
+}
+async function resumePending(){
+  for(const d of S.custom.filter(d=>d.reading&&!d.reading.failed&&!d.c)){
+    const rec=d.shot&&S.inbox.find(x=>x.id===d.shot), key=rec?d.shot:d.id;
+    if(PENDING[key]) continue; PENDING[key]=d.id;
+    try{ await cropSign(key,rec?{rect:d.reading.rect}:{blob:d.img}); }catch(e){}
+  }
 }
 /* ---------- fixing one misread character: tap it, pick a replacement ----------
    Candidates come from the dictionary (words that fit the neighbouring characters), from the AI
@@ -2992,14 +3055,12 @@ async function signTranslate(id){
     sg.nmt={lines:lines.join("\n"),m:r.m,src:r.src,pending:r.pending}; /* Save reuses it for the same lines (v194, H: the Save button read "Translating …" — the model ran a second time) */
   }catch(err){ if(sm) sm.textContent="Offline translation failed, meaning composed word by word"; }
 }
-async function saveSign(id){
-  const sg=SIGN[id]; if(!sg) return;
-  if(sg.aiPromise){ const b=document.querySelector(`[data-signsave="${id}"]`); if(b){ b.disabled=true; b.textContent="Checking …"; } await sg.aiPromise; if(!SIGN[id]) return; }
+/* the card from a reading — text, pinyin, meaning, source — without the document (the background finish uses it too, v237) */
+async function readingCard(id,sg){
   signPreview(id);
-  const keep=sg.lines.map((l,k)=>({l:l.trim(),r:sg.res[k]})).filter(x=>x.r);
-  if(!keep.length) return;
+  const keep=sg.lines.map((l,k)=>({l:l.trim(),r:sg.res&&sg.res[k]})).filter(x=>x.r);
+  if(!keep.length) return null;
   const c=keep.map(x=>x.l).join("\n");
-  if(deck().some(d=>d.c===c&&d.shot===id)){ sg.aiErr="This text is already saved from this photo."; renderShots(); return; } /* the same text from another photo is a new card (H, v118) */
   /* meaning: AI check (if done here) → phrasebook → offline translation (if enabled) → word gloss (then pending) */
   let mt={src:sg.full?"phrasebook":"gloss",verified:false,pending:!sg.full}, mean=sg.mean||"", pin=keep.map(x=>x.r.py).join(" / ");
   if(sg.ai && c===sg.ai.zh && !sg.ai.bad && !sg.ai.kept){ mean=sg.ai.m||mean; pin=sg.ai.p||pin; mt={src:"llm",verified:true,pending:false}; }
@@ -3027,7 +3088,15 @@ async function saveSign(id){
   if(sg.tags&&sg.tags.length) card.tags=sg.tags.slice();
   if(sg.alts&&sg.alts.length) card.alts=sg.alts.slice(0,5); /* the other readings stay with the card for a later AI check */
   if(sg.trad&&(sg.tradText||"").trim()) card.trad=sg.tradText.trim(); /* the text as it stands on the photo, in traditional characters (v101) */
-  if(S.pendingImg) card.img=await jpegOf(S.pendingImg);
+  return {card,c,mt};
+}
+async function saveSign(id){
+  const sg=SIGN[id]; if(!sg) return;
+  if(sg.aiPromise){ const b=document.querySelector(`[data-signsave="${id}"]`); if(b){ b.disabled=true; b.textContent="Checking …"; } await sg.aiPromise; if(!SIGN[id]) return; }
+  const built=await readingCard(id,sg); if(!built) return;
+  const {card,c,mt}=built;
+  if(deck().some(d=>d.c===c&&d.shot===id)){ sg.aiErr="This text is already saved from this photo."; renderShots(); return; } /* the same text from another photo is a new card (H, v118) */
+  const pic=sg.cardImg||S.pendingImg; if(pic) card.img=await jpegOf(pic);
   if(S.pendingFull&&!S.inbox.some(x=>x.id===id)) card.imgFull=S.pendingFull; /* the whole photo stays in the inbox, not twice (v214) */
   S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; /* used up — the Add form once showed the last photo's crop on a card made from scratch (v188) */
   bump("byPhoto"); S.custom.push(card);
@@ -3067,13 +3136,14 @@ function renderShots(){
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">Cancel</button>`
           :`<button class="ocr-btn" data-crop="${s.id}">Crop</button><button class="del" data-del="${s.id}">Delete</button>`}</span></div>
-        <div class="ocr" id="ocr-${s.id}">${SIGN[s.id]?signEditorHTML(s.id):READING[s.id]?readingHTML(READING[s.id],s.id):cropping
+        <div class="ocr" id="ocr-${s.id}">${PENDING[s.id]?readingHTML(READING[s.id]||AI_BUSY_TEXT,s.id):SIGN[s.id]?signEditorHTML(s.id):READING[s.id]?readingHTML(READING[s.id],s.id):cropping
           ?CROP.auto?busyHTML("Finding the text …"):`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.</span>`
           :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
     }).join("");
   box.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>delShot(b.dataset.del));
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
+  box.onclick=e=>{ const b=e.target.closest("[data-savenow]"); if(b){ b.disabled=true; saveNow(b.dataset.savenow); } }; /* the button is inside the reading box, which every status re-renders (v237) */
   box.querySelectorAll("[data-cropcancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.cropcancel; clearTimeout(READ_TIMER[id]); READ_RUN[id]=(READ_RUN[id]||0)+1; /* a running reading abandons instead of delivering a result after Cancel */ CROP=null; delete SIGN[id]; delete READING[id]; renderShots(); });
   box.querySelectorAll("[data-signai]").forEach(b=> b.onclick=()=>signAskAI(b.dataset.signai));
   box.querySelectorAll("[data-scriptset]").forEach(b=> b.onclick=async()=>{ const sg=SIGN[b.closest("[data-scriptseg]").dataset.scriptseg], on=b.dataset.scriptset==="1"; if(!sg||on===!!sg.trad) return; await setScript(sg,on); renderShots(); }); /* the mark by hand (v146); the AI is not asked again */
