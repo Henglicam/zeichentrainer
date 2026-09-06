@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=242; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=243; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1470,8 +1470,7 @@ function renderEdit(main,c){
     box.querySelectorAll(".croplayer").forEach(wireCrop);
     $("#e-cropcancel").onclick=()=>{ endRecrop(); showPimg(); }; };
   const endRecrop=()=>{ if(PENDING[rid]) return; /* handed over to the background (Save changes during the reading, v241): the reading goes on and fills the card */
-    clearTimeout(READ_TIMER[rid]); READ_RUN[rid]=(READ_RUN[rid]||0)+1; /* a running reading abandons */
-    if(CROP&&CROP.id===rid) CROP=null; delete SIGN[rid]; delete READING[rid]; delete RECROP[rid];
+    abandonReading(rid); if(CROP&&CROP.id===rid) CROP=null; delete RECROP[rid];
     if(SHOTS_EXTRA[rid]){ delete SHOTS_EXTRA[rid]; if(IMGURL[rid]){ URL.revokeObjectURL(IMGURL[rid]); delete IMGURL[rid]; } } };
   const startRecrop=()=>{ if(!full) return;
     SHOTS_EXTRA[rid]={id:rid,blob:full,ts:Date.now()};
@@ -1527,7 +1526,7 @@ function renderEdit(main,c){
    pinyin/segmentation/gloss (unless pinyin was set by hand). The id stays, so
    progress, thumbnail and queue entries need no move (v118). */
 async function applyCardUpdate(id,upd,newC,pinByHand,lines){
-  { const d0=cardOf(id); if(d0&&d0.reading&&newC&&newC.trim()){ delete d0.reading; delete upd.reading; const k=Object.keys(PENDING).find(k=>PENDING[k]===id); if(k){ delete PENDING[k]; READ_RUN[k]=(READ_RUN[k]||0)+1; delete READING[k]; delete SIGN[k]; } } } /* H typed the text: the background reading is not needed (v237) */
+  { const d0=cardOf(id); if(d0&&d0.reading&&newC&&newC.trim()&&newC.trim()!==(d0.c||"").trim()){ delete d0.reading; delete upd.reading; const k=Object.keys(PENDING).find(k=>PENDING[k]===id); if(k){ delete PENDING[k]; abandonReading(k); dropExtraShot(k); } } } /* H typed another text: the background reading is not needed (v237); an edit that keeps the text lets a re-crop's reading finish (v243) */
   const isSign=upd.kind==="sign", c=upd.c;
   if(newC && newC!==c){
     upd.c=newC;
@@ -1706,6 +1705,7 @@ async function readPassTra(blob,status){
 
 /* per-photo result (session only): characters with box + auto pinyin; tap to select */
 const PENDING={}; /* shot id → the id of a card saved before its reading finished (v237, "Save now"): the reading fills it in when done */
+const abandonReading=id=>{ clearTimeout(READ_TIMER[id]); READ_RUN[id]=(READ_RUN[id]||0)+1; delete SIGN[id]; delete READING[id]; }; /* a running reading of this photo abandons at its next step instead of delivering a result (v117); the inbox's Cancel, the Edit form's Crop again and an edit over a pending reading share it (v243) */
 const SHOTS_EXTRA={}, RECROP={}; /* the Edit form's Crop again (v239): the card's whole photo as a photo record outside the inbox (SHOTS_EXTRA[id]={id,blob,ts}), and the form's hooks — redraw (the frame view in place of renderShots), onRead (the reading's result), onImage (Image only), end */
 const shotRec=id=>S.inbox.find(s=>s.id===id)||SHOTS_EXTRA[id]||null;
 const QSNOTE={}, QSCARD={}, READING={}; /* READING[id]: status text while the photo is being read · QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) · QSNOTE[id] = the note under the photo after saving */
@@ -2149,13 +2149,14 @@ const READ_STUCK=20000, READ_AT={}, READ_RUN={}; /* READ_RUN[id] = the number of
    changes late and nothing said the app was still at it: "kann man anzeigen, dass er noch dran arbeitet?") */
 const busyHTML=t=>`<div class="reading"><div class="bar"><i></i></div><span class="badge">${esc(t)}</span></div>`;
 const AI_BUSY_TEXT="Checking pinyin and meaning …";
-/* while a photo is read: the bar, and beside it Save now (v237, H: "take a photo, crop in a rush, hit Save and move on" —
-   the card is made at once with the crop, the reading fills it in in the background); once saved, the note instead */
+/* while a photo is read: the bar, its text and Save now at the right of that line (v237, H: "take a photo, crop in a rush, hit
+   Save and move on" — the card is made at once with the crop, the reading fills it in in the background); once saved, one
+   green line instead; not in the Edit form's Crop again, where Save changes takes that role (v241) */
 const readingHTML=(t,id)=>READ_FAIL.test(t)?`<span class="badge">${esc(t)}</span>`
   :(stuck=>id&&PENDING[id]
-    ?`<div class="reading"><div class="bar"><i></i></div><span class="ok" style="margin:0">Card saved — the text follows when the reading is done.${stuck}</span></div>`
+    ?`<div class="reading"><div class="bar"><i></i></div><span class="ok" style="margin:0">Card saved — the text follows when the reading is done.${stuck.replace(" still"," Still")}</span></div>`
     :`<div class="reading"><div class="bar"><i></i></div><div class="readrow"><span class="badge">Reading the text …${stuck}</span>${id&&CROP&&CROP.id===id&&CROP.rect&&!RECROP[id]?`<button class="btn mini" data-savenow="${id}">Save now</button>`:""}</div></div>`)
-   (id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK?` Still at: ${esc(t)}`:"");
+   (id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK?` still at: ${esc(t)}`:"");
 const readingStatus=(id,run)=>t=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=t; READ_AT[id]=Date.now(); READLOG.push({t:Date.now(),text:t}); while(READLOG.length>40) READLOG.shift();
   const b=$("#ocr-"+id); if(b) b.innerHTML=readingHTML(t,id);
   setTimeout(()=>{ if(READING[id]!==t) return; const b2=$("#ocr-"+id); if(b2) b2.innerHTML=readingHTML(t,id); },READ_STUCK+50); };
@@ -2505,13 +2506,15 @@ async function cropSign(id,opts){
 }
 /* ---------- a card saved before its reading is done (v237, H: "take a photo and make a crop in a rush, hit Save and move on;
    the app will finish everything in the background") ----------
-   Save now, beside the reading bar, makes the card at once with the crop as framed and no text ("Reading …" in the Cards
-   list, skipped by Learn); the reading and the AI check go on and fill it in — the text, pinyin, meaning, the tightened
-   picture — appended in the background while H takes the next photo or leaves the tab. A weak or doubtful reading is
+   Save now, at the right of the reading text, makes the card at once with the crop as framed and no text ("Reading …" in
+   the Cards list, skipped by Learn); the reading and the AI check go on and fill it in — the text, pinyin, meaning, the
+   tightened picture — in the background while H takes the next photo or leaves the tab. A weak or doubtful reading is
    saved with the review flag "check the reading" instead of the preview's red line; a reading that finds nothing or
-   fails leaves the card empty, flagged, for Edit or another framing. The work needs the page open: a card still waiting at
-   the next start gets its reading redone then (resumePending), from the photo with the frame it was saved with, or from
-   the crop itself when the photo is gone. The usual flow — wait for the preview, then Save card — is unchanged. */
+   fails leaves the card empty, flagged, for Edit or another framing. The Edit form's Crop again hands a card with text
+   over the same way when Save changes comes during the reading (v241): the card keeps its old text until the fill, and a
+   failed reading keeps it for good. The work needs the page open: a card still waiting at the next start gets its reading
+   redone then (resumePending), from the inbox photo with the frame it was saved with, from the photo copied onto the card,
+   or from the crop itself. The usual flow — wait for the preview, then Save card — is unchanged. */
 async function saveNow(id){
   if(PENDING[id]||!CROP||CROP.id!==id||!CROP.rect) return;
   const rect={...CROP.rect}, r=await cropBlob(id,rect); if(!r) return;
@@ -2545,7 +2548,8 @@ async function finishPending(id){
 async function failPending(id,why){
   const ph=pendingCard(id); delete PENDING[id]; delete SIGN[id]; if(!ph||!ph.reading) return;
   dropExtraShot(id);
-  ph.reading.failed=why; ph.flag=true; ph.flagNote=ph.c?"the new frame could not be read — the old text stays":"the reading failed — edit the card or frame the photo again"; /* a card framed again in the Edit form keeps its text (v241) */
+  if(ph.c) delete ph.reading; else ph.reading.failed=why; /* a card framed again in the Edit form keeps its text and forgets the frame (v241, v243); an empty card keeps the failure for "Nothing read yet" */
+  ph.flag=true; ph.flagNote=ph.c?"the new frame could not be read — the old text stays":"the reading failed — edit the card or frame the photo again";
   try{ await idbPut("custom",ph); }catch(e){}
   QSNOTE[id]="Card saved, but nothing could be read — edit the card or frame the photo again."; setStats();
   if(S.mode==="cards"&&!S.editing) render(); else renderShots(); /* the list or the detail shows the filled card at once */
@@ -3212,7 +3216,7 @@ function renderShots(){
   box.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>delShot(b.dataset.del));
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
   box.onclick=e=>{ const b=e.target.closest("[data-savenow]"); if(b){ b.disabled=true; saveNow(b.dataset.savenow); } }; /* the button is inside the reading box, which every status re-renders (v237) */
-  box.querySelectorAll("[data-cropcancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.cropcancel; clearTimeout(READ_TIMER[id]); READ_RUN[id]=(READ_RUN[id]||0)+1; /* a running reading abandons instead of delivering a result after Cancel */ CROP=null; delete SIGN[id]; delete READING[id]; renderShots(); });
+  box.querySelectorAll("[data-cropcancel]").forEach(b=> b.onclick=()=>{ abandonReading(b.dataset.cropcancel); CROP=null; renderShots(); });
   box.querySelectorAll("[data-signai]").forEach(b=> b.onclick=()=>signAskAI(b.dataset.signai));
   box.querySelectorAll("[data-scriptset]").forEach(b=> b.onclick=async()=>{ const sg=SIGN[b.closest("[data-scriptseg]").dataset.scriptseg], on=b.dataset.scriptset==="1"; if(!sg||on===!!sg.trad) return; await setScript(sg,on); renderShots(); }); /* the mark by hand (v146); the AI is not asked again */
   wireAi(box);
