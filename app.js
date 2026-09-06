@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=256; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=257; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -824,36 +824,44 @@ function wxNoteHTML(){ return inWeChat()?`<div class="wxnote">${t(WX_NOTE)}</div
 function applyLangStatic(){ document.documentElement.lang=LANG;
   [["#stat-open b","Due"],["#stat-done b","capsule:Done"],["#stat-deck b","Deck"]].forEach(([q,k])=>{ const e=$(q); if(e) e.textContent=t(k); });
   document.querySelectorAll("#tabs .tab").forEach(b=>{ const k={study:"Learn",cards:"Cards",inbox:"Camera",more:"More"}[b.dataset.mode]; const n=b.lastChild; if(k&&n&&n.nodeType===3) n.textContent=t(k); }); }
-async function setLang(code){ if(!LANGS.some(([c])=>c===code)) return; LANG=code; await setSetting("lang",code); applyLangStatic(); render(); }
+async function setLang(code){ if(!LANGS.some(([c])=>c===code)) return; LANG=code; await setSetting("lang",code); if(TRANSLATE&&!TRANSLATE.running) TRANSLATE=null; /* a finished run's line belongs to the old language */ applyLangStatic(); render(); }
 /* Translate all cards into the app's language (v256, H chose the button over an automatic run — it costs an AI call per batch of
    cards): the cards whose meaning is in another language than the app's go to the AI in batches, only the meaning and its
    language are taken from the answer, the text and the pinyin stay. The row sits under the Language chips and shows only
    while such cards exist and an AI is set up. */
 const TRANSLATE_BATCH=20;
 const toTranslate=()=>deck().filter(d=>d.c&&d.m&&mlOf(d)!==LANG);
+/* the run's state lives here, not in the row (v257, H: "pressed Translate all, changed page, pressed again and no reaction" — the
+   row had been re-rendered by the tab change, the loop wrote its progress into the old row, and the guard swallowed the second tap):
+   the row is drawn from TRANSLATE, every step re-queries the row by id, and a tap while a run is on shows the progress */
+let TRANSLATE=null; /* {running, done, total, left, failed, lang} */
 function translateRowHTML(){
-  const n=toTranslate().length; if(!n||!aiOn()) return "";
+  const n=toTranslate().length, tr=TRANSLATE; if(!(n||tr)||!aiOn()) return "";
   const name=(LANGS.find(([c])=>c===LANG)||[])[1]||LANG;
-  return `<div class="mrow"><div style="flex:1"><div class="t">${t("Meanings")}</div><div class="s" id="translate-status">${t("{0} have their meaning in another language.",nOf(n,"card"))}</div><div class="fieldacts"><button class="btn mini" id="translate-all">${t("Translate all cards into {0}",name)}</button></div></div></div>`; /* the button under the sentence, as the Feedback row's Send — its label is long in every language */
+  const line=tr&&tr.running?t("Translating {0} of {1} …",tr.done,tr.total):tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n):tr?t("Done — {0} translated.",nOf(tr.done,"card")):t("{0} have their meaning in another language.",nOf(n,"card"));
+  return `<div class="mrow"><div style="flex:1"><div class="t">${t("Meanings")}</div><div class="s" id="translate-status">${line}</div>${n?`<div class="fieldacts"><button class="btn mini" id="translate-all"${tr&&tr.running?" disabled":""}>${t("Translate all cards into {0}",name)}</button></div>`:""}</div></div>`; /* the button under the sentence, as the Feedback row's Send — its label is long in every language */
 }
-let _translating=false;
+function translateRefresh(){ const st=$("#translate-status"), b=$("#translate-all"), tr=TRANSLATE; if(!st) return; /* the row as it stands now, whatever page was shown meanwhile */
+  const n=toTranslate().length;
+  st.textContent=tr&&tr.running?t("Translating {0} of {1} …",tr.done,tr.total):tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n):tr?t("Done — {0} translated.",nOf(tr.done,"card")):t("{0} have their meaning in another language.",nOf(n,"card"));
+  if(b){ b.disabled=!!(tr&&tr.running); if(!n&&!(tr&&tr.running)) b.remove(); } }
 async function translateAll(){
-  if(_translating) return; const st=$("#translate-status"), b=$("#translate-all"); if(!st||!b) return;
-  if(!navigator.onLine){ st.textContent=t("No connection. Try again when online."); return; }
+  if(TRANSLATE&&TRANSLATE.running){ translateRefresh(); return; }
+  if(!navigator.onLine){ const st=$("#translate-status"); if(st) st.textContent=t("No connection. Try again when online."); return; }
   const list=toTranslate(); if(!list.length) return;
-  _translating=true; b.disabled=true; let done=0, failed=null;
+  TRANSLATE={running:true,done:0,total:list.length,failed:false,lang:LANG}; translateRefresh();
   try{
     for(let i=0;i<list.length;i+=TRANSLATE_BATCH){
-      const batch=list.slice(i,i+TRANSLATE_BATCH); st.textContent=t("Translating {0} of {1} …",Math.min(i+batch.length,list.length),list.length);
+      if(LANG!==TRANSLATE.lang) break; /* the language was switched meanwhile: the rest would land in the wrong one */
+      const batch=list.slice(i,i+TRANSLATE_BATCH);
       const ans=await aiAsk(batch.map(d=>({...d,translate:true})));
       for(let k=0;k<batch.length;k++){ const d=cardOf(batch[k].id), a=ans[k]; if(!d||!a||!a.m||a.bad) continue;
-        const upd={...d, m:a.m}; setMl(upd,a.ml); await putCard(upd,d.id); done++; }
+        const upd={...d, m:a.m}; setMl(upd,a.ml); await putCard(upd,d.id); TRANSLATE.done++; }
+      translateRefresh();
     }
-  }catch(err){ failed=err&&err.message||String(err); }
-  _translating=false;
-  const left=toTranslate().length;
-  st.textContent=failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",done,left):t("Done — {0} translated.",nOf(done,"card"));
-  if(!left){ b.remove(); } else b.disabled=false;
+  }catch(err){ TRANSLATE.failed=true; logErr("translate",err&&err.message||String(err)); }
+  TRANSLATE.running=false; translateRefresh();
+  if(S.mode==="study"||S.mode==="cards") render(); /* the meanings on screen follow */
 }
 function reportData(){
   const u=usage(), m=u.m||{}, st=learnStats(), n=k=>u[k]||0, mn=k=>m[k]||0;
@@ -949,12 +957,12 @@ function renderMore(main){
     <div class="listhead">${t("Share")}</div>
     <div class="mrow"><div><div class="t">${t("Share the app")}</div><div class="s" id="app-share-status">${t("Send the link to a friend. The app installs from any browser, no store.")}</div></div><button class="btn mini" id="app-share">${t("Share")}</button></div>
     <div class="mrow"><div style="flex:1"><div class="t">${t("Feedback")}</div><div class="s" id="fb-status">${t("Tell the app's owner what works and what does not.")}</div><textarea class="grow" id="fb-text" rows="2" placeholder="${t("Your message")}"></textarea><div class="fieldacts"><button class="btn mini" id="fb-send">${t("Send")}</button></div></div></div>
-    <div class="listhead">${t("Your data")}</div>
-    <div class="mrow"><div><div class="t">${t("Export")}</div><div class="s">${t("Progress and cards as one file, via the share sheet.")} ${backupNote()}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="export-photos"${exportPhotos()?" checked":""}> ${t("Include photos (adds about {0} MB)",(photoBytes()*1.37/1048576).toFixed(1))}</label></div><button class="btn mini" id="export">${t("Export")}</button></div>
-    <div class="mrow"><div><div class="t">${t("Import")}</div><div class="s">${t("A zeichentrainer-….json.txt file. Existing cards are overwritten.")}</div></div><button class="btn mini" id="import">${t("Import")}</button></div>
-    <div class="mrow"><div><div class="t">${t("Flagged cards")}</div><div class="s">${t("{0} flagged for review. Share the list as text, for a teacher.",deck().filter(d=>d.flag).length)}</div></div><span class="btnrow"><button class="btn mini" id="show-flag">${t("Show")}</button><button class="btn mini" id="share-flag">${t("Share")}</button></span></div>
-    ${S.admin?`<div class="listhead">Translation</div>
-    <div class="mrow"><div><div class="t">Offline translation</div><div class="s" id="nmt-status">Checking …</div></div><button class="btn mini" id="nmt-btn" hidden></button></div>`:""}
+    <div class="listhead">${t("Learning")}</div>
+    <div class="mrow"><div style="flex:1"><div class="t">${t("Progress")}</div><div class="s">${statsLine()}. ${t("App opened {0}, {1} reviewed, {2}, {3} checked by the AI.",nOf(usage().opens,"time"),nOf(usage().reviews,"card"),nOf(usage().aiCalls,"AI check"),nOf(usage().pics,"photo"))} ${t("Work done by {0}.",workLines(usage().models).join(", "))}</div><div class="fieldacts"><button class="btn mini" id="usage-share">${t("Share report")}</button></div></div></div>
+    <div class="mrow"><div><div class="t">${t("Card order")}</div><div class="s">${t("Due cards come first, then up to {0} new ones. This sets the order inside each group.",NEW_PER_SESSION)}</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${t(l)}</button>`).join("")}</div></div></div>
+    <div class="listhead">${t("Language")}</div>
+    <div class="mrow"><div style="flex:1"><div class="t">${t("Language")}</div><div class="s">${t("The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.")}</div><div class="chipset" id="lang-chips" style="margin-top:8px">${LANGS.map(([c,n])=>`<button class="chip${LANG===c?" on":""}" data-lang="${c}">${n}</button>`).join("")}</div></div></div>
+    ${translateRowHTML()}
     <div class="listhead">${t("Online AI review")}</div>
     <div class="mrow"><div><div class="t">${t("AI review")}</div><div class="s" id="ai-status"></div><div class="s" style="margin-top:6px">${t("What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. The framed area of a photo only when the reading is weak, to a provider that takes pictures. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.")}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> ${t("Check every new card with the AI automatically (when online)")}</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
     ${S.admin?`<div class="aiform" id="ai-form" hidden>
@@ -967,22 +975,26 @@ function renderMore(main){
       <div class="field" id="ai-picfield" hidden><label class="check"><input type="checkbox" id="ai-picture"${pictureOn()?" checked":""}> Send the framed area to the AI when the reading is weak</label></div>
       <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" id="ai-save">Save</button><button class="del" id="ai-remove">Remove key</button></div>
     </div>`:""}
-    <div class="mrow"><div><div class="t">${t("Review queue")}</div><div class="s" id="ai-runstatus"></div></div><button class="btn mini" id="ai-run" hidden></button></div>
-    <div class="mrow"><div><div class="t">${t("Storage")}</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
-    ${S.admin?`<div class="mrow"><div><div class="t">Text recognition</div><div class="s" id="ocr-status">Checking …</div></div><button class="btn mini" id="ocr-btn" hidden></button></div>`:""}
-    <div class="listhead">${t("Learning")}</div>
-    <div class="mrow"><div><div class="t">${t("Card order")}</div><div class="s">${t("Due cards come first, then up to {0} new ones. This sets the order inside each group.",NEW_PER_SESSION)}</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${t(l)}</button>`).join("")}</div></div></div>
-    ${S.admin?`<div class="listhead">Updates without a VPN</div>
-    <div class="mrow"><div><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div></div><button class="btn mini" id="mirror-check">Check now</button></div>
-    <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>`:""}
-    <div class="listhead">${t("Language")}</div>
-    <div class="mrow"><div style="flex:1"><div class="t">${t("Language")}</div><div class="s">${t("The app's own texts and, with the AI, the meaning of new cards. Cards keep their Chinese and pinyin.")}</div><div class="chipset" id="lang-chips" style="margin-top:8px">${LANGS.map(([c,n])=>`<button class="chip${LANG===c?" on":""}" data-lang="${c}">${n}</button>`).join("")}</div></div></div>
-    ${translateRowHTML()}
-    <div class="listhead">${t("On this phone")}</div>
-    <div class="mrow"><div><div class="t">${t("Progress")}</div><div class="s">${statsLine()}. ${t("App opened {0}, {1} reviewed, {2}, {3} checked by the AI.",nOf(usage().opens,"time"),nOf(usage().reviews,"card"),nOf(usage().aiCalls,"AI check"),nOf(usage().pics,"photo"))} ${t("Work done by {0}.",workLines(usage().models).join(", "))}</div></div><button class="btn mini" id="usage-share">${t("Share report")}</button></div>
-    <div class="mrow"><div><div class="t">${t("Usage sharing")}</div><div class="s">${t("Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks. No card text, no photos.")} <span id="share-status">${esc(shareNote())}</span> ${t("Your id: {0}.",`<span id="share-id">${esc(installId())}</span>`)}<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> ${t("Send once a day")}</label></div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">${t("Review queue")}</div><div class="s" id="ai-runstatus"></div><div class="fieldacts"><button class="btn mini" id="ai-run" hidden></button></div></div></div>
+    <div class="listhead">${t("Your data")}</div>
+    <div class="mrow"><div><div class="t">${t("Export")}</div><div class="s">${t("Progress and cards as one file, via the share sheet.")} ${backupNote()}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="export-photos"${exportPhotos()?" checked":""}> ${t("Include photos (adds about {0} MB)",(photoBytes()*1.37/1048576).toFixed(1))}</label></div><button class="btn mini" id="export">${t("Export")}</button></div>
+    <div class="mrow"><div><div class="t">${t("Import")}</div><div class="s">${t("A zeichentrainer-….json.txt file. Existing cards are overwritten.")}</div></div><button class="btn mini" id="import">${t("Import")}</button></div>
+    <div class="mrow"><div><div class="t">${t("Flagged cards")}</div><div class="s">${t("{0} flagged for review. Share the list as text, for a teacher.",deck().filter(d=>d.flag).length)}</div></div><span class="btnrow"><button class="btn mini" id="show-flag">${t("Show")}</button><button class="btn mini" id="share-flag">${t("Share")}</button></span></div>
     <div class="mrow"><div><div class="t">${t("Photos")}</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">${t("Delete {0}",oldShots().length)}</button>`:""}</div>
-    ${S.admin?`<div class="listhead">Diagnostics</div>
+    <div class="mrow"><div><div class="t">${t("Storage")}</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
+    <div class="listhead">${t("Privacy")}</div>
+    <div class="mrow"><div><div class="t">${t("Usage sharing")}</div><div class="s">${t("Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks. No card text, no photos.")} <span id="share-status">${esc(shareNote())}</span> ${t("Your id: {0}.",`<span id="share-id">${esc(installId())}</span>`)}<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> ${t("Send once a day")}</label></div></div></div>
+    <div class="listhead">${t("Advanced settings")}</div>
+    ${S.admin?`<div class="mrow"><div><div class="t">Unlocked</div><div class="s">Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are shown below until the app is closed.</div></div><button class="btn mini" id="admin-lock">Lock</button></div>`
+    :`<div class="mrow"><div><div class="t">${t("Locked")}</div><div class="s">${t("Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are for the app's owner.")}</div></div></div>
+    <div class="field"><label>${t("Password")}</label><div class="btnrow"><input id="admin-pw" type="password" autocomplete="off"><button class="btn mini" id="admin-unlock">${t("Unlock")}</button></div><div class="err" id="admin-err" style="display:none">${t("Wrong password.")}</div></div>`}
+    ${S.admin?`<div class="listhead">Downloads</div>
+    <div class="mrow"><div><div class="t">Offline translation</div><div class="s" id="nmt-status">Checking …</div></div><button class="btn mini" id="nmt-btn" hidden></button></div>
+    <div class="mrow"><div><div class="t">Text recognition</div><div class="s" id="ocr-status">Checking …</div></div><button class="btn mini" id="ocr-btn" hidden></button></div>
+    <div class="listhead">Updates without a VPN</div>
+    <div class="mrow"><div><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div></div><button class="btn mini" id="mirror-check">Check now</button></div>
+    <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>
+    <div class="listhead">Diagnostics</div>
     <div class="mrow"><div><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${READLOG.length} step${READLOG.length===1?"":"s"}.</div></div><span class="btnrow"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button></span></div>
     <pre class="diag" id="diag-out" hidden></pre>
     <div class="mrow"><div><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"install")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div></div><span class="btnrow"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button></span></div>
@@ -991,10 +1003,6 @@ function renderMore(main){
     <pre class="diag" id="fb-out" hidden></pre>
     <div class="listhead">Start over</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>`:""}
-    <div class="listhead">${t("Advanced settings")}</div>
-    ${S.admin?`<div class="mrow"><div><div class="t">Unlocked</div><div class="s">Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are shown until the app is closed.</div></div><button class="btn mini" id="admin-lock">Lock</button></div>`
-    :`<div class="mrow"><div><div class="t">${t("Locked")}</div><div class="s">${t("Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are for the app's owner.")}</div></div></div>
-    <div class="field"><label>${t("Password")}</label><div class="btnrow"><input id="admin-pw" type="password" autocomplete="off"><button class="btn mini" id="admin-unlock">${t("Unlock")}</button></div><div class="err" id="admin-err" style="display:none">${t("Wrong password.")}</div></div>`}
     <div class="listhead">${t("About")}</div>
     <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s" id="about-s">${esc(aboutText())}</div></div></div>
   </div>`;
