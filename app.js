@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=245; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=246; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1465,7 +1465,7 @@ function renderEdit(main,c){
         <div class="croplayer${CROP.rect?" framed":""}${zoomed?" zoomed":""}" data-id="${rid}">${zoomed?"":`<div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="Turn the frame"></div></div>`}</div>
       </div>
       <div class="imgacts"><button class="del" id="e-cropcancel">Cancel</button></div>
-      <div class="ocr" id="ocr-${rid}">${READING[rid]?readingHTML(READING[rid],rid):res&&res.key===rectKey(CROP.rect)?`<div class="croppreview"><img src="${res.url}" alt="the new crop"><div class="badge" style="margin:6px 0 0">${res.text?`Read as “${esc(res.text)}”. `:"Picture taken, the text stays. "}Adjust the frame to read again, or save.</div></div>`:CROP.auto?busyHTML("Finding the text …"):`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.</span>`}</div></div>`;
+      <div class="ocr" id="ocr-${rid}">${READING[rid]?readingHTML(READING[rid],rid):res&&res.key===rectKey(CROP.rect)?`<div class="croppreview"><img src="${res.url}" alt="the new crop"><div class="badge" style="margin:6px 0 0">${res.text?`Read as “${esc(res.text)}”. `:"Picture taken, the text stays. "}Adjust the frame to read again, or save.</div></div>`:CROP.locating?busyHTML("Finding the frame …"):CROP.auto?busyHTML("Finding the text …"):`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.</span>`}</div></div>`;
     box.querySelectorAll(".croplayer").forEach(wireCrop);
     $("#e-cropcancel").onclick=()=>{ restoreBefore(); endRecrop(); showPimg(); }; };
   /* the reading's result stays under the photo with the frame (v244, H: "don't exit crop mode so fast, do as in the initial crop screen") — the view goes on Save changes or Cancel */
@@ -1490,8 +1490,14 @@ function renderEdit(main,c){
         syncWord(); drawLines(); pinyinFollow();
         if(!meanTouched){ const r2=sg.lines.filter(l=>CJK.test(l)).map(lineMeaning), m=r2.map(r=>r.en).filter(Boolean).join(" / "); if(m){ $("#e-mean").value=m; $("#e-aistatus").textContent=`Meaning ${r2.length&&r2.every(r=>r.full)?"from the phrasebook":"composed word by word"}, unverified`; } } /* the word-by-word gloss with its source line until the AI answers, as in the Read preview (v245); a meaning typed here stays */
         showAi(); const ab=$("#e-ai"); if(ab&&aiLive()) ab.click(); } };
-    /* the frame the card was cut with, without a reading until it is moved (v244, H: "use the previous cropping area as starting point"); a card without one gets the app's proposal at once (v241) */
+    /* the frame the card was cut with, without a reading until it is moved (v244, H: "use the previous cropping area as starting point");
+       a card from before v244 has no frame stored — its crop is looked for in the photo (findFrame, v246) and the frame kept on the card;
+       only when nothing is found does the app propose one (v241) */
     if(d.frame&&d.frame.w){ CROP={id:rid,rect:null}; drawRecrop(); placeFrame(rid,d.frame,{noRead:true}); }
+    else if(d.img&&!removeImg){ CROP={id:rid,rect:null,locating:true}; drawRecrop();
+      findFrame(full,d.img).then(async f=>{ if(!CROP||CROP.id!==rid||!CROP.locating) return; delete CROP.locating;
+        if(f){ d.frame=f; try{ await idbPut("custom",d); }catch(e){} drawRecrop(); placeFrame(rid,f,{noRead:true}); }
+        else { CROP.auto=true; drawRecrop(); proposeFrame(rid); } }); }
     else { CROP={id:rid,rect:null,auto:true}; drawRecrop(); proposeFrame(rid); } };
   showPimg();
   $("#e-save").onclick=async()=>{
@@ -1721,6 +1727,30 @@ async function placeFrame(id,f,opts){ /* a stored frame onto the photo's layer, 
   CROP.rect={x:f.x*r.width,y:f.y*r.height,w:f.w*r.width,h:f.h*r.height,a:f.a||0,lw:r.width,lh:r.height};
   renderShots(); showCropPreview(id,opts);
 }
+/* where an old card's crop sits in its photo (v246, H on Crop again: "does not work as specified" — every card saved before v244
+   carries no frame, so Crop again proposed a fresh one instead of the previous cropping area): the crop is a cut of the photo
+   at the photo's own pixels, so a grey copy of both at ≤ 240 px is searched for the position with the smallest mean
+   difference — coarse grid first, then the pixels around the best; a turned frame's cut is not a plain sub-image and finds
+   nothing, as does a crop from another photo; null then, and the app's proposal takes over. About 100 ms. */
+async function findFrame(fullBlob,cropBlob){
+  let F=null,C=null;
+  try{
+    [F,C]=await Promise.all([createImageBitmap(fullBlob),createImageBitmap(cropBlob)]);
+    if(C.width>F.width+2||C.height>F.height+2) return null;
+    const k=Math.min(1,240/Math.max(F.width,F.height));
+    const fw=Math.max(1,Math.round(F.width*k)), fh=Math.max(1,Math.round(F.height*k)), cw=Math.min(fw,Math.max(1,Math.round(C.width*k))), ch=Math.min(fh,Math.max(1,Math.round(C.height*k)));
+    if(cw<4||ch<4) return null;
+    const grey=(bmp,w,h)=>{ const cv=document.createElement("canvas"); cv.width=w; cv.height=h; const g=cv.getContext("2d",{alpha:false}); g.drawImage(bmp,0,0,w,h); const d=g.getImageData(0,0,w,h).data, o=new Float32Array(w*h); for(let i=0;i<w*h;i++) o[i]=d[i*4]*0.299+d[i*4+1]*0.587+d[i*4+2]*0.114; return o; };
+    const P=grey(F,fw,fh), T=grey(C,cw,ch), step=Math.max(1,Math.floor(Math.min(cw,ch)/20));
+    const sad=(x,y,st)=>{ let sum=0,m=0; for(let j=0;j<ch;j+=st){ const pr=(y+j)*fw+x, tr=j*cw; for(let i=0;i<cw;i+=st){ sum+=Math.abs(P[pr+i]-T[tr+i]); m++; } } return sum/m; };
+    let best=Infinity,bx=0,by=0;
+    for(let y=0;y<=fh-ch;y+=step) for(let x=0;x<=fw-cw;x+=step){ const v=sad(x,y,step); if(v<best){ best=v; bx=x; by=y; } }
+    for(let y=Math.max(0,by-step);y<=Math.min(fh-ch,by+step);y++) for(let x=Math.max(0,bx-step);x<=Math.min(fw-cw,bx+step);x++){ const v=sad(x,y,1); if(v<best){ best=v; bx=x; by=y; } }
+    READLOG.push({t:Date.now(),text:`the old crop ${best<=22?"found":"not found"} in the photo (difference ${best.toFixed(1)})`}); while(READLOG.length>40) READLOG.shift();
+    if(best>22) return null; /* the same pixels through two JPEG passes differ by a few grey levels; another place by dozens */
+    return {x:+(bx/fw).toFixed(4),y:+(by/fh).toFixed(4),w:+(cw/fw).toFixed(4),h:+(ch/fh).toFixed(4),a:0};
+  }catch(e){ return null; } finally{ if(F) F.close(); if(C) C.close(); }
+}
 const abandonReading=id=>{ clearTimeout(READ_TIMER[id]); READ_RUN[id]=(READ_RUN[id]||0)+1; delete SIGN[id]; delete READING[id]; }; /* a running reading of this photo abandons at its next step instead of delivering a result (v117); the inbox's Cancel, the Edit form's Crop again and an edit over a pending reading share it (v243) */
 const SHOTS_EXTRA={}, RECROP={}; /* the Edit form's Crop again (v239): the card's whole photo as a photo record outside the inbox (SHOTS_EXTRA[id]={id,blob,ts}), and the form's hooks — redraw (the frame view in place of renderShots), onRead (the reading's result), onImage (Image only), end */
 const shotRec=id=>S.inbox.find(s=>s.id===id)||SHOTS_EXTRA[id]||null;
@@ -1739,7 +1769,7 @@ function segmentChars(chars){
 /* the AI's answer for the card just saved from this photo, with one-tap Accept */
 function qsAiBox(id){ const c=QSCARD[id], d=c&&cardOf(c); return d&&d.ai?aiBoxHTML(d):""; }
 /* ---------- Cropping (crop → OCR or card image) ---------- */
-let CROP=null; /* {id, rect:{x,y,w,h,lw,lh,a}, auto, proposed, zoom} while cropping — stays until the card is saved (H, v50); a = the frame's angle (v185), auto/proposed = the frame proposed by the app (v203), zoom = the framed area enlarged (v169) */
+let CROP=null; /* {id, rect:{x,y,w,h,lw,lh,a}, auto, proposed, zoom, locating} while cropping — stays until the card is saved (H, v50); a = the frame's angle (v185), auto/proposed = the frame proposed by the app (v203), zoom = the framed area enlarged (v169), locating = the Edit form looking for an old card's crop in the photo (v246) */
 function cropRectStyle(){
   const r=CROP&&CROP.rect; if(!r||!r.lw||!r.lh) return "";
   const pc=v=>(v*100).toFixed(2)+"%";
