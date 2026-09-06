@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=250; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=251; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -182,10 +182,10 @@ async function sendFeedback(text){
   const r=await fetch(SHARE_URL+"/rest/v1/feedback",{method:"POST",headers:{"apikey":SHARE_KEY,"Authorization":"Bearer "+SHARE_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({install:installId(),version:APP_V,text})});
   if(!r.ok){ const body=await r.text().catch(()=>""); logErr("feedback",r.status+": "+body.slice(0,300)); throw new Error(r.status===404?"the feedback table is not set up":"error "+r.status); }
 }
-function feedbackText(rows){
+function feedbackText(rows){ /* laid out like the All users report since v251 (H: "Same for feedback"): a head with the count, one block per message with a blank line between, the sender's id under the time */
   const day=t=>String(t||"").replace("T"," ").slice(0,16);
-  const lines=rows.map(r=>`${day(r.created_at)}  v${r.version||"?"}  ${r.install||"?"}\n  ${String(r.text||"").replace(/\s*\n\s*/g,"\n  ")}`);
-  return [`识字 Zeichentrainer — feedback, ${nOf(rows.length,"message")}`,""].concat(lines.length?lines:["No messages yet."]).join("\n")+"\n";
+  const blocks=rows.map(r=>`${day(r.created_at)}, v${r.version||"?"}\n  from ${r.install||"?"}\n  ${String(r.text||"").replace(/\s*\n\s*/g,"\n  ")}`);
+  return [`识字 Zeichentrainer — feedback, ${day(new Date().toISOString()).slice(0,10)}`,`  messages ${String(rows.length).padStart(4)}  (newest first, up to 500)`,""].concat(blocks.length?blocks.join("\n\n"):"No messages yet.").join("\n")+"\n";
 }
 async function shareFeedback(){
   const rows=(FEEDBACK&&FEEDBACK.rows)||(await fetchFeedback()).rows;
@@ -205,14 +205,14 @@ function allUsersText(rows){
   let active=0, wx=0, installed=0; const models={}, users=[], tried=[], lookers=[];
   for(const r of rows){ const d=r.data||{}; if(new Date(r.created_at).getTime()>=week) active++;
     if(/WeChat/.test(d.device||"")) wx++; if(d.installed) installed++;
-    if(n(d,"cards")>0) users.push(r); else if(n(d,"aiCalls")>0||n(r,"relay_today")>0) tried.push(r); else lookers.push(r);
+    if(n(d,"cards")>0) users.push(r); else if(n(d.models,"reader")>0||n(d,"aiCalls")>0||n(r,"relay_today")>0) tried.push(r); else lookers.push(r); /* read a photo without saving a card: the on-device reader ran, or an AI or relay call went out (v251 — the label "tried the reader" was H's question) */
     for(const k of ["cards","reviews","aiCalls","pics","byPhoto","byHand"]) add(tot,k,n(d,k));
     for(const [m,v] of Object.entries(d.models||{})) add(models,m,+v||0); add(tot,"relay",n(r,"relay_today")); }
   users.sort((a,b)=>n(b.data,"cards")-n(a.data,"cards")); tried.sort((a,b)=>n(b,"relay_today")-n(a,"relay_today"));
   const row=(k,v,w)=>`  ${k.padEnd(w)}${String(v).padStart(4)}`, kv=(k,v)=>`  ${k.padEnd(12)}${v}`;
   const head=[`识字 Zeichentrainer — all users, ${day(new Date().toISOString())}`,"",
     `Installs ${rows.length}`,"  (one per browser storage, not per person)",
-    row("with cards",users.length,27), row("only tried the reader",tried.length,27), row("only opened the page",lookers.length,27),
+    row("with cards",users.length,27), row("read a photo, no card yet",tried.length,27), row("only opened the page",lookers.length,27),
     wx?row("in WeChat's browser",wx,27):null, row("installed on a home screen",installed,27), row("reported in the last 7 days",active,27),
     "","Totals",
     kv("cards",`${tot.cards||0} (${tot.byPhoto||0} by photo, ${tot.byHand||0} by hand)`), kv("reviews",tot.reviews||0), kv("AI calls",`${tot.aiCalls||0} (${tot.pics||0} pictures)`),
@@ -226,7 +226,7 @@ function allUsersText(rows){
     `  relay today ${n(r,"relay_today")}`,
     `  first ${d.first||"?"}, last ${day(r.created_at)}`].filter(Boolean).join("\n"); };
   const section=(title,list)=>list.length?[`${title} (${list.length})`,""].concat(list.map(block).join("\n\n")).concat([""]):[];
-  const lines=section("Users with cards",users).concat(section("Tried the reader",tried));
+  const lines=section("Users with cards",users).concat(section("Read a photo, no card yet",tried));
   if(lookers.length){ const plat=d=>{ const v=d.device||""; return /iPhone|iPad/.test(v)?"iPhone":/Android/.test(v)?"Android":/Windows/.test(v)?"Windows":/Mac/.test(v)?"Mac":/Linux|X11/.test(v)?"Linux":"other"; };
     const by={}; let lwx=0; for(const r of lookers){ const d=r.data||{}; add(by,plat(d),1); if(/WeChat/.test(d.device||"")) lwx++; }
     lines.push(`Only opened the page (${lookers.length})`,`  ${Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${v} ${k}`).join(", ")}${lwx?` (${lwx} in WeChat)`:""}`); }
