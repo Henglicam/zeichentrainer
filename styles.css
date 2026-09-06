@@ -159,6 +159,10 @@ button{font:inherit;color:inherit}
 .crow:last-of-type{border-bottom:none;border-bottom-left-radius:var(--r);border-bottom-right-radius:var(--r)}
 .crow:active{background:var(--card2)}
 .thumb{width:104px;height:58px;border-radius:8px;object-fit:contain;object-position:center;background:var(--card2)}
+/* the list's thumbnail like the front's photo box (v232, H: "in der Cards Liste auch"): a darkened blurred copy of the crop fills the tile behind the fitted picture */
+.thumbbox{position:relative;display:block;width:104px;height:58px;border-radius:8px;overflow:hidden;background:var(--card2);box-shadow:inset 0 0 0 1px var(--sep)}
+.thumbbox .thumbbg{position:absolute;left:-10%;top:-10%;width:120%;height:120%;object-fit:cover;filter:blur(10px) brightness(.65);pointer-events:none}
+.thumbbox .thumb{position:relative;display:block;background:transparent;border-radius:0}
 .thumb.glyph{display:flex;align-items:center;justify-content:center;font-family:var(--hanzi);font-size:26px;color:var(--label3)}
 .ct{display:flex;flex-direction:column;min-width:0}
 .ct .c{font-family:var(--hanzi);font-size:19px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .ct .pills{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0} .ct .pills .pill{margin-left:0;font-size:10px;padding:1px 7px} /* the pills have their own line under the pinyin, the text keeps its room (v126/v134) */
