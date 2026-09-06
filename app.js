@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=249; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=250; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -198,7 +198,10 @@ function allUsersText(rows){
   const day=t=>String(t||"").slice(0,10), week=Date.now()-7*DAY, n=(o,k)=>+(o&&o[k])||0;
   const tot={}; const add=(o,k,v)=>{ o[k]=(o[k]||0)+v; };
   /* installs sorted by what they did (v220, H: "18 phones is incorrect" — a row is a browser storage, not a person; WeChat's browser
-     makes a new one per tap); since v221 the real users come first, by cards, and the rows that only opened the page fold into one line */
+     makes a new one per tap); since v221 the real users come first, by cards, and the rows that only opened the page fold into one line;
+     since v250 the report is laid out to be read at a glance (H: "ein bisschen übersichtlicher — das dauert immer, bis ich da durchsteige"):
+     the head as two short tables with the counts aligned, one block of short lines per install instead of one long line, the sections
+     with a heading and a count */
   let active=0, wx=0, installed=0; const models={}, users=[], tried=[], lookers=[];
   for(const r of rows){ const d=r.data||{}; if(new Date(r.created_at).getTime()>=week) active++;
     if(/WeChat/.test(d.device||"")) wx++; if(d.installed) installed++;
@@ -206,14 +209,27 @@ function allUsersText(rows){
     for(const k of ["cards","reviews","aiCalls","pics","byPhoto","byHand"]) add(tot,k,n(d,k));
     for(const [m,v] of Object.entries(d.models||{})) add(models,m,+v||0); add(tot,"relay",n(r,"relay_today")); }
   users.sort((a,b)=>n(b.data,"cards")-n(a.data,"cards")); tried.sort((a,b)=>n(b,"relay_today")-n(a,"relay_today"));
-  const head=[`识字 Zeichentrainer — all users, ${day(new Date().toISOString())}`,
-    `${nOf(rows.length,"install")} (one per browser storage, not per person): ${users.length} with cards, ${tried.length} that only tried the reader, ${lookers.length} that only opened the page${wx?`; ${wx} inside WeChat's browser`:""}. ${installed} installed on a home screen, ${active} reported in the last 7 days. Cards ${tot.cards||0} (${tot.byPhoto||0} by photo, ${tot.byHand||0} by hand), reviews ${tot.reviews||0}, AI calls ${tot.aiCalls||0} (pictures ${tot.pics||0}). Relay today: ${nOf(tot.relay,"call")}.`,
-    `Analyses: ${modelsText(models)}.`,""];
-  const line=r=>{ const d=r.data||{}, reader=n(d.models,"reader"); return `${d.install||"?"}  v${d.version||"?"}  ${d.installed?"installed":"browser"}  first ${d.first||"?"}  last ${day(r.created_at)}  days ${n(d,"days")}  opens ${n(d,"opens")}  cards ${n(d,"cards")}  reviews ${n(d,"reviews")}  AI ${n(d,"aiCalls")} (pics ${n(d,"pics")})  reader ${reader}${reader?`, weak ${n(d,"pics")} of ${reader}`:""}  relay today ${n(r,"relay_today")}${d.device?"  "+d.device:""}`; };
-  const lines=users.map(line).concat(tried.length?["",`${nOf(tried.length,"install")} that only tried the reader:`].concat(tried.map(line)):[]);
+  const row=(k,v,w)=>`  ${k.padEnd(w)}${String(v).padStart(4)}`, kv=(k,v)=>`  ${k.padEnd(12)}${v}`;
+  const head=[`识字 Zeichentrainer — all users, ${day(new Date().toISOString())}`,"",
+    `Installs ${rows.length}`,"  (one per browser storage, not per person)",
+    row("with cards",users.length,27), row("only tried the reader",tried.length,27), row("only opened the page",lookers.length,27),
+    wx?row("in WeChat's browser",wx,27):null, row("installed on a home screen",installed,27), row("reported in the last 7 days",active,27),
+    "","Totals",
+    kv("cards",`${tot.cards||0} (${tot.byPhoto||0} by photo, ${tot.byHand||0} by hand)`), kv("reviews",tot.reviews||0), kv("AI calls",`${tot.aiCalls||0} (${tot.pics||0} pictures)`),
+    kv("relay today",tot.relay||0)].concat(Object.entries(models).length?Object.entries(models).map(([m,v],i)=>kv(i?"":"analyses",`${m==="reader"?"on-device reader":m} ${v}`)):[kv("analyses","none")]).concat([""]).filter(x=>x!==null); /* one analysis per line, so nothing wraps on the phone */
+  const block=r=>{ const d=r.data||{}, reader=n(d.models,"reader"), cards=n(d,"cards"); return [d.install||"?",
+    `  v${d.version||"?"}, ${d.installed?"installed":"browser"}${d.device?", "+d.device:""}`,
+    cards?`  cards ${cards} (${n(d,"byPhoto")} by photo, ${n(d,"byHand")} by hand)`:null,
+    `  reviews ${n(d,"reviews")}, days ${n(d,"days")}, opens ${n(d,"opens")}`,
+    `  AI ${n(d,"aiCalls")} calls, ${n(d,"pics")} pictures`,
+    reader?`  readings ${reader}, weak ${n(d,"pics")}`:null,
+    `  relay today ${n(r,"relay_today")}`,
+    `  first ${d.first||"?"}, last ${day(r.created_at)}`].filter(Boolean).join("\n"); };
+  const section=(title,list)=>list.length?[`${title} (${list.length})`,""].concat(list.map(block).join("\n\n")).concat([""]):[];
+  const lines=section("Users with cards",users).concat(section("Tried the reader",tried));
   if(lookers.length){ const plat=d=>{ const v=d.device||""; return /iPhone|iPad/.test(v)?"iPhone":/Android/.test(v)?"Android":/Windows/.test(v)?"Windows":/Mac/.test(v)?"Mac":/Linux|X11/.test(v)?"Linux":"other"; };
     const by={}; let lwx=0; for(const r of lookers){ const d=r.data||{}; add(by,plat(d),1); if(/WeChat/.test(d.device||"")) lwx++; }
-    lines.push("",`${nOf(lookers.length,"install")} only opened the page: ${Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${v} ${k}`).join(", ")}${lwx?` (${lwx} in WeChat)`:""}.`); }
+    lines.push(`Only opened the page (${lookers.length})`,`  ${Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${v} ${k}`).join(", ")}${lwx?` (${lwx} in WeChat)`:""}`); }
   return head.concat(lines.length?lines:["No rows yet."]).join("\n")+"\n";
 }
 async function shareUsers(){
