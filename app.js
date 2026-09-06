@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=264; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=265; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -268,6 +268,7 @@ async function boot(){
     S.inbox = inb.sort((a,b)=>b.ts-a.ts);
   }catch(e){ console.warn("IndexedDB unavailable, session only:", e); }
   LANG=LANGS.some(([c])=>c===S.settings.lang)?S.settings.lang:langDefault(); applyLangStatic(); /* the app's language (v253): the setting, else the phone's */
+  await syncMeanings(); /* every card shows the meaning it has in the app's language (v265); cards from before get their ms */
   S.ready=true;
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
   wireChrome(); render();
@@ -568,7 +569,23 @@ function aiCardPayload(d){
    v256 does). meaningLangName() is the language's English name for the model. */
 const meaningLangName=()=>LANG_NAME[LANG]||"English";
 const mlOf=d=>d.ml||"en"; /* the language of a card's meaning */
-const setMl=(card,ml)=>{ if(ml&&ml!=="en") card.ml=ml; else delete card.ml; return card; }; /* English is the absent default */
+const setMl=(card,ml)=>{ if(ml&&ml!=="en") card.ml=ml; else delete card.ml; if(card.m) card.ms={...(card.ms||{}),[ml||"en"]:card.m}; return card; }; /* English is the absent default; ms keeps every meaning the card got, by language (v265) */
+/* one meaning per language on the card (v265, H's "Go" on idea 2): ms = {en:"…", de:"…"} holds every meaning a card got — set wherever a
+   meaning gets its language (setMl) —, m stays the meaning shown and ml its language. syncMeanings() at boot and on a language switch
+   shows the meaning the card already has in the app's language, in one transaction, so a switch back to a known language is instant
+   and free; a card without one keeps its meaning and the pill, and Translate all fills it. A typed meaning replaces only its own
+   language; a changed Chinese text drops the other languages' meanings (applyCardUpdate). Cards from before v265 get ms at boot. */
+async function syncMeanings(){
+  const rows=[];
+  for(const d of S.custom){ if(!d.m) continue; let u=null;
+    if(!d.ms){ u={...d, ms:{[mlOf(d)]:d.m}}; } /* v265 migration: the meaning it has, under its language */
+    const ms=(u||d).ms; if(ms[LANG]&&mlOf(u||d)!==LANG){ u={...(u||d), m:ms[LANG]}; setMl(u,LANG); } /* the meaning in the app's language, already there */
+    if(u) rows.push(u); }
+  if(!rows.length) return 0;
+  try{ await idbPutMany("custom",rows); }catch(e){ logErr("meanings","sync: "+(e&&e.message||e)); return 0; }
+  for(const r of rows){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; }
+  return rows.length;
+}
 const langName=code=>(LANGS.find(([c])=>c===code)||[code,code])[1]; /* a language's own name (Deutsch, 日本語) */
 const mlPill=d=>d.m&&mlOf(d)!==LANG?`<span class="pill lang" title="${esc(t("The meaning is in another language than the app."))}">${esc(langName(mlOf(d)))}</span>`:""; /* a card whose meaning is in another language than the app (v258, PR 5): the pill names it, on the back and in the Cards list; Translate all or an AI check takes it away */
 /* the model's meaning is taken only when it is a meaning and not the Chinese text echoed (v97; since v256 by language: a Japanese
@@ -828,7 +845,7 @@ function wxNoteHTML(){ return inWeChat()?`<div class="wxnote">${t(WX_NOTE)}</div
 function applyLangStatic(){ document.documentElement.lang=LANG;
   [["#stat-open b","Due"],["#stat-done b","capsule:Done"],["#stat-deck b","Deck"]].forEach(([q,k])=>{ const e=$(q); if(e) e.textContent=t(k); });
   document.querySelectorAll("#tabs .tab").forEach(b=>{ const k={study:"Learn",cards:"Cards",inbox:"Camera",more:"More"}[b.dataset.mode]; const n=b.lastChild; if(k&&n&&n.nodeType===3) n.textContent=t(k); }); }
-async function setLang(code){ if(!LANGS.some(([c])=>c===code)) return; LANG=code; await setSetting("lang",code); if(TRANSLATE&&!TRANSLATE.running) TRANSLATE=null; /* a finished run's line belongs to the old language */ if(stageOf()&&stageOf().lang!==code) await clearStage(); /* a stage for another language is worthless (v264) */ if(S.settings.translateRun||(TRANSLATE&&TRANSLATE.running)){ await rememberTranslate(true); resumeTranslate(); } /* a run under way or waiting goes on in the new language (v263) */ applyLangStatic(); render(); }
+async function setLang(code){ if(!LANGS.some(([c])=>c===code)) return; LANG=code; await setSetting("lang",code); await syncMeanings(); /* the meanings the cards already have in this language, at once (v265) */ if(TRANSLATE&&!TRANSLATE.running) TRANSLATE=null; /* a finished run's line belongs to the old language */ if(stageOf()&&stageOf().lang!==code) await clearStage(); /* a stage for another language is worthless (v264) */ if(S.settings.translateRun||(TRANSLATE&&TRANSLATE.running)){ await rememberTranslate(true); resumeTranslate(); } /* a run under way or waiting goes on in the new language (v263) */ applyLangStatic(); render(); }
 /* Translate all cards into the app's language (v256, H chose the button over an automatic run — it costs an AI call per batch of
    cards): the cards whose meaning is in another language than the app's go to the AI in batches, only the meaning and its
    language are taken from the answer, the text and the pinyin stay. The row sits under the Language chips and shows only
@@ -1458,7 +1475,7 @@ function cardsListHTML(){
   if(S.filterFlag) list=list.filter(d=>d.flag);
   if(S.filterAi) list=list.filter(d=>d.ai);
   if(S.filterTag) list=list.filter(d=>hasTag(d,S.filterTag));
-  if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,d.w,d.wp,d.wm,d.flagNote,...(d.tags||[])].filter(Boolean).join(" ").toLowerCase().includes(q));
+  if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,...Object.values(d.ms||{}),d.w,d.wp,d.wm,d.flagNote,...(d.tags||[])].filter(Boolean).join(" ").toLowerCase().includes(q));
   const rows=list.map(d=>`<button class="crow" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
       <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
@@ -1728,7 +1745,7 @@ async function applyCardUpdate(id,upd,newC,pinByHand,lines){
   { const d0=cardOf(id); if(d0&&d0.reading&&newC&&newC.trim()&&newC.trim()!==(d0.c||"").trim()){ delete d0.reading; delete upd.reading; const k=Object.keys(PENDING).find(k=>PENDING[k]===id); if(k){ delete PENDING[k]; abandonReading(k); dropExtraShot(k); } } } /* H typed another text: the background reading is not needed (v237); an edit that keeps the text lets a re-crop's reading finish (v243) */
   const isSign=upd.kind==="sign", c=upd.c;
   if(newC && newC!==c){
-    upd.c=newC;
+    upd.c=newC; if(upd.m) upd.ms={[mlOf(upd)]:upd.m}; else delete upd.ms; /* another text: the other languages' meanings described the old one (v265) */
     try{
       if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
       await loadDict().catch(()=>{}); if(isSign) await loadSigns().catch(()=>{});
@@ -2231,7 +2248,7 @@ async function translatePending(status){
   let n=0;
   for(const d of list){
     const r=await signMeaning(d.c.split("\n"),status);
-    if(r.src==="nmt"){ d.m=r.m; d.mt={...d.mt,src:"nmt",pending:r.pending,verified:false}; try{ await idbPut("custom",d); }catch(e){} n++; }
+    if(r.src==="nmt"){ d.m=r.m; setMl(d,"en"); d.mt={...d.mt,src:"nmt",pending:r.pending,verified:false}; try{ await idbPut("custom",d); }catch(e){} n++; } /* the offline model speaks English (v265: recorded under en) */
   }
   return n;
 }
