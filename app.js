@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=246; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=247; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1474,13 +1474,45 @@ function renderEdit(main,c){
   const restoreBefore=()=>{ if(!before) return; Object.assign(sg,before.sg); recropImg=null; recropRect=null; /* Cancel: the text, pinyin and meaning from before Crop again */
     $("#e-pin").value=before.pin; $("#e-mean").value=before.mean; const lab=$("#e-lines").closest(".field").querySelector("label"); if(lab) lab.textContent=before.label; syncWord(); drawLines(); };
   const endRecrop=()=>{ if(PENDING[rid]) return; /* handed over to the background (Save changes during the reading, v241): the reading goes on and fills the card */
-    abandonReading(rid); if(CROP&&CROP.id===rid) CROP=null; delete RECROP[rid]; if(res&&res.url) URL.revokeObjectURL(res.url); res=null; before=null;
+    abandonReading(rid); if(CROP&&CROP.id===rid) CROP=null; delete RECROP[rid]; if(res&&res.url) URL.revokeObjectURL(res.url); res=null; before=null; win=null;
     if(SHOTS_EXTRA[rid]){ delete SHOTS_EXTRA[rid]; if(IMGURL[rid]){ URL.revokeObjectURL(IMGURL[rid]); delete IMGURL[rid]; } } };
+  /* ---------- a small frame opens enlarged (v247, H's vocabulary sheet: the found frame was a sixth of the photo, "so small and hard
+     to see and handle"; option 1 of three, "OK, 1"): when the frame is under WIN_MAX of the photo's width, the photo record shows a
+     window cut around it — a plain sub-rectangle of the photo at its own pixels, PNG, so the reader's cut stays one JPEG generation —,
+     the frame is laid into the window's coordinates and everything else (corners, the reading, the preview, the picture path) runs
+     on the window as on a photo; a tap outside the frame switches to the whole photo and back, the frame following. Every frame
+     that leaves the form (the card's frame, the hand-off's reading rect) is mapped back to the whole photo, so Save, resume and
+     Crop again later see photo fractions and photo pixels as before. ---------- */
+  let win=null, PW=0, PH=0; /* the window as fractions of the photo {x,y,w,h}, or null while the whole photo shows; PW/PH the photo's pixel size */
+  const WIN_MAX=0.45, WIN_ROOM=2, WIN_ROOM_H=1.3;
+  const windowFor=f=>{ if(!(f.w<WIN_MAX)) return null; const k=Math.min(1,Math.max(0.3,f.w*WIN_ROOM,f.h*WIN_ROOM_H)); if(k>=0.95) return null;
+    const cx=f.x+f.w/2, cy=f.y+f.h/2, x=Math.min(1-k,Math.max(0,cx-k/2)), y=Math.min(1-k,Math.max(0,cy-k/2)); return {x:+x.toFixed(4),y:+y.toFixed(4),w:k,h:k}; }; /* the same fraction of width and height: the window keeps the photo's shape, so the layer and the frame's angle are unchanged */
+  const toPhoto=f=>win?{x:win.x+f.x*win.w,y:win.y+f.y*win.h,w:f.w*win.w,h:f.h*win.h,a:f.a||0}:f;
+  const toWin=(f,w)=>w?{x:(f.x-w.x)/w.w,y:(f.y-w.y)/w.h,w:f.w/w.w,h:f.h/w.h,a:f.a||0}:f;
+  const round4=f=>({x:+f.x.toFixed(4),y:+f.y.toFixed(4),w:+f.w.toFixed(4),h:+f.h.toFixed(4),a:+(f.a||0).toFixed(1)});
+  const photoFrame=rect=>round4(toPhoto(frameOf(rect))); /* a layer rect → the card's frame, as fractions of the whole photo */
+  const photoRect=rect=>{ const f=toPhoto(frameOf(rect)); return {x:f.x*PW,y:f.y*PH,w:f.w*PW,h:f.h*PH,a:f.a||0,lw:PW,lh:PH}; }; /* a layer rect → a rect on the whole photo's pixels, for the background reading */
+  const setRecBlob=b=>{ const rec=SHOTS_EXTRA[rid]; if(!rec) return; rec.blob=b; if(IMGURL[rid]){ URL.revokeObjectURL(IMGURL[rid]); delete IMGURL[rid]; } };
+  const cutWindow=async w=>{ const bmp=await createImageBitmap(full); PW=bmp.width; PH=bmp.height;
+    const X=Math.round(w.x*PW), Y=Math.round(w.y*PH), W=Math.max(1,Math.round(w.w*PW)), H=Math.max(1,Math.round(w.h*PH));
+    const cv=document.createElement("canvas"); cv.width=W; cv.height=H; cv.getContext("2d").drawImage(bmp,X,Y,W,H,0,0,W,H); bmp.close();
+    return new Promise(r=>cv.toBlob(r,"image/png")); };
+  const enterWindow=async f=>{ const w=windowFor(f); if(!w) return f; const b=await cutWindow(w); if(!b||!RECROP[rid]) return f; win=w; setRecBlob(b); return toWin(f,w); }; /* the photo frame → the window's; the record shows the window from here */
+  const leaveWindow=f=>{ const pf=toPhoto(f); win=null; setRecBlob(full); return pf; };
+  const openFrame=async f=>{ const g=await enterWindow(f); if(!RECROP[rid]) return; CROP={id:rid,rect:null}; drawRecrop(); placeFrame(rid,g,{noRead:true,win:win?"in":""}); };
+  const onZoom=async()=>{ if(!CROP||CROP.id!==rid||!CROP.rect||RECROP[rid]._zooming) return; RECROP[rid]._zooming=true;
+    try{ const f=frameOf(CROP.rect), keep=res&&res.key===rectKey(CROP.rect); let g;
+      if(win) g=leaveWindow(f); else { g=await enterWindow(f); if(g===f) return; } /* the whole photo → a window around the frame as it stands now; a frame grown past WIN_MAX stays whole */
+      if(!CROP||CROP.id!==rid) return; const stage=RECROP[rid].stage; CROP.rect=null; drawRecrop(); await placeFrame(rid,g,{silent:true}); if(!CROP||CROP.id!==rid||!CROP.rect) return;
+      if(keep){ res.key=rectKey(CROP.rect); recropRect={...CROP.rect}; drawRecrop(); } /* the result under the photo stays with the frame */
+      else if(READING[rid]||stage==="reading") drawRecrop(); /* the reading runs on and lands on the frame where it now is */
+      else showCropPreview(rid,{noRead:true,win:win?"in":"out"}); }
+    finally{ if(RECROP[rid]) delete RECROP[rid]._zooming; } };
   const startRecrop=()=>{ if(!full) return;
     SHOTS_EXTRA[rid]={id:rid,blob:full,ts:Date.now()};
     before={sg:{lines:sg.lines.slice(),orig:sg.orig.slice(),conf:sg.conf,boxes:sg.boxes,img:sg.img,alts:sg.alts,trad:sg.trad,tradDetected:sg.tradDetected,tradText:sg.tradText,tradTouched:sg.tradTouched,tradUser:sg.tradUser,ai:sg.ai,sel:null},
       pin:$("#e-pin").value,mean:$("#e-mean").value,label:$("#e-lines").closest(".field").querySelector("label").textContent};
-    RECROP[rid]={redraw:drawRecrop,stage:"idle",end:()=>{ endRecrop(); },
+    RECROP[rid]={redraw:drawRecrop,stage:"idle",end:()=>{ endRecrop(); },onZoom,
       onImage:blob=>setResult(blob,""),
       onRead:sg2=>{ if(!sg2) return;
         sg.lines=sg2.lines.slice(); sg.orig=sg2.orig.slice(); sg.conf=sg2.conf; sg.boxes=sg2.boxes; sg.img=sg2.img; sg.alts=sg2.alts;
@@ -1493,10 +1525,10 @@ function renderEdit(main,c){
     /* the frame the card was cut with, without a reading until it is moved (v244, H: "use the previous cropping area as starting point");
        a card from before v244 has no frame stored — its crop is looked for in the photo (findFrame, v246) and the frame kept on the card;
        only when nothing is found does the app propose one (v241) */
-    if(d.frame&&d.frame.w){ CROP={id:rid,rect:null}; drawRecrop(); placeFrame(rid,d.frame,{noRead:true}); }
+    if(d.frame&&d.frame.w){ CROP={id:rid,rect:null}; drawRecrop(); openFrame(d.frame); }
     else if(d.img&&!removeImg){ CROP={id:rid,rect:null,locating:true}; drawRecrop();
       findFrame(full,d.img).then(async f=>{ if(!CROP||CROP.id!==rid||!CROP.locating) return; delete CROP.locating;
-        if(f){ d.frame=f; try{ await idbPut("custom",d); }catch(e){} drawRecrop(); placeFrame(rid,f,{noRead:true}); }
+        if(f){ d.frame=f; try{ await idbPut("custom",d); }catch(e){} openFrame(f); }
         else { CROP.auto=true; drawRecrop(); proposeFrame(rid); } }); }
     else { CROP={id:rid,rect:null,auto:true}; drawRecrop(); proposeFrame(rid); } };
   showPimg();
@@ -1520,8 +1552,8 @@ function renderEdit(main,c){
     let handoff=null;
     if(!removeImg&&RECROP[rid]&&CROP&&CROP.id===rid&&CROP.rect&&RECROP[rid].stage!=="idle"){ const rect={...CROP.rect}; const r=await cropBlob(rid,rect); if(r) handoff={rect,blob:r.blob}; } /* a reading still due or running for this frame (v244: an untouched or already read frame saves without one) */
     if(removeImg){ delete upd.img; delete upd.imgFull; delete upd.shot; delete upd.frame; dropThumb(c); } /* shot too — without it the front would still show the inbox photo through fullPhoto (v214) */
-    else if(handoff){ upd.img=await jpegOf(handoff.blob); upd.frame=frameOf(handoff.rect); dropThumb(c); }
-    else if(recropImg){ upd.img=await jpegOf(recropImg); if(recropRect) upd.frame=frameOf(recropRect); dropThumb(c); } /* the crop framed again in this form (v239) with its frame (v244) */
+    else if(handoff){ upd.img=await jpegOf(handoff.blob); upd.frame=photoFrame(handoff.rect); dropThumb(c); }
+    else if(recropImg){ upd.img=await jpegOf(recropImg); if(recropRect) upd.frame=photoFrame(recropRect); dropThumb(c); } /* the crop framed again in this form (v239) with its frame (v244), as fractions of the whole photo even when framed in the window (v247) */
     if(upd.mt){ upd.mt={...upd.mt, verified:true, pending:false}; delete upd.mt.suspect; } /* a human edited it */
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
     const tags=parseTags($("#e-tags").value); if(tags.length) upd.tags=tags; else delete upd.tags;
@@ -1529,9 +1561,10 @@ function renderEdit(main,c){
     else { delete upd.flag; delete upd.flagNote; }
     if(sg.trad){ const trad=(sg.tradText||"").trim(); if(trad) upd.trad=trad; else delete upd.trad; } else delete upd.trad; /* the strip's line carries the traditional form; no separate field (H, v110); the link drops the mark (v146) */
     await applyCardUpdate(c,upd,newC,pin!==d.p,isSign?undefined:wordLines);
-    if(handoff){ const d2=cardOf(c); if(d2){ d2.reading={rect:handoff.rect,at:Date.now()}; try{ await idbPut("custom",d2); }catch(e){} }
+    if(handoff){ const rect=win?photoRect(handoff.rect):handoff.rect; if(win) leaveWindow(frameOf(handoff.rect)); /* the reading rect on the whole photo's pixels, and the record back to the whole photo, so the reading, resume and the fill see the photo (v247) */
+      const d2=cardOf(c); if(d2){ d2.reading={rect,at:Date.now()}; try{ await idbPut("custom",d2); }catch(e){} }
       delete RECROP[rid]; PENDING[rid]=c; CROP=null; /* the form's hooks go, the photo record stays for the reading */
-      clearTimeout(READ_TIMER[rid]); if(!READING[rid]) cropSign(rid,{rect:handoff.rect}); }
+      clearTimeout(READ_TIMER[rid]); if(!READING[rid]) cropSign(rid,{rect}); }
     leave(c);
   };
 }
@@ -1725,7 +1758,7 @@ async function placeFrame(id,f,opts){ /* a stored frame onto the photo's layer, 
   if(img&&!img.complete) await new Promise(r=>{ img.onload=r; img.onerror=r; });
   if(!CROP||CROP.id!==id||CROP.rect) return; const r=layer.getBoundingClientRect(); if(!r.width||!r.height) return;
   CROP.rect={x:f.x*r.width,y:f.y*r.height,w:f.w*r.width,h:f.h*r.height,a:f.a||0,lw:r.width,lh:r.height};
-  renderShots(); showCropPreview(id,opts);
+  renderShots(); if(!(opts&&opts.silent)) showCropPreview(id,opts); /* silent: the frame alone, the caller draws the box (the window toggle, v247) */
 }
 /* where an old card's crop sits in its photo (v246, H on Crop again: "does not work as specified" — every card saved before v244
    carries no frame, so Crop again proposed a fresh one instead of the previous cropping area): the crop is a cut of the photo
@@ -1802,7 +1835,7 @@ function wireCrop(layer){
   let press=null; /* {x,y,t} of the last press outside the frame */
   const tapOrScroll=e=>{ press={x:e.clientX,y:e.clientY,t:Date.now()}; };
   layer.onclick=e=>{ if(layer._gesture){ layer._gesture=false; return; } const p=press; press=null; if(!p||!CROP||!CROP.rect) return;
-    if(Math.hypot(e.clientX-p.x,e.clientY-p.y)<8&&Date.now()-p.t<600){ CROP.zoom=!CROP.zoom; renderShots(); } };
+    if(Math.hypot(e.clientX-p.x,e.clientY-p.y)<8&&Date.now()-p.t<600){ const rc=RECROP[CROP.id]; if(rc&&rc.onZoom) rc.onZoom(); else { CROP.zoom=!CROP.zoom; renderShots(); } } }; /* the Edit form's Crop again with a window: whole photo ↔ the enlarged part (v247) */
   layer.onpointerdown=e=>{
     if(layer.classList.contains("zoomed")){ tapOrScroll(e); return; }
     const r=layer.getBoundingClientRect();
@@ -1872,7 +1905,7 @@ async function showCropPreview(id,opts){
   _prevURL=URL.createObjectURL(r.blob);
   box.innerHTML=`<div class="croppreview">
     <img src="${_prevURL}" alt="selected area">
-    <div class="badge" style="margin:6px 0 8px">${noRead?"The frame the card was cut with — adjust it to read again.":"Reading in a moment — drag a corner first if the frame is off."}</div>
+    <div class="badge" style="margin:6px 0 8px">${noRead?"The frame the card was cut with — adjust it to read again."+(opts.win==="in"?" Tap outside the frame for the whole photo.":opts.win==="out"?" Tap outside the frame to enlarge it again.":""):"Reading in a moment — drag a corner first if the frame is off."}</div>
     <div class="cropacts">
       <button class="del" data-cropread="${id}">Read now</button>
       <button class="del" data-cropok="${id}">Image only</button>
