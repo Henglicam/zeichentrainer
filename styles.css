@@ -220,6 +220,7 @@ button{font:inherit;color:inherit}
 
 .shotwrap{position:relative;margin-bottom:8px}
 .shotwrap img{margin-bottom:0;border-radius:10px}
+.shotwrap img,.shotwrap .shotzoom,.croplayer{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none} /* a finger held on the photo to adjust the frame must not open the browser's image menu (v248, H's screenshot: "Copy image / Download image / Share image" over the frame) */
 .signed .badge.ai{color:var(--ok)}
 .signed .badge.bad,.smean.bad{color:var(--tint)} .aibox.bad{background:var(--tint-soft)} .aibox.bad .aihead{color:var(--tint)}
 .cropacts .del{padding:10px 6px}

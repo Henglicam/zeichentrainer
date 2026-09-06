@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=247; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=248; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1826,6 +1826,7 @@ function zoomStyle(s){
 }
 function wireCrop(layer){
   const rect=layer.querySelector(".croprect");
+  layer.oncontextmenu=e=>e.preventDefault(); const wrap=layer.parentElement; if(wrap) wrap.oncontextmenu=e=>e.preventDefault(); /* a long press while adjusting the frame is not a request for the browser's image menu (v248, H: "Don't make those things pop up while adjusting the crop") */
   /* a short tap without movement toggles the enlarged view; a swipe is left to the page. The tap is taken from the
      click event (v206, H: the tap did nothing on an iPhone — until v205 it was read from pointerup with a distance and
      time check, and on a layer that lets the page scroll iOS Safari turns the touch into a scroll gesture and sends
