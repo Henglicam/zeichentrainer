@@ -302,7 +302,6 @@ body.noscroll{overflow:hidden}
 .ainote{color:var(--label2);font-size:14px;margin-top:6px}
 .aiacts{display:flex;gap:8px;margin-top:10px}
 .aiform{background:var(--card);border-radius:var(--r);padding:12px 14px 14px;margin:4px 0 10px;box-shadow:var(--shadow)}
-#e-aibox{margin-top:8px}
 /* review flag */
 .flagbox{margin-top:16px;padding:10px 14px;border-radius:var(--r);color:var(--tint);font-size:14px;line-height:1.45;text-align:left;background:var(--tint-soft)}
 .backacts{display:flex;justify-content:center;gap:22px;margin-top:12px} .backacts .del{font-size:15px;padding:10px 4px}
