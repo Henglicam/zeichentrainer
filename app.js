@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=281; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=282; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1091,14 +1091,12 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">${t("Usage sharing")}</div><div class="s">${t("Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.")} <span id="share-status">${esc(shareNote())}</span> ${t("Your id: {0}.",`<span id="share-id">${esc(installId())}</span>`)}<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> ${t("Send once a day")}</label></div></div></div>
     <div class="listhead">${t("Advanced settings")}</div>
     ${S.admin?`<div class="mrow"><div><div class="t">Unlocked</div><div class="s">Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are shown below until the app is closed.</div></div><button class="btn mini" id="admin-lock">Lock</button></div>`
-    :`<div class="mrow"><div><div class="t">${t("Locked")}</div><div class="s">${t("Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are for the app's owner.")}</div></div></div>
-    <div class="field"><label>${t("Password")}</label><div class="btnrow"><input id="admin-pw" type="password" autocomplete="off"><button class="btn mini" id="admin-unlock">${t("Unlock")}</button></div><div class="err" id="admin-err" style="display:none">${t("Wrong password.")}</div></div>`}
+    :`<div class="mrow"><div style="flex:1"><div class="t">${t("Locked")}</div><div class="s">${t("Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are for the app's owner.")}</div><div class="inrow"><input id="admin-pw" type="password" placeholder="${t("Password")}" autocomplete="off"><button class="btn mini" id="admin-unlock">${t("Unlock")}</button></div><div class="err" id="admin-err" style="display:none">${t("Wrong password.")}</div></div></div>`} <!-- the field inside the row (v282, H: the box's bottom corners were square — a .field after the last row took its rounding, and the field stood outside the white surface); the Mirror address the same -->
     ${S.admin?`<div class="listhead">Downloads</div>
     <div class="mrow"><div><div class="t">Offline translation</div><div class="s" id="nmt-status">Checking …</div></div><button class="btn mini" id="nmt-btn" hidden></button></div>
     <div class="mrow"><div><div class="t">Text recognition</div><div class="s" id="ocr-status">Checking …</div></div><button class="btn mini" id="ocr-btn" hidden></button></div>
     <div class="listhead">Updates without a VPN</div>
-    <div class="mrow"><div><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div></div><button class="btn mini" id="mirror-check">Check now</button></div>
-    <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>
+    <div class="mrow"><div style="flex:1"><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div><div class="inrow"><input id="mirror-url" class="mono" autocomplete="off" placeholder="Mirror address" title="Mirror address (a copy of the app reachable in China)" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"><button class="btn mini" id="mirror-check">Check now</button></div></div></div>
     <div class="listhead">Diagnostics</div>
     <div class="mrow"><div><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${READLOG.length} step${READLOG.length===1?"":"s"}.</div></div><span class="btnrow"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button></span></div>
     <pre class="diag" id="diag-out" hidden></pre>
