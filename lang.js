@@ -216,7 +216,9 @@ de:{
   /* the staged translation (v264) */
   "The cards change together when all are done.":"Die Karten wechseln gemeinsam, sobald alle fertig sind.",
   /* the notice sheet and the pointer to the guide (v266) */
-  "OK":"OK","New here? The guide explains the app in six short sections.":"Neu hier? Die Anleitung erklärt die App in sechs kurzen Abschnitten."
+  "OK":"OK","New here? The guide explains the app in six short sections.":"Neu hier? Die Anleitung erklärt die App in sechs kurzen Abschnitten.",
+  /* Undo after Delete (v268) */
+  "Deleted “{0}”":"„{0}“ gelöscht","Card deleted":"Karte gelöscht","Photo deleted":"Foto gelöscht","Deleted {0}":"{0} gelöscht","Deleted {0} and {1}":"{0} und {1} gelöscht","Undo":"Rückgängig"
 },
 fr:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"Les photos restent sur ce téléphone. Cadre le texte – la carte est créée pour toi.",
@@ -420,7 +422,9 @@ fr:{
   /* the staged translation (v264) */
   "The cards change together when all are done.":"Les cartes changent toutes ensemble quand tout est prêt.",
   /* the notice sheet and the pointer to the guide (v266) */
-  "OK":"OK","New here? The guide explains the app in six short sections.":"Nouveau ici ? Le guide explique l'appli en six courtes sections."
+  "OK":"OK","New here? The guide explains the app in six short sections.":"Nouveau ici ? Le guide explique l'appli en six courtes sections.",
+  /* Undo after Delete (v268) */
+  "Deleted “{0}”":"« {0} » supprimée","Card deleted":"Carte supprimée","Photo deleted":"Photo supprimée","Deleted {0}":"{0} supprimées","Deleted {0} and {1}":"{0} et {1} supprimées","Undo":"Annuler"
 },
 es:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"Las fotos se quedan en este teléfono. Encuadra el texto y la tarjeta se crea sola.",
@@ -624,7 +628,9 @@ es:{
   /* the staged translation (v264) */
   "The cards change together when all are done.":"Las tarjetas cambian todas a la vez cuando estén listas.",
   /* the notice sheet and the pointer to the guide (v266) */
-  "OK":"OK","New here? The guide explains the app in six short sections.":"¿Nuevo aquí? La guía explica la app en seis secciones cortas."
+  "OK":"OK","New here? The guide explains the app in six short sections.":"¿Nuevo aquí? La guía explica la app en seis secciones cortas.",
+  /* Undo after Delete (v268) */
+  "Deleted “{0}”":"«{0}» eliminada","Card deleted":"Tarjeta eliminada","Photo deleted":"Foto eliminada","Deleted {0}":"{0} eliminadas","Deleted {0} and {1}":"{0} y {1} eliminadas","Undo":"Deshacer"
 },
 ja:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"写真はこの端末に残ります。文字を枠で囲むと、カードが作られます。",
@@ -828,7 +834,9 @@ ja:{
   /* the staged translation (v264) */
   "The cards change together when all are done.":"全部そろってから、カードはまとめて切り替わります。",
   /* the notice sheet and the pointer to the guide (v266) */
-  "OK":"OK","New here? The guide explains the app in six short sections.":"はじめての方へ：使い方ガイドが6つの短い項目でアプリを説明します。"
+  "OK":"OK","New here? The guide explains the app in six short sections.":"はじめての方へ：使い方ガイドが6つの短い項目でアプリを説明します。",
+  /* Undo after Delete (v268) */
+  "Deleted “{0}”":"「{0}」を削除しました","Card deleted":"カードを削除しました","Photo deleted":"写真を削除しました","Deleted {0}":"{0}を削除しました","Deleted {0} and {1}":"{0}と{1}を削除しました","Undo":"元に戻す"
 },
 ko:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"사진은 이 기기에만 남아요. 글자를 틀로 감싸면 카드가 만들어져요.",
@@ -1032,6 +1040,8 @@ ko:{
   /* the staged translation (v264) */
   "The cards change together when all are done.":"모두 끝나면 카드가 한꺼번에 바뀌어요.",
   /* the notice sheet and the pointer to the guide (v266) */
-  "OK":"확인","New here? The guide explains the app in six short sections.":"처음이세요? 사용법이 짧은 여섯 항목으로 앱을 설명해요."
+  "OK":"확인","New here? The guide explains the app in six short sections.":"처음이세요? 사용법이 짧은 여섯 항목으로 앱을 설명해요.",
+  /* Undo after Delete (v268) */
+  "Deleted “{0}”":"“{0}” 삭제했어요","Card deleted":"카드를 삭제했어요","Photo deleted":"사진을 삭제했어요","Deleted {0}":"{0} 삭제했어요","Deleted {0} and {1}":"{0}과 {1} 삭제했어요","Undo":"실행 취소"
 }
 };

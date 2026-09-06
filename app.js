@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=267; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=268; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1546,10 +1546,7 @@ function renderCardDetail(main,c){
   $("#d-flag").onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   wireSay(); wireChars(d); wireLinks();
   wireAi();
-  const del=$("#d-del"); if(del) del.onclick=async()=>{
-    if(!await askSheet({title:d.c?t("Delete “{0}”?",d.c.replace(/\n/g," / ")):t("Delete this card?"),text:t("The card and its learning progress will be removed."),ok:t("Delete")})) return;
-    await delCustom(c); S.detail=null; render();
-  };
+  const del=$("#d-del"); if(del) del.onclick=async()=>{ await delCustom(c); S.detail=null; render(); }; /* at once, with Undo (v268) */
 }
 function renderEdit(main,c){
   const d=cardOf(c); if(!d){ S.editing=null; S.editFrom=null; return render(); }
@@ -1593,8 +1590,7 @@ function renderEdit(main,c){
   $("#e-flag").onchange=()=>{ $("#e-note").hidden=!$("#e-flag").checked; if($("#e-flag").checked) $("#e-note").focus(); }; /* the note only with the flag, as in the Add form and the preview (v136) */
   /* delete from here too (H): from the study back the session goes on with the next card, otherwise back to the list */
   $("#e-del").onclick=async()=>{
-    if(!await askSheet({title:d.c?t("Delete “{0}”?",d.c.replace(/\n/g," / ")):t("Delete this card?"),text:t("The card and its learning progress will be removed."),ok:t("Delete")})) return;
-    await delCustom(c); endRecrop(); delete SIGN[eid];
+    await delCustom(c); endRecrop(); delete SIGN[eid]; /* at once, with Undo (v268) */
     const from=S.editFrom; S.editing=null; S.editFrom=null;
     if(from==="study"){ S.queue=S.queue.filter(x=>x!==c); if(S.single===c) S.single=null; S.revealed=false; S.fullPic=false; S.mode="study"; }
     else { S.mode="cards"; S.detail=null; }
@@ -1808,10 +1804,51 @@ async function addManual(){
 }
 async function delCustom(id){
   bump("deleted");
+  const idx=S.custom.findIndex(x=>x.id===id), d=idx>=0?S.custom[idx]:null, prog=S.progress[id];
   S.custom=S.custom.filter(x=>x.id!==id);
   try{ await idbDel("custom",id); await idbDel("progress",id); }catch(e){}
   delete S.progress[id]; dropThumb(id);
   setStats();
+  if(d) showUndo({kind:"card",d,prog,idx});
+}
+/* Undo after Delete (v268, idea 3 of the improvement list — a card or photo deleted by mistake was gone): the card's Delete
+   and the inbox's Delete act at once, no sheet, and a line above the tab bar says "Deleted “学”" with Undo for UNDO_MS;
+   a second deletion meanwhile joins it ("Deleted 2 cards"), Undo puts everything back — the card with its progress row at
+   its old place, the photo into the inbox (the copy keepPhoto made onto its cards goes again) — and the line goes when the
+   time is up. Photos → Delete N and Reset keep their sheet. */
+const UNDO_MS=5000; let UNDO=null;
+function undoText(){
+  const cards=UNDO.items.filter(i=>i.kind==="card"), photos=UNDO.items.filter(i=>i.kind==="photo");
+  if(cards.length&&photos.length) return t("Deleted {0} and {1}",nOf(cards.length,"card"),nOf(photos.length,"photo"));
+  if(cards.length===1) return cards[0].d.c?t("Deleted “{0}”",cards[0].d.c.replace(/\n/g," / ")):t("Card deleted");
+  if(cards.length) return t("Deleted {0}",nOf(cards.length,"card"));
+  if(photos.length===1) return t("Photo deleted");
+  return t("Deleted {0}",nOf(photos.length,"photo"));
+}
+function showUndo(item){
+  if(!UNDO) UNDO={items:[],timer:null};
+  UNDO.items.push(item); clearTimeout(UNDO.timer); UNDO.timer=setTimeout(hideUndo,UNDO_MS);
+  let el=$("#undo");
+  if(!el){ el=document.createElement("div"); el.className="undo"; el.id="undo"; el.setAttribute("role","status"); el.innerHTML=`<span class="t"></span><button id="undo-btn">${t("Undo")}</button>`; el.querySelector("#undo-btn").onclick=undoDelete; document.body.appendChild(el); }
+  el.querySelector(".t").textContent=undoText();
+}
+function hideUndo(){ if(UNDO) clearTimeout(UNDO.timer); UNDO=null; const el=$("#undo"); if(el) el.remove(); }
+async function undoDelete(){
+  if(!UNDO) return; const items=UNDO.items; hideUndo();
+  for(const it of items){
+    if(it.kind==="card"){
+      const d=it.d; if(S.custom.some(x=>x.id===d.id)) continue;
+      S.custom.splice(Math.min(it.idx,S.custom.length),0,d); try{ await idbPut("custom",d); }catch(e){}
+      if(it.prog){ S.progress[d.id]=it.prog; try{ await idbPut("progress",{id:d.id,...it.prog}); }catch(e){} }
+      bump("deleted",-1);
+      if(S.mode==="study"&&!S.queue.includes(d.id)&&d.c){ S.queue.splice(S.idx,0,d.id); S.revealed=false; S.fullPic=false; } /* deleted from the study back: the card comes next again */
+    } else {
+      const rec=it.rec; if(S.inbox.some(x=>x.id===rec.id)) continue;
+      S.inbox.splice(Math.min(it.idx,S.inbox.length),0,rec); try{ await idbPut("inbox",rec); }catch(e){}
+      for(const d of S.custom) if(d.shot===rec.id&&d.imgFull){ delete d.imgFull; try{ await idbPut("custom",d); }catch(e){} } /* the photo is stored once again (v214) */
+    }
+  }
+  setStats(); render();
 }
 
 /* ---------- OCR (Tesseract.js + pinyin-pro + CC-CEDICT, fully local from ./vendor — no CDN) ---------- */
@@ -3482,7 +3519,7 @@ function renderShots(){
           :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
     }).join("");
-  box.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>delShot(b.dataset.del));
+  box.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>delShot(b.dataset.del,true));
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
   box.onclick=e=>{ const b=e.target.closest("[data-savenow]"); if(b){ b.disabled=true; saveNow(b.dataset.savenow); } }; /* the button is inside the reading box, which every status re-renders (v237) */
   box.querySelectorAll("[data-cropcancel]").forEach(b=> b.onclick=()=>{ abandonReading(b.dataset.cropcancel); CROP=null; renderShots(); });
@@ -3553,8 +3590,10 @@ async function addPhoto(file){
   try{ await idbPut("inbox",rec); }catch(err){}
   return rec.id;
 }
-async function delShot(id){
+async function delShot(id,undo){
   await keepPhoto(id); /* the cards made from it keep the whole photo (v214) */
+  const idx=S.inbox.findIndex(s=>s.id===id), rec=idx>=0?S.inbox[idx]:null;
+  if(undo&&rec) showUndo({kind:"photo",rec,idx});
   S.inbox=S.inbox.filter(s=>s.id!==id);
   try{ await idbDel("inbox",id); }catch(e){}
   if(IMGURL[id]){ URL.revokeObjectURL(IMGURL[id]); delete IMGURL[id]; }
