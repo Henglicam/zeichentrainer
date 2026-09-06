@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=263; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=264; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -68,6 +68,7 @@ function _os(store,mode){ return openDB().then(db=>db.transaction(store,mode).ob
 function idbPut(store,val){ return _os(store,"readwrite").then(os=>new Promise((res,rej)=>{const r=os.put(val);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);})); }
 function idbDel(store,key){ return _os(store,"readwrite").then(os=>new Promise((res,rej)=>{const r=os.delete(key);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);})); }
 function idbAll(store){ return _os(store,"readonly").then(os=>new Promise((res,rej)=>{const r=os.getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error);})); }
+function idbPutMany(store,rows){ return _os(store,"readwrite").then(os=>new Promise((res,rej)=>{ const tx=os.transaction; rows.forEach(r=>os.put(r)); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); tx.onabort=()=>rej(tx.error); })); } /* all rows in one transaction: all or nothing (v264, the translation applied together) */
 function idbClear(store){ return _os(store,"readwrite").then(os=>new Promise((res,rej)=>{const r=os.clear();r.onsuccess=()=>res();r.onerror=()=>rej(r.error);})); }
 
 /* a card into the deck and the store: replace by key or append; storage errors are swallowed like everywhere else */
@@ -827,7 +828,7 @@ function wxNoteHTML(){ return inWeChat()?`<div class="wxnote">${t(WX_NOTE)}</div
 function applyLangStatic(){ document.documentElement.lang=LANG;
   [["#stat-open b","Due"],["#stat-done b","capsule:Done"],["#stat-deck b","Deck"]].forEach(([q,k])=>{ const e=$(q); if(e) e.textContent=t(k); });
   document.querySelectorAll("#tabs .tab").forEach(b=>{ const k={study:"Learn",cards:"Cards",inbox:"Camera",more:"More"}[b.dataset.mode]; const n=b.lastChild; if(k&&n&&n.nodeType===3) n.textContent=t(k); }); }
-async function setLang(code){ if(!LANGS.some(([c])=>c===code)) return; LANG=code; await setSetting("lang",code); if(TRANSLATE&&!TRANSLATE.running) TRANSLATE=null; /* a finished run's line belongs to the old language */ if(S.settings.translateRun||(TRANSLATE&&TRANSLATE.running)){ await rememberTranslate(true); resumeTranslate(); } /* a run under way or waiting goes on in the new language (v263) */ applyLangStatic(); render(); }
+async function setLang(code){ if(!LANGS.some(([c])=>c===code)) return; LANG=code; await setSetting("lang",code); if(TRANSLATE&&!TRANSLATE.running) TRANSLATE=null; /* a finished run's line belongs to the old language */ if(stageOf()&&stageOf().lang!==code) await clearStage(); /* a stage for another language is worthless (v264) */ if(S.settings.translateRun||(TRANSLATE&&TRANSLATE.running)){ await rememberTranslate(true); resumeTranslate(); } /* a run under way or waiting goes on in the new language (v263) */ applyLangStatic(); render(); }
 /* Translate all cards into the app's language (v256, H chose the button over an automatic run — it costs an AI call per batch of
    cards): the cards whose meaning is in another language than the app's go to the AI in batches, only the meaning and its
    language are taken from the answer, the text and the pinyin stay. The row sits under the Language chips and shows only
@@ -841,6 +842,18 @@ let TRANSLATE=null; /* {running, done, at, total, failed, lang} — at = the car
 /* a run goes on after an interruption (v262, H: "Please continue translating after being interrupted"): the run is remembered in
    setting translateRun {lang, at} until every card is done, and resumeTranslate() picks it up again at boot, on reconnect and on
    foreground — a failed call (Android cuts a background page's requests) no longer ends the run, the row says it continues */
+/* the translation is staged, not written card by card (v264, H: "make translation consistent and make sure that cards are not mixed in
+   different languages if the translation was interrupted"): every answer lands in setting translateStage {lang, m:{id:{m,from}}} —
+   from = the meaning the card had when it was asked, so a meaning typed meanwhile is not overwritten — and the cards change
+   together, in one transaction, only when every card has its answer (or was tried and got none: skip). Until then Learn and Cards
+   show the old meanings, all in one language, and the pill on every card; an interruption keeps the stage, the resumed run asks
+   only for the cards not staged yet; a switched language drops the stage. */
+const stageOf=()=>S.settings.translateStage;
+async function saveStage(st){ S.settings.translateStage=st; await setSetting("translateStage",st); }
+async function clearStage(){ if(S.settings.translateStage){ delete S.settings.translateStage; await idbDel("settings","translateStage").catch(()=>{}); } }
+const inStage=(st,d)=>!!(st&&st.m[d.id]&&st.m[d.id].from===d.m); /* this card's answer is in, for the meaning it has now */
+async function applyStage(st,list){ const rows=[]; for(const x of list){ const d=cardOf(x.id), e=d&&st.m[d.id]; if(!e||e.from!==d.m||e.skip||!e.m) continue; rows.push(setMl({...d,m:e.m},st.lang)); }
+  if(rows.length){ try{ await idbPutMany("custom",rows); }catch(e){ logErr("translate","apply: "+(e&&e.message||e)); return 0; } for(const r of rows){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; } } return rows.length; }
 async function rememberTranslate(on){ if(on){ S.settings.translateRun={lang:LANG,at:Date.now()}; await setSetting("translateRun",S.settings.translateRun); } else if(S.settings.translateRun){ delete S.settings.translateRun; await idbDel("settings","translateRun").catch(()=>{}); } }
 function resumeTranslate(){ const r=S.settings.translateRun; if(!r||(TRANSLATE&&TRANSLATE.running)) return;
   if(!toTranslate().length){ rememberTranslate(false); return; } /* nothing is left for the app's language (a switched language just means other cards are left, v263) */
@@ -848,32 +861,36 @@ function resumeTranslate(){ const r=S.settings.translateRun; if(!r||(TRANSLATE&&
 function translateRowHTML(){
   const n=toTranslate().length, tr=TRANSLATE; if(!(n||tr)||!aiOn()) return "";
   const name=(LANGS.find(([c])=>c===LANG)||[])[1]||LANG;
-  const line=tr&&tr.running?busyHTML(t("Translating {0} of {1} …",tr.at,tr.total)):tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n)+" "+t("It goes on by itself when the AI can be reached again."):tr?t("Done — {0} translated.",nOf(tr.done,"card")):t("{0} have their meaning in another language.",nOf(n,"card"));
+  const line=tr&&tr.running?busyHTML(t("Translating {0} of {1} …",tr.at,tr.total)+" "+t("The cards change together when all are done.")):tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n)+" "+t("The cards change together when all are done.")+" "+t("It goes on by itself when the AI can be reached again."):tr?t("Done — {0} translated.",nOf(tr.done,"card")):t("{0} have their meaning in another language.",nOf(n,"card"));
   return `<div class="mrow"><div style="flex:1"><div class="t">${t("Meanings")}</div><div class="s" id="translate-status">${line}</div>${n?`<div class="fieldacts"><button class="btn mini" id="translate-all"${tr&&tr.running?" disabled":""}>${t("Translate all cards into {0}",name)}</button></div>`:""}</div></div>`; /* the button under the sentence, as the Feedback row's Send — its label is long in every language */
 }
 function translateRefresh(){ const st=$("#translate-status"), b=$("#translate-all"), tr=TRANSLATE; if(!st) return; /* the row as it stands now, whatever page was shown meanwhile */
   const n=toTranslate().length;
-  if(tr&&tr.running) st.innerHTML=busyHTML(t("Translating {0} of {1} …",tr.at,tr.total)); /* the moving bar with the count of the card the AI is on */
-  else st.textContent=tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n)+" "+t("It goes on by itself when the AI can be reached again."):tr?t("Done — {0} translated.",nOf(tr.done,"card")):t("{0} have their meaning in another language.",nOf(n,"card"));
+  if(tr&&tr.running) st.innerHTML=busyHTML(t("Translating {0} of {1} …",tr.at,tr.total)+" "+t("The cards change together when all are done.")); /* the moving bar with the count of the card the AI is on */
+  else st.textContent=tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n)+" "+t("The cards change together when all are done.")+" "+t("It goes on by itself when the AI can be reached again."):tr?t("Done — {0} translated.",nOf(tr.done,"card")):t("{0} have their meaning in another language.",nOf(n,"card"));
   if(b){ b.disabled=!!(tr&&tr.running); if(!n&&!(tr&&tr.running)) b.remove(); } }
 async function translateAll(){
   if(TRANSLATE&&TRANSLATE.running){ translateRefresh(); return; }
   if(!navigator.onLine){ const st=$("#translate-status"); if(st) st.textContent=t("No connection. Try again when online."); return; }
   const list=toTranslate(); if(!list.length) return;
-  TRANSLATE={running:true,done:0,at:0,total:list.length,failed:false,lang:LANG}; translateRefresh(); await rememberTranslate(true);
+  let stage=stageOf(); if(!stage||stage.lang!==LANG||!stage.m) stage={lang:LANG,m:{}}; /* the stage of an interrupted run in this language, else a fresh one */
+  const todo=list.filter(d=>!inStage(stage,d));
+  TRANSLATE={running:true,done:list.length-todo.length,at:list.length-todo.length,total:list.length,failed:false,lang:LANG}; translateRefresh(); await rememberTranslate(true); await saveStage(stage);
   try{
-    for(let i=0;i<list.length;i+=TRANSLATE_BATCH){
+    for(let i=0;i<todo.length;i+=TRANSLATE_BATCH){
       if(LANG!==TRANSLATE.lang) break; /* the language was switched meanwhile: this run stops and a fresh one for the new language follows (v263, H: "then all the cards have to be translated into the new language") */
-      const batch=list.slice(i,i+TRANSLATE_BATCH), lang=TRANSLATE.lang; TRANSLATE.at=Math.min(i+batch.length,list.length); translateRefresh();
+      const batch=todo.slice(i,i+TRANSLATE_BATCH), lang=TRANSLATE.lang; TRANSLATE.at=Math.min(TRANSLATE.done+batch.length,list.length); translateRefresh();
       const ans=await aiAsk(batch.map(d=>({...d,translate:true})));
-      for(let k=0;k<batch.length;k++){ const d=cardOf(batch[k].id), a=ans[k]; if(!d||!a||!a.m||a.bad) continue;
-        const upd={...d, m:a.m}; setMl(upd,lang); await putCard(upd,d.id); TRANSLATE.done++; } /* the language the batch was asked in — a switch meanwhile changes LANG, and the follow-up run translates these again (v263) */
-      translateRefresh();
+      for(let k=0;k<batch.length;k++){ const d=cardOf(batch[k].id), a=ans[k]; if(!d) continue;
+        stage.m[d.id]=a&&a.m&&!a.bad?{m:a.m,from:d.m}:{skip:true,from:d.m}; TRANSLATE.done++; } /* staged, not written: the cards change together at the end */
+      if(lang===TRANSLATE.lang&&LANG===lang) await saveStage(stage);
     }
   }catch(err){ TRANSLATE.failed=true; logErr("translate",err&&err.message||String(err)); }
-  TRANSLATE.running=false;
-  if(LANG!==TRANSLATE.lang&&!TRANSLATE.failed&&toTranslate().length) return translateAll(); /* the language was switched during the run: every card goes into the new one (v263) */
-  if(!toTranslate().length) await rememberTranslate(false); translateRefresh(); /* remembered while cards are left, so the run goes on at the next chance */
+  if(LANG!==TRANSLATE.lang&&!TRANSLATE.failed&&toTranslate().length){ await clearStage(); TRANSLATE.running=false; return translateAll(); } /* the language was switched during the run: every card goes into the new one (v263) */
+  if(!TRANSLATE.failed&&LANG===TRANSLATE.lang&&list.every(d=>{ const c=cardOf(d.id); return !c||inStage(stage,c)||c.m!==d.m; })){ /* every card answered (or tried): now they change together */
+    TRANSLATE.done=await applyStage(stage,list); await clearStage(); }
+  if(!toTranslate().length||!TRANSLATE.failed&&!stageOf()) await rememberTranslate(false); /* remembered while cards are left, so the run goes on at the next chance */
+  TRANSLATE.running=false; translateRefresh(); /* running stays set until the cards and the settings are written — whoever waits for the end sees the finished state (v264) */
   if(S.mode==="study"||S.mode==="cards") render(); /* the meanings on screen follow */
 }
 function reportData(){
