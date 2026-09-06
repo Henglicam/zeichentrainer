@@ -182,7 +182,7 @@ button{font:inherit;color:inherit}
 .lbl{font-family:var(--sans);font-size:13px;font-weight:500;color:var(--label2);margin-right:8px}
 .scriptref{display:inline-flex;align-items:baseline;gap:0}
 .scriptref .hanzi{font-family:var(--hanzi);font-size:18px;color:var(--label)}
-.script{margin:10px 0 0;text-align:center} .script>.lbl{display:block;margin:0 0 2px}
+.script{margin:10px 0 0;text-align:center} .script .pill{margin-left:0} .script.back{margin:0 0 10px}
 .flag{display:inline-block;font-size:13px;font-weight:500;padding:4px 10px;border-radius:999px;color:var(--tint);background:var(--tint-soft);margin-top:12px}
 .aibar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;padding:8px 8px 8px 14px;border-radius:var(--r);background:var(--ok-soft);color:var(--ok);font-size:14px;font-weight:600}
 

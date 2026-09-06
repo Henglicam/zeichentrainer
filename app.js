@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=226; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=227; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1014,7 +1014,7 @@ function frontPic(d){
   return S.fullPic&&full?img:`<div class="picbox" data-pic="1">${img}</div>`;
 }
 function frontHTML(d){
-  const scriptNote=d.trad?`<div class="script"><div class="lbl">Traditional characters, as on the photo</div><div class="scriptref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></div></div>`:""; /* the simplified form for reference (H, v102); plain words, no 简/繁 shorthand (H, v106); the back repeats nothing */
+  const scriptNote=d.trad?`<div class="script"><span class="pill trad">Traditional</span></div>`:""; /* one pill under the box (v227, H's "Go" on the design review — until v226 two lines, "Traditional characters, as on the photo" and "Simplified 养乐多"); the simplified form sits on the back now (simpRefHTML), plain words, no 简/繁 shorthand (H, v106) */
   if(d.kind==="sign"){
     /* sign card: the picture is the exercise, text underneath wrapped only between words */
     const lines0=(d.trad||d.c).split("\n");
@@ -1100,6 +1100,8 @@ function wireChars(d){ document.querySelectorAll(".chars:not(.sub) .ch").forEach
    HINT_REVIEWS reviews all time (v226, H's "Go" on the design review: a line of instruction on every card forever is noise) */
 const HINT_REVIEWS=20;
 const showHints=()=>(usage().reviews||0)<HINT_REVIEWS;
+/* the simplified form of a traditional card, on the back above the pinyin (v227; on the front until v226, H v102) */
+const simpRefHTML=d=>d.trad?`<div class="script back"><span class="scriptref"><span class="lbl">Simplified</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span></div>`:"";
 function backHTML(d){
   const wordBlock = d.w ? `<div class="rule"></div>
     <div class="word"><span class="w">${esc(d.w)}</span><span class="wp">${esc(d.wp||"")}</span></div>
@@ -1107,7 +1109,7 @@ function backHTML(d){
   const glossBlock = d.kind==="sign" ? `
     ${d.mt&&!d.mt.verified?`<span class="flag">meaning unverified${d.mt.pending?" (translation pending)":""}${d.mt.suspect?" (reading uncertain: "+esc(d.mt.suspect)+")":""}</span>`:""}
 ` : "";
-  return `<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${SAY_HINT}<div class="mean">${esc(d.m)}</div>${charsHTML(d)}
+  return `${simpRefHTML(d)}<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${SAY_HINT}<div class="mean">${esc(d.m)}</div>${charsHTML(d)}
     ${d.kind==="sign"?glossBlock:wordBlock}${linkedHTML(d)}`;
 }
 /* the other cards with the same text (v122, H: "if one character connects to various photos, then link them"): their
