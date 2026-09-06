@@ -214,7 +214,9 @@ de:{
   /* the Translate-all run that goes on after an interruption (v262) */
   "It goes on by itself when the AI can be reached again.":"Es geht von selbst weiter, sobald die KI wieder erreichbar ist.",
   /* the staged translation (v264) */
-  "The cards change together when all are done.":"Die Karten wechseln gemeinsam, sobald alle fertig sind."
+  "The cards change together when all are done.":"Die Karten wechseln gemeinsam, sobald alle fertig sind.",
+  /* the notice sheet and the pointer to the guide (v266) */
+  "OK":"OK","New here? The guide explains the app in six short sections.":"Neu hier? Die Anleitung erklärt die App in sechs kurzen Abschnitten."
 },
 fr:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"Les photos restent sur ce téléphone. Cadre le texte – la carte est créée pour toi.",
@@ -416,7 +418,9 @@ fr:{
   /* the Translate-all run that goes on after an interruption (v262) */
   "It goes on by itself when the AI can be reached again.":"Ça reprend tout seul dès que l'IA est à nouveau joignable.",
   /* the staged translation (v264) */
-  "The cards change together when all are done.":"Les cartes changent toutes ensemble quand tout est prêt."
+  "The cards change together when all are done.":"Les cartes changent toutes ensemble quand tout est prêt.",
+  /* the notice sheet and the pointer to the guide (v266) */
+  "OK":"OK","New here? The guide explains the app in six short sections.":"Nouveau ici ? Le guide explique l'appli en six courtes sections."
 },
 es:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"Las fotos se quedan en este teléfono. Encuadra el texto y la tarjeta se crea sola.",
@@ -618,7 +622,9 @@ es:{
   /* the Translate-all run that goes on after an interruption (v262) */
   "It goes on by itself when the AI can be reached again.":"Sigue solo en cuanto la IA vuelva a estar disponible.",
   /* the staged translation (v264) */
-  "The cards change together when all are done.":"Las tarjetas cambian todas a la vez cuando estén listas."
+  "The cards change together when all are done.":"Las tarjetas cambian todas a la vez cuando estén listas.",
+  /* the notice sheet and the pointer to the guide (v266) */
+  "OK":"OK","New here? The guide explains the app in six short sections.":"¿Nuevo aquí? La guía explica la app en seis secciones cortas."
 },
 ja:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"写真はこの端末に残ります。文字を枠で囲むと、カードが作られます。",
@@ -820,7 +826,9 @@ ja:{
   /* the Translate-all run that goes on after an interruption (v262) */
   "It goes on by itself when the AI can be reached again.":"AIにつながり次第、自動で続きます。",
   /* the staged translation (v264) */
-  "The cards change together when all are done.":"全部そろってから、カードはまとめて切り替わります。"
+  "The cards change together when all are done.":"全部そろってから、カードはまとめて切り替わります。",
+  /* the notice sheet and the pointer to the guide (v266) */
+  "OK":"OK","New here? The guide explains the app in six short sections.":"はじめての方へ：使い方ガイドが6つの短い項目でアプリを説明します。"
 },
 ko:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"사진은 이 기기에만 남아요. 글자를 틀로 감싸면 카드가 만들어져요.",
@@ -1022,6 +1030,8 @@ ko:{
   /* the Translate-all run that goes on after an interruption (v262) */
   "It goes on by itself when the AI can be reached again.":"AI에 다시 연결되면 저절로 이어져요.",
   /* the staged translation (v264) */
-  "The cards change together when all are done.":"모두 끝나면 카드가 한꺼번에 바뀌어요."
+  "The cards change together when all are done.":"모두 끝나면 카드가 한꺼번에 바뀌어요.",
+  /* the notice sheet and the pointer to the guide (v266) */
+  "OK":"확인","New here? The guide explains the app in six short sections.":"처음이세요? 사용법이 짧은 여섯 항목으로 앱을 설명해요."
 }
 };

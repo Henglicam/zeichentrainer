@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=265; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=266; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -193,7 +193,7 @@ async function shareFeedback(){
   const text=feedbackText(rows), name="zeichentrainer-feedback-"+new Date().toISOString().slice(0,10)+".txt", file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
   if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
-  try{ await navigator.clipboard.writeText(text); alert(t("Copied to the clipboard.")); }catch(err){ alert(t("Sharing is not available here.")); }
+  try{ await navigator.clipboard.writeText(text); noteSheet(t("Copied to the clipboard.")); }catch(err){ noteSheet(t("Sharing is not available here.")); }
 }
 function allUsersText(rows){
   const day=t=>String(t||"").slice(0,10), week=Date.now()-7*DAY, n=(o,k)=>+(o&&o[k])||0;
@@ -241,13 +241,13 @@ async function shareUsers(){
   const text=allUsersText(rows), name="zeichentrainer-users-"+new Date().toISOString().slice(0,10)+".txt", file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
   if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
-  try{ await navigator.clipboard.writeText(text); alert(t("Copied to the clipboard.")); }catch(err){ alert(t("Sharing is not available here.")); }
+  try{ await navigator.clipboard.writeText(text); noteSheet(t("Copied to the clipboard.")); }catch(err){ noteSheet(t("Sharing is not available here.")); }
 }
 async function shareDiag(){
   const text=diagText(), name="zeichentrainer-diagnostics.txt", file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
   if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
-  try{ await navigator.clipboard.writeText(text); alert(t("Copied to the clipboard.")); }catch(err){ alert(t("Sharing is not available here.")); }
+  try{ await navigator.clipboard.writeText(text); noteSheet(t("Copied to the clipboard.")); }catch(err){ noteSheet(t("Sharing is not available here.")); }
 }
 
 /* ---------- Boot ---------- */
@@ -464,6 +464,10 @@ const relayUrl=()=>SHARE_URL+"/functions/v1/ai-relay", RELAY_PROVIDERS=["deepsee
 const relayOn=()=>S.settings.aiRelay!==false;
 function viaRelay(pv){ pv=pv||aiProvider(); return !aiKey(pv)&&relayOn()&&RELAY_PROVIDERS.includes(pv); }
 function aiOn(){ return (!!aiKey()||viaRelay())&&!!aiBase(); }
+/* the text goes to DeepSeek when it can (v266, idea 3: Qwen was the active provider on H's phone and slow on text, v208): a picture-capable
+   active provider hands the text check, the picker's candidates and Translate all to DeepSeek when a DeepSeek key or the relay is there;
+   DeepSeek itself, or a provider without pictures, stays as it is. The picture keeps pictureProvider(). */
+function textProvider(){ const pv=aiProvider(); if(pv==="deepseek"||!AI_PROVIDERS[pv].vision) return pv; return (aiKey("deepseek")||viaRelay("deepseek"))?"deepseek":pv; }
 /* one OpenAI-style request through the relay: the function adds the key and answers with the provider's JSON as it is */
 /* Every AI request goes through aiFetch (v201 — H switched apps during "Checking pinyin and meaning …" and came back to
    "no connection (offline, or this provider refuses calls from a browser …)": Android cuts a page's requests when it goes
@@ -614,17 +618,17 @@ const aiSystem=()=>`You review flashcards for an adult learning to read Chinese 
 For every card return the corrected card. Rules: "zh" = the Chinese text in simplified characters (always simplified, even when the sign is traditional), fixed only if it is clearly an OCR slip (keep line breaks); "p" = pinyin with tone marks, correct for this context (多音字!), one space between syllables, " / " between lines; "m" = natural ${meaningLangName()} meaning of the whole text as a sign or word (short, in ${meaningLangName()} only, no explanations — the input meaning may be in another language, answer in ${meaningLangName()}); the text is usually a real sign, menu item, product name or brand — when the readings circle around a well-known brand or product name, "zh" is that name; "note" = one short sentence on what was wrong, or "ok" (in English); "ok" = true when zh, pinyin and meaning were already right; "zht" = only when the input has "script":"traditional" (the photo shows traditional characters): "zh" written in traditional characters as it stands on the sign; "alt" (when present) = other readings of the same photo by other OCR passes and models — the true text is often a mix of them, or a well-known name or phrase they all circle around; prefer a real sign, menu or product text that every reading could be a misreading of; "bad" = true when the Chinese text is OCR garbage — no plausible sign, menu or product text can be made of it — then keep "zh" as given, leave "m" empty and say so in the note. Before calling a text bad, try the "alt" readings: when one of them, or a mix of them, is a plausible text or a well-known name (a brand on a bottle, a shop name), answer with that as "zh", "bad" false, and say in the note which reading you used. Never replace an unreadable text with a mere guess.
 Answer with a JSON array only, one object per input card in the same order: [{"c":"<input c>","zh":"…","p":"…","m":"…","note":"…","ok":true|false,"bad":true|false}]. No prose, no code fences.`; /* the meaning in the app's language (v256) — meaningLangName() is read when the request goes out */
 async function aiAsk(cards,status){
-  const pv=aiProvider(), key=aiKey(), relay=!key&&viaRelay(pv); if(!key&&!relay) throw new Error("no API key");
-  const model=aiModel(), user=JSON.stringify(cards.map(aiCardPayload));
+  const pv=textProvider(), key=aiKey(pv), relay=!key&&viaRelay(pv); if(!key&&!relay) throw new Error("no API key");
+  const model=aiModel(pv), user=JSON.stringify(cards.map(aiCardPayload));
   status&&status(`asking ${model} about ${cards.length} card${cards.length>1?"s":""} …`);
   let r; const t0=Date.now();
   try{
     if(pv==="claude")
-      r=await aiFetch(aiBase(),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      r=await aiFetch(aiBase(pv),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({model,max_tokens:4000,system:aiSystem(),messages:[{role:"user",content:user}]})});
     else { /* OpenAI-style chat completions (DeepSeek, Qwen, GLM, …), direct with the phone's key or through the owner's relay */
       const body=noThinking(pv,model,{model,max_tokens:4000,temperature:0,messages:[{role:"system",content:aiSystem()},{role:"user",content:user}]});
-      r=relay?await relayFetch(pv,body):await aiFetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
+      r=relay?await relayFetch(pv,body):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
   }catch(err){ logAi({model,req:user.slice(0,1500),err:"no connection: "+(err&&err.message||err)+(pv==="claude"?" — the API may be blocked without a VPN":" — offline, or this provider refuses calls from a browser")}); throw new Error(AI_NET_ERR); }
   if(!r.ok&&relay){ const t=await apiErrText(r); logAi({model,status:r.status,req:user.slice(0,1500),err:t}); throw new Error(relayError(r,t)); }
   if(r.status===401||r.status===403) throw new Error("API key rejected ("+r.status+")");
@@ -714,7 +718,7 @@ function renderAiRow(){
   const all=aiQueue(), q=all.length, fl=all.filter(d=>d.flag).length, sp=all.filter(d=>!d.flag&&d.mt.suspect).length, pd=q-fl-sp;
   const ppv=pictureProvider(); const ab=$("#about-s"); if(ab) ab.textContent=aboutText();
   const relayed=viaRelay()||(ppv&&viaRelay(ppv)); /* the first line names the models and says which one does what (v195, H: "I liked the previous text more — revert and polish the first paragraph") */
-  const who=`${AI_PROVIDERS[aiProvider()].short} (${aiModel()})`, pic=ppv?`${AI_PROVIDERS[ppv].short} (${pictureModel(ppv)})`:"";
+  const who=`${AI_PROVIDERS[textProvider()].short} (${aiModel(textProvider())})`, pic=ppv?`${AI_PROVIDERS[ppv].short} (${pictureModel(ppv)})`:"";
   st.textContent=!aiOn()?t("Off. The app's owner sets it up under Advanced settings.")
     :S.settings.aiAuto===false?(pic?t("Off. {0} and {1} are set up{2} — tick the box to check new cards.",who,pic,relayed?t(" through the app owner's relay"):""):t("Off. {0} is set up{1} — tick the box to check new cards.",who,relayed?t(" through the app owner's relay"):"")) /* the line follows the switch (v196, H: "it cannot say On when I've unticked the checkbox") */
     :(pic?t("On{0}: {1} checks the text, {2} reads the framed area when the reading is weak.",relayed?t(", through the app owner's relay"):"",who,pic):t("On{0}: {1} checks the text. Photos never leave the phone.",relayed?t(", through the app owner's relay"):"",who));
@@ -807,7 +811,7 @@ async function shareUsage(){
   const text=usageText(), name="zeichentrainer-usage-"+new Date().toISOString().slice(0,10)+".txt", file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name,text:"Zeichentrainer usage report"}); return; }catch(err){ if(err && err.name==="AbortError") return; } }
   if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err && err.name==="AbortError") return; } }
-  try{ await navigator.clipboard.writeText(text); alert(t("Copied to the clipboard.")); }catch(err){ alert(t("Sharing is not available here.")); }
+  try{ await navigator.clipboard.writeText(text); noteSheet(t("Copied to the clipboard.")); }catch(err){ noteSheet(t("Sharing is not available here.")); }
 }
 /* ---------- usage sharing (v170, H: "I want to share the app and get user stats" — automatic reports from every phone):
    once a day, while online and the switch in More is on, the same counts as the report go to a table of H's own in a
@@ -832,9 +836,12 @@ function askSheet(o){ return new Promise(res=>{
   const onKey=e=>{ if(e.key==="Escape") done(false); };
   const done=v=>{ el.remove(); document.removeEventListener("keydown",onKey); res(v); };
   el.onclick=e=>{ if(e.target===el) done(false); };
-  el.querySelector("#ask-cancel").onclick=()=>done(false); el.querySelector("#ask-ok").onclick=()=>done(true);
-  document.addEventListener("keydown",onKey); document.body.appendChild(el); el.querySelector("#ask-cancel").focus();
+  const cancel=el.querySelector("#ask-cancel"); if(o.cancel===false) cancel.remove(); else cancel.onclick=()=>done(false); el.querySelector("#ask-ok").onclick=()=>done(true);
+  document.addEventListener("keydown",onKey); document.body.appendChild(el); (o.cancel===false?el.querySelector("#ask-ok"):cancel).focus();
 }); }
+/* a plain notice as the app's own sheet (v266, idea 4 — the twelve browser alerts said "henglicam.github.io says"): one line, or a title
+   with a sentence, and OK; the backdrop and Escape close it too */
+const noteSheet=(title,text)=>askSheet({title,text,ok:t("OK"),danger:false,cancel:false});
 const inWeChat=()=>/MicroMessenger/i.test(navigator.userAgent);
 const isInstalled=()=>{ try{ return matchMedia("(display-mode: standalone)").matches||navigator.standalone===true; }catch(e){ return false; } }; /* runs from the home screen — the strongest sign of a real user (v221) */
 const WX_NOTE="You are inside WeChat. Open this page in your browser to install the app and keep your cards.";
@@ -1142,7 +1149,7 @@ function flaggedText(){
 }
 async function shareFlagged(){
   const n=deck().filter(d=>d.flag).length;
-  if(!n){ alert(t("No flagged cards.")); return; }
+  if(!n){ noteSheet(t("No flagged cards.")); return; }
   const text=flaggedText();
   const name="zeichentrainer-review-"+new Date().toISOString().slice(0,10)+".txt";
   const file=new File([text],name,{type:"text/plain"});
@@ -1151,8 +1158,8 @@ async function shareFlagged(){
     catch(err){ if(err && err.name==="AbortError") return; }
   }
   if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err && err.name==="AbortError") return; } }
-  try{ await navigator.clipboard.writeText(text); alert(t("Copied to the clipboard.")); }
-  catch(err){ alert(t("Sharing is not available here.")); }
+  try{ await navigator.clipboard.writeText(text); noteSheet(t("Copied to the clipboard.")); }
+  catch(err){ noteSheet(t("Sharing is not available here.")); }
 }
 /* one object URL per blob, for images that re-render on every tap (the study front, the Add form) — never revoked while the blob lives */
 const BLOBURL=new WeakMap();
@@ -1316,8 +1323,10 @@ function renderStudy(main){
       <h2>${t("No cards yet.")}</h2>
       <p>${t("Photograph a sign, a menu or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.")}</p>
       <button class="btn" id="go-cam">${t("Take a photo")}</button>
+      <p class="hint">${t("New here? The guide explains the app in six short sections.")}</p>
+      <button class="del" id="go-guide">${t("How to use the app")}</button>
     </div>`;
-    $("#go-cam").onclick=()=>{ S.mode="inbox"; render(); };
+    $("#go-cam").onclick=()=>{ S.mode="inbox"; render(); }; $("#go-guide").onclick=()=>{ S.mode="guide"; render(); window.scrollTo({top:0}); }; /* the pointer to the guide (v266, idea 5) — a friend who installs the app never sees More → Help unless told */
     return;
   }
   const finished = S.idx>=S.queue.length;
@@ -2847,16 +2856,16 @@ function charCandidates(line,i,insert){ /* insert: candidates for a new characte
   return [...out.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]).slice(0,8);
 }
 async function aiCharAlternatives(line,i,insert){
-  const pv=aiProvider(), key=aiKey(), relay=!key&&viaRelay(pv); if(!key&&!relay) throw new Error("no API key");
-  const model=aiModel(), chars=[...line];
+  const pv=textProvider(), key=aiKey(pv), relay=!key&&viaRelay(pv); if(!key&&!relay) throw new Error("no API key");
+  const model=aiModel(pv), chars=[...line];
   const sys="You correct OCR of Chinese signs, menus and packaging. Answer with a JSON array of single Chinese characters only, most likely first, no prose.";
   const user=insert
     ?`OCR read this line: "${line}". One character is missing ${i===0?"at the start":i>=chars.length?"at the end":`between "${chars[i-1]}" and "${chars[i]}"`}. Give up to 4 likely characters for that gap, judging from the context.`
     :`OCR read this line: "${line}". Character ${i+1} ("${chars[i]}") is probably misread. Give up to 4 likely correct characters for that position, judging from the context.`;
   let r;
-  if(pv==="claude") r=await aiFetch(aiBase(),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model,max_tokens:100,system:sys,messages:[{role:"user",content:user}]})});
+  if(pv==="claude") r=await aiFetch(aiBase(pv),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model,max_tokens:100,system:sys,messages:[{role:"user",content:user}]})});
   else { const body=noThinking(pv,model,{model,max_tokens:100,temperature:0,messages:[{role:"system",content:sys},{role:"user",content:user}]});
-    r=relay?await relayFetch(pv,body):await aiFetch(aiBase()+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
+    r=relay?await relayFetch(pv,body):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
   if(!r.ok) throw new Error(relay?relayError(r):"API error "+r.status);
   const data=await r.json(); countTokens(pv,data); bumpModel(model);
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
@@ -3580,7 +3589,7 @@ async function exportData(){
     a.href=url; a.download=name;
     document.body.appendChild(a); a.click(); a.remove(); await setSetting("lastExport",Date.now());
     setTimeout(()=>URL.revokeObjectURL(url),60000);
-  }catch(err){ alert(t("Export failed: {0}",err)); }
+  }catch(err){ noteSheet(t("Export failed: {0}",err)); }
 }
 async function importData(e){
   const file=e.target.files && e.target.files[0];
@@ -3589,12 +3598,12 @@ async function importData(e){
   let data=null;
   try{ data=JSON.parse(await file.text()); }catch(err){}
   if(!data || data.app!=="zeichentrainer" || !Array.isArray(data.progress) || !Array.isArray(data.custom)){
-    alert(t("Not a Zeichentrainer export (JSON).")); return;
+    noteSheet(t("Not a Zeichentrainer export (JSON).")); return;
   }
   /* exports before v118 carry the text as the key; the id is the text then */
   const prog=data.progress.filter(r=>r && typeof (r.id||r.c)==="string" && typeof r.due==="number").map(({id,c,...s})=>({id:id||c,...s}));
   const cust=data.custom.filter(r=>r && typeof r.c==="string" && typeof r.p==="string" && typeof r.m==="string").map(r=>({...r,id:r.id||r.c}));
-  if(!prog.length && !cust.length){ alert(t("Export is empty — nothing to import.")); return; }
+  if(!prog.length && !cust.length){ noteSheet(t("Export is empty — nothing to import.")); return; }
   if(!await askSheet({title:t("Import {0} and {1}?",nOf(cust.length,"card"),nOf(prog.length,"progress entry","progress entries")),text:t("Existing entries of the same cards will be overwritten."),ok:t("Import"),danger:false})) return;
   /* the photos come with the file when it carries them (v166); otherwise the existing image is kept when overwriting */
   const merged=[]; let nPhotos=0, nInFile=0;
@@ -3608,13 +3617,13 @@ async function importData(e){
     merged.push(r); }
   try{
     await Promise.all([...prog.map(r=>idbPut("progress",r)), ...merged.map(r=>idbPut("custom",r))]);
-  }catch(err){ alert(t("Import failed ({0})",err)); return; }
+  }catch(err){ noteSheet(t("Import failed ({0})",err)); return; }
   prog.forEach(r=>{ const {id,...s}=r; S.progress[id]=s; });
   merged.forEach(r=>{ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; else S.custom.push(r); });
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
   S.mode="study"; render();
   /* what the import did, in one sentence (v167, H: an older app had dropped the photos without a word) */
-  alert(t("Imported {0} and {1}",nOf(cust.length,"card"),nOf(prog.length,"progress entry","progress entries"))+(nInFile?t(", {0} with photos",nPhotos)+(nPhotos<nInFile?" "+t("({0} could not be read)",nInFile-nPhotos):""):". "+t("The file carries no photos; the photos on this phone were kept"))+".");
+  noteSheet(t("Import"),t("Imported {0} and {1}",nOf(cust.length,"card"),nOf(prog.length,"progress entry","progress entries"))+(nInFile?t(", {0} with photos",nPhotos)+(nPhotos<nInFile?" "+t("({0} could not be read)",nInFile-nPhotos):""):". "+t("The file carries no photos; the photos on this phone were kept"))+".");
 }
 
 /* ---------- Reset ---------- */

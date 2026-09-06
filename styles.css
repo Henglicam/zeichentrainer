@@ -322,3 +322,5 @@ body.noscroll{overflow:hidden}
 
 /* How to use the app (v259): one white card, a section per topic with a hairline between */
 .guide{background:var(--card);border-radius:var(--rc);padding:2px 16px 6px;box-shadow:var(--shadow);margin-top:4px} .guide section+section{border-top:1px solid var(--sep)} .guide h2{font-size:17px;font-weight:600;margin:14px 0 6px} .guide p{margin:0 0 10px;font-size:16px;line-height:1.45;color:var(--label)}
+
+.done .hint{margin:18px 0 6px} /* the pointer to the guide under Take a photo (v266) */
