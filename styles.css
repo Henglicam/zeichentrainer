@@ -320,3 +320,6 @@ body.noscroll{overflow:hidden}
 .pimg .del.on{color:var(--ok)}
 /* the picture-read mark at the right end of the Characters label (v176–v180): the green AI capsule of the Cards list */
 .picmark{display:inline-flex;align-items:center;gap:4px;color:var(--ok);background:var(--ok-soft);border-radius:999px;padding:2px 8px 2px 6px;font-size:11px;font-weight:600;letter-spacing:.02em;float:right;margin-top:-2px;line-height:16px} .picmark svg{width:13px;height:13px}
+
+/* How to use the app (v259): one white card, a section per topic with a hairline between */
+.guide{background:var(--card);border-radius:var(--rc);padding:2px 16px 6px;box-shadow:var(--shadow);margin-top:4px} .guide section+section{border-top:1px solid var(--sep)} .guide h2{font-size:17px;font-weight:600;margin:14px 0 6px} .guide p{margin:0 0 10px;font-size:16px;line-height:1.45;color:var(--label)}

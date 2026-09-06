@@ -191,7 +191,26 @@ de:{
   /* the More screen in the learner's order (v257) */
   "Privacy":"Privatsphäre",
   /* the pill for a meaning in another language (v258) */
-  "The meaning is in another language than the app.":"Die Bedeutung ist in einer anderen Sprache als die App."
+  "The meaning is in another language than the app.":"Die Bedeutung ist in einer anderen Sprache als die App.",
+  /* How to use the app (v259) */
+  "Help":"Hilfe",
+  "How to use the app":"So funktioniert die App",
+  "Six short sections: photo, characters, learning, cards, language, what stays on the phone.":"Sechs kurze Abschnitte: Foto, Zeichen, Lernen, Karten, Sprache, was auf dem Telefon bleibt.",
+  "Open":"Öffnen",
+  "Camera → Take photo, or From album. The photo opens with a frame the app drew around the text. Drag a corner or the inside to fit it, the round handle turns it. Let go, and the reading starts by itself. Tap outside the frame to see the framed part large.":"Kamera → Foto aufnehmen oder Aus dem Album. Das Foto öffnet sich mit einem Rahmen, den die App um den Text gelegt hat. Zieh an einer Ecke oder innen, bis er passt, der runde Griff dreht ihn. Loslassen, und das Lesen startet von selbst. Tipp außerhalb des Rahmens, um den Ausschnitt groß zu sehen.",
+  "In a hurry? Save now makes the card at once, the reading finishes in the background and the card fills in.":"Keine Zeit? Jetzt speichern legt die Karte sofort an, das Lesen läuft im Hintergrund weiter und die Karte füllt sich.",
+  "Fix the characters":"Zeichen korrigieren",
+  "Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once.":"Unter dem Foto ist jedes Zeichen ein Knopf. Tipp eines an für andere Lesungen, oder zeichne es mit dem Finger, wenn das richtige fehlt. Tipp die Zeile unter der Leiste ein, um sie zu ersetzen. Auswählen entfernt mehrere Zeichen auf einmal.",
+  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.":"Pinyin und Bedeutung folgen den Zeichen. Ist die KI an, prüft sie beides vor dem Speichern. Markiere die Karte, wenn noch etwas falsch aussieht.",
+  "Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.":"Lernen zeigt die fälligen Karten, dann bis zu acht neue. Tipp auf das Zeichen für Pinyin und Bedeutung, auf das Foto für das ganze Bild, der Lautsprecher liest vor.",
+  "Grade yourself: Again, Hard, Good, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward.":"Bewerte dich selbst: Nochmal, Schwer, Gut, Leicht. Die Karte kommt früher oder später wieder, das ist der ganze Trick. Nichts fällig? Zieh die nächsten Karten vor.",
+  "All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included.":"Alle deine Karten, neueste zuerst. Durchsuche sie, filtere nach Markierung oder Tag, tipp eine an für die Detailansicht mit Testen, Bearbeiten und Löschen. + Neu legt eine Karte von Hand an, gezeichnetes Zeichen inklusive.",
+  "Tags group cards for a class or a level. Learn can show one tag at a time.":"Tags gruppieren Karten für einen Kurs oder ein Niveau. Lernen kann einen Tag nach dem anderen zeigen.",
+  "Language and meanings":"Sprache und Bedeutungen",
+  "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"Mehr → Sprache schaltet die Texte der App um. Ist die KI an, bekommen neue Karten ihre Bedeutung in dieser Sprache, und Alle Karten übersetzen erledigt es für die vorhandenen. Eine kleine Pille nennt eine Bedeutung, die noch in einer anderen Sprache ist.",
+  "What stays on the phone":"Was auf dem Telefon bleibt",
+  "Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak.":"Karten und Fotos bleiben auf diesem Telefon und sonst nirgends — exportiere sie ab und zu unter Mehr → Deine Daten. Die KI-Prüfung sendet den chinesischen Text, Pinyin und Bedeutung einer Karte, und den eingerahmten Teil eines Fotos nur, wenn die Erkennung schwach ist.",
+  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"Einmal am Tag gehen anonyme Nutzungszahlen an den Besitzer der App; unter Privatsphäre kannst du das abschalten. Fragen oder Ideen? Mehr → Feedback."
 },
 fr:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"Les photos restent sur ce téléphone. Cadre le texte – la carte est créée pour toi.",
@@ -294,8 +313,7 @@ fr:{
   "Due":"À faire","capsule:Done":"Faites","Deck":"Cartes","Learn":"Apprendre","Cards":"Cartes","Camera":"Photo","More":"Plus",
   "Language":"Langue",
   "Loading …":"Chargement …","No cards yet.":"Pas encore de cartes.",
-  "Photograph a sign, a menu or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.":"Photographie un panneau, un menu ou un emballage sous <b>Photo</b> – ou ajoute un mot à la main sous <b>Cartes → + Nouvelle</b>.",
-  "Take a photo":"Prendre une photo","All clear.":"Tout est fait.","Pulled-forward round finished.":"Tour anticipé terminé.",
+  "Photograph a sign, a menu or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.":"Photographie un panneau, un menu ou un emballage sous <b>Photo</b> – ou ajoute un mot à la main sous <b>Cartes → + Nouvelle</b>.","All clear.":"Tout est fait.","Pulled-forward round finished.":"Tour anticipé terminé.",
   "Nothing due today. Come back tomorrow — or pull the next cards forward.":"Rien à réviser aujourd'hui. Reviens demain – ou avance les prochaines cartes.",
   "Pull the next cards forward":"Avancer les prochaines cartes","Again":"Encore","Hard":"Difficile","Good":"Bien","Easy":"Facile",
   "⚑ Clear flag":"⚑ Retirer le signalement","⚑ Flag for review":"⚑ Signaler à vérifier","✎ Edit":"✎ Modifier",
@@ -370,7 +388,27 @@ fr:{
   /* the More screen in the learner's order (v257) */
   "Privacy":"Confidentialité",
   /* the pill for a meaning in another language (v258) */
-  "The meaning is in another language than the app.":"Le sens est dans une autre langue que l'appli."
+  "The meaning is in another language than the app.":"Le sens est dans une autre langue que l'appli.",
+  /* How to use the app (v259) */
+  "Take a photo":"Prendre une photo",
+  "Help":"Aide",
+  "How to use the app":"Comment utiliser l'appli",
+  "Six short sections: photo, characters, learning, cards, language, what stays on the phone.":"Six courtes sections : photo, caractères, apprentissage, cartes, langue, ce qui reste sur le téléphone.",
+  "Open":"Ouvrir",
+  "Camera → Take photo, or From album. The photo opens with a frame the app drew around the text. Drag a corner or the inside to fit it, the round handle turns it. Let go, and the reading starts by itself. Tap outside the frame to see the framed part large.":"Photo → Prendre une photo, ou Depuis l'album. La photo s'ouvre avec un cadre que l'appli a posé autour du texte. Tire un coin ou l'intérieur pour l'ajuster, la poignée ronde le tourne. Lâche, et la lecture démarre toute seule. Touche hors du cadre pour voir la partie cadrée en grand.",
+  "In a hurry? Save now makes the card at once, the reading finishes in the background and the card fills in.":"Pressé ? Enregistrer maintenant crée la carte tout de suite, la lecture se termine en arrière-plan et la carte se remplit.",
+  "Fix the characters":"Corriger les caractères",
+  "Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once.":"Sous la photo, chaque caractère est un bouton. Touche-en un pour d'autres lectures, ou dessine-le avec le doigt quand le bon manque. Saisis la ligne sous la bande pour la remplacer. Sélectionner retire plusieurs caractères d'un coup.",
+  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.":"Le pinyin et le sens suivent les caractères. Avec l'IA activée, elle les vérifie avant l'enregistrement. Signale la carte si quelque chose semble encore faux.",
+  "Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.":"Apprendre montre les cartes à revoir, puis jusqu'à huit nouvelles. Touche le caractère pour le pinyin et le sens, la photo pour l'image entière, le haut-parleur le lit.",
+  "Grade yourself: Again, Hard, Good, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward.":"Note-toi : Encore, Difficile, Bien, Facile. La carte revient plus ou moins tôt, c'est toute l'astuce. Rien à revoir ? Avance les prochaines cartes.",
+  "All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included.":"Toutes tes cartes, les plus récentes d'abord. Cherche, filtre par signalement ou tag, touche-en une pour son détail avec Tester, Modifier et Supprimer. + Nouvelle crée une carte à la main, caractère dessiné compris.",
+  "Tags group cards for a class or a level. Learn can show one tag at a time.":"Les tags regroupent les cartes pour un cours ou un niveau. Apprendre peut montrer un tag à la fois.",
+  "Language and meanings":"Langue et sens",
+  "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"Plus → Langue change les textes de l'appli. Avec l'IA, les nouvelles cartes reçoivent leur sens dans cette langue, et Traduire toutes les cartes le fait pour celles que tu as déjà. Une petite pastille nomme un sens encore dans une autre langue.",
+  "What stays on the phone":"Ce qui reste sur le téléphone",
+  "Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak.":"Les cartes et les photos restent sur ce téléphone et nulle part ailleurs – exporte-les de temps en temps sous Plus → Tes données. La vérification par l'IA envoie le texte chinois, le pinyin et le sens d'une carte, et la partie cadrée d'une photo seulement quand la lecture est faible.",
+  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"Une fois par jour, des comptages anonymes vont au propriétaire de l'appli ; désactive-les sous Confidentialité. Des questions ou des idées ? Plus → Commentaires."
 },
 es:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"Las fotos se quedan en este teléfono. Encuadra el texto y la tarjeta se crea sola.",
@@ -473,8 +511,7 @@ es:{
   "Due":"Pendientes","capsule:Done":"Hechas","Deck":"Tarjetas","Learn":"Aprender","Cards":"Tarjetas","Camera":"Cámara","More":"Más",
   "Language":"Idioma",
   "Loading …":"Cargando …","No cards yet.":"Aún no hay tarjetas.",
-  "Photograph a sign, a menu or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.":"Fotografía un letrero, una carta o un envase en <b>Cámara</b>, o añade una palabra a mano en <b>Tarjetas → + Nueva</b>.",
-  "Take a photo":"Hacer una foto","All clear.":"Todo hecho.","Pulled-forward round finished.":"Ronda adelantada terminada.",
+  "Photograph a sign, a menu or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.":"Fotografía un letrero, una carta o un envase en <b>Cámara</b>, o añade una palabra a mano en <b>Tarjetas → + Nueva</b>.","All clear.":"Todo hecho.","Pulled-forward round finished.":"Ronda adelantada terminada.",
   "Nothing due today. Come back tomorrow — or pull the next cards forward.":"Nada pendiente hoy. Vuelve mañana, o adelanta las siguientes tarjetas.",
   "Pull the next cards forward":"Adelantar las siguientes tarjetas","Again":"Otra vez","Hard":"Difícil","Good":"Bien","Easy":"Fácil",
   "⚑ Clear flag":"⚑ Quitar la marca","⚑ Flag for review":"⚑ Marcar para revisar","✎ Edit":"✎ Editar",
@@ -549,7 +586,27 @@ es:{
   /* the More screen in the learner's order (v257) */
   "Privacy":"Privacidad",
   /* the pill for a meaning in another language (v258) */
-  "The meaning is in another language than the app.":"El significado está en otro idioma que la app."
+  "The meaning is in another language than the app.":"El significado está en otro idioma que la app.",
+  /* How to use the app (v259) */
+  "Take a photo":"Hacer una foto",
+  "Help":"Ayuda",
+  "How to use the app":"Cómo usar la app",
+  "Six short sections: photo, characters, learning, cards, language, what stays on the phone.":"Seis secciones cortas: foto, caracteres, aprender, tarjetas, idioma, qué se queda en el teléfono.",
+  "Open":"Abrir",
+  "Camera → Take photo, or From album. The photo opens with a frame the app drew around the text. Drag a corner or the inside to fit it, the round handle turns it. Let go, and the reading starts by itself. Tap outside the frame to see the framed part large.":"Cámara → Hacer foto, o Del álbum. La foto se abre con un marco que la app puso alrededor del texto. Arrastra una esquina o el interior para ajustarlo, el mando redondo lo gira. Suelta, y la lectura empieza sola. Toca fuera del marco para ver la parte enmarcada en grande.",
+  "In a hurry? Save now makes the card at once, the reading finishes in the background and the card fills in.":"¿Con prisa? Guardar ahora crea la tarjeta al instante, la lectura termina en segundo plano y la tarjeta se rellena.",
+  "Fix the characters":"Corregir los caracteres",
+  "Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once.":"Bajo la foto cada carácter es un botón. Toca uno para otras lecturas, o dibújalo con el dedo cuando falte el correcto. Escribe la línea bajo la tira para reemplazarla. Seleccionar quita varios caracteres a la vez.",
+  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.":"El pinyin y el significado siguen a los caracteres. Con la IA activada, los revisa antes de guardar. Marca la tarjeta si algo sigue pareciendo mal.",
+  "Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.":"Aprender muestra las tarjetas pendientes, luego hasta ocho nuevas. Toca el carácter para pinyin y significado, la foto para la imagen completa, el altavoz lo lee.",
+  "Grade yourself: Again, Hard, Good, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward.":"Puntúate: Otra vez, Difícil, Bien, Fácil. La tarjeta vuelve antes o después, ese es todo el truco. ¿Nada pendiente? Adelanta las siguientes tarjetas.",
+  "All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included.":"Todas tus tarjetas, las más recientes primero. Búscalas, filtra por marca o etiqueta, toca una para su detalle con Probar, Editar y Eliminar. + Nueva crea una tarjeta a mano, carácter dibujado incluido.",
+  "Tags group cards for a class or a level. Learn can show one tag at a time.":"Las etiquetas agrupan tarjetas por clase o nivel. Aprender puede mostrar una etiqueta cada vez.",
+  "Language and meanings":"Idioma y significados",
+  "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"Más → Idioma cambia los textos de la app. Con la IA, las tarjetas nuevas reciben su significado en ese idioma, y Traducir todas las tarjetas lo hace con las que ya tienes. Una pequeña etiqueta nombra un significado que sigue en otro idioma.",
+  "What stays on the phone":"Qué se queda en el teléfono",
+  "Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak.":"Las tarjetas y las fotos se quedan en este teléfono y en ningún otro sitio — expórtalas de vez en cuando en Más → Tus datos. La revisión con IA envía el texto chino, el pinyin y el significado de una tarjeta, y la parte enmarcada de una foto solo cuando la lectura es débil.",
+  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"Una vez al día van recuentos de uso anónimos al propietario de la app; desactívalo en Privacidad. ¿Preguntas o ideas? Más → Comentarios."
 },
 ja:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"写真はこの端末に残ります。文字を枠で囲むと、カードが作られます。",
@@ -652,8 +709,7 @@ ja:{
   "Due":"今日","capsule:Done":"済み","Deck":"カード","Learn":"学習","Cards":"カード","Camera":"カメラ","More":"その他",
   "Language":"言語",
   "Loading …":"読み込み中 …","No cards yet.":"カードはまだありません。",
-  "Photograph a sign, a menu or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.":"<b>カメラ</b>で看板・メニュー・パッケージを撮影するか、<b>カード → + 新規</b>で単語を手入力してください。",
-  "Take a photo":"写真を撮る","All clear.":"今日の分は終わりました。","Pulled-forward round finished.":"前倒しの復習が終わりました。",
+  "Photograph a sign, a menu or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.":"<b>カメラ</b>で看板・メニュー・パッケージを撮影するか、<b>カード → + 新規</b>で単語を手入力してください。","All clear.":"今日の分は終わりました。","Pulled-forward round finished.":"前倒しの復習が終わりました。",
   "Nothing due today. Come back tomorrow — or pull the next cards forward.":"今日の復習はありません。明日また来るか、次のカードを前倒しできます。",
   "Pull the next cards forward":"次のカードを前倒しする","Again":"もう一度","Hard":"難しい","Good":"普通","Easy":"簡単",
   "⚑ Clear flag":"⚑ 印を外す","⚑ Flag for review":"⚑ 要確認の印","✎ Edit":"✎ 編集",
@@ -728,7 +784,27 @@ ja:{
   /* the More screen in the learner's order (v257) */
   "Privacy":"プライバシー",
   /* the pill for a meaning in another language (v258) */
-  "The meaning is in another language than the app.":"意味がアプリと別の言語になっています。"
+  "The meaning is in another language than the app.":"意味がアプリと別の言語になっています。",
+  /* How to use the app (v259) */
+  "Take a photo":"写真を撮る",
+  "Help":"ヘルプ",
+  "How to use the app":"アプリの使い方",
+  "Six short sections: photo, characters, learning, cards, language, what stays on the phone.":"短い6つの項目：写真、文字、学習、カード、言語、端末に残るもの。",
+  "Open":"開く",
+  "Camera → Take photo, or From album. The photo opens with a frame the app drew around the text. Drag a corner or the inside to fit it, the round handle turns it. Let go, and the reading starts by itself. Tap outside the frame to see the framed part large.":"カメラ → 写真を撮る、またはアルバムから。写真はアプリがテキストの周りに引いた枠つきで開きます。角や内側をドラッグして合わせ、丸いハンドルで回します。指を離すと読み取りが自動で始まります。枠の外をタップすると枠内を大きく見られます。",
+  "In a hurry? Save now makes the card at once, the reading finishes in the background and the card fills in.":"急いでいるときは「今すぐ保存」。カードがすぐ作られ、読み取りは裏で続いてカードに入ります。",
+  "Fix the characters":"文字を直す",
+  "Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once.":"写真の下では文字がひとつずつボタンです。タップすると別の候補が出て、正しいものがなければ指で書けます。帯の下の行に入力すると置き換わります。「選択」で複数の文字をまとめて消せます。",
+  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.":"ピンインと意味は文字に合わせて変わります。AIがオンなら保存前に確認します。まだ変だと思ったらカードに印を付けてください。",
+  "Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.":"学習では復習するカードが先に、そのあと新しいカードが最大8枚出ます。文字をタップするとピンインと意味、写真をタップすると全体、スピーカーで読み上げます。",
+  "Grade yourself: Again, Hard, Good, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward.":"自分で評価します：もう一度、難しい、良い、簡単。カードは早めか遅めにまた出てきます。それだけの仕組みです。復習がない日は次のカードを前倒しできます。",
+  "All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included.":"カードは新しい順に並びます。検索し、印やタグで絞り、タップすると詳細（テスト、編集、削除）が開きます。「+ 新規」で手入力のカードを作れます。文字の手書きもできます。",
+  "Tags group cards for a class or a level. Learn can show one tag at a time.":"タグでカードを授業やレベルごとにまとめられます。学習ではタグをひとつずつ選べます。",
+  "Language and meanings":"言語と意味",
+  "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"その他 → 言語でアプリの表示が切り替わります。AIがオンなら新しいカードの意味はその言語になり、「すべてのカードを翻訳」で今あるカードも翻訳できます。まだ別の言語の意味には小さなラベルが付きます。",
+  "What stays on the phone":"端末に残るもの",
+  "Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak.":"カードと写真はこの端末にだけあります。ときどき「その他 → データ」からエクスポートしてください。AI確認ではカードの中国語、ピンイン、意味を送り、写真の枠内は読み取りが弱いときだけ送ります。",
+  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"1日1回、匿名の利用回数がアプリの所有者に送られます。プライバシーでオフにできます。質問やアイデアは「その他 → フィードバック」へ。"
 },
 ko:{
   "Photos stay on this phone. Frame the text — the card is made for you.":"사진은 이 기기에만 남아요. 글자를 틀로 감싸면 카드가 만들어져요.",
@@ -831,8 +907,7 @@ ko:{
   "Due":"오늘","capsule:Done":"완료","Deck":"카드","Learn":"학습","Cards":"카드","Camera":"카메라","More":"더보기",
   "Language":"언어",
   "Loading …":"불러오는 중 …","No cards yet.":"아직 카드가 없어요.",
-  "Photograph a sign, a menu or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.":"<b>카메라</b>에서 간판, 메뉴, 포장을 찍거나 <b>카드 → + 새로 만들기</b>에서 단어를 직접 입력하세요.",
-  "Take a photo":"사진 찍기","All clear.":"오늘 분량을 마쳤어요.","Pulled-forward round finished.":"앞당긴 복습을 마쳤어요.",
+  "Photograph a sign, a menu or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.":"<b>카메라</b>에서 간판, 메뉴, 포장을 찍거나 <b>카드 → + 새로 만들기</b>에서 단어를 직접 입력하세요.","All clear.":"오늘 분량을 마쳤어요.","Pulled-forward round finished.":"앞당긴 복습을 마쳤어요.",
   "Nothing due today. Come back tomorrow — or pull the next cards forward.":"오늘 복습할 카드가 없어요. 내일 다시 오거나 다음 카드를 앞당길 수 있어요.",
   "Pull the next cards forward":"다음 카드 앞당기기","Again":"다시","Hard":"어려움","Good":"보통","Easy":"쉬움",
   "⚑ Clear flag":"⚑ 표시 지우기","⚑ Flag for review":"⚑ 검토 표시","✎ Edit":"✎ 편집",
@@ -907,6 +982,26 @@ ko:{
   /* the More screen in the learner's order (v257) */
   "Privacy":"개인정보",
   /* the pill for a meaning in another language (v258) */
-  "The meaning is in another language than the app.":"뜻이 앱과 다른 언어로 되어 있어요."
+  "The meaning is in another language than the app.":"뜻이 앱과 다른 언어로 되어 있어요.",
+  /* How to use the app (v259) */
+  "Take a photo":"사진 찍기",
+  "Help":"도움말",
+  "How to use the app":"앱 사용법",
+  "Six short sections: photo, characters, learning, cards, language, what stays on the phone.":"짧은 여섯 항목: 사진, 글자, 학습, 카드, 언어, 휴대폰에 남는 것.",
+  "Open":"열기",
+  "Camera → Take photo, or From album. The photo opens with a frame the app drew around the text. Drag a corner or the inside to fit it, the round handle turns it. Let go, and the reading starts by itself. Tap outside the frame to see the framed part large.":"카메라 → 사진 찍기, 또는 앨범에서. 사진은 앱이 텍스트 둘레에 그린 테두리와 함께 열려요. 모서리나 안쪽을 끌어 맞추고, 둥근 손잡이로 돌려요. 손을 떼면 읽기가 저절로 시작돼요. 테두리 바깥을 누르면 테두리 안을 크게 볼 수 있어요.",
+  "In a hurry? Save now makes the card at once, the reading finishes in the background and the card fills in.":"바쁠 땐 지금 저장. 카드가 바로 만들어지고, 읽기는 뒤에서 이어져 카드가 채워져요.",
+  "Fix the characters":"글자 고치기",
+  "Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once.":"사진 아래에서는 글자 하나하나가 버튼이에요. 누르면 다른 후보가 나오고, 맞는 게 없으면 손가락으로 써요. 띠 아래 줄에 입력하면 바뀌어요. 선택으로 여러 글자를 한 번에 지울 수 있어요.",
+  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.":"병음과 뜻은 글자를 따라가요. AI가 켜져 있으면 저장 전에 확인해요. 그래도 이상하면 카드에 표시해 두세요.",
+  "Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.":"학습에는 복습할 카드가 먼저, 그다음 새 카드가 최대 여덟 장 나와요. 글자를 누르면 병음과 뜻, 사진을 누르면 전체 사진, 스피커를 누르면 읽어 줘요.",
+  "Grade yourself: Again, Hard, Good, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward.":"스스로 평가해요: 다시, 어려움, 좋음, 쉬움. 카드는 빨리 또는 늦게 다시 나와요. 그게 전부예요. 복습할 게 없으면 다음 카드를 앞당겨요.",
+  "All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included.":"모든 카드가 최신 순으로 있어요. 검색하고, 표시나 태그로 거르고, 누르면 테스트·편집·삭제가 있는 상세가 열려요. + 새로 만들기로 직접 카드를 만들고, 글자를 손으로 쓸 수도 있어요.",
+  "Tags group cards for a class or a level. Learn can show one tag at a time.":"태그로 카드를 수업이나 레벨별로 묶어요. 학습에서 태그 하나씩 볼 수 있어요.",
+  "Language and meanings":"언어와 뜻",
+  "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"더보기 → 언어에서 앱의 표시를 바꿔요. AI가 켜져 있으면 새 카드의 뜻이 그 언어로 나오고, 모든 카드 번역으로 이미 있는 카드도 번역돼요. 아직 다른 언어인 뜻에는 작은 표시가 붙어요.",
+  "What stays on the phone":"휴대폰에 남는 것",
+  "Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak.":"카드와 사진은 이 휴대폰에만 있어요. 가끔 더보기 → 내 데이터에서 내보내 두세요. AI 확인은 카드의 중국어, 병음, 뜻을 보내고, 사진의 테두리 안은 읽기가 약할 때만 보내요.",
+  "Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.":"하루 한 번 익명의 사용 횟수가 앱 소유자에게 가요. 개인정보에서 끌 수 있어요. 질문이나 아이디어가 있으면 더보기 → 피드백."
 }
 };

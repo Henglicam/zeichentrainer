@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=258; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=259; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -304,7 +304,7 @@ function setStats(){
   $("#stat-open .v").textContent=remaining;
   $("#stat-done .j").textContent=S.done;
   $("#stat-deck .v").textContent=deck().length;
-  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.mode===S.mode||(b.dataset.mode==="cards"&&S.mode==="add")));
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.mode===S.mode||(b.dataset.mode==="cards"&&S.mode==="add")||(b.dataset.mode==="more"&&S.mode==="guide")));
 }
 
 /* colours the script draws itself come from the stylesheet's tokens, so canvases and inline SVG follow light and dark */
@@ -424,6 +424,7 @@ function render(){
   if(S.mode==="add")   return renderAdd(main);
   if(S.mode==="inbox") return renderInbox(main);
   if(S.mode==="more")  return renderMore(main);
+  if(S.mode==="guide") return renderGuide(main); /* How to use the app (v259) */
   if(S.mode==="cards") return S.detail?renderCardDetail(main,S.detail):renderCards(main);
 }
 /* ---------- online AI review (T3, opt-in) ----------
@@ -959,6 +960,8 @@ function renderMore(main){
     <div class="listhead">${t("Share")}</div>
     <div class="mrow"><div><div class="t">${t("Share the app")}</div><div class="s" id="app-share-status">${t("Send the link to a friend. The app installs from any browser, no store.")}</div></div><button class="btn mini" id="app-share">${t("Share")}</button></div>
     <div class="mrow"><div style="flex:1"><div class="t">${t("Feedback")}</div><div class="s" id="fb-status">${t("Tell the app's owner what works and what does not.")}</div><textarea class="grow" id="fb-text" rows="2" placeholder="${t("Your message")}"></textarea><div class="fieldacts"><button class="btn mini" id="fb-send">${t("Send")}</button></div></div></div>
+    <div class="listhead">${t("Help")}</div>
+    <div class="mrow"><div><div class="t">${t("How to use the app")}</div><div class="s">${t("Six short sections: photo, characters, learning, cards, language, what stays on the phone.")}</div></div><button class="btn mini" id="guide-open">${t("Open")}</button></div>
     <div class="listhead">${t("Learning")}</div>
     <div class="mrow"><div style="flex:1"><div class="t">${t("Progress")}</div><div class="s">${statsLine()}. ${t("App opened {0}, {1} reviewed, {2}, {3} checked by the AI.",nOf(usage().opens,"time"),nOf(usage().reviews,"card"),nOf(usage().aiCalls,"AI check"),nOf(usage().pics,"photo"))} ${t("Work done by {0}.",workLines(usage().models).join(", "))}</div><div class="fieldacts"><button class="btn mini" id="usage-share">${t("Share report")}</button></div></div></div>
     <div class="mrow"><div><div class="t">${t("Card order")}</div><div class="s">${t("Due cards come first, then up to {0} new ones. This sets the order inside each group.",NEW_PER_SESSION)}</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${t(l)}</button>`).join("")}</div></div></div>
@@ -1013,6 +1016,7 @@ function renderMore(main){
   $("#usage-share").onclick=shareUsage; $("#app-share").onclick=shareApp;
   document.querySelectorAll("[data-lang]").forEach(b=> b.onclick=()=>setLang(b.dataset.lang));
   const tr=$("#translate-all"); if(tr) tr.onclick=translateAll;
+  $("#guide-open").onclick=()=>{ S.mode="guide"; render(); window.scrollTo({top:0}); };
   wireGrow(main); /* the feedback box grows with its text like the forms' fields (v218, H: "looks a little bit old school") */
   $("#fb-send").onclick=async()=>{ const tx=$("#fb-text"), st=$("#fb-status"), b=$("#fb-send"), text=tx.value.trim(); if(!text){ st.textContent=t("Write a few words first."); return; }
     if(!navigator.onLine){ st.textContent=t("No connection. Try again when online."); return; }
@@ -1047,6 +1051,28 @@ function renderMore(main){
   renderNmtRow(); renderAiRow();
 }
 
+/* ---------- How to use the app (v259, H's to-do "a user guide (Gebrauchsanleitung)" for his friends — described first as a page inside
+   the app, "Go"): one scrolling page in the app's language, six short sections, text only, offline; it describes what the app does today,
+   nothing planned, and changes in the same PR as the screen it describes. More → Help → Open; ← Back returns to More. ---------- */
+const GUIDE=()=>[
+  {h:t("Take a photo"),p:[t("Camera → Take photo, or From album. The photo opens with a frame the app drew around the text. Drag a corner or the inside to fit it, the round handle turns it. Let go, and the reading starts by itself. Tap outside the frame to see the framed part large."),
+    t("In a hurry? Save now makes the card at once, the reading finishes in the background and the card fills in.")]},
+  {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
+    t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.")]},
+  {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out."),
+    t("Grade yourself: Again, Hard, Good, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward.")]},
+  {h:t("Cards"),p:[t("All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included."),
+    t("Tags group cards for a class or a level. Learn can show one tag at a time.")]},
+  {h:t("Language and meanings"),p:[t("More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.")]},
+  {h:t("What stays on the phone"),p:[t("Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak."),
+    t("Once a day anonymous usage counts go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.")]}];
+function renderGuide(main){
+  main.innerHTML=`<div class="pane">
+    <div class="topline"><button class="del" id="back-more">${t("← Back")}</button><span class="badge">${t("How to use the app")}</span></div>
+    <div class="guide">${GUIDE().map(sec=>`<section><h2>${esc(sec.h)}</h2>${sec.p.map(x=>`<p>${esc(x)}</p>`).join("")}</section>`).join("")}</div>
+  </div>`;
+  $("#back-more").onclick=()=>{ S.mode="more"; render(); };
+}
 function tagsHTML(d,isNew){
   return `<div class="tags">${d.flag?`<span class="f">${t("⚑ Review")}</span>`:""}<span class="${isNew?"n":"r"}">${isNew?t("New"):t("Review")}</span></div>`; /* no card type (H, v105) */
 }
