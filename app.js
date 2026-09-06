@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=238; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=239; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -265,6 +265,7 @@ function wireChrome(){
   document.querySelectorAll(".tab").forEach(b=>{
     b.onclick=()=>{ const m=b.dataset.mode;
       S.editing=null; S.editFrom=null;                       /* a tab tap always leaves the edit form */
+      if(CROP&&RECROP[CROP.id]) RECROP[CROP.id].end();      /* … and its Crop again (v239) */
       if(m==="cards" && (S.mode==="cards"||S.mode==="add")) S.detail=null; /* Cards again → back to the list */
       S.mode=m; render(); }; /* the Camera tab opens the inbox page with Take photo and From album — a tab that fired the camera at once (v184) went in v186, H: "I don't like the direct capture, revert" */
   });
@@ -1371,15 +1372,16 @@ function renderCardDetail(main,c){
 function renderEdit(main,c){
   const d=cardOf(c); if(!d){ S.editing=null; S.editFrom=null; return render(); }
   const isSign=d.kind==="sign";
-  let removeImg=false, aiApplied=false;
+  let removeImg=false, aiApplied=false, recropImg=null, meanTouched=false; /* recropImg: the crop framed again in this form (v239), stored on Save */
   /* the text is edited like the Read preview (H): a character strip per line, tap a character for the picker and the
      drawing sheet; SIGN carries the lines and the card's crop as the photo reference (no boxes: the whole crop) */
   const eid="edit"+(S.editSeq=(S.editSeq||0)+1), lines0=isSign?d.c.split("\n"):frontLines(d); /* plain id: it goes into selectors */
   const sg=SIGN[eid]={lines:lines0.slice(),orig:lines0.slice(),img:d.img||null,onChange:null,trad:!!d.trad,tradDetected:!!d.trad,tradText:d.trad||"",tradTouched:!!d.trad};
   if(d.trad) loadScriptTables().catch(()=>{});
   const cropURL=d.img?URL.createObjectURL(d.img):""; /* the crop itself, not the whole-photo thumbnail (H: "only the cropped image, not with context") */
+  const full=fullPhoto(d), rid="recrop-"+eid; /* Crop again (v239): the whole photo, when it is still on the phone, framed anew in this form */
   const leave=newC=>{ /* back to where the edit started: study back or card detail */
-    delete SIGN[eid]; if(cropURL) URL.revokeObjectURL(cropURL);
+    endRecrop(); delete SIGN[eid]; if(cropURL) URL.revokeObjectURL(cropURL);
     const from=S.editFrom; S.editing=null; S.editFrom=null;
     if(from==="study"){ S.mode="study"; S.revealed=true; } else { S.mode="cards"; if(newC) S.detail=newC; }
     render();
@@ -1395,7 +1397,7 @@ function renderEdit(main,c){
       <div class="field"><label>Meaning</label><textarea id="e-mean" class="grow" rows="1">${esc(d.m)}</textarea></div>
     ${isSign||!d.w?"":`<div class="field"><label>Context word, pinyin, meaning (optional)</label>
       <div class="row"><input id="e-w" class="hanzi" value="${esc(d.w||"")}" placeholder="学习"><input id="e-wp" value="${esc(d.wp||"")}" placeholder="xuéxí"><input id="e-wm" value="${esc(d.wm||"")}" placeholder="to learn"></div></div>`}
-    ${d.img?`<div class="field" id="e-imgfield"><label>Image (stays on this phone)</label><div class="pimg"><img src="${cropURL}" alt=""><button class="del" id="e-noimg">Remove image</button></div></div>`:""}
+    ${d.img||full?`<div class="field" id="e-imgfield"><label>Image (stays on this phone)</label><div class="pimg" id="e-pimg"></div></div>`:""}
     <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
       <input id="e-note" value="${esc(d.flagNote||"")}" placeholder="Note for the reviewer (optional)"${d.flag?"":" hidden"}></div>
     ${tagsFieldHTML("e-tags",d.tags)}
@@ -1410,7 +1412,7 @@ function renderEdit(main,c){
   /* delete from here too (H): from the study back the session goes on with the next card, otherwise back to the list */
   $("#e-del").onclick=async()=>{
     if(!await askSheet({title:d.c?"Delete “"+d.c.replace(/\n/g," / ")+"”?":"Delete this card?",text:"The card and its learning progress will be removed.",ok:"Delete"})) return;
-    await delCustom(c); delete SIGN[eid];
+    await delCustom(c); endRecrop(); delete SIGN[eid];
     const from=S.editFrom; S.editing=null; S.editFrom=null;
     if(from==="study"){ S.queue=S.queue.filter(x=>x!==c); if(S.single===c) S.single=null; S.revealed=false; S.fullPic=false; S.mode="study"; }
     else { S.mode="cards"; S.detail=null; }
@@ -1425,7 +1427,7 @@ function renderEdit(main,c){
     box.querySelectorAll("[data-scriptset]").forEach(b=> b.onclick=async()=>{ const on=b.dataset.scriptset==="1"; if(on===!!sg.trad) return; await setScript(sg,on); drawLines(); const lab=box.closest(".field").querySelector("label"); if(lab) lab.textContent="Characters"+(sg.trad?" (traditional, as on the photo)":""); }); /* the mark by hand (v146) */
   };
   /* pinyin follows the text unless it was edited by hand */
-  let pinTouched=false; $("#e-pin").addEventListener("input",()=>{ pinTouched=true; }); wireGrow(main);
+  let pinTouched=false; $("#e-pin").addEventListener("input",()=>{ pinTouched=true; }); $("#e-mean").addEventListener("input",()=>{ meanTouched=true; }); wireGrow(main);
   const pinyinFollow=()=>{ if(pinTouched||!window.pinyinPro) return; const t=sg.lines.join("").replace(/\s+/g,""); if(CJK.test(t)) $("#e-pin").value=pinyinPro.pinyin(t,{toneType:"symbol"}); };
   /* the AI button only where it adds something: a card the AI did not verify, or a verified one whose text was changed here (H, v135) */
   const showAi=()=>{ const f=$("#e-aifield"); if(f) f.hidden=false; };
@@ -1445,7 +1447,45 @@ function renderEdit(main,c){
     }catch(err){ const m=err&&err.message||String(err); st.textContent=m===AI_NET_ERR?m+". Tap the button to try again.":"The AI check failed: "+m; }
     ab.disabled=false;
   };
-  const ni=$("#e-noimg"); if(ni) ni.onclick=()=>{ removeImg=true; $("#e-imgfield").remove(); };
+  /* ---------- the image field: the crop, Remove image, and Crop again (v239, H: "allow to re-crop a photo in edit mode",
+     described first and built on "Go"): the whole photo opens in place of the crop with the Camera tab's frame layer —
+     the photo is a record outside the inbox (SHOTS_EXTRA), so cropBlob, the preview, the reading and the picture path
+     run unchanged; the reading's result lands in the strip, pinyin and meaning through onRead, Image only takes the
+     new crop alone through onImage, Cancel keeps the old crop; Save changes stores the new crop ---------- */
+  let recropURL=null;
+  const showPimg=()=>{ const box=$("#e-pimg"); if(!box) return;
+    if(recropURL){ URL.revokeObjectURL(recropURL); recropURL=null; }
+    const url=recropImg?(recropURL=URL.createObjectURL(recropImg)):cropURL;
+    box.innerHTML=`${url?`<img src="${url}" alt="">`:""}<div class="imgacts">${full?`<button class="del" id="e-recrop">Crop again</button>`:""}${url?`<button class="del" id="e-noimg">Remove image</button>`:""}</div>`;
+    const ni=$("#e-noimg"); if(ni) ni.onclick=()=>{ removeImg=true; $("#e-imgfield").remove(); };
+    const rc=$("#e-recrop"); if(rc) rc.onclick=startRecrop; };
+  const drawRecrop=()=>{ const box=$("#e-pimg"), rec=SHOTS_EXTRA[rid]; if(!box||!rec||!CROP||CROP.id!==rid) return;
+    const zoomed=!!(CROP.rect&&CROP.zoom);
+    box.innerHTML=`<div class="recrop"><div class="shotwrap">
+        ${zoomed?`<div class="shotzoom" style="${zoomStyle(rec)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(rec)}" alt="photo">`}
+        <div class="croplayer${CROP.rect?" framed":""}${zoomed?" zoomed":""}" data-id="${rid}">${zoomed?"":`<div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="Turn the frame"></div></div>`}</div>
+      </div>
+      <div class="ocr" id="ocr-${rid}">${READING[rid]?readingHTML(READING[rid],rid):`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.</span>`}</div>
+      <div class="imgacts"><button class="del" id="e-cropcancel">Cancel</button></div></div>`;
+    box.querySelectorAll(".croplayer").forEach(wireCrop);
+    $("#e-cropcancel").onclick=()=>{ endRecrop(); showPimg(); }; };
+  const endRecrop=()=>{ clearTimeout(READ_TIMER[rid]); READ_RUN[rid]=(READ_RUN[rid]||0)+1; /* a running reading abandons */
+    if(CROP&&CROP.id===rid) CROP=null; delete SIGN[rid]; delete READING[rid]; delete RECROP[rid];
+    if(SHOTS_EXTRA[rid]){ delete SHOTS_EXTRA[rid]; if(IMGURL[rid]){ URL.revokeObjectURL(IMGURL[rid]); delete IMGURL[rid]; } } };
+  const startRecrop=()=>{ if(!full) return;
+    SHOTS_EXTRA[rid]={id:rid,blob:full,ts:Date.now()};
+    RECROP[rid]={redraw:drawRecrop,end:()=>{ endRecrop(); },
+      onImage:blob=>{ recropImg=blob; endRecrop(); showPimg(); },
+      onRead:sg2=>{ if(!sg2) return; recropImg=sg2.cardImg||recropImg; /* the tightened cut when there is one, else the crop as framed */
+        sg.lines=sg2.lines.slice(); sg.orig=sg2.orig.slice(); sg.conf=sg2.conf; sg.boxes=sg2.boxes; sg.img=sg2.img; sg.alts=sg2.alts;
+        sg.trad=!!sg2.trad; sg.tradDetected=!!sg2.tradDetected||!!sg.tradDetected; sg.tradText=sg2.tradText||""; sg.tradTouched=false; sg.tradUser=false; sg.sel=null; delete sg.ai;
+        endRecrop(); showPimg();
+        const lab=$("#e-lines").closest(".field").querySelector("label"); if(lab) lab.textContent="Characters"+(sg.trad?" (traditional, as on the photo)":"");
+        syncWord(); drawLines(); pinyinFollow();
+        if(!meanTouched){ const res=sg.lines.filter(l=>CJK.test(l)).map(lineMeaning), m=res.map(r=>r.en).filter(Boolean).join(" / "); if(m) $("#e-mean").value=m; } /* the word-by-word gloss until the AI answers; a meaning typed here stays */
+        showAi(); const ab=$("#e-ai"); if(ab&&aiLive()) ab.click(); } };
+    CROP={id:rid,rect:null}; drawRecrop(); };
+  showPimg();
   $("#e-save").onclick=async()=>{
     const fail=m=>{ const e=$("#e-err"); e.textContent=m; e.style.display=""; };
     let pin=$("#e-pin").value.replace(/\s+/g," ").trim(); const mean=$("#e-mean").value.replace(/\s+/g," ").trim();
@@ -1462,6 +1502,7 @@ function renderEdit(main,c){
     if(!isSign&&$("#e-w")){ upd.w=$("#e-w").value.trim(); upd.wp=$("#e-wp").value.trim(); upd.wm=$("#e-wm").value.trim();
       if(!upd.w){ delete upd.w; delete upd.wp; delete upd.wm; } } /* the context fields show only on cards that have one */
     if(removeImg){ delete upd.img; delete upd.imgFull; delete upd.shot; dropThumb(c); } /* shot too — without it the front would still show the inbox photo through fullPhoto (v214) */
+    else if(recropImg){ upd.img=await jpegOf(recropImg); dropThumb(c); } /* the crop framed again in this form (v239) */
     if(upd.mt){ upd.mt={...upd.mt, verified:true, pending:false}; delete upd.mt.suspect; } /* a human edited it */
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
     const tags=parseTags($("#e-tags").value); if(tags.length) upd.tags=tags; else delete upd.tags;
@@ -1655,6 +1696,8 @@ async function readPassTra(blob,status){
 
 /* per-photo result (session only): characters with box + auto pinyin; tap to select */
 const PENDING={}; /* shot id → the id of a card saved before its reading finished (v237, "Save now"): the reading fills it in when done */
+const SHOTS_EXTRA={}, RECROP={}; /* the Edit form's Crop again (v239): the card's whole photo as a photo record outside the inbox (SHOTS_EXTRA[id]={id,blob,ts}), and the form's hooks — redraw (the frame view in place of renderShots), onRead (the reading's result), onImage (Image only), end */
+const shotRec=id=>S.inbox.find(s=>s.id===id)||SHOTS_EXTRA[id]||null;
 const QSNOTE={}, QSCARD={}, READING={}; /* READING[id]: status text while the photo is being read · QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) · QSNOTE[id] = the note under the photo after saving */
 /* greedy longest-match segmentation against CC-CEDICT (max word length 8) */
 function segmentChars(chars){
@@ -1816,7 +1859,7 @@ function shapeBox(b,W,H){
   return {x,y,w,h};
 }
 async function proposeFrame(id){
-  const rec=S.inbox.find(s=>s.id===id); if(!rec||!CROP||CROP.id!==id||CROP.auto!==true) return;
+  const rec=shotRec(id); if(!rec||!CROP||CROP.id!==id||CROP.auto!==true) return;
   CROP.auto="running";
   let reg=null;
   try{ const bmp=await createImageBitmap(rec.blob); try{ reg=textRegion(bmp); } finally{ bmp.close(); } }catch(err){ logErr("frame",err&&err.message||err); }
@@ -1834,7 +1877,7 @@ async function proposeFrame(id){
   renderShots(); showCropPreview(id);
 }
 async function cropBlob(id,rectArg){
-  const rec=S.inbox.find(s=>s.id===id), rect=rectArg||(CROP&&CROP.id===id?CROP.rect:null);
+  const rec=shotRec(id), rect=rectArg||(CROP&&CROP.id===id?CROP.rect:null);
   if(!rec||!rect||rect.w<8||rect.h<8) return null;
   const {x,y,w,h,lw,a}=rect;
   const bmp=await createImageBitmap(rec.blob);
@@ -1858,7 +1901,8 @@ async function cropBlob(id,rectArg){
 async function cropOk(id){
   const r=await cropBlob(id);
   if(!r) return; /* no frame yet — nothing to do */
-  const rec=S.inbox.find(x=>x.id===id);
+  if(RECROP[id]) return RECROP[id].onImage(r.blob); /* the Edit form's Crop again: the new crop alone, the text stays (v239) */
+  const rec=shotRec(id);
   CROP=null; S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null; S.pendingShot=id;
   S.mode="add"; render();
 }
@@ -2100,7 +2144,7 @@ const AI_BUSY_TEXT="Checking pinyin and meaning …";
 const readingHTML=(t,id)=>READ_FAIL.test(t)?`<span class="badge">${esc(t)}</span>`
   :(stuck=>id&&PENDING[id]
     ?`<div class="reading"><div class="bar"><i></i></div><span class="ok" style="margin:0">Card saved — the text follows when the reading is done.${stuck}</span></div>`
-    :`<div class="reading"><div class="bar"><i></i></div><div class="readrow"><span class="badge">Reading the text …${stuck}</span>${id&&CROP&&CROP.id===id&&CROP.rect?`<button class="btn mini" data-savenow="${id}">Save now</button>`:""}</div></div>`)
+    :`<div class="reading"><div class="bar"><i></i></div><div class="readrow"><span class="badge">Reading the text …${stuck}</span>${id&&CROP&&CROP.id===id&&CROP.rect&&!RECROP[id]?`<button class="btn mini" data-savenow="${id}">Save now</button>`:""}</div></div>`)
    (id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK?` Still at: ${esc(t)}`:"");
 const readingStatus=(id,run)=>t=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=t; READ_AT[id]=Date.now(); READLOG.push({t:Date.now(),text:t}); while(READLOG.length>40) READLOG.shift();
   const b=$("#ocr-"+id); if(b) b.innerHTML=readingHTML(t,id);
@@ -2352,8 +2396,8 @@ async function cropSign(id,opts){
     const r=opts&&opts.blob?{blob:opts.blob}:await cropBlob(id,opts&&opts.rect);
     if(stale()) return;
     if(!r){ delete READING[id]; renderShots(); if(PENDING[id]) failPending(id,"no frame"); return; } /* no frame yet — nothing to do */
-    const rec=S.inbox.find(x=>x.id===id);
-    cardImg=r.blob; if(!PENDING[id]){ S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null; }
+    const rec=shotRec(id);
+    cardImg=r.blob; if(!PENDING[id]&&!RECROP[id]){ S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null; }
     delete SIGN[id]; if(!PENDING[id]) delete QSNOTE[id]; /* the frame stays visible while reading */
     renderShots();
     const box=$("#ocr-"+id); if(!box&&!PENDING[id]) return; /* a photo not on screen is not read — unless a saved card waits for it */
@@ -2397,7 +2441,7 @@ async function cropSign(id,opts){
     r.passes=passes.map(p=>({s:Math.round(score(p)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),h:Hink?+(hOfPass(p)/Hink).toFixed(2):null,tight:p.tightened,bw:!!p.bw,ch:!!p.chroma,tra:!!p.tra,...(lineFit(p)<1?{over:p.lines.length-maxLines}:{})}));
     LAST_READ.passes=r.passes;
     const best=passes[0], lines=best.lines;
-    if(best.tightened&&cardRect){ const cut=await cutUnrotated(r.blob,cardRect,dk.angle||0); if(cut){ cardImg=cut; if(!PENDING[id]) S.pendingImg=cut; } } /* the text area with its margin, from the crop as framed */
+    if(best.tightened&&cardRect){ const cut=await cutUnrotated(r.blob,cardRect,dk.angle||0); if(cut){ cardImg=cut; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=cut; } } /* the text area with its margin, from the crop as framed */
     /* a weak reading, or none: the picture goes to the AI when a provider that takes pictures is set (v173) */
     const weak=!lines.length||effScore(lines,Hink)<WEAK_READ; let pic=null;
     if(weak&&pictureProvider()&&aiAutoOn()&&navigator.onLine){ /* the one switch covers text and pictures (v193, H: the picture went out while the check was off — "counterintuitive") */
@@ -2410,10 +2454,10 @@ async function cropSign(id,opts){
       /* the AI's lines replace the reading: no confidences (every character is open in the picker), no boxes (the sheet
          shows the whole crop), the reader's texts become the alternatives; the answer is the check, no text check follows */
       const zh=pic.zh.split("\n"), guesses=[...new Set(passes.map(textOf).filter(t=>t&&t!==pic.zh))].slice(0,6);
-      cardImg=r.blob; if(!PENDING[id]) S.pendingImg=r.blob; /* the card image is the crop as framed, not the second look's band */
+      cardImg=r.blob; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=r.blob; /* the card image is the crop as framed, not the second look's band */
       SIGN[id]={lines:zh, orig:zh.slice(), conf:[], boxes:zh.map(()=>[]), img:dk.blob, angle:dk.angle||0, tightened:false, region:r, alts:guesses, trad:!!pic.zht, tradDetected:!!pic.zht, tradText:pic.zht||"",
         ai:{zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,note:pic.note,ok:true,bad:false,pic:true}, cardImg, weak:false};
-      delete READING[id]; renderShots(); if(PENDING[id]) finishPending(id); return;
+      delete READING[id]; renderShots(); if(PENDING[id]) finishPending(id); if(RECROP[id]) RECROP[id].onRead(SIGN[id]); return;
     }
     if(!lines.length){ status("No Chinese characters recognized — frame the characters tightly and try again."); if(PENDING[id]) failPending(id,"no Chinese characters recognized"); return; }
     /* img = the (straightened, maybe tightened) crop the text was read from, boxes = where each character sits in it: the picker shows the original */
@@ -2444,8 +2488,9 @@ async function cropSign(id,opts){
     SIGN[id].cardImg=cardImg; SIGN[id].weak=weak; /* for the card saved before the reading (v237): its picture, and the flag when the reading was weak */
     if(pic&&pic.bad){ const sg=SIGN[id]; sg.ai={zh:bestT,zht:"",p:"",m:"",note:pic.note,ok:false,bad:true,pic:true}; sg.flag=true; sg.flagNote="the reading looks wrong"; } /* the AI saw the picture and found no readable text: the reading is marked wrong, no text check on it */
     delete READING[id]; renderShots();
-    if(aiAutoOn()&&!(pic&&pic.bad)) signAskAI(id); /* every reading is checked without a tap */
+    if(aiAutoOn()&&!(pic&&pic.bad)&&!RECROP[id]) signAskAI(id); /* every reading is checked without a tap (the Edit form asks through its own button, v239) */
     if(PENDING[id]) finishPending(id);
+    if(RECROP[id]) RECROP[id].onRead(SIGN[id]);
   }catch(err){ if(stale()) return; status("Reading failed: "+(err&&err.message||err)); logErr("read",err&&(err.stack||err.message)||err); if(PENDING[id]) failPending(id,"the reading failed"); }
 }
 /* ---------- a card saved before its reading is done (v237, H: "take a photo and make a crop in a rush, hit Save and move on;
@@ -3128,6 +3173,7 @@ function renderInbox(main){
 const IMGURL={}; // cache object URLs per photo — renderShots re-runs on every selection
 function shotURL(s){ return IMGURL[s.id]||(IMGURL[s.id]=URL.createObjectURL(s.blob)); }
 function renderShots(){
+  if(CROP&&RECROP[CROP.id]){ RECROP[CROP.id].redraw(); return; } /* the Edit form's Crop again draws its own frame view (v239) */
   const box=$("#shots"); if(!box) return;
   const pending=PENDING_SHOT?`<div class="shot pending"><div class="badge">Processing photo …</div></div>`:"";
   if(!S.inbox.length){ box.innerHTML=pending||`<div class="badge" style="margin-top:18px">No photos yet.</div>`; return; }
