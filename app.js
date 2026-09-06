@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=234; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=235; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1077,10 +1077,15 @@ function charsHTML(d){
   if(parts.length<2||parts.length>16) return "";
   return `<div class="chars">${parts.map(w=>`<button class="ch" data-ch="${esc(w)}">${esc(w)}</button>`).join("")}</div><div class="chinfo" id="chinfo" hidden></div>`;
 }
+/* the parts row's dictionary and pinyin library load in the background as soon as a card's back is shown, so the first
+   word tap finds them ready (v235, H's "Go" after "Why loading the dictionary?" — until v234 the first tap of a session
+   waited a second or two for the 2.5 MB file to parse); once per session, from the phone's cache, errors are silent
+   — the tap itself still loads on demand when the warm-up did not run or failed */
+function warmParts(){ if(!window.pinyinPro) loadScript("./vendor/pinyin-pro.js").catch(()=>{}); if(!DICT) loadDict().catch(()=>{}); }
 async function charInfo(w,btn,d){
   const box=$("#chinfo"); if(!box) return;
   document.querySelectorAll(".chars .ch").forEach(b=>b.classList.toggle("on",b===btn));
-  box.hidden=false; box.innerHTML=`<span class="badge">Loading the dictionary …</span>`;
+  box.hidden=false; if(!DICT||!window.pinyinPro) box.innerHTML=`<span class="badge">Loading the dictionary …</span>`;
   try{
     if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
     await loadDict().catch(()=>{});
@@ -1170,6 +1175,7 @@ function renderStudy(main){
     ${S.single?`<div class="topline"><button class="del" id="back-cards">← Cards</button><span class="badge">Testing from the list</span></div>`:""}
     <div class="front tap" id="reveal">${frontHTML(d)}</div>
     ${back}</div>`;
+  if(S.revealed) warmParts();
   /* tap on the photo: crop ⇄ whole photo; tap on the character: back on and off */
   const rv=$("#reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); return; } S.revealed=!S.revealed; render(); };
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
@@ -1343,6 +1349,7 @@ function renderCardDetail(main,c){
   </div>`;
   $("#back").onclick=()=>{ S.detail=null; S.detailHide=false; S.fullPic=false; render(); };
   /* the preview behaves like the test: tap the photo for the whole picture, tap the character to hide and show the answer (H) */
+  if(!S.detailHide) warmParts();
   const rv=$("#d-reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); return; } S.detailHide=!S.detailHide; render(); };
   $("#d-test").onclick=()=>{
     S.saved={queue:S.queue,idx:S.idx,done:S.done,ahead:S.ahead};
