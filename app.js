@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=253; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=254; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -118,7 +118,7 @@ const UNTAGGED="__untagged__";
 const hasTag=(d,t)=>t===UNTAGGED?!(d.tags&&d.tags.length):(d.tags||[]).includes(t);
 const untaggedCount=()=>deck().filter(d=>hasTag(d,UNTAGGED)).length;
 function tagsFieldHTML(id,tags){ const cur=tags||[], known=allTags();
-  return `<div class="field"><label>Tags</label><input id="${id}" class="tags" value="${esc(cur.join(", "))}" placeholder="Chinese class, HSK 3 …" autocomplete="off">${known.length?`<div class="tagchips" data-tagsfor="${id}">${known.map(t=>`<button type="button" class="chip${cur.includes(t)?" on":""}" data-tag="${esc(t)}">${esc(t)}</button>`).join("")}</div>`:""}</div>`; }
+  return `<div class="field"><label>${t("Tags")}</label><input id="${id}" class="tags" value="${esc(cur.join(", "))}" placeholder="${t("Chinese class, HSK 3 …")}" autocomplete="off">${known.length?`<div class="tagchips" data-tagsfor="${id}">${known.map(t=>`<button type="button" class="chip${cur.includes(t)?" on":""}" data-tag="${esc(t)}">${esc(t)}</button>`).join("")}</div>`:""}</div>`; }
 function wireTags(root,onChange){
   root.querySelectorAll("input.tags").forEach(inp=>{ const box=root.querySelector(`[data-tagsfor="${inp.id}"]`);
     const sync=()=>{ const cur=parseTags(inp.value); if(box) box.querySelectorAll("[data-tag]").forEach(b=>b.classList.toggle("on",cur.includes(b.dataset.tag))); if(onChange) onChange(cur,inp); };
@@ -807,7 +807,7 @@ function wxNoteHTML(){ return inWeChat()?`<div class="wxnote">${t(WX_NOTE)}</div
    strings live in lang.js with English as the key): More → Language switches at once and keeps the choice (setting "lang");
    the header's capsules and the tab labels sit in index.html and are set here, everything else asks t() while rendering */
 function applyLangStatic(){ document.documentElement.lang=LANG;
-  [["#stat-open b","Due"],["#stat-done b","Done"],["#stat-deck b","Deck"]].forEach(([q,k])=>{ const e=$(q); if(e) e.textContent=t(k); });
+  [["#stat-open b","Due"],["#stat-done b","capsule:Done"],["#stat-deck b","Deck"]].forEach(([q,k])=>{ const e=$(q); if(e) e.textContent=t(k); });
   document.querySelectorAll("#tabs .tab").forEach(b=>{ const k={study:"Learn",cards:"Cards",inbox:"Camera",more:"More"}[b.dataset.mode]; const n=b.lastChild; if(k&&n&&n.nodeType===3) n.textContent=t(k); }); }
 async function setLang(code){ if(!LANGS.some(([c])=>c===code)) return; LANG=code; await setSetting("lang",code); applyLangStatic(); render(); }
 function reportData(){
@@ -1302,7 +1302,7 @@ function renderAdd(main){
     const run=++fillRun, same=()=>run===fillRun&&$("#f-word")&&$("#f-word").value.replace(/\s+/g,"")===word;
     if(S.draft) delete S.draft.ai;
     if(aiLive()){
-      st.innerHTML=busyHTML(AI_BUSY_TEXT);
+      st.innerHTML=busyHTML(t(AI_BUSY_TEXT));
       try{
         const [r]=await aiAsk([{kind:"word",c:word,p:"",m:"",mt:{src:"dict",verified:false,suspect:"typed by hand, please check"}}]);
         if(!same()) return;
@@ -1480,7 +1480,7 @@ function renderEdit(main,c){
     const st=$("#e-aistatus"); ab.disabled=true;
     const zh=$("#e-word").value, pin=$("#e-pin").value.trim(), mean=$("#e-mean").value.trim(), note=$("#e-note").value.trim();
     try{
-      const [r]=await aiAsk([{kind:d.kind||"word",c:isSign?zh.split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):zh.replace(/\s+/g,""),p:pin,m:mean,flagNote:note,gloss:d.gloss,mt:{src:"dict",verified:false,suspect:"please check"}}],()=>{ st.innerHTML=busyHTML(AI_BUSY_TEXT); });
+      const [r]=await aiAsk([{kind:d.kind||"word",c:isSign?zh.split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):zh.replace(/\s+/g,""),p:pin,m:mean,flagNote:note,gloss:d.gloss,mt:{src:"dict",verified:false,suspect:"please check"}}],()=>{ st.innerHTML=busyHTML(t(AI_BUSY_TEXT)); });
       if(r.zh&&CJK.test(r.zh)){ const zh=r.zh.replace(/\r/g,""); sg.lines=(isSign?zh:recutLines(zh.replace(/\s+/g,""),sg.lines)).split("\n").map(l=>l.trim()).filter(Boolean); sg.orig=sg.lines.slice(); syncWord(); drawLines(); }
       if(r.p) $("#e-pin").value=r.p;
       if(r.m) $("#e-mean").value=r.m;
@@ -1504,10 +1504,10 @@ function renderEdit(main,c){
     const zoomed=!!(CROP.rect&&CROP.zoom);
     box.innerHTML=`<div class="recrop"><div class="shotwrap">
         ${zoomed?`<div class="shotzoom" style="${zoomStyle(rec)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(rec)}" alt="photo">`}
-        <div class="croplayer${CROP.rect?" framed":""}${zoomed?" zoomed":""}" data-id="${rid}">${zoomed?"":`<div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="Turn the frame"></div></div>`}</div>
+        <div class="croplayer${CROP.rect?" framed":""}${zoomed?" zoomed":""}" data-id="${rid}">${zoomed?"":`<div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="${t("Turn the frame")}"></div></div>`}</div>
       </div>
-      <div class="imgacts"><button class="del" id="e-cropcancel">Cancel</button></div>
-      <div class="ocr" id="ocr-${rid}">${READING[rid]?readingHTML(READING[rid],rid):res&&res.key===rectKey(CROP.rect)?`<div class="croppreview"><img src="${res.url}" alt="the new crop"><div class="badge" style="margin:6px 0 0">${res.text?`Read as “${esc(res.text)}”. `:"Picture taken, the text stays. "}Adjust the frame to read again, or save.</div></div>`:CROP.locating?busyHTML("Finding the frame …"):CROP.auto?busyHTML("Finding the text …"):`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.</span>`}</div></div>`;
+      <div class="imgacts"><button class="del" id="e-cropcancel">${t("Cancel")}</button></div>
+      <div class="ocr" id="ocr-${rid}">${READING[rid]?readingHTML(READING[rid],rid):res&&res.key===rectKey(CROP.rect)?`<div class="croppreview"><img src="${res.url}" alt="the new crop"><div class="badge" style="margin:6px 0 0">${res.text?t("Read as “{0}”. ",esc(res.text)):t("Picture taken, the text stays. ")}${t("Adjust the frame to read again, or save.")}</div></div>`:CROP.locating?busyHTML(t("Finding the frame …")):CROP.auto?busyHTML(t("Finding the text …")):`<span class="badge">${t("Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.")}</span>`}</div></div>`;
     box.querySelectorAll(".croplayer").forEach(wireCrop);
     $("#e-cropcancel").onclick=()=>{ restoreBefore(); endRecrop(); showPimg(); }; };
   /* the reading's result stays under the photo with the frame (v244, H: "don't exit crop mode so fast, do as in the initial crop screen") — the view goes on Save changes or Cancel */
@@ -1941,16 +1941,16 @@ const READ_TIMER={}, READ_WAIT=1200;
 let _prevURL=null;
 async function showCropPreview(id,opts){
   const box=$("#ocr-"+id); if(!box) return; const noRead=!!(opts&&opts.noRead);
-  let r=null; try{ r=await cropBlob(id); }catch(err){ box.innerHTML=`<span class="badge">Reading failed: ${esc(err&&err.message||err)}</span>`; logErr("crop",err&&(err.stack||err.message)||err); return; }
-  if(!r){ box.innerHTML=`<span class="badge">Frame too small — draw again.</span>`; return; }
+  let r=null; try{ r=await cropBlob(id); }catch(err){ box.innerHTML=`<span class="badge">${t("Reading failed: {0}",esc(err&&err.message||err))}</span>`; logErr("crop",err&&(err.stack||err.message)||err); return; }
+  if(!r){ box.innerHTML=`<span class="badge">${t("Frame too small — draw again.")}</span>`; return; }
   if(_prevURL) URL.revokeObjectURL(_prevURL);
   _prevURL=URL.createObjectURL(r.blob);
   box.innerHTML=`<div class="croppreview">
     <img src="${_prevURL}" alt="selected area">
-    <div class="badge" style="margin:6px 0 8px">${noRead?"The frame the card was cut with — adjust it to read again."+(opts.win==="in"?" Tap outside the frame for the whole photo.":opts.win==="out"?" Tap outside the frame to enlarge it again.":""):"Reading in a moment — drag a corner first if the frame is off."}</div>
+    <div class="badge" style="margin:6px 0 8px">${noRead?t("The frame the card was cut with — adjust it to read again.")+(opts.win==="in"?t(" Tap outside the frame for the whole photo."):opts.win==="out"?t(" Tap outside the frame to enlarge it again."):""):t("Reading in a moment — drag a corner first if the frame is off.")}</div>
     <div class="cropacts">
-      <button class="del" data-cropread="${id}">Read now</button>
-      <button class="del" data-cropok="${id}">Image only</button>
+      <button class="del" data-cropread="${id}">${t("Read now")}</button>
+      <button class="del" data-cropok="${id}">${t("Image only")}</button>
     </div></div>`;
   box.querySelector("[data-cropread]").onclick=()=>{ clearTimeout(READ_TIMER[id]); cropSign(id); };
   box.querySelector("[data-cropok]").onclick=()=>{ clearTimeout(READ_TIMER[id]); cropOk(id); };
@@ -2273,14 +2273,15 @@ const AI_BUSY_TEXT="Checking pinyin and meaning …";
 /* while a photo is read: the bar, its text and Save now at the right of that line (v237, H: "take a photo, crop in a rush, hit
    Save and move on" — the card is made at once with the crop, the reading fills it in in the background); once saved, one
    green line instead; not in the Edit form's Crop again, where Save changes takes that role (v241) */
-const readingHTML=(t,id)=>READ_FAIL.test(t)?`<span class="badge">${esc(t)}</span>`
+const failText=x=>x.startsWith("Reading failed: ")?t("Reading failed: {0}",esc(x.slice(16))):esc(t(x)); /* the failure sentence in the app's language; the step texts stay English for Diagnostics (v254) */
+const readingHTML=(x,id)=>READ_FAIL.test(x)?`<span class="badge">${failText(x)}</span>`
   :(stuck=>id&&PENDING[id]
-    ?`<div class="reading"><div class="bar"><i></i></div><span class="ok" style="margin:0">Card saved — the text follows when the reading is done.${stuck.replace(" still"," Still")}</span></div>`
-    :`<div class="reading"><div class="bar"><i></i></div><div class="readrow"><span class="badge">Reading the text …${stuck}</span>${id&&CROP&&CROP.id===id&&CROP.rect&&!RECROP[id]?`<button class="btn mini" data-savenow="${id}">Save now</button>`:""}</div></div>`)
-   (id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK?` still at: ${esc(t)}`:"");
-const readingStatus=(id,run)=>t=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=t; READ_AT[id]=Date.now(); READLOG.push({t:Date.now(),text:t}); while(READLOG.length>40) READLOG.shift();
-  const b=$("#ocr-"+id); if(b) b.innerHTML=readingHTML(t,id);
-  setTimeout(()=>{ if(READING[id]!==t) return; const b2=$("#ocr-"+id); if(b2) b2.innerHTML=readingHTML(t,id); },READ_STUCK+50); };
+    ?`<div class="reading"><div class="bar"><i></i></div><span class="ok" style="margin:0">${t("Card saved — the text follows when the reading is done.")}${stuck?t(" Still at: {0}",esc(x)):""}</span></div>`
+    :`<div class="reading"><div class="bar"><i></i></div><div class="readrow"><span class="badge">${t("Reading the text …")}${stuck?t(" still at: {0}",esc(x)):""}</span>${id&&CROP&&CROP.id===id&&CROP.rect&&!RECROP[id]?`<button class="btn mini" data-savenow="${id}">${t("Save now")}</button>`:""}</div></div>`)
+   (!!(id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK));
+const readingStatus=(id,run)=>x=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=x; READ_AT[id]=Date.now(); READLOG.push({t:Date.now(),text:x}); while(READLOG.length>40) READLOG.shift();
+  const b=$("#ocr-"+id); if(b) b.innerHTML=readingHTML(x,id);
+  setTimeout(()=>{ if(READING[id]!==x) return; const b2=$("#ocr-"+id); if(b2) b2.innerHTML=readingHTML(x,id); },READ_STUCK+50); };
 /* a canvas with the bitmap drawn at a scale (opaque — the reader is handed JPEGs) */
 function scaledCanvas(bmp,scale,readable){
   const cv=document.createElement("canvas"); cv.width=Math.max(1,Math.round(bmp.width*scale)); cv.height=Math.max(1,Math.round(bmp.height*scale));
@@ -2619,7 +2620,7 @@ async function cropSign(id,opts){
     const tradPhoto=s2t(bestT)!==bestT&&tradPhotoOf(lines.map(x=>x.t),passes,score); r.trad=tradPhoto; /* a text without a traditional form (推) has nothing to vote on */
     SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r, alts, trad:tradPhoto, tradDetected:tradPhoto, tradText:tradPhoto?s2t(bestT):""};
     SIGN[id].cardImg=cardImg; SIGN[id].weak=weak; /* for the card saved before the reading (v237): its picture, and the flag when the reading was weak */
-    if(pic&&pic.bad){ const sg=SIGN[id]; sg.ai={zh:bestT,zht:"",p:"",m:"",note:pic.note,ok:false,bad:true,pic:true}; sg.flag=true; sg.flagNote="the reading looks wrong"; } /* the AI saw the picture and found no readable text: the reading is marked wrong, no text check on it */
+    if(pic&&pic.bad){ const sg=SIGN[id]; sg.ai={zh:bestT,zht:"",p:"",m:"",note:pic.note,ok:false,bad:true,pic:true}; sg.flag=true; sg.flagNote=t("the reading looks wrong"); } /* the AI saw the picture and found no readable text: the reading is marked wrong, no text check on it */
     delete READING[id]; renderShots();
     if(aiAutoOn()&&!(pic&&pic.bad)&&!RECROP[id]) signAskAI(id); /* every reading is checked without a tap (the Edit form asks through its own button, v239) */
     if(PENDING[id]) finishPending(id);
@@ -2643,7 +2644,7 @@ async function saveNow(id){
   const card={id:"reading#"+Date.now(), c:"", p:"", m:"", t:"Custom", at:Date.now(), shot:id, lb:"photo", img:await jpegOf(r.blob), mt:{src:"gloss",verified:false,pending:true}, frame:frameOf(rect), reading:{rect,at:Date.now()}};
   bump("byPhoto"); S.custom.push(card); try{ await idbPut("custom",card); }catch(e){}
   PENDING[id]=card.id; QSCARD[id]=card.id; CROP=null; delete SIGN[id];
-  QSNOTE[id]="Card saved — the text follows when the reading is done.";
+  QSNOTE[id]=t("Card saved — the text follows when the reading is done.");
   clearTimeout(READ_TIMER[id]); if(!READING[id]) cropSign(id,{rect}); /* the reading had not started yet (the 1.2 s wait) — start it with the frame it was saved with */
   setStats(); renderShots();
 }
@@ -2660,7 +2661,7 @@ async function finishPending(id){
     for(const k of Object.keys(ph)) if(!["id","at","img","imgFull","shot","tags","frame"].includes(k)) delete ph[k];
     const {id:_i,at:_a,img:_m,shot:_s,...fields}=card; Object.assign(ph,fields);
     if(sg.cardImg){ ph.img=await jpegOf(sg.cardImg); dropThumb(ph.id); } /* the list's thumbnail was made from the crop saved first (v242, H: "the card with a photo before the re-crop remains") */
-    ph.flag=true; ph.flagNote=(mt.suspect||sg.weak||(sg.ai&&sg.ai.bad))?"saved before the reading was done, and the reading is weak — check text, pinyin and meaning":"saved before the reading was done — check text, pinyin and meaning"; /* nobody saw the preview (v245, H: "flag cards that were saved before the final stage, with an appropriate comment") */
+    ph.flag=true; ph.flagNote=(mt.suspect||sg.weak||(sg.ai&&sg.ai.bad))?t("saved before the reading was done, and the reading is weak — check text, pinyin and meaning"):t("saved before the reading was done — check text, pinyin and meaning"); /* nobody saw the preview (v245, H: "flag cards that were saved before the final stage, with an appropriate comment") */
     try{ await idbPut("custom",ph); }catch(e){}
     QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}.`+(mt.pending?" Translation pending.":"")+(ph.flag?" Flagged for review.":"");
   }catch(err){ logErr("savenow",err&&(err.stack||err.message)||err); return failPending(id,"the reading failed"); }
@@ -2672,7 +2673,7 @@ async function failPending(id,why){
   const ph=pendingCard(id); delete PENDING[id]; delete SIGN[id]; if(!ph||!ph.reading) return;
   dropExtraShot(id);
   if(ph.c) delete ph.reading; else ph.reading.failed=why; /* a card framed again in the Edit form keeps its text and forgets the frame (v241, v243); an empty card keeps the failure for "Nothing read yet" */
-  ph.flag=true; ph.flagNote=ph.c?"the new frame could not be read — the old text stays":"the reading failed — edit the card or frame the photo again";
+  ph.flag=true; ph.flagNote=ph.c?t("the new frame could not be read — the old text stays"):t("the reading failed — edit the card or frame the photo again");
   try{ await idbPut("custom",ph); }catch(e){}
   QSNOTE[id]="Card saved, but nothing could be read — edit the card or frame the photo again."; setStats();
   if(S.mode==="cards"&&!S.editing) render(); else renderShots(); /* the list or the detail shows the filled card at once */
@@ -2794,11 +2795,11 @@ async function openCharPick(id,k,i,btn,mode){
     renderShots(); if(aiLive()) signAskAI(id); };
   const render=(dict,ai,aiBusy)=>{
     const seen=new Set();
-    const where=ins?(i===0?"at the start":i>=chars.length?"at the end":`between <b class="hanzi">${esc(chars[i-1])}</b> and <b class="hanzi">${esc(chars[i])}</b>`):"";
-    box.innerHTML=`<div class="ckhead"><span class="badge">${ins?`Add a character ${where}:`:`Replace <b class="hanzi">${esc(ch)}</b> with:`}</span><button class="ckx" id="ck-x-${id}" aria-label="Close">×</button></div>
-      <div class="cands">${ai.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!aiBusy?`<span class="badge">No match — draw it or ask the AI.</span>`:""}${aiBusy?`<span class="badge">Asking the AI …</span>`:""}</div>
-      <div class="ckacts">${ins||chars.length<=1?"":`<button class="btn mini danger" id="ck-del-${id}">Remove <span class="hanzi">${esc(ch)}</span></button>`}<button class="btn mini" id="ck-draw-${id}">Not here? Draw it</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">Ask AI</button>`:""}</div>
-      ${ins?"":`<div class="ckacts ckadd"><span class="badge">Add a character:</span><button class="del" id="ck-ins0-${id}">+ before <span class="hanzi">${esc(ch)}</span></button><button class="del" id="ck-ins1-${id}">+ after <span class="hanzi">${esc(ch)}</span></button></div>`}`;
+    const where=ins?(i===0?t("at the start"):i>=chars.length?t("at the end"):t("between {0} and {1}",`<b class="hanzi">${esc(chars[i-1])}</b>`,`<b class="hanzi">${esc(chars[i])}</b>`)):"";
+    box.innerHTML=`<div class="ckhead"><span class="badge">${ins?t("Add a character {0}:",where):t("Replace {0} with:",`<b class="hanzi">${esc(ch)}</b>`)}</span><button class="ckx" id="ck-x-${id}" aria-label="${t("Close")}">×</button></div>
+      <div class="cands">${ai.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!aiBusy?`<span class="badge">${t("No match — draw it or ask the AI.")}</span>`:""}${aiBusy?`<span class="badge">${t("Asking the AI …")}</span>`:""}</div>
+      <div class="ckacts">${ins||chars.length<=1?"":`<button class="btn mini danger" id="ck-del-${id}">${t("Remove {0}",`<span class="hanzi">${esc(ch)}</span>`)}</button>`}<button class="btn mini" id="ck-draw-${id}">${t("Not here? Draw it")}</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">${t("Ask AI")}</button>`:""}</div>
+      ${ins?"":`<div class="ckacts ckadd"><span class="badge">${t("Add a character:")}</span><button class="del" id="ck-ins0-${id}">${t("+ before {0}",`<span class="hanzi">${esc(ch)}</span>`)}</button><button class="del" id="ck-ins1-${id}">${t("+ after {0}",`<span class="hanzi">${esc(ch)}</span>`)}</button></div>`}`;
     box.querySelectorAll("[data-rep]").forEach(b=> b.onclick=()=>apply(b.dataset.rep));
     const del=$("#ck-del-"+id); if(del) del.onclick=()=>apply(null);
     const i0=$("#ck-ins0-"+id); if(i0) i0.onclick=()=>openCharPick(id,k,i,btn,"ins");
@@ -2807,7 +2808,7 @@ async function openCharPick(id,k,i,btn,mode){
     const ab=$("#ck-ai-"+id); if(ab) ab.onclick=()=>askAI(dict);
     $("#ck-draw-"+id).onclick=()=>openDrawSheet(id,k,i,apply,ins);
   };
-  const askAI=async(dict)=>{ render(dict,[],true); try{ const alts=await aiCharAlternatives(line,i,ins); if(!box.isConnected) return; render(dict,alts,false); if(!alts.length) box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">The AI has no better idea.</span>`); }catch(err){ if(!box.isConnected) return; render(dict,[],false); box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">The AI could not be reached.</span>`); } };
+  const askAI=async(dict)=>{ render(dict,[],true); try{ const alts=await aiCharAlternatives(line,i,ins); if(!box.isConnected) return; render(dict,alts,false); if(!alts.length) box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">${t("The AI has no better idea.")}</span>`); }catch(err){ if(!box.isConnected) return; render(dict,[],false); box.querySelector(".cands").insertAdjacentHTML("beforeend",`<span class="badge">${t(AI_NET_ERR)}.</span>`); } };
   render([],[],false);
   await loadDict().catch(()=>{});
   const dict=ins?charCandidates(line,i,true):[...new Set([...altCharsAt(sg,k,i),...charCandidates(line,i)])];
@@ -2877,12 +2878,12 @@ function openDrawSheet(id,k,i,apply,ins){
   document.querySelectorAll(".drawsheet").forEach(x=>x.remove());
   const el=document.createElement("div"); el.className="drawsheet";
   const noRef=!sg.img; /* a card without a photo (the Add form's "Draw a character", an Edit form without an image): the pad alone (v159) */
-  el.innerHTML=`<div class="dshead"><div class="badge">${noRef?"Draw the character below.":"The character in the photo (drag to move, pinch to zoom) — draw it below."}</div><button class="del" id="ds-x">Cancel</button></div>
-    ${noRef?"":`<canvas class="ckref" width="1" height="1" title="the character in the photo"></canvas>`}
+  el.innerHTML=`<div class="dshead"><div class="badge">${noRef?t("Draw the character below."):t("The character in the photo (drag to move, pinch to zoom) — draw it below.")}</div><button class="del" id="ds-x">${t("Cancel")}</button></div>
+    ${noRef?"":`<canvas class="ckref" width="1" height="1" title="${t("the character in the photo")}"></canvas>`}
     <canvas class="pad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas>
-    <div class="badge" id="ds-st">Draw all strokes, then tap Done.</div>
+    <div class="badge" id="ds-st">${t("Draw all strokes, then tap Done.")}</div>
     <div class="cands" id="ds-cands"></div>
-    <div class="ckacts"><button class="del" id="ds-undo">Undo</button><button class="del" id="ds-clear">Clear</button><span class="grow"></span><button class="btn primary" id="ds-done">Done</button></div>`;
+    <div class="ckacts"><button class="del" id="ds-undo">${t("Undo")}</button><button class="del" id="ds-clear">${t("Clear")}</button><span class="grow"></span><button class="btn primary" id="ds-done">${t("Done")}</button></div>`;
   document.body.appendChild(el); document.body.classList.add("noscroll");
   /* symmetric: the photo character and the pad are two squares of the same side, as big as the screen allows (H) */
   const fitRef=()=>{ const rc=el.querySelector(".ckref"), pd=el.querySelector(".pad"); if(!pd||!pd.isConnected) return;
@@ -2913,25 +2914,25 @@ function openDrawSheet(id,k,i,apply,ins){
   };
   const recognize=async()=>{
     const my=++seq; showCands([]);
-    if(!strokes.length){ status("Draw the character first."); return; }
+    if(!strokes.length){ status(t("Draw the character first.")); return; }
     try{
       const w=await ocrWorker(status); if(my!==seq) return;
-      status("reading …");
+      status(t("reading …"));
       /* stroke matching first (v141), the print model's readings after it; the database may be missing on a first use offline */
       let sm=[]; try{ sm=await strokeMatch(strokes); }catch(err){ logErr("strokes",err&&err.message||err); }
       const good=sm.filter(x=>x.cost<0.4).slice(0,5).map(x=>x.ch);
-      const ocr=await recognizeStrokes(w,strokes,p=>{ if(my===seq) status("reading … "+p+"%"); });
+      const ocr=await recognizeStrokes(w,strokes,p=>{ if(my===seq) status(t("reading … {0}%",p)); });
       const alts=[...new Set([...good,...ocr])].slice(0,6);
       DRAWLOG.push({t:Date.now(),strokes:strokes.map(st=>st.map(p=>[Math.round(p[0]),Math.round(p[1])])),alts,strokes_best:sm.slice(0,5).map(x=>x.ch+":"+x.cost.toFixed(2)),ocr}); while(DRAWLOG.length>3) DRAWLOG.shift(); /* the phone's real strokes for the diagnostics (v140) */
       if(my!==seq||!el.isConnected) return;
       const ctxc=SIGN[id]?charCandidates(SIGN[id].lines[k],i,ins):[];
       const ranked=alts.slice().sort((a,b)=>(ctxc.includes(b)?1:0)-(ctxc.includes(a)?1:0)); /* what fits the neighbours first, otherwise the stroke match's order */
       showCands(ranked);
-      status(ranked.length?"Read as — tap the right one. Not there? Clear and draw again.":"Not recognized — try cleaner, well-separated strokes.");
-    }catch(err){ if(my===seq) status("Reading failed: "+(err&&err.message||err)); }
+      status(ranked.length?t("Read as — tap the right one. Not there? Clear and draw again."):t("Not recognized — try cleaner, well-separated strokes."));
+    }catch(err){ if(my===seq) status(t("Reading failed: {0}",err&&err.message||err)); }
   };
-  el.querySelector("#ds-undo").onclick=()=>{ strokes.pop(); seq++; showCands([]); paint(); status("Draw all strokes, then tap Done."); };
-  el.querySelector("#ds-clear").onclick=()=>{ strokes.length=0; seq++; showCands([]); paint(); status("Draw all strokes, then tap Done."); };
+  el.querySelector("#ds-undo").onclick=()=>{ strokes.pop(); seq++; showCands([]); paint(); status(t("Draw all strokes, then tap Done.")); };
+  el.querySelector("#ds-clear").onclick=()=>{ strokes.length=0; seq++; showCands([]); paint(); status(t("Draw all strokes, then tap Done.")); };
   el.querySelector("#ds-done").onclick=recognize;
   el.querySelector("#ds-x").onclick=close;
   el.strokes=strokes; el.recognize=recognize; el.paint=paint; /* used by the tests */
@@ -3050,7 +3051,7 @@ async function recognizeStrokes(w,strokes,log,guide=true){
 function scriptSwitchHTML(id,sg){
   if(!sg.trad&&!sg.tradDetected) return "";
   const txt=sg.lines.map(l=>l.trim()).filter(Boolean).join("\n"), same=!sg.trad&&S2T&&s2t(txt)===txt;
-  return `<div class="seg" data-scriptseg="${id}"><button type="button" class="segbtn${sg.trad?"":" on"}" data-scriptset="0">Simplified</button><button type="button" class="segbtn${sg.trad?" on":""}" data-scriptset="1"${same?" disabled":""}>Traditional</button></div>`;
+  return `<div class="seg" data-scriptseg="${id}"><button type="button" class="segbtn${sg.trad?"":" on"}" data-scriptset="0">${t("Simplified")}</button><button type="button" class="segbtn${sg.trad?" on":""}" data-scriptset="1"${same?" disabled":""}>${t("Traditional")}</button></div>`;
 }
 async function setScript(sg,on){
   sg.tradUser=true; sg.tradTouched=false;
@@ -3061,8 +3062,8 @@ function tradLine(sg,k){ const line=sg.lines[k]; if(!sg.trad) return line; const
 function slineHTML(id,k,line,withPinyin,withInput=true){
   const sg=SIGN[id]; /* withInput=false: the Read preview shows the strip alone (H, v109: the line field under it was one thing too many); the Edit form keeps it for retyping */
   const empty=!(line||"").trim(); /* a card saved before its reading and never read (v238): nothing to tap yet */
-  const t=empty?"Type the text below.":`Tap a character to change it${withInput?", or type the line below":""}.`;
-  const hint=k===0?`<div class="badge ckhint" data-hint="${id}" data-text="${t}">${sg&&sg.sel?SEL_HINT:t}</div>`:""; /* right under the strip (H, v112) */
+  const tx=empty?t("Type the text below."):t("Tap a character to change it")+(withInput?t(", or type the line below"):"")+".";
+  const hint=k===0?`<div class="badge ckhint" data-hint="${id}" data-text="${tx}">${sg&&sg.sel?t(SEL_HINT):tx}</div>`:""; /* right under the strip (H, v112) */
   return `<div class="sline">${empty?"":charStripHTML(id,k)}${hint}${withInput?`<input class="hanzi" data-sid="${id}" data-sline="${k}" value="${esc(sg&&sg.trad?tradLine(sg,k):line)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">`:""}${withPinyin?`<div class="sp" id="sp-${id}-${k}"></div>`:""}</div>`;
 }
 /* Several characters removed at once (v204, H: "select them first and then remove them all together", described first and
@@ -3074,14 +3075,14 @@ const SEL_HINT="Tap the characters to remove, then Remove.";
 function selRowHTML(id){ const sg=SIGN[id]; if(!sg||!sg.lines.some(l=>l.trim())) return ""; return `<div class="fieldacts selrow" data-selrow="${id}">${selRowInner(id)}</div>`; }
 function selRowInner(id){
   const sg=SIGN[id]; if(!sg) return "";
-  if(!sg.sel) return `<button class="btn mini" data-selstart="${id}">Select</button>`;
+  if(!sg.sel) return `<button class="btn mini" data-selstart="${id}">${t("Select")}</button>`;
   const n=sg.sel.size, all=n>=sg.lines.reduce((a,l)=>a+[...l].length,0);
-  return `<button class="btn mini danger" data-selremove="${id}"${!n||all?" disabled":""}>Remove${n?" "+n:""}</button><button class="btn mini" data-seldone="${id}">Done</button>`;
+  return `<button class="btn mini danger" data-selremove="${id}"${!n||all?" disabled":""}>${n?t("Remove {0}",n):t("Remove")}</button><button class="btn mini" data-seldone="${id}">${t("Done")}</button>`;
 }
 function selRowRefresh(root,id){
   const sg=SIGN[id], row=root.querySelector(`[data-selrow="${id}"]`); if(!sg||!row) return;
   row.innerHTML=selRowInner(id);
-  const h=root.querySelector(`[data-hint="${id}"]`); if(h) h.textContent=sg.sel?SEL_HINT:h.dataset.text;
+  const h=root.querySelector(`[data-hint="${id}"]`); if(h) h.textContent=sg.sel?t(SEL_HINT):h.dataset.text;
   if(!sg.sel) root.querySelectorAll(`[data-ck][data-sid="${id}"]`).forEach(b=>b.classList.remove("on"));
   root.querySelectorAll(".cstrip").forEach(st=>{ const f=st.querySelector("[data-ck]"); if(f&&f.dataset.sid===id) st.classList.toggle("selecting",!!sg.sel); }); /* the strip takes the finger while selecting (v205) */
   wireSel(root);
@@ -3125,7 +3126,7 @@ function wireSlines(root,onInput,onCommit){
     onInput(sg,inp.dataset.sid); });
   root.querySelectorAll("[data-sline]").forEach(inp=> inp.onchange=()=>{ const sg=SIGN[inp.dataset.sid]; if(!sg) return; const k=+inp.dataset.sline, sl=inp.closest(".sline"), strip=sl&&sl.querySelector(".cstrip");
     if(strip){ strip.outerHTML=charStripHTML(inp.dataset.sid,k); wireSlines(sl,onInput,onCommit); } /* the buttons follow the typed line */
-    else if(sl&&inp.value.trim()){ sl.insertAdjacentHTML("afterbegin",charStripHTML(inp.dataset.sid,k)); const h=sl.querySelector(".ckhint"); if(h) h.dataset.text=h.textContent="Tap a character to change it, or type the line below."; /* the first text of a card saved before its reading (v238): the strip appears with it */
+    else if(sl&&inp.value.trim()){ sl.insertAdjacentHTML("afterbegin",charStripHTML(inp.dataset.sid,k)); const h=sl.querySelector(".ckhint"); if(h) h.dataset.text=h.textContent=t("Tap a character to change it")+t(", or type the line below")+"."; /* the first text of a card saved before its reading (v238): the strip appears with it */
       if(!root.querySelector("[data-selrow]")) root.insertAdjacentHTML("beforeend",selRowHTML(inp.dataset.sid)); wireSlines(sl,onInput,onCommit); wireSel(root); }
     if(onCommit) onCommit(sg,inp.dataset.sid,k); });
   root.querySelectorAll("[data-spin]").forEach(t=> t.oninput=()=>{ const sg=SIGN[t.dataset.spin]; if(sg){ sg.pinTouched=true; sg.pinEdit=t.value; } });
@@ -3135,28 +3136,28 @@ function wireSlines(root,onInput,onCommit){
   wireGrow(root);
 }
 /* the AI's failure as a sentence for the user (v201): the network case says what to do, a provider's answer is named as the check's failure */
-const aiErrText=e=>e===AI_NET_ERR?e+". Tap Ask AI to try again.":/^[a-z]/.test(e)?"The AI check failed: "+e:e;
+const aiErrText=e=>e===AI_NET_ERR?t(AI_NET_ERR)+t(". Tap Ask AI to try again."):/^[a-z]/.test(e)?t("The AI check failed: {0}",e):e;
 function signEditorHTML(id){
   const sg=SIGN[id]; if(!sg) return "";
   const rows=sg.lines.map((l,k)=>slineHTML(id,k,l,false,true)).join(""); /* the line input is back under the strip (v120, H: "type the correct hanzi in a text field, like in Edit mode" — it went in v109) */
   const low=sg.conf?Math.min(...sg.conf.flat().concat([100])):100;
-  const doubt=!aiLive()&&low<OCR_DOUBT?` The reading looks uncertain (confidence ${Math.round(low)}%) — check the text.`:"";
+  const doubt=!aiLive()&&low<OCR_DOUBT?t(" The reading looks uncertain (confidence {0}%) — check the text.",Math.round(low)):"";
   const bad=sg.ai&&sg.ai.bad;
   /* no status about the AI (H, v105: "not relevant for user") — the text is either fine, or it needs a hand */
-  const head=sg.aiBusy?"":bad?"This reading looks wrong — frame the text tightly and read again, or fix the characters.":sg.ai&&!sg.ai.kept?"":doubt.trim(); /* the tap hint sits under the strip (H, v111) */
+  const head=sg.aiBusy?"":bad?t("This reading looks wrong — frame the text tightly and read again, or fix the characters."):sg.ai&&!sg.ai.kept?"":doubt.trim(); /* the tap hint sits under the strip (H, v111) */
   /* the reading crop is not shown (H: "the user doesn't have to see it") — it serves the picker's reference only */
   const nChars=sg.lines.join("").replace(/[^\u4e00-\u9fff]/g,"").length, meanCf=(sg.conf||[]).flat().reduce((a,c,_,arr)=>a+c/arr.length,0);
-  const weak=nChars<=2&&meanCf<85?`<div class="err" style="margin:4px 0 8px">Only ${nChars} character${nChars===1?"":"s"} found — if the photo shows more, frame the characters tightly and drag a corner to read again.</div>`:"";
+  const weak=nChars<=2&&meanCf<85?`<div class="err" style="margin:4px 0 8px">${t("Only {0} found — if the photo shows more, frame the characters tightly and drag a corner to read again.",nOf(nChars,"character"))}</div>`:"";
 
   /* the same layout as the Edit form (H): Text, Pinyin, Meaning — pinyin and meaning can be corrected before saving */
   return `<div class="signed">${weak}${head?`<div class="badge${bad?" bad":""}" style="margin-bottom:8px">${head}</div>`:""}
-    <div class="field"><label>Characters${sg.trad?" (traditional, as on the photo)":""}${sg.ai&&sg.ai.pic&&!sg.ai.bad?PIC_MARK:""}</label>${rows}<div class="scriptline">${scriptSwitchHTML(id,sg)}</div>${selRowHTML(id)}</div>
-    <div class="field"><label>Pinyin</label><textarea class="grow" id="spin-${id}" rows="1" data-spin="${id}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">${esc(sg.pinEdit||"")}</textarea></div>
-    <div class="field"><label>Meaning</label><textarea class="grow" id="smeanf-${id}" rows="1" data-smean="${id}">${esc(sg.meanEdit||"")}</textarea><div class="smean badge" id="smean-${id}" style="margin-top:4px"></div></div>
-    <div class="field"><label class="check"><input type="checkbox" data-sflag="${id}"${sg.flag?" checked":""}> ⚑ Flag for review (text, pinyin or meaning looks wrong)</label>
-      <input data-snote="${id}" value="${esc(sg.flagNote||"")}" placeholder="Note for the reviewer (optional)"${sg.flag?"":" hidden"}></div>
+    <div class="field"><label>${t("Characters")}${sg.trad?t(" (traditional, as on the photo)"):""}${sg.ai&&sg.ai.pic&&!sg.ai.bad?picMark():""}</label>${rows}<div class="scriptline">${scriptSwitchHTML(id,sg)}</div>${selRowHTML(id)}</div>
+    <div class="field"><label>${t("Pinyin")}</label><textarea class="grow" id="spin-${id}" rows="1" data-spin="${id}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">${esc(sg.pinEdit||"")}</textarea></div>
+    <div class="field"><label>${t("Meaning")}</label><textarea class="grow" id="smeanf-${id}" rows="1" data-smean="${id}">${esc(sg.meanEdit||"")}</textarea><div class="smean badge" id="smean-${id}" style="margin-top:4px"></div></div>
+    <div class="field"><label class="check"><input type="checkbox" data-sflag="${id}"${sg.flag?" checked":""}> ${t("⚑ Flag for review (text, pinyin or meaning looks wrong)")}</label>
+      <input data-snote="${id}" value="${esc(sg.flagNote||"")}" placeholder="${t("Note for the reviewer (optional)")}"${sg.flag?"":" hidden"}></div>
     ${tagsFieldHTML("stags-"+id,sg.tags)}
-    <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">Save card</button>${aiOn()&&!sg.ai&&!sg.aiBusy?`<button class="btn mini" data-signai="${id}">Ask AI</button>`:""}<button class="del" data-signcancel="${id}">Cancel</button></div>
+    <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" data-signsave="${id}">${t("Save card")}</button>${aiOn()&&!sg.ai&&!sg.aiBusy?`<button class="btn mini" data-signai="${id}">${t("Ask AI")}</button>`:""}<button class="del" data-signcancel="${id}">${t("Cancel")}</button></div>
     ${sg.aiErr?`<div class="err" style="margin-top:6px">${esc(aiErrText(sg.aiErr))}</div>`:""}</div>`;
 }
 /* recompute pinyin / meaning / gloss for the current lines without re-rendering (keeps input focus) */
@@ -3175,13 +3176,13 @@ function signPreview(id){
   if(pinF&&!sg.pinTouched){ pinF.value=good&&sg.ai.p?sg.ai.p:py; autoGrow(pinF); }
   if(meanF&&!sg.meanTouched){ meanF.value=good?(sg.ai.m||mean):mean; autoGrow(meanF); }
   const sm=$(`#smean-${id}`);
-  if(sm&&sg.aiBusy){ sm.className="smean badge"; sm.innerHTML=busyHTML(AI_BUSY_TEXT); } /* the bar under the meaning while the AI runs (v200) */
+  if(sm&&sg.aiBusy){ sm.className="smean badge"; sm.innerHTML=busyHTML(t(AI_BUSY_TEXT)); } /* the bar under the meaning while the AI runs (v200) */
   else if(sm){ sm.className="smean badge"+(good?" ai":sg.ai&&!sg.ai.kept?" bad":"");
     sm.textContent=good
     ?"" /* a good answer shows nothing: no "checked by the AI" (H, v104/v105), no remark of the model (v154, H: "don't show the OCR slip message to the user"), and since v174 not "Read from the picture by the AI." either (H: "not relevant to the user") — a picture answer shows a small mark on the Characters label instead (v176/v177) */
-    :sg.ai&&sg.ai.kept?`The AI suggested ${sg.ai.proposed.replace(/\n/g," / ")}, but ${sg.ai.kept} was read clearly, so the reading stays. Meaning ${full?"from the phrasebook":"composed word by word"}, unverified.`
-    :sg.ai?`This text looks misread${sg.ai.note?": "+sg.ai.note:""} — unverified`
-    :`Meaning ${full?"from the phrasebook":"composed word by word"}, unverified`; }
+    :sg.ai&&sg.ai.kept?t("The AI suggested {0}, but {1} was read clearly, so the reading stays. ",sg.ai.proposed.replace(/\n/g," / "),sg.ai.kept)+t("Meaning {0}, unverified",full?t("from the phrasebook"):t("composed word by word"))+"."
+    :sg.ai?t("This text looks misread{0} — unverified",sg.ai.note?": "+sg.ai.note:"")
+    :t("Meaning {0}, unverified",full?t("from the phrasebook"):t("composed word by word")); }
   /* the traditional form follows the text (the AI's "zht" when it matches, else the character table) unless edited by hand */
   if(sg.trad){
     if(!sg.tradTouched){ const zh=sg.lines.map(l=>l.trim()).filter(l=>CJK.test(l)).join("\n"), zht=good&&sg.ai.zht&&[...sg.ai.zht].length===[...zh].length?sg.ai.zht:s2t(zh); sg.tradText=zht; }
@@ -3210,7 +3211,7 @@ function aiSettled(sg,lines,zh){
   return "";
 }
 /* a small quiet mark on the Characters label when the AI read the text from the picture (v176; under the meaning at first, moved in v177 — H: "the icon belongs under the Chinese characters, not the translation") */
-const PIC_MARK=`<span class="picmark" title="Read from the picture by the AI"><svg viewBox="0 0 24 24" style="fill:var(--ok)"><path d="M12 2.5l2.3 6.2 6.2 2.3-6.2 2.3L12 19.5l-2.3-6.2-6.2-2.3 6.2-2.3z"/><path d="M19.5 15.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9z"/></svg>AI</span>`; /* the green AI capsule of the Cards list, with a sparkle (v180, H: "place the AI icon more sexy") */
+const picMark=()=>`<span class="picmark" title="${t("Read from the picture by the AI")}"><svg viewBox="0 0 24 24" style="fill:var(--ok)"><path d="M12 2.5l2.3 6.2 6.2 2.3-6.2 2.3L12 19.5l-2.3-6.2-6.2-2.3 6.2-2.3z"/><path d="M19.5 15.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9z"/></svg>AI</span>`; /* the green AI capsule of the Cards list, with a sparkle (v180, H: "place the AI icon more sexy") */
 async function signAskAI(id){
   const sg=SIGN[id]; if(!sg||sg.aiBusy) return;
   signPreview(id);
@@ -3225,7 +3226,7 @@ async function signAskAI(id){
     const kept=zh!==c?aiSettled(sg,lines,zh):"";
     if(kept){ sg.ai={zh:c,proposed:zh,kept,zht:"",p:"",m:"",note:r.note,ok:false,bad:false}; }
     else { sg.lines=zh.split("\n"); sg.ai={zh,zht:r.zht&&CJK.test(r.zht)?recutLines(r.zht.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"),lines):"",p:r.p,m:r.m,note:r.note,ok:r.ok,bad:!!r.bad};
-    if(r.bad&&!sg.flag){ sg.flag=true; sg.flagNote=sg.flagNote||"the reading looks wrong"; } } /* H's rule: when unsure, flag instead of inventing */
+    if(r.bad&&!sg.flag){ sg.flag=true; sg.flagNote=sg.flagNote||t("the reading looks wrong"); } } /* H's rule: when unsure, flag instead of inventing */
   }catch(err){ if(SIGN[id]) sg.aiErr=err&&err.message||String(err); } /* → signPreview falls back to the offline model */
   if(SIGN[id]){ delete sg.aiBusy; delete sg.aiPromise; }
   renderShots(); })();
@@ -3244,10 +3245,10 @@ async function signTranslate(id){
     const r=await signMeaning(lines,t=>{ const el=$(`#smean-${id}`); if(el) el.textContent=t; });
     if(sg.tok!==tok||!SIGN[id]) return;
     const box=$(`#smean-${id}`), mf=$(`#smeanf-${id}`);
-    if(box) box.textContent=`Meaning ${r.src==="nmt"?"from the offline translation":r.src==="phrasebook"?"from the phrasebook":"composed word by word"}, unverified`;
+    if(box) box.textContent=t("Meaning {0}, unverified",r.src==="nmt"?t("from the offline translation"):r.src==="phrasebook"?t("from the phrasebook"):t("composed word by word"));
     if(mf&&!sg.meanTouched&&r.m){ mf.value=r.m; autoGrow(mf); }
     sg.nmt={lines:lines.join("\n"),m:r.m,src:r.src,pending:r.pending}; /* Save reuses it for the same lines (v194, H: the Save button read "Translating …" — the model ran a second time) */
-  }catch(err){ if(sm) sm.textContent="Offline translation failed, meaning composed word by word"; }
+  }catch(err){ if(sm) sm.textContent=t("Offline translation failed, meaning composed word by word"); }
 }
 /* the card from a reading — text, pinyin, meaning, source — without the document (the background finish uses it too, v237) */
 async function readingCard(id,sg){
@@ -3264,7 +3265,7 @@ async function readingCard(id,sg){
   else if(!meanHand && !sg.full && nmtOn() && !(aiLive()&&!sg.aiErr)){ /* no connection (or AI failed): offline model */
     const done=sg.nmt&&sg.nmt.lines===keep.map(x=>x.l).join("\n")?sg.nmt:null; /* the preview's translation of these very lines */
     if(done){ mean=done.m||mean; mt={src:done.src,verified:false,pending:done.pending}; }
-    else { const btn=document.querySelector(`[data-signsave="${id}"]`); if(btn){ btn.disabled=true; btn.textContent="Translating …"; }
+    else { const btn=document.querySelector(`[data-signsave="${id}"]`); if(btn){ btn.disabled=true; btn.textContent=t("Translating …"); }
       try{ const r=await signMeaning(keep.map(x=>x.l)); mean=r.m||mean; mt={src:r.src,verified:false,pending:r.pending}; }catch(e){} }
   }
   /* doubtful OCR: low confidence on a line H did not correct, or words the dictionary does not know */
@@ -3289,7 +3290,7 @@ async function saveSign(id){
   if(sg.aiPromise){ const b=document.querySelector(`[data-signsave="${id}"]`); if(b){ b.disabled=true; b.textContent="Checking …"; } await sg.aiPromise; if(!SIGN[id]) return; }
   const built=await readingCard(id,sg); if(!built) return;
   const {card,c,mt}=built;
-  if(deck().some(d=>d.c===c&&d.shot===id)){ sg.aiErr="This text is already saved from this photo."; renderShots(); return; } /* the same text from another photo is a new card (H, v118) */
+  if(deck().some(d=>d.c===c&&d.shot===id)){ sg.aiErr=t("This text is already saved from this photo."); renderShots(); return; } /* the same text from another photo is a new card (H, v118) */
   const pic=sg.cardImg||S.pendingImg; if(pic) card.img=await jpegOf(pic);
   if(S.pendingFull&&!S.inbox.some(x=>x.id===id)) card.imgFull=S.pendingFull; /* the whole photo stays in the inbox, not twice (v214) */
   S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; /* used up — the Add form once showed the last photo's crop on a card made from scratch (v188) */
@@ -3298,15 +3299,15 @@ async function saveSign(id){
   try{ await idbPut("custom",card); }catch(e){}
   S.queue=buildQueue(false); QSCARD[id]=card.id;
   delete SIGN[id]; if(CROP&&CROP.id===id) CROP=null; /* saved — the frame has done its job */
-  QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}.`+(mt.pending?" Translation pending.":"")+(card.flag?" Flagged for review.":""); /* no word about sources or the AI (H, v105) */
+  QSNOTE[id]=t("Card saved — {0}.",esc(c.replace(/\n/g," / ")))+(mt.pending?t(" Translation pending."):"")+(card.flag?t(" Flagged for review."):""); /* no word about sources or the AI (H, v105) */
   aiAutoSoon();
   setStats(); renderShots();
 }
 /* ---------- Kamera / Inbox ---------- */
 function renderInbox(main){
   main.innerHTML=`<div class="pane">
-    <div class="lead">Photos stay on this phone. Frame the text — the card is made for you.</div>
-    <div class="snaprow"><button class="btn primary" id="snap">Take photo</button><button class="btn" id="pick">From album</button></div>
+    <div class="lead">${t("Photos stay on this phone. Frame the text — the card is made for you.")}</div>
+    <div class="snaprow"><button class="btn primary" id="snap">${t("Take photo")}</button><button class="btn" id="pick">${t("From album")}</button></div>
     <div id="shots"></div>
   </div>`;
   $("#snap").onclick=()=>$("#cam").click();
@@ -3318,22 +3319,22 @@ function shotURL(s){ return IMGURL[s.id]||(IMGURL[s.id]=URL.createObjectURL(s.bl
 function renderShots(){
   if(CROP&&RECROP[CROP.id]){ RECROP[CROP.id].redraw(); return; } /* the Edit form's Crop again draws its own frame view (v239) */
   const box=$("#shots"); if(!box) return;
-  const pending=PENDING_SHOT?`<div class="shot pending"><div class="badge">Processing photo …</div></div>`:"";
-  if(!S.inbox.length){ box.innerHTML=pending||`<div class="badge" style="margin-top:18px">No photos yet.</div>`; return; }
-  box.innerHTML=`<div class="listhead">Inbox (${S.inbox.length})</div>`+pending+
+  const pending=PENDING_SHOT?`<div class="shot pending"><div class="badge">${t("Processing photo …")}</div></div>`:"";
+  if(!S.inbox.length){ box.innerHTML=pending||`<div class="badge" style="margin-top:18px">${t("No photos yet.")}</div>`; return; }
+  box.innerHTML=`<div class="listhead">${t("Inbox ({0})",S.inbox.length)}</div>`+pending+
     S.inbox.map(s=>{
-      const dt=new Date(s.ts).toLocaleString("en-GB");
+      const dt=new Date(s.ts).toLocaleString(LANG_LOCALE[LANG]);
       const cropping=CROP && CROP.id===s.id, zoomed=!!(cropping&&CROP.rect&&CROP.zoom);
       return `<div class="shot">
         <div class="shotwrap">
           ${zoomed?`<div class="shotzoom" style="${zoomStyle(s)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(s)}" alt="photo">`}
-          ${cropping?`<div class="croplayer${CROP.rect?" framed":""}${zoomed?" zoomed":""}" data-id="${s.id}">${zoomed?"":`<div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="Turn the frame"></div></div>`}</div>`:""}
+          ${cropping?`<div class="croplayer${CROP.rect?" framed":""}${zoomed?" zoomed":""}" data-id="${s.id}">${zoomed?"":`<div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="${t("Turn the frame")}"></div></div>`}</div>`:""}
         </div>
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
-          ?`<button class="del" data-cropcancel="${s.id}">Cancel</button>`
-          :`${PENDING[s.id]?"":`<button class="ocr-btn" data-crop="${s.id}">Crop</button>`}<button class="del" data-del="${s.id}">Delete</button>`}</span></div>
+          ?`<button class="del" data-cropcancel="${s.id}">${t("Cancel")}</button>`
+          :`${PENDING[s.id]?"":`<button class="ocr-btn" data-crop="${s.id}">${t("Crop")}</button>`}<button class="del" data-del="${s.id}">${t("Delete")}</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${PENDING[s.id]?readingHTML(READING[s.id]||AI_BUSY_TEXT,s.id):SIGN[s.id]?signEditorHTML(s.id):READING[s.id]?readingHTML(READING[s.id],s.id):cropping
-          ?CROP.auto?busyHTML("Finding the text …"):`<span class="badge">Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.</span>`
+          ?CROP.auto?busyHTML(t("Finding the text …")):`<span class="badge">${t("Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.")}</span>`
           :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
     }).join("");
