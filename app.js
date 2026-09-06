@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=269; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=270; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -843,7 +843,7 @@ function askSheet(o){ return new Promise(res=>{
   const cancel=el.querySelector("#ask-cancel"); if(o.cancel===false) cancel.remove(); else cancel.onclick=()=>done(false); el.querySelector("#ask-ok").onclick=()=>done(true);
   document.addEventListener("keydown",onKey); document.body.appendChild(el); (o.cancel===false?el.querySelector("#ask-ok"):cancel).focus();
 }); }
-/* a plain notice as the app's own sheet (v266, idea 4 — the twelve browser alerts said "henglicam.github.io says"): one line, or a title
+/* a plain notice as the app's own sheet (v266, from the improvement list — the twelve browser alerts said "henglicam.github.io says"): one line, or a title
    with a sentence, and OK; the backdrop and Escape close it too */
 const noteSheet=(title,text)=>askSheet({title,text,ok:t("OK"),danger:false,cancel:false});
 const inWeChat=()=>/MicroMessenger/i.test(navigator.userAgent);
@@ -1831,13 +1831,16 @@ async function cardImage(d){
   ctx.fillStyle="#FFFFFF"; ctx.fillRect(0,0,SHARE_W,H);
   let y=SHARE_PAD;
   if(bmp){ /* the front's photo box: the crop fitted on the grey surface, a blurred copy behind it in the photo's colours (v224–v234) */
-    ctx.save(); ctx.beginPath(); ctx.roundRect(SHARE_PAD,y,inner,picH,36); ctx.clip();
+    const rr=(x,y2,w,h,r)=>{ ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(x,y2,w,h,r); else ctx.rect(x,y2,w,h); }; /* an old WebKit without roundRect gets square corners */
+    ctx.save(); rr(SHARE_PAD,y,inner,picH,36); ctx.clip();
     ctx.fillStyle="#F2F2F7"; ctx.fillRect(SHARE_PAD,y,inner,picH);
-    const cover=Math.max(inner/bmp.width,picH/bmp.height)*1.2, cw=bmp.width*cover, ch=bmp.height*cover;
-    ctx.filter="blur(60px) saturate(55%) brightness(85%)"; ctx.globalAlpha=.55; ctx.drawImage(bmp,SHARE_PAD+(inner-cw)/2,y+(picH-ch)/2,cw,ch); ctx.filter="none"; ctx.globalAlpha=1;
+    if("filter" in ctx){ /* Safari's canvas has no filter — there the crop sits on the plain grey, an unblurred copy behind it would look wrong */
+      const cover=Math.max(inner/bmp.width,picH/bmp.height)*1.2, cw=bmp.width*cover, ch=bmp.height*cover;
+      ctx.filter="blur(60px) saturate(55%) brightness(85%)"; ctx.globalAlpha=.55; ctx.drawImage(bmp,SHARE_PAD+(inner-cw)/2,y+(picH-ch)/2,cw,ch); ctx.filter="none"; ctx.globalAlpha=1;
+    }
     const fit=Math.min(inner/bmp.width,picH/bmp.height), fw=bmp.width*fit, fh=bmp.height*fit;
     ctx.drawImage(bmp,SHARE_PAD+(inner-fw)/2,y+(picH-fh)/2,fw,fh); ctx.restore();
-    ctx.strokeStyle="rgba(60,60,67,.29)"; ctx.lineWidth=2; ctx.beginPath(); ctx.roundRect(SHARE_PAD+1,y+1,inner-2,picH-2,35); ctx.stroke();
+    ctx.strokeStyle="rgba(60,60,67,.29)"; ctx.lineWidth=2; rr(SHARE_PAD+1,y+1,inner-2,picH-2,35); ctx.stroke();
     bmp.close(); y+=picH+56;
   }
   ctx.textAlign="center"; ctx.textBaseline="alphabetic"; ctx.fillStyle="#000000"; ctx.font=`${fs}px ${hanzi}`;
