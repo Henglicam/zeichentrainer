@@ -24,7 +24,7 @@ body{background:var(--bg);color:var(--label);font-family:var(--sans);font-size:1
 button{font:inherit;color:inherit}
 /* the browser's own touch behaviours kept off the app (v249, H after the image menu of v248: "Find all such useless behaviours and remove them"): no long-press image menu, drag ghost or selection on any picture or canvas; no selection toolbar on buttons, tabs, chips, strips, tiles, the picker, the drawing sheet and the crop layer; no double-tap zoom anywhere (touch-action on body, the crop layer and the pad keep their own stricter values); the callout is Safari's, for the iPhone */
 img,canvas{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-user-select:none}
-button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.drawsheet,.croplayer,.croprect,.reticle,.picbox,.thumbbox,.shotzoom,.linked{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.drawsheet,.croplayer,.croprect,.reticle,.picbox,.thumbbox,.shotzoom,.linked,.badge,label,.topline,.mrow .t,.field>label{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none} /* the badges and the forms' labels too since v272 — a long press on the Edit badge opened the phone's dictionary card for "edit" (H) */
 :focus-visible{outline:2px solid var(--tint);outline-offset:2px}
 #app{min-height:100%;display:flex;flex-direction:column}
 
@@ -259,6 +259,7 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 .ckacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px} .ckacts .grow{flex:1}
 .ckacts.ckadd{gap:4px} .ckadd .del{padding:6px 3px;font-size:14px;min-height:36px} .ckadd .badge{margin-right:2px}
 .ckhint{margin:2px 0 8px}
+.ckrow{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:flex-end;gap:6px 10px;margin:2px 0 8px} .ckrow .ckhint{margin:0;flex:1 1 210px} .ckrow .selrow{margin:0 0 0 auto;flex:none} /* Select fits beside the hint; Remove and Done, wider, drop under it, right-aligned */ /* the hint with Select (or Remove and Done) at its right, under the strip (v272) */
 .reading{display:flex;flex-direction:column;gap:8px;padding:4px 0}
 .diag{font-family:var(--mono);font-size:12px;line-height:1.4;white-space:pre-wrap;word-break:break-word;background:var(--card);color:var(--label2);border-radius:var(--rc);padding:12px 14px;margin:0 0 10px;max-height:50vh;overflow:auto}
 .reading .readrow{display:flex;align-items:center;justify-content:space-between;gap:10px} /* the reading's text with Save now at the right (v237) */
