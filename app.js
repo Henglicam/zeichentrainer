@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=275; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=276; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -789,12 +789,17 @@ function usageText(){ /* laid out in short blocks with plain labels since v252 (
   const ua=navigator.userAgent, dev=(ua.match(/\(([^)]*)\)/)||[])[1]||"";
   const kv=(k,v)=>`  ${k} ${v}`;
   const work=workLines(u.models), workM=workLines(m.models);
-  return [`识字 Zeichentrainer — usage report, ${day(Date.now())}`,
+  const pg=progressData(), active=pg.dots.filter(x=>x.n).length, month=pg.dots.reduce((a,x)=>a+x.n,0); /* the dashboard's figures first, in its order (v276, H: "Und beim Sharen bitte genauso") */
+  return [`识字 Zeichentrainer — usage report, ${day(Date.now())}`,"",
+    "Progress",
+    kv("day streak",pg.streak), kv("cards learned",`${pg.learned} of ${deck().length}`), kv("due today",pg.dueToday), kv("reviews this week",pg.week),
+    kv("last 30 days:",`reviewed on ${nOf(active,"day")}, ${nOf(month,"review")}`),
+    kv("deck:",`${pg.nw} new, ${pg.learning} still learning, ${pg.known} known`),
+    kv("coming up:",`${pg.dueTomorrow} due tomorrow, ${pg.dueWeek} this week`),"",
     kv("app version",APP_V), kv("first used",day(u.first)), kv("device",dev), kv("installed on the home screen:",isInstalled()?"yes":"no"),"",
     "Learning",
     kv("days used",`${(S.settings.days||[]).length} (streak ${nOf(st.streak,"day")})`),
     kv("app opened",`${nOf(n("opens"),"time")} (${mn("opens")} this month)`),
-    kv("cards learned",`${st.total} of ${deck().length}`),
     kv("cards reviewed",`${n("reviews")} (${mn("reviews")} this month)`),"",
     "Cards",
     kv("from photos",`${n("byPhoto")} (${mn("byPhoto")} this month)`),
