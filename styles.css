@@ -179,7 +179,7 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 .cs{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
 .st{font-size:12px;font-weight:500;color:var(--label2)} .st.due{color:var(--tint)}
 .detailacts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
-.detailacts .primary,.detailacts .danger{grid-column:1/-1} .detailacts .btn{font-size:15px;padding:12px 8px;white-space:nowrap}
+.detailacts .primary{grid-column:1/-1} .detailacts .btn{font-size:15px;padding:12px 8px;white-space:nowrap}
 .pill{font-size:11px;font-weight:600;border-radius:999px;padding:2px 8px;color:var(--label2);background:var(--card2);margin-left:6px;vertical-align:middle;white-space:nowrap;display:inline-block}
 .pill.flagged{color:var(--tint);background:var(--tint-soft)}
 .pill.ai{color:var(--ok);background:var(--ok-soft)}
