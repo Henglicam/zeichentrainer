@@ -63,7 +63,7 @@ button{font:inherit;color:inherit}
 .tags span{padding:3px 10px;border-radius:999px;background:var(--card2);color:var(--label2)}
 .tags .n{color:var(--tint);background:var(--tint-soft)} .tags .r{color:var(--ok);background:var(--ok-soft)}
 .tags .f{color:var(--tint);background:var(--tint-soft)}
-.reticle{position:relative;width:260px;height:260px;max-width:100%;margin:0 auto;background:var(--card2);border-radius:var(--rc);overflow:hidden}
+.reticle{position:relative;width:100%;height:150px;max-width:100%;margin:0 auto;background:var(--card2);border-radius:var(--rc);overflow:hidden} /* the size comes inline from frontBox (the wide box, FRONT_H per photo line); the 260 px square default of v82–v222 went in v233 */
 .reticle svg{position:absolute;inset:0}
 .reticle .glyph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   font-family:var(--hanzi);line-height:1.15;color:var(--label);user-select:none;white-space:nowrap;text-align:center;
@@ -282,7 +282,7 @@ body.noscroll{overflow:hidden}
 .picbox{position:relative;width:100%;aspect-ratio:16/9;background:var(--card2);border-radius:var(--rc);margin:0 auto 10px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--sep)}
 .picbox .picbg{position:absolute;left:-10%;top:-10%;width:120%;height:120%;object-fit:cover;filter:blur(24px) brightness(.65);pointer-events:none}
 .picbox .signimg{position:relative;width:100%;height:100%;object-fit:contain;margin:0;max-height:none;border-radius:0}
-.signimg{max-width:100%;max-height:220px;display:block;margin:0 auto 10px;border-radius:10px}
+.signimg{max-width:100%;max-height:220px;display:block;margin:0 auto 10px;border-radius:10px} /* outside the box only the whole-photo view (.full) is left, in the photo's own shape */
 .signimg.full{max-height:420px}
 .signtext{position:relative;font-family:var(--hanzi);line-height:1.3;color:var(--label);padding:16px 14px;white-space:nowrap;background:var(--card2);border-radius:var(--r);text-align:center}
 
