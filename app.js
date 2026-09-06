@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=251; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=252; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -184,7 +184,7 @@ async function sendFeedback(text){
 }
 function feedbackText(rows){ /* laid out like the All users report since v251 (H: "Same for feedback"): a head with the count, one block per message with a blank line between, the sender's id under the time */
   const day=t=>String(t||"").replace("T"," ").slice(0,16);
-  const blocks=rows.map(r=>`${day(r.created_at)}, v${r.version||"?"}\n  from ${r.install||"?"}\n  ${String(r.text||"").replace(/\s*\n\s*/g,"\n  ")}`);
+  const blocks=rows.map(r=>`${day(r.created_at)}, app version ${r.version||"?"}\n  from phone ${r.install||"?"}\n  ${String(r.text||"").replace(/\s*\n\s*/g,"\n  ")}`);
   return [`识字 Zeichentrainer — feedback, ${day(new Date().toISOString()).slice(0,10)}`,`  messages ${String(rows.length).padStart(4)}  (newest first, up to 500)`,""].concat(blocks.length?blocks.join("\n\n"):"No messages yet.").join("\n")+"\n";
 }
 async function shareFeedback(){
@@ -209,27 +209,30 @@ function allUsersText(rows){
     for(const k of ["cards","reviews","aiCalls","pics","byPhoto","byHand"]) add(tot,k,n(d,k));
     for(const [m,v] of Object.entries(d.models||{})) add(models,m,+v||0); add(tot,"relay",n(r,"relay_today")); }
   users.sort((a,b)=>n(b.data,"cards")-n(a.data,"cards")); tried.sort((a,b)=>n(b,"relay_today")-n(a,"relay_today"));
-  const row=(k,v,w)=>`  ${k.padEnd(w)}${String(v).padStart(4)}`, kv=(k,v)=>`  ${k.padEnd(12)}${v}`;
+  const row=(k,v)=>`  ${k.padEnd(30)}${String(v).padStart(4)}`, sub=(k,v)=>row("  "+k,v); /* one figure per line, the numbers in one column — the box holds 40 characters at 390 px */
   const head=[`识字 Zeichentrainer — all users, ${day(new Date().toISOString())}`,"",
-    `Installs ${rows.length}`,"  (one per browser storage, not per person)",
-    row("with cards",users.length,27), row("read a photo, no card yet",tried.length,27), row("only opened the page",lookers.length,27),
-    wx?row("in WeChat's browser",wx,27):null, row("installed on a home screen",installed,27), row("reported in the last 7 days",active,27),
-    "","Totals",
-    kv("cards",`${tot.cards||0} (${tot.byPhoto||0} by photo, ${tot.byHand||0} by hand)`), kv("reviews",tot.reviews||0), kv("AI calls",`${tot.aiCalls||0} (${tot.pics||0} pictures)`),
-    kv("relay today",tot.relay||0)].concat(Object.entries(models).length?Object.entries(models).map(([m,v],i)=>kv(i?"":"analyses",`${m==="reader"?"on-device reader":m} ${v}`)):[kv("analyses","none")]).concat([""]).filter(x=>x!==null); /* one analysis per line, so nothing wraps on the phone */
-  const block=r=>{ const d=r.data||{}, reader=n(d.models,"reader"), cards=n(d,"cards"); return [d.install||"?",
-    `  v${d.version||"?"}, ${d.installed?"installed":"browser"}${d.device?", "+d.device:""}`,
-    cards?`  cards ${cards} (${n(d,"byPhoto")} by photo, ${n(d,"byHand")} by hand)`:null,
-    `  reviews ${n(d,"reviews")}, days ${n(d,"days")}, opens ${n(d,"opens")}`,
-    `  AI ${n(d,"aiCalls")} calls, ${n(d,"pics")} pictures`,
-    reader?`  readings ${reader}, weak ${n(d,"pics")}`:null,
-    `  relay today ${n(r,"relay_today")}`,
-    `  first ${d.first||"?"}, last ${day(r.created_at)}`].filter(Boolean).join("\n"); };
+    `Phones ${rows.length}`,"  (one line per browser — a phone that","  opened the link in WeChat and Chrome","  is counted twice)",
+    row("made cards",users.length), row("read a photo, saved no card",tried.length), row("only opened the app",lookers.length),
+    wx?row("opened it inside WeChat",wx):null, row("installed on the home screen",installed), row("used in the last 7 days",active),
+    "","All phones together",
+    row("cards",tot.cards||0), sub("from photos",tot.byPhoto||0), sub("typed by hand",tot.byHand||0), row("cards reviewed",tot.reviews||0),
+    row("AI checks",tot.aiCalls||0), sub("with the photo",tot.pics||0), sub("via the owner's key today",tot.relay||0),
+    "  work done by"].concat(Object.entries(models).length?Object.entries(models).map(([m,v])=>sub(m==="reader"?"on-device reader, readings":m+", checks",v)):[sub("none yet","")]).concat([""]).filter(x=>x!==null);
+  const block=r=>{ const d=r.data||{}, reader=n(d.models,"reader"), cards=n(d,"cards"); return [`Phone ${d.install||"?"}`,
+    `  app version ${d.version||"?"}`, `  ${d.installed?"installed on the home screen":"used in the browser"}`,
+    d.device?`  device ${d.device}`:null,
+    cards?`  cards ${cards} (${n(d,"byPhoto")} from photos, ${n(d,"byHand")} typed)`:null,
+    `  cards reviewed ${n(d,"reviews")}`,
+    `  days used ${n(d,"days")}, app opened ${nOf(n(d,"opens"),"time")}`,
+    `  AI checks ${n(d,"aiCalls")}, ${n(d,"pics")} with the photo`,
+    reader?`  photos read ${reader}, ${n(d,"pics")} of them poorly`:null,
+    `  checks via the owner's key today ${n(r,"relay_today")}`,
+    `  first used ${d.first||"?"}`, `  last report ${day(r.created_at)}`].filter(Boolean).join("\n"); };
   const section=(title,list)=>list.length?[`${title} (${list.length})`,""].concat(list.map(block).join("\n\n")).concat([""]):[];
-  const lines=section("Users with cards",users).concat(section("Read a photo, no card yet",tried));
+  const lines=section("Phones with cards",users).concat(section("Read a photo, saved no card",tried));
   if(lookers.length){ const plat=d=>{ const v=d.device||""; return /iPhone|iPad/.test(v)?"iPhone":/Android/.test(v)?"Android":/Windows/.test(v)?"Windows":/Mac/.test(v)?"Mac":/Linux|X11/.test(v)?"Linux":"other"; };
     const by={}; let lwx=0; for(const r of lookers){ const d=r.data||{}; add(by,plat(d),1); if(/WeChat/.test(d.device||"")) lwx++; }
-    lines.push(`Only opened the page (${lookers.length})`,`  ${Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${v} ${k}`).join(", ")}${lwx?` (${lwx} in WeChat)`:""}`); }
+    lines.push(`Only opened the app (${lookers.length})`,`  ${Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${v} ${k}`).join(", ")}${lwx?` (${lwx} in WeChat)`:""}`); }
   return head.concat(lines.length?lines:["No rows yet."]).join("\n")+"\n";
 }
 async function shareUsers(){
@@ -726,20 +729,31 @@ function bump(key,n){ n=n||1; if(key==="byPhoto"||key==="byHand"||key==="deleted
    count the on-device reader ("reader", one per reading) and every AI model by name, all time and this month */
 function bumpModel(name){ const u=usage(); u.models=u.models||{}; u.m.models=u.m.models||{}; u.models[name]=(u.models[name]||0)+1; u.m.models[name]=(u.m.models[name]||0)+1; S.settings.usage=u; clearTimeout(_usageTimer); _usageTimer=setTimeout(()=>{ setSetting("usage",u).catch(()=>{}); },500); }
 const modelsText=o=>{ const e=Object.entries(o||{}); return e.length?e.map(([k,v])=>`${k==="reader"?"on-device reader":k} ${v}`).join(", "):"none"; };
+const workLines=o=>{ const e=Object.entries(o||{}); return e.length?e.map(([k,v])=>k==="reader"?`on-device reader ${nOf(v,"reading")}`:`${k} ${nOf(v,"check")}`):["none yet"]; }; /* "work done by": who read and checked, with a unit each (v252, H: "Make all labels easy to understand") */
 function countTokens(pv,data){ const g=(data&&data.usage)||{}; const i=pv==="claude"?g.input_tokens:g.prompt_tokens, o=pv==="claude"?g.output_tokens:g.completion_tokens; bump("aiCalls"); if(i) bump("aiIn",+i); if(o) bump("aiOut",+o); }
-function usageText(){
+function usageText(){ /* laid out in short blocks with plain labels since v252 (H: "Make all labels easy to understand") */
   const u=usage(), m=u.m||{}, st=learnStats(), n=k=>u[k]||0, mn=k=>m[k]||0, day=t=>new Date(t).toISOString().slice(0,10);
   const ua=navigator.userAgent, dev=(ua.match(/\(([^)]*)\)/)||[])[1]||"";
+  const kv=(k,v)=>`  ${k} ${v}`;
+  const work=workLines(u.models), workM=workLines(m.models);
   return [`识字 Zeichentrainer — usage report, ${day(Date.now())}`,
-    `App v${APP_V} · first used ${day(u.first)} · ${dev}`,
-    `Days used: ${(S.settings.days||[]).length} (streak ${st.streak}) · app opened ${n("opens")} times, ${mn("opens")} this month`,
-    `Reviews: ${n("reviews")} (${mn("reviews")} this month) · cards learned: ${st.total} of ${deck().length}`,
-    `Cards created: ${n("byPhoto")} by photo, ${n("byHand")} by hand (this month ${mn("byPhoto")} and ${mn("byHand")}) · deleted ${n("deleted")}`,
-    `AI: ${n("aiCalls")} calls, ${n("aiIn")} input + ${n("aiOut")} output tokens (this month ${mn("aiCalls")} calls, ${mn("aiIn")} + ${mn("aiOut")} tokens) · ${aiOn()?AI_PROVIDERS[aiProvider()].name+", "+aiModel():"AI not set up"}`,
-    `Pictures read by the AI: ${n("pics")} (${mn("pics")} this month)`,
-    `Analyses by model: ${modelsText(u.models)} (this month ${modelsText(m.models)})`,
-    `Installed on the home screen: ${isInstalled()?"yes":"no"}`,
-    `Photos in the inbox: ${S.inbox.length} · tags: ${allTags().length}`].join("\n")+"\n";
+    kv("app version",APP_V), kv("first used",day(u.first)), kv("device",dev), kv("installed on the home screen:",isInstalled()?"yes":"no"),"",
+    "Learning",
+    kv("days used",`${(S.settings.days||[]).length} (streak ${nOf(st.streak,"day")})`),
+    kv("app opened",`${nOf(n("opens"),"time")} (${mn("opens")} this month)`),
+    kv("cards learned",`${st.total} of ${deck().length}`),
+    kv("cards reviewed",`${n("reviews")} (${mn("reviews")} this month)`),"",
+    "Cards",
+    kv("from photos",`${n("byPhoto")} (${mn("byPhoto")} this month)`),
+    kv("typed by hand",`${n("byHand")} (${mn("byHand")} this month)`),
+    kv("deleted",n("deleted")),
+    kv("photos waiting in the inbox",S.inbox.length), kv("tags",allTags().length),"",
+    "AI",
+    kv("set up:",aiOn()?AI_PROVIDERS[aiProvider()].name+", "+aiModel():"no"),
+    kv("checks",`${n("aiCalls")} (${mn("aiCalls")} this month)`),
+    kv("photos checked by the AI",`${n("pics")} (${mn("pics")} this month)`),
+    kv("tokens sent and received",`${n("aiIn")} + ${n("aiOut")} (this month ${mn("aiIn")} + ${mn("aiOut")})`),
+    kv("work done by",work[0])].concat(work.slice(1).map(l=>`               ${l}`)).concat([kv("this month",workM[0])]).concat(workM.slice(1).map(l=>`             ${l}`)).join("\n")+"\n";
 }
 /* Share the app (v210, H: "add a share app function", described first and built on "Go"; v211: the first row of More, and the
    text names no browser — it installs from Safari, Chrome, Edge, Samsung Internet alike): the link with a one-line text
@@ -910,8 +924,8 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div></div><button class="btn mini" id="mirror-check">Check now</button></div>
     <div class="field"><label>Mirror address (a copy of the app reachable in China)</label><input id="mirror-url" class="mono" autocomplete="off" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"></div>`:""}
     <div class="listhead">On this phone</div>
-    <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}. Opened ${nOf(usage().opens,"time")}, ${nOf(usage().reviews,"review")}, ${nOf(usage().aiCalls,"AI call")}, ${nOf(usage().pics,"picture")} read by the AI. Analyses: ${modelsText(usage().models)}.</div></div><button class="btn mini" id="usage-share">Share report</button></div>
-    <div class="mrow"><div><div class="t">Usage sharing</div><div class="s">Sends anonymous usage counts to the app's owner once a day: days used, reviews, cards, AI calls. No card text, no photos. <span id="share-status">${esc(shareNote())}</span> Your id: <span id="share-id">${esc(installId())}</span>.<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> Send once a day</label></div></div></div>
+    <div class="mrow"><div><div class="t">Progress</div><div class="s">${statsLine()}. App opened ${nOf(usage().opens,"time")}, ${nOf(usage().reviews,"card")} reviewed, ${nOf(usage().aiCalls,"AI check")}, ${nOf(usage().pics,"photo")} checked by the AI. Work done by ${workLines(usage().models).join(", ")}.</div></div><button class="btn mini" id="usage-share">Share report</button></div>
+    <div class="mrow"><div><div class="t">Usage sharing</div><div class="s">Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks. No card text, no photos. <span id="share-status">${esc(shareNote())}</span> Your id: <span id="share-id">${esc(installId())}</span>.<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> Send once a day</label></div></div></div>
     <div class="mrow"><div><div class="t">Photos</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">Delete ${oldShots().length}</button>`:""}</div>
     ${S.admin?`<div class="listhead">Diagnostics</div>
     <div class="mrow"><div><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${READLOG.length} step${READLOG.length===1?"":"s"}.</div></div><span class="btnrow"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button></span></div>
