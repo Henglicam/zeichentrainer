@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=268; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=269; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1530,7 +1530,8 @@ function renderCardDetail(main,c){
       ${d.c?`<button class="btn primary" id="d-test">${t("Test this card")}</button>`:""}
       <button class="btn" id="d-edit">${t("Edit")}</button>
       <button class="btn${d.flag?" on":""}" id="d-flag">${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}</button>
-      <button class="btn danger" id="d-del">${t("Delete card")}</button>
+      ${d.c?`<button class="btn" id="d-share">${t("Share")}</button>`:""}
+      <button class="btn danger" id="d-del"${d.c?"":' style="grid-column:1/-1"'}>${t("Delete card")}</button>
     </div>
     <div class="badge" style="margin-top:14px">${esc(stat)}</div>
   </div>`;
@@ -1544,6 +1545,7 @@ function renderCardDetail(main,c){
   };
   $("#d-edit").onclick=()=>{ S.editing=c; render(); };
   $("#d-flag").onclick=async()=>{ await setFlag(c,!d.flag); render(); };
+  const sh=$("#d-share"); if(sh) sh.onclick=()=>shareCard(c); /* one image through the share sheet (v269) */
   wireSay(); wireChars(d); wireLinks();
   wireAi();
   const del=$("#d-del"); if(del) del.onclick=async()=>{ await delCustom(c); S.detail=null; render(); }; /* at once, with Undo (v268) */
@@ -1801,6 +1803,60 @@ async function addManual(){
   S.draft=null;
   ok.textContent=t("“{0}” added.",word); ok.style.display="";
   bump("byHand"); setStats();
+}
+/* Share a card (v269, idea 5 of the improvement list): one image — the crop in the front's box with the blurred fill behind it,
+   the characters as on the front (the traditional form when the card has one, the photo's lines), pinyin, meaning and the app's
+   name — drawn on a canvas at 1080 px, always in the light look, and handed to the share sheet as a PNG (Android shares images;
+   nothing is written to the phone, hard constraint 6). Without a share sheet the notice says so. */
+const SHARE_W=1080, SHARE_PAD=72;
+function wrapText(ctx,text,maxW){
+  const out=[]; for(const para of String(text).split("\n")){ let line="";
+    const push=w=>{ if(!line){ line=w; return; } const tryL=line+(/^[\u3000-\u9fff]/.test(w)&&/[\u3000-\u9fff]$/.test(line)?"":" ")+w; if(ctx.measureText(tryL).width<=maxW) line=tryL; else { out.push(line); line=w; } };
+    for(const w of para.split(" ")){ if(ctx.measureText(w).width<=maxW) push(w); else for(const ch of [...w]) push(ch); } /* a word wider than the line (a Japanese meaning) breaks by character */
+    out.push(line); }
+  return out;
+}
+async function cardImage(d){
+  const cv=document.createElement("canvas"), ctx=cv.getContext("2d"), inner=SHARE_W-2*SHARE_PAD;
+  const hanzi=getComputedStyle(document.documentElement).getPropertyValue("--hanzi")||"serif", sans=getComputedStyle(document.documentElement).getPropertyValue("--sans")||"sans-serif";
+  const lines=(d.trad||(d.kind==="sign"?d.c:frontLines(d).join("\n"))).split("\n").filter(Boolean);
+  let fs=200; ctx.font=`${fs}px ${hanzi}`; const widest=Math.max(...lines.map(l=>ctx.measureText(l).width));
+  if(widest>inner) fs=Math.max(56,Math.floor(fs*inner/widest));
+  const lineH=Math.round(fs*1.2), textH=lines.length*lineH;
+  ctx.font=`600 56px ${sans}`; const pin=d.p?wrapText(ctx,d.p,inner):[];
+  ctx.font=`52px ${sans}`; const mean=d.m?wrapText(ctx,d.m,inner):[];
+  const bmp=d.img?await createImageBitmap(d.img):null, picH=bmp?Math.round(inner*9/16):0;
+  const H=SHARE_PAD+(bmp?picH+56:0)+textH+(pin.length?24+pin.length*72:0)+(mean.length?16+mean.length*68:0)+56+40+SHARE_PAD;
+  cv.width=SHARE_W; cv.height=H;
+  ctx.fillStyle="#FFFFFF"; ctx.fillRect(0,0,SHARE_W,H);
+  let y=SHARE_PAD;
+  if(bmp){ /* the front's photo box: the crop fitted on the grey surface, a blurred copy behind it in the photo's colours (v224–v234) */
+    ctx.save(); ctx.beginPath(); ctx.roundRect(SHARE_PAD,y,inner,picH,36); ctx.clip();
+    ctx.fillStyle="#F2F2F7"; ctx.fillRect(SHARE_PAD,y,inner,picH);
+    const cover=Math.max(inner/bmp.width,picH/bmp.height)*1.2, cw=bmp.width*cover, ch=bmp.height*cover;
+    ctx.filter="blur(60px) saturate(55%) brightness(85%)"; ctx.globalAlpha=.55; ctx.drawImage(bmp,SHARE_PAD+(inner-cw)/2,y+(picH-ch)/2,cw,ch); ctx.filter="none"; ctx.globalAlpha=1;
+    const fit=Math.min(inner/bmp.width,picH/bmp.height), fw=bmp.width*fit, fh=bmp.height*fit;
+    ctx.drawImage(bmp,SHARE_PAD+(inner-fw)/2,y+(picH-fh)/2,fw,fh); ctx.restore();
+    ctx.strokeStyle="rgba(60,60,67,.29)"; ctx.lineWidth=2; ctx.beginPath(); ctx.roundRect(SHARE_PAD+1,y+1,inner-2,picH-2,35); ctx.stroke();
+    bmp.close(); y+=picH+56;
+  }
+  ctx.textAlign="center"; ctx.textBaseline="alphabetic"; ctx.fillStyle="#000000"; ctx.font=`${fs}px ${hanzi}`;
+  for(const l of lines){ ctx.fillText(l,SHARE_W/2,y+Math.round(fs*0.92)); y+=lineH; }
+  if(pin.length){ y+=24; ctx.fillStyle="#C8372D"; ctx.font=`600 56px ${sans}`; for(const l of pin){ ctx.fillText(l,SHARE_W/2,y+54); y+=72; } }
+  if(mean.length){ y+=16; ctx.fillStyle="#000000"; ctx.font=`52px ${sans}`; for(const l of mean){ ctx.fillText(l,SHARE_W/2,y+50); y+=68; } }
+  y+=56; ctx.fillStyle="#AEAEB2"; ctx.font=`34px ${sans}`; ctx.fillText("识字 Zeichentrainer",SHARE_W/2,y+32);
+  return new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error("no image")),"image/png"));
+}
+async function shareCard(id){
+  const d=cardOf(id); if(!d||!d.c) return;
+  let blob; try{ blob=await cardImage(d); }catch(err){ logErr("share",err); noteSheet(t("Sharing is not available here.")); return; }
+  const file=new File([blob],"zeichentrainer-card.png",{type:"image/png"});
+  const text=[d.trad||d.c,d.p,d.m].filter(Boolean).join(" — ").replace(/\n/g," / ");
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:d.c.replace(/\n/g," / "),text}); return; }
+    catch(err){ if(err && err.name==="AbortError") return; logErr("share",err); }
+  }
+  noteSheet(t("Sharing is not available here."));
 }
 async function delCustom(id){
   bump("deleted");
