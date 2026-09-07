@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=304; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=305; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2293,7 +2293,7 @@ function textRegion(bmp){
 const FRAME_RATIO=16/9;
 const FIRST_MAX=1000; /* the quick look that places the frame reads a copy of at most this many pixels on the long side (v290) */
 const FRAME_ROOM=0.3;
-const textLike=lines=>{ const sure=lines.flatMap(l=>(l.cf||[]).filter(c=>c>=SURE_BOX)); return sure.length>0&&(dictCover(lines)>=0.5||sure.reduce((a,c)=>a+c,0)/sure.length>=95); }; /* a reading the frame may follow (v296, H's 邪不压正 poster: the faces read as 品语失色全了 at 86 % and the quick look framed them — "jetzt macht er gesichtserkennung!?!??"): half its characters in dictionary words (two characters and more — a lone 有 has none), or its confident characters read at 95 % on average (a stray 人 at 40 % beside a 有 at 98 % does not count; the strays place no frame either) */ /* the placed frame's room around the text, in text heights (v293 — a third; until v292 one at the ends and half above and below, then widened to 16:9) */
+function textLike(lines){ const sure=lines.flatMap(l=>(l.cf||[]).filter(c=>c>=SURE_BOX)); return sure.length>0&&(dictCover(lines)>=0.5||sure.reduce((a,c)=>a+c,0)/sure.length>=95); } /* a declaration, so the harness can stand it down (as effScore) */ /* a reading the frame may follow (v296, H's 邪不压正 poster: the faces read as 品语失色全了 at 86 % and the quick look framed them — "jetzt macht er gesichtserkennung!?!??"): half its characters in dictionary words (two characters and more — a lone 有 has none), or its confident characters read at 95 % on average (a stray 人 at 40 % beside a 有 at 98 % does not count; the strays place no frame either) */ /* the placed frame's room around the text, in text heights (v293 — a third; until v292 one at the ends and half above and below, then widened to 16:9) */
 let FRAME_WAIT=2000; /* the ink-row proposal is shown as the frame when the reader has not placed one within this time (v289, H: "Show the ink-row frame after 2 seconds if the reader is slower") */
 function shapeBox(b,W,H){
   let x=b.x*W, y=b.y*H, w=(b.x1-b.x)*W, h=(b.y1-b.y)*H;
@@ -2921,8 +2921,8 @@ async function frameOnText(id,orig,base,rect,angle,by){ /* rect: the text with i
    joins — the box cut 邪 between 牙 and 阝, and 牙 lay outside it; sideways only, since under a line the cheeks of the
    faces would qualify. The snapped box is the union of those blobs; nothing, or under a fifth of the AI's box, leaves the AI's box as it is. Measured
    crossings per row could not do it: the faces' rows had as many light-dark changes as the title's. */
-const SNAP_ROOM=1, SNAP_MIN=0.15, SNAP_MAX=0.95, SNAP_COL=0.15;
-function snapBox(bmp,box,n){
+const SNAP_ROOM=1, SNAP_MIN=0.15, SNAP_MAX=0.95, SNAP_COL=0.15, SNAP_WIDE=1.6, SNAP_GAP=0.8;
+function snapBox(bmp,box,n,lens){ /* lens: the answer's lines' character counts (v305) */
   const k=Math.min(1,800/Math.max(bmp.width,bmp.height)), W=Math.max(1,Math.round(bmp.width*k)), Hh=Math.max(1,Math.round(bmp.height*k));
   const cv=document.createElement("canvas"); cv.width=W; cv.height=Hh; const ctx=cv.getContext("2d",{alpha:false,willReadFrequently:true}); ctx.drawImage(bmp,0,0,W,Hh);
   const d=ctx.getImageData(0,0,W,Hh).data, g=new Uint8Array(W*Hh); for(let i=0,j=0;i<d.length;i+=4,j++) g[j]=(d[i]*77+d[i+1]*151+d[i+2]*28)>>8;
@@ -2973,6 +2973,18 @@ function snapBox(bmp,box,n){
     const t=near.reduce((a,c)=>Math.abs((c.x0+c.x1)/2-(f.x0+f.x1)/2)<Math.abs((a.x0+a.x1)/2-(f.x0+f.x1)/2)?c:a), tx0=t.x0-R.x0, tx1=t.x1-R.x0;
     const best=runs.filter(r=>r.x1-r.x0+1>=SNAP_MIN*bh2&&Math.max(r.x0-tx1,tx0-r.x1)<=0.5*Hb).sort((a,b)=>Math.max(a.x0-tx1,tx0-a.x1)-Math.max(b.x0-tx1,tx0-b.x1))[0];
     if(best) taken.push({x0:R.x0+best.x0,y0:R.y0+best.y0,x1:R.x0+best.x1+1,y1:R.y0+best.y1+1,area:0,inside:true,clean:false}); }
+  /* a line may not be much wider than its characters allow (v305, H's 业主直租 sign: Qwen's box ran over the QR code beside the text, whose bottom finder square is a dark blob of a character's size in the line's band, and the frame took half the code — "Das ginge schon noch zentrierter"): the taken blobs are grouped into line bands by vertical overlap; a band whose blobs span more than SNAP_WIDE times the count of its answer line times its tallest blob (the bands matched to the lines by order when the counts agree, else the longest line for every band) is cut at gaps wider than SNAP_GAP text heights into runs, and the run with the most blob area keeps its neighbours only while the width stays within that budget — the rest is not the line's */
+  const bands=[]; for(const c of [...taken].sort((a,b)=>a.y0-b.y0)){ const b=bands.find(b=>Math.min(c.y1,b.y1)-Math.max(c.y0,b.y0)>=0.5*Math.min(c.y1-c.y0,b.y1-b.y0)); if(b){ b.cs.push(c); b.y0=Math.min(b.y0,c.y0); b.y1=Math.max(b.y1,c.y1); } else bands.push({y0:c.y0,y1:c.y1,cs:[c]}); }
+  const lns=(lens&&lens.length?lens:[n]).map(v=>Math.max(1,v|0)), kmax=Math.max(...lns);
+  bands.forEach((b,i)=>{ const k=bands.length===lns.length?lns[i]:kmax, Hl=Math.max(...b.cs.map(c=>c.y1-c.y0)), budget=k*Hl*SNAP_WIDE, cs=b.cs.slice().sort((a,c)=>a.x0-c.x0);
+    if(Math.max(...cs.map(c=>c.x1))-cs[0].x0<=budget) return;
+    const runs=[]; let run=null, xe=-1; for(const c of cs){ if(run&&c.x0-xe<SNAP_GAP*Hl) run.cs.push(c); else { run={cs:[c]}; runs.push(run); } xe=Math.max(xe,c.x1); }
+    if(runs.length<2) return;
+    for(const r of runs){ r.x0=Math.min(...r.cs.map(c=>c.x0)); r.x1=Math.max(...r.cs.map(c=>c.x1)); r.size=r.cs.reduce((a,c)=>a+(c.x1-c.x0)*(c.y1-c.y0),0); }
+    let lo=runs.indexOf(runs.reduce((a,r)=>r.size>a.size?r:a)), hi=lo;
+    for(;;){ const left=lo>0&&runs[hi].x1-runs[lo-1].x0<=budget, right=hi<runs.length-1&&runs[hi+1].x1-runs[lo].x0<=budget; if(left&&(!right||runs[lo-1].size>=runs[hi+1].size)) lo--; else if(right) hi++; else break; }
+    for(const r of runs.filter((r,j)=>j<lo||j>hi)) for(const c of r.cs){ const j=taken.indexOf(c); if(j>=0) taken.splice(j,1); } });
+  if(!taken.length) return null;
   const U={x0:Math.min(...taken.map(c=>c.x0)),y0:Math.min(...taken.map(c=>c.y0)),x1:Math.max(...taken.map(c=>c.x1)),y1:Math.max(...taken.map(c=>c.y1))};
   if(U.x1-U.x0<0.2*(B.x1-B.x0)||U.y1-U.y0<0.2*(B.y1-B.y0)) return null; /* specks alone: the AI's box stays */
   return {x0:U.x0/k,y0:U.y0/k,x1:U.x1/k,y1:U.y1/k};
@@ -3077,7 +3089,7 @@ async function cropSign(id,opts){
       if(pic.box&&picSeen&&(PENDING[id]&&!RECROP[id]?READ_APP[id]:CROP&&CROP.id===id&&CROP.proposed)){ /* the reader could not read this font (v293 — H's 邪不压正 poster: the ink rows and the reader's garbage boxes put the frame around the whole photo): the AI's box places the frame, once, as fractions of the straightened picture it saw — the proposal's crop, or the cut of the frame the quick look had placed from that same garbage; on the placed frame's own cut (v301) the box centres the frame on the characters inside it (v303, H's 绿皮书: "should be more centered") */
         const seen=picSeen.dk?picSeen.dk.blob:picSeen.orig, seenAngle=picSeen.dk?picSeen.dk.angle||0:0, seenBase=picSeen.dk?base:(PLACED[id]||(CROP&&CROP.id===id?CROP.rect:null)); /* the placed cut is upright, and its frame is the placed one */
         let W=0,Hh=0,box=null; try{ const b=await createImageBitmap(seen); W=b.width; Hh=b.height; const [bx0,by0,bx1,by1]=pic.box, n=Math.max(1,zh.length);
-          box={x0:bx0*W,y0:by0*Hh,x1:bx1*W,y1:by1*Hh}; const snap=snapBox(b,box,n); b.close(); /* the box's edges from the pixels (v297): an edge that cuts through the text moves out to its end, a blank margin is trimmed */
+          box={x0:bx0*W,y0:by0*Hh,x1:bx1*W,y1:by1*Hh}; const snap=snapBox(b,box,n,zh.map(l=>l.replace(/[\s\/／·・,，。.、()（）]/g,"").length)); b.close(); /* the box's edges from the pixels (v297): an edge that cuts through the text moves out to its end, a blank margin is trimmed */
           if(snap){ const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`the AI's box ${pc(bx0)}–${pc(bx1)} % across, ${pc(by0)}–${pc(by1)} % down, snapped to the ink: ${pc(snap.x0/W)}–${pc(snap.x1/W)} % across, ${pc(snap.y0/Hh)}–${pc(snap.y1/Hh)} % down`}); while(READLOG.length>40) READLOG.shift(); box=snap; }
           r.pic.snap=snap?[snap.x0/W,snap.y0/Hh,snap.x1/W,snap.y1/Hh].map(v=>+v.toFixed(3)):null;
           const Hb=(box.y1-box.y0)/n; /* the text height from the box and its lines */
