@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=310; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=311; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2919,7 +2919,7 @@ async function frameOnText(id,orig,base,rect,angle,by){ /* rect: the text with i
   if(!W||!Hh||(!pend&&(!CROP||CROP.rect!==cr))) return null;
   const sc=W/base.w, lw=base.lw, lh=base.lh; /* crop pixels per layer pixel */
   let f; /* the text with its small room, no 16:9 widening (v293, H: "Make the automatic crop frame tighter. Chinese Text should be well readable in the thumbnail list" — the list's box is 16:9 itself, with the blurred fill behind a wide crop, and a frame widened to 16:9 around a one-line text shrank the text to half the thumbnail's width) */
-  let a=0;
+  let a=0, upright=false;
   if(refine){ /* the placed frame's cut is upright (a turned frame's cut is drawn upright): the box's rectangle in the cut turns with the frame around the frame's centre (v303, H's 绿皮书 poster: the quick look's frame ran to the right edge over a reflection streak read as 一, and the title sat at the left — "should be more centered") */
     const ar=(base.a||0)*Math.PI/180, dx=((rect.x0+rect.x1)/2-W/2)/sc, dy=((rect.y0+rect.y1)/2-Hh/2)/sc, w=(rect.x1-rect.x0)/sc, h=(rect.y1-rect.y0)/sc;
     const px=base.x+base.w/2+dx*Math.cos(ar)-dy*Math.sin(ar), py=base.y+base.h/2+dx*Math.sin(ar)+dy*Math.cos(ar);
@@ -2928,7 +2928,10 @@ async function frameOnText(id,orig,base,rect,angle,by){ /* rect: the text with i
     const r=-angle*Math.PI/180, nw=Math.abs(W*Math.cos(r))+Math.abs(Hh*Math.sin(r)), nh=Math.abs(W*Math.sin(r))+Math.abs(Hh*Math.cos(r));
     const cx=(rect.x0+rect.x1)/2-nw/2, cy=(rect.y0+rect.y1)/2-nh/2, ox=cx*Math.cos(-r)-cy*Math.sin(-r)+W/2, oy=cx*Math.sin(-r)+cy*Math.cos(-r)+Hh/2; /* the rectangle's centre on the crop as framed */
     const w=(rect.x1-rect.x0)/sc, h=(rect.y1-rect.y0)/sc; f={x:base.x+ox/sc-w/2,y:base.y+oy/sc-h/2,w,h}; a=+angle.toFixed(1);
-  } else {
+    const ar=a*Math.PI/180, fx=f.x+w/2, fy=f.y+h/2, tol=0.02, out=[[-w/2,-h/2],[w/2,-h/2],[-w/2,h/2],[w/2,h/2]].some(([dx,dy])=>{ const px=fx+dx*Math.cos(ar)-dy*Math.sin(ar), py=fy+dx*Math.sin(ar)+dy*Math.cos(ar); return px<-tol*lw||px>(1+tol)*lw||py<-tol*lh||py>(1+tol)*lh; }); /* the frame's corners on the photo */
+    if(out){ upright=true; f=null; a=0; } /* the turned frame would leave the photo (v311, H's 无名 poster: a level poster on a busy wall, straightened by −14° on a flat, spurious profile peak; Qwen's box covered the straightened copy, and the frame at −14° reached from −8 to 119 % across, its cut the poster tilted with black wedges — "das ging ordentlich daneben"): the text is in the photo, so a frame that is not cannot be right; it is placed upright as the box's bounding box, clipped to the photo */
+  }
+  if(!f){
     const {x0,y0,x1,y1}=unrotatedBox(W,Hh,rect,angle); if(!(x1-x0>=8&&y1-y0>=8)) return null;
     f={x:base.x+x0/sc,y:base.y+y0/sc,w:(x1-x0)/sc,h:(y1-y0)/sc};
   }
@@ -2939,7 +2942,7 @@ async function frameOnText(id,orig,base,rect,angle,by){ /* rect: the text with i
   if(pend){ if(!PENDING[id]) return null; PLACED[id]=nr; } /* the waiting card takes this frame and its cut (finishPending) */
   else { if(!CROP||CROP.id!==id||CROP.rect!==cr) return null; /* the hand moved the frame meanwhile: the reading is stale anyway */
     CROP.rect=nr; CROP.proposed="text"; CROP.followed=true; delete CROP.hidden; }
-  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`frame ${refine?"centred":"placed"} on the text${by?" by the "+by:""}: ${pc(f.x/lw)}–${pc((f.x+f.w)/lw)} % across, ${pc(f.y/lh)}–${pc((f.y+f.h)/lh)} % down${a?`, turned by ${a}°`:""}`}); while(READLOG.length>40) READLOG.shift();
+  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`frame ${refine?"centred":"placed"} on the text${by?" by the "+by:""}: ${pc(f.x/lw)}–${pc((f.x+f.w)/lw)} % across, ${pc(f.y/lh)}–${pc((f.y+f.h)/lh)} % down${a?`, turned by ${a}°`:""}${upright?` — upright, the frame turned by ${angle.toFixed(1)}° would leave the photo`:""}`}); while(READLOG.length>40) READLOG.shift();
   return cut.blob;
 }
 /* The AI's box, snapped to the characters (v297, H's 邪不压正 poster: Qwen's box cut 邪 at the left and reached into
