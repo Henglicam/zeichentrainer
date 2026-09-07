@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=288; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=289; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2271,6 +2271,7 @@ function textRegion(bmp){
    previews"): the padded text box is widened, never narrowed, to FRAME_RATIO 16:9 — the Cards list's 104×58 thumbnails —
    centred on the text and kept inside the photo; a text the photo cannot hold at that shape keeps its own box */
 const FRAME_RATIO=16/9;
+let FRAME_WAIT=2000; /* the ink-row proposal is shown as the frame when the reader has not placed one within this time (v289, H: "Show the ink-row frame after 2 seconds if the reader is slower") */
 function shapeBox(b,W,H){
   let x=b.x*W, y=b.y*H, w=(b.x1-b.x)*W, h=(b.y1-b.y)*H;
   if(w/h<FRAME_RATIO){ const w2=h*FRAME_RATIO; if(w2>W) return null; x=Math.min(Math.max(0,x-(w2-w)/2),W-w2); w=w2; }
@@ -2294,7 +2295,10 @@ async function proposeFrame(id){
   CROP.proposed=full?"whole":shaped?"16:9":"text"; delete CROP.auto;
   const hidden=!RECROP[id]; if(hidden) CROP.hidden=true; /* the inbox never shows the proposal (v288): the reader reads it now, and the frame appears on the text it finds */
   const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),pre:true,text:`frame proposed by the app${hidden?" (not shown)":""}: ${full?"the whole photo":`${pc(f.x/r.width)}–${pc((f.x+f.w)/r.width)} % across, ${pc(f.y/r.height)}–${pc((f.y+f.h)/r.height)} % down${shaped?" (16:9)":" (the text's own box, 16:9 does not fit)"}`}${reg?`, text rows ${pc(reg.y)}–${pc(reg.y1)} %`:", no text rows found"}`}); while(READLOG.length>40) READLOG.shift();
-  if(hidden){ cropSign(id); renderShots(); return; } /* the reading at once — no preview, no wait: there is no frame to adjust yet; cropSign's first status sets the bar's text before the render */
+  if(hidden){
+    cropSign(id); renderShots();
+    setTimeout(()=>{ if(!(CROP&&CROP.id===id&&CROP.hidden)) return; delete CROP.hidden; READLOG.push({t:Date.now(),text:`frame shown as proposed — the reader took longer than ${FRAME_WAIT/1000} s`}); while(READLOG.length>40) READLOG.shift(); renderShots(); },FRAME_WAIT); /* the reader is slower: the proposal becomes the frame and stays — no jump later (v289) */
+    return; } /* the reading at once — no preview, no wait: there is no frame to adjust yet; cropSign's first status sets the bar's text before the render */
   renderShots(); showCropPreview(id);
 }
 async function cropBlob(id,rectArg){
