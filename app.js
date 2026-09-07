@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=286; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=287; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2127,7 +2127,7 @@ function segmentChars(chars){
 /* the AI's answer for the card just saved from this photo, with one-tap Accept */
 function qsAiBox(id){ const c=QSCARD[id], d=c&&cardOf(c); return d&&d.ai?aiBoxHTML(d):""; }
 /* ---------- Cropping (crop → OCR or card image) ---------- */
-let CROP=null; /* {id, rect:{x,y,w,h,lw,lh,a}, auto, proposed, zoom, locating} while cropping — stays until the card is saved (H, v50); a = the frame's angle (v185), auto/proposed = the frame proposed by the app (v203), zoom = the framed area enlarged (v169), locating = the Edit form looking for an old card's crop in the photo (v246) */
+let CROP=null; /* {id, rect:{x,y,w,h,lw,lh,a}, auto, proposed, followed, zoom, locating} while cropping — stays until the card is saved (H, v50); a = the frame's angle (v185), auto/proposed = the frame proposed by the app (v203, cleared by the hand's first gesture), followed = it moved onto the text the reader found (v287), zoom = the framed area enlarged (v169), locating = the Edit form looking for an old card's crop in the photo (v246) */
 function cropRectStyle(){
   const r=CROP&&CROP.rect; if(!r||!r.lw||!r.lh) return "";
   const pc=v=>(v*100).toFixed(2)+"%";
@@ -2194,6 +2194,7 @@ function wireCrop(layer){
     }
     if(mode==="draw"&&cur){ tapOrScroll(e); return; } /* a frame exists: no new frame — the swipe scrolls the page instead (`.croplayer.framed`, v131/v132), a tap enlarges the framed area (v169); adjusting the frame is allowed and re-reads, Cancel removes it (H, v129–v132) */
     e.preventDefault(); layer._gesture=true; /* the click that closes this gesture is not a tap */
+    delete CROP.proposed; delete CROP.followed; /* the frame is the hand's from now on: the reading never moves it (v287) */
     clearTimeout(READ_TIMER[layer.dataset.id]); /* adjusting the frame — read after the next release */
     if(mode==="draw") setRect(px,py,0,0);
     layer.setPointerCapture(e.pointerId);
@@ -2784,25 +2785,64 @@ async function secondLook(w,dk,passes,status,r,Hink){
     /* the card image: the same area with a real margin of one text height all round — as a rectangle in the straightened
        crop's coordinates; cropSign cuts it from the crop as framed, unrotated (v145, H: no rotated images with filled
        corners on the card) */
-    return {x0:Math.max(0,x0-H/2), y0:Math.max(0,y0-H/2), x1:Math.min(bmp.width,x1+H/2), y1:Math.min(bmp.height,y1+H/2)};
+    return {x0:Math.max(0,x0-H/2), y0:Math.max(0,y0-H/2), x1:Math.min(bmp.width,x1+H/2), y1:Math.min(bmp.height,y1+H/2),
+      tight:{x0,y0,pad,angle:dk2.angle||0,w:cv.width,h:cv.height}}; /* where the tight crop sits in the straightened frame, for the frame that follows the reading (v287) */
   } finally { bmp.close(); }
 }
 /* A rectangle of the straightened crop, cut from the crop as framed: the rectangle's corners are turned back by the
    straightening angle about the centre, their bounding box is cut (v145 — the rotated, corner-filled crop is for the
    reader only; H: "don't show the corrupt images rotated in the preview, I don't want to see that gray frame") */
+function unrotatedBox(W,Hh,rect,angle){ /* a rectangle of the straightened crop as its bounding box on the crop as framed */
+  const r=-angle*Math.PI/180;
+  const nw=Math.abs(W*Math.cos(r))+Math.abs(Hh*Math.sin(r)), nh=Math.abs(W*Math.sin(r))+Math.abs(Hh*Math.cos(r));
+  const pts=[[rect.x0,rect.y0],[rect.x1,rect.y0],[rect.x0,rect.y1],[rect.x1,rect.y1]].map(([x,y])=>{ const dx=x-nw/2, dy=y-nh/2; return [dx*Math.cos(-r)-dy*Math.sin(-r)+W/2, dx*Math.sin(-r)+dy*Math.cos(-r)+Hh/2]; });
+  const x0=Math.max(0,Math.floor(Math.min(...pts.map(p=>p[0])))), x1=Math.min(W,Math.ceil(Math.max(...pts.map(p=>p[0]))));
+  const y0=Math.max(0,Math.floor(Math.min(...pts.map(p=>p[1])))), y1=Math.min(Hh,Math.ceil(Math.max(...pts.map(p=>p[1]))));
+  return {x0,y0,x1,y1};
+}
 async function cutUnrotated(orig,rect,angle){
   const bmp=await createImageBitmap(orig);
   try{
-    const W=bmp.width, Hh=bmp.height, r=-angle*Math.PI/180;
-    const nw=Math.abs(W*Math.cos(r))+Math.abs(Hh*Math.sin(r)), nh=Math.abs(W*Math.sin(r))+Math.abs(Hh*Math.cos(r));
-    const pts=[[rect.x0,rect.y0],[rect.x1,rect.y0],[rect.x0,rect.y1],[rect.x1,rect.y1]].map(([x,y])=>{ const dx=x-nw/2, dy=y-nh/2; return [dx*Math.cos(-r)-dy*Math.sin(-r)+W/2, dx*Math.sin(-r)+dy*Math.cos(-r)+Hh/2]; });
-    const x0=Math.max(0,Math.floor(Math.min(...pts.map(p=>p[0])))), x1=Math.min(W,Math.ceil(Math.max(...pts.map(p=>p[0]))));
-    const y0=Math.max(0,Math.floor(Math.min(...pts.map(p=>p[1])))), y1=Math.min(Hh,Math.ceil(Math.max(...pts.map(p=>p[1]))));
+    const W=bmp.width, Hh=bmp.height, {x0,y0,x1,y1}=unrotatedBox(W,Hh,rect,angle);
     if(!(x1-x0>=8&&y1-y0>=8)) return null;
     const cc=document.createElement("canvas"); cc.width=x1-x0; cc.height=y1-y0;
     cc.getContext("2d",{alpha:false}).drawImage(bmp,x0,y0,cc.width,cc.height,0,0,cc.width,cc.height);
     return await new Promise(res=>cc.toBlob(res,"image/jpeg",READ_JPEG));
   }catch(e){ return null; } finally{ bmp.close(); }
+}
+/* The frame follows the reading (v287, H's poster 手作冰淇淋 under a wide proposed frame: "Why don't you automatically
+   crop the chinese text?"): the app's proposal is made from ink rows, and drawings or Latin letters extend it — the
+   reader's second look then finds the text band, but until v286 only the card image took it and the frame on screen
+   stayed wide. Now, when the reading of a frame proposed by the app wins on its tightened band, the frame moves onto
+   that band — widened to 16:9 where the photo allows (`shapeBox`, as the proposal) —, the card image is the moved
+   frame's cut, and the card's `frame` is the moved one. No re-read, no AI call, no timer. A frame drawn or adjusted
+   by hand never moves (`CROP.proposed` goes at the hand's first gesture); the Edit form's Crop again keeps its
+   frame, a card saved with Save now has no frame left. Returns the new card image, or null when the frame stays. */
+function textBandOf(best,cardRect){ /* the winning pass's own boxes, as a rectangle of the straightened frame: the second look's band starts from the first pass, whose garbage above the text (a drawing read as a character) would keep the frame wide; the boxes' heights are right, their ends drift (v69), so one text height of room at the ends and half a height above and below */
+  const tg=cardRect.tight, boxes=tg?best.lines.flatMap(l=>l.bx||[]).filter(Boolean):[]; if(!boxes.length) return cardRect;
+  const Hb=median(boxes.map(b=>b.y1-b.y0)); if(!(Hb>0)) return cardRect;
+  const b={x0:Math.min(...boxes.map(b=>b.x0))-Hb, y0:Math.min(...boxes.map(b=>b.y0))-Hb/2, x1:Math.max(...boxes.map(b=>b.x1))+Hb, y1:Math.max(...boxes.map(b=>b.y1))+Hb/2};
+  const u=unrotatedBox(tg.w,tg.h,b,tg.angle); /* the tight crop's own straightening turned back */
+  const r={x0:u.x0-tg.pad+tg.x0, y0:u.y0-tg.pad+tg.y0, x1:u.x1-tg.pad+tg.x0, y1:u.y1-tg.pad+tg.y0}; /* the padding off, into the straightened frame */
+  return {x0:Math.max(cardRect.x0,r.x0), y0:Math.max(cardRect.y0,r.y0), x1:Math.min(cardRect.x1,r.x1), y1:Math.min(cardRect.y1,r.y1)}; /* never outside the band the card image takes */
+}
+async function followReading(id,orig,best,cardRect,angle){
+  const cr=CROP&&CROP.id===id&&CROP.rect; if(!cr||!CROP.proposed||cr.a||RECROP[id]||PENDING[id]) return null;
+  let W=0,Hh=0; try{ const bmp=await createImageBitmap(orig); W=bmp.width; Hh=bmp.height; bmp.close(); }catch(e){ return null; }
+  if(!W||!Hh||CROP.rect!==cr) return null;
+  const rect=textBandOf(best,cardRect);
+  const {x0,y0,x1,y1}=unrotatedBox(W,Hh,rect,angle); if(!(x1-x0>=8&&y1-y0>=8)) return null;
+  const sc=W/cr.w, lw=cr.lw, lh=cr.lh; /* crop pixels per layer pixel */
+  const b={x:(cr.x+x0/sc)/lw, y:(cr.y+y0/sc)/lh, x1:(cr.x+x1/sc)/lw, y1:(cr.y+y1/sc)/lh};
+  const shaped=shapeBox(b,lw,lh), f=shaped||{x:b.x*lw,y:b.y*lh,w:(b.x1-b.x)*lw,h:(b.y1-b.y)*lh};
+  const nr={x:f.x,y:f.y,w:f.w,h:f.h,a:0,lw,lh};
+  if(nr.w<8||nr.h<8) return null;
+  if(Math.abs(nr.x-cr.x)<0.01*lw&&Math.abs(nr.y-cr.y)<0.01*lh&&Math.abs(nr.w-cr.w)<0.01*lw&&Math.abs(nr.h-cr.h)<0.01*lh) return null; /* the text fills the frame: nothing to move */
+  const cut=await cropBlob(id,nr); if(!cut) return null;
+  if(!CROP||CROP.id!==id||CROP.rect!==cr) return null; /* the hand moved the frame meanwhile: the reading is stale anyway */
+  CROP.rect=nr; CROP.proposed="text"; CROP.followed=true;
+  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`frame moved onto the text: ${pc(f.x/lw)}–${pc((f.x+f.w)/lw)} % across, ${pc(f.y/lh)}–${pc((f.y+f.h)/lh)} % down${shaped?" (16:9)":" (the text's own box, 16:9 does not fit)"}`}); while(READLOG.length>40) READLOG.shift();
+  return cut.blob;
 }
 async function cropSign(id,opts){
   const run=READ_RUN[id]=(READ_RUN[id]||0)+1, stale=()=>READ_RUN[id]!==run; /* a newer reading of this photo has started: leave everything to it */
@@ -2860,7 +2900,10 @@ async function cropSign(id,opts){
     r.passes=passes.map(p=>({s:Math.round(score(p)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),h:Hink?+(hOfPass(p)/Hink).toFixed(2):null,tight:p.tightened,bw:!!p.bw,ch:!!p.chroma,tra:!!p.tra,...(lineFit(p)<1?{over:p.lines.length-maxLines}:{})}));
     LAST_READ.passes=r.passes; saveReadLog();
     const best=passes[0], lines=best.lines;
-    if(best.tightened&&cardRect){ const cut=await cutUnrotated(r.blob,cardRect,dk.angle||0); if(cut){ cardImg=cut; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=cut; } } /* the text area with its margin, from the crop as framed */
+    if(best.tightened&&cardRect){ /* the text area with its margin, from the crop as framed — or, under a frame the app proposed, the frame moves onto it and the card takes the moved frame's cut (v287) */
+      const moved=await followReading(id,r.blob,best,cardRect,dk.angle||0); if(stale()) return;
+      const cut=moved||await cutUnrotated(r.blob,cardRect,dk.angle||0); if(stale()) return;
+      if(cut){ cardImg=cut; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=cut; } }
     /* a weak reading, or none: the picture goes to the AI when a provider that takes pictures is set (v173) */
     const weak=!lines.length||effScore(lines,Hink)<WEAK_READ; let pic=null;
     if(weak&&pictureProvider()&&aiAutoOn()&&navigator.onLine){ /* the one switch covers text and pictures (v193, H: the picture went out while the check was off — "counterintuitive") */
