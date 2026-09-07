@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=293; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=294; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -530,14 +530,14 @@ async function pictureJpeg(blob){
   const out=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
   const b64=(await blobToB64(out)).d; return {b64,w:cv.width,h:cv.height,kb:Math.round(out.size/1024)};
 }
-const picSystem=()=>`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","box":[left,top,right,bottom],"bad":true|false}. "zh" = the Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without Latin letters, numbers of the decoration or anything you cannot see; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural ${meaningLangName()} meaning of the text as a sign or name (short, ${meaningLangName()} only); when the text is a brand, shop or product name, "m" is that name as it is known (the romanised or the international name), followed in brackets by what it is, in ${meaningLangName()} — e.g. "Mixue Bingcheng (ice-cream and bubble-tea chain)", never the bare name alone; "note" = one short remark if needed; "box" = where the text you read stands in the picture — one rectangle around all its lines, as fractions of the picture's width and height from 0 to 1, e.g. [0.31,0.22,0.79,0.66]; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty and omit "box". An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`; /* the meaning in the app's language (v256) */
+const picSystem=()=>`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","box":[left,top,right,bottom],"bad":true|false}. "zh" = the Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without Latin letters, numbers of the decoration or anything you cannot see; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural ${meaningLangName()} meaning of the text as a sign or name (short, ${meaningLangName()} only); when the text is a brand, shop or product name, "m" is that name as it is known (the romanised or the international name), followed in brackets by what it is, in ${meaningLangName()} — e.g. "Mixue Bingcheng (ice-cream and bubble-tea chain)", never the bare name alone; "note" = one short remark if needed; "box" = where the text you read stands in the picture — one rectangle around all its lines, [left, top, right, bottom] in pixels of the picture (its size is given with the picture), tight around the characters; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty and omit "box". An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`; /* the meaning in the app's language (v256) */
 /* Qwen's hybrid models think by default, and the thinking takes many seconds before the short JSON comes (v208, H with Qwen
    as the active provider: "Check pinyin and meaning takes way too long" — until v207 only the picture path switched it off) */
 function noThinking(pv,model,body){ if(pv==="qwen"&&/^qwen3/.test(model)) body.enable_thinking=false; return body; }
 async function aiReadPicture(blob,alts,status){
   const pv=pictureProvider(); if(!pv) throw new Error("no picture provider");
   const key=aiKey(pv), model=pictureModel(pv), pic=await pictureJpeg(blob), relay=!key&&viaRelay(pv);
-  const text=`Read the Chinese text on this picture. The reader's guesses: ${alts.length?alts.map(a=>a.replace(/\n/g," / ")).join(" | "):"none"}.`;
+  const text=`Read the Chinese text on this picture (${pic.w}×${pic.h} pixels). The reader's guesses: ${alts.length?alts.map(a=>a.replace(/\n/g," / ")).join(" | "):"none"}.`; /* the size, so the box comes in its pixels (v294 — fractions came out shifted by a tenth on H's poster) */
   const req=`[picture ${pic.w}×${pic.h} JPEG, ${pic.kb} KB] ${text}`; /* the log never carries the picture */
   status&&status("Asking the AI about the picture …");
   let r; const t0=Date.now();
@@ -1703,7 +1703,7 @@ function renderEdit(main,c){
     const zoomed=!!(CROP.rect&&CROP.zoom);
     box.innerHTML=`<div class="recrop"><div class="shotwrap">
         ${zoomed?`<div class="shotzoom" style="${zoomStyle(rec)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(rec)}" alt="photo">`}
-        <div class="croplayer${CROP.rect?" framed":""}${zoomed?" zoomed":""}" data-id="${rid}">${zoomed?"":`<div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="${t("Turn the frame")}"></div></div>`}</div>
+        <div class="croplayer${CROP.rect?" framed":""}${zoomed?" zoomed":""}" data-id="${rid}">${zoomed?"":`<div class="croprect"${cropRectStyle()}>${READING[rid]&&!READ_FAIL.test(READING[rid])?`<div class="work" aria-hidden="true"></div>`:""}<div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="${t("Turn the frame")}"></div></div>`}</div>
       </div>
       <div class="imgacts"><button class="del" id="e-cropcancel">${t("Cancel")}</button></div>
       <div class="ocr" id="ocr-${rid}">${READING[rid]?readingHTML(READING[rid],rid):res&&res.key===rectKey(CROP.rect)?`<div class="croppreview"><img src="${res.url}" alt="the new crop"><div class="badge" style="margin:6px 0 0">${res.text?t("Read as “{0}”. ",esc(res.text)):t("Picture taken, the text stays. ")}${t("Adjust the frame to read again, or save.")}</div></div>`:CROP.locating?busyHTML(t("Finding the frame …")):CROP.auto?busyHTML(t("Finding the text …")):`<span class="badge">${t("Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.")}</span>`}</div></div>`;
@@ -3732,7 +3732,7 @@ function renderShots(){
       return `<div class="shot">
         <div class="shotwrap">
           ${zoomed?`<div class="shotzoom" style="${zoomStyle(s)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(s)}" alt="photo">`}
-          ${cropping?`<div class="croplayer${shown?" framed":""}${zoomed?" zoomed":""}" data-id="${s.id}">${zoomed?"":`<div class="croprect"${cropRectStyle()}><div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="${t("Turn the frame")}"></div></div>`}</div>`:""}
+          ${cropping?`<div class="croplayer${shown?" framed":""}${zoomed?" zoomed":""}" data-id="${s.id}">${zoomed?"":`<div class="croprect"${cropRectStyle()}>${READING[s.id]&&!READ_FAIL.test(READING[s.id])?`<div class="work" aria-hidden="true"></div>`:""}<div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="${t("Turn the frame")}"></div></div>`}</div>`:""}
         </div>
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">${t("Cancel")}</button>`
