@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=289; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=290; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2271,6 +2271,7 @@ function textRegion(bmp){
    previews"): the padded text box is widened, never narrowed, to FRAME_RATIO 16:9 — the Cards list's 104×58 thumbnails —
    centred on the text and kept inside the photo; a text the photo cannot hold at that shape keeps its own box */
 const FRAME_RATIO=16/9;
+const FIRST_MAX=1000; /* the quick look that places the frame reads a copy of at most this many pixels on the long side (v290) */
 let FRAME_WAIT=2000; /* the ink-row proposal is shown as the frame when the reader has not placed one within this time (v289, H: "Show the ink-row frame after 2 seconds if the reader is slower") */
 function shapeBox(b,W,H){
   let x=b.x*W, y=b.y*H, w=(b.x1-b.x)*W, h=(b.y1-b.y)*H;
@@ -2774,7 +2775,7 @@ async function secondLook(w,dk,passes,status,r,Hink){
     let traRun=null; const traBuf=[];
     if(agreed){ r.clear=true; status("the reading is clear …"); }
     else {
-      if(weak()) traRun=(async()=>{ for(const mode of ["colour","bw","chroma"]){ const srcs=srcsOf(mode); for(let i=0;i<scales.length;i++){ const lines=await readPassTra(await srcs[i],status); if(!lines) break; traBuf.push([mode,scales[i],lines]); } } })().catch(()=>{});
+      if(weak()) traRun=(async()=>{ for(const mode of ["colour","bw","chroma"]){ const srcs=srcsOf(mode); for(let i=0;i<scales.length;i++){ if(r.done) return; const lines=await readPassTra(await srcs[i],status); if(!lines) break; traBuf.push([mode,scales[i],lines]); } } })().catch(()=>{}); /* r.done: the reading ended without it — stop (v290) */
       await readTight("bw"); await readTight("chroma"); /* the copies otherwise (v96) */
     }
     /* still weak? the traditional reader on all three — it knows glyphs the simplified one can only approximate */
@@ -2831,12 +2832,15 @@ async function cutUnrotated(orig,rect,angle){
    first gesture). The Edit form's Crop again keeps the shown proposal. Returns the new card image, or null when the
    frame is shown as proposed (no tight pass, or the text fills it). */
 const SURE_BOX=70; /* a character's box counts for the frame from this confidence (v288) */
+function frameBoxes(lines){ /* the boxes that place the frame: beside a real line a lone character is a fragment (the score's rule) — the ice-cream cone read as 槛 by every colour pass —, a two-character line (喜欢, 爸爸) stays; and only characters read with confidence, all of them when none is */
+  const n=l=>[...(l.t||"")].filter(c=>CJK.test(c)).length, use=lines.some(l=>n(l)>=3)?lines.filter(l=>n(l)>=2):lines;
+  const sure=use.flatMap(l=>(l.bx||[]).filter((b,i)=>b&&(l.cf||[])[i]>=SURE_BOX)); return sure.length?sure:use.flatMap(l=>l.bx||[]).filter(Boolean);
+}
 function textBandOf(tightPasses,cardRect){ /* the tight passes' own boxes, as a rectangle of the straightened frame: the second look's band starts from the first pass, whose garbage above the text (a drawing read as a character) would keep the frame wide. Each pass gives the extent of its confident boxes; the frame takes the quartiles over the passes — a stray one pass read (the ice-cream cone above 手作冰淇淋 as 槛 at 88 %) is left out, a line most passes saw is in, and a lone pass counts as it is. The boxes' heights are right, their ends drift (v69): one text height of room at the ends, half a height above and below */
   const tg=cardRect.tight; if(!tg) return cardRect;
   const ext=[], hs=[];
   for(const p of tightPasses){
-    const n=l=>[...(l.t||"")].filter(c=>CJK.test(c)).length, lines=p.lines.some(l=>n(l)>=3)?p.lines.filter(l=>n(l)>=2):p.lines; /* beside a real line a lone character is a fragment (the score's rule): the cone read as 槛 by every colour pass; a two-character line (喜欢, 爸爸) stays */
-    const sure=lines.flatMap(l=>(l.bx||[]).filter((b,i)=>b&&(l.cf||[])[i]>=SURE_BOX)), boxes=sure.length?sure:lines.flatMap(l=>l.bx||[]).filter(Boolean); if(!boxes.length) continue;
+    const boxes=frameBoxes(p.lines); if(!boxes.length) continue;
     ext.push({x0:Math.min(...boxes.map(b=>b.x0)),y0:Math.min(...boxes.map(b=>b.y0)),x1:Math.max(...boxes.map(b=>b.x1)),y1:Math.max(...boxes.map(b=>b.y1))}); hs.push(median(boxes.map(b=>b.y1-b.y0)));
   }
   if(!ext.length) return cardRect;
@@ -2847,11 +2851,10 @@ function textBandOf(tightPasses,cardRect){ /* the tight passes' own boxes, as a 
   const r={x0:u.x0-tg.pad+tg.x0, y0:u.y0-tg.pad+tg.y0, x1:u.x1-tg.pad+tg.x0, y1:u.y1-tg.pad+tg.y0}; /* the padding off, into the straightened frame */
   return {x0:Math.max(cardRect.x0,r.x0), y0:Math.max(cardRect.y0,r.y0), x1:Math.min(cardRect.x1,r.x1), y1:Math.min(cardRect.y1,r.y1)}; /* never outside the band the card image takes */
 }
-async function frameOnText(id,orig,tightPasses,cardRect,angle){
-  const cr=CROP&&CROP.id===id&&CROP.rect; if(!cr||!CROP.hidden||!tightPasses.length||!cardRect||cr.a||RECROP[id]||PENDING[id]) return null;
+async function frameOnText(id,orig,rect,angle){ /* rect: the text with its room, in the straightened frame's coordinates */
+  const cr=CROP&&CROP.id===id&&CROP.rect; if(!cr||!CROP.hidden||!rect||cr.a||RECROP[id]||PENDING[id]) return null;
   let W=0,Hh=0; try{ const bmp=await createImageBitmap(orig); W=bmp.width; Hh=bmp.height; bmp.close(); }catch(e){ return null; }
   if(!W||!Hh||CROP.rect!==cr) return null;
-  const rect=textBandOf(tightPasses,cardRect);
   const {x0,y0,x1,y1}=unrotatedBox(W,Hh,rect,angle); if(!(x1-x0>=8&&y1-y0>=8)) return null;
   const sc=W/cr.w, lw=cr.lw, lh=cr.lh; /* crop pixels per layer pixel */
   const b={x:(cr.x+x0/sc)/lw, y:(cr.y+y0/sc)/lh, x1:(cr.x+x1/sc)/lw, y1:(cr.y+y1/sc)/lh};
@@ -2867,6 +2870,7 @@ async function frameOnText(id,orig,tightPasses,cardRect,angle){
 }
 async function cropSign(id,opts){
   const run=READ_RUN[id]=(READ_RUN[id]||0)+1, stale=()=>READ_RUN[id]!==run; /* a newer reading of this photo has started: leave everything to it */
+  const done=r=>{ if(r) r.done=true; if(!stale()) READ_RUN[id]++; }; /* the result is in: the run is over, so the traditional reader's chain still running in the background (v236) can write no progress into the box over the editor and stops at its next pass (v290 — the quick look let the chain outlive the reading, and the box showed "recognizing … 100 %" for good) */
   if(RECROP[id]) RECROP[id].stage="reading";
   const status=readingStatus(id,run);
   { const pre=[]; while(READLOG.length&&READLOG[READLOG.length-1].pre) pre.unshift(READLOG.pop()); READLOG.length=0; READLOG.push(...pre); } /* the frame's own lines (proposed by the app, the old crop found) stay at the head of the new reading's log (v285 — until then the reading wiped them at once) */
@@ -2890,14 +2894,23 @@ async function cropSign(id,opts){
        — H's phone read the Yakult logo as a four-line soup of 17 stroke-sized "characters" and the count outweighed
        ten passes agreeing on a three-character reading */
     const Hink=await (async()=>{ const b=await createImageBitmap(dk.blob); try{ r.frameH=b.height; return inkHeight(b); } finally{ b.close(); } })(); r.ink=Math.round(Hink);
+    let placedCut=null; /* the frame placed on the text (v288): its cut is the card image and what the AI gets */
+    const placeRect=async rect=>{ const cut=await frameOnText(id,r.blob,rect,dk.angle||0); if(stale()) return; if(cut){ placedCut=cut; renderShots(); } };
+    if(CROP&&CROP.id===id&&CROP.hidden){ /* a quick look for the frame alone (v290, H: "you don't need to translate first, you just need to identify text first"): one pass on a copy of at most FIRST_MAX px — 0.3 s on H's poster where the whole frame at 1 600 px takes 1.1 s — whose confident boxes give the lines and the image their ends; the frame goes there before the reading proper starts. It is not one of the reading's passes: as the first pass it lost 爸爸 on that poster, so the reading stays as it was */
+      status("looking for the text …"); const bmp=await createImageBitmap(dk.blob); const k=Math.min(1,FIRST_MAX/Math.max(bmp.width,bmp.height)); const src=k<1?await toJpeg(bmp,k):dk.blob;
+      let rect=null; try{ const lines=scaleBoxes(await readPass(w,src,status),k); if(stale()) return;
+        const boxes=frameBoxes(lines), Hb=boxes.length?median(boxes.map(b=>b.y1-b.y0)):0;
+        if(Hb>0){ const y0=Math.max(0,Math.min(...boxes.map(b=>b.y0))-Hb/2), y1=Math.min(bmp.height,Math.max(...boxes.map(b=>b.y1))+Hb/2);
+          const ext=textRowExtent(bmp,Math.min(...boxes.map(b=>b.x0)),Math.max(...boxes.map(b=>b.x1)),y0,y1,Hb); rect={x0:Math.max(0,ext.x0-Hb),y0,x1:Math.min(bmp.width,ext.x1+Hb),y1}; } } finally{ bmp.close(); }
+      if(rect){ await placeRect(rect); if(stale()) return;
+        if(CROP&&CROP.id===id&&CROP.hidden){ delete CROP.hidden; READLOG.push({t:Date.now(),text:"frame shown as proposed — the text fills it"}); while(READLOG.length>40) READLOG.shift(); renderShots(); } } } /* nothing to move: the proposal is the frame, from now */
+    status("reading the text …");
     const passes=[{lines:await readPass(w,dk.blob,status),img:dk.blob,angle:dk.angle,tightened:false}];
     if(stale()) return;
-    let placedCut=null; /* the frame placed on the text (v288): its cut is the card image and what the AI gets */
-    const place=async band=>{ /* the best tight pass so far puts the frame on the text; first tried after the close look's colour passes, again after the whole close look */
+    const place=async band=>{ /* nothing placed yet (the first pass had no usable box): the tight passes so far — after the close look's colour passes, again after the whole close look */
       if(stale()||!(CROP&&CROP.id===id&&CROP.hidden)) return;
-      const tight=passes.filter(p=>p.tightened&&p.lines.length&&!p.tra&&p.scale!=="merged"); /* the simplified reader's tight passes as read (the traditional reader's lines are converted, the merged pass is a composite) */
-      const cut=await frameOnText(id,r.blob,tight,band,dk.angle||0); if(stale()) return;
-      if(cut){ placedCut=cut; renderShots(); } };
+      const tight=passes.filter(p=>p.tightened&&p.lines.length&&!p.tra&&p.scale!=="merged"); if(!tight.length||!band) return; /* the simplified reader's tight passes as read (the traditional reader's lines are converted, the merged pass is a composite) */
+      await placeRect(textBandOf(tight,band)); };
     r.onTight=place;
     const cardRect=await secondLook(w,dk,passes,status,r,Hink);
     delete r.onTight; if(stale()) return;
@@ -2950,9 +2963,9 @@ async function cropSign(id,opts){
       cardImg=placedCut||r.blob; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=cardImg; /* the card image is the crop as framed (the placed frame's cut, v288), not the second look's band */
       SIGN[id]={lines:zh, orig:zh.slice(), conf:[], boxes:zh.map(()=>[]), img:dk.blob, angle:dk.angle||0, tightened:false, region:r, alts:guesses, trad:!!pic.zht, tradDetected:!!pic.zht, tradText:pic.zht||"",
         ai:{zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,ml:pic.ml,note:pic.note,ok:true,bad:false,pic:true}, cardImg, weak:false};
-      delete READING[id]; renderShots(); if(PENDING[id]) finishPending(id); if(RECROP[id]) RECROP[id].onRead(SIGN[id]); return;
+      done(r); delete READING[id]; renderShots(); if(PENDING[id]) finishPending(id); if(RECROP[id]) RECROP[id].onRead(SIGN[id]); return;
     }
-    if(!lines.length){ status("No Chinese characters recognized — frame the characters tightly and try again."); if(PENDING[id]) failPending(id,"no Chinese characters recognized"); return; }
+    if(!lines.length){ status("No Chinese characters recognized — frame the characters tightly and try again."); done(r); if(PENDING[id]) failPending(id,"no Chinese characters recognized"); return; }
     /* img = the (straightened, maybe tightened) crop the text was read from, boxes = where each character sits in it: the picker shows the original */
     /* the other readings (distinct texts, best first): the AI sees them all (the truth is often a mix, or a name they circle
        around — 养兴多 / 义乐多 / 和准浴多 → 养乐多), the picker offers their characters at the same position */
@@ -2980,11 +2993,11 @@ async function cropSign(id,opts){
     SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r, alts, trad:tradPhoto, tradDetected:tradPhoto, tradText:tradPhoto?s2t(bestT):""};
     SIGN[id].cardImg=cardImg; SIGN[id].weak=weak; /* for the card saved before the reading (v237): its picture, and the flag when the reading was weak */
     if(pic&&pic.bad){ const sg=SIGN[id]; sg.ai={zh:bestT,zht:"",p:"",m:"",note:pic.note,ok:false,bad:true,pic:true}; sg.flag=true; sg.flagNote=t("the reading looks wrong"); } /* the AI saw the picture and found no readable text: the reading is marked wrong, no text check on it */
-    delete READING[id]; renderShots();
+    done(r); delete READING[id]; renderShots();
     if(aiAutoOn()&&!(pic&&pic.bad)&&!RECROP[id]) signAskAI(id); /* every reading is checked without a tap (the Edit form asks through its own button, v239) */
     if(PENDING[id]) finishPending(id);
     if(RECROP[id]) RECROP[id].onRead(SIGN[id]);
-  }catch(err){ if(stale()) return; status("Reading failed: "+(err&&err.message||err)); logErr("read",err&&(err.stack||err.message)||err); if(PENDING[id]) failPending(id,"the reading failed"); }
+  }catch(err){ if(stale()) return; status("Reading failed: "+(err&&err.message||err)); done(); logErr("read",err&&(err.stack||err.message)||err); if(PENDING[id]) failPending(id,"the reading failed"); }
 }
 /* ---------- a card saved before its reading is done (v237, H: "take a photo and make a crop in a rush, hit Save and move on;
    the app will finish everything in the background") ----------
@@ -3667,7 +3680,13 @@ async function saveSign(id){
   setStats(); renderShots();
 }
 /* ---------- Kamera / Inbox ---------- */
+let READER_WARMED=false;
+async function warmReader(){ /* the Camera tab loads the reader ahead of the first photo when its files are already on the phone (v290) — no download is started for a tab that is only looked at */
+  if(READER_WARMED||_ocrWorker||_ocrLoading) return; READER_WARMED=true;
+  try{ if(await ocrCached()<OCR_FILES.length) return; await ocrWorker(()=>{}); }catch(e){}
+}
 function renderInbox(main){
+  warmReader();
   main.innerHTML=`<div class="pane">
     <div class="lead">${t("Photos stay on this phone. Frame the text — the card is made for you.")}</div>
     <div class="snaprow"><button class="btn primary" id="snap">${t("Take photo")}</button><button class="btn" id="pick">${t("From album")}</button></div>
