@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=320; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=321; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2315,6 +2315,12 @@ const FRAME_ROOM=0.3; /* the placed frame's room around the text, in text height
 const PLACE_CF=95, PLACE_MIN=3; /* the reader may place the frame only from a reading this sure (v319, H: "Is the close look approach the right one at all?" — the reader's garbage reads at 79–88 % (the faces of 邪不压正 at 86 %, the wave lines of the Nongfu Spring logo as 还一二 at 86 %, the ice-cream cone as one character at 88 %), real text at 95–99 % in the quick look (绿友书一 97, 手作冰淇淋 97); a dictionary word inside the garbage — 一二, 品语 — was letting it place the frame, so the dictionary path of v296 and its v318 patch went) */
 function textLike(lines){ const sure=lines.flatMap(l=>(l.cf||[]).filter(c=>c>=SURE_BOX)); return sure.length>=PLACE_MIN&&sure.reduce((a,c)=>a+c,0)/sure.length>=PLACE_CF; } /* a declaration, so the harness can stand it down (as effScore) */ /* a reading the frame may follow (v296, H's 邪不压正 poster: the faces read as 品语失色全了 at 86 % and the quick look framed them — "jetzt macht er gesichtserkennung!?!??"): at least three characters read with confidence, at 95 % on average (v319; v296–v318: half the characters in dictionary words, or 95 % on average — a lone 有 has no word and the red test sign keeps its ink-row proposal either way; 90 was tried first and let the credits under 邪不压正, read as 册 | 二 | 国有证 with the sure characters at 90.25 %, place the frame on them) */
 const PLACE_H=0.4; /* fine print does not place the frame (v320, H's yoghurt pack 水果多多, 2026-09-08: the quick look read the small print under the title — 免豆水果制品和酸奶块口感, 即食添加量30丰富 — at 95 %, real text, and framed the whole photo around it, while the title was read only by the close look, at 1.5 × the ink height, and could no longer move the frame — "jetzt nimmt er wieder so gut wie alles mit rein"): the frame's ink height tells how tall the main text is (the small print measured 0.29 of it, real readings 0.4–2.5 — the sizeFitOf range), so lines under this share of it are left out of the placement, by the quick look and the close look alike; when nothing is left, nothing is placed and the close look or the AI decides */
+function rectOfLines(bmp,lines){ /* the frame around these lines, in the straightened frame's pixels: the confident boxes give the lines and their height, the image their ends (the quick look's rule since v290, shared with the reading's best pass since v321); null when nothing is confident */
+  const boxes=frameBoxes(lines), Hb=boxes.length?median(boxes.map(b=>b.y1-b.y0)):0; if(!(Hb>0)) return null;
+  const y0=Math.max(0,Math.min(...boxes.map(b=>b.y0))-Hb/2), y1=Math.min(bmp.height,Math.max(...boxes.map(b=>b.y1))+Hb/2);
+  const ext=textRowExtent(bmp,Math.min(...boxes.map(b=>b.x0)),Math.max(...boxes.map(b=>b.x1)),y0,y1,Hb);
+  return {x0:Math.max(0,ext.x0-Hb*FRAME_ROOM),y0:Math.max(0,y0+Hb/2-Hb*FRAME_ROOM),x1:Math.min(bmp.width,ext.x1+Hb*FRAME_ROOM),y1:Math.min(bmp.height,y1-Hb/2+Hb*FRAME_ROOM)};
+}
 function tallLines(lines,Hink){ if(!(Hink>0)) return lines; return lines.filter(l=>{ const h=boxHeight([l]); return !h||h>=PLACE_H*Hink; }); }
 let FRAME_WAIT=2000; /* the ink-row proposal is shown as the frame when the reader has not placed one within this time (v289, H: "Show the ink-row frame after 2 seconds if the reader is slower") */
 function shapeBox(b,W,H){
@@ -3100,14 +3106,12 @@ async function cropSign(id,opts){
        ten passes agreeing on a three-character reading */
     const Hink=await (async()=>{ const b=await createImageBitmap(dk.blob); try{ r.frameH=b.height; return inkHeight(b); } finally{ b.close(); } })(); r.ink=Math.round(Hink);
     let placedCut=null; /* the frame placed on the text (v288): its cut is the card image and what the AI gets */
-    const placeRect=async rect=>{ const cut=await frameOnText(id,r.blob,base,rect,dk.angle||0); if(stale()) return; if(cut){ placedCut=cut; renderShots(); } };
+    const placeRect=async (rect,by)=>{ const cut=await frameOnText(id,r.blob,base,rect,dk.angle||0,by); if(stale()) return; if(cut){ placedCut=cut; renderShots(); } };
     if(CROP&&CROP.id===id&&CROP.hidden){ /* a quick look for the frame alone (v290, H: "you don't need to translate first, you just need to identify text first"): one pass on a copy of at most FIRST_MAX px — 0.3 s on H's poster where the whole frame at 1 600 px takes 1.1 s — whose confident boxes give the lines and the image their ends; the frame goes there before the reading proper starts. It is not one of the reading's passes: as the first pass it lost 爸爸 on that poster, so the reading stays as it was */
       status("looking for the text …"); const bmp=await createImageBitmap(dk.blob); const k=Math.min(1,FIRST_MAX/Math.max(bmp.width,bmp.height)); const src=k<1?await toJpeg(bmp,k):dk.blob;
       let rect=null; try{ const read=scaleBoxes(await readPass(w,src,status),k); if(stale()) return; const lines=tallLines(read,Hink), fine=read.filter(l=>!lines.includes(l)); /* fine print beside taller ink places nothing (v320) */
         const ok=textLike(lines); READLOG.push({t:Date.now(),text:`quick look: ${read.length?read.map(l=>l.t).join(" | ")+` at ${Math.round(meanCf(read))} %`:"nothing"}${fine.length?` — fine print beside taller ink, left out: ${fine.map(l=>l.t).join(" | ")}`:""}${lines.length&&!ok?" — not text, no frame from it":read.length&&!lines.length?" — nothing left to frame":""}`}); while(READLOG.length>40) READLOG.shift(); /* Diagnostics (v296) */
-        const boxes=ok?frameBoxes(lines):[], Hb=boxes.length?median(boxes.map(b=>b.y1-b.y0)):0; /* garbage places no frame (v296) */
-        if(Hb>0){ const y0=Math.max(0,Math.min(...boxes.map(b=>b.y0))-Hb/2), y1=Math.min(bmp.height,Math.max(...boxes.map(b=>b.y1))+Hb/2);
-          const ext=textRowExtent(bmp,Math.min(...boxes.map(b=>b.x0)),Math.max(...boxes.map(b=>b.x1)),y0,y1,Hb); rect={x0:Math.max(0,ext.x0-Hb*FRAME_ROOM),y0:Math.max(0,y0+Hb/2-Hb*FRAME_ROOM),x1:Math.min(bmp.width,ext.x1+Hb*FRAME_ROOM),y1:Math.min(bmp.height,y1-Hb/2+Hb*FRAME_ROOM)}; } } finally{ bmp.close(); }
+        if(ok) rect=rectOfLines(bmp,lines); /* garbage places no frame (v296) */ } finally{ bmp.close(); }
       if(rect){ await placeRect(rect); if(stale()) return;
         if(CROP&&CROP.id===id&&CROP.hidden){ delete CROP.hidden; READLOG.push({t:Date.now(),text:"frame shown as proposed — the text fills it"}); while(READLOG.length>40) READLOG.shift(); renderShots(); } } } /* nothing to move: the proposal is the frame, from now */
     status("reading the text …");
@@ -3151,6 +3155,9 @@ async function cropSign(id,opts){
     r.passes=passes.map(p=>({s:Math.round(score(p)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),h:Hink?+(hOfPass(p)/Hink).toFixed(2):null,tight:p.tightened,bw:!!p.bw,ch:!!p.chroma,tra:!!p.tra,...(lineFit(p)<1?{over:p.lines.length-maxLines}:{})}));
     LAST_READ.passes=r.passes; saveReadLog();
     const best=passes[0], lines=best.lines;
+    /* the reading's winning pass places the frame when nothing else did (v321, H's Nongfu Spring bottle taken again at v320: the quick look read garbage, the close look's band sat on the mountain logo, and the text 农夫山泉 / 饮用天然水 was read by the whole-frame fallback at 98 % — a pass that could not place the frame, since only the close look's tight passes did —, so the card's picture kept the logo above the text: "das Bild über der Schrift gehört auch nicht rein"): a strong whole-frame pass whose lines pass the placement bar (textLike, the fine print left out) gives the frame the way the quick look does, while the frame is still the app's and untouched — Diagnostics "frame placed on the text by the reading: …" */
+    if(!placedCut&&lines.length&&!best.tightened&&effScore(lines,Hink)>=WEAK_READ&&(PENDING[id]&&!RECROP[id]?READ_APP[id]&&!PLACED[id]:CROP&&CROP.id===id&&(CROP.hidden||(CROP.proposed&&!CROP.followed)))){
+      const tl=tallLines(lines,Hink); if(textLike(tl)){ let rect=null; const bmp=await createImageBitmap(dk.blob); try{ rect=rectOfLines(bmp,tl); } finally{ bmp.close(); } if(stale()) return; if(rect){ await placeRect(rect,"reading"); if(stale()) return; } } }
     if(placedCut){ cardImg=placedCut; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=placedCut; } /* the frame placed on the text: the card shows what the frame shows (v288) */
     else if(best.tightened&&cardRect){ const cut=await cutUnrotated(r.blob,cardRect,dk.angle||0); if(stale()) return; if(cut){ cardImg=cut; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=cut; } } /* the text area with its margin, from the crop as framed */
     /* a weak reading, or none: the picture goes to the AI when a provider that takes pictures is set (v173) */
