@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=297; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=298; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2897,17 +2897,18 @@ async function frameOnText(id,orig,base,rect,angle,by){ /* rect: the text with i
    the faces under the title — "links leicht abgeschnitten, unten zu viel Luft"): a vision model's box is a rough place,
    a tenth of the picture off on that poster twice; the pixels know the characters. On a grey copy of at most 800 px,
    thresholded by Otsu over the box, the connected blobs of both colours are labelled within the box widened by one text
-   height (SNAP_ROOM; the text height = the box's height over its lines). A character is a blob between 0.15 and 1.3
-   text heights tall and at most two wide (SNAP_MIN/SNAP_MAX), not touching the widened box's edge — the faces cut off
-   by the picture's bottom, the poster's border and the wall, the red between the characters and a reflection streak all
-   fail one of these — with at least half of it inside the AI's box (a reflection streak above the title and a cheek
+   height (SNAP_ROOM; the text height = the box's height over its lines). A character is a blob at least 0.15 text
+   heights tall (SNAP_MIN) and smaller than the box itself (SNAP_MAX of its width and height — a border ring around the
+   box is bigger; no bound at a character's size, since a brush title's strokes join across the lines), not touching the
+   widened box's edge — the faces cut off by the picture's bottom, the poster's border and the wall, the red between the
+   characters and a reflection streak all fail one of these — with at least half of it inside the AI's box (a reflection streak above the title and a cheek
    under it lie outside, the 邪 the box cuts lies mostly inside), and of the two colours the one whose characters cover
    more area is the text (a median or a dominant colour cannot tell the background: the white title fills more of
    Qwen's box than the red does). A blob of that colour in a taken blob's band, within half a text height sideways,
    joins — the box cut 邪 between 牙 and 阝, and 牙 lay outside it; sideways only, since under a line the cheeks of the
    faces would qualify. The snapped box is the union of those blobs; nothing, or under a fifth of the AI's box, leaves the AI's box as it is. Measured
    crossings per row could not do it: the faces' rows had as many light-dark changes as the title's. */
-const SNAP_ROOM=1, SNAP_MIN=0.15, SNAP_MAX=1.3;
+const SNAP_ROOM=1, SNAP_MIN=0.15, SNAP_MAX=0.95;
 function snapBox(bmp,box,n){
   const k=Math.min(1,800/Math.max(bmp.width,bmp.height)), W=Math.max(1,Math.round(bmp.width*k)), Hh=Math.max(1,Math.round(bmp.height*k));
   const cv=document.createElement("canvas"); cv.width=W; cv.height=Hh; const ctx=cv.getContext("2d",{alpha:false,willReadFrequently:true}); ctx.drawImage(bmp,0,0,W,Hh);
@@ -2932,7 +2933,7 @@ function snapBox(bmp,box,n){
         if(y>0&&!lab[i-rw]&&m[i-rw]){ lab[i-rw]=1; stack[top++]=i-rw; } if(y<rh-1&&!lab[i+rw]&&m[i+rw]){ lab[i+rw]=1; stack[top++]=i+rw; } }
       mnx-=e; mny-=e; mxx+=e; mxy+=e; const h=mxy-mny+1, w=mxx-mnx+1; /* grown back */
       if(mnx<=0||mny<=0||mxx>=rw-1||mxy>=rh-1) continue; /* cut by the edge: the faces, the border, the wall, the background */
-      if(h<SNAP_MIN*Hb||h>SNAP_MAX*Hb||w>2*SNAP_MAX*Hb||area<0.01*Hb*Hb) continue; /* not a character's size */
+      if(h<SNAP_MIN*Hb||h>SNAP_MAX*(B.y1-B.y0)||w>SNAP_MAX*(B.x1-B.x0)||area<0.01*Hb*Hb) continue; /* not a character's size: smaller than 0.15 text heights, or nearly the box itself (a border ring around it) — no upper bound at a character's size, since a brush title's strokes join into one blob spanning the lines (H's 流浪地球: the title fell out and the frame cut 流 and 地) */
       const bx0=R.x0+mnx, by0=R.y0+mny, bx1=R.x0+mxx+1, by1=R.y0+mxy+1, ix=Math.min(bx1,B.x1)-Math.max(bx0,B.x0), iy=Math.min(by1,B.y1)-Math.max(by0,B.y0);
       comps[c].push({x0:bx0,y0:by0,x1:bx1,y1:by1,area,inside:ix>0&&iy>0&&ix*iy>=0.5*w*h}); } } /* inside: at least half of it in the AI's box — a character the box cuts counts, a reflection above it and a face's cheek under it do not */
   const areaOf=cs=>cs.filter(c=>c.inside).reduce((a,c)=>a+c.area,0), text=areaOf(comps[1])>areaOf(comps[0])?comps[1]:comps[0];
