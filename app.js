@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=303; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=304; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2095,6 +2095,7 @@ async function readPassTra(blob,status){
 
 /* per-photo result (session only): characters with box + auto pinyin; tap to select */
 const PENDING={}; /* shot id → the id of a card saved before its reading finished (v237, "Save now"): the reading fills it in when done */
+const PLACED={}, READ_APP={}; /* v304, for a card saved with Save now: PLACED = the frame the reader or the AI placed on the text while the card waited (the card takes it as its frame and its crop), READ_APP = the reading started from the app's own frame, not the hand's (only such a frame may be moved) */
 const frameOf=r=>({x:+(r.x/r.lw).toFixed(4),y:+(r.y/r.lh).toFixed(4),w:+(r.w/r.lw).toFixed(4),h:+(r.h/r.lh).toFixed(4),a:+(r.a||0).toFixed(1)}); /* the frame a card was cut with, as fractions of the photo (card.frame, v244) — Crop again starts from it */
 const rectKey=r=>r?[r.x,r.y,r.w,r.h,r.a||0].map(v=>Math.round(v)).join(","):""; /* the same frame, give or take a pixel */
 async function placeFrame(id,f,opts){ /* a stored frame onto the photo's layer, then the preview — without the automatic reading when asked (v244) */
@@ -2128,7 +2129,7 @@ async function findFrame(fullBlob,cropBlob){
     return {x:+(bx/fw).toFixed(4),y:+(by/fh).toFixed(4),w:+(cw/fw).toFixed(4),h:+(ch/fh).toFixed(4),a:0};
   }catch(e){ return null; } finally{ if(F) F.close(); if(C) C.close(); }
 }
-const abandonReading=id=>{ clearTimeout(READ_TIMER[id]); READ_RUN[id]=(READ_RUN[id]||0)+1; delete SIGN[id]; delete READING[id]; }; /* a running reading of this photo abandons at its next step instead of delivering a result (v117); the inbox's Cancel, the Edit form's Crop again and an edit over a pending reading share it (v243) */
+const abandonReading=id=>{ clearTimeout(READ_TIMER[id]); READ_RUN[id]=(READ_RUN[id]||0)+1; delete SIGN[id]; delete READING[id]; delete PLACED[id]; }; /* a running reading of this photo abandons at its next step instead of delivering a result (v117); the inbox's Cancel, the Edit form's Crop again and an edit over a pending reading share it (v243) */
 const SHOTS_EXTRA={}, RECROP={}; /* the Edit form's Crop again (v239): the card's whole photo as a photo record outside the inbox (SHOTS_EXTRA[id]={id,blob,ts}), and the form's hooks — redraw (the frame view in place of renderShots), onRead (the reading's result), onImage (Image only), end */
 const shotRec=id=>S.inbox.find(s=>s.id===id)||SHOTS_EXTRA[id]||null;
 const QSNOTE={}, QSCARD={}, READING={}; /* READING[id]: status text while the photo is being read · QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) · QSNOTE[id] = the note under the photo after saving */
@@ -2873,10 +2874,13 @@ function textBandOf(tightPasses,cardRect){ /* the tight passes' own boxes, as a 
   return {x0:Math.max(cardRect.x0,r.x0), y0:Math.max(cardRect.y0,r.y0), x1:Math.min(cardRect.x1,r.x1), y1:Math.min(cardRect.y1,r.y1)}; /* never outside the band the card image takes */
 }
 async function frameOnText(id,orig,base,rect,angle,by){ /* rect: the text with its room, in the straightened frame's coordinates; orig = the crop the reading started from, base = the frame it was cut with (v297: a frame the quick look placed meanwhile is not the picture's frame); by = "AI" when the picture answer places it (v293: allowed while the frame is still the app's proposal, shown or not) */
-  const cr=CROP&&CROP.id===id&&CROP.rect, refine=!!by&&!!base&&base===cr&&!!CROP.followed; /* the AI's box on the placed frame's own cut (v303): the frame is centred inside itself */
-  if(!cr||!base||!(CROP.hidden||(by&&CROP.proposed))||!rect||(base.a&&!refine)||RECROP[id]||PENDING[id]) return null; /* the AI may move a frame the reader placed from a weak reading, never one the hand touched (the hand's first gesture drops `proposed`); a turned base is the hand's — unless it is the placed frame itself */
+  const pend=!!PENDING[id]&&!RECROP[id]; /* a card saved with Save now (v304, H's three posters on v303 all with the whole frame's crop: "Enger crop funktioniert manchmal, aber nicht immer" — the frame was gone with the tap, so nothing could be placed): the placement goes to the waiting card instead — its frame and its crop */
+  const cr=pend?(PLACED[id]||base):(CROP&&CROP.id===id&&CROP.rect), refine=!!by&&!!base&&!!cr&&base===cr&&(pend?!!PLACED[id]:!!CROP.followed); /* the AI's box on the placed frame's own cut (v303): the frame is centred inside itself */
+  if(!base||!rect||RECROP[id]) return null;
+  if(pend){ if(!READ_APP[id]||(base.a&&!refine)) return null; } /* only a frame the app drew may be moved for the waiting card; the hand's frame is the card's */
+  else if(!cr||!(CROP.hidden||(by&&CROP.proposed))||(base.a&&!refine)) return null; /* the AI may move a frame the reader placed from a weak reading, never one the hand touched (the hand's first gesture drops `proposed`); a turned base is the hand's — unless it is the placed frame itself */
   let W=0,Hh=0; try{ const bmp=await createImageBitmap(orig); W=bmp.width; Hh=bmp.height; bmp.close(); }catch(e){ return null; }
-  if(!W||!Hh||CROP.rect!==cr) return null;
+  if(!W||!Hh||(!pend&&(!CROP||CROP.rect!==cr))) return null;
   const sc=W/base.w, lw=base.lw, lh=base.lh; /* crop pixels per layer pixel */
   const shaped=false; let f; /* the text with its small room, no 16:9 widening (v293, H: "Make the automatic crop frame tighter. Chinese Text should be well readable in the thumbnail list" — the list's box is 16:9 itself, with the blurred fill behind a wide crop, and a frame widened to 16:9 around a one-line text shrank the text to half the thumbnail's width) */
   let a=0;
@@ -2896,8 +2900,9 @@ async function frameOnText(id,orig,base,rect,angle,by){ /* rect: the text with i
   if(nr.w<8||nr.h<8) return null;
   if(!(cr.a||0)===!a&&Math.abs(nr.x-cr.x)<0.01*lw&&Math.abs(nr.y-cr.y)<0.01*lh&&Math.abs(nr.w-cr.w)<0.01*lw&&Math.abs(nr.h-cr.h)<0.01*lh) return null; /* the text fills the frame: nothing to move */
   const cut=await cropBlob(id,nr); if(!cut) return null;
-  if(!CROP||CROP.id!==id||CROP.rect!==cr) return null; /* the hand moved the frame meanwhile: the reading is stale anyway */
-  CROP.rect=nr; CROP.proposed="text"; CROP.followed=true; delete CROP.hidden;
+  if(pend){ if(!PENDING[id]) return null; PLACED[id]=nr; } /* the waiting card takes this frame and its cut (finishPending) */
+  else { if(!CROP||CROP.id!==id||CROP.rect!==cr) return null; /* the hand moved the frame meanwhile: the reading is stale anyway */
+    CROP.rect=nr; CROP.proposed="text"; CROP.followed=true; delete CROP.hidden; }
   const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`frame ${refine?"centred":"placed"} on the text${by?" by the "+by:""}: ${pc(f.x/lw)}–${pc((f.x+f.w)/lw)} % across, ${pc(f.y/lh)}–${pc((f.y+f.h)/lh)} % down${shaped?" (16:9)":""}${a?`, turned by ${a}°`:""}`}); while(READLOG.length>40) READLOG.shift();
   return cut.blob;
 }
@@ -2981,6 +2986,7 @@ async function cropSign(id,opts){
   LAST_READ.passes=null; status("cutting out the frame …");
   let cardImg=null; /* the card's picture from this reading — kept on the reading, not in the one global slot, so a reading finishing in the background cannot hand its picture to another photo's card (v237) */
   try{
+    READ_APP[id]=opts&&opts.app!==undefined?!!opts.app:!!(CROP&&CROP.id===id&&(CROP.hidden||CROP.proposed)); delete PLACED[id]; /* the app's own frame, not the hand's (v304: the placement may move it for a card saved with Save now) */
     const base=opts&&opts.rect||(CROP&&CROP.id===id?CROP.rect:null); /* the frame the reading starts from: a placed frame's rectangle is mapped from its cut, not from whatever frame stands when the placement lands (v297 — the quick look's placed frame had shifted the AI's box) */
     const r=opts&&opts.blob?{blob:opts.blob}:await cropBlob(id,opts&&opts.rect);
     if(stale()) return;
@@ -3058,7 +3064,7 @@ async function cropSign(id,opts){
     if(weak&&pictureProvider()&&aiAutoOn()&&navigator.onLine){ /* the one switch covers text and pictures (v193, H: the picture went out while the check was off — "counterintuitive") */
       const guesses=[...new Set(passes.map(textOf).filter(Boolean))].slice(0,6);
       /* the whole straightened frame, never the second look's band (v175, H's two-line sticker 骑车勿盯 / 还车勿忘: the tight band held the lower line only, and the AI read that line alone) */
-      const onText=!!placedCut&&CROP&&CROP.id===id&&CROP.followed; /* the frame was placed on text the reader could read (the quick look or the close look, through textLike since v296): the AI sees that frame's cut, as the user does — v301, H's 绿皮书 poster: the reading proper on the whole proposal was weak, the whole poster went to Qwen, and the card came back with the Oscar line from outside the frame ("warum wurden hier characters ausserhalb des crops mitgelesen?"); the cut is upright already (a turned frame's cut is drawn upright), the AI's box then centres the frame on the characters (v303) */
+      const onText=!!placedCut&&(CROP&&CROP.id===id&&CROP.followed||!!PLACED[id]); /* the frame was placed on text the reader could read (the quick look or the close look, through textLike since v296): the AI sees that frame's cut, as the user does — v301, H's 绿皮书 poster: the reading proper on the whole proposal was weak, the whole poster went to Qwen, and the card came back with the Oscar line from outside the frame ("warum wurden hier characters ausserhalb des crops mitgelesen?"); the cut is upright already (a turned frame's cut is drawn upright), the AI's box then centres the frame on the characters (v303) */
       const picBase=onText?{orig:placedCut,dk:null}:{orig:r.blob,dk}; /* else the area the reading started from — the app's proposal or the hand's frame —, never a placed cut from garbage (v296: the faces went to Qwen while the title stayed outside; v288–v295 sent the placed cut); kept with its straightening, so the AI's box maps back onto it (v293) */
       if(onText){ READLOG.push({t:Date.now(),text:"the AI gets the placed frame's cut"}); while(READLOG.length>40) READLOG.shift(); }
       var picSeen=picBase; try{ pic=await aiReadPicture(picBase.dk?picBase.dk.blob:picBase.orig,guesses,status); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
@@ -3068,14 +3074,14 @@ async function cropSign(id,opts){
       /* the AI's lines replace the reading: no confidences (every character is open in the picker), no boxes (the sheet
          shows the whole crop), the reader's texts become the alternatives; the answer is the check, no text check follows */
       const zh=pic.zh.split("\n"), guesses=[...new Set(passes.map(textOf).filter(tx=>tx&&tx!==pic.zh))].slice(0,6);
-      if(pic.box&&picSeen&&CROP&&CROP.id===id&&CROP.proposed){ /* the reader could not read this font (v293 — H's 邪不压正 poster: the ink rows and the reader's garbage boxes put the frame around the whole photo): the AI's box places the frame, once, as fractions of the straightened picture it saw — the proposal's crop, or the cut of the frame the quick look had placed from that same garbage; on the placed frame's own cut (v301) the box centres the frame on the characters inside it (v303, H's 绿皮书: "should be more centered") */
-        const seen=picSeen.dk?picSeen.dk.blob:picSeen.orig, seenAngle=picSeen.dk?picSeen.dk.angle||0:0, seenBase=picSeen.dk?base:CROP.rect; /* the placed cut is upright, and its frame is the placed one */
+      if(pic.box&&picSeen&&(PENDING[id]&&!RECROP[id]?READ_APP[id]:CROP&&CROP.id===id&&CROP.proposed)){ /* the reader could not read this font (v293 — H's 邪不压正 poster: the ink rows and the reader's garbage boxes put the frame around the whole photo): the AI's box places the frame, once, as fractions of the straightened picture it saw — the proposal's crop, or the cut of the frame the quick look had placed from that same garbage; on the placed frame's own cut (v301) the box centres the frame on the characters inside it (v303, H's 绿皮书: "should be more centered") */
+        const seen=picSeen.dk?picSeen.dk.blob:picSeen.orig, seenAngle=picSeen.dk?picSeen.dk.angle||0:0, seenBase=picSeen.dk?base:(PLACED[id]||(CROP&&CROP.id===id?CROP.rect:null)); /* the placed cut is upright, and its frame is the placed one */
         let W=0,Hh=0,box=null; try{ const b=await createImageBitmap(seen); W=b.width; Hh=b.height; const [bx0,by0,bx1,by1]=pic.box, n=Math.max(1,zh.length);
           box={x0:bx0*W,y0:by0*Hh,x1:bx1*W,y1:by1*Hh}; const snap=snapBox(b,box,n); b.close(); /* the box's edges from the pixels (v297): an edge that cuts through the text moves out to its end, a blank margin is trimmed */
           if(snap){ const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`the AI's box ${pc(bx0)}–${pc(bx1)} % across, ${pc(by0)}–${pc(by1)} % down, snapped to the ink: ${pc(snap.x0/W)}–${pc(snap.x1/W)} % across, ${pc(snap.y0/Hh)}–${pc(snap.y1/Hh)} % down`}); while(READLOG.length>40) READLOG.shift(); box=snap; }
           r.pic.snap=snap?[snap.x0/W,snap.y0/Hh,snap.x1/W,snap.y1/Hh].map(v=>+v.toFixed(3)):null;
           const Hb=(box.y1-box.y0)/n; /* the text height from the box and its lines */
-          var rect={x0:Math.max(0,box.x0-Hb*FRAME_ROOM),y0:Math.max(0,box.y0-Hb*FRAME_ROOM),x1:Math.min(W,box.x1+Hb*FRAME_ROOM),y1:Math.min(Hh,box.y1+Hb*FRAME_ROOM)}; }catch(e){ box=null; }
+          var rect={x0:Math.max(0,box.x0-Hb*FRAME_ROOM),y0:Math.max(0,box.y0-Hb*FRAME_ROOM),x1:Math.min(W,box.x1+Hb*FRAME_ROOM),y1:Math.min(Hh,box.y1+Hb*FRAME_ROOM)}; }catch(e){ box=null; logErr("snap",e&&e.message||String(e)); READLOG.push({t:Date.now(),text:"the AI's box could not be used: "+(e&&e.message||e)}); while(READLOG.length>40) READLOG.shift(); }
         if(box){ const cut=await frameOnText(id,picSeen.orig,seenBase,rect,seenAngle,"AI"); if(stale()) return; if(cut) placedCut=cut; } }
       cardImg=placedCut||r.blob; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=cardImg; /* the card image is the crop as framed (the placed frame's cut, v288), not the second look's band */
       SIGN[id]={lines:zh, orig:zh.slice(), conf:[], boxes:zh.map(()=>[]), img:dk.blob, angle:dk.angle||0, tightened:false, region:r, alts:guesses, trad:!!pic.zht, tradDetected:!!pic.zht, tradText:pic.zht||"",
@@ -3108,7 +3114,7 @@ async function cropSign(id,opts){
       if(pick&&!alts.includes(textOf(pick))){ if(alts.length>=6) alts.pop(); alts.push(textOf(pick)); } }
     const tradPhoto=s2t(bestT)!==bestT&&tradPhotoOf(lines.map(x=>x.t),passes,score); r.trad=tradPhoto; /* a text without a traditional form (推) has nothing to vote on */
     SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r, alts, trad:tradPhoto, tradDetected:tradPhoto, tradText:tradPhoto?s2t(bestT):""};
-    SIGN[id].cardImg=cardImg; SIGN[id].weak=weak; SIGN[id].picBlob=(placedCut&&CROP&&CROP.id===id&&CROP.followed)?placedCut:dk.blob; SIGN[id].picAsked=r.pic!==undefined; /* the picture for a garbage verdict of the text check (v302): the placed frame's cut, else the straightened frame — the same picture the weak path sends */ /* for the card saved before the reading (v237): its picture, and the flag when the reading was weak */
+    SIGN[id].cardImg=cardImg; SIGN[id].weak=weak; SIGN[id].picBlob=(placedCut&&(CROP&&CROP.id===id&&CROP.followed||PLACED[id]))?placedCut:dk.blob; SIGN[id].picAsked=r.pic!==undefined; /* the picture for a garbage verdict of the text check (v302): the placed frame's cut, else the straightened frame — the same picture the weak path sends */ /* for the card saved before the reading (v237): its picture, and the flag when the reading was weak */
     if(pic&&pic.bad){ const sg=SIGN[id]; sg.ai={zh:bestT,zht:"",p:"",m:"",note:pic.note,ok:false,bad:true,pic:true}; sg.flag=true; sg.flagNote=t("the reading looks wrong"); } /* the AI saw the picture and found no readable text: the reading is marked wrong, no text check on it */
     done(r); delete READING[id]; renderShots();
     if(aiAutoOn()&&!(pic&&pic.bad)&&!RECROP[id]) signAskAI(id); /* every reading is checked without a tap (the Edit form asks through its own button, v239) */
@@ -3129,12 +3135,12 @@ async function cropSign(id,opts){
    or from the crop itself. The usual flow — wait for the preview, then Save card — is unchanged. */
 async function saveNow(id){
   if(PENDING[id]||!CROP||CROP.id!==id||!CROP.rect) return;
-  const rect={...CROP.rect}, r=await cropBlob(id,rect); if(!r) return;
-  const card={id:"reading#"+Date.now(), c:"", p:"", m:"", t:"Custom", at:Date.now(), shot:id, lb:"photo", img:await jpegOf(r.blob), mt:{src:"gloss",verified:false,pending:true}, frame:frameOf(rect), reading:{rect,at:Date.now()}};
+  const rect={...CROP.rect}, app=!!(CROP.hidden||CROP.proposed), followed=!!CROP.followed, r=await cropBlob(id,rect); if(!r) return;
+  const card={id:"reading#"+Date.now(), c:"", p:"", m:"", t:"Custom", at:Date.now(), shot:id, lb:"photo", img:await jpegOf(r.blob), mt:{src:"gloss",verified:false,pending:true}, frame:frameOf(rect), reading:{rect,at:Date.now(),app}}; /* app: the frame was the app's own, so the reader or the AI may still tighten it while the card waits (v304) */
   bump("byPhoto"); S.custom.push(card); try{ await idbPut("custom",card); }catch(e){}
-  PENDING[id]=card.id; QSCARD[id]=card.id; CROP=null; delete SIGN[id];
+  PENDING[id]=card.id; QSCARD[id]=card.id; CROP=null; delete SIGN[id]; if(followed) PLACED[id]=rect; /* a frame the reader had already placed on the text: the running reading goes on as if it stood (the AI gets its cut and centres it, v304) */
   QSNOTE[id]=t("Card saved — the text follows when the reading is done.");
-  clearTimeout(READ_TIMER[id]); if(!READING[id]) cropSign(id,{rect}); /* the reading had not started yet (the 1.2 s wait) — start it with the frame it was saved with */
+  clearTimeout(READ_TIMER[id]); if(!READING[id]) cropSign(id,{rect,app}); /* the reading had not started yet (the 1.2 s wait) — start it with the frame it was saved with */
   setStats(); renderShots();
 }
 function pendingCard(id){ const cid=PENDING[id]; return cid?cardOf(cid):null; }
@@ -3146,7 +3152,7 @@ async function finishPending(id){
     const built=sg&&SIGN[id]===sg?await readingCard(id,sg):null;
     if(!built){ return failPending(id,"nothing to save"); }
     const {card,c,mt}=built;
-    if(ph.reading.rect&&ph.reading.rect.lw) ph.frame=frameOf(ph.reading.rect);
+    if(PLACED[id]) ph.frame=frameOf(PLACED[id]); else if(ph.reading.rect&&ph.reading.rect.lw) ph.frame=frameOf(ph.reading.rect); /* the frame the reader or the AI placed on the text while the card waited (v304), else the one it was saved with */
     for(const k of Object.keys(ph)) if(!["id","at","img","imgFull","shot","tags","frame"].includes(k)) delete ph[k];
     const {id:_i,at:_a,img:_m,shot:_s,...fields}=card; Object.assign(ph,fields);
     if(sg.cardImg){ ph.img=await jpegOf(sg.cardImg); dropThumb(ph.id); } /* the list's thumbnail was made from the crop saved first (v242, H: "the card with a photo before the re-crop remains") */
@@ -3154,12 +3160,12 @@ async function finishPending(id){
     try{ await idbPut("custom",ph); }catch(e){}
     QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}.`+(mt.pending?" Translation pending.":"")+(ph.flag?" Flagged for review.":"");
   }catch(err){ logErr("savenow",err&&(err.stack||err.message)||err); return failPending(id,"the reading failed"); }
-  finally{ delete PENDING[id]; delete SIGN[id]; dropExtraShot(id); }
+  finally{ delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; dropExtraShot(id); }
   S.queue=buildQueue(false); aiAutoSoon(); setStats();
   if(S.mode==="cards"&&!S.editing) render(); else renderShots(); /* the list or the detail shows the filled card at once */
 }
 async function failPending(id,why){
-  const ph=pendingCard(id); delete PENDING[id]; delete SIGN[id]; if(!ph||!ph.reading) return;
+  const ph=pendingCard(id); delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; if(!ph||!ph.reading) return;
   dropExtraShot(id);
   if(ph.c) delete ph.reading; else ph.reading.failed=why; /* a card framed again in the Edit form keeps its text and forgets the frame (v241, v243); an empty card keeps the failure for "Nothing read yet" */
   ph.flag=true; ph.flagNote=ph.c?t("the new frame could not be read — the old text stays"):t("the reading failed — edit the card or frame the photo again");
@@ -3170,8 +3176,8 @@ async function failPending(id,why){
 async function resumePending(){
   for(const d of S.custom.filter(d=>d.reading&&!d.reading.failed)){
     const rec=d.shot&&S.inbox.find(x=>x.id===d.shot), full=!rec&&fullPhoto(d), rect=d.reading.rect; let key, opts;
-    if(rec){ key=d.shot; opts={rect}; } /* the inbox photo with the saved frame */
-    else if(full&&rect&&rect.lw){ key=d.id; SHOTS_EXTRA[key]={id:key,blob:full,ts:Date.now()}; opts={rect}; } /* the photo copied onto the card (v241: a frame from the Edit form after the inbox photo went) */
+    if(rec){ key=d.shot; opts={rect,app:!!d.reading.app}; } /* the inbox photo with the saved frame */
+    else if(full&&rect&&rect.lw){ key=d.id; SHOTS_EXTRA[key]={id:key,blob:full,ts:Date.now()}; opts={rect,app:!!d.reading.app}; } /* the photo copied onto the card (v241: a frame from the Edit form after the inbox photo went) */
     else { key=d.id; opts={blob:d.img}; } /* the crop itself */
     if(PENDING[key]) continue; PENDING[key]=d.id;
     try{ await cropSign(key,opts); }catch(e){}
