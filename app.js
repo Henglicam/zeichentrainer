@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=300; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=301; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -3036,15 +3036,17 @@ async function cropSign(id,opts){
     if(weak&&pictureProvider()&&aiAutoOn()&&navigator.onLine){ /* the one switch covers text and pictures (v193, H: the picture went out while the check was off — "counterintuitive") */
       const guesses=[...new Set(passes.map(textOf).filter(Boolean))].slice(0,6);
       /* the whole straightened frame, never the second look's band (v175, H's two-line sticker 骑车勿盯 / 还车勿忘: the tight band held the lower line only, and the AI read that line alone) */
-      const picBase={orig:r.blob,dk}; /* the area the reading started from — the app's proposal or the hand's frame —, never the reader's placed cut (v296: a weak reading means that placement came from garbage, and the faces went to Qwen while the title stayed outside; v288–v295 sent the placed cut); kept with its straightening, so the AI's box maps back onto it (v293) */
-      var picSeen=picBase; try{ pic=await aiReadPicture(picBase.dk.blob,guesses,status); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
+      const onText=!!placedCut&&CROP&&CROP.id===id&&CROP.followed; /* the frame was placed on text the reader could read (the quick look or the close look, through textLike since v296): the AI sees that frame's cut, as the user does — v301, H's 绿皮书 poster: the reading proper on the whole proposal was weak, the whole poster went to Qwen, and the card came back with the Oscar line from outside the frame ("warum wurden hier characters ausserhalb des crops mitgelesen?"); the cut is upright already (a turned frame's cut is drawn upright), and the AI's box is not needed on a frame that stands on the text */
+      const picBase=onText?{orig:placedCut,dk:null}:{orig:r.blob,dk}; /* else the area the reading started from — the app's proposal or the hand's frame —, never a placed cut from garbage (v296: the faces went to Qwen while the title stayed outside; v288–v295 sent the placed cut); kept with its straightening, so the AI's box maps back onto it (v293) */
+      if(onText){ READLOG.push({t:Date.now(),text:"the AI gets the placed frame's cut"}); while(READLOG.length>40) READLOG.shift(); }
+      var picSeen=picBase; try{ pic=await aiReadPicture(picBase.dk?picBase.dk.blob:picBase.orig,guesses,status); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
       if(stale()) return; r.pic=pic?{zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box}:null;
     }
     if(pic&&!pic.bad){
       /* the AI's lines replace the reading: no confidences (every character is open in the picker), no boxes (the sheet
          shows the whole crop), the reader's texts become the alternatives; the answer is the check, no text check follows */
       const zh=pic.zh.split("\n"), guesses=[...new Set(passes.map(textOf).filter(tx=>tx&&tx!==pic.zh))].slice(0,6);
-      if(pic.box&&picSeen&&CROP&&CROP.id===id&&CROP.proposed){ /* the reader could not read this font (v293 — H's 邪不压正 poster: the ink rows and the reader's garbage boxes put the frame around the whole photo): the AI's box places the frame, once, as fractions of the straightened picture it saw — the proposal's crop, or the cut of the frame the quick look had placed from that same garbage */
+      if(pic.box&&picSeen&&picSeen.dk&&CROP&&CROP.id===id&&CROP.proposed){ /* the reader could not read this font (v293 — H's 邪不压正 poster: the ink rows and the reader's garbage boxes put the frame around the whole photo): the AI's box places the frame, once, as fractions of the straightened picture it saw — the proposal's crop, or the cut of the frame the quick look had placed from that same garbage */
         let W=0,Hh=0,box=null; try{ const b=await createImageBitmap(picSeen.dk.blob); W=b.width; Hh=b.height; const [bx0,by0,bx1,by1]=pic.box, n=Math.max(1,zh.length);
           box={x0:bx0*W,y0:by0*Hh,x1:bx1*W,y1:by1*Hh}; const snap=snapBox(b,box,n); b.close(); /* the box's edges from the pixels (v297): an edge that cuts through the text moves out to its end, a blank margin is trimmed */
           if(snap){ const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`the AI's box ${pc(bx0)}–${pc(bx1)} % across, ${pc(by0)}–${pc(by1)} % down, snapped to the ink: ${pc(snap.x0/W)}–${pc(snap.x1/W)} % across, ${pc(snap.y0/Hh)}–${pc(snap.y1/Hh)} % down`}); while(READLOG.length>40) READLOG.shift(); box=snap; }
