@@ -168,7 +168,7 @@ de:{
   "Check every new card with the AI automatically (when online)":"Jede neue Karte automatisch mit der KI prüfen (wenn online)","Review queue":"Warteschlange","Storage":"Speicher","Learning":"Lernen",
   "Card order":"Reihenfolge der Karten","Due cards come first, then up to {0} new ones. This sets the order inside each group.":"Fällige Karten kommen zuerst, dann bis zu {0} neue. Das hier legt die Reihenfolge innerhalb jeder Gruppe fest.",
   "Progress":"Fortschritt","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"App {0} geöffnet, {1} wiederholt, {2}, {3} von der KI geprüft.","Work done by {0}.":"Arbeit erledigt von {0}.",
-  "on-device reader":"Texterkennung im Telefon","none yet":"noch nichts","Share report":"Bericht teilen","Usage sharing":"Nutzungsdaten",
+  "Share report":"Bericht teilen","Usage sharing":"Nutzungsdaten",
   "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"Sendet einmal am Tag anonyme Nutzungszahlen an den Besitzer der App: genutzte Tage, erstellte und wiederholte Karten, KI-Prüfungen und die Fehlermeldungen der App. Kein Kartentext, keine Fotos.",
   "Your id: {0}.":"Deine Kennung: {0}.","Send once a day":"Einmal am Tag senden","Photos":"Fotos","Delete {0}":"{0} löschen",
   "Advanced settings":"Erweiterte Einstellungen","Admin log in":"Admin-Anmeldung",
@@ -186,7 +186,6 @@ de:{
   "Start over?":"Von vorn anfangen?","All progress, cards and inbox photos on this phone will be deleted.":"Aller Fortschritt, alle Karten und Fotos im Eingang auf diesem Telefon werden gelöscht.",
   "Delete everything":"Alles löschen","Oldest first":"Älteste zuerst","Newest first":"Neueste zuerst","Random":"Zufällig",
   "suggestion":"{0} Vorschlag","suggestions":"{0} Vorschläge","progress entry":"{0} Lerneintrag","progress entries":"{0} Lerneinträge",
-  "reading":"{0} Erkennung","readings":"{0} Erkennungen","check":"{0} Prüfung","checks":"{0} Prüfungen",
   /* the meaning in the app's language and the Translate-all row (v256) */
   "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Die Texte der App und die Bedeutung neuer Karten. Karten behalten Chinesisch und Pinyin.","Meanings":"Bedeutungen","{0} have their meaning in another language.":"{0} haben ihre Bedeutung in einer anderen Sprache.","Translate all cards into {0}":"Alle Karten auf {0} übersetzen","Translating {0} of {1} …":"Übersetze {0} von {1} …","{0} translated, {1} left.":"{0} übersetzt, {1} übrig.","Done — {0} translated.":"Fertig — {0} übersetzt.",
   /* the More screen in the learner's order (v257) */
@@ -376,7 +375,7 @@ fr:{
   "Check every new card with the AI automatically (when online)":"Vérifier chaque nouvelle carte automatiquement avec l'IA (en ligne)","Review queue":"File de vérification","Storage":"Stockage","Learning":"Apprentissage",
   "Card order":"Ordre des cartes","Due cards come first, then up to {0} new ones. This sets the order inside each group.":"Les cartes à revoir viennent d'abord, puis jusqu'à {0} nouvelles. Ceci règle l'ordre dans chaque groupe.",
   "Progress":"Progression","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"Appli ouverte {0}, {1} revues, {2}, {3} vérifiées par l'IA.","Work done by {0}.":"Travail effectué par {0}.",
-  "on-device reader":"lecteur sur le téléphone","none yet":"rien encore","Share report":"Partager le rapport","Usage sharing":"Partage d'utilisation",
+  "Share report":"Partager le rapport","Usage sharing":"Partage d'utilisation",
   "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"Envoie une fois par jour des comptages anonymes au propriétaire de l'appli : jours d'utilisation, cartes créées et revues, vérifications par l'IA et messages d'erreur de l'appli. Pas de texte des cartes, pas de photos.",
   "Your id: {0}.":"Ton identifiant : {0}.","Send once a day":"Envoyer une fois par jour","Photos":"Photos","Delete {0}":"Supprimer {0}",
   "Advanced settings":"Réglages avancés","Admin log in":"Connexion admin",
@@ -394,7 +393,6 @@ fr:{
   "Start over?":"Tout recommencer ?","All progress, cards and inbox photos on this phone will be deleted.":"Toute la progression, les cartes et les photos de la boîte sur ce téléphone seront supprimées.",
   "Delete everything":"Tout supprimer","Oldest first":"Plus anciennes d'abord","Newest first":"Plus récentes d'abord","Random":"Aléatoire",
   "suggestion":"{0} suggestion","suggestions":"{0} suggestions","progress entry":"{0} entrée de progression","progress entries":"{0} entrées de progression",
-  "reading":"{0} lecture","readings":"{0} lectures","check":"{0} vérification","checks":"{0} vérifications",
   /* the meaning in the app's language and the Translate-all row (v256) */
   "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Les textes de l'appli et le sens des nouvelles cartes. Les cartes gardent le chinois et le pinyin.","Meanings":"Sens","{0} have their meaning in another language.":"{0} ont leur sens dans une autre langue.","Translate all cards into {0}":"Traduire toutes les cartes en {0}","Translating {0} of {1} …":"Traduction {0} sur {1} …","{0} translated, {1} left.":"{0} traduites, {1} restantes.","Done — {0} translated.":"Terminé – {0} traduites.",
   /* the More screen in the learner's order (v257) */
@@ -585,7 +583,7 @@ es:{
   "Check every new card with the AI automatically (when online)":"Revisar cada tarjeta nueva automáticamente con la IA (con conexión)","Review queue":"Cola de revisión","Storage":"Almacenamiento","Learning":"Aprendizaje",
   "Card order":"Orden de las tarjetas","Due cards come first, then up to {0} new ones. This sets the order inside each group.":"Primero las tarjetas pendientes, luego hasta {0} nuevas. Esto fija el orden dentro de cada grupo.",
   "Progress":"Progreso","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"App abierta {0}, {1} repasadas, {2}, {3} revisadas por la IA.","Work done by {0}.":"Trabajo realizado por {0}.",
-  "on-device reader":"lector en el teléfono","none yet":"nada aún","Share report":"Compartir informe","Usage sharing":"Datos de uso",
+  "Share report":"Compartir informe","Usage sharing":"Datos de uso",
   "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"Envía una vez al día recuentos de uso anónimos al propietario de la app: días de uso, tarjetas creadas y repasadas, revisiones con IA y los mensajes de error de la app. Sin texto de las tarjetas, sin fotos.",
   "Your id: {0}.":"Tu identificador: {0}.","Send once a day":"Enviar una vez al día","Photos":"Fotos","Delete {0}":"Eliminar {0}",
   "Advanced settings":"Ajustes avanzados","Admin log in":"Inicio de sesión admin",
@@ -603,7 +601,6 @@ es:{
   "Start over?":"¿Empezar de cero?","All progress, cards and inbox photos on this phone will be deleted.":"Se eliminarán todo el progreso, las tarjetas y las fotos de la bandeja en este teléfono.",
   "Delete everything":"Eliminar todo","Oldest first":"Más antiguas primero","Newest first":"Más recientes primero","Random":"Aleatorio",
   "suggestion":"{0} sugerencia","suggestions":"{0} sugerencias","progress entry":"{0} entrada de progreso","progress entries":"{0} entradas de progreso",
-  "reading":"{0} lectura","readings":"{0} lecturas","check":"{0} revisión","checks":"{0} revisiones",
   /* the meaning in the app's language and the Translate-all row (v256) */
   "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Los textos de la app y el significado de las tarjetas nuevas. Las tarjetas conservan el chino y el pinyin.","Meanings":"Significados","{0} have their meaning in another language.":"{0} tienen su significado en otro idioma.","Translate all cards into {0}":"Traducir todas las tarjetas al {0}","Translating {0} of {1} …":"Traduciendo {0} de {1} …","{0} translated, {1} left.":"{0} traducidas, {1} pendientes.","Done — {0} translated.":"Listo — {0} traducidas.",
   /* the More screen in the learner's order (v257) */
@@ -794,7 +791,7 @@ ja:{
   "Check every new card with the AI automatically (when online)":"新しいカードを自動でAIに確認させる（オンライン時）","Review queue":"確認待ち","Storage":"ストレージ","Learning":"学習",
   "Card order":"カードの順序","Due cards come first, then up to {0} new ones. This sets the order inside each group.":"復習カードが先、その後に新しいカードが最大{0}枚。ここでは各グループ内の順序を決めます。",
   "Progress":"進み具合","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"アプリを{0}開き、{1}を復習、{2}、{3}をAIが確認。","Work done by {0}.":"作業の内訳：{0}。",
-  "on-device reader":"端末内の読み取り","none yet":"まだありません","Share report":"レポートを共有","Usage sharing":"利用状況の送信",
+  "Share report":"レポートを共有","Usage sharing":"利用状況の送信",
   "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"1日1回、匿名の利用回数をアプリの所有者に送ります：使用日数、作成・復習したカード、AI確認、アプリのエラーメッセージ。カードの内容や写真は送りません。",
   "Your id: {0}.":"あなたのID：{0}","Send once a day":"1日1回送信","Photos":"写真","Delete {0}":"{0}枚を削除",
   "Advanced settings":"詳細設定","Admin log in":"管理者ログイン",
@@ -812,7 +809,6 @@ ja:{
   "Start over?":"最初からやり直しますか？","All progress, cards and inbox photos on this phone will be deleted.":"この端末の学習記録、カード、受信箱の写真がすべて削除されます。",
   "Delete everything":"すべて削除","Oldest first":"古い順","Newest first":"新しい順","Random":"ランダム",
   "suggestion":"候補{0}件","suggestions":"候補{0}件","progress entry":"学習記録{0}件","progress entries":"学習記録{0}件",
-  "reading":"読み取り{0}回","readings":"読み取り{0}回","check":"確認{0}回","checks":"確認{0}回",
   /* the meaning in the app's language and the Translate-all row (v256) */
   "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"アプリの表示と新しいカードの意味。カードの中国語とピンインはそのままです。","Meanings":"意味","{0} have their meaning in another language.":"{0}の意味が別の言語になっています。","Translate all cards into {0}":"すべてのカードを{0}に翻訳","Translating {0} of {1} …":"翻訳中 {0} / {1}…","{0} translated, {1} left.":"{0}枚を翻訳、残り{1}枚。","Done — {0} translated.":"完了。{0}を翻訳しました。",
   /* the More screen in the learner's order (v257) */
@@ -1003,7 +999,7 @@ ko:{
   "Check every new card with the AI automatically (when online)":"새 카드를 자동으로 AI로 확인 (온라인일 때)","Review queue":"확인 대기열","Storage":"저장 공간","Learning":"학습",
   "Card order":"카드 순서","Due cards come first, then up to {0} new ones. This sets the order inside each group.":"복습할 카드가 먼저, 그다음 새 카드 최대 {0}장. 여기서는 각 그룹 안의 순서를 정해요.",
   "Progress":"진행 상황","App opened {0}, {1} reviewed, {2}, {3} checked by the AI.":"앱 {0} 열림, {1} 복습, {2}, {3} AI 확인.","Work done by {0}.":"작업 수행: {0}.",
-  "on-device reader":"기기 내 읽기","none yet":"아직 없음","Share report":"보고서 공유","Usage sharing":"사용 정보 공유",
+  "Share report":"보고서 공유","Usage sharing":"사용 정보 공유",
   "Sends anonymous usage counts to the app's owner once a day: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"하루 한 번 익명의 사용 횟수를 앱 소유자에게 보내요: 사용 일수, 만들고 복습한 카드, AI 확인, 앱의 오류 메시지. 카드 내용과 사진은 보내지 않아요.",
   "Your id: {0}.":"내 ID: {0}.","Send once a day":"하루 한 번 보내기","Photos":"사진","Delete {0}":"{0}장 삭제",
   "Advanced settings":"고급 설정","Admin log in":"관리자 로그인",
@@ -1021,7 +1017,6 @@ ko:{
   "Start over?":"처음부터 다시 시작할까요?","All progress, cards and inbox photos on this phone will be deleted.":"이 휴대폰의 모든 진행 상황, 카드, 받은 사진이 삭제돼요.",
   "Delete everything":"모두 삭제","Oldest first":"오래된 순","Newest first":"최신 순","Random":"무작위",
   "suggestion":"제안 {0}개","suggestions":"제안 {0}개","progress entry":"학습 기록 {0}개","progress entries":"학습 기록 {0}개",
-  "reading":"읽기 {0}회","readings":"읽기 {0}회","check":"확인 {0}회","checks":"확인 {0}회",
   /* the meaning in the app's language and the Translate-all row (v256) */
   "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"앱의 표시 언어와 새 카드의 뜻. 카드의 중국어와 병음은 그대로예요.","Meanings":"뜻","{0} have their meaning in another language.":"{0}의 뜻이 다른 언어로 되어 있어요.","Translate all cards into {0}":"모든 카드를 {0}(으)로 번역","Translating {0} of {1} …":"번역 중 {0} / {1}…","{0} translated, {1} left.":"{0}장 번역됨, {1}장 남음.","Done — {0} translated.":"완료. {0}을(를) 번역했어요.",
   /* the More screen in the learner's order (v257) */
