@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=284; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=285; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2104,7 +2104,7 @@ async function findFrame(fullBlob,cropBlob){
     let best=Infinity,bx=0,by=0;
     for(let y=0;y<=fh-ch;y+=step) for(let x=0;x<=fw-cw;x+=step){ const v=sad(x,y,step); if(v<best){ best=v; bx=x; by=y; } }
     for(let y=Math.max(0,by-step);y<=Math.min(fh-ch,by+step);y++) for(let x=Math.max(0,bx-step);x<=Math.min(fw-cw,bx+step);x++){ const v=sad(x,y,1); if(v<best){ best=v; bx=x; by=y; } }
-    READLOG.push({t:Date.now(),text:`the old crop ${best<=22?"found":"not found"} in the photo (difference ${best.toFixed(1)})`}); while(READLOG.length>40) READLOG.shift();
+    READLOG.push({t:Date.now(),pre:true,text:`the old crop ${best<=22?"found":"not found"} in the photo (difference ${best.toFixed(1)})`}); while(READLOG.length>40) READLOG.shift();
     if(best>22) return null; /* the same pixels through two JPEG passes differ by a few grey levels; another place by dozens */
     return {x:+(bx/fw).toFixed(4),y:+(by/fh).toFixed(4),w:+(cw/fw).toFixed(4),h:+(ch/fh).toFixed(4),a:0};
   }catch(e){ return null; } finally{ if(F) F.close(); if(C) C.close(); }
@@ -2287,7 +2287,7 @@ async function proposeFrame(id){
   const shaped=full?null:shapeBox(b,r.width,r.height), f=shaped||{x:b.x*r.width,y:b.y*r.height,w:(b.x1-b.x)*r.width,h:(b.y1-b.y)*r.height};
   CROP.rect={x:f.x,y:f.y,w:f.w,h:f.h,a:0,lw:r.width,lh:r.height};
   CROP.proposed=full?"whole":shaped?"16:9":"text"; delete CROP.auto;
-  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`frame proposed by the app: ${full?"the whole photo":`${pc(f.x/r.width)}–${pc((f.x+f.w)/r.width)} % across, ${pc(f.y/r.height)}–${pc((f.y+f.h)/r.height)} % down${shaped?" (16:9)":" (the text's own box, 16:9 does not fit)"}`}${reg?`, text rows ${pc(reg.y)}–${pc(reg.y1)} %`:", no text rows found"}`}); while(READLOG.length>40) READLOG.shift();
+  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),pre:true,text:`frame proposed by the app: ${full?"the whole photo":`${pc(f.x/r.width)}–${pc((f.x+f.w)/r.width)} % across, ${pc(f.y/r.height)}–${pc((f.y+f.h)/r.height)} % down${shaped?" (16:9)":" (the text's own box, 16:9 does not fit)"}`}${reg?`, text rows ${pc(reg.y)}–${pc(reg.y1)} %`:", no text rows found"}`}); while(READLOG.length>40) READLOG.shift();
   renderShots(); showCropPreview(id);
 }
 async function cropBlob(id,rectArg){
@@ -2562,7 +2562,7 @@ const readingHTML=(x,id)=>READ_FAIL.test(x)?`<span class="badge">${failText(x)}<
     ?`<div class="reading"><div class="bar"><i></i></div><span class="ok" style="margin:0">${t("Card saved — the text follows when the reading is done.")}${stuck?t(" Still at: {0}",esc(x)):""}</span></div>`
     :`<div class="reading"><div class="bar"><i></i></div><div class="readrow"><span class="badge">${t("Reading the text …")}${stuck?t(" still at: {0}",esc(x)):""}</span>${id&&CROP&&CROP.id===id&&CROP.rect&&!RECROP[id]?`<button class="btn mini" data-savenow="${id}">${t("Save now")}</button>`:""}</div></div>`)
    (!!(id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK));
-const readingStatus=(id,run)=>x=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=x; READ_AT[id]=Date.now(); READLOG.push({t:Date.now(),text:x}); while(READLOG.length>40) READLOG.shift(); saveReadLog();
+const readingStatus=(id,run)=>x=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=x; READ_AT[id]=Date.now(); const last=READLOG[READLOG.length-1]; if(last&&/^recognizing … \d+%$/.test(last.text)&&/^recognizing … \d+%$/.test(x)) last.text=x; else READLOG.push({t:Date.now(),text:x}); while(READLOG.length>40) READLOG.shift(); saveReadLog(); /* the reader's progress overwrites its own line (v285: forty "recognizing … N%" lines had pushed every step and the proposed frame out of H's diagnostics) */
   const b=$("#ocr-"+id); if(b) b.innerHTML=readingHTML(x,id);
   setTimeout(()=>{ if(READING[id]!==x) return; const b2=$("#ocr-"+id); if(b2) b2.innerHTML=readingHTML(x,id); },READ_STUCK+50); };
 /* a canvas with the bitmap drawn at a scale (opaque — the reader is handed JPEGs) */
@@ -2807,7 +2807,8 @@ async function cropSign(id,opts){
   const run=READ_RUN[id]=(READ_RUN[id]||0)+1, stale=()=>READ_RUN[id]!==run; /* a newer reading of this photo has started: leave everything to it */
   if(RECROP[id]) RECROP[id].stage="reading";
   const status=readingStatus(id,run);
-  READLOG.length=0; LAST_READ.passes=null; status("cutting out the frame …");
+  { const pre=[]; while(READLOG.length&&READLOG[READLOG.length-1].pre) pre.unshift(READLOG.pop()); READLOG.length=0; READLOG.push(...pre); } /* the frame's own lines (proposed by the app, the old crop found) stay at the head of the new reading's log (v285 — until then the reading wiped them at once) */
+  LAST_READ.passes=null; status("cutting out the frame …");
   let cardImg=null; /* the card's picture from this reading — kept on the reading, not in the one global slot, so a reading finishing in the background cannot hand its picture to another photo's card (v237) */
   try{
     const r=opts&&opts.blob?{blob:opts.blob}:await cropBlob(id,opts&&opts.rect);
