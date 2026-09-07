@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=317; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=318; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2312,7 +2312,7 @@ function textRegion(bmp){
 const FRAME_RATIO=16/9;
 const FIRST_MAX=1000; /* the quick look that places the frame reads a copy of at most this many pixels on the long side (v290) */
 const FRAME_ROOM=0.3; /* the placed frame's room around the text, in text heights (v293 — a third; until v292 one at the ends and half above and below, then widened to 16:9) */
-function textLike(lines){ const sure=lines.flatMap(l=>(l.cf||[]).filter(c=>c>=SURE_BOX)); return sure.length>0&&(dictCover(lines)>=0.5||sure.reduce((a,c)=>a+c,0)/sure.length>=95); } /* a declaration, so the harness can stand it down (as effScore) */ /* a reading the frame may follow (v296, H's 邪不压正 poster: the faces read as 品语失色全了 at 86 % and the quick look framed them — "jetzt macht er gesichtserkennung!?!??"): half its characters in dictionary words (two characters and more — a lone 有 has none), or its confident characters read at 95 % on average (a stray 人 at 40 % beside a 有 at 98 % does not count; the strays place no frame either) */
+function textLike(lines){ const sure=lines.flatMap(l=>(l.cf||[]).filter(c=>c>=SURE_BOX)); return sure.length>0&&(dictCover(lines,true)>=0.5||sure.reduce((a,c)=>a+c,0)/sure.length>=95); } /* a declaration, so the harness can stand it down (as effScore) */ /* a dictionary word of lines alone — 一二, 十一 — is no evidence (v318, H's Nongfu Spring bottle: the logo's wave lines read as 还一二 at 86 %, 一二 is in the dictionary, so the close look placed the frame on the label's top right corner and the AI saw only the last character's edge) */ /* a reading the frame may follow (v296, H's 邪不压正 poster: the faces read as 品语失色全了 at 86 % and the quick look framed them — "jetzt macht er gesichtserkennung!?!??"): half its characters in dictionary words (two characters and more — a lone 有 has none), or its confident characters read at 95 % on average (a stray 人 at 40 % beside a 有 at 98 % does not count; the strays place no frame either) */
 let FRAME_WAIT=2000; /* the ink-row proposal is shown as the frame when the reader has not placed one within this time (v289, H: "Show the ink-row frame after 2 seconds if the reader is slower") */
 function shapeBox(b,W,H){
   let x=b.x*W, y=b.y*H, w=(b.x1-b.x)*W, h=(b.y1-b.y)*H;
@@ -2756,10 +2756,10 @@ const scaleBoxes=(ls,k)=>ls.map(l=>({...l,bx:l.bx.map(b=>b&&{x0:b.x0/k,y0:b.y0/k
 /* readings compete by confidence, a mild weight on length, and how much of the text forms dictionary words —
    garbage comes as many characters that are each plausible but form no words (加罗, 区和和, 二门花二人人) */
 const meanCf=ls=>{ const cf=ls.flatMap(l=>l.cf); return cf.length?cf.reduce((a,c)=>a+c,0)/cf.length:0; };
-function dictCover(ls){
+function dictCover(ls,strict){ /* strict (v318): a word of nothing but 一 二 三 十 does not count — lines and stripes read as those */
   if(!DICT) return 0.5; const ch=[...ls.map(l=>l.t).join("")].filter(c=>CJK.test(c)); if(!ch.length) return 0;
   let i=0, cov=0;
-  while(i<ch.length){ let hit=0; for(let len=Math.min(4,ch.length-i);len>=2;len--){ if(DICT.has(ch.slice(i,i+len).join(""))){ hit=len; break; } } if(hit){ cov+=hit; i+=hit; } else i++; }
+  while(i<ch.length){ let hit=0; for(let len=Math.min(4,ch.length-i);len>=2;len--){ const w=ch.slice(i,i+len).join(""); if(DICT.has(w)&&!(strict&&/^[一二三十]+$/.test(w))){ hit=len; break; } } if(hit){ cov+=hit; i+=hit; } else i++; }
   return cov/ch.length;
 }
 const boxHeight=lines=>{ const hs=lines.flatMap(l=>l.bx.filter(Boolean).map(b=>b.y1-b.y0)); return hs.length?median(hs):0; };
@@ -3164,8 +3164,8 @@ async function cropSign(id,opts){
       /* the app's own frame cut a line off (v314, H's 大闸蟹 / 我选蟹状元 poster: the close look placed the frame at 37–77 % down, through the middle of the first line, the AI got that cut and left the cut line out as the v312 rule says, and its box could only centre the frame inside the placed one — "Warum nur die zweite Zeile und nicht auch die erste???"): when the AI names an edge that cuts off a line and the frame is the app's — placed by the reader, or the proposal —, the frame reaches past that edge by 1.2 tallest line heights into the photo, and the AI reads the grown cut once more; never for the hand's frame, never for a turned one, never twice */
       if(pic&&!pic.bad&&pic.cut&&(PENDING[id]&&!RECROP[id]?READ_APP[id]:CROP&&CROP.id===id&&CROP.proposed)){
         const cur=PENDING[id]&&!RECROP[id]?(PLACED[id]||base):(CROP&&CROP.id===id?CROP.rect:null);
-        if(cur&&!cur.a){ const hl=pic.boxes&&pic.boxes.length?Math.max(...pic.boxes.map(b=>b[3]-b[1])):0.3, g={top:/top/.test(pic.cut),bottom:/bottom/.test(pic.cut),left:/left/.test(pic.cut),right:/right/.test(pic.cut)}, d=1.2*hl*cur.h;
-          const nr={x:cur.x-(g.left?d:0),y:cur.y-(g.top?d:0),w:cur.w+(g.left?d:0)+(g.right?d:0),h:cur.h+(g.top?d:0)+(g.bottom?d:0),a:0,lw:cur.lw,lh:cur.lh};
+        if(cur&&!cur.a){ const g={top:/top/.test(pic.cut),bottom:/bottom/.test(pic.cut),left:/left/.test(pic.cut),right:/right/.test(pic.cut)}; /* the frame reaches the photo's edge on every cut side (v318, H's Nongfu Spring bottle: the frame stood on the last character's edge, one character's width of room to the left showed 泉 alone and the AI said "cut" again — how far the line runs is unknown, the photo's edge is the only sure end, and the AI's box then places the frame on the line) */
+          const nr={x:g.left?0:cur.x,y:g.top?0:cur.y,w:(g.right?cur.lw:cur.x+cur.w)-(g.left?0:cur.x),h:(g.bottom?cur.lh:cur.y+cur.h)-(g.top?0:cur.y),a:0,lw:cur.lw,lh:cur.lh};
           nr.x=Math.max(0,nr.x); nr.y=Math.max(0,nr.y); nr.w=Math.min(cur.lw-nr.x,nr.w); nr.h=Math.min(cur.lh-nr.y,nr.h);
           if(nr.w>cur.w+1||nr.h>cur.h+1){ let cut=await cropBlob(id,nr); if(stale()) return;
             if(cut){ if(PENDING[id]&&!RECROP[id]) PLACED[id]=nr; else if(CROP&&CROP.id===id&&CROP.rect===cur){ CROP.rect=nr; CROP.proposed="text"; CROP.followed=true; delete CROP.hidden; } else cut=null; }
