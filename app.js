@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=307; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=308; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1557,6 +1557,8 @@ function cardsListHTML(){
 }
 function renderCards(main){
   const unv=S.custom.filter(d=>d.mt&&!d.mt.verified).length, flg=S.custom.filter(d=>d.flag).length, nAi=deck().filter(d=>d.ai).length;
+  if(S.filterAi&&!nAi) S.filterAi=false; /* a filter whose chip is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the list anymore" — the AI chip shows only while suggestions wait, so the filter had no chip left to switch it off and the list stood empty at "0 of 131") */
+  if(S.filterTag&&!(S.filterTag===UNTAGGED?allTags().length&&untaggedCount():allTags().includes(S.filterTag))) S.filterTag=null; /* the same for a tag chip: the last card of a tag re-tagged, or the last untagged card tagged */
   const {html,n}=cardsListHTML();
   main.innerHTML=`<div class="pane">
     <div class="cardsbar"><input id="q" type="search" placeholder="${t("Search")}" value="${esc(S.query)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="btn mini primary" id="newcard">${t("+ New")}</button></div>
