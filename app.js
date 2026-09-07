@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=292; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=293; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -530,7 +530,7 @@ async function pictureJpeg(blob){
   const out=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
   const b64=(await blobToB64(out)).d; return {b64,w:cv.width,h:cv.height,kb:Math.round(out.size/1024)};
 }
-const picSystem=()=>`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","bad":true|false}. "zh" = the Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without Latin letters, numbers of the decoration or anything you cannot see; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural ${meaningLangName()} meaning of the text as a sign or name (short, ${meaningLangName()} only); when the text is a brand, shop or product name, "m" is that name as it is known (the romanised or the international name), followed in brackets by what it is, in ${meaningLangName()} — e.g. "Mixue Bingcheng (ice-cream and bubble-tea chain)", never the bare name alone; "note" = one short remark if needed; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty. An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`; /* the meaning in the app's language (v256) */
+const picSystem=()=>`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","box":[left,top,right,bottom],"bad":true|false}. "zh" = the Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without Latin letters, numbers of the decoration or anything you cannot see; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural ${meaningLangName()} meaning of the text as a sign or name (short, ${meaningLangName()} only); when the text is a brand, shop or product name, "m" is that name as it is known (the romanised or the international name), followed in brackets by what it is, in ${meaningLangName()} — e.g. "Mixue Bingcheng (ice-cream and bubble-tea chain)", never the bare name alone; "note" = one short remark if needed; "box" = where the text you read stands in the picture — one rectangle around all its lines, as fractions of the picture's width and height from 0 to 1, e.g. [0.31,0.22,0.79,0.66]; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty and omit "box". An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`; /* the meaning in the app's language (v256) */
 /* Qwen's hybrid models think by default, and the thinking takes many seconds before the short JSON comes (v208, H with Qwen
    as the active provider: "Check pinyin and meaning takes way too long" — until v207 only the picture path switched it off) */
 function noThinking(pv,model,body){ if(pv==="qwen"&&/^qwen3/.test(model)) body.enable_thinking=false; return body; }
@@ -557,7 +557,15 @@ async function aiReadPicture(blob,alts,status){
   const txt=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,""); let x; try{ x=JSON.parse(txt); if(Array.isArray(x)) x=x[0]; }catch(e){ throw new Error("could not read the model's answer"); }
   if(!x||typeof x!=="object") throw new Error("unexpected answer");
   const zhRaw=String(x.zh||"").replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"), zh=t2s(zhRaw), m=saneM(x.m,zh);
-  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(x.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv};
+  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(x.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:picBox(x.box,pic.w,pic.h)};
+}
+/* the text's box from the picture answer (v293), as fractions of the sent picture: the prompt asks for fractions, a model that answers in the picture's pixels or on a 0–1000 grid is scaled back; anything else is no box */
+function picBox(b,w,h){
+  if(!Array.isArray(b)||b.length!==4||!b.every(v=>typeof v==="number"&&isFinite(v)&&v>=0)) return null;
+  let [x0,y0,x1,y1]=b; const mx=Math.max(x0,x1), my=Math.max(y0,y1);
+  if(mx>1||my>1){ if(mx<=w&&my<=h){ x0/=w; x1/=w; y0/=h; y1/=h; } else if(mx<=1000&&my<=1000){ x0/=1000; x1/=1000; y0/=1000; y1/=1000; } else return null; }
+  if(!(x1-x0>=0.02&&y1-y0>=0.02)) return null;
+  return [Math.max(0,x0),Math.max(0,y0),Math.min(1,x1),Math.min(1,y1)];
 }
 function aiQueue(){ return deck().filter(d=>d.c&&(d.flag||(d.mt&&(d.mt.pending||d.mt.suspect)))); } /* a card still waiting for its reading has no text to check (v237) */
 function aiAutoOn(){ return aiOn()&&S.settings.aiAuto!==false; }
@@ -2280,6 +2288,7 @@ function textRegion(bmp){
    centred on the text and kept inside the photo; a text the photo cannot hold at that shape keeps its own box */
 const FRAME_RATIO=16/9;
 const FIRST_MAX=1000; /* the quick look that places the frame reads a copy of at most this many pixels on the long side (v290) */
+const FRAME_ROOM=0.3; /* the placed frame's room around the text, in text heights (v293 — a third; until v292 one at the ends and half above and below, then widened to 16:9) */
 let FRAME_WAIT=2000; /* the ink-row proposal is shown as the frame when the reader has not placed one within this time (v289, H: "Show the ink-row frame after 2 seconds if the reader is slower") */
 function shapeBox(b,W,H){
   let x=b.x*W, y=b.y*H, w=(b.x1-b.x)*W, h=(b.y1-b.y)*H;
@@ -2854,26 +2863,26 @@ function textBandOf(tightPasses,cardRect){ /* the tight passes' own boxes, as a 
   if(!ext.length) return cardRect;
   const Hb=median(hs); if(!(Hb>0)) return cardRect;
   const q=(vals,f)=>{ const v=vals.slice().sort((a,b)=>a-b); return v[Math.round(f*(v.length-1))]; }; /* the lower quartile of the starts, the upper of the ends */
-  const b={x0:q(ext.map(e=>e.x0),0.25)-Hb, y0:q(ext.map(e=>e.y0),0.25)-Hb/2, x1:q(ext.map(e=>e.x1),0.75)+Hb, y1:q(ext.map(e=>e.y1),0.75)+Hb/2};
+  const b={x0:q(ext.map(e=>e.x0),0.25)-Hb/2, y0:q(ext.map(e=>e.y0),0.25)-Hb*FRAME_ROOM, x1:q(ext.map(e=>e.x1),0.75)+Hb/2, y1:q(ext.map(e=>e.y1),0.75)+Hb*FRAME_ROOM};
   const u=unrotatedBox(tg.w,tg.h,b,tg.angle); /* the tight crop's own straightening turned back */
   const r={x0:u.x0-tg.pad+tg.x0, y0:u.y0-tg.pad+tg.y0, x1:u.x1-tg.pad+tg.x0, y1:u.y1-tg.pad+tg.y0}; /* the padding off, into the straightened frame */
   return {x0:Math.max(cardRect.x0,r.x0), y0:Math.max(cardRect.y0,r.y0), x1:Math.min(cardRect.x1,r.x1), y1:Math.min(cardRect.y1,r.y1)}; /* never outside the band the card image takes */
 }
-async function frameOnText(id,orig,rect,angle){ /* rect: the text with its room, in the straightened frame's coordinates */
-  const cr=CROP&&CROP.id===id&&CROP.rect; if(!cr||!CROP.hidden||!rect||cr.a||RECROP[id]||PENDING[id]) return null;
+async function frameOnText(id,orig,rect,angle,by){ /* rect: the text with its room, in the straightened frame's coordinates; by = "AI" when the picture answer places it (v293: allowed while the frame is still the app's proposal, shown or not) */
+  const cr=CROP&&CROP.id===id&&CROP.rect; if(!cr||!(CROP.hidden||(by&&CROP.proposed))||!rect||cr.a||RECROP[id]||PENDING[id]) return null; /* the AI may move a frame the reader placed from a weak reading, never one the hand touched */
   let W=0,Hh=0; try{ const bmp=await createImageBitmap(orig); W=bmp.width; Hh=bmp.height; bmp.close(); }catch(e){ return null; }
   if(!W||!Hh||CROP.rect!==cr) return null;
   const {x0,y0,x1,y1}=unrotatedBox(W,Hh,rect,angle); if(!(x1-x0>=8&&y1-y0>=8)) return null;
   const sc=W/cr.w, lw=cr.lw, lh=cr.lh; /* crop pixels per layer pixel */
   const b={x:(cr.x+x0/sc)/lw, y:(cr.y+y0/sc)/lh, x1:(cr.x+x1/sc)/lw, y1:(cr.y+y1/sc)/lh};
-  const shaped=shapeBox(b,lw,lh), f=shaped||{x:b.x*lw,y:b.y*lh,w:(b.x1-b.x)*lw,h:(b.y1-b.y)*lh};
+  const shaped=false, f={x:b.x*lw,y:b.y*lh,w:(b.x1-b.x)*lw,h:(b.y1-b.y)*lh}; /* the text with its small room, no 16:9 widening (v293, H: "Make the automatic crop frame tighter. Chinese Text should be well readable in the thumbnail list" — the list's box is 16:9 itself, with the blurred fill behind a wide crop, and a frame widened to 16:9 around a one-line text shrank the text to half the thumbnail's width) */
   const nr={x:f.x,y:f.y,w:f.w,h:f.h,a:0,lw,lh};
   if(nr.w<8||nr.h<8) return null;
   if(Math.abs(nr.x-cr.x)<0.01*lw&&Math.abs(nr.y-cr.y)<0.01*lh&&Math.abs(nr.w-cr.w)<0.01*lw&&Math.abs(nr.h-cr.h)<0.01*lh) return null; /* the text fills the frame: nothing to move */
   const cut=await cropBlob(id,nr); if(!cut) return null;
   if(!CROP||CROP.id!==id||CROP.rect!==cr) return null; /* the hand moved the frame meanwhile: the reading is stale anyway */
   CROP.rect=nr; CROP.proposed="text"; CROP.followed=true; delete CROP.hidden;
-  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`frame placed on the text: ${pc(f.x/lw)}–${pc((f.x+f.w)/lw)} % across, ${pc(f.y/lh)}–${pc((f.y+f.h)/lh)} % down${shaped?" (16:9)":" (the text's own box, 16:9 does not fit)"}`}); while(READLOG.length>40) READLOG.shift();
+  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`frame placed on the text${by?" by the "+by:""}: ${pc(f.x/lw)}–${pc((f.x+f.w)/lw)} % across, ${pc(f.y/lh)}–${pc((f.y+f.h)/lh)} % down${shaped?" (16:9)":""}`}); while(READLOG.length>40) READLOG.shift();
   return cut.blob;
 }
 async function cropSign(id,opts){
@@ -2909,7 +2918,7 @@ async function cropSign(id,opts){
       let rect=null; try{ const lines=scaleBoxes(await readPass(w,src,status),k); if(stale()) return;
         const boxes=frameBoxes(lines), Hb=boxes.length?median(boxes.map(b=>b.y1-b.y0)):0;
         if(Hb>0){ const y0=Math.max(0,Math.min(...boxes.map(b=>b.y0))-Hb/2), y1=Math.min(bmp.height,Math.max(...boxes.map(b=>b.y1))+Hb/2);
-          const ext=textRowExtent(bmp,Math.min(...boxes.map(b=>b.x0)),Math.max(...boxes.map(b=>b.x1)),y0,y1,Hb); rect={x0:Math.max(0,ext.x0-Hb),y0,x1:Math.min(bmp.width,ext.x1+Hb),y1}; } } finally{ bmp.close(); }
+          const ext=textRowExtent(bmp,Math.min(...boxes.map(b=>b.x0)),Math.max(...boxes.map(b=>b.x1)),y0,y1,Hb); rect={x0:Math.max(0,ext.x0-Hb*FRAME_ROOM),y0:Math.max(0,y0+Hb/2-Hb*FRAME_ROOM),x1:Math.min(bmp.width,ext.x1+Hb*FRAME_ROOM),y1:Math.min(bmp.height,y1-Hb/2+Hb*FRAME_ROOM)}; } } finally{ bmp.close(); }
       if(rect){ await placeRect(rect); if(stale()) return;
         if(CROP&&CROP.id===id&&CROP.hidden){ delete CROP.hidden; READLOG.push({t:Date.now(),text:"frame shown as proposed — the text fills it"}); while(READLOG.length>40) READLOG.shift(); renderShots(); } } } /* nothing to move: the proposal is the frame, from now */
     status("reading the text …");
@@ -2960,14 +2969,19 @@ async function cropSign(id,opts){
     if(weak&&pictureProvider()&&aiAutoOn()&&navigator.onLine){ /* the one switch covers text and pictures (v193, H: the picture went out while the check was off — "counterintuitive") */
       const guesses=[...new Set(passes.map(textOf).filter(Boolean))].slice(0,6);
       /* the whole straightened frame, never the second look's band (v175, H's two-line sticker 骑车勿盯 / 还车勿忘: the tight band held the lower line only, and the AI read that line alone) */
-      const picBlob=placedCut?(await deskewBlob(placedCut)).blob:dk.blob; if(stale()) return; /* the framed area as the user sees it: the placed frame's cut when there is one (v288) */
-      try{ pic=await aiReadPicture(picBlob,guesses,status); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
-      if(stale()) return; r.pic=pic?{zh:pic.zh,bad:pic.bad,model:pic.model}:null;
+      const picBase=placedCut?{orig:placedCut,dk:await deskewBlob(placedCut)}:{orig:r.blob,dk}; if(stale()) return; /* the framed area as the user sees it: the placed frame's cut when there is one (v288); kept with its straightening, so the AI's box maps back onto it (v293) */
+      var picSeen=picBase; try{ pic=await aiReadPicture(picBase.dk.blob,guesses,status); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
+      if(stale()) return; r.pic=pic?{zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box}:null;
     }
     if(pic&&!pic.bad){
       /* the AI's lines replace the reading: no confidences (every character is open in the picker), no boxes (the sheet
          shows the whole crop), the reader's texts become the alternatives; the answer is the check, no text check follows */
       const zh=pic.zh.split("\n"), guesses=[...new Set(passes.map(textOf).filter(tx=>tx&&tx!==pic.zh))].slice(0,6);
+      if(pic.box&&picSeen&&CROP&&CROP.id===id&&CROP.proposed){ /* the reader could not read this font (v293 — H's 邪不压正 poster: the ink rows and the reader's garbage boxes put the frame around the whole photo): the AI's box places the frame, once, as fractions of the straightened picture it saw — the proposal's crop, or the cut of the frame the quick look had placed from that same garbage */
+        let W=0,Hh=0; try{ const b=await createImageBitmap(picSeen.dk.blob); W=b.width; Hh=b.height; b.close(); }catch(e){}
+        if(W&&Hh){ const [bx0,by0,bx1,by1]=pic.box, n=Math.max(1,zh.length), Hb=(by1-by0)*Hh/n; /* the text height from the box and its lines */
+          const rect={x0:Math.max(0,bx0*W-Hb*FRAME_ROOM),y0:Math.max(0,by0*Hh-Hb*FRAME_ROOM),x1:Math.min(W,bx1*W+Hb*FRAME_ROOM),y1:Math.min(Hh,by1*Hh+Hb*FRAME_ROOM)};
+          const cut=await frameOnText(id,picSeen.orig,rect,picSeen.dk.angle||0,"AI"); if(stale()) return; if(cut) placedCut=cut; } }
       cardImg=placedCut||r.blob; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=cardImg; /* the card image is the crop as framed (the placed frame's cut, v288), not the second look's band */
       SIGN[id]={lines:zh, orig:zh.slice(), conf:[], boxes:zh.map(()=>[]), img:dk.blob, angle:dk.angle||0, tightened:false, region:r, alts:guesses, trad:!!pic.zht, tradDetected:!!pic.zht, tradText:pic.zht||"",
         ai:{zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,ml:pic.ml,note:pic.note,ok:true,bad:false,pic:true}, cardImg, weak:false};
