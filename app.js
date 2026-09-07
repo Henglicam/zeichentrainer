@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=308; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=309; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1308,8 +1308,9 @@ function wireSay(root){ (root||document).querySelectorAll("[data-say]").forEach(
 function cleanSense(m){ return String(m||"").replace(/\(Taiwan pr\.[^)]*\)/g,"").replace(/\[[^\]]*\]/g,"").replace(/\s*CL:[^;,)]*/g,"").replace(/\(\s*\)/g,"").replace(/\s{2,}/g," ").trim(); }
 /* the words of the card as buttons on the back — tap one for its pinyin and meaning; a word of
    several characters then offers its characters too. Replaces the old word/gloss tables (H: redundant). */
+const cardGloss=d=>mergeUnits(d.gloss||[]); /* the stored gloss with a number and its unit as one part (v309; cards from before carry them apart) */
 function cardParts(d){
-  let words=d.gloss&&d.gloss.length?d.gloss.map(g=>g.w):(d.kind==="sign"?(d.segs||[]).flat():(d.seg||[]).filter(x=>x!=="\n"));
+  let words=d.gloss&&d.gloss.length?cardGloss(d).map(g=>g.w):(d.kind==="sign"?(d.segs||[]).flat():(d.seg||[]).filter(x=>x!=="\n"));
   words=words.filter(w=>CJK.test(w));
   if(words.length<2) words=[...d.c].filter(ch=>CJK.test(ch)); /* one word → its characters */
   return [...new Set(words)];
@@ -1331,11 +1332,11 @@ async function charInfo(w,btn,d){
   try{
     if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
     await loadDict().catch(()=>{});
-    const known=d&&d.gloss&&d.gloss.find(g=>g.w===w);
+    const known=d&&d.gloss&&cardGloss(d).find(g=>g.w===w);
     const py=known&&known.p?known.p:pinyinPro.pinyin(w,{toneType:"symbol"});
     const m=cleanSense((known&&known.m)||bestSense(w)||((DICT&&DICT.get(w))||""));
     const chars=[...w].filter(ch=>CJK.test(ch));
-    const sub=chars.length>1?`<div class="chars sub">${chars.map(ch=>`<button class="ch" data-sub="${ch}">${ch}</button>`).join("")}</div>`:"";
+    const sub=chars.length>1||(known&&known.unit)?`<div class="chars sub">${chars.map(ch=>`<button class="ch" data-sub="${ch}">${ch}</button>`).join("")}</div>`:"";
     box.innerHTML=`<div class="chline"><span class="hanzi">${esc(w)}</span><span class="mono">${esc(py)}</span><span>${esc(m||t("not in the dictionary"))}</span></div>${sub}`;
     box.querySelectorAll("[data-sub]").forEach(b=> b.onclick=async e=>{ e.stopPropagation(); const ch=b.dataset.sub;
       box.querySelectorAll(".sub .ch").forEach(x=>x.classList.toggle("on",x===b));
@@ -2457,10 +2458,10 @@ function loadSigns(){
   return _signsLoading;
 }
 const SIGN_PUNCT=/[、，。：:,.!！?？;；·]/;
-/* first dictionary sense that is not a surname / bound-form / variant note */
+/* first dictionary sense that is not a surname / bound-form / variant / abbreviation note (the abbreviation since v309: 日 opened with "abbr. for 日本, Japan" before "sun; day") */
 function bestSense(w){
   const senses=((DICT&&DICT.get(w))||"").split(";").map(x=>x.trim()).filter(Boolean);
-  return senses.find(x=>!/^(surname |\(bound form\)|old variant|variant of|\(archaic\))/i.test(x))||senses[0]||"";
+  return senses.find(x=>!/^(surname |\(bound form\)|old variant|variant of|\(archaic\)|abbr\. (for|of) )/i.test(x))||senses[0]||"";
 }
 /* meaning of one transcript line: longest phrasebook phrases first, dictionary
    words for the rest; punctuation kept as its own token for wrapping */
@@ -2470,7 +2471,7 @@ function lineMeaning(line){
   while(k<raw.length){
     const ch=raw[k];
     if(SIGN_PUNCT.test(ch)){ parts.push({w:ch,p:"",m:"",punct:true}); k++; continue; }
-    const num=raw.slice(k).match(/^[0-9]+/); if(num){ parts.push({w:num[0],p:num[0],m:num[0],num:true}); k+=num[0].length; continue; } /* a number reads as itself */
+    const num=raw.slice(k).match(/^[0-9]+/); if(num){ parts.push({w:num[0],p:num[0],m:num[0],num:true}); k+=num[0].length; continue; } /* a number reads as itself — and takes the unit after it below (mergeUnits, v309) */
     const hit=(SIGNS||[]).find(e=>raw.startsWith(e.zh,k));
     if(hit){ parts.push({w:hit.zh,p:hit.py,m:hit.en,ph:true}); k+=hit.zh.length; continue; }
     const rest=raw.slice(k).split(SIGN_PUNCT)[0]; let len=Math.min(8,rest.length)||1;
@@ -2479,12 +2480,46 @@ function lineMeaning(line){
     parts.push({w,p:pySpaced(w),m:cleanSense(bestSense(w)),ph:false}); /* no dictionary clutter in the composed meaning (v134) */
     k+=w.length;
   }
-  const words=parts.filter(x=>!x.punct);
-  const full=words.length>0 && words.every(x=>x.ph||x.num);
+  const words=mergeUnits(parts).filter(x=>!x.punct);
+  const full=words.length>0 && words.every(x=>x.ph||x.num||x.unit);
   /* fully phrasebook-matched line reads as English; a composed line shows word + gloss for every part */
   const en=full?words.map(x=>x.m).join(" · "):words.map(x=>x.num?x.w:x.w+" "+(x.m||"?")).join(" · ");
   const py=pySpaced(words.map(x=>x.w).join(""));
-  return {en,full,gloss:words,segs:parts.map(x=>x.w),py};
+  return {en,full,gloss:words,segs:mergeUnits(parts).map(x=>x.w),py};
+}
+/* a number and its unit are one part (v309, H's 绿皮书 card with 3月1日 全国上映: the parts row showed 月 and 日 alone, and the tap on
+   日 gave the dictionary's first sense, "abbr. for 日本, Japan" — "日 muss zusammen mit der 1 also Datum/Tag erkannt werden"):
+   after a number, a lone unit character — 年 月 日 号 点 时 元 块 层 楼 岁 米 人 位 折 — joins it as 3月 / 1日 with a meaning
+   read from the pair (March, the 1st), and the row shows that part; a dictionary word starting with the unit (月份, 人人)
+   is not a unit and stays a word of its own. Old cards keep their stored gloss, and the row merges it at display time. */
+const UNIT_WORDS=new Set(["年","月","日","号","点","时","元","块","层","楼","岁","米","人","位","折"]);
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+function ordinal(n){ const r=n%100, s=r>=11&&r<=13?"th":({1:"st",2:"nd",3:"rd"})[n%10]||"th"; return n+s; }
+function unitMeaning(n,u,afterMonth){
+  const v=+n;
+  switch(u){
+    case "年": return v>=1000?`the year ${n}`:`${n} year${v===1?"":"s"}`;
+    case "月": return v>=1&&v<=12?MONTHS[v-1]:`${n} months`;
+    case "日": return afterMonth?`the ${ordinal(v)} (day of the month)`:`${n} day${v===1?"":"s"}, or the ${ordinal(v)}`;
+    case "号": return afterMonth?`the ${ordinal(v)} (day of the month)`:`No. ${n}`;
+    case "点": case "时": return `${n} o'clock`;
+    case "元": case "块": return `${n} yuan`;
+    case "层": case "楼": return `${ordinal(v)} floor`;
+    case "岁": return `${n} years old`;
+    case "米": return `${n} metre${v===1?"":"s"}`;
+    case "人": case "位": return v===1?"1 person":`${n} people`;
+    case "折": return v>=1&&v<=9?`${(10-v)*10} % off`:`${n} % of the price`;
+  }
+  return n+" "+u;
+}
+function mergeUnits(parts){
+  const out=[]; let afterMonth=false;
+  for(let i=0;i<parts.length;i++){
+    const a=parts[i], b=parts[i+1];
+    if(a&&a.num&&b&&!b.punct&&UNIT_WORDS.has(b.w)){ const w=a.w+b.w; out.push({w,p:a.w+" "+(b.p||pySpaced(b.w)),m:unitMeaning(a.w,b.w,afterMonth),unit:true}); afterMonth=b.w==="月"; i++; continue; }
+    if(!a.punct) afterMonth=false; out.push(a);
+  }
+  return out;
 }
 const SIGN={}; /* id -> {lines:[...], res, full, mean} while the transcript editor is open */
 /* ---------- deskew: a tilted sign is read badly, so the framed area is straightened first ----------
