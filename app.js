@@ -8,7 +8,8 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=315; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=316; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -308,6 +309,7 @@ function wireChrome(){
       S.mode=m; render(); }; /* the Camera tab opens the inbox page with Take photo and From album — a tab that fired the camera at once (v184) went in v186, H: "I don't like the direct capture, revert" */
   });
   $("#cam").onchange=onPhoto; $("#album").onchange=onPhoto; /* camera, or photos already on the phone */
+  for(const id of ["#cam","#album"]){ $(id).addEventListener("change",()=>{ PICKING=0; }); $(id).addEventListener("cancel",()=>{ PICKING=0; }); } /* the pick is over, with a photo or without (v316) */
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden && S.mode==="inbox") renderShots(); });
   /* a long press on a picture, a canvas or a control is never a request for the browser's menu — the image sheet came up over the crop frame (v248, H: "Don't make those things pop up while adjusting the crop"), and v249 keeps it off every picture and control (H: "Find all such useless behaviours and remove them"); plain text and the fields keep their menus, so a meaning can still be copied */
   document.addEventListener("contextmenu",e=>{ const t=e.target; if(t&&t.closest&&t.closest("img,canvas,button,.croplayer,.shotwrap,.drawsheet,.picbox,.thumbbox,.reticle,.ck,.chip,.tab,.grade,.seg,.linked")) e.preventDefault(); });
@@ -3938,8 +3940,8 @@ function renderInbox(main){
     <div class="snaprow"><button class="btn primary" id="snap">${t("Take photo")}</button><button class="btn" id="pick">${t("From album")}</button></div>
     <div id="shots"></div>
   </div>`;
-  $("#snap").onclick=()=>$("#cam").click();
-  $("#pick").onclick=()=>$("#album").click();
+  $("#snap").onclick=()=>{ PICKING=Date.now(); $("#cam").click(); };
+  $("#pick").onclick=()=>{ PICKING=Date.now(); $("#album").click(); };
   renderShots();
 }
 const IMGURL={}; // cache object URLs per photo — renderShots re-runs on every selection
@@ -4156,10 +4158,15 @@ if("serviceWorker" in navigator){
    update reloaded the page the moment the new worker took over, in the middle of whatever H was doing): within RELOAD_GRACE
    of the load (the user has just opened the app and sees the first screen) or while the app is in the background the page
    reloads at once, as before; later, RELOAD_DUE is set and the reload comes when the app next comes to the foreground.
-   A tap on the mirror's Check now still reloads at once — the user asked for it. */
+   A tap on the mirror's Check now still reloads at once — the user asked for it.
+   Never while a photo is being taken or a frame stands (v316, H right after the v315 update: "Ich habe gerade ein Foto gemacht
+   und bin danach direkt auf der Learn Seite gelandet. Foto ist weg." — the camera app in front is the page hidden, the new
+   worker took over meanwhile and the page reloaded at once; the camera handed the photo to a page that was gone): while
+   picking() or CROP the reload is deferred, and the return to the foreground reloads only once both are over. */
 const LOAD_AT=Date.now(), RELOAD_GRACE=3000; let RELOAD_DUE=false;
-function reloadSoon(){ if(Date.now()-LOAD_AT<RELOAD_GRACE||document.hidden){ location.reload(); return; } RELOAD_DUE=true; }
-document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&RELOAD_DUE){ RELOAD_DUE=false; location.reload(); } });
+const reloadBusy=()=>picking()||!!CROP; /* a photo on its way from the camera, or a photo open with its frame */
+function reloadSoon(){ if(reloadBusy()){ RELOAD_DUE=true; return; } if(Date.now()-LOAD_AT<RELOAD_GRACE||document.hidden){ location.reload(); return; } RELOAD_DUE=true; }
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&RELOAD_DUE&&!reloadBusy()){ RELOAD_DUE=false; location.reload(); } });
 /* ---------- mixed shell: the page and the script at different versions ----------
    GitHub Pages caches for ten minutes and jsDelivr per file, so after quick successive deploys a worker once served
    the v70 page with the v69 script (H: "I was on 70" — and the drag was missing). If the label and APP_V differ,
