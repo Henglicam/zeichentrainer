@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=311; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=312; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -530,7 +530,7 @@ async function pictureJpeg(blob){
   const out=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
   const b64=(await blobToB64(out)).d; return {b64,w:cv.width,h:cv.height,kb:Math.round(out.size/1024)};
 }
-const picSystem=()=>`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","box":[left,top,right,bottom],"bad":true|false}. "zh" = the Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without Latin letters, numbers of the decoration or anything you cannot see; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural ${meaningLangName()} meaning of the text as a sign or name (short, ${meaningLangName()} only); when the text is a brand, shop or product name, "m" is that name as it is known (the romanised or the international name), followed in brackets by what it is, in ${meaningLangName()} — e.g. "Mixue Bingcheng (ice-cream and bubble-tea chain)", never the bare name alone; when the text has several lines that say different things (a film poster: the title, then credits), "m" gives one short meaning per line, in the same order, joined with " / " as the pinyin is — e.g. "The Wandering Earth (film) / a film by / producer, original novel / Guo Fan, Liu Cixin" — so the learner sees which line means what; lines that form one phrase keep one meaning; "note" = one short remark if needed; "box" = where the text you read stands in the picture — one rectangle around all its lines, [left, top, right, bottom] in pixels of the picture (its size is given with the picture), tight around the characters; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty and omit "box". An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`; /* the meaning in the app's language (v256) */
+const picSystem=()=>`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","box":[left,top,right,bottom],"bad":true|false}. "zh" = the main Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without Latin letters, numbers of the decoration or anything you cannot see — the main text only: leave out fine print, that is lines whose characters are under a third the height of the largest characters (dates, credits, small notes, slogans in small type), and leave out any line the picture's edge cuts off; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural ${meaningLangName()} meaning of the text as a sign or name (short, ${meaningLangName()} only); when the text is a brand, shop or product name, "m" is that name as it is known (the romanised or the international name), followed in brackets by what it is, in ${meaningLangName()} — e.g. "Mixue Bingcheng (ice-cream and bubble-tea chain)", never the bare name alone; when the text has several lines that say different things (a film poster: the title, then credits), "m" gives one short meaning per line, in the same order, joined with " / " as the pinyin is — e.g. "The Wandering Earth (film) / a film by / producer, original novel / Guo Fan, Liu Cixin" — so the learner sees which line means what; lines that form one phrase keep one meaning; "note" = one short remark if needed; "box" = where the text you read stands in the picture — one rectangle around all its lines, [left, top, right, bottom] in pixels of the picture (its size is given with the picture), tight around the characters; "boxes" = the same for each line of "zh" on its own, one rectangle per line in the same order; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty and omit "box" and "boxes". An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`; /* the meaning in the app's language (v256) */
 /* Qwen's hybrid models think by default, and the thinking takes many seconds before the short JSON comes (v208, H with Qwen
    as the active provider: "Check pinyin and meaning takes way too long" — until v207 only the picture path switched it off) */
 function noThinking(pv,model,body){ if(pv==="qwen"&&/^qwen3/.test(model)) body.enable_thinking=false; return body; }
@@ -556,8 +556,23 @@ async function aiReadPicture(blob,alts,status){
   await loadScriptTables().catch(()=>{});
   const txt=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,""); let x; try{ x=JSON.parse(txt); if(Array.isArray(x)) x=x[0]; }catch(e){ throw new Error("could not read the model's answer"); }
   if(!x||typeof x!=="object") throw new Error("unexpected answer");
-  const zhRaw=String(x.zh||"").replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"), zh=t2s(zhRaw), m=saneM(x.m,zh);
-  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(x.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:picBox(x.box,pic.w,pic.h)};
+  const main=mainLines(String(x.zh||"").replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean),x.p,x.m,Array.isArray(x.boxes)?x.boxes.map(b=>picBox(b,pic.w,pic.h)):null,picBox(x.box,pic.w,pic.h));
+  const zhRaw=main.lines.join("\n"), zh=t2s(zhRaw), m=saneM(main.m,zh);
+  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxes:main.boxes,dropped:main.dropped};
+}
+/* the main text only (v312, H's 青春无烟 / 未来无限 poster: the card carried the poster's small print — the line 第39个世界无烟日 above the title and the date 2026年5月31日 世界无烟日 below it, half of it outside the frame — "wieder die Sachen ausserhalb des Crops und das Kleingedruckte mitgelesen. Bitte beides vermeiden"): the prompt asks for the main text and leaves fine print and lines the picture's edge cuts off to the model; this is the safety net from the model's own line boxes — a line whose box is under FINE_PRINT of the tallest line's height is fine print and goes, with its pinyin and meaning parts when they come one per line; the box for the frame is then the union of the lines kept */
+const FINE_PRINT=1/3;
+function mainLines(lines,p,m,boxes,box){
+  const out={lines,p:String(p||""),m:String(m||""),box,boxes:null,dropped:[]};
+  if(!boxes||boxes.length!==lines.length||boxes.some(b=>!b)||lines.length<2) return out;
+  const hs=boxes.map(b=>b[3]-b[1]), hmax=Math.max(...hs), keep=hs.map(h=>h>=FINE_PRINT*hmax);
+  if(keep.every(Boolean)) return {...out,boxes};
+  const pp=out.p.split(/\s*\/\s*/), mp=out.m.split(/\s*\/\s*/);
+  out.dropped=lines.filter((l,i)=>!keep[i]); out.lines=lines.filter((l,i)=>keep[i]); out.boxes=boxes.filter((b,i)=>keep[i]);
+  if(pp.length===lines.length) out.p=pp.filter((x,i)=>keep[i]).join(" / ");
+  if(mp.length===lines.length) out.m=mp.filter((x,i)=>keep[i]).join(" / ");
+  const u=out.boxes; out.box=[Math.min(...u.map(b=>b[0])),Math.min(...u.map(b=>b[1])),Math.max(...u.map(b=>b[2])),Math.max(...u.map(b=>b[3]))];
+  return out;
 }
 /* the text's box from the picture answer (v293), as fractions of the sent picture: the prompt asks for fractions, a model that answers in the picture's pixels or on a 0–1000 grid is scaled back; anything else is no box */
 function picBox(b,w,h){
@@ -3140,7 +3155,8 @@ async function cropSign(id,opts){
       const picBase=onText?{orig:placedCut,dk:null}:{orig:r.blob,dk}; /* else the area the reading started from — the app's proposal or the hand's frame —, never a placed cut from garbage (v296: the faces went to Qwen while the title stayed outside; v288–v295 sent the placed cut); kept with its straightening, so the AI's box maps back onto it (v293) */
       if(onText){ READLOG.push({t:Date.now(),text:"the AI gets the placed frame's cut"}); while(READLOG.length>40) READLOG.shift(); }
       picSeen=picBase; try{ pic=await aiReadPicture(picBase.dk?picBase.dk.blob:picBase.orig,guesses,status); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
-      if(stale()) return; r.pic=pic?{zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box}:null;
+      if(stale()) return; r.pic=pic?{zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped}:null;
+      if(pic&&pic.dropped&&pic.dropped.length){ READLOG.push({t:Date.now(),text:`fine print left out of the AI's answer: ${pic.dropped.join(" | ")}`}); while(READLOG.length>40) READLOG.shift(); } /* Diagnostics (v312) */
     }
     if(pic&&!pic.bad){
       /* the AI's lines replace the reading: no confidences (every character is open in the picker), no boxes (the sheet
@@ -3792,7 +3808,7 @@ const picMark=()=>`<span class="picmark" title="${t("Read from the picture by th
 async function picOnBad(sg,guesses,status){
   if(!sg||sg.picAsked||!sg.picBlob||!pictureProvider()||!aiAutoOn()||!navigator.onLine) return null;
   sg.picAsked=true; READLOG.push({t:Date.now(),text:"the text check called the reading garbage — the AI gets the picture"}); while(READLOG.length>40) READLOG.shift();
-  try{ const pic=await aiReadPicture(sg.picBlob,[...new Set(guesses.filter(Boolean))].slice(0,6),status||(()=>{})); if(sg.region) sg.region.pic={zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box}; return pic&&!pic.bad?pic:null; }
+  try{ const pic=await aiReadPicture(sg.picBlob,[...new Set(guesses.filter(Boolean))].slice(0,6),status||(()=>{})); if(sg.region) sg.region.pic={zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped}; return pic&&!pic.bad?pic:null; }
   catch(err){ logErr("picture",err&&err.message||String(err)); return null; }
 }
 async function signAskAI(id){
