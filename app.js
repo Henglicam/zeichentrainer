@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=291; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=292; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -251,6 +251,11 @@ async function shareUsers(){
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
   if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
   try{ await navigator.clipboard.writeText(text); noteSheet(t("Copied to the clipboard.")); }catch(err){ noteSheet(t("Sharing is not available here.")); }
+}
+/* the owner's texts onto the clipboard (v292, H: "offer the option to share/copy diagnostics and user data and feedback directly from the app"): Share hands a file to the share sheet, Copy puts the same text where a chat can take it; the row's line says so */
+async function copyText(text,st){
+  try{ await navigator.clipboard.writeText(text); if(st) st.textContent="Copied."; }
+  catch(err){ if(st) st.textContent="Copy is not available here — tap Show and select the text."; }
 }
 async function shareDiag(){
   const text=diagText(), name="zeichentrainer-diagnostics.txt", file=new File([text],name,{type:"text/plain"});
@@ -1098,11 +1103,11 @@ function renderMore(main){
     <div class="listhead">Updates without a VPN</div>
     <div class="mrow"><div style="flex:1"><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div><div class="inrow"><input id="mirror-url" class="mono" autocomplete="off" placeholder="Mirror address" title="Mirror address (a copy of the app reachable in China)" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"><button class="btn mini" id="mirror-check">Check now</button></div></div></div>
     <div class="listhead">Diagnostics</div>
-    <div class="mrow"><div><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${READLOG.length} step${READLOG.length===1?"":"s"}.</div></div><span class="btnrow"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button></span></div>
+    <div class="mrow"><div style="flex:1"><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${READLOG.length} step${READLOG.length===1?"":"s"}.</div><div class="fieldacts"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button><button class="btn mini" id="diag-copy">Copy</button></div></div></div>
     <pre class="diag" id="diag-out" hidden></pre>
-    <div class="mrow"><div><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"install")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div></div><span class="btnrow"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button></span></div>
+    <div class="mrow"><div style="flex:1"><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"install")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div><div class="fieldacts"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button><button class="btn mini" id="users-copy">Copy</button></div></div></div>
     <pre class="diag" id="users-out" hidden></pre>
-    <div class="mrow"><div><div class="t">Feedback</div><div class="s" id="fb-in-status">${FEEDBACK?`${nOf(FEEDBACK.rows.length,"message")}, fetched ${new Date(FEEDBACK.at).toLocaleTimeString()}.`:"The messages users sent from the app, newest first."}</div></div><span class="btnrow"><button class="btn mini" id="fb-show">Show</button><button class="btn mini" id="fb-share">Share</button></span></div>
+    <div class="mrow"><div style="flex:1"><div class="t">Feedback</div><div class="s" id="fb-in-status">${FEEDBACK?`${nOf(FEEDBACK.rows.length,"message")}, fetched ${new Date(FEEDBACK.at).toLocaleTimeString()}.`:"The messages users sent from the app, newest first."}</div><div class="fieldacts"><button class="btn mini" id="fb-show">Show</button><button class="btn mini" id="fb-share">Share</button><button class="btn mini" id="fb-copy">Copy</button></div></div></div>
     <pre class="diag" id="fb-out" hidden></pre>
     <div class="listhead">Start over</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>`:""}
@@ -1128,6 +1133,9 @@ function renderMore(main){
   if(S.admin){
     $("#diag-show").onclick=()=>{ const o=$("#diag-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=diagText(); };
     $("#diag-share").onclick=shareDiag;
+    $("#diag-copy").onclick=()=>copyText(diagText(),$("#diag-status"));
+    $("#users-copy").onclick=async()=>{ const st=$("#users-status"); try{ const rows=(USERS&&USERS.rows)||(await fetchAllUsers()).rows; await copyText(allUsersText(rows),st); }catch(err){ st.textContent="Could not fetch: "+(err&&err.message||err); } };
+    $("#fb-copy").onclick=async()=>{ const st=$("#fb-in-status"); try{ const rows=(FEEDBACK&&FEEDBACK.rows)||(await fetchFeedback()).rows; await copyText(feedbackText(rows),st); }catch(err){ st.textContent="Could not fetch: "+(err&&err.message||err); } };
     $("#users-show").onclick=async()=>{ const o=$("#users-out"), st=$("#users-status"); if(!o.hidden&&USERS){ o.hidden=true; return; }
       st.textContent="Fetching …"; try{ const u=await fetchAllUsers(); o.textContent=allUsersText(u.rows); o.hidden=false; st.textContent=`${nOf(u.rows.length,"install")}, fetched ${new Date(u.at).toLocaleTimeString()}.`; }
       catch(err){ st.textContent="Could not fetch: "+(err&&err.message||err); } };
