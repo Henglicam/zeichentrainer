@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=305; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=306; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2974,8 +2974,8 @@ function snapBox(bmp,box,n,lens){ /* lens: the answer's lines' character counts 
     const best=runs.filter(r=>r.x1-r.x0+1>=SNAP_MIN*bh2&&Math.max(r.x0-tx1,tx0-r.x1)<=0.5*Hb).sort((a,b)=>Math.max(a.x0-tx1,tx0-a.x1)-Math.max(b.x0-tx1,tx0-b.x1))[0];
     if(best) taken.push({x0:R.x0+best.x0,y0:R.y0+best.y0,x1:R.x0+best.x1+1,y1:R.y0+best.y1+1,area:0,inside:true,clean:false}); }
   /* a line may not be much wider than its characters allow (v305, H's 业主直租 sign: Qwen's box ran over the QR code beside the text, whose bottom finder square is a dark blob of a character's size in the line's band, and the frame took half the code — "Das ginge schon noch zentrierter"): the taken blobs are grouped into line bands by vertical overlap; a band whose blobs span more than SNAP_WIDE times the count of its answer line times its tallest blob (the bands matched to the lines by order when the counts agree, else the longest line for every band) is cut at gaps wider than SNAP_GAP text heights into runs, and the run with the most blob area keeps its neighbours only while the width stays within that budget — the rest is not the line's */
-  const bands=[]; for(const c of [...taken].sort((a,b)=>a.y0-b.y0)){ const b=bands.find(b=>Math.min(c.y1,b.y1)-Math.max(c.y0,b.y0)>=0.5*Math.min(c.y1-c.y0,b.y1-b.y0)); if(b){ b.cs.push(c); b.y0=Math.min(b.y0,c.y0); b.y1=Math.max(b.y1,c.y1); } else bands.push({y0:c.y0,y1:c.y1,cs:[c]}); }
   const lns=(lens&&lens.length?lens:[n]).map(v=>Math.max(1,v|0)), kmax=Math.max(...lns);
+  const trim=()=>{ const bands=[]; for(const c of [...taken].sort((a,b)=>a.y0-b.y0)){ const b=bands.find(b=>Math.min(c.y1,b.y1)-Math.max(c.y0,b.y0)>=0.5*Math.min(c.y1-c.y0,b.y1-b.y0)); if(b){ b.cs.push(c); b.y0=Math.min(b.y0,c.y0); b.y1=Math.max(b.y1,c.y1); } else bands.push({y0:c.y0,y1:c.y1,cs:[c]}); } bands.sort((a,b)=>a.y0-b.y0);
   bands.forEach((b,i)=>{ const k=bands.length===lns.length?lns[i]:kmax, Hl=Math.max(...b.cs.map(c=>c.y1-c.y0)), budget=k*Hl*SNAP_WIDE, cs=b.cs.slice().sort((a,c)=>a.x0-c.x0);
     if(Math.max(...cs.map(c=>c.x1))-cs[0].x0<=budget) return;
     const runs=[]; let run=null, xe=-1; for(const c of cs){ if(run&&c.x0-xe<SNAP_GAP*Hl) run.cs.push(c); else { run={cs:[c]}; runs.push(run); } xe=Math.max(xe,c.x1); }
@@ -2983,8 +2983,27 @@ function snapBox(bmp,box,n,lens){ /* lens: the answer's lines' character counts 
     for(const r of runs){ r.x0=Math.min(...r.cs.map(c=>c.x0)); r.x1=Math.max(...r.cs.map(c=>c.x1)); r.size=r.cs.reduce((a,c)=>a+(c.x1-c.x0)*(c.y1-c.y0),0); }
     let lo=runs.indexOf(runs.reduce((a,r)=>r.size>a.size?r:a)), hi=lo;
     for(;;){ const left=lo>0&&runs[hi].x1-runs[lo-1].x0<=budget, right=hi<runs.length-1&&runs[hi+1].x1-runs[lo].x0<=budget; if(left&&(!right||runs[lo-1].size>=runs[hi+1].size)) lo--; else if(right) hi++; else break; }
-    for(const r of runs.filter((r,j)=>j<lo||j>hi)) for(const c of r.cs){ const j=taken.indexOf(c); if(j>=0) taken.splice(j,1); } });
-  if(!taken.length) return null;
+    for(const r of runs.filter((r,j)=>j<lo||j>hi)) for(const c of r.cs){ const j=taken.indexOf(c); if(j>=0) taken.splice(j,1); } }); };
+  trim(); if(!taken.length) return null;
+  /* a character in shadow beside the line (v306, H's 邪不压正 photographed with the lamp on its right: the left of the poster lay in shadow, 邪 fell under the one cut set over the bright title and was no blob at all, so neither the sideways nor the column pass could reach it — the true cause behind v300's "牙 hung on the mat"): from each end of the line, a strip of 1.5 text heights beyond the union is cut by its own Otsu, and a clean blob of the text's colour in it — not touching the strip's outer, top or bottom edge, of a character's size against the end blob, within half a text height of the union — joins by its extent; up to three characters a side */
+  for(const side of [-1,1]) for(let it=0;it<3;it++){
+    const U0={x0:Math.min(...taken.map(c=>c.x0)),x1:Math.max(...taken.map(c=>c.x1))}, near0=0.05*(U0.x1-U0.x0), t=taken.filter(c=>side<0?c.x0<=U0.x0+near0:c.x1>=U0.x1-near0).reduce((a,c)=>(c.y1-c.y0)>(a.y1-a.y0)?c:a), Hl=t.y1-t.y0, edge=side<0?U0.x0:U0.x1; /* the tallest blob at the end — the title's character, not the letter under it */
+    const sx0=side<0?Math.max(0,Math.round(edge-1.5*Hl)):edge, sx1=side<0?edge:Math.min(W,Math.round(edge+1.5*Hl)), sy0=Math.max(0,Math.round(t.y0-0.1*Hl)), sy1=Math.min(Hh,Math.round(t.y1+0.1*Hl)), sw=sx1-sx0, sh=sy1-sy0;
+    if(sw<0.5*Hl||sh<8) break;
+    const h2=new Uint32Array(256); for(let y=sy0;y<sy1;y++) for(let x=sx0;x<sx1;x++) h2[g[y*W+x]]++;
+    const cut=otsuThr(h2,sw*sh), sm=new Uint8Array(sw*sh); for(let y=0;y<sh;y++) for(let x=0;x<sw;x++) sm[y*sw+x]=(g[(sy0+y)*W+sx0+x]>cut?1:0)===tc?1:0;
+    const sl=new Int32Array(sw*sh), sst=new Int32Array(sw*sh); let pick=null, nb=0;
+    for(let s0=0;s0<sw*sh;s0++){ if(sl[s0]||!sm[s0]) continue; const id=++nb; let top=0, mnx=sw, mxx=-1, mny=sh, mxy=-1, px=0; sst[top++]=s0; sl[s0]=id;
+      while(top){ const i=sst[--top], x=i%sw, y=(i-x)/sw; px++; if(x<mnx) mnx=x; if(x>mxx) mxx=x; if(y<mny) mny=y; if(y>mxy) mxy=y;
+        if(x>0&&!sl[i-1]&&sm[i-1]){ sl[i-1]=id; sst[top++]=i-1; } if(x<sw-1&&!sl[i+1]&&sm[i+1]){ sl[i+1]=id; sst[top++]=i+1; }
+        if(y>0&&!sl[i-sw]&&sm[i-sw]){ sl[i-sw]=id; sst[top++]=i-sw; } if(y<sh-1&&!sl[i+sw]&&sm[i+sw]){ sl[i+sw]=id; sst[top++]=i+sw; } }
+      const h=mxy-mny+1, w=mxx-mnx+1, outer=side<0?mnx===0:mxx===sw-1;
+      let runs=0, rows=0; for(let y=mny;y<=mxy;y++){ let r=0; for(let x=mnx;x<=mxx;x++) if(sl[y*sw+x]===id&&(x===mnx||sl[y*sw+x-1]!==id)) r++; if(r){ runs+=r; rows++; } } /* strokes across: a character's rows hold several runs, a wall or a bar one */
+      if(outer||h<0.3*Hl||w<0.3*Hl||w>1.3*Hl||px>0.85*w*h||runs<1.6*rows) continue; /* the strip is the line's own band, so a character may touch its top or bottom; a thin bar (the mat's border), a wide one (an underline) and a solid block (the wall beside the poster, cut light against the red — one run per row) are no character */
+      const bx0=sx0+mnx, bx1=sx0+mxx+1, by0=sy0+mny, by1=sy0+mxy+1, gap=side<0?edge-bx1:bx0-edge; if(gap>0.5*Hl||Math.min(by1,t.y1)-Math.max(by0,t.y0)<0.5*Math.min(h,Hl)) continue;
+      if(!pick||gap<pick.gap) pick={x0:bx0,y0:by0,x1:bx1,y1:by1,gap}; }
+    if(!pick) break; taken.push({x0:pick.x0,y0:pick.y0,x1:pick.x1,y1:pick.y1,area:0,inside:true,clean:true}); }
+  trim(); if(!taken.length) return null;
   const U={x0:Math.min(...taken.map(c=>c.x0)),y0:Math.min(...taken.map(c=>c.y0)),x1:Math.max(...taken.map(c=>c.x1)),y1:Math.max(...taken.map(c=>c.y1))};
   if(U.x1-U.x0<0.2*(B.x1-B.x0)||U.y1-U.y0<0.2*(B.y1-B.y0)) return null; /* specks alone: the AI's box stays */
   return {x0:U.x0/k,y0:U.y0/k,x1:U.x1/k,y1:U.y1/k};
