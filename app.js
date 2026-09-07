@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=295; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=296; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2288,7 +2288,8 @@ function textRegion(bmp){
    centred on the text and kept inside the photo; a text the photo cannot hold at that shape keeps its own box */
 const FRAME_RATIO=16/9;
 const FIRST_MAX=1000; /* the quick look that places the frame reads a copy of at most this many pixels on the long side (v290) */
-const FRAME_ROOM=0.3; /* the placed frame's room around the text, in text heights (v293 — a third; until v292 one at the ends and half above and below, then widened to 16:9) */
+const FRAME_ROOM=0.3;
+const textLike=lines=>{ const sure=lines.flatMap(l=>(l.cf||[]).filter(c=>c>=SURE_BOX)); return sure.length>0&&(dictCover(lines)>=0.5||sure.reduce((a,c)=>a+c,0)/sure.length>=95); }; /* a reading the frame may follow (v296, H's 邪不压正 poster: the faces read as 品语失色全了 at 86 % and the quick look framed them — "jetzt macht er gesichtserkennung!?!??"): half its characters in dictionary words (two characters and more — a lone 有 has none), or its confident characters read at 95 % on average (a stray 人 at 40 % beside a 有 at 98 % does not count; the strays place no frame either) */ /* the placed frame's room around the text, in text heights (v293 — a third; until v292 one at the ends and half above and below, then widened to 16:9) */
 let FRAME_WAIT=2000; /* the ink-row proposal is shown as the frame when the reader has not placed one within this time (v289, H: "Show the ink-row frame after 2 seconds if the reader is slower") */
 function shapeBox(b,W,H){
   let x=b.x*W, y=b.y*H, w=(b.x1-b.x)*W, h=(b.y1-b.y)*H;
@@ -2916,7 +2917,8 @@ async function cropSign(id,opts){
     if(CROP&&CROP.id===id&&CROP.hidden){ /* a quick look for the frame alone (v290, H: "you don't need to translate first, you just need to identify text first"): one pass on a copy of at most FIRST_MAX px — 0.3 s on H's poster where the whole frame at 1 600 px takes 1.1 s — whose confident boxes give the lines and the image their ends; the frame goes there before the reading proper starts. It is not one of the reading's passes: as the first pass it lost 爸爸 on that poster, so the reading stays as it was */
       status("looking for the text …"); const bmp=await createImageBitmap(dk.blob); const k=Math.min(1,FIRST_MAX/Math.max(bmp.width,bmp.height)); const src=k<1?await toJpeg(bmp,k):dk.blob;
       let rect=null; try{ const lines=scaleBoxes(await readPass(w,src,status),k); if(stale()) return;
-        const boxes=frameBoxes(lines), Hb=boxes.length?median(boxes.map(b=>b.y1-b.y0)):0;
+        const ok=textLike(lines); READLOG.push({t:Date.now(),text:`quick look: ${lines.length?lines.map(l=>l.t).join(" | ")+` at ${Math.round(meanCf(lines))} %`:"nothing"}${lines.length&&!ok?" — not text, no frame from it":""}`}); while(READLOG.length>40) READLOG.shift(); /* Diagnostics (v296) */
+        const boxes=ok?frameBoxes(lines):[], Hb=boxes.length?median(boxes.map(b=>b.y1-b.y0)):0; /* garbage places no frame (v296) */
         if(Hb>0){ const y0=Math.max(0,Math.min(...boxes.map(b=>b.y0))-Hb/2), y1=Math.min(bmp.height,Math.max(...boxes.map(b=>b.y1))+Hb/2);
           const ext=textRowExtent(bmp,Math.min(...boxes.map(b=>b.x0)),Math.max(...boxes.map(b=>b.x1)),y0,y1,Hb); rect={x0:Math.max(0,ext.x0-Hb*FRAME_ROOM),y0:Math.max(0,y0+Hb/2-Hb*FRAME_ROOM),x1:Math.min(bmp.width,ext.x1+Hb*FRAME_ROOM),y1:Math.min(bmp.height,y1-Hb/2+Hb*FRAME_ROOM)}; } } finally{ bmp.close(); }
       if(rect){ await placeRect(rect); if(stale()) return;
@@ -2926,7 +2928,7 @@ async function cropSign(id,opts){
     if(stale()) return;
     const place=async band=>{ /* nothing placed yet (the first pass had no usable box): the tight passes so far — after the close look's colour passes, again after the whole close look */
       if(stale()||!(CROP&&CROP.id===id&&CROP.hidden)) return;
-      const tight=passes.filter(p=>p.tightened&&p.lines.length&&!p.tra&&p.scale!=="merged"); if(!tight.length||!band) return; /* the simplified reader's tight passes as read (the traditional reader's lines are converted, the merged pass is a composite) */
+      const tight=passes.filter(p=>p.tightened&&p.lines.length&&!p.tra&&p.scale!=="merged"&&textLike(p.lines)); if(!tight.length||!band) return; /* the simplified reader's tight passes as read (the traditional reader's lines are converted, the merged pass is a composite), and only those that look like text (v296) */
       await placeRect(textBandOf(tight,band)); };
     r.onTight=place;
     const cardRect=await secondLook(w,dk,passes,status,r,Hink);
@@ -2969,7 +2971,7 @@ async function cropSign(id,opts){
     if(weak&&pictureProvider()&&aiAutoOn()&&navigator.onLine){ /* the one switch covers text and pictures (v193, H: the picture went out while the check was off — "counterintuitive") */
       const guesses=[...new Set(passes.map(textOf).filter(Boolean))].slice(0,6);
       /* the whole straightened frame, never the second look's band (v175, H's two-line sticker 骑车勿盯 / 还车勿忘: the tight band held the lower line only, and the AI read that line alone) */
-      const picBase=placedCut?{orig:placedCut,dk:await deskewBlob(placedCut)}:{orig:r.blob,dk}; if(stale()) return; /* the framed area as the user sees it: the placed frame's cut when there is one (v288); kept with its straightening, so the AI's box maps back onto it (v293) */
+      const picBase={orig:r.blob,dk}; /* the area the reading started from — the app's proposal or the hand's frame —, never the reader's placed cut (v296: a weak reading means that placement came from garbage, and the faces went to Qwen while the title stayed outside; v288–v295 sent the placed cut); kept with its straightening, so the AI's box maps back onto it (v293) */
       var picSeen=picBase; try{ pic=await aiReadPicture(picBase.dk.blob,guesses,status); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
       if(stale()) return; r.pic=pic?{zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box}:null;
     }
