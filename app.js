@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=298; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=299; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2922,25 +2922,29 @@ function snapBox(bmp,box,n){
   const bin=new Uint8Array(rw*rh); for(let y=0;y<rh;y++) for(let x=0;x<rw;x++) bin[y*rw+x]=g[(R.y0+y)*W+R.x0+x]>thr?1:0;
   const e0=Math.max(0,Math.min(3,Math.round(Hb/60))); /* eroded by a few pixels too, so a reflection or a thin bridge does not fuse a character with the poster's border (H's 邪: its 牙 hung on the white border); the blobs are grown back by the same amount */
   const lab=new Uint8Array(rw*rh), stack=new Int32Array(rw*rh); const comps=[[],[]]; /* the blobs of each colour: [dark, light] */
+  const bw=B.x1-B.x0, bh=B.y1-B.y0;
   for(const [c,e] of e0?[[0,0],[1,0],[0,e0],[1,e0]]:[[0,0],[1,0]]){ /* each colour as it is and eroded: the eroded pass frees a character from a bridge, the plain pass keeps the small lines whose strokes the erosion takes away (姜文电影 over the title) */
     let m=new Uint8Array(rw*rh); for(let i=0;i<m.length;i++) m[i]=bin[i]===c?1:0;
     for(let t=0;t<e;t++){ const m2=new Uint8Array(rw*rh); for(let y=1;y<rh-1;y++) for(let x=1;x<rw-1;x++){ const i=y*rw+x; if(m[i]&&m[i-1]&&m[i+1]&&m[i-rw]&&m[i+rw]) m2[i]=1; } m=m2; }
     lab.fill(0);
     for(let s0=0;s0<rw*rh;s0++){ if(lab[s0]||!m[s0]) continue;
-      let top=0, area=0, mnx=rw, mxx=-1, mny=rh, mxy=-1; stack[top++]=s0; lab[s0]=1;
+      let top=0, area=0, mnx=rw, mxx=-1, mny=rh, mxy=-1, iarea=0, inx=rw, ixx=-1, iny=rh, ixy=-1; stack[top++]=s0; lab[s0]=1;
       while(top){ const i=stack[--top], x=i%rw, y=(i-x)/rw; area++; if(x<mnx) mnx=x; if(x>mxx) mxx=x; if(y<mny) mny=y; if(y>mxy) mxy=y;
+        const X=R.x0+x, Y=R.y0+y; if(X>=B.x0&&X<B.x1&&Y>=B.y0&&Y<B.y1){ iarea++; if(x<inx) inx=x; if(x>ixx) ixx=x; if(y<iny) iny=y; if(y>ixy) ixy=y; } /* the part inside the AI's box */
         if(x>0&&!lab[i-1]&&m[i-1]){ lab[i-1]=1; stack[top++]=i-1; } if(x<rw-1&&!lab[i+1]&&m[i+1]){ lab[i+1]=1; stack[top++]=i+1; }
         if(y>0&&!lab[i-rw]&&m[i-rw]){ lab[i-rw]=1; stack[top++]=i-rw; } if(y<rh-1&&!lab[i+rw]&&m[i+rw]){ lab[i+rw]=1; stack[top++]=i+rw; } }
-      mnx-=e; mny-=e; mxx+=e; mxy+=e; const h=mxy-mny+1, w=mxx-mnx+1; /* grown back */
-      if(mnx<=0||mny<=0||mxx>=rw-1||mxy>=rh-1) continue; /* cut by the edge: the faces, the border, the wall, the background */
-      if(h<SNAP_MIN*Hb||h>SNAP_MAX*(B.y1-B.y0)||w>SNAP_MAX*(B.x1-B.x0)||area<0.01*Hb*Hb) continue; /* not a character's size: smaller than 0.15 text heights, or nearly the box itself (a border ring around it) — no upper bound at a character's size, since a brush title's strokes join into one blob spanning the lines (H's 流浪地球: the title fell out and the frame cut 流 and 地) */
-      const bx0=R.x0+mnx, by0=R.y0+mny, bx1=R.x0+mxx+1, by1=R.y0+mxy+1, ix=Math.min(bx1,B.x1)-Math.max(bx0,B.x0), iy=Math.min(by1,B.y1)-Math.max(by0,B.y0);
-      comps[c].push({x0:bx0,y0:by0,x1:bx1,y1:by1,area,inside:ix>0&&iy>0&&ix*iy>=0.5*w*h}); } } /* inside: at least half of it in the AI's box — a character the box cuts counts, a reflection above it and a face's cheek under it do not */
+      mnx-=e; mny-=e; mxx+=e; mxy+=e; inx-=e; iny-=e; ixx+=e; ixy+=e; const h=mxy-mny+1, w=mxx-mnx+1, ih=ixy-iny+1, iw=ixx-inx+1; /* grown back */
+      const clean=mnx>0&&mny>0&&mxx<rw-1&&mxy<rh-1&&h<=SNAP_MAX*bh&&w<=SNAP_MAX*bw; /* a blob of a character's kind: whole, not cut by the widened box's edge, smaller than the box — its whole extent counts, and it may join a line sideways; anything else (a title fused with the letters under it that run to the picture's edge, or with a bright robot arm above it) counts with the part inside the box, so it can never fall out and hand the box to the other colour's gaps (v298, H's 流浪地球 twice) */
+      if(!clean&&!iarea) continue; /* nothing of it in the AI's box: a reflection above the title, a cheek under it (a clean blob outside the box stays for the sideways pass — the eroded 牙 has no pixel left inside) */
+      if(iarea&&iw>=0.9*bw&&ih>=0.9*bh) continue; /* the background, or a ring around the box: its part inside is the box itself */
+      if(clean?(h<SNAP_MIN*Hb||area<0.01*Hb*Hb):(ih<SNAP_MIN*Hb||iw<SNAP_MIN*Hb||iarea<Hb*Hb)) continue; /* no character: a speck; of a fused blob the part inside must hold a text height's square of ink — a title's strokes do, the wedge of the poster's slanted border inside the box (34 × 149 px on 邪不压正) does not */
+      const bx0=R.x0+mnx, by0=R.y0+mny, bx1=R.x0+mxx+1, by1=R.y0+mxy+1, ix=Math.min(bx1,B.x1)-Math.max(bx0,B.x0), iy=Math.min(by1,B.y1)-Math.max(by0,B.y0), inside=clean&&ix*iy>=0.5*w*h;
+      comps[c].push(clean?{x0:bx0,y0:by0,x1:bx1,y1:by1,area:iarea,inside,clean}:{x0:R.x0+inx,y0:R.y0+iny,x1:R.x0+ixx+1,y1:R.y0+ixy+1,area:iarea,inside:true,clean}); } } /* inside = counts from the start: a clean blob with at least half of it in the box, by its whole extent (a character the box cuts), a fused blob by its part inside; a clean blob mostly outside keeps its whole extent and waits for the sideways pass */
   const areaOf=cs=>cs.filter(c=>c.inside).reduce((a,c)=>a+c.area,0), text=areaOf(comps[1])>areaOf(comps[0])?comps[1]:comps[0];
   const taken=text.filter(c=>c.inside);
   if(!taken.length) return null;
-  for(let grew=true;grew;){ grew=false; /* the line goes on outside the box (the box cut 邪 between 牙 and 阝, and 牙 lay outside it): a blob of the text's colour in a taken blob's band, within half a text height sideways, is the line's too — sideways only: under a line the cheeks of the faces would qualify */
-    for(const c of text){ if(taken.includes(c)) continue;
+  for(let grew=true;grew;){ grew=false; /* the line goes on outside the box (the box cut 邪 between 牙 and 阝, and 牙 lay outside it): a clean blob of the text's colour in a taken blob's band, within half a text height sideways, is the line's too — sideways only: under a line the cheeks of the faces would qualify */
+    for(const c of text){ if(!c.clean||taken.includes(c)) continue;
       if(taken.some(t=>Math.min(c.y1,t.y1)-Math.max(c.y0,t.y0)>=0.5*Math.min(c.y1-c.y0,t.y1-t.y0)&&Math.max(c.x0-t.x1,t.x0-c.x1)<=0.5*Hb)){ taken.push(c); grew=true; } } }
   const U={x0:Math.min(...taken.map(c=>c.x0)),y0:Math.min(...taken.map(c=>c.y0)),x1:Math.max(...taken.map(c=>c.x1)),y1:Math.max(...taken.map(c=>c.y1))};
   if(U.x1-U.x0<0.2*(B.x1-B.x0)||U.y1-U.y0<0.2*(B.y1-B.y0)) return null; /* specks alone: the AI's box stays */
