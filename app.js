@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=301; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=302; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -1679,11 +1679,14 @@ function renderEdit(main,c){
     const st=$("#e-aistatus"); ab.disabled=true;
     const zh=$("#e-word").value, pin=$("#e-pin").value.trim(), mean=$("#e-mean").value.trim(), note=$("#e-note").value.trim();
     try{
-      const [r]=await aiAsk([{kind:d.kind||"word",c:isSign?zh.split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):zh.replace(/\s+/g,""),p:pin,m:mean,flagNote:note,gloss:d.gloss,mt:{src:"dict",verified:false,suspect:"please check"}}],()=>{ st.innerHTML=busyHTML(t(AI_BUSY_TEXT)); });
-      if(r.zh&&CJK.test(r.zh)){ const zh=r.zh.replace(/\r/g,""); sg.lines=(isSign?zh:recutLines(zh.replace(/\s+/g,""),sg.lines)).split("\n").map(l=>l.trim()).filter(Boolean); sg.orig=sg.lines.slice(); syncWord(); drawLines(); }
-      if(r.p){ $("#e-pin").value=r.p; autoGrow($("#e-pin")); }
-      if(r.m){ $("#e-mean").value=r.m; autoGrow($("#e-mean")); aiMl=r.ml||"en"; meanTouched=false; } /* the fields grow with the answer — a filled value fires no input event (v281, H's two-line brand meaning cut off) */
-      aiApplied=true; st.textContent=""; /* a good answer shows nothing, the fields just fill — as in the Read preview (H, v105; the green "AI: looks right" box went in v245) */
+      let [r]=await aiAsk([{kind:d.kind||"word",c:isSign?zh.split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):zh.replace(/\s+/g,""),p:pin,m:mean,flagNote:note,gloss:d.gloss,mt:{src:"dict",verified:false,suspect:"please check"}}],()=>{ st.innerHTML=busyHTML(t(AI_BUSY_TEXT)); });
+      if(r.bad&&(recropImg||d.img)){ const pic=await picOnBad({picBlob:recropImg||d.img,region:null},[zh]); if(pic) r={...pic,ok:true,bad:false}; } /* garbage says the text check: the card's own picture goes to the AI that takes pictures (v302) */
+      if(!r.bad){
+        if(r.zh&&CJK.test(r.zh)){ const zh=r.zh.replace(/\r/g,""); sg.lines=(isSign?zh:recutLines(zh.replace(/\s+/g,""),sg.lines)).split("\n").map(l=>l.trim()).filter(Boolean); sg.orig=sg.lines.slice(); syncWord(); drawLines(); }
+        if(r.p){ $("#e-pin").value=r.p; autoGrow($("#e-pin")); }
+        if(r.m){ $("#e-mean").value=r.m; autoGrow($("#e-mean")); aiMl=r.ml||"en"; meanTouched=false; } /* the fields grow with the answer — a filled value fires no input event (v281, H's two-line brand meaning cut off) */
+        aiApplied=true; st.textContent=""; } /* a good answer shows nothing, the fields just fill — as in the Read preview (H, v105; the green "AI: looks right" box went in v245) */
+      else st.textContent=t("The AI says this text looks misread. Fix the characters, or crop the photo again."); /* until v301 a garbage verdict left the form as it was, without a word (H: "doesn't work anymore?") */
     }catch(err){ const m=err&&err.message||String(err); st.textContent=m===AI_NET_ERR?t(m)+t(". Tap the button to try again."):t("The AI check failed: {0}",m); }
     ab.disabled=false;
   };
@@ -3085,7 +3088,7 @@ async function cropSign(id,opts){
       if(pick&&!alts.includes(textOf(pick))){ if(alts.length>=6) alts.pop(); alts.push(textOf(pick)); } }
     const tradPhoto=s2t(bestT)!==bestT&&tradPhotoOf(lines.map(x=>x.t),passes,score); r.trad=tradPhoto; /* a text without a traditional form (推) has nothing to vote on */
     SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r, alts, trad:tradPhoto, tradDetected:tradPhoto, tradText:tradPhoto?s2t(bestT):""};
-    SIGN[id].cardImg=cardImg; SIGN[id].weak=weak; /* for the card saved before the reading (v237): its picture, and the flag when the reading was weak */
+    SIGN[id].cardImg=cardImg; SIGN[id].weak=weak; SIGN[id].picBlob=(placedCut&&CROP&&CROP.id===id&&CROP.followed)?placedCut:dk.blob; SIGN[id].picAsked=r.pic!==undefined; /* the picture for a garbage verdict of the text check (v302): the placed frame's cut, else the straightened frame — the same picture the weak path sends */ /* for the card saved before the reading (v237): its picture, and the flag when the reading was weak */
     if(pic&&pic.bad){ const sg=SIGN[id]; sg.ai={zh:bestT,zht:"",p:"",m:"",note:pic.note,ok:false,bad:true,pic:true}; sg.flag=true; sg.flagNote=t("the reading looks wrong"); } /* the AI saw the picture and found no readable text: the reading is marked wrong, no text check on it */
     done(r); delete READING[id]; renderShots();
     if(aiAutoOn()&&!(pic&&pic.bad)&&!RECROP[id]) signAskAI(id); /* every reading is checked without a tap (the Edit form asks through its own button, v239) */
@@ -3680,6 +3683,19 @@ function aiSettled(sg,lines,zh){
 }
 /* a small quiet mark on the Characters label when the AI read the text from the picture (v176; under the meaning at first, moved in v177 — H: "the icon belongs under the Chinese characters, not the translation") */
 const picMark=()=>`<span class="picmark" title="${t("Read from the picture by the AI")}"><svg viewBox="0 0 24 24" style="fill:var(--ok)"><path d="M12 2.5l2.3 6.2 6.2 2.3-6.2 2.3L12 19.5l-2.3-6.2-6.2-2.3 6.2-2.3z"/><path d="M19.5 15.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9z"/></svg>AI</span>`; /* the green AI capsule of the Cards list, with a sparkle (v180, H: "place the AI icon more sexy") */
+/* A garbage verdict sends the picture (v302, H's 绿皮书 poster framed by hand: the reader's soup 绿区十 / 月时，全网上妾 scored
+   above the weak line — confident garbage with two accidental dictionary words —, so no picture went out, and DeepSeek
+   called it garbage three times; the card kept its gloss and the flag, and H: "Looks like AI check for pinyin and
+   description doesn't work anymore?"): when the text check answers bad and the picture path is open (a provider that
+   takes pictures, the automatic check on, online) and this reading has not sent its picture yet, the picture goes now —
+   the placed frame's cut, else the straightened frame, as the weak path sends it — and a good answer replaces the reading
+   as there; a bad answer or a failed call leaves the garbage verdict as before. Once per reading (`picAsked`). */
+async function picOnBad(sg,guesses,status){
+  if(!sg||sg.picAsked||!sg.picBlob||!pictureProvider()||!aiAutoOn()||!navigator.onLine) return null;
+  sg.picAsked=true; READLOG.push({t:Date.now(),text:"the text check called the reading garbage — the AI gets the picture"}); while(READLOG.length>40) READLOG.shift();
+  try{ const pic=await aiReadPicture(sg.picBlob,[...new Set(guesses.filter(Boolean))].slice(0,6),status||(()=>{})); if(sg.region) sg.region.pic={zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box}; return pic&&!pic.bad?pic:null; }
+  catch(err){ logErr("picture",err&&err.message||String(err)); return null; }
+}
 async function signAskAI(id){
   const sg=SIGN[id]; if(!sg||sg.aiBusy) return;
   signPreview(id);
@@ -3689,12 +3705,16 @@ async function signAskAI(id){
     const c=lines.join("\n"), res=(sg.res||[]).filter(Boolean);
     const [r]=await aiAsk([{kind:"sign",c,p:res.map(x=>x.py).join(" / "),m:sg.mean||"",gloss:res.flatMap(x=>x.gloss),alts:sg.alts,trad:!!sg.trad,mt:{src:"gloss",verified:false,suspect:"read from a photo by OCR"}}]);
     if(!SIGN[id]) return;
+    const pic=r.bad?await picOnBad(sg,[c,...(sg.alts||[])]):null; if(!SIGN[id]) return; /* the text check calls the reading garbage: the picture goes to the AI that takes pictures (v302) */
+    if(pic){ const zh=pic.zh.split("\n"); sg.lines=zh; sg.orig=zh.slice(); sg.conf=[]; sg.boxes=zh.map(()=>[]); sg.alts=[c,...(sg.alts||[])].filter(x=>x&&x!==pic.zh).slice(0,6); sg.trad=!!pic.zht; sg.tradDetected=!!pic.zht; sg.tradText=pic.zht||""; sg.weak=false;
+      sg.ai={zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,ml:pic.ml,note:pic.note,ok:true,bad:false,pic:true}; } /* as the weak path's answer: open characters, no boxes, the reader's texts as the alternatives, the mark on the label */
+    else {
     let zh=r.zh&&CJK.test(r.zh)&&!r.bad?r.zh.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):c;
     zh=recutLines(zh,lines); /* the model often drops the line breaks — the photo's lines win */
     const kept=zh!==c?aiSettled(sg,lines,zh):"";
     if(kept){ sg.ai={zh:c,proposed:zh,kept,zht:"",p:"",m:"",note:r.note,ok:false,bad:false}; }
     else { sg.lines=zh.split("\n"); sg.ai={zh,zht:r.zht&&CJK.test(r.zht)?recutLines(r.zht.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"),lines):"",p:r.p,m:r.m,ml:r.ml,note:r.note,ok:r.ok,bad:!!r.bad};
-    if(r.bad&&!sg.flag){ sg.flag=true; sg.flagNote=sg.flagNote||t("the reading looks wrong"); } } /* H's rule: when unsure, flag instead of inventing */
+    if(r.bad&&!sg.flag){ sg.flag=true; sg.flagNote=sg.flagNote||t("the reading looks wrong"); } } } /* H's rule: when unsure, flag instead of inventing */
   }catch(err){ if(SIGN[id]) sg.aiErr=err&&err.message||String(err); } /* → signPreview falls back to the offline model */
   if(SIGN[id]){ delete sg.aiBusy; delete sg.aiPromise; }
   renderShots(); })();
