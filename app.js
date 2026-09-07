@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=312; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=313; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2924,7 +2924,7 @@ function textBandOf(tightPasses,cardRect){ /* the tight passes' own boxes, as a 
   const r={x0:u.x0-tg.pad+tg.x0, y0:u.y0-tg.pad+tg.y0, x1:u.x1-tg.pad+tg.x0, y1:u.y1-tg.pad+tg.y0}; /* the padding off, into the straightened frame */
   return {x0:Math.max(cardRect.x0,r.x0), y0:Math.max(cardRect.y0,r.y0), x1:Math.min(cardRect.x1,r.x1), y1:Math.min(cardRect.y1,r.y1)}; /* never outside the band the card image takes */
 }
-async function frameOnText(id,orig,base,rect,angle,by){ /* rect: the text with its room, in the straightened frame's coordinates; orig = the crop the reading started from, base = the frame it was cut with (v297: a frame the quick look placed meanwhile is not the picture's frame); by = "AI" when the picture answer places it (v293: allowed while the frame is still the app's proposal, shown or not) */
+async function frameOnText(id,orig,base,rect,angle,by,grow){ /* grow (v313): room beyond the picture's edges, in the copy's pixels, when the AI's box touches them */ /* rect: the text with its room, in the straightened frame's coordinates; orig = the crop the reading started from, base = the frame it was cut with (v297: a frame the quick look placed meanwhile is not the picture's frame); by = "AI" when the picture answer places it (v293: allowed while the frame is still the app's proposal, shown or not) */
   const pend=!!PENDING[id]&&!RECROP[id]; /* a card saved with Save now (v304, H's three posters on v303 all with the whole frame's crop: "Enger crop funktioniert manchmal, aber nicht immer" — the frame was gone with the tap, so nothing could be placed): the placement goes to the waiting card instead — its frame and its crop */
   const cr=pend?(PLACED[id]||base):(CROP&&CROP.id===id&&CROP.rect), refine=!!by&&!!base&&!!cr&&base===cr&&(pend?!!PLACED[id]:!!CROP.followed); /* the AI's box on the placed frame's own cut (v303): the frame is centred inside itself */
   if(!base||!rect||RECROP[id]) return null;
@@ -2950,6 +2950,7 @@ async function frameOnText(id,orig,base,rect,angle,by){ /* rect: the text with i
     const {x0,y0,x1,y1}=unrotatedBox(W,Hh,rect,angle); if(!(x1-x0>=8&&y1-y0>=8)) return null;
     f={x:base.x+x0/sc,y:base.y+y0/sc,w:(x1-x0)/sc,h:(y1-y0)/sc};
   }
+  if(grow&&!a){ f.x-=grow.left/sc; f.w+=(grow.left+grow.right)/sc; f.y-=grow.top/sc; f.h+=(grow.top+grow.bottom)/sc; f.x=Math.max(0,f.x); f.y=Math.max(0,f.y); f.w=Math.min(lw-f.x,f.w); f.h=Math.min(lh-f.y,f.h); } /* the text may go on beyond the picture's edge: the frame reaches past it, into the photo (v313) */
   const nr={x:f.x,y:f.y,w:f.w,h:f.h,a,lw,lh};
   if(nr.w<8||nr.h<8) return null;
   if(!(cr.a||0)===!a&&Math.abs(nr.x-cr.x)<0.01*lw&&Math.abs(nr.y-cr.y)<0.01*lh&&Math.abs(nr.w-cr.w)<0.01*lw&&Math.abs(nr.h-cr.h)<0.01*lh) return null; /* the text fills the frame: nothing to move */
@@ -3164,13 +3165,15 @@ async function cropSign(id,opts){
       const zh=pic.zh.split("\n"), guesses=[...new Set(passes.map(textOf).filter(tx=>tx&&tx!==pic.zh))].slice(0,6);
       if(pic.box&&picSeen&&(PENDING[id]&&!RECROP[id]?READ_APP[id]:CROP&&CROP.id===id&&CROP.proposed)){ /* the reader could not read this font (v293 — H's 邪不压正 poster: the ink rows and the reader's garbage boxes put the frame around the whole photo): the AI's box places the frame, once, as fractions of the straightened picture it saw — the proposal's crop, or the cut of the frame the quick look had placed from that same garbage; on the placed frame's own cut (v301) the box centres the frame on the characters inside it (v303, H's 绿皮书: "should be more centered") */
         const seen=picSeen.dk?picSeen.dk.blob:picSeen.orig, seenAngle=picSeen.dk?picSeen.dk.angle||0:0, seenBase=picSeen.dk?base:(PLACED[id]||(CROP&&CROP.id===id?CROP.rect:null)); /* the placed cut is upright, and its frame is the placed one */
-        let W=0,Hh=0,box=null,rect=null; try{ const b=await createImageBitmap(seen); W=b.width; Hh=b.height; const [bx0,by0,bx1,by1]=pic.box, n=Math.max(1,zh.length);
+        let W=0,Hh=0,box=null,rect=null,grow=null; try{ const b=await createImageBitmap(seen); W=b.width; Hh=b.height; const [bx0,by0,bx1,by1]=pic.box, n=Math.max(1,zh.length);
           box={x0:bx0*W,y0:by0*Hh,x1:bx1*W,y1:by1*Hh}; const snap=snapBox(b,box,n,zh.map(l=>l.replace(/[\s\/／·・,，。.、()（）]/g,"").length)); b.close(); /* the box's edges from the pixels (v297): an edge that cuts through the text moves out to its end, a blank margin is trimmed */
           if(snap){ const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`the AI's box ${pc(bx0)}–${pc(bx1)} % across, ${pc(by0)}–${pc(by1)} % down, snapped to the ink: ${pc(snap.x0/W)}–${pc(snap.x1/W)} % across, ${pc(snap.y0/Hh)}–${pc(snap.y1/Hh)} % down`}); while(READLOG.length>40) READLOG.shift(); box=snap; }
           r.pic.snap=snap?[snap.x0/W,snap.y0/Hh,snap.x1/W,snap.y1/Hh].map(v=>+v.toFixed(3)):null;
           const Hb=(box.y1-box.y0)/n; /* the text height from the box and its lines */
-          rect={x0:Math.max(0,box.x0-Hb*FRAME_ROOM),y0:Math.max(0,box.y0-Hb*FRAME_ROOM),x1:Math.min(W,box.x1+Hb*FRAME_ROOM),y1:Math.min(Hh,box.y1+Hb*FRAME_ROOM)}; }catch(e){ box=null; logErr("snap",e&&e.message||String(e)); READLOG.push({t:Date.now(),text:"the AI's box could not be used: "+(e&&e.message||e)}); while(READLOG.length>40) READLOG.shift(); }
-        if(box){ const cut=await frameOnText(id,picSeen.orig,seenBase,rect,seenAngle,"AI"); if(stale()) return; if(cut) placedCut=cut; } }
+          rect={x0:Math.max(0,box.x0-Hb*FRAME_ROOM),y0:Math.max(0,box.y0-Hb*FRAME_ROOM),x1:Math.min(W,box.x1+Hb*FRAME_ROOM),y1:Math.min(Hh,box.y1+Hb*FRAME_ROOM)};
+          if(picSeen.dk){ const bh=box.y1-box.y0, e={top:box.y0<=0.02*Hh,bottom:box.y1>=0.98*Hh,left:box.x0<=0.02*W,right:box.x1>=0.98*W}; /* the box on the edge of the app's proposal (v313, H's 北京现代 badge: the ink rows cut the chrome characters in half at the proposal's top, Qwen boxed the visible halves at y 0–55 of 496, the snap found nothing, and the card showed half characters — "Why is the crop so wrong here?"): the text may go on beyond the edge, so the frame reaches past it — 1.5 box heights above or below, two text heights sideways — into the photo; never for the hand's frame or the whole photo, where there is nothing beyond */
+            if(e.top||e.bottom||e.left||e.right){ grow={top:e.top?1.5*bh:0,bottom:e.bottom?1.5*bh:0,left:e.left?2*bh:0,right:e.right?2*bh:0}; READLOG.push({t:Date.now(),text:`the AI's box touches the picture's ${["top","bottom","left","right"].filter(k=>e[k]).join(" and ")} edge — the frame reaches beyond it`}); while(READLOG.length>40) READLOG.shift(); } } }catch(e){ box=null; logErr("snap",e&&e.message||String(e)); READLOG.push({t:Date.now(),text:"the AI's box could not be used: "+(e&&e.message||e)}); while(READLOG.length>40) READLOG.shift(); }
+        if(box){ const cut=await frameOnText(id,picSeen.orig,seenBase,rect,seenAngle,"AI",grow); if(stale()) return; if(cut) placedCut=cut; } }
       cardImg=placedCut||r.blob; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=cardImg; /* the card image is the crop as framed (the placed frame's cut, v288), not the second look's band */
       SIGN[id]={lines:zh, orig:zh.slice(), conf:[], boxes:zh.map(()=>[]), img:dk.blob, angle:dk.angle||0, tightened:false, region:r, alts:guesses, trad:!!pic.zht, tradDetected:!!pic.zht, tradText:pic.zht||"",
         ai:{zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,ml:pic.ml,note:pic.note,ok:true,bad:false,pic:true}, cardImg, weak:false};
