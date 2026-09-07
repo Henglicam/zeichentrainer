@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=285; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=286; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2214,6 +2214,7 @@ function wireCrop(layer){
     layer.onpointerup=()=>{
       layer.onpointermove=null; layer.onpointerup=null;
       layer.classList.add("framed"); /* from now on strokes outside the frame scroll the page (v132) */
+      abandonReading(layer.dataset.id); /* the frame changed: the old reading and its editor go at once (v286, H's SF Express card — the AI answer of the first reading re-drew the old editor during the 1.2 s wait, and Save stored the old picture and text under the new frame) */
       showCropPreview(layer.dataset.id); /* starts the automatic read */
     };
   };
