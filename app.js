@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}).join(" ").replace(/(\d) (?=\d)/g,"$1"); /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0) */
-const APP_V=302; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=303; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
 
@@ -2873,13 +2873,18 @@ function textBandOf(tightPasses,cardRect){ /* the tight passes' own boxes, as a 
   return {x0:Math.max(cardRect.x0,r.x0), y0:Math.max(cardRect.y0,r.y0), x1:Math.min(cardRect.x1,r.x1), y1:Math.min(cardRect.y1,r.y1)}; /* never outside the band the card image takes */
 }
 async function frameOnText(id,orig,base,rect,angle,by){ /* rect: the text with its room, in the straightened frame's coordinates; orig = the crop the reading started from, base = the frame it was cut with (v297: a frame the quick look placed meanwhile is not the picture's frame); by = "AI" when the picture answer places it (v293: allowed while the frame is still the app's proposal, shown or not) */
-  const cr=CROP&&CROP.id===id&&CROP.rect; if(!cr||!base||!(CROP.hidden||(by&&CROP.proposed))||!rect||base.a||RECROP[id]||PENDING[id]) return null; /* the AI may move a frame the reader placed from a weak reading, never one the hand touched (the hand's first gesture drops `proposed`); a turned base is the hand's */
+  const cr=CROP&&CROP.id===id&&CROP.rect, refine=!!by&&!!base&&base===cr&&!!CROP.followed; /* the AI's box on the placed frame's own cut (v303): the frame is centred inside itself */
+  if(!cr||!base||!(CROP.hidden||(by&&CROP.proposed))||!rect||(base.a&&!refine)||RECROP[id]||PENDING[id]) return null; /* the AI may move a frame the reader placed from a weak reading, never one the hand touched (the hand's first gesture drops `proposed`); a turned base is the hand's — unless it is the placed frame itself */
   let W=0,Hh=0; try{ const bmp=await createImageBitmap(orig); W=bmp.width; Hh=bmp.height; bmp.close(); }catch(e){ return null; }
   if(!W||!Hh||CROP.rect!==cr) return null;
   const sc=W/base.w, lw=base.lw, lh=base.lh; /* crop pixels per layer pixel */
   const shaped=false; let f; /* the text with its small room, no 16:9 widening (v293, H: "Make the automatic crop frame tighter. Chinese Text should be well readable in the thumbnail list" — the list's box is 16:9 itself, with the blurred fill behind a wide crop, and a frame widened to 16:9 around a one-line text shrank the text to half the thumbnail's width) */
   let a=0;
-  if(Math.abs(angle)>=1.5){ /* the copy was straightened: the frame turns with the text (v297, H's 邪不压正 poster at 8°: "Schrift ist immer noch nicht mittig im Rahmen" — until v296 the frame was the bounding box of the turned rectangle, wider and taller than the text with the text running diagonally through it; a turned frame is the rectangle itself, and its cut — drawn upright by cropBlob, as a frame turned by hand (v185) — is the straight text) */
+  if(refine){ /* the placed frame's cut is upright (a turned frame's cut is drawn upright): the box's rectangle in the cut turns with the frame around the frame's centre (v303, H's 绿皮书 poster: the quick look's frame ran to the right edge over a reflection streak read as 一, and the title sat at the left — "should be more centered") */
+    const ar=(base.a||0)*Math.PI/180, dx=((rect.x0+rect.x1)/2-W/2)/sc, dy=((rect.y0+rect.y1)/2-Hh/2)/sc, w=(rect.x1-rect.x0)/sc, h=(rect.y1-rect.y0)/sc;
+    const px=base.x+base.w/2+dx*Math.cos(ar)-dy*Math.sin(ar), py=base.y+base.h/2+dx*Math.sin(ar)+dy*Math.cos(ar);
+    f={x:px-w/2,y:py-h/2,w,h}; a=base.a||0;
+  } else if(Math.abs(angle)>=1.5){ /* the copy was straightened: the frame turns with the text (v297, H's 邪不压正 poster at 8°: "Schrift ist immer noch nicht mittig im Rahmen" — until v296 the frame was the bounding box of the turned rectangle, wider and taller than the text with the text running diagonally through it; a turned frame is the rectangle itself, and its cut — drawn upright by cropBlob, as a frame turned by hand (v185) — is the straight text) */
     const r=-angle*Math.PI/180, nw=Math.abs(W*Math.cos(r))+Math.abs(Hh*Math.sin(r)), nh=Math.abs(W*Math.sin(r))+Math.abs(Hh*Math.cos(r));
     const cx=(rect.x0+rect.x1)/2-nw/2, cy=(rect.y0+rect.y1)/2-nh/2, ox=cx*Math.cos(-r)-cy*Math.sin(-r)+W/2, oy=cx*Math.sin(-r)+cy*Math.cos(-r)+Hh/2; /* the rectangle's centre on the crop as framed */
     const w=(rect.x1-rect.x0)/sc, h=(rect.y1-rect.y0)/sc; f={x:base.x+ox/sc-w/2,y:base.y+oy/sc-h/2,w,h}; a=+angle.toFixed(1);
@@ -2893,7 +2898,7 @@ async function frameOnText(id,orig,base,rect,angle,by){ /* rect: the text with i
   const cut=await cropBlob(id,nr); if(!cut) return null;
   if(!CROP||CROP.id!==id||CROP.rect!==cr) return null; /* the hand moved the frame meanwhile: the reading is stale anyway */
   CROP.rect=nr; CROP.proposed="text"; CROP.followed=true; delete CROP.hidden;
-  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`frame placed on the text${by?" by the "+by:""}: ${pc(f.x/lw)}–${pc((f.x+f.w)/lw)} % across, ${pc(f.y/lh)}–${pc((f.y+f.h)/lh)} % down${shaped?" (16:9)":""}${a?`, turned by ${a}°`:""}`}); while(READLOG.length>40) READLOG.shift();
+  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`frame ${refine?"centred":"placed"} on the text${by?" by the "+by:""}: ${pc(f.x/lw)}–${pc((f.x+f.w)/lw)} % across, ${pc(f.y/lh)}–${pc((f.y+f.h)/lh)} % down${shaped?" (16:9)":""}${a?`, turned by ${a}°`:""}`}); while(READLOG.length>40) READLOG.shift();
   return cut.blob;
 }
 /* The AI's box, snapped to the characters (v297, H's 邪不压正 poster: Qwen's box cut 邪 at the left and reached into
@@ -2911,7 +2916,7 @@ async function frameOnText(id,orig,base,rect,angle,by){ /* rect: the text with i
    joins — the box cut 邪 between 牙 and 阝, and 牙 lay outside it; sideways only, since under a line the cheeks of the
    faces would qualify. The snapped box is the union of those blobs; nothing, or under a fifth of the AI's box, leaves the AI's box as it is. Measured
    crossings per row could not do it: the faces' rows had as many light-dark changes as the title's. */
-const SNAP_ROOM=1, SNAP_MIN=0.15, SNAP_MAX=0.95;
+const SNAP_ROOM=1, SNAP_MIN=0.15, SNAP_MAX=0.95, SNAP_COL=0.15;
 function snapBox(bmp,box,n){
   const k=Math.min(1,800/Math.max(bmp.width,bmp.height)), W=Math.max(1,Math.round(bmp.width*k)), Hh=Math.max(1,Math.round(bmp.height*k));
   const cv=document.createElement("canvas"); cv.width=W; cv.height=Hh; const ctx=cv.getContext("2d",{alpha:false,willReadFrequently:true}); ctx.drawImage(bmp,0,0,W,Hh);
@@ -2924,12 +2929,12 @@ function snapBox(bmp,box,n){
   const room=Math.round(SNAP_ROOM*Hb), R={x0:Math.max(0,B.x0-room),y0:Math.max(0,B.y0-room),x1:Math.min(W,B.x1+room),y1:Math.min(Hh,B.y1+room)}, rw=R.x1-R.x0, rh=R.y1-R.y0;
   const bin=new Uint8Array(rw*rh); for(let y=0;y<rh;y++) for(let x=0;x<rw;x++) bin[y*rw+x]=g[(R.y0+y)*W+R.x0+x]>thr?1:0;
   const e0=Math.max(0,Math.min(3,Math.round(Hb/60))); /* eroded by a few pixels too, so a reflection or a thin bridge does not fuse a character with the poster's border (H's 邪: its 牙 hung on the white border); the blobs are grown back by the same amount */
-  const lab=new Uint8Array(rw*rh), stack=new Int32Array(rw*rh); const comps=[[],[]]; /* the blobs of each colour: [dark, light] */
+  const lab=new Uint8Array(rw*rh), stack=new Int32Array(rw*rh); const comps=[[],[]], fused=[[],[]], masks=[null,null]; /* the blobs of each colour: [dark, light]; fused = the blobs cut by the widened box's edge that hold too little ink to count, for the column pass below (v303) */
   const bw=B.x1-B.x0, bh=B.y1-B.y0;
   for(const [c,e] of e0?[[0,0],[1,0],[0,e0],[1,e0]]:[[0,0],[1,0]]){ /* each colour as it is and eroded: the eroded pass frees a character from a bridge, the plain pass keeps the small lines whose strokes the erosion takes away (姜文电影 over the title) */
     let m=new Uint8Array(rw*rh); for(let i=0;i<m.length;i++) m[i]=bin[i]===c?1:0;
     for(let t=0;t<e;t++){ const m2=new Uint8Array(rw*rh); for(let y=1;y<rh-1;y++) for(let x=1;x<rw-1;x++){ const i=y*rw+x; if(m[i]&&m[i-1]&&m[i+1]&&m[i-rw]&&m[i+rw]) m2[i]=1; } m=m2; }
-    lab.fill(0);
+    if(!e) masks[c]=m; lab.fill(0);
     for(let s0=0;s0<rw*rh;s0++){ if(lab[s0]||!m[s0]) continue;
       let top=0, area=0, mnx=rw, mxx=-1, mny=rh, mxy=-1, iarea=0, inx=rw, ixx=-1, iny=rh, ixy=-1; stack[top++]=s0; lab[s0]=1;
       while(top){ const i=stack[--top], x=i%rw, y=(i-x)/rw; area++; if(x<mnx) mnx=x; if(x>mxx) mxx=x; if(y<mny) mny=y; if(y>mxy) mxy=y;
@@ -2940,7 +2945,7 @@ function snapBox(bmp,box,n){
       const clean=mnx>0&&mny>0&&mxx<rw-1&&mxy<rh-1&&h<=SNAP_MAX*bh&&w<=SNAP_MAX*bw; /* a blob of a character's kind: whole, not cut by the widened box's edge, smaller than the box — its whole extent counts, and it may join a line sideways; anything else (a title fused with the letters under it that run to the picture's edge, or with a bright robot arm above it) counts with the part inside the box, so it can never fall out and hand the box to the other colour's gaps (v298, H's 流浪地球 twice) */
       if(!clean&&!iarea) continue; /* nothing of it in the AI's box: a reflection above the title, a cheek under it (a clean blob outside the box stays for the sideways pass — the eroded 牙 has no pixel left inside) */
       if(iarea&&iw>=0.9*bw&&ih>=0.9*bh) continue; /* the background, or a ring around the box: its part inside is the box itself */
-      if(clean?(h<SNAP_MIN*Hb||area<0.01*Hb*Hb):(ih<SNAP_MIN*Hb||iw<SNAP_MIN*Hb||iarea<Hb*Hb)) continue; /* no character: a speck; of a fused blob the part inside must hold a text height's square of ink — a title's strokes do, the wedge of the poster's slanted border inside the box (34 × 149 px on 邪不压正) does not */
+      if(clean?(h<SNAP_MIN*Hb||area<0.01*Hb*Hb):(ih<SNAP_MIN*Hb||iw<SNAP_MIN*Hb||iarea<Hb*Hb)){ if(!clean&&!e&&ih>=SNAP_MIN*Hb&&iw>=SNAP_MIN*Hb) fused[c].push({seed:s0,x0:R.x0+inx,y0:R.y0+iny,x1:R.x0+ixx+1,y1:R.y0+ixy+1}); continue; } /* no character: a speck; of a fused blob the part inside must hold a text height's square of ink — a title's strokes do, the wedge of the poster's slanted border inside the box (34 × 149 px on 邪不压正) does not; a fused blob of a character's size with less ink waits for the column pass (v303) */
       const bx0=R.x0+mnx, by0=R.y0+mny, bx1=R.x0+mxx+1, by1=R.y0+mxy+1, ix=Math.min(bx1,B.x1)-Math.max(bx0,B.x0), iy=Math.min(by1,B.y1)-Math.max(by0,B.y0), inside=clean&&ix*iy>=0.5*w*h;
       comps[c].push(clean?{x0:bx0,y0:by0,x1:bx1,y1:by1,area:iarea,inside,clean}:{x0:R.x0+inx,y0:R.y0+iny,x1:R.x0+ixx+1,y1:R.y0+ixy+1,area:iarea,inside:true,clean}); } } /* inside = counts from the start: a clean blob with at least half of it in the box, by its whole extent (a character the box cuts), a fused blob by its part inside; a clean blob mostly outside keeps its whole extent and waits for the sideways pass */
   const areaOf=cs=>cs.filter(c=>c.inside).reduce((a,c)=>a+c.area,0), text=areaOf(comps[1])>areaOf(comps[0])?comps[1]:comps[0];
@@ -2949,6 +2954,20 @@ function snapBox(bmp,box,n){
   for(let grew=true;grew;){ grew=false; /* the line goes on outside the box (the box cut 邪 between 牙 and 阝, and 牙 lay outside it): a clean blob of the text's colour in a taken blob's band, within half a text height sideways, is the line's too — sideways only: under a line the cheeks of the faces would qualify */
     for(const c of text){ if(!c.clean||taken.includes(c)) continue;
       if(taken.some(t=>Math.min(c.y1,t.y1)-Math.max(c.y0,t.y0)>=0.5*Math.min(c.y1-c.y0,t.y1-t.y0)&&Math.max(c.x0-t.x1,t.x0-c.x1)<=0.5*Hb)){ taken.push(c); grew=true; } } }
+  /* a character fused with something that runs to the picture's edge (v303, H's 绿皮书 poster: a reflection streak through the hook of 书 ran to the right edge, so 书 was no blob of its own, held too little ink for the fused rule, and the frame ended after 皮): a fused blob of the text's colour beside a taken blob, in its band, is looked at column by column within that band — a column holding at least SNAP_COL of the band's height in ink is a stroke's, the streak's thin columns are not — and the run of stroke columns nearest the line joins by its own extent (the streak beyond the character stays out) */
+  const tc=text===comps[1]?1:0;
+  for(const f of fused[tc]){
+    const near=taken.filter(t=>Math.min(f.y1,t.y1)-Math.max(f.y0,t.y0)>=0.5*Math.min(f.y1-f.y0,t.y1-t.y0)&&Math.max(f.x0-t.x1,t.x0-f.x1)<=0.5*Hb); if(!near.length) continue;
+    const by0=Math.max(0,Math.min(...near.map(t=>t.y0))-R.y0), by1=Math.min(rh,Math.max(...near.map(t=>t.y1))-R.y0), bh2=by1-by0; if(bh2<8) continue; /* the line's band, in the widened box's coordinates */
+    const m=masks[tc], ink=new Int32Array(rw), ymn=new Int32Array(rw).fill(rh), ymx=new Int32Array(rw).fill(-1), yall0=new Int32Array(rw).fill(rh), yall1=new Int32Array(rw).fill(-1); lab.fill(0); let top=0; stack[top++]=f.seed; lab[f.seed]=1;
+    while(top){ const i=stack[--top], x=i%rw, y=(i-x)/rw; if(y<yall0[x]) yall0[x]=y; if(y>yall1[x]) yall1[x]=y; if(y>=by0&&y<by1){ ink[x]++; if(y<ymn[x]) ymn[x]=y; if(y>ymx[x]) ymx[x]=y; }
+      if(x>0&&!lab[i-1]&&m[i-1]){ lab[i-1]=1; stack[top++]=i-1; } if(x<rw-1&&!lab[i+1]&&m[i+1]){ lab[i+1]=1; stack[top++]=i+1; }
+      if(y>0&&!lab[i-rw]&&m[i-rw]){ lab[i-rw]=1; stack[top++]=i-rw; } if(y<rh-1&&!lab[i+rw]&&m[i+rw]){ lab[i+rw]=1; stack[top++]=i+rw; } }
+    const gap=Math.round(0.3*bh2), runs=[]; let run=null, last=-1; /* the runs of stroke columns, a gap of a few blank columns inside a character allowed */
+    for(let x=0;x<rw;x++){ if(ink[x]<SNAP_COL*bh2||yall0[x]<by0-0.25*bh2||yall1[x]>=by1+0.25*bh2) continue; /* a stroke's column: enough ink in the band, and nothing of the blob far above or below it — the white mat beside 邪不压正 runs the whole height, a character stays in its line */ if(run&&x-last<=gap){ run.x1=x; run.y0=Math.min(run.y0,ymn[x]); run.y1=Math.max(run.y1,ymx[x]); } else { run={x0:x,x1:x,y0:ymn[x],y1:ymx[x]}; runs.push(run); } last=x; }
+    const t=near.reduce((a,c)=>Math.abs((c.x0+c.x1)/2-(f.x0+f.x1)/2)<Math.abs((a.x0+a.x1)/2-(f.x0+f.x1)/2)?c:a), tx0=t.x0-R.x0, tx1=t.x1-R.x0;
+    const best=runs.filter(r=>r.x1-r.x0+1>=SNAP_MIN*bh2&&Math.max(r.x0-tx1,tx0-r.x1)<=0.5*Hb).sort((a,b)=>Math.max(a.x0-tx1,tx0-a.x1)-Math.max(b.x0-tx1,tx0-b.x1))[0];
+    if(best) taken.push({x0:R.x0+best.x0,y0:R.y0+best.y0,x1:R.x0+best.x1+1,y1:R.y0+best.y1+1,area:0,inside:true,clean:false}); }
   const U={x0:Math.min(...taken.map(c=>c.x0)),y0:Math.min(...taken.map(c=>c.y0)),x1:Math.max(...taken.map(c=>c.x1)),y1:Math.max(...taken.map(c=>c.y1))};
   if(U.x1-U.x0<0.2*(B.x1-B.x0)||U.y1-U.y0<0.2*(B.y1-B.y0)) return null; /* specks alone: the AI's box stays */
   return {x0:U.x0/k,y0:U.y0/k,x1:U.x1/k,y1:U.y1/k};
@@ -3039,7 +3058,7 @@ async function cropSign(id,opts){
     if(weak&&pictureProvider()&&aiAutoOn()&&navigator.onLine){ /* the one switch covers text and pictures (v193, H: the picture went out while the check was off — "counterintuitive") */
       const guesses=[...new Set(passes.map(textOf).filter(Boolean))].slice(0,6);
       /* the whole straightened frame, never the second look's band (v175, H's two-line sticker 骑车勿盯 / 还车勿忘: the tight band held the lower line only, and the AI read that line alone) */
-      const onText=!!placedCut&&CROP&&CROP.id===id&&CROP.followed; /* the frame was placed on text the reader could read (the quick look or the close look, through textLike since v296): the AI sees that frame's cut, as the user does — v301, H's 绿皮书 poster: the reading proper on the whole proposal was weak, the whole poster went to Qwen, and the card came back with the Oscar line from outside the frame ("warum wurden hier characters ausserhalb des crops mitgelesen?"); the cut is upright already (a turned frame's cut is drawn upright), and the AI's box is not needed on a frame that stands on the text */
+      const onText=!!placedCut&&CROP&&CROP.id===id&&CROP.followed; /* the frame was placed on text the reader could read (the quick look or the close look, through textLike since v296): the AI sees that frame's cut, as the user does — v301, H's 绿皮书 poster: the reading proper on the whole proposal was weak, the whole poster went to Qwen, and the card came back with the Oscar line from outside the frame ("warum wurden hier characters ausserhalb des crops mitgelesen?"); the cut is upright already (a turned frame's cut is drawn upright), the AI's box then centres the frame on the characters (v303) */
       const picBase=onText?{orig:placedCut,dk:null}:{orig:r.blob,dk}; /* else the area the reading started from — the app's proposal or the hand's frame —, never a placed cut from garbage (v296: the faces went to Qwen while the title stayed outside; v288–v295 sent the placed cut); kept with its straightening, so the AI's box maps back onto it (v293) */
       if(onText){ READLOG.push({t:Date.now(),text:"the AI gets the placed frame's cut"}); while(READLOG.length>40) READLOG.shift(); }
       var picSeen=picBase; try{ pic=await aiReadPicture(picBase.dk?picBase.dk.blob:picBase.orig,guesses,status); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
@@ -3049,14 +3068,15 @@ async function cropSign(id,opts){
       /* the AI's lines replace the reading: no confidences (every character is open in the picker), no boxes (the sheet
          shows the whole crop), the reader's texts become the alternatives; the answer is the check, no text check follows */
       const zh=pic.zh.split("\n"), guesses=[...new Set(passes.map(textOf).filter(tx=>tx&&tx!==pic.zh))].slice(0,6);
-      if(pic.box&&picSeen&&picSeen.dk&&CROP&&CROP.id===id&&CROP.proposed){ /* the reader could not read this font (v293 — H's 邪不压正 poster: the ink rows and the reader's garbage boxes put the frame around the whole photo): the AI's box places the frame, once, as fractions of the straightened picture it saw — the proposal's crop, or the cut of the frame the quick look had placed from that same garbage */
-        let W=0,Hh=0,box=null; try{ const b=await createImageBitmap(picSeen.dk.blob); W=b.width; Hh=b.height; const [bx0,by0,bx1,by1]=pic.box, n=Math.max(1,zh.length);
+      if(pic.box&&picSeen&&CROP&&CROP.id===id&&CROP.proposed){ /* the reader could not read this font (v293 — H's 邪不压正 poster: the ink rows and the reader's garbage boxes put the frame around the whole photo): the AI's box places the frame, once, as fractions of the straightened picture it saw — the proposal's crop, or the cut of the frame the quick look had placed from that same garbage; on the placed frame's own cut (v301) the box centres the frame on the characters inside it (v303, H's 绿皮书: "should be more centered") */
+        const seen=picSeen.dk?picSeen.dk.blob:picSeen.orig, seenAngle=picSeen.dk?picSeen.dk.angle||0:0, seenBase=picSeen.dk?base:CROP.rect; /* the placed cut is upright, and its frame is the placed one */
+        let W=0,Hh=0,box=null; try{ const b=await createImageBitmap(seen); W=b.width; Hh=b.height; const [bx0,by0,bx1,by1]=pic.box, n=Math.max(1,zh.length);
           box={x0:bx0*W,y0:by0*Hh,x1:bx1*W,y1:by1*Hh}; const snap=snapBox(b,box,n); b.close(); /* the box's edges from the pixels (v297): an edge that cuts through the text moves out to its end, a blank margin is trimmed */
           if(snap){ const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`the AI's box ${pc(bx0)}–${pc(bx1)} % across, ${pc(by0)}–${pc(by1)} % down, snapped to the ink: ${pc(snap.x0/W)}–${pc(snap.x1/W)} % across, ${pc(snap.y0/Hh)}–${pc(snap.y1/Hh)} % down`}); while(READLOG.length>40) READLOG.shift(); box=snap; }
           r.pic.snap=snap?[snap.x0/W,snap.y0/Hh,snap.x1/W,snap.y1/Hh].map(v=>+v.toFixed(3)):null;
           const Hb=(box.y1-box.y0)/n; /* the text height from the box and its lines */
           var rect={x0:Math.max(0,box.x0-Hb*FRAME_ROOM),y0:Math.max(0,box.y0-Hb*FRAME_ROOM),x1:Math.min(W,box.x1+Hb*FRAME_ROOM),y1:Math.min(Hh,box.y1+Hb*FRAME_ROOM)}; }catch(e){ box=null; }
-        if(box){ const cut=await frameOnText(id,picSeen.orig,base,rect,picSeen.dk.angle||0,"AI"); if(stale()) return; if(cut) placedCut=cut; } }
+        if(box){ const cut=await frameOnText(id,picSeen.orig,seenBase,rect,seenAngle,"AI"); if(stale()) return; if(cut) placedCut=cut; } }
       cardImg=placedCut||r.blob; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=cardImg; /* the card image is the crop as framed (the placed frame's cut, v288), not the second look's band */
       SIGN[id]={lines:zh, orig:zh.slice(), conf:[], boxes:zh.map(()=>[]), img:dk.blob, angle:dk.angle||0, tightened:false, region:r, alts:guesses, trad:!!pic.zht, tradDetected:!!pic.zht, tradText:pic.zht||"",
         ai:{zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,ml:pic.ml,note:pic.note,ok:true,bad:false,pic:true}, cardImg, weak:false};
