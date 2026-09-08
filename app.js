@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=339; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=340; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -602,7 +602,7 @@ async function aiReadPicture(blob,alts,status){
   if(!x||typeof x!=="object") throw new Error("unexpected answer");
   const main=mainLines(String(x.zh||"").replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean),x.p,x.m,Array.isArray(x.boxes)?x.boxes.map(b=>picBox(b,pic.w,pic.h)):null,picBox(x.box,pic.w,pic.h));
   const zhRaw=main.lines.join("\n"), zh=t2s(zhRaw), m=saneM(main.m,zh);
-  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,"")}; /* cut (v314): the edges that cut off a line the model left out */
+  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxAlt:picBoxPix(x.box,pic.w,pic.h),boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,"")}; /* cut (v314): the edges that cut off a line the model left out */
 }
 /* the main text only (v312, H's 青春无烟 / 未来无限 poster: the card carried the poster's small print — the line 第39个世界无烟日 above the title and the date 2026年5月31日 世界无烟日 below it, half of it outside the frame — "wieder die Sachen ausserhalb des Crops und das Kleingedruckte mitgelesen. Bitte beides vermeiden"): the prompt asks for the main text and leaves fine print and lines the picture's edge cuts off to the model; this is the safety net from the model's own line boxes — a line whose box is under FINE_PRINT of the tallest line's height is fine print and goes, with its pinyin and meaning parts when they come one per line; the box for the frame is then the union of the lines kept */
 const FINE_PRINT=1/3;
@@ -625,6 +625,20 @@ function picBox(b,w,h){
   if(mx>1||my>1){ if(mx<=w&&my<=h){ x0/=w; x1/=w; y0/=h; y1/=h; } else if(mx<=1000&&my<=1000){ x0/=1000; x1/=1000; y0/=1000; y1/=1000; } else return null; }
   if(!(x1-x0>=0.02&&y1-y0>=0.02)) return null;
   return [Math.max(0,x0),Math.max(0,y0),Math.min(1,x1),Math.min(1,y1)];
+}
+/* the other reading of a box that overshoots the picture a little (v340, H's ARRI poster 突破光影边界, 2026-09-08: Qwen answered
+   [120,330,860,450] for an 800×600 picture — pixels, with the right edge 60 px past the picture, since the title runs to its
+   edge; 860 > 800 made picBox take the 0–1000 grid, the box landed on the blank blue above the title, the snap found no ink
+   there and the frame was placed on nothing: the card showed ARRI with the title cut off at the bottom): a box whose values
+   pass the picture's size by at most PIX_OVER is also pixels clamped to the picture — the snap decides which reading holds
+   characters (cropSign's box branch) */
+const PIX_OVER=1.2;
+function picBoxPix(b,w,h){
+  if(!Array.isArray(b)||b.length!==4||!b.every(v=>typeof v==="number"&&isFinite(v)&&v>=0)) return null;
+  const [x0,y0,x1,y1]=b, mx=Math.max(x0,x1), my=Math.max(y0,y1);
+  if(!((mx>w||my>h)&&mx<=w*PIX_OVER&&my<=h*PIX_OVER&&mx<=1000&&my<=1000)) return null; /* only the ambiguous case: past the picture, within the grid */
+  const r=[Math.max(0,x0/w),Math.max(0,y0/h),Math.min(1,x1/w),Math.min(1,y1/h)];
+  return r[2]-r[0]>=0.02&&r[3]-r[1]>=0.02?r:null;
 }
 function aiQueue(){ return deck().filter(d=>d.c&&(d.flag||(d.mt&&(d.mt.pending||d.mt.suspect)))); } /* a card still waiting for its reading has no text to check (v237) */
 function aiAutoOn(){ return aiOn()&&S.settings.aiAuto!==false; }
@@ -2832,6 +2846,10 @@ const toChroma=(bmp,scale)=>new Promise(res=>chromaCanvas(bmp,scale).toBlob(res,
 /* the height of one text line in a frame, from the ink of a small chromaticity copy: the longest run of rows holding
    ink (a loose frame once made the reader guess the size from the frame height and read a 40 % line at 19 px); 0 when
    nothing stands out */
+/* how much of a box looks like text: the share of its rows with some ink, not solid, and many stroke edges — the ink
+   height's row rule (v100) over a chromaticity copy of the box alone (v340, the referee between two readings of an
+   ambiguous AI box: the blank blue above the ARRI poster's title scores 0, the title's rows score high; the snap cannot
+   tell them apart there, since the glow fuses the title, the light beam and the blue into one blob it drops as background) */
 function inkHeight(bmp){
   const k=Math.min(1,320/bmp.height), cv=chromaCanvas(bmp,k), W=cv.width, d=cv.getContext("2d").getImageData(0,0,W,cv.height).data;
   let run=0, best=0;
@@ -3237,7 +3255,7 @@ function snapBox(bmp,box,n,lens,skip){ /* lens: the answer's lines' character co
     beyond.push({x0:(sx0+mn)/k,y0:(sy0+y0)/k,x1:(sx0+mx+1)/k,y1:(sy0+y1)/k,side,near:near/k}); } /* side: below (1) or above (-1) the union; near: the gap to it — a band that touches the union is a line the box cut through, and its cut reaches into the union (v326) */
   const U={x0:Math.min(...taken.map(c=>c.x0)),y0:Math.min(...taken.map(c=>c.y0)),x1:Math.max(...taken.map(c=>c.x1)),y1:Math.max(...taken.map(c=>c.y1))};
   if(U.x1-U.x0<0.2*(B.x1-B.x0)||U.y1-U.y0<0.2*(B.y1-B.y0)) return null; /* specks alone: the AI's box stays */
-  return {x0:U.x0/k,y0:U.y0/k,x1:U.x1/k,y1:U.y1/k,beyond};
+  return {x0:U.x0/k,y0:U.y0/k,x1:U.x1/k,y1:U.y1/k,beyond,count:taken.length}; /* count: the character-shaped blobs taken — the evidence between two readings of an ambiguous box (v340) */
 }
 async function cropSign(id,opts){
   const run=READ_RUN[id]=(READ_RUN[id]||0)+1, stale=()=>READ_RUN[id]!==run; /* a newer reading of this photo has started: leave everything to it */
@@ -3354,8 +3372,14 @@ async function cropSign(id,opts){
       if(pic.box&&picSeen&&(PENDING[id]&&!RECROP[id]?READ_APP[id]:CROP&&CROP.id===id&&CROP.proposed)){ /* the reader could not read this font (v293 — H's 邪不压正 poster: the ink rows and the reader's garbage boxes put the frame around the whole photo): the AI's box places the frame, once, as fractions of the straightened picture it saw — the proposal's crop, or the cut of the frame the quick look had placed from that same garbage; on the placed frame's own cut (v301) the box centres the frame on the characters inside it (v303, H's 绿皮书: "should be more centered") */
         const seen=picSeen.dk?picSeen.dk.blob:picSeen.orig, seenAngle=picSeen.dk?picSeen.dk.angle||0:0, seenBase=picSeen.dk?base:(PLACED[id]||(CROP&&CROP.id===id?CROP.rect:null)); /* the placed cut is upright, and its frame is the placed one */
         let W=0,Hh=0,box=null,rect=null,grow=null; try{ const b=await createImageBitmap(seen); W=b.width; Hh=b.height; const [bx0,by0,bx1,by1]=pic.box, n=Math.max(1,zh.length);
-          box={x0:bx0*W,y0:by0*Hh,x1:bx1*W,y1:by1*Hh}; const snap=snapBox(b,box,n,zh.map(l=>l.replace(/[\s\/／·・,，。.、()（）]/g,"").length),pic.droppedBoxes); /* the box's edges from the pixels (v297): an edge that cuts through the text moves out to its end, a blank margin is trimmed */
-          if(snap){ const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`the AI's box ${pc(bx0)}–${pc(bx1)} % across, ${pc(by0)}–${pc(by1)} % down, snapped to the ink: ${pc(snap.x0/W)}–${pc(snap.x1/W)} % across, ${pc(snap.y0/Hh)}–${pc(snap.y1/Hh)} % down`}); while(READLOG.length>40) READLOG.shift(); box=snap;
+          box={x0:bx0*W,y0:by0*Hh,x1:bx1*W,y1:by1*Hh}; let [fx0,fy0,fx1,fy1]=pic.box; /* the box as read, for the log (v340) */ const lens=zh.map(l=>l.replace(/[\s\/／·・,，。.、()（）]/g,"").length); let snap=snapBox(b,box,n,lens,pic.droppedBoxes);
+          if(pic.boxAlt){ /* the box overshoots the picture by a little (v340, H's ARRI poster 突破光影边界: Qwen's box [120,330,860,450] for an 800×600 picture — pixels, the title running to the right edge —, read on the 0–1000 grid as 12–86 % across, 33–45 % down: the blank blue above the title, so the card showed ARRI and cut the title; v328's far 邪不压正 answered the same way and meant the grid): the numbers read as pixels, clamped to the picture, name another place, and the snap decides — the pixel reading wins when its box holds a line of characters and the grid's holds none */
+            const [ax0,ay0,ax1,ay1]=pic.boxAlt, abox={x0:ax0*W,y0:ay0*Hh,x1:ax1*W,y1:ay1*Hh}; let s2=null; try{ s2=snapBox(b,abox,n,lens,pic.droppedBoxes); }catch(e){ s2=null; }
+            const pc=v=>Math.round(v*100), cg=snap?snap.count:0, cp=s2?s2.count:0; /* count: the character-shaped blobs each snap took, both passes together — a real line gives several, a blank box none */
+            if(cp>=3&&cg<3){ READLOG.push({t:Date.now(),text:`the AI's box ${pc(bx0)}–${pc(bx1)} % across, ${pc(by0)}–${pc(by1)} % down passes the picture's edge on the 0–1000 grid and holds no characters there — read as pixels it holds ${cp} blobs of a character's size: ${pc(ax0)}–${pc(ax1)} % across, ${pc(ay0)}–${pc(ay1)} % down`}); box=abox; snap=s2; pic.box=pic.boxAlt; if(r.pic) r.pic.box=pic.boxAlt; [fx0,fy0,fx1,fy1]=pic.boxAlt; }
+            else READLOG.push({t:Date.now(),text:`the AI's box passes the picture's edge — read on the 0–1000 grid it holds ${cg} blobs of a character's size, read as pixels ${cp}; the grid stays`});
+            while(READLOG.length>40) READLOG.shift(); } /* the box's edges from the pixels (v297): an edge that cuts through the text moves out to its end, a blank margin is trimmed */
+          if(snap){ const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`the AI's box ${pc(fx0)}–${pc(fx1)} % across, ${pc(fy0)}–${pc(fy1)} % down, snapped to the ink: ${pc(snap.x0/W)}–${pc(snap.x1/W)} % across, ${pc(snap.y0/Hh)}–${pc(snap.y1/Hh)} % down`}); while(READLOG.length>40) READLOG.shift(); box=snap;
             /* a line of the answer the box left out (v324, H's Nongfu Spring label: the AI's box for 饮用天然水 净含量380ml sat on NONGFU SPRING, so the snap ended at the Latin line and the card showed the Chinese line cut in half — "only translate what is also shown in the thumbnail and in the learning card"): every band of ink the snap found just beyond the text is read by the on-device reader, and it joins the box when the reader's line is one the AI read — at least three of its characters, half of them, in one of the answer's lines; the faces under a poster's title and a Latin line read as nothing of the kind, and stay out */
             for(const cand of snap.beyond||[]){ const bh=cand.y1-cand.y0, room=0.3*bh, into=cand.near<0.1*bh?0.6*bh:room, sx=Math.max(0,cand.x0-room), sy=Math.max(0,cand.y0-(cand.side>0?into:room)), sw=Math.min(W,cand.x1+room)-sx, sh=Math.min(Hh,cand.y1+(cand.side>0?room:into))-sy; if(sw<4||sh<4) continue; /* a band that touches the union is a line the box cut through: the cut reaches 0.6 band heights into the union, so the reader sees the whole characters (v326) */
               const sc=Math.min(3,Math.max(0.3,64/bh)), cv=document.createElement("canvas"); cv.width=Math.max(1,Math.round(sw*sc)); cv.height=Math.max(1,Math.round(sh*sc)); cv.getContext("2d",{alpha:false}).drawImage(b,sx,sy,sw,sh,0,0,cv.width,cv.height);
