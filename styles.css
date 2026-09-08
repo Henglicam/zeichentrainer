@@ -161,14 +161,14 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 .pill.tag{background:var(--tint-soft);color:var(--tint)} .learnchips{justify-content:safe center;margin:0 0 14px;width:100%;max-width:440px}
 .say{background:var(--fill);border:none;border-radius:999px;width:38px;height:38px;margin-left:10px;vertical-align:middle;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center}
 .say svg{width:20px;height:20px;fill:none;stroke:var(--tint);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round} .say:active{opacity:.6}
-.crow{display:grid;grid-template-columns:104px 1fr auto;gap:12px;align-items:center;width:100%;background:var(--card);border:none;
+.crow{display:grid;grid-template-columns:124px 1fr auto;gap:12px;align-items:center;width:100%;background:var(--card);border:none;
   border-bottom:1px solid var(--sep);padding:10px 12px;text-align:left;cursor:pointer;color:var(--label)}
 .crow:first-of-type{border-top-left-radius:var(--r);border-top-right-radius:var(--r)}
 .crow:last-of-type{border-bottom:none;border-bottom-left-radius:var(--r);border-bottom-right-radius:var(--r)}
 .crow:active{background:var(--card2)}
-.thumb{width:104px;height:58px;border-radius:8px;object-fit:contain;object-position:center;background:var(--card2)}
+.thumb{width:124px;height:70px;border-radius:8px;object-fit:contain;object-position:center;background:var(--card2)}
 /* the list's thumbnail like the front's photo box (v232, H: "in der Cards Liste auch"): a darkened blurred copy of the crop fills the tile behind the fitted picture */
-.thumbbox{position:relative;display:block;width:104px;height:58px;border-radius:8px;overflow:hidden;background:var(--card2);box-shadow:inset 0 0 0 1px var(--sep)}
+.thumbbox{position:relative;display:block;width:124px;height:70px;border-radius:8px;overflow:hidden;background:var(--card2);box-shadow:inset 0 0 0 1px var(--sep)}
 .thumbbox .thumbbg{position:absolute;left:-10%;top:-10%;width:120%;height:120%;object-fit:cover;filter:blur(10px) saturate(.55) brightness(.85);opacity:.55;pointer-events:none} /* the same subdued fill as the front (v234) */
 .thumbbox .thumb{position:relative;display:block;background:transparent;border-radius:0}
 .thumb.glyph{display:flex;align-items:center;justify-content:center;font-family:var(--hanzi);font-size:26px;color:var(--label3)}
