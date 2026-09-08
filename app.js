@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=342; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=343; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -359,7 +359,7 @@ function recutLines(text,origLines){
 /* the words of each line for a word card's seg: dictionary words from the Chinese characters, and a number with its Latin
    unit as a word of its own (v338, H's 24小时营业: the front showed 小时营业 — the number was dropped here and in readingCard,
    while the pinyin and the parts row kept it) */
-const NUM_TOKEN=/^[0-9]+(?:\.[0-9]+)?[a-zA-Z%]{0,3}/;
+const NUM_TOKEN=/^[0-9]+(?:\.[0-9]+)?[a-zA-Z%]{0,4}/, NUM_PART=new RegExp(NUM_TOKEN.source+"$"); /* a number with its Latin unit as written (24H, 380ml, 20%, 100kcal): NUM_TOKEN cuts one from a line (v338), NUM_PART tells a whole token (v323, v336) — one rule since the polish at v343 (three regexes until then, one of them capped at three letters and missing kcal) */
 function segWithBreaks(lines){
   const out=[];
   lines.forEach((line,i)=>{
@@ -600,9 +600,11 @@ async function aiReadPicture(blob,alts,status){
   await loadScriptTables().catch(()=>{});
   const txt=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,""); let x; try{ x=JSON.parse(txt); if(Array.isArray(x)) x=x[0]; }catch(e){ throw new Error("could not read the model's answer"); }
   if(!x||typeof x!=="object") throw new Error("unexpected answer");
-  const main=mainLines(String(x.zh||"").replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean),x.p,x.m,Array.isArray(x.boxes)?x.boxes.map(b=>picBox(b,pic.w,pic.h)):null,picBox(x.box,pic.w,pic.h));
+  const lines0=String(x.zh||"").replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean), lineBoxes=Array.isArray(x.boxes)?x.boxes:null;
+  const main=mainLines(lines0,x.p,x.m,lineBoxes?lineBoxes.map(b=>picBox(b,pic.w,pic.h)):null,picBox(x.box,pic.w,pic.h));
+  const altBox=picBoxPix(x.box,pic.w,pic.h), mainAlt=altBox?mainLines(lines0,x.p,x.m,lineBoxes?lineBoxes.map(b=>picBoxPix(b,pic.w,pic.h)||picBox(b,pic.w,pic.h)):null,altBox):null; /* the second reading of a box that passes the picture's edge (v340), through the fine-print rule like the first (v343 polish): its box is the kept lines' union too, and its dropped boxes are its own */
   const zhRaw=main.lines.join("\n"), zh=t2s(zhRaw), m=saneM(main.m,zh);
-  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxAlt:picBoxPix(x.box,pic.w,pic.h),boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,"")}; /* cut (v314): the edges that cut off a line the model left out */
+  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxAlt:mainAlt?mainAlt.box:null,droppedBoxesAlt:mainAlt?mainAlt.droppedBoxes:null,boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,"")}; /* cut (v314): the edges that cut off a line the model left out */
 }
 /* the main text only (v312, H's 青春无烟 / 未来无限 poster: the card carried the poster's small print — the line 第39个世界无烟日 above the title and the date 2026年5月31日 世界无烟日 below it, half of it outside the frame — "wieder die Sachen ausserhalb des Crops und das Kleingedruckte mitgelesen. Bitte beides vermeiden"): the prompt asks for the main text and leaves fine print and lines the picture's edge cuts off to the model; this is the safety net from the model's own line boxes — a line whose box is under FINE_PRINT of the tallest line's height is fine print and goes, with its pinyin and meaning parts when they come one per line; the box for the frame is then the union of the lines kept */
 const FINE_PRINT=1/3;
@@ -705,9 +707,8 @@ async function saneP(p,zh){
   const lines=String(zh||"").split("\n").filter(l=>CJK.test(l)); if(!lines.length) return String(p||"").trim();
   const given=String(p||"").split("/").map(l=>l.trim().split(/\s+/).filter(Boolean));
   /* one vowel group per character (syllables may be joined into words, as some models write them), digits aside; a token without a vowel is a broken syllable */
-  const NUM=/^[\d.]+[a-zA-Z%]*$/; /* a number, with its unit as written (380ml, 20%) — v323 */
-  const nuclei=toks=>toks.filter(x=>!NUM.test(x)).reduce((a,x)=>a+(x.match(PY_VOWELS)||[]).length,0);
-  const ok=given.length===lines.length&&given.every((toks,k)=>toks.length>0&&nuclei(toks)===[...lines[k]].filter(c=>CJK.test(c)).length&&toks.every(x=>NUM.test(x)||(x.match(PY_VOWELS)||[]).length>0));
+  const nuclei=toks=>toks.filter(x=>!NUM_PART.test(x)).reduce((a,x)=>a+(x.match(PY_VOWELS)||[]).length,0);
+  const ok=given.length===lines.length&&given.every((toks,k)=>toks.length>0&&nuclei(toks)===[...lines[k]].filter(c=>CJK.test(c)).length&&toks.every(x=>NUM_PART.test(x)||(x.match(PY_VOWELS)||[]).length>0));
   if(ok) return given.map(l=>l.join(" ")).join(" / ");
   try{ if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); return lines.map(pySpaced).join(" / "); }catch(e){ return String(p||"").trim(); }
 }
@@ -1382,7 +1383,6 @@ function wireSay(root){ (root||document).querySelectorAll("[data-say]").forEach(
 function cleanSense(m){ return String(m||"").replace(/\(Taiwan pr\.[^)]*\)/g,"").replace(/\[[^\]]*\]/g,"").replace(/\s*CL:[^;,)]*/g,"").replace(/\(\s*\)/g,"").replace(/\s{2,}/g," ").trim(); }
 /* the words of the card as buttons on the back — tap one for its pinyin and meaning; a word of
    several characters then offers its characters too. Replaces the old word/gloss tables (H: redundant). */
-const NUM_PART=/^[0-9]+(?:\.[0-9]+)?[a-zA-Z%]{0,3}$/; /* a number as lineMeaning cuts it, with its Latin unit (24H, 380ml, 20%) */
 /* what a number with a Latin unit means (v337, H on the 24H part: "24H is not only a number, it means 24 hours"): the unit's
    word in the app's language after the number — 24 hours, 380 millilitres, 20 percent; a bare number or an unknown unit
    reads as it is */
@@ -3392,7 +3392,7 @@ async function cropSign(id,opts){
         let W=0,Hh=0,box=null,rect=null,grow=null; try{ const b=await createImageBitmap(seen); W=b.width; Hh=b.height; const [bx0,by0,bx1,by1]=pic.box, n=Math.max(1,zh.length);
           box={x0:bx0*W,y0:by0*Hh,x1:bx1*W,y1:by1*Hh}; let [fx0,fy0,fx1,fy1]=pic.box; /* the box as read, for the log (v340) */ const lens=zh.map(l=>l.replace(/[\s\/／·・,，。.、()（）]/g,"").length); let snap=snapBox(b,box,n,lens,pic.droppedBoxes);
           if(pic.boxAlt){ /* the box overshoots the picture by a little (v340, H's ARRI poster 突破光影边界: Qwen's box [120,330,860,450] for an 800×600 picture — pixels, the title running to the right edge —, read on the 0–1000 grid as 12–86 % across, 33–45 % down: the blank blue above the title, so the card showed ARRI and cut the title; v328's far 邪不压正 answered the same way and meant the grid): the numbers read as pixels, clamped to the picture, name another place, and the snap decides — the pixel reading wins when its box holds a line of characters and the grid's holds none */
-            const [ax0,ay0,ax1,ay1]=pic.boxAlt, abox={x0:ax0*W,y0:ay0*Hh,x1:ax1*W,y1:ay1*Hh}; let s2=null; try{ s2=snapBox(b,abox,n,lens,pic.droppedBoxes); }catch(e){ s2=null; }
+            const [ax0,ay0,ax1,ay1]=pic.boxAlt, abox={x0:ax0*W,y0:ay0*Hh,x1:ax1*W,y1:ay1*Hh}; let s2=null; try{ s2=snapBox(b,abox,n,lens,pic.droppedBoxesAlt||pic.droppedBoxes); }catch(e){ s2=null; }
             const pc=v=>Math.round(v*100), cg=snap?snap.count:0, cp=s2?s2.count:0; /* count: the character-shaped blobs each snap took, both passes together — a real line gives several, a blank box none */
             if(cp>=3&&cg<3){ READLOG.push({t:Date.now(),text:`the AI's box ${pc(bx0)}–${pc(bx1)} % across, ${pc(by0)}–${pc(by1)} % down passes the picture's edge on the 0–1000 grid and holds no characters there — read as pixels it holds ${cp} blobs of a character's size: ${pc(ax0)}–${pc(ax1)} % across, ${pc(ay0)}–${pc(ay1)} % down`}); box=abox; snap=s2; pic.box=pic.boxAlt; if(r.pic) r.pic.box=pic.boxAlt; [fx0,fy0,fx1,fy1]=pic.boxAlt; }
             else READLOG.push({t:Date.now(),text:`the AI's box passes the picture's edge — read on the 0–1000 grid it holds ${cg} blobs of a character's size, read as pixels ${cp}; the grid stays`});
