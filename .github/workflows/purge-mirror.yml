@@ -1,0 +1,21 @@
+# Purges the jsDelivr mirror's copy of the app's shell after every push to main (v327), so a phone without a VPN gets a
+# new version within minutes instead of waiting for the CDN's own cache to expire. The app checks the mirror every ten
+# minutes (More → Updates without a VPN); the purge API needs no key.
+name: Purge the mirror
+on:
+  push:
+    branches: [main]
+    paths: [index.html, app.js, styles.css, lang.js, sw.js, manifest.webmanifest, signs.json, nmt-model.json, privacy.html]
+permissions: {}
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Purge the shell files on jsDelivr
+        run: |
+          set -u
+          for f in index.html app.js styles.css lang.js sw.js manifest.webmanifest signs.json nmt-model.json privacy.html; do
+            echo "== $f"
+            curl -sS --max-time 30 "https://purge.jsdelivr.net/gh/henglicam/zeichentrainer@main/$f" || echo "purge failed for $f"
+            echo
+          done
