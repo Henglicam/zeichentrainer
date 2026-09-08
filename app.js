@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=332; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=333; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2132,7 +2132,8 @@ function windowRect(r){ const {lw,lh}=r, a=r.a||0; let w=r.w, h=r.h;
   if(w/h<FRAME_RATIO) w=h*FRAME_RATIO; else h=w/FRAME_RATIO;
   w=Math.max(r.w,Math.min(w,lw)); h=Math.max(r.h,Math.min(h,lh));
   let x=r.x+r.w/2-w/2, y=r.y+r.h/2-h/2;
-  if(!a){ x=Math.min(Math.max(0,x),Math.max(0,lw-w)); y=Math.min(Math.max(0,y),Math.max(0,lh-h)); } /* a turned window keeps its centre; what lies outside the photo takes the area's colour (cropBlob, v185) */
+  if(!a){ x=Math.min(Math.max(0,x),Math.max(0,lw-w)); y=Math.min(Math.max(0,y),Math.max(0,lh-h)); }
+  else { const ft=fitTurned({x,y,w,h},a,lw,lh,{u0:-r.w/2,u1:r.w/2,v0:-r.h/2,v1:r.h/2}); if(ft){ ({x,y,w,h}=ft); } } /* a turned window keeps its centre and gives up the widening that would leave the photo, never the frame itself (v333; in v329–v332 what lay outside took the area's colour through cropBlob, v185 — a wedge of fill beside a poster at 18°); a frame that sticks out itself stays as it is */
   return {x,y,w,h,a,lw,lh}; }
 async function windowCut(id,rect){ if(!rect||!rect.lw||!shotRec(id)) return null; try{ return await cropBlob(id,windowRect(rect)); }catch(e){ return null; } } /* the window's cut, or null when the photo is gone */
 const rectKey=r=>r?[r.x,r.y,r.w,r.h,r.a||0].map(v=>Math.round(v)).join(","):""; /* the same frame, give or take a pixel */
@@ -2914,6 +2915,17 @@ async function secondLook(w,dk,passes,status,r,Hink){
 /* A rectangle of the straightened crop, cut from the crop as framed: the rectangle's corners are turned back by the
    straightening angle about the centre, their bounding box is cut (v145 — the rotated, corner-filled crop is for the
    reader only; H: "don't show the corrupt images rotated in the preview, I don't want to see that gray frame") */
+function fitTurned(f,a,lw,lh,keep){ /* a turned frame trimmed to the photo (v333): its sides move inward, in its own turned coordinates, until every corner lies in the photo — the side whose corner sticks out furthest each time; keep = extents (about the centre) the sides may not pass, the frame inside a window (windowRect); null when nothing is left */
+  const ar=a*Math.PI/180, c=Math.cos(ar), s=Math.sin(ar), cx=f.x+f.w/2, cy=f.y+f.h/2; let u0=-f.w/2, u1=f.w/2, v0=-f.h/2, v1=f.h/2;
+  for(let it=0;it<200;it++){ let worst=null;
+    for(const [u,v] of [[u0,v0],[u1,v0],[u0,v1],[u1,v1]]){ const px=cx+u*c-v*s, py=cy+u*s+v*c;
+      for(const [d,ax] of [[-px,"u"],[px-lw,"u"],[-py,"v"],[py-lh,"v"]]) if(d>0.5&&(!worst||d>worst.d)) worst={d,u,v,ax}; }
+    if(!worst) break; const {d,u,v}=worst; let {ax}=worst; /* the corner that sticks out furthest is an extreme one, so moving either of its sides inward brings it in: along the axis of the violation by d/|cos|, along the other by d/|sin| */
+    const su=d/Math.abs(ax==="u"?c:s)+0.5, sv=d/Math.abs(ax==="u"?s:c)+0.5, okU=!keep||(u===u1?u1-su>=keep.u1:u0+su<=keep.u0), okV=!keep||(v===v1?v1-sv>=keep.v1:v0+sv<=keep.v0);
+    if(keep){ if(okU&&okV) ax=su<=sv?"u":"v"; else if(okU) ax="u"; else if(okV) ax="v"; else return null; } /* a window: the side that may still move — the widened one, the frame's own sides stay */
+    if(ax==="u"){ if(u===u1) u1-=su; else u0+=su; } else { if(v===v1) v1-=sv; else v0+=sv; }
+    if(u1-u0<8||v1-v0<8) return null; }
+  const nu=(u0+u1)/2, nv=(v0+v1)/2, w=u1-u0, h=v1-v0; return {x:cx+nu*c-nv*s-w/2,y:cy+nu*s+nv*c-h/2,w,h}; }
 function unrotatedBox(W,Hh,rect,angle){ /* a rectangle of the straightened crop as its bounding box on the crop as framed */
   const r=-angle*Math.PI/180;
   const nw=Math.abs(W*Math.cos(r))+Math.abs(Hh*Math.sin(r)), nh=Math.abs(W*Math.sin(r))+Math.abs(Hh*Math.cos(r));
@@ -2962,7 +2974,7 @@ function textBandOf(tightPasses,cardRect){ /* the tight passes' own boxes, as a 
   const r={x0:u.x0-tg.pad+tg.x0, y0:u.y0-tg.pad+tg.y0, x1:u.x1-tg.pad+tg.x0, y1:u.y1-tg.pad+tg.y0}; /* the padding off, into the straightened frame */
   return {x0:Math.max(cardRect.x0,r.x0), y0:Math.max(cardRect.y0,r.y0), x1:Math.min(cardRect.x1,r.x1), y1:Math.min(cardRect.y1,r.y1)}; /* never outside the band the card image takes */
 }
-async function frameOnText(id,orig,base,rect,angle,by,grow){ /* grow (v313): room beyond the picture's edges, in the copy's pixels, when the AI's box touches them */ /* rect: the text with its room, in the straightened frame's coordinates; orig = the crop the reading started from, base = the frame it was cut with (v297: a frame the quick look placed meanwhile is not the picture's frame); by = "AI" when the picture answer places it (v293: allowed while the frame is still the app's proposal, shown or not) */
+async function frameOnText(id,orig,base,rect,angle,by,grow,sure){ /* sure (v333): the reading confirms the straightening — a turned frame that would leave the photo is trimmed to it instead of placed upright */ /* grow (v313): room beyond the picture's edges, in the copy's pixels, when the AI's box touches them */ /* rect: the text with its room, in the straightened frame's coordinates; orig = the crop the reading started from, base = the frame it was cut with (v297: a frame the quick look placed meanwhile is not the picture's frame); by = "AI" when the picture answer places it (v293: allowed while the frame is still the app's proposal, shown or not) */
   const pend=!!PENDING[id]&&!RECROP[id]; /* a card saved with Save now (v304, H's three posters on v303 all with the whole frame's crop: "Enger crop funktioniert manchmal, aber nicht immer" — the frame was gone with the tap, so nothing could be placed): the placement goes to the waiting card instead — its frame and its crop */
   const cr=pend?(PLACED[id]||base):(CROP&&CROP.id===id&&CROP.rect), refine=!!by&&!!base&&!!cr&&base===cr&&(pend?!!PLACED[id]:!!CROP.followed); /* the AI's box on the placed frame's own cut (v303): the frame is centred inside itself */
   if(!base||!rect||RECROP[id]) return null;
@@ -2972,7 +2984,7 @@ async function frameOnText(id,orig,base,rect,angle,by,grow){ /* grow (v313): roo
   if(!W||!Hh||(!pend&&(!CROP||CROP.rect!==cr))) return null;
   const sc=W/base.w, lw=base.lw, lh=base.lh; /* crop pixels per layer pixel */
   let f; /* the text with its small room, no 16:9 widening (v293, H: "Make the automatic crop frame tighter. Chinese Text should be well readable in the thumbnail list" — the list's box is 16:9 itself, with the blurred fill behind a wide crop, and a frame widened to 16:9 around a one-line text shrank the text to half the thumbnail's width) */
-  let a=0, upright=false;
+  let a=0, upright=false, trimmed=false;
   if(refine){ /* the placed frame's cut is upright (a turned frame's cut is drawn upright): the box's rectangle in the cut turns with the frame around the frame's centre (v303, H's 绿皮书 poster: the quick look's frame ran to the right edge over a reflection streak read as 一, and the title sat at the left — "should be more centered") */
     const ar=(base.a||0)*Math.PI/180, dx=((rect.x0+rect.x1)/2-W/2)/sc, dy=((rect.y0+rect.y1)/2-Hh/2)/sc, w=(rect.x1-rect.x0)/sc, h=(rect.y1-rect.y0)/sc;
     const px=base.x+base.w/2+dx*Math.cos(ar)-dy*Math.sin(ar), py=base.y+base.h/2+dx*Math.sin(ar)+dy*Math.cos(ar);
@@ -2982,7 +2994,8 @@ async function frameOnText(id,orig,base,rect,angle,by,grow){ /* grow (v313): roo
     const cx=(rect.x0+rect.x1)/2-nw/2, cy=(rect.y0+rect.y1)/2-nh/2, ox=cx*Math.cos(-r)-cy*Math.sin(-r)+W/2, oy=cx*Math.sin(-r)+cy*Math.cos(-r)+Hh/2; /* the rectangle's centre on the crop as framed */
     const w=(rect.x1-rect.x0)/sc, h=(rect.y1-rect.y0)/sc; f={x:base.x+ox/sc-w/2,y:base.y+oy/sc-h/2,w,h}; a=+angle.toFixed(1);
     const ar=a*Math.PI/180, fx=f.x+w/2, fy=f.y+h/2, tol=0.02, out=[[-w/2,-h/2],[w/2,-h/2],[-w/2,h/2],[w/2,h/2]].some(([dx,dy])=>{ const px=fx+dx*Math.cos(ar)-dy*Math.sin(ar), py=fy+dx*Math.sin(ar)+dy*Math.cos(ar); return px<-tol*lw||px>(1+tol)*lw||py<-tol*lh||py>(1+tol)*lh; }); /* the frame's corners on the photo */
-    if(out){ upright=true; f=null; a=0; } /* the turned frame would leave the photo (v311, H's 无名 poster: a level poster on a busy wall, straightened by −14° on a flat, spurious profile peak; Qwen's box covered the straightened copy, and the frame at −14° reached from −8 to 119 % across, its cut the poster tilted with black wedges — "das ging ordentlich daneben"): the text is in the photo, so a frame that is not cannot be right; it is placed upright as the box's bounding box, clipped to the photo */
+    const ft=out&&sure?fitTurned(f,a,lw,lh):null; if(ft){ f=ft; trimmed=true; } /* the reading read the straightened copy well, so the angle is right and the text lies in the photo (v333, H's 绿皮书 poster at −18°: the turned frame reached past the photo's edge with the copy's filled corner, the upright fallback of v311 made the whole lower photo the frame, and the card was half desk — "viel zu viel Luft unten"): the frame keeps its turn and its sides move in until it lies in the photo */
+    else if(out){ upright=true; f=null; a=0; } /* the turned frame would leave the photo (v311, H's 无名 poster: a level poster on a busy wall, straightened by −14° on a flat, spurious profile peak; Qwen's box covered the straightened copy, and the frame at −14° reached from −8 to 119 % across, its cut the poster tilted with black wedges — "das ging ordentlich daneben"): the text is in the photo, so a frame that is not cannot be right; it is placed upright as the box's bounding box, clipped to the photo */
   }
   if(!f){
     const {x0,y0,x1,y1}=unrotatedBox(W,Hh,rect,angle); if(!(x1-x0>=8&&y1-y0>=8)) return null;
@@ -2996,7 +3009,7 @@ async function frameOnText(id,orig,base,rect,angle,by,grow){ /* grow (v313): roo
   if(pend){ if(!PENDING[id]) return null; PLACED[id]=nr; } /* the waiting card takes this frame and its cut (finishPending) */
   else { if(!CROP||CROP.id!==id||CROP.rect!==cr) return null; /* the hand moved the frame meanwhile: the reading is stale anyway */
     CROP.rect=nr; CROP.proposed="text"; CROP.followed=true; delete CROP.hidden; }
-  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`frame ${refine?"centred":"placed"} on the text${by?" by the "+by:""}: ${pc(f.x/lw)}–${pc((f.x+f.w)/lw)} % across, ${pc(f.y/lh)}–${pc((f.y+f.h)/lh)} % down${a?`, turned by ${a}°`:""}${upright?` — upright, the frame turned by ${angle.toFixed(1)}° would leave the photo`:""}`}); while(READLOG.length>40) READLOG.shift();
+  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`frame ${refine?"centred":"placed"} on the text${by?" by the "+by:""}: ${pc(f.x/lw)}–${pc((f.x+f.w)/lw)} % across, ${pc(f.y/lh)}–${pc((f.y+f.h)/lh)} % down${a?`, turned by ${a}°`:""}${trimmed?" — trimmed to the photo":""}${upright?` — upright, the frame turned by ${angle.toFixed(1)}° would leave the photo`:""}`}); while(READLOG.length>40) READLOG.shift();
   return cut.blob;
 }
 /* The AI's box, snapped to the characters (v297, H's 邪不压正 poster: Qwen's box cut 邪 at the left and reached into
@@ -3155,7 +3168,7 @@ async function cropSign(id,opts){
        ten passes agreeing on a three-character reading */
     const Hink=await (async()=>{ const b=await createImageBitmap(dk.blob); try{ r.frameH=b.height; return inkHeight(b); } finally{ b.close(); } })(); r.ink=Math.round(Hink);
     let placedCut=null; /* the frame placed on the text (v288): its cut is the card image and what the AI gets */
-    const placeRect=async (rect,by)=>{ const cut=await frameOnText(id,r.blob,base,rect,dk.angle||0,by); if(stale()) return; if(cut){ placedCut=cut; renderShots(); } };
+    const placeRect=async (rect,by)=>{ const cut=await frameOnText(id,r.blob,base,rect,dk.angle||0,by,null,true); if(stale()) return; if(cut){ placedCut=cut; renderShots(); } }; /* sure: the reader's placements come from lines that pass textLike on the straightened copy */
     if((CROP&&CROP.id===id&&CROP.hidden)||(PENDING[id]&&!RECROP[id]&&READ_APP[id]&&!PLACED[id])){ /* a quick look for the frame alone (v290; also for a card made by itself, whose frame is the app's until the reader or the AI places it — v325, H: "you don't need to translate first, you just need to identify text first"): one pass on a copy of at most FIRST_MAX px — 0.3 s on H's poster where the whole frame at 1 600 px takes 1.1 s — whose confident boxes give the lines and the image their ends; the frame goes there before the reading proper starts. It is not one of the reading's passes: as the first pass it lost 爸爸 on that poster, so the reading stays as it was */
       status("looking for the text …"); const bmp=await createImageBitmap(dk.blob); const k=Math.min(1,FIRST_MAX/Math.max(bmp.width,bmp.height)); const src=k<1?await toJpeg(bmp,k):dk.blob;
       let rect=null; try{ const read=scaleBoxes(await readPass(w,src,status),k); if(stale()) return; const lines=tallLines(read,Hink), fine=read.filter(l=>!lines.includes(l)); /* fine print beside taller ink places nothing (v320) */
@@ -3258,7 +3271,7 @@ async function cropSign(id,opts){
           rect={x0:Math.max(0,box.x0-Hb*FRAME_ROOM),y0:Math.max(0,box.y0-Hb*FRAME_ROOM),x1:Math.min(W,box.x1+Hb*FRAME_ROOM),y1:Math.min(Hh,box.y1+Hb*FRAME_ROOM)};
           if(picSeen.dk){ const bh=box.y1-box.y0, sb=seenBase, e={top:box.y0<=0.02*Hh&&sb.y>0.005*sb.lh,bottom:box.y1>=0.98*Hh&&sb.y+sb.h<0.995*sb.lh,left:box.x0<=0.02*W&&sb.x>0.005*sb.lw,right:box.x1>=0.98*W&&sb.x+sb.w<0.995*sb.lw}; /* an edge that is the photo's own has nothing beyond it (v315: on the whole-photo proposal of H's parking sign the line said the frame reaches beyond the right edge, where nothing was) */ /* the box on the edge of the app's proposal (v313, H's 北京现代 badge: the ink rows cut the chrome characters in half at the proposal's top, Qwen boxed the visible halves at y 0–55 of 496, the snap found nothing, and the card showed half characters — "Why is the crop so wrong here?"): the text may go on beyond the edge, so the frame reaches past it — 1.5 box heights above or below, two text heights sideways — into the photo; never for the hand's frame or the whole photo, where there is nothing beyond */
             if(e.top||e.bottom||e.left||e.right){ grow={top:e.top?1.5*bh:0,bottom:e.bottom?1.5*bh:0,left:e.left?2*bh:0,right:e.right?2*bh:0}; READLOG.push({t:Date.now(),text:`the AI's box touches the picture's ${["top","bottom","left","right"].filter(k=>e[k]).join(" and ")} edge — the frame reaches beyond it`}); while(READLOG.length>40) READLOG.shift(); } } }catch(e){ box=null; logErr("snap",e&&e.message||String(e)); READLOG.push({t:Date.now(),text:"the AI's box could not be used: "+(e&&e.message||e)}); while(READLOG.length>40) READLOG.shift(); }
-        if(box){ const cut=await frameOnText(id,picSeen.orig,seenBase,rect,seenAngle,"AI",grow); if(stale()) return; if(cut) placedCut=cut; } }
+        if(box){ const sure=passes.some(p=>!p.tra&&p.scale!=="merged"&&p.lines.length&&textLike(tallLines(p.lines,Hink))); /* a pass that read the straightened copy well confirms the angle (v333) */ const cut=await frameOnText(id,picSeen.orig,seenBase,rect,seenAngle,"AI",grow,sure); if(stale()) return; if(cut) placedCut=cut; } }
       cardImg=placedCut||r.blob; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=cardImg; /* the card image is the crop as framed (the placed frame's cut, v288), not the second look's band */
       SIGN[id]={lines:zh, orig:zh.slice(), conf:[], boxes:zh.map(()=>[]), img:dk.blob, angle:dk.angle||0, tightened:false, region:r, alts:guesses, trad:!!pic.zht, tradDetected:!!pic.zht, tradText:pic.zht||"",
         ai:{zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,ml:pic.ml,note:pic.note,ok:true,bad:false,pic:true}, cardImg, weak:false};
