@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=355; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=356; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1659,7 +1659,7 @@ function renderCards(main){
     ${nAi?`<div class="aibar"><span>${nOf(nAi,"AI suggestion waiting","AI suggestions waiting")}</span><button class="btn mini primary" id="ai-acceptall">${t("Accept all")}</button></div>`:""}
     ${marking("cards")
       ?`<div class="chips"><span class="badge" id="pick-n">${t("{0} selected",PICK.set.size)}</span><span class="cend"><button class="del" id="pick-all"></button></span></div>` /* the chips make room for the marking (v354) */
-      :`<div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">${t("⚑ Flagged ({0})",flg)}</button>${nAi?`<button class="chip${S.filterAi?" on":""}" id="chip-ai">${t("AI ({0})",nAi)}</button>`:""}<button class="chip${S.filterUnv?" on":""}" id="chip-unv">${t("Unverified ({0})",unv)}</button>${allTags().map(t=>`<button class="chip tag${S.filterTag===t?" on":""}" data-tagchip="${esc(t)}">${esc(t)}</button>`).join("")}${allTags().length&&untaggedCount()?`<button class="chip tag${S.filterTag===UNTAGGED?" on":""}" data-tagchip="${UNTAGGED}">${t("Untagged ({0})",untaggedCount())}</button>`:""}</span><span class="cend"><span class="badge" id="cnt">${t("{0} of {1}",n,deck().length)}</span></span></div>`}
+      :`<div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">${t("⚑ Flagged ({0})",flg)}</button>${nAi?`<button class="chip${S.filterAi?" on":""}" id="chip-ai">${t("AI ({0})",nAi)}</button>`:""}<button class="chip${S.filterUnv?" on":""}" id="chip-unv">${t("Unverified ({0})",unv)}</button>${allTags().map(t=>`<button class="chip tag${S.filterTag===t?" on":""}" data-tagchip="${esc(t)}">${esc(t)}</button>`).join("")}${allTags().length&&untaggedCount()?`<button class="chip tag${S.filterTag===UNTAGGED?" on":""}" data-tagchip="${UNTAGGED}">${t("Untagged ({0})",untaggedCount())}</button>`:""}</span><span class="cend"><span class="badge" id="cnt"${n===deck().length?" hidden":""}>${t("{0} of {1}",n,deck().length)}</span></span></div>`}
     <div class="clist" id="clist">${html}</div>
   </div>`;
   const wire=()=>{ document.querySelectorAll(".crow").forEach(b=>{
@@ -1669,7 +1669,7 @@ function renderCards(main){
       S.detail=b.dataset.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); };
     if(!marking("cards")&&S.custom.length>1) longPress(b,()=>{ PICK={kind:"cards",set:new Set([b.dataset.id])}; render(); }); /* press and hold to start marking (v354) */
   }); };
-  const refresh=()=>{ const r=cardsListHTML(); ids=r.ids; $("#clist").innerHTML=r.html; const ct=$("#cnt"); if(ct) ct.textContent=t("{0} of {1}",r.n,deck().length); wire(); if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); } };
+  const refresh=()=>{ const r=cardsListHTML(); ids=r.ids; $("#clist").innerHTML=r.html; const ct=$("#cnt"); if(ct){ ct.textContent=t("{0} of {1}",r.n,deck().length); ct.hidden=r.n===deck().length; } /* the count shows only while a search or a chip narrows the list (v356) */ wire(); if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); } };
   $("#q").oninput=e=>{ S.query=e.target.value; refresh(); };
   const cu=$("#chip-unv"); if(cu) cu.onclick=()=>{ S.filterUnv=!S.filterUnv; render(); };
   const cf=$("#chip-flag"); if(cf) cf.onclick=()=>{ S.filterFlag=!S.filterFlag; render(); };
