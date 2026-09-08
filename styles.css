@@ -229,7 +229,7 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 @keyframes scan{to{left:105%}}
 @media (prefers-reduced-motion:reduce){.shotwrap .scan::before{animation:none;left:0;width:100%;transform:none;background:rgba(255,255,255,.12)}}
 /* the finished card in the photo's place (v325): the front's boxes and the back as in the detail, on the photo's own card */
-.shot .result{text-align:center;padding:6px 4px 2px} .shot .result img{margin-bottom:0;border-radius:0;width:auto} .shot .result .picbox{border-radius:var(--rc)} .shot .result .signimg.full{width:100%;border-radius:10px;margin-bottom:10px}
+.shot .result{text-align:center;padding:6px 4px 2px} .shot .result img{margin-bottom:0;border-radius:0} .shot .result .thumbs img{width:auto} /* the photo box's own rules size its two pictures (v328 — a width:auto here had left the crop at the box's left edge and the blurred fill short) */ .shot .result .picbox{border-radius:var(--rc)} .shot .result .signimg.full{width:100%;border-radius:10px;margin-bottom:10px}
 .shot .result .back{margin-top:14px} .shot .result .linked .thumbs{justify-content:center} .shot .result .flagbox{text-align:left}
 .signed .badge.ai{color:var(--ok)}
 .signed .badge.bad,.smean.bad{color:var(--tint)} .aibox.bad{background:var(--tint-soft)} .aibox.bad .aihead{color:var(--tint)}
