@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=351; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=352; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1626,6 +1626,10 @@ function cardStatus(d){
   const days=Math.round((p.due-today())/DAY);
   return `<span class="st${days<=0?" due":""}">${days<=0?t("due"):t("in {0} d",days)}</span>`;
 }
+/* The list keeps its place (v351): a row tap notes where the list stood, the detail's ← Cards puts it back —
+   H: "going back by pressing the arrow … please be at the place where the card was and not at the top of the list". */
+let LIST_SCROLL=0;
+function backToList(){ S.detail=null; S.detailHide=false; S.fullPic=false; render(); const y=LIST_SCROLL; requestAnimationFrame(()=>window.scrollTo(0,y)); }
 function cardsListHTML(){
   const q=S.query.trim().toLowerCase();
   let list=S.custom.slice().sort((a,b)=>(b.at||0)-(a.at||0)); /* newest first */
@@ -1656,7 +1660,8 @@ function renderCards(main){
   </div>`;
   const wire=()=>{ document.querySelectorAll(".crow").forEach(b=> b.onclick=()=>{
     if(marking("cards")){ pickToggle(b.dataset.id); b.classList.toggle("on"); pickBar(()=>delPicked("cards")); return; } /* while marking a tap marks the row instead of opening it (v351) */
-    S.detail=b.dataset.id; S.detailHide=false; S.fullPic=false; render(); }); };
+    LIST_SCROLL=window.scrollY; /* where the list stood — ← Cards comes back to it (v351) */
+    S.detail=b.dataset.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); }); };
   const refresh=()=>{ const r=cardsListHTML(); ids=r.ids; $("#clist").innerHTML=r.html; $("#cnt").textContent=t("{0} of {1}",r.n,deck().length); wire(); if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); } };
   $("#q").oninput=e=>{ S.query=e.target.value; refresh(); };
   $("#chip-unv").onclick=()=>{ S.filterUnv=!S.filterUnv; render(); };
@@ -1687,7 +1692,7 @@ function renderCardDetail(main,c){
     </div>
     <div class="badge" style="margin-top:14px">${esc(stat)}</div>
   </div>`;
-  $("#back").onclick=()=>{ S.detail=null; S.detailHide=false; S.fullPic=false; render(); };
+  $("#back").onclick=backToList;
   /* the preview behaves like the test: tap the photo for the whole picture, tap the character to hide and show the answer (H) */
   if(!S.detailHide&&d.c) warmParts();
   const rv=$("#d-reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); return; } S.detailHide=!S.detailHide; render(); };
