@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=335; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=336; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1334,10 +1334,11 @@ function wireSay(root){ (root||document).querySelectorAll("[data-say]").forEach(
 function cleanSense(m){ return String(m||"").replace(/\(Taiwan pr\.[^)]*\)/g,"").replace(/\[[^\]]*\]/g,"").replace(/\s*CL:[^;,)]*/g,"").replace(/\(\s*\)/g,"").replace(/\s{2,}/g," ").trim(); }
 /* the words of the card as buttons on the back — tap one for its pinyin and meaning; a word of
    several characters then offers its characters too. Replaces the old word/gloss tables (H: redundant). */
+const NUM_PART=/^[0-9]+(?:\.[0-9]+)?[a-zA-Z%]{0,3}$/; /* a number as lineMeaning cuts it, with its Latin unit (24H, 380ml, 20%) */
 const cardGloss=d=>mergeUnits(d.gloss||[]); /* the stored gloss with a number and its unit as one part (v309; cards from before carry them apart) */
 function cardParts(d){
   let words=d.gloss&&d.gloss.length?cardGloss(d).map(g=>g.w):(d.kind==="sign"?(d.segs||[]).flat():(d.seg||[]).filter(x=>x!=="\n"));
-  words=words.filter(w=>CJK.test(w));
+  words=words.filter(w=>CJK.test(w)||NUM_PART.test(w)); /* a number with its unit is a part of the meaning and stays in the row (v336, H's 24H存包: "das 24H sollte auch in der Zeile bei den chinesischen Schriftzeichen dabei sein") */
   if(words.length<2) words=[...d.c].filter(ch=>CJK.test(ch)); /* one word → its characters */
   return [...new Set(words)];
 }
@@ -1363,7 +1364,8 @@ async function charInfo(w,btn,d){
     const m=cleanSense((known&&known.m)||bestSense(w)||((DICT&&DICT.get(w))||""));
     const chars=[...w].filter(ch=>CJK.test(ch));
     const sub=chars.length>1||(known&&known.unit)?`<div class="chars sub">${chars.map(ch=>`<button class="ch" data-sub="${ch}">${ch}</button>`).join("")}</div>`:"";
-    box.innerHTML=`<div class="chline"><span class="hanzi">${esc(w)}</span><span class="mono">${esc(py)}</span><span>${esc(m||t("not in the dictionary"))}</span></div>${sub}`;
+    box.innerHTML=NUM_PART.test(w)?`<div class="chline"><span class="hanzi">${esc(w)}</span><span>${esc(t("A number, read as it is."))}</span></div>`
+      :`<div class="chline"><span class="hanzi">${esc(w)}</span><span class="mono">${esc(py)}</span><span>${esc(m||t("not in the dictionary"))}</span></div>${sub}`; /* a number part shows itself once, not as its own pinyin and meaning (v336) */
     box.querySelectorAll("[data-sub]").forEach(b=> b.onclick=async e=>{ e.stopPropagation(); const ch=b.dataset.sub;
       box.querySelectorAll(".sub .ch").forEach(x=>x.classList.toggle("on",x===b));
       const line=box.querySelector(".chline"); line.innerHTML=`<span class="hanzi">${esc(ch)}</span><span class="mono">${esc(pinyinPro.pinyin(ch,{toneType:"symbol"}))}</span><span>${esc(cleanSense(bestSense(ch)||((DICT&&DICT.get(ch))||""))||t("not in the dictionary"))}</span>`; });
