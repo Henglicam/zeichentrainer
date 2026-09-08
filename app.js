@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=340; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=341; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1700,7 +1700,7 @@ function renderCardDetail(main,c){
 function renderEdit(main,c){
   const d=cardOf(c); if(!d){ S.editing=null; S.editFrom=null; return render(); }
   const isSign=d.kind==="sign";
-  let removeImg=false, aiApplied=false, aiMl=null, recropImg=null, recropRect=null, meanTouched=false; /* aiMl: the language of the meaning the AI filled in (v256) */ /* recropImg: the crop framed again in this form (v239), stored on Save with its frame (recropRect, v244) */
+  let removeImg=false, aiApplied=false, aiMl=null, recropImg=null, recropRect=null, meanTouched=false, aiRun=null; /* aiRun: the form's AI request while it runs (v341) */ /* aiMl: the language of the meaning the AI filled in (v256) */ /* recropImg: the crop framed again in this form (v239), stored on Save with its frame (recropRect, v244) */
   /* the text is edited like the Read preview (H): a character strip per line, tap a character for the picker and the
      drawing sheet; SIGN carries the lines and the card's crop as the photo reference (no boxes: the whole crop) */
   const eid="edit"+(S.editSeq=(S.editSeq||0)+1), lines0=isSign?d.c.split("\n"):frontLines(d); /* plain id: it goes into selectors */
@@ -1766,16 +1766,20 @@ function renderEdit(main,c){
   const ab=$("#e-ai"); if(ab) ab.onclick=async()=>{
     const st=$("#e-aistatus"); ab.disabled=true;
     const zh=$("#e-word").value, pin=$("#e-pin").value.trim(), mean=$("#e-mean").value.trim(), note=$("#e-note").value.trim();
-    try{
-      let [r]=await aiAsk([{kind:d.kind||"word",c:isSign?zh.split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):zh.replace(/\s+/g,""),p:pin,m:mean,flagNote:note,gloss:d.gloss,mt:{src:"dict",verified:false,suspect:"please check"}}],()=>{ st.innerHTML=busyHTML(t(AI_BUSY_TEXT)); });
+    const run=(async()=>{ /* the request as a promise the form keeps (v341): Save changes while it runs hands the answer over to the card, see the save handler */
+      let [r]=await aiAsk([{kind:d.kind||"word",c:isSign?zh.split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):zh.replace(/\s+/g,""),p:pin,m:mean,flagNote:note,gloss:d.gloss,mt:{src:"dict",verified:false,suspect:"please check"}}],()=>{ if(st&&st.isConnected) st.innerHTML=busyHTML(t(AI_BUSY_TEXT)); });
       if(r.bad&&(recropImg||d.img)){ const pic=await picOnBad({picBlob:recropImg||d.img,region:null},[zh]); if(pic) r={...pic,ok:true,bad:false}; } /* garbage says the text check: the card's own picture goes to the AI that takes pictures (v302) */
+      return r; })();
+    aiRun=run; { const clear=()=>{ if(aiRun===run) aiRun=null; }; run.then(clear,clear); } /* no derived promise that could reject unhandled */
+    try{
+      const r=await run; if(!ab.isConnected) return; /* the form is gone — Save changes took the card, and the answer lands there (v341) */
       if(!r.bad){
         if(r.zh&&CJK.test(r.zh)){ const zh=r.zh.replace(/\r/g,""); sg.lines=(isSign?zh:recutLines(zh.replace(/\s+/g,""),sg.lines)).split("\n").map(l=>l.trim()).filter(Boolean); sg.orig=sg.lines.slice(); syncWord(); drawLines(); }
         if(r.p){ $("#e-pin").value=r.p; autoGrow($("#e-pin")); }
         if(r.m){ $("#e-mean").value=r.m; autoGrow($("#e-mean")); aiMl=r.ml||"en"; meanTouched=false; } /* the fields grow with the answer — a filled value fires no input event (v281, H's two-line brand meaning cut off) */
         aiApplied=true; st.textContent=""; } /* a good answer shows nothing, the fields just fill — as in the Read preview (H, v105; the green "AI: looks right" box went in v245) */
       else st.textContent=t("The AI says this text looks misread. Fix the characters, or crop the photo again."); /* until v301 a garbage verdict left the form as it was, without a word (H: "doesn't work anymore?") */
-    }catch(err){ const m=err&&err.message||String(err); st.textContent=m===AI_NET_ERR?t(m)+t(". Tap the button to try again."):t("The AI check failed: {0}",m); }
+    }catch(err){ if(!ab.isConnected) return; const m=err&&err.message||String(err); st.textContent=m===AI_NET_ERR?t(m)+t(". Tap the button to try again."):t("The AI check failed: {0}",m); }
     ab.disabled=false;
   };
   /* ---------- the image field: the crop, Remove image, and Crop again (v239, H: "allow to re-crop a photo in edit mode",
@@ -1799,6 +1803,7 @@ function renderEdit(main,c){
       <div class="imgacts"><button class="del" id="e-cropcancel">${t("Cancel")}</button></div>
       <div class="ocr" id="ocr-${rid}">${READING[rid]?readingHTML(READING[rid],rid):res&&res.key===rectKey(CROP.rect)?`<div class="croppreview"><img src="${res.url}" alt="the new crop"><div class="badge" style="margin:6px 0 0">${res.text?t("Read as “{0}”. ",esc(res.text)):t("Picture taken, the text stays. ")}${t("Adjust the frame to read again, or save.")}</div></div>`:CROP.locating?busyHTML(t("Finding the frame …")):CROP.auto?busyHTML(t("Finding the text …")):`<span class="badge">${t("Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.")}</span>`}</div></div>`;
     box.querySelectorAll(".croplayer").forEach(wireCrop);
+    box.onclick=e=>{ const b=e.target.closest("[data-savenow]"); if(b){ b.disabled=true; const sv=$("#e-save"); if(sv) sv.click(); } }; /* Save now beside the bar (v341, H: "allow cropping an image in edit mode and saving it before the AI finishes, same as when taking a photo"): the same hand-off as Save changes — the button sits in the reading box, which every status re-renders */
     $("#e-cropcancel").onclick=()=>{ restoreBefore(); endRecrop(); showPimg(); }; };
   /* the reading's result stays under the photo with the frame (v244, H: "don't exit crop mode so fast, do as in the initial crop screen") — the view goes on Save changes or Cancel */
   let res=null, before=null;
@@ -1868,14 +1873,16 @@ function renderEdit(main,c){
   $("#e-save").onclick=async()=>{
     const fail=m=>{ const e=$("#e-err"); e.textContent=m; e.style.display=""; };
     let pin=$("#e-pin").value.replace(/\s+/g," ").trim(); const mean=$("#e-mean").value.replace(/\s+/g," ").trim();
-    if(!pin||!mean) return fail(t("Pinyin and meaning are required."));
+    /* a save before the analysis is done (v341, H: "allow cropping an image in edit mode and saving it before the AI finishes, same as when taking a photo" — "what finally counts is the newly analysed hanzi, pinyin and meaning"): a reading still due or running for the standing frame is handed over as before (v241), and the form's own AI request, when it is still running, hands its answer over too — the fields as they stand are placeholders, the analysis replaces them */
+    const willHand=!removeImg&&RECROP[rid]&&CROP&&CROP.id===rid&&CROP.rect&&RECROP[rid].stage!=="idle", aiLate=!aiApplied&&aiRun?aiRun:null;
+    if((!pin||!mean)&&!willHand&&!aiLate) return fail(t("Pinyin and meaning are required."));
     /* the Chinese text itself may be corrected (OCR slip) — progress and images move with it */
     let newC=d.c;
     const we=$("#e-word");
     if(we){
       var wordLines=we.value.split("\n").map(l=>l.replace(/\s+/g,"")).filter(l=>CJK.test(l));
       newC=isSign?wordLines.join("\n"):wordLines.join("");
-      if(!CJK.test(newC)) return fail(t("Please enter Chinese text."));
+      if(!CJK.test(newC)){ if(willHand||aiLate){ newC=d.c; wordLines=undefined; } else return fail(t("Please enter Chinese text.")); } /* an empty card saved early keeps its text until the analysis fills it */
     }
     const upd={...d, p:pin, m:mean}; delete upd.ex; delete upd.exp; delete upd.exm; /* example sentences were dropped in v41 */
     if(!isSign&&$("#e-w")){ upd.w=$("#e-w").value.trim(); upd.wp=$("#e-wp").value.trim(); upd.wm=$("#e-wm").value.trim();
@@ -1883,12 +1890,13 @@ function renderEdit(main,c){
     /* Save changes while the new frame is still being read (v241, H: "allow instant saving"): the card takes the new crop now, the
        reading goes on in the background and fills text, pinyin and meaning when done — like Save now in the Camera tab */
     let handoff=null;
-    if(!removeImg&&RECROP[rid]&&CROP&&CROP.id===rid&&CROP.rect&&RECROP[rid].stage!=="idle"){ const rect={...CROP.rect}; const r=await cropBlob(rid,rect); if(r) handoff={rect,blob:r.blob}; } /* a reading still due or running for this frame (v244: an untouched or already read frame saves without one) */
+    if(willHand){ const rect={...CROP.rect}; const r=await cropBlob(rid,rect); if(r) handoff={rect,blob:r.blob}; } /* a reading still due or running for this frame (v244: an untouched or already read frame saves without one) */
     if(removeImg){ delete upd.img; delete upd.imgFull; delete upd.shot; delete upd.frame; dropThumb(c); } /* shot too — without it the front would still show the inbox photo through fullPhoto (v214) */
     else if(handoff){ const win=await windowCut(rid,handoff.rect); upd.img=await jpegOf(win?win.blob:handoff.blob); upd.frame=photoFrame(handoff.rect); dropThumb(c); } /* the 16:9 window around the frame (v329) */
     else if(recropImg){ const win=recropRect?await windowCut(rid,recropRect):null; upd.img=await jpegOf(win?win.blob:recropImg); if(recropRect) upd.frame=photoFrame(recropRect); dropThumb(c); } /* the crop framed again in this form (v239) with its frame (v244), as fractions of the whole photo even when framed in the window (v247) */
     if(upd.mt){ upd.mt={...upd.mt, verified:true, pending:false}; delete upd.mt.suspect; } /* a human edited it */
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
+    else if(aiLate){ upd.mt={...(upd.mt||{}), src:"dict", verified:false, pending:false}; delete upd.mt.suspect; } /* unverified until the running AI check answers (v341); its failure marks the card pending for the next auto run */
     if(aiMl&&!meanTouched) setMl(upd,aiMl); else if(meanTouched||mean!==d.m) setMl(upd,LANG); /* a meaning typed here is in the app's language, one the AI filled in carries its own; an untouched meaning keeps its language (v256) */
     const tags=parseTags($("#e-tags").value); if(tags.length) upd.tags=tags; else delete upd.tags;
     if($("#e-flag").checked){ upd.flag=true; const note=$("#e-note").value.trim(); if(note) upd.flagNote=note; else delete upd.flagNote; }
@@ -1899,6 +1907,16 @@ function renderEdit(main,c){
       const d2=cardOf(c); if(d2){ d2.reading={rect,at:Date.now()}; try{ await idbPut("custom",d2); }catch(e){} }
       delete RECROP[rid]; PENDING[rid]=c; CROP=null; /* the form's hooks go, the photo record stays for the reading */
       clearTimeout(READ_TIMER[rid]); if(!READING[rid]) cropSign(rid,{rect}); }
+    if(aiLate&&!handoff){ const lines0=sg.lines.slice(); /* the AI's answer lands on the card when it comes (v341): text, pinyin and meaning as the form would have taken them, the card verified by the AI; a failed call leaves the card pending for the auto run */
+      aiLate.then(async r=>{ const d2=cardOf(c); if(!d2) return;
+        if(!r||r.bad){ d2.mt={...(d2.mt||{}),verified:false,pending:true}; try{ await idbPut("custom",d2); }catch(e){} aiAutoSoon(); return; }
+        const upd2={...d2}; let newC2=d2.c, lines2;
+        if(r.zh&&CJK.test(r.zh)){ const zh=r.zh.replace(/\r/g,""); lines2=(isSign?zh:recutLines(zh.replace(/\s+/g,""),lines0)).split("\n").map(l=>l.trim()).filter(Boolean); newC2=isSign?lines2.join("\n"):lines2.join(""); }
+        if(r.p) upd2.p=r.p; if(r.m){ upd2.m=r.m; setMl(upd2,r.ml||"en"); }
+        upd2.mt={...(upd2.mt||{}),src:"llm",verified:true,pending:false}; delete upd2.mt.suspect;
+        await applyCardUpdate(c,upd2,newC2,!!r.p,isSign?undefined:lines2);
+        if(S.mode==="cards"&&!S.editing) render(); else renderShots(); },
+      async()=>{ const d2=cardOf(c); if(!d2) return; d2.mt={...(d2.mt||{}),verified:false,pending:true}; try{ await idbPut("custom",d2); }catch(e){} aiAutoSoon(); }); }
     leave(c);
   };
 }
@@ -2790,13 +2808,13 @@ const busyHTML=t=>`<div class="reading"><div class="bar"><i></i></div><span clas
 const AI_BUSY_TEXT="Checking pinyin and meaning …";
 /* while a photo is read: the bar, its text and Save now at the right of that line (v237, H: "take a photo, crop in a rush, hit
    Save and move on" — the card is made at once with the crop, the reading fills it in in the background); once saved, one
-   green line instead; not in the Edit form's Crop again, where Save changes takes that role (v241) */
+   green line instead; in the Edit form's Crop again too since v341 (H: "same as when taking a photo"), where it presses Save changes */
 const failText=x=>x.startsWith("Reading failed: ")?t("Reading failed: {0}",esc(x.slice(16))):esc(t(x)); /* the failure sentence in the app's language; the step texts stay English for Diagnostics (v254) */
 const readingHTML=(x,id)=>READ_FAIL.test(x)?`<span class="badge">${failText(x)}</span>`
   :(stuck=>id&&PENDING[id]
     ?AUTO[id]?`<div class="reading"><div class="bar"><i></i></div><span class="badge">${t("Reading the text …")}${stuck?t(" still at: {0}",esc(x)):""}</span></div>` /* the card made by itself (v325): the bar alone, the shimmer is on the photo */
     :`<div class="reading"><div class="bar"><i></i></div><span class="ok" style="margin:0">${t("Card saved — the text follows when the reading is done.")}${stuck?t(" Still at: {0}",esc(x)):""}</span></div>`
-    :`<div class="reading"><div class="bar"><i></i></div><div class="readrow"><span class="badge">${id&&CROP&&CROP.id===id&&CROP.hidden?t("Finding the text …"):t("Reading the text …")}${stuck?t(" still at: {0}",esc(x)):""}</span>${id&&CROP&&CROP.id===id&&CROP.rect&&!CROP.hidden&&!RECROP[id]?`<button class="btn mini" data-savenow="${id}">${t("Save now")}</button>`:""}</div></div>`)
+    :`<div class="reading"><div class="bar"><i></i></div><div class="readrow"><span class="badge">${id&&CROP&&CROP.id===id&&CROP.hidden?t("Finding the text …"):t("Reading the text …")}${stuck?t(" still at: {0}",esc(x)):""}</span>${id&&CROP&&CROP.id===id&&CROP.rect&&!CROP.hidden?`<button class="btn mini" data-savenow="${id}">${t("Save now")}</button>`:""}</div></div>`)
    (!!(id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK));
 const readingStatus=(id,run)=>x=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=x; READ_AT[id]=Date.now(); const last=READLOG[READLOG.length-1]; if(last&&/^recognizing … \d+%$/.test(last.text)&&/^recognizing … \d+%$/.test(x)) last.text=x; else READLOG.push({t:Date.now(),text:x}); while(READLOG.length>40) READLOG.shift(); saveReadLog(); /* the reader's progress overwrites its own line (v285: forty "recognizing … N%" lines had pushed every step and the proposed frame out of H's diagnostics) */
   const b=$("#ocr-"+id); if(b) b.innerHTML=readingHTML(x,id);
