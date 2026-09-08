@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=337; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=338; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -293,6 +293,7 @@ async function boot(){
   wireChrome(); render();
   if(rv&&rv.scroll) requestAnimationFrame(()=>window.scrollTo(0,rv.scroll));
   autoBreaks(); /* old cards get their photo lines estimated once */
+  fixNumberSegs(); /* word cards from before v338 get their numbers back into their lines */
   dedupePhotos(); /* cards from before v214 drop the whole photo they hold twice */
   setTimeout(resumePending,1500); /* cards saved before their reading finished get it now (v237) */
   aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); });
@@ -355,14 +356,44 @@ function recutLines(text,origLines){
   return out.join("\n");
 }
 /* word cards: seg tokens with "\n" mark the photo's line breaks — rebuild them for new text */
+/* the words of each line for a word card's seg: dictionary words from the Chinese characters, and a number with its Latin
+   unit as a word of its own (v338, H's 24小时营业: the front showed 小时营业 — the number was dropped here and in readingCard,
+   while the pinyin and the parts row kept it) */
+const NUM_TOKEN=/^[0-9]+(?:\.[0-9]+)?[a-zA-Z%]{0,3}/;
 function segWithBreaks(lines){
   const out=[];
   lines.forEach((line,i)=>{
     if(i) out.push("\n");
-    const chars=[...line].filter(ch=>CJK.test(ch)).map(ch=>({ch}));
-    segmentChars(chars).forEach(seg=>out.push(seg.map(x=>x.ch).join("")));
+    let k=0, run=[]; const flush=()=>{ if(run.length){ segmentChars(run).forEach(seg=>out.push(seg.map(x=>x.ch).join(""))); run=[]; } };
+    while(k<line.length){
+      const num=line.slice(k).match(NUM_TOKEN);
+      if(num){ flush(); out.push(num[0]); k+=num[0].length; continue; }
+      const ch=line[k]; if(CJK.test(ch)) run.push({ch}); k++;
+    }
+    flush();
   });
   return out;
+}
+/* a word card saved before v338 lost its numbers from seg (24小时营业 showed as 小时营业): once at boot, a word card whose seg
+   lacks a number its text has gets its lines rebuilt — the old lines' Chinese characters keep their line, the numbers
+   between them follow the text's order */
+async function fixNumberSegs(){
+  const digits=x=>(String(x).match(/[0-9]/g)||[]).length;
+  const todo=S.custom.filter(d=>d.kind!=="sign"&&d.seg&&digits(d.c)>digits(d.seg.join("")));
+  if(!todo.length) return;
+  try{ await loadDict(); }catch(e){ return; } /* the words need the dictionary; without it the next start repairs */
+  for(const d of todo){
+    const raw=d.c.replace(/\s+/g,""), old=frontLines(d), lines=[]; let k=0;
+    old.forEach((line,i)=>{
+      const n=[...line].filter(ch=>CJK.test(ch)).length; let got=0, cur="";
+      while(k<raw.length&&(got<n||(i===old.length-1))){ const ch=raw[k]; cur+=ch; k++; if(CJK.test(ch)) got++; }
+      lines.push(cur);
+    });
+    if(k<raw.length) lines[lines.length-1]+=raw.slice(k);
+    const segs=segWithBreaks(lines); if(segs.length>1) d.seg=segs; else delete d.seg;
+  }
+  try{ await idbPutMany("custom",todo); }catch(e){}
+  if(S.mode==="study"||S.detail) render();
 }
 /* the text keeps the photo's lines: a horizontal word stays on one line, so the box goes
    wide and the font shrinks to fit instead of wrapping (H: "the image is one line") */
@@ -4062,7 +4093,7 @@ async function readingCard(id,sg){
   /* a short single line is a word card (reticle front); anything longer is a sign card */
   const word=keep.length===1 && glyphs(c)<=4;
   const card=word
-    ? { id:cardId(c), c, p:pin, m:mean, t:"Custom", at:Date.now(), shot:id, lb:"photo", mt, ...(keep[0].r.segs.filter(x=>CJK.test(x)).length>1?{seg:keep[0].r.segs.filter(x=>CJK.test(x)), gloss:keep[0].r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))}:{}) }
+    ? { id:cardId(c), c, p:pin, m:mean, t:"Custom", at:Date.now(), shot:id, lb:"photo", mt, ...(keep[0].r.segs.filter(x=>CJK.test(x)||NUM_PART.test(x)).length>1?{seg:keep[0].r.segs.filter(x=>CJK.test(x)||NUM_PART.test(x)), gloss:keep[0].r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))}:{}) }
     : { id:cardId(c), kind:"sign", c, p:pin, m:mean, t:"Sign", at:Date.now(), shot:id,
         segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
   setMl(card,ml);
