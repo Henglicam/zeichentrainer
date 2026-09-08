@@ -223,6 +223,14 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 
 .shotwrap{position:relative;margin-bottom:8px}
 .shotwrap img{margin-bottom:0;border-radius:10px}
+/* the card made by itself (v325, H: "no frame during the first scan, just the magic wobbling over the image, and then the result is the finished card"): a soft band of light sweeps the photo while the app reads — nothing on the photo but light, no frame; still under reduced motion (a faint veil) */
+.shotwrap .scan{position:absolute;inset:0;border-radius:10px;overflow:hidden;pointer-events:none}
+.shotwrap .scan::before{content:"";position:absolute;top:-30%;bottom:-30%;left:-45%;width:45%;transform:skewX(-14deg);background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.28) 35%,rgba(255,255,255,.55) 50%,rgba(255,255,255,.28) 65%,rgba(255,255,255,0));animation:scan 1.7s ease-in-out infinite}
+@keyframes scan{to{left:105%}}
+@media (prefers-reduced-motion:reduce){.shotwrap .scan::before{animation:none;left:0;width:100%;transform:none;background:rgba(255,255,255,.12)}}
+/* the finished card in the photo's place (v325): the front's boxes and the back as in the detail, on the photo's own card */
+.shot .result{text-align:center;padding:6px 4px 2px} .shot .result img{margin-bottom:0;border-radius:0;width:auto} .shot .result .picbox{border-radius:var(--rc)} .shot .result .signimg.full{width:100%;border-radius:10px;margin-bottom:10px}
+.shot .result .back{margin-top:14px} .shot .result .linked .thumbs{justify-content:center} .shot .result .flagbox{text-align:left}
 .signed .badge.ai{color:var(--ok)}
 .signed .badge.bad,.smean.bad{color:var(--tint)} .aibox.bad{background:var(--tint-soft)} .aibox.bad .aihead{color:var(--tint)}
 .cropacts .del{padding:10px 6px}
