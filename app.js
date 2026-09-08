@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=350; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=351; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -309,6 +309,7 @@ function wireChrome(){
   document.querySelectorAll(".tab").forEach(b=>{
     b.onclick=()=>{ const m=b.dataset.mode;
       S.editing=null; S.editFrom=null;                       /* a tab tap always leaves the edit form */
+      endPick();                                            /* … and any marking (v351) */
       if(CROP&&RECROP[CROP.id]) RECROP[CROP.id].end();      /* … and its Crop again (v239) */
       if(m==="cards" && (S.mode==="cards"||S.mode==="add")) S.detail=null; /* Cards again → back to the list */
       S.mode=m; render(); }; /* the Camera tab opens the inbox page with Take photo and From album — a tab that fired the camera at once (v184) went in v186, H: "I don't like the direct capture, revert" */
@@ -1634,33 +1635,37 @@ function cardsListHTML(){
   if(S.filterAi) list=list.filter(d=>d.ai);
   if(S.filterTag) list=list.filter(d=>hasTag(d,S.filterTag));
   if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,...Object.values(d.ms||{}),d.w,d.wp,d.wm,d.flagNote,...(d.tags||[])].filter(Boolean).join(" ").toLowerCase().includes(q));
-  const rows=list.map(d=>`<button class="crow" data-id="${esc(d.id)}">
+  const pk=marking("cards"); /* marking (v351): a tick over the thumbnail, the tap marks instead of opening */
+  const rows=list.map(d=>`<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">${pk?`<span class="tick" aria-hidden="true"></span>`:""}
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
       <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
       <span class="cs">${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}${cardStatus(d)}</span></button>`).join("");
   const empty=S.custom.length?t("No cards match."):t("No cards yet — take a photo under Camera, or tap + New.");
-  return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length};
+  return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length, ids:list.map(d=>d.id)};
 }
 function renderCards(main){
   const unv=S.custom.filter(d=>d.mt&&!d.mt.verified).length, flg=S.custom.filter(d=>d.flag).length, nAi=deck().filter(d=>d.ai).length;
   if(S.filterAi&&!nAi) S.filterAi=false; /* a filter whose chip is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the list anymore" — the AI chip shows only while suggestions wait, so the filter had no chip left to switch it off and the list stood empty at "0 of 131") */
   if(S.filterTag&&!(S.filterTag===UNTAGGED?allTags().length&&untaggedCount():allTags().includes(S.filterTag))) S.filterTag=null; /* the same for a tag chip: the last card of a tag re-tagged, or the last untagged card tagged */
-  const {html,n}=cardsListHTML();
+  let {html,n,ids}=cardsListHTML();
   main.innerHTML=`<div class="pane">
     <div class="cardsbar"><input id="q" type="search" placeholder="${t("Search")}" value="${esc(S.query)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="btn mini primary" id="newcard">${t("+ New")}</button></div>
     ${nAi?`<div class="aibar"><span>${nOf(nAi,"AI suggestion waiting","AI suggestions waiting")}</span><button class="btn mini primary" id="ai-acceptall">${t("Accept all")}</button></div>`:""}
-    <div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">${t("⚑ Flagged ({0})",flg)}</button>${nAi?`<button class="chip${S.filterAi?" on":""}" id="chip-ai">${t("AI ({0})",nAi)}</button>`:""}<button class="chip${S.filterUnv?" on":""}" id="chip-unv">${t("Unverified ({0})",unv)}</button>${allTags().map(t=>`<button class="chip tag${S.filterTag===t?" on":""}" data-tagchip="${esc(t)}">${esc(t)}</button>`).join("")}${allTags().length&&untaggedCount()?`<button class="chip tag${S.filterTag===UNTAGGED?" on":""}" data-tagchip="${UNTAGGED}">${t("Untagged ({0})",untaggedCount())}</button>`:""}</span><span class="badge" id="cnt">${t("{0} of {1}",n,deck().length)}</span></div>
+    <div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">${t("⚑ Flagged ({0})",flg)}</button>${nAi?`<button class="chip${S.filterAi?" on":""}" id="chip-ai">${t("AI ({0})",nAi)}</button>`:""}<button class="chip${S.filterUnv?" on":""}" id="chip-unv">${t("Unverified ({0})",unv)}</button>${allTags().map(t=>`<button class="chip tag${S.filterTag===t?" on":""}" data-tagchip="${esc(t)}">${esc(t)}</button>`).join("")}${allTags().length&&untaggedCount()?`<button class="chip tag${S.filterTag===UNTAGGED?" on":""}" data-tagchip="${UNTAGGED}">${t("Untagged ({0})",untaggedCount())}</button>`:""}</span><span class="cend"><span class="badge" id="cnt">${t("{0} of {1}",n,deck().length)}</span>${S.custom.length>1?`<button class="del" id="${marking("cards")?"pick-all":"pick-start"}">${marking("cards")?"":t("Select")}</button>`:""}</span></div>
     <div class="clist" id="clist">${html}</div>
   </div>`;
-  const wire=()=>{ document.querySelectorAll(".crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.id; S.detailHide=false; S.fullPic=false; render(); }); };
-  const refresh=()=>{ const r=cardsListHTML(); $("#clist").innerHTML=r.html; $("#cnt").textContent=t("{0} of {1}",r.n,deck().length); wire(); };
+  const wire=()=>{ document.querySelectorAll(".crow").forEach(b=> b.onclick=()=>{
+    if(marking("cards")){ pickToggle(b.dataset.id); b.classList.toggle("on"); pickBar(()=>delPicked("cards")); return; } /* while marking a tap marks the row instead of opening it (v351) */
+    S.detail=b.dataset.id; S.detailHide=false; S.fullPic=false; render(); }); };
+  const refresh=()=>{ const r=cardsListHTML(); ids=r.ids; $("#clist").innerHTML=r.html; $("#cnt").textContent=t("{0} of {1}",r.n,deck().length); wire(); if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); } };
   $("#q").oninput=e=>{ S.query=e.target.value; refresh(); };
   $("#chip-unv").onclick=()=>{ S.filterUnv=!S.filterUnv; render(); };
   $("#chip-flag").onclick=()=>{ S.filterFlag=!S.filterFlag; render(); };
   const ca=$("#chip-ai"); if(ca) ca.onclick=()=>{ S.filterAi=!S.filterAi; render(); };
   document.querySelectorAll("[data-tagchip]").forEach(b=> b.onclick=()=>{ S.filterTag=S.filterTag===b.dataset.tagchip?null:b.dataset.tagchip; render(); });
   const aa=$("#ai-acceptall"); if(aa) aa.onclick=async()=>{ aa.disabled=true; await aiAcceptAll(); render(); };
-  $("#newcard").onclick=()=>{ S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; S.mode="add"; render(); }; /* a card from scratch starts without a picture (v188); the photo path comes in through cropOk with its own pending image */
+  if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); } else { const ps=$("#pick-start"); if(ps) ps.onclick=()=>{ PICK={kind:"cards",set:new Set()}; render(); }; }
+  $("#newcard").onclick=()=>{ endPick(); S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; S.mode="add"; render(); }; /* a card from scratch starts without a picture (v188); the photo path comes in through cropOk with its own pending image */
   wire();
 }
 function renderCardDetail(main,c){
@@ -2063,6 +2068,36 @@ function showUndo(item){
   el.querySelector(".t").textContent=undoText();
 }
 function hideUndo(){ if(UNDO) clearTimeout(UNDO.timer); UNDO=null; const el=$("#undo"); if(el) el.remove(); }
+/* Marking many cards or photos and deleting them together (v351, H: "implement a function to batch mark and delete cards
+   and photos" — described first, "Go"): Select on the Cards list and in the inbox head puts the screen into marking, a tap
+   on a row marks it instead of opening it, All marks everything the list shows (the filter and the search decide what that
+   is), and a bar above the tab bar carries "Delete N" and Done. The deletion runs through the same delCustom / delShot as a
+   single one, so the Undo line of v268 says "Deleted 12 cards" and five seconds put everything back. */
+let PICK=null; /* {kind:"cards"|"shots", set:Set of ids} while marking */
+const marking=k=>!!(PICK&&PICK.kind===k);
+function endPick(){ PICK=null; const el=$("#pickbar"); if(el) el.remove(); }
+function pickToggle(id){ if(PICK) PICK.set.has(id)?PICK.set.delete(id):PICK.set.add(id); }
+function pickBar(onDelete){
+  let el=$("#pickbar");
+  if(!PICK){ if(el) el.remove(); return; }
+  if(!el){ el=document.createElement("div"); el.className="undo pickbar"; el.id="pickbar"; el.setAttribute("role","status");
+    el.innerHTML=`<button id="pick-del"></button><span class="sp"></span><button id="pick-done"></button>`;
+    el.querySelector("#pick-done").onclick=()=>{ endPick(); render(); }; document.body.appendChild(el); }
+  el.querySelector("#pick-done").textContent=t("Done");
+  const n=PICK.set.size, del=el.querySelector("#pick-del");
+  del.textContent=t("Delete {0}",n); del.disabled=!n; del.onclick=onDelete;
+}
+function pickAllBtn(ids,redraw){ /* All marks everything the screen shows, None clears it */
+  const b=$("#pick-all"); if(!b||!PICK) return;
+  const all=ids.length&&ids.every(id=>PICK.set.has(id));
+  b.textContent=all?t("None"):t("All");
+  b.onclick=()=>{ ids.forEach(id=>all?PICK.set.delete(id):PICK.set.add(id)); redraw(); };
+}
+async function delPicked(kind){
+  if(!PICK) return; const ids=[...PICK.set]; endPick();
+  for(const id of ids){ if(kind==="cards") await delCustom(id); else await delShot(id,true); } /* each one shows its Undo item, so the line reads "Deleted 12 cards" */
+  render();
+}
 async function undoDelete(){
   if(!UNDO) return; const items=UNDO.items; hideUndo();
   for(const it of items){
@@ -4216,8 +4251,18 @@ function renderShots(){
   if(CROP&&RECROP[CROP.id]){ RECROP[CROP.id].redraw(); return; } /* the Edit form's Crop again draws its own frame view (v239) */
   const box=$("#shots"); if(!box) return;
   const pending=PENDING_SHOT?`<div class="shot pending"><div class="badge">${t("Processing photo …")}</div></div>`:"";
-  if(!S.inbox.length){ box.innerHTML=pending||`<div class="badge" style="margin-top:18px">${t("No photos yet.")}</div>`; return; }
-  box.innerHTML=`<div class="listhead">${t("Inbox ({0})",S.inbox.length)}</div>`+pending+
+  if(!S.inbox.length){ if(PICK) endPick(); box.innerHTML=pending||`<div class="badge" style="margin-top:18px">${t("No photos yet.")}</div>`; return; }
+  if(marking("shots")){ /* the photo picker (v351): the photos alone with a tick — no frame, no reading box, no result card */
+    box.innerHTML=`<div class="listhead pickhead"><span>${t("Inbox ({0})",S.inbox.length)}</span><button class="del" id="pick-all"></button></div>`+
+      S.inbox.map(s=>`<div class="shot pick${PICK.set.has(s.id)?" on":""}" data-pickshot="${s.id}">
+        <div class="shotwrap"><img src="${shotURL(s)}" alt="photo"><span class="tick" aria-hidden="true"></span></div>
+        <div class="meta"><span class="ts">${new Date(s.ts).toLocaleString(LANG_LOCALE[LANG])}</span></div></div>`).join("");
+    box.querySelectorAll("[data-pickshot]").forEach(el=> el.onclick=()=>{ pickToggle(el.dataset.pickshot); el.classList.toggle("on"); pickBar(()=>delPicked("shots")); });
+    pickAllBtn(S.inbox.map(s=>s.id),renderShots); pickBar(()=>delPicked("shots"));
+    return;
+  }
+  const busy=!!CROP||S.inbox.some(s=>PENDING[s.id]); /* no marking while a frame stands or a photo is being read (v351) */
+  box.innerHTML=`<div class="listhead pickhead"><span>${t("Inbox ({0})",S.inbox.length)}</span>${busy||S.inbox.length<2?"":`<button class="del" id="pick-start">${t("Select")}</button>`}</div>`+pending+
     S.inbox.map(s=>{
       const dt=new Date(s.ts).toLocaleString(LANG_LOCALE[LANG]);
       const cropping=CROP && CROP.id===s.id, shown=!!(cropping&&CROP.rect&&!CROP.hidden), zoomed=!!(shown&&CROP.zoom);
@@ -4240,6 +4285,7 @@ function renderShots(){
           :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
     }).join("");
+  { const ps=$("#pick-start"); if(ps) ps.onclick=()=>{ PICK={kind:"shots",set:new Set()}; renderShots(); }; } /* marking many photos (v351) */
   box.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>delShot(b.dataset.del,true));
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
   box.onclick=e=>{ const b=e.target.closest("[data-savenow]"); if(b){ b.disabled=true; saveNow(b.dataset.savenow); } }; /* the button is inside the reading box, which every status re-renders (v237) */

@@ -354,6 +354,20 @@ body.noscroll{overflow:hidden}
 /* the Undo line after a deletion (v268): above the tab bar, the card's surface with the hairline and a shadow, the text and a tint Undo */
 .undo{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav) + 14px + env(safe-area-inset-bottom));z-index:20;display:flex;align-items:center;gap:12px;width:calc(100% - 32px);max-width:408px;padding:6px 6px 6px 16px;border-radius:var(--r);background:var(--card);color:var(--label);font-size:15px;line-height:1.35;box-shadow:0 0 0 1px var(--sep),0 8px 24px rgba(0,0,0,.18);animation:undoup .18s ease-out}
 .undo .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* marking many cards or photos (v351): a tick over the picture, and the bar of the Undo line with Delete N and Done */
+.crow.pick,.shot.pick{position:relative;cursor:pointer}
+.tick{position:absolute;left:8px;top:8px;width:22px;height:22px;border-radius:999px;background:rgba(255,255,255,.9);box-shadow:inset 0 0 0 1.5px var(--label3),0 1px 3px rgba(0,0,0,.25);z-index:2}
+.shot.pick .tick{left:8px;top:8px}
+.crow.on .tick,.shot.pick.on .tick{background:var(--tint);box-shadow:inset 0 0 0 1.5px var(--tint),0 1px 3px rgba(0,0,0,.25)}
+.crow.on .tick::after,.shot.pick.on .tick::after{content:"";position:absolute;left:8px;top:4px;width:5px;height:10px;border:2px solid #fff;border-top:0;border-left:0;transform:rotate(45deg)}
+.pickbar{padding-left:6px}
+.pickbar .sp{flex:1}
+.pickbar #pick-del{color:var(--tint)}
+.pickbar #pick-del[disabled]{color:var(--label3)}
+.pickbar #pick-done{color:var(--label2)}
+.cend{display:flex;align-items:center;gap:10px;flex:none}
+.chips .del{padding:6px 2px;min-height:0;font-size:14px}
+.listhead.pickhead{display:flex;align-items:center;justify-content:space-between;gap:8px} .listhead.pickhead .del{padding:2px 2px;min-height:0;font-size:14px}
 .undo button{background:none;border:none;font-family:var(--sans);font-size:16px;font-weight:600;color:var(--tint);padding:0 10px;min-height:44px;cursor:pointer;flex:none}
 @keyframes undoup{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
 /* the Progress dashboard (v274): four tiles on the row's grey surface, the 30-day strip in the tint, the deck bar in grey, tint and green */
