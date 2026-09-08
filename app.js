@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=330; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=331; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -494,17 +494,21 @@ function textProvider(){ const pv=aiProvider(); if(pv==="deepseek"||!AI_PROVIDER
    "no connection (offline, or this provider refuses calls from a browser …)": Android cuts a page's requests when it goes
    to the background, and the text named a provider problem the user cannot do anything about). A request that fails is
    tried once more — after the page is back in the foreground when it went to the background meanwhile, else after 1.5 s;
-   a second failure is reported as AI_NET_ERR, the detail (and the retry) goes to the AI log only. */
+   a second failure is reported as AI_NET_ERR, the detail (and the retry) goes to the AI log only. A try that has not
+   answered within AI_TIMEOUT_MS is dropped and counts as a failure (v331, H: "he was reading quite long" — a hanging
+   connection held the reading for as long as the browser waits, a minute or more, before the retry even started; Qwen's
+   picture answers take 3–10 s on H's phone). */
 let HIDDEN_AT=0; document.addEventListener("visibilitychange",()=>{ if(document.hidden) HIDDEN_AT=Date.now(); });
 const whenVisible=()=>document.hidden?new Promise(res=>document.addEventListener("visibilitychange",function f(){ if(!document.hidden){ document.removeEventListener("visibilitychange",f); res(); } })):Promise.resolve();
-const AI_NET_ERR="The AI could not be reached", AI_RETRY_MS=1500;
+const AI_NET_ERR="The AI could not be reached", AI_RETRY_MS=1500; let AI_TIMEOUT_MS=25000; /* let: the harness shortens it */
+const timedFetch=(url,opts)=>{ const ac=new AbortController(), t=setTimeout(()=>ac.abort(),AI_TIMEOUT_MS); return fetch(url,{...opts,signal:ac.signal}).catch(err=>{ throw ac.signal.aborted?new Error("no answer within "+Math.round(AI_TIMEOUT_MS/1000)+" s"):err; }).finally(()=>clearTimeout(t)); };
 async function aiFetch(url,opts){
   const t0=Date.now();
-  try{ return await fetch(url,opts); }
+  try{ return await timedFetch(url,opts); }
   catch(err){
     const bg=document.hidden||HIDDEN_AT>=t0;
     if(bg) await whenVisible(); else await new Promise(r=>setTimeout(r,AI_RETRY_MS));
-    try{ return await fetch(url,opts); }
+    try{ return await timedFetch(url,opts); }
     catch(err2){ throw new Error((err2&&err2.message||err2)+(bg?" (tried again after the app came back to the foreground)":" (tried twice)")); }
   }
 }
@@ -674,7 +678,7 @@ async function aiAsk(cards,status){
     else { /* OpenAI-style chat completions (DeepSeek, Qwen, GLM, …), direct with the phone's key or through the owner's relay */
       const body=noThinking(pv,model,{model,max_tokens:4000,temperature:0,messages:[{role:"system",content:aiSystem()},{role:"user",content:user}]});
       r=relay?await relayFetch(pv,body):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
-  }catch(err){ logAi({model,req:user.slice(0,1500),err:"no connection: "+(err&&err.message||err)+(pv==="claude"?" — the API may be blocked without a VPN":" — offline, or this provider refuses calls from a browser")}); throw new Error(AI_NET_ERR); }
+  }catch(err){ logAi({model,req:user.slice(0,1500),err:"no connection: "+(err&&err.message||err)+(/^no answer within/.test(err&&err.message||"")?" — the connection hangs, or the provider is slow":pv==="claude"?" — the API may be blocked without a VPN":" — offline, or this provider refuses calls from a browser")}); throw new Error(AI_NET_ERR); }
   if(!r.ok&&relay){ const t=await apiErrText(r); logAi({model,status:r.status,req:user.slice(0,1500),err:t}); throw new Error(relayError(r,t)); }
   if(r.status===401||r.status===403) throw new Error("API key rejected ("+r.status+")");
   if(r.status===402) throw new Error("no credit left at "+AI_PROVIDERS[pv].name);
