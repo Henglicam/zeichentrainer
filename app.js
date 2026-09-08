@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=353; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=354; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1253,7 +1253,7 @@ const GUIDE=()=>[
   {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out."),
     t("Grade yourself: Again, Hard, Good, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included."),
-    t("Tags group cards for a class or a level. Learn can show one tag at a time.")]},
+    t("Tags group cards for a class or a level. Learn can show one tag at a time. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way.")]},
   {h:t("Language and meanings"),p:[t("More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.")]},
   {h:t("What stays on the phone"),p:[t("Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak."),
     t("Once a day anonymous usage counts and the app's error messages go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.")]}];
@@ -1657,21 +1657,26 @@ function renderCards(main){
   main.innerHTML=`<div class="pane">
     <div class="cardsbar"><input id="q" type="search" placeholder="${t("Search")}" value="${esc(S.query)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="btn mini primary" id="newcard">${t("+ New")}</button></div>
     ${nAi?`<div class="aibar"><span>${nOf(nAi,"AI suggestion waiting","AI suggestions waiting")}</span><button class="btn mini primary" id="ai-acceptall">${t("Accept all")}</button></div>`:""}
-    <div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">${t("⚑ Flagged ({0})",flg)}</button>${nAi?`<button class="chip${S.filterAi?" on":""}" id="chip-ai">${t("AI ({0})",nAi)}</button>`:""}<button class="chip${S.filterUnv?" on":""}" id="chip-unv">${t("Unverified ({0})",unv)}</button>${allTags().map(t=>`<button class="chip tag${S.filterTag===t?" on":""}" data-tagchip="${esc(t)}">${esc(t)}</button>`).join("")}${allTags().length&&untaggedCount()?`<button class="chip tag${S.filterTag===UNTAGGED?" on":""}" data-tagchip="${UNTAGGED}">${t("Untagged ({0})",untaggedCount())}</button>`:""}</span><span class="cend"><span class="badge" id="cnt">${t("{0} of {1}",n,deck().length)}</span>${S.custom.length>1?`<button class="del" id="${marking("cards")?"pick-all":"pick-start"}">${marking("cards")?"":t("Select")}</button>`:""}</span></div>
+    ${marking("cards")
+      ?`<div class="chips"><span class="badge" id="pick-n">${t("{0} selected",PICK.set.size)}</span><span class="cend"><button class="del" id="pick-all"></button></span></div>` /* the chips make room for the marking (v354) */
+      :`<div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">${t("⚑ Flagged ({0})",flg)}</button>${nAi?`<button class="chip${S.filterAi?" on":""}" id="chip-ai">${t("AI ({0})",nAi)}</button>`:""}<button class="chip${S.filterUnv?" on":""}" id="chip-unv">${t("Unverified ({0})",unv)}</button>${allTags().map(t=>`<button class="chip tag${S.filterTag===t?" on":""}" data-tagchip="${esc(t)}">${esc(t)}</button>`).join("")}${allTags().length&&untaggedCount()?`<button class="chip tag${S.filterTag===UNTAGGED?" on":""}" data-tagchip="${UNTAGGED}">${t("Untagged ({0})",untaggedCount())}</button>`:""}</span><span class="cend"><span class="badge" id="cnt">${t("{0} of {1}",n,deck().length)}</span></span></div>`}
     <div class="clist" id="clist">${html}</div>
   </div>`;
-  const wire=()=>{ document.querySelectorAll(".crow").forEach(b=> b.onclick=()=>{
-    if(marking("cards")){ pickToggle(b.dataset.id); b.classList.toggle("on"); pickBar(()=>delPicked("cards")); return; } /* while marking a tap marks the row instead of opening it (v351) */
-    LIST_SCROLL=window.scrollY; /* where the list stood — ← Cards comes back to it (v351) */
-    S.detail=b.dataset.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); }); };
-  const refresh=()=>{ const r=cardsListHTML(); ids=r.ids; $("#clist").innerHTML=r.html; $("#cnt").textContent=t("{0} of {1}",r.n,deck().length); wire(); if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); } };
+  const wire=()=>{ document.querySelectorAll(".crow").forEach(b=>{
+    b.onclick=()=>{
+      if(marking("cards")){ pickToggle(b.dataset.id); b.classList.toggle("on"); pickBar(()=>delPicked("cards")); return; } /* while marking a tap marks the row instead of opening it (v351) */
+      LIST_SCROLL=window.scrollY; /* where the list stood — ← Cards comes back to it (v351) */
+      S.detail=b.dataset.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); };
+    if(!marking("cards")&&S.custom.length>1) longPress(b,()=>{ PICK={kind:"cards",set:new Set([b.dataset.id])}; render(); }); /* press and hold to start marking (v354) */
+  }); };
+  const refresh=()=>{ const r=cardsListHTML(); ids=r.ids; $("#clist").innerHTML=r.html; const ct=$("#cnt"); if(ct) ct.textContent=t("{0} of {1}",r.n,deck().length); wire(); if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); } };
   $("#q").oninput=e=>{ S.query=e.target.value; refresh(); };
-  $("#chip-unv").onclick=()=>{ S.filterUnv=!S.filterUnv; render(); };
-  $("#chip-flag").onclick=()=>{ S.filterFlag=!S.filterFlag; render(); };
+  const cu=$("#chip-unv"); if(cu) cu.onclick=()=>{ S.filterUnv=!S.filterUnv; render(); };
+  const cf=$("#chip-flag"); if(cf) cf.onclick=()=>{ S.filterFlag=!S.filterFlag; render(); };
   const ca=$("#chip-ai"); if(ca) ca.onclick=()=>{ S.filterAi=!S.filterAi; render(); };
   document.querySelectorAll("[data-tagchip]").forEach(b=> b.onclick=()=>{ S.filterTag=S.filterTag===b.dataset.tagchip?null:b.dataset.tagchip; render(); });
   const aa=$("#ai-acceptall"); if(aa) aa.onclick=async()=>{ aa.disabled=true; await aiAcceptAll(); render(); };
-  if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); } else { const ps=$("#pick-start"); if(ps) ps.onclick=()=>{ PICK={kind:"cards",set:new Set()}; render(); }; }
+  if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); }
   $("#newcard").onclick=()=>{ endPick(); S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; S.mode="add"; render(); }; /* a card from scratch starts without a picture (v188); the photo path comes in through cropOk with its own pending image */
   wire();
 }
@@ -2084,6 +2089,24 @@ let PICK=null; /* {kind:"cards"|"shots", set:Set of ids} while marking */
 const marking=k=>!!(PICK&&PICK.kind===k);
 function endPick(){ PICK=null; const el=$("#pickbar"); if(el) el.remove(); }
 function pickToggle(id){ if(PICK) PICK.set.has(id)?PICK.set.delete(id):PICK.set.add(id); }
+/* A long press starts the marking (v354, H's screenshot of the cramped chip row: "Der card selection mode sieht kaese aus.
+   Ist zu eng. Wie waer's mit longpress auf karte enters selection mode?"): the Select button is gone from the Cards chip row
+   and from the inbox head — press and hold a card or a photo for half a second instead, and it is marked. A press that
+   turns into a scroll or a drag cancels; the click that follows the press is not a tap (LP_AT), so the row does not toggle
+   itself off again. */
+const LP_MS=500, LP_MOVE=10, LP_EAT=250;
+function longPress(el,fn){
+  let tm=null,px=0,py=0;
+  const stop=()=>{ if(tm) clearTimeout(tm); tm=null; };
+  el.addEventListener("pointerdown",e=>{ if(e.button) return; px=e.clientX; py=e.clientY; stop();
+    tm=setTimeout(()=>{ tm=null;
+      const eat=ev=>{ ev.stopPropagation(); ev.preventDefault(); }; /* the click that ends the press is not a tap — it would toggle the row straight off again */
+      document.addEventListener("click",eat,true); setTimeout(()=>document.removeEventListener("click",eat,true),LP_EAT);
+      try{ navigator.vibrate&&navigator.vibrate(12); }catch(_){}
+      fn(); },LP_MS); });
+  el.addEventListener("pointermove",e=>{ if(tm&&Math.hypot(e.clientX-px,e.clientY-py)>LP_MOVE) stop(); });
+  ["pointerup","pointercancel","pointerleave"].forEach(k=>el.addEventListener(k,stop));
+}
 function pickBar(onDelete){
   let el=$("#pickbar");
   if(!PICK){ if(el) el.remove(); return; }
@@ -2093,6 +2116,7 @@ function pickBar(onDelete){
   el.querySelector("#pick-done").textContent=t("Done");
   const n=PICK.set.size, del=el.querySelector("#pick-del");
   del.textContent=t("Delete {0}",n); del.disabled=!n; del.onclick=onDelete;
+  const pn=$("#pick-n"); if(pn) pn.textContent=t("{0} selected",n); /* the line that replaces the chips (v354) */
 }
 function pickAllBtn(ids,redraw){ /* All marks everything the screen shows, None clears it */
   const b=$("#pick-all"); if(!b||!PICK) return;
@@ -4260,7 +4284,7 @@ function renderShots(){
   const pending=PENDING_SHOT?`<div class="shot pending"><div class="badge">${t("Processing photo …")}</div></div>`:"";
   if(!S.inbox.length){ if(PICK) endPick(); box.innerHTML=pending||`<div class="badge" style="margin-top:18px">${t("No photos yet.")}</div>`; return; }
   if(marking("shots")){ /* the photo picker (v351): the photos alone with a tick — no frame, no reading box, no result card */
-    box.innerHTML=`<div class="listhead pickhead"><span>${t("Inbox ({0})",S.inbox.length)}</span><button class="del" id="pick-all"></button></div>`+
+    box.innerHTML=`<div class="listhead pickhead"><span class="badge" id="pick-n">${t("{0} selected",PICK.set.size)}</span><button class="del" id="pick-all"></button></div>`+
       S.inbox.map(s=>`<div class="shot pick${PICK.set.has(s.id)?" on":""}" data-pickshot="${s.id}">
         <div class="shotwrap"><img src="${shotURL(s)}" alt="photo"><span class="tick" aria-hidden="true"></span></div>
         <div class="meta"><span class="ts">${new Date(s.ts).toLocaleString(LANG_LOCALE[LANG])}</span></div></div>`).join("");
@@ -4269,7 +4293,7 @@ function renderShots(){
     return;
   }
   const busy=!!CROP||S.inbox.some(s=>PENDING[s.id]); /* no marking while a frame stands or a photo is being read (v351) */
-  box.innerHTML=`<div class="listhead pickhead"><span>${t("Inbox ({0})",S.inbox.length)}</span>${busy||S.inbox.length<2?"":`<button class="del" id="pick-start">${t("Select")}</button>`}</div>`+pending+
+  box.innerHTML=`<div class="listhead">${t("Inbox ({0})",S.inbox.length)}</div>`+pending+
     S.inbox.map(s=>{
       const dt=new Date(s.ts).toLocaleString(LANG_LOCALE[LANG]);
       const cropping=CROP && CROP.id===s.id, shown=!!(cropping&&CROP.rect&&!CROP.hidden), zoomed=!!(shown&&CROP.zoom);
@@ -4278,7 +4302,7 @@ function renderShots(){
         <div class="detailacts"><button class="btn" data-resedit="${s.id}">${t("Edit")}</button><button class="btn danger" data-resdel="${s.id}">${t("Delete card")}</button></div>
         <div class="ocr" id="ocr-${s.id}">${qsAiBox(s.id)}</div>
       </div>`;
-      return `<div class="shot">
+      return `<div class="shot"${!busy&&!AUTO[s.id]&&S.inbox.length>1?` data-lp="${s.id}"`:""}>
         <div class="shotwrap">
           ${zoomed?`<div class="shotzoom" style="${zoomStyle(s)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(s)}" alt="photo">`}${working?`<div class="scan" aria-hidden="true"></div>`:""}
           ${cropping?`<div class="croplayer${shown?" framed":""}${zoomed?" zoomed":""}" data-id="${s.id}">${zoomed?"":`<div class="croprect${READING[s.id]&&!READ_FAIL.test(READING[s.id])?" working":""}"${cropRectStyle()}>${READING[s.id]&&!READ_FAIL.test(READING[s.id])?`<div class="work" aria-hidden="true"><svg><rect/></svg></div>`:""}<div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="${t("Turn the frame")}"></div></div>`}</div>`:""}
@@ -4292,7 +4316,7 @@ function renderShots(){
           :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
     }).join("");
-  { const ps=$("#pick-start"); if(ps) ps.onclick=()=>{ PICK={kind:"shots",set:new Set()}; renderShots(); }; } /* marking many photos (v351) */
+  box.querySelectorAll("[data-lp]").forEach(el=> longPress(el,()=>{ PICK={kind:"shots",set:new Set([el.dataset.lp])}; renderShots(); })); /* press and hold a photo to start marking (v354) */
   box.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>delShot(b.dataset.del,true));
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
   box.onclick=e=>{ const b=e.target.closest("[data-savenow]"); if(b){ b.disabled=true; saveNow(b.dataset.savenow); } }; /* the button is inside the reading box, which every status re-renders (v237) */
