@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=338; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=339; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -441,11 +441,14 @@ function frontWidth(){
 /* A photo line too long for the box goes on two (or more) lines instead of past the card (v152, H's 16-character
    escalator sign: "statt überlaufende Zeile bitte zweizeilig"): while the fitted font would fall under minFs, the longest
    line is cut nearest its middle, between words where the card knows them (words[k] = the words of line k) */
+/* a line's width in character widths: a Chinese character 1, a digit or a Latin letter 0.6, a space 0.35 (v339, H's 绿皮书 card: the
+   line 3月1日 全国上映 ran past the box — glyphs() counted its six characters and not the digits and the space) */
+function lineUnits(s){ let u=0; for(const ch of String(s)){ u+=CJK.test(ch)?1:ch===" "?0.35:/[0-9A-Za-z%.]/.test(ch)?0.6:0.5; } return u; }
 function fitLines(lines,words,W,cap,minFs){
   lines=lines.slice(); words=(words||[]).slice();
-  const fsOf=()=>Math.min(cap,Math.floor((W-28)/Math.max(1,...lines.map(glyphs))));
+  const fsOf=()=>Math.min(cap,Math.floor((W-28)/Math.max(1,...lines.map(lineUnits))));
   for(let guard=0;guard<6&&fsOf()<minFs;guard++){
-    let k=0; lines.forEach((l,i)=>{ if(glyphs(l)>glyphs(lines[k])) k=i; });
+    let k=0; lines.forEach((l,i)=>{ if(lineUnits(l)>lineUnits(lines[k])) k=i; });
     const cs=[...lines[k]]; if(cs.length<4) break;
     const mid=cs.length/2; let cut=Math.round(mid);
     const ws=words[k]; if(ws&&ws.length>1){ let pos=0, best=null; for(const w of ws.slice(0,-1)){ pos+=[...w].length; if(best===null||Math.abs(pos-mid)<Math.abs(best-mid)) best=pos; } if(best&&Math.abs(best-mid)<=mid*0.5) cut=best; }
