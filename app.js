@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=343; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=344; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -4197,7 +4197,7 @@ function renderShots(){
       const cropping=CROP && CROP.id===s.id, shown=!!(cropping&&CROP.rect&&!CROP.hidden), zoomed=!!(shown&&CROP.zoom);
       const working=!!(AUTO[s.id]&&PENDING[s.id]&&READING[s.id]&&!READ_FAIL.test(READING[s.id])), result=!cropping&&AUTO[s.id]&&!PENDING[s.id]&&QSCARD[s.id]?cardOf(QSCARD[s.id]):null; /* the card made by itself (v325): the shimmer while it reads, the finished card after */
       if(result&&result.c) return `<div class="shot">${resultHTML(result)}
-        <div class="meta"><span class="ts">${dt}</span><span class="acts"><button class="ocr-btn" data-resedit="${s.id}">${t("Edit")}</button><button class="del" data-resdel="${s.id}">${t("Delete card")}</button></span></div>
+        <div class="detailacts"><button class="btn" data-resedit="${s.id}">${t("Edit")}</button><button class="btn danger" data-resdel="${s.id}">${t("Delete card")}</button></div>
         <div class="ocr" id="ocr-${s.id}">${qsAiBox(s.id)}</div>
       </div>`;
       return `<div class="shot">
