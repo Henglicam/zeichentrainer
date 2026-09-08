@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=352; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=353; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -312,7 +312,9 @@ function wireChrome(){
       endPick();                                            /* … and any marking (v351) */
       if(CROP&&RECROP[CROP.id]) RECROP[CROP.id].end();      /* … and its Crop again (v239) */
       if(m==="cards" && (S.mode==="cards"||S.mode==="add")) S.detail=null; /* Cards again → back to the list */
-      S.mode=m; render(); }; /* the Camera tab opens the inbox page with Take photo and From album — a tab that fired the camera at once (v184) went in v186, H: "I don't like the direct capture, revert" */
+      S.mode=m; render();
+      if(m==="inbox") window.scrollTo(0,0); /* the Camera tab always opens at the top, so Take photo is under the thumb (v353) */
+    }; /* the Camera tab opens the inbox page with Take photo and From album — a tab that fired the camera at once (v184) went in v186, H: "I don't like the direct capture, revert" */
   });
   $("#cam").onchange=onPhoto; $("#album").onchange=onPhoto; /* camera, or photos already on the phone */
   for(const id of ["#cam","#album"]){ $(id).addEventListener("change",()=>{ PICKING=0; }); $(id).addEventListener("cancel",()=>{ PICKING=0; }); } /* the pick is over, with a photo or without (v316) */
