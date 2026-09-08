@@ -1,4 +1,4 @@
-const CACHE = "zt-v334";
+const CACHE = "zt-v335";
 /* OCR assets (./vendor/, ~12 MB) live in their own cache that survives shell
    updates — otherwise every cache version bump would re-download all of
    Tesseract. Only bump this when vendor files change. */
@@ -35,6 +35,7 @@ const typeOf = path => TYPES[path.split(".").pop()] || "application/octet-stream
 self.addEventListener("message", e => {
   const d = e.data || {};
   if (d.type === "mirror" && d.mirror) MIRROR = d.mirror;
+  if (d.type === "claim") e.waitUntil(self.clients.claim()); /* a page the worker does not control asks to be taken over (v335) */
   if (d.type === "mirror-update" && d.mirror) { MIRROR = d.mirror; e.waitUntil(mirrorUpdate(d.mirror, e.source, +d.local || 0)); }
   /* the page found its script and its label at different versions (a mixed shell): refill from the server, then it reloads */
   if (d.type === "refresh") e.waitUntil(fillShell()

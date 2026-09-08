@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=334; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=335; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -147,7 +147,7 @@ window.addEventListener("unhandledrejection",e=>{ const r=e.reason; logErr("prom
 function diagText(){
   const ago=t=>{ const d=Math.round((Date.now()-t)/1000); return d<60?d+" s ago":d<3600?Math.round(d/60)+" min ago":Math.round(d/3600)+" h ago"; };
   const out=[`Zeichentrainer diagnostics — ${new Date().toLocaleString("en-GB")}`,
-    `page ${pageVersion()||"?"} · script ${APP_V} · online ${navigator.onLine} · AI ${aiOn()?aiProvider()+(aiLive()?" live":" off")+(textProvider()!==aiProvider()?` (text ${textProvider()})`:""):"none"} · SW ${navigator.serviceWorker&&navigator.serviceWorker.controller?"yes":"no"}`,
+    `page ${pageVersion()||"?"} · script ${APP_V} · online ${navigator.onLine} · AI ${aiOn()?aiProvider()+(aiLive()?" live":" off")+(textProvider()!==aiProvider()?` (text ${textProvider()})`:""):"none"} · SW ${swControls()?"yes":"no"+(SW_REG?` (registration ${SW_REG})`:"")}${VENDOR.base?` · reader files from ${VENDOR.base===originVendor()?"github.io":"the mirror"}`:""}`,
     navigator.userAgent, `voices (${voiceList().length}): ${voiceList().join("; ")||"none reported"}`, ""];
   out.push(`Last reading (${READLOG.length} steps):`);
   READLOG.forEach(x=>out.push(`  ${ago(x.t)}  ${x.text}`));
@@ -2006,7 +2006,53 @@ async function undoDelete(){
 
 /* ---------- OCR (Tesseract.js + pinyin-pro + CC-CEDICT, fully local from ./vendor — no CDN) ---------- */
 let _ocrWorker=null, _ocrLoading=null;
-function loadScript(src){
+/* The reader's files when no worker controls the page (v335, H's phone with "SW no" and no VPN: "Now he really loads forever!"
+   — the page fetched every reader file straight from github.io, which answers with nothing behind the wall, and Tesseract's
+   load never settled). The worker's origin-then-mirror rule (v189) is the worker's; a page without one asks github.io once for a
+   small file with ORIGIN_WAIT, takes the mirror for every reader file when it is silent, serves what it fetched before from the
+   reader's cache and puts new files there for the worker to serve later, and hands Tesseract the worker and the core as blob
+   URLs; the language file is fetched by Tesseract itself from the base that answered (this build's initialize step cannot take
+   the data directly). Every file is read chunk by chunk, so a load that moves no byte for READER_STALL fails the reading
+   instead of standing for good. */
+const VENDOR={base:null,probe:null,paths:null,note:""}, ORIGIN_WAIT=6000; let READER_STALL=90000; /* a let, so the harness shortens it */
+const VENDOR_TYPES={js:"text/javascript; charset=utf-8",wasm:"application/wasm",gz:"application/gzip",txt:"text/plain; charset=utf-8"};
+const vendorType=name=>VENDOR_TYPES[name.split(".").pop()]||"application/octet-stream";
+const originVendor=()=>new URL("./vendor/",location.href).href;
+const swControls=()=>!!(navigator.serviceWorker&&navigator.serviceWorker.controller);
+function fetchWithin(url,ms,opts){ const ac=new AbortController(), tm=setTimeout(()=>ac.abort(),ms); return fetch(url,{...opts,signal:ac.signal}).finally(()=>clearTimeout(tm)); }
+async function vendorBase(){
+  if(swControls()) return originVendor(); /* the worker decides between the origin and the mirror (v189) */
+  if(VENDOR.base) return VENDOR.base;
+  if(!VENDOR.probe) VENDOR.probe=(async()=>{
+    let ok=false; try{ const r=await fetchWithin(originVendor()+"t2s.txt",ORIGIN_WAIT,{cache:"no-store"}); ok=r.ok; }catch(e){}
+    VENDOR.base=ok?originVendor():mirrorURL()+"vendor/";
+    if(!ok){ VENDOR.note="no worker controls the page and github.io did not answer within "+Math.round(ORIGIN_WAIT/1000)+" s — the reader's files come from the mirror"; logErr("vendor",VENDOR.note); }
+    return VENDOR.base;
+  })().catch(err=>{ VENDOR.probe=null; throw err; });
+  return VENDOR.probe;
+}
+/* a reader file for the page's own use: through the worker when it controls the page, else the reader's cache, then the base
+   the probe chose; a file fetched past the worker is put into the cache under its own address, so the worker serves it later */
+async function vendorFetch(name){
+  const url=originVendor()+name; let r=null, put=false;
+  if(swControls()) r=await fetch(url);
+  else{
+    try{ r=await caches.match(url); }catch(e){}
+    if(!r){ const base=await vendorBase(); r=await fetch(base+name,{cache:"no-store"}); put=true; }
+  }
+  if(!r.ok) throw new Error(name+" not available ("+r.status+")");
+  const chunks=[], rd=r.body&&r.body.getReader();
+  if(rd){ for(;;){ const {done,value}=await rd.read(); if(done) break; chunks.push(value); readerTick(); } } else chunks.push(await r.arrayBuffer());
+  const res=new Response(new Blob(chunks),{headers:{"Content-Type":r.headers.get("Content-Type")||vendorType(name)}});
+  if(put){ try{ const c=await caches.open("zt-ocr-v1"); await c.put(new Request(url),res.clone()); }catch(e){} }
+  return res;
+}
+/* a load that moves no byte and reports no step for READER_STALL is a stalled connection, not a slow one */
+const STALL=new Set(); function readerTick(){ for(const f of STALL) f(); }
+function withStall(p,ms,what){ return new Promise((res,rej)=>{ let tm; const arm=()=>{ clearTimeout(tm); tm=setTimeout(()=>{ STALL.delete(arm); rej(new Error(what)); },ms); }; STALL.add(arm); arm(); p.then(v=>{ clearTimeout(tm); STALL.delete(arm); res(v); },e=>{ clearTimeout(tm); STALL.delete(arm); rej(e); }); }); }
+const STALL_TEXT=()=>"the reader did not load within "+Math.round(READER_STALL/1000)+" s — no answer from github.io or the mirror";
+async function loadScript(src){
+  if(src.startsWith("./vendor/")){ const r=await vendorFetch(src.slice(9)); src=URL.createObjectURL(await r.blob()); } /* v335: through vendorFetch, so the mirror and the stall rule hold for scripts too */
   return new Promise((res,rej)=>{
     const s=document.createElement("script");
     s.src=src; s.onload=res; s.onerror=()=>rej(new Error("script failed to load"));
@@ -2020,7 +2066,7 @@ function loadDict(){
   if(!_dictLoading){
     _dictLoading=(async()=>{
       const url=new URL("./vendor/cedict.tsv.gz",location.href).href;
-      let r=await fetch(url);
+      let r=await vendorFetch("cedict.tsv.gz").catch(err=>{ if(!swControls()) throw err; return {ok:false,status:err.message}; });
       if(!r.ok){
         /* heal a poisoned cache entry (e.g. a 404 cached before the file was deployed) */
         try{ const c=await caches.open("zt-ocr-v1"); await c.delete(url); }catch(e){}
@@ -2048,8 +2094,7 @@ async function ocrWorker(status){
   if(!_ocrLoading){
     _ocrLoading=(async()=>{
       status("Loading the reader … (one-time ~12 MB, works offline afterwards)");
-      if(!window.Tesseract) await loadScript("./vendor/tesseract.min.js");
-      if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
+      await withStall((async()=>{ if(!window.Tesseract) await loadScript("./vendor/tesseract.min.js"); if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); })(),READER_STALL,STALL_TEXT());
       await loadDict().catch(()=>{}); /* meanings are optional — OCR works without */
       /* paths derived from the page URL at runtime — stays relative to the subpath */
       const w=await makeWorker("chi_sim");
@@ -2078,15 +2123,23 @@ async function runPasses(jobs,status){
   await Promise.all(pool.map(async w=>{ while(i<jobs.length){ const j=i++; out[j]=await jobs[j](w); } }));
   return out;
 }
+/* the worker's, the core's and the language files' addresses: the origin's while the worker controls the page; else the
+   worker and the core as blob URLs from vendorFetch (the core's must end in "js" for Tesseract, hence the fragment) and the
+   language files from the base the probe chose (v335) */
+function tessPaths(){
+  if(swControls()){ const base=originVendor(); return Promise.resolve({workerPath:base+"worker.min.js",corePath:base+"tesseract-core-simd-lstm.wasm.js",langPath:base.replace(/\/$/,"")}); }
+  if(!VENDOR.paths) VENDOR.paths=(async()=>{
+    const [w,c]=await Promise.all([vendorFetch("worker.min.js"),vendorFetch("tesseract-core-simd-lstm.wasm.js")]), base=await vendorBase();
+    return {workerPath:URL.createObjectURL(await w.blob()),corePath:URL.createObjectURL(await c.blob())+"#core.js",langPath:base.replace(/\/$/,"")};
+  })().catch(err=>{ VENDOR.paths=null; throw err; });
+  return VENDOR.paths;
+}
 function makeWorker(lang){
-  const base=new URL("./vendor/",location.href).href;
-  return Tesseract.createWorker(lang,1,{
-    workerPath:base+"worker.min.js",
-    corePath:base+"tesseract-core-simd-lstm.wasm.js",
-    langPath:base.replace(/\/$/,""),
+  return withStall(tessPaths().then(paths=>Tesseract.createWorker(lang,1,{
+    ...paths,
     cacheMethod:"none", /* SW cache covers offline; tesseract's IndexedDB cache is a known corruption source */
-    logger:m=>{ if(m.status==="recognizing text"&&_ocrLog) _ocrLog(Math.round(m.progress*100)); } /* one job at a time, whichever worker: the running job's handler */
-  });
+    logger:m=>{ readerTick(); if(m.status==="recognizing text"&&_ocrLog) _ocrLog(Math.round(m.progress*100)); } /* one job at a time, whichever worker: the running job's handler */
+  })),READER_STALL,STALL_TEXT());
 }
 /* The traditional-character reader (v96, H's Yakult bottle: 養樂多 is a traditional logo, and the simplified model can only
    answer with the nearest simplified shapes — 养兴多, 和准浴多; chi_tra reads 義樂多). Loaded on first need, its lines are
@@ -2099,7 +2152,7 @@ function loadScriptTables(){
   if(T2S&&S2T) return Promise.resolve();
   if(!_tablesLoading) _tablesLoading=(async()=>{
     const mk=txt=>{ const m=new Map(); for(const line of txt.split("\n")){ const cs=[...line]; if(cs.length>=2) m.set(cs[0],cs[1]); } return m; };
-    const [a,b]=await Promise.all([fetch("./vendor/t2s.txt").then(r=>r.text()),fetch("./vendor/s2t.txt").then(r=>r.text())]);
+    const [a,b]=await Promise.all([vendorFetch("t2s.txt").then(r=>r.text()),vendorFetch("s2t.txt").then(r=>r.text())]);
     T2S=mk(a); S2T=mk(b);
   })().catch(err=>{ _tablesLoading=null; throw err; });
   return _tablesLoading;
@@ -3312,7 +3365,7 @@ async function cropSign(id,opts){
     if(aiAutoOn()&&!(pic&&pic.bad)&&!RECROP[id]) signAskAI(id); /* every reading is checked without a tap (the Edit form asks through its own button, v239) */
     if(PENDING[id]) finishPending(id);
     if(RECROP[id]) RECROP[id].onRead(SIGN[id]);
-  }catch(err){ if(stale()) return; status("Reading failed: "+(err&&err.message||err)); done(); logErr("read",err&&(err.stack||err.message)||err); if(PENDING[id]) failPending(id,"the reading failed"); }
+  }catch(err){ if(stale()) return; status("Reading failed: "+(err&&err.message||err)); done(); logErr("read",err&&(err.stack||err.message)||err); if(PENDING[id]) failPending(id,"the reading failed",String(err&&err.message||err)); }
 }
 /* ---------- a card saved before its reading is done (v237, H: "take a photo and make a crop in a rush, hit Save and move on;
    the app will finish everything in the background") ----------
@@ -3370,10 +3423,10 @@ async function finishPending(id){
   S.queue=buildQueue(false); aiAutoSoon(); setStats();
   if(S.mode==="cards"&&!S.editing) render(); else renderShots(); /* the list or the detail shows the filled card at once */
 }
-async function failPending(id,why){
+async function failPending(id,why,msg){
   const ph=pendingCard(id); delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; if(!ph||!ph.reading) return;
   dropExtraShot(id);
-  if(ph.reading.auto&&!ph.c){ await dropAuto(id,ph.id); delete READING[id]; QSNOTE[id]=t("Nothing could be read. Tap Crop to frame the text by hand."); if(S.mode==="cards"&&!S.editing) render(); else renderShots(); return; } /* a card made by itself with nothing to show is no card (v325): the photo stays with Crop */
+  if(ph.reading.auto&&!ph.c){ await dropAuto(id,ph.id); delete READING[id]; QSNOTE[id]=/^the reader did not load/.test(msg||"")?failText("Reading failed: "+msg):t("Nothing could be read. Tap Crop to frame the text by hand."); /* a reader that never loaded is not a photo without text (v335) */ if(S.mode==="cards"&&!S.editing) render(); else renderShots(); return; } /* a card made by itself with nothing to show is no card (v325): the photo stays with Crop */
   if(ph.c) delete ph.reading; else ph.reading.failed=why; /* a card framed again in the Edit form keeps its text and forgets the frame (v241, v243); an empty card keeps the failure for "Nothing read yet" */
   ph.flag=true; ph.flagNote=ph.c?t("the new frame could not be read — the old text stays"):t("the reading failed — edit the card or frame the photo again");
   try{ await idbPut("custom",ph); }catch(e){}
@@ -3653,7 +3706,7 @@ function loadStrokes(){
   if(STROKES) return Promise.resolve(STROKES);
   if(!_strokesLoading) _strokesLoading=(async()=>{
     const url=new URL("./vendor/strokes.txt.gz",location.href).href;
-    let r=await fetch(url);
+    let r=await vendorFetch("strokes.txt.gz").catch(err=>{ if(!swControls()) throw err; return {ok:false,status:err.message}; });
     if(!r.ok){ try{ const c=await caches.open("zt-ocr-v1"); await c.delete(url); }catch(e){} r=await fetch(url,{cache:"reload"}); if(!r.ok) throw new Error("stroke data not available ("+r.status+")"); }
     const buf=new Uint8Array(await r.arrayBuffer());
     const text=(buf[0]===0x1f&&buf[1]===0x8b)?await new Response(new Response(buf).body.pipeThrough(new DecompressionStream("gzip"))).text():new TextDecoder().decode(buf);
@@ -4241,15 +4294,20 @@ async function resetAll(){
 }
 
 /* ---------- Service worker & persistent storage ---------- */
+let SW_REG=""; /* the registration's state for Diagnostics (v335): a page with "SW no" says whether a worker is there at all */
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
     navigator.serviceWorker.register("./sw.js").then(reg=>{
+      SW_REG=reg.active?"active":reg.waiting?"waiting":reg.installing?"installing":"none";
       reg.update();
       /* installed PWAs rarely check for updates on their own — check when brought to foreground */
       document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ reg.update().catch(()=>{}); mirrorCheck(); } });
       setInterval(()=>{ if(!document.hidden){ reg.update().catch(()=>{}); mirrorCheck(); } },MIRROR_EVERY); /* and while the app stays open (v327) */
       mirrorCheck(); tellMirror(); shellCheck();
-    }).catch(()=>{});
+    }).catch(err=>{ SW_REG="failed: "+String(err&&err.message||err); });
+    /* a page the worker does not control while a worker is active (v335, H's phone: Diagnostics "SW no", the reader's files
+       fetched straight from github.io): the worker takes it over now, no reload — ready resolves once an active worker is there */
+    navigator.serviceWorker.ready.then(reg=>{ SW_REG="active"; if(!navigator.serviceWorker.controller&&reg.active) reg.active.postMessage({type:"claim"}); }).catch(()=>{});
     takeShared(); /* photos shared to the app (v163) — after boot, S.inbox is loaded by then */
     navigator.serviceWorker.addEventListener("message",e=>{
       const d=e.data||{};
@@ -4263,7 +4321,7 @@ if("serviceWorker" in navigator){
        First install (no controller before) does not trigger a reload. */
     let hadCtrl=!!navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener("controllerchange",()=>{
-      if(!hadCtrl){ hadCtrl=true; shellCheck(); return; } /* first install: no reload, but the shell check can run now */
+      if(!hadCtrl){ hadCtrl=true; tellMirror(); shellCheck(); return; } /* first install, or the claim of v335: no reload, but the worker needs the mirror and the shell check can run now */
       reloadSoon();
     });
   });
@@ -4337,7 +4395,7 @@ async function renderOcrRow(){
   btn.onclick=async()=>{
     btn.disabled=true; let done=0;
     for(const f of OCR_FILES){ st.textContent=`Downloading ${f} (${done+1} of ${OCR_FILES.length}) …`;
-      try{ const r=await fetch("./vendor/"+f); if(!r.ok) throw new Error(r.status); await r.blob(); done++; }
+      try{ const r=await vendorFetch(f); if(!r.ok) throw new Error(r.status); await r.blob(); done++; }
       catch(e){ st.textContent="Download failed at "+f+": no connection to github.io or the mirror."; btn.disabled=false; return; } }
     renderOcrRow();
   };
