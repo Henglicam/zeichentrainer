@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=344; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=345; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1450,7 +1450,7 @@ function backHTML(d){
 const sameText=d=>deck().filter(x=>x.id!==d.id&&d.c&&x.c===d.c).sort((a,b)=>(b.at||0)-(a.at||0));
 function linkedHTML(d){
   const others=sameText(d); if(!others.length) return "";
-  return `<div class="linked"><div class="lbl">${others.length===1?t("Also on another photo"):t("Also on {0} other photos",others.length)}</div><div class="thumbs">${others.map(x=>`<button class="lnk${S.mode==="study"&&S.peek===x.id?" on":""}" data-link="${esc(x.id)}" aria-label="${S.mode==="study"?t("Show this photo"):t("Open this card")}">${x.img||fullPhoto(x)?`<img src="${thumbURL(x)}" alt="">`:`<span class="glyph hanzi">${esc([...x.c][0])}</span>`}</button>`).join("")}</div></div>`;
+  return `<div class="linked"><div class="lbl">${others.length===1?t("Also on another photo"):t("Also on {0} other photos",others.length)}</div><div class="thumbs">${others.map(x=>`<button class="lnk${S.mode==="study"&&S.peek===x.id?" on":""}" data-link="${esc(x.id)}" aria-label="${S.mode==="study"?t("Show this photo"):t("Open this card")}">${x.img||fullPhoto(x)?`<img class="thumbbg" src="${thumbURL(x)}" alt="" aria-hidden="true"><img class="thumb" src="${thumbURL(x)}" alt="">`:`<span class="glyph hanzi">${esc([...x.c][0])}</span>`}</button>`).join("")}</div></div>`;
 }
 function wireLinks(root){ (root||document).querySelectorAll("[data-link]").forEach(b=> b.onclick=()=>{
   /* in Learn the tap shows that photo on the card in place, a second tap returns — the session goes on (v155, H: "I'm
