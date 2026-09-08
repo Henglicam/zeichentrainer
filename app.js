@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=336; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=337; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1335,6 +1335,15 @@ function cleanSense(m){ return String(m||"").replace(/\(Taiwan pr\.[^)]*\)/g,"")
 /* the words of the card as buttons on the back — tap one for its pinyin and meaning; a word of
    several characters then offers its characters too. Replaces the old word/gloss tables (H: redundant). */
 const NUM_PART=/^[0-9]+(?:\.[0-9]+)?[a-zA-Z%]{0,3}$/; /* a number as lineMeaning cuts it, with its Latin unit (24H, 380ml, 20%) */
+/* what a number with a Latin unit means (v337, H on the 24H part: "24H is not only a number, it means 24 hours"): the unit's
+   word in the app's language after the number — 24 hours, 380 millilitres, 20 percent; a bare number or an unknown unit
+   reads as it is */
+const LATIN_UNITS={h:["hour","hours"],hr:["hour","hours"],hrs:["hour","hours"],min:["minute","minutes"],s:["second","seconds"],sec:["second","seconds"],ml:["millilitre","millilitres"],l:["litre","litres"],g:["gram","grams"],mg:["milligram","milligrams"],kg:["kilogram","kilograms"],km:["kilometre","kilometres"],m:["metre","metres"],cm:["centimetre","centimetres"],mm:["millimetre","millimetres"],"%":["percent","percent"],kcal:["kilocalorie","kilocalories"],w:["watt","watts"],kw:["kilowatt","kilowatts"],v:["volt","volts"],mah:["milliampere-hour","milliampere-hours"]};
+function latinUnitMeaning(w){
+  const m=w.match(/^([0-9]+(?:\.[0-9]+)?)([a-zA-Z%]*)$/); if(!m) return "";
+  const u=LATIN_UNITS[m[2].toLowerCase()]; if(!u) return "";
+  return m[1]+" "+t(+m[1]===1?u[0]:u[1]);
+}
 const cardGloss=d=>mergeUnits(d.gloss||[]); /* the stored gloss with a number and its unit as one part (v309; cards from before carry them apart) */
 function cardParts(d){
   let words=d.gloss&&d.gloss.length?cardGloss(d).map(g=>g.w):(d.kind==="sign"?(d.segs||[]).flat():(d.seg||[]).filter(x=>x!=="\n"));
@@ -1364,7 +1373,7 @@ async function charInfo(w,btn,d){
     const m=cleanSense((known&&known.m)||bestSense(w)||((DICT&&DICT.get(w))||""));
     const chars=[...w].filter(ch=>CJK.test(ch));
     const sub=chars.length>1||(known&&known.unit)?`<div class="chars sub">${chars.map(ch=>`<button class="ch" data-sub="${ch}">${ch}</button>`).join("")}</div>`:"";
-    box.innerHTML=NUM_PART.test(w)?`<div class="chline"><span class="hanzi">${esc(w)}</span><span>${esc(t("A number, read as it is."))}</span></div>`
+    box.innerHTML=NUM_PART.test(w)?`<div class="chline"><span class="hanzi">${esc(w)}</span><span>${esc(latinUnitMeaning(w)||t("A number, read as it is."))}</span></div>`
       :`<div class="chline"><span class="hanzi">${esc(w)}</span><span class="mono">${esc(py)}</span><span>${esc(m||t("not in the dictionary"))}</span></div>${sub}`; /* a number part shows itself once, not as its own pinyin and meaning (v336) */
     box.querySelectorAll("[data-sub]").forEach(b=> b.onclick=async e=>{ e.stopPropagation(); const ch=b.dataset.sub;
       box.querySelectorAll(".sub .ch").forEach(x=>x.classList.toggle("on",x===b));
