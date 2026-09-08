@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=325; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=326; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3087,7 +3087,7 @@ function snapBox(bmp,box,n,lens){ /* lens: the answer's lines' character counts 
   trim(); if(!taken.length) return null;
   /* a line just beyond the taken ones (v324, H's Nongfu Spring label at v323: Qwen read 农夫山泉 and 饮用天然水 净含量380ml, but its box for the second line sat where NONGFU SPRING is, so the snap ended at the Latin line and the frame cut the Chinese line in half — "only translate what is also shown in the thumbnail and in the learning card"): when the AI read two lines or more, the strip of 1.2 text heights below the union (and above it) is cut by its own Otsu, and a band of the text's colour that starts within half a text height of the union, is at least a third of the tallest taken blob and at most 1.2 text heights tall, holds strokes (two ink runs per row at least, under 0.85 filled), spans at least 0.4 of the union's width and does not run into the strip's far edge is a candidate — handed back as `beyond`, in the bitmap's pixels, for the reader to confirm (cropSign): the pixels alone took the faces under 邪不压正 and a band above 业主直租 for lines */
   const beyond=[];
-  if(n>=2) for(const side of [1,-1]){
+  for(const side of [1,-1]){ /* every answer since v326 (H's street sign 北 金汇路 南: Qwen's one-line box sat a tenth too low, the Chinese line lay mostly outside it, the snap kept the pinyin line under it and the card showed N JINHUI LU S with the characters' feet — until v325 only a two-line answer was looked around) */
     const U0={x0:Math.min(...taken.map(c=>c.x0)),y0:Math.min(...taken.map(c=>c.y0)),x1:Math.max(...taken.map(c=>c.x1)),y1:Math.max(...taken.map(c=>c.y1))}, Hl=Math.max(...taken.map(c=>c.y1-c.y0)), reach=Math.round(1.2*Hb);
     const sy0=side>0?U0.y1:Math.max(0,U0.y0-reach), sy1=side>0?Math.min(Hh,U0.y1+reach):U0.y0, sx0=Math.max(0,Math.round(U0.x0-0.5*Hb)), sx1=Math.min(W,Math.round(U0.x1+0.5*Hb)), sw=sx1-sx0, sh=sy1-sy0;
     if(sh<8||sw<8) continue;
@@ -3101,7 +3101,7 @@ function snapBox(bmp,box,n,lens){ /* lens: the answer's lines' character counts 
     let px=0, runs=0, cnt=0, mn=sw, mx=-1; for(let y=y0;y<y1;y++){ const r=rows[y]; px+=r.px; if(r.px){ runs+=r.runs; cnt++; if(r.mn<mn) mn=r.mn; if(r.mx>mx) mx=r.mx; } }
     const bw=mx-mn+1;
     if(far||near>0.5*Hb||bh<0.34*Hl||bh>1.2*Hb||bw<0.4*(U0.x1-U0.x0)||!cnt||runs<1.6*cnt||px>0.85*bw*bh) continue;
-    beyond.push({x0:(sx0+mn)/k,y0:(sy0+y0)/k,x1:(sx0+mx+1)/k,y1:(sy0+y1)/k}); }
+    beyond.push({x0:(sx0+mn)/k,y0:(sy0+y0)/k,x1:(sx0+mx+1)/k,y1:(sy0+y1)/k,side,near:near/k}); } /* side: below (1) or above (-1) the union; near: the gap to it — a band that touches the union is a line the box cut through, and its cut reaches into the union (v326) */
   const U={x0:Math.min(...taken.map(c=>c.x0)),y0:Math.min(...taken.map(c=>c.y0)),x1:Math.max(...taken.map(c=>c.x1)),y1:Math.max(...taken.map(c=>c.y1))};
   if(U.x1-U.x0<0.2*(B.x1-B.x0)||U.y1-U.y0<0.2*(B.y1-B.y0)) return null; /* specks alone: the AI's box stays */
   return {x0:U.x0/k,y0:U.y0/k,x1:U.x1/k,y1:U.y1/k,beyond};
@@ -3224,7 +3224,7 @@ async function cropSign(id,opts){
           box={x0:bx0*W,y0:by0*Hh,x1:bx1*W,y1:by1*Hh}; const snap=snapBox(b,box,n,zh.map(l=>l.replace(/[\s\/／·・,，。.、()（）]/g,"").length)); /* the box's edges from the pixels (v297): an edge that cuts through the text moves out to its end, a blank margin is trimmed */
           if(snap){ const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),text:`the AI's box ${pc(bx0)}–${pc(bx1)} % across, ${pc(by0)}–${pc(by1)} % down, snapped to the ink: ${pc(snap.x0/W)}–${pc(snap.x1/W)} % across, ${pc(snap.y0/Hh)}–${pc(snap.y1/Hh)} % down`}); while(READLOG.length>40) READLOG.shift(); box=snap;
             /* a line of the answer the box left out (v324, H's Nongfu Spring label: the AI's box for 饮用天然水 净含量380ml sat on NONGFU SPRING, so the snap ended at the Latin line and the card showed the Chinese line cut in half — "only translate what is also shown in the thumbnail and in the learning card"): every band of ink the snap found just beyond the text is read by the on-device reader, and it joins the box when the reader's line is one the AI read — at least three of its characters, half of them, in one of the answer's lines; the faces under a poster's title and a Latin line read as nothing of the kind, and stay out */
-            for(const cand of snap.beyond||[]){ const bh=cand.y1-cand.y0, room=0.3*bh, sx=Math.max(0,cand.x0-room), sy=Math.max(0,cand.y0-room), sw=Math.min(W,cand.x1+room)-sx, sh=Math.min(Hh,cand.y1+room)-sy; if(sw<4||sh<4) continue;
+            for(const cand of snap.beyond||[]){ const bh=cand.y1-cand.y0, room=0.3*bh, into=cand.near<0.1*bh?0.6*bh:room, sx=Math.max(0,cand.x0-room), sy=Math.max(0,cand.y0-(cand.side>0?into:room)), sw=Math.min(W,cand.x1+room)-sx, sh=Math.min(Hh,cand.y1+(cand.side>0?room:into))-sy; if(sw<4||sh<4) continue; /* a band that touches the union is a line the box cut through: the cut reaches 0.6 band heights into the union, so the reader sees the whole characters (v326) */
               const sc=Math.min(3,Math.max(0.3,64/bh)), cv=document.createElement("canvas"); cv.width=Math.max(1,Math.round(sw*sc)); cv.height=Math.max(1,Math.round(sh*sc)); cv.getContext("2d",{alpha:false}).drawImage(b,sx,sy,sw,sh,0,0,cv.width,cv.height);
               const jpg=await new Promise(res=>cv.toBlob(res,"image/jpeg",READ_JPEG)); if(!jpg) continue; const got=await readPass(w,jpg,()=>{}); if(stale()) return;
               const chars=tx=>[...tx].filter(c=>CJK.test(c)||/[0-9]/.test(c)), hit=got.find(l=>{ const rc=chars(l.t); if(rc.length<3) return false; return zh.some(al=>{ const ac=new Set(chars(al)); const shared=rc.filter(c=>ac.has(c)).length; return shared>=3&&shared>=0.5*rc.length; }); });
