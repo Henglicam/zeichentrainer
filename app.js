@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=324; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=325; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -85,7 +85,8 @@ const S = { mode:"study", progress:{}, custom:[], inbox:[],
   peek:null, /* Learn: the id of a linked card whose photo is shown on the front instead (v155) */
   admin:false, /* the owner's rows in More unlocked for this session (v162) */
   detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterTag:null, settings:{}, single:null, saved:null,
-  editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null };
+  editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null,
+  autoCard:window.AUTO_CARD!==false, editOpenFrame:false }; /* autoCard (v325): a photo that opens by itself becomes a card without a frame or a preview; the harness sets window.AUTO_CARD=false to keep the crop-mode flow its frame suites drive */
 
 function deck(){ return S.custom; }
 /* the order of a Learn session (v153, H: "provide choices for the order in which the flash cards are shown"): due cards
@@ -1186,8 +1187,8 @@ function renderMore(main){
    the app, "Go"): one scrolling page in the app's language, six short sections, text only, offline; it describes what the app does today,
    nothing planned, and changes in the same PR as the screen it describes. More → Help → Open; ← Back returns to More. ---------- */
 const GUIDE=()=>[
-  {h:t("Take a photo"),p:[t("Camera → Take photo, or From album. The app looks for the text and draws a frame around it while it reads. Drag a corner or the inside to fit it, the round handle turns it. Let go, and the reading starts again. Tap outside the frame to see the framed part large."),
-    t("In a hurry? Save now makes the card at once, the reading finishes in the background and the card fills in.")]},
+  {h:t("Take a photo"),p:[t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card by itself — you see the finished card with Edit and Delete under it. Edit shows the photo with the frame the app used: drag a corner or the inside to fit it, the round handle turns it, let go and the reading starts again."),
+    t("Crop frames a photo by hand, with a preview before the card is saved. In a hurry there? Save now makes the card at once and the reading fills it in.")]},
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
     t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.")]},
   {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out."),
@@ -1644,7 +1645,7 @@ function renderEdit(main,c){
   const leave=newC=>{ /* back to where the edit started: study back or card detail */
     endRecrop(); delete SIGN[eid]; if(cropURL) URL.revokeObjectURL(cropURL);
     const from=S.editFrom; S.editing=null; S.editFrom=null;
-    if(from==="study"){ S.mode="study"; S.revealed=true; } else { S.mode="cards"; if(newC) S.detail=newC; }
+    if(from==="study"){ S.mode="study"; S.revealed=true; } else if(from==="camera"){ S.mode="inbox"; S.fullPic=false; } else { S.mode="cards"; if(newC) S.detail=newC; } /* from the finished card in the Camera tab (v325): back to it */
     render();
   };
   main.innerHTML=`<div class="pane">
@@ -1675,6 +1676,7 @@ function renderEdit(main,c){
     await delCustom(c); endRecrop(); delete SIGN[eid]; /* at once, with Undo (v268) */
     const from=S.editFrom; S.editing=null; S.editFrom=null;
     if(from==="study"){ S.queue=S.queue.filter(x=>x!==c); if(S.single===c) S.single=null; S.revealed=false; S.fullPic=false; S.mode="study"; }
+    else if(from==="camera"){ S.mode="inbox"; S.fullPic=false; }
     else { S.mode="cards"; S.detail=null; }
     render();
   };
@@ -1796,6 +1798,7 @@ function renderEdit(main,c){
         else { CROP.auto=true; drawRecrop(); proposeFrame(rid); } }); }
     else { CROP={id:rid,rect:null,auto:true}; drawRecrop(); proposeFrame(rid); } };
   showPimg();
+  if(S.editOpenFrame){ S.editOpenFrame=false; if(full&&!removeImg) startRecrop(); } /* Edit from the finished card (v325): the photo with the frame the card was cut with, ready to adjust */
   $("#e-save").onclick=async()=>{
     const fail=m=>{ const e=$("#e-err"); e.textContent=m; e.style.display=""; };
     let pin=$("#e-pin").value.replace(/\s+/g," ").trim(); const mean=$("#e-mean").value.replace(/\s+/g," ").trim();
@@ -2152,7 +2155,7 @@ async function findFrame(fullBlob,cropBlob){
 const abandonReading=id=>{ clearTimeout(READ_TIMER[id]); READ_RUN[id]=(READ_RUN[id]||0)+1; delete SIGN[id]; delete READING[id]; delete PLACED[id]; }; /* a running reading of this photo abandons at its next step instead of delivering a result (v117); the inbox's Cancel, the Edit form's Crop again and an edit over a pending reading share it (v243) */
 const SHOTS_EXTRA={}, RECROP={}; /* the Edit form's Crop again (v239): the card's whole photo as a photo record outside the inbox (SHOTS_EXTRA[id]={id,blob,ts}), and the form's hooks — redraw (the frame view in place of renderShots), onRead (the reading's result), onImage (Image only), end */
 const shotRec=id=>S.inbox.find(s=>s.id===id)||SHOTS_EXTRA[id]||null;
-const QSNOTE={}, QSCARD={}, READING={}; /* READING[id]: status text while the photo is being read · QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) · QSNOTE[id] = the note under the photo after saving */
+const QSNOTE={}, QSCARD={}, READING={}, AUTO={}; /* AUTO[id]: the photo became a card by itself (v325) — the row shows the shimmer while it reads and the finished card after */ /* READING[id]: status text while the photo is being read · QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) · QSNOTE[id] = the note under the photo after saving */
 /* greedy longest-match segmentation against CC-CEDICT (max word length 8) */
 function segmentChars(chars){
   const out=[]; let k=0;
@@ -2353,7 +2356,9 @@ async function proposeFrame(id){
   const hidden=!RECROP[id]; if(hidden) CROP.hidden=true; /* the inbox never shows the proposal (v288): the reader reads it now, and the frame appears on the text it finds */
   const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),pre:true,text:`frame proposed by the app${hidden?" (not shown)":""}: ${full?"the whole photo":`${pc(f.x/r.width)}–${pc((f.x+f.w)/r.width)} % across, ${pc(f.y/r.height)}–${pc((f.y+f.h)/r.height)} % down${shaped?" (16:9)":" (the text's own box, 16:9 does not fit)"}`}${reg?`, text rows ${pc(reg.y)}–${pc(reg.y1)} %`:", no text rows found"}`}); while(READLOG.length>40) READLOG.shift();
   if(hidden){
-    cropSign(id); renderShots();
+    cropSign(id);
+    if(S.autoCard){ saveNow(id,true); return; } /* the card by itself (v325): no frame, no preview — the reading fills the card, the reader's or the AI's placement becomes its frame (PLACED, v304), and the row shows the finished card */
+    renderShots();
     setTimeout(()=>{ if(!(CROP&&CROP.id===id&&CROP.hidden)) return; delete CROP.hidden; READLOG.push({t:Date.now(),text:`frame shown as proposed — the reader took longer than ${FRAME_WAIT/1000} s`}); while(READLOG.length>40) READLOG.shift(); renderShots(); },FRAME_WAIT); /* the reader is slower: the proposal becomes the frame (v289); the reader may still move it once onto the text it finds, while no finger has touched it (v310) */
     return; } /* the reading at once — no preview, no wait: there is no frame to adjust yet; cropSign's first status sets the bar's text before the render */
   renderShots(); showCropPreview(id);
@@ -2661,7 +2666,8 @@ const AI_BUSY_TEXT="Checking pinyin and meaning …";
 const failText=x=>x.startsWith("Reading failed: ")?t("Reading failed: {0}",esc(x.slice(16))):esc(t(x)); /* the failure sentence in the app's language; the step texts stay English for Diagnostics (v254) */
 const readingHTML=(x,id)=>READ_FAIL.test(x)?`<span class="badge">${failText(x)}</span>`
   :(stuck=>id&&PENDING[id]
-    ?`<div class="reading"><div class="bar"><i></i></div><span class="ok" style="margin:0">${t("Card saved — the text follows when the reading is done.")}${stuck?t(" Still at: {0}",esc(x)):""}</span></div>`
+    ?AUTO[id]?`<div class="reading"><div class="bar"><i></i></div><span class="badge">${t("Reading the text …")}${stuck?t(" still at: {0}",esc(x)):""}</span></div>` /* the card made by itself (v325): the bar alone, the shimmer is on the photo */
+    :`<div class="reading"><div class="bar"><i></i></div><span class="ok" style="margin:0">${t("Card saved — the text follows when the reading is done.")}${stuck?t(" Still at: {0}",esc(x)):""}</span></div>`
     :`<div class="reading"><div class="bar"><i></i></div><div class="readrow"><span class="badge">${id&&CROP&&CROP.id===id&&CROP.hidden?t("Finding the text …"):t("Reading the text …")}${stuck?t(" still at: {0}",esc(x)):""}</span>${id&&CROP&&CROP.id===id&&CROP.rect&&!CROP.hidden&&!RECROP[id]?`<button class="btn mini" data-savenow="${id}">${t("Save now")}</button>`:""}</div></div>`)
    (!!(id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK));
 const readingStatus=(id,run)=>x=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=x; READ_AT[id]=Date.now(); const last=READLOG[READLOG.length-1]; if(last&&/^recognizing … \d+%$/.test(last.text)&&/^recognizing … \d+%$/.test(x)) last.text=x; else READLOG.push({t:Date.now(),text:x}); while(READLOG.length>40) READLOG.shift(); saveReadLog(); /* the reader's progress overwrites its own line (v285: forty "recognizing … N%" lines had pushed every step and the proposed frame out of H's diagnostics) */
@@ -3130,7 +3136,7 @@ async function cropSign(id,opts){
     const Hink=await (async()=>{ const b=await createImageBitmap(dk.blob); try{ r.frameH=b.height; return inkHeight(b); } finally{ b.close(); } })(); r.ink=Math.round(Hink);
     let placedCut=null; /* the frame placed on the text (v288): its cut is the card image and what the AI gets */
     const placeRect=async (rect,by)=>{ const cut=await frameOnText(id,r.blob,base,rect,dk.angle||0,by); if(stale()) return; if(cut){ placedCut=cut; renderShots(); } };
-    if(CROP&&CROP.id===id&&CROP.hidden){ /* a quick look for the frame alone (v290, H: "you don't need to translate first, you just need to identify text first"): one pass on a copy of at most FIRST_MAX px — 0.3 s on H's poster where the whole frame at 1 600 px takes 1.1 s — whose confident boxes give the lines and the image their ends; the frame goes there before the reading proper starts. It is not one of the reading's passes: as the first pass it lost 爸爸 on that poster, so the reading stays as it was */
+    if((CROP&&CROP.id===id&&CROP.hidden)||(PENDING[id]&&!RECROP[id]&&READ_APP[id]&&!PLACED[id])){ /* a quick look for the frame alone (v290; also for a card made by itself, whose frame is the app's until the reader or the AI places it — v325, H: "you don't need to translate first, you just need to identify text first"): one pass on a copy of at most FIRST_MAX px — 0.3 s on H's poster where the whole frame at 1 600 px takes 1.1 s — whose confident boxes give the lines and the image their ends; the frame goes there before the reading proper starts. It is not one of the reading's passes: as the first pass it lost 爸爸 on that poster, so the reading stays as it was */
       status("looking for the text …"); const bmp=await createImageBitmap(dk.blob); const k=Math.min(1,FIRST_MAX/Math.max(bmp.width,bmp.height)); const src=k<1?await toJpeg(bmp,k):dk.blob;
       let rect=null; try{ const read=scaleBoxes(await readPass(w,src,status),k); if(stale()) return; const lines=tallLines(read,Hink), fine=read.filter(l=>!lines.includes(l)); /* fine print beside taller ink places nothing (v320) */
         const ok=textLike(lines); READLOG.push({t:Date.now(),text:`quick look: ${read.length?read.map(l=>l.t).join(" | ")+` at ${Math.round(meanCf(read))} %`:"nothing"}${fine.length?` — fine print beside taller ink, left out: ${fine.map(l=>l.t).join(" | ")}`:""}${lines.length&&!ok?" — not text, no frame from it":read.length&&!lines.length?" — nothing left to frame":""}`}); while(READLOG.length>40) READLOG.shift(); /* Diagnostics (v296) */
@@ -3141,7 +3147,7 @@ async function cropSign(id,opts){
     const passes=[{lines:await readPass(w,dk.blob,status),img:dk.blob,angle:dk.angle,tightened:false}];
     if(stale()) return;
     const place=async band=>{ /* nothing placed yet (the first pass had no usable box): the tight passes so far — after the close look's colour passes, again after the whole close look */
-      if(stale()||!(CROP&&CROP.id===id&&(CROP.hidden||(CROP.proposed&&!CROP.followed)))) return; /* the frame still the app's — hidden, or shown by the 2 s fallback and untouched (v310) */
+      if(stale()||!(PENDING[id]&&!RECROP[id]?READ_APP[id]&&!PLACED[id]:CROP&&CROP.id===id&&(CROP.hidden||(CROP.proposed&&!CROP.followed)))) return; /* the frame still the app's — hidden, or shown by the 2 s fallback and untouched (v310); a card made by itself while nothing was placed (v325) */
       const tight=passes.filter(p=>p.tightened&&p.lines.length&&!p.tra&&p.scale!=="merged").map(p=>({...p,lines:tallLines(p.lines,Hink)})).filter(p=>p.lines.length&&textLike(p.lines)); if(!tight.length||!band) return; /* without the fine print (v320) */ /* the simplified reader's tight passes as read (the traditional reader's lines are converted, the merged pass is a composite), and only those that look like text (v296) */
       await placeRect(textBandOf(tight,band)); };
     r.onTight=place;
@@ -3284,17 +3290,27 @@ async function cropSign(id,opts){
    failed reading keeps it for good. The work needs the page open: a card still waiting at the next start gets its reading
    redone then (resumePending), from the inbox photo with the frame it was saved with, from the photo copied onto the card,
    or from the crop itself. The usual flow — wait for the preview, then Save card — is unchanged. */
-async function saveNow(id){
+async function saveNow(id,auto){ /* auto (v325): the card made by itself from a photo that opened by itself — no note, the shimmer, the finished card in the row */
   if(PENDING[id]||!CROP||CROP.id!==id||!CROP.rect) return;
-  const rect={...CROP.rect}, app=!!(CROP.hidden||CROP.proposed), followed=!!CROP.followed, r=await cropBlob(id,rect); if(!r) return;
-  const card={id:"reading#"+Date.now(), c:"", p:"", m:"", t:"Custom", at:Date.now(), shot:id, lb:"photo", img:await jpegOf(r.blob), mt:{src:"gloss",verified:false,pending:true}, frame:frameOf(rect), reading:{rect,at:Date.now(),app}}; /* app: the frame was the app's own, so the reader or the AI may still tighten it while the card waits (v304) */
+  const rect={...CROP.rect}, app=!!(CROP.hidden||CROP.proposed), cid="reading#"+Date.now();
+  if(auto){ PENDING[id]=cid; AUTO[id]=true; QSCARD[id]=cid; delete QSNOTE[id]; } /* announced before the cut is made, so the quick look's placement meanwhile goes to PLACED and no frame is ever drawn (v325) */
+  const r=await cropBlob(id,rect); if(!r){ if(auto&&PENDING[id]===cid){ delete PENDING[id]; delete AUTO[id]; delete QSCARD[id]; } return; }
+  const img=await jpegOf(r.blob);
+  if(auto?PENDING[id]!==cid:PENDING[id]){ return; } /* Cancel or another photo meanwhile */
+  if(!CROP||CROP.id!==id){ if(auto){ delete PENDING[id]; delete AUTO[id]; delete QSCARD[id]; } return; }
+  const followed=!!CROP.followed, placed=followed?{...CROP.rect}:null; /* a frame the reader placed while the cut was made (v325: read after the awaits) */
+  const card={id:cid, c:"", p:"", m:"", t:"Custom", at:Date.now(), shot:id, lb:"photo", img, mt:{src:"gloss",verified:false,pending:true}, frame:frameOf(rect), reading:{rect,at:Date.now(),app,...(auto?{auto:true}:{})}}; /* app: the frame was the app's own, so the reader or the AI may still tighten it while the card waits (v304) */
   bump("byPhoto"); S.custom.push(card); try{ await idbPut("custom",card); }catch(e){}
-  PENDING[id]=card.id; QSCARD[id]=card.id; CROP=null; delete SIGN[id]; if(followed) PLACED[id]=rect; /* a frame the reader had already placed on the text: the running reading goes on as if it stood (the AI gets its cut and centres it, v304) */
-  QSNOTE[id]=t("Card saved — the text follows when the reading is done.");
+  PENDING[id]=card.id; QSCARD[id]=card.id; CROP=null; delete SIGN[id]; if(followed) PLACED[id]=placed; /* a frame the reader had already placed on the text: the running reading goes on as if it stood (the AI gets its cut and centres it, v304) */
+  if(!auto) QSNOTE[id]=t("Card saved — the text follows when the reading is done.");
   clearTimeout(READ_TIMER[id]); if(!READING[id]) cropSign(id,{rect,app}); /* the reading had not started yet (the 1.2 s wait) — start it with the frame it was saved with */
   setStats(); renderShots();
 }
 function pendingCard(id){ const cid=PENDING[id]; return cid?cardOf(cid):null; }
+/* the card made by itself (v325, H: "no frame is seen during the first scan at all, just the magic wobbling over the image, and then the result is the finished card … if I want to edit something, I get a frame which I can adjust"; saved by itself on my recommendation, "Go"): Cancel while it reads drops the placeholder, nothing readable drops it too (dropAuto), and the row shows the finished card with Edit and Delete (resultHTML) */
+async function dropAuto(id,cid){ delete AUTO[id]; delete QSCARD[id]; if(!cid) return; const d=cardOf(cid); if(!d||d.c) return; S.custom=S.custom.filter(x=>x.id!==cid); try{ await idbDel("custom",cid); }catch(e){} bump("byPhoto",-1); dropThumb(cid); setStats(); }
+async function cancelAuto(id){ const cid=PENDING[id]; abandonReading(id); delete PENDING[id]; await dropAuto(id,cid); renderShots(); }
+const resultHTML=d=>`<div class="result" data-card="${esc(d.id)}"><div class="front">${frontHTML(d)}</div><div class="back">${backHTML(d)}</div>${flagNoteHTML(d)}</div>`; /* the finished card in the photo's place: the front's boxes and the back, as in the detail */
 async function finishPending(id){
   const sg=SIGN[id], ph=pendingCard(id); if(!ph){ delete PENDING[id]; return; }
   if(!ph.reading){ delete PENDING[id]; delete SIGN[id]; return; } /* H gave it a text meanwhile (Edit) — the reading is not needed */
@@ -3302,14 +3318,16 @@ async function finishPending(id){
     if(sg&&sg.aiPromise) await sg.aiPromise;
     const built=sg&&SIGN[id]===sg?await readingCard(id,sg):null;
     if(!built){ return failPending(id,"nothing to save"); }
-    const {card,c,mt}=built;
+    const {card,c,mt}=built, auto=!!ph.reading.auto;
     if(PLACED[id]) ph.frame=frameOf(PLACED[id]); else if(ph.reading.rect&&ph.reading.rect.lw) ph.frame=frameOf(ph.reading.rect); /* the frame the reader or the AI placed on the text while the card waited (v304), else the one it was saved with */
     for(const k of Object.keys(ph)) if(!["id","at","img","imgFull","shot","tags","frame"].includes(k)) delete ph[k];
     const {id:_i,at:_a,img:_m,shot:_s,...fields}=card; Object.assign(ph,fields);
     if(sg.cardImg){ ph.img=await jpegOf(sg.cardImg); dropThumb(ph.id); } /* the list's thumbnail was made from the crop saved first (v242, H: "the card with a photo before the re-crop remains") */
-    ph.flag=true; ph.flagNote=(mt.suspect||sg.weak||(sg.ai&&sg.ai.bad))?t("saved before the reading was done, and the reading is weak — check text, pinyin and meaning"):t("saved before the reading was done — check text, pinyin and meaning"); /* nobody saw the preview (v245, H: "flag cards that were saved before the final stage, with an appropriate comment") */
+    const weak=!!(mt.suspect||sg.weak||(sg.ai&&sg.ai.bad));
+    if(auto){ if(mt.suspect||(sg.ai&&sg.ai.bad)||(sg.weak&&!(sg.ai&&sg.ai.ok))){ ph.flag=true; ph.flagNote=t("the reading looks unsure — check text, pinyin and meaning"); } } /* the card made by itself (v325): the row shows it, so only a doubtful reading carries the flag — a weak reader score the AI check then confirmed is no doubt */
+    else { ph.flag=true; ph.flagNote=weak?t("saved before the reading was done, and the reading is weak — check text, pinyin and meaning"):t("saved before the reading was done — check text, pinyin and meaning"); } /* nobody saw the preview (v245, H: "flag cards that were saved before the final stage, with an appropriate comment") */
     try{ await idbPut("custom",ph); }catch(e){}
-    QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}.`+(mt.pending?" Translation pending.":"")+(ph.flag?" Flagged for review.":"");
+    if(!auto) QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}.`+(mt.pending?" Translation pending.":"")+(ph.flag?" Flagged for review.":"");
   }catch(err){ logErr("savenow",err&&(err.stack||err.message)||err); return failPending(id,"the reading failed"); }
   finally{ delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; dropExtraShot(id); }
   S.queue=buildQueue(false); aiAutoSoon(); setStats();
@@ -3318,6 +3336,7 @@ async function finishPending(id){
 async function failPending(id,why){
   const ph=pendingCard(id); delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; if(!ph||!ph.reading) return;
   dropExtraShot(id);
+  if(ph.reading.auto&&!ph.c){ await dropAuto(id,ph.id); delete READING[id]; QSNOTE[id]=t("Nothing could be read. Tap Crop to frame the text by hand."); if(S.mode==="cards"&&!S.editing) render(); else renderShots(); return; } /* a card made by itself with nothing to show is no card (v325): the photo stays with Crop */
   if(ph.c) delete ph.reading; else ph.reading.failed=why; /* a card framed again in the Edit form keeps its text and forgets the frame (v241, v243); an empty card keeps the failure for "Nothing read yet" */
   ph.flag=true; ph.flagNote=ph.c?t("the new frame could not be read — the old text stays"):t("the reading failed — edit the card or frame the photo again");
   try{ await idbPut("custom",ph); }catch(e){}
@@ -3327,7 +3346,7 @@ async function failPending(id,why){
 async function resumePending(){
   for(const d of S.custom.filter(d=>d.reading&&!d.reading.failed)){
     const rec=d.shot&&S.inbox.find(x=>x.id===d.shot), full=!rec&&fullPhoto(d), rect=d.reading.rect; let key, opts;
-    if(rec){ key=d.shot; opts={rect,app:!!d.reading.app}; } /* the inbox photo with the saved frame */
+    if(rec){ key=d.shot; opts={rect,app:!!d.reading.app}; if(d.reading.auto){ AUTO[key]=true; QSCARD[key]=d.id; } } /* the inbox photo with the saved frame; a card made by itself shows its result in the row again (v325) */
     else if(full&&rect&&rect.lw){ key=d.id; SHOTS_EXTRA[key]={id:key,blob:full,ts:Date.now()}; opts={rect,app:!!d.reading.app}; } /* the photo copied onto the card (v241: a frame from the Edit form after the inbox photo went) */
     else { key=d.id; opts={blob:d.img}; } /* the crop itself */
     if(PENDING[key]) continue; PENDING[key]=d.id;
@@ -3979,7 +3998,7 @@ async function warmReader(){ /* the Camera tab loads the reader ahead of the fir
 function renderInbox(main){
   warmReader();
   main.innerHTML=`<div class="pane">
-    <div class="lead">${t("Photos stay on this phone. Frame the text — the card is made for you.")}</div>
+    <div class="lead">${t("Photos stay on this phone. Take one — the card is made for you.")}</div>
     <div class="snaprow"><button class="btn primary" id="snap">${t("Take photo")}</button><button class="btn" id="pick">${t("From album")}</button></div>
     <div id="shots"></div>
   </div>`;
@@ -3998,13 +4017,19 @@ function renderShots(){
     S.inbox.map(s=>{
       const dt=new Date(s.ts).toLocaleString(LANG_LOCALE[LANG]);
       const cropping=CROP && CROP.id===s.id, shown=!!(cropping&&CROP.rect&&!CROP.hidden), zoomed=!!(shown&&CROP.zoom);
+      const working=!!(AUTO[s.id]&&PENDING[s.id]&&READING[s.id]&&!READ_FAIL.test(READING[s.id])), result=!cropping&&AUTO[s.id]&&!PENDING[s.id]&&QSCARD[s.id]?cardOf(QSCARD[s.id]):null; /* the card made by itself (v325): the shimmer while it reads, the finished card after */
+      if(result&&result.c) return `<div class="shot">${resultHTML(result)}
+        <div class="meta"><span class="ts">${dt}</span><span class="acts"><button class="ocr-btn" data-resedit="${s.id}">${t("Edit")}</button><button class="del" data-resdel="${s.id}">${t("Delete card")}</button></span></div>
+        <div class="ocr" id="ocr-${s.id}">${qsAiBox(s.id)}</div>
+      </div>`;
       return `<div class="shot">
         <div class="shotwrap">
-          ${zoomed?`<div class="shotzoom" style="${zoomStyle(s)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(s)}" alt="photo">`}
+          ${zoomed?`<div class="shotzoom" style="${zoomStyle(s)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(s)}" alt="photo">`}${working?`<div class="scan" aria-hidden="true"></div>`:""}
           ${cropping?`<div class="croplayer${shown?" framed":""}${zoomed?" zoomed":""}" data-id="${s.id}">${zoomed?"":`<div class="croprect${READING[s.id]&&!READ_FAIL.test(READING[s.id])?" working":""}"${cropRectStyle()}>${READING[s.id]&&!READ_FAIL.test(READING[s.id])?`<div class="work" aria-hidden="true"><svg><rect/></svg></div>`:""}<div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="${t("Turn the frame")}"></div></div>`}</div>`:""}
         </div>
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">${t("Cancel")}</button>`
+          :AUTO[s.id]&&PENDING[s.id]?`<button class="del" data-autocancel="${s.id}">${t("Cancel")}</button>`
           :`${PENDING[s.id]?"":`<button class="ocr-btn" data-crop="${s.id}">${t("Crop")}</button>`}<button class="del" data-del="${s.id}">${t("Delete")}</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${PENDING[s.id]?readingHTML(READING[s.id]||AI_BUSY_TEXT,s.id):SIGN[s.id]?signEditorHTML(s.id):READING[s.id]?readingHTML(READING[s.id],s.id):cropping
           ?CROP.auto?busyHTML(t("Finding the text …")):`<span class="badge">${t("Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.")}</span>`
@@ -4015,6 +4040,13 @@ function renderShots(){
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
   box.onclick=e=>{ const b=e.target.closest("[data-savenow]"); if(b){ b.disabled=true; saveNow(b.dataset.savenow); } }; /* the button is inside the reading box, which every status re-renders (v237) */
   box.querySelectorAll("[data-cropcancel]").forEach(b=> b.onclick=()=>{ abandonReading(b.dataset.cropcancel); CROP=null; renderShots(); });
+  box.querySelectorAll("[data-autocancel]").forEach(b=> b.onclick=()=>cancelAuto(b.dataset.autocancel)); /* the card made by itself (v325): Cancel drops the placeholder, the photo stays */
+  box.querySelectorAll("[data-resedit]").forEach(b=> b.onclick=()=>{ const cid=QSCARD[b.dataset.resedit]; if(!cid) return; S.editing=cid; S.editFrom="camera"; S.editOpenFrame=true; S.fullPic=false; render(); window.scrollTo({top:0}); }); /* Edit opens the form with the photo and the frame the card was cut with */
+  box.querySelectorAll("[data-resdel]").forEach(b=> b.onclick=async()=>{ const cid=QSCARD[b.dataset.resdel]; if(cid) await delCustom(cid); renderShots(); }); /* at once, with Undo (v268) — Undo brings the result back, the photo stays with Crop meanwhile */
+  box.querySelectorAll(".result").forEach(el=>{ const d=cardOf(el.dataset.card); if(!d) return;
+    el.querySelectorAll("[data-pic]").forEach(p=> p.onclick=e=>{ e.stopPropagation(); S.fullPic=!S.fullPic; renderShots(); }); /* the photo's tap: the whole picture and back, as on the front */
+    el.querySelectorAll(".chars:not(.sub) .ch").forEach(c=> c.onclick=e=>{ e.stopPropagation(); charInfo(c.dataset.ch,c,d); }); });
+  wireSay(box); wireLinks(box);
   box.querySelectorAll("[data-signai]").forEach(b=> b.onclick=()=>signAskAI(b.dataset.signai));
   box.querySelectorAll("[data-scriptset]").forEach(b=> b.onclick=async()=>{ const sg=SIGN[b.closest("[data-scriptseg]").dataset.scriptseg], on=b.dataset.scriptset==="1"; if(!sg||on===!!sg.trad) return; await setScript(sg,on); renderShots(); }); /* the mark by hand (v146); the AI is not asked again */
   wireAi(box);
