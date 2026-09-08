@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=328; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=329; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1822,8 +1822,8 @@ function renderEdit(main,c){
     let handoff=null;
     if(!removeImg&&RECROP[rid]&&CROP&&CROP.id===rid&&CROP.rect&&RECROP[rid].stage!=="idle"){ const rect={...CROP.rect}; const r=await cropBlob(rid,rect); if(r) handoff={rect,blob:r.blob}; } /* a reading still due or running for this frame (v244: an untouched or already read frame saves without one) */
     if(removeImg){ delete upd.img; delete upd.imgFull; delete upd.shot; delete upd.frame; dropThumb(c); } /* shot too — without it the front would still show the inbox photo through fullPhoto (v214) */
-    else if(handoff){ upd.img=await jpegOf(handoff.blob); upd.frame=photoFrame(handoff.rect); dropThumb(c); }
-    else if(recropImg){ upd.img=await jpegOf(recropImg); if(recropRect) upd.frame=photoFrame(recropRect); dropThumb(c); } /* the crop framed again in this form (v239) with its frame (v244), as fractions of the whole photo even when framed in the window (v247) */
+    else if(handoff){ const win=await windowCut(rid,handoff.rect); upd.img=await jpegOf(win?win.blob:handoff.blob); upd.frame=photoFrame(handoff.rect); dropThumb(c); } /* the 16:9 window around the frame (v329) */
+    else if(recropImg){ const win=recropRect?await windowCut(rid,recropRect):null; upd.img=await jpegOf(win?win.blob:recropImg); if(recropRect) upd.frame=photoFrame(recropRect); dropThumb(c); } /* the crop framed again in this form (v239) with its frame (v244), as fractions of the whole photo even when framed in the window (v247) */
     if(upd.mt){ upd.mt={...upd.mt, verified:true, pending:false}; delete upd.mt.suspect; } /* a human edited it */
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
     if(aiMl&&!meanTouched) setMl(upd,aiMl); else if(meanTouched||mean!==d.m) setMl(upd,LANG); /* a meaning typed here is in the app's language, one the AI filled in carries its own; an untouched meaning keeps its language (v256) */
@@ -2123,6 +2123,14 @@ async function readPassTra(blob,status){
 const PENDING={}; /* shot id → the id of a card saved before its reading finished (v237, "Save now"): the reading fills it in when done */
 const PLACED={}, READ_APP={}; /* v304, for a card saved with Save now: PLACED = the frame the reader or the AI placed on the text while the card waited (the card takes it as its frame and its crop), READ_APP = the reading started from the app's own frame, not the hand's (only such a frame may be moved) */
 const frameOf=r=>({x:+(r.x/r.lw).toFixed(4),y:+(r.y/r.lh).toFixed(4),w:+(r.w/r.lw).toFixed(4),h:+(r.h/r.lh).toFixed(4),a:+(r.a||0).toFixed(1)}); /* the frame a card was cut with, as fractions of the photo (card.frame, v244) — Crop again starts from it */
+/* The card's picture is a 16:9 window around the text (v329, H: "does the 16:9 format make sense?" — measured on 21 photos: one-line signs run 2.3–6.8:1, posters and plates 0.9–1.6:1, so the tight crop filled the photo box's height or width only half and the rest was the blurred fill; "Go" on the window): the same centre as the frame, the frame's own angle, widened to FRAME_RATIO in the direction it lacks, never smaller than the frame, shifted to stay inside the photo and clamped to the photo's size — the text keeps its size and place in the box, the surroundings fill the rest. The card's frame stays the text's frame (Crop again starts from it); only the picture is the window. */
+function windowRect(r){ const {lw,lh}=r, a=r.a||0; let w=r.w, h=r.h;
+  if(w/h<FRAME_RATIO) w=h*FRAME_RATIO; else h=w/FRAME_RATIO;
+  w=Math.max(r.w,Math.min(w,lw)); h=Math.max(r.h,Math.min(h,lh));
+  let x=r.x+r.w/2-w/2, y=r.y+r.h/2-h/2;
+  if(!a){ x=Math.min(Math.max(0,x),Math.max(0,lw-w)); y=Math.min(Math.max(0,y),Math.max(0,lh-h)); } /* a turned window keeps its centre; what lies outside the photo takes the area's colour (cropBlob, v185) */
+  return {x,y,w,h,a,lw,lh}; }
+async function windowCut(id,rect){ if(!rect||!rect.lw||!shotRec(id)) return null; try{ return await cropBlob(id,windowRect(rect)); }catch(e){ return null; } } /* the window's cut, or null when the photo is gone */
 const rectKey=r=>r?[r.x,r.y,r.w,r.h,r.a||0].map(v=>Math.round(v)).join(","):""; /* the same frame, give or take a pixel */
 async function placeFrame(id,f,opts){ /* a stored frame onto the photo's layer, then the preview — without the automatic reading when asked (v244) */
   const layer=document.querySelector(`.croplayer[data-id="${id}"]`), img=layer&&layer.parentElement.querySelector("img"); if(!layer) return;
@@ -2392,8 +2400,8 @@ async function cropOk(id){
   const r=await cropBlob(id);
   if(!r) return; /* no frame yet — nothing to do */
   if(RECROP[id]) return RECROP[id].onImage(r.blob); /* the Edit form's Crop again: the new crop alone, the text stays (v239) */
-  const rec=shotRec(id);
-  CROP=null; S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null; S.pendingShot=id;
+  const rec=shotRec(id), win=await windowCut(id,CROP&&CROP.id===id?CROP.rect:null); /* the 16:9 window (v329) */
+  CROP=null; S.pendingImg=(win||r).blob; S.pendingFull=rec?rec.blob:null; S.pendingShot=id;
   S.mode="add"; render();
 }
 
@@ -3299,7 +3307,7 @@ async function saveNow(id,auto){ /* auto (v325): the card made by itself from a 
   if(PENDING[id]||!CROP||CROP.id!==id||!CROP.rect) return;
   const rect={...CROP.rect}, app=!!(CROP.hidden||CROP.proposed), cid="reading#"+Date.now();
   if(auto){ PENDING[id]=cid; AUTO[id]=true; QSCARD[id]=cid; delete QSNOTE[id]; } /* announced before the cut is made, so the quick look's placement meanwhile goes to PLACED and no frame is ever drawn (v325) */
-  const r=await cropBlob(id,rect); if(!r){ if(auto&&PENDING[id]===cid){ delete PENDING[id]; delete AUTO[id]; delete QSCARD[id]; } return; }
+  const r=await cropBlob(id,windowRect(rect)); if(!r){ if(auto&&PENDING[id]===cid){ delete PENDING[id]; delete AUTO[id]; delete QSCARD[id]; } return; } /* the placeholder's picture is the 16:9 window too (v329) */
   const img=await jpegOf(r.blob);
   if(auto?PENDING[id]!==cid:PENDING[id]){ return; } /* Cancel or another photo meanwhile */
   if(!CROP||CROP.id!==id){ if(auto){ delete PENDING[id]; delete AUTO[id]; delete QSCARD[id]; } return; }
@@ -3325,9 +3333,11 @@ async function finishPending(id){
     if(!built){ return failPending(id,"nothing to save"); }
     const {card,c,mt}=built, auto=!!ph.reading.auto;
     if(PLACED[id]) ph.frame=frameOf(PLACED[id]); else if(ph.reading.rect&&ph.reading.rect.lw) ph.frame=frameOf(ph.reading.rect); /* the frame the reader or the AI placed on the text while the card waited (v304), else the one it was saved with */
+    const fr=PLACED[id]||(ph.reading.rect&&ph.reading.rect.lw?ph.reading.rect:null); /* for the window below, read before the card's fields are replaced (v329) */
     for(const k of Object.keys(ph)) if(!["id","at","img","imgFull","shot","tags","frame"].includes(k)) delete ph[k];
     const {id:_i,at:_a,img:_m,shot:_s,...fields}=card; Object.assign(ph,fields);
     if(sg.cardImg){ ph.img=await jpegOf(sg.cardImg); dropThumb(ph.id); } /* the list's thumbnail was made from the crop saved first (v242, H: "the card with a photo before the re-crop remains") */
+    { const win=fr?await windowCut(id,fr):null; if(win){ ph.img=await jpegOf(win.blob); dropThumb(ph.id); } } /* the 16:9 window around the text (v329) — the tight cut only when the photo is gone */
     const weak=!!(mt.suspect||sg.weak||(sg.ai&&sg.ai.bad));
     if(auto){ if(mt.suspect||(sg.ai&&sg.ai.bad)||(sg.weak&&!(sg.ai&&sg.ai.ok))){ ph.flag=true; ph.flagNote=t("the reading looks unsure — check text, pinyin and meaning"); } } /* the card made by itself (v325): the row shows it, so only a doubtful reading carries the flag — a weak reader score the AI check then confirmed is no doubt */
     else { ph.flag=true; ph.flagNote=weak?t("saved before the reading was done, and the reading is weak — check text, pinyin and meaning"):t("saved before the reading was done — check text, pinyin and meaning"); } /* nobody saw the preview (v245, H: "flag cards that were saved before the final stage, with an appropriate comment") */
@@ -3983,6 +3993,7 @@ async function saveSign(id){
   const {card,c,mt}=built;
   if(deck().some(d=>d.c===c&&d.shot===id)){ sg.aiErr=t("This text is already saved from this photo."); renderShots(); return; } /* the same text from another photo is a new card (H, v118) */
   const pic=sg.cardImg||S.pendingImg; if(pic) card.img=await jpegOf(pic);
+  { const win=CROP&&CROP.id===id&&CROP.rect?await windowCut(id,CROP.rect):null; if(win) card.img=await jpegOf(win.blob); } /* the 16:9 window around the text (v329) */
   if(S.pendingFull&&!S.inbox.some(x=>x.id===id)) card.imgFull=S.pendingFull; /* the whole photo stays in the inbox, not twice (v214) */
   S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; /* used up — the Add form once showed the last photo's crop on a card made from scratch (v188) */
   if(CROP&&CROP.id===id&&CROP.rect) card.frame=frameOf(CROP.rect); /* the frame, for Crop again (v244) */
