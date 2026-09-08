@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=326; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=327; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -288,7 +288,10 @@ async function boot(){
   await syncMeanings(); /* every card shows the meaning it has in the app's language (v265); cards from before get their ms */
   S.ready=true;
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
+  const rv=S.settings.resumeView; if(rv){ delete S.settings.resumeView; idbDel("settings","resumeView").catch(()=>{}); } /* the screen the update's reload left (v327): back to it, so the reload is not felt */
+  if(rv&&Date.now()-(rv.at||0)<RESUME_MAX){ if(["study","cards","inbox","more","guide"].includes(rv.mode)) S.mode=rv.mode; if(S.mode==="cards"&&rv.detail&&S.custom.some(d=>d.id===rv.detail)) S.detail=rv.detail; if(typeof rv.query==="string") S.query=rv.query; }
   wireChrome(); render();
+  if(rv&&rv.scroll) requestAnimationFrame(()=>window.scrollTo(0,rv.scroll));
   autoBreaks(); /* old cards get their photo lines estimated once */
   dedupePhotos(); /* cards from before v214 drop the whole photo they hold twice */
   setTimeout(resumePending,1500); /* cards saved before their reading finished get it now (v237) */
@@ -4209,6 +4212,7 @@ if("serviceWorker" in navigator){
       reg.update();
       /* installed PWAs rarely check for updates on their own — check when brought to foreground */
       document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ reg.update().catch(()=>{}); mirrorCheck(); } });
+      setInterval(()=>{ if(!document.hidden){ reg.update().catch(()=>{}); mirrorCheck(); } },MIRROR_EVERY); /* and while the app stays open (v327) */
       mirrorCheck(); tellMirror(); shellCheck();
     }).catch(()=>{});
     takeShared(); /* photos shared to the app (v163) — after boot, S.inbox is loaded by then */
@@ -4218,7 +4222,7 @@ if("serviceWorker" in navigator){
       if(d.type!=="mirror-update") return;
       MIRROR.busy=false; MIRROR.last=d; const forced=MIRROR.forced; MIRROR.forced=false;
       const st=$("#mirror-status"); if(st) st.textContent=mirrorText();
-      if(d.status==="updated") setTimeout(()=>forced?location.reload():reloadSoon(),600); /* Check now was a tap — reload at once; the hourly check waits (v279) */
+      if(d.status==="updated") setTimeout(()=>forced?reloadNow():reloadSoon(),600); /* Check now was a tap — reload at once; the check by itself waits for a pause (v279, v327) */
     });
     /* new version activated (skipWaiting+claim) → reload once automatically.
        First install (no controller before) does not trigger a reload. */
@@ -4238,10 +4242,21 @@ if("serviceWorker" in navigator){
    und bin danach direkt auf der Learn Seite gelandet. Foto ist weg." — the camera app in front is the page hidden, the new
    worker took over meanwhile and the page reloaded at once; the camera handed the photo to a page that was gone): while
    picking() or CROP the reload is deferred, and the return to the foreground reloads only once both are over. */
-const LOAD_AT=Date.now(), RELOAD_GRACE=3000; let RELOAD_DUE=false;
+const LOAD_AT=Date.now(), RELOAD_GRACE=3000; let RELOAD_DUE=false, RELOAD_TIMER=null;
 const reloadBusy=()=>picking()||!!CROP; /* a photo on its way from the camera, or a photo open with its frame */
-function reloadSoon(){ if(reloadBusy()){ RELOAD_DUE=true; return; } if(Date.now()-LOAD_AT<RELOAD_GRACE||document.hidden){ location.reload(); return; } RELOAD_DUE=true; }
-document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&RELOAD_DUE&&!reloadBusy()){ RELOAD_DUE=false; location.reload(); } });
+/* The reload comes at the next pause, on the same screen (v327, H: "make sure that new software versions always load
+   automatically without the need for manual refresh" — until v326 a deferred reload waited for the next return to the
+   foreground, so an update taken while the app was open showed only after the app had been left and reopened):
+   once a reload is due, every RELOAD_POLL the page asks whether the app is idle — no finger for IDLE_MS, no form open,
+   no reading or translation running, no sheet, no feedback being typed, no photo on its way — and then reloads after
+   noting the screen (resumeView: mode, the open card, the search, the scroll), which boot restores, so the new version
+   is up within seconds and the user finds the same screen. */
+const IDLE_MS=4000, RELOAD_POLL=2000, RESUME_MAX=180000; let LAST_TOUCH=Date.now();
+["pointerdown","keydown","input","touchstart","wheel"].forEach(ev=>document.addEventListener(ev,()=>{ LAST_TOUCH=Date.now(); },{capture:true,passive:true}));
+const reloadIdle=()=>!reloadBusy()&&!document.hidden&&Date.now()-LAST_TOUCH>=IDLE_MS&&!S.editing&&S.mode!=="add"&&!Object.keys(PENDING).length&&!Object.keys(READING).length&&!(TRANSLATE&&TRANSLATE.running)&&!document.querySelector(".drawsheet,.ask")&&!(($("#fb-text")||{}).value||"").trim();
+async function reloadNow(){ RELOAD_DUE=false; clearInterval(RELOAD_TIMER); RELOAD_TIMER=null; try{ await setSetting("resumeView",{mode:S.mode,detail:S.detail,query:S.query,scroll:window.scrollY,at:Date.now()}); }catch(e){} location.reload(); }
+function reloadSoon(){ if(!reloadBusy()&&(Date.now()-LOAD_AT<RELOAD_GRACE||document.hidden)){ reloadNow(); return; } RELOAD_DUE=true; if(!RELOAD_TIMER) RELOAD_TIMER=setInterval(()=>{ if(RELOAD_DUE&&reloadIdle()) reloadNow(); },RELOAD_POLL); }
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&RELOAD_DUE&&!reloadBusy()) reloadNow(); });
 /* ---------- mixed shell: the page and the script at different versions ----------
    GitHub Pages caches for ten minutes and jsDelivr per file, so after quick successive deploys a worker once served
    the v70 page with the v69 script (H: "I was on 70" — and the drag was missing). If the label and APP_V differ,
@@ -4256,12 +4271,12 @@ async function shellCheck(){
   ctrl.postMessage({type:"refresh"});
 }
 /* ---------- updates without a VPN: ask the worker to pull a newer shell from a mirror ---------- */
-const MIRROR_DEFAULT="https://cdn.jsdelivr.net/gh/henglicam/zeichentrainer@main/";
+const MIRROR_DEFAULT="https://cdn.jsdelivr.net/gh/henglicam/zeichentrainer@main/", MIRROR_EVERY=600000; /* the mirror's own cache is purged by the workflow purge-mirror.yml on every push to main (v327), so ten minutes is the lag at most */
 const MIRROR={busy:false,last:null,at:0};
 function mirrorURL(){ const u=(S.settings.mirror||MIRROR_DEFAULT).trim(); return u.endsWith("/")?u:u+"/"; }
 function mirrorCheck(force){
   if(!navigator.onLine||MIRROR.busy) return;
-  if(!force && Date.now()-MIRROR.at<3600000) return; /* at most once an hour by itself */
+  if(!force && Date.now()-MIRROR.at<MIRROR_EVERY) return; /* at most every ten minutes by itself (hourly until v326) */
   const ctrl=navigator.serviceWorker&&navigator.serviceWorker.controller; if(!ctrl) return;
   MIRROR.busy=true; MIRROR.at=Date.now(); MIRROR.forced=!!force;
   const local=pageVersion();
