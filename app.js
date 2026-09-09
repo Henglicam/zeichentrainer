@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=389; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=390; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3827,6 +3827,17 @@ function labelPlan(gy,labels){ /* one cluster per row of the answer, in order; o
   for(const p of pin) if(p) p.skip=bar.filter(b=>b.q!==p.row).map(b=>({y0:b.y0,y1:b.y1}));
   return {pin,placed,rows:R};
 }
+function roundGrid(lab,W){ /* the boxes drawn on a round grid (v390, H's washing machine at v389: the model answered a lattice
+     again — [130,260,190,300] for 混合, [210,260,270,300] for 快速 — but 60 px wide for two characters and 70 for three, so the
+     width rule of v381 called it a measurement, the cards were placed by the model's coordinates as before v380, and every one
+     showed a neighbour's button). Every number of that answer is a multiple of ten. A measurement of a photo lands on arbitrary
+     pixels (H's rice cooker: 158, 236, 255, 285); a drawing lands on round ones. Pixel answers only — on the 0–1000 grid a round
+     number is just two digits of precision, and a real measurement may well be written that way. */
+  if(!lab||lab.length<4||!lab.every(l=>l.scale==="px")) return false;
+  let round=0;
+  for(const l of lab) for(const v of [l.box[0]*W,l.box[2]*W]){ const r=Math.round(v); if(Math.abs(v-r)<0.3&&r%LB_STEP===0) round++; }
+  return round>=LB_ROUND*lab.length*2;
+}
 function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not measured on the picture (v380, H's washing
      machine at v379: every box exactly 60×40 px on an 800 px picture, the whole grid a cell and more to the right of the panel,
      so every card showed its neighbour's button). A drift like that cannot be told from the truth — the boxes are internally
@@ -3837,7 +3848,7 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
   const ws=lab.map(l=>(l.box[2]-l.box[0])*W); /* the width, not the height: a label of k characters is k characters wide, while a box's height is its row's style and honestly differs from row to row (H's panel: every box 60 px wide, the rows 50 and 30 px tall) */
   const mw=med(ws), one=[]; /* the picture's edge clips a box or two, so the rule is the share of boxes of one size, not their spread */
   for(let k=0;k<lab.length;k++) if(Math.abs(ws[k]-mw)<=LB_TMPL*mw) one.push(k);
-  if(one.length<0.8*lab.length) return false;
+  if(one.length<0.8*lab.length) return roundGrid(lab,W);
   /* Two ideas were tried on top of this rule and both are gone. The pitch as a second tell (v382, dropped in v383): a panel's
      buttons of one block *are* evenly spaced, so a measurement gives the same regular gaps a lattice does. And asking the model
      again, one strip per row (v382–v383, dropped in v385): H's own three strip answers, read from the AI log the moment it
@@ -3861,6 +3872,7 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
    neighbour's. Measured on H's own photo at its own 1600 px with his own texts: 18 of the 19 labels on their own
    characters, none on another's, where v385 gave all 19 the whole panel. */
 const RL_STEP=0.6, RL_SUP=3, RL_DUP=0.6, RL_TILES=8, RL_GAP=0.55, RL_WMIN=0.8, RL_WMAX=12, RL_PX=64, RL_ROOM=[0.3,0.5], RL_CAP=420, RL_HIT=0.6, RL_WEAK=0.5, RL_GROW=[0.22,0.45], RL_WIDE=[0.6,1.8], RL_COL=0.6, RL_HGT=[0.6,1.6];
+const LB_STEP=10, LB_ROUND=0.8, RL_ROW=0.8; /* a drawn grid lands on round pixels (v390) */
 function labelRunsOf(gy,labels,uni){ /* the picture's own rows of characters, and the runs of each row, in the grey copy's pixels */
   const {g,W,Hh}=gy, med=a=>{ const t=a.slice().sort((x,y)=>x-y); return t[t.length>>1]||0.05; };
   const bw=med(labels.map(l=>l.box[2]-l.box[0])), bh=med(labels.map(l=>l.box[3]-l.box[1]));
@@ -3953,6 +3965,17 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
   const ur=new Set(), rects=labels.map(()=>null), pick=labels.map(()=>-1), read=labels.map(()=>""); let hit=0;
   for(const [,i,j] of pairs){ if(ur.has(i)||pick[j]>=0) continue; ur.add(i); pick[j]=i; hit++;
     read[j]=(got[i]||[]).map(rd=>[labelHit(rd,labels[j].zh),rd]).sort((a,b)=>b[0]-a[0])[0][1]||""; }
+  /* a placement that breaks its row is dropped (v390, H's washing machine at v389: 智洗烘 took a run in the panel's left
+     block and 时间 one at its far left — both read well enough to win the greedy pairing, both a whole row away from the
+     labels they stand beside). The model's rows are reliable (v376's finding), so the runs of one answer row must share a
+     band: the median centre of the row's placed runs decides, and a run further than RL_ROW of a run height from it is not
+     this label's. A row of two that disagrees loses both — with two runs and no majority there is nothing to trust. */
+  const rowsAll=labelRows(labels);
+  for(const rw of rowsAll){
+    const ps=rw.at.filter(j=>pick[j]>=0); if(ps.length<2) continue;
+    const cy=ps.map(j=>(runs[pick[j]].y0+runs[pick[j]].y1)/2), h=median(ps.map(j=>runs[pick[j]].y1-runs[pick[j]].y0))||1, mid0=median(cy);
+    ps.forEach((j,k)=>{ if(Math.abs(cy[k]-mid0)<=RL_ROW*h) return; ur.delete(pick[j]); pick[j]=-1; read[j]=""; hit--; });
+  }
   /* a label only half read takes the run its row's order gives it (v388): the model's reading order and row topology
      are reliable (v376's finding) while its coordinates are not, so a run that reads as half of a label's characters
      is that label when it stands in the label's own row and between the labels the reader did name — 袜子 read as
