@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=367; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=368; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -363,8 +363,8 @@ async function boot(){
   fixNumberSegs(); /* word cards from before v338 get their numbers back into their lines */
   dedupePhotos(); /* cards from before v214 drop the whole photo they hold twice */
   setTimeout(resumePending,1500); /* cards saved before their reading finished get it now (v237) */
-  aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); });
-  setTimeout(resumeTranslate,2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) resumeTranslate(); }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262) */
+  aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); resumeTagAll(); });
+  setTimeout(()=>{ resumeTranslate(); resumeTagAll(); },2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ resumeTranslate(); resumeTagAll(); } }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262) */
   sendReport(); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) sendReport(); else if(REPORT_DIRTY) sendReport(true); }); /* the day's first row on foreground, a second one on background when cards changed (v219) */
 }
 
@@ -773,7 +773,7 @@ function ocrDoubt(confs,meaning,unknown){
 let _aiSoon=null;
 function aiAutoSoon(){ if(!aiAutoOn()) return; clearTimeout(_aiSoon); _aiSoon=setTimeout(()=>{ _aiAutoRan=false; aiAuto(); },1500); }
 function aiCardPayload(d){
-  return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:d.translate?"translate the meaning into "+meaningLangName()+" (it is in "+(LANG_NAME[d.ml||"en"]||"another language")+" now); keep zh and p unless clearly wrong":[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"the reading looks uncertain ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
+  return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:d.tagOnly?"name \"kind\" for this card and nothing else; keep zh, p and m exactly as given":d.translate?"translate the meaning into "+meaningLangName()+" (it is in "+(LANG_NAME[d.ml||"en"]||"another language")+" now); keep zh and p unless clearly wrong":[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"the reading looks uncertain ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
     gloss:d.kind==="sign"?(d.gloss||[]).map(g=>g.w+" "+(g.m||"?")).join(" · "):undefined,
     alt:d.alts&&d.alts.length?d.alts:undefined, script:d.trad?"traditional":undefined };
 }
@@ -1130,6 +1130,67 @@ async function translateAll(){
   TRANSLATE.running=false; translateRefresh(); /* running stays set until the cards and the settings are written — whoever waits for the end sees the finished state (v264) */
   if(S.mode==="study"||S.mode==="cards") render(); /* the meanings on screen follow */
 }
+/* Tag all cards (v368, H's "1 now, 3 straight after it" on the labelling question of v364, then "Tag all cards"): the kind tag of
+   v364 rides on every new card's own AI answer, so the deck H already has stays untagged. This row asks the AI for the kind of
+   the cards that carry no tag at all — it never touches a card that carries a tag of H's own — and works exactly like Translate
+   all: the run's state lives in TAGALL and not in the row, a batch of TAG_BATCH cards per call, every answer staged in setting
+   tagStage {m:{id:kind}} and every card written together at the end (idbPutMany), the run remembered in setting tagRun until no
+   card is left, resumed at boot, on reconnect and on foreground. The payload asks for the kind alone (tagOnly), so a run cannot
+   change a text, a pinyin or a meaning. */
+const TAG_BATCH=10; /* the answer is one word per card, so ten fit where the translation takes five */
+const toTag=()=>deck().filter(d=>d.c&&!(d.tags&&d.tags.length));
+let TAGALL=null; /* {running, done, at, total, failed} */
+const tagStageOf=()=>S.settings.tagStage;
+async function saveTagStage(st){ S.settings.tagStage=st; await setSetting("tagStage",st); }
+async function clearTagStage(){ if(S.settings.tagStage){ delete S.settings.tagStage; await idbDel("settings","tagStage").catch(()=>{}); } }
+const inTagStage=(st,d)=>!!(st&&st.m&&st.m[d.id]);
+async function applyTagStage(st,list){ const rows=[];
+  for(const x of list){ const d=cardOf(x.id), k=d&&st.m[d.id]; if(!d||!k||k==="skip"||(d.tags&&d.tags.length)) continue;
+    const tg=kindTag(k); if(tg) rows.push({...d,tags:[tg]}); }
+  if(rows.length){ try{ await idbPutMany("custom",rows); }catch(e){ logErr("tagall","apply: "+(e&&e.message||e)); return 0; }
+    for(const r of rows){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; } }
+  return rows.length; }
+async function rememberTagRun(on){ if(on){ S.settings.tagRun={at:Date.now()}; await setSetting("tagRun",S.settings.tagRun); }
+  else if(S.settings.tagRun){ delete S.settings.tagRun; await idbDel("settings","tagRun").catch(()=>{}); } }
+function resumeTagAll(){ if(!S.settings.tagRun||(TAGALL&&TAGALL.running)) return;
+  if(!toTag().length){ rememberTagRun(false); return; }
+  if(!aiOn()||!navigator.onLine) return; tagAll(); }
+function tagRowHTML(){
+  const n=toTag().length, tr=TAGALL; if(!(n||tr)||!aiOn()) return "";
+  const line=tr&&tr.running?busyHTML(t("Tagging {0} of {1} …",tr.at,tr.total)+" "+t("The cards change together when all are done."))
+    :tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} tagged, {1} left.",tr.done,n)+" "+t("It goes on by itself when the AI can be reached again.")
+    :tr?t("Done — {0} tagged.",nOf(tr.done,"card")):t("{0} carry no tag yet.",nOf(n,"card"));
+  return `<div class="mrow"><div style="flex:1"><div class="t">${t("Tags")}</div><div class="s" id="tagall-status">${line}</div>${n?`<div class="fieldacts"><button class="btn mini" id="tag-all"${tr&&tr.running?" disabled":""}>${t("Tag all cards")}</button></div>`:""}</div></div>`;
+}
+function tagRefresh(){ const st=$("#tagall-status"), b=$("#tag-all"), tr=TAGALL; if(!st) return;
+  const n=toTag().length;
+  if(tr&&tr.running) st.innerHTML=busyHTML(t("Tagging {0} of {1} …",tr.at,tr.total)+" "+t("The cards change together when all are done."));
+  else st.textContent=tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} tagged, {1} left.",tr.done,n)+" "+t("It goes on by itself when the AI can be reached again.")
+    :tr?t("Done — {0} tagged.",nOf(tr.done,"card")):t("{0} carry no tag yet.",nOf(n,"card"));
+  if(b){ b.disabled=!!(tr&&tr.running); if(!n&&!(tr&&tr.running)) b.remove(); } }
+async function tagAll(){
+  if(TAGALL&&TAGALL.running){ tagRefresh(); return; }
+  if(!navigator.onLine){ const st=$("#tagall-status"); if(st) st.textContent=t("No connection. Try again when online."); return; }
+  const list=toTag(); if(!list.length) return;
+  let stage=tagStageOf(); if(!stage||!stage.m) stage={m:{}};
+  const todo=list.filter(d=>!inTagStage(stage,d));
+  TAGALL={running:true,done:list.length-todo.length,at:list.length-todo.length,total:list.length,failed:false}; tagRefresh();
+  await rememberTagRun(true); await saveTagStage(stage);
+  try{
+    for(let i=0;i<todo.length;i+=TAG_BATCH){
+      const batch=todo.slice(i,i+TAG_BATCH); TAGALL.at=Math.min(TAGALL.done+batch.length,list.length); tagRefresh();
+      const ans=await aiAsk(batch.map(d=>({...d,tagOnly:true})));
+      for(let k=0;k<batch.length;k++){ const d=cardOf(batch[k].id), a=ans[k]; if(!d) continue;
+        stage.m[d.id]=a&&!a.bad&&kindTag(a.kind)?a.kind:"skip"; TAGALL.done++; } /* staged, not written: the cards change together at the end */
+      await saveTagStage(stage);
+    }
+  }catch(err){ TAGALL.failed=true; logErr("tagall",err&&err.message||String(err)); }
+  if(!TAGALL.failed&&list.every(d=>{ const c=cardOf(d.id); return !c||inTagStage(stage,c)||(c.tags&&c.tags.length); })){
+    TAGALL.done=await applyTagStage(stage,list); await clearTagStage(); }
+  if(!toTag().length||!TAGALL.failed&&!tagStageOf()) await rememberTagRun(false);
+  TAGALL.running=false; tagRefresh();
+  if(S.mode==="study"||S.mode==="cards") render();
+}
 function reportData(){
   const u=usage(), m=u.m||{}, st=learnStats(), n=k=>u[k]||0, mn=k=>m[k]||0;
   const ua=navigator.userAgent, dev=((ua.match(/\(([^)]*)\)/)||[])[1]||"")+(inWeChat()?"; WeChat":"");
@@ -1259,6 +1320,7 @@ function renderMore(main){
     <div class="listhead">${t("Learning")}</div> <!-- first since v275 (H: the dashboard belongs "ganz nach oben, an erste Stelle") -->
     <div class="mrow"><div style="flex:1"><div class="t">${t("Progress")}</div><div class="s">${progressHTML()}</div><div class="fieldacts"><button class="btn mini" id="usage-share">${t("Share report")}</button></div></div></div>
     <div class="mrow"><div><div class="t">${t("Card order")}</div><div class="s">${t("Due cards come first, then up to {0} new ones. This sets the order inside each group.",NEW_PER_SESSION)}</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${t(l)}</button>`).join("")}</div></div></div>
+    ${tagRowHTML()}
     <div class="listhead">${t("Share")}</div>
     <div class="mrow"><div><div class="t">${t("Share the app")}</div><div class="s" id="app-share-status">${t("Send the link to a friend. The app installs from any browser, no store.")}</div></div><button class="btn mini" id="app-share">${t("Share")}</button></div>
     <div class="mrow"><div style="flex:1"><div class="t">${t("Feedback")}</div><div class="s" id="fb-status">${t("Tell the app's owner what works and what does not.")}</div><textarea class="grow" id="fb-text" rows="2" placeholder="${t("Your message")}"></textarea><div class="fieldacts"><button class="btn mini" id="fb-send">${t("Send")}</button></div></div></div>
@@ -1313,6 +1375,7 @@ function renderMore(main){
   $("#usage-share").onclick=shareProgress; $("#app-share").onclick=shareApp;
   document.querySelectorAll("[data-lang]").forEach(b=> b.onclick=()=>setLang(b.dataset.lang));
   const tr=$("#translate-all"); if(tr) tr.onclick=translateAll;
+  const tg=$("#tag-all"); if(tg) tg.onclick=tagAll; /* Tag all cards (v368) */
   $("#guide-open").onclick=()=>{ S.mode="guide"; render(); window.scrollTo({top:0}); };
   wireGrow(main); /* the feedback box grows with its text like the forms' fields (v218, H: "looks a little bit old school") */
   $("#fb-send").onclick=async()=>{ const tx=$("#fb-text"), st=$("#fb-status"), b=$("#fb-send"), text=tx.value.trim(); if(!text){ st.textContent=t("Write a few words first."); return; }
@@ -1363,7 +1426,7 @@ const GUIDE=()=>[
   {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out."),
     t("Grade yourself: Again, Hard, Good, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included."),
-    t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on. Learn can show one tag at a time. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way.")]},
+    t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way.")]},
   {h:t("Language and meanings"),p:[t("More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.")]},
   {h:t("What stays on the phone"),p:[t("Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak."),
     t("Once a day anonymous usage counts and the app's error messages go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.")]}];
@@ -4814,7 +4877,7 @@ const reloadBusy=()=>picking()||!!CROP; /* a photo on its way from the camera, o
    is up within seconds and the user finds the same screen. */
 const IDLE_MS=4000, RELOAD_POLL=2000, RESUME_MAX=180000; let LAST_TOUCH=Date.now();
 ["pointerdown","keydown","input","touchstart","wheel"].forEach(ev=>document.addEventListener(ev,()=>{ LAST_TOUCH=Date.now(); },{capture:true,passive:true}));
-const reloadIdle=()=>!reloadBusy()&&!document.hidden&&Date.now()-LAST_TOUCH>=IDLE_MS&&!S.editing&&S.mode!=="add"&&!Object.keys(PENDING).length&&!Object.keys(READING).length&&!(TRANSLATE&&TRANSLATE.running)&&!document.querySelector(".drawsheet,.ask")&&!(($("#fb-text")||{}).value||"").trim();
+const reloadIdle=()=>!reloadBusy()&&!document.hidden&&Date.now()-LAST_TOUCH>=IDLE_MS&&!S.editing&&S.mode!=="add"&&!Object.keys(PENDING).length&&!Object.keys(READING).length&&!(TRANSLATE&&TRANSLATE.running)&&!(TAGALL&&TAGALL.running)&&!document.querySelector(".drawsheet,.ask")&&!(($("#fb-text")||{}).value||"").trim();
 async function reloadNow(){ RELOAD_DUE=false; clearInterval(RELOAD_TIMER); RELOAD_TIMER=null; try{ await setSetting("resumeView",{mode:S.mode,detail:S.detail,query:S.query,scroll:window.scrollY,at:Date.now()}); }catch(e){} location.reload(); }
 function reloadSoon(){ if(!reloadBusy()&&(Date.now()-LOAD_AT<RELOAD_GRACE||document.hidden)){ reloadNow(); return; } RELOAD_DUE=true; if(!RELOAD_TIMER) RELOAD_TIMER=setInterval(()=>{ if(RELOAD_DUE&&reloadIdle()) reloadNow(); },RELOAD_POLL); }
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&RELOAD_DUE&&!reloadBusy()) reloadNow(); });

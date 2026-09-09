@@ -15,6 +15,11 @@ function nOf(n,w,pl){ n=n||0; const key=n===1?w:(pl||w+"s"), d=L10N[LANG], tr=d&
 const L10N={
 en:{"capsule:Done":"Done","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
 de:{
+  "Tag all cards":"Alle Karten taggen",
+  "Tagging {0} of {1} …":"Tagge {0} von {1} …",
+  "{0} tagged, {1} left.":"{0} getaggt, {1} übrig.",
+  "Done — {0} tagged.":"Fertig – {0} getaggt.",
+  "{0} carry no tag yet.":"{0} haben noch kein Tag.",
   "Filter":"Filter",
   "Status":"Status",
   "Untagged":"Ohne Tag",
@@ -226,7 +231,7 @@ de:{
   "Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.":"Lernen zeigt die fälligen Karten, dann bis zu acht neue. Tipp auf das Zeichen für Pinyin und Bedeutung, auf das Foto für das ganze Bild, der Lautsprecher liest vor.",
   "Grade yourself: Again, Hard, Good, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward.":"Bewerte dich selbst: Nochmal, Schwer, Gut, Leicht. Die Karte kommt früher oder später wieder, das ist der ganze Trick. Nichts fällig? Zieh die nächsten Karten vor.",
   "All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included.":"Alle deine Karten, neueste zuerst. Durchsuche sie, filtere nach Markierung oder Tag, tipp eine an für die Detailansicht mit Testen, Bearbeiten und Löschen. + Neu legt eine Karte von Hand an, gezeichnetes Zeichen inklusive.",
-  "Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on. Learn can show one tag at a time. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way.":"Tags gruppieren Karten für einen Kurs oder ein Niveau, und eine Karte aus einem Foto bekommt eins dafür, was sie ist — Speisekarte, Laden, Produkt, Gerät und so weiter. Lernen kann einen Tag nach dem anderen zeigen. Halte eine Karte gedrückt, um mehrere zu markieren und zusammen zu löschen — ein Foto im Kamera-Tab genauso.",
+  "Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way.":"Tags gruppieren Karten für einen Kurs oder ein Niveau, und eine Karte aus einem Foto bekommt eins dafür, was sie ist — Speisekarte, Laden, Produkt, Gerät und so weiter; unter Mehr → Lernen gibt „Alle Karten taggen“ auch den älteren Karten eins. Lernen zeigt die Tags, die du wählst. Halte eine Karte gedrückt, um mehrere zu markieren und zusammen zu löschen — ein Foto im Kamera-Tab genauso.",
   "Language and meanings":"Sprache und Bedeutungen",
   "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"Mehr → Sprache schaltet die Texte der App um. Ist die KI an, bekommen neue Karten ihre Bedeutung in dieser Sprache, und Alle Karten übersetzen erledigt es für die vorhandenen. Eine kleine Pille nennt eine Bedeutung, die noch in einer anderen Sprache ist.",
   "What stays on the phone":"Was auf dem Telefon bleibt",
@@ -244,6 +249,11 @@ de:{
   "Day streak":"Tage in Folge","Cards learned":"Karten gelernt","Due today":"Heute fällig","Reviews this week":"Wiederholungen diese Woche","Last 30 days":"Die letzten 30 Tage","Still learning":"Noch am Lernen","Known":"Sicher","Coming up: {0} due tomorrow, {1} this week.":"Demnächst: {0} morgen fällig, {1} diese Woche."
 },
 fr:{
+  "Tag all cards":"Taguer toutes les cartes",
+  "Tagging {0} of {1} …":"Tag {0} sur {1} …",
+  "{0} tagged, {1} left.":"{0} taguées, {1} restantes.",
+  "Done — {0} tagged.":"Terminé – {0} taguées.",
+  "{0} carry no tag yet.":"{0} n'ont pas encore de tag.",
   "Filter":"Filtre",
   "Status":"Statut",
   "Untagged":"Sans tag",
@@ -455,7 +465,7 @@ fr:{
   "Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.":"Apprendre montre les cartes à revoir, puis jusqu'à huit nouvelles. Touche le caractère pour le pinyin et le sens, la photo pour l'image entière, le haut-parleur le lit.",
   "Grade yourself: Again, Hard, Good, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward.":"Note-toi : Encore, Difficile, Bien, Facile. La carte revient plus ou moins tôt, c'est toute l'astuce. Rien à revoir ? Avance les prochaines cartes.",
   "All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included.":"Toutes tes cartes, les plus récentes d'abord. Cherche, filtre par signalement ou tag, touche-en une pour son détail avec Tester, Modifier et Supprimer. + Nouvelle crée une carte à la main, caractère dessiné compris.",
-  "Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on. Learn can show one tag at a time. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way.":"Les tags regroupent les cartes pour un cours ou un niveau, et une carte issue d'une photo en reçoit un pour ce qu'elle est — Menu, Boutique, Produit, Appareil, etc. Apprendre peut montrer un tag à la fois. Appuie longuement sur une carte pour en marquer plusieurs et les supprimer ensemble — pareil pour une photo dans l'onglet Appareil photo.",
+  "Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way.":"Les tags regroupent les cartes pour un cours ou un niveau, et une carte issue d'une photo en reçoit un pour ce qu'elle est — Menu, Boutique, Produit, Appareil, etc. ; dans Plus → Apprendre, « Taguer toutes les cartes » en donne un aussi aux anciennes. Apprendre montre les tags que tu choisis. Appuie longuement sur une carte pour en marquer plusieurs et les supprimer ensemble — pareil pour une photo dans l'onglet Appareil photo.",
   "Language and meanings":"Langue et sens",
   "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"Plus → Langue change les textes de l'appli. Avec l'IA, les nouvelles cartes reçoivent leur sens dans cette langue, et Traduire toutes les cartes le fait pour celles que tu as déjà. Une petite pastille nomme un sens encore dans une autre langue.",
   "What stays on the phone":"Ce qui reste sur le téléphone",
@@ -473,6 +483,11 @@ fr:{
   "Day streak":"Jours d'affilée","Cards learned":"Cartes apprises","Due today":"À revoir aujourd'hui","Reviews this week":"Révisions cette semaine","Last 30 days":"Les 30 derniers jours","Still learning":"En cours","Known":"Acquises","Coming up: {0} due tomorrow, {1} this week.":"À venir : {0} demain, {1} cette semaine."
 },
 es:{
+  "Tag all cards":"Etiquetar todas las tarjetas",
+  "Tagging {0} of {1} …":"Etiquetando {0} de {1} …",
+  "{0} tagged, {1} left.":"{0} etiquetadas, {1} restantes.",
+  "Done — {0} tagged.":"Listo: {0} etiquetadas.",
+  "{0} carry no tag yet.":"{0} aún no tienen etiqueta.",
   "Filter":"Filtro",
   "Status":"Estado",
   "Untagged":"Sin etiqueta",
@@ -684,7 +699,7 @@ es:{
   "Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.":"Aprender muestra las tarjetas pendientes, luego hasta ocho nuevas. Toca el carácter para pinyin y significado, la foto para la imagen completa, el altavoz lo lee.",
   "Grade yourself: Again, Hard, Good, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward.":"Puntúate: Otra vez, Difícil, Bien, Fácil. La tarjeta vuelve antes o después, ese es todo el truco. ¿Nada pendiente? Adelanta las siguientes tarjetas.",
   "All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included.":"Todas tus tarjetas, las más recientes primero. Búscalas, filtra por marca o etiqueta, toca una para su detalle con Probar, Editar y Eliminar. + Nueva crea una tarjeta a mano, carácter dibujado incluido.",
-  "Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on. Learn can show one tag at a time. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way.":"Las etiquetas agrupan tarjetas por clase o nivel, y una tarjeta hecha con una foto recibe una según lo que sea — Menú, Tienda, Producto, Aparato y demás. Aprender puede mostrar una etiqueta cada vez. Mantén pulsada una tarjeta para marcar varias y borrarlas juntas — una foto en la pestaña Cámara igual.",
+  "Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way.":"Las etiquetas agrupan tarjetas por clase o nivel, y una tarjeta hecha con una foto recibe una según lo que sea — Menú, Tienda, Producto, Aparato y demás; en Más → Aprender, «Etiquetar todas las tarjetas» también se la da a las antiguas. Aprender muestra las etiquetas que elijas. Mantén pulsada una tarjeta para marcar varias y borrarlas juntas — una foto en la pestaña Cámara igual.",
   "Language and meanings":"Idioma y significados",
   "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"Más → Idioma cambia los textos de la app. Con la IA, las tarjetas nuevas reciben su significado en ese idioma, y Traducir todas las tarjetas lo hace con las que ya tienes. Una pequeña etiqueta nombra un significado que sigue en otro idioma.",
   "What stays on the phone":"Qué se queda en el teléfono",
@@ -702,6 +717,11 @@ es:{
   "Day streak":"Días seguidos","Cards learned":"Tarjetas aprendidas","Due today":"Para hoy","Reviews this week":"Repasos esta semana","Last 30 days":"Últimos 30 días","Still learning":"En curso","Known":"Dominadas","Coming up: {0} due tomorrow, {1} this week.":"Próximamente: {0} mañana, {1} esta semana."
 },
 ja:{
+  "Tag all cards":"すべてのカードにタグを付ける",
+  "Tagging {0} of {1} …":"{0} / {1} にタグ付け中 …",
+  "{0} tagged, {1} left.":"{0}にタグ付け、残り{1}。",
+  "Done — {0} tagged.":"完了 — {0}にタグを付けました。",
+  "{0} carry no tag yet.":"{0}にまだタグがありません。",
   "Filter":"フィルター",
   "Status":"状態",
   "Untagged":"タグなし",
@@ -913,7 +933,7 @@ ja:{
   "Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.":"学習では復習するカードが先に、そのあと新しいカードが最大8枚出ます。文字をタップするとピンインと意味、写真をタップすると全体、スピーカーで読み上げます。",
   "Grade yourself: Again, Hard, Good, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward.":"自分で評価します：もう一度、難しい、良い、簡単。カードは早めか遅めにまた出てきます。それだけの仕組みです。復習がない日は次のカードを前倒しできます。",
   "All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included.":"カードは新しい順に並びます。検索し、印やタグで絞り、タップすると詳細（テスト、編集、削除）が開きます。「+ 新規」で手入力のカードを作れます。文字の手書きもできます。",
-  "Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on. Learn can show one tag at a time. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way.":"タグでカードを授業やレベルごとにまとめられます。写真から作ったカードには、その中身を表すタグ（メニュー、店、商品、家電など）が付きます。学習ではタグをひとつずつ選べます。 カードを長押しすると複数を選んでまとめて削除できます。カメラタブの写真も同じです。",
+  "Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way.":"タグでカードを授業やレベルごとにまとめられます。写真から作ったカードには、その中身を表すタグ（メニュー、店、商品、家電など）が付き、その他 → 学習の「すべてのカードにタグを付ける」で古いカードにも付けられます。学習では選んだタグのカードが出ます。カードを長押しすると複数を選んでまとめて削除できます。カメラタブの写真も同じです。",
   "Language and meanings":"言語と意味",
   "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"その他 → 言語でアプリの表示が切り替わります。AIがオンなら新しいカードの意味はその言語になり、「すべてのカードを翻訳」で今あるカードも翻訳できます。まだ別の言語の意味には小さなラベルが付きます。",
   "What stays on the phone":"端末に残るもの",
@@ -931,6 +951,11 @@ ja:{
   "Day streak":"連続日数","Cards learned":"学んだカード","Due today":"今日の復習","Reviews this week":"今週の復習回数","Last 30 days":"過去30日","Still learning":"学習中","Known":"定着","Coming up: {0} due tomorrow, {1} this week.":"この先：明日{0}枚、今週{1}枚。"
 },
 ko:{
+  "Tag all cards":"모든 카드에 태그 달기",
+  "Tagging {0} of {1} …":"{0} / {1} 태그 다는 중 …",
+  "{0} tagged, {1} left.":"{0} 태그 완료, {1} 남음.",
+  "Done — {0} tagged.":"완료 — {0} 태그했어요.",
+  "{0} carry no tag yet.":"{0}에 아직 태그가 없어요.",
   "Filter":"필터",
   "Status":"상태",
   "Untagged":"태그 없음",
@@ -1142,7 +1167,7 @@ ko:{
   "Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.":"학습에는 복습할 카드가 먼저, 그다음 새 카드가 최대 여덟 장 나와요. 글자를 누르면 병음과 뜻, 사진을 누르면 전체 사진, 스피커를 누르면 읽어 줘요.",
   "Grade yourself: Again, Hard, Good, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward.":"스스로 평가해요: 다시, 어려움, 좋음, 쉬움. 카드는 빨리 또는 늦게 다시 나와요. 그게 전부예요. 복습할 게 없으면 다음 카드를 앞당겨요.",
   "All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included.":"모든 카드가 최신 순으로 있어요. 검색하고, 표시나 태그로 거르고, 누르면 테스트·편집·삭제가 있는 상세가 열려요. + 새로 만들기로 직접 카드를 만들고, 글자를 손으로 쓸 수도 있어요.",
-  "Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on. Learn can show one tag at a time. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way.":"태그로 카드를 수업이나 레벨별로 묶어요. 사진으로 만든 카드에는 그게 뭔지 알려주는 태그(메뉴, 가게, 제품, 가전 등)가 붙어요. 학습에서 태그 하나씩 볼 수 있어요. 카드를 길게 누르면 여러 장을 골라 한 번에 지울 수 있어요. 카메라 탭의 사진도 같아요.",
+  "Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way.":"태그로 카드를 수업이나 레벨별로 묶어요. 사진으로 만든 카드에는 그게 뭔지 알려주는 태그(메뉴, 가게, 제품, 가전 등)가 붙고, 더 보기 → 학습의 ‘모든 카드에 태그 달기’로 예전 카드에도 붙일 수 있어요. 학습에서는 고른 태그의 카드가 나와요. 카드를 길게 누르면 여러 장을 골라 한 번에 지울 수 있어요. 카메라 탭의 사진도 같아요.",
   "Language and meanings":"언어와 뜻",
   "More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.":"더보기 → 언어에서 앱의 표시를 바꿔요. AI가 켜져 있으면 새 카드의 뜻이 그 언어로 나오고, 모든 카드 번역으로 이미 있는 카드도 번역돼요. 아직 다른 언어인 뜻에는 작은 표시가 붙어요.",
   "What stays on the phone":"휴대폰에 남는 것",
