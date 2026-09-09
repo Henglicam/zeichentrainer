@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=358; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=359; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -577,7 +577,7 @@ async function pictureJpeg(blob){
   const out=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
   const b64=(await blobToB64(out)).d; return {b64,w:cv.width,h:cv.height,kb:Math.round(out.size/1024)};
 }
-const picSystem=()=>`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","box":[left,top,right,bottom],"boxes":[[left,top,right,bottom],…],"cut":"…","apart":true|false,"labels":[{"zh":"…","p":"…","m":"…","box":[left,top,right,bottom]},…],"bad":true|false}. "zh" = the main Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without lines of Latin letters (a brand's English name), without numbers of the decoration and nothing you cannot see — a number that belongs to a Chinese line stays in that line with its unit, as written (净含量380ml, 30分钟, 3月1日): the learner reads it as part of the line — the main text only: leave out fine print, that is lines whose characters are under a third the height of the largest characters (dates, credits, small notes, slogans in small type), and leave out any line the picture's edge cuts off; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural ${meaningLangName()} meaning of the text as a sign or name (short, ${meaningLangName()} only); when the text is a brand, shop or product name, "m" is that name as it is known (the romanised or the international name), followed in brackets by what it is, in ${meaningLangName()} — e.g. "Mixue Bingcheng (ice-cream and bubble-tea chain)", never the bare name alone; when the text has several lines that say different things (a film poster: the title, then credits), "m" gives one short meaning per line, in the same order, joined with " / " as the pinyin is — e.g. "The Wandering Earth (film) / a film by / producer, original novel / Guo Fan, Liu Cixin" — so the learner sees which line means what; lines that form one phrase keep one meaning; "note" = one short remark if needed; "box" = where the text you read stands in the picture — one rectangle around all its lines, [left, top, right, bottom] in pixels of the picture (its size is given with the picture), tight around the characters; "boxes" = the same for each line of "zh" on its own, one rectangle per line in the same order; "cut" = the edges of the picture that cut off a line of Chinese text you left out because of that — "top", "bottom", "left" or "right", several separated by commas, "" when no line is cut off; "apart" = true when the picture shows a user interface — the control panel of an appliance, a remote, a keypad, a lift panel, a vending machine — or several signs, labels, buttons, menu items or packages standing next to each other, whose Chinese texts each name their own button, setting, item or thing, so that a learner would learn them one by one; false when the lines belong to one text (a poster's title and its credits, a sign's two lines, a brand name above a product name, a label's name and its ingredients); "labels" = only when "apart" is true: one entry per element, in reading order, left to right and top to bottom, every one of them, each with that element's own Chinese text, its own pinyin, its own meaning and its own rectangle around it — a smaller label under a bigger one (长按童锁 under 洗衣液) is an element of its own, not fine print; an element printed on two lines (加速 above 省时, 轻载 above 模式) is one entry 加速省时 with one rectangle around both lines; an element that reads 汤/粥 keeps the slash in its "zh", and its pinyin and meaning stay in that one entry; when "apart" is true, "zh" holds the same elements, one per line, in the same order, and none of them counts as fine print; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty and omit "box" and "boxes". An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`; /* the meaning in the app's language (v256) */
+const picSystem=()=>`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","box":[left,top,right,bottom],"boxes":[[left,top,right,bottom],…],"cut":"…","apart":true|false,"labels":[{"zh":"…","p":"…","m":"…","box":[left,top,right,bottom]},…],"bad":true|false}. "zh" = the main Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without lines of Latin letters (a brand's English name), without numbers of the decoration and nothing you cannot see — a number that belongs to a Chinese line stays in that line with its unit, as written (净含量380ml, 30分钟, 3月1日): the learner reads it as part of the line — the main text only: leave out fine print, that is lines whose characters are under a third the height of the largest characters (dates, credits, small notes, slogans in small type), and leave out any line the picture's edge cuts off; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural ${meaningLangName()} meaning of the text as a sign or name (short, ${meaningLangName()} only); when the text is a brand, shop or product name, "m" is that name as it is known (the romanised or the international name), followed in brackets by what it is, in ${meaningLangName()} — e.g. "Mixue Bingcheng (ice-cream and bubble-tea chain)", never the bare name alone; when the text has several lines that say different things (a film poster: the title, then credits), "m" gives one short meaning per line, in the same order, joined with " / " as the pinyin is — e.g. "The Wandering Earth (film) / a film by / producer, original novel / Guo Fan, Liu Cixin" — so the learner sees which line means what; lines that form one phrase keep one meaning; "note" = one short remark if needed; "box" = where the text you read stands in the picture — one rectangle around all its lines, [left, top, right, bottom] in pixels of the picture (its size is given with the picture), tight around the characters; "boxes" = the same for each line of "zh" on its own, one rectangle per line in the same order; "cut" = the edges of the picture that cut off a line of Chinese text you left out because of that — "top", "bottom", "left" or "right", several separated by commas, "" when no line is cut off; "apart" = true when the picture shows a user interface — the control panel of an appliance, a remote, a keypad, a lift panel, a vending machine, a screenshot of a phone app — or several signs, labels, buttons, menu items or packages standing next to each other — a menu board, a shelf of price labels, a wall of notices, a building directory, a bus stop board, the care instructions on a clothing label —, whose Chinese texts each name their own button, setting, item or thing, so that a learner would learn them one by one; false when the lines belong to one text (a poster's title and its credits, a sign's two lines, a brand name above a product name, a label's name and its ingredients); "labels" = only when "apart" is true: one entry per element, in reading order, left to right and top to bottom, every one of them, each with that element's own Chinese text, its own pinyin, its own meaning and its own rectangle around it — a smaller label under a bigger one (长按童锁 under 洗衣液) is an element of its own, not fine print; an element printed on two lines (加速 above 省时, 轻载 above 模式) is one entry 加速省时 with one rectangle around both lines; an element that reads 汤/粥 keeps the slash in its "zh", and its pinyin and meaning stay in that one entry; when "apart" is true, "zh" holds the same elements, one per line, in the same order, and none of them counts as fine print; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty and omit "box" and "boxes". An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`; /* the meaning in the app's language (v256) */
 /* Qwen's hybrid models think by default, and the thinking takes many seconds before the short JSON comes (v208, H with Qwen
    as the active provider: "Check pinyin and meaning takes way too long" — until v207 only the picture path switched it off) */
 function noThinking(pv,model,body){ if(pv==="qwen"&&/^qwen3/.test(model)) body.enable_thinking=false; return body; }
@@ -3281,6 +3281,67 @@ function photoFrameOf(base,W,Hh,rect,angle){ /* a rectangle of the straightened 
   f.x=Math.max(0,Math.min(base.lw-f.w,f.x)); f.y=Math.max(0,Math.min(base.lh-f.h,f.y));
   return f.w>=CROP_MIN&&f.h>=CROP_MIN&&f.w<=base.lw&&f.h<=base.lh?f:null;
 }
+/* The characters of one label, near the model's anchor (v359, H's rice cooker at v358: every top-row card showed the small black
+   button instead of its label — "Cropped wrong areas"). The reproduction of that photo (the picture the AI saw, 637×800, with the
+   answer's own boxes drawn on it) says why: Qwen's per-label boxes sit on the buttons, one label height below the characters —
+   [158,236,255,285] for 低卡饭 whose text stands at y 185–220 —, and snapBox then did its job on the ink it was pointed at. The
+   union box drifted the same way, and the v326 band check caught that one ("a line above the AI's box, read as 快毒粗粮饭"); the
+   label boxes had nothing to catch theirs. So a label's box is an anchor, not a measurement: look around it for a row of
+   character-shaped blobs and take that. What tells a label from its button: characters are blobs about as wide as tall, several
+   of them in a row, while a button is one blob three times wider than tall. The neighbouring labels stand in the same row band,
+   so the band is cut into runs at gaps of half a character height — inside a label the characters nearly touch, between labels
+   there is a character's width of air — and the run over the anchor is the label. A second row joins when it sits within
+   LB_GAP of the first and stands over it (保温 above 取消). Nothing character-shaped: the AI's box stays as it is. */
+const LB_UP=1.6, LB_SIDE=1.5, LB_MINH=0.2, LB_MAXH=1.25, LB_ROW=0.02, LB_MERGE=0.5, LB_FILL=0.8, LB_INK0=0.005, LB_INK1=0.35, LB_NEAR=0.6, LB_GAP=0.8, LB_OVER=0.4;
+function labelRect(bmp,box,uni){
+  const k=Math.min(1,900/Math.max(bmp.width,bmp.height)), W=Math.max(1,Math.round(bmp.width*k)), Hh=Math.max(1,Math.round(bmp.height*k));
+  const cv=document.createElement("canvas"); cv.width=W; cv.height=Hh; const ctx=cv.getContext("2d",{alpha:false,willReadFrequently:true}); ctx.drawImage(bmp,0,0,W,Hh);
+  const d=ctx.getImageData(0,0,W,Hh).data, g=new Uint8Array(W*Hh); for(let i=0,j=0;i<d.length;i+=4,j++) g[j]=(d[i]*77+d[i+1]*151+d[i+2]*28)>>8;
+  const cl=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+  const B={x0:cl(Math.round(box.x0*k),0,W-2),y0:cl(Math.round(box.y0*k),0,Hh-2)}; B.x1=cl(Math.round(box.x1*k),B.x0+2,W); B.y1=cl(Math.round(box.y1*k),B.y0+2,Hh);
+  const bh=B.y1-B.y0; if(bh<6) return null;
+  const U=uni?{x0:cl(Math.round(uni.x0*k),0,W-2),y0:cl(Math.round(uni.y0*k),0,Hh-2),x1:cl(Math.round(uni.x1*k),1,W),y1:cl(Math.round(uni.y1*k),1,Hh)}:B;
+  const hist=new Uint32Array(256); let un=0; for(let y=U.y0;y<U.y1;y++) for(let x=U.x0;x<U.x1;x++){ hist[g[y*W+x]]++; un++; }
+  const thrU=otsuThr(hist,Math.max(1,un));
+  let dark=0; for(let v=0;v<=thrU;v++) dark+=hist[v];
+  const inkDark=dark*2<un; /* ink is the minority — dark characters on a light panel, light ones on a dark one */
+  const R={x0:Math.max(0,Math.round(B.x0-LB_SIDE*bh)),y0:Math.max(0,Math.round(B.y0-LB_UP*bh)),x1:Math.min(W,Math.round(B.x1+LB_SIDE*bh)),y1:Math.min(Hh,Math.round(B.y1+LB_UP*bh))};
+  const rw=R.x1-R.x0, rh=R.y1-R.y0; if(rw<4||rh<4) return null;
+  /* the cut: the label's own surroundings when they hold ink — a panel is lit unevenly, and one cut over the whole answer's box
+     loses the characters at its dim end (H's 粗粮饭 came out as 粗粮) —, else the whole answer's box, which certainly holds ink:
+     over surroundings that are bare panel Otsu splits the panel's own gradient in half and the characters drown in it (H's 预约,
+     whose anchor stands on bare panel) */
+  const hr=new Uint32Array(256); for(let y=R.y0;y<R.y1;y++) for(let x=R.x0;x<R.x1;x++) hr[g[y*W+x]]++;
+  const thrR=otsuThr(hr,rw*rh); let dr=0; for(let v=0;v<=thrR;v++) dr+=hr[v];
+  const share=Math.min(dr,rw*rh-dr)/(rw*rh), thr=share>=LB_INK0&&share<=LB_INK1?thrR:thrU;
+  const on=(x,y)=>{ const v=g[(R.y0+y)*W+R.x0+x]; return inkDark?v<=thr:v>thr; };
+  const rowInk=new Int32Array(rh); for(let y=0;y<rh;y++){ let n=0; for(let x=0;x<rw;x++) if(on(x,y)) n++; rowInk[y]=n; }
+  const need=Math.max(1,Math.round(LB_ROW*rw)), bands=[];
+  for(let y=0,run=0;y<=rh;y++){ if(y<rh&&rowInk[y]>=need) run++; else { if(run) bands.push({y0:y-run,y1:y}); run=0; } }
+  const bcx=(B.x0+B.x1)/2-R.x0, bcy=(B.y0+B.y1)/2-R.y0, bx0=B.x0-R.x0, bx1=B.x1-R.x0;
+  const runOf=band=>{ /* the label the anchor stands over: inside a label the characters nearly touch, between labels there is a character's width of air */
+    const bhh=band.y1-band.y0; if(bhh<LB_MINH*bh||bhh>LB_MAXH*bh) return null;
+    const col=new Int32Array(rw); for(let x=0;x<rw;x++){ let n=0; for(let y=band.y0;y<band.y1;y++) if(on(x,y)) n++; col[x]=n; }
+    const gap=Math.max(2,Math.round(LB_MERGE*bhh)), runs=[];
+    for(let x=0,st=-1,off=0;x<=rw;x++){ if(x<rw&&col[x]){ if(st<0) st=x; off=0; }
+      else if(st>=0){ off++; if(x===rw||off>gap){ runs.push({x0:st,x1:x-off+1}); st=-1; off=0; } } }
+    let best=null, bv=-1e9;
+    for(const r of runs){ let ink=0; for(let x=r.x0;x<r.x1;x++) ink+=col[x];
+      const w=r.x1-r.x0; if(ink>=LB_FILL*w*bhh) continue; /* solid: a button, a bar, a plate — not characters (measured on H's cooker: 低卡饭 fills 0.45 of its box, the button under it 0.89) */
+      const bw=Math.max(1,bx1-bx0), ov=Math.max(0,Math.min(r.x1,bx1)-Math.max(r.x0,bx0))/bw;
+      const v=2*ov-Math.abs((r.x0+r.x1)/2-bcx)/bw-Math.abs(w-bw)/bw; /* the model's box may sit on the button under the label, but its width is the label's: a run as wide as the box is the text, the button under it is a third of it */
+      if(v>bv){ bv=v; best={x0:r.x0,y0:band.y0,x1:r.x1,y1:band.y1,v}; } }
+    return best; };
+  let take=null, tv=-1e9;
+  for(const band of bands){ const r=runOf(band); if(!r) continue;
+    const v=r.v-LB_NEAR*Math.abs((r.y0+r.y1)/2-bcy)/bh; /* the run over the anchor, in the row nearest it — but only as a tiebreaker: the model's boxes drift by a whole label height, so what the run looks like weighs more than where it sits */
+    if(v>tv){ tv=v; take=r; } }
+  if(!take) return null;
+  for(const band of bands){ const r=runOf(band); if(!r||r.y0===take.y0) continue; /* a label printed on two lines: the row above or below, standing over the same place (保温 above 取消) */
+    const gp=Math.max(r.y0-take.y1,take.y0-r.y1), ov=Math.max(0,Math.min(r.x1,take.x1)-Math.max(r.x0,take.x0))/Math.max(1,Math.min(r.x1-r.x0,take.x1-take.x0));
+    if(gp<=LB_GAP*(take.y1-take.y0)&&ov>=LB_OVER) take={x0:Math.min(take.x0,r.x0),y0:Math.min(take.y0,r.y0),x1:Math.max(take.x1,r.x1),y1:Math.max(take.y1,r.y1),v:take.v}; }
+  return {x0:(take.x0+R.x0)/k,y0:(take.y0+R.y0)/k,x1:(take.x1+R.x0)/k,y1:(take.y1+R.y0)/k};
+}
 function snapBox(bmp,box,n,lens,skip){ /* lens: the answer's lines' character counts (v305); skip: the fine print's boxes as fractions (v328) — a blob whose centre lies in one is not the text */
   const k=Math.min(1,800/Math.max(bmp.width,bmp.height)), W=Math.max(1,Math.round(bmp.width*k)), Hh=Math.max(1,Math.round(bmp.height*k));
   const cv=document.createElement("canvas"); cv.width=W; cv.height=Hh; const ctx=cv.getContext("2d",{alpha:false,willReadFrequently:true}); ctx.drawImage(bmp,0,0,W,Hh);
@@ -3554,9 +3615,10 @@ async function cropSign(id,opts){
             const whole=bs.some(q=>(q.x1-q.x0)*(q.y1-q.y0)>0.9*W*Hh); /* a box over the whole picture is not one element */
             const why=lab.length>SPLIT_MAX?`there are ${lab.length} of them`:!oneScale?"their boxes are not all on the same scale":whole?"one box covers the whole picture":"";
             if(why){ READLOG.push({t:Date.now(),text:`the AI calls these ${lab.length} texts separate labels, but ${why} — one card`}); while(READLOG.length>40) READLOG.shift(); }
-            else labelRects=bs.map((bb,k)=>{ let sn=null; try{ sn=snapBox(b,bb,1,[[...lab[k].zh].filter(ch=>CJK.test(ch)||NUM_PART.test(ch)).length||1],pic.droppedBoxes); }catch(e){ sn=null; }
-                const q=sn&&sn.x1>sn.x0?sn:bb, Hk=Math.max(1,q.y1-q.y0); /* the snap's own box, its beyond-bands ignored: a neighbouring label is not this label's cut-off line */
-                return {x0:Math.max(0,q.x0-Hk*FRAME_ROOM),y0:Math.max(0,q.y0-Hk*FRAME_ROOM),x1:Math.min(W,q.x1+Hk*FRAME_ROOM),y1:Math.min(Hh,q.y1+Hk*FRAME_ROOM)}; }); }
+            else labelRects=(pcv=>bs.map((bb,k)=>{ let sn=null; try{ sn=labelRect(b,bb,{x0:pic.box[0]*W,y0:pic.box[1]*Hh,x1:pic.box[2]*W,y1:pic.box[3]*Hh}); }catch(e){ sn=null; logErr("split",e&&e.message||String(e)); }
+                READLOG.push({t:Date.now(),text:sn?`${lab[k].zh}: the AI's box ${pcv(bb.x0/W)}–${pcv(bb.x1/W)} % across, ${pcv(bb.y0/Hh)}–${pcv(bb.y1/Hh)} % down, its characters at ${pcv(sn.x0/W)}–${pcv(sn.x1/W)} %, ${pcv(sn.y0/Hh)}–${pcv(sn.y1/Hh)} %`:`${lab[k].zh}: nothing of a character's shape near the AI's box — the box stays`}); while(READLOG.length>40) READLOG.shift();
+                const q=sn&&sn.x1>sn.x0?sn:bb, Hk=Math.max(1,q.y1-q.y0); /* the label's own characters (v359), not snapBox's poster machinery: its room reaches into the neighbours and its passes take the button */
+                return {x0:Math.max(0,q.x0-Hk*FRAME_ROOM),y0:Math.max(0,q.y0-Hk*FRAME_ROOM),x1:Math.min(W,q.x1+Hk*FRAME_ROOM),y1:Math.min(Hh,q.y1+Hk*FRAME_ROOM)}; }))(v=>Math.round(v*100)); }
           b.close();
           r.pic.snap=snap?[box.x0/W,box.y0/Hh,box.x1/W,box.y1/Hh].map(v=>+v.toFixed(3)):null; /* with the lines the reader confirmed (v324) */
           const Hb=(box.y1-box.y0)/n; /* the text height from the box and its lines */
