@@ -307,6 +307,20 @@ body.noscroll{overflow:hidden}
 .ask .s{font-size:15px;color:var(--label2);line-height:1.45;margin-top:6px}
 .ask .row{display:flex;gap:10px;margin-top:18px} .ask .row .btn{flex:1;min-height:50px;font-size:17px}
 .ask .btn.plain{background:var(--fill);color:var(--label)}
+/* the filter pill and its sheet (v365): one line in place of the chip row, the whole list grouped in the sheet */
+.chip.fpill{display:inline-flex;align-items:center;gap:6px} .ficon{width:16px;height:16px;flex:none;fill:none;stroke-width:1.7;stroke-linecap:round}
+.ask .sheet.filter{padding:16px 0 12px;max-height:78vh;display:flex;flex-direction:column}
+.filter .fhead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 16px 12px}
+.filter .flist{overflow-y:auto;min-height:0;-webkit-overflow-scrolling:touch}
+.filter .fgroup+.fgroup{margin-top:16px}
+.filter .fgh{font-size:13px;color:var(--label2);padding:0 16px 6px}
+.filter .frow{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:11px 16px;background:none;border:none;text-align:left;font-size:16px;color:var(--label);cursor:pointer}
+.filter .frow+.frow{border-top:1px solid var(--sep)}
+.filter .fl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.filter .fn{color:var(--label2);font-size:15px;flex:none} .filter .fc{width:16px;flex:none}
+.filter .frow.on .fl{color:var(--tint);font-weight:600}
+.filter .frow.on .fc::after{content:"";display:block;width:6px;height:11px;margin:0 auto;border:2px solid var(--tint);border-top:0;border-left:0;transform:rotate(45deg)}
+.filter .row{margin-top:12px;padding:12px 16px 0;border-top:1px solid var(--sep)}
 
 /* sign card front */
 .signfront{width:100%;max-width:440px;margin:0 auto}
