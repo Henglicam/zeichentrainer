@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=374; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=375; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3099,20 +3099,32 @@ async function jpegOf(blob,q){
    picture whose brightest pixels stay under BR_HI has no light in it, and one whose span is under BR_SPAN is flat.
    Measured on the real photos of the harness: all seven rice-cooker labels come out readable, and 绿皮书, 流浪地球,
    the scooter badge, the Nongfu bottle, the parking sign and the whole washing-machine panel are left as they are.
-   It is idempotent — a stretched picture measures "fine" the next time. */
-const BR_HI=200, BR_SPAN=120, BR_MIN=24, BR_GAIN=40, BR_CLIP=0.01, BR_SAMPLE=200000;
-function brightLut(px){
-  const h=new Uint32Array(256); let n=0;
+   It is idempotent — a stretched picture measures "fine" the next time.
+   The stretch is per channel, which is a white balance (v375, H: "kannst du beim brightening noch einen
+   Weissabgleich machen, damit alle bilder aus einem batch gleich aussehen?"): the labels cut from one panel each
+   carried their own share of the light's colour, so seven cards of one photo came out in seven different tints.
+   Each channel's own 1st and 99th percentile go to black and white, so whatever the light did to the picture is
+   taken out and the sibling cards match. It runs only where the three channels are of a kind — the widest span at
+   most BR_WB times the narrowest: a crop that is one colour through and through (red text on a red button) has no
+   white in it to balance against, and stretching its empty channels would drain the colour, so it keeps the one
+   luminance curve of v372. */
+const BR_HI=200, BR_SPAN=120, BR_MIN=24, BR_GAIN=40, BR_CLIP=0.01, BR_SAMPLE=200000, BR_WB=2.5;
+function brightLut(px){ /* one curve per channel: red, green, blue */
+  const h=[new Uint32Array(256),new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)]; let n=0; /* 0 luminance, 1-3 the channels */
   const step=4*Math.max(1,Math.ceil(px.length/4/BR_SAMPLE)); /* a big picture is measured on a sample, the curve then runs over every pixel */
-  for(let i=0;i<px.length;i+=step){ h[(px[i]*77+px[i+1]*151+px[i+2]*28)>>8]++; n++; }
+  for(let i=0;i<px.length;i+=step){ h[0][(px[i]*77+px[i+1]*151+px[i+2]*28)>>8]++; h[1][px[i]]++; h[2][px[i+1]]++; h[3][px[i+2]]++; n++; }
   if(!n) return null;
-  const at=q=>{ let c=0; const k=q*n; for(let v=0;v<256;v++){ c+=h[v]; if(c>=k) return v; } return 255; };
-  const lo=at(BR_CLIP), hi=at(1-BR_CLIP);
+  const at=(k,q)=>{ let c=0; const need=q*n; for(let v=0;v<256;v++){ c+=h[k][v]; if(c>=need) return v; } return 255; };
+  const lo=at(0,BR_CLIP), hi=at(0,1-BR_CLIP);
   if(hi-lo<BR_MIN) return null; /* nothing but noise to stretch */
   if(hi>=BR_HI&&hi-lo>=BR_SPAN) return null; /* light and lively: leave it alone */
-  const span=Math.max(hi-lo,BR_GAIN), lut=new Uint8Array(256); /* the gain is capped, so a nearly flat picture does not become a poster */
-  for(let v=0;v<256;v++) lut[v]=Math.round(255*Math.min(1,Math.max(0,(v-lo)/span)));
-  return lut;
+  const ends=[1,2,3].map(k=>{ const a=at(k,BR_CLIP), b=at(k,1-BR_CLIP); return {lo:a,span:b-a}; });
+  const wide=Math.max(...ends.map(e=>e.span)), narrow=Math.min(...ends.map(e=>e.span));
+  const balance=narrow>0&&wide<=BR_WB*narrow; /* the channels are of a kind: there is white in the picture to balance against */
+  const cap=Math.max(hi-lo,BR_GAIN)/(hi-lo); /* the gain is capped, so a nearly flat picture does not become a poster — the same factor on all three, or the cap would tilt the balance */
+  const curve=(a,span)=>{ const lut=new Uint8Array(256); for(let v=0;v<256;v++) lut[v]=Math.round(255*Math.min(1,Math.max(0,(v-a)/span))); return lut; };
+  if(!balance){ const one=curve(lo,(hi-lo)*cap); return [one,one,one]; }
+  return ends.map(e=>curve(e.lo,Math.max(1,e.span)*cap));
 }
 /* the picture brightened, or null when it needs nothing (then the caller keeps the blob it has, unencoded) */
 async function brightenBlob(blob){
@@ -3123,7 +3135,7 @@ async function brightenBlob(blob){
     const ctx=cv.getContext("2d",{alpha:false}); ctx.drawImage(bmp,0,0); bmp.close();
     const d=ctx.getImageData(0,0,cv.width,cv.height), lut=brightLut(d.data);
     if(!lut) return null;
-    for(let i=0;i<d.data.length;i+=4){ d.data[i]=lut[d.data[i]]; d.data[i+1]=lut[d.data[i+1]]; d.data[i+2]=lut[d.data[i+2]]; }
+    for(let i=0;i<d.data.length;i+=4){ d.data[i]=lut[0][d.data[i]]; d.data[i+1]=lut[1][d.data[i+1]]; d.data[i+2]=lut[2][d.data[i+2]]; }
     ctx.putImageData(d,0,0);
     return await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
   }catch(e){ return null; }
