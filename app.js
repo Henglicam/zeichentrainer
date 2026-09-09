@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=359; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=360; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -537,20 +537,22 @@ function textProvider(){ const pv=aiProvider(); if(pv==="deepseek"||!AI_PROVIDER
    picture answers take 3–10 s on H's phone). */
 let HIDDEN_AT=0; document.addEventListener("visibilitychange",()=>{ if(document.hidden) HIDDEN_AT=Date.now(); });
 const whenVisible=()=>document.hidden?new Promise(res=>document.addEventListener("visibilitychange",function f(){ if(!document.hidden){ document.removeEventListener("visibilitychange",f); res(); } })):Promise.resolve();
-const AI_NET_ERR="The AI could not be reached", AI_RETRY_MS=1500; let AI_TIMEOUT_MS=25000; /* let: the harness shortens it */
-const timedFetch=(url,opts)=>{ const ac=new AbortController(), t=setTimeout(()=>ac.abort(),AI_TIMEOUT_MS); return fetch(url,{...opts,signal:ac.signal}).catch(err=>{ throw ac.signal.aborted?new Error("no answer within "+Math.round(AI_TIMEOUT_MS/1000)+" s"):err; }).finally(()=>clearTimeout(t)); };
-async function aiFetch(url,opts){
+const AI_NET_ERR="The AI could not be reached", AI_RETRY_MS=1500, PIC_TOKENS=4000; let AI_TIMEOUT_MS=25000, PIC_TIMEOUT_MS=60000; /* let: the harness shortens them */
+/* the picture gets its own budget (v360, H's washing machine: 26 buttons, and Qwen's answer at 1000 tokens already took 22 s —
+   a full one passes 25 s, and the abort would throw away an answer that was on its way) */
+const timedFetch=(url,opts,ms)=>{ const ac=new AbortController(), lim=ms||AI_TIMEOUT_MS, t=setTimeout(()=>ac.abort(),lim); return fetch(url,{...opts,signal:ac.signal}).catch(err=>{ throw ac.signal.aborted?new Error("no answer within "+Math.round(lim/1000)+" s"):err; }).finally(()=>clearTimeout(t)); };
+async function aiFetch(url,opts,ms){
   const t0=Date.now();
-  try{ return await timedFetch(url,opts); }
+  try{ return await timedFetch(url,opts,ms); }
   catch(err){
     const bg=document.hidden||HIDDEN_AT>=t0;
     if(bg) await whenVisible(); else await new Promise(r=>setTimeout(r,AI_RETRY_MS));
-    try{ return await timedFetch(url,opts); }
+    try{ return await timedFetch(url,opts,ms); }
     catch(err2){ throw new Error((err2&&err2.message||err2)+(bg?" (tried again after the app came back to the foreground)":" (tried twice)")); }
   }
 }
-async function relayFetch(pv,body){
-  return aiFetch(relayUrl(),{method:"POST",headers:{"content-type":"application/json","apikey":SHARE_KEY,"authorization":"Bearer "+SHARE_KEY,"x-install":installId()},body:JSON.stringify({provider:pv,body})});
+async function relayFetch(pv,body,ms){
+  return aiFetch(relayUrl(),{method:"POST",headers:{"content-type":"application/json","apikey":SHARE_KEY,"authorization":"Bearer "+SHARE_KEY,"x-install":installId()},body:JSON.stringify({provider:pv,body})},ms);
 }
 /* the provider's or the relay's error text from a failed answer's JSON body ("" when there is none) */
 async function apiErrText(r){ try{ const j=await r.json(); return String((j.error&&(j.error.message||j.error))||j.message||""); }catch(e){ return ""; } }
@@ -577,7 +579,7 @@ async function pictureJpeg(blob){
   const out=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
   const b64=(await blobToB64(out)).d; return {b64,w:cv.width,h:cv.height,kb:Math.round(out.size/1024)};
 }
-const picSystem=()=>`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","box":[left,top,right,bottom],"boxes":[[left,top,right,bottom],…],"cut":"…","apart":true|false,"labels":[{"zh":"…","p":"…","m":"…","box":[left,top,right,bottom]},…],"bad":true|false}. "zh" = the main Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without lines of Latin letters (a brand's English name), without numbers of the decoration and nothing you cannot see — a number that belongs to a Chinese line stays in that line with its unit, as written (净含量380ml, 30分钟, 3月1日): the learner reads it as part of the line — the main text only: leave out fine print, that is lines whose characters are under a third the height of the largest characters (dates, credits, small notes, slogans in small type), and leave out any line the picture's edge cuts off; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural ${meaningLangName()} meaning of the text as a sign or name (short, ${meaningLangName()} only); when the text is a brand, shop or product name, "m" is that name as it is known (the romanised or the international name), followed in brackets by what it is, in ${meaningLangName()} — e.g. "Mixue Bingcheng (ice-cream and bubble-tea chain)", never the bare name alone; when the text has several lines that say different things (a film poster: the title, then credits), "m" gives one short meaning per line, in the same order, joined with " / " as the pinyin is — e.g. "The Wandering Earth (film) / a film by / producer, original novel / Guo Fan, Liu Cixin" — so the learner sees which line means what; lines that form one phrase keep one meaning; "note" = one short remark if needed; "box" = where the text you read stands in the picture — one rectangle around all its lines, [left, top, right, bottom] in pixels of the picture (its size is given with the picture), tight around the characters; "boxes" = the same for each line of "zh" on its own, one rectangle per line in the same order; "cut" = the edges of the picture that cut off a line of Chinese text you left out because of that — "top", "bottom", "left" or "right", several separated by commas, "" when no line is cut off; "apart" = true when the picture shows a user interface — the control panel of an appliance, a remote, a keypad, a lift panel, a vending machine, a screenshot of a phone app — or several signs, labels, buttons, menu items or packages standing next to each other — a menu board, a shelf of price labels, a wall of notices, a building directory, a bus stop board, the care instructions on a clothing label —, whose Chinese texts each name their own button, setting, item or thing, so that a learner would learn them one by one; false when the lines belong to one text (a poster's title and its credits, a sign's two lines, a brand name above a product name, a label's name and its ingredients); "labels" = only when "apart" is true: one entry per element, in reading order, left to right and top to bottom, every one of them, each with that element's own Chinese text, its own pinyin, its own meaning and its own rectangle around it — a smaller label under a bigger one (长按童锁 under 洗衣液) is an element of its own, not fine print; an element printed on two lines (加速 above 省时, 轻载 above 模式) is one entry 加速省时 with one rectangle around both lines; an element that reads 汤/粥 keeps the slash in its "zh", and its pinyin and meaning stay in that one entry; when "apart" is true, "zh" holds the same elements, one per line, in the same order, and none of them counts as fine print; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty and omit "box" and "boxes". An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`; /* the meaning in the app's language (v256) */
+const picSystem=()=>`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","box":[left,top,right,bottom],"boxes":[[left,top,right,bottom],…],"cut":"…","apart":true|false,"labels":[{"zh":"…","p":"…","m":"…","box":[left,top,right,bottom]},…],"bad":true|false}. "zh" = the main Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without lines of Latin letters (a brand's English name), without numbers of the decoration and nothing you cannot see — a number that belongs to a Chinese line stays in that line with its unit, as written (净含量380ml, 30分钟, 3月1日): the learner reads it as part of the line — the main text only: leave out fine print, that is lines whose characters are under a third the height of the largest characters (dates, credits, small notes, slogans in small type), and leave out any line the picture's edge cuts off; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural ${meaningLangName()} meaning of the text as a sign or name (short, ${meaningLangName()} only); when the text is a brand, shop or product name, "m" is that name as it is known (the romanised or the international name), followed in brackets by what it is, in ${meaningLangName()} — e.g. "Mixue Bingcheng (ice-cream and bubble-tea chain)", never the bare name alone; when the text has several lines that say different things (a film poster: the title, then credits), "m" gives one short meaning per line, in the same order, joined with " / " as the pinyin is — e.g. "The Wandering Earth (film) / a film by / producer, original novel / Guo Fan, Liu Cixin" — so the learner sees which line means what; lines that form one phrase keep one meaning; "note" = one short remark if needed; "box" = where the text you read stands in the picture — one rectangle around all its lines, [left, top, right, bottom] in pixels of the picture (its size is given with the picture), tight around the characters; "boxes" = the same for each line of "zh" on its own, one rectangle per line in the same order — leave "boxes" out entirely when you give "labels", whose entries carry their own rectangles; "cut" = the edges of the picture that cut off a line of Chinese text you left out because of that — "top", "bottom", "left" or "right", several separated by commas, "" when no line is cut off; "apart" = true when the picture shows a user interface — the control panel of an appliance, a remote, a keypad, a lift panel, a vending machine, a screenshot of a phone app — or several signs, labels, buttons, menu items or packages standing next to each other — a menu board, a shelf of price labels, a wall of notices, a building directory, a bus stop board, the care instructions on a clothing label —, whose Chinese texts each name their own button, setting, item or thing, so that a learner would learn them one by one; false when the lines belong to one text (a poster's title and its credits, a sign's two lines, a brand name above a product name, a label's name and its ingredients); "labels" = only when "apart" is true: one entry per element, in reading order, left to right and top to bottom, every one of them, each with that element's own Chinese text, its own pinyin, its own meaning and its own rectangle around it — a smaller label under a bigger one (长按童锁 under 洗衣液) is an element of its own, not fine print; an element printed on two lines (加速 above 省时, 轻载 above 模式) is one entry 加速省时 with one rectangle around both lines; an element that reads 汤/粥 keeps the slash in its "zh", and its pinyin and meaning stay in that one entry; when "apart" is true, "zh" holds the same elements, one per line, in the same order, and none of them counts as fine print; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty and omit "box" and "boxes". An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`; /* the meaning in the app's language (v256) */
 /* Qwen's hybrid models think by default, and the thinking takes many seconds before the short JSON comes (v208, H with Qwen
    as the active provider: "Check pinyin and meaning takes way too long" — until v207 only the picture path switched it off) */
 function noThinking(pv,model,body){ if(pv==="qwen"&&/^qwen3/.test(model)) body.enable_thinking=false; return body; }
@@ -591,17 +593,18 @@ async function aiReadPicture(blob,alts,status){
   try{
     if(pv==="claude")
       r=await aiFetch(aiBase(pv),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-        body:JSON.stringify({model,max_tokens:1000,system:picSystem(),messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:pic.b64}},{type:"text",text}]}]})});
-    else { const body={model,max_tokens:1000,temperature:0,messages:[{role:"system",content:picSystem()},{role:"user",content:[{type:"text",text},{type:"image_url",image_url:{url:"data:image/jpeg;base64,"+pic.b64}}]}]};
+        body:JSON.stringify({model,max_tokens:PIC_TOKENS,system:picSystem(),messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:pic.b64}},{type:"text",text}]}]})},PIC_TIMEOUT_MS);
+    else { const body={model,max_tokens:PIC_TOKENS,temperature:0,messages:[{role:"system",content:picSystem()},{role:"user",content:[{type:"text",text},{type:"image_url",image_url:{url:"data:image/jpeg;base64,"+pic.b64}}]}]};
       noThinking(pv,model,body);
-      r=relay?await relayFetch(pv,body):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
+      r=relay?await relayFetch(pv,body,PIC_TIMEOUT_MS):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)},PIC_TIMEOUT_MS); }
   }catch(err){ logAi({model,req,err:"no connection: "+(err&&err.message||err)}); throw new Error(AI_NET_ERR); }
   if(!r.ok){ const t=await apiErrText(r); logAi({model,status:r.status,req,err:t}); throw new Error(relay?relayError(r,t):"API error "+r.status+(t?": "+t:"")); }
   const data=await r.json(); countTokens(pv,data); bump("pics"); bumpModel(model); /* the usage counters and the daily row count the picture readings (v178, H) and the model (v179) */
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
   logAi({model,status:r.status,ms:Date.now()-t0,req,res:raw.slice(0,1500)});
   await loadScriptTables().catch(()=>{});
-  const txt=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,""); let x; try{ x=JSON.parse(txt); if(Array.isArray(x)) x=x[0]; }catch(e){ throw new Error("could not read the model's answer"); }
+  const txt=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,""); let x; try{ x=JSON.parse(txt); if(Array.isArray(x)) x=x[0]; }catch(e){ x=mendJSON(txt); if(!x) throw new Error("could not read the model's answer");
+    READLOG.push({t:Date.now(),text:`the AI's answer stopped in the middle — kept what came (${Object.keys(x).join(", ")})`}); while(READLOG.length>40) READLOG.shift(); }
   if(!x||typeof x!=="object") throw new Error("unexpected answer");
   const lines0=String(x.zh||"").replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean), lineBoxes=Array.isArray(x.boxes)?x.boxes:null;
   const main=mainLines(lines0,x.p,x.m,lineBoxes?lineBoxes.map(b=>picBox(b,pic.w,pic.h)):null,picBox(x.box,pic.w,pic.h));
@@ -644,6 +647,24 @@ function picBox(b,w,h){
   if(mx>1||my>1){ if(mx<=w&&my<=h){ x0/=w; x1/=w; y0/=h; y1/=h; } else if(mx<=1000&&my<=1000){ x0/=1000; x1/=1000; y0/=1000; y1/=1000; } else return null; }
   if(!(x1-x0>=0.02&&y1-y0>=0.02)) return null;
   return [Math.max(0,x0),Math.max(0,y0),Math.min(1,x1),Math.min(1,y1)];
+}
+function mendJSON(txt){ /* an answer the model's token budget cut in the middle (v360, H's washing machine: 26 buttons, and the answer
+  stopped inside its "boxes" array): close what is open and keep the fields that came whole — the app then has the text even when
+  the boxes or the labels never arrived, instead of nothing at all */
+  let t=String(txt||""); const i=t.indexOf("["), j=t.indexOf("{");
+  if(j<0) return null; if(i>=0&&i<j) t=t.slice(i+1); /* an array of one object, as some models answer */
+  t=t.slice(t.indexOf("{"));
+  for(let end=t.length;end>0;end--){ /* cut back to the last comma or closing bracket, then close every open bracket */
+    const c=t[end-1]; if(c!==","&&c!=="}"&&c!=="]"&&c!=='"'&&!/[\w一-鿿]/.test(c)) continue;
+    let cut=t.slice(0,end).replace(/,\s*$/,""), depth=[], str=false, esc=false;
+    for(const ch of cut){ if(str){ if(esc) esc=false; else if(ch==="\\") esc=true; else if(ch==='"') str=false; continue; }
+      if(ch==='"') str=true; else if(ch==="{"||ch==="[") depth.push(ch==="{"?"}":"]"); else if(ch==="}"||ch==="]") depth.pop(); }
+    if(str||esc) continue; /* the cut fell inside a string: try a shorter one */
+    cut=cut.replace(/,\s*$/,"").replace(/:\s*$/,":null");
+    while(depth.length) cut+=depth.pop();
+    try{ const v=JSON.parse(cut); if(v&&typeof v==="object"&&!Array.isArray(v)&&Object.keys(v).length) return v; }catch(e){}
+  }
+  return null;
 }
 function picScale(b,w,h){ /* how picBox read these numbers — as fractions, as the picture's pixels or on the 0–1000 grid (v358): a
   panel's labels must all be read the same way, or some of them land somewhere else entirely */
@@ -3272,7 +3293,7 @@ const SNAP_REACH=0.85; /* how much of the AI's box the coloured ink must reach a
    own, v297) and not the v340 pixel reading of the box (the labels are never rescaled with it). v357 also asked whether two boxes
    stood side by side and whether any box was taller than twice its width — a panel whose labels sit in one column would have
    failed both, and the geometry was the app's invention; it is gone. */
-const SPLIT_MIN=2, SPLIT_MAX=30, SPLIT_PX=16, CROP_MIN=8.5; /* SPLIT_PX: in the copy's own pixels, the smallest label a frame is made from · CROP_MIN: the smallest frame cropBlob cuts, in the layer's pixels */
+const SPLIT_MIN=2, SPLIT_MAX=30, SPLIT_PX=8, CROP_MIN=8.5; /* SPLIT_PX: in the copy's own pixels, the smallest label a frame is made from · CROP_MIN: the smallest frame cropBlob cuts, in the layer's pixels */
 function photoFrameOf(base,W,Hh,rect,angle){ /* a rectangle of the straightened copy as a frame on the photo — frameOnText's own upright mapping, without its side effects */
   const sc=W/base.w, {x0,y0,x1,y1}=unrotatedBox(W,Hh,rect,angle);
   if(!(x1-x0>=SPLIT_PX&&y1-y0>=SPLIT_PX)) return null; /* in the copy's own pixels: a label is measured against the photo, not against the layer — a button 35 px tall in a 1600 px photo is under 8 px on a 338 px layer and is a good card picture all the same */
@@ -3292,22 +3313,25 @@ function photoFrameOf(base,W,Hh,rect,angle){ /* a rectangle of the straightened 
    so the band is cut into runs at gaps of half a character height — inside a label the characters nearly touch, between labels
    there is a character's width of air — and the run over the anchor is the label. A second row joins when it sits within
    LB_GAP of the first and stands over it (保温 above 取消). Nothing character-shaped: the AI's box stays as it is. */
-const LB_UP=1.6, LB_SIDE=1.5, LB_MINH=0.2, LB_MAXH=1.25, LB_ROW=0.02, LB_MERGE=0.5, LB_FILL=0.8, LB_INK0=0.005, LB_INK1=0.35, LB_NEAR=0.6, LB_GAP=0.8, LB_OVER=0.4;
-function labelRect(bmp,box,uni){
-  const k=Math.min(1,900/Math.max(bmp.width,bmp.height)), W=Math.max(1,Math.round(bmp.width*k)), Hh=Math.max(1,Math.round(bmp.height*k));
+const LB_CAP=1600, LB_UP=1.6, LB_SIDE=1.5, LB_MINH=0.2, LB_MAXH=1.25, LB_ROW=0.02, LB_MERGE=0.5, LB_FILL=0.8, LB_INK0=0.005, LB_INK1=0.35, LB_NEAR=0.6, LB_GAP=0.8, LB_OVER=0.4;
+function labelGrey(bmp,uni){ /* the picture in grey once for the whole panel (v360): at its own pixels up to LB_CAP, so a label 16 px
+  tall in the 800 px picture the AI saw is measured on twice as many pixels, and the 20-odd labels share one canvas instead of one each */
+  const k=Math.min(1,LB_CAP/Math.max(bmp.width,bmp.height)), W=Math.max(1,Math.round(bmp.width*k)), Hh=Math.max(1,Math.round(bmp.height*k));
   const cv=document.createElement("canvas"); cv.width=W; cv.height=Hh; const ctx=cv.getContext("2d",{alpha:false,willReadFrequently:true}); ctx.drawImage(bmp,0,0,W,Hh);
   const d=ctx.getImageData(0,0,W,Hh).data, g=new Uint8Array(W*Hh); for(let i=0,j=0;i<d.length;i+=4,j++) g[j]=(d[i]*77+d[i+1]*151+d[i+2]*28)>>8;
   const cl=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
-  const B={x0:cl(Math.round(box.x0*k),0,W-2),y0:cl(Math.round(box.y0*k),0,Hh-2)}; B.x1=cl(Math.round(box.x1*k),B.x0+2,W); B.y1=cl(Math.round(box.y1*k),B.y0+2,Hh);
-  const bh=B.y1-B.y0; if(bh<6) return null;
-  const U=uni?{x0:cl(Math.round(uni.x0*k),0,W-2),y0:cl(Math.round(uni.y0*k),0,Hh-2),x1:cl(Math.round(uni.x1*k),1,W),y1:cl(Math.round(uni.y1*k),1,Hh)}:B;
+  const U=uni?{x0:cl(Math.round(uni[0]*W),0,W-2),y0:cl(Math.round(uni[1]*Hh),0,Hh-2),x1:cl(Math.round(uni[2]*W),1,W),y1:cl(Math.round(uni[3]*Hh),1,Hh)}:{x0:0,y0:0,x1:W,y1:Hh};
   const hist=new Uint32Array(256); let un=0; for(let y=U.y0;y<U.y1;y++) for(let x=U.x0;x<U.x1;x++){ hist[g[y*W+x]]++; un++; }
-  const thrU=otsuThr(hist,Math.max(1,un));
-  let dark=0; for(let v=0;v<=thrU;v++) dark+=hist[v];
-  const inkDark=dark*2<un; /* ink is the minority — dark characters on a light panel, light ones on a dark one */
+  const thrU=otsuThr(hist,Math.max(1,un)); let dark=0; for(let v=0;v<=thrU;v++) dark+=hist[v];
+  return {g,W,Hh,thrU,inkDark:dark*2<un}; /* ink is the minority — dark characters on a light panel, light ones on a dark one */
+}
+function labelRect(gy,box){ /* box in fractions of the picture */
+  const {g,W,Hh,thrU,inkDark}=gy, cl=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+  const B={x0:cl(Math.round(box.x0*W),0,W-2),y0:cl(Math.round(box.y0*Hh),0,Hh-2)}; B.x1=cl(Math.round(box.x1*W),B.x0+2,W); B.y1=cl(Math.round(box.y1*Hh),B.y0+2,Hh);
+  const bh=B.y1-B.y0; if(bh<6) return null;
   const R={x0:Math.max(0,Math.round(B.x0-LB_SIDE*bh)),y0:Math.max(0,Math.round(B.y0-LB_UP*bh)),x1:Math.min(W,Math.round(B.x1+LB_SIDE*bh)),y1:Math.min(Hh,Math.round(B.y1+LB_UP*bh))};
   const rw=R.x1-R.x0, rh=R.y1-R.y0; if(rw<4||rh<4) return null;
-  /* the cut: the label's own surroundings when they hold ink — a panel is lit unevenly, and one cut over the whole answer's box
+  /* the cut: the label's own surroundings when they hold ink — a panel is lit unevenly and one cut over the whole answer's box
      loses the characters at its dim end (H's 粗粮饭 came out as 粗粮) —, else the whole answer's box, which certainly holds ink:
      over surroundings that are bare panel Otsu splits the panel's own gradient in half and the characters drown in it (H's 预约,
      whose anchor stands on bare panel) */
@@ -3340,7 +3364,7 @@ function labelRect(bmp,box,uni){
   for(const band of bands){ const r=runOf(band); if(!r||r.y0===take.y0) continue; /* a label printed on two lines: the row above or below, standing over the same place (保温 above 取消) */
     const gp=Math.max(r.y0-take.y1,take.y0-r.y1), ov=Math.max(0,Math.min(r.x1,take.x1)-Math.max(r.x0,take.x0))/Math.max(1,Math.min(r.x1-r.x0,take.x1-take.x0));
     if(gp<=LB_GAP*(take.y1-take.y0)&&ov>=LB_OVER) take={x0:Math.min(take.x0,r.x0),y0:Math.min(take.y0,r.y0),x1:Math.max(take.x1,r.x1),y1:Math.max(take.y1,r.y1),v:take.v}; }
-  return {x0:(take.x0+R.x0)/k,y0:(take.y0+R.y0)/k,x1:(take.x1+R.x0)/k,y1:(take.y1+R.y0)/k};
+  return {x0:(take.x0+R.x0)/W,y0:(take.y0+R.y0)/Hh,x1:(take.x1+R.x0)/W,y1:(take.y1+R.y0)/Hh}; /* fractions of the picture */
 }
 function snapBox(bmp,box,n,lens,skip){ /* lens: the answer's lines' character counts (v305); skip: the fine print's boxes as fractions (v328) — a blob whose centre lies in one is not the text */
   const k=Math.min(1,800/Math.max(bmp.width,bmp.height)), W=Math.max(1,Math.round(bmp.width*k)), Hh=Math.max(1,Math.round(bmp.height*k));
@@ -3615,10 +3639,13 @@ async function cropSign(id,opts){
             const whole=bs.some(q=>(q.x1-q.x0)*(q.y1-q.y0)>0.9*W*Hh); /* a box over the whole picture is not one element */
             const why=lab.length>SPLIT_MAX?`there are ${lab.length} of them`:!oneScale?"their boxes are not all on the same scale":whole?"one box covers the whole picture":"";
             if(why){ READLOG.push({t:Date.now(),text:`the AI calls these ${lab.length} texts separate labels, but ${why} — one card`}); while(READLOG.length>40) READLOG.shift(); }
-            else labelRects=(pcv=>bs.map((bb,k)=>{ let sn=null; try{ sn=labelRect(b,bb,{x0:pic.box[0]*W,y0:pic.box[1]*Hh,x1:pic.box[2]*W,y1:pic.box[3]*Hh}); }catch(e){ sn=null; logErr("split",e&&e.message||String(e)); }
-                READLOG.push({t:Date.now(),text:sn?`${lab[k].zh}: the AI's box ${pcv(bb.x0/W)}–${pcv(bb.x1/W)} % across, ${pcv(bb.y0/Hh)}–${pcv(bb.y1/Hh)} % down, its characters at ${pcv(sn.x0/W)}–${pcv(sn.x1/W)} %, ${pcv(sn.y0/Hh)}–${pcv(sn.y1/Hh)} %`:`${lab[k].zh}: nothing of a character's shape near the AI's box — the box stays`}); while(READLOG.length>40) READLOG.shift();
-                const q=sn&&sn.x1>sn.x0?sn:bb, Hk=Math.max(1,q.y1-q.y0); /* the label's own characters (v359), not snapBox's poster machinery: its room reaches into the neighbours and its passes take the button */
-                return {x0:Math.max(0,q.x0-Hk*FRAME_ROOM),y0:Math.max(0,q.y0-Hk*FRAME_ROOM),x1:Math.min(W,q.x1+Hk*FRAME_ROOM),y1:Math.min(Hh,q.y1+Hk*FRAME_ROOM)}; }))(v=>Math.round(v*100)); }
+            else { const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen; /* the frame at its own pixels when nothing was straightened: a panel's labels are small in the 800 px picture the AI saw */
+              const sb=src===seen?b:await createImageBitmap(src); const gy=labelGrey(sb,pic.box); if(sb!==b) sb.close();
+              const pcv=v=>Math.round(v*100);
+              labelRects=lab.map((l,k)=>{ let sn=null; try{ sn=labelRect(gy,{x0:l.box[0],y0:l.box[1],x1:l.box[2],y1:l.box[3]}); }catch(e){ sn=null; logErr("split",e&&e.message||String(e)); }
+                READLOG.push({t:Date.now(),text:sn?`${l.zh}: the AI's box ${pcv(l.box[0])}–${pcv(l.box[2])} % across, ${pcv(l.box[1])}–${pcv(l.box[3])} % down, its characters at ${pcv(sn.x0)}–${pcv(sn.x1)} %, ${pcv(sn.y0)}–${pcv(sn.y1)} %`:`${l.zh}: nothing of a character's shape near the AI's box — the box stays`}); while(READLOG.length>40) READLOG.shift();
+                const q=sn||{x0:l.box[0],y0:l.box[1],x1:l.box[2],y1:l.box[3]}, Hk=Math.max(1/Hh,q.y1-q.y0); /* the label's own characters (v359), not snapBox's poster machinery: its room reaches into the neighbours and its passes take the button */
+                return {x0:Math.max(0,q.x0-Hk*FRAME_ROOM)*W,y0:Math.max(0,q.y0-Hk*FRAME_ROOM)*Hh,x1:Math.min(1,q.x1+Hk*FRAME_ROOM)*W,y1:Math.min(1,q.y1+Hk*FRAME_ROOM)*Hh}; }); } }
           b.close();
           r.pic.snap=snap?[box.x0/W,box.y0/Hh,box.x1/W,box.y1/Hh].map(v=>+v.toFixed(3)):null; /* with the lines the reader confirmed (v324) */
           const Hb=(box.y1-box.y0)/n; /* the text height from the box and its lines */
@@ -3627,10 +3654,18 @@ async function cropSign(id,opts){
             if(e.top||e.bottom||e.left||e.right){ grow={top:e.top?1.5*bh:0,bottom:e.bottom?1.5*bh:0,left:e.left?2*bh:0,right:e.right?2*bh:0}; READLOG.push({t:Date.now(),text:`the AI's box touches the picture's ${["top","bottom","left","right"].filter(k=>e[k]).join(" and ")} edge — the frame reaches beyond it`}); while(READLOG.length>40) READLOG.shift(); } } }catch(e){ box=null; logErr("snap",e&&e.message||String(e)); READLOG.push({t:Date.now(),text:"the AI's box could not be used: "+(e&&e.message||e)}); while(READLOG.length>40) READLOG.shift(); }
         if(box){ const sure=sureAngle; const cut=await frameOnText(id,picSeen.orig,seenBase,rect,seenAngle,"AI",grow,sure&&{box}); if(stale()) return; if(cut) placedCut=cut; }
         if(labelRects&&W&&Hh&&seenBase){ /* one frame per label on the photo (v357), for finishPending to cut and save */
-          const fr=labelRects.map(rc=>photoFrameOf(seenBase,W,Hh,rc,seenAngle));
-          if(fr.every(Boolean)){ SPLIT[id]=fr; const pc=v=>Math.round(v*100);
-            READLOG.push({t:Date.now(),text:`the AI calls these ${pic.labels.length} texts separate labels — one card each: ${fr.map((f,k)=>`${pic.labels[k].zh} ${pc(f.x/f.lw)}–${pc((f.x+f.w)/f.lw)} %`).join(", ")}`}); while(READLOG.length>40) READLOG.shift(); }
-          else { const bad=fr.map((f,k)=>f?null:k).filter(k=>k!==null); READLOG.push({t:Date.now(),text:`the frame of ${bad.map(k=>pic.labels[k].zh).join(", ")} could not be placed on the photo (base ${Math.round(seenBase.w)}×${Math.round(seenBase.h)} of ${Math.round(seenBase.lw)}×${Math.round(seenBase.lh)}, copy ${W}×${Hh}) — one card`}); while(READLOG.length>40) READLOG.shift(); } } }
+          const fr=labelRects.map(rc=>photoFrameOf(seenBase,W,Hh,rc,seenAngle)), pc=v=>Math.round(v*100);
+          const keep=[]; for(let k=0;k<fr.length;k++) if(fr[k]) keep.push(k);
+          if(keep.length<fr.length){ /* a label too small to cut is left out and the others keep their cards (v360, H's washing machine, whose fine print stands 6 px tall in the picture) */
+            const lost=[]; for(let k=0;k<fr.length;k++) if(!fr[k]) lost.push(pic.labels[k].zh);
+            const rest=keep.length>=SPLIT_MIN?"the other labels keep their cards":"one card";
+            READLOG.push({t:Date.now(),text:"no frame for "+lost.join(", ")+" on the photo (copy "+W+"×"+Hh+") — "+rest});
+            while(READLOG.length>40) READLOG.shift(); }
+          if(keep.length>=SPLIT_MIN){
+            pic.labels=keep.map(k=>pic.labels[k]); SPLIT[id]=keep.map(k=>fr[k]);
+            const where=SPLIT[id].map((f,k)=>pic.labels[k].zh+" "+pc(f.x/f.lw)+"–"+pc((f.x+f.w)/f.lw)+" %").join(", ");
+            READLOG.push({t:Date.now(),text:"the AI calls these "+pic.labels.length+" texts separate labels — one card each: "+where});
+            while(READLOG.length>40) READLOG.shift(); } } }
       cardImg=placedCut||r.blob; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=cardImg; /* the card image is the crop as framed (the placed frame's cut, v288), not the second look's band */
       SIGN[id]={lines:zh, orig:zh.slice(), conf:[], boxes:zh.map(()=>[]), img:dk.blob, angle:dk.angle||0, tightened:false, region:r, alts:guesses, trad:!!pic.zht, tradDetected:!!pic.zht, tradText:pic.zht||"",
         ai:{zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,ml:pic.ml,note:pic.note,ok:true,bad:false,pic:true,labels:pic.labels||null}, cardImg, weak:false};
