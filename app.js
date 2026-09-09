@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=386; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=387; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3856,7 +3856,7 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
    matched keeps the frame's own picture — the v380 answer — so a card can be short of its own crop but never carries a
    neighbour's. Measured on H's own photo at its own 1600 px with his own texts: 18 of the 19 labels on their own
    characters, none on another's, where v385 gave all 19 the whole panel. */
-const RL_STEP=0.6, RL_SUP=3, RL_DUP=0.6, RL_TILES=8, RL_GAP=0.55, RL_WMIN=0.8, RL_WMAX=12, RL_PX=45, RL_CAP=420, RL_HIT=0.6;
+const RL_STEP=0.6, RL_SUP=3, RL_DUP=0.6, RL_TILES=8, RL_GAP=0.55, RL_WMIN=0.8, RL_WMAX=12, RL_PX=64, RL_ROOM=[0.3,0.5], RL_CAP=420, RL_HIT=0.6;
 function labelRunsOf(gy,labels,uni){ /* the picture's own rows of characters, and the runs of each row, in the grey copy's pixels */
   const {g,W,Hh}=gy, med=a=>{ const t=a.slice().sort((x,y)=>x-y); return t[t.length>>1]||0.05; };
   const bw=med(labels.map(l=>l.box[2]-l.box[0])), bh=med(labels.map(l=>l.box[3]-l.box[1]));
@@ -3905,21 +3905,38 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
   const {runs,bands}=labelRunsOf(gy,labels,uni); if(!runs.length) return {rects:labels.map(()=>null),bands,runs:0,hit:0};
   const kx=bmp.width/gy.W, ky=bmp.height/gy.Hh;
   const got=await runPasses(runs.map(r=>async w=>{ /* the run at the photo's own pixels, with the margin the reader wants */
-    const room=0.3*(r.y1-r.y0);
-    const x0=Math.max(0,Math.round((r.x0-room)*kx)), y0=Math.max(0,Math.round((r.y0-room)*ky));
-    const x1=Math.min(bmp.width,Math.round((r.x1+room)*kx)), y1=Math.min(bmp.height,Math.round((r.y1+room)*ky));
-    const bw=x1-x0, bh=y1-y0; if(bw<4||bh<4) return "";
-    const k=Math.min(4,RL_PX/bh), cv=document.createElement("canvas");
-    cv.width=Math.max(1,Math.round(bw*k)); cv.height=Math.max(1,Math.round(bh*k)); if(cv.width<8||cv.height<8) return "";
-    cv.getContext("2d",{alpha:false}).drawImage(bmp,x0,y0,bw,bh,0,0,cv.width,cv.height);
-    const jpg=await new Promise(res=>cv.toBlob(res,"image/jpeg",READ_JPEG)); if(!jpg) return "";
-    try{ const ls=await readPass(w,jpg,()=>{}); return ls.map(l=>l.t).join(""); }catch(e){ return ""; } }),status);
+    const out=[];
+    /* the scale is the characters' own height, not the padded crop's — a 41 px label in a 65 px box came out at
+       45 px, smaller than it started and 20 px a character, and the reader read nothing (v387) — and the run is the
+       ink's own extent, which clips the first and last character a little: the tight room reads a label whose icon
+       stands close above it, the loose one a label the column cut trimmed (measured on H's panel: 快速 needs the
+       tight room, 云程序 and 筒自洁 the loose one) */
+    const k=Math.max(1,Math.min(4,RL_PX/((r.y1-r.y0)*ky)));
+    for(const f of RL_ROOM){
+      const room=f*(r.y1-r.y0);
+      const x0=Math.max(0,Math.round((r.x0-room)*kx)), y0=Math.max(0,Math.round((r.y0-room)*ky));
+      const x1=Math.min(bmp.width,Math.round((r.x1+room)*kx)), y1=Math.min(bmp.height,Math.round((r.y1+room)*ky));
+      const bw=x1-x0, bh=y1-y0; if(bw<4||bh<4) continue;
+      const cv=document.createElement("canvas");
+      cv.width=Math.max(1,Math.round(bw*k)); cv.height=Math.max(1,Math.round(bh*k)); if(cv.width<8||cv.height<8) continue;
+      cv.getContext("2d",{alpha:false}).drawImage(bmp,x0,y0,bw,bh,0,0,cv.width,cv.height);
+      for(const mode of ["colour","bw"]){ /* a panel is lit unevenly: the colour copy reads its bright half, the black-and-white one its dim half */
+        let jb=null;
+        if(mode==="bw"){ const sb=await createImageBitmap(cv); try{ jb=await toBW(sb,1); }catch(e){ jb=null; } sb.close(); }
+        else jb=await new Promise(res=>cv.toBlob(res,"image/jpeg",READ_JPEG));
+        if(!jb) continue;
+        try{ const ls=await readPass(w,jb,()=>{}); out.push(ls.map(l=>l.t).join("")); }catch(e){}
+      }
+    }
+    return out; }),status);
   const pairs=[]; /* every run against every label, the surest pairing first; each run and each label used once */
-  for(let i=0;i<runs.length;i++) for(let j=0;j<labels.length;j++){ const v=labelHit(got[i],labels[j].zh); if(v>=RL_HIT) pairs.push([v,i,j]); }
+  for(let i=0;i<runs.length;i++) for(let j=0;j<labels.length;j++){
+    const v=Math.max(0,...(got[i]||[]).map(rd=>labelHit(rd,labels[j].zh))); if(v>=RL_HIT) pairs.push([v,i,j]); }
   pairs.sort((a,b)=>b[0]-a[0]);
   const ur=new Set(), ul=new Set(), rects=labels.map(()=>null); let hit=0;
   for(const [,i,j] of pairs){ if(ur.has(i)||ul.has(j)) continue; ur.add(i); ul.add(j); hit++;
-    const r=runs[i]; rects[j]={x0:r.x0/gy.W,y0:r.y0/gy.Hh,x1:r.x1/gy.W,y1:r.y1/gy.Hh,read:got[i]}; }
+    const r=runs[i]; const best=(got[i]||[]).map(rd=>[labelHit(rd,labels[j].zh),rd]).sort((a,b)=>b[0]-a[0])[0];
+    rects[j]={x0:r.x0/gy.W,y0:r.y0/gy.Hh,x1:r.x1/gy.W,y1:r.y1/gy.Hh,read:(best&&best[1])||""}; }
   return {rects,bands,runs:runs.length,hit};
 }
 function snapBox(bmp,box,n,lens,skip){ /* lens: the answer's lines' character counts (v305); skip: the fine print's boxes as fractions (v328) — a blob whose centre lies in one is not the text */
