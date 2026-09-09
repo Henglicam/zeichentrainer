@@ -651,7 +651,7 @@ async function migrateAi(){
 const pictureOn=()=>S.settings.aiPicture!==false;
 function pictureProvider(){ if(!pictureOn()) return null; return [aiProvider(),...Object.keys(AI_PROVIDERS)].find(pv=>AI_PROVIDERS[pv].vision&&(aiKey(pv)||viaRelay(pv))&&aiBase(pv))||null; }
 const pictureModel=pv=>AI_PROVIDERS[pv].vmodel||aiModel(pv);
-const PIC_SMALL=0.15, PIC_EDGE=0.05; /* an answer's box smaller than this share of the picture, against an edge, means the app's frame was pointed at the wrong place (v393) */
+const PIC_SMALL=0.15, PIC_EDGE=0.05, PIC_SIDE=[0.35,0.6]; /* an answer's box smaller than this share of the picture, against an edge, means the app's frame was pointed at the wrong place (v393) */
 const PIC_MAX=800;
 async function pictureJpeg(blob){
   const bmp=await createImageBitmap(blob); const k=Math.min(1,PIC_MAX/Math.max(bmp.width,bmp.height));
@@ -4396,6 +4396,7 @@ async function cropSign(id,opts){
          the text the model found is at the border of what the app chose, and there is very likely more beyond it. The
          frame then reaches the whole photo and the AI reads once more, as it does for a bad answer (v348). */
       const pbox=pic&&!pic.bad&&pic.box, tiny=!!(pbox&&(pbox[2]-pbox[0])*(pbox[3]-pbox[1])<PIC_SMALL
+        &&pbox[2]-pbox[0]<PIC_SIDE[0]&&pbox[3]-pbox[1]<PIC_SIDE[1] /* small in both directions: a box that spans much of one is a line running along that edge, and the v313 grow past that edge is its answer — H's 北京现代 badge, whose box is 37 % of the picture's width along its top */
         &&(pbox[0]<PIC_EDGE||pbox[1]<PIC_EDGE||pbox[2]>1-PIC_EDGE||pbox[3]>1-PIC_EDGE));
       if(pic&&(noText||tiny||!pic.bad&&pic.cut)&&(PENDING[id]&&!RECROP[id]?READ_APP[id]:CROP&&CROP.id===id&&CROP.proposed)){
         const cur=base; /* the picture the AI saw is the proposal's (v319), whatever the reader placed meanwhile */
