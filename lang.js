@@ -15,6 +15,10 @@ function nOf(n,w,pl){ n=n||0; const key=n===1?w:(pl||w+"s"), d=L10N[LANG], tr=d&
 const L10N={
 en:{"capsule:Done":"Done","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
 de:{
+  "Undo last run":"Letzten Durchlauf rückgängig",
+  "Tagged {0} at {1}.":"{0} um {1} getaggt.",
+  "Translated {0} at {1}.":"{0} um {1} übersetzt.",
+  "Undone — {0} put back.":"Rückgängig – {0} wiederhergestellt.",
   "Tag all cards":"Alle Karten taggen",
   "Tagging {0} of {1} …":"Tagge {0} von {1} …",
   "{0} tagged, {1} left.":"{0} getaggt, {1} übrig.",
@@ -249,6 +253,10 @@ de:{
   "Day streak":"Tage in Folge","Cards learned":"Karten gelernt","Due today":"Heute fällig","Reviews this week":"Wiederholungen diese Woche","Last 30 days":"Die letzten 30 Tage","Still learning":"Noch am Lernen","Known":"Sicher","Coming up: {0} due tomorrow, {1} this week.":"Demnächst: {0} morgen fällig, {1} diese Woche."
 },
 fr:{
+  "Undo last run":"Annuler la dernière passe",
+  "Tagged {0} at {1}.":"{0} taguées à {1}.",
+  "Translated {0} at {1}.":"{0} traduites à {1}.",
+  "Undone — {0} put back.":"Annulé – {0} restaurées.",
   "Tag all cards":"Taguer toutes les cartes",
   "Tagging {0} of {1} …":"Tag {0} sur {1} …",
   "{0} tagged, {1} left.":"{0} taguées, {1} restantes.",
@@ -483,6 +491,10 @@ fr:{
   "Day streak":"Jours d'affilée","Cards learned":"Cartes apprises","Due today":"À revoir aujourd'hui","Reviews this week":"Révisions cette semaine","Last 30 days":"Les 30 derniers jours","Still learning":"En cours","Known":"Acquises","Coming up: {0} due tomorrow, {1} this week.":"À venir : {0} demain, {1} cette semaine."
 },
 es:{
+  "Undo last run":"Deshacer la última pasada",
+  "Tagged {0} at {1}.":"{0} etiquetadas a las {1}.",
+  "Translated {0} at {1}.":"{0} traducidas a las {1}.",
+  "Undone — {0} put back.":"Deshecho: {0} restauradas.",
   "Tag all cards":"Etiquetar todas las tarjetas",
   "Tagging {0} of {1} …":"Etiquetando {0} de {1} …",
   "{0} tagged, {1} left.":"{0} etiquetadas, {1} restantes.",
@@ -717,6 +729,10 @@ es:{
   "Day streak":"Días seguidos","Cards learned":"Tarjetas aprendidas","Due today":"Para hoy","Reviews this week":"Repasos esta semana","Last 30 days":"Últimos 30 días","Still learning":"En curso","Known":"Dominadas","Coming up: {0} due tomorrow, {1} this week.":"Próximamente: {0} mañana, {1} esta semana."
 },
 ja:{
+  "Undo last run":"前回の実行を取り消す",
+  "Tagged {0} at {1}.":"{1}に{0}にタグを付けました。",
+  "Translated {0} at {1}.":"{1}に{0}を翻訳しました。",
+  "Undone — {0} put back.":"取り消しました — {0}を元に戻しました。",
   "Tag all cards":"すべてのカードにタグを付ける",
   "Tagging {0} of {1} …":"{0} / {1} にタグ付け中 …",
   "{0} tagged, {1} left.":"{0}にタグ付け、残り{1}。",
@@ -951,6 +967,10 @@ ja:{
   "Day streak":"連続日数","Cards learned":"学んだカード","Due today":"今日の復習","Reviews this week":"今週の復習回数","Last 30 days":"過去30日","Still learning":"学習中","Known":"定着","Coming up: {0} due tomorrow, {1} this week.":"この先：明日{0}枚、今週{1}枚。"
 },
 ko:{
+  "Undo last run":"지난 실행 되돌리기",
+  "Tagged {0} at {1}.":"{1}에 {0} 태그했어요.",
+  "Translated {0} at {1}.":"{1}에 {0} 번역했어요.",
+  "Undone — {0} put back.":"되돌렸어요 — {0} 복구했어요.",
   "Tag all cards":"모든 카드에 태그 달기",
   "Tagging {0} of {1} …":"{0} / {1} 태그 다는 중 …",
   "{0} tagged, {1} left.":"{0} 태그 완료, {1} 남음.",

@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=368; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=369; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1085,12 +1085,32 @@ let TRANSLATE=null; /* {running, done, at, total, failed, lang} — at = the car
    together, in one transaction, only when every card has its answer (or was tried and got none: skip). Until then Learn and Cards
    show the old meanings, all in one language, and the pill on every card; an interruption keeps the stage, the resumed run asks
    only for the cards not staged yet; a switched language drops the stage. */
+/* Undo last run (v369, H after v368 wrote a tag onto every untagged card: "there should be an 'undo last run' option as well…
+   Your recommendation?" → C first, then A; "Go"): a run that writes many cards at once — Translate all, Tag all — keeps what it
+   replaced in setting lastRun {kind, at, n, keys, m:{id:{field…}}}, and the row it belongs to offers Undo until the next run
+   replaces the store. One run deep on purpose: the store is the fields that run touched, nothing else, so 167 cards cost a few
+   kilobytes; a field the card did not have is stored as absent and the undo deletes it again. */
+async function saveLastRun(kind,keys,before,n){ const run={kind,keys,n,at:Date.now(),m:before}; S.settings.lastRun=run; await setSetting("lastRun",run); }
+async function clearLastRun(){ if(S.settings.lastRun){ delete S.settings.lastRun; await idbDel("settings","lastRun").catch(()=>{}); } }
+const runWhen=at=>{ const d=new Date(at), loc=LANG_LOCALE[LANG];
+  return new Date(at).toDateString()===new Date().toDateString()?d.toLocaleTimeString(loc,{hour:"2-digit",minute:"2-digit"}):d.toLocaleString(loc); };
+function undoRunHTML(kind){ const r=S.settings.lastRun; if(!r||r.kind!==kind||(TRANSLATE&&TRANSLATE.running)||(TAGALL&&TAGALL.running)) return "";
+  const line=kind==="tags"?t("Tagged {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):t("Translated {0} at {1}.",nOf(r.n,"card"),runWhen(r.at));
+  return `<div class="mrow"><div style="flex:1"><div class="t">${t("Undo last run")}</div><div class="s" id="undorun-status">${line}</div><div class="fieldacts"><button class="btn mini" id="undo-run">${t("Undo")}</button></div></div></div>`; }
+async function undoLastRun(){ const r=S.settings.lastRun; if(!r) return;
+  const rows=[]; for(const id of Object.keys(r.m)){ const d=cardOf(id); if(!d) continue; const b=r.m[id], u={...d};
+    for(const k of r.keys){ if(b[k]===undefined) delete u[k]; else u[k]=b[k]; } rows.push(u); }
+  if(rows.length){ try{ await idbPutMany("custom",rows); }catch(e){ logErr("undorun",e&&e.message||String(e)); return; }
+    for(const x of rows){ const i=S.custom.findIndex(y=>y.id===x.id); if(i>=0) S.custom[i]=x; } }
+  await clearLastRun(); TRANSLATE=null; TAGALL=null; /* the finished lines belong to a run that is undone */
+  const st=$("#undorun-status"); if(st) st.textContent=t("Undone — {0} put back.",nOf(rows.length,"card"));
+  render(); }
 const stageOf=()=>S.settings.translateStage;
 async function saveStage(st){ S.settings.translateStage=st; await setSetting("translateStage",st); }
 async function clearStage(){ if(S.settings.translateStage){ delete S.settings.translateStage; await idbDel("settings","translateStage").catch(()=>{}); } }
 const inStage=(st,d)=>!!(st&&st.m[d.id]&&st.m[d.id].from===d.m); /* this card's answer is in, for the meaning it has now */
-async function applyStage(st,list){ const rows=[]; for(const x of list){ const d=cardOf(x.id), e=d&&st.m[d.id]; if(!e||e.from!==d.m||e.skip||!e.m) continue; rows.push(setMl({...d,m:e.m},st.lang)); }
-  if(rows.length){ try{ await idbPutMany("custom",rows); }catch(e){ logErr("translate","apply: "+(e&&e.message||e)); return 0; } for(const r of rows){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; } } return rows.length; }
+async function applyStage(st,list){ const rows=[], before={}; for(const x of list){ const d=cardOf(x.id), e=d&&st.m[d.id]; if(!e||e.from!==d.m||e.skip||!e.m) continue; before[d.id]={m:d.m,ml:d.ml,ms:d.ms}; rows.push(setMl({...d,m:e.m},st.lang)); }
+  if(rows.length){ try{ await idbPutMany("custom",rows); }catch(e){ logErr("translate","apply: "+(e&&e.message||e)); return 0; } for(const r of rows){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; } await saveLastRun("meanings",["m","ml","ms"],before,rows.length); } return rows.length; }
 async function rememberTranslate(on){ if(on){ S.settings.translateRun={lang:LANG,at:Date.now()}; await setSetting("translateRun",S.settings.translateRun); } else if(S.settings.translateRun){ delete S.settings.translateRun; await idbDel("settings","translateRun").catch(()=>{}); } }
 function resumeTranslate(){ const r=S.settings.translateRun; if(!r||(TRANSLATE&&TRANSLATE.running)) return;
   if(!toTranslate().length){ rememberTranslate(false); return; } /* nothing is left for the app's language (a switched language just means other cards are left, v263) */
@@ -1128,7 +1148,7 @@ async function translateAll(){
     TRANSLATE.done=await applyStage(stage,list); await clearStage(); }
   if(!toTranslate().length||!TRANSLATE.failed&&!stageOf()) await rememberTranslate(false); /* remembered while cards are left, so the run goes on at the next chance */
   TRANSLATE.running=false; translateRefresh(); /* running stays set until the cards and the settings are written — whoever waits for the end sees the finished state (v264) */
-  if(S.mode==="study"||S.mode==="cards") render(); /* the meanings on screen follow */
+  if(S.mode==="study"||S.mode==="cards"||S.mode==="more") render(); /* the meanings on screen follow, and More gets the Undo row (v369) */
 }
 /* Tag all cards (v368, H's "1 now, 3 straight after it" on the labelling question of v364, then "Tag all cards"): the kind tag of
    v364 rides on every new card's own AI answer, so the deck H already has stays untagged. This row asks the AI for the kind of
@@ -1145,10 +1165,11 @@ async function saveTagStage(st){ S.settings.tagStage=st; await setSetting("tagSt
 async function clearTagStage(){ if(S.settings.tagStage){ delete S.settings.tagStage; await idbDel("settings","tagStage").catch(()=>{}); } }
 const inTagStage=(st,d)=>!!(st&&st.m&&st.m[d.id]);
 async function applyTagStage(st,list){ const rows=[];
+  const before={};
   for(const x of list){ const d=cardOf(x.id), k=d&&st.m[d.id]; if(!d||!k||k==="skip"||(d.tags&&d.tags.length)) continue;
-    const tg=kindTag(k); if(tg) rows.push({...d,tags:[tg]}); }
+    const tg=kindTag(k); if(tg){ before[d.id]={tags:d.tags}; rows.push({...d,tags:[tg]}); } }
   if(rows.length){ try{ await idbPutMany("custom",rows); }catch(e){ logErr("tagall","apply: "+(e&&e.message||e)); return 0; }
-    for(const r of rows){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; } }
+    for(const r of rows){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; } await saveLastRun("tags",["tags"],before,rows.length); }
   return rows.length; }
 async function rememberTagRun(on){ if(on){ S.settings.tagRun={at:Date.now()}; await setSetting("tagRun",S.settings.tagRun); }
   else if(S.settings.tagRun){ delete S.settings.tagRun; await idbDel("settings","tagRun").catch(()=>{}); } }
@@ -1189,7 +1210,7 @@ async function tagAll(){
     TAGALL.done=await applyTagStage(stage,list); await clearTagStage(); }
   if(!toTag().length||!TAGALL.failed&&!tagStageOf()) await rememberTagRun(false);
   TAGALL.running=false; tagRefresh();
-  if(S.mode==="study"||S.mode==="cards") render();
+  if(S.mode==="study"||S.mode==="cards"||S.mode==="more") render(); /* More gets the Undo row of v369 without leaving the page */
 }
 function reportData(){
   const u=usage(), m=u.m||{}, st=learnStats(), n=k=>u[k]||0, mn=k=>m[k]||0;
@@ -1321,6 +1342,7 @@ function renderMore(main){
     <div class="mrow"><div style="flex:1"><div class="t">${t("Progress")}</div><div class="s">${progressHTML()}</div><div class="fieldacts"><button class="btn mini" id="usage-share">${t("Share report")}</button></div></div></div>
     <div class="mrow"><div><div class="t">${t("Card order")}</div><div class="s">${t("Due cards come first, then up to {0} new ones. This sets the order inside each group.",NEW_PER_SESSION)}</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${t(l)}</button>`).join("")}</div></div></div>
     ${tagRowHTML()}
+    ${undoRunHTML("tags")}
     <div class="listhead">${t("Share")}</div>
     <div class="mrow"><div><div class="t">${t("Share the app")}</div><div class="s" id="app-share-status">${t("Send the link to a friend. The app installs from any browser, no store.")}</div></div><button class="btn mini" id="app-share">${t("Share")}</button></div>
     <div class="mrow"><div style="flex:1"><div class="t">${t("Feedback")}</div><div class="s" id="fb-status">${t("Tell the app's owner what works and what does not.")}</div><textarea class="grow" id="fb-text" rows="2" placeholder="${t("Your message")}"></textarea><div class="fieldacts"><button class="btn mini" id="fb-send">${t("Send")}</button></div></div></div>
@@ -1329,6 +1351,7 @@ function renderMore(main){
     <div class="listhead">${t("Language")}</div>
     <div class="mrow"><div style="flex:1"><div class="t">${t("Language")}</div><div class="s">${t("The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.")}</div><div class="chipset" id="lang-chips" style="margin-top:8px">${LANGS.map(([c,n])=>`<button class="chip${LANG===c?" on":""}" data-lang="${c}">${n}</button>`).join("")}</div></div></div>
     ${translateRowHTML()}
+    ${undoRunHTML("meanings")}
     <div class="listhead">${t("Online AI review")}</div>
     <div class="mrow"><div><div class="t">${t("AI review")}</div><div class="s" id="ai-status"></div><div class="s" style="margin-top:6px">${t("What is sent: the Chinese text, pinyin, meaning and your note of flagged, doubtful or pending cards. The framed area of a photo only when the reading is weak, to a provider that takes pictures. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.")}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> ${t("Check every new card with the AI automatically (when online)")}</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
     ${S.admin?`<div class="aiform" id="ai-form" hidden>
@@ -1376,6 +1399,7 @@ function renderMore(main){
   document.querySelectorAll("[data-lang]").forEach(b=> b.onclick=()=>setLang(b.dataset.lang));
   const tr=$("#translate-all"); if(tr) tr.onclick=translateAll;
   const tg=$("#tag-all"); if(tg) tg.onclick=tagAll; /* Tag all cards (v368) */
+  const ur=$("#undo-run"); if(ur) ur.onclick=undoLastRun; /* Undo last run (v369) */
   $("#guide-open").onclick=()=>{ S.mode="guide"; render(); window.scrollTo({top:0}); };
   wireGrow(main); /* the feedback box grows with its text like the forms' fields (v218, H: "looks a little bit old school") */
   $("#fb-send").onclick=async()=>{ const tx=$("#fb-text"), st=$("#fb-status"), b=$("#fb-send"), text=tx.value.trim(); if(!text){ st.textContent=t("Write a few words first."); return; }
