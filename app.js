@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=375; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=376; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3570,7 +3570,7 @@ async function frameOnText(id,orig,base,rect,angle,by,grow,sure){ /* sure (v333)
    stand below with their own notes: the column pass for a character fused with a streak (v303), the width budget per
    line (v305) and the shadow pass beyond the line's ends (v306). */
 const SKEW_TRUST=12; /* an unconfirmed straightening beyond this many degrees is not trusted for the picture the AI sees (v346) */
-const SNAP_ROOM=1, SNAP_MIN=0.15, SNAP_MAX=0.95, SNAP_COL=0.15, SNAP_WIDE=1.6, SNAP_GAP=0.8;
+const SNAP_ROOM=1, SNAP_MIN=0.15, SNAP_MAX=0.95, SNAP_COL=0.15, SNAP_WIDE=1.6, SNAP_GAP=0.8, SNAP_BAR=1.6, SNAP_STACK=0.5; /* BAR: how much wider than tall a blob must be to be read as one stroke of a character written in bars · STACK: how far apart two of them may stand */
 const SNAP_REACH=0.85; /* how much of the AI's box the coloured ink must reach across beside the grey pick's (v349, H's vending machine at v347 "Vending machine works not yet": the red text on glass reaches 77 % of the box against the grey cut's 89 %, so v347's "at least as much" blocked the switch on the phone's own pixels; H's 流浪地球 poster, the case the guard is for, reaches 56 against 92) */
 /* A photo of a user interface, one card per element (v357–v358, H's rice cooker panel — eleven buttons, 低卡饭 柴火饭 快煮
    粗粮饭 汤/粥, 时 分, 保温/取消 预约 开始 功能: "I want that if such a picture comes, you automatically detect the different
@@ -3621,11 +3621,16 @@ function labelGrey(bmp,uni){ /* the picture in grey once for the whole panel (v3
   const thrU=otsuThr(hist,Math.max(1,un)); let dark=0; for(let v=0;v<=thrU;v++) dark+=hist[v];
   return {g,W,Hh,thrU,inkDark:dark*2<un}; /* ink is the minority — dark characters on a light panel, light ones on a dark one */
 }
-function labelRect(gy,box){ /* box in fractions of the picture */
+function labelScan(gy,box,pin,far){ /* every row of ink near the anchor and, in each row, the run that looks most like this label */
   const {g,W,Hh,thrU,inkDark}=gy, cl=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
-  const B={x0:cl(Math.round(box.x0*W),0,W-2),y0:cl(Math.round(box.y0*Hh),0,Hh-2)}; B.x1=cl(Math.round(box.x1*W),B.x0+2,W); B.y1=cl(Math.round(box.y1*Hh),B.y0+2,Hh);
-  const bh=B.y1-B.y0; if(bh<6) return null;
-  const R={x0:Math.max(0,Math.round(B.x0-LB_SIDE*bh)),y0:Math.max(0,Math.round(B.y0-LB_UP*bh)),x1:Math.min(W,Math.round(B.x1+LB_SIDE*bh)),y1:Math.min(Hh,Math.round(B.y1+LB_UP*bh))};
+  const B=pin?{x0:cl(Math.round(pin.x0),0,W-2),y0:cl(Math.round(pin.y0),0,Hh-2),x1:cl(Math.round(pin.x1),1,W),y1:cl(Math.round(pin.y1),1,Hh)}
+             :{x0:cl(Math.round(box.x0*W),0,W-2),y0:cl(Math.round(box.y0*Hh),0,Hh-2),x1:0,y1:0};
+  if(!pin){ B.x1=cl(Math.round(box.x1*W),B.x0+2,W); B.y1=cl(Math.round(box.y1*Hh),B.y0+2,Hh); }
+  const bh=(pin&&pin.h)||(B.y1-B.y0); if(bh<6) return null; /* pinned: the row's own height, not the run's — a faint label gives a fragment of a run, and every size test below would shrink with it */
+  /* pinned (v376): the plan chose the row and the run, so the region is that run with a little room for the local cut to finish the characters */
+  const side=pin&&pin.loose?LB_SIDE*bh:0.5*bh; /* a label the plan could not give a run of its own keeps the answer's box, which may sit sideways of its characters */
+  const R=pin?{x0:Math.max(0,Math.round(B.x0-side)),y0:Math.max(0,Math.round(B.y0-LB_PIN*bh)),x1:Math.min(W,Math.round(B.x1+side)),y1:Math.min(Hh,Math.round(B.y1+LB_PIN*bh))}
+             :{x0:Math.max(0,Math.round(B.x0-LB_SIDE*bh)),y0:Math.max(0,Math.round(B.y0-(far?LB_FAR:LB_UP)*bh)),x1:Math.min(W,Math.round(B.x1+LB_SIDE*bh)),y1:Math.min(Hh,Math.round(B.y1+(far?LB_FAR:LB_UP)*bh))};
   const rw=R.x1-R.x0, rh=R.y1-R.y0; if(rw<4||rh<4) return null;
   /* the cut: the label's own surroundings when they hold ink — a panel is lit unevenly and one cut over the whole answer's box
      loses the characters at its dim end (H's 粗粮饭 came out as 粗粮) —, else the whole answer's box, which certainly holds ink:
@@ -3640,7 +3645,7 @@ function labelRect(gy,box){ /* box in fractions of the picture */
   for(let y=0,run=0;y<=rh;y++){ if(y<rh&&rowInk[y]>=need) run++; else { if(run) bands.push({y0:y-run,y1:y}); run=0; } }
   const bcx=(B.x0+B.x1)/2-R.x0, bcy=(B.y0+B.y1)/2-R.y0, bx0=B.x0-R.x0, bx1=B.x1-R.x0;
   const runOf=band=>{ /* the label the anchor stands over: inside a label the characters nearly touch, between labels there is a character's width of air */
-    const bhh=band.y1-band.y0; if(bhh<LB_MINH*bh||bhh>LB_MAXH*bh) return null;
+    const bhh=band.y1-band.y0; if(bhh<LB_MINH*bh||bhh>(far?LB_TALL:LB_MAXH)*bh) return null; /* the plan's scan lets a row be taller: a panel's row of labels carries its fine print, and the pinned scan tightens it again */
     const col=new Int32Array(rw); for(let x=0;x<rw;x++){ let n=0; for(let y=band.y0;y<band.y1;y++) if(on(x,y)) n++; col[x]=n; }
     const gap=Math.max(2,Math.round(LB_MERGE*bhh)), runs=[];
     for(let x=0,st=-1,off=0;x<=rw;x++){ if(x<rw&&col[x]){ if(st<0) st=x; off=0; }
@@ -3652,15 +3657,109 @@ function labelRect(gy,box){ /* box in fractions of the picture */
       const v=2*ov-Math.abs((r.x0+r.x1)/2-bcx)/bw-Math.abs(w-bw)/bw; /* the model's box may sit on the button under the label, but its width is the label's: a run as wide as the box is the text, the button under it is a third of it */
       if(v>bv){ bv=v; best={x0:r.x0,y0:band.y0,x1:r.x1,y1:band.y1,v}; } }
     return best; };
+  const spots=[]; for(const band of bands){ const r=runOf(band); if(r) spots.push({x0:r.x0+R.x0,y0:r.y0+R.y0,x1:r.x1+R.x0,y1:r.y1+R.y0,v:r.v}); }
+  return {W,Hh,bh,bcy:bcy+R.y0,spots};
+}
+function labelRect(gy,box,pin){ /* box in fractions of the picture; pin (v376): the row and the run the plan gave this label, in the picture's own pixels */
+  const sc=labelScan(gy,box,pin);
+  if(pin&&(!sc||!sc.spots.length)) return {x0:pin.x0/gy.W,y0:pin.y0/gy.Hh,x1:pin.x1/gy.W,y1:pin.y1/gy.Hh}; /* the run the plan measured is a good answer on its own */
+  if(!sc||!sc.spots.length) return null;
+  const {W,Hh,bh,bcy,spots}=sc;
   let take=null, tv=-1e9;
-  for(const band of bands){ const r=runOf(band); if(!r) continue;
-    const v=r.v-LB_NEAR*Math.abs((r.y0+r.y1)/2-bcy)/bh; /* the run over the anchor, in the row nearest it — but only as a tiebreaker: the model's boxes drift by a whole label height, so what the run looks like weighs more than where it sits */
+  for(const r of spots){ /* pinned: the plan chose the row, so the band nearest it wins outright; free: the run over the anchor, in the row nearest it — but only as a tiebreaker, since the model's boxes drift by a whole label height and what the run looks like weighs more than where it sits */
+    const v=pin&&!pin.loose?-Math.abs((r.y0+r.y1)/2-bcy):r.v-LB_NEAR*Math.abs((r.y0+r.y1)/2-bcy)/bh;
     if(v>tv){ tv=v; take=r; } }
   if(!take) return null;
-  for(const band of bands){ const r=runOf(band); if(!r||r.y0===take.y0) continue; /* a label printed on two lines: the row above or below, standing over the same place (保温 above 取消) */
+  const skip=(pin&&pin.skip)||[]; /* a row another label was placed on is not this label's second line */
+  for(const r of spots){ if(r===take||skip.some(o=>Math.min(o.y1,r.y1)-Math.max(o.y0,r.y0)>0)) continue; /* a label printed on two lines: the row above or below, standing over the same place (保温 above 取消) */
     const gp=Math.max(r.y0-take.y1,take.y0-r.y1), ov=Math.max(0,Math.min(r.x1,take.x1)-Math.max(r.x0,take.x0))/Math.max(1,Math.min(r.x1-r.x0,take.x1-take.x0));
     if(gp<=LB_GAP*(take.y1-take.y0)&&ov>=LB_OVER) take={x0:Math.min(take.x0,r.x0),y0:Math.min(take.y0,r.y0),x1:Math.max(take.x1,r.x1),y1:Math.max(take.y1,r.y1),v:take.v}; }
-  return {x0:(take.x0+R.x0)/W,y0:(take.y0+R.y0)/Hh,x1:(take.x1+R.x0)/W,y1:(take.y1+R.y0)/Hh}; /* fractions of the picture */
+  return {x0:take.x0/W,y0:take.y0/Hh,x1:take.x1/W,y1:take.y1/Hh}; /* fractions of the picture */
+}
+/* The labels are placed row by row, in the order the model read them (v376, H's washing machine at v375: the split
+   worked and every card showed a neighbour's label — "beim 2. Anlauf hat es geklappt, aber leider fehlerhaft"). The
+   answer's boxes for that panel are an evenly spaced grid — 130,200,270,340 across and 255,300,345 down, every box
+   50×35 — a plausible layout rather than a measurement, and the panel's own rows are not evenly spaced (an icon row
+   stands between the first and the second). So each anchor sat up to a whole row away from its label, and v359's
+   per-label search, which weighs what a run looks like far above where it sits, walked to whatever ink was nearest:
+   five pairs of labels took the same characters and six found nothing at all. What the model does get right is the
+   reading order and the topology — which label stands in which row, and in which column of it —, so that is what is
+   used. Every label's own scan (v359's, with its local cut) nominates one run per row of ink near it; the nominations
+   of all the labels are clustered into the picture's own rows; the answer's boxes are grouped into rows too; the rows
+   are laid onto the clusters in order (a cluster may be skipped — the icon rows are); and inside a cluster the row's
+   labels are laid onto its runs in order, so no two labels can take the same run. Then labelRect runs again, pinned
+   to that row and that run. Nothing lines up: the plan is dropped and every label is placed on its own as before. */
+const LB_MISS=1.2, LB_PIN=0.35, LB_KEEP=0.5, LB_SAME=0.5, LB_FAR=4, LB_TALL=2.2, LB_PAR=2; /* MISS: what a label that finds no run costs its row · PIN: the room around a pinned run · KEEP: the share of labels a plan must place · SAME: two nominations of one run · FAR: how far, in box heights, the plan's scan looks for the picture's own rows, since the answer's grid may sit a row and more beside them · TALL: how tall a row may be in that scan · PAR: a spare row of ink standing under this many of a row's labels is a row of its own (a panel's icons), not their second line */
+function labelRows(labels){ /* the answer's boxes grouped into rows, each row in reading order */
+  const at=labels.map((l,i)=>i).sort((a,b)=>(labels[a].box[1]+labels[a].box[3])-(labels[b].box[1]+labels[b].box[3])), rows=[];
+  for(const i of at){ const b=labels[i].box, h=b[3]-b[1], r=rows[rows.length-1];
+    if(r&&Math.min(r.y1,b[3])-Math.max(r.y0,b[1])>=0.5*Math.min(r.y1-r.y0,h)){ r.at.push(i); r.y0=Math.min(r.y0,b[1]); r.y1=Math.max(r.y1,b[3]); }
+    else rows.push({y0:b[1],y1:b[3],at:[i]}); }
+  for(const r of rows) r.at.sort((a,b)=>(labels[a].box[0]+labels[a].box[2])-(labels[b].box[0]+labels[b].box[2]));
+  return rows;
+}
+function labelClusters(spots){ /* every label's nominations, clustered into the picture's own rows of characters */
+  const all=[]; spots.forEach(ss=>ss.forEach(r=>all.push(r)));
+  if(!all.length) return [];
+  all.sort((a,b)=>(a.y0+a.y1)-(b.y0+b.y1));
+  const cs=[];
+  for(const r of all){ const c=cs[cs.length-1], h=r.y1-r.y0;
+    if(c&&Math.min(c.y1,r.y1)-Math.max(c.y0,r.y0)>=0.5*Math.min(c.y1-c.y0,h)){ c.at.push(r); c.y0=Math.min(c.y0,r.y0); c.y1=Math.max(c.y1,r.y1); }
+    else cs.push({y0:r.y0,y1:r.y1,at:[r]}); }
+  return cs.map(c=>{ const rs=c.at.slice().sort((a,b)=>a.x0-b.x0), runs=[]; /* two labels that nominated the same run give it twice */
+    for(const r of rs){ const p=runs[runs.length-1];
+      if(p&&Math.min(p.x1,r.x1)-Math.max(p.x0,r.x0)>=LB_SAME*Math.min(p.x1-p.x0,r.x1-r.x0)){ p.x0=Math.min(p.x0,r.x0); p.x1=Math.max(p.x1,r.x1); p.y0=Math.min(p.y0,r.y0); p.y1=Math.max(p.y1,r.y1); }
+      else runs.push({x0:r.x0,x1:r.x1,y0:r.y0,y1:r.y1}); }
+    const hs=c.at.map(r=>r.y1-r.y0).sort((a,b)=>a-b);
+    return {y0:c.y0,y1:c.y1,h:hs[hs.length>>1],runs}; });
+}
+function alignRow(labs,cluster,W){ /* the row's labels onto the cluster's runs, both in reading order, each run used once */
+  const n=labs.length, m=cluster.runs.length, bh=Math.max(1,cluster.h);
+  const val=(i,j)=>{ const b=labs[i].box, bx0=b[0]*W, bx1=b[2]*W, bw=Math.max(1,bx1-bx0), r=cluster.runs[j], w=r.x1-r.x0;
+    const ov=Math.max(0,Math.min(r.x1,bx1)-Math.max(r.x0,bx0))/bw, want=Math.max(1,labs[i].n*bh); /* a label of k characters is about k rows high wide */
+    return 2*ov-Math.abs((r.x0+r.x1)/2-(bx0+bx1)/2)/(4*bh)-Math.abs(w-want)/want; };
+  const NEG=-1e9, f=[], pk=[];
+  for(let i=0;i<=n;i++){ f.push(new Float64Array(m+1).fill(NEG)); pk.push(new Int32Array(m+1).fill(-9)); }
+  f[0][0]=0; for(let j=1;j<=m;j++){ f[0][j]=0; pk[0][j]=-1; }
+  for(let i=1;i<=n;i++) for(let j=0;j<=m;j++){
+    let best=f[i-1][j]-LB_MISS, from=-3;
+    if(j>0&&f[i][j-1]>best){ best=f[i][j-1]; from=-1; }
+    if(j>0){ const v=f[i-1][j-1]+val(i-1,j-1); if(v>best){ best=v; from=j-1; } }
+    f[i][j]=best; pk[i][j]=from; }
+  const pick=new Array(n).fill(-1); let i=n, j=m;
+  while(i>0){ const p=pk[i][j]; if(p===-1) j--; else if(p===-3) i--; else { pick[i-1]=p; i--; j--; } }
+  return {score:f[n][m],pick};
+}
+function labelPlan(gy,labels){ /* one cluster per row of the answer, in order; one run per label inside it */
+  const spots=labels.map(l=>{ let sc=null; try{ sc=labelScan(gy,{x0:l.box[0],y0:l.box[1],x1:l.box[2],y1:l.box[3]},null,true); }catch(e){ sc=null; } return sc?sc.spots:[]; });
+  const cs=labelClusters(spots), rows=labelRows(labels), R=rows.length, C=cs.length;
+  if(!R||C<R) return null;
+  const al=rows.map(r=>cs.map(c=>alignRow(r.at.map(k=>labels[k]),c,gy.W)));
+  const NEG=-1e9, f=[], pk=[];
+  for(let i=0;i<=R;i++){ f.push(new Float64Array(C+1).fill(NEG)); pk.push(new Int32Array(C+1).fill(-9)); }
+  for(let j=0;j<=C;j++){ f[0][j]=0; pk[0][j]=-1; }
+  for(let i=1;i<=R;i++) for(let j=1;j<=C;j++){
+    let best=f[i][j-1], from=-1;
+    if(f[i-1][j-1]>NEG/2){ const v=f[i-1][j-1]+al[i-1][j-1].score; if(v>best){ best=v; from=j-1; } }
+    f[i][j]=best; pk[i][j]=from; }
+  const at=new Array(R).fill(-1); let i=R, j=C;
+  while(i>0&&j>0){ const p=pk[i][j]; if(p===-1) j--; else { at[i-1]=p; i--; j--; } }
+  if(at.some(v=>v<0)) return null;
+  const pin=new Array(labels.length).fill(null); let placed=0;
+  rows.forEach((r,ri)=>{ const c=cs[at[ri]], pick=al[ri][at[ri]].pick;
+    r.at.forEach((k,q)=>{ const rn=pick[q]<0?null:c.runs[pick[q]], b=labels[k].box;
+      if(rn){ placed++; pin[k]={x0:rn.x0,x1:rn.x1,y0:rn.y0,y1:rn.y1,h:c.h,row:at[ri]}; }
+      else pin[k]={x0:b[0]*gy.W,x1:b[2]*gy.W,y0:c.y0,y1:c.y1,h:c.h,row:at[ri],loose:true}; }); }); /* no run of its own: at least the row is known, and the answer's own box says where in it to look */
+  if(placed<LB_KEEP*labels.length) return null;
+  /* a spare row of ink that stands under more than one of a row's labels is a row of its own — a panel carries an icon
+     over every button — and never their second line; a second line stands under one label alone (保温 above 取消) */
+  const used=new Set(at), par=new Set();
+  cs.forEach((c,q)=>{ if(used.has(q)) return; let n=0;
+    for(const r of c.runs) if(at.some(u=>cs[u].runs.some(o=>Math.max(0,Math.min(o.x1,r.x1)-Math.max(o.x0,r.x0))>=LB_OVER*Math.min(o.x1-o.x0,r.x1-r.x0)))) n++;
+    if(n>=LB_PAR) par.add(q); });
+  const bar=cs.map((c,q)=>q).filter(q=>used.has(q)||par.has(q)).map(q=>({q,y0:cs[q].y0,y1:cs[q].y1}));
+  for(const p of pin) if(p) p.skip=bar.filter(b=>b.q!==p.row).map(b=>({y0:b.y0,y1:b.y1}));
+  return {pin,placed,rows:R};
 }
 function snapBox(bmp,box,n,lens,skip){ /* lens: the answer's lines' character counts (v305); skip: the fine print's boxes as fractions (v328) — a blob whose centre lies in one is not the text */
   const k=Math.min(1,800/Math.max(bmp.width,bmp.height)), W=Math.max(1,Math.round(bmp.width*k)), Hh=Math.max(1,Math.round(bmp.height*k));
@@ -3684,7 +3783,7 @@ function snapBox(bmp,box,n,lens,skip){ /* lens: the answer's lines' character co
     for(let i=0;i<out.length;i++){ out[i]=dist[i]>tc2?1:0; if(out[i]) ink++; }
     return ink>0.02*rw*rh&&ink<0.6*rw*rh?out:null; })(); /* nothing to separate on a grey photo: no third candidate */
   const e0=Math.max(0,Math.min(3,Math.round(Hb/60))); /* eroded by a few pixels too, so a reflection or a thin bridge does not fuse a character with the poster's border (H's 邪: its 牙 hung on the white border); the blobs are grown back by the same amount */
-  const lab=new Uint8Array(rw*rh), stack=new Int32Array(rw*rh); const comps=[[],[],[]], fused=[[],[],[]], masks=[null,null,null]; /* the blobs of each colour: [dark, light]; fused = the blobs cut by the widened box's edge that hold too little ink to count, for the column pass below (v303) */
+  const lab=new Uint8Array(rw*rh), stack=new Int32Array(rw*rh); const comps=[[],[],[]], fused=[[],[],[]], bars=[[],[],[]], masks=[null,null,null]; /* the blobs of each colour: [dark, light]; fused = the blobs cut by the widened box's edge that hold too little ink to count, for the column pass below (v303) */
   const bw=B.x1-B.x0, bh=B.y1-B.y0;
   const cands=chroma?[0,1,2]:[0,1];
   for(const [c,e] of e0?[...cands.map(c=>[c,0]),...cands.map(c=>[c,e0])]:cands.map(c=>[c,0])){ /* each colour as it is and eroded: the eroded pass frees a character from a bridge, the plain pass keeps the small lines whose strokes the erosion takes away (姜文电影 over the title) */
@@ -3701,9 +3800,25 @@ function snapBox(bmp,box,n,lens,skip){ /* lens: the answer's lines' character co
       const clean=mnx>0&&mny>0&&mxx<rw-1&&mxy<rh-1&&(h<=SNAP_MAX*bh||(h<=1.25*Hb&&w<=1.5*h))&&w<=SNAP_MAX*bw; /* a character as tall as the AI's box, or a little taller, is still a character (v317, H's coconut-water carton 椰子水: Qwen's box was 26 % of the picture tall and the characters 25 % — over 0.95 of the box —, so the tall strokes of 椰, 子 and 水 fell out, the short pieces alone made the box 42–58 % down, and the card cut the characters' tops): up to 1.25 text heights tall and no wider than 1.5 times its height; a ring around the box is wider than that */ /* a blob of a character's kind: whole, not cut by the widened box's edge, smaller than the box — its whole extent counts, and it may join a line sideways; anything else (a title fused with the letters under it that run to the picture's edge, or with a bright robot arm above it) counts with the part inside the box, so it can never fall out and hand the box to the other colour's gaps (v298, H's 流浪地球 twice) */
       if(!clean&&!iarea) continue; /* nothing of it in the AI's box: a reflection above the title, a cheek under it (a clean blob outside the box stays for the sideways pass — the eroded 牙 has no pixel left inside) */
       if(iarea&&iw>=0.9*bw&&ih>=0.9*bh){ if(!e) fused[c].push({seed:s0,x0:R.x0+inx,y0:R.y0+iny,x1:R.x0+ixx+1,y1:R.y0+ixy+1,bg:true}); continue; } /* the background, or a ring around the box: its part inside is the box itself — but the characters at the line's ends may hang on it (v330, H's 邪不压正 taken close: 邪 and 正 both touched the poster's white mat, so mat and both characters were one blob that filled the box, and the snap kept 不压 alone), so it goes to the column pass like a fused blob */
-      if(clean?(h<SNAP_MIN*Hb||area<0.01*Hb*Hb):(ih<SNAP_MIN*Hb||iw<SNAP_MIN*Hb||iarea<Hb*Hb||iarea>0.85*iw*ih)){ if(!clean&&!e&&ih>=SNAP_MIN*Hb&&iw>=SNAP_MIN*Hb) fused[c].push({seed:s0,x0:R.x0+inx,y0:R.y0+iny,x1:R.x0+ixx+1,y1:R.y0+ixy+1}); continue; } /* no character: a speck; of a fused blob the part inside must hold a text height's square of ink and be strokes, not a solid field — under 0.85 filled (v334, H's 绿皮书 at 18°: the poster's pale lower half, fused with the copy's filled corner, was taken by its part inside — 590 × 347 px, solid — and carried the snap to the copy's edge, so the turned frame reached far past the photo) — a title's strokes do, the wedge of the poster's slanted border inside the box (34 × 149 px on 邪不压正) does not; a fused blob of a character's size with less ink waits for the column pass (v303) */
+      if(clean?(h<SNAP_MIN*Hb||area<0.01*Hb*Hb):(ih<SNAP_MIN*Hb||iw<SNAP_MIN*Hb||iarea<Hb*Hb||iarea>0.85*iw*ih)){ if(!clean&&!e&&ih>=SNAP_MIN*Hb&&iw>=SNAP_MIN*Hb) fused[c].push({seed:s0,x0:R.x0+inx,y0:R.y0+iny,x1:R.x0+ixx+1,y1:R.y0+ixy+1});
+        if(clean&&!e&&iarea&&w>=SNAP_BAR*h&&h>=0.03*Hb&&w<=1.5*Hb) bars[c].push({x0:R.x0+mnx,y0:R.y0+mny,x1:R.x0+mxx+1,y1:R.y0+mxy+1}); /* a bar, too flat to be a character on its own (v376) */
+        continue; } /* no character: a speck; of a fused blob the part inside must hold a text height's square of ink and be strokes, not a solid field — under 0.85 filled (v334, H's 绿皮书 at 18°: the poster's pale lower half, fused with the copy's filled corner, was taken by its part inside — 590 × 347 px, solid — and carried the snap to the copy's edge, so the turned frame reached far past the photo) — a title's strokes do, the wedge of the poster's slanted border inside the box (34 × 149 px on 邪不压正) does not; a fused blob of a character's size with less ink waits for the column pass (v303) */
       const bx0=R.x0+mnx, by0=R.y0+mny, bx1=R.x0+mxx+1, by1=R.y0+mxy+1, ix=Math.max(0,Math.min(bx1,B.x1)-Math.max(bx0,B.x0)), iy=Math.max(0,Math.min(by1,B.y1)-Math.max(by0,B.y0)), inside=clean&&ix*iy>=0.5*w*h; /* clipped at zero (v328): a blob beyond the box on both axes had two negative overlaps, whose product counted as inside — a bright clip on the wall above and right of 邪不压正 joined the title */
       comps[c].push(clean?{x0:bx0,y0:by0,x1:bx1,y1:by1,area:iarea,inside,clean}:{x0:R.x0+inx,y0:R.y0+iny,x1:R.x0+ixx+1,y1:R.y0+ixy+1,area:iarea,inside:true,clean,seed:s0,wide:iw>2*Hb}); } } /* seed: a pixel of the blob, for the column pass — the eroded pass's pixel lies in the plain mask too (v334: the pale field under 绿皮书's title survived the plain pass's background rule only in the eroded pass, and a take without a seed could not be read column by column) */ /* inside = counts from the start: a clean blob with at least half of it in the box, by its whole extent (a character the box cuts), a fused blob by its part inside; a clean blob mostly outside keeps its whole extent and waits for the sideways pass */
+  /* a character written in horizontal strokes alone is not one blob (v376, H's 三立方咖啡 shop sign: 三 is three bars,
+     each a twentieth of the text height, so each fell out as a speck and the snap began at 立 — the card's picture and
+     the thumbnail lost the first character). Bars of the same colour standing over one another, within half a text
+     height and sharing most of their width, are one character: 三, 二, and the like. One bar alone is not — a rule
+     under a line, the edge of a plate, an underline. */
+  for(const c of cands){ const bs=bars[c].slice().sort((a,b)=>a.y0-b.y0), used=new Array(bs.length).fill(false);
+    for(let i=0;i<bs.length;i++){ if(used[i]) continue; const st=[bs[i]]; used[i]=true;
+      for(let j=i+1;j<bs.length;j++){ if(used[j]) continue; const t=st[st.length-1], o=bs[j], ow=Math.min(t.x1,o.x1)-Math.max(t.x0,o.x0);
+        if(o.y0-t.y1<=SNAP_STACK*Hb&&o.y0>=t.y0&&ow>=0.6*Math.min(t.x1-t.x0,o.x1-o.x0)){ st.push(o); used[j]=true; } }
+      if(st.length<2) continue;
+      const x0=Math.min(...st.map(b=>b.x0)), x1=Math.max(...st.map(b=>b.x1)), y0=st[0].y0, y1=st[st.length-1].y1, hh=y1-y0;
+      if(hh<SNAP_MIN*Hb||hh>1.25*Hb||x1-x0>1.5*Hb) continue;
+      const ix=Math.max(0,Math.min(x1,B.x1)-Math.max(x0,B.x0)), iy=Math.max(0,Math.min(y1,B.y1)-Math.max(y0,B.y0));
+      comps[c].push({x0,y0,x1,y1,area:ix*iy,inside:ix*iy>=0.5*(x1-x0)*hh,clean:true}); } }
   for(const c of cands) comps[c]=comps[c].filter(b=>{ if(b.x1-b.x0<=2*Hb) return true; const cs=(c===2?[...comps[0],...comps[1]]:comps[1-c]).filter(o=>o.clean&&o.y1-o.y0>=0.4*Hb&&o.x1-o.x0<=1.3*(o.y1-o.y0)&&o.x1-o.x0>=0.45*(o.y1-o.y0)&&o.x0>=b.x0&&o.x1<=b.x1&&Math.min(o.y1,b.y1)-Math.max(o.y0,b.y0)>=0.5*(o.y1-o.y0)).sort((a,o)=>a.x0-o.x0); let held=0, last=null; for(const o of cs){ if(last&&(o.x0<last.x1||Math.min(o.y1,last.y1)-Math.max(o.y0,last.y0)<0.5*Math.min(o.y1-o.y0,last.y1-last.y0))) continue; held++; last=o; } return held<2; }); /* a plate, not a character (v315, H's parking sign 请您停车入位: the white plate's part inside Qwen's box was 84 % of its width and 78 % of its height — under the background rule's 0.9 — and its area beat the six dark characters, so the plate was the "text", and the light specks on the ground beside it joined it): a blob wider than two text heights that holds a row of two or more character-shaped clean blobs of the other colour — at least 0.4 text heights tall, no wider than 1.3 times their height, within its width and mostly within its rows, side by side without overlap in one band (the plain and the eroded pass see the same gap in 流浪地球's brush title twice — one gap is no row) — is the ground the characters stand on and drops; a character is at least 0.45 as wide as tall since v330 (a row of small characters from 0.2 text heights was tried in v334 for the pale field under 绿皮书's title and dropped: the gaps inside the blocky 邪不压正 and the brush strokes of 流浪地球 made such rows too) (the thin red gaps inside the blocky 压 of H's 邪不压正 counted as a row of characters, and the blob of the mat with 邪 and 正 hung on it was dropped as a plate) */
   if(skip&&skip.length){ const sk=skip.map(b=>({x0:b[0]*W,y0:b[1]*Hh,x1:b[2]*W,y1:b[3]*Hh})); for(const c of cands) comps[c]=comps[c].filter(b=>{ const cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2; return !sk.some(o=>cx>=o.x0&&cx<=o.x1&&cy>=o.y0&&cy<=o.y1); }); } /* the fine print the AI left out of the text (v312) is left out of the snap too (v328, H's 邪不压正 from across the room: the box's top edge cut through 姜文电影, whose small characters were half inside and counted) */
   const areaOf=cs=>cs.filter(c=>c.inside).reduce((a,c)=>a+c.area,0); let text=areaOf(comps[1])>areaOf(comps[0])?comps[1]:comps[0];
@@ -3943,7 +4058,11 @@ async function cropSign(id,opts){
             else { const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen; /* the frame at its own pixels when nothing was straightened: a panel's labels are small in the 800 px picture the AI saw */
               const sb=src===seen?b:await createImageBitmap(src); const gy=labelGrey(sb,pic.box); if(sb!==b) sb.close();
               const pcv=v=>Math.round(v*100);
-              labelRects=lab.map((l,k)=>{ let sn=null; try{ sn=labelRect(gy,{x0:l.box[0],y0:l.box[1],x1:l.box[2],y1:l.box[3]}); }catch(e){ sn=null; logErr("split",e&&e.message||String(e)); }
+              /* the rows and the runs first (v376): the model's boxes are a layout, its reading order a fact */
+              let plan=null; try{ plan=labelPlan(gy,lab.map(l=>({box:l.box,n:[...l.zh].filter(c=>CJK.test(c)).length||1}))); }catch(e){ plan=null; logErr("split",e&&e.message||String(e)); }
+              logRead(plan?`the ${lab.length} labels stand in ${plan.rows} ${plan.rows===1?"row":"rows"}, and ${plan.placed} of them found their own place in the picture's own rows of characters`
+                          :"the labels' rows do not line up with the picture's — each label is placed on its own");
+              labelRects=lab.map((l,k)=>{ let sn=null; try{ sn=labelRect(gy,{x0:l.box[0],y0:l.box[1],x1:l.box[2],y1:l.box[3]},plan&&plan.pin[k]); }catch(e){ sn=null; logErr("split",e&&e.message||String(e)); }
                 logRead(sn?`${l.zh}: the AI's box ${pcv(l.box[0])}–${pcv(l.box[2])} % across, ${pcv(l.box[1])}–${pcv(l.box[3])} % down, its characters at ${pcv(sn.x0)}–${pcv(sn.x1)} %, ${pcv(sn.y0)}–${pcv(sn.y1)} %`:`${l.zh}: nothing of a character's shape near the AI's box — the box stays`);
                 const q=sn||{x0:l.box[0],y0:l.box[1],x1:l.box[2],y1:l.box[3]}, Hk=Math.max(1/Hh,q.y1-q.y0); /* the label's own characters (v359), not snapBox's poster machinery: its room reaches into the neighbours and its passes take the button */
                 return {x0:Math.max(0,q.x0-Hk*FRAME_ROOM)*W,y0:Math.max(0,q.y0-Hk*FRAME_ROOM)*Hh,x1:Math.min(1,q.x1+Hk*FRAME_ROOM)*W,y1:Math.min(1,q.y1+Hk*FRAME_ROOM)*Hh}; }); } }
