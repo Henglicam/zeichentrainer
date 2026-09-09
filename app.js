@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=387; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=388; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3856,7 +3856,7 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
    matched keeps the frame's own picture — the v380 answer — so a card can be short of its own crop but never carries a
    neighbour's. Measured on H's own photo at its own 1600 px with his own texts: 18 of the 19 labels on their own
    characters, none on another's, where v385 gave all 19 the whole panel. */
-const RL_STEP=0.6, RL_SUP=3, RL_DUP=0.6, RL_TILES=8, RL_GAP=0.55, RL_WMIN=0.8, RL_WMAX=12, RL_PX=64, RL_ROOM=[0.3,0.5], RL_CAP=420, RL_HIT=0.6;
+const RL_STEP=0.6, RL_SUP=3, RL_DUP=0.6, RL_TILES=8, RL_GAP=0.55, RL_WMIN=0.8, RL_WMAX=12, RL_PX=64, RL_ROOM=[0.3,0.5], RL_CAP=420, RL_HIT=0.6, RL_WEAK=0.5, RL_GROW=[0.22,0.45], RL_WIDE=[0.6,1.8];
 function labelRunsOf(gy,labels,uni){ /* the picture's own rows of characters, and the runs of each row, in the grey copy's pixels */
   const {g,W,Hh}=gy, med=a=>{ const t=a.slice().sort((x,y)=>x-y); return t[t.length>>1]||0.05; };
   const bw=med(labels.map(l=>l.box[2]-l.box[0])), bh=med(labels.map(l=>l.box[3]-l.box[1]));
@@ -3901,6 +3901,18 @@ function labelHit(read,zh){ /* a run's reading against one label's text */
   const a=[...read].filter(c=>CJK.test(c)||/[0-9]/.test(c)), b=[...zh].filter(c=>CJK.test(c)||/[0-9]/.test(c));
   if(!a.length||!b.length||Math.abs(a.length-b.length)>1) return 0; /* a fragment, or a run of several labels, is not this label */
   return lcsLen(a,b)/Math.max(a.length,b.length); }
+function growRun(r,runs){ /* the column cut is the ink's own extent, so it clips the first and last stroke and the
+    band is thinner than the characters (v388, H: "still a few missing or unprecise crops"): give the run back a
+    quarter of its width sideways and a third of its height up and down, but never more than half the way to its
+    neighbour, so a card's picture holds its own label whole and nothing of the next one */
+  const h=r.y1-r.y0, w=r.x1-r.x0; let dl=RL_GROW[0]*w, dr=dl, du=RL_GROW[1]*h, dd=du;
+  for(const o of runs){ if(o===r) continue;
+    if(Math.min(o.y1,r.y1)-Math.max(o.y0,r.y0)>=0.5*Math.min(h,o.y1-o.y0)){
+      if(o.x1<=r.x0) dl=Math.min(dl,(r.x0-o.x1)/2); else if(o.x0>=r.x1) dr=Math.min(dr,(o.x0-r.x1)/2); }
+    if(Math.min(o.x1,r.x1)-Math.max(o.x0,r.x0)>=0.5*Math.min(w,o.x1-o.x0)){
+      if(o.y1<=r.y0) du=Math.min(du,(r.y0-o.y1)/2); else if(o.y0>=r.y1) dd=Math.min(dd,(o.y0-r.y1)/2); } }
+  return {x0:r.x0-Math.max(0,dl),y0:r.y0-Math.max(0,du),x1:r.x1+Math.max(0,dr),y1:r.y1+Math.max(0,dd)};
+}
 async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label, or null where the reader could not name the run */
   const {runs,bands}=labelRunsOf(gy,labels,uni); if(!runs.length) return {rects:labels.map(()=>null),bands,runs:0,hit:0};
   const kx=bmp.width/gy.W, ky=bmp.height/gy.Hh;
@@ -3929,15 +3941,39 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
       }
     }
     return out; }),status);
+  const nCJK=t=>[...t].filter(c=>CJK.test(c)||/[0-9]/.test(c)).length;
+  const score=(i,j)=>Math.max(0,...(got[i]||[]).map(rd=>labelHit(rd,labels[j].zh)));
   const pairs=[]; /* every run against every label, the surest pairing first; each run and each label used once */
-  for(let i=0;i<runs.length;i++) for(let j=0;j<labels.length;j++){
-    const v=Math.max(0,...(got[i]||[]).map(rd=>labelHit(rd,labels[j].zh))); if(v>=RL_HIT) pairs.push([v,i,j]); }
+  for(let i=0;i<runs.length;i++) for(let j=0;j<labels.length;j++){ const v=score(i,j); if(v>=RL_HIT) pairs.push([v,i,j]); }
   pairs.sort((a,b)=>b[0]-a[0]);
-  const ur=new Set(), ul=new Set(), rects=labels.map(()=>null); let hit=0;
-  for(const [,i,j] of pairs){ if(ur.has(i)||ul.has(j)) continue; ur.add(i); ul.add(j); hit++;
-    const r=runs[i]; const best=(got[i]||[]).map(rd=>[labelHit(rd,labels[j].zh),rd]).sort((a,b)=>b[0]-a[0])[0];
-    rects[j]={x0:r.x0/gy.W,y0:r.y0/gy.Hh,x1:r.x1/gy.W,y1:r.y1/gy.Hh,read:(best&&best[1])||""}; }
-  return {rects,bands,runs:runs.length,hit};
+  const ur=new Set(), rects=labels.map(()=>null), pick=labels.map(()=>-1), read=labels.map(()=>""); let hit=0;
+  for(const [,i,j] of pairs){ if(ur.has(i)||pick[j]>=0) continue; ur.add(i); pick[j]=i; hit++;
+    read[j]=(got[i]||[]).map(rd=>[labelHit(rd,labels[j].zh),rd]).sort((a,b)=>b[0]-a[0])[0][1]||""; }
+  /* a label only half read takes the run its row's order gives it (v388): the model's reading order and row topology
+     are reliable (v376's finding) while its coordinates are not, so a run that reads as half of a label's characters
+     is that label when it stands in the label's own row and between the labels the reader did name — 袜子 read as
+     计子 and 下筒 as 下简 on H's panel, each with one run and one place they can go. */
+  const rows=labelRows(labels), rowOf=new Map(); rows.forEach((rw,ri)=>rw.at.forEach(j=>rowOf.set(j,ri)));
+  const band=rows.map(rw=>{ const rs=rw.at.filter(j=>pick[j]>=0).map(j=>runs[pick[j]]);
+    return rs.length?{y0:Math.min(...rs.map(r=>r.y0)),y1:Math.max(...rs.map(r=>r.y1))}:null; });
+  const mid=r=>(r.x0+r.x1)/2, weak=[]; let filled=0;
+  for(let i=0;i<runs.length;i++) for(let j=0;j<labels.length;j++){ if(pick[j]>=0) continue;
+    const v=score(i,j); if(v>=RL_WEAK&&v<RL_HIT) weak.push([v,i,j]); }
+  weak.sort((a,b)=>b[0]-a[0]);
+  const perChar=rows.map(rw=>{ const v=rw.at.filter(j=>pick[j]>=0).map(j=>{ const n=nCJK(labels[j].zh); return n?(runs[pick[j]].x1-runs[pick[j]].x0)/n:0; })
+    .filter(x=>x>0).sort((a,b)=>a-b); return v[v.length>>1]||0; });
+  for(const [,i,j] of weak){ if(ur.has(i)||pick[j]>=0) continue;
+    const bd=band[rowOf.get(j)], r=runs[i]; if(!bd) continue;
+    const pw=perChar[rowOf.get(j)], cw=(r.x1-r.x0)/Math.max(1,nCJK(labels[j].zh)); /* a run far wider than the row's characters holds more than this label */
+    if(pw&&(cw<RL_WIDE[0]*pw||cw>RL_WIDE[1]*pw)) continue;
+    if(Math.min(bd.y1,r.y1)-Math.max(bd.y0,r.y0)<0.5*Math.min(bd.y1-bd.y0,r.y1-r.y0)) continue;
+    const at=rows[rowOf.get(j)].at, k=at.indexOf(j);
+    if(!at.every((o,t)=>o===j||pick[o]<0||(t<k?mid(runs[pick[o]])<mid(r):mid(runs[pick[o]])>mid(r)))) continue;
+    ur.add(i); pick[j]=i; filled++;
+    read[j]=(got[i]||[]).map(rd=>[labelHit(rd,labels[j].zh),rd]).sort((a,b)=>b[0]-a[0])[0][1]||""; }
+  labels.forEach((l,j)=>{ if(pick[j]<0) return; const g=growRun(runs[pick[j]],runs);
+    rects[j]={x0:g.x0/gy.W,y0:g.y0/gy.Hh,x1:g.x1/gy.W,y1:g.y1/gy.Hh,read:read[j]}; });
+  return {rects,bands,runs:runs.length,hit,filled};
 }
 function snapBox(bmp,box,n,lens,skip){ /* lens: the answer's lines' character counts (v305); skip: the fine print's boxes as fractions (v328) — a blob whose centre lies in one is not the text */
   const k=Math.min(1,800/Math.max(bmp.width,bmp.height)), W=Math.max(1,Math.round(bmp.width*k)), Hh=Math.max(1,Math.round(bmp.height*k));
@@ -4239,14 +4275,14 @@ async function cropSign(id,opts){
               const sb=src===seen?b:await createImageBitmap(src); const gy=labelGrey(sb,pic.box);
               let found=null; try{ found=await readLabels(sb,gy,lab,pic.box,()=>{}); }catch(e){ found=null; logErr("split",e&&e.message||String(e)); }
               if(sb!==b) sb.close(); if(stale()) return;
-              if(found&&found.hit>=SPLIT_MIN){
-                logRead(`the picture's own characters stand in ${found.bands} ${found.bands===1?"row":"rows"}, ${found.runs} runs; the reader named ${found.hit} of the ${lab.length} labels`);
+              if(found&&found.hit+found.filled>=SPLIT_MIN){
+                logRead(`the picture's own characters stand in ${found.bands} ${found.bands===1?"row":"rows"}, ${found.runs} runs; the reader named ${found.hit} of the ${lab.length} labels`+(found.filled?`, and ${found.filled} more by half a reading and their row's order`:""));
                 const pcv=v=>Math.round(v*100);
                 labelWhole=true; /* a label the reader could not name keeps the frame's own picture, never a neighbour's */
                 labelRects=lab.map((l,k)=>{ const q=found.rects[k];
                   logRead(q?`${l.zh}: read as ${q.read} at ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`:`${l.zh}: no run of the picture reads as it — the whole picture`);
-                  if(!q) return null; const Hk=Math.max(1/Hh,q.y1-q.y0);
-                  return {x0:Math.max(0,q.x0-Hk*FRAME_ROOM)*W,y0:Math.max(0,q.y0-Hk*FRAME_ROOM)*Hh,x1:Math.min(1,q.x1+Hk*FRAME_ROOM)*W,y1:Math.min(1,q.y1+Hk*FRAME_ROOM)*Hh}; }); }
+                  if(!q) return null; /* no FRAME_ROOM here: the run was already grown as far as its neighbours allow (v388) */
+                  return {x0:Math.max(0,q.x0)*W,y0:Math.max(0,q.y0)*Hh,x1:Math.min(1,q.x1)*W,y1:Math.min(1,q.y1)*Hh}; }); }
               else { logRead(`the reader found ${found?found.hit:0} of the ${lab.length} labels in the picture — every card gets the whole picture`); splitWhole=true; } }
             else { const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen; /* the frame at its own pixels when nothing was straightened: a panel's labels are small in the 800 px picture the AI saw */
               const sb=src===seen?b:await createImageBitmap(src); const gy=labelGrey(sb,pic.box); if(sb!==b) sb.close();
