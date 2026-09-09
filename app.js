@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=379; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=380; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3731,7 +3731,7 @@ function labelRect(gy,box,pin){ /* box in fractions of the picture; pin (v376): 
    are laid onto the clusters in order (a cluster may be skipped — the icon rows are); and inside a cluster the row's
    labels are laid onto its runs in order, so no two labels can take the same run. Then labelRect runs again, pinned
    to that row and that run. Nothing lines up: the plan is dropped and every label is placed on its own as before. */
-const LB_MISS=1.2, LB_PIN=0.35, LB_KEEP=0.5, LB_SAME=0.5, LB_FAR=4, LB_TALL=2.2, LB_PAR=2; /* MISS: what a label that finds no run costs its row · PIN: the room around a pinned run · KEEP: the share of labels a plan must place · SAME: two nominations of one run · FAR: how far, in box heights, the plan's scan looks for the picture's own rows, since the answer's grid may sit a row and more beside them · TALL: how tall a row may be in that scan · PAR: a spare row of ink standing under this many of a row's labels is a row of its own (a panel's icons), not their second line */
+const LB_TMPL=0.1, LB_MISS=1.2, LB_PIN=0.35, LB_KEEP=0.5, LB_SAME=0.5, LB_FAR=4, LB_TALL=2.2, LB_PAR=2; /* TMPL: how far a label box may sit from the median before it is not one of the grid's · MISS: what a label that finds no run costs its row · PIN: the room around a pinned run · KEEP: the share of labels a plan must place · SAME: two nominations of one run · FAR: how far, in box heights, the plan's scan looks for the picture's own rows, since the answer's grid may sit a row and more beside them · TALL: how tall a row may be in that scan · PAR: a spare row of ink standing under this many of a row's labels is a row of its own (a panel's icons), not their second line */
 function labelRows(labels){ /* the answer's boxes grouped into rows, each row in reading order */
   const at=labels.map((l,i)=>i).sort((a,b)=>(labels[a].box[1]+labels[a].box[3])-(labels[b].box[1]+labels[b].box[3])), rows=[];
   for(const i of at){ const b=labels[i].box, h=b[3]-b[1], r=rows[rows.length-1];
@@ -3802,6 +3802,20 @@ function labelPlan(gy,labels){ /* one cluster per row of the answer, in order; o
   const bar=cs.map((c,q)=>q).filter(q=>used.has(q)||par.has(q)).map(q=>({q,y0:cs[q].y0,y1:cs[q].y1}));
   for(const p of pin) if(p) p.skip=bar.filter(b=>b.q!==p.row).map(b=>({y0:b.y0,y1:b.y1}));
   return {pin,placed,rows:R};
+}
+function templateBoxes(lab,W,Hh){ /* the answer's label boxes drawn to a grid, not measured on the picture (v380, H's washing
+     machine at v379: every box exactly 60×40 px on an 800 px picture, the whole grid a cell and more to the right of the panel,
+     so every card showed its neighbour's button). A drift like that cannot be told from the truth — the boxes are internally
+     consistent, the plan places as many labels either way — so the boxes are not used to cut a picture at all. The tell is that
+     labels of two and of seven characters got the same box: a measurement follows the characters, a drawing does not. */
+  if(!lab||lab.length<4) return false;
+  const ws=lab.map(l=>(l.box[2]-l.box[0])*W), hs=lab.map(l=>(l.box[3]-l.box[1])*Hh);
+  const med=a=>{ const t=a.slice().sort((x,y)=>x-y); return t[t.length>>1]||1; };
+  const mw=med(ws), mh=med(hs), one=[]; /* the picture's edge clips a box or two, so the rule is the share of boxes of one size, not their spread */
+  for(let k=0;k<lab.length;k++) if(Math.abs(ws[k]-mw)<=LB_TMPL*mw&&Math.abs(hs[k]-mh)<=LB_TMPL*mh) one.push(k);
+  if(one.length<0.8*lab.length) return false;
+  const ns=one.map(k=>[...lab[k].zh].filter(c=>CJK.test(c)).length||1);
+  return Math.max(...ns)>Math.min(...ns); /* labels of one length may honestly measure the same width */
 }
 function snapBox(bmp,box,n,lens,skip){ /* lens: the answer's lines' character counts (v305); skip: the fine print's boxes as fractions (v328) — a blob whose centre lies in one is not the text */
   const k=Math.min(1,800/Math.max(bmp.width,bmp.height)), W=Math.max(1,Math.round(bmp.width*k)), Hh=Math.max(1,Math.round(bmp.height*k));
@@ -4064,7 +4078,7 @@ async function cropSign(id,opts){
       const zh=pic.zh.split("\n"), guesses=[...new Set(passes.map(textOf).filter(tx=>tx&&tx!==pic.zh))].slice(0,6);
       if(pic.box&&picSeen&&(PENDING[id]&&!RECROP[id]?READ_APP[id]:CROP&&CROP.id===id&&CROP.proposed)){ /* the reader could not read this font (v293 — H's 邪不压正 poster: the ink rows and the reader's garbage boxes put the frame around the whole photo): the AI's box places the frame, once, as fractions of the straightened picture it saw — the proposal's crop, or the cut of the frame the quick look had placed from that same garbage; on the placed frame's own cut (v301) the box centres the frame on the characters inside it (v303, H's 绿皮书: "should be more centered") */
         const seen=picSeen.dk?picSeen.dk.blob:picSeen.orig, seenAngle=picSeen.dk?picSeen.dk.angle||0:0, seenBase=picSeen.base||PLACED[id]||(CROP&&CROP.id===id?CROP.rect:null); /* the placed cut is upright, and its frame is the placed one */
-        let W=0,Hh=0,box=null,rect=null,grow=null,altWon=false,labelRects=null; try{ const b=await createImageBitmap(seen); W=b.width; Hh=b.height; const [bx0,by0,bx1,by1]=pic.box, n=Math.max(1,zh.length);
+        let W=0,Hh=0,box=null,rect=null,grow=null,altWon=false,labelRects=null,splitWhole=false; try{ const b=await createImageBitmap(seen); W=b.width; Hh=b.height; const [bx0,by0,bx1,by1]=pic.box, n=Math.max(1,zh.length);
           box={x0:bx0*W,y0:by0*Hh,x1:bx1*W,y1:by1*Hh}; let [fx0,fy0,fx1,fy1]=pic.box; /* the box as read, for the log (v340) */ const lens=zh.map(l=>l.replace(/[\s\/／·・,，。.、()（）]/g,"").length); let snap=snapBox(b,box,n,lens,pic.droppedBoxes);
           if(pic.boxAlt){ /* the box overshoots the picture by a little (v340, H's ARRI poster 突破光影边界: Qwen's box [120,330,860,450] for an 800×600 picture — pixels, the title running to the right edge —, read on the 0–1000 grid as 12–86 % across, 33–45 % down: the blank blue above the title, so the card showed ARRI and cut the title; v328's far 邪不压正 answered the same way and meant the grid): the numbers read as pixels, clamped to the picture, name another place, and the snap decides — the pixel reading wins when its box holds a line of characters and the grid's holds none */
             const [ax0,ay0,ax1,ay1]=pic.boxAlt, abox={x0:ax0*W,y0:ay0*Hh,x1:ax1*W,y1:ay1*Hh}; let s2=null; try{ s2=snapBox(b,abox,n,lens,pic.droppedBoxesAlt||pic.droppedBoxes); }catch(e){ s2=null; }
@@ -4097,6 +4111,9 @@ async function cropSign(id,opts){
             const whole=bs.some(q=>(q.x1-q.x0)*(q.y1-q.y0)>0.9*W*Hh); /* a box over the whole picture is not one element */
             const why=lab.length>SPLIT_MAX?`there are ${lab.length} of them`:!oneScale?"their boxes are not all on the same scale":whole?"one box covers the whole picture":"";
             if(why){ logRead(`the AI calls these ${lab.length} texts separate labels, but ${why} — one card`); }
+            else if(templateBoxes(lab,W,Hh)){ /* v380 */
+              splitWhole=true;
+              logRead(`the AI's ${lab.length} label boxes are all the same size — a drawing of the grid, not a measurement: every card gets the whole picture`); }
             else { const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen; /* the frame at its own pixels when nothing was straightened: a panel's labels are small in the 800 px picture the AI saw */
               const sb=src===seen?b:await createImageBitmap(src); const gy=labelGrey(sb,pic.box); if(sb!==b) sb.close();
               const pcv=v=>Math.round(v*100);
@@ -4115,6 +4132,10 @@ async function cropSign(id,opts){
           if(picSeen.base){ const bh=box.y1-box.y0, sb=seenBase, e={top:box.y0<=0.02*Hh&&sb.y>0.005*sb.lh,bottom:box.y1>=0.98*Hh&&sb.y+sb.h<0.995*sb.lh,left:box.x0<=0.02*W&&sb.x>0.005*sb.lw,right:box.x1>=0.98*W&&sb.x+sb.w<0.995*sb.lw}; /* an edge that is the photo's own has nothing beyond it (v315: on the whole-photo proposal of H's parking sign the line said the frame reaches beyond the right edge, where nothing was) */ /* the box on the edge of the app's proposal (v313, H's 北京现代 badge: the ink rows cut the chrome characters in half at the proposal's top, Qwen boxed the visible halves at y 0–55 of 496, the snap found nothing, and the card showed half characters — "Why is the crop so wrong here?"): the text may go on beyond the edge, so the frame reaches past it — 1.5 box heights above or below, two text heights sideways — into the photo; never for the hand's frame or the whole photo, where there is nothing beyond */
             if(e.top||e.bottom||e.left||e.right){ grow={top:e.top?1.5*bh:0,bottom:e.bottom?1.5*bh:0,left:e.left?2*bh:0,right:e.right?2*bh:0}; logRead(`the AI's box touches the picture's ${["top","bottom","left","right"].filter(k=>e[k]).join(" and ")} edge — the frame reaches beyond it`); } } }catch(e){ box=null; logErr("snap",e&&e.message||String(e)); logRead("the AI's box could not be used: "+(e&&e.message||e)); }
         if(box){ const sure=sureAngle; const cut=await frameOnText(id,picSeen.orig,seenBase,rect,seenAngle,"AI",grow,sure&&{box}); if(stale()) return; if(cut) placedCut=cut; }
+        if(splitWhole&&W&&Hh&&seenBase&&pic.labels&&pic.labels.length>=SPLIT_MIN){ /* the boxes are a drawing: the cards keep their texts and get the frame's own picture (v380) */
+          const one=PLACED[id]||seenBase;
+          SPLIT[id]=pic.labels.map(()=>one);
+          logRead("the AI calls these "+pic.labels.length+" texts separate labels — one card each, all with the frame's own picture"); }
         if(labelRects&&W&&Hh&&seenBase){ /* one frame per label on the photo (v357), for finishPending to cut and save */
           const fr=labelRects.map(rc=>photoFrameOf(seenBase,W,Hh,rc,seenAngle)), pc=v=>Math.round(v*100);
           const keep=[]; for(let k=0;k<fr.length;k++) if(fr[k]) keep.push(k);
