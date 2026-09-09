@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=371; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=372; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1237,6 +1237,41 @@ function recheckLine(){ const tr=RECHECK, left=recheckLeft().length;
   if(tr&&tr.failed) return t("The AI could not be reached")+". "+t("{0} checked, {1} left.",tr.done,left)+" "+t("It goes on by itself when the AI can be reached again.");
   if(tr) return tr.found?t("Done — {0} could be better. See them on the Cards tab.",nOf(tr.found,"card")):t("Done — nothing to change. Your cards are in good shape.");
   return t("The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it."); }
+/* The pictures already on the phone (v372): one pass over the deck, each card measured and only the dark or flat ones
+   written. Nothing is staged and no run is remembered — the pass is local, fast and idempotent, so an interruption
+   leaves the cards it reached brightened and the next tap picks up the rest by itself. */
+const BR_BATCH=10;
+let BRIGHT=null;
+function brightLine(){ const b=BRIGHT;
+  if(b&&b.running) return null; /* the moving bar, drawn by the callers */
+  if(b) return b.done?`Done — ${nOf(b.done,"picture")} brightened.`:"Done — nothing to brighten. The pictures look good.";
+  return "A picture taken in the shade comes out dark. New cards are brightened as they are made; this does the pictures already on the phone."; }
+function brightRowHTML(){ const b=BRIGHT; if(!S.admin||!deck().filter(d=>d.img).length) return ""; /* the owner's row, English like the other owner's tools */
+  const line=b&&b.running?busyHTML(`Looking at ${b.at} of ${b.total} …`):brightLine();
+  return `<div class="listhead">Card pictures</div>
+    <div class="mrow"><div style="flex:1"><div class="t">Dark pictures</div><div class="s" id="bright-status">${line}</div><div class="fieldacts"><button class="btn mini" id="bright-all"${b&&b.running?" disabled":""}>Brighten dark pictures</button></div></div></div>`; }
+function brightRefresh(){ const st=$("#bright-status"), btn=$("#bright-all"), b=BRIGHT; if(!st) return;
+  if(b&&b.running) st.innerHTML=busyHTML(`Looking at ${b.at} of ${b.total} …`); else st.textContent=brightLine();
+  if(btn) btn.disabled=!!(b&&b.running); }
+async function brightenAll(){
+  if(BRIGHT&&BRIGHT.running){ brightRefresh(); return; }
+  const list=deck().filter(d=>d.img).map(d=>d.id); if(!list.length) return;
+  if(!await askSheet({title:"Brighten the dark card pictures?",text:"The pictures on this phone change. The photos stay as they are, and this cannot be undone.",ok:"Brighten"})) return;
+  BRIGHT={running:true,at:0,total:list.length,done:0}; brightRefresh();
+  let rows=[];
+  const write=async()=>{ if(!rows.length) return; try{ await idbPutMany("custom",rows); for(const r of rows){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; } }catch(e){ logErr("bright","write: "+(e&&e.message||e)); } rows=[]; };
+  for(let i=0;i<list.length;i++){
+    BRIGHT.at=i+1; if(i%BR_BATCH===0) brightRefresh();
+    const d=cardOf(list[i]); if(!d||!d.img) continue;
+    let b=null; try{ b=await brightenBlob(d.img); }catch(e){ b=null; }
+    if(!b) continue;
+    rows.push({...d,img:b}); dropThumb(d.id); BRIGHT.done++;
+    if(rows.length>=BR_BATCH) await write();
+  }
+  await write();
+  BRIGHT.running=false; brightRefresh();
+  if(S.mode==="cards"||S.mode==="study") render();
+}
 function recheckRowHTML(){ const n=toRecheck().length, tr=RECHECK; if(!n||!aiOn()) return "";
   const line=tr&&tr.running?busyHTML(t("Checking {0} of {1} …",tr.at,tr.total)):recheckLine();
   return `<div class="mrow"><div style="flex:1"><div class="t">${t("Check-up")}</div><div class="s" id="recheck-status">${line}</div><div class="fieldacts"><button class="btn mini" id="recheck-all"${tr&&tr.running?" disabled":""}>${t("Check all cards again")}</button></div></div></div>`; }
@@ -1444,6 +1479,7 @@ function renderMore(main){
     <pre class="diag" id="users-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">Feedback</div><div class="s" id="fb-in-status">${FEEDBACK?`${nOf(FEEDBACK.rows.length,"message")}, fetched ${new Date(FEEDBACK.at).toLocaleTimeString()}.`:"The messages users sent from the app, newest first."}</div><div class="fieldacts"><button class="btn mini" id="fb-show">Show</button><button class="btn mini" id="fb-share">Share</button><button class="btn mini" id="fb-copy">Copy</button></div></div></div>
     <pre class="diag" id="fb-out" hidden></pre>
+    ${brightRowHTML()}
     <div class="listhead">Start over</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>`:""}
     <div class="listhead">${t("About")}</div>
@@ -1457,6 +1493,7 @@ function renderMore(main){
   const tg=$("#tag-all"); if(tg) tg.onclick=tagAll; /* Tag all cards (v368) */
   const ur=$("#undo-run"); if(ur) ur.onclick=undoLastRun; /* Undo last run (v369) */
   const rc=$("#recheck-all"); if(rc) rc.onclick=recheckAll; /* Check all cards again (v370) */
+  const br=$("#bright-all"); if(br) br.onclick=brightenAll; /* Brighten dark pictures (v372) */
   $("#guide-open").onclick=()=>{ S.mode="guide"; render(); window.scrollTo({top:0}); };
   wireGrow(main); /* the feedback box grows with its text like the forms' fields (v218, H: "looks a little bit old school") */
   $("#fb-send").onclick=async()=>{ const tx=$("#fb-text"), st=$("#fb-status"), b=$("#fb-send"), text=tx.value.trim(); if(!text){ st.textContent=t("Write a few words first."); return; }
@@ -2159,8 +2196,8 @@ function renderEdit(main,c){
     let handoff=null;
     if(willHand){ const rect={...CROP.rect}; const r=await cropBlob(rid,rect); if(r) handoff={rect,blob:r.blob}; } /* a reading still due or running for this frame (v244: an untouched or already read frame saves without one) */
     if(removeImg){ delete upd.img; delete upd.imgFull; delete upd.shot; delete upd.frame; dropThumb(c); } /* shot too — without it the front would still show the inbox photo through fullPhoto (v214) */
-    else if(handoff){ const win=await windowCut(rid,handoff.rect); upd.img=await jpegOf(win?win.blob:handoff.blob); upd.frame=photoFrame(handoff.rect); dropThumb(c); } /* the 16:9 window around the frame (v329) */
-    else if(recropImg){ const win=recropRect?await windowCut(rid,recropRect):null; upd.img=await jpegOf(win?win.blob:recropImg); if(recropRect) upd.frame=photoFrame(recropRect); dropThumb(c); } /* the crop framed again in this form (v239) with its frame (v244), as fractions of the whole photo even when framed in the window (v247) */
+    else if(handoff){ const win=await windowCut(rid,handoff.rect); upd.img=await cardJpeg(win?win.blob:handoff.blob); upd.frame=photoFrame(handoff.rect); dropThumb(c); } /* the 16:9 window around the frame (v329) */
+    else if(recropImg){ const win=recropRect?await windowCut(rid,recropRect):null; upd.img=await cardJpeg(win?win.blob:recropImg); if(recropRect) upd.frame=photoFrame(recropRect); dropThumb(c); } /* the crop framed again in this form (v239) with its frame (v244), as fractions of the whole photo even when framed in the window (v247) */
     if(upd.mt){ upd.mt={...upd.mt, verified:true, pending:false}; delete upd.mt.suspect; } /* a human edited it */
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
     else if(aiLate){ upd.mt={...(upd.mt||{}), src:"dict", verified:false, pending:false}; delete upd.mt.suspect; } /* unverified until the running AI check answers (v341); its failure marks the card pending for the next auto run */
@@ -2230,7 +2267,7 @@ async function addManual(){
   if($("#f-flag").checked){ card.flag=true; const note=$("#f-note").value.trim(); if(note) card.flagNote=note; }
   if(S.pendingShot){ card.shot=S.pendingShot; S.pendingShot=null; }
   const chosenImg=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
-  if(chosenImg){ card.img=await jpegOf(chosenImg); }
+  if(chosenImg){ card.img=await cardJpeg(chosenImg); }
   S.pendingImg=null; S.pendingFull=null;
   S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
@@ -3054,6 +3091,44 @@ async function jpegOf(blob,q){
   try{ const bmp=await createImageBitmap(blob); const cv=document.createElement("canvas"); cv.width=bmp.width; cv.height=bmp.height; cv.getContext("2d",{alpha:false}).drawImage(bmp,0,0); bmp.close();
     return (await new Promise(res=>cv.toBlob(res,"image/jpeg",q||0.85)))||blob; }catch(e){ return blob; }
 }
+/* A card picture is brightened when it has no highlights or no contrast (v372, H's rice-cooker labels in the shade:
+   "Some Cards really look bad because their part of the image was in the shade"). The 1st and 99th percentile of the
+   luminance are stretched to black and white — a straight stretch, no gamma: a poster on a dark wall is not
+   underexposed, and lifting its midtones would wash it out. So the test is the highlight end, not the median: a
+   picture whose brightest pixels stay under BR_HI has no light in it, and one whose span is under BR_SPAN is flat.
+   Measured on the real photos of the harness: all seven rice-cooker labels come out readable, and 绿皮书, 流浪地球,
+   the scooter badge, the Nongfu bottle, the parking sign and the whole washing-machine panel are left as they are.
+   It is idempotent — a stretched picture measures "fine" the next time. */
+const BR_HI=200, BR_SPAN=120, BR_MIN=24, BR_GAIN=40, BR_CLIP=0.01, BR_SAMPLE=200000;
+function brightLut(px){
+  const h=new Uint32Array(256); let n=0;
+  const step=4*Math.max(1,Math.ceil(px.length/4/BR_SAMPLE)); /* a big picture is measured on a sample, the curve then runs over every pixel */
+  for(let i=0;i<px.length;i+=step){ h[(px[i]*77+px[i+1]*151+px[i+2]*28)>>8]++; n++; }
+  if(!n) return null;
+  const at=q=>{ let c=0; const k=q*n; for(let v=0;v<256;v++){ c+=h[v]; if(c>=k) return v; } return 255; };
+  const lo=at(BR_CLIP), hi=at(1-BR_CLIP);
+  if(hi-lo<BR_MIN) return null; /* nothing but noise to stretch */
+  if(hi>=BR_HI&&hi-lo>=BR_SPAN) return null; /* light and lively: leave it alone */
+  const span=Math.max(hi-lo,BR_GAIN), lut=new Uint8Array(256); /* the gain is capped, so a nearly flat picture does not become a poster */
+  for(let v=0;v<256;v++) lut[v]=Math.round(255*Math.min(1,Math.max(0,(v-lo)/span)));
+  return lut;
+}
+/* the picture brightened, or null when it needs nothing (then the caller keeps the blob it has, unencoded) */
+async function brightenBlob(blob){
+  if(!blob) return null;
+  try{
+    const bmp=await createImageBitmap(blob), cv=document.createElement("canvas");
+    cv.width=bmp.width; cv.height=bmp.height;
+    const ctx=cv.getContext("2d",{alpha:false}); ctx.drawImage(bmp,0,0); bmp.close();
+    const d=ctx.getImageData(0,0,cv.width,cv.height), lut=brightLut(d.data);
+    if(!lut) return null;
+    for(let i=0;i<d.data.length;i+=4){ d.data[i]=lut[d.data[i]]; d.data[i+1]=lut[d.data[i+1]]; d.data[i+2]=lut[d.data[i+2]]; }
+    ctx.putImageData(d,0,0);
+    return await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
+  }catch(e){ return null; }
+}
+/* every card picture goes through here: brightened when it is dark or flat, then a JPEG (v372) */
+async function cardJpeg(blob){ const b=await brightenBlob(blob); return b||jpegOf(blob); }
 /* What the reader sees must be a JPEG: this Tesseract build misreads canvas PNGs and WebPs (measured on the tilted
    composite: JPEG 0.95 → 本区域禁止违规 99 %, the same pixels as PNG → one character). Intermediate crops stay PNG so the
    only lossy step is the last one — two JPEG generations in a row lost the line too. */
@@ -3930,7 +4005,7 @@ async function saveNow(id,auto){ /* auto (v325): the card made by itself from a 
   const rect={...CROP.rect}, app=!!(CROP.hidden||CROP.proposed), cid="reading#"+Date.now();
   if(auto){ PENDING[id]=cid; AUTO[id]=true; QSCARD[id]=cid; delete QSMORE[id]; delete QSNOTE[id]; } /* announced before the cut is made, so the quick look's placement meanwhile goes to PLACED and no frame is ever drawn (v325) */
   const r=await cropBlob(id,windowRect(rect)); if(!r){ if(auto&&PENDING[id]===cid){ delete PENDING[id]; delete AUTO[id]; delete QSCARD[id]; } return; } /* the placeholder's picture is the 16:9 window too (v329) */
-  const img=await jpegOf(r.blob);
+  const img=await cardJpeg(r.blob);
   if(auto?PENDING[id]!==cid:PENDING[id]){ return; } /* Cancel or another photo meanwhile */
   if(!CROP||CROP.id!==id){ if(auto){ delete PENDING[id]; delete AUTO[id]; delete QSCARD[id]; } return; }
   const followed=!!CROP.followed, placed=followed?{...CROP.rect}:null; /* a frame the reader placed while the cut was made (v325: read after the awaits) */
@@ -3964,7 +4039,7 @@ async function splitCards(id,sg,ph){
       let b=null; try{ b=await readingCard(id,sgK); }catch(e){ logErr("split",e&&e.message||String(e)); b=null; }
       if(!b||!b.card||!b.card.c) continue;
       let cut=null; try{ cut=await cropBlob(id,fr[k]); }catch(e){ cut=null; } /* the label's own cut at the photo's pixels (v362, H: "do the label crops at full resolution") — not the 16:9 window of v329, which on a panel widens a small label until its neighbours stand in the picture */
-      out.push({card:b.card,img:cut&&cut.blob?await jpegOf(cut.blob):null,frame:fr[k]});
+      out.push({card:b.card,img:cut&&cut.blob?await cardJpeg(cut.blob):null,frame:fr[k]});
     }
   } finally{ SIGN[id]=prev; }
   if(out.length<SPLIT_MIN){ READLOG.push({t:Date.now(),text:`only ${out.length} of ${lab.length} labels could be made into cards — one card`}); while(READLOG.length>40) READLOG.shift(); return null; }
@@ -4009,8 +4084,8 @@ async function finishPending(id){
     const fr=PLACED[id]||(ph.reading.rect&&ph.reading.rect.lw?ph.reading.rect:null); /* for the window below, read before the card's fields are replaced (v329) */
     for(const k of Object.keys(ph)) if(!["id","at","img","imgFull","shot","tags","frame"].includes(k)) delete ph[k];
     const {id:_i,at:_a,img:_m,shot:_s,...fields}=card; Object.assign(ph,fields);
-    if(sg.cardImg){ ph.img=await jpegOf(sg.cardImg); dropThumb(ph.id); } /* the list's thumbnail was made from the crop saved first (v242, H: "the card with a photo before the re-crop remains") */
-    { const win=fr?await windowCut(id,fr):null; if(win){ ph.img=await jpegOf(win.blob); dropThumb(ph.id); } } /* the 16:9 window around the text (v329) — the tight cut only when the photo is gone */
+    if(sg.cardImg){ ph.img=await cardJpeg(sg.cardImg); dropThumb(ph.id); } /* the list's thumbnail was made from the crop saved first (v242, H: "the card with a photo before the re-crop remains") */
+    { const win=fr?await windowCut(id,fr):null; if(win){ ph.img=await cardJpeg(win.blob); dropThumb(ph.id); } } /* the 16:9 window around the text (v329) — the tight cut only when the photo is gone */
     const weak=!!(mt.suspect||sg.weak||(sg.ai&&sg.ai.bad));
     if(auto||edit){ if(mt.suspect||(sg.ai&&sg.ai.bad)||(sg.weak&&!(sg.ai&&sg.ai.ok))){ ph.flag=true; ph.flagNote=t("the reading looks unsure — check text, pinyin and meaning"); } } /* the card made by itself (v325) and the card saved early from Crop again (v342, H's "Go" on the recommendation — the analysis counts): only a doubtful reading carries the flag */ /* the card made by itself (v325): the row shows it, so only a doubtful reading carries the flag — a weak reader score the AI check then confirmed is no doubt */
     else { ph.flag=true; ph.flagNote=weak?t("saved before the reading was done, and the reading is weak — check text, pinyin and meaning"):t("saved before the reading was done — check text, pinyin and meaning"); } /* nobody saw the preview (v245, H: "flag cards that were saved before the final stage, with an appropriate comment") */
@@ -4667,8 +4742,8 @@ async function saveSign(id){
   const built=await readingCard(id,sg); if(!built) return;
   const {card,c,mt}=built;
   if(deck().some(d=>d.c===c&&d.shot===id)){ sg.aiErr=t("This text is already saved from this photo."); renderShots(); return; } /* the same text from another photo is a new card (H, v118) */
-  const pic=sg.cardImg||S.pendingImg; if(pic) card.img=await jpegOf(pic);
-  { const win=CROP&&CROP.id===id&&CROP.rect?await windowCut(id,CROP.rect):null; if(win) card.img=await jpegOf(win.blob); } /* the 16:9 window around the text (v329) */
+  const pic=sg.cardImg||S.pendingImg; if(pic) card.img=await cardJpeg(pic);
+  { const win=CROP&&CROP.id===id&&CROP.rect?await windowCut(id,CROP.rect):null; if(win) card.img=await cardJpeg(win.blob); } /* the 16:9 window around the text (v329) */
   if(S.pendingFull&&!S.inbox.some(x=>x.id===id)) card.imgFull=S.pendingFull; /* the whole photo stays in the inbox, not twice (v214) */
   S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; /* used up — the Add form once showed the last photo's crop on a card made from scratch (v188) */
   if(CROP&&CROP.id===id&&CROP.rect) card.frame=frameOf(CROP.rect); /* the frame, for Crop again (v244) */
@@ -4958,7 +5033,7 @@ const reloadBusy=()=>picking()||!!CROP; /* a photo on its way from the camera, o
    is up within seconds and the user finds the same screen. */
 const IDLE_MS=4000, RELOAD_POLL=2000, RESUME_MAX=180000; let LAST_TOUCH=Date.now();
 ["pointerdown","keydown","input","touchstart","wheel"].forEach(ev=>document.addEventListener(ev,()=>{ LAST_TOUCH=Date.now(); },{capture:true,passive:true}));
-const reloadIdle=()=>!reloadBusy()&&!document.hidden&&Date.now()-LAST_TOUCH>=IDLE_MS&&!S.editing&&S.mode!=="add"&&!Object.keys(PENDING).length&&!Object.keys(READING).length&&!(TRANSLATE&&TRANSLATE.running)&&!(TAGALL&&TAGALL.running)&&!(RECHECK&&RECHECK.running)&&!document.querySelector(".drawsheet,.ask")&&!(($("#fb-text")||{}).value||"").trim();
+const reloadIdle=()=>!reloadBusy()&&!document.hidden&&Date.now()-LAST_TOUCH>=IDLE_MS&&!S.editing&&S.mode!=="add"&&!Object.keys(PENDING).length&&!Object.keys(READING).length&&!(TRANSLATE&&TRANSLATE.running)&&!(TAGALL&&TAGALL.running)&&!(RECHECK&&RECHECK.running)&&!(BRIGHT&&BRIGHT.running)&&!document.querySelector(".drawsheet,.ask")&&!(($("#fb-text")||{}).value||"").trim();
 async function reloadNow(){ RELOAD_DUE=false; clearInterval(RELOAD_TIMER); RELOAD_TIMER=null; try{ await setSetting("resumeView",{mode:S.mode,detail:S.detail,query:S.query,scroll:window.scrollY,at:Date.now()}); }catch(e){} location.reload(); }
 function reloadSoon(){ if(!reloadBusy()&&(Date.now()-LOAD_AT<RELOAD_GRACE||document.hidden)){ reloadNow(); return; } RELOAD_DUE=true; if(!RELOAD_TIMER) RELOAD_TIMER=setInterval(()=>{ if(RELOAD_DUE&&reloadIdle()) reloadNow(); },RELOAD_POLL); }
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&RELOAD_DUE&&!reloadBusy()) reloadNow(); });
