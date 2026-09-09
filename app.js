@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=357; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=358; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -577,7 +577,7 @@ async function pictureJpeg(blob){
   const out=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
   const b64=(await blobToB64(out)).d; return {b64,w:cv.width,h:cv.height,kb:Math.round(out.size/1024)};
 }
-const picSystem=()=>`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","box":[left,top,right,bottom],"boxes":[[left,top,right,bottom],…],"cut":"…","separate":true|false,"labels":[{"zh":"…","p":"…","m":"…","box":[left,top,right,bottom]},…],"bad":true|false}. "zh" = the main Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without lines of Latin letters (a brand's English name), without numbers of the decoration and nothing you cannot see — a number that belongs to a Chinese line stays in that line with its unit, as written (净含量380ml, 30分钟, 3月1日): the learner reads it as part of the line — the main text only: leave out fine print, that is lines whose characters are under a third the height of the largest characters (dates, credits, small notes, slogans in small type), and leave out any line the picture's edge cuts off; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural ${meaningLangName()} meaning of the text as a sign or name (short, ${meaningLangName()} only); when the text is a brand, shop or product name, "m" is that name as it is known (the romanised or the international name), followed in brackets by what it is, in ${meaningLangName()} — e.g. "Mixue Bingcheng (ice-cream and bubble-tea chain)", never the bare name alone; when the text has several lines that say different things (a film poster: the title, then credits), "m" gives one short meaning per line, in the same order, joined with " / " as the pinyin is — e.g. "The Wandering Earth (film) / a film by / producer, original novel / Guo Fan, Liu Cixin" — so the learner sees which line means what; lines that form one phrase keep one meaning; "note" = one short remark if needed; "box" = where the text you read stands in the picture — one rectangle around all its lines, [left, top, right, bottom] in pixels of the picture (its size is given with the picture), tight around the characters; "boxes" = the same for each line of "zh" on its own, one rectangle per line in the same order; "cut" = the edges of the picture that cut off a line of Chinese text you left out because of that — "top", "bottom", "left" or "right", several separated by commas, "" when no line is cut off; "separate" = true when the picture shows several labels that each stand on their own — the buttons of a control panel, the items of a menu board, a wall of separate signs — so that a learner would learn them one by one; false when the lines belong to one text (a poster's title and its credits, a sign's two lines, a brand name above a product name); "labels" = only when "separate" is true: one entry per label, in the order of the lines of "zh", each with that label's own Chinese text, its own pinyin, its own meaning and its own rectangle — a label that reads 汤/粥 keeps the slash in "zh" and its pinyin and meaning stay in that one entry, and a label printed on two lines (加速 above 省时, 轻载 above 模式) is one entry 加速省时 with one rectangle around both lines; a smaller line under a label (长按童锁 under 洗衣液) is fine print and is left out; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty and omit "box" and "boxes". An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`; /* the meaning in the app's language (v256) */
+const picSystem=()=>`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","box":[left,top,right,bottom],"boxes":[[left,top,right,bottom],…],"cut":"…","apart":true|false,"labels":[{"zh":"…","p":"…","m":"…","box":[left,top,right,bottom]},…],"bad":true|false}. "zh" = the main Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without lines of Latin letters (a brand's English name), without numbers of the decoration and nothing you cannot see — a number that belongs to a Chinese line stays in that line with its unit, as written (净含量380ml, 30分钟, 3月1日): the learner reads it as part of the line — the main text only: leave out fine print, that is lines whose characters are under a third the height of the largest characters (dates, credits, small notes, slogans in small type), and leave out any line the picture's edge cuts off; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural ${meaningLangName()} meaning of the text as a sign or name (short, ${meaningLangName()} only); when the text is a brand, shop or product name, "m" is that name as it is known (the romanised or the international name), followed in brackets by what it is, in ${meaningLangName()} — e.g. "Mixue Bingcheng (ice-cream and bubble-tea chain)", never the bare name alone; when the text has several lines that say different things (a film poster: the title, then credits), "m" gives one short meaning per line, in the same order, joined with " / " as the pinyin is — e.g. "The Wandering Earth (film) / a film by / producer, original novel / Guo Fan, Liu Cixin" — so the learner sees which line means what; lines that form one phrase keep one meaning; "note" = one short remark if needed; "box" = where the text you read stands in the picture — one rectangle around all its lines, [left, top, right, bottom] in pixels of the picture (its size is given with the picture), tight around the characters; "boxes" = the same for each line of "zh" on its own, one rectangle per line in the same order; "cut" = the edges of the picture that cut off a line of Chinese text you left out because of that — "top", "bottom", "left" or "right", several separated by commas, "" when no line is cut off; "apart" = true when the picture shows a user interface — the control panel of an appliance, a remote, a keypad, a lift panel, a vending machine — or several signs, labels, buttons, menu items or packages standing next to each other, whose Chinese texts each name their own button, setting, item or thing, so that a learner would learn them one by one; false when the lines belong to one text (a poster's title and its credits, a sign's two lines, a brand name above a product name, a label's name and its ingredients); "labels" = only when "apart" is true: one entry per element, in reading order, left to right and top to bottom, every one of them, each with that element's own Chinese text, its own pinyin, its own meaning and its own rectangle around it — a smaller label under a bigger one (长按童锁 under 洗衣液) is an element of its own, not fine print; an element printed on two lines (加速 above 省时, 轻载 above 模式) is one entry 加速省时 with one rectangle around both lines; an element that reads 汤/粥 keeps the slash in its "zh", and its pinyin and meaning stay in that one entry; when "apart" is true, "zh" holds the same elements, one per line, in the same order, and none of them counts as fine print; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty and omit "box" and "boxes". An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`; /* the meaning in the app's language (v256) */
 /* Qwen's hybrid models think by default, and the thinking takes many seconds before the short JSON comes (v208, H with Qwen
    as the active provider: "Check pinyin and meaning takes way too long" — until v207 only the picture path switched it off) */
 function noThinking(pv,model,body){ if(pv==="qwen"&&/^qwen3/.test(model)) body.enable_thinking=false; return body; }
@@ -607,18 +607,21 @@ async function aiReadPicture(blob,alts,status){
   const main=mainLines(lines0,x.p,x.m,lineBoxes?lineBoxes.map(b=>picBox(b,pic.w,pic.h)):null,picBox(x.box,pic.w,pic.h));
   const altBox=picBoxPix(x.box,pic.w,pic.h), mainAlt=altBox?mainLines(lines0,x.p,x.m,lineBoxes?lineBoxes.map(b=>picBoxPix(b,pic.w,pic.h)||picBox(b,pic.w,pic.h)):null,altBox):null; /* the second reading of a box that passes the picture's edge (v340), through the fine-print rule like the first (v343 polish): its box is the kept lines' union too, and its dropped boxes are its own */
   const zhRaw=main.lines.join("\n"), zh=t2s(zhRaw), m=saneM(main.m,zh);
-  /* the labels of a picture of separate labels (v357): data, not one joined string — the pinyin of 汤/粥 is "tāng / zhōu" and its
-     meaning "soup / congee", so splitting the joined "p" and "m" on " / " gives more parts than there are labels and the app could
-     not tell them apart. Each entry keeps its own pinyin, meaning and rectangle; the fine print the v312 rule dropped stays dropped. */
-  const sep=!!x.separate&&main.lines.length>1;
+  /* the elements of a user interface, and of any picture of separate signs or labels (v358, H: "you have to find out if the image is
+     a user interface and then put a card for each and every single element of it", then "Also for all kinds of signs and labels"): one question — "ui" — and the answer's own list of elements. Data, not one joined string: the
+     pinyin of 汤/粥 is "tāng / zhōu" and its meaning "soup / congee", so splitting the joined "p" and "m" on " / " gives more parts
+     than there are labels and the app could not tell them apart. The fine-print rule of v312 does not touch this list — a small
+     label under a bigger one is an element of the panel, not a poster's credits — so the labels are read from the raw answer. */
+  const apart=!!x.apart;
   let labels=null;
-  if(sep&&Array.isArray(x.labels)&&x.labels.length){
-    const kept=new Set(main.lines.map(l=>t2s(l.trim())));
-    labels=x.labels.map(l=>{ const lz=t2s(String(l&&l.zh||"").trim()); const bx=picBox(l&&l.box,pic.w,pic.h);
-      return lz&&bx?{zh:lz,p:String(l.p||"").trim(),m:String(l.m||"").trim(),box:bx}:null; }).filter(l=>l&&kept.has(l.zh));
-    if(labels.length<2) labels=null;
+  if(apart&&Array.isArray(x.labels)&&x.labels.length>=SPLIT_MIN){
+    const seen=new Set();
+    labels=x.labels.map(l=>{ const lz=t2s(String(l&&l.zh||"").trim().replace(/\s+/g,"")), bx=picBox(l&&l.box,pic.w,pic.h);
+      if(!lz||!CJK.test(lz)||!bx||seen.has(lz+"|"+bx.join())) return null; seen.add(lz+"|"+bx.join());
+      return {zh:lz,p:String(l.p||"").trim(),m:String(l.m||"").trim(),box:bx,scale:picScale(l.box,pic.w,pic.h)}; }).filter(Boolean);
+    if(labels.length<SPLIT_MIN) labels=null;
   }
-  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxAlt:mainAlt?mainAlt.box:null,droppedBoxesAlt:mainAlt?mainAlt.droppedBoxes:null,boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,""),separate:sep,labels:sep?labels:null}; /* cut (v314): the edges that cut off a line the model left out */
+  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxAlt:mainAlt?mainAlt.box:null,droppedBoxesAlt:mainAlt?mainAlt.droppedBoxes:null,boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,""),apart,labels,boxScale:picScale(x.box,pic.w,pic.h)}; /* cut (v314): the edges that cut off a line the model left out */
 }
 /* the main text only (v312, H's 青春无烟 / 未来无限 poster: the card carried the poster's small print — the line 第39个世界无烟日 above the title and the date 2026年5月31日 世界无烟日 below it, half of it outside the frame — "wieder die Sachen ausserhalb des Crops und das Kleingedruckte mitgelesen. Bitte beides vermeiden"): the prompt asks for the main text and leaves fine print and lines the picture's edge cuts off to the model; this is the safety net from the model's own line boxes — a line whose box is under FINE_PRINT of the tallest line's height is fine print and goes, with its pinyin and meaning parts when they come one per line; the box for the frame is then the union of the lines kept */
 const FINE_PRINT=1/3;
@@ -641,6 +644,12 @@ function picBox(b,w,h){
   if(mx>1||my>1){ if(mx<=w&&my<=h){ x0/=w; x1/=w; y0/=h; y1/=h; } else if(mx<=1000&&my<=1000){ x0/=1000; x1/=1000; y0/=1000; y1/=1000; } else return null; }
   if(!(x1-x0>=0.02&&y1-y0>=0.02)) return null;
   return [Math.max(0,x0),Math.max(0,y0),Math.min(1,x1),Math.min(1,y1)];
+}
+function picScale(b,w,h){ /* how picBox read these numbers — as fractions, as the picture's pixels or on the 0–1000 grid (v358): a
+  panel's labels must all be read the same way, or some of them land somewhere else entirely */
+  if(!picBox(b,w,h)) return null;
+  const mx=Math.max(b[0],b[2]), my=Math.max(b[1],b[3]);
+  return mx>1||my>1?(mx<=w&&my<=h?"px":"grid"):"frac";
 }
 /* the other reading of a box that overshoots the picture a little (v340, H's ARRI poster 突破光影边界, 2026-09-08: Qwen answered
    [120,330,860,450] for an 800×600 picture — pixels, with the right edge 60 px past the picture, since the title runs to its
@@ -1258,7 +1267,7 @@ function renderMore(main){
    nothing planned, and changes in the same PR as the screen it describes. More → Help → Open; ← Back returns to More. ---------- */
 const GUIDE=()=>[
   {h:t("Take a photo"),p:[t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card by itself — you see the finished card with Edit and Delete under it. Edit shows the photo with the frame the app used: drag a corner or the inside to fit it, the round handle turns it, let go and the reading starts again."),
-    t("A photo of separate labels — the buttons of a rice cooker, the items of a menu board — becomes one card per label, each with its own cut of the photo."),
+    t("A photo of a control panel, or of several signs beside each other — a rice cooker’s buttons, the items of a menu board — becomes one card per label, each with its own cut of the photo."),
     t("Crop frames a photo by hand, with a preview before the card is saved. In a hurry there? Save now makes the card at once and the reading fills it in.")]},
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
     t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.")]},
@@ -2379,7 +2388,7 @@ async function findFrame(fullBlob,cropBlob){
 const abandonReading=id=>{ clearTimeout(READ_TIMER[id]); READ_RUN[id]=(READ_RUN[id]||0)+1; delete SIGN[id]; delete READING[id]; delete PLACED[id]; delete SPLIT[id]; }; /* a running reading of this photo abandons at its next step instead of delivering a result (v117); the inbox's Cancel, the Edit form's Crop again and an edit over a pending reading share it (v243) */
 const SHOTS_EXTRA={}, RECROP={}; /* the Edit form's Crop again (v239): the card's whole photo as a photo record outside the inbox (SHOTS_EXTRA[id]={id,blob,ts}), and the form's hooks — redraw (the frame view in place of renderShots), onRead (the reading's result), onImage (Image only), end */
 const shotRec=id=>S.inbox.find(s=>s.id===id)||SHOTS_EXTRA[id]||null;
-const QSNOTE={}, QSCARD={}, READING={}, AUTO={}, SPLIT={}, QSMORE={}; /* SPLIT[id]: one frame per label when the AI called the photo's labels separate (v357) · QSMORE[id]: the cards after the first, for the photo's row */ /* AUTO[id]: the photo became a card by itself (v325) — the row shows the shimmer while it reads and the finished card after */ /* READING[id]: status text while the photo is being read · QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) · QSNOTE[id] = the note under the photo after saving */
+const QSNOTE={}, QSCARD={}, READING={}, AUTO={}, SPLIT={}, QSMORE={}; /* SPLIT[id]: one frame per element when the AI called the photo a user interface (v357–v358) · QSMORE[id]: the cards after the first, for the photo's row */ /* AUTO[id]: the photo became a card by itself (v325) — the row shows the shimmer while it reads and the finished card after */ /* READING[id]: status text while the photo is being read · QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) · QSNOTE[id] = the note under the photo after saving */
 /* greedy longest-match segmentation against CC-CEDICT (max word length 8) */
 function segmentChars(chars){
   const out=[]; let k=0;
@@ -3246,29 +3255,24 @@ async function frameOnText(id,orig,base,rect,angle,by,grow,sure){ /* sure (v333)
 const SKEW_TRUST=12; /* an unconfirmed straightening beyond this many degrees is not trusted for the picture the AI sees (v346) */
 const SNAP_ROOM=1, SNAP_MIN=0.15, SNAP_MAX=0.95, SNAP_COL=0.15, SNAP_WIDE=1.6, SNAP_GAP=0.8;
 const SNAP_REACH=0.85; /* how much of the AI's box the coloured ink must reach across beside the grey pick's (v349, H's vending machine at v347 "Vending machine works not yet": the red text on glass reaches 77 % of the box against the grey cut's 89 %, so v347's "at least as much" blocked the switch on the phone's own pixels; H's 流浪地球 poster, the case the guard is for, reaches 56 against 92) */
-/* Several labels on one photo, one card each (v357, H's rice cooker panel — eleven buttons, 低卡饭 柴火饭 快煮 粗粮饭 汤/粥,
-   时 分, 保温/取消 预约 开始 功能: "I want that if such a picture comes, you automatically detect the different words on it and
-   make single flash cards for each of them"). Measured on that photo first: the reader reads garbage from it (说, 队定还,
-   下昌。。功双 — every pass scores 0), so the picture goes to the AI as any weak reading does, and the answer already carries
-   every label on its own line with its own pinyin, its own meaning (v300) and its own box (v312) — eleven cards' worth of data
-   in the one call the app already makes. What the pixels alone cannot do: a clustering of the photo's ink found 8 of the 11
-   labels and lost the whole left half to one brightness threshold, so the split follows the model's line boxes, not geometry.
-   The model is asked one new question ("separate", above) and answers with a "labels" array — data, not one joined string: the
-   pinyin of 汤/粥 is "tāng / zhōu" and its meaning "soup / congee", so splitting the joined "p" and "m" on " / " gives more parts
-   than there are labels and the app could not tell them apart. The app believes "separate" only when the boxes agree: SPLIT_MIN to
-   SPLIT_MAX labels (H's washing machine carries 23, his dishwasher's lower panel only two — 加速省时 beside 轻载模式), every box
-   inside the answer's own box (picBox reads each box as pixels or on the 0–1000 grid on its own, so a mixed answer would put some
-   labels elsewhere), no box taller than twice its width (a vertical sign's columns stand side by side too, and they are one
-   sentence), and at least one pair standing side by side in a row band — a panel's signature, which a poster's stacked lines never
-   show. Upright frames only (a tilted panel keeps one card: the turned mapping is the frame's own, v297). */
-const SPLIT_MIN=2, SPLIT_MAX=24, SPLIT_BAND=0.5, SPLIT_PX=16, CROP_MIN=8.5; /* CROP_MIN: the smallest frame cropBlob cuts, in the layer's pixels */ /* how much of the shorter box's height two boxes must share to count as one row */
-function sideBySide(bs){ /* two labels in one row band, apart across: the buttons of a panel, never a poster's stacked lines */
-  for(let i=0;i<bs.length;i++) for(let j=i+1;j<bs.length;j++){ const a=bs[i], b=bs[j];
-    const ov=Math.min(a.y1,b.y1)-Math.max(a.y0,b.y0), h=Math.min(a.y1-a.y0,b.y1-b.y0);
-    if(!(h>0&&ov>=SPLIT_BAND*h)) continue;
-    if(Math.min(a.x1,b.x1)-Math.max(a.x0,b.x0)<=0) return true; } /* one row, no overlap across */
-  return false;
-}
+/* A photo of a user interface, one card per element (v357–v358, H's rice cooker panel — eleven buttons, 低卡饭 柴火饭 快煮
+   粗粮饭 汤/粥, 时 分, 保温/取消 预约 开始 功能: "I want that if such a picture comes, you automatically detect the different
+   words on it and make single flash cards for each of them", then on v357's geometric test: "No. It doesn't work like that. I
+   think you have to find out if the image is a user interface and then put a card for each and every single element of it").
+   Measured on that photo first: the reader reads garbage from it (说, 队定还, 下昌。。功双 — every pass scores 0), so the picture
+   goes to the AI as any weak reading does, and the answer already carries every label with its own pinyin, its own meaning (v300)
+   and its own box (v312) — eleven cards' worth of data in the one call the app already makes. What the pixels alone cannot do: a
+   clustering of the photo's ink found 8 of the 11 labels and lost the whole left half to one brightness threshold, so the split
+   follows the model, not geometry. The model is asked one question — is this a user interface? — and answers with a "labels"
+   array, one entry per element, the small label under a bigger one included. The app checks only what it can check better than
+   the model: SPLIT_MIN to SPLIT_MAX elements (H's washing machine carries 23, his dishwasher's lower panel two — 加速省时 beside
+   轻载模式), every box read on the same scale (picBox reads numbers as fractions, as pixels or on the 0–1000 grid on its own, so a
+   mixed answer would put some labels somewhere else entirely), no box covering the whole picture, the automatic-card path only (a
+   frame drawn by hand still makes one card), an upright frame (a tilted panel keeps one card: the turned mapping is the frame's
+   own, v297) and not the v340 pixel reading of the box (the labels are never rescaled with it). v357 also asked whether two boxes
+   stood side by side and whether any box was taller than twice its width — a panel whose labels sit in one column would have
+   failed both, and the geometry was the app's invention; it is gone. */
+const SPLIT_MIN=2, SPLIT_MAX=30, SPLIT_PX=16, CROP_MIN=8.5; /* SPLIT_PX: in the copy's own pixels, the smallest label a frame is made from · CROP_MIN: the smallest frame cropBlob cuts, in the layer's pixels */
 function photoFrameOf(base,W,Hh,rect,angle){ /* a rectangle of the straightened copy as a frame on the photo — frameOnText's own upright mapping, without its side effects */
   const sc=W/base.w, {x0,y0,x1,y1}=unrotatedBox(W,Hh,rect,angle);
   if(!(x1-x0>=SPLIT_PX&&y1-y0>=SPLIT_PX)) return null; /* in the copy's own pixels: a label is measured against the photo, not against the layer — a button 35 px tall in a 1600 px photo is under 8 px on a 338 px layer and is a good card picture all the same */
@@ -3541,16 +3545,15 @@ async function cropSign(id,opts){
               if(hit){ box={x0:Math.min(box.x0,cand.x0),y0:Math.min(box.y0,cand.y0),x1:Math.max(box.x1,cand.x1),y1:Math.max(box.y1,cand.y1)}; READLOG.push({t:Date.now(),text:`a line ${where} the AI's box, read as ${hit.t} — one of the answer's lines, the frame takes it: ${pc(box.x0/W)}–${pc(box.x1/W)} % across, ${pc(box.y0/Hh)}–${pc(box.y1/Hh)} % down`}); }
               else READLOG.push({t:Date.now(),text:`a band ${where} the AI's box read as ${got.map(l=>l.t).join(" | ")||"nothing"} — not a line of the answer, left out`});
               while(READLOG.length>40) READLOG.shift(); } }
-          /* several labels, one card each (v357): the model called them separate and its boxes agree — each box is snapped
-             on its own (n=1, its own character count for the width budget) and gets the same room the union frame gets;
-             the auto-card path only, where no frame is ever drawn, so the placement above is untouched */
-          if(pic.labels&&PENDING[id]&&!RECROP[id]&&READ_APP[id]&&!altWon&&Math.abs(seenAngle)<1.5&&seenBase&&!seenBase.a&&pic.labels.length>=SPLIT_MIN&&pic.labels.length<=SPLIT_MAX){
+          /* one card per element of a user interface (v358): the model called the picture an interface and listed its elements —
+             each box is snapped on its own (n=1, its own character count for the width budget) and gets the same room the union
+             frame gets; the auto-card path only, where no frame is ever drawn, so the placement above is untouched */
+          if(pic.labels&&PENDING[id]&&!RECROP[id]&&READ_APP[id]&&!altWon&&Math.abs(seenAngle)<1.5&&seenBase&&!seenBase.a){
             const lab=pic.labels, bs=lab.map(l=>({x0:l.box[0]*W,y0:l.box[1]*Hh,x1:l.box[2]*W,y1:l.box[3]*Hh}));
-            const [ux0,uy0,ux1,uy1]=pic.box, pd=0.02;
-            const inside=bs.every(q=>q.x0>=(ux0-pd)*W&&q.y0>=(uy0-pd)*Hh&&q.x1<=(ux1+pd)*W&&q.y1<=(uy1+pd)*Hh); /* every box on the same scale: picBox reads each one as pixels or on the 0–1000 grid on its own, so a mixed answer would put some labels somewhere else entirely */
-            const flat=bs.every(q=>q.y1-q.y0<=2*(q.x1-q.x0)); /* a vertical sign's columns also stand side by side, and they are one sentence, not separate labels (H's escalator sign) */
-            const why=!inside?"their boxes are not all inside the answer's own box":!flat?"a label's box is taller than twice its width — the text may read downwards":!sideBySide(bs)?"no two of their boxes stand side by side":"";
-            if(why){ READLOG.push({t:Date.now(),text:`the AI calls these ${lab.length} lines separate labels, but ${why} — one card`}); while(READLOG.length>40) READLOG.shift(); }
+            const scale=lab[0].scale, oneScale=lab.every(l=>l.scale===scale)&&(!pic.boxScale||pic.boxScale===scale); /* every box read the same way, or some of them land somewhere else entirely */
+            const whole=bs.some(q=>(q.x1-q.x0)*(q.y1-q.y0)>0.9*W*Hh); /* a box over the whole picture is not one element */
+            const why=lab.length>SPLIT_MAX?`there are ${lab.length} of them`:!oneScale?"their boxes are not all on the same scale":whole?"one box covers the whole picture":"";
+            if(why){ READLOG.push({t:Date.now(),text:`the AI calls these ${lab.length} texts separate labels, but ${why} — one card`}); while(READLOG.length>40) READLOG.shift(); }
             else labelRects=bs.map((bb,k)=>{ let sn=null; try{ sn=snapBox(b,bb,1,[[...lab[k].zh].filter(ch=>CJK.test(ch)||NUM_PART.test(ch)).length||1],pic.droppedBoxes); }catch(e){ sn=null; }
                 const q=sn&&sn.x1>sn.x0?sn:bb, Hk=Math.max(1,q.y1-q.y0); /* the snap's own box, its beyond-bands ignored: a neighbouring label is not this label's cut-off line */
                 return {x0:Math.max(0,q.x0-Hk*FRAME_ROOM),y0:Math.max(0,q.y0-Hk*FRAME_ROOM),x1:Math.min(W,q.x1+Hk*FRAME_ROOM),y1:Math.min(Hh,q.y1+Hk*FRAME_ROOM)}; }); }
@@ -3564,7 +3567,7 @@ async function cropSign(id,opts){
         if(labelRects&&W&&Hh&&seenBase){ /* one frame per label on the photo (v357), for finishPending to cut and save */
           const fr=labelRects.map(rc=>photoFrameOf(seenBase,W,Hh,rc,seenAngle));
           if(fr.every(Boolean)){ SPLIT[id]=fr; const pc=v=>Math.round(v*100);
-            READLOG.push({t:Date.now(),text:`the AI calls these ${pic.labels.length} lines separate labels — one card each: ${fr.map((f,k)=>`${pic.labels[k].zh} ${pc(f.x/f.lw)}–${pc((f.x+f.w)/f.lw)} %`).join(", ")}`}); while(READLOG.length>40) READLOG.shift(); }
+            READLOG.push({t:Date.now(),text:`the AI calls these ${pic.labels.length} texts separate labels — one card each: ${fr.map((f,k)=>`${pic.labels[k].zh} ${pc(f.x/f.lw)}–${pc((f.x+f.w)/f.lw)} %`).join(", ")}`}); while(READLOG.length>40) READLOG.shift(); }
           else { const bad=fr.map((f,k)=>f?null:k).filter(k=>k!==null); READLOG.push({t:Date.now(),text:`the frame of ${bad.map(k=>pic.labels[k].zh).join(", ")} could not be placed on the photo (base ${Math.round(seenBase.w)}×${Math.round(seenBase.h)} of ${Math.round(seenBase.lw)}×${Math.round(seenBase.lh)}, copy ${W}×${Hh}) — one card`}); while(READLOG.length>40) READLOG.shift(); } } }
       cardImg=placedCut||r.blob; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=cardImg; /* the card image is the crop as framed (the placed frame's cut, v288), not the second look's band */
       SIGN[id]={lines:zh, orig:zh.slice(), conf:[], boxes:zh.map(()=>[]), img:dk.blob, angle:dk.angle||0, tightened:false, region:r, alts:guesses, trad:!!pic.zht, tradDetected:!!pic.zht, tradText:pic.zht||"",
