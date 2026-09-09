@@ -15,6 +15,15 @@ function nOf(n,w,pl){ n=n||0; const key=n===1?w:(pl||w+"s"), d=L10N[LANG], tr=d&
 const L10N={
 en:{"capsule:Done":"Done","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
 de:{
+  "Check all cards again":"Alle Karten neu prüfen",
+  "Checks every card again. You see each change before you accept it.":"Prüft jede Karte noch einmal. Du siehst jede Änderung, bevor du sie übernimmst.",
+  "Checking {0} of {1} …":"Prüfe {0} von {1} …",
+  "Done — {0}.":"Fertig – {0}.",
+  "Done — nothing to change.":"Fertig – nichts zu ändern.",
+  "{0} checked, {1} left.":"{0} geprüft, {1} übrig.",
+  "Accepted {0} at {1}.":"{0} um {1} übernommen.",
+  "AI suggestion":"KI-Vorschlag",
+  "AI suggestions":"KI-Vorschläge",
   "Undo last run":"Letzten Durchlauf rückgängig",
   "Tagged {0} at {1}.":"{0} um {1} getaggt.",
   "Translated {0} at {1}.":"{0} um {1} übersetzt.",
@@ -253,6 +262,15 @@ de:{
   "Day streak":"Tage in Folge","Cards learned":"Karten gelernt","Due today":"Heute fällig","Reviews this week":"Wiederholungen diese Woche","Last 30 days":"Die letzten 30 Tage","Still learning":"Noch am Lernen","Known":"Sicher","Coming up: {0} due tomorrow, {1} this week.":"Demnächst: {0} morgen fällig, {1} diese Woche."
 },
 fr:{
+  "Check all cards again":"Revérifier toutes les cartes",
+  "Checks every card again. You see each change before you accept it.":"Revérifie chaque carte. Tu vois chaque changement avant de l'accepter.",
+  "Checking {0} of {1} …":"Vérification {0} sur {1} …",
+  "Done — {0}.":"Terminé – {0}.",
+  "Done — nothing to change.":"Terminé – rien à changer.",
+  "{0} checked, {1} left.":"{0} vérifiées, {1} restantes.",
+  "Accepted {0} at {1}.":"{0} acceptées à {1}.",
+  "AI suggestion":"suggestion IA",
+  "AI suggestions":"suggestions IA",
   "Undo last run":"Annuler la dernière passe",
   "Tagged {0} at {1}.":"{0} taguées à {1}.",
   "Translated {0} at {1}.":"{0} traduites à {1}.",
@@ -491,6 +509,15 @@ fr:{
   "Day streak":"Jours d'affilée","Cards learned":"Cartes apprises","Due today":"À revoir aujourd'hui","Reviews this week":"Révisions cette semaine","Last 30 days":"Les 30 derniers jours","Still learning":"En cours","Known":"Acquises","Coming up: {0} due tomorrow, {1} this week.":"À venir : {0} demain, {1} cette semaine."
 },
 es:{
+  "Check all cards again":"Revisar todas las tarjetas",
+  "Checks every card again. You see each change before you accept it.":"Revisa cada tarjeta otra vez. Ves cada cambio antes de aceptarlo.",
+  "Checking {0} of {1} …":"Revisando {0} de {1} …",
+  "Done — {0}.":"Listo: {0}.",
+  "Done — nothing to change.":"Listo: nada que cambiar.",
+  "{0} checked, {1} left.":"{0} revisadas, {1} restantes.",
+  "Accepted {0} at {1}.":"{0} aceptadas a las {1}.",
+  "AI suggestion":"sugerencia de IA",
+  "AI suggestions":"sugerencias de IA",
   "Undo last run":"Deshacer la última pasada",
   "Tagged {0} at {1}.":"{0} etiquetadas a las {1}.",
   "Translated {0} at {1}.":"{0} traducidas a las {1}.",
@@ -729,6 +756,15 @@ es:{
   "Day streak":"Días seguidos","Cards learned":"Tarjetas aprendidas","Due today":"Para hoy","Reviews this week":"Repasos esta semana","Last 30 days":"Últimos 30 días","Still learning":"En curso","Known":"Dominadas","Coming up: {0} due tomorrow, {1} this week.":"Próximamente: {0} mañana, {1} esta semana."
 },
 ja:{
+  "Check all cards again":"すべてのカードを再チェック",
+  "Checks every card again. You see each change before you accept it.":"すべてのカードをもう一度チェックします。変更は取り込む前に確認できます。",
+  "Checking {0} of {1} …":"{0} / {1} をチェック中 …",
+  "Done — {0}.":"完了 — {0}。",
+  "Done — nothing to change.":"完了 — 変更はありません。",
+  "{0} checked, {1} left.":"{0}をチェック、残り{1}。",
+  "Accepted {0} at {1}.":"{1}に{0}を取り込みました。",
+  "AI suggestion":"AIの提案{0}件",
+  "AI suggestions":"AIの提案{0}件",
   "Undo last run":"前回の実行を取り消す",
   "Tagged {0} at {1}.":"{1}に{0}にタグを付けました。",
   "Translated {0} at {1}.":"{1}に{0}を翻訳しました。",
@@ -967,6 +1003,15 @@ ja:{
   "Day streak":"連続日数","Cards learned":"学んだカード","Due today":"今日の復習","Reviews this week":"今週の復習回数","Last 30 days":"過去30日","Still learning":"学習中","Known":"定着","Coming up: {0} due tomorrow, {1} this week.":"この先：明日{0}枚、今週{1}枚。"
 },
 ko:{
+  "Check all cards again":"모든 카드 다시 확인",
+  "Checks every card again. You see each change before you accept it.":"모든 카드를 다시 확인해요. 반영하기 전에 변경 내용을 볼 수 있어요.",
+  "Checking {0} of {1} …":"{0} / {1} 확인 중 …",
+  "Done — {0}.":"완료 — {0}.",
+  "Done — nothing to change.":"완료 — 바꿀 게 없어요.",
+  "{0} checked, {1} left.":"{0} 확인, {1} 남음.",
+  "Accepted {0} at {1}.":"{1}에 {0} 반영했어요.",
+  "AI suggestion":"AI 제안 {0}개",
+  "AI suggestions":"AI 제안 {0}개",
   "Undo last run":"지난 실행 되돌리기",
   "Tagged {0} at {1}.":"{1}에 {0} 태그했어요.",
   "Translated {0} at {1}.":"{1}에 {0} 번역했어요.",

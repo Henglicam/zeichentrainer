@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=369; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=370; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -363,8 +363,8 @@ async function boot(){
   fixNumberSegs(); /* word cards from before v338 get their numbers back into their lines */
   dedupePhotos(); /* cards from before v214 drop the whole photo they hold twice */
   setTimeout(resumePending,1500); /* cards saved before their reading finished get it now (v237) */
-  aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); resumeTagAll(); });
-  setTimeout(()=>{ resumeTranslate(); resumeTagAll(); },2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ resumeTranslate(); resumeTagAll(); } }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262) */
+  aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); resumeTagAll(); resumeRecheck(); });
+  setTimeout(()=>{ resumeTranslate(); resumeTagAll(); resumeRecheck(); },2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ resumeTranslate(); resumeTagAll(); resumeRecheck(); } }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262) */
   sendReport(); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) sendReport(); else if(REPORT_DIRTY) sendReport(true); }); /* the day's first row on foreground, a second one on background when cards changed (v219) */
 }
 
@@ -887,7 +887,9 @@ async function aiAccept(id){
 /* one tap for everything waiting: accept every suggestion */
 async function aiAcceptAll(){
   const list=deck().filter(d=>d.ai);
+  const before={}; for(const d of list){ const {img,imgFull,...rest}=d; before[d.id]=rest; } /* the whole card but its pictures, so Undo last run takes a whole Accept all back (v370) */
   for(const d of list) await aiAccept(d.id);
+  if(list.length) await saveLastRun("accept","*",before,list.length);
   return list.length;
 }
 async function aiDismiss(id){
@@ -1095,11 +1097,13 @@ async function clearLastRun(){ if(S.settings.lastRun){ delete S.settings.lastRun
 const runWhen=at=>{ const d=new Date(at), loc=LANG_LOCALE[LANG];
   return new Date(at).toDateString()===new Date().toDateString()?d.toLocaleTimeString(loc,{hour:"2-digit",minute:"2-digit"}):d.toLocaleString(loc); };
 function undoRunHTML(kind){ const r=S.settings.lastRun; if(!r||r.kind!==kind||(TRANSLATE&&TRANSLATE.running)||(TAGALL&&TAGALL.running)) return "";
-  const line=kind==="tags"?t("Tagged {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):t("Translated {0} at {1}.",nOf(r.n,"card"),runWhen(r.at));
+  const line=kind==="tags"?t("Tagged {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):kind==="accept"?t("Accepted {0} at {1}.",nOf(r.n,"AI suggestion","AI suggestions"),runWhen(r.at)):t("Translated {0} at {1}.",nOf(r.n,"card"),runWhen(r.at));
   return `<div class="mrow"><div style="flex:1"><div class="t">${t("Undo last run")}</div><div class="s" id="undorun-status">${line}</div><div class="fieldacts"><button class="btn mini" id="undo-run">${t("Undo")}</button></div></div></div>`; }
 async function undoLastRun(){ const r=S.settings.lastRun; if(!r) return;
-  const rows=[]; for(const id of Object.keys(r.m)){ const d=cardOf(id); if(!d) continue; const b=r.m[id], u={...d};
-    for(const k of r.keys){ if(b[k]===undefined) delete u[k]; else u[k]=b[k]; } rows.push(u); }
+  const rows=[]; for(const id of Object.keys(r.m)){ const d=cardOf(id); if(!d) continue; const b=r.m[id];
+    let u; if(r.keys==="*"){ u={...b}; if(d.img) u.img=d.img; else delete u.img; if(d.imgFull) u.imgFull=d.imgFull; else delete u.imgFull; } /* the whole card back, its pictures as they are now (v370) */
+    else { u={...d}; for(const k of r.keys){ if(b[k]===undefined) delete u[k]; else u[k]=b[k]; } }
+    rows.push(u); }
   if(rows.length){ try{ await idbPutMany("custom",rows); }catch(e){ logErr("undorun",e&&e.message||String(e)); return; }
     for(const x of rows){ const i=S.custom.findIndex(y=>y.id===x.id); if(i>=0) S.custom[i]=x; } }
   await clearLastRun(); TRANSLATE=null; TAGALL=null; /* the finished lines belong to a run that is undone */
@@ -1211,6 +1215,57 @@ async function tagAll(){
   if(!toTag().length||!TAGALL.failed&&!tagStageOf()) await rememberTagRun(false);
   TAGALL.running=false; tagRefresh();
   if(S.mode==="study"||S.mode==="cards"||S.mode==="more") render(); /* More gets the Undo row of v369 without leaving the page */
+}
+/* Check all cards again (v370, H: "maybe Tag all cards should be a general AI re-run on all Cards? Because ai models get better
+   over time?" — three ways offered, my recommendation the one that never writes: on a saved card the v143 guard is gone (the
+   reader's per-character confidences are not kept), so a run that applied its answers would silently rewrite correct cards.
+   This run therefore only fills the card's own AI box: the Cards tab shows "N AI suggestions waiting — Accept all", and every
+   card keeps its text, pinyin and meaning until H accepts. An answer equal to the card, or one the model calls garbage, is
+   dropped — only a real change becomes a suggestion. Like the other runs the state lives in RECHECK, not in the row, and an
+   interrupted run goes on by itself: setting recheckRun {at} marks it, and a card whose suggestion is newer than that is done. */
+const RECHECK_BATCH=5; /* the answer carries zh, pinyin and meaning per card, as the translation does */
+const toRecheck=()=>deck().filter(d=>d.c&&!d.reading);
+const recheckLeft=()=>{ const r=S.settings.recheckRun; if(!r) return toRecheck(); const done=new Set(r.done||[]); return toRecheck().filter(d=>!done.has(d.id)); }; /* the cards this run has not asked about yet — a card whose answer matched keeps no suggestion, so the run has to remember the ids itself */
+let RECHECK=null; /* {running, done, at, total, failed, found} */
+async function rememberRecheck(on,done){ if(on){ S.settings.recheckRun={at:(S.settings.recheckRun||{}).at||Date.now(),done:done||(S.settings.recheckRun||{}).done||[]}; await setSetting("recheckRun",S.settings.recheckRun); }
+  else if(S.settings.recheckRun){ delete S.settings.recheckRun; await idbDel("settings","recheckRun").catch(()=>{}); } }
+function resumeRecheck(){ if(!S.settings.recheckRun||(RECHECK&&RECHECK.running)) return;
+  if(!recheckLeft().length){ rememberRecheck(false); return; }
+  if(!aiOn()||!navigator.onLine) return; recheckAll(); }
+const waitingSugg=()=>deck().filter(d=>d.ai).length;
+function recheckLine(){ const tr=RECHECK, left=recheckLeft().length;
+  if(tr&&tr.running) return null; /* the moving bar, drawn by the callers */
+  if(tr&&tr.failed) return t("The AI could not be reached")+". "+t("{0} checked, {1} left.",tr.done,left)+" "+t("It goes on by itself when the AI can be reached again.");
+  if(tr) return tr.found?t("Done — {0}.",nOf(tr.found,"AI suggestion waiting","AI suggestions waiting")):t("Done — nothing to change.");
+  return t("Checks every card again. You see each change before you accept it."); }
+function recheckRowHTML(){ const n=toRecheck().length, tr=RECHECK; if(!n||!aiOn()) return "";
+  const line=tr&&tr.running?busyHTML(t("Checking {0} of {1} …",tr.at,tr.total)):recheckLine();
+  return `<div class="mrow"><div style="flex:1"><div class="t">${t("Check all cards again")}</div><div class="s" id="recheck-status">${line}</div><div class="fieldacts"><button class="btn mini" id="recheck-all"${tr&&tr.running?" disabled":""}>${t("Check all cards again")}</button></div></div></div>`; }
+function recheckRefresh(){ const st=$("#recheck-status"), b=$("#recheck-all"), tr=RECHECK; if(!st) return;
+  if(tr&&tr.running) st.innerHTML=busyHTML(t("Checking {0} of {1} …",tr.at,tr.total)); else st.textContent=recheckLine();
+  if(b) b.disabled=!!(tr&&tr.running); }
+async function recheckAll(){
+  if(RECHECK&&RECHECK.running){ recheckRefresh(); return; }
+  if(!navigator.onLine){ const st=$("#recheck-status"); if(st) st.textContent=t("No connection. Try again when online."); return; }
+  const all=toRecheck(); if(!all.length) return;
+  if(!S.settings.recheckRun) await rememberRecheck(true);
+  const todo=recheckLeft();
+  RECHECK={running:true,done:all.length-todo.length,at:all.length-todo.length,total:all.length,failed:false,found:0}; recheckRefresh();
+  try{
+    for(let i=0;i<todo.length;i+=RECHECK_BATCH){
+      const batch=todo.slice(i,i+RECHECK_BATCH); RECHECK.at=Math.min(RECHECK.done+batch.length,all.length); recheckRefresh();
+      const ans=await aiAsk(batch);
+      for(let k=0;k<batch.length;k++){ const d=cardOf(batch[k].id), a=ans[k]; RECHECK.done++; if(!d||!a) continue;
+        const zh=a.zh&&CJK.test(a.zh)?a.zh.replace(/\r/g,""):d.c;
+        if(a.bad||(zh===d.c&&(!a.p||a.p===d.p)&&(!a.m||a.m===d.m))) continue; /* nothing to show: the card already says it */
+        await putCard({...d, ai:{...a, zh, c:d.c}}); RECHECK.found++; }
+      await rememberRecheck(true,[...((S.settings.recheckRun||{}).done||[]),...batch.map(d=>d.id)]); /* these are answered, whatever the answer was */
+      recheckRefresh();
+    }
+  }catch(err){ RECHECK.failed=true; logErr("recheck",err&&err.message||String(err)); }
+  if(!RECHECK.failed&&!recheckLeft().length) await rememberRecheck(false);
+  RECHECK.running=false; recheckRefresh();
+  if(S.mode==="cards"||S.mode==="study"||S.mode==="more") render();
 }
 function reportData(){
   const u=usage(), m=u.m||{}, st=learnStats(), n=k=>u[k]||0, mn=k=>m[k]||0;
@@ -1343,6 +1398,8 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">${t("Card order")}</div><div class="s">${t("Due cards come first, then up to {0} new ones. This sets the order inside each group.",NEW_PER_SESSION)}</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${t(l)}</button>`).join("")}</div></div></div>
     ${tagRowHTML()}
     ${undoRunHTML("tags")}
+    ${recheckRowHTML()}
+    ${undoRunHTML("accept")}
     <div class="listhead">${t("Share")}</div>
     <div class="mrow"><div><div class="t">${t("Share the app")}</div><div class="s" id="app-share-status">${t("Send the link to a friend. The app installs from any browser, no store.")}</div></div><button class="btn mini" id="app-share">${t("Share")}</button></div>
     <div class="mrow"><div style="flex:1"><div class="t">${t("Feedback")}</div><div class="s" id="fb-status">${t("Tell the app's owner what works and what does not.")}</div><textarea class="grow" id="fb-text" rows="2" placeholder="${t("Your message")}"></textarea><div class="fieldacts"><button class="btn mini" id="fb-send">${t("Send")}</button></div></div></div>
@@ -1400,6 +1457,7 @@ function renderMore(main){
   const tr=$("#translate-all"); if(tr) tr.onclick=translateAll;
   const tg=$("#tag-all"); if(tg) tg.onclick=tagAll; /* Tag all cards (v368) */
   const ur=$("#undo-run"); if(ur) ur.onclick=undoLastRun; /* Undo last run (v369) */
+  const rc=$("#recheck-all"); if(rc) rc.onclick=recheckAll; /* Check all cards again (v370) */
   $("#guide-open").onclick=()=>{ S.mode="guide"; render(); window.scrollTo({top:0}); };
   wireGrow(main); /* the feedback box grows with its text like the forms' fields (v218, H: "looks a little bit old school") */
   $("#fb-send").onclick=async()=>{ const tx=$("#fb-text"), st=$("#fb-status"), b=$("#fb-send"), text=tx.value.trim(); if(!text){ st.textContent=t("Write a few words first."); return; }
@@ -4901,7 +4959,7 @@ const reloadBusy=()=>picking()||!!CROP; /* a photo on its way from the camera, o
    is up within seconds and the user finds the same screen. */
 const IDLE_MS=4000, RELOAD_POLL=2000, RESUME_MAX=180000; let LAST_TOUCH=Date.now();
 ["pointerdown","keydown","input","touchstart","wheel"].forEach(ev=>document.addEventListener(ev,()=>{ LAST_TOUCH=Date.now(); },{capture:true,passive:true}));
-const reloadIdle=()=>!reloadBusy()&&!document.hidden&&Date.now()-LAST_TOUCH>=IDLE_MS&&!S.editing&&S.mode!=="add"&&!Object.keys(PENDING).length&&!Object.keys(READING).length&&!(TRANSLATE&&TRANSLATE.running)&&!(TAGALL&&TAGALL.running)&&!document.querySelector(".drawsheet,.ask")&&!(($("#fb-text")||{}).value||"").trim();
+const reloadIdle=()=>!reloadBusy()&&!document.hidden&&Date.now()-LAST_TOUCH>=IDLE_MS&&!S.editing&&S.mode!=="add"&&!Object.keys(PENDING).length&&!Object.keys(READING).length&&!(TRANSLATE&&TRANSLATE.running)&&!(TAGALL&&TAGALL.running)&&!(RECHECK&&RECHECK.running)&&!document.querySelector(".drawsheet,.ask")&&!(($("#fb-text")||{}).value||"").trim();
 async function reloadNow(){ RELOAD_DUE=false; clearInterval(RELOAD_TIMER); RELOAD_TIMER=null; try{ await setSetting("resumeView",{mode:S.mode,detail:S.detail,query:S.query,scroll:window.scrollY,at:Date.now()}); }catch(e){} location.reload(); }
 function reloadSoon(){ if(!reloadBusy()&&(Date.now()-LOAD_AT<RELOAD_GRACE||document.hidden)){ reloadNow(); return; } RELOAD_DUE=true; if(!RELOAD_TIMER) RELOAD_TIMER=setInterval(()=>{ if(RELOAD_DUE&&reloadIdle()) reloadNow(); },RELOAD_POLL); }
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&RELOAD_DUE&&!reloadBusy()) reloadNow(); });
