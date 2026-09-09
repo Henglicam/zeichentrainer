@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=370; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=371; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1097,7 +1097,7 @@ async function clearLastRun(){ if(S.settings.lastRun){ delete S.settings.lastRun
 const runWhen=at=>{ const d=new Date(at), loc=LANG_LOCALE[LANG];
   return new Date(at).toDateString()===new Date().toDateString()?d.toLocaleTimeString(loc,{hour:"2-digit",minute:"2-digit"}):d.toLocaleString(loc); };
 function undoRunHTML(kind){ const r=S.settings.lastRun; if(!r||r.kind!==kind||(TRANSLATE&&TRANSLATE.running)||(TAGALL&&TAGALL.running)) return "";
-  const line=kind==="tags"?t("Tagged {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):kind==="accept"?t("Accepted {0} at {1}.",nOf(r.n,"AI suggestion","AI suggestions"),runWhen(r.at)):t("Translated {0} at {1}.",nOf(r.n,"card"),runWhen(r.at));
+  const line=kind==="tags"?t("Tagged {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):kind==="accept"?t("Accepted the AI's changes on {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):t("Translated {0} at {1}.",nOf(r.n,"card"),runWhen(r.at));
   return `<div class="mrow"><div style="flex:1"><div class="t">${t("Undo last run")}</div><div class="s" id="undorun-status">${line}</div><div class="fieldacts"><button class="btn mini" id="undo-run">${t("Undo")}</button></div></div></div>`; }
 async function undoLastRun(){ const r=S.settings.lastRun; if(!r) return;
   const rows=[]; for(const id of Object.keys(r.m)){ const d=cardOf(id); if(!d) continue; const b=r.m[id];
@@ -1232,15 +1232,14 @@ async function rememberRecheck(on,done){ if(on){ S.settings.recheckRun={at:(S.se
 function resumeRecheck(){ if(!S.settings.recheckRun||(RECHECK&&RECHECK.running)) return;
   if(!recheckLeft().length){ rememberRecheck(false); return; }
   if(!aiOn()||!navigator.onLine) return; recheckAll(); }
-const waitingSugg=()=>deck().filter(d=>d.ai).length;
 function recheckLine(){ const tr=RECHECK, left=recheckLeft().length;
   if(tr&&tr.running) return null; /* the moving bar, drawn by the callers */
   if(tr&&tr.failed) return t("The AI could not be reached")+". "+t("{0} checked, {1} left.",tr.done,left)+" "+t("It goes on by itself when the AI can be reached again.");
-  if(tr) return tr.found?t("Done — {0}.",nOf(tr.found,"AI suggestion waiting","AI suggestions waiting")):t("Done — nothing to change.");
-  return t("Checks every card again. You see each change before you accept it."); }
+  if(tr) return tr.found?t("Done — {0} could be better. See them on the Cards tab.",nOf(tr.found,"card")):t("Done — nothing to change. Your cards are in good shape.");
+  return t("The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it."); }
 function recheckRowHTML(){ const n=toRecheck().length, tr=RECHECK; if(!n||!aiOn()) return "";
   const line=tr&&tr.running?busyHTML(t("Checking {0} of {1} …",tr.at,tr.total)):recheckLine();
-  return `<div class="mrow"><div style="flex:1"><div class="t">${t("Check all cards again")}</div><div class="s" id="recheck-status">${line}</div><div class="fieldacts"><button class="btn mini" id="recheck-all"${tr&&tr.running?" disabled":""}>${t("Check all cards again")}</button></div></div></div>`; }
+  return `<div class="mrow"><div style="flex:1"><div class="t">${t("Check-up")}</div><div class="s" id="recheck-status">${line}</div><div class="fieldacts"><button class="btn mini" id="recheck-all"${tr&&tr.running?" disabled":""}>${t("Check all cards again")}</button></div></div></div>`; }
 function recheckRefresh(){ const st=$("#recheck-status"), b=$("#recheck-all"), tr=RECHECK; if(!st) return;
   if(tr&&tr.running) st.innerHTML=busyHTML(t("Checking {0} of {1} …",tr.at,tr.total)); else st.textContent=recheckLine();
   if(b) b.disabled=!!(tr&&tr.running); }
@@ -4237,7 +4236,7 @@ function openDrawSheet(id,k,i,apply,ins){
     <canvas class="pad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas>
     <div class="badge" id="ds-st">${t("Draw all strokes, then tap Done.")}</div>
     <div class="cands" id="ds-cands"></div>
-    <div class="ckacts"><button class="del" id="ds-undo">${t("Undo")}</button><button class="del" id="ds-clear">${t("Clear")}</button><span class="grow"></span><button class="btn primary" id="ds-done">${t("Done")}</button></div>`;
+    <div class="ckacts"><button class="del" id="ds-undo">${t("pad:Undo")}</button><button class="del" id="ds-clear">${t("Clear")}</button><span class="grow"></span><button class="btn primary" id="ds-done">${t("Done")}</button></div>`;
   document.body.appendChild(el); document.body.classList.add("noscroll");
   /* symmetric: the photo character and the pad are two squares of the same side, as big as the screen allows (H) */
   const fitRef=()=>{ const rc=el.querySelector(".ckref"), pd=el.querySelector(".pad"); if(!pd||!pd.isConnected) return;
