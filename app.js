@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=377; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=378; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3126,22 +3126,52 @@ function brightLut(px){ /* one curve per channel: red, green, blue */
   if(!balance){ const one=curve(lo,(hi-lo)*cap); return [one,one,one]; }
   return ends.map(e=>curve(e.lo,Math.max(1,e.span)*cap));
 }
-/* the picture brightened, or null when it needs nothing (then the caller keeps the blob it has, unencoded) */
-async function brightenBlob(blob){
+/* A card picture is sharpened at the cut (v378, H's "Go" on the offer after "Any other image improvements you
+   suggest?"). A photo is stored at 1 600 px, so one rice-cooker label is 184 px wide in it and the card shows it at
+   about 322 CSS pixels — two to three times its own size on the phone —, and that softness is in the pixels: the
+   brightening cannot touch it. An unsharp mask puts the edge back: the picture blurred with two 1-2-1 passes
+   (a radius of about one pixel), the difference added back at SH_AMOUNT. A difference under SH_MIN is the JPEG's
+   own grain and is left alone, so a panel's flat surface does not become crunchy. It runs only on a picture under
+   SH_W wide — one the card enlarges; a big crop already has more pixels than the box and is left as it is. Measured
+   on the rice-cooker labels enlarged three times: 0.8 is the last amount without a light halo around the strokes
+   (1.4 haloes and lifts the grain), and two blur passes read far better than one, since the softness spans three or
+   four pixels. It is not idempotent — sharpening twice is visible —, so it happens only where a picture is cut fresh
+   from the photo, never over the deck: the cards already on the phone keep their look until they are cut again. */
+const SH_W=800, SH_AMOUNT=0.8, SH_MIN=3, SH_PASS=2;
+function sharpen(d){ /* the ImageData sharpened in place; false when the picture wants none */
+  const W=d.width, Hh=d.height, p=d.data;
+  if(W>SH_W||W<16||Hh<16) return false;
+  let a=Uint8ClampedArray.from(p);
+  for(let k=0;k<SH_PASS;k++){ /* separable, so the blur costs two passes over the pixels, not nine reads each */
+    const t=new Uint8ClampedArray(a.length);
+    for(let y=0;y<Hh;y++) for(let x=0;x<W;x++){ const i=(y*W+x)*4, l=x>0?i-4:i, r=x<W-1?i+4:i;
+      for(let c=0;c<3;c++) t[i+c]=(a[l+c]+2*a[i+c]+a[r+c])>>2; }
+    const b=new Uint8ClampedArray(a.length);
+    for(let y=0;y<Hh;y++) for(let x=0;x<W;x++){ const i=(y*W+x)*4, u=y>0?i-W*4:i, dn=y<Hh-1?i+W*4:i;
+      for(let c=0;c<3;c++) b[i+c]=(t[u+c]+2*t[i+c]+t[dn+c])>>2; }
+    a=b; }
+  for(let i=0;i<p.length;i+=4) for(let c=0;c<3;c++){ const v=p[i+c], df=v-a[i+c];
+    if(df>SH_MIN||df<-SH_MIN) p[i+c]=Math.max(0,Math.min(255,Math.round(v+SH_AMOUNT*df))); }
+  return true;
+}
+/* the picture brightened and, at a fresh cut, sharpened — null when it needs neither (then the caller keeps the blob
+   it has, unencoded); sharp false is the deck pass of v373, which must not sharpen a picture a second time */
+async function brightenBlob(blob,sharp){
   if(!blob) return null;
   try{
     const bmp=await createImageBitmap(blob), cv=document.createElement("canvas");
     cv.width=bmp.width; cv.height=bmp.height;
     const ctx=cv.getContext("2d",{alpha:false}); ctx.drawImage(bmp,0,0); bmp.close();
     const d=ctx.getImageData(0,0,cv.width,cv.height), lut=brightLut(d.data);
-    if(!lut) return null;
-    for(let i=0;i<d.data.length;i+=4){ d.data[i]=lut[0][d.data[i]]; d.data[i+1]=lut[1][d.data[i+1]]; d.data[i+2]=lut[2][d.data[i+2]]; }
+    if(lut) for(let i=0;i<d.data.length;i+=4){ d.data[i]=lut[0][d.data[i]]; d.data[i+1]=lut[1][d.data[i+1]]; d.data[i+2]=lut[2][d.data[i+2]]; }
+    const sh=sharp?sharpen(d):false; /* the stretch first, then the edge — the sharpening's threshold then reads the picture as the card shows it */
+    if(!lut&&!sh) return null;
     ctx.putImageData(d,0,0);
     return await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
   }catch(e){ return null; }
 }
-/* every card picture goes through here: brightened when it is dark or flat, then a JPEG (v372) */
-async function cardJpeg(blob){ const b=await brightenBlob(blob); return b||jpegOf(blob); }
+/* every card picture goes through here: brightened when it is dark or flat, sharpened when the card enlarges it, then a JPEG (v372, v378) */
+async function cardJpeg(blob){ const b=await brightenBlob(blob,true); return b||jpegOf(blob); }
 /* What the reader sees must be a JPEG: this Tesseract build misreads canvas PNGs and WebPs (measured on the tilted
    composite: JPEG 0.95 → 本区域禁止违规 99 %, the same pixels as PNG → one character). Intermediate crops stay PNG so the
    only lossy step is the last one — two JPEG generations in a row lost the line too. */
