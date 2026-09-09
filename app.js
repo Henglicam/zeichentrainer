@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=392; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=393; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -4377,6 +4377,21 @@ async function cropSign(id,opts){
       let picBase={orig:r.blob,dk:trustAngle?dk:null,base};
       if(!trustAngle){ logRead(`the straightening of ${(dk.angle||0).toFixed(1)}° is not confirmed by the reading — the AI gets the frame as it is`); }
       if(placedCut){ logRead("the AI gets the whole proposal, not the placed frame's cut"); }
+      /* an unconfirmed proposal is no picture to ask about (v393, H's rice cooker taken again: two cards, 时 and 分,
+         where the panel carries eleven labels — "Why only those 2?"). The ink rows had proposed 27–77 % down of a
+         washed-out white panel, where the strongest ink is the display's black rectangle and the buttons' dashes and
+         not the faint grey labels, so the bottom row — 保温/取消, 预约, 开始, 功能 — was cut off before the AI ever saw
+         it, and the AI answered about the strip that was left. The proposal comes from the same ink analysis that just
+         produced the garbage reading, so when nothing was placed on the text it carries no weight at all: the AI gets
+         the whole photo, and its box places the frame anywhere in it as before. Only the app's own untouched proposal
+         is widened — never a frame the hand drew, never one the reader placed, never a turned one, and never when the
+         proposal is the whole photo already. */
+      if(!placedCut&&base&&!base.a&&(PENDING[id]&&!RECROP[id]?READ_APP[id]&&!PLACED[id]:CROP&&CROP.id===id&&(CROP.hidden||CROP.proposed&&!CROP.followed))
+         &&(base.x>1||base.y>1||base.x+base.w<base.lw-1||base.y+base.h<base.lh-1)){
+        const nr={x:0,y:0,w:base.lw,h:base.lh,a:0,lw:base.lw,lh:base.lh}, cut=await cropBlob(id,nr); if(stale()) return;
+        if(cut){ const pc=v=>Math.round(v*100);
+          logRead(`the reading found nothing in the app's own frame (${pc(base.x/base.lw)}–${pc((base.x+base.w)/base.lw)} % across, ${pc(base.y/base.lh)}–${pc((base.y+base.h)/base.lh)} % down) — the AI gets the whole photo`);
+          picBase={orig:cut.blob,dk:null,base:nr}; } }
       picSeen=picBase; try{ pic=await aiReadPicture(picBase.dk?picBase.dk.blob:picBase.orig,guesses,status); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
       if(stale()) return; r.pic=pic?{zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped}:null;
       if(pic&&pic.dropped&&pic.dropped.length){ logRead(`fine print left out of the AI's answer: ${pic.dropped.join(" | ")}`); } /* Diagnostics (v312) */
