@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=361; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=362; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3755,8 +3755,8 @@ async function splitCards(id,sg,ph){
       SIGN[id]=sgK;
       let b=null; try{ b=await readingCard(id,sgK); }catch(e){ logErr("split",e&&e.message||String(e)); b=null; }
       if(!b||!b.card||!b.card.c) continue;
-      const win=await windowCut(id,fr[k]);
-      out.push({card:b.card,img:win?await jpegOf(win.blob):null,frame:fr[k]});
+      let cut=null; try{ cut=await cropBlob(id,fr[k]); }catch(e){ cut=null; } /* the label's own cut at the photo's pixels (v362, H: "do the label crops at full resolution") — not the 16:9 window of v329, which on a panel widens a small label until its neighbours stand in the picture */
+      out.push({card:b.card,img:cut&&cut.blob?await jpegOf(cut.blob):null,frame:fr[k]});
     }
   } finally{ SIGN[id]=prev; }
   if(out.length<SPLIT_MIN){ READLOG.push({t:Date.now(),text:`only ${out.length} of ${lab.length} labels could be made into cards — one card`}); while(READLOG.length>40) READLOG.shift(); return null; }
