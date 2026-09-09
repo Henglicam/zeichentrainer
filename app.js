@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=388; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=389; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -722,6 +722,10 @@ async function aiReadPicture(blob,alts,status){
     labels=x.labels.map(l=>{ const lz=t2s(String(l&&l.zh||"").trim().replace(/\s+/g,"")), bx=picBox(l&&l.box,pic.w,pic.h,LABEL_MIN,how);
       if(!lz||!CJK.test(lz)||!bx||seen.has(lz+"|"+bx.join())) return null; seen.add(lz+"|"+bx.join());
       return {zh:lz,p:String(l.p||"").trim(),m:String(l.m||"").trim(),box:bx,scale:how}; }).filter(Boolean);
+    /* every label's pinyin is checked against its own characters (v389, H's 洗衣液 card read "x yī yè" — Qwen dropped the ǐ
+       of xǐ, and the v187 check ran on the answer's own "p" alone, never on the labels' own): a broken syllable is replaced
+       by the app's own pinyin, label by label */
+    for(const l of labels) l.p=await saneP(l.p,l.zh);
     if(labels.length<SPLIT_MIN) labels=null;
   }
   /* what came back, in one line of the log (v374): the shape of the answer survives a restart, so a panel that made one card can
@@ -3856,7 +3860,7 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
    matched keeps the frame's own picture — the v380 answer — so a card can be short of its own crop but never carries a
    neighbour's. Measured on H's own photo at its own 1600 px with his own texts: 18 of the 19 labels on their own
    characters, none on another's, where v385 gave all 19 the whole panel. */
-const RL_STEP=0.6, RL_SUP=3, RL_DUP=0.6, RL_TILES=8, RL_GAP=0.55, RL_WMIN=0.8, RL_WMAX=12, RL_PX=64, RL_ROOM=[0.3,0.5], RL_CAP=420, RL_HIT=0.6, RL_WEAK=0.5, RL_GROW=[0.22,0.45], RL_WIDE=[0.6,1.8];
+const RL_STEP=0.6, RL_SUP=3, RL_DUP=0.6, RL_TILES=8, RL_GAP=0.55, RL_WMIN=0.8, RL_WMAX=12, RL_PX=64, RL_ROOM=[0.3,0.5], RL_CAP=420, RL_HIT=0.6, RL_WEAK=0.5, RL_GROW=[0.22,0.45], RL_WIDE=[0.6,1.8], RL_COL=0.6, RL_HGT=[0.6,1.6];
 function labelRunsOf(gy,labels,uni){ /* the picture's own rows of characters, and the runs of each row, in the grey copy's pixels */
   const {g,W,Hh}=gy, med=a=>{ const t=a.slice().sort((x,y)=>x-y); return t[t.length>>1]||0.05; };
   const bw=med(labels.map(l=>l.box[2]-l.box[0])), bh=med(labels.map(l=>l.box[3]-l.box[1]));
@@ -3971,9 +3975,39 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
     if(!at.every((o,t)=>o===j||pick[o]<0||(t<k?mid(runs[pick[o]])<mid(r):mid(runs[pick[o]])>mid(r)))) continue;
     ur.add(i); pick[j]=i; filled++;
     read[j]=(got[i]||[]).map(rd=>[labelHit(rd,labels[j].zh),rd]).sort((a,b)=>b[0]-a[0])[0][1]||""; }
+  /* a label the reader could not read at all takes the run its row's order gives it (v389, H's washing machine at v388:
+     袜子, 洗衣液, 柔顺剂 and +烘干 are the panel's dimmest labels and read as nothing from a perfect crop, but each stands
+     in a row whose other labels the reader named). Only where the order is unambiguous: exactly as many free runs between
+     two placed labels as there are labels to put between them, each of the row's own height and width per character, and
+     each standing in a column another placed label established (the panel's buttons line up; a stray run in the dial or at
+     the picture's edge does not). Anything short of that keeps the whole picture — a card showing the neighbour's button is
+     worse than a card showing the panel. */
+  const placedRuns=labels.map((l,j)=>pick[j]>=0?runs[pick[j]]:null).filter(Boolean); let ordered=0;
+  if(placedRuns.length>=2){
+    const cols=placedRuns.map(mid), medW=median(placedRuns.map(r=>r.x1-r.x0))||1;
+    rows.forEach((rw,ri)=>{
+      const at=rw.at, ps=at.filter(j=>pick[j]>=0), bd=band[ri];
+      if(!bd||!ps.length||ps.length===at.length) return;
+      const rh=median(ps.map(j=>runs[pick[j]].y1-runs[pick[j]].y0))||1;
+      const pw=median(ps.map(j=>{ const n=nCJK(labels[j].zh); return n?(runs[pick[j]].x1-runs[pick[j]].x0)/n:0; }).filter(v=>v>0))||0;
+      const cand=runs.map((r,i)=>({r,i})).filter(({r,i})=>!ur.has(i)
+        &&Math.min(bd.y1,r.y1)-Math.max(bd.y0,r.y0)>=0.5*Math.min(bd.y1-bd.y0,r.y1-r.y0)
+        &&r.y1-r.y0>=RL_HGT[0]*rh&&r.y1-r.y0<=RL_HGT[1]*rh
+        &&cols.some(c=>Math.abs(mid(r)-c)<=RL_COL*medW)).sort((a,b)=>mid(a.r)-mid(b.r));
+      for(let k=0;k<at.length;){
+        if(pick[at[k]]>=0){ k++; continue; }
+        let e=k; while(e<at.length&&pick[at[e]]<0) e++;
+        const gap=at.slice(k,e), L=k>0?runs[pick[at[k-1]]]:null, R=e<at.length?runs[pick[at[e]]]:null;
+        const free=cand.filter(({i,r})=>!ur.has(i)&&(!L||mid(r)>L.x1)&&(!R||mid(r)<R.x0));
+        if((L||R)&&free.length===gap.length&&gap.every((j,t)=>{ const w=(free[t].r.x1-free[t].r.x0)/Math.max(1,nCJK(labels[j].zh)); return !pw||(w>=RL_WIDE[0]*pw&&w<=RL_WIDE[1]*pw); }))
+          gap.forEach((j,t)=>{ const {r,i}=free[t]; ur.add(i); pick[j]=i; ordered++; });
+        k=e;
+      }
+    });
+  }
   labels.forEach((l,j)=>{ if(pick[j]<0) return; const g=growRun(runs[pick[j]],runs);
     rects[j]={x0:g.x0/gy.W,y0:g.y0/gy.Hh,x1:g.x1/gy.W,y1:g.y1/gy.Hh,read:read[j]}; });
-  return {rects,bands,runs:runs.length,hit,filled};
+  return {rects,bands,runs:runs.length,hit,filled,ordered};
 }
 function snapBox(bmp,box,n,lens,skip){ /* lens: the answer's lines' character counts (v305); skip: the fine print's boxes as fractions (v328) — a blob whose centre lies in one is not the text */
   const k=Math.min(1,800/Math.max(bmp.width,bmp.height)), W=Math.max(1,Math.round(bmp.width*k)), Hh=Math.max(1,Math.round(bmp.height*k));
@@ -4275,12 +4309,13 @@ async function cropSign(id,opts){
               const sb=src===seen?b:await createImageBitmap(src); const gy=labelGrey(sb,pic.box);
               let found=null; try{ found=await readLabels(sb,gy,lab,pic.box,()=>{}); }catch(e){ found=null; logErr("split",e&&e.message||String(e)); }
               if(sb!==b) sb.close(); if(stale()) return;
-              if(found&&found.hit+found.filled>=SPLIT_MIN){
-                logRead(`the picture's own characters stand in ${found.bands} ${found.bands===1?"row":"rows"}, ${found.runs} runs; the reader named ${found.hit} of the ${lab.length} labels`+(found.filled?`, and ${found.filled} more by half a reading and their row's order`:""));
+              if(found&&found.hit+found.filled+found.ordered>=SPLIT_MIN){
+                logRead(`the picture's own characters stand in ${found.bands} ${found.bands===1?"row":"rows"}, ${found.runs} runs; the reader named ${found.hit} of the ${lab.length} labels`+(found.filled?`, and ${found.filled} more by half a reading and their row's order`:"")+(found.ordered?`, and ${found.ordered} more by their row's order alone`:""));
                 const pcv=v=>Math.round(v*100);
                 labelWhole=true; /* a label the reader could not name keeps the frame's own picture, never a neighbour's */
                 labelRects=lab.map((l,k)=>{ const q=found.rects[k];
-                  logRead(q?`${l.zh}: read as ${q.read} at ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`:`${l.zh}: no run of the picture reads as it — the whole picture`);
+                  logRead(q?(q.read?`${l.zh}: read as ${q.read} at ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`
+        :`${l.zh}: no reading, its row's order gives it ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`):`${l.zh}: no run of the picture reads as it — the whole picture`);
                   if(!q) return null; /* no FRAME_ROOM here: the run was already grown as far as its neighbours allow (v388) */
                   return {x0:Math.max(0,q.x0)*W,y0:Math.max(0,q.y0)*Hh,x1:Math.min(1,q.x1)*W,y1:Math.min(1,q.y1)*Hh}; }); }
               else { logRead(`the reader found ${found?found.hit:0} of the ${lab.length} labels in the picture — every card gets the whole picture`); splitWhole=true; } }
