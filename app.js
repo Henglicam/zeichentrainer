@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=365; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=366; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -84,7 +84,7 @@ const S = { mode:"study", progress:{}, custom:[], inbox:[],
   pendingImg:null, pendingFull:null, pendingUse:"crop", persist:null,
   peek:null, /* Learn: the id of a linked card whose photo is shown on the front instead (v155) */
   admin:false, /* the owner's rows in More unlocked for this session (v162) */
-  detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterTag:null, settings:{}, single:null, saved:null,
+  detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterTags:[], settings:{}, single:null, saved:null,
   editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null,
   autoCard:window.AUTO_CARD!==false, editOpenFrame:false }; /* autoCard (v325): a photo that opens by itself becomes a card without a frame or a preview; the harness sets window.AUTO_CARD=false to keep the crop-mode flow its frame suites drive */
 
@@ -100,7 +100,7 @@ function orderCards(list,order,byDue){
   return byDue?list.slice().sort((a,b)=>S.progress[a.id].due-S.progress[b.id].due):list.slice(); /* the deck is oldest first already */
 }
 function buildQueue(includeAhead){
-  const lt=learnTag(), p=S.progress, t=today(), d=(lt?deck().filter(x=>hasTag(x,lt)):deck()).filter(x=>x.c); /* Learn: all cards, one tag, or the untagged ones (v133, v156); a card still reading has no text yet (v237) */
+  const lt=learnTags(), p=S.progress, t=today(), d=(lt.length?deck().filter(x=>lt.some(g=>hasTag(x,g))):deck()).filter(x=>x.c); /* Learn: all cards, or the tags picked in the filter sheet — several allowed since v366, a card in any of them counts (v133, v156); a card still reading has no text yet (v237) */
   const order=learnOrder();
   const due = orderCards(d.filter(x=>p[x.id] && p[x.id].due<=t),order,true).map(x=>x.id);
   const fresh = orderCards(d.filter(x=>!p[x.id]),order,false).slice(0,NEW_PER_SESSION).map(x=>x.id);
@@ -134,7 +134,7 @@ function wireTags(root,onChange){
     if(box) box.querySelectorAll("[data-tag]").forEach(b=> b.onclick=()=>{ const cur=parseTags(inp.value), i=cur.indexOf(b.dataset.tag); if(i>=0) cur.splice(i,1); else cur.push(b.dataset.tag); inp.value=cur.join(", "); sync(); });
     inp.oninput=sync; });
 }
-const learnTag=()=>S.settings.learnTag||"";
+const learnTags=()=>{ const v=S.settings.learnTag; return Array.isArray(v)?v:v?[v]:[]; }; /* several tags since v366; a phone that stored one keeps working */
 /* the filter as one pill and a sheet (v365, H on the eight kind tags of v364: "with so many tags, we'll probably need a
    separate tags page or something like that" — four ways offered, "I like B most"): the chip row that had to be swiped
    sideways is one pill now — the filter glyph and the filter's own name — and the whole list lives in the app's own sheet,
@@ -142,11 +142,12 @@ const learnTag=()=>S.settings.learnTag||"";
    the deck has. What it costs: changing a filter is two taps instead of one. */
 const filterIcon=`<svg class="ficon" viewBox="0 0 24 24" aria-hidden="true" style="stroke:currentColor"><path d="M4 7h10M18 7h2M4 12h2M10 12h10M4 17h10M18 17h2"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="17" r="2"/></svg>`;
 /* the rows the sheet offers, in groups: the Cards tab has the status filters and the tags, Learn the tags alone */
+const tagOn=(scope,x)=>(scope==="learn"?learnTags():S.filterTags).includes(x);
 function filterGroups(scope){
   const tags=allTags(), un=untaggedCount(), tagRows=[
-    ...tags.map(x=>({k:"tag:"+x, label:x, n:deck().filter(d=>hasTag(d,x)).length, on:scope==="learn"?learnTag()===x:S.filterTag===x})),
-    ...(tags.length&&un?[{k:"tag:"+UNTAGGED, label:t("Untagged"), n:un, on:scope==="learn"?learnTag()===UNTAGGED:S.filterTag===UNTAGGED}]:[])];
-  if(scope==="learn") return [{head:t("Tags"), rows:[{k:"", label:t("All cards"), n:deck().filter(d=>d.c).length, on:!learnTag()},...tagRows]}];
+    ...tags.map(x=>({k:"tag:"+x, label:x, n:deck().filter(d=>hasTag(d,x)).length, on:tagOn(scope,x)})),
+    ...(tags.length&&un?[{k:"tag:"+UNTAGGED, label:t("Untagged"), n:un, on:tagOn(scope,UNTAGGED)}]:[])];
+  if(scope==="learn") return [{head:t("Tags"), rows:[{k:"", label:t("All cards"), n:deck().filter(d=>d.c).length, on:!learnTags().length},...tagRows]}];
   const nAi=deck().filter(d=>d.ai).length;
   const st=[{k:"flag", label:t("⚑ Flagged"), n:S.custom.filter(d=>d.flag).length, on:S.filterFlag},
     ...(nAi?[{k:"ai", label:t("AI"), n:nAi, on:S.filterAi}]:[]),
@@ -162,30 +163,39 @@ function filterPillHTML(scope){
 }
 function wireFilterPill(scope,after){ document.querySelectorAll(`[data-filter="${scope}"]`).forEach(b=> b.onclick=()=>openFilterSheet(scope,after)); }
 function openFilterSheet(scope,after){
-  const groups=filterGroups(scope), lit=filterOn(scope).length>0;
+  const groups=filterGroups(scope);
   const el=document.createElement("div"); el.className="ask"; el.setAttribute("role","dialog"); el.setAttribute("aria-modal","true");
-  el.innerHTML=`<div class="sheet filter"><div class="fhead"><span class="t">${t("Filter")}</span>${lit?`<button class="del" id="f-clear">${t("Clear")}</button>`:""}</div>
+  el.innerHTML=`<div class="sheet filter"><div class="fhead"><span class="t">${t("Filter")}</span>${filterOn(scope).length?`<button class="del" id="f-clear">${t("Clear")}</button>`:""}</div>
     <div class="flist">${groups.map(g=>`<div class="fgroup"><div class="fgh">${esc(g.head)}</div>${g.rows.map(r=>
       `<button class="frow${r.on?" on":""}" data-frow="${esc(r.k)}"><span class="fl">${esc(r.label)}</span><span class="fn">${r.n}</span><span class="fc" aria-hidden="true"></span></button>`).join("")}</div>`).join("")}</div>
-    <div class="row"><button class="btn plain" id="f-cancel">${t("Cancel")}</button></div></div>`;
+    <div class="row"><button class="btn plain" id="f-done">${t("Done")}</button></div></div>`;
   const onKey=e=>{ if(e.key==="Escape") close(); };
   const close=()=>{ el.remove(); document.removeEventListener("keydown",onKey); };
   el.onclick=e=>{ if(e.target===el) close(); };
-  el.querySelector("#f-cancel").onclick=close;
-  const pick=async k=>{ close(); await setFilter(scope,k); after&&after(); };
-  const cl=el.querySelector("#f-clear"); if(cl) cl.onclick=()=>pick("");
+  el.querySelector("#f-done").onclick=close;
+  /* several rows at once (v366, H: "Bitte beim filtern multiple choice zulassen"): a tap ticks or unticks its row, the list
+     behind follows at once and the sheet stays open — its rows are refreshed in place, so nothing slides or scrolls away */
+  const sync=()=>{ const by=new Map(filterGroups(scope).flatMap(g=>g.rows).map(r=>[r.k,r]));
+    el.querySelectorAll("[data-frow]").forEach(b=>{ const r=by.get(b.dataset.frow); if(!r) return; b.classList.toggle("on",!!r.on); b.querySelector(".fn").textContent=r.n; });
+    const head=el.querySelector(".fhead"); let cl=el.querySelector("#f-clear");
+    if(filterOn(scope).length&&!cl){ cl=document.createElement("button"); cl.className="del"; cl.id="f-clear"; cl.textContent=t("Clear"); cl.onclick=()=>pick(""); head.appendChild(cl); }
+    else if(!filterOn(scope).length&&cl) cl.remove(); };
+  const pick=async k=>{ await setFilter(scope,k); after&&after(); sync(); };
+  const cl0=el.querySelector("#f-clear"); if(cl0) cl0.onclick=()=>pick("");
   el.querySelectorAll("[data-frow]").forEach(b=> b.onclick=()=>pick(b.dataset.frow));
   document.addEventListener("keydown",onKey); document.body.appendChild(el); el.querySelector(".frow").focus();
 }
 /* one row tapped: the status filters stay independent toggles, the tag is one at a time, "" clears everything */
 async function setFilter(scope,k){
-  if(scope==="learn"){ const v=k.startsWith("tag:")?k.slice(4):""; await setSetting("learnTag",v);
+  if(scope==="learn"){ let v=learnTags().slice();
+    if(!k.startsWith("tag:")) v=[]; else { const x=k.slice(4); v=v.includes(x)?v.filter(y=>y!==x):[...v,x]; }
+    await setSetting("learnTag",v);
     S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false; S.single=null; S.saved=null; setStats(); return; }
-  if(!k){ S.filterFlag=false; S.filterAi=false; S.filterUnv=false; S.filterTag=null; return; }
+  if(!k){ S.filterFlag=false; S.filterAi=false; S.filterUnv=false; S.filterTags=[]; return; }
   if(k==="flag") S.filterFlag=!S.filterFlag;
   else if(k==="ai") S.filterAi=!S.filterAi;
   else if(k==="unv") S.filterUnv=!S.filterUnv;
-  else { const v=k.slice(4); S.filterTag=S.filterTag===v?null:v; }
+  else { const v=k.slice(4); S.filterTags=S.filterTags.includes(v)?S.filterTags.filter(y=>y!==v):[...S.filterTags,v]; }
 }
 function learnChipsHTML(){ if(!allTags().length) return ""; return `<div class="chipset learnchips">${filterPillHTML("learn")}</div>`; }
 function wireLearnChips(){ wireFilterPill("learn",render); }
@@ -1311,7 +1321,7 @@ function renderMore(main){
   $("#share-usage").onchange=async e=>{ await setSetting("shareUsage",!!e.target.checked); $("#share-status").textContent=shareNote(); sendReport(); };
   $("#import").onclick=()=>$("#imp").click();
   $("#share-flag").onclick=shareFlagged;
-  $("#show-flag").onclick=()=>{ S.mode="cards"; S.detail=null; S.editing=null; S.query=""; S.filterUnv=false; S.filterAi=false; S.filterFlag=true; render(); };
+  $("#show-flag").onclick=()=>{ S.mode="cards"; S.detail=null; S.editing=null; S.query=""; S.filterUnv=false; S.filterAi=false; S.filterTags=[]; S.filterFlag=true; render(); };
   const cs=$("#cleanshots"); if(cs) cs.onclick=cleanupShots;
   if(S.admin){
     $("#diag-show").onclick=()=>{ const o=$("#diag-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=diagText(); };
@@ -1735,10 +1745,9 @@ function cardsListHTML(){
   const q=S.query.trim().toLowerCase();
   let list=S.custom.slice().sort((a,b)=>(b.at||0)-(a.at||0)); /* newest first */
   const byText=new Map(); S.custom.forEach(x=>{ if(x.c) byText.set(x.c,(byText.get(x.c)||0)+1); }); /* the same text from several photos (v122) */
-  if(S.filterUnv) list=list.filter(d=>d.mt&&!d.mt.verified);
-  if(S.filterFlag) list=list.filter(d=>d.flag);
-  if(S.filterAi) list=list.filter(d=>d.ai);
-  if(S.filterTag) list=list.filter(d=>hasTag(d,S.filterTag));
+  /* several rows may be ticked at once (v366): a card must match one of the ticked status rows and one of the ticked tags */
+  if(S.filterUnv||S.filterFlag||S.filterAi) list=list.filter(d=>(S.filterUnv&&d.mt&&!d.mt.verified)||(S.filterFlag&&d.flag)||(S.filterAi&&d.ai));
+  if(S.filterTags.length) list=list.filter(d=>S.filterTags.some(g=>hasTag(d,g)));
   if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,...Object.values(d.ms||{}),d.w,d.wp,d.wm,d.flagNote,...(d.tags||[])].filter(Boolean).join(" ").toLowerCase().includes(q));
   const pk=marking("cards"); /* marking (v351): the tap marks instead of opening; the mark sits at the right end of the row since v355 */
   const rows=list.map(d=>`<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
@@ -1751,7 +1760,7 @@ function cardsListHTML(){
 function renderCards(main){
   const nAi=deck().filter(d=>d.ai).length;
   if(S.filterAi&&!nAi) S.filterAi=false; /* a filter whose chip is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the list anymore" — the AI chip shows only while suggestions wait, so the filter had no chip left to switch it off and the list stood empty at "0 of 131") */
-  if(S.filterTag&&!(S.filterTag===UNTAGGED?allTags().length&&untaggedCount():allTags().includes(S.filterTag))) S.filterTag=null; /* the same for a tag chip: the last card of a tag re-tagged, or the last untagged card tagged */
+  S.filterTags=S.filterTags.filter(g=>g===UNTAGGED?allTags().length&&untaggedCount():allTags().includes(g)); /* the same for a tag: the last card of a tag re-tagged, or the last untagged card tagged */
   let {html,n,ids}=cardsListHTML();
   main.innerHTML=`<div class="pane">
     <div class="cardsbar"><input id="q" type="search" placeholder="${t("Search")}" value="${esc(S.query)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="btn mini primary" id="newcard">${t("+ New")}</button></div>
