@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=390; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=391; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3872,7 +3872,7 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
    neighbour's. Measured on H's own photo at its own 1600 px with his own texts: 18 of the 19 labels on their own
    characters, none on another's, where v385 gave all 19 the whole panel. */
 const RL_STEP=0.6, RL_SUP=3, RL_DUP=0.6, RL_TILES=8, RL_GAP=0.55, RL_WMIN=0.8, RL_WMAX=12, RL_PX=64, RL_ROOM=[0.3,0.5], RL_CAP=420, RL_HIT=0.6, RL_WEAK=0.5, RL_GROW=[0.22,0.45], RL_WIDE=[0.6,1.8], RL_COL=0.6, RL_HGT=[0.6,1.6];
-const LB_STEP=10, LB_ROUND=0.8, RL_ROW=0.8; /* a drawn grid lands on round pixels (v390) */
+const LB_STEP=10, LB_ROUND=0.8, RL_ROW=0.8, RL_FLOOR=0.15, RL_TIGHT=1.4, RL_CLEAR=0.5, RL_DUPX=0.6; /* a drawn grid lands on round pixels (v390) */
 function labelRunsOf(gy,labels,uni){ /* the picture's own rows of characters, and the runs of each row, in the grey copy's pixels */
   const {g,W,Hh}=gy, med=a=>{ const t=a.slice().sort((x,y)=>x-y); return t[t.length>>1]||0.05; };
   const bw=med(labels.map(l=>l.box[2]-l.box[0])), bh=med(labels.map(l=>l.box[3]-l.box[1]));
@@ -3917,16 +3917,21 @@ function labelHit(read,zh){ /* a run's reading against one label's text */
   const a=[...read].filter(c=>CJK.test(c)||/[0-9]/.test(c)), b=[...zh].filter(c=>CJK.test(c)||/[0-9]/.test(c));
   if(!a.length||!b.length||Math.abs(a.length-b.length)>1) return 0; /* a fragment, or a run of several labels, is not this label */
   return lcsLen(a,b)/Math.max(a.length,b.length); }
-function growRun(r,runs){ /* the column cut is the ink's own extent, so it clips the first and last stroke and the
+function growRun(r,runs,self){ /* the column cut is the ink's own extent, so it clips the first and last stroke and the
     band is thinner than the characters (v388, H: "still a few missing or unprecise crops"): give the run back a
     quarter of its width sideways and a third of its height up and down, but never more than half the way to its
     neighbour, so a card's picture holds its own label whole and nothing of the next one */
   const h=r.y1-r.y0, w=r.x1-r.x0; let dl=RL_GROW[0]*w, dr=dl, du=RL_GROW[1]*h, dd=du;
-  for(const o of runs){ if(o===r) continue;
+  for(const o of runs){ if(o===r||o===self) continue;
     if(Math.min(o.y1,r.y1)-Math.max(o.y0,r.y0)>=0.5*Math.min(h,o.y1-o.y0)){
       if(o.x1<=r.x0) dl=Math.min(dl,(r.x0-o.x1)/2); else if(o.x0>=r.x1) dr=Math.min(dr,(o.x0-r.x1)/2); }
     if(Math.min(o.x1,r.x1)-Math.max(o.x0,r.x0)>=0.5*Math.min(w,o.x1-o.x0)){
       if(o.y1<=r.y0) du=Math.min(du,(r.y0-o.y1)/2); else if(o.y0>=r.y1) dd=Math.min(dd,(o.y0-r.y1)/2); } }
+  /* the floor above and below (v391): a panel carries an icon row over its labels and fine print under them, so the
+     neighbour bound took the whole vertical room away and the cut ended on the characters' own ink — the strokes the
+     column cut clips were sliced off. A sliver of the row above in the picture is nothing; a sliced character is the
+     card. Sideways the bound stays: two cards of one row must not overlap. */
+  du=Math.max(du,RL_FLOOR*h); dd=Math.max(dd,RL_FLOOR*h);
   return {x0:r.x0-Math.max(0,dl),y0:r.y0-Math.max(0,du),x1:r.x1+Math.max(0,dr),y1:r.y1+Math.max(0,dd)};
 }
 async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label, or null where the reader could not name the run */
@@ -4022,13 +4027,51 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
         let e=k; while(e<at.length&&pick[at[e]]<0) e++;
         const gap=at.slice(k,e), L=k>0?runs[pick[at[k-1]]]:null, R=e<at.length?runs[pick[at[e]]]:null;
         const free=cand.filter(({i,r})=>!ur.has(i)&&(!L||mid(r)>L.x1)&&(!R||mid(r)<R.x0));
-        if((L||R)&&free.length===gap.length&&gap.every((j,t)=>{ const w=(free[t].r.x1-free[t].r.x0)/Math.max(1,nCJK(labels[j].zh)); return !pw||(w>=RL_WIDE[0]*pw&&w<=RL_WIDE[1]*pw); }))
-          gap.forEach((j,t)=>{ const {r,i}=free[t]; ur.add(i); pick[j]=i; ordered++; });
+        /* as many free runs as labels was the rule until v391, and on a photo whose search finds twice as many runs it
+           never holds — H's panel at v390 found 166 runs where it had found 90, and not one of its four unread labels
+           was placed. First the same characters stand in several of the picture's bands when the lattice is fine, so
+           one label's column offers three candidates that are one run seen three times: the free candidates covering
+           the same columns are collapsed into one, the one whose height is nearest the row's own. */
+        const groups=[];
+        for(const f of free.slice().sort((a,b)=>mid(a.r)-mid(b.r))){
+          const g=groups.find(g0=>{ const o=g0[0].r; return Math.min(o.x1,f.r.x1)-Math.max(o.x0,f.r.x0)>=RL_DUPX*Math.min(o.x1-o.x0,f.r.x1-f.r.x0); });
+          if(g) g.push(f); else groups.push([f]); }
+        const one=groups.map(g=>g.slice().sort((a,b)=>Math.abs((a.r.y1-a.r.y0)-rh)-Math.abs((b.r.y1-b.r.y0)-rh))[0]);
+        /* then the columns decide: the runs nearest the columns the placed labels established are this gap's, and they
+           count only when the next candidate stands clearly further out (RL_CLEAR of a run's width), so an ambiguous
+           row still keeps the whole picture rather than risk a neighbour's button */
+        let chosen=null;
+        if((L||R)&&one.length>=gap.length&&gap.length){
+          const dist=r=>Math.min(...cols.map(c=>Math.abs(mid(r)-c)));
+          const rank=one.slice().sort((a,b)=>dist(a.r)-dist(b.r)), take=rank.slice(0,gap.length);
+          if(one.length===gap.length||dist(rank[gap.length].r)>=dist(take[take.length-1].r)+RL_CLEAR*medW){
+            const sel=take.slice().sort((a,b)=>mid(a.r)-mid(b.r));
+            if(gap.every((j,t)=>{ const w=(sel[t].r.x1-sel[t].r.x0)/Math.max(1,nCJK(labels[j].zh)); return !pw||(w>=RL_WIDE[0]*pw&&w<=RL_WIDE[1]*pw); })) chosen=sel; } }
+        if(chosen) chosen.forEach(({r,i},t)=>{ ur.add(i); pick[gap[t]]=i; ordered++; });
         k=e;
       }
     });
   }
-  labels.forEach((l,j)=>{ if(pick[j]<0) return; const g=growRun(runs[pick[j]],runs);
+  /* every card of a row is cut at its row's own band (v391, H at v390: "Paar sachen abgeschnitten" — 单脱水's run had
+     taken the icon row above its characters and read the label all the same, since the reader's margin pulls the
+     characters into the crop, so the card showed the icon with the character tops sliced; others had swallowed that row
+     and stood three times as tall as their neighbours). The x stays the label's own run, which the reader measured; the
+     y becomes the row's own. The row's band cannot be the average of its runs — on this panel half of them merged the
+     icon row into their band —, so it is the tightest quarter's height (a run that took a neighbouring row in is two or
+     three times as tall) around the centre those tight runs share. A run displaced onto the row above, or one that
+     swallowed it, is then cut where its row's characters stand, and the cards of one row are of one height. The x is
+     never touched, so a card still cannot carry a neighbour's button. */
+  const cut=labels.map((l,j)=>pick[j]>=0?runs[pick[j]]:null);
+  for(const rw of rowsAll){
+    const ps=rw.at.filter(j=>pick[j]>=0); if(ps.length<2) continue;
+    const q=(a,f)=>{ const t=a.slice().sort((p,r)=>p-r); return t[Math.max(0,Math.min(t.length-1,Math.round(f*(t.length-1))))]; };
+    const hq=q(ps.map(j=>runs[pick[j]].y1-runs[pick[j]].y0),0.25); if(hq<4) continue; /* the row's own character height: the tightest quarter of its runs, since a run that swallowed the icon row above is twice as tall */
+    const tight=ps.filter(j=>runs[pick[j]].y1-runs[pick[j]].y0<=RL_TIGHT*hq);
+    const cy=median(tight.map(j=>(runs[pick[j]].y0+runs[pick[j]].y1)/2)); if(!(cy>0)) continue;
+    const y0=Math.round(cy-hq/2), y1=Math.round(cy+hq/2);
+    ps.forEach(j=>{ const r=runs[pick[j]]; cut[j]={x0:r.x0,y0,x1:r.x1,y1}; });
+  }
+  labels.forEach((l,j)=>{ if(pick[j]<0) return; const g=growRun(cut[j],runs,runs[pick[j]]);
     rects[j]={x0:g.x0/gy.W,y0:g.y0/gy.Hh,x1:g.x1/gy.W,y1:g.y1/gy.Hh,read:read[j]}; });
   return {rects,bands,runs:runs.length,hit,filled,ordered};
 }
