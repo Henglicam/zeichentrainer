@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=391; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=392; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3872,7 +3872,7 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
    neighbour's. Measured on H's own photo at its own 1600 px with his own texts: 18 of the 19 labels on their own
    characters, none on another's, where v385 gave all 19 the whole panel. */
 const RL_STEP=0.6, RL_SUP=3, RL_DUP=0.6, RL_TILES=8, RL_GAP=0.55, RL_WMIN=0.8, RL_WMAX=12, RL_PX=64, RL_ROOM=[0.3,0.5], RL_CAP=420, RL_HIT=0.6, RL_WEAK=0.5, RL_GROW=[0.22,0.45], RL_WIDE=[0.6,1.8], RL_COL=0.6, RL_HGT=[0.6,1.6];
-const LB_STEP=10, LB_ROUND=0.8, RL_ROW=0.8, RL_FLOOR=0.15, RL_TIGHT=1.4, RL_CLEAR=0.5, RL_DUPX=0.6; /* a drawn grid lands on round pixels (v390) */
+const LB_STEP=10, LB_ROUND=0.8, RL_ROW=0.8, RL_FLOOR=0.15, RL_TIGHT=1.4, RL_CLEAR=0.5, RL_DUPX=0.6, RL_ICON=1.2, RL_ICONH=2.2, RL_ICONX=0.5, RL_ICONJOIN=0.6, RL_ICONMAX=4, DIAL_W=4, DIAL_OFF=0.12, DIAL_REACH=0.3; /* a drawn grid lands on round pixels (v390) */
 function labelRunsOf(gy,labels,uni){ /* the picture's own rows of characters, and the runs of each row, in the grey copy's pixels */
   const {g,W,Hh}=gy, med=a=>{ const t=a.slice().sort((x,y)=>x-y); return t[t.length>>1]||0.05; };
   const bw=med(labels.map(l=>l.box[2]-l.box[0])), bh=med(labels.map(l=>l.box[3]-l.box[1]));
@@ -4057,21 +4057,87 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
      characters into the crop, so the card showed the icon with the character tops sliced; others had swallowed that row
      and stood three times as tall as their neighbours). The x stays the label's own run, which the reader measured; the
      y becomes the row's own. The row's band cannot be the average of its runs — on this panel half of them merged the
-     icon row into their band —, so it is the tightest quarter's height (a run that took a neighbouring row in is two or
-     three times as tall) around the centre those tight runs share. A run displaced onto the row above, or one that
-     swallowed it, is then cut where its row's characters stand, and the cards of one row are of one height. The x is
-     never touched, so a card still cannot carry a neighbour's button. */
-  const cut=labels.map((l,j)=>pick[j]>=0?runs[pick[j]]:null);
-  for(const rw of rowsAll){
-    const ps=rw.at.filter(j=>pick[j]>=0); if(ps.length<2) continue;
+     icon row into their band —, so the row's own height is the tightest quarter of its runs (a run that took a
+     neighbouring row in is two or three times as tall), and the band is the extent of the runs that agree on that
+     row's centre — their own extent, since the median height would cut the head or the feet off a taller character of
+     the row (v392). A run displaced onto the row above, or one that swallowed it, is then cut where its row's
+     characters stand, and the cards of one row are of one height. The x is never touched, so a card still cannot
+     carry a neighbour's button. */
+  const cut=labels.map((l,j)=>pick[j]>=0?runs[pick[j]]:null), rowBand=rowsAll.map(()=>null);
+  rowsAll.forEach((rw,ri)=>{
+    const ps=rw.at.filter(j=>pick[j]>=0); if(ps.length<2) return;
     const q=(a,f)=>{ const t=a.slice().sort((p,r)=>p-r); return t[Math.max(0,Math.min(t.length-1,Math.round(f*(t.length-1))))]; };
-    const hq=q(ps.map(j=>runs[pick[j]].y1-runs[pick[j]].y0),0.25); if(hq<4) continue; /* the row's own character height: the tightest quarter of its runs, since a run that swallowed the icon row above is twice as tall */
+    const hq=q(ps.map(j=>runs[pick[j]].y1-runs[pick[j]].y0),0.25); if(hq<4) return; /* the row's own character height: the tightest quarter of its runs, since a run that swallowed the icon row above is twice as tall */
     const tight=ps.filter(j=>runs[pick[j]].y1-runs[pick[j]].y0<=RL_TIGHT*hq);
-    const cy=median(tight.map(j=>(runs[pick[j]].y0+runs[pick[j]].y1)/2)); if(!(cy>0)) continue;
-    const y0=Math.round(cy-hq/2), y1=Math.round(cy+hq/2);
+    const cy=median(tight.map(j=>(runs[pick[j]].y0+runs[pick[j]].y1)/2)); if(!(cy>0)) return;
+    const near=tight.filter(j=>Math.abs((runs[pick[j]].y0+runs[pick[j]].y1)/2-cy)<=0.5*hq); /* the runs that agree on the row */
+    if(!near.length) return;
+    const y0=Math.min(...near.map(j=>runs[pick[j]].y0)), y1=Math.max(...near.map(j=>runs[pick[j]].y1)); /* their own extent, not the median height: a taller character of the row must not be cut (v392, H: "Do not cut off parts of the symbols or the characters.") */
+    rowBand[ri]={y0,y1};
     ps.forEach(j=>{ const r=runs[pick[j]]; cut[j]={x0:r.x0,y0,x1:r.x1,y1}; });
+  });
+  /* the symbol over the label belongs to the card (v392, H: "Du siehst ja ueber vielen der schriftzeichen die
+     dazugehoerigen symbole. Diese bitte ebenfalls in den crop aufnehmen."). A panel's button carries its pictogram
+     over its text, and the row band cuts it away, so the cut reaches up to the run standing over this label: the
+     nearest one above it that covers the label's own columns, stands no further than RL_ICON of the band's height
+     away, is no taller than RL_ICONH of it, and begins under the characters of the row above — a run that reaches into
+     that row is that row's label, not this card's symbol (its own run runs a few pixels past its row's median band,
+     so the test is on where the run begins, not where it ends). A label with nothing over it is cut as before. */
+  const floors=rowBand.filter(Boolean).map(b=>b.y1), iconTop=labels.map(()=>null);
+  labels.forEach((l,j)=>{ const c=cut[j]; if(pick[j]<0||!c) return;
+    const h=c.y1-c.y0, w=c.x1-c.x0; let stop=0, top=c.y0;
+    for(const y of floors) if(y<=c.y0&&y>stop) stop=y;
+    /* the symbol is taken whole: the search for a band goes on upward from the one it found, as long as the next
+       band touches it (RL_ICONJOIN), since one pictogram breaks into several rows of ink — its own bands must all be
+       in the picture (v392, H: "Do not cut off parts of the symbols or the characters.") */
+    for(let step=0;step<RL_ICONMAX;step++){ let found=null;
+      for(const o of runs){
+        if(o.y1>top||o.y0<stop-0.2*h||top-o.y1>(step?RL_ICONJOIN:RL_ICON)*h||o.y1-o.y0>RL_ICONH*h) continue;
+        if(Math.min(o.x1,c.x1)-Math.max(o.x0,c.x0)<RL_ICONX*Math.min(w,o.x1-o.x0)) continue;
+        if(!found||o.y1>found.y1) found=o; }
+      if(!found||found.y0>=top) break; top=found.y0; }
+    if(top<c.y0){ iconTop[j]=top; cut[j]={...c,y0:top}; }
+  });
+  /* and a label whose own symbol the reader did not find as a run takes its row's (v392, H: "Do not cut off parts of
+     the symbols or the characters.") — the sock over 袜子 is dim and left no run of its own, so its card showed the
+     symbol sliced by the top edge, while every other label of that row had found one. The row's symbols stand in one
+     band, so its median top is the row's, and it is given to the labels of that row that found none. */
+  rowsAll.forEach(rw=>{
+    const got=rw.at.filter(j=>iconTop[j]!==null); if(got.length<2) return;
+    const top=median(got.map(j=>iconTop[j]));
+    rw.at.forEach(j=>{ const c=cut[j]; if(pick[j]<0||!c||iconTop[j]!==null||top>=c.y0) return; cut[j]={...c,y0:top}; });
+  });
+  /* a word standing on its own in the middle of the panel is not on a button but on a free-standing element — the
+     round display of H's washer, with 左筒 and 右筒 along its ring and 下筒 under its clock —, and the whole element
+     is the picture of every word on it (v392, H: "Nimm den runden kreis in der mitte samt seiner 3 worte doch als
+     einen crop. Das ist voellig ok", then "The idea behind the dial is one crop is to make the AI easier. So please
+     try to make a rule out of it. It also makes more sense for the human user."). The rule: the corridor the label's
+     own row leaves free around it — from the nearest run of that row on its left to the nearest on its right — is at
+     least DIAL_W of the label's own width, and the label sits in the middle of that corridor (DIAL_OFF of its width).
+     Both tests are needed: a label at the end of a block has as wide a corridor and is nowhere near its centre. The
+     element is that corridor over every row of the panel, and every other label whose run stands inside it shares the
+     same picture, so a display with three words gives three cards of one picture. growRun is not applied to them —
+     the corridor already ends at the neighbours. */
+  const island=new Set(), yAll=rowBand.filter(Boolean);
+  if(yAll.length){
+    const ty=Math.min(...yAll.map(b=>b.y0)), by=Math.max(...yAll.map(b=>b.y1)), base=cut.slice(), parts=[];
+    labels.forEach((l,j)=>{ const c=base[j]; if(pick[j]<0||!c) return;
+      const w=c.x1-c.x0, mid=(c.x0+c.x1)/2; let L=0, R=gy.W;
+      labels.forEach((o,k)=>{ const d=k!==j&&base[k]; if(!d) return;
+        if(Math.min(d.y1,c.y1)-Math.max(d.y0,c.y0)<0.5*Math.min(d.y1-d.y0,c.y1-c.y0)) return;
+        if(d.x1<=c.x0) L=Math.max(L,d.x1); else if(d.x0>=c.x1) R=Math.min(R,d.x0); });
+      if(R-L<DIAL_W*w||Math.abs(mid-(L+R)/2)>DIAL_OFF*(R-L)) return;
+      let ry0=Math.min(ty,c.y0), ry1=Math.max(by,c.y1); /* the element's own ink, so its ring and the words along it are whole */
+      for(const o of runs){ const m=(o.x0+o.x1)/2;
+        if(m<L||m>R||o.y1<ty-DIAL_REACH*(by-ty)||o.y0>by+DIAL_REACH*(by-ty)) continue;
+        ry0=Math.min(ry0,o.y0); ry1=Math.max(ry1,o.y1); }
+      parts.push({x0:L,y0:ry0,x1:R,y1:ry1}); });
+    for(const g of parts) labels.forEach((l,j)=>{ const c=base[j]; if(pick[j]<0||!c) return;
+      const mx=(c.x0+c.x1)/2, my=(c.y0+c.y1)/2;
+      if(mx<g.x0||mx>g.x1||my<g.y0||my>g.y1) return;
+      island.add(j); cut[j]={...g}; });
   }
-  labels.forEach((l,j)=>{ if(pick[j]<0) return; const g=growRun(cut[j],runs,runs[pick[j]]);
+  labels.forEach((l,j)=>{ if(pick[j]<0) return; const g=island.has(j)?cut[j]:growRun(cut[j],runs,runs[pick[j]]);
     rects[j]={x0:g.x0/gy.W,y0:g.y0/gy.Hh,x1:g.x1/gy.W,y1:g.y1/gy.Hh,read:read[j]}; });
   return {rects,bands,runs:runs.length,hit,filled,ordered};
 }
