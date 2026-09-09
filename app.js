@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=378; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=379; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -689,10 +689,19 @@ async function aiReadPicture(blob,alts,status){
   const apart=!!x.apart;
   let labels=null;
   if(apart&&Array.isArray(x.labels)&&x.labels.length>=SPLIT_MIN){
+    /* the labels are read the way most of them are read (v379, H's washing machine at v378: the model's grid puts the last
+       column at x 770–830 of an 800 px picture, so that one box alone came out over the picture's width and picBox took it for
+       the 0–1000 grid while the other eighteen were pixels — "their boxes are not all on the same scale" and the panel kept one
+       card). One column overshooting the edge by a little says nothing about the answer's scale: the majority decides, ties go
+       to the union box's own reading, and a box read on the majority's scale is clamped to the picture as any box is. */
+    const tally={}; for(const l of x.labels){ const sc=picScale(l&&l.box,pic.w,pic.h,LABEL_MIN); if(sc) tally[sc]=(tally[sc]||0)+1; }
+    const uni=picScale(x.box,pic.w,pic.h), how=Object.keys(tally).sort((a,b)=>tally[b]-tally[a]||(a===uni?-1:b===uni?1:0))[0]||null;
+    const odd=Object.keys(tally).length-1;
+    if(odd>0) logRead(`${Object.keys(tally).map(k=>tally[k]+" "+k).join(", ")} — the labels are all read as ${how}`);
     const seen=new Set();
-    labels=x.labels.map(l=>{ const lz=t2s(String(l&&l.zh||"").trim().replace(/\s+/g,"")), bx=picBox(l&&l.box,pic.w,pic.h,LABEL_MIN);
+    labels=x.labels.map(l=>{ const lz=t2s(String(l&&l.zh||"").trim().replace(/\s+/g,"")), bx=picBox(l&&l.box,pic.w,pic.h,LABEL_MIN,how);
       if(!lz||!CJK.test(lz)||!bx||seen.has(lz+"|"+bx.join())) return null; seen.add(lz+"|"+bx.join());
-      return {zh:lz,p:String(l.p||"").trim(),m:String(l.m||"").trim(),box:bx,scale:picScale(l.box,pic.w,pic.h,LABEL_MIN)}; }).filter(Boolean);
+      return {zh:lz,p:String(l.p||"").trim(),m:String(l.m||"").trim(),box:bx,scale:how}; }).filter(Boolean);
     if(labels.length<SPLIT_MIN) labels=null;
   }
   /* what came back, in one line of the log (v374): the shape of the answer survives a restart, so a panel that made one card can
@@ -716,12 +725,15 @@ function mainLines(lines,p,m,boxes,box){
 }
 /* the text's box from the picture answer (v293), as fractions of the sent picture: the prompt asks for fractions, a model that answers in the picture's pixels or on a 0–1000 grid is scaled back; anything else is no box */
 const PIC_MIN=0.02, LABEL_MIN=0.005; /* a box must cover this much of the picture — the union box a fiftieth (v293), one label of a phone screenshot far less: 外卖 is 30 of 2520 pixels tall on H's Meituan home screen (v367) */
-function picBox(b,w,h,min){
+function picBox(b,w,h,min,force){ /* force (v379): read the numbers this way — the labels of one panel must all be read alike */
   if(!Array.isArray(b)||b.length!==4||!b.every(v=>typeof v==="number"&&isFinite(v)&&v>=0)) return null;
   let [x0,y0,x1,y1]=b; const mx=Math.max(x0,x1), my=Math.max(y0,y1);
-  if(mx>1||my>1){ if(mx<=w&&my<=h){ x0/=w; x1/=w; y0/=h; y1/=h; } else if(mx<=1000&&my<=1000){ x0/=1000; x1/=1000; y0/=1000; y1/=1000; } else return null; }
+  const how=force||(mx>1||my>1?(mx<=w&&my<=h?"px":(mx<=1000&&my<=1000?"grid":null)):"frac");
+  if(!how) return null;
+  if(how==="px"){ x0/=w; x1/=w; y0/=h; y1/=h; } else if(how==="grid"){ x0/=1000; x1/=1000; y0/=1000; y1/=1000; }
+  const cl=v=>Math.max(0,Math.min(1,v)); x0=cl(x0); y0=cl(y0); x1=cl(x1); y1=cl(y1); /* clamped before the size test (v379): forced onto another scale a box may lie wholly outside the picture, and what is left of it must still be a box */
   if(!(x1-x0>=(min||PIC_MIN)&&y1-y0>=(min||PIC_MIN))) return null;
-  return [Math.max(0,x0),Math.max(0,y0),Math.min(1,x1),Math.min(1,y1)];
+  return [x0,y0,x1,y1];
 }
 function mendJSON(txt){ /* an answer the model's token budget cut in the middle (v360, H's washing machine: 26 buttons, and the answer
   stopped inside its "boxes" array): close what is open and keep the fields that came whole — the app then has the text even when
