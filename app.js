@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=380; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=381; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -677,7 +677,19 @@ async function aiReadPicture(blob,alts,status){
   const txt=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,""); let x; try{ x=JSON.parse(txt); if(Array.isArray(x)) x=x[0]; }catch(e){ x=mendJSON(txt); if(!x) throw new Error("could not read the model's answer");
     logRead(`the AI's answer stopped in the middle — kept what came (${Object.keys(x).join(", ")})`); }
   if(!x||typeof x!=="object") throw new Error("unexpected answer");
-  const lines0=String(x.zh||"").replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean), lineBoxes=Array.isArray(x.boxes)?x.boxes:null;
+  let lines0=String(x.zh||"").replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean), lineBoxes=Array.isArray(x.boxes)?x.boxes:null;
+  /* a line of Latin letters alone leaves the answer (v381, H's washing machine: the model answered a "Bra" line beside the
+     nineteen Chinese ones, so the reading's lines held it while every later comparison counts the Chinese lines only — the
+     check that an AI answer still fits its lines then found 19 against 20, dropped the whole answer, and the panel's labels
+     lost their split and their meaning). The line's pinyin and meaning go with it, and its box, so the rest stays aligned. */
+  { const keep=lines0.map(l=>CJK.test(l));
+    if(keep.some(Boolean)&&!keep.every(Boolean)){
+      const pp=String(x.p||"").split(/\s*\/\s*/), mp=String(x.m||"").split(/\s*\/\s*/);
+      logRead(`a line of Latin letters left out of the AI's answer: ${lines0.filter((l,i)=>!keep[i]).join(" | ")}`);
+      if(pp.length===lines0.length) x.p=pp.filter((v,i)=>keep[i]).join(" / ");
+      if(mp.length===lines0.length) x.m=mp.filter((v,i)=>keep[i]).join(" / ");
+      if(lineBoxes&&lineBoxes.length===lines0.length) lineBoxes=lineBoxes.filter((v,i)=>keep[i]);
+      lines0=lines0.filter((l,i)=>keep[i]); } }
   const main=mainLines(lines0,x.p,x.m,lineBoxes?lineBoxes.map(b=>picBox(b,pic.w,pic.h)):null,picBox(x.box,pic.w,pic.h));
   const altBox=picBoxPix(x.box,pic.w,pic.h), mainAlt=altBox?mainLines(lines0,x.p,x.m,lineBoxes?lineBoxes.map(b=>picBoxPix(b,pic.w,pic.h)||picBox(b,pic.w,pic.h)):null,altBox):null; /* the second reading of a box that passes the picture's edge (v340), through the fine-print rule like the first (v343 polish): its box is the kept lines' union too, and its dropped boxes are its own */
   const zhRaw=main.lines.join("\n"), zh=t2s(zhRaw), m=saneM(main.m,zh);
@@ -3803,16 +3815,16 @@ function labelPlan(gy,labels){ /* one cluster per row of the answer, in order; o
   for(const p of pin) if(p) p.skip=bar.filter(b=>b.q!==p.row).map(b=>({y0:b.y0,y1:b.y1}));
   return {pin,placed,rows:R};
 }
-function templateBoxes(lab,W,Hh){ /* the answer's label boxes drawn to a grid, not measured on the picture (v380, H's washing
+function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not measured on the picture (v380, H's washing
      machine at v379: every box exactly 60×40 px on an 800 px picture, the whole grid a cell and more to the right of the panel,
      so every card showed its neighbour's button). A drift like that cannot be told from the truth — the boxes are internally
      consistent, the plan places as many labels either way — so the boxes are not used to cut a picture at all. The tell is that
      labels of two and of seven characters got the same box: a measurement follows the characters, a drawing does not. */
   if(!lab||lab.length<4) return false;
-  const ws=lab.map(l=>(l.box[2]-l.box[0])*W), hs=lab.map(l=>(l.box[3]-l.box[1])*Hh);
+  const ws=lab.map(l=>(l.box[2]-l.box[0])*W); /* the width alone: a label of k characters is k characters wide, while the box's height is its row's style and honestly differs from row to row (H's panel: every box 60 px wide, the rows 50 and 30 px tall) */
   const med=a=>{ const t=a.slice().sort((x,y)=>x-y); return t[t.length>>1]||1; };
-  const mw=med(ws), mh=med(hs), one=[]; /* the picture's edge clips a box or two, so the rule is the share of boxes of one size, not their spread */
-  for(let k=0;k<lab.length;k++) if(Math.abs(ws[k]-mw)<=LB_TMPL*mw&&Math.abs(hs[k]-mh)<=LB_TMPL*mh) one.push(k);
+  const mw=med(ws), one=[]; /* the picture's edge clips a box or two, so the rule is the share of boxes of one size, not their spread */
+  for(let k=0;k<lab.length;k++) if(Math.abs(ws[k]-mw)<=LB_TMPL*mw) one.push(k);
   if(one.length<0.8*lab.length) return false;
   const ns=one.map(k=>[...lab[k].zh].filter(c=>CJK.test(c)).length||1);
   return Math.max(...ns)>Math.min(...ns); /* labels of one length may honestly measure the same width */
@@ -4111,7 +4123,7 @@ async function cropSign(id,opts){
             const whole=bs.some(q=>(q.x1-q.x0)*(q.y1-q.y0)>0.9*W*Hh); /* a box over the whole picture is not one element */
             const why=lab.length>SPLIT_MAX?`there are ${lab.length} of them`:!oneScale?"their boxes are not all on the same scale":whole?"one box covers the whole picture":"";
             if(why){ logRead(`the AI calls these ${lab.length} texts separate labels, but ${why} — one card`); }
-            else if(templateBoxes(lab,W,Hh)){ /* v380 */
+            else if(templateBoxes(lab,W)){ /* v380 */
               splitWhole=true;
               logRead(`the AI's ${lab.length} label boxes are all the same size — a drawing of the grid, not a measurement: every card gets the whole picture`); }
             else { const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen; /* the frame at its own pixels when nothing was straightened: a panel's labels are small in the 800 px picture the AI saw */
