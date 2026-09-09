@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=364; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=365; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -135,9 +135,60 @@ function wireTags(root,onChange){
     inp.oninput=sync; });
 }
 const learnTag=()=>S.settings.learnTag||"";
-function learnChipsHTML(){ const tags=allTags(); if(!tags.length) return ""; const lt=learnTag();
-  return `<div class="chipset learnchips">${[["",t("All cards")],...tags.map(x=>[x,x]),...(untaggedCount()?[[UNTAGGED,t("Untagged")]]:[])].map(([v,l])=>`<button class="chip${lt===v?" on":""}" data-learntag="${esc(v)}">${esc(l)}</button>`).join("")}</div>`; }
-function wireLearnChips(){ document.querySelectorAll("[data-learntag]").forEach(b=> b.onclick=async()=>{ await setSetting("learnTag",b.dataset.learntag||""); S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false; S.single=null; S.saved=null; setStats(); render(); }); }
+/* the filter as one pill and a sheet (v365, H on the eight kind tags of v364: "with so many tags, we'll probably need a
+   separate tags page or something like that" — four ways offered, "I like B most"): the chip row that had to be swiped
+   sideways is one pill now — the filter glyph and the filter's own name — and the whole list lives in the app's own sheet,
+   grouped, with each row's card count at the right. The way Mail and Photos do it; it takes one line however many tags
+   the deck has. What it costs: changing a filter is two taps instead of one. */
+const filterIcon=`<svg class="ficon" viewBox="0 0 24 24" aria-hidden="true" style="stroke:currentColor"><path d="M4 7h10M18 7h2M4 12h2M10 12h10M4 17h10M18 17h2"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="17" r="2"/></svg>`;
+/* the rows the sheet offers, in groups: the Cards tab has the status filters and the tags, Learn the tags alone */
+function filterGroups(scope){
+  const tags=allTags(), un=untaggedCount(), tagRows=[
+    ...tags.map(x=>({k:"tag:"+x, label:x, n:deck().filter(d=>hasTag(d,x)).length, on:scope==="learn"?learnTag()===x:S.filterTag===x})),
+    ...(tags.length&&un?[{k:"tag:"+UNTAGGED, label:t("Untagged"), n:un, on:scope==="learn"?learnTag()===UNTAGGED:S.filterTag===UNTAGGED}]:[])];
+  if(scope==="learn") return [{head:t("Tags"), rows:[{k:"", label:t("All cards"), n:deck().filter(d=>d.c).length, on:!learnTag()},...tagRows]}];
+  const nAi=deck().filter(d=>d.ai).length;
+  const st=[{k:"flag", label:t("⚑ Flagged"), n:S.custom.filter(d=>d.flag).length, on:S.filterFlag},
+    ...(nAi?[{k:"ai", label:t("AI"), n:nAi, on:S.filterAi}]:[]),
+    {k:"unv", label:t("Unverified"), n:S.custom.filter(d=>d.mt&&!d.mt.verified).length, on:S.filterUnv}];
+  return [{head:t("Status"), rows:st},...(tagRows.length?[{head:t("Tags"), rows:tagRows}]:[])];
+}
+const filterOn=scope=>filterGroups(scope).flatMap(g=>g.rows).filter(r=>r.on&&r.k);
+/* the pill: the filter's own name while one is set, "All cards" while none is */
+function filterPillHTML(scope){
+  const on=filterOn(scope), lit=on.length>0;
+  const label=!lit?t("All cards"):on.length===1?(on[0].n!=null?t("{0} ({1})",on[0].label,on[0].n):on[0].label):t("Filters ({0})",on.length);
+  return `<button class="chip fpill${lit?" on":""}" data-filter="${scope}">${filterIcon}<span>${esc(label)}</span></button>`;
+}
+function wireFilterPill(scope,after){ document.querySelectorAll(`[data-filter="${scope}"]`).forEach(b=> b.onclick=()=>openFilterSheet(scope,after)); }
+function openFilterSheet(scope,after){
+  const groups=filterGroups(scope), lit=filterOn(scope).length>0;
+  const el=document.createElement("div"); el.className="ask"; el.setAttribute("role","dialog"); el.setAttribute("aria-modal","true");
+  el.innerHTML=`<div class="sheet filter"><div class="fhead"><span class="t">${t("Filter")}</span>${lit?`<button class="del" id="f-clear">${t("Clear")}</button>`:""}</div>
+    <div class="flist">${groups.map(g=>`<div class="fgroup"><div class="fgh">${esc(g.head)}</div>${g.rows.map(r=>
+      `<button class="frow${r.on?" on":""}" data-frow="${esc(r.k)}"><span class="fl">${esc(r.label)}</span><span class="fn">${r.n}</span><span class="fc" aria-hidden="true"></span></button>`).join("")}</div>`).join("")}</div>
+    <div class="row"><button class="btn plain" id="f-cancel">${t("Cancel")}</button></div></div>`;
+  const onKey=e=>{ if(e.key==="Escape") close(); };
+  const close=()=>{ el.remove(); document.removeEventListener("keydown",onKey); };
+  el.onclick=e=>{ if(e.target===el) close(); };
+  el.querySelector("#f-cancel").onclick=close;
+  const pick=async k=>{ close(); await setFilter(scope,k); after&&after(); };
+  const cl=el.querySelector("#f-clear"); if(cl) cl.onclick=()=>pick("");
+  el.querySelectorAll("[data-frow]").forEach(b=> b.onclick=()=>pick(b.dataset.frow));
+  document.addEventListener("keydown",onKey); document.body.appendChild(el); el.querySelector(".frow").focus();
+}
+/* one row tapped: the status filters stay independent toggles, the tag is one at a time, "" clears everything */
+async function setFilter(scope,k){
+  if(scope==="learn"){ const v=k.startsWith("tag:")?k.slice(4):""; await setSetting("learnTag",v);
+    S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false; S.single=null; S.saved=null; setStats(); return; }
+  if(!k){ S.filterFlag=false; S.filterAi=false; S.filterUnv=false; S.filterTag=null; return; }
+  if(k==="flag") S.filterFlag=!S.filterFlag;
+  else if(k==="ai") S.filterAi=!S.filterAi;
+  else if(k==="unv") S.filterUnv=!S.filterUnv;
+  else { const v=k.slice(4); S.filterTag=S.filterTag===v?null:v; }
+}
+function learnChipsHTML(){ if(!allTags().length) return ""; return `<div class="chipset learnchips">${filterPillHTML("learn")}</div>`; }
+function wireLearnChips(){ wireFilterPill("learn",render); }
 /* the id of a new card: the text itself while it is free (readable in exports), else text plus a timestamp */
 const cardId = c => deck().some(d=>d.id===c) ? c+"#"+Date.now() : c;
 async function setSetting(k,v){ S.settings[k]=v; try{ await idbPut("settings",{k,v}); }catch(e){} }
@@ -1698,7 +1749,7 @@ function cardsListHTML(){
   return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length, ids:list.map(d=>d.id)};
 }
 function renderCards(main){
-  const unv=S.custom.filter(d=>d.mt&&!d.mt.verified).length, flg=S.custom.filter(d=>d.flag).length, nAi=deck().filter(d=>d.ai).length;
+  const nAi=deck().filter(d=>d.ai).length;
   if(S.filterAi&&!nAi) S.filterAi=false; /* a filter whose chip is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the list anymore" — the AI chip shows only while suggestions wait, so the filter had no chip left to switch it off and the list stood empty at "0 of 131") */
   if(S.filterTag&&!(S.filterTag===UNTAGGED?allTags().length&&untaggedCount():allTags().includes(S.filterTag))) S.filterTag=null; /* the same for a tag chip: the last card of a tag re-tagged, or the last untagged card tagged */
   let {html,n,ids}=cardsListHTML();
@@ -1707,7 +1758,7 @@ function renderCards(main){
     ${nAi?`<div class="aibar"><span>${nOf(nAi,"AI suggestion waiting","AI suggestions waiting")}</span><button class="btn mini primary" id="ai-acceptall">${t("Accept all")}</button></div>`:""}
     ${marking("cards")
       ?`<div class="chips"><span class="badge" id="pick-n">${t("{0} selected",PICK.set.size)}</span><span class="cend"><button class="del" id="pick-all"></button></span></div>` /* the chips make room for the marking (v354) */
-      :`<div class="chips"><span class="chipset"><button class="chip${S.filterFlag?" on":""}" id="chip-flag">${t("⚑ Flagged ({0})",flg)}</button>${nAi?`<button class="chip${S.filterAi?" on":""}" id="chip-ai">${t("AI ({0})",nAi)}</button>`:""}<button class="chip${S.filterUnv?" on":""}" id="chip-unv">${t("Unverified ({0})",unv)}</button>${allTags().map(t=>`<button class="chip tag${S.filterTag===t?" on":""}" data-tagchip="${esc(t)}">${esc(t)}</button>`).join("")}${allTags().length&&untaggedCount()?`<button class="chip tag${S.filterTag===UNTAGGED?" on":""}" data-tagchip="${UNTAGGED}">${t("Untagged ({0})",untaggedCount())}</button>`:""}</span><span class="cend"><span class="badge" id="cnt"${n===deck().length?" hidden":""}>${t("{0} of {1}",n,deck().length)}</span></span></div>`}
+      :`<div class="chips"><span class="chipset">${filterPillHTML("cards")}</span><span class="cend"><span class="badge" id="cnt"${n===deck().length?" hidden":""}>${t("{0} of {1}",n,deck().length)}</span></span></div>`}
     <div class="clist" id="clist">${html}</div>
   </div>`;
   const wire=()=>{ document.querySelectorAll(".crow").forEach(b=>{
@@ -1719,10 +1770,7 @@ function renderCards(main){
   }); };
   const refresh=()=>{ const r=cardsListHTML(); ids=r.ids; $("#clist").innerHTML=r.html; const ct=$("#cnt"); if(ct){ ct.textContent=t("{0} of {1}",r.n,deck().length); ct.hidden=r.n===deck().length; } /* the count shows only while a search or a chip narrows the list (v356) */ wire(); if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); } };
   $("#q").oninput=e=>{ S.query=e.target.value; refresh(); };
-  const cu=$("#chip-unv"); if(cu) cu.onclick=()=>{ S.filterUnv=!S.filterUnv; render(); };
-  const cf=$("#chip-flag"); if(cf) cf.onclick=()=>{ S.filterFlag=!S.filterFlag; render(); };
-  const ca=$("#chip-ai"); if(ca) ca.onclick=()=>{ S.filterAi=!S.filterAi; render(); };
-  document.querySelectorAll("[data-tagchip]").forEach(b=> b.onclick=()=>{ S.filterTag=S.filterTag===b.dataset.tagchip?null:b.dataset.tagchip; render(); });
+  wireFilterPill("cards",render);
   const aa=$("#ai-acceptall"); if(aa) aa.onclick=async()=>{ aa.disabled=true; await aiAcceptAll(); render(); };
   if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); }
   $("#newcard").onclick=()=>{ endPick(); S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; S.mode="add"; render(); }; /* a card from scratch starts without a picture (v188); the photo path comes in through cropOk with its own pending image */
