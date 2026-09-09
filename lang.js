@@ -13,7 +13,7 @@ function t(key,...args){ const d=L10N[LANG]; let s=d&&d[key]!=null?d[key]:null; 
 /* a count with its word: nOf(3,"card") → "3 cards" / "3 Karten" / "カード3枚"; pl = an irregular plural key */
 function nOf(n,w,pl){ n=n||0; const key=n===1?w:(pl||w+"s"), d=L10N[LANG], tr=d&&d[key]!=null?d[key]:key; return tr.includes("{0}")?tr.replace("{0}",n):`${n} ${tr}`; }
 const L10N={
-en:{"capsule:Done":"Done","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice"}, /* only the keys whose English differs from the key itself: one English word, two translations */
+en:{"capsule:Done":"Done","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
 de:{
   "Filter":"Filter",
   "Status":"Status",
@@ -27,6 +27,7 @@ de:{
   "kind:Transport":"Verkehr",
   "kind:Office":"Büro",
   "kind:Notice":"Hinweis",
+  "kind:App":"App",
   "Photos stay on this phone. Take one — the card is made for you.":"Fotos bleiben auf diesem Telefon. Mach eins – die Karte wird für dich gemacht.",
   "Take photo":"Foto aufnehmen",
   "From album":"Aus dem Album",
@@ -255,6 +256,7 @@ fr:{
   "kind:Transport":"Transport",
   "kind:Office":"Bureau",
   "kind:Notice":"Avis",
+  "kind:App":"Appli",
   "Photos stay on this phone. Take one — the card is made for you.":"Les photos restent sur ce téléphone. Prends-en une – la carte est créée pour toi.",
   "Take photo":"Prendre une photo",
   "From album":"Depuis l'album",
@@ -483,6 +485,7 @@ es:{
   "kind:Transport":"Transporte",
   "kind:Office":"Oficina",
   "kind:Notice":"Aviso",
+  "kind:App":"App",
   "Photos stay on this phone. Take one — the card is made for you.":"Las fotos se quedan en este teléfono. Haz una y la tarjeta se crea sola.",
   "Take photo":"Hacer foto",
   "From album":"Del álbum",
@@ -711,6 +714,7 @@ ja:{
   "kind:Transport":"交通",
   "kind:Office":"オフィス",
   "kind:Notice":"お知らせ",
+  "kind:App":"アプリ",
   "Photos stay on this phone. Take one — the card is made for you.":"写真はこの端末に残ります。撮れば、カードが作られます。",
   "Take photo":"写真を撮る",
   "From album":"アルバムから",
@@ -939,6 +943,7 @@ ko:{
   "kind:Transport":"교통",
   "kind:Office":"사무실",
   "kind:Notice":"안내",
+  "kind:App":"앱",
   "Photos stay on this phone. Take one — the card is made for you.":"사진은 이 기기에만 남아요. 한 장 찍으면 카드가 만들어져요.",
   "Take photo":"사진 찍기",
   "From album":"앨범에서",
