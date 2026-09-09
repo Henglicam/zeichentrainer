@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=372; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=373; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -364,7 +364,7 @@ async function boot(){
   dedupePhotos(); /* cards from before v214 drop the whole photo they hold twice */
   setTimeout(resumePending,1500); /* cards saved before their reading finished get it now (v237) */
   aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); resumeTagAll(); resumeRecheck(); });
-  setTimeout(()=>{ resumeTranslate(); resumeTagAll(); resumeRecheck(); },2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ resumeTranslate(); resumeTagAll(); resumeRecheck(); } }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262) */
+  setTimeout(()=>{ resumeTranslate(); resumeTagAll(); resumeRecheck(); brightenPass(); },2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ resumeTranslate(); resumeTagAll(); resumeRecheck(); } }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262) */
   sendReport(); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) sendReport(); else if(REPORT_DIRTY) sendReport(true); }); /* the day's first row on foreground, a second one on background when cards changed (v219) */
 }
 
@@ -1237,40 +1237,36 @@ function recheckLine(){ const tr=RECHECK, left=recheckLeft().length;
   if(tr&&tr.failed) return t("The AI could not be reached")+". "+t("{0} checked, {1} left.",tr.done,left)+" "+t("It goes on by itself when the AI can be reached again.");
   if(tr) return tr.found?t("Done — {0} could be better. See them on the Cards tab.",nOf(tr.found,"card")):t("Done — nothing to change. Your cards are in good shape.");
   return t("The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it."); }
-/* The pictures already on the phone (v372): one pass over the deck, each card measured and only the dark or flat ones
-   written. Nothing is staged and no run is remembered — the pass is local, fast and idempotent, so an interruption
-   leaves the cards it reached brightened and the next tap picks up the rest by itself. */
-const BR_BATCH=10;
+/* The pictures already on the phone: one quiet pass (v373, H: "Run the brightening over my deck now and remove the
+   manual option completely" — the deck lives on the phone, so the app has to do it itself). At the first start after
+   the update it walks the deck once, measures every card picture and writes back the ones that were dark or flat.
+   No row, no button, no question. The flag (setting brightPass) is set only when it has been through the whole deck,
+   and the curve is idempotent, so an interrupted pass simply finishes at the next start. It waits while a photo is
+   being framed or read, and breathes between cards, so nothing it does is felt. */
+const BR_BATCH=10, BR_PAUSE=60, BR_WAIT=2000;
 let BRIGHT=null;
-function brightLine(){ const b=BRIGHT;
-  if(b&&b.running) return null; /* the moving bar, drawn by the callers */
-  if(b) return b.done?`Done — ${nOf(b.done,"picture")} brightened.`:"Done — nothing to brighten. The pictures look good.";
-  return "A picture taken in the shade comes out dark. New cards are brightened as they are made; this does the pictures already on the phone."; }
-function brightRowHTML(){ const b=BRIGHT; if(!S.admin||!deck().filter(d=>d.img).length) return ""; /* the owner's row, English like the other owner's tools */
-  const line=b&&b.running?busyHTML(`Looking at ${b.at} of ${b.total} …`):brightLine();
-  return `<div class="listhead">Card pictures</div>
-    <div class="mrow"><div style="flex:1"><div class="t">Dark pictures</div><div class="s" id="bright-status">${line}</div><div class="fieldacts"><button class="btn mini" id="bright-all"${b&&b.running?" disabled":""}>Brighten dark pictures</button></div></div></div>`; }
-function brightRefresh(){ const st=$("#bright-status"), btn=$("#bright-all"), b=BRIGHT; if(!st) return;
-  if(b&&b.running) st.innerHTML=busyHTML(`Looking at ${b.at} of ${b.total} …`); else st.textContent=brightLine();
-  if(btn) btn.disabled=!!(b&&b.running); }
-async function brightenAll(){
-  if(BRIGHT&&BRIGHT.running){ brightRefresh(); return; }
-  const list=deck().filter(d=>d.img).map(d=>d.id); if(!list.length) return;
-  if(!await askSheet({title:"Brighten the dark card pictures?",text:"The pictures on this phone change. The photos stay as they are, and this cannot be undone.",ok:"Brighten"})) return;
-  BRIGHT={running:true,at:0,total:list.length,done:0}; brightRefresh();
+async function brightenPass(){
+  if(BRIGHT||S.settings.brightPass) return;
+  const ids=deck().filter(d=>d.img).map(d=>d.id);
+  BRIGHT={done:0};
   let rows=[];
-  const write=async()=>{ if(!rows.length) return; try{ await idbPutMany("custom",rows); for(const r of rows){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; } }catch(e){ logErr("bright","write: "+(e&&e.message||e)); } rows=[]; };
-  for(let i=0;i<list.length;i++){
-    BRIGHT.at=i+1; if(i%BR_BATCH===0) brightRefresh();
-    const d=cardOf(list[i]); if(!d||!d.img) continue;
-    let b=null; try{ b=await brightenBlob(d.img); }catch(e){ b=null; }
-    if(!b) continue;
-    rows.push({...d,img:b}); dropThumb(d.id); BRIGHT.done++;
-    if(rows.length>=BR_BATCH) await write();
-  }
-  await write();
-  BRIGHT.running=false; brightRefresh();
-  if(S.mode==="cards"||S.mode==="study") render();
+  const write=async()=>{ if(!rows.length) return;
+    const out=rows.map(r=>{ const d=cardOf(r.id); return d?{...d,img:r.img}:null; }).filter(Boolean); rows=[]; /* the card as it stands now: an edit meanwhile is not overwritten */
+    if(!out.length) return;
+    try{ await idbPutMany("custom",out); for(const r of out){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; dropThumb(r.id); } }catch(e){ logErr("bright","write: "+(e&&e.message||e)); } };
+  try{
+    for(const id of ids){
+      while(reloadBusy()||Object.keys(READING).length) await new Promise(r=>setTimeout(r,BR_WAIT)); /* the camera and the reader come first */
+      const d=cardOf(id); if(!d||!d.img) continue;
+      let b=null; try{ b=await brightenBlob(d.img); }catch(e){ b=null; }
+      if(b){ rows.push({id,img:b}); BRIGHT.done++; if(rows.length>=BR_BATCH) await write(); }
+      await new Promise(r=>setTimeout(r,BR_PAUSE));
+    }
+    await write();
+  }catch(e){ logErr("bright",e&&e.message||String(e)); BRIGHT=null; return; } /* no flag: the next start goes through again */
+  S.settings.brightPass=1; await setSetting("brightPass",1);
+  const n=BRIGHT.done; BRIGHT=null;
+  if(n&&(S.mode==="cards"||S.mode==="study")) render();
 }
 function recheckRowHTML(){ const n=toRecheck().length, tr=RECHECK; if(!n||!aiOn()) return "";
   const line=tr&&tr.running?busyHTML(t("Checking {0} of {1} …",tr.at,tr.total)):recheckLine();
@@ -1479,7 +1475,6 @@ function renderMore(main){
     <pre class="diag" id="users-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">Feedback</div><div class="s" id="fb-in-status">${FEEDBACK?`${nOf(FEEDBACK.rows.length,"message")}, fetched ${new Date(FEEDBACK.at).toLocaleTimeString()}.`:"The messages users sent from the app, newest first."}</div><div class="fieldacts"><button class="btn mini" id="fb-show">Show</button><button class="btn mini" id="fb-share">Share</button><button class="btn mini" id="fb-copy">Copy</button></div></div></div>
     <pre class="diag" id="fb-out" hidden></pre>
-    ${brightRowHTML()}
     <div class="listhead">Start over</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>`:""}
     <div class="listhead">${t("About")}</div>
@@ -1493,7 +1488,6 @@ function renderMore(main){
   const tg=$("#tag-all"); if(tg) tg.onclick=tagAll; /* Tag all cards (v368) */
   const ur=$("#undo-run"); if(ur) ur.onclick=undoLastRun; /* Undo last run (v369) */
   const rc=$("#recheck-all"); if(rc) rc.onclick=recheckAll; /* Check all cards again (v370) */
-  const br=$("#bright-all"); if(br) br.onclick=brightenAll; /* Brighten dark pictures (v372) */
   $("#guide-open").onclick=()=>{ S.mode="guide"; render(); window.scrollTo({top:0}); };
   wireGrow(main); /* the feedback box grows with its text like the forms' fields (v218, H: "looks a little bit old school") */
   $("#fb-send").onclick=async()=>{ const tx=$("#fb-text"), st=$("#fb-status"), b=$("#fb-send"), text=tx.value.trim(); if(!text){ st.textContent=t("Write a few words first."); return; }
@@ -5033,7 +5027,7 @@ const reloadBusy=()=>picking()||!!CROP; /* a photo on its way from the camera, o
    is up within seconds and the user finds the same screen. */
 const IDLE_MS=4000, RELOAD_POLL=2000, RESUME_MAX=180000; let LAST_TOUCH=Date.now();
 ["pointerdown","keydown","input","touchstart","wheel"].forEach(ev=>document.addEventListener(ev,()=>{ LAST_TOUCH=Date.now(); },{capture:true,passive:true}));
-const reloadIdle=()=>!reloadBusy()&&!document.hidden&&Date.now()-LAST_TOUCH>=IDLE_MS&&!S.editing&&S.mode!=="add"&&!Object.keys(PENDING).length&&!Object.keys(READING).length&&!(TRANSLATE&&TRANSLATE.running)&&!(TAGALL&&TAGALL.running)&&!(RECHECK&&RECHECK.running)&&!(BRIGHT&&BRIGHT.running)&&!document.querySelector(".drawsheet,.ask")&&!(($("#fb-text")||{}).value||"").trim();
+const reloadIdle=()=>!reloadBusy()&&!document.hidden&&Date.now()-LAST_TOUCH>=IDLE_MS&&!S.editing&&S.mode!=="add"&&!Object.keys(PENDING).length&&!Object.keys(READING).length&&!(TRANSLATE&&TRANSLATE.running)&&!(TAGALL&&TAGALL.running)&&!(RECHECK&&RECHECK.running)&&!BRIGHT&&!document.querySelector(".drawsheet,.ask")&&!(($("#fb-text")||{}).value||"").trim();
 async function reloadNow(){ RELOAD_DUE=false; clearInterval(RELOAD_TIMER); RELOAD_TIMER=null; try{ await setSetting("resumeView",{mode:S.mode,detail:S.detail,query:S.query,scroll:window.scrollY,at:Date.now()}); }catch(e){} location.reload(); }
 function reloadSoon(){ if(!reloadBusy()&&(Date.now()-LOAD_AT<RELOAD_GRACE||document.hidden)){ reloadNow(); return; } RELOAD_DUE=true; if(!RELOAD_TIMER) RELOAD_TIMER=setInterval(()=>{ if(RELOAD_DUE&&reloadIdle()) reloadNow(); },RELOAD_POLL); }
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&RELOAD_DUE&&!reloadBusy()) reloadNow(); });
