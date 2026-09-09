@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=382; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=383; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3743,7 +3743,7 @@ function labelRect(gy,box,pin){ /* box in fractions of the picture; pin (v376): 
    are laid onto the clusters in order (a cluster may be skipped — the icon rows are); and inside a cluster the row's
    labels are laid onto its runs in order, so no two labels can take the same run. Then labelRect runs again, pinned
    to that row and that run. Nothing lines up: the plan is dropped and every label is placed on its own as before. */
-const STRIP_MAX=3, STRIP_PAD=0.5, LB_TMPL=0.1, LB_MISS=1.2, LB_PIN=0.35, LB_KEEP=0.5, LB_SAME=0.5, LB_FAR=4, LB_TALL=2.2, LB_PAR=2; /* STRIP_MAX: how many strips a picture with a drawn grid is cut into for the second ask · STRIP_PAD: the room above and below a strip, in its own height · TMPL: how far a label box may sit from the median before it is not one of the grid's · MISS: what a label that finds no run costs its row · PIN: the room around a pinned run · KEEP: the share of labels a plan must place · SAME: two nominations of one run · FAR: how far, in box heights, the plan's scan looks for the picture's own rows, since the answer's grid may sit a row and more beside them · TALL: how tall a row may be in that scan · PAR: a spare row of ink standing under this many of a row's labels is a row of its own (a panel's icons), not their second line */
+const STRIP_MAX=3, STRIP_PAD=0.5, STRIP_MOVE=0.25, LB_TMPL=0.1, LB_MISS=1.2, LB_PIN=0.35, LB_KEEP=0.5, LB_SAME=0.5, LB_FAR=4, LB_TALL=2.2, LB_PAR=2; /* STRIP_MAX: how many strips a picture with a drawn grid is cut into for the second ask · STRIP_PAD: the room above and below a strip, in its own height · STRIP_MOVE: how far the strips' boxes must move, in box widths, to count as a measurement · TMPL: how far a label box may sit from the median before it is not one of the grid's · MISS: what a label that finds no run costs its row · PIN: the room around a pinned run · KEEP: the share of labels a plan must place · SAME: two nominations of one run · FAR: how far, in box heights, the plan's scan looks for the picture's own rows, since the answer's grid may sit a row and more beside them · TALL: how tall a row may be in that scan · PAR: a spare row of ink standing under this many of a row's labels is a row of its own (a panel's icons), not their second line */
 function labelRows(labels){ /* the answer's boxes grouped into rows, each row in reading order */
   const at=labels.map((l,i)=>i).sort((a,b)=>(labels[a].box[1]+labels[a].box[3])-(labels[b].box[1]+labels[b].box[3])), rows=[];
   for(const i of at){ const b=labels[i].box, h=b[3]-b[1], r=rows[rows.length-1];
@@ -3822,19 +3822,14 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
      labels of two and of seven characters got the same box: a measurement follows the characters, a drawing does not. */
   if(!lab||lab.length<4) return false;
   const med=a=>{ const t=a.slice().sort((x,y)=>x-y); return t[t.length>>1]||1; };
-  const near=(a,m)=>a.filter(v=>Math.abs(v-m)<=LB_TMPL*m).length/a.length;
   const ws=lab.map(l=>(l.box[2]-l.box[0])*W); /* the width, not the height: a label of k characters is k characters wide, while a box's height is its row's style and honestly differs from row to row (H's panel: every box 60 px wide, the rows 50 and 30 px tall) */
   const mw=med(ws), one=[]; /* the picture's edge clips a box or two, so the rule is the share of boxes of one size, not their spread */
   for(let k=0;k<lab.length;k++) if(Math.abs(ws[k]-mw)<=LB_TMPL*mw) one.push(k);
   if(one.length<0.8*lab.length) return false;
-  /* and one pitch (v382): a panel's buttons are not evenly spaced — a dial or a gap stands between them —, so measured boxes
-     give irregular gaps, while a drawn lattice gives the same gap over and over. The width alone called a measurement drawn
-     where a panel's two- and three-character labels happen to be of a width. */
-  const cx=k=>(lab[k].box[0]+lab[k].box[2])/2*W; let onPitch=0;
-  for(const r of labelRows(lab)){ if(r.at.length<4) continue; /* under three gaps there is no pitch to see */
-    const gs=[]; for(let i=1;i<r.at.length;i++) gs.push(cx(r.at[i])-cx(r.at[i-1]));
-    if(near(gs,med(gs))>=0.8) onPitch+=r.at.length; }
-  if(onPitch<0.8*lab.length) return false;
+  /* the pitch was tried as a second tell in v382 and dropped in v383: a panel's buttons of one block *are* evenly spaced, so
+     a measurement gives the same regular gaps a lattice does, and one label inside the dial breaking its row's rhythm was
+     enough to call H's own drawn grid a measurement. Whether the strips' second answer is better is asked of the boxes
+     themselves — did they move (v383) — not of their shape. */
   const ns=one.map(k=>[...lab[k].zh].filter(c=>CJK.test(c)).length||1);
   return Math.max(...ns)>Math.min(...ns); /* labels of one length may honestly measure the same width */
 }
@@ -3843,7 +3838,7 @@ async function stripBoxes(bmp,W,Hh,lab,guesses,status){ /* the model draws a gri
   const per=Math.ceil(rows.length/Math.min(STRIP_MAX,rows.length)), groups=[];
   for(let i=0;i<rows.length;i+=per) groups.push(rows.slice(i,i+per));
   const mid=r=>(r.y0+r.y1)/2, pitch=rows.length>1?(mid(rows[rows.length-1])-mid(rows[0]))/(rows.length-1):0; /* the strip's room is the rows' own pitch: the drawn grid's y drifts as its x does, and the row must stay inside its strip */
-  let got=0;
+  let got=0, moved=[], wide=[];
   for(const g of groups){
     const y0=Math.min(...g.map(r=>r.y0)), y1=Math.max(...g.map(r=>r.y1)), pad=STRIP_PAD*Math.max(y1-y0,pitch);
     const a=Math.max(0,y0-pad), z=Math.min(1,y1+pad), sy=Math.round(a*Hh), sh=Math.max(8,Math.round((z-a)*Hh));
@@ -3854,8 +3849,11 @@ async function stripBoxes(bmp,W,Hh,lab,guesses,status){ /* the model draws a gri
     if(!sp||!Array.isArray(sp.labels)) continue;
     for(const q of sp.labels){ if(!q||!q.box) continue;
       const k=lab.findIndex(l=>l.zh===q.zh&&!l.strip); if(k<0) continue;
-      lab[k].box=[q.box[0],a+q.box[1]*(z-a),q.box[2],a+q.box[3]*(z-a)]; lab[k].strip=true; got++; } }
-  return got;
+      const was=(lab[k].box[0]+lab[k].box[2])/2; wide.push(lab[k].box[2]-lab[k].box[0]);
+      lab[k].box=[q.box[0],a+q.box[1]*(z-a),q.box[2],a+q.box[3]*(z-a)]; lab[k].strip=true; got++;
+      moved.push(Math.abs((q.box[0]+q.box[2])/2-was)); } }
+  const md=a=>{ const t=a.slice().sort((x,y)=>x-y); return t.length?t[t.length>>1]:0; };
+  return {got,moved:md(moved),width:md(wide)};
 }
 function snapBox(bmp,box,n,lens,skip){ /* lens: the answer's lines' character counts (v305); skip: the fine print's boxes as fractions (v328) — a blob whose centre lies in one is not the text */
   const k=Math.min(1,800/Math.max(bmp.width,bmp.height)), W=Math.max(1,Math.round(bmp.width*k)), Hh=Math.max(1,Math.round(bmp.height*k));
@@ -4154,10 +4152,12 @@ async function cropSign(id,opts){
             else if(await (async()=>{ /* v380: the boxes are a drawing, not a measurement — v382 asks again, row by row, before giving up on them */
               if(!templateBoxes(lab,W)) return false;
               logRead(`the AI's ${lab.length} label boxes are all the same size — a drawing of the grid, not a measurement: the AI is asked again, one strip per row`);
-              let got=0; try{ got=await stripBoxes(b,W,Hh,lab,guesses,status); }catch(e){ logErr("split",e&&e.message||String(e)); }
-              if(!got){ logRead("the strips brought no boxes — every card gets the whole picture"); return true; }
-              if(templateBoxes(lab,W)){ logRead(`the strips answered with ${got} boxes, and they are a drawing of the grid too — every card gets the whole picture`); return true; }
-              logRead(`the strips measured ${got} of the ${lab.length} labels — every card gets its own picture`); return false; })()){
+              let r2=null; try{ r2=await stripBoxes(b,W,Hh,lab,guesses,status); }catch(e){ logErr("split",e&&e.message||String(e)); }
+              if(!r2||!r2.got){ logRead("the strips brought no boxes — every card gets the whole picture"); return true; }
+              /* the second answer is worth having when it puts the boxes somewhere else: a strip that draws the same lattice
+                 again has measured nothing, and the cards keep the whole picture as in v380 */
+              if(r2.moved<STRIP_MOVE*Math.max(r2.width,1e-6)){ logRead(`the strips answered with ${r2.got} boxes, but put them where the grid already had them — every card gets the whole picture`); return true; }
+              logRead(`the strips measured ${r2.got} of the ${lab.length} labels, ${Math.round(r2.moved/Math.max(r2.width,1e-6)*100)} % of a box away from the grid — every card gets its own picture`); return false; })()){
               splitWhole=true; }
             else { const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen; /* the frame at its own pixels when nothing was straightened: a panel's labels are small in the 800 px picture the AI saw */
               const sb=src===seen?b:await createImageBitmap(src); const gy=labelGrey(sb,pic.box); if(sb!==b) sb.close();
