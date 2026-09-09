@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=392; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=393; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -651,6 +651,7 @@ async function migrateAi(){
 const pictureOn=()=>S.settings.aiPicture!==false;
 function pictureProvider(){ if(!pictureOn()) return null; return [aiProvider(),...Object.keys(AI_PROVIDERS)].find(pv=>AI_PROVIDERS[pv].vision&&(aiKey(pv)||viaRelay(pv))&&aiBase(pv))||null; }
 const pictureModel=pv=>AI_PROVIDERS[pv].vmodel||aiModel(pv);
+const PIC_SMALL=0.15, PIC_EDGE=0.05, PIC_SIDE=[0.35,0.6]; /* an answer's box smaller than this share of the picture, against an edge, means the app's frame was pointed at the wrong place (v393) */
 const PIC_MAX=800;
 async function pictureJpeg(blob){
   const bmp=await createImageBitmap(blob); const k=Math.min(1,PIC_MAX/Math.max(bmp.width,bmp.height));
@@ -4383,15 +4384,29 @@ async function cropSign(id,opts){
       /* the app's own frame cut a line off (v314, H's 大闸蟹 / 我选蟹状元 poster: the close look placed the frame at 37–77 % down, through the middle of the first line, the AI got that cut and left the cut line out as the v312 rule says, and its box could only centre the frame inside the placed one — "Warum nur die zweite Zeile und nicht auch die erste???"): when the AI names an edge that cuts off a line and the frame is the app's — placed by the reader, or the proposal —, the frame reaches past that edge by 1.2 tallest line heights into the photo, and the AI reads the grown cut once more; never for the hand's frame, never for a turned one, never twice */
       /* the app's frame holds no Chinese text at all (v348, H's scooter badge 九号 Fz110: the ink rows framed the yellow plate beside the characters, Qwen answered "no Chinese characters" for that cut — correctly —, and the card was made from the reader's garbage 量词口还: "voll falsch!"): the frame reaches the whole photo and the AI reads once more, so the text beside the proposal gets its chance; never for the hand's frame, never for a turned one, never twice */
       const noText=!!(pic&&pic.bad);
-      if(pic&&(noText||!pic.bad&&pic.cut)&&(PENDING[id]&&!RECROP[id]?READ_APP[id]:CROP&&CROP.id===id&&CROP.proposed)){
+      /* the AI found the text pressed into a corner of what it was shown (v393, H's rice cooker taken again: two
+         cards, 时 and 分, where the panel carries eleven labels — "Why only those 2?"). The ink rows had proposed
+         27–77 % down of a washed-out white panel, where the strongest ink is the display's black rectangle and the
+         buttons' dashes and not the faint grey labels, so the top row at 22–25 % and the bottom row at 79–82 % were
+         both cut away before the AI ever saw them; its answer, "labels on a digital clock or timer display panel",
+         was right about the strip it was given. The app cannot tell beforehand that its own proposal is wrong — every
+         poster's frame is built the same way, and sending the whole photo instead cost the placement on H's own
+         confirmed cards (邪不压正 lost its straightening, the vending machine and the poster grew) — but it can tell
+         afterwards: when the answer's box covers under PIC_SMALL of the picture and lies against one of its edges,
+         the text the model found is at the border of what the app chose, and there is very likely more beyond it. The
+         frame then reaches the whole photo and the AI reads once more, as it does for a bad answer (v348). */
+      const pbox=pic&&!pic.bad&&pic.box, tiny=!!(pbox&&(pbox[2]-pbox[0])*(pbox[3]-pbox[1])<PIC_SMALL
+        &&pbox[2]-pbox[0]<PIC_SIDE[0]&&pbox[3]-pbox[1]<PIC_SIDE[1] /* small in both directions: a box that spans much of one is a line running along that edge, and the v313 grow past that edge is its answer — H's 北京现代 badge, whose box is 37 % of the picture's width along its top */
+        &&(pbox[0]<PIC_EDGE||pbox[1]<PIC_EDGE||pbox[2]>1-PIC_EDGE||pbox[3]>1-PIC_EDGE));
+      if(pic&&(noText||tiny||!pic.bad&&pic.cut)&&(PENDING[id]&&!RECROP[id]?READ_APP[id]:CROP&&CROP.id===id&&CROP.proposed)){
         const cur=base; /* the picture the AI saw is the proposal's (v319), whatever the reader placed meanwhile */
-        if(cur&&!cur.a){ const g=noText?{top:true,bottom:true,left:true,right:true}:{top:/top/.test(pic.cut),bottom:/bottom/.test(pic.cut),left:/left/.test(pic.cut),right:/right/.test(pic.cut)}; /* the frame reaches the photo's edge on every cut side (v318, H's Nongfu Spring bottle: the frame stood on the last character's edge, one character's width of room to the left showed 泉 alone and the AI said "cut" again — how far the line runs is unknown, the photo's edge is the only sure end, and the AI's box then places the frame on the line) */
+        if(cur&&!cur.a){ const g=noText||tiny?{top:true,bottom:true,left:true,right:true}:{top:/top/.test(pic.cut),bottom:/bottom/.test(pic.cut),left:/left/.test(pic.cut),right:/right/.test(pic.cut)}; /* the frame reaches the photo's edge on every cut side (v318, H's Nongfu Spring bottle: the frame stood on the last character's edge, one character's width of room to the left showed 泉 alone and the AI said "cut" again — how far the line runs is unknown, the photo's edge is the only sure end, and the AI's box then places the frame on the line) */
           const nr={x:g.left?0:cur.x,y:g.top?0:cur.y,w:(g.right?cur.lw:cur.x+cur.w)-(g.left?0:cur.x),h:(g.bottom?cur.lh:cur.y+cur.h)-(g.top?0:cur.y),a:0,lw:cur.lw,lh:cur.lh};
           nr.x=Math.max(0,nr.x); nr.y=Math.max(0,nr.y); nr.w=Math.min(cur.lw-nr.x,nr.w); nr.h=Math.min(cur.lh-nr.y,nr.h);
           if(nr.w>cur.w+1||nr.h>cur.h+1){ let cut=await cropBlob(id,nr); if(stale()) return;
             if(cut){ if(PENDING[id]&&!RECROP[id]) PLACED[id]=nr; else if(CROP&&CROP.id===id&&CROP.proposed){ CROP.rect=nr; CROP.proposed="text"; CROP.followed=true; delete CROP.hidden; } else cut=null; }
             if(cut){ placedCut=cut.blob; renderShots(); const pc=v=>Math.round(v*100);
-              logRead((noText?"the AI found no Chinese text in the picture — the frame reaches the whole photo":`the AI says the picture's ${pic.cut} edge cuts off a line — the frame reaches beyond it`)+` (${pc(nr.x/nr.lw)}–${pc((nr.x+nr.w)/nr.lw)} % across, ${pc(nr.y/nr.lh)}–${pc((nr.y+nr.h)/nr.lh)} % down) and the AI reads again`);
+              logRead((noText?"the AI found no Chinese text in the picture — the frame reaches the whole photo":tiny?`the AI found the text in ${Math.round((pbox[2]-pbox[0])*(pbox[3]-pbox[1])*100)} % of the picture, against its edge — the frame reaches the whole photo`:`the AI says the picture's ${pic.cut} edge cuts off a line — the frame reaches beyond it`)+` (${pc(nr.x/nr.lw)}–${pc((nr.x+nr.w)/nr.lw)} % across, ${pc(nr.y/nr.lh)}–${pc((nr.y+nr.h)/nr.lh)} % down) and the AI reads again`);
               picBase={orig:placedCut,dk:null,base:null}; picSeen=picBase;
               try{ pic=await aiReadPicture(placedCut,guesses,status); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
               if(stale()) return; r.pic=pic?{zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped,cut:pic.cut}:null; } } } }
