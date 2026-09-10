@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=395; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=396; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -737,7 +737,7 @@ async function aiReadPicture(blob,alts,status){
   /* what came back, in one line of the log (v374): the shape of the answer survives a restart, so a panel that made one card can
      be read back afterwards — until v373 only the split's own lines said anything, and they lived in memory */
   logRead(`the AI's answer: ${lines0.length} ${lines0.length===1?"line":"lines"}, apart ${apart?"yes":"no"}, ${Array.isArray(x.labels)?x.labels.length:0} labels${Array.isArray(x.labels)&&x.labels.length?" ("+(labels?labels.length:0)+" usable)":""}, ${Array.isArray(x.boxes)?x.boxes.length:0} boxes, meaning ${String(x.m||"").length} characters`);
-  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxAlt:mainAlt?mainAlt.box:null,droppedBoxesAlt:mainAlt?mainAlt.droppedBoxes:null,boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,""),kind:String(x.kind||"").trim(),apart,labels,boxScale:picScale(x.box,pic.w,pic.h)}; /* cut (v314): the edges that cut off a line the model left out */
+  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxAlt:mainAlt?mainAlt.box:null,droppedBoxesAlt:mainAlt?mainAlt.droppedBoxes:null,boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,""),kind:String(x.kind||"").trim(),apart,labels,picW:pic.w,picH:pic.h,boxScale:picScale(x.box,pic.w,pic.h)}; /* cut (v314): the edges that cut off a line the model left out */
 }
 /* the main text only (v312, H's 青春无烟 / 未来无限 poster: the card carried the poster's small print — the line 第39个世界无烟日 above the title and the date 2026年5月31日 世界无烟日 below it, half of it outside the frame — "wieder die Sachen ausserhalb des Crops und das Kleingedruckte mitgelesen. Bitte beides vermeiden"): the prompt asks for the main text and leaves fine print and lines the picture's edge cuts off to the model; this is the safety net from the model's own line boxes — a line whose box is under FINE_PRINT of the tallest line's height is fine print and goes, with its pinyin and meaning parts when they come one per line; the box for the frame is then the union of the lines kept */
 const FINE_PRINT=1/3;
@@ -3150,7 +3150,7 @@ async function jpegOf(blob,q){
    most BR_WB times the narrowest: a crop that is one colour through and through (red text on a red button) has no
    white in it to balance against, and stretching its empty channels would drain the colour, so it keeps the one
    luminance curve of v372. */
-const BR_HI=200, BR_SPAN=120, BR_MIN=24, BR_GAIN=40, BR_CLIP=0.01, BR_SAMPLE=200000, BR_WB=2.5;
+const BR_HI=200, BR_SPAN=120, BR_MIN=24, BR_GAIN=40, BR_CLIP=0.01, BR_SAMPLE=200000, BR_WB=2.5, BR_KNEE=246; /* the highlight shoulder (v396) */
 function brightLut(px){ /* one curve per channel: red, green, blue */
   const h=[new Uint32Array(256),new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)]; let n=0; /* 0 luminance, 1-3 the channels */
   const step=4*Math.max(1,Math.ceil(px.length/4/BR_SAMPLE)); /* a big picture is measured on a sample, the curve then runs over every pixel */
@@ -3164,9 +3164,18 @@ function brightLut(px){ /* one curve per channel: red, green, blue */
   const wide=Math.max(...ends.map(e=>e.span)), narrow=Math.min(...ends.map(e=>e.span));
   const balance=narrow>0&&wide<=BR_WB*narrow; /* the channels are of a kind: there is white in the picture to balance against */
   const cap=Math.max(hi-lo,BR_GAIN)/(hi-lo); /* the gain is capped, so a nearly flat picture does not become a poster — the same factor on all three, or the cap would tilt the balance */
-  const curve=(a,span)=>{ const lut=new Uint8Array(256); for(let v=0;v<256;v++) lut[v]=Math.round(255*Math.min(1,Math.max(0,(v-a)/span))); return lut; };
-  if(!balance){ const one=curve(lo,(hi-lo)*cap); return [one,one,one]; }
-  return ends.map(e=>curve(e.lo,Math.max(1,e.span)*cap));
+  /* the top end rolls off instead of clipping (v396, H: "when brightening, avoid clipping highlights"): until v395 the
+     stretch mapped the 99th percentile straight to white, so the brightest hundredth of the picture — a lamp on a glossy
+     panel, the glare on a bottle — came out as one flat sheet of 255 with its shape gone. The straight part now ends at
+     BR_KNEE and everything above it is compressed into the last few levels — the brightest pixel of the picture still
+     reaches white, but the hundredth above the knee keeps its order and its shape instead of one flat sheet. Below the
+     black end nothing changes: a card picture wants its dark ground dark. */
+  const curve=(a,span,top)=>{ const lut=new Uint8Array(256), knee=a+span, room=Math.max(1,top-knee);
+    for(let v=0;v<256;v++){ const t=(v-a)/span;
+      lut[v]=Math.round(t<=0?0:t<1?BR_KNEE*t:BR_KNEE+(255-BR_KNEE)*Math.min(1,(v-knee)/room)); }
+    return lut; };
+  if(!balance){ const one=curve(lo,(hi-lo)*cap,at(0,1)); return [one,one,one]; }
+  return ends.map((e,i)=>curve(e.lo,Math.max(1,e.span)*cap,at(i+1,1)));
 }
 /* A card picture is sharpened at the cut (v378, H's "Go" on the offer after "Any other image improvements you
    suggest?"). A photo is stored at 1 600 px, so one rice-cooker label is 184 px wide in it and the card shows it at
@@ -3863,7 +3872,7 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
      localise on it; a second question gets a second drawing, and the strips' own y squashed the answer's three rows into two,
      so labelPlan found nothing to line up. Three calls and two minutes for a worse answer. */
   const ns=one.map(k=>[...lab[k].zh].filter(c=>CJK.test(c)).length||1);
-  return Math.max(...ns)>Math.min(...ns); /* labels of one length may honestly measure the same width */
+  return Math.max(...ns)>Math.min(...ns)||roundGrid(lab,W); /* labels of one length may honestly measure the same width — then the round pixels decide */
 }
 /* One card per label when the model's boxes are a drawing (v386, H's washing machine at v385: the model reads that panel
    perfectly and cannot say where anything is — measured on his own answers, the bright right-hand block within a point of
@@ -3878,7 +3887,7 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
    neighbour's. Measured on H's own photo at its own 1600 px with his own texts: 18 of the 19 labels on their own
    characters, none on another's, where v385 gave all 19 the whole panel. */
 const RL_STEP=0.6, RL_SUP=3, RL_DUP=0.6, RL_TILES=8, RL_GAP=0.55, RL_WMIN=0.8, RL_WMAX=12, RL_PX=64, RL_ROOM=[0.3,0.5], RL_CAP=420, RL_HIT=0.6, RL_WEAK=0.5, RL_GROW=[0.22,0.45], RL_WIDE=[0.6,1.8], RL_COL=0.6, RL_HGT=[0.6,1.6];
-const LB_STEP=10, LB_ROUND=0.8, RL_ROW=0.8, RL_FLOOR=0.15, RL_TIGHT=1.4, RL_CLEAR=0.5, RL_DUPX=0.6, RL_ICON=1.2, RL_ICONH=2.2, RL_ICONX=0.5, RL_ICONJOIN=0.6, RL_ICONMAX=4, DIAL_W=4, DIAL_OFF=0.12, DIAL_REACH=0.3; /* a drawn grid lands on round pixels (v390) */
+const LB_STEP=10, LB_ROUND=0.8, RL_ROW=0.8, RL_FLOOR=0.15, RL_TIGHT=1.4, RL_CLEAR=0.5, RL_DUPX=0.6, RL_ICON=1.2, RL_ICONH=2.2, RL_ICONX=0.5, RL_ICONJOIN=0.6, RL_ICONMAX=4, DIAL_W=4, DIAL_OFF=0.12, DIAL_REACH=0.3, DIAL_PITCH=2.5, RL_SIDEGAP=0.8, RL_SIDEW=1.6; /* a drawn grid lands on round pixels (v390) */
 function labelRunsOf(gy,labels,uni){ /* the picture's own rows of characters, and the runs of each row, in the grey copy's pixels */
   const {g,W,Hh}=gy, med=a=>{ const t=a.slice().sort((x,y)=>x-y); return t[t.length>>1]||0.05; };
   const bw=med(labels.map(l=>l.box[2]-l.box[0])), bh=med(labels.map(l=>l.box[3]-l.box[1]));
@@ -4124,15 +4133,45 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
      element is that corridor over every row of the panel, and every other label whose run stands inside it shares the
      same picture, so a display with three words gives three cards of one picture. growRun is not applied to them —
      the corridor already ends at the neighbours. */
+  /* a symbol BESIDE the label joins its card too (v396, H: "All user interfaces shall include icons with their chinese
+     characters, if available. Because it helps the user to understand, learn and remember."). The rule of v392 reaches
+     only upward, which is where a dishwasher's pictograms stand; a Panasonic oven prints a circled number to the LEFT of
+     every programme name (⑥ 烤鱼), and those cards came out as the characters alone. A run beside the label is its symbol
+     when it stands in the label's own band, within RL_SIDEGAP of the cut, is no wider than RL_SIDEW of the cut's height
+     (a circled number is about square; a neighbouring label of two characters is twice as wide) and belongs to no other
+     label — and the join may never reach more than half the way to the neighbouring label's cut, so two cards of one row
+     can meet but never overlap. */
+  labels.forEach((l,j)=>{ const c=cut[j]; if(pick[j]<0||!c) return;
+    const h=c.y1-c.y0; let L=0, R=gy.W;
+    labels.forEach((o,k)=>{ const d=k!==j&&cut[k]; if(!d) return;
+      if(Math.min(d.y1,c.y1)-Math.max(d.y0,c.y0)<0.5*Math.min(d.y1-d.y0,h)) return;
+      if(d.x1<=c.x0) L=Math.max(L,(d.x1+c.x0)/2); else if(d.x0>=c.x1) R=Math.min(R,(d.x0+c.x1)/2); });
+    let x0=c.x0, x1=c.x1;
+    for(let i=0;i<runs.length;i++){ if(ur.has(i)) continue; const o=runs[i];
+      const oh=o.y1-o.y0, ow=o.x1-o.x0;
+      if(Math.min(o.y1,c.y1)-Math.max(o.y0,c.y0)<0.5*Math.min(oh,h)) continue; /* the label's own band */
+      if(ow>RL_SIDEW*h||oh>RL_ICONH*h) continue; /* about square: a number in a circle, not the next label */
+      if(o.x1<=c.x0&&c.x0-o.x1<=RL_SIDEGAP*h&&o.x0>=L) x0=Math.min(x0,o.x0);
+      else if(o.x0>=c.x1&&o.x0-c.x1<=RL_SIDEGAP*h&&o.x1<=R) x1=Math.max(x1,o.x1); }
+    if(x0<c.x0||x1>c.x1) cut[j]={...c,x0:Math.max(L,x0),x1:Math.min(R,x1)};
+  });
   const island=new Set(), yAll=rowBand.filter(Boolean);
   if(yAll.length){
     const ty=Math.min(...yAll.map(b=>b.y0)), by=Math.max(...yAll.map(b=>b.y1)), base=cut.slice(), parts=[];
+    const mids=labels.map((l,j)=>base[j]?((base[j].x0+base[j].x1)/2):null).filter(v=>v!==null).sort((a2,b2)=>a2-b2);
+    const steps=[]; for(let i=1;i<mids.length;i++) steps.push(mids[i]-mids[i-1]);
+    const pitch=steps.length?median(steps):0; /* the step from one placed label to the next, over the whole panel */
     labels.forEach((l,j)=>{ const c=base[j]; if(pick[j]<0||!c) return;
       const w=c.x1-c.x0, mid=(c.x0+c.x1)/2; let L=0, R=gy.W;
       labels.forEach((o,k)=>{ const d=k!==j&&base[k]; if(!d) return;
         if(Math.min(d.y1,c.y1)-Math.max(d.y0,c.y0)<0.5*Math.min(d.y1-d.y0,c.y1-c.y0)) return;
         if(d.x1<=c.x0) L=Math.max(L,d.x1); else if(d.x0>=c.x1) R=Math.min(R,d.x0); });
       if(R-L<DIAL_W*w||Math.abs(mid-(L+R)/2)>DIAL_OFF*(R-L)) return;
+      if(R-L<DIAL_PITCH*pitch) return; /* and clearly wider than the row's own rhythm (v396, H's Panasonic oven: its five
+         labels stand a label's width apart, so every one of them had a corridor four times its own width and sat in the
+         middle of it — each card became a quarter of the panel holding its neighbour's number. A word on an element of
+         its own (the washer's dial) stands in a gap far larger than the step from one button to the next; a well-spaced
+         row does not. */
       let ry0=Math.min(ty,c.y0), ry1=Math.max(by,c.y1); /* the element's own ink, so its ring and the words along it are whole */
       for(const o of runs){ const m=(o.x0+o.x1)/2;
         if(m<L||m>R||o.y1<ty-DIAL_REACH*(by-ty)||o.y0>by+DIAL_REACH*(by-ty)) continue;
@@ -4465,7 +4504,7 @@ async function cropSign(id,opts){
             const whole=bs.some(q=>(q.x1-q.x0)*(q.y1-q.y0)>0.9*W*Hh); /* a box over the whole picture is not one element */
             const why=lab.length>SPLIT_MAX?`there are ${lab.length} of them`:!oneScale?"their boxes are not all on the same scale":whole?"one box covers the whole picture":"";
             if(why){ logRead(`the AI calls these ${lab.length} texts separate labels, but ${why} — one card`); }
-            else if(templateBoxes(lab,W)){ /* the boxes are a drawing, not a measurement (v380): the model cannot say where anything is, so the reader looks (v386) */
+            else if(templateBoxes(lab,pic.picW||W)){ /* the boxes are a drawing, not a measurement (v380): the model cannot say where anything is, so the reader looks (v386) */
               logRead(`the AI's ${lab.length} label boxes are all the same size — a drawing of the grid, not a measurement: the reader looks for the labels in the picture itself`);
               const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen;
               const sb=src===seen?b:await createImageBitmap(src); const gy=labelGrey(sb,pic.box);
