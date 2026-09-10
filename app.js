@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=404; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=405; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -203,7 +203,7 @@ function wireLearnChips(){ wireFilterPill("learn",render); }
 const cardId = c => deck().some(d=>d.id===c) ? c+"#"+Date.now() : c;
 async function setSetting(k,v){ S.settings[k]=v; try{ await idbPut("settings",{k,v}); }catch(e){} }
 /* diagnostics (H debugs alone on the phone): the last errors and the last reading's steps, shown and shared from More → Diagnostics */
-const ERRLOG=[], READLOG=[], LAST_READ={passes:null,nums:null}, AILOG=[]; /* AILOG: the last three AI exchanges, request and raw reply, never the key (v97) */
+const ERRLOG=[], READLOG=[], LAST_READ={passes:null,nums:null,ring:[]}, AILOG=[]; /* AILOG: the last three AI exchanges, request and raw reply, never the key (v97) */
 /* The AI exchanges survive a restart too (v384, H's washing machine: five versions were tuned against his answer rebuilt from
    the reading log's rounded percentages — a box edge rounded to a whole percent is a tenth of a box width, wider than the
    tolerance the test measures — while the raw answer sat one section further down in Diagnostics and was always empty:
@@ -251,7 +251,16 @@ function numsReset(id,keep){ /* proposeFrame writes the proposal before cropSign
   if(pre) for(const k of Object.keys(pre)) if(pre[k]!==undefined&&pre[k]!==null) N[k]=pre[k];
   NUMSOF[id]=N; numsGC(); return N; }
 /* the one place a finished reading's record is handed on: Diagnostics prints it, and the ring keeps it */
-function numsFile(id){ const N=numsFor(id); if(!N) return null; if(!N.ms) N.ms=Date.now()-N.at; LAST_READ.nums=N; saveReadLog(); return N; }
+function numsFile(id){ const N=numsFor(id); if(!N) return null; if(!N.ms) N.ms=Date.now()-N.at; LAST_READ.nums=N;
+  /* the ring, not one slot (v405, H's washing machine at v404): NUMSOF holds six records but only one ever reached the
+     shared text, so a session of three photos kept the last photo's numbers and threw the other two away — and H's own
+     way of working is to take a lot of photos and share the ones that came out wrong, which by construction is almost
+     never the last one (the washer's record existed a minute before he shared and the rice cooker had overwritten it).
+     The same shape as v384 (AILOG in memory alone) and v395 (the reply cut at 1500 characters), one level up.
+     Filed by identity, since one reading files twice — at the end of cropSign and again once splitCards named its cards —
+     and both times it is the same object, which the ring then updates in place. */
+  const r=LAST_READ.ring, i=r.indexOf(N); if(i>=0) r.splice(i,1); r.push(N); while(r.length>NUMS_KEEP) r.shift();
+  saveReadLog(); return N; }
 const n4=v=>typeof v==="number"&&isFinite(v)?+v.toFixed(4):null; /* a fraction of an 800 px picture to a third of a pixel: roundGrid tests against 0.3 px and templateBoxes against a tenth of a box */
 const n1=v=>typeof v==="number"&&isFinite(v)?+v.toFixed(1):null; /* a copy's pixels, and degrees */
 const numRect=r=>r?[n1(r.x),n1(r.y),n1(r.w),n1(r.h),n1(r.a||0),n1(r.lw),n1(r.lh)]:null; /* a frame on the layer, with the layer it was measured on — a rectangle without its lw/lh cannot be mapped anywhere */
@@ -272,12 +281,15 @@ const numPic=p=>p?{pw:p.picW,ph:p.picH,box:numFrac(p.box),alt:numFrac(p.boxAlt),
   boxes:Array.isArray(p.boxes)?p.boxes.map(numFrac):null,drop:(p.dropped||[]).map(x=>String(x).slice(0,24)),dropB:(p.droppedBoxes||[]).map(numFrac),
   cut:p.cut||"",bad:!!p.bad,apart:!!p.apart,kind:p.kind||"",zh:String(p.zh||"").slice(0,200),
   labels:(p.labels||[]).map(l=>({zh:l.zh,box:numFrac(l.box),sc:l.scale}))}:null;
+const NUMS_KEEP=3; /* readings kept in the shared text (v405) — three covers a photo taken, looked at and taken again */
+const NUMS_OLD=6000; /* the older two are trimmed harder than the newest: a 19-label panel measures 6.1 KB whole, so this
+   keeps a panel intact and costs at most 12 KB of the diagnostics H pastes into a chat */
 const NUMS_MAX=12000; /* one reading's numbers, measured on this build: an ordinary sign 1.9 KB, H's 19-label washing machine
    6.1 KB, and about 180 bytes a label after that — so SPLIT_MAX 30 labels come to roughly 8 KB and fit whole. Past the cap
    the blocks go in the order they are worth least: the quick look's boxes first (the reader path does not use them), then
    each label's rectangle in the copy, and the run search's own result last, since that is the one the panel work needs. */
-function numsTrim(o){ if(!o) return o; if(JSON.stringify(o).length<=NUMS_MAX) return o;
-  const c={...o}; for(const k of ["qk","lrects","best","found"]){ if(c[k]!==undefined){ c[k]="dropped, over "+NUMS_MAX+" characters"; if(JSON.stringify(c).length<=NUMS_MAX) break; } } return c; }
+function numsTrim(o,cap){ const max=cap||NUMS_MAX; if(!o) return o; if(JSON.stringify(o).length<=max) return o;
+  const c={...o}; for(const k of ["qk","lrects","best","found"]){ if(c[k]!==undefined){ c[k]="dropped, over "+max+" characters"; if(JSON.stringify(c).length<=max) break; } } return c; }
 /* a fingerprint of the system prompt (v399): picSystem() is 5 600 characters and changed at v361, v363, v367 and v377, so an
    answer cannot be attributed to a prompt without one — the version says which code, this says which words it actually sent */
 const strHash=s=>{ let h=5381; for(let i=0;i<s.length;i++) h=(h*33^s.charCodeAt(i))>>>0; return h.toString(36); };
@@ -288,7 +300,9 @@ const strHash=s=>{ let h=5381; for(let i=0;i<s.length;i++) h=(h*33^s.charCodeAt(
 const STORAGE={};
 async function storageFacts(){ try{ if(navigator.storage&&navigator.storage.estimate){ const e=await navigator.storage.estimate(); STORAGE.quota=e.quota||0; STORAGE.usage=e.usage||0; }
     if(navigator.storage&&navigator.storage.persisted) STORAGE.persisted=await navigator.storage.persisted(); }catch(e){} }
-let _readlogT=null; const saveReadLog=()=>{ clearTimeout(_readlogT); _readlogT=setTimeout(()=>{ setSetting("readlog",{steps:READLOG.slice(),passes:LAST_READ.passes||null,nums:numsTrim(LAST_READ.nums)}).catch(()=>{}); },800); };
+/* the ring as it is written down: the newest at its full cap, the older two trimmed harder (v405) */
+const numsRing=()=>LAST_READ.ring.map((N,i)=>numsTrim(N,i===LAST_READ.ring.length-1?NUMS_MAX:NUMS_OLD));
+let _readlogT=null; const saveReadLog=()=>{ clearTimeout(_readlogT); _readlogT=setTimeout(()=>{ setSetting("readlog",{steps:READLOG.slice(),passes:LAST_READ.passes||null,ring:numsRing()}).catch(()=>{}); },800); };
 function logErr(kind,msg){ ERRLOG.push({t:Date.now(),kind,msg:String(msg||"").slice(0,400)}); while(ERRLOG.length>20) ERRLOG.shift(); setSetting("errlog",ERRLOG.slice()).catch(()=>{}); }
 window.addEventListener("error",e=>logErr("error",(e.message||"")+(e.filename?` @${String(e.filename).split("/").pop()}:${e.lineno}`:"")));
 window.addEventListener("unhandledrejection",e=>{ const r=e.reason; logErr("promise",r&&(r.stack||r.message)||r); });
@@ -308,6 +322,11 @@ function diagText(){
   READLOG.forEach(x=>out.push(`  ${ago(x.t)}  ${x.text}`));
   if(LAST_READ.passes) out.push("  passes: "+JSON.stringify(LAST_READ.passes));
   if(LAST_READ.nums) out.push("  numbers: "+JSON.stringify(numsTrim(LAST_READ.nums))); /* the frame chain's own values, unrounded (v399) — the prose above is for reading, this is what a harness is fed */
+  /* the two readings before it (v405): a card that came out wrong is rarely from the last photo taken */
+  const older=LAST_READ.ring.filter(N=>N&&N!==LAST_READ.nums);
+  if(older.length){ out.push("", `Earlier readings (${older.length}, newest last):`);
+    older.forEach(N=>{ out.push(`  ${ago(N.at)}  ${N.shot||"?"}${Array.isArray(N.cards)?` \u00b7 ${N.cards.length} card${N.cards.length===1?"":"s"}`:""}`);
+      out.push("    numbers: "+JSON.stringify(numsTrim(N,NUMS_OLD))); }); }
   out.push("", `Drawings (${DRAWLOG.length}, newest last):`);
   DRAWLOG.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.strokes.length} stroke${x.strokes.length===1?"":"s"} → ${x.alts.join(" ")||"nothing"}${x.strokes_best?` · strokes ${x.strokes_best.join(" ")} · print ${(x.ocr||[]).join(" ")||"nothing"}`:""}`); out.push("    strokes: "+JSON.stringify(x.strokes)); });
   out.push("", `AI exchanges (${AILOG.length}, newest last):`);
@@ -429,7 +448,10 @@ async function boot(){
     S.progress = {}; prog.forEach(r=>{ const {id,c,...s}=r; S.progress[id||c]=s; });
     sett.forEach(r=>{ S.settings[r.k]=r.v; });
     if(Array.isArray(S.settings.errlog)) ERRLOG.unshift(...S.settings.errlog.slice(-20));
-    if(S.settings.readlog&&Array.isArray(S.settings.readlog.steps)&&!READLOG.length){ READLOG.push(...S.settings.readlog.steps.slice(-40)); LAST_READ.passes=S.settings.readlog.passes||null; LAST_READ.nums=S.settings.readlog.nums||null; } /* the reading's numbers survive the restart with its steps (v399) */ /* the last reading before the restart (v267) */
+    if(S.settings.readlog&&Array.isArray(S.settings.readlog.steps)&&!READLOG.length){ READLOG.push(...S.settings.readlog.steps.slice(-40)); LAST_READ.passes=S.settings.readlog.passes||null;
+      /* the ring since v405; a phone still holding a v404 setting has one record under nums */
+      LAST_READ.ring=(Array.isArray(S.settings.readlog.ring)?S.settings.readlog.ring:(S.settings.readlog.nums?[S.settings.readlog.nums]:[])).slice(-NUMS_KEEP);
+      LAST_READ.nums=LAST_READ.ring[LAST_READ.ring.length-1]||null; } /* the reading's numbers survive the restart with its steps (v399) */ /* the last reading before the restart (v267) */
     if(Array.isArray(S.settings.ailog)&&!AILOG.length) AILOG.push(...S.settings.ailog.slice(-3)); /* the last AI exchanges before the restart (v384) */
     await migrateAi();
     storageFacts(); /* v399: the quota and the usage for Diagnostics, once at boot */
