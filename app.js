@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=393; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=394; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -4132,8 +4132,18 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
       for(const o of runs){ const m=(o.x0+o.x1)/2;
         if(m<L||m>R||o.y1<ty-DIAL_REACH*(by-ty)||o.y0>by+DIAL_REACH*(by-ty)) continue;
         ry0=Math.min(ry0,o.y0); ry1=Math.max(ry1,o.y1); }
-      parts.push({x0:L,y0:ry0,x1:R,y1:ry1}); });
-    for(const g of parts) labels.forEach((l,j)=>{ const c=base[j]; if(pick[j]<0||!c) return;
+      const g={x0:L,y0:ry0,x1:R,y1:ry1};
+      /* nothing else may stand in it (v393, H's rice cooker at v392: six of its eleven cards showed the same wide
+         slab of the panel — the rule found a "free-standing element" wherever a label had room around it in its own
+         answer row, and handed that room to every label inside it). An element is free-standing only when no other
+         label the reader placed stands in it: the washer's dial holds 下筒 alone, while the rice cooker's gaps each
+         hold two or three of the panel's own buttons, so no region is made there at all. */
+      if(labels.some((o,k)=>{ if(k===j||pick[k]<0) return false; const d=runs[pick[k]], m=(d.x0+d.x1)/2, n=(d.y0+d.y1)/2;
+        return m>g.x0&&m<g.x1&&n>g.y0&&n<g.y1; })) return;
+      parts.push(g); });
+    /* the region is the picture of the label that established it, and of the words on the element the reader could
+       not place at all — the dial's 左筒 and 右筒 would share it, a placed label never does */
+    for(const g of parts) labels.forEach((l,j)=>{ const c=base[j]; if(!c) return;
       const mx=(c.x0+c.x1)/2, my=(c.y0+c.y1)/2;
       if(mx<g.x0||mx>g.x1||my<g.y0||my>g.y1) return;
       island.add(j); cut[j]={...g}; });
