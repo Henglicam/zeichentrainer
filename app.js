@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=403; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=404; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -111,7 +111,7 @@ function buildQueue(includeAhead){
 }
 const cardOf = id => deck().find(d=>d.id===id); /* cards are addressed by id everywhere; the text is c */
 /* Tags (v133, H: "make the cards sortable, for Chinese class, HSK …"): free labels on a card, several allowed; the
-   forms offer the labels already in use as chips, the Cards tab filters by one, the Learn tab studies one */
+   forms offer the labels already in use as chips, and the Cards tab and the Learn tab each filter by any number of them (v366) */
 const parseTags=str=>[...new Set(String(str||"").split(/[,，;；]/).map(t=>t.trim()).filter(Boolean))];
 const allTags=()=>[...new Set(deck().flatMap(d=>d.tags||[]))].sort((a,b)=>a.localeCompare(b));
 /* the kind of a card made from a photo (v364, H: "Could you automatically label the Cards?"): one word from a fixed set,
@@ -121,7 +121,7 @@ const allTags=()=>[...new Set(deck().flatMap(d=>d.tags||[]))].sort((a,b)=>a.loca
 const KINDS=["Menu","Street sign","Shop","Product","Appliance","Transport","Office","Notice","App"];
 const kindTag=k=>{ const w=String(k||"").trim().toLowerCase(), hit=KINDS.find(x=>x.toLowerCase()===w); return hit?t("kind:"+hit):""; };
 /* "Untagged" (v156, H: "provide a default tag for not-tagged cards"): a group, not a label written on the cards — the
-   Cards tab and the Learn tab offer it as a chip while tags exist and some cards carry none; a card that gets a tag
+   Cards tab and the Learn tab offer it as a row in the filter sheet (v365) while tags exist and some cards carry none; a card that gets a tag
    leaves the group by itself, exports are untouched */
 const UNTAGGED="__untagged__";
 const hasTag=(d,t)=>t===UNTAGGED?!(d.tags&&d.tags.length):(d.tags||[]).includes(t);
@@ -185,7 +185,7 @@ function openFilterSheet(scope,after){
   el.querySelectorAll("[data-frow]").forEach(b=> b.onclick=()=>pick(b.dataset.frow));
   document.addEventListener("keydown",onKey); document.body.appendChild(el); el.querySelector(".frow").focus();
 }
-/* one row tapped: the status filters stay independent toggles, the tag is one at a time, "" clears everything */
+/* one row tapped: the status filters and the tags are each independent toggles since v366, "" clears everything */
 async function setFilter(scope,k){
   if(scope==="learn"){ let v=learnTags().slice();
     if(!k.startsWith("tag:")) v=[]; else { const x=k.slice(4); v=v.includes(x)?v.filter(y=>y!==x):[...v,x]; }
@@ -215,6 +215,9 @@ const ERRLOG=[], READLOG=[], LAST_READ={passes:null,nums:null}, AILOG=[]; /* AIL
    label. The v384 rule again, one level down: the raw answer is the only thing the harness can be fitted to, so it must
    arrive whole. 6000 characters hold about forty labels; three entries in the setting are some 18 KB. */
 const AI_LOG_RES=6000;
+/* and the request is the other half of what a harness has to be fitted to (v403's audit): 1500 characters is under half of a real
+   batch, so the log stopped mid-object exactly the way v395 found the reply doing; 4000 covers the worst measured case (3901). */
+const AI_LOG_REQ=4000;
 function logAi(entry){ AILOG.push({t:Date.now(),...entry}); while(AILOG.length>3) AILOG.shift(); saveAiLog(); } /* entry.ms: how long the call took (v208, H: the check "takes way too long" — Diagnostics now shows it) */
 let _ailogT=null; const saveAiLog=()=>{ clearTimeout(_ailogT); _ailogT=setTimeout(()=>{ setSetting("ailog",AILOG.slice()).catch(()=>{}); },800); };
 /* the last reading's steps and passes survive a restart (v267 — H's first diagnostics after the v266 update said "Last reading (0 steps)":
@@ -227,7 +230,7 @@ function logRead(text){ READLOG.push({t:Date.now(),text}); while(READLOG.length>
    knipsen und Karten generieren und dir Screenshots von den Karten schicken, von denen ich denke, dass da was nicht korrekt
    ist. Plus die Diagnostiks."). Every line of the log above rounds what it prints to whole percent, and on a label box
    7.5 % of the picture wide a whole percent is a tenth of a box on each edge — wider than the tolerance templateBoxes
-   measures and far wider than the 0.3 px roundGrid needs. v379–v383 were four versions fitted to those rounded numbers:
+   measures and far wider than the 0.3 px roundGrid needs. v379–v383 were five versions fitted to those rounded numbers:
    every one passed in the harness and failed on the phone, because the harness had been fed a reconstruction and never
    the phone's own answer. So the values each decision of the frame chain is taken on are written down as they are, at the
    precision the code uses them, and the prose stays for reading. The v384 rule one level further: when the harness and
@@ -438,7 +441,7 @@ async function boot(){
     /* creation order (cards without a timestamp, from before v33, come first in key order) */
     S.custom = cust.sort((a,b)=>(a.at||0)-(b.at||0));
     S.inbox = inb.sort((a,b)=>b.ts-a.ts);
-  }catch(e){ console.warn("IndexedDB unavailable, session only:", e); }
+  }catch(e){ console.warn("IndexedDB unavailable, session only:", e); logErr("boot","IndexedDB unavailable, session only: "+(e&&e.message||e)); /* the app then runs with no cards and no settings; the phone must be able to say so (v403) */ }
   LANG=LANGS.some(([c])=>c===S.settings.lang)?S.settings.lang:langDefault(); applyLangStatic(); /* the app's language (v253): the setting, else the phone's */
   await syncMeanings(); /* every card shows the meaning it has in the app's language (v265); cards from before get their ms */
   S.ready=true;
@@ -452,7 +455,8 @@ async function boot(){
   dedupePhotos(); /* cards from before v214 drop the whole photo they hold twice */
   setTimeout(resumePending,1500); /* cards saved before their reading finished get it now (v237) */
   aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); resumeTagAll(); resumeRecheck(); });
-  setTimeout(()=>{ resumeTranslate(); resumeTagAll(); resumeRecheck(); brightenPass().catch(()=>{}).then(()=>recutPass()); },2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ resumeTranslate(); resumeTagAll(); resumeRecheck(); } }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262) */
+  /* an interrupted Translate-all, Tag-all or Check-up run, and the deck's two one-off passes, go on by themselves (v262, v368, v370, v373, v398) */
+  setTimeout(()=>{ resumeTranslate(); resumeTagAll(); resumeRecheck(); brightenPass().catch(()=>{}).then(()=>recutPass().catch(()=>{})); },2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ resumeTranslate(); resumeTagAll(); resumeRecheck(); } }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262) */
   sendReport(); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) sendReport(); else if(REPORT_DIRTY) sendReport(true); }); /* the day's first row on foreground, a second one on background when cards changed (v219) */
 }
 
@@ -969,14 +973,14 @@ async function aiAsk(cards,status){
     else { /* OpenAI-style chat completions (DeepSeek, Qwen, GLM, …), direct with the phone's key or through the owner's relay */
       const body=noThinking(pv,model,{model,max_tokens:4000,temperature:0,messages:[{role:"system",content:aiSystem()},{role:"user",content:user}]});
       r=relay?await relayFetch(pv,body):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
-  }catch(err){ logAi({model,req:user.slice(0,1500),err:"no connection: "+(err&&err.message||err)+(/^no answer within/.test(err&&err.message||"")?" — the connection hangs, or the provider is slow":pv==="claude"?" — the API may be blocked without a VPN":" — offline, or this provider refuses calls from a browser")}); throw new Error(AI_NET_ERR); }
-  if(!r.ok&&relay){ const t=await apiErrText(r); logAi({model,status:r.status,req:user.slice(0,1500),err:t}); throw new Error(relayError(r,t)); }
+  }catch(err){ logAi({model,req:user.slice(0,AI_LOG_REQ),err:"no connection: "+(err&&err.message||err)+(/^no answer within/.test(err&&err.message||"")?" — the connection hangs, or the provider is slow":pv==="claude"?" — the API may be blocked without a VPN":" — offline, or this provider refuses calls from a browser")}); throw new Error(AI_NET_ERR); }
+  if(!r.ok&&relay){ const t=await apiErrText(r); logAi({model,status:r.status,req:user.slice(0,AI_LOG_REQ),err:t}); throw new Error(relayError(r,t)); }
   if(r.status===401||r.status===403) throw new Error("API key rejected ("+r.status+")");
   if(r.status===402) throw new Error("no credit left at "+AI_PROVIDERS[pv].name);
   if(!r.ok){ const t=await apiErrText(r); throw new Error("API error "+r.status+(t?": "+t:"")); }
   const data=await r.json(); countTokens(pv,data); bumpModel(model);
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
-  logAi({model,status:r.status,ms:Date.now()-t0,req:user.slice(0,1500),res:raw.slice(0,AI_LOG_RES)});
+  logAi({model,status:r.status,ms:Date.now()-t0,req:user.slice(0,AI_LOG_REQ),res:raw.slice(0,AI_LOG_RES)});
   await loadScriptTables().catch(()=>{}); /* v103: the model answered a traditional sign with traditional "zh" — the card's key is always simplified */
   const text=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,"");
   let arr; try{ arr=JSON.parse(text); }catch(e){ throw new Error("could not read the model's answer"); }
@@ -1050,7 +1054,7 @@ async function aiAuto(){
   if(!aiLive()||_aiAutoRan) return;
   const list=S.custom.filter(d=>d.c&&d.mt&&(d.mt.pending||d.mt.suspect)&&!d.ai); if(!list.length) return; /* a card still waiting for its reading has no text yet (v237) */
   _aiAutoRan=true;
-  try{ await aiReview(list); if(S.mode==="more"||S.mode==="cards"||S.mode==="inbox") render(); }catch(e){ console.warn("AI auto review:",e); }
+  try{ await aiReview(list); if(S.mode==="more"||S.mode==="cards"||S.mode==="inbox") render(); }catch(e){ console.warn("AI auto review:",e); logErr("ai","auto review: "+(e&&e.message||e)); } /* the console is invisible on a phone — the error log reaches Diagnostics and the daily row (v403) */
 }
 /* About: what leaves the phone, live with the AI settings (v173) */
 function aboutText(){ const ver=($(".ver")||{}).textContent||""; return `${ver}. ${t("Works offline. Cards and photos stay on this phone; anonymous usage counts go to the app's owner.")}${(pv=>pv?" "+t("Only when the reading is weak, the framed area of a photo goes to {0}.",AI_PROVIDERS[pv].short):"")(pictureProvider())}`; } /* names the AI (v216, H: "goes to your AI provider" is wrong — a friend's phone has no provider of its own); the relay stays out of About (v217, H) — the AI row's What-is-sent line and privacy.html describe it */
@@ -2203,7 +2207,7 @@ function renderCards(main){
   const wire=()=>{ document.querySelectorAll(".crow").forEach(b=>{
     b.onclick=()=>{
       if(marking("cards")){ pickToggle(b.dataset.id); b.classList.toggle("on"); pickBar(()=>delPicked("cards")); return; } /* while marking a tap marks the row instead of opening it (v351) */
-      LIST_SCROLL=window.scrollY; /* where the list stood — ← Cards comes back to it (v351) */
+      LIST_SCROLL=window.scrollY; /* where the list stood — ← Cards comes back to it (v352) */
       S.detail=b.dataset.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); };
     if(!marking("cards")&&S.custom.length>1) longPress(b,()=>{ PICK={kind:"cards",set:new Set([b.dataset.id])}; render(); }); /* press and hold to start marking (v354) */
   }); };
@@ -2431,8 +2435,9 @@ function renderEdit(main,c){
     /* the Chinese text itself may be corrected (OCR slip) — progress and images move with it */
     let newC=d.c;
     const we=$("#e-word");
+    let wordLines;
     if(we){
-      var wordLines=we.value.split("\n").map(l=>l.replace(/\s+/g,"")).filter(l=>CJK.test(l));
+      wordLines=we.value.split("\n").map(l=>l.replace(/\s+/g,"")).filter(l=>CJK.test(l));
       newC=isSign?wordLines.join("\n"):wordLines.join("");
       if(!CJK.test(newC)){ if(willHand||aiLate){ newC=d.c; wordLines=undefined; } else return fail(t("Please enter Chinese text.")); } /* an empty card saved early keeps its text until the analysis fills it */
     }
@@ -2642,7 +2647,7 @@ function pickToggle(id){ if(PICK) PICK.set.has(id)?PICK.set.delete(id):PICK.set.
 /* A long press starts the marking (v354, H's screenshot of the cramped chip row: "Der card selection mode sieht kaese aus.
    Ist zu eng. Wie waer's mit longpress auf karte enters selection mode?"): the Select button is gone from the Cards chip row
    and from the inbox head — press and hold a card or a photo for half a second instead, and it is marked. A press that
-   turns into a scroll or a drag cancels; the click that follows the press is not a tap (LP_AT), so the row does not toggle
+   turns into a scroll or a drag cancels; the click that follows the press is not a tap (LP_EAT), so the row does not toggle
    itself off again. */
 const LP_MS=500, LP_MOVE=10, LP_EAT=250;
 function longPress(el,fn){
@@ -3230,7 +3235,7 @@ async function signMeaning(lines,status){
       const tr=await nmtTranslate(todo.map(i=>lines[i]),status);
       todo.forEach((i,k)=>{ if(tr[k]) out[i]=tr[k]; });
       if(tr.some(Boolean)){ src="nmt"; pending=tr.some(t=>!t); }
-    }catch(err){ console.warn("offline translation failed:",err); }
+    }catch(err){ console.warn("offline translation failed:",err); logErr("nmt","offline translation failed: "+(err&&err.message||err)); }
   }
   return {m:out.filter(Boolean).join(" / "), src, pending, res};
 }
@@ -3738,7 +3743,7 @@ async function secondLook(w,dk,passes,status,r,Hink){
        so the main thread's work overlaps the workers' (v236); a clear reading throws them away unused — the fast path
        loses at most one copy's time */
     const colourRun=readTight("colour"); let colourDone=false; colourRun.then(()=>{ colourDone=true; },()=>{ colourDone=true; });
-    (async()=>{ await new Promise(r=>setTimeout(r,0)); if(!colourDone){ srcsOf("bw"); } await Promise.all(srcsOf("bw")).catch(()=>{}); if(!colourDone) srcsOf("chroma"); })();
+    (async()=>{ await new Promise(r=>setTimeout(r,0)); if(!colourDone){ srcsOf("bw"); } await Promise.all(srcsOf("bw")).catch(()=>{}); if(!colourDone) Promise.all(srcsOf("chroma")).catch(()=>{}); })().catch(()=>{}); /* the copies are thrown away when the colour passes finished first, and the deferred makers then run after bmp2.close() — without the catch that detached-bitmap error lands in the phone's error log (v403) */
     await colourRun;
     if(r.onTight) await r.onTight(textArea); /* the frame appears on the text now, before the copies and the traditional reader (v288: the first look that knows where the text is) */
     /* a clear reading skips the copies (v209): two colour passes agreeing on the same text of dictionary words at 95 % or
