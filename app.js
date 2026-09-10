@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=400; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=401; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -928,8 +928,12 @@ const mlPill=d=>d.m&&mlOf(d)!==LANG?`<span class="pill lang" title="${esc(t("The
 function saneM(m,zh){
   m=String(m||"").trim(); if(!m) return "";
   const flat=x=>String(x||"").replace(/[\s\n/·,;。，、]/g,""); const echoed=flat(m)===flat(zh)||flat(t2s(m))===flat(zh);
-  const han=/[\u4e00-\u9fff]/.test(m), latin=/[A-Za-z\u00C0-\u024F]{2}/.test(m), kana=/[\u3040-\u30ff]/.test(m), hangul=/[\uAC00-\uD7AF]/.test(m);
-  const bad=echoed||(han&&!latin&&!kana&&!hangul&&LANG!=="ja");
+  /* the scripts a meaning may be written in — Cyrillic since v401 (H: "Ergaenze russisch als sprache"): a Russian meaning
+     that quotes the characters, 健康 (здоровье), has Han and none of the other three, so it was thrown away as "answered in
+     Chinese". Two letters in a row, as with Latin, so a stray one inside Chinese text is no meaning. The list is the shape
+     of the bug: an eighth language repeats it unless its script is named here too. */
+  const han=/[\u4e00-\u9fff]/.test(m), latin=/[A-Za-z\u00C0-\u024F]{2}/.test(m), kana=/[\u3040-\u30ff]/.test(m), hangul=/[\uAC00-\uD7AF]/.test(m), cyr=/[\u0400-\u052f]{2}/.test(m);
+  const bad=echoed||(han&&!latin&&!kana&&!hangul&&!cyr&&LANG!=="ja");
   if(bad){ logErr("ai","meaning answered in Chinese: "+m); return ""; }
   return m;
 }
@@ -1923,7 +1927,7 @@ const LATIN_UNITS={h:["hour","hours"],hr:["hour","hours"],hrs:["hour","hours"],m
 function latinUnitMeaning(w){
   const m=w.match(/^([0-9]+(?:\.[0-9]+)?)([a-zA-Z%]*)$/); if(!m) return "";
   const u=LATIN_UNITS[m[2].toLowerCase()]; if(!u) return "";
-  return m[1]+" "+t(+m[1]===1?u[0]:u[1]);
+  return m[1]+" "+wordOf(+m[1],u[0],u[1]); /* the unit's form for this number, through the app's one plural rule (v401): 1 час, 2 часа, 24 часа, 5 часов */
 }
 const cardGloss=d=>mergeUnits(d.gloss||[]); /* the stored gloss with a number and its unit as one part (v309; cards from before carry them apart) */
 function cardParts(d){
