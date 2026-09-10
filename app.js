@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=397; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=398; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -381,7 +381,7 @@ async function boot(){
   dedupePhotos(); /* cards from before v214 drop the whole photo they hold twice */
   setTimeout(resumePending,1500); /* cards saved before their reading finished get it now (v237) */
   aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); resumeTagAll(); resumeRecheck(); });
-  setTimeout(()=>{ resumeTranslate(); resumeTagAll(); resumeRecheck(); brightenPass(); },2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ resumeTranslate(); resumeTagAll(); resumeRecheck(); } }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262) */
+  setTimeout(()=>{ resumeTranslate(); resumeTagAll(); resumeRecheck(); brightenPass().catch(()=>{}).then(()=>recutPass()); },2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ resumeTranslate(); resumeTagAll(); resumeRecheck(); } }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262) */
   sendReport(); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) sendReport(); else if(REPORT_DIRTY) sendReport(true); }); /* the day's first row on foreground, a second one on background when cards changed (v219) */
 }
 
@@ -737,7 +737,7 @@ async function aiReadPicture(blob,alts,status){
   /* what came back, in one line of the log (v374): the shape of the answer survives a restart, so a panel that made one card can
      be read back afterwards — until v373 only the split's own lines said anything, and they lived in memory */
   logRead(`the AI's answer: ${lines0.length} ${lines0.length===1?"line":"lines"}, apart ${apart?"yes":"no"}, ${Array.isArray(x.labels)?x.labels.length:0} labels${Array.isArray(x.labels)&&x.labels.length?" ("+(labels?labels.length:0)+" usable)":""}, ${Array.isArray(x.boxes)?x.boxes.length:0} boxes, meaning ${String(x.m||"").length} characters`);
-  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxAlt:mainAlt?mainAlt.box:null,droppedBoxesAlt:mainAlt?mainAlt.droppedBoxes:null,boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,""),kind:String(x.kind||"").trim(),apart,labels,boxScale:picScale(x.box,pic.w,pic.h)}; /* cut (v314): the edges that cut off a line the model left out */
+  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxAlt:mainAlt?mainAlt.box:null,droppedBoxesAlt:mainAlt?mainAlt.droppedBoxes:null,boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,""),kind:String(x.kind||"").trim(),apart,labels,picW:pic.w,picH:pic.h,boxScale:picScale(x.box,pic.w,pic.h)}; /* cut (v314): the edges that cut off a line the model left out */
 }
 /* the main text only (v312, H's 青春无烟 / 未来无限 poster: the card carried the poster's small print — the line 第39个世界无烟日 above the title and the date 2026年5月31日 世界无烟日 below it, half of it outside the frame — "wieder die Sachen ausserhalb des Crops und das Kleingedruckte mitgelesen. Bitte beides vermeiden"): the prompt asks for the main text and leaves fine print and lines the picture's edge cuts off to the model; this is the safety net from the model's own line boxes — a line whose box is under FINE_PRINT of the tallest line's height is fine print and goes, with its pinyin and meaning parts when they come one per line; the box for the frame is then the union of the lines kept */
 const FINE_PRINT=1/3;
@@ -1293,29 +1293,152 @@ function recheckLine(){ const tr=RECHECK, left=recheckLeft().length;
    and the curve is idempotent, so an interrupted pass simply finishes at the next start. It waits while a photo is
    being framed or read, and breathes between cards, so nothing it does is felt. */
 const BR_BATCH=10, BR_PAUSE=60, BR_WAIT=2000;
+/* neither pass may run while the user is doing the very things that change a card's picture (v398): a photo being
+   taken or framed and a reading in flight were there from v373; an Edit or Add form and a card still waiting for its
+   reading came with the re-cut, since both write a card's picture from state the pass cannot see. */
+const passBusy=()=>reloadBusy()||!!S.editing||S.mode==="add"||!!Object.keys(READING).length||!!Object.keys(PENDING).length;
 let BRIGHT=null;
 async function brightenPass(){
   if(BRIGHT||S.settings.brightPass) return;
-  const ids=deck().filter(d=>d.img).map(d=>d.id);
-  BRIGHT={done:0};
+  const ids=deck().filter(d=>d.img&&!d.reading).map(d=>d.id); /* a card still waiting for its reading is finishPending's, which holds it across an await (v398) */
+  BRIGHT={done:0,written:0,dropped:0}; /* done: measured and queued · written: actually written · dropped: queued but the card had moved on */
   let rows=[];
   const write=async()=>{ if(!rows.length) return;
-    const out=rows.map(r=>{ const d=cardOf(r.id); return d?{...d,img:r.img}:null; }).filter(Boolean); rows=[]; /* the card as it stands now: an edit meanwhile is not overwritten */
+    const queued=rows; rows=[];
+    const out=queued.map(r=>{ const d=cardOf(r.id); return d&&d.img===r.img0&&!d.reading&&S.editing!==r.id?{...d,img:r.img}:null; }).filter(Boolean); /* the card as it stands now, and only while it is still the picture that was measured: a re-crop, a Remove image, a reading that filled the card, or the card standing open in the Edit form all drop the row (v398) */
+    BRIGHT.written+=out.length; BRIGHT.dropped+=queued.length-out.length;
     if(!out.length) return;
     try{ await idbPutMany("custom",out); for(const r of out){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; dropThumb(r.id); } }catch(e){ logErr("bright","write: "+(e&&e.message||e)); } };
   try{
     for(const id of ids){
-      while(reloadBusy()||Object.keys(READING).length) await new Promise(r=>setTimeout(r,BR_WAIT)); /* the camera and the reader come first */
-      const d=cardOf(id); if(!d||!d.img) continue;
+      if(passBusy()){ await write(); while(passBusy()) await new Promise(r=>setTimeout(r,BR_WAIT)); } /* the rows in hand are written before the wait, never held across it */
+      const d=cardOf(id); if(!d||!d.img||d.reading) continue;
       let b=null; try{ b=await brightenBlob(d.img); }catch(e){ b=null; }
-      if(b){ rows.push({id,img:b}); BRIGHT.done++; if(rows.length>=BR_BATCH) await write(); }
+      if(b){ rows.push({id,img:b,img0:d.img}); BRIGHT.done++; if(rows.length>=BR_BATCH) await write(); }
       await new Promise(r=>setTimeout(r,BR_PAUSE));
     }
     await write();
   }catch(e){ logErr("bright",e&&e.message||String(e)); BRIGHT=null; return; } /* no flag: the next start goes through again */
   S.settings.brightPass=1; await setSetting("brightPass",1);
-  const n=BRIGHT.done; BRIGHT=null;
+  const n=BRIGHT.written; BRIGHT=null;
   if(n&&(S.mode==="cards"||S.mode==="study")) render();
+}
+/* The deck cut again, once (v398, H: "Go with your recommendation and update all existing crops in my app"). The
+   pictures already on the phone were made by the curve of v372–v378: an old white balance is baked into the stored
+   crop and cannot be measured back out of it, and the unsharp mask is not idempotent, so running the new curve over a
+   stored crop would double-sharpen and keep the cast. The only honest fix is to cut again from the photo — the same
+   rectangle, the new treatment. Modelled on the brightening pass of v373: it starts by itself, waits while a photo is
+   being framed or read, breathes between cards, writes in chunks with the card as it stands at the write, and its flag
+   (setting recutPass, its own — brightPass is untouched) is written only after the whole deck has been walked, so an
+   interrupted pass simply runs again at the next start. It runs after the brightening pass, never beside it, or the two
+   would write the same card.
+   A card qualifies only when it carries a picture, a stored frame and a photo still on the phone (fullPhoto: the inbox
+   photo, or the copy that was made onto the card when the inbox photo went). Everything else is left exactly as it is.
+   Which rectangle the picture is, is decided by measurement, not by a field: an ordinary card's picture is the 16:9
+   window around the text frame (v329), a label cut from a split panel is the label's own frame at the photo's pixels
+   (v362), and nothing on the card says which. So both cuts are computed and the one whose size matches the stored
+   picture is taken; a picture the frame does not describe at all — a crop cut in the Edit form's window (v247) that the
+   window's own bounds clipped, a picture the reading made when the photo was already gone — matches neither and the
+   card is skipped, since re-cutting it would change what the card shows. As a last guard the new picture is compared
+   with the old one (RC_CORR, a normalised correlation over a small grey copy, which a change of brightness or of the
+   white balance does not move): a picture that no longer shows the same thing is a bug, not a fresher card, and the
+   card keeps what it has. Where 0.8 comes from, measured: 120 frames of every shape swept through the exact rounding
+   a real card carries — the frame lives in layer pixels when the card is saved and comes back as four decimals of the
+   photo — give a correlation of 0.92 at worst, 1.00 in the middle, and none under 0.9; a cut of the same photo moved
+   by a quarter of its own width gives 0.28 to 0.59, a frame whose numbers are broken 0.00 to 0.08, and a cut of a
+   different photo 0.55. So the bar sits in the gap between 0.59 and 0.92, and it is set on the safe side: a card left
+   with the picture it has is a fine outcome, a card showing the wrong region is not. */
+const RC_BATCH=10, RC_PAUSE=60, RC_WAIT=2000, RC_TOLPX=2, RC_TOL=0.01, RC_CORR=0.8, RC_THUMB=32, RC_INSIDE=0.5;
+const frameKey=f=>f?[f.x,f.y,f.w,f.h,f.a||0].join(","):""; /* the same rectangle, to the number */
+let RECUT=null;
+async function recutPass(){
+  if(RECUT||S.settings.recutPass) return;
+  const ids=deck().filter(d=>d.img&&d.frame&&!d.reading&&fullPhoto(d)).map(d=>d.id); /* a card still waiting for its reading belongs to finishPending, which holds it across an await and writes it whole (v398) */
+  RECUT={done:0,written:0,skipped:0,dropped:0}; /* done: cut and queued · written: actually written · dropped: queued but the card had moved on · skipped: the card was left alone */
+  let rows=[];
+  const write=async()=>{ if(!rows.length) return;
+    const queued=rows; rows=[];
+    /* the card as it stands now, and only while it is still the card the cut was made from (v398): a cut sits in the
+       queue for a moment, and in that moment H can re-crop the card in the Edit form, remove its picture, or let a
+       reading fill it — every one of those writes a picture of its own, and forcing the queued cut on top would leave
+       the card showing a region its own frame no longer describes. Such a row is dropped; the card keeps what it has. */
+    const out=queued.map(r=>{ const d=cardOf(r.id);
+      if(S.editing===r.id) return null; /* the card is open in the Edit form, which was drawn from the picture it had: its Save would write that picture back anyway */
+      return d&&d.img===r.img0&&!d.reading&&frameKey(d.frame)===r.fkey&&fullPhoto(d)===r.full0?{...d,img:r.img}:null; }).filter(Boolean);
+    RECUT.written+=out.length; RECUT.dropped+=queued.length-out.length;
+    if(!out.length) return;
+    try{ await idbPutMany("custom",out); for(const r of out){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; dropThumb(r.id); } }catch(e){ logErr("recut","write: "+(e&&e.message||e)); } };
+  try{
+    for(const id of ids){
+      if(passBusy()){ await write(); while(passBusy()) await new Promise(r=>setTimeout(r,RC_WAIT)); } /* the camera, the reader and the forms come first — and the rows in hand are written before the wait, never held across it */
+      const d=cardOf(id); if(!d||!d.img||!d.frame||d.reading) continue;
+      const img0=d.img, fkey=frameKey(d.frame), full0=fullPhoto(d);
+      let b=null; try{ b=await recutCard(d); }catch(e){ b=null; }
+      if(b){ rows.push({id,img:b,img0,fkey,full0}); RECUT.done++; if(rows.length>=RC_BATCH) await write(); } else RECUT.skipped++;
+      await new Promise(r=>setTimeout(r,RC_PAUSE));
+    }
+    await write();
+  }catch(e){ logErr("recut",e&&e.message||String(e)); RECUT=null; return; } /* no flag: the next start goes through again */
+  S.settings.recutPass=1; await setSetting("recutPass",1);
+  const n=RECUT.written; RECUT=null;
+  if(n&&(S.mode==="cards"||S.mode==="study")) render();
+}
+/* a small grey copy of a picture, for the framing check */
+async function greyThumb(blob,n){
+  const bmp=await createImageBitmap(blob), cv=document.createElement("canvas");
+  cv.width=n; cv.height=n;
+  const ctx=cv.getContext("2d",{alpha:false}); ctx.drawImage(bmp,0,0,bmp.width,bmp.height,0,0,n,n); bmp.close();
+  const d=ctx.getImageData(0,0,n,n).data, out=new Float64Array(n*n);
+  for(let i=0,k=0;i<d.length;i+=4,k++) out[k]=(d[i]*77+d[i+1]*151+d[i+2]*28)/256;
+  return out;
+}
+/* how alike two pictures are, whatever was done to their brightness: Pearson's correlation over the grey copies */
+function corrOf(a,b){
+  const n=Math.min(a.length,b.length); if(!n) return 0;
+  let ma=0,mb=0; for(let i=0;i<n;i++){ ma+=a[i]; mb+=b[i]; } ma/=n; mb/=n;
+  let sa=0,sb=0,sab=0;
+  for(let i=0;i<n;i++){ const u=a[i]-ma, v=b[i]-mb; sa+=u*u; sb+=v*v; sab+=u*v; }
+  if(sb<1e-6) return sa<1e-6?1:0; /* the fresh cut came out flat where the card had a picture — a cut of nothing is exactly what must be refused (v398) */
+  if(sa<1e-6) return 1; /* the stored picture is flat: there is nothing to disagree with */
+  return sab/Math.sqrt(sa*sb);
+}
+/* one card's picture cut again from its photo — null when the frame does not describe the stored picture,
+   or when the fresh cut no longer shows what the card showed */
+async function recutCard(d){
+  const full=fullPhoto(d); if(!full||!d.img||!d.frame) return null;
+  let iw=0,ih=0,pw=0,ph=0;
+  try{ const bm=await createImageBitmap(d.img); iw=bm.width; ih=bm.height; bm.close(); }catch(e){ return null; }
+  try{ const bm=await createImageBitmap(full); pw=bm.width; ph=bm.height; bm.close(); }catch(e){ return null; }
+  if(!iw||!ih||!pw||!ph) return null;
+  const f=d.frame;
+  /* the frame is fractions of the photo, and nothing has ever checked them (v398): importData copies frame straight
+     out of a file, so a missing, non-finite or out-of-range number can reach here, and a rectangle built from one cuts
+     a picture of nothing. All four numbers must be real, the rectangle must be a rectangle, and it must lie on the
+     photo — a turned frame may hang over the edge (v334), so half of it inside is the bar, not all of it. */
+  const num=v=>typeof v==="number"&&isFinite(v);
+  if(!num(f.x)||!num(f.y)||!num(f.w)||!num(f.h)||(f.a!==undefined&&!num(f.a))) return null;
+  if(!(f.w>0&&f.h>0)||f.w>2||f.h>2) return null;
+  if(f.x<-0.5||f.y<-0.5||f.x+f.w>1.5||f.y+f.h>1.5) return null;
+  { const ix=Math.min(1,f.x+f.w)-Math.max(0,f.x), iy=Math.min(1,f.y+f.h)-Math.max(0,f.y);
+    if(!(ix>0&&iy>0)||ix*iy<RC_INSIDE*f.w*f.h) return null; }
+  const rect={x:f.x*pw,y:f.y*ph,w:f.w*pw,h:f.h*ph,a:f.a||0,lw:pw,lh:ph}; /* the frame at the photo's own pixels — cropBlob then cuts one to one, and turns the frame back upright itself (v185) */
+  if(rect.w<8||rect.h<8) return null;
+  const win=windowRect(rect); /* the 16:9 window of an ordinary card (v329) */
+  const off=r=>{ const w=Math.max(1,Math.round(r.w)), h=Math.max(1,Math.round(r.h)); /* what cropBlob will make of it */
+    const near=(a,b)=>Math.abs(a-b)<=Math.max(RC_TOLPX,RC_TOL*b);
+    return near(w,iw)&&near(h,ih)?Math.abs(w-iw)+Math.abs(h-ih):-1; };
+  const dw=off(win), df=off(rect);
+  const use=dw>=0&&(df<0||dw<=df)?win:df>=0?rect:null; /* the window and the label's own frame are the same rectangle where both fit */
+  if(!use) return null;
+  const key="recut#"+d.id; /* the photo as a record of its own: an inbox photo and an open Crop again are untouched */
+  SHOTS_EXTRA[key]={id:key,blob:full,ts:Date.now()};
+  let cut=null;
+  try{ cut=await cropBlob(key,use); }
+  finally{ delete SHOTS_EXTRA[key]; }
+  if(!cut||!cut.blob) return null;
+  const out=await cardJpeg(cut.blob); if(!out) return null;
+  try{ if(corrOf(await greyThumb(d.img,RC_THUMB),await greyThumb(out,RC_THUMB))<RC_CORR) return null; }catch(e){ return null; } /* the framing moved: keep what the card has */
+  return out;
 }
 function recheckRowHTML(){ const n=toRecheck().length, tr=RECHECK; if(!n||!aiOn()) return "";
   const line=tr&&tr.running?busyHTML(t("Checking {0} of {1} …",tr.at,tr.total)):recheckLine();
@@ -3149,8 +3272,16 @@ async function jpegOf(blob,q){
    taken out and the sibling cards match. It runs only where the three channels are of a kind — the widest span at
    most BR_WB times the narrowest: a crop that is one colour through and through (red text on a red button) has no
    white in it to balance against, and stretching its empty channels would drain the colour, so it keeps the one
-   luminance curve of v372. */
-const BR_HI=200, BR_SPAN=120, BR_MIN=24, BR_GAIN=40, BR_CLIP=0.01, BR_SAMPLE=200000, BR_WB=2.5;
+   luminance curve of v372. BR_WB is 1.5 since v398, measured on 26 crops of H's own photos: the curve stretches seven
+   of them, and six — the rice cooker's three labels, the washer's 袜子, the 三立方咖啡 sign, the 语翼中文 banner — sit
+   at 1.03, 1.03, 1.04, 1.09, 1.14 and 1.15 and keep their balance. The seventh is the blue backlit 绿皮书 lightbox at
+   2.21, which the balance drained to swamp green with dirty cream characters; with one luminance curve it stays blue.
+   So the bar sits in an empty gap, 1.15 to 2.21, and 1.5 is the middle of it. What the one curve does to that crop
+   instead: it crushes the weak red channel (mean RGB 92,147,162 in the crop, 84,135,132 under the balance, 41,148,183
+   under the one curve), so the card's blue is stronger than the photo's, not the photo's own blue. It reads better
+   than the swamp green and it is not the photo's colour. The other 19 crops are not stretched at all and never reach
+   this test — the panel photos among them carry their highlight in the white strokes and lit icons. */
+const BR_HI=200, BR_SPAN=120, BR_MIN=24, BR_GAIN=40, BR_CLIP=0.01, BR_SAMPLE=200000, BR_WB=1.5, BR_KNEE=246; /* the highlight shoulder (v396) */
 function brightLut(px){ /* one curve per channel: red, green, blue */
   const h=[new Uint32Array(256),new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)]; let n=0; /* 0 luminance, 1-3 the channels */
   const step=4*Math.max(1,Math.ceil(px.length/4/BR_SAMPLE)); /* a big picture is measured on a sample, the curve then runs over every pixel */
@@ -3164,9 +3295,30 @@ function brightLut(px){ /* one curve per channel: red, green, blue */
   const wide=Math.max(...ends.map(e=>e.span)), narrow=Math.min(...ends.map(e=>e.span));
   const balance=narrow>0&&wide<=BR_WB*narrow; /* the channels are of a kind: there is white in the picture to balance against */
   const cap=Math.max(hi-lo,BR_GAIN)/(hi-lo); /* the gain is capped, so a nearly flat picture does not become a poster — the same factor on all three, or the cap would tilt the balance */
-  const curve=(a,span)=>{ const lut=new Uint8Array(256); for(let v=0;v<256;v++) lut[v]=Math.round(255*Math.min(1,Math.max(0,(v-a)/span))); return lut; };
-  if(!balance){ const one=curve(lo,(hi-lo)*cap); return [one,one,one]; }
-  return ends.map(e=>curve(e.lo,Math.max(1,e.span)*cap));
+  /* the top end rolls off instead of clipping (v396, H: "when brightening, avoid clipping highlights"): until v395 the
+     stretch mapped the 99th percentile straight to white, so the brightest hundredth of the picture — a lamp on a glossy
+     panel, the glare on a bottle — came out as one flat sheet of 255 with its shape gone. The straight part now ends at
+     BR_KNEE and everything above it is compressed into the last few levels — the brightest pixel of the picture still
+     reaches white, but the hundredth above the knee keeps its order and its shape instead of one flat sheet. Below the
+     black end nothing changes: a card picture wants its dark ground dark. Measured on H's seven stretched crops: the
+     share of the picture's own top hundredth that comes out pure white falls from 13–27 % to 0–1.2 % on four of them
+     and does not move on the other three. What the knee costs, and what it does not settle: it maps the 99th percentile
+     to 246 instead of 255, so everything under it is scaled by 0.965 and the midtone drops a few levels (measured
+     199→192, 220→212, 231→222); and the unsharp mask that runs after it puts some clipped pixels back (measured within
+     this build, the finished picture against the curve's own output: 1.16 % → 4.24 % on the dishwasher's 加速, 0 % →
+     0.52 % on the oven's 烤鱼) — the curve no longer clips, the card picture still does a little, though less than at
+     v395 in every one of the 19 crops the app changes. Nearly idempotent, not quite: a stretched picture measures fine
+     the next time whenever its luminance span was 33 or more, and both v395 and v398 always settle within two passes.
+     Below that they need the second pass — v395 from span 32 down, v398 from 33 down, one value wider (246·32/40 = 197
+     falls under BR_HI where 255·32/40 = 204 clears it) — and a picture whose black point is already about 225 needs two
+     at any span, on both builds. H's own crops run from span 63 to 144, and no path in the app applies the curve twice
+     to one picture: the deck pass measures a stored picture once, and the re-cut cuts a fresh one from the photo. */
+  const curve=(a,span,top)=>{ const lut=new Uint8Array(256), knee=a+span, room=Math.max(1,top-knee);
+    for(let v=0;v<256;v++){ const t=(v-a)/span;
+      lut[v]=Math.round(t<=0?0:t<1?BR_KNEE*t:BR_KNEE+(255-BR_KNEE)*Math.min(1,(v-knee)/room)); }
+    return lut; };
+  if(!balance){ const one=curve(lo,(hi-lo)*cap,at(0,1)); return [one,one,one]; }
+  return ends.map((e,i)=>curve(e.lo,Math.max(1,e.span)*cap,at(i+1,1)));
 }
 /* A card picture is sharpened at the cut (v378, H's "Go" on the offer after "Any other image improvements you
    suggest?"). A photo is stored at 1 600 px, so one rice-cooker label is 184 px wide in it and the card shows it at
@@ -3174,12 +3326,18 @@ function brightLut(px){ /* one curve per channel: red, green, blue */
    brightening cannot touch it. An unsharp mask puts the edge back: the picture blurred with two 1-2-1 passes
    (a radius of about one pixel), the difference added back at SH_AMOUNT. A difference under SH_MIN is the JPEG's
    own grain and is left alone, so a panel's flat surface does not become crunchy. It runs only on a picture under
-   SH_W wide — one the card enlarges; a big crop already has more pixels than the box and is left as it is. Measured
-   on the rice-cooker labels enlarged three times: 0.8 is the last amount without a light halo around the strokes
-   (1.4 haloes and lifts the grain), and two blur passes read far better than one, since the softness spans three or
-   four pixels. It is not idempotent — sharpening twice is visible —, so it happens only where a picture is cut fresh
-   from the photo, never over the deck: the cards already on the phone keep their look until they are cut again. */
-const SH_W=800, SH_AMOUNT=0.8, SH_MIN=3, SH_PASS=2;
+   SH_W wide — one the card enlarges; a big crop already has more pixels than the box and is left as it is. Two blur
+   passes read far better than one, since the softness spans three or four pixels. SH_AMOUNT is 0.4 since v398, and
+   this is what the two amounts do on the 17 of H's 26 crops the mask actually runs on (measured through the shipped
+   code, the finished card picture against the picture the mask was handed): the share of pixels pushed outside their
+   own 3×3 neighbourhood falls from 9.9–32.7 % to 5.7–27.4 %, the mean excursion from 2.7–9.2 to 1.8–6.6 grey levels,
+   and the halo energy per pixel by 27–66 %, half of it over the whole set. What that costs: about half the ink/ground
+   separation the mask buys (+8.5 → +4.3 on the rice cooker's 低卡饭, +22.8 → +12.6 on the washer's 袜子, +19.3 → +12.5
+   on the Meituan label). 0.8 was chosen at v378 on a clean synthetic label, which has no grain to lift; H's own crops
+   carry the phone's JPEG grain and the panel's texture, and at 0.8 the mask lifts that with the strokes. It is not
+   idempotent — sharpening twice is visible —, so it happens only where a picture is cut fresh from the photo, never
+   over the deck: the cards already on the phone keep their look until they are cut again. */
+const SH_W=800, SH_AMOUNT=0.4, SH_MIN=3, SH_PASS=2;
 function sharpen(d){ /* the ImageData sharpened in place; false when the picture wants none */
   const W=d.width, Hh=d.height, p=d.data;
   if(W>SH_W||W<16||Hh<16) return false;
@@ -3863,7 +4021,7 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
      localise on it; a second question gets a second drawing, and the strips' own y squashed the answer's three rows into two,
      so labelPlan found nothing to line up. Three calls and two minutes for a worse answer. */
   const ns=one.map(k=>[...lab[k].zh].filter(c=>CJK.test(c)).length||1);
-  return Math.max(...ns)>Math.min(...ns); /* labels of one length may honestly measure the same width */
+  return Math.max(...ns)>Math.min(...ns)||roundGrid(lab,W); /* labels of one length may honestly measure the same width — then the round pixels decide */
 }
 /* One card per label when the model's boxes are a drawing (v386, H's washing machine at v385: the model reads that panel
    perfectly and cannot say where anything is — measured on his own answers, the bright right-hand block within a point of
@@ -3878,7 +4036,7 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
    neighbour's. Measured on H's own photo at its own 1600 px with his own texts: 18 of the 19 labels on their own
    characters, none on another's, where v385 gave all 19 the whole panel. */
 const RL_STEP=0.6, RL_SUP=3, RL_DUP=0.6, RL_TILES=8, RL_GAP=0.55, RL_WMIN=0.8, RL_WMAX=12, RL_PX=64, RL_ROOM=[0.3,0.5], RL_CAP=420, RL_HIT=0.6, RL_WEAK=0.5, RL_GROW=[0.22,0.45], RL_WIDE=[0.6,1.8], RL_COL=0.6, RL_HGT=[0.6,1.6];
-const LB_STEP=10, LB_ROUND=0.8, RL_ROW=0.8, RL_FLOOR=0.15, RL_TIGHT=1.4, RL_CLEAR=0.5, RL_DUPX=0.6, RL_ICON=1.2, RL_ICONH=2.2, RL_ICONX=0.5, RL_ICONJOIN=0.6, RL_ICONMAX=4, DIAL_W=4, DIAL_OFF=0.12, DIAL_REACH=0.3; /* a drawn grid lands on round pixels (v390) */
+const LB_STEP=10, LB_ROUND=0.8, RL_ROW=0.8, RL_FLOOR=0.15, RL_TIGHT=1.4, RL_CLEAR=0.5, RL_DUPX=0.6, RL_ICON=1.2, RL_ICONH=2.2, RL_ICONX=0.5, RL_ICONJOIN=0.6, RL_ICONMAX=4, DIAL_W=4, DIAL_OFF=0.12, DIAL_REACH=0.3, DIAL_PITCH=2.5, RL_SIDEGAP=0.8, RL_SIDEW=1.6; /* a drawn grid lands on round pixels (v390) */
 function labelRunsOf(gy,labels,uni){ /* the picture's own rows of characters, and the runs of each row, in the grey copy's pixels */
   const {g,W,Hh}=gy, med=a=>{ const t=a.slice().sort((x,y)=>x-y); return t[t.length>>1]||0.05; };
   const bw=med(labels.map(l=>l.box[2]-l.box[0])), bh=med(labels.map(l=>l.box[3]-l.box[1]));
@@ -4124,15 +4282,44 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
      element is that corridor over every row of the panel, and every other label whose run stands inside it shares the
      same picture, so a display with three words gives three cards of one picture. growRun is not applied to them —
      the corridor already ends at the neighbours. */
+  /* a symbol BESIDE the label joins its card (v396's rule, with the guard measured on the characters — v398). The
+     v392 join reaches only upward, where a dishwasher's pictograms stand; a Panasonic oven prints a circled number to
+     the LEFT of every programme name. The width cap must be measured against the label's own CHARACTER height (the
+     row's band), not against the cut, which the v392 join has already made two characters tall — on H's washing
+     machine that inflated cap let the whole three-character 智洗烘 through as 羊毛's "symbol". */
+  { const rowIx=labels.map(()=>-1); rowsAll.forEach((rw,ri)=>rw.at.forEach(j=>{ rowIx[j]=ri; }));
+    labels.forEach((l,j)=>{ const c=cut[j]; if(pick[j]<0||!c) return;
+      const bd=rowBand[rowIx[j]], ch=bd?bd.y1-bd.y0:(runs[pick[j]].y1-runs[pick[j]].y0); /* the characters' own height */
+      const h=c.y1-c.y0; let L=0, R=gy.W;
+      labels.forEach((o,k)=>{ const d=k!==j&&cut[k]; if(!d) return;
+        if(Math.min(d.y1,c.y1)-Math.max(d.y0,c.y0)<0.5*Math.min(d.y1-d.y0,h)) return;
+        if(d.x1<=c.x0) L=Math.max(L,(d.x1+c.x0)/2); else if(d.x0>=c.x1) R=Math.min(R,(d.x0+c.x1)/2); });
+      let x0=c.x0, x1=c.x1;
+      for(let i=0;i<runs.length;i++){ if(ur.has(i)) continue; const o=runs[i];
+        const oh=o.y1-o.y0, ow=o.x1-o.x0;
+        if(Math.min(o.y1,c.y1)-Math.max(o.y0,c.y0)<0.5*Math.min(oh,h)) continue; /* the label's own band */
+        if(ow>RL_SIDEW*ch||oh>RL_ICONH*ch) continue; /* about square, in characters: a number in a circle, never the next label */
+        if(o.x1<=c.x0&&c.x0-o.x1<=RL_SIDEGAP*ch&&o.x0>=L) x0=Math.min(x0,o.x0);
+        else if(o.x0>=c.x1&&o.x0-c.x1<=RL_SIDEGAP*ch&&o.x1<=R) x1=Math.max(x1,o.x1); }
+      if(x0<c.x0||x1>c.x1) cut[j]={...c,x0:Math.max(L,x0),x1:Math.min(R,x1)};
+    }); }
   const island=new Set(), yAll=rowBand.filter(Boolean);
   if(yAll.length){
     const ty=Math.min(...yAll.map(b=>b.y0)), by=Math.max(...yAll.map(b=>b.y1)), base=cut.slice(), parts=[];
+    const mids=labels.map((l,j)=>base[j]?((base[j].x0+base[j].x1)/2):null).filter(v=>v!==null).sort((a2,b2)=>a2-b2);
+    const steps=[]; for(let i=1;i<mids.length;i++) steps.push(mids[i]-mids[i-1]);
+    const pitch=steps.length?median(steps):0; /* the step from one placed label to the next, over the whole panel */
     labels.forEach((l,j)=>{ const c=base[j]; if(pick[j]<0||!c) return;
       const w=c.x1-c.x0, mid=(c.x0+c.x1)/2; let L=0, R=gy.W;
       labels.forEach((o,k)=>{ const d=k!==j&&base[k]; if(!d) return;
         if(Math.min(d.y1,c.y1)-Math.max(d.y0,c.y0)<0.5*Math.min(d.y1-d.y0,c.y1-c.y0)) return;
         if(d.x1<=c.x0) L=Math.max(L,d.x1); else if(d.x0>=c.x1) R=Math.min(R,d.x0); });
       if(R-L<DIAL_W*w||Math.abs(mid-(L+R)/2)>DIAL_OFF*(R-L)) return;
+      if(R-L<DIAL_PITCH*pitch) return; /* and clearly wider than the row's own rhythm (v396, H's Panasonic oven: its five
+         labels stand a label's width apart, so every one of them had a corridor four times its own width and sat in the
+         middle of it — each card became a quarter of the panel holding its neighbour's number. A word on an element of
+         its own (the washer's dial) stands in a gap far larger than the step from one button to the next; a well-spaced
+         row does not. */
       let ry0=Math.min(ty,c.y0), ry1=Math.max(by,c.y1); /* the element's own ink, so its ring and the words along it are whole */
       for(const o of runs){ const m=(o.x0+o.x1)/2;
         if(m<L||m>R||o.y1<ty-DIAL_REACH*(by-ty)||o.y0>by+DIAL_REACH*(by-ty)) continue;
@@ -4465,7 +4652,7 @@ async function cropSign(id,opts){
             const whole=bs.some(q=>(q.x1-q.x0)*(q.y1-q.y0)>0.9*W*Hh); /* a box over the whole picture is not one element */
             const why=lab.length>SPLIT_MAX?`there are ${lab.length} of them`:!oneScale?"their boxes are not all on the same scale":whole?"one box covers the whole picture":"";
             if(why){ logRead(`the AI calls these ${lab.length} texts separate labels, but ${why} — one card`); }
-            else if(templateBoxes(lab,W)){ /* the boxes are a drawing, not a measurement (v380): the model cannot say where anything is, so the reader looks (v386) */
+            else if(templateBoxes(lab,pic.picW||W)){ /* the boxes are a drawing, not a measurement (v380): the model cannot say where anything is, so the reader looks (v386) */
               logRead(`the AI's ${lab.length} label boxes are all the same size — a drawing of the grid, not a measurement: the reader looks for the labels in the picture itself`);
               const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen;
               const sb=src===seen?b:await createImageBitmap(src); const gy=labelGrey(sb,pic.box);
@@ -4504,7 +4691,7 @@ async function cropSign(id,opts){
           SPLIT[id]=pic.labels.map(()=>one);
           logRead("the AI calls these "+pic.labels.length+" texts separate labels — one card each, all with the frame's own picture"); }
         if(labelRects&&W&&Hh&&seenBase){ /* one frame per label on the photo (v357), for finishPending to cut and save */
-          const one=PLACED[id]||seenBase; /* the frame's own picture, for a label the reader could not name (v386) */
+          const one=seenBase; /* the frame the AI read the text from, for a label the reader could not name (v398): PLACED[id] is the snapped frame, trimmed to the ink the search found, so it is guaranteed to omit exactly the labels the search missed */
           const fr=labelRects.map(rc=>rc?photoFrameOf(seenBase,W,Hh,rc,seenAngle):(labelWhole?one:null)), pc=v=>Math.round(v*100);
           const keep=[]; for(let k=0;k<fr.length;k++) if(fr[k]) keep.push(k);
           if(keep.length<fr.length){ /* a label too small to cut is left out and the others keep their cards (v360, H's washing machine, whose fine print stands 6 px tall in the picture) */
@@ -5601,7 +5788,7 @@ const reloadBusy=()=>picking()||!!CROP; /* a photo on its way from the camera, o
    is up within seconds and the user finds the same screen. */
 const IDLE_MS=4000, RELOAD_POLL=2000, RESUME_MAX=180000; let LAST_TOUCH=Date.now();
 ["pointerdown","keydown","input","touchstart","wheel"].forEach(ev=>document.addEventListener(ev,()=>{ LAST_TOUCH=Date.now(); },{capture:true,passive:true}));
-const reloadIdle=()=>!reloadBusy()&&!document.hidden&&Date.now()-LAST_TOUCH>=IDLE_MS&&!S.editing&&S.mode!=="add"&&!Object.keys(PENDING).length&&!Object.keys(READING).length&&!(TRANSLATE&&TRANSLATE.running)&&!(TAGALL&&TAGALL.running)&&!(RECHECK&&RECHECK.running)&&!BRIGHT&&!document.querySelector(".drawsheet,.ask")&&!(($("#fb-text")||{}).value||"").trim();
+const reloadIdle=()=>!reloadBusy()&&!document.hidden&&Date.now()-LAST_TOUCH>=IDLE_MS&&!S.editing&&S.mode!=="add"&&!Object.keys(PENDING).length&&!Object.keys(READING).length&&!(TRANSLATE&&TRANSLATE.running)&&!(TAGALL&&TAGALL.running)&&!(RECHECK&&RECHECK.running)&&!BRIGHT&&!RECUT&&!document.querySelector(".drawsheet,.ask")&&!(($("#fb-text")||{}).value||"").trim();
 async function reloadNow(){ RELOAD_DUE=false; clearInterval(RELOAD_TIMER); RELOAD_TIMER=null; try{ await setSetting("resumeView",{mode:S.mode,detail:S.detail,query:S.query,scroll:window.scrollY,at:Date.now()}); }catch(e){} location.reload(); }
 function reloadSoon(){ if(!reloadBusy()&&(Date.now()-LOAD_AT<RELOAD_GRACE||document.hidden)){ reloadNow(); return; } RELOAD_DUE=true; if(!RELOAD_TIMER) RELOAD_TIMER=setInterval(()=>{ if(RELOAD_DUE&&reloadIdle()) reloadNow(); },RELOAD_POLL); }
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&RELOAD_DUE&&!reloadBusy()) reloadNow(); });

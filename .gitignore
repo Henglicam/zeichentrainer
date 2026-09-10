@@ -1,2 +1,11 @@
 verify-*.log
 *.log
+
+# Harness scratch that has leaked in from agent runs (v398). Suites and serving
+# roots belong in the session scratchpad, never in the repo — and never as a
+# symlink into it: vendor/vendor -> vendor recurses forever for anything that
+# walks the tree.
+pairdone.txt
+runs2.txt
+vendor/vendor
+supabase/supabase
