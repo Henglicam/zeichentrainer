@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=394; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=395; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -210,6 +210,11 @@ const ERRLOG=[], READLOG=[], LAST_READ={passes:null}, AILOG=[]; /* AILOG: the la
    "AI exchanges (0)". AILOG lived in memory alone, and the idle reload of v327 or an update wipes it between the photo and
    the diagnostics. Now it is written like the reading log, so the model's own numbers reach the next session. Device only:
    the daily usage row carries reportErrors() and never this. */
+/* AI_LOG_RES (v395, H's washing machine at v394: 15 of the 25 labels placed and none wrong, and the answer that made
+   them could not be rebuilt — the log cut the reply at 1500 characters, which a panel's answer passes inside its third
+   label. The v384 rule again, one level down: the raw answer is the only thing the harness can be fitted to, so it must
+   arrive whole. 6000 characters hold about forty labels; three entries in the setting are some 18 KB. */
+const AI_LOG_RES=6000;
 function logAi(entry){ AILOG.push({t:Date.now(),...entry}); while(AILOG.length>3) AILOG.shift(); saveAiLog(); } /* entry.ms: how long the call took (v208, H: the check "takes way too long" — Diagnostics now shows it) */
 let _ailogT=null; const saveAiLog=()=>{ clearTimeout(_ailogT); _ailogT=setTimeout(()=>{ setSetting("ailog",AILOG.slice()).catch(()=>{}); },800); };
 /* the last reading's steps and passes survive a restart (v267 — H's first diagnostics after the v266 update said "Last reading (0 steps)":
@@ -681,7 +686,7 @@ async function aiReadPicture(blob,alts,status){
   if(!r.ok){ const t=await apiErrText(r); logAi({model,status:r.status,req,err:t}); throw new Error(relay?relayError(r,t):"API error "+r.status+(t?": "+t:"")); }
   const data=await r.json(); countTokens(pv,data); bump("pics"); bumpModel(model); /* the usage counters and the daily row count the picture readings (v178, H) and the model (v179) */
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
-  logAi({model,status:r.status,ms:Date.now()-t0,req,res:raw.slice(0,1500)});
+  logAi({model,status:r.status,ms:Date.now()-t0,req,res:raw.slice(0,AI_LOG_RES)});
   await loadScriptTables().catch(()=>{});
   const txt=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,""); let x; try{ x=JSON.parse(txt); if(Array.isArray(x)) x=x[0]; }catch(e){ x=mendJSON(txt); if(!x) throw new Error("could not read the model's answer");
     logRead(`the AI's answer stopped in the middle — kept what came (${Object.keys(x).join(", ")})`); }
@@ -890,7 +895,7 @@ async function aiAsk(cards,status){
   if(!r.ok){ const t=await apiErrText(r); throw new Error("API error "+r.status+(t?": "+t:"")); }
   const data=await r.json(); countTokens(pv,data); bumpModel(model);
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
-  logAi({model,status:r.status,ms:Date.now()-t0,req:user.slice(0,1500),res:raw.slice(0,1500)});
+  logAi({model,status:r.status,ms:Date.now()-t0,req:user.slice(0,1500),res:raw.slice(0,AI_LOG_RES)});
   await loadScriptTables().catch(()=>{}); /* v103: the model answered a traditional sign with traditional "zh" — the card's key is always simplified */
   const text=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,"");
   let arr; try{ arr=JSON.parse(text); }catch(e){ throw new Error("could not read the model's answer"); }
