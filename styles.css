@@ -37,7 +37,7 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 .ver{display:none} /* the PWA vN label stays in the page for the shell check, the mirror and About, but is not shown in the header (v225, H's "Go" on the design review: a developer's line, not a user's) */
 .stats{display:flex;gap:6px;font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums;padding-bottom:3px}
 .stats span{display:inline-flex;align-items:baseline;gap:5px;padding:5px 11px;border-radius:999px;background:var(--fill)}
-.stats b{font-weight:600;font-size:11px;color:var(--label2);text-transform:capitalize}
+.stats b{font-weight:600;font-size:11px;color:var(--label2)} /* no capitalize since v402 (H: "Ebenso Vietnamesisch, Thai, Indonesisch"): the rule title-cased every word of the label, which is right for no language that needs two of them — "Jatuh Tempo", "Đến Hạn", and French's "À Faire" since v255. The three labels are written in the case they should show. */
 .stats .v{color:var(--label);font-weight:600} .stats .j{color:var(--ok);font-weight:600}
 
 /* main */
@@ -316,7 +316,7 @@ body.noscroll{overflow:hidden}
 .filter .fgh{font-size:13px;color:var(--label2);padding:0 16px 6px}
 .filter .frow{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:11px 16px;background:none;border:none;text-align:left;font-size:16px;color:var(--label);cursor:pointer}
 .filter .frow+.frow{border-top:1px solid var(--sep)}
-.filter .fl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.filter .fl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.6} /* 1.6, not the page's 1.45, since v402: Thai stacks a vowel and a tone over the letter (ทั้, ชื่), and at 16 px the taller stack stood 1 px above a line box this row clips — the only slot in the app where any ink left its box. The row's min-height 48 absorbs the 2.4 px, so no filter row grows. */
 .filter .fn{color:var(--label2);font-size:15px;flex:none} .filter .fc{width:16px;flex:none}
 .filter .frow.on .fl{color:var(--tint);font-weight:600}
 .filter .frow.on .fc::after{content:"";display:block;width:6px;height:11px;margin:0 auto;border:2px solid var(--tint);border-top:0;border-left:0;transform:rotate(45deg)}

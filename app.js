@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=401; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=402; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -931,9 +931,14 @@ function saneM(m,zh){
   /* the scripts a meaning may be written in — Cyrillic since v401 (H: "Ergaenze russisch als sprache"): a Russian meaning
      that quotes the characters, 健康 (здоровье), has Han and none of the other three, so it was thrown away as "answered in
      Chinese". Two letters in a row, as with Latin, so a stray one inside Chinese text is no meaning. The list is the shape
-     of the bug: an eighth language repeats it unless its script is named here too. */
-  const han=/[\u4e00-\u9fff]/.test(m), latin=/[A-Za-z\u00C0-\u024F]{2}/.test(m), kana=/[\u3040-\u30ff]/.test(m), hangul=/[\uAC00-\uD7AF]/.test(m), cyr=/[\u0400-\u052f]{2}/.test(m);
-  const bad=echoed||(han&&!latin&&!kana&&!hangul&&!cyr&&LANG!=="ja");
+     of the bug: an eighth language repeats it unless its script is named here too — and Thai, the ninth, did (v402, H:
+     "Ebenso Vietnamesisch, Thai, Indonesisch"), 健康 (สุขภาพ) with it. Two Thai characters in a row for the same reason: the
+     block holds ฿ and ๆ, and one of those beside Chinese is decoration, not a meaning. Vietnamese needed no new test but a
+     wider Latin one: \u00C0-\u024F stops before Latin Extended Additional, where 34 of its tone-marked letters live, so
+     sữa, gạo, cửa, học, mở, một, đỏ — a quarter of everyday one-word meanings, measured — held no two letters this test
+     could see and were thrown away as Chinese. Indonesian is plain ASCII and was always safe. */
+  const han=/[\u4e00-\u9fff]/.test(m), latin=/[A-Za-z\u00C0-\u024F\u1E00-\u1EFF]{2}/.test(m), kana=/[\u3040-\u30ff]/.test(m), hangul=/[\uAC00-\uD7AF]/.test(m), cyr=/[\u0400-\u052f]{2}/.test(m), thai=/[\u0E00-\u0E7F]{2}/.test(m);
+  const bad=echoed||(han&&!latin&&!kana&&!hangul&&!cyr&&!thai&&LANG!=="ja");
   if(bad){ logErr("ai","meaning answered in Chinese: "+m); return ""; }
   return m;
 }
@@ -2527,10 +2532,25 @@ async function addManual(){
    name — drawn on a canvas at 1080 px, always in the light look, and handed to the share sheet as a PNG (Android shares images;
    nothing is written to the phone, hard constraint 6). Without a share sheet the notice says so. */
 const SHARE_W=1080, SHARE_PAD=72;
+/* the pieces a word too wide for the line is broken into (v402, H: "Ebenso Vietnamesisch, Thai, Indonesisch"): Thai writes
+   without spaces, so a whole clause arrives as one "word" — until v401 it was cut into single code points glued back with a
+   space, which tore every tone mark off its letter (ผ ู ้ จ ั ด) on the shared card and the shared progress report. The
+   browser's own word breaker knows where Thai words end; its grapheme clusters are the fallback, and a piece still too wide
+   for the line is cut into clusters as well. A Japanese meaning comes out as before, since the pieces are joined with
+   nothing either way. */
+function textPieces(w,ctx,maxW){
+  let ps=null;
+  try{ const seg=[...new Intl.Segmenter(undefined,{granularity:"word"}).segment(w)].map(s=>s.segment); if(seg.length>1) ps=seg; }catch(e){}
+  if(!ps){ try{ ps=[...new Intl.Segmenter(undefined,{granularity:"grapheme"}).segment(w)].map(s=>s.segment); }catch(e){ ps=[...w]; } }
+  if(!ctx) return ps;
+  const out=[]; for(const p of ps){ if(ctx.measureText(p).width<=maxW||p.length===1){ out.push(p); continue; }
+    try{ for(const g of new Intl.Segmenter(undefined,{granularity:"grapheme"}).segment(p)) out.push(g.segment); }catch(e){ out.push(...p); } }
+  return out;
+}
 function wrapText(ctx,text,maxW){
   const out=[]; for(const para of String(text).split("\n")){ let line="";
-    const push=w=>{ if(!line){ line=w; return; } const tryL=line+(/^[\u3000-\u9fff]/.test(w)&&/[\u3000-\u9fff]$/.test(line)?"":" ")+w; if(ctx.measureText(tryL).width<=maxW) line=tryL; else { out.push(line); line=w; } };
-    for(const w of para.split(" ")){ if(ctx.measureText(w).width<=maxW) push(w); else for(const ch of [...w]) push(ch); } /* a word wider than the line (a Japanese meaning) breaks by character */
+    const push=(w,glue)=>{ if(!line){ line=w; return; } const tryL=line+(glue!=null?glue:(/^[\u3000-\u9fff]/.test(w)&&/[\u3000-\u9fff]$/.test(line)?"":" "))+w; if(ctx.measureText(tryL).width<=maxW) line=tryL; else { out.push(line); line=w; } };
+    for(const w of para.split(" ")){ if(ctx.measureText(w).width<=maxW) push(w); else for(const p of textPieces(w,ctx,maxW)) push(p,""); } /* a word wider than the line (a Japanese meaning, a whole Thai clause) breaks inside itself */
     out.push(line); }
   return out;
 }
