@@ -48,13 +48,35 @@ offline and without any CDN):
   Firefox Translations zh→en "base-memory" model — Mozilla Public License 2.0
   https://github.com/mozilla/firefox-translations-models
 
-Apache License 2.0 full text: https://www.apache.org/licenses/LICENSE-2.0
-CC BY-SA 4.0 full text: https://creativecommons.org/licenses/by-sa/4.0/
-MPL 2.0 full text: https://www.mozilla.org/MPL/2.0/
+- strokes.txt.gz
+  Stroke medians of 9,534 characters, extracted from graphics.txt of Make Me a Hanzi
+  (https://github.com/skishore/makemeahanzi, Shaunak Kishore), which derives them from the
+  Arphic PL KaitiM GB and Arphic PL UKai fonts (Arphic Technology).
+  ARPHIC PUBLIC LICENSE (1999) — the full text is beside this file as ARPHICPL.TXT,
+  which that license requires to be retained unaltered in every copy.
+  Modification, as its section 2 a) asks: on 3 September 2026, for this app, graphics.txt was
+  reduced to the character and its per-stroke median points, with y flipped to screen
+  coordinates and the values rounded to whole pixels; the outlines, stroke matches and radical
+  data were dropped. Section 2 b) asks that such modifications stay freely available under the
+  same license to everyone — strokes.txt.gz is published at
+  https://github.com/henglicam/zeichentrainer and must remain so.
+  (Make Me a Hanzi's dictionary.txt is LGPL-licensed and is NOT used here.)
 
-strokes.txt.gz — stroke medians of 9,534 characters, extracted from graphics.txt of Make Me a Hanzi
-(https://github.com/skishore/makemeahanzi, Shaunak Kishore), which derives them from the Arphic PL KaitiM GB
-and Arphic PL UKai fonts (Arphic Technology). Licensed under the Arphic Public License (1999): the fonts and
-derived data may be used, copied, modified and distributed freely, provided this notice and the license terms
-are kept; the full license text is in the makemeahanzi repository and with the Arphic PL font packages.
-Only the character, the per-stroke median points (y flipped to screen coordinates, rounded) are kept here.
+Conditions that travel with these files, in short:
+  Apache-2.0 — keep the notice and the license; no NOTICE file exists upstream for any of the
+    four Apache-licensed items above, so there is nothing further to reproduce.
+  MIT — keep the copyright notice and the license.
+  MPL-2.0 — the .wasm and .js are distributed unmodified; the Source Code Form is at the
+    addresses given above, which is what section 3.2 asks for.
+  CC BY-SA 4.0 — attribution as given above, and the derived dictionary (cedict.tsv.gz) is
+    itself under CC BY-SA 4.0 and must stay available under it.
+  ARPHIC (1999) — as set out above; the license states that a fee may be charged.
+All of these permit commercial use. None of them places its terms on the app's own code:
+each of them treats separate works aggregated on the same medium as separate works.
+
+Full license texts:
+  Apache License 2.0 — https://www.apache.org/licenses/LICENSE-2.0
+  MIT — https://opensource.org/license/mit
+  MPL 2.0 — https://www.mozilla.org/MPL/2.0/
+  CC BY-SA 4.0 — https://creativecommons.org/licenses/by-sa/4.0/
+  ARPHIC PUBLIC LICENSE (1999) — ARPHICPL.TXT, beside this file
