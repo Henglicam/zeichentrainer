@@ -6,7 +6,7 @@ const PROVIDERS: Record<string, { url: string; key: string }> = {
   deepseek: { url: "https://api.deepseek.com/chat/completions", key: Deno.env.get("DEEPSEEK_KEY") || "" },
   qwen: { url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", key: Deno.env.get("QWEN_KEY") || "" },
 };
-const CAP_PER_PHONE = 200, CAP_ALL = 2000; // calls per day
+const CAP_PER_PHONE = 200, CAP_ALL = 10000; // calls per day (v409: raised from 2000 for the class rollout — the per-phone cap still bounds the expensive picture calls)
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-install", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...CORS, "content-type": "application/json" } });
 
