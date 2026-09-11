@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=416; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=417; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2114,7 +2114,7 @@ function renderStudy(main){
     back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="grades">${grds}</div>
       <div class="backacts"><button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}</button><button class="del" id="edit-card">${t("✎ Edit")}</button></div></div>`;
   } else {
-    back=showHints()?`<div class="hint">${t("Tap the character to reveal")}${fullPhoto(d)?t(", or the photo for the whole picture"):""}.${S.queue.length>1?" "+t("Swipe left or right to pick another card."):""}</div>`:"";
+    back=swipeHint(d);
   }
   /* front: no tag row (theme / new / custom is noise while learning); tapping the photo or the character reveals */
   main.innerHTML=wxNoteHTML()+learnChipsHTML()+`<div class="card">
@@ -2137,16 +2137,30 @@ function renderStudy(main){
    erlauben, sodass man sich quasi die Karten aussuchen kann, die man testen moechte? I think that only makes sense In the closed card view,
    not after opening the card"): a horizontal stroke moves through the queue and grades nothing — the card that is skipped keeps its place and
    comes round again, so the session is unchanged. Only while the back is closed; once it is open the four grades own the screen. */
-const SW_SLOP=12, SW_MIN=60, SW_OUT=1.4;
-let SWIPED=0;
+const SW_SLOP=12, SW_MIN=60, SW_GAP=16, SW_MS=220;
+/* the closed card is pushed sideways and the next one slides in from the other side and snaps into place (v414, the carousel of v417 — H: "Ich moechte die Karten quasi nach links schieben und die naechste Karte kommt von rechts rein und rastet geschmeidig ein … Die muessen nicht so zur Seite wegkippen wie bei Tinder"). Nothing is graded: only S.idx moves, so the skipped card keeps its place and comes round again. */
+function swipeHint(d){ return showHints()?`<div class="hint">${t("Tap the character to reveal")}${fullPhoto(d)?t(", or the photo for the whole picture"):""}.${S.queue.length>1?" "+t("Swipe left or right to pick another card."):""}</div>`:""; }
 function wireSwipe(card){
-  const came=SWIPED; SWIPED=0;
   if(!card||S.revealed||S.queue.length<2) return;
-  if(came) card.classList.add(came>0?"inR":"inL"); /* the next card comes in from the side the stroke went to */
   card.classList.add("swipe");
-  let x0=0,y0=0,dx=0,on=false,ate=false,pid=null;
+  const par=card.parentElement;
+  let x0=0,y0=0,dx=0,on=false,ate=false,pid=null,peer=null,step=0,shift=0;
   const at=i=>i>=0&&i<S.queue.length;
-  const put=v=>{ card.style.transform=v?`translateX(${v}px)`:""; card.style.opacity=v?String(Math.max(.4,1-Math.abs(v)/(card.offsetWidth||320))):""; };
+  const dropPeer=()=>{ if(peer){ peer.remove(); peer=null; } };
+  /* the neighbour is an absolutely placed copy of the card beside it, so the page's layout never moves while the finger does */
+  const makePeer=s=>{
+    dropPeer(); step=s;
+    if(!at(S.idx+s)) return;
+    const d=cardOf(S.queue[S.idx+s]); if(!d) return;
+    shift=card.offsetWidth+SW_GAP;
+    peer=document.createElement("div");
+    peer.className="card peer";
+    peer.innerHTML=`<div class="front">${frontHTML(d)}</div>${swipeHint(d)}`;
+    peer.style.left=card.offsetLeft+"px"; peer.style.top=card.offsetTop+"px"; peer.style.width=card.offsetWidth+"px";
+    peer.style.transform=`translateX(${s*shift}px)`;
+    par.appendChild(peer);
+  };
+  const put=v=>{ card.style.transform=v?`translateX(${v}px)`:""; if(peer) peer.style.transform=`translateX(${step*shift+v}px)`; };
   card.addEventListener("click",e=>{ if(ate){ ate=false; e.stopPropagation(); e.preventDefault(); } },true); /* the stroke's own closing click must not reveal the card */
   card.addEventListener("pointerdown",e=>{
     if(e.target.closest("button,a,input,textarea,.chip")) return;
@@ -2155,22 +2169,28 @@ function wireSwipe(card){
   card.addEventListener("pointermove",e=>{
     if(e.pointerId!==pid) return;
     const ax=e.clientX-x0, ay=e.clientY-y0;
+    /* the browser is the arbiter of a scroll: .card.swipe is touch-action:pan-y, so a real pan cancels the pointer. Until then a stroke that began with a little downward drift may still turn into a swipe — the v414 rule latched on the first vertical move and killed the gesture for the whole touch. */
     if(!on){
-      if(Math.abs(ay)>Math.abs(ax)&&Math.abs(ay)>SW_SLOP){ pid=null; return; } /* the page is being scrolled, not the card swiped */
-      if(Math.abs(ax)<SW_SLOP) return;
-      on=true; ate=true; card.setPointerCapture(e.pointerId); card.classList.add("swiping");
+      if(Math.abs(ax)<SW_SLOP||Math.abs(ax)<=Math.abs(ay)) return;
+      on=true; ate=true; card.setPointerCapture(e.pointerId); makePeer(ax<0?1:-1);
     }
-    dx=at(S.idx+(ax<0?1:-1))?ax:ax/4; /* at either end of the queue the card gives a little and springs back */
+    const want=ax<0?1:-1;
+    if(want!==step&&Math.abs(ax)>SW_SLOP) makePeer(want); /* the finger turned round mid-stroke */
+    dx=peer?ax:ax/4; /* at either end of the queue the card gives a little and springs back */
     put(dx);
   });
   const end=e=>{
     if(e.pointerId!==pid) return; pid=null;
     if(!on) return;
-    on=false; card.classList.remove("swiping");
-    const step=dx<0?1:-1;
-    if(Math.abs(dx)<SW_MIN||!at(S.idx+step)){ put(0); return; }
-    put(step*(card.offsetWidth||320)*SW_OUT); card.style.opacity="0";
-    setTimeout(()=>{ S.idx+=step; S.revealed=false; S.fullPic=false; S.peek=null; SWIPED=step; render(); window.scrollTo({top:0}); },150);
+    on=false;
+    const go=peer&&Math.abs(dx)>=SW_MIN;
+    card.classList.add("sliding"); if(peer) peer.classList.add("sliding");
+    put(go?-step*shift:0);
+    setTimeout(()=>{
+      card.classList.remove("sliding");
+      if(!go){ dropPeer(); card.style.transform=""; return; }
+      S.idx+=step; S.revealed=false; S.fullPic=false; S.peek=null; render(); window.scrollTo({top:0});
+    },SW_MS);
   };
   card.addEventListener("pointerup",end); card.addEventListener("pointercancel",end);
 }
