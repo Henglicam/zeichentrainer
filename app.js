@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=427; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=428; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -92,10 +92,18 @@ function orderCards(list,order,byDue){
   if(order==="newest") return list.slice().sort((a,b)=>(b.at||0)-(a.at||0));
   return byDue?list.slice().sort((a,b)=>S.progress[a.id].due-S.progress[b.id].due):list.slice(); /* the deck is oldest first already */
 }
+/* the cards the Learn filter lets through — all of them, the tags picked in the filter sheet (several allowed since v366,
+   a card in any of them counts, v133/v156), or the starred ones (v425); a card still reading has no text yet (v237).
+   One filter rule, read by the session and by the pull-forward alike — two copies would drift (the v401 lesson). */
+function learnDeck(){
+  const lt=learnTags(); let d=(lt.length?deck().filter(x=>lt.some(g=>hasTag(x,g))):deck()).filter(x=>x.c);
+  if(S.settings.learnStar&&d.some(x=>x.star)) d=d.filter(x=>x.star); /* a filter that would empty the session stands down */
+  return d;
+}
+/* the next cards of the same filter by due date, the ones a pull-forward would reach, skipping what the session already holds (v428) */
+const aheadCards=n=>{ const p=S.progress; return learnDeck().filter(x=>p[x.id]&&!S.queue.includes(x.id)).sort((a,b)=>p[a.id].due-p[b.id].due).slice(0,n).map(x=>x.id); };
 function buildQueue(includeAhead){
-  /* Learn: all cards, or the tags picked in the filter sheet — several allowed since v366, a card in any of them counts (v133, v156); a card still reading has no text yet (v237) */
-  const lt=learnTags(), p=S.progress, t=today(); let d=(lt.length?deck().filter(x=>lt.some(g=>hasTag(x,g))):deck()).filter(x=>x.c);
-  if(S.settings.learnStar&&d.some(x=>x.star)) d=d.filter(x=>x.star); /* the starred cards alone (v425); a filter that would empty the session stands down */
+  const p=S.progress, t=today(); const d=learnDeck();
   const order=learnOrder();
   const due = orderCards(d.filter(x=>p[x.id] && p[x.id].due<=t),order,true).map(x=>x.id);
   const fresh = orderCards(d.filter(x=>!p[x.id]),order,false).slice(0,NEW_PER_SESSION).map(x=>x.id);
@@ -2284,7 +2292,15 @@ async function grade(g){
   if(days[days.length-1]!==day){ days.push(day); if(days.length>400) days.shift(); await setSetting("days",days); }
   dailyBump(day);
   if(S.single){ nextSingle(c); return; }
-  if(g==="again") S.queue.push(c); else S.done++;
+  /* never the same card twice in a row with nothing in between (v428, H: "jetzt haengt der star filter bei dieser einen karte"):
+     "again" puts the card back at the end of the queue, and when the session holds nothing after it that end is now — the screen
+     came back byte-identical, neither counter moved, and the app looked frozen. Since v421 Hard *is* again, so a session of one
+     card — which a narrow filter makes ordinary — looped for ever. The next cards of the same filter are pulled forward first,
+     so the card returns behind them; with nothing to pull it is genuinely the only card there is and repeats as before. */
+  if(g==="again"){
+    if(S.idx+1>=S.queue.length){ const more=aheadCards(NEW_PER_SESSION); if(more.length){ S.queue.push(...more); S.ahead=true; } }
+    S.queue.push(c);
+  } else S.done++;
   S.idx++; S.revealed=false; S.fullPic=false; S.peek=null; render(); window.scrollTo({top:0});
 }
 /* "Test this card" continues with the next card of the list (newest first); ← Cards stops */
