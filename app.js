@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=430; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=431; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2196,8 +2196,13 @@ function renderStudy(main){
        today instead. The schedule itself is untouched: every card keeps the interval and ease it has. */
     const grds=[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>
       `<button class="grade" data-g="${g}"><span class="lbl">${t(l)}</span></button>`).join("");
+    /* Star, Flag, Edit — one word each (v431, H on the row wrapping to two lines: "Koennen wir hier nicht einfach schreiben
+       Star, Flag, Edit? Eine Zeile?"): the flag carried the detail's own phrases, "⚑ Flag for review" and "⚑ Clear flag",
+       which are right on a wide pill and too long between two one-word buttons. The label still carries the state, as the
+       star's does (v427) — the row is all tint, so a colour could not say it. The card detail keeps its phrases: its buttons
+       sit two to a row beside "Test this card" and "Delete card", where one word would read as the odd one out. */
     back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="grades">${grds}</div>
-      <div class="backacts"><button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button><button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}</button><button class="del" id="edit-card">${t("✎ Edit")}</button></div>${linkedHTML(d)}</div>`;
+      <div class="backacts"><button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button><button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button><button class="del" id="edit-card">${t("✎ Edit")}</button></div>${linkedHTML(d)}</div>`;
   } else {
     back=swipeHint(d);
   }
