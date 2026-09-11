@@ -32,8 +32,10 @@ function wordOf(n,w,pl){ const d=L10N[LANG], pk=pl||w+"s", f=pForm(n);
 /* a count with its word: nOf(3,"card") → "3 cards" / "3 Karten" / "カード3枚" / "3 карточки"; pl = an irregular plural key */
 function nOf(n,w,pl){ n=n||0; const tr=wordOf(n,w,pl); return tr.includes("{0}")?tr.replace("{0}",n):`${n} ${tr}`; }
 const L10N={
-en:{"capsule:Done":"Done","pad:Undo":"Undo","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
+en:{"card:⚑ Flagged":"⚑ Flagged","capsule:Done":"Done","pad:Undo":"Undo","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
 de:{
+"⚑ Flag":"⚑ Markieren",
+"card:⚑ Flagged":"⚑ Markiert",
   "Update notes":"Update-Hinweise",
 "Tell me what is new after an update.":"Sag mir nach einem Update, was neu ist.",
 "Updated.":"Aktualisiert.",
@@ -288,6 +290,8 @@ de:{
   "Day streak":"Tage in Folge","Cards learned":"Karten gelernt","Due today":"Heute fällig","Reviews this week":"Wiederholungen diese Woche","Last 30 days":"Die letzten 30 Tage","Still learning":"Noch am Lernen","Known":"Sicher","Coming up: {0} due tomorrow, {1} this week.":"Demnächst: {0} morgen fällig, {1} diese Woche."
 },
 fr:{
+"⚑ Flag":"⚑ Signaler",
+"card:⚑ Flagged":"⚑ Signalée",
   "Update notes":"Nouveautés",
 "Tell me what is new after an update.":"Dis-moi ce qui est nouveau après une mise à jour.",
 "Updated.":"Mis à jour.",
@@ -542,6 +546,8 @@ fr:{
   "Day streak":"Jours d'affilée","Cards learned":"Cartes apprises","Due today":"À revoir aujourd'hui","Reviews this week":"Révisions cette semaine","Last 30 days":"Les 30 derniers jours","Still learning":"En cours","Known":"Acquises","Coming up: {0} due tomorrow, {1} this week.":"À venir : {0} demain, {1} cette semaine."
 },
 es:{
+"⚑ Flag":"⚑ Marcar",
+"card:⚑ Flagged":"⚑ Marcada",
   "Update notes":"Novedades",
 "Tell me what is new after an update.":"Cuéntame qué hay de nuevo tras una actualización.",
 "Updated.":"Actualizado.",
@@ -796,6 +802,8 @@ es:{
   "Day streak":"Días seguidos","Cards learned":"Tarjetas aprendidas","Due today":"Para hoy","Reviews this week":"Repasos esta semana","Last 30 days":"Últimos 30 días","Still learning":"En curso","Known":"Dominadas","Coming up: {0} due tomorrow, {1} this week.":"Próximamente: {0} mañana, {1} esta semana."
 },
 ja:{
+"⚑ Flag":"⚑ 印をつける",
+"card:⚑ Flagged":"⚑ 印あり",
   "Update notes":"アップデートのお知らせ",
 "Tell me what is new after an update.":"アップデート後に新しくなったことを知らせる。",
 "Updated.":"アップデートしました。",
@@ -1050,6 +1058,8 @@ ja:{
   "Day streak":"連続日数","Cards learned":"学んだカード","Due today":"今日の復習","Reviews this week":"今週の復習回数","Last 30 days":"過去30日","Still learning":"学習中","Known":"定着","Coming up: {0} due tomorrow, {1} this week.":"この先：明日{0}枚、今週{1}枚。"
 },
 ko:{
+"⚑ Flag":"⚑ 표시",
+"card:⚑ Flagged":"⚑ 표시됨",
   "Update notes":"업데이트 소식",
 "Tell me what is new after an update.":"업데이트한 뒤에 뭐가 새로워졌는지 알려줘요.",
 "Updated.":"업데이트했어요.",
@@ -1307,6 +1317,8 @@ ko:{
    word, so every plural key carries a "#many" twin (5 карточек, 11 карточек, 111 карточек) that only PLURAL.ru ever looks
    up; "percent#few" is the one unit that also needs its own middle form, because English calls both of its forms "percent". */
 ru:{
+"⚑ Flag":"⚑ Метка",
+"card:⚑ Flagged":"⚑ С меткой",
   "Update notes":"Что нового",
 "Tell me what is new after an update.":"Показывать, что нового после обновления.",
 "Updated.":"Обновлено.",
@@ -1561,6 +1573,8 @@ ru:{
   "Day streak":"Дней подряд","Cards learned":"Выучено карточек","Due today":"Сегодня к повтору","Reviews this week":"Повторов за неделю","Last 30 days":"Последние 30 дней","Still learning":"В процессе","Known":"Освоено","Coming up: {0} due tomorrow, {1} this week.":"Впереди: завтра {0}, на этой неделе {1}."
 },
 vi:{
+"⚑ Flag":"⚑ Đánh dấu",
+"card:⚑ Flagged":"⚑ Đã đánh dấu",
   "Update notes":"Thông báo cập nhật",
 "Tell me what is new after an update.":"Cho mình biết có gì mới sau khi cập nhật.",
 "Updated.":"Đã cập nhật.",
@@ -1815,6 +1829,8 @@ vi:{
   "Day streak":"Chuỗi ngày","Cards learned":"Thẻ đã học","Due today":"Đến hạn hôm nay","Reviews this week":"Lượt ôn tuần này","Last 30 days":"30 ngày qua","Still learning":"Đang học","Known":"Đã thuộc","Coming up: {0} due tomorrow, {1} this week.":"Sắp tới: {0} đến hạn ngày mai, {1} trong tuần."
 },
 th:{
+"⚑ Flag":"⚑ ติดธง",
+"card:⚑ Flagged":"⚑ ติดธงแล้ว",
   "Update notes":"ข่าวอัปเดต",
 "Tell me what is new after an update.":"บอกด้วยว่ามีอะไรใหม่หลังอัปเดต",
 "Updated.":"อัปเดตแล้ว",
@@ -2069,6 +2085,8 @@ th:{
   "Day streak":"วันต่อเนื่อง","Cards learned":"การ์ดที่เรียนแล้ว","Due today":"ถึงกำหนดวันนี้","Reviews this week":"ทบทวนสัปดาห์นี้","Last 30 days":"30 วันล่าสุด","Still learning":"กำลังเรียน","Known":"จำได้แล้ว","Coming up: {0} due tomorrow, {1} this week.":"ที่กำลังจะมา: พรุ่งนี้ {0} ใบ · สัปดาห์นี้ {1} ใบ"
 },
 id:{
+"⚑ Flag":"⚑ Tandai",
+"card:⚑ Flagged":"⚑ Ditandai",
   "Update notes":"Info pembaruan",
 "Tell me what is new after an update.":"Kasih tahu apa yang baru setelah pembaruan.",
 "Updated.":"Diperbarui.",
