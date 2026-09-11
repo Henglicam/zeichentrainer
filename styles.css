@@ -95,6 +95,14 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
   cursor:pointer;font-family:var(--sans);font-size:17px;font-weight:600;min-height:50px;padding:12px 18px}
 .btn:active{opacity:.7}
 .front.tap{cursor:pointer} .front.tap:active .reticle{opacity:.75}
+/* the closed card is swiped sideways to pick another card of the session (v414): pan-y so a horizontal stroke reaches the handler while the page
+   still scrolls; .swiping drops the transition so the card follows the thumb, and the next card comes in from the side the stroke went to. */
+.card.swipe{touch-action:pan-y;transition:transform .15s ease-out,opacity .15s ease-out}
+.card.swiping{transition:none}
+@keyframes cardinR{from{opacity:0;transform:translateX(56px)}to{opacity:1;transform:translateX(0)}}
+@keyframes cardinL{from{opacity:0;transform:translateX(-56px)}to{opacity:1;transform:translateX(0)}}
+.card.inR{animation:cardinR .18s ease-out} .card.inL{animation:cardinL .18s ease-out}
+@media (prefers-reduced-motion:reduce){.card.swipe{transition:none}.card.inR,.card.inL{animation:none}}
 .hint{margin-top:18px;font-size:13px;color:var(--label3)}
 .btn.block{width:100%}
 .snaprow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
