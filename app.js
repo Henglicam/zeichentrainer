@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=418; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=419; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -317,7 +317,7 @@ function diagText(){
     `cores ${navigator.hardwareConcurrency||"?"} · memory ${navigator.deviceMemory||"?"} GB · readers ${(_pool?_pool.length:0)}/${poolSize()}${STORAGE.quota?` · storage ${((STORAGE.usage||0)/1048576).toFixed(1)} of ${Math.round(STORAGE.quota/1048576)} MB${STORAGE.persisted?", persistent":""}`:" · storage not measured"}`,
     /* the settings the same photo would be read differently under: the app's language goes into picSystem() through
        meaningLangName(), so a German phone gets another answer for the same picture */
-    `settings · lang ${LANG} · picture to the AI ${S.settings.aiPicture===false?"off":"on"} · relay ${S.settings.aiRelay===false?"off":"on"} · auto check ${S.settings.aiAuto===false?"off":"on"} · offline model ${S.settings.nmt?"on":"off"} · mirror ${S.settings.mirror===undefined?"default":(S.settings.mirror||"off")} · brightening ${S.settings.brightPass?"done":"not yet"} · re-cut ${S.settings.recutPass?"done":"not yet"}`,
+    `settings · lang ${LANG} · picture to the AI ${S.settings.aiPicture===false?"off":"on"} · relay ${S.settings.aiRelay===false?"off":"on"} · auto check ${S.settings.aiAuto===false?"off":"on"} · offline model ${S.settings.nmt?"on":"off"} · mirror ${S.settings.mirror===undefined?"default":(S.settings.mirror||"off")} · brightening ${S.settings.brightPass?"done":"not yet"} · re-cut ${recutLine()}`,
     navigator.userAgent, `voices (${voiceList().length}): ${voiceList().join("; ")||"none reported"}`, ""];
   out.push(`Last reading (${READLOG.length} steps):`);
   READLOG.forEach(x=>out.push(`  ${ago(x.t)}  ${x.text}`));
@@ -1506,7 +1506,7 @@ const RECUT_V=2; /* v418: the pictures the v398 curve made carry its white balan
 async function recutPass(){
   if(RECUT||S.settings.recutPass>=RECUT_V) return;
   const ids=deck().filter(d=>d.img&&d.frame&&!d.reading&&fullPhoto(d)).map(d=>d.id); /* a card still waiting for its reading belongs to finishPending, which holds it across an await and writes it whole (v398) */
-  RECUT={done:0,written:0,skipped:0,dropped:0}; /* done: cut and queued · written: actually written · dropped: queued but the card had moved on · skipped: the card was left alone */
+  RECUT={done:0,written:0,skipped:0,dropped:0,eligible:ids.length}; /* done: cut and queued · written: actually written · dropped: queued but the card had moved on · skipped: the card was left alone */
   let rows=[];
   const write=async()=>{ if(!rows.length) return;
     const queued=rows; rows=[];
@@ -1532,8 +1532,26 @@ async function recutPass(){
     await write();
   }catch(e){ logErr("recut",e&&e.message||String(e)); RECUT=null; return; } /* no flag: the next start goes through again */
   S.settings.recutPass=RECUT_V; await setSetting("recutPass",RECUT_V);
+  /* what the pass reached, for Diagnostics (v418, H: "Zeig mir den Zähler in den Diagnostics"): a card without a
+     stored frame, without its photo, or whose fresh cut does not match what is stored keeps its old picture for good,
+     and until now nothing said how many those were — so the counts are written down beside the version. */
+  const stat={v:RECUT_V,at:dayKey(),deck:deck().length,eligible:RECUT.eligible,written:RECUT.written,skipped:RECUT.skipped,dropped:RECUT.dropped};
+  S.settings.recutStat=stat; try{ await setSetting("recutStat",stat); }catch(e){}
   const n=RECUT.written; RECUT=null;
   if(n&&(S.mode==="cards"||S.mode==="study")) render();
+}
+/* the re-cut pass in one line for Diagnostics (v418): while it runs, how far it has come; afterwards, how many cards
+   it reached and how many keep their old picture for good — a card with no stored frame (anything from before v244),
+   one whose photo is gone, or one whose fresh cut does not match what is stored is never re-cut and never will be. */
+function recutLine(){
+  if(RECUT) return `v${RECUT_V} running, ${RECUT.done} of ${RECUT.eligible} cards cut so far`;
+  const t=S.settings.recutStat;
+  if(!t||t.v!==S.settings.recutPass) return S.settings.recutPass?`v${S.settings.recutPass} done, no count kept`:"not yet";
+  const untried=Math.max(0,t.deck-t.eligible);
+  return `v${t.v} done ${t.at} · ${t.written} of ${t.deck} cards cut again`
+    +(t.skipped?` · ${t.skipped} could not be cut`:"")
+    +(t.dropped?` · ${t.dropped} changed while the pass ran`:"")
+    +(untried?` · ${untried} without a frame or photo, never tried`:"");
 }
 /* a small grey copy of a picture, for the framing check */
 async function greyThumb(blob,n){
