@@ -34,7 +34,9 @@ function nOf(n,w,pl){ n=n||0; const tr=wordOf(n,w,pl); return tr.includes("{0}")
 const L10N={
 en:{"capsule:Done":"Done","pad:Undo":"Undo","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
 de:{
-  "Updated.":"Aktualisiert.",
+  "Update notes":"Update-Hinweise",
+"Tell me what is new after an update.":"Sag mir nach einem Update, was neu ist.",
+"Updated.":"Aktualisiert.",
   "{0} to go, while the app is open.":"Noch {0}, solange die App offen ist.",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"Aus Galerie nimmt mehrere Fotos auf einmal – alle werden nacheinander zu Karten, solange die App offen ist.",
   "Check all cards again":"Alle Karten neu prüfen",
@@ -284,7 +286,9 @@ de:{
   "Day streak":"Tage in Folge","Cards learned":"Karten gelernt","Due today":"Heute fällig","Reviews this week":"Wiederholungen diese Woche","Last 30 days":"Die letzten 30 Tage","Still learning":"Noch am Lernen","Known":"Sicher","Coming up: {0} due tomorrow, {1} this week.":"Demnächst: {0} morgen fällig, {1} diese Woche."
 },
 fr:{
-  "Updated.":"Mis à jour.",
+  "Update notes":"Nouveautés",
+"Tell me what is new after an update.":"Dis-moi ce qui est nouveau après une mise à jour.",
+"Updated.":"Mis à jour.",
   "{0} to go, while the app is open.":"Encore {0}, tant que l’appli est ouverte.",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"Depuis l'album prend plusieurs photos d'un coup – elles deviennent toutes des cartes, l'une après l'autre, tant que l'appli est ouverte.",
   "Check all cards again":"Revérifier toutes les cartes",
@@ -534,7 +538,9 @@ fr:{
   "Day streak":"Jours d'affilée","Cards learned":"Cartes apprises","Due today":"À revoir aujourd'hui","Reviews this week":"Révisions cette semaine","Last 30 days":"Les 30 derniers jours","Still learning":"En cours","Known":"Acquises","Coming up: {0} due tomorrow, {1} this week.":"À venir : {0} demain, {1} cette semaine."
 },
 es:{
-  "Updated.":"Actualizado.",
+  "Update notes":"Novedades",
+"Tell me what is new after an update.":"Cuéntame qué hay de nuevo tras una actualización.",
+"Updated.":"Actualizado.",
   "{0} to go, while the app is open.":"{0} más, mientras la app está abierta.",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"Desde álbum coge varias fotos a la vez: todas se convierten en cartas, una tras otra, mientras la app está abierta.",
   "Check all cards again":"Revisar todas las tarjetas",
@@ -784,7 +790,9 @@ es:{
   "Day streak":"Días seguidos","Cards learned":"Tarjetas aprendidas","Due today":"Para hoy","Reviews this week":"Repasos esta semana","Last 30 days":"Últimos 30 días","Still learning":"En curso","Known":"Dominadas","Coming up: {0} due tomorrow, {1} this week.":"Próximamente: {0} mañana, {1} esta semana."
 },
 ja:{
-  "Updated.":"アップデートしました。",
+  "Update notes":"アップデートのお知らせ",
+"Tell me what is new after an update.":"アップデート後に新しくなったことを知らせる。",
+"Updated.":"アップデートしました。",
   "{0} to go, while the app is open.":"アプリを開いている間に、あと{0}。",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"アルバムからでは写真をまとめて選べます。アプリを開いている間に、順番に全部カードになります。",
   "Check all cards again":"すべてのカードを再チェック",
@@ -1034,7 +1042,9 @@ ja:{
   "Day streak":"連続日数","Cards learned":"学んだカード","Due today":"今日の復習","Reviews this week":"今週の復習回数","Last 30 days":"過去30日","Still learning":"学習中","Known":"定着","Coming up: {0} due tomorrow, {1} this week.":"この先：明日{0}枚、今週{1}枚。"
 },
 ko:{
-  "Updated.":"업데이트했어요.",
+  "Update notes":"업데이트 소식",
+"Tell me what is new after an update.":"업데이트한 뒤에 뭐가 새로워졌는지 알려줘요.",
+"Updated.":"업데이트했어요.",
   "{0} to go, while the app is open.":"{0} 남았어요. 앱이 열려 있는 동안 진행돼요.",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"앨범에서는 사진을 한 번에 여러 장 고를 수 있어요. 앱이 열려 있는 동안 차례대로 모두 카드가 돼요.",
   "Check all cards again":"모든 카드 다시 확인",
@@ -1287,7 +1297,9 @@ ko:{
    word, so every plural key carries a "#many" twin (5 карточек, 11 карточек, 111 карточек) that only PLURAL.ru ever looks
    up; "percent#few" is the one unit that also needs its own middle form, because English calls both of its forms "percent". */
 ru:{
-  "Updated.":"Обновлено.",
+  "Update notes":"Что нового",
+"Tell me what is new after an update.":"Показывать, что нового после обновления.",
+"Updated.":"Обновлено.",
   "{0} to go, while the app is open.":"Осталось {0}, пока приложение открыто.",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"«Из альбома» берёт сразу несколько фото — пока приложение открыто, они одно за другим станут карточками.",
   "Check all cards again":"Проверить все карточки",
@@ -1537,7 +1549,9 @@ ru:{
   "Day streak":"Дней подряд","Cards learned":"Выучено карточек","Due today":"Сегодня к повтору","Reviews this week":"Повторов за неделю","Last 30 days":"Последние 30 дней","Still learning":"В процессе","Known":"Освоено","Coming up: {0} due tomorrow, {1} this week.":"Впереди: завтра {0}, на этой неделе {1}."
 },
 vi:{
-  "Updated.":"Đã cập nhật.",
+  "Update notes":"Thông báo cập nhật",
+"Tell me what is new after an update.":"Cho mình biết có gì mới sau khi cập nhật.",
+"Updated.":"Đã cập nhật.",
   "{0} to go, while the app is open.":"Còn {0}, khi ứng dụng đang mở.",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"Từ album lấy được nhiều ảnh cùng lúc — tất cả lần lượt thành thẻ khi ứng dụng đang mở.",
   "Check all cards again":"Kiểm tra lại mọi thẻ",
@@ -1787,7 +1801,9 @@ vi:{
   "Day streak":"Chuỗi ngày","Cards learned":"Thẻ đã học","Due today":"Đến hạn hôm nay","Reviews this week":"Lượt ôn tuần này","Last 30 days":"30 ngày qua","Still learning":"Đang học","Known":"Đã thuộc","Coming up: {0} due tomorrow, {1} this week.":"Sắp tới: {0} đến hạn ngày mai, {1} trong tuần."
 },
 th:{
-  "Updated.":"อัปเดตแล้ว",
+  "Update notes":"ข่าวอัปเดต",
+"Tell me what is new after an update.":"บอกด้วยว่ามีอะไรใหม่หลังอัปเดต",
+"Updated.":"อัปเดตแล้ว",
   "{0} to go, while the app is open.":"เหลือ{0} จะทำต่อตอนเปิดแอปอยู่",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"จากอัลบั้ม เลือกรูปได้หลายรูปพร้อมกัน ทั้งหมดจะกลายเป็นการ์ดทีละใบตอนเปิดแอปอยู่",
   "Check all cards again":"ตรวจการ์ดทั้งหมดอีกครั้ง",
@@ -2037,7 +2053,9 @@ th:{
   "Day streak":"วันต่อเนื่อง","Cards learned":"การ์ดที่เรียนแล้ว","Due today":"ถึงกำหนดวันนี้","Reviews this week":"ทบทวนสัปดาห์นี้","Last 30 days":"30 วันล่าสุด","Still learning":"กำลังเรียน","Known":"จำได้แล้ว","Coming up: {0} due tomorrow, {1} this week.":"ที่กำลังจะมา: พรุ่งนี้ {0} ใบ · สัปดาห์นี้ {1} ใบ"
 },
 id:{
-  "Updated.":"Diperbarui.",
+  "Update notes":"Info pembaruan",
+"Tell me what is new after an update.":"Kasih tahu apa yang baru setelah pembaruan.",
+"Updated.":"Diperbarui.",
   "{0} to go, while the app is open.":"Sisa {0}, selama aplikasi terbuka.",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"Dari album bisa ambil beberapa foto sekaligus — semuanya jadi kartu satu per satu selama aplikasi terbuka.",
   "Check all cards again":"Periksa ulang semua kartu",
