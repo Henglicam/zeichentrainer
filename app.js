@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=413; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=414; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1860,7 +1860,8 @@ const GUIDE=()=>[
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
     t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.")]},
   {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out."),
-    t("Grade yourself: Again, Hard, Good, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward.")]},
+    t("Grade yourself: Again, Hard, Good, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
+    t("Swipe the closed card left or right to pick another one — nothing is graded, and the card you skip comes round again.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included."),
     t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way.")]},
   {h:t("Language and meanings"),p:[t("More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.")]},
@@ -2110,7 +2111,7 @@ function renderStudy(main){
     back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="grades">${grds}</div>
       <div class="backacts"><button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}</button><button class="del" id="edit-card">${t("✎ Edit")}</button></div></div>`;
   } else {
-    back=showHints()?`<div class="hint">${t("Tap the character to reveal")}${fullPhoto(d)?t(", or the photo for the whole picture"):""}.</div>`:"";
+    back=showHints()?`<div class="hint">${t("Tap the character to reveal")}${fullPhoto(d)?t(", or the photo for the whole picture"):""}.${S.queue.length>1?" "+t("Swipe left or right to pick another card."):""}</div>`:"";
   }
   /* front: no tag row (theme / new / custom is noise while learning); tapping the photo or the character reveals */
   main.innerHTML=wxNoteHTML()+learnChipsHTML()+`<div class="card">
@@ -2120,12 +2121,55 @@ function renderStudy(main){
   if(S.revealed) warmParts();
   /* tap on the photo: crop ⇄ whole photo; tap on the character: back on and off */
   const rv=$("#reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); return; } S.revealed=!S.revealed; render(); };
+  wireSwipe(main.querySelector(".card"));
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   const ed=$("#edit-card"); if(ed) ed.onclick=()=>{ S.editFrom="study"; S.editing=c; render(); };
   wireSay(); wireChars(d); wireLinks(); wireLearnChips();
   wireAi();
   document.querySelectorAll(".grade").forEach(b=> b.onclick=()=>grade(b.dataset.g));
+}
+
+/* Swipe the closed card sideways to pick another card of the session (v414, H: "koennen wir bitte im Lernmodus Swipes nach rechts und links
+   erlauben, sodass man sich quasi die Karten aussuchen kann, die man testen moechte? I think that only makes sense In the closed card view,
+   not after opening the card"): a horizontal stroke moves through the queue and grades nothing — the card that is skipped keeps its place and
+   comes round again, so the session is unchanged. Only while the back is closed; once it is open the four grades own the screen. */
+const SW_SLOP=12, SW_MIN=60, SW_OUT=1.4;
+let SWIPED=0;
+function wireSwipe(card){
+  const came=SWIPED; SWIPED=0;
+  if(!card||S.revealed||S.queue.length<2) return;
+  if(came) card.classList.add(came>0?"inR":"inL"); /* the next card comes in from the side the stroke went to */
+  card.classList.add("swipe");
+  let x0=0,y0=0,dx=0,on=false,ate=false,pid=null;
+  const at=i=>i>=0&&i<S.queue.length;
+  const put=v=>{ card.style.transform=v?`translateX(${v}px)`:""; card.style.opacity=v?String(Math.max(.4,1-Math.abs(v)/(card.offsetWidth||320))):""; };
+  card.addEventListener("click",e=>{ if(ate){ ate=false; e.stopPropagation(); e.preventDefault(); } },true); /* the stroke's own closing click must not reveal the card */
+  card.addEventListener("pointerdown",e=>{
+    if(e.target.closest("button,a,input,textarea,.chip")) return;
+    x0=e.clientX; y0=e.clientY; dx=0; on=false; pid=e.pointerId;
+  });
+  card.addEventListener("pointermove",e=>{
+    if(e.pointerId!==pid) return;
+    const ax=e.clientX-x0, ay=e.clientY-y0;
+    if(!on){
+      if(Math.abs(ay)>Math.abs(ax)&&Math.abs(ay)>SW_SLOP){ pid=null; return; } /* the page is being scrolled, not the card swiped */
+      if(Math.abs(ax)<SW_SLOP) return;
+      on=true; ate=true; card.setPointerCapture(e.pointerId); card.classList.add("swiping");
+    }
+    dx=at(S.idx+(ax<0?1:-1))?ax:ax/4; /* at either end of the queue the card gives a little and springs back */
+    put(dx);
+  });
+  const end=e=>{
+    if(e.pointerId!==pid) return; pid=null;
+    if(!on) return;
+    on=false; card.classList.remove("swiping");
+    const step=dx<0?1:-1;
+    if(Math.abs(dx)<SW_MIN||!at(S.idx+step)){ put(0); return; }
+    put(step*(card.offsetWidth||320)*SW_OUT); card.style.opacity="0";
+    setTimeout(()=>{ S.idx+=step; S.revealed=false; S.fullPic=false; S.peek=null; SWIPED=step; render(); window.scrollTo({top:0}); },150);
+  };
+  card.addEventListener("pointerup",end); card.addEventListener("pointercancel",end);
 }
 
 async function grade(g){
@@ -2695,6 +2739,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  414:"Swipe a card left or right, before you open it, to pick another one from the session.",
   413:"Update notes now show in full, instead of being cut off halfway.",
   411:"Pick several photos at once and they all become cards, one after the other.",
   410:"A card no longer carries text that its own picture does not show.",
