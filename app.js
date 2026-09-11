@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=408; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=409; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1080,7 +1080,7 @@ async function aiAuto(){
   try{ await aiReview(list); if(S.mode==="more"||S.mode==="cards"||S.mode==="inbox") render(); }catch(e){ console.warn("AI auto review:",e); logErr("ai","auto review: "+(e&&e.message||e)); } /* the console is invisible on a phone — the error log reaches Diagnostics and the daily row (v403) */
 }
 /* About: what leaves the phone, live with the AI settings (v173) */
-function aboutText(){ const ver=($(".ver")||{}).textContent||""; return `${ver}. ${t("Works offline. Cards and photos stay on this phone; anonymous usage counts go to the app's owner.")}${(pv=>pv?" "+t("Only when the reading is weak, the framed area of a photo goes to {0}.",AI_PROVIDERS[pv].short):"")(pictureProvider())}`; } /* names the AI (v216, H: "goes to your AI provider" is wrong — a friend's phone has no provider of its own); the relay stays out of About (v217, H) — the AI row's What-is-sent line and privacy.html describe it */
+function aboutText(){ const ver=($(".ver")||{}).textContent||""; return `${ver}. ${t("Cards and photos stay on this phone, and studying works without a connection. Making a new card uses the AI: the card's text goes to the provider, and anonymous usage counts go to the app's owner.")}`+(pv=>pv?" "+t("When the reading is hard, a picture of the text — sometimes the whole photo — goes to {0}.",AI_PROVIDERS[pv].short):"")(pictureProvider())+" "+t("The AI can get a character, its pinyin or its meaning wrong. Check anything you rely on."); } /* names the AI (v216, H: "goes to your AI provider" is wrong — a friend's phone has no provider of its own); the relay stays out of About (v217, H) — the AI row's What-is-sent line and privacy.html describe it. v409 (H: "Works Offline under about is too prominent and somehow misleading", "add a disclaimer that the correct interpretations and translatios cannot be guaranteed"): the offline claim is scoped to studying and the AI sentence names the main outbound flow, since a fresh install checks every new card through the relay with no key and no tap; the picture clause no longer says "only when the reading is weak" (picOnBad fires at any score) nor "the framed area" (the v348/v393 re-ask sends the whole photo) */
 /* More → Online AI review row + inline setup form */
 function renderAiRow(){
   const st=$("#ai-status"), btn=$("#ai-btn"), run=$("#ai-run"), form=$("#ai-form"); if(!st) return;
@@ -2652,6 +2652,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  409:"About now says plainly what leaves the phone, and that the AI can be wrong.",
   407:"A photo of a control panel now makes one card per button, each with its own picture.",
   402:"The app speaks Russian, Vietnamese, Thai and Indonesian too.",
 };
