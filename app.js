@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=422; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=423; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -464,7 +464,12 @@ async function boot(){
   S.ready=true;
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
   const rv=S.settings.resumeView; if(rv){ delete S.settings.resumeView; idbDel("settings","resumeView").catch(()=>{}); } /* the screen the update's reload left (v327): back to it, so the reload is not felt */
-  if(rv&&Date.now()-(rv.at||0)<RESUME_MAX&&(rv.own!==false||navReload())){ if(["study","cards","inbox","more","guide"].includes(rv.mode)) S.mode=rv.mode; if(S.mode==="cards"&&rv.detail&&S.custom.some(d=>d.id===rv.detail)) S.detail=rv.detail; if(typeof rv.query==="string") S.query=rv.query; }
+  if(rv&&Date.now()-(rv.at||0)<RESUME_MAX&&(rv.own!==false||navReload())){ if(["study","cards","inbox","more","guide"].includes(rv.mode)) S.mode=rv.mode; if(S.mode==="cards"&&rv.detail&&S.custom.some(d=>d.id===rv.detail)) S.detail=rv.detail; if(typeof rv.query==="string") S.query=rv.query;
+    /* the session as it stood (v423): the queue's ids, minus any card that is gone or has no text, with the place in it, the
+       open answer and the day's count — so a reload in Learn comes back on the same card instead of at the top of a queue
+       built afresh, where a card already graded is no longer due and the next one takes its place. */
+    if(S.mode==="study"&&Array.isArray(rv.queue)){ const q=rv.queue.filter(id=>{ const d=cardOf(id); return d&&d.c; });
+      if(q.length){ S.queue=q; S.idx=Math.max(0,Math.min(q.length,rv.idx|0)); S.revealed=!!rv.revealed&&S.idx<q.length; S.done=Math.max(0,rv.done|0); S.ahead=!!rv.ahead; } } }
   wireChrome(); render();
   if(rv&&rv.scroll&&(rv.own!==false||navReload())) requestAnimationFrame(()=>window.scrollTo(0,rv.scroll));
   autoBreaks(); /* old cards get their photo lines estimated once */
@@ -2799,6 +2804,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  423:"An update no longer sends you to another card in the middle of a session.",
   421:"Three grades instead of four — Hard, Medium, Easy, in the traffic light's colours.",
   416:"The update note now waits until you tap it away — and More lets you switch it off.",
   415:"Pulling the page down no longer reloads the app and throws you back to Learn.",
@@ -6330,12 +6336,20 @@ document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&RELOAD_D
    so a pull-to-refresh — or a page Android discards for memory — landed on Learn. Boot takes the note only when the page really was
    reloaded (`own` for the app's own reload, else the navigation type), so opening the app fresh still starts on Learn. */
 let RELOADING=false, VIEW_KEY="";
-const viewNow=own=>({mode:S.mode,detail:S.detail,query:S.query,scroll:window.scrollY,at:Date.now(),own:!!own});
+/* the note carries the Learn session too (v423, H at v421: "hatte ich gerade eine Karte offen und er ist von alleine zur
+   naechsten Karte gesprungen"): boot always rebuilds the queue and sets idx 0, done 0, revealed false, so every reload in
+   Learn — the v327 idle reload after an update, a pull-to-refresh, a page Android discards — restarted the session at the top
+   of a freshly built queue. A card graded earlier in the session is no longer due, so the rebuilt queue begins at the next
+   one and the app looks as if it jumped by itself; the Done capsule went back to 0 with it. The queue is card ids, so the
+   note stays small. What it still cannot restore: a single-card test from the Cards list (S.single/S.saved) — a reload there
+   comes back in the ordinary session. */
+const viewNow=own=>({mode:S.mode,detail:S.detail,query:S.query,scroll:window.scrollY,at:Date.now(),own:!!own,
+  ...(S.mode==="study"&&!S.single?{queue:S.queue,idx:S.idx,revealed:S.revealed,done:S.done,ahead:S.ahead}:{})});
 const noteView=()=>{ if(!RELOADING&&S.ready){ VIEW_KEY=""; setSetting("resumeView",viewNow(false)).catch(()=>{}); } };
 /* the note has to be on disk BEFORE the gesture: a pull-to-refresh tears the document down at once, and an IndexedDB write
    started in pagehide is not guaranteed to commit (measured — it did not). So every change of screen writes it, which is one
    small put per navigation inside the app; the scroll is refreshed when the app goes to the background and by reloadNow. */
-function noteViewSoon(){ if(RELOADING||!S.ready) return; const k=S.mode+"|"+(S.detail||"")+"|"+(S.query||""); if(k===VIEW_KEY) return; VIEW_KEY=k; setSetting("resumeView",viewNow(false)).catch(()=>{}); }
+function noteViewSoon(){ if(RELOADING||!S.ready) return; const k=S.mode+"|"+(S.detail||"")+"|"+(S.query||"")+(S.mode==="study"?"|"+S.idx+"|"+(S.revealed?1:0):""); if(k===VIEW_KEY) return; /* v423: inside Learn the card and whether its answer is open are part of the screen, so each one is noted as it comes up */ VIEW_KEY=k; setSetting("resumeView",viewNow(false)).catch(()=>{}); }
 document.addEventListener("visibilitychange",()=>{ if(document.hidden) noteView(); });
 window.addEventListener("pagehide",noteView);
 const navReload=()=>{ try{ const n=performance.getEntriesByType("navigation")[0]; return !!n&&n.type==="reload"; }catch(e){ return false; } };
