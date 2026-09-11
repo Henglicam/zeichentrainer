@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=431; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=432; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -18,6 +18,8 @@ const DAY = 86400000;
 const LEECH_FAILS = 4; /* "again" this many times in a row flags the card for review */
 const startOfDay = t => { const d = new Date(t); d.setHours(0,0,0,0); return d.getTime(); };
 const today = () => startOfDay(Date.now());
+/* the screen offers three grades since v421 — Hard = "again", Medium = "good", Easy — so "hard" is no longer reachable
+   from the card; it stays here for the progress rows written by it and for the fails rule below */
 function schedule(card, grade){
   let ease = card ? card.ease : 2.5;
   let interval = card ? card.interval : 0;
@@ -1348,13 +1350,13 @@ function resumeTranslate(){ const r=S.settings.translateRun; if(!r||(TRANSLATE&&
 function translateRowHTML(){
   const n=toTranslate().length, tr=TRANSLATE; if(!(n||tr)||!aiOn()) return "";
   const name=(LANGS.find(([c])=>c===LANG)||[])[1]||LANG;
-  const line=tr&&tr.running?busyHTML(t("Translating {0} of {1} …",tr.at,tr.total)+" "+t("The cards change together when all are done.")):tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n)+" "+t("The cards change together when all are done.")+" "+t("It goes on by itself when the AI can be reached again."):tr?t("Done — {0} translated.",nOf(tr.done,"card")):t("{0} have their meaning in another language.",nOf(n,"card"));
+  const line=tr&&tr.running?busyHTML(t("Translating {0} of {1} …",tr.at,tr.total)+" "+t("The cards change together when all are done.")):tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n)+" "+t("The cards change together when all are done.")+" "+t("It goes on by itself when the AI can be reached again."):tr?t("Done — {0} translated.",nOf(tr.done,"card")):nOf(n,"card has its meaning in another language.","cards have their meaning in another language.");
   return `<div class="mrow"><div style="flex:1"><div class="t">${t("Meanings")}</div><div class="s" id="translate-status">${line}</div>${n?`<div class="fieldacts"><button class="btn mini" id="translate-all"${tr&&tr.running?" disabled":""}>${t("Translate all cards into {0}",name)}</button></div>`:""}</div></div>`; /* the button under the sentence, as the Feedback row's Send — its label is long in every language */
 }
 function translateRefresh(){ const st=$("#translate-status"), b=$("#translate-all"), tr=TRANSLATE; if(!st) return; /* the row as it stands now, whatever page was shown meanwhile */
   const n=toTranslate().length;
   if(tr&&tr.running) st.innerHTML=busyHTML(t("Translating {0} of {1} …",tr.at,tr.total)+" "+t("The cards change together when all are done.")); /* the moving bar with the count of the card the AI is on */
-  else st.textContent=tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n)+" "+t("The cards change together when all are done.")+" "+t("It goes on by itself when the AI can be reached again."):tr?t("Done — {0} translated.",nOf(tr.done,"card")):t("{0} have their meaning in another language.",nOf(n,"card"));
+  else st.textContent=tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n)+" "+t("The cards change together when all are done.")+" "+t("It goes on by itself when the AI can be reached again."):tr?t("Done — {0} translated.",nOf(tr.done,"card")):nOf(n,"card has its meaning in another language.","cards have their meaning in another language.");
   if(b){ b.disabled=!!(tr&&tr.running); if(!n&&!(tr&&tr.running)) b.remove(); } }
 async function translateAll(){
   if(TRANSLATE&&TRANSLATE.running){ translateRefresh(); return; }
@@ -1911,7 +1913,7 @@ const GUIDE=()=>[
     t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.")]},
   {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out."),
     t("Grade yourself: Hard, Medium, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
-    t("Swipe the closed card left or right to pick another one — nothing is graded, and the card you skip comes round again.")]},
+    t("Swipe the closed card left or right to pick another one — nothing is graded, and a card you skip stays due for next time.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included."),
     t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way. Tap the star on a card to mark it as one you care about — the filter then shows them alone, and Learn studies all of them, due or not.")]},
   {h:t("Language and meanings"),p:[t("More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.")]},
@@ -2226,10 +2228,11 @@ function renderStudy(main){
 
 /* Swipe the closed card sideways to pick another card of the session (v414, H: "koennen wir bitte im Lernmodus Swipes nach rechts und links
    erlauben, sodass man sich quasi die Karten aussuchen kann, die man testen moechte? I think that only makes sense In the closed card view,
-   not after opening the card"): a horizontal stroke moves through the queue and grades nothing — the card that is skipped keeps its place and
-   comes round again, so the session is unchanged. Only while the back is closed; once it is open the four grades own the screen. */
+   not after opening the card"): a horizontal stroke moves through the queue and grades nothing — only S.idx moves, so the schedule and the
+   progress rows are untouched. A card swiped past sits behind the index and does not come back in this session (v417 measured that; it is
+   still due, so the next session's queue picks it up). Only while the back is closed; once it is open the grades own the screen. */
 const SW_SLOP=12, SW_MIN=60, SW_GAP=16, SW_MS=220;
-/* the closed card is pushed sideways and the next one slides in from the other side and snaps into place (v414, the carousel of v417 — H: "Ich moechte die Karten quasi nach links schieben und die naechste Karte kommt von rechts rein und rastet geschmeidig ein … Die muessen nicht so zur Seite wegkippen wie bei Tinder"). Nothing is graded: only S.idx moves, so the skipped card keeps its place and comes round again. */
+/* the closed card is pushed sideways and the next one slides in from the other side and snaps into place (v414, the carousel of v417 — H: "Ich moechte die Karten quasi nach links schieben und die naechste Karte kommt von rechts rein und rastet geschmeidig ein … Die muessen nicht so zur Seite wegkippen wie bei Tinder"). Nothing is graded: only S.idx moves; a card swiped past returns in the next session, not in this one (v417). */
 function swipeHint(d){ return showHints()?`<div class="hint">${t("Tap the character to reveal")}${fullPhoto(d)?t(", or the photo for the whole picture"):""}.${S.queue.length>1?" "+t("Swipe left or right to pick another card."):""}</div>`:""; }
 function wireSwipe(card){
   if(!card||S.revealed||S.queue.length<2) return;
@@ -5509,13 +5512,16 @@ async function aiCharAlternatives(line,i,insert){
   const user=insert
     ?`OCR read this line: "${line}". One character is missing ${i===0?"at the start":i>=chars.length?"at the end":`between "${chars[i-1]}" and "${chars[i]}"`}. Give up to 4 likely characters for that gap, judging from the context.`
     :`OCR read this line: "${line}". Character ${i+1} ("${chars[i]}") is probably misread. Give up to 4 likely correct characters for that position, judging from the context.`;
-  let r;
-  if(pv==="claude") r=await aiFetch(aiBase(pv),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model,max_tokens:100,system:sys,messages:[{role:"user",content:user}]})});
-  else { const body=noThinking(pv,model,{model,max_tokens:100,temperature:0,messages:[{role:"system",content:sys},{role:"user",content:user}]});
-    r=relay?await relayFetch(pv,body):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
-  if(!r.ok) throw new Error(relay?relayError(r):"API error "+r.status);
+  let r; const t0=Date.now();
+  try{
+    if(pv==="claude") r=await aiFetch(aiBase(pv),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model,max_tokens:100,system:sys,messages:[{role:"user",content:user}]})});
+    else { const body=noThinking(pv,model,{model,max_tokens:100,temperature:0,messages:[{role:"system",content:sys},{role:"user",content:user}]});
+      r=relay?await relayFetch(pv,body):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)}); }
+  }catch(err){ logAi({model,req:user,err:"no connection: "+(err&&err.message||err)}); throw err; } /* a dead connection in Diagnostics too (v432) */
+  if(!r.ok){ const err=await apiErrText(r); logAi({model,status:r.status,req:user,err}); throw new Error(relay?relayError(r,err):"API error "+r.status+(err?": "+err:"")); }
   const data=await r.json(); countTokens(pv,data); bumpModel(model);
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
+  logAi({model,status:r.status,ms:Date.now()-t0,req:user,res:raw.slice(0,AI_LOG_RES)}); /* the picker's own call in Diagnostics too (v432) — the only transport that logged nothing */
   let arr=[]; try{ arr=JSON.parse(raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,"")); }catch(e){ arr=[...raw].filter(ch=>CJK.test(ch)); }
   return [...new Set(arr.map(x=>String(x).trim()).filter(x=>[...x].length===1&&CJK.test(x)&&(insert||x!==chars[i])))].slice(0,4);
 }
