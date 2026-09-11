@@ -81,11 +81,6 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 .reticle .glyph .wait.failed{width:auto}
 .pin{font-size:21px;font-weight:600;color:var(--label);letter-spacing:.3px}
 .mean{font-size:18px;color:var(--label);margin-top:6px;line-height:1.45}
-.rule{height:1px;background:var(--sep);margin:18px 0}
-.word{display:flex;align-items:baseline;justify-content:center;gap:10px}
-.word .w{font-family:var(--hanzi);font-size:26px}
-.word .wp{font-size:14px;color:var(--label2)}
-.wm{font-size:15px;color:var(--label2);margin-top:2px}
 /* three grades in the traffic light's own colours (v421): red = Hard, amber = Medium, green = Easy — the soft surface with the
    strong label of .btn.danger, so the colour is unmistakable and the text still reads on both grounds; a filled amber tile with
    white on it does not (measured against the same text on the soft ground). No interval line under the label any more. */
