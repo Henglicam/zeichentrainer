@@ -111,6 +111,11 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 .btn.primary{background:var(--tint);color:#fff}
 .btn.danger{background:var(--tint-soft);color:var(--tint)}
 .btn.mini{min-height:44px;padding:10px 14px;font-size:15px;white-space:nowrap}
+/* a .btn.mini on its own line under a field may wrap: the nowrap above was written for a two-word action
+   ("Not here? Draw it"), and Meanings puts a whole sentence there — "Traduire toutes les cartes en Français"
+   stood 5 px past the card's own edge at 390 px and 35 px at 360 (v432; the v413 lesson, a class written for
+   one shape is not a free ride for another) */
+.fieldacts .btn.mini{white-space:normal;text-align:center;line-height:1.25}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 .btn.on{background:var(--tint);color:#fff}
 
@@ -253,7 +258,7 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 @media (prefers-reduced-motion:reduce){.shotwrap .scan::before{animation:none;left:0;width:100%;transform:none;background:rgba(255,255,255,.12)}}
 /* the finished card in the photo's place (v325): the front's boxes and the back as in the detail, on the photo's own card */
 .shot .result{text-align:center;padding:6px 4px 2px} .shot .result img{margin-bottom:0;border-radius:0} /* the photo box's own rules size its two pictures (v328 — a width:auto here had left the crop at the box's left edge and the blurred fill short), the linked row's its own since v345 */ .shot .result .picbox{border-radius:var(--rc)} .shot .result .signimg.full{width:100%;border-radius:10px;margin-bottom:10px}
-.shot .result .back{margin-top:14px} .shot .result .linked .thumbs{justify-content:center} .shot .result .flagbox{text-align:left}
+.shot .result .back{margin-top:14px} .shot .result .linked .thumbs{justify-content:safe center} .shot .result .flagbox{text-align:left}
 .shot:has(.result){padding:12px 12px 14px} .shot .detailacts{margin-top:16px}
 .shot .reshead{margin:2px 0 10px 2px} .shot .result+.detailacts+.result{margin-top:22px;padding-top:22px;border-top:1px solid var(--sep)} /* several labels of one photo, one card each (v357): a head line and a hairline between the cards */
 /* the finished card carries the detail's own action row (v344): Edit and Delete card as two equal buttons with the detail's room above them, no photo timestamp — the row had three type sizes and touched the parts row */
