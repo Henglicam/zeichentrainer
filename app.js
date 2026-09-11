@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=424; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=425; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1820,6 +1820,7 @@ function renderMore(main){
     <div class="listhead">${t("About")}</div>
     <div class="mrow"><div><div class="t">${t("Update notes")}</div><div class="s"><label class="check" style="margin:0"><input type="checkbox" id="update-note"${updateNoteOn()?" checked":""}> ${t("Tell me what is new after an update.")}</label></div></div></div>
     <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s" id="about-s">${esc(aboutText())}</div>${whatsNewHTML()}</div></div>
+    <div class="mrow"><div><div class="t">${t("Open source licenses")}</div><div class="s">${t("The software and data the app is built on, and who made them.")}</div></div><button class="btn mini" id="lic-open">${t("Open")}</button></div> <!-- the notices Apache-2.0, MPL-2.0 and CC BY-SA ask to be delivered with the work (v425); ./vendor/LICENSES.txt goes through the worker's vendor route, so it comes from the mirror behind the wall and is cached after the first look -->
   </div>`;
   $("#export").onclick=exportData;
   $("#export-photos").onchange=e=>setSetting("exportPhotos",!!e.target.checked);
@@ -1830,6 +1831,7 @@ function renderMore(main){
   const ur=$("#undo-run"); if(ur) ur.onclick=undoLastRun; /* Undo last run (v369) */
   const rc=$("#recheck-all"); if(rc) rc.onclick=recheckAll; /* Check all cards again (v370) */
   $("#guide-open").onclick=()=>{ S.mode="guide"; render(); window.scrollTo({top:0}); };
+  $("#lic-open").onclick=()=>{ window.open("./vendor/LICENSES.txt","_blank","noopener"); };
   wireGrow(main); /* the feedback box grows with its text like the forms' fields (v218, H: "looks a little bit old school") */
   $("#fb-send").onclick=async()=>{ const tx=$("#fb-text"), st=$("#fb-status"), b=$("#fb-send"), text=tx.value.trim(); if(!text){ st.textContent=t("Write a few words first."); return; }
     if(!navigator.onLine){ st.textContent=t("No connection. Try again when online."); return; }
