@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=417; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=418; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1502,8 +1502,9 @@ async function brightenPass(){
 const RC_BATCH=10, RC_PAUSE=60, RC_WAIT=2000, RC_TOLPX=2, RC_TOL=0.01, RC_CORR=0.8, RC_THUMB=32, RC_INSIDE=0.5;
 const frameKey=f=>f?[f.x,f.y,f.w,f.h,f.a||0].join(","):""; /* the same rectangle, to the number */
 let RECUT=null;
+const RECUT_V=2; /* v418: the pictures the v398 curve made carry its white balance baked in, so the deck is walked once more */
 async function recutPass(){
-  if(RECUT||S.settings.recutPass) return;
+  if(RECUT||S.settings.recutPass>=RECUT_V) return;
   const ids=deck().filter(d=>d.img&&d.frame&&!d.reading&&fullPhoto(d)).map(d=>d.id); /* a card still waiting for its reading belongs to finishPending, which holds it across an await and writes it whole (v398) */
   RECUT={done:0,written:0,skipped:0,dropped:0}; /* done: cut and queued · written: actually written · dropped: queued but the card had moved on · skipped: the card was left alone */
   let rows=[];
@@ -1530,7 +1531,7 @@ async function recutPass(){
     }
     await write();
   }catch(e){ logErr("recut",e&&e.message||String(e)); RECUT=null; return; } /* no flag: the next start goes through again */
-  S.settings.recutPass=1; await setSetting("recutPass",1);
+  S.settings.recutPass=RECUT_V; await setSetting("recutPass",RECUT_V);
   const n=RECUT.written; RECUT=null;
   if(n&&(S.mode==="cards"||S.mode==="study")) render();
 }
@@ -2159,6 +2160,11 @@ function wireSwipe(card){
     peer.style.left=card.offsetLeft+"px"; peer.style.top=card.offsetTop+"px"; peer.style.width=card.offsetWidth+"px";
     peer.style.transform=`translateX(${s*shift}px)`;
     par.appendChild(peer);
+    /* the neighbour is centred on the card, not hung from its top (v418, H: "Beim links, rechts swipen springen
+       unterschiedlich hohe Karten in der Vertikalen. Bitte vermeiden."): Learn centres the card in what is left of the
+       screen (measured, a two-line sign card sits 20 px lower than a one-character one and their middles are the same
+       pixel), so a top-aligned neighbour slides in at the wrong height and hops to its own place at the render. */
+    peer.style.top=Math.round(card.offsetTop+(card.offsetHeight-peer.offsetHeight)/2)+"px";
   };
   const put=v=>{ card.style.transform=v?`translateX(${v}px)`:""; if(peer) peer.style.transform=`translateX(${step*shift+v}px)`; };
   card.addEventListener("click",e=>{ if(ate){ ate=false; e.stopPropagation(); e.preventDefault(); } },true); /* the stroke's own closing click must not reveal the card */
@@ -3597,7 +3603,7 @@ async function jpegOf(blob,q){
    under the one curve), so the card's blue is stronger than the photo's, not the photo's own blue. It reads better
    than the swamp green and it is not the photo's colour. The other 19 crops are not stretched at all and never reach
    this test — the panel photos among them carry their highlight in the white strokes and lit icons. */
-const BR_HI=200, BR_SPAN=120, BR_MIN=24, BR_GAIN=40, BR_CLIP=0.01, BR_SAMPLE=200000, BR_WB=1.5, BR_KNEE=246; /* the highlight shoulder (v396) */
+const BR_HI=200, BR_SPAN=120, BR_MIN=24, BR_GAIN=40, BR_CLIP=0.01, BR_SAMPLE=200000, BR_WB=1.5, BR_LO=30, BR_KNEE=246; /* the highlight shoulder (v396), the black-point spread (v418) */
 function brightLut(px){ /* one curve per channel: red, green, blue */
   const h=[new Uint32Array(256),new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)]; let n=0; /* 0 luminance, 1-3 the channels */
   const step=4*Math.max(1,Math.ceil(px.length/4/BR_SAMPLE)); /* a big picture is measured on a sample, the curve then runs over every pixel */
@@ -3609,7 +3615,20 @@ function brightLut(px){ /* one curve per channel: red, green, blue */
   if(hi>=BR_HI&&hi-lo>=BR_SPAN) return null; /* light and lively: leave it alone */
   const ends=[1,2,3].map(k=>{ const a=at(k,BR_CLIP), b=at(k,1-BR_CLIP); return {lo:a,span:b-a}; });
   const wide=Math.max(...ends.map(e=>e.span)), narrow=Math.min(...ends.map(e=>e.span));
-  const balance=narrow>0&&wide<=BR_WB*narrow; /* the channels are of a kind: there is white in the picture to balance against */
+  const loSpread=Math.max(...ends.map(e=>e.lo))-Math.min(...ends.map(e=>e.lo));
+  /* The channels may only be stretched apart when there is something near-neutral in the picture to balance against,
+     and v375's test for that — the span ratio — is the wrong quantity. It was measured on H's 福 card (v418, his
+     screenshots of a pink paper-cut on a grey wall coming back as a red one on a green wall: "Die Farbkorrektur ist
+     hier ja schrecklich!!!!! Absolutes no go!!!"): the three spans there are 122/145/114, a ratio of 1.272, while the
+     three black points are 97/50/85 — 47 levels apart, because a saturated red object covers most of the frame and
+     pushes green's own 1st percentile far below red's. Mapping each channel's own black point to zero then rotates the
+     hue instead of removing a cast: measured, the wall goes (152,151,146) → (112,172,132), which is H's card to within
+     four levels on every channel. The span ratio cannot be tuned out of this — across the real crops in the harness it
+     puts the near poster at 1.254 and this failure at 1.272, no gap at all — while the black-point spread separates
+     them with room: 1–14 on every panel label the white balance exists for (the rice cooker 3, the washer 2 and 14,
+     the QR sign 8, the near poster 1), 22 on the parking sign, and 47 here, 48 on the green lightbox cut. BR_LO 30
+     sits in that gap. Both tests must pass; BR_WB stays as the second, looser guard. */
+  const balance=narrow>0&&wide<=BR_WB*narrow&&loSpread<=BR_LO;
   const cap=Math.max(hi-lo,BR_GAIN)/(hi-lo); /* the gain is capped, so a nearly flat picture does not become a poster — the same factor on all three, or the cap would tilt the balance */
   /* the top end rolls off instead of clipping (v396, H: "when brightening, avoid clipping highlights"): until v395 the
      stretch mapped the 99th percentile straight to white, so the brightest hundredth of the picture — a lamp on a glossy
