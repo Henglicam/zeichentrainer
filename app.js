@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=409; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=410; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -279,6 +279,7 @@ const numFrames=fs=>{ const a=fs.filter(Boolean)[0]; return a?{lw:n1(a.lw),lh:n1
    difference between them. */
 const numPic=p=>p?{pw:p.picW,ph:p.picH,box:numFrac(p.box),alt:numFrac(p.boxAlt),sc:p.boxScale||null,model:p.model||"",
   boxes:Array.isArray(p.boxes)?p.boxes.map(numFrac):null,drop:(p.dropped||[]).map(x=>String(x).slice(0,24)),dropB:(p.droppedBoxes||[]).map(numFrac),
+  out:(p.outside||[]).map(x=>String(x).slice(0,24)),
   cut:p.cut||"",bad:!!p.bad,apart:!!p.apart,kind:p.kind||"",zh:String(p.zh||"").slice(0,200),
   labels:(p.labels||[]).map(l=>({zh:l.zh,box:numFrac(l.box),sc:l.scale}))}:null;
 const NUMS_KEEP=3; /* readings kept in the shared text (v405) — three covers a photo taken, looked at and taken again */
@@ -804,6 +805,7 @@ async function aiReadPicture(blob,alts,status,rec){
       if(lineBoxes&&lineBoxes.length===lines0.length) lineBoxes=lineBoxes.filter((v,i)=>keep[i]);
       lines0=lines0.filter((l,i)=>keep[i]); } }
   const main=mainLines(lines0,x.p,x.m,lineBoxes?lineBoxes.map(b=>picBox(b,pic.w,pic.h)):null,picBox(x.box,pic.w,pic.h));
+  const oneScale=!lineBoxes||lineBoxes.every(b=>{ const sc=picScale(b,pic.w,pic.h); return !sc||sc===picScale(x.box,pic.w,pic.h); }); /* v410: every line box read the way the union box is read, or the comparison below means nothing (the v379 trap) */
   const altBox=picBoxPix(x.box,pic.w,pic.h), mainAlt=altBox?mainLines(lines0,x.p,x.m,lineBoxes?lineBoxes.map(b=>picBoxPix(b,pic.w,pic.h)||picBox(b,pic.w,pic.h)):null,altBox):null; /* the second reading of a box that passes the picture's edge (v340), through the fine-print rule like the first (v343 polish): its box is the kept lines' union too, and its dropped boxes are its own */
   const zhRaw=main.lines.join("\n"), zh=t2s(zhRaw), m=saneM(main.m,zh);
   /* the elements of a user interface, and of any picture of separate signs or labels (v358, H: "you have to find out if the image is
@@ -836,7 +838,7 @@ async function aiReadPicture(blob,alts,status,rec){
   /* what came back, in one line of the log (v374): the shape of the answer survives a restart, so a panel that made one card can
      be read back afterwards — until v373 only the split's own lines said anything, and they lived in memory */
   logRead(`the AI's answer: ${lines0.length} ${lines0.length===1?"line":"lines"}, apart ${apart?"yes":"no"}, ${Array.isArray(x.labels)?x.labels.length:0} labels${Array.isArray(x.labels)&&x.labels.length?" ("+(labels?labels.length:0)+" usable)":""}, ${Array.isArray(x.boxes)?x.boxes.length:0} boxes, meaning ${String(x.m||"").length} characters`);
-  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxAlt:mainAlt?mainAlt.box:null,droppedBoxesAlt:mainAlt?mainAlt.droppedBoxes:null,boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,""),kind:String(x.kind||"").trim(),apart,labels,picW:pic.w,picH:pic.h,boxScale:picScale(x.box,pic.w,pic.h)}; /* cut (v314): the edges that cut off a line the model left out */
+  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxAlt:mainAlt?mainAlt.box:null,droppedBoxesAlt:mainAlt?mainAlt.droppedBoxes:null,boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,outside:[],oneScale,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,""),kind:String(x.kind||"").trim(),apart,labels,picW:pic.w,picH:pic.h,boxScale:picScale(x.box,pic.w,pic.h)}; /* cut (v314): the edges that cut off a line the model left out */
 }
 /* the main text only (v312, H's 青春无烟 / 未来无限 poster: the card carried the poster's small print — the line 第39个世界无烟日 above the title and the date 2026年5月31日 世界无烟日 below it, half of it outside the frame — "wieder die Sachen ausserhalb des Crops und das Kleingedruckte mitgelesen. Bitte beides vermeiden"): the prompt asks for the main text and leaves fine print and lines the picture's edge cuts off to the model; this is the safety net from the model's own line boxes — a line whose box is under FINE_PRINT of the tallest line's height is fine print and goes, with its pinyin and meaning parts when they come one per line; the box for the frame is then the union of the lines kept */
 const FINE_PRINT=1/3;
@@ -851,6 +853,45 @@ function mainLines(lines,p,m,boxes,box){
   if(mp.length===lines.length) out.m=mp.filter((x,i)=>keep[i]).join(" / ");
   const u=out.boxes; out.box=[Math.min(...u.map(b=>b[0])),Math.min(...u.map(b=>b[1])),Math.max(...u.map(b=>b[2])),Math.max(...u.map(b=>b[3]))];
   return out;
+}
+/* a line the card's own picture does not show (v410, H's shop sign 建国肉夹馍 / 砂, 2026-09-11: Qwen's union "box" was byte for
+   byte its own first line box, so the frame was placed on 建国肉夹馍 and the card's picture ends 2.5 % of the photo above 砂 —
+   and the card's text carried 砂 with "clay pot" all the same: "den character fuer Claypot noch mit drin, obwohl ich ihn
+   explizit ausm Frame ausgeschlossen hab". H's own rule since v324: only translate what is also shown in the thumbnail and in
+   the learning card.
+   WHERE THIS RUNS IS THE WHOLE DESIGN, and the first cut got it wrong. Put in aiReadPicture it filtered the text on every
+   path while the frame follows the box on only one, so four skeptics broke it in four ways, all reproduced end to end: a
+   hand-drawn frame, a frame H merely nudged (CROP.proposed is deleted on the first pointerdown — "most photos"), and the Edit
+   form's Ask AI all place nothing at all, so the card showed both lines and taught one; and on the intended path the card's
+   picture is the 16:9 WINDOW of v329, not the text frame, and the window still showed the line the text had lost. So the test
+   sits here, after frameOnText has actually moved the frame, and it asks the only question H's rule asks: is this line inside
+   the picture this card will carry? A frame the box did not place is never filtered — the picture then shows everything.
+   The comparison is the model against itself, mapped through the app's own geometry, and never against the pixels: snapBox
+   shrinks the box to the ink it found, so a poster whose snap trimmed would lose a real line.
+   Measured over 22 real picture answers (the 32 aiframe cases, the panel suite, Qwen's own replies quoted in this file): the
+   defect scores 0.000 and the lowest legitimate line 0.906, and the model's box must cut off more than 85 % of a line before
+   it goes. The number can move, but only on evidence — the failure mode of this rule is deleting text that belongs. */
+const LINE_OUT=0.15, LINE_KEEP=0.5; /* LINE_KEEP: more than half the lines must survive — a union covering one line of five is a broken answer, not a forgotten line, and there the old behaviour (the picture shows less than the text) is the safer one */
+function outsideWindow(pic,placed,base,W,Hh,angle){
+  if(!pic||!placed||!base||!W||!Hh) return null;
+  if(placed.a||base.a||angle) return null; /* a turned frame: the window is turned too, and an upright overlap would be a guess */
+  if(!pic.oneScale||pic.apart||(Array.isArray(pic.labels)&&pic.labels.length)) return null; /* a panel's boxes are the split's (v358), and a drawn lattice (v380) would fire wholesale */
+  const lines=String(pic.zh||"").split("\n"), boxes=pic.boxes;
+  if(lines.length<2||!Array.isArray(boxes)||boxes.length!==lines.length||boxes.some(b=>!b)) return null;
+  const pp=String(pic.p||"").split(/\s*\/\s*/), mp=String(pic.m||"").split(/\s*\/\s*/);
+  if(pp.length!==lines.length||mp.length!==lines.length) return null; /* the pinyin and the meaning must be able to follow, or the card would keep the meaning of text that is gone */
+  const win=windowRect(placed), keep=boxes.map(b=>{
+    const f=photoFrameOf(base,W,Hh,{x0:b[0]*W,y0:b[1]*Hh,x1:b[2]*W,y1:b[3]*Hh},angle); if(!f) return true;
+    const a=f.w*f.h; if(!(a>0)) return true;
+    return Math.max(0,Math.min(f.x+f.w,win.x+win.w)-Math.max(f.x,win.x))*Math.max(0,Math.min(f.y+f.h,win.y+win.h)-Math.max(f.y,win.y))/a>=LINE_OUT; });
+  const n=keep.filter(Boolean).length;
+  if(pic.outside&&pic.outside.length) return null; /* once per answer, whatever calls it */
+  if(n===lines.length||n<LINE_KEEP*lines.length) return null; /* strictly under: one survivor of two IS more than half, and two lines is the field defect's own shape — `<=` made the rule inert on exactly the card it exists for, which two independent skeptics caught end to end */
+  pic.outside=lines.filter((l,i)=>!keep[i]);
+  pic.zh=lines.filter((l,i)=>keep[i]).join("\n");
+  pic.p=pp.filter((v,i)=>keep[i]).join(" / "); pic.m=mp.filter((v,i)=>keep[i]).join(" / ");
+  pic.boxes=boxes.filter((b,i)=>keep[i]);
+  return pic.outside;
 }
 /* the text's box from the picture answer (v293), as fractions of the sent picture: the prompt asks for fractions, a model that answers in the picture's pixels or on a 0–1000 grid is scaled back; anything else is no box */
 const PIC_MIN=0.02, LABEL_MIN=0.005; /* a box must cover this much of the picture — the union box a fiftieth (v293), one label of a phone screenshot far less: 外卖 is 30 of 2520 pixels tall on H's Meituan home screen (v367) */
@@ -2652,6 +2693,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  410:"A card no longer carries text that its own picture does not show.",
   409:"About now says plainly what leaves the phone, and that the AI can be wrong.",
   407:"A photo of a control panel now makes one card per button, each with its own picture.",
   402:"The app speaks Russian, Vietnamese, Thai and Indonesian too.",
@@ -4936,7 +4978,10 @@ async function cropSign(id,opts){
           N.rect=numBox(rect); N.Hb=n1(Hb); /* v399 */
           if(picSeen.base){ const bh=box.y1-box.y0, sb=seenBase, e={top:box.y0<=0.02*Hh&&sb.y>0.005*sb.lh,bottom:box.y1>=0.98*Hh&&sb.y+sb.h<0.995*sb.lh,left:box.x0<=0.02*W&&sb.x>0.005*sb.lw,right:box.x1>=0.98*W&&sb.x+sb.w<0.995*sb.lw}; /* an edge that is the photo's own has nothing beyond it (v315: on the whole-photo proposal of H's parking sign the line said the frame reaches beyond the right edge, where nothing was) */ /* the box on the edge of the app's proposal (v313, H's 北京现代 badge: the ink rows cut the chrome characters in half at the proposal's top, Qwen boxed the visible halves at y 0–55 of 496, the snap found nothing, and the card showed half characters — "Why is the crop so wrong here?"): the text may go on beyond the edge, so the frame reaches past it — 1.5 box heights above or below, two text heights sideways — into the photo; never for the hand's frame or the whole photo, where there is nothing beyond */
             if(e.top||e.bottom||e.left||e.right){ grow={top:e.top?1.5*bh:0,bottom:e.bottom?1.5*bh:0,left:e.left?2*bh:0,right:e.right?2*bh:0}; logRead(`the AI's box touches the picture's ${["top","bottom","left","right"].filter(k=>e[k]).join(" and ")} edge — the frame reaches beyond it`); } } }catch(e){ box=null; logErr("snap",e&&e.message||String(e)); logRead("the AI's box could not be used: "+(e&&e.message||e)); }
-        if(box){ const sure=sureAngle; const cut=await frameOnText(id,picSeen.orig,seenBase,rect,seenAngle,"AI",grow,sure&&{box}); if(stale()) return; if(cut) placedCut=cut; }
+        if(box){ const sure=sureAngle; const cut=await frameOnText(id,picSeen.orig,seenBase,rect,seenAngle,"AI",grow,sure&&{box}); if(stale()) return; if(cut) placedCut=cut;
+          const placed=PLACED[id]||(CROP&&CROP.id===id&&CROP.followed?CROP.rect:null); /* only a frame this box actually moved (v410) */
+          const gone=cut&&placed&&picSeen.base?outsideWindow(pic,placed,seenBase,W,Hh,seenAngle):null; /* picSeen.base is null on the regrow branch and only there: after a v314 cut, a v318 side, a v348 noText or a v393 tiny re-ask the app has just spent a second Qwen call to RECOVER a line, and the snap then trims its region off the union — measured, the rule deleted the very line the re-ask existed for (verify-aiframe cutline) */
+          if(gone) logRead(`a line outside the picture this card will carry, left off it: ${gone.join(" | ")}`); }
         if(splitWhole&&W&&Hh&&seenBase&&pic.labels&&pic.labels.length>=SPLIT_MIN){ /* the boxes are a drawing: the cards keep their texts and get the frame's own picture (v380) */
           const one=PLACED[id]||seenBase;
           SPLIT[id]=pic.labels.map(()=>one);
@@ -5002,8 +5047,9 @@ async function cropSign(id,opts){
     if(pic&&!pic.bad){
       /* the AI's lines replace the reading: no confidences (every character is open in the picker), no boxes (the sheet
          shows the whole crop), the reader's texts become the alternatives; the answer is the check, no text check follows */
-      const zh=pic.zh.split("\n"), guesses=[...new Set(passes.map(textOf).filter(tx=>tx&&tx!==pic.zh))].slice(0,6);
       await placeFromPicture(pic,picSeen,run); if(stale()) return; /* v406: the weak path runs it inline, exactly where the block stood */
+      const zh=pic.zh.split("\n"), guesses=[...new Set(passes.map(textOf).filter(tx=>tx&&tx!==pic.zh))].slice(0,6); /* after the placement, which may have left a line off the card (v410) */
+      N.pic=numPic(pic); /* v410: numPic ran before the placement, so `out` was always empty in the record — the v384/v395/v405 shape, a record that does not say what happened */
       cardImg=placedCut||r.blob; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=cardImg; /* the card image is the crop as framed (the placed frame's cut, v288), not the second look's band */
       SIGN[id]={lines:zh, orig:zh.slice(), conf:[], boxes:zh.map(()=>[]), img:dk.blob, angle:dk.angle||0, tightened:false, region:r, alts:guesses, trad:!!pic.zht, tradDetected:!!pic.zht, tradText:pic.zht||"",
         ai:{zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,ml:pic.ml,note:pic.note,kind:pic.kind,ok:true,bad:false,pic:true,labels:pic.labels||null}, cardImg, weak:false};
@@ -5044,7 +5090,7 @@ async function cropSign(id,opts){
       N.pic=numPic(pic); r.pic={zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped}; /* v399: the record was empty on this path until v406 */
       if(pic.dropped&&pic.dropped.length) logRead(`fine print left out of the AI's answer: ${pic.dropped.join(" | ")}`);
       const cut=await placeFromPicture(pic,{orig:r.blob,dk:trustAngle?dk:null,base},at);
-      if(READ_RUN[id]!==at||SIGN[id]!==sg) return; if(cut) sg.cardImg=cut; numsFile(id); }; /* the ring files by identity, so this takes no second slot (v405) */ /* the picture for a garbage verdict of the text check (v302): the straightened frame the reading started from — the same picture the weak path sends (v319; v302–v318 the placed frame's cut when the frame stood on read text) */
+      if(READ_RUN[id]!==at||SIGN[id]!==sg) return; if(cut) sg.cardImg=cut; N.pic=numPic(pic); numsFile(id); }; /* the ring files by identity, so this takes no second slot (v405) */ /* the picture for a garbage verdict of the text check (v302): the straightened frame the reading started from — the same picture the weak path sends (v319; v302–v318 the placed frame's cut when the frame stood on read text) */
     if(pic&&pic.bad){ const sg=SIGN[id]; sg.noText=true; sg.ai={zh:bestT,zht:"",p:"",m:"",note:pic.note,ok:false,bad:true,pic:true}; sg.flag=true; sg.flagNote=t("the reading looks wrong"); } /* the AI saw the picture and found no readable text: the reading is marked wrong, no text check on it */
     done(r); numsFile(id); delete READING[id]; renderShots();
     if(aiAutoOn()&&!(pic&&pic.bad)&&!RECROP[id]) signAskAI(id); /* every reading is checked without a tap (the Edit form asks through its own button, v239) */
