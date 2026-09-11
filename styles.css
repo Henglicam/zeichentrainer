@@ -360,7 +360,9 @@ body.noscroll{overflow:hidden}
 .aiform{background:var(--card);border-radius:var(--r);padding:12px 14px 14px;margin:4px 0 10px;box-shadow:var(--shadow)}
 /* review flag */
 .flagbox{margin-top:16px;padding:10px 14px;border-radius:var(--r);color:var(--tint);font-size:14px;line-height:1.45;text-align:left;background:var(--tint-soft)}
-.backacts{display:flex;justify-content:center;gap:22px;margin-top:12px} .backacts .del{font-size:15px;padding:10px 4px}
+/* three actions since v427 (the star joined Flag and Edit): the row wraps as whole buttons and a label never breaks
+   mid-phrase — without nowrap the German row came out as three ragged two-line columns with the glyph stranded above its word */
+.backacts{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 22px;margin-top:12px} .backacts .del{font-size:15px;padding:10px 4px;white-space:nowrap}
 .flagbtn.on{color:var(--tint)}
 /* a text box inside a More row (the Feedback row, v218): the form field's look on the row's secondary surface, full width, growing with its text */
 .mrow textarea{width:100%;background:var(--card2);border:none;border-radius:10px;color:var(--label);font-family:var(--sans);font-size:17px;padding:12px 14px;outline:none;box-shadow:none;margin-top:10px;resize:none;overflow:hidden;line-height:1.35;min-height:46px;display:block}

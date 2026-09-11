@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=426; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=427; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2175,7 +2175,7 @@ function renderStudy(main){
     const grds=[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>
       `<button class="grade" data-g="${g}"><span class="lbl">${t(l)}</span></button>`).join("");
     back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="grades">${grds}</div>
-      <div class="backacts"><button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}</button><button class="del" id="edit-card">${t("✎ Edit")}</button></div>${linkedHTML(d)}</div>`;
+      <div class="backacts"><button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button><button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}</button><button class="del" id="edit-card">${t("✎ Edit")}</button></div>${linkedHTML(d)}</div>`;
   } else {
     back=swipeHint(d);
   }
@@ -2189,6 +2189,7 @@ function renderStudy(main){
   const rv=$("#reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); return; } S.revealed=!S.revealed; render(); };
   wireSwipe(main.querySelector(".card"));
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
+  const st=$("#star-card"); if(st) st.onclick=async()=>{ await setStar(c,!d.star); render(); }; /* the learner's own mark, here too (v427) — the same field the Cards list writes */
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   const ed=$("#edit-card"); if(ed) ed.onclick=()=>{ S.editFrom="study"; S.editing=c; render(); };
   wireSay(); wireChars(d); wireLinks(); wireLearnChips();
@@ -2838,7 +2839,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
-  425:"Tap the star on a card to mark it, and study your starred cards from the filter.",
+  427:"Tap the star on a card — in the list or while learning — to mark it, and study your starred cards from the filter.",
   423:"An update no longer sends you to another card in the middle of a session.",
   421:"Three grades instead of four — Hard, Medium, Easy, in the traffic light's colours.",
   416:"The update note now waits until you tap it away — and More lets you switch it off.",
