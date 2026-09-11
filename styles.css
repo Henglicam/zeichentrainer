@@ -19,7 +19,10 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;height:100%}
-html{background:var(--bg)}
+/* the pull-to-refresh is off on the VIEWPORT'S scroller, which is html, not body (v415, H: "nach unten swipen hat manchmal einen
+   refresh mit zurueckspringen auf die Learn Seite zur Folge"): overscroll-behavior is not propagated from body the way overflow is,
+   so the rule below — on body since v82 — never reached the scroller and Chrome reloaded the page on a downward swipe at the top. */
+html{background:var(--bg);overscroll-behavior-y:contain}
 body{background:var(--bg);color:var(--label);font-family:var(--sans);font-size:17px;line-height:1.45;-webkit-font-smoothing:antialiased;touch-action:manipulation;overscroll-behavior-y:contain}
 button{font:inherit;color:inherit}
 /* the browser's own touch behaviours kept off the app (v249, H after the image menu of v248: "Find all such useless behaviours and remove them"): no long-press image menu, drag ghost or selection on any picture or canvas; no selection toolbar on buttons, tabs, chips, strips, tiles, the picker, the drawing sheet and the crop layer; no double-tap zoom anywhere (touch-action on body, the crop layer and the pad keep their own stricter values); the callout is Safari's, for the iPhone */
