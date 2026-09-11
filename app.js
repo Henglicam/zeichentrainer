@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=419; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=420; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2171,7 +2171,15 @@ function wireSwipe(card){
     dropPeer(); step=s;
     if(!at(S.idx+s)) return;
     const d=cardOf(S.queue[S.idx+s]); if(!d) return;
-    shift=card.offsetWidth+SW_GAP;
+    /* far enough that the pair leaves the screen, not merely one card width (v419, H on his Xiaomi Mix Fold unfolded:
+       "Sieht der Swipe im aufgeklappten Zustand auf dem großen Screen noch etwas komisch aus, weil die Karten links und
+       rechts dann einfach plötzlich verschwinden. Die müssten eigentlich dann rausfliegen."). A card is at most 440 px
+       wide, so on a wide screen one card width carries the outgoing card nowhere near the edge — measured at 1840 px it
+       finished at 285–725 of the viewport, fully visible, and then simply blinked out at the render, while the neighbour
+       popped into being in plain sight beside it. The travel is the distance that puts the leaving card past the edge
+       and the arriving one beyond the other, which on a phone is the card width again (390 px: 374 either way, so
+       nothing about the phone moves) and on the unfolded screen is about three times it. */
+    shift=Math.max(card.offsetWidth+SW_GAP, par.offsetWidth-card.offsetLeft, card.offsetLeft+card.offsetWidth);
     peer=document.createElement("div");
     peer.className="card peer";
     peer.innerHTML=`<div class="front">${frontHTML(d)}</div>${swipeHint(d)}`;
