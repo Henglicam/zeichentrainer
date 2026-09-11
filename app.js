@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=407; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=408; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -478,6 +478,7 @@ async function boot(){
   setTimeout(resumePending,1500); /* cards saved before their reading finished get it now (v237) */
   aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); resumeTagAll(); resumeRecheck(); });
   /* an interrupted Translate-all, Tag-all or Check-up run, and the deck's two one-off passes, go on by themselves (v262, v368, v370, v373, v398) */
+  setTimeout(updateNote,1200); /* v408: after the restored screen is up, not during the first paint */
   setTimeout(()=>{ resumeTranslate(); resumeTagAll(); resumeRecheck(); brightenPass().catch(()=>{}).then(()=>recutPass().catch(()=>{})); },2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ resumeTranslate(); resumeTagAll(); resumeRecheck(); } }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262) */
   sendReport(); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) sendReport(); else if(REPORT_DIRTY) sendReport(true); }); /* the day's first row on foreground, a second one on background when cards changed (v219) */
 }
@@ -1757,7 +1758,7 @@ function renderMore(main){
     <div class="listhead">Start over</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>`:""}
     <div class="listhead">${t("About")}</div>
-    <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s" id="about-s">${esc(aboutText())}</div></div></div>
+    <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s" id="about-s">${esc(aboutText())}</div>${whatsNewHTML()}</div></div>
   </div>`;
   $("#export").onclick=exportData;
   $("#export-photos").onchange=e=>setSetting("exportPhotos",!!e.target.checked);
@@ -2640,6 +2641,40 @@ async function delCustom(id){
    a second deletion meanwhile joins it ("Deleted 2 cards"), Undo puts everything back — the card with its progress row at
    its old place, the photo into the inbox (the copy keepPhoto made onto its cards goes again) — and the line goes when the
    time is up. Photos → Delete N and Reset keep their sheet. */
+/* What changed, told to the user (v408, H: "von jetzt an bitte immer den user darueber benachrichtigen, wenn etwas
+   geupdated wurde", then "Should also mention anything relevant for the users"). Since v327 the app reloads itself at
+   the next pause and says nothing, so nobody — H testing in the field least of all — can tell whether the page in their
+   hand is the version we just shipped.
+   THE RULE, and it is the whole point of this block: every PR that changes something a learner would notice adds one
+   line to WHATS_NEW, keyed by its version. A PR that does not — a matcher rule, a log that survives a restart, a closure
+   moved above a gate — adds nothing, and its update says only that there was one. Most versions get no note; that is
+   correct, not an oversight. The sentence is an English t() key like every other string, so it ships in English and its
+   translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
+   friend's German phone shows the English sentence and nothing breaks. */
+const WHATS_NEW={
+  407:"A photo of a control panel now makes one card per button, each with its own picture.",
+  402:"The app speaks Russian, Vietnamese, Thai and Indonesian too.",
+};
+const NEW_MS=6000; /* a beat longer than the Undo line: this one is read, not acted on */
+const newsList=()=>Object.keys(WHATS_NEW).map(Number).sort((a,b)=>b-a);
+const newsSince=v=>newsList().filter(n=>n>v&&n<=APP_V).map(n=>({v:n,s:WHATS_NEW[n]})); /* what this phone has not been shown yet, newest first */
+function whatsNewHTML(){ const ns=newsList().slice(0,5); if(!ns.length) return "";
+  return `<div class="s" style="margin-top:8px">${esc(t("What is new"))}</div>`+ns.map(n=>`<div class="s">v${n} — ${esc(t(WHATS_NEW[n]))}</div>`).join(""); }
+function showUpdated(notes){
+  const el=document.createElement("div"); el.className="undo"; el.id="updated"; el.setAttribute("role","status");
+  const line=notes.length?t("Updated — {0}",t(notes[0].s)):t("Updated to {0}.","v"+APP_V);
+  const more=notes.length>1?" "+t("More under About."):"";
+  el.innerHTML=`<span class="t">${esc(line+more)}</span>`;
+  document.body.appendChild(el); setTimeout(()=>{ const e=$("#updated"); if(e) e.remove(); },NEW_MS);
+}
+/* at boot, once: a phone that has seen a version before and now runs a newer one gets the line. A fresh install writes
+   the version down and says nothing — there is nothing it was updated from. */
+function updateNote(){
+  const seen=+S.settings.seenVer||0;
+  setSetting("seenVer",APP_V).catch(()=>{});
+  if(!seen||seen>=APP_V) return;
+  showUpdated(newsSince(seen));
+}
 const UNDO_MS=5000; let UNDO=null;
 function undoText(){
   const cards=UNDO.items.filter(i=>i.kind==="card"), photos=UNDO.items.filter(i=>i.kind==="photo");
