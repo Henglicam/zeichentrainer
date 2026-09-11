@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=428; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=429; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -94,20 +94,28 @@ function orderCards(list,order,byDue){
 }
 /* the cards the Learn filter lets through — all of them, the tags picked in the filter sheet (several allowed since v366,
    a card in any of them counts, v133/v156), or the starred ones (v425); a card still reading has no text yet (v237).
-   One filter rule, read by the session and by the pull-forward alike — two copies would drift (the v401 lesson). */
+   One filter rule, read by the session and by the pull-forward alike — two copies would drift (the v401 lesson).
+   `star` says whether the star filter really applied, which the session needs (v429): it stands down when nothing in
+   reach is starred, and then the session is an ordinary one. */
 function learnDeck(){
-  const lt=learnTags(); let d=(lt.length?deck().filter(x=>lt.some(g=>hasTag(x,g))):deck()).filter(x=>x.c);
-  if(S.settings.learnStar&&d.some(x=>x.star)) d=d.filter(x=>x.star); /* a filter that would empty the session stands down */
-  return d;
+  const lt=learnTags(); const d=(lt.length?deck().filter(x=>lt.some(g=>hasTag(x,g))):deck()).filter(x=>x.c);
+  const star=!!S.settings.learnStar&&d.some(x=>x.star); /* a filter that would empty the session stands down */
+  return {cards:star?d.filter(x=>x.star):d, star};
 }
 /* the next cards of the same filter by due date, the ones a pull-forward would reach, skipping what the session already holds (v428) */
-const aheadCards=n=>{ const p=S.progress; return learnDeck().filter(x=>p[x.id]&&!S.queue.includes(x.id)).sort((a,b)=>p[a.id].due-p[b.id].due).slice(0,n).map(x=>x.id); };
+const aheadCards=n=>{ const p=S.progress; return learnDeck().cards.filter(x=>p[x.id]&&!S.queue.includes(x.id)).sort((a,b)=>p[a.id].due-p[b.id].due).slice(0,n).map(x=>x.id); };
 function buildQueue(includeAhead){
-  const p=S.progress, t=today(); const d=learnDeck();
+  const p=S.progress, t=today(); const {cards:d,star}=learnDeck();
   const order=learnOrder();
   const due = orderCards(d.filter(x=>p[x.id] && p[x.id].due<=t),order,true).map(x=>x.id);
-  const fresh = orderCards(d.filter(x=>!p[x.id]),order,false).slice(0,NEW_PER_SESSION).map(x=>x.id);
+  /* A star is a hand-picked short list, not a category, so a starred session holds every starred card (v429, H: "Go" on the
+     recommendation): the due ones first, so the plan still leads, then the new ones — without the eight-card cap, which exists
+     to stop a learner drowning in new cards and not to withhold the ones they picked themselves — then the rest by due date.
+     The pill counts 11 and the session now holds 11. A tag stays as it was: a tag can be the whole deck. */
+  const all = orderCards(d.filter(x=>!p[x.id]),order,false).map(x=>x.id);
+  const fresh = star?all:all.slice(0,NEW_PER_SESSION);
   let q=[...due,...fresh];
+  if(star) q=[...q,...d.filter(x=>p[x.id]&&p[x.id].due>t).sort((a,b)=>p[a.id].due-p[b.id].due).map(x=>x.id)];
   if(includeAhead && q.length===0)
     q = d.filter(x=>p[x.id]).sort((a,b)=>p[a.id].due-p[b.id].due).slice(0,8).map(x=>x.id);
   return q;
@@ -1905,7 +1913,7 @@ const GUIDE=()=>[
     t("Grade yourself: Hard, Medium, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
     t("Swipe the closed card left or right to pick another one — nothing is graded, and the card you skip comes round again.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included."),
-    t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way. Tap the star on a card to mark it as one you care about — the filter then shows, or studies, your starred cards alone.")]},
+    t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way. Tap the star on a card to mark it as one you care about — the filter then shows them alone, and Learn studies all of them, due or not.")]},
   {h:t("Language and meanings"),p:[t("More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.")]},
   {h:t("What stays on the phone"),p:[t("Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak."),
     t("Once a day anonymous usage counts and the app's error messages go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.")]}];
@@ -2855,6 +2863,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  429:"Picking Starred now studies all your starred cards, not only the ones due today.",
   427:"Tap the star on a card — in the list or while learning — to mark it, and study your starred cards from the filter.",
   423:"An update no longer sends you to another card in the middle of a session.",
   421:"Three grades instead of four — Hard, Medium, Easy, in the traffic light's colours.",
