@@ -176,6 +176,15 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 .crow:first-of-type{border-top-left-radius:var(--r);border-top-right-radius:var(--r)}
 .crow:last-of-type{border-bottom:none;border-bottom-left-radius:var(--r);border-bottom-right-radius:var(--r)}
 .crow:active{background:var(--card2)}
+/* the star (v425, H: "waehrend des Durchscrollens ganz schnell und unkompliziert Karten markieren"): one tap, no mode. It sits
+   at the head of the row's status column, which is right-aligned and auto-wide — so every star lines up at the same edge and, on
+   a row that already carries a pill or a due date, costs no width at all. A column of its own was measured and dropped: it took
+   52 px from the text and clipped the card's own characters (大闸蟹我选蟹状元 → 大闸蟹我选蟹…), which is the one thing in the row
+   that must not be cut. The negative margins keep the 44 px touch area while the box lays out as 33 × 32. */
+.star{display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-6px -11px -6px 0;cursor:pointer;color:var(--label3)}
+.star svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round}
+.star.on{color:var(--tint)} .star.on svg{fill:currentColor}
+.star:active{opacity:.55}
 .thumb{width:124px;height:70px;border-radius:8px;object-fit:contain;object-position:center;background:var(--card2)}
 /* the list's thumbnail like the front's photo box (v232, H: "in der Cards Liste auch"): a darkened blurred copy of the crop fills the tile behind the fitted picture */
 .thumbbox{position:relative;display:block;width:124px;height:70px;border-radius:8px;overflow:hidden;background:var(--card2);box-shadow:inset 0 0 0 1px var(--sep)}
