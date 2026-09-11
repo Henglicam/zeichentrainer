@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=423; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=424; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2069,9 +2069,6 @@ const showHints=()=>(usage().reviews||0)<HINT_REVIEWS;
 /* the simplified form of a traditional card, on the back above the pinyin (v227; on the front until v226, H v102) */
 const simpRefHTML=d=>d.trad?`<div class="script back"><span class="scriptref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span></div>`:"";
 function backHTML(d){
-  const wordBlock = d.w ? `<div class="rule"></div>
-    <div class="word"><span class="w">${esc(d.w)}</span><span class="wp">${esc(d.wp||"")}</span></div>
-    <div class="wm">${esc(d.wm||"")}</div>` : "";
   const glossBlock = d.kind==="sign" ? `
     ${d.mt&&!d.mt.verified?`<span class="flag">${t("meaning unverified")}${d.mt.pending?t(" (translation pending)"):""}${d.mt.suspect?t(" (reading uncertain: {0})",esc(d.mt.suspect)):""}</span>`:""}
 ` : "";
@@ -2079,7 +2076,7 @@ function backHTML(d){
      stood between the parts row and the grades, so reference material sat in the middle of the answer-then-grade path. Each
      caller places it now, below its own actions. */
   return `${simpRefHTML(d)}<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}</div>${charsHTML(d)}
-    ${d.kind==="sign"?glossBlock:wordBlock}`;
+    ${glossBlock}`;
 }
 /* the other cards with the same text (v122, H: "if one character connects to various photos, then link them"): their
    crops in a row on the back and in the card detail; a tap opens that card */
@@ -2356,7 +2353,7 @@ function cardsListHTML(){
   /* several rows may be ticked at once (v366): a card must match one of the ticked status rows and one of the ticked tags */
   if(S.filterUnv||S.filterFlag||S.filterAi) list=list.filter(d=>(S.filterUnv&&d.mt&&!d.mt.verified)||(S.filterFlag&&d.flag)||(S.filterAi&&d.ai));
   if(S.filterTags.length) list=list.filter(d=>S.filterTags.some(g=>hasTag(d,g)));
-  if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,...Object.values(d.ms||{}),d.w,d.wp,d.wm,d.flagNote,...(d.tags||[])].filter(Boolean).join(" ").toLowerCase().includes(q));
+  if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,...Object.values(d.ms||{}),d.flagNote,...(d.tags||[])].filter(Boolean).join(" ").toLowerCase().includes(q));
   const pk=marking("cards"); /* marking (v351): the tap marks instead of opening; the mark sits at the right end of the row since v355 */
   const rows=list.map(d=>`<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
@@ -2455,8 +2452,6 @@ function renderEdit(main,c){
       </div>
       <div class="field"><label>${t("Pinyin")}</label><textarea id="e-pin" class="grow" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">${esc(d.p)}</textarea></div>
       <div class="field"><label>${t("Meaning")}</label><textarea id="e-mean" class="grow" rows="1">${esc(d.m)}</textarea><div class="smean badge" id="e-aistatus" style="margin-top:4px"></div></div>
-    ${isSign||!d.w?"":`<div class="field"><label>${t("Context word, pinyin, meaning (optional)")}</label>
-      <div class="row"><input id="e-w" class="hanzi" value="${esc(d.w||"")}" placeholder="学习" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><input id="e-wp" value="${esc(d.wp||"")}" placeholder="xuéxí" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><input id="e-wm" value="${esc(d.wm||"")}" placeholder="${t("to learn")}"></div></div>`}
     <div class="field"><label class="check"><input type="checkbox" id="e-flag"${d.flag?" checked":""}> ${t("⚑ Flag for review (text, pinyin or meaning looks wrong)")}</label>
       <input id="e-note" value="${esc(d.flagNote||"")}" placeholder="${t("Note for the reviewer (optional)")}"${d.flag?"":" hidden"}></div>
     ${tagsFieldHTML("e-tags",d.tags)}
@@ -2617,8 +2612,6 @@ function renderEdit(main,c){
       if(!CJK.test(newC)){ if(willHand||aiLate){ newC=d.c; wordLines=undefined; } else return fail(t("Please enter Chinese text.")); } /* an empty card saved early keeps its text until the analysis fills it */
     }
     const upd={...d, p:pin, m:mean}; delete upd.ex; delete upd.exp; delete upd.exm; /* example sentences were dropped in v41 */
-    if(!isSign&&$("#e-w")){ upd.w=$("#e-w").value.trim(); upd.wp=$("#e-wp").value.trim(); upd.wm=$("#e-wm").value.trim();
-      if(!upd.w){ delete upd.w; delete upd.wp; delete upd.wm; } } /* the context fields show only on cards that have one */
     /* Save changes while the new frame is still being read (v241, H: "allow instant saving"): the card takes the new crop now, the
        reading goes on in the background and fills text, pinyin and meaning when done — like Save now in the Camera tab */
     let handoff=null;
