@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=420; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=421; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -30,13 +30,6 @@ function schedule(card, grade){
   /* consecutive failures — a leech is usually a bad card, not a bad memory */
   const fails = grade==="again" ? ((card&&card.fails)||0)+1 : grade==="hard" ? ((card&&card.fails)||0) : 0;
   return { interval, ease, due, reps, fails, last:today() };
-}
-function previewInterval(card, grade){
-  const s = schedule(card, grade);
-  if (grade==="again") return t("<10 min");
-  if (s.interval<1) return t("<1 d");
-  if (s.interval===1) return t("1 d");
-  return t("{0} d",s.interval);
 }
 
 /* ---------- IndexedDB (persistent) ---------- */
@@ -1882,7 +1875,7 @@ const GUIDE=()=>[
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
     t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.")]},
   {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out."),
-    t("Grade yourself: Again, Hard, Good, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
+    t("Grade yourself: Hard, Medium, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
     t("Swipe the closed card left or right to pick another one — nothing is graded, and the card you skip comes round again.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included."),
     t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way.")]},
@@ -2125,11 +2118,19 @@ function renderStudy(main){
     wireLearnChips();
     return;
   }
-  const c=S.queue[S.idx], d=cardOf(c), sched=S.progress[c]||null, isNew=!S.progress[c];
+  const c=S.queue[S.idx], d=cardOf(c), isNew=!S.progress[c];
   let back="";
   if(S.revealed){
-    const grds=[["again","Again"],["hard","Hard"],["good","Good"],["easy","Easy"]].map(([g,l])=>
-      `<button class="grade" data-g="${g}"><span class="lbl">${t(l)}</span><span class="iv">${previewInterval(sched,g)}</span></button>`).join("");
+    /* three buttons in the traffic light's own colours, and no interval preview under them (v421, H: "die Auswahlknöpfe müssen
+       viel einfacher und weniger sein. Nur Easy, Medium, and Hard, in den Ampelfarben Rot, Grün und Gelb", then "Ich swipe die
+       Karten nach links und rechts, fang mir die Lösung an und sag, das war easy, das war mittel oder das war hart. Zack, zack,
+       ohne groß Nachdenken"): the four grades of SM-2 asked the learner to choose between "Again" and "Hard" — two words for
+       two kinds of not knowing — and the "<10 min / 3 d / 8 d" line under each label was the arithmetic that made the choice
+       feel like a decision. Hard is the old "again" (the card comes back later in the same session), Medium the old "good",
+       Easy unchanged; the old "hard" grade — I knew it, barely, come back tomorrow — is gone, so a card half known repeats
+       today instead. The schedule itself is untouched: every card keeps the interval and ease it has. */
+    const grds=[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>
+      `<button class="grade" data-g="${g}"><span class="lbl">${t(l)}</span></button>`).join("");
     back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="grades">${grds}</div>
       <div class="backacts"><button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}</button><button class="del" id="edit-card">${t("✎ Edit")}</button></div></div>`;
   } else {
@@ -2794,6 +2795,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  421:"Three grades instead of four — Hard, Medium, Easy, in the traffic light's colours.",
   416:"The update note now waits until you tap it away — and More lets you switch it off.",
   415:"Pulling the page down no longer reloads the app and throws you back to Learn.",
   414:"Swipe a card left or right, before you open it, to pick another one from the session.",
