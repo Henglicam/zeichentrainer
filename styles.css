@@ -3,7 +3,7 @@
 :root{
   --bg:#F2F2F7; --card:#FFFFFF; --card2:#F2F2F7; --fill:#E9E9EE;
   --label:#000000; --label2:#6E6E73; --label3:#AEAEB2; --sep:rgba(60,60,67,.24);
-  --tint:#C8372D; --tint-soft:rgba(200,55,45,.12); --ok:#2FA36B; --ok-soft:rgba(47,163,107,.12);
+  --tint:#C8372D; --tint-soft:rgba(200,55,45,.12); --ok:#2FA36B; --ok-soft:rgba(47,163,107,.12); --warn:#B5730B; --warn-soft:rgba(214,148,30,.14);
   --bar:rgba(249,249,249,.86); --shadow:0 1px 2px rgba(0,0,0,.05), 0 6px 20px rgba(0,0,0,.05);
   --hanzi:'Songti SC','STSong','Noto Serif CJK SC','Source Han Serif SC','SimSun',serif;
   --sans:-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC','Helvetica Neue',Roboto,system-ui,'Noto Sans SC',sans-serif;
@@ -14,7 +14,7 @@
 @media (prefers-color-scheme:dark){
   :root{ --bg:#000000; --card:#1C1C1E; --card2:#2C2C2E; --fill:#3A3A3C;
     --label:#FFFFFF; --label2:#A1A1A6; --label3:#6E6E73; --sep:rgba(84,84,88,.6);
-    --tint:#E0483E; --tint-soft:rgba(224,72,62,.18); --ok:#3DBE7A; --ok-soft:rgba(61,190,122,.16);
+    --tint:#E0483E; --tint-soft:rgba(224,72,62,.18); --ok:#3DBE7A; --ok-soft:rgba(61,190,122,.16); --warn:#E8A93C; --warn-soft:rgba(232,169,60,.18);
     --bar:rgba(22,22,24,.82); --shadow:none; }
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -86,12 +86,17 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 .word .w{font-family:var(--hanzi);font-size:26px}
 .word .wp{font-size:14px;color:var(--label2)}
 .wm{font-size:15px;color:var(--label2);margin-top:2px}
-.grades{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:22px}
-.grade{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:58px;background:var(--card2);
+/* three grades in the traffic light's own colours (v421): red = Hard, amber = Medium, green = Easy — the soft surface with the
+   strong label of .btn.danger, so the colour is unmistakable and the text still reads on both grounds; a filled amber tile with
+   white on it does not (measured against the same text on the soft ground). No interval line under the label any more. */
+.grades{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:22px}
+.grade{display:flex;align-items:center;justify-content:center;min-height:62px;background:var(--card2);
   color:var(--label);cursor:pointer;border:none;border-radius:var(--r);padding:8px 4px}
-.grade:active{background:var(--fill)}
-.grade .lbl{font-size:15px;font-weight:600}
-.grade .iv{font-size:12px;color:var(--label2);margin-top:3px;font-variant-numeric:tabular-nums}
+.grade[data-g="again"]{background:var(--tint-soft);color:var(--tint)}
+.grade[data-g="good"]{background:var(--warn-soft);color:var(--warn)}
+.grade[data-g="easy"]{background:var(--ok-soft);color:var(--ok)}
+.grade:active{filter:brightness(.94)}
+.grade .lbl{font-size:17px;font-weight:600;color:inherit;margin:0} /* the tile carries the colour; the page-wide .lbl rule (label2, margin-right 8px) would otherwise win over the inherited one and push the label off centre */
 
 /* buttons: primary = filled tint · default = tinted soft · danger = red on soft · del = plain text */
 .btn{background:var(--tint-soft);color:var(--tint);border:none;border-radius:var(--r);
