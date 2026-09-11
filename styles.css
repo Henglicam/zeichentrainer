@@ -402,3 +402,6 @@ body.noscroll{overflow:hidden}
 .pbar i.new,.plegend i.new{background:var(--label3)} .pbar i.learn,.plegend i.learn{background:var(--tint)} .pbar i.known,.plegend i.known{background:var(--ok)}
 .plegend{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:13px;color:var(--label2)}
 .plegend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+
+/* the batch of photos working itself through, and the one thing the user has to know about it (v411) */
+.batchline{margin:2px 4px 10px;font-size:13px;line-height:1.4;color:var(--label2)}

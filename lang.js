@@ -34,6 +34,9 @@ function nOf(n,w,pl){ n=n||0; const tr=wordOf(n,w,pl); return tr.includes("{0}")
 const L10N={
 en:{"capsule:Done":"Done","pad:Undo":"Undo","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
 de:{
+  "{0} to go.":"Noch {0}.",
+  "They finish while the app is open, and pick up where they stopped next time.":"Sie werden fertig, solange die App offen ist – und machen beim nächsten Mal da weiter, wo sie aufgehört haben.",
+  "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"Aus Galerie nimmt mehrere Fotos auf einmal – alle werden nacheinander zu Karten, solange die App offen ist.",
   "Check all cards again":"Alle Karten neu prüfen",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"Die KI wird ständig besser. Lass sie noch mal über dein ganzes Deck schauen – du siehst jede Änderung, bevor du sie übernimmst.",
   "Checking {0} of {1} …":"Prüfe {0} von {1} …",
@@ -279,6 +282,9 @@ de:{
   "Day streak":"Tage in Folge","Cards learned":"Karten gelernt","Due today":"Heute fällig","Reviews this week":"Wiederholungen diese Woche","Last 30 days":"Die letzten 30 Tage","Still learning":"Noch am Lernen","Known":"Sicher","Coming up: {0} due tomorrow, {1} this week.":"Demnächst: {0} morgen fällig, {1} diese Woche."
 },
 fr:{
+  "{0} to go.":"Encore {0}.",
+  "They finish while the app is open, and pick up where they stopped next time.":"Elles se terminent tant que l'appli est ouverte, et reprennent là où elles en étaient la fois suivante.",
+  "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"Depuis l'album prend plusieurs photos d'un coup – elles deviennent toutes des cartes, l'une après l'autre, tant que l'appli est ouverte.",
   "Check all cards again":"Revérifier toutes les cartes",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"L'IA s'améliore sans cesse. Laisse-la relire tout ton paquet – tu vois chaque changement avant de l'accepter.",
   "Checking {0} of {1} …":"Vérification {0} sur {1} …",
@@ -524,6 +530,9 @@ fr:{
   "Day streak":"Jours d'affilée","Cards learned":"Cartes apprises","Due today":"À revoir aujourd'hui","Reviews this week":"Révisions cette semaine","Last 30 days":"Les 30 derniers jours","Still learning":"En cours","Known":"Acquises","Coming up: {0} due tomorrow, {1} this week.":"À venir : {0} demain, {1} cette semaine."
 },
 es:{
+  "{0} to go.":"Quedan {0}.",
+  "They finish while the app is open, and pick up where they stopped next time.":"Se terminan mientras la app está abierta, y la próxima vez siguen donde se quedaron.",
+  "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"Desde álbum coge varias fotos a la vez: todas se convierten en cartas, una tras otra, mientras la app está abierta.",
   "Check all cards again":"Revisar todas las tarjetas",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"La IA mejora sin parar. Deja que repase todo tu mazo: ves cada cambio antes de aceptarlo.",
   "Checking {0} of {1} …":"Revisando {0} de {1} …",
@@ -769,6 +778,9 @@ es:{
   "Day streak":"Días seguidos","Cards learned":"Tarjetas aprendidas","Due today":"Para hoy","Reviews this week":"Repasos esta semana","Last 30 days":"Últimos 30 días","Still learning":"En curso","Known":"Dominadas","Coming up: {0} due tomorrow, {1} this week.":"Próximamente: {0} mañana, {1} esta semana."
 },
 ja:{
+  "{0} to go.":"あと{0}。",
+  "They finish while the app is open, and pick up where they stopped next time.":"アプリを開いている間に処理されます。途中で止まっても、次に開いたとき続きから進みます。",
+  "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"アルバムからでは写真をまとめて選べます。アプリを開いている間に、順番に全部カードになります。",
   "Check all cards again":"すべてのカードを再チェック",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"AIは日々よくなっています。カード全部をもう一度見てもらいましょう。変更は取り込む前に確認できます。",
   "Checking {0} of {1} …":"{0} / {1} をチェック中 …",
@@ -1014,6 +1026,9 @@ ja:{
   "Day streak":"連続日数","Cards learned":"学んだカード","Due today":"今日の復習","Reviews this week":"今週の復習回数","Last 30 days":"過去30日","Still learning":"学習中","Known":"定着","Coming up: {0} due tomorrow, {1} this week.":"この先：明日{0}枚、今週{1}枚。"
 },
 ko:{
+  "{0} to go.":"{0} 남았어요.",
+  "They finish while the app is open, and pick up where they stopped next time.":"앱이 열려 있는 동안 처리되고, 중간에 멈추면 다음에 열 때 이어서 해요.",
+  "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"앨범에서는 사진을 한 번에 여러 장 고를 수 있어요. 앱이 열려 있는 동안 차례대로 모두 카드가 돼요.",
   "Check all cards again":"모든 카드 다시 확인",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"AI는 계속 좋아져요. 카드 전체를 다시 한번 보게 해요 — 반영하기 전에 모든 변경 내용을 볼 수 있어요.",
   "Checking {0} of {1} …":"{0} / {1} 확인 중 …",
@@ -1262,6 +1277,9 @@ ko:{
    word, so every plural key carries a "#many" twin (5 карточек, 11 карточек, 111 карточек) that only PLURAL.ru ever looks
    up; "percent#few" is the one unit that also needs its own middle form, because English calls both of its forms "percent". */
 ru:{
+  "{0} to go.":"Осталось {0}.",
+  "They finish while the app is open, and pick up where they stopped next time.":"Они обрабатываются, пока приложение открыто, а в следующий раз продолжат с того места, где остановились.",
+  "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"«Из альбома» берёт сразу несколько фото — пока приложение открыто, они одно за другим станут карточками.",
   "Check all cards again":"Проверить все карточки",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"ИИ становится всё лучше. Дай ему ещё раз взглянуть на всю колоду — каждое изменение ты увидишь до того, как примешь его.",
   "Checking {0} of {1} …":"Проверяю {0} из {1} …",
@@ -1507,6 +1525,9 @@ ru:{
   "Day streak":"Дней подряд","Cards learned":"Выучено карточек","Due today":"Сегодня к повтору","Reviews this week":"Повторов за неделю","Last 30 days":"Последние 30 дней","Still learning":"В процессе","Known":"Освоено","Coming up: {0} due tomorrow, {1} this week.":"Впереди: завтра {0}, на этой неделе {1}."
 },
 vi:{
+  "{0} to go.":"Còn {0}.",
+  "They finish while the app is open, and pick up where they stopped next time.":"Chúng xử lý xong khi ứng dụng đang mở, lần sau sẽ tiếp tục từ chỗ đang dở.",
+  "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"Từ album lấy được nhiều ảnh cùng lúc — tất cả lần lượt thành thẻ khi ứng dụng đang mở.",
   "Check all cards again":"Kiểm tra lại mọi thẻ",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"AI ngày càng giỏi. Cho nó xem lại cả bộ thẻ của bạn đi — bạn thấy từng thay đổi trước khi áp dụng.",
   "Checking {0} of {1} …":"Đang kiểm tra {0}/{1} …",
@@ -1752,6 +1773,9 @@ vi:{
   "Day streak":"Chuỗi ngày","Cards learned":"Thẻ đã học","Due today":"Đến hạn hôm nay","Reviews this week":"Lượt ôn tuần này","Last 30 days":"30 ngày qua","Still learning":"Đang học","Known":"Đã thuộc","Coming up: {0} due tomorrow, {1} this week.":"Sắp tới: {0} đến hạn ngày mai, {1} trong tuần."
 },
 th:{
+  "{0} to go.":"เหลืออีก {0}",
+  "They finish while the app is open, and pick up where they stopped next time.":"ทั้งหมดจะทำจนเสร็จตอนเปิดแอปอยู่ ถ้าค้างไว้ ครั้งหน้าจะทำต่อจากจุดเดิม",
+  "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"จากอัลบั้ม เลือกรูปได้หลายรูปพร้อมกัน ทั้งหมดจะกลายเป็นการ์ดทีละใบตอนเปิดแอปอยู่",
   "Check all cards again":"ตรวจการ์ดทั้งหมดอีกครั้ง",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"AI เก่งขึ้นเรื่อยๆ ลองให้ AI ดูการ์ดทั้งหมดอีกรอบ — ทุกอย่างที่จะเปลี่ยน คุณได้ดูก่อนกดรับไว้เสมอ",
   "Checking {0} of {1} …":"กำลังตรวจ {0} จาก {1} …",
@@ -1997,6 +2021,9 @@ th:{
   "Day streak":"วันต่อเนื่อง","Cards learned":"การ์ดที่เรียนแล้ว","Due today":"ถึงกำหนดวันนี้","Reviews this week":"ทบทวนสัปดาห์นี้","Last 30 days":"30 วันล่าสุด","Still learning":"กำลังเรียน","Known":"จำได้แล้ว","Coming up: {0} due tomorrow, {1} this week.":"ที่กำลังจะมา: พรุ่งนี้ {0} ใบ · สัปดาห์นี้ {1} ใบ"
 },
 id:{
+  "{0} to go.":"Sisa {0}.",
+  "They finish while the app is open, and pick up where they stopped next time.":"Semuanya selesai selama aplikasi terbuka, dan lain kali lanjut dari tempat berhenti.",
+  "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"Dari album bisa ambil beberapa foto sekaligus — semuanya jadi kartu satu per satu selama aplikasi terbuka.",
   "Check all cards again":"Periksa ulang semua kartu",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"AI terus jadi lebih pintar. Minta dia memeriksa lagi semua kartumu — setiap perubahan kamu lihat dulu sebelum diterima.",
   "Checking {0} of {1} …":"Memeriksa {0} dari {1} …",

@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=410; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=411; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -449,6 +449,7 @@ async function boot(){
     S.progress = {}; prog.forEach(r=>{ const {id,c,...s}=r; S.progress[id||c]=s; });
     sett.forEach(r=>{ S.settings[r.k]=r.v; });
     if(Array.isArray(S.settings.errlog)) ERRLOG.unshift(...S.settings.errlog.slice(-20));
+    if(Array.isArray(S.settings.autoQueue)) AUTOQ.push(...S.settings.autoQueue.filter(id=>typeof id==="string")); /* v411: the batch goes on where it stopped */
     if(S.settings.readlog&&Array.isArray(S.settings.readlog.steps)&&!READLOG.length){ READLOG.push(...S.settings.readlog.steps.slice(-40)); LAST_READ.passes=S.settings.readlog.passes||null;
       /* the ring since v405; a phone still holding a v404 setting has one record under nums */
       LAST_READ.ring=(Array.isArray(S.settings.readlog.ring)?S.settings.readlog.ring:(S.settings.readlog.nums?[S.settings.readlog.nums]:[])).slice(-NUMS_KEEP);
@@ -476,11 +477,11 @@ async function boot(){
   autoBreaks(); /* old cards get their photo lines estimated once */
   fixNumberSegs(); /* word cards from before v338 get their numbers back into their lines */
   dedupePhotos(); /* cards from before v214 drop the whole photo they hold twice */
-  setTimeout(resumePending,1500); /* cards saved before their reading finished get it now (v237) */
+  setTimeout(()=>resumePending().then(autoNext,autoNext),1500); /* cards saved before their reading finished get it now (v237), then the batch goes on where it stopped (v411) */
   aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); resumeTagAll(); resumeRecheck(); });
   /* an interrupted Translate-all, Tag-all or Check-up run, and the deck's two one-off passes, go on by themselves (v262, v368, v370, v373, v398) */
   setTimeout(updateNote,1200); /* v408: after the restored screen is up, not during the first paint */
-  setTimeout(()=>{ resumeTranslate(); resumeTagAll(); resumeRecheck(); brightenPass().catch(()=>{}).then(()=>recutPass().catch(()=>{})); },2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ resumeTranslate(); resumeTagAll(); resumeRecheck(); } }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262) */
+  setTimeout(()=>{ resumeTranslate(); resumeTagAll(); resumeRecheck(); brightenPass().catch(()=>{}).then(()=>recutPass().catch(()=>{})); },2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ resumeTranslate(); resumeTagAll(); resumeRecheck(); autoNext(); } }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262); a batch of photos held up by a reading that never ended goes on too (v411) */
   sendReport(); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) sendReport(); else if(REPORT_DIRTY) sendReport(true); }); /* the day's first row on foreground, a second one on background when cards changed (v219) */
 }
 
@@ -1854,7 +1855,8 @@ function renderMore(main){
 const GUIDE=()=>[
   {h:t("Take a photo"),p:[t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card by itself — you see the finished card with Edit and Delete under it. Edit shows the photo with the frame the app used: drag a corner or the inside to fit it, the round handle turns it, let go and the reading starts again."),
     t("A photo of a control panel, or of several signs beside each other — a rice cooker’s buttons, the items of a menu board — becomes one card per label, each with its own cut of the photo."),
-    t("Crop frames a photo by hand, with a preview before the card is saved. In a hurry there? Save now makes the card at once and the reading fills it in.")]},
+    t("Crop frames a photo by hand, with a preview before the card is saved. In a hurry there? Save now makes the card at once and the reading fills it in."),
+    t("From album takes several photos at once — they all become cards, one after the other, while the app is open.")]},
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
     t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.")]},
   {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out."),
@@ -2693,6 +2695,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  411:"Pick several photos at once and they all become cards, one after the other.",
   410:"A card no longer carries text that its own picture does not show.",
   409:"About now says plainly what leaves the phone, and that the AI can be wrong.",
   407:"A photo of a control panel now makes one card per button, each with its own picture.",
@@ -3022,6 +3025,28 @@ async function findFrame(fullBlob,cropBlob){
 const abandonReading=id=>{ clearTimeout(READ_TIMER[id]); READ_RUN[id]=(READ_RUN[id]||0)+1; delete SIGN[id]; delete READING[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; }; /* a running reading of this photo abandons at its next step instead of delivering a result (v117); the inbox's Cancel, the Edit form's Crop again and an edit over a pending reading share it (v243) */
 const SHOTS_EXTRA={}, RECROP={}; /* the Edit form's Crop again (v239): the card's whole photo as a photo record outside the inbox (SHOTS_EXTRA[id]={id,blob,ts}), and the form's hooks — redraw (the frame view in place of renderShots), onRead (the reading's result), onImage (Image only), end */
 const shotRec=id=>S.inbox.find(s=>s.id===id)||SHOTS_EXTRA[id]||null;
+/* a batch of photos becomes a batch of cards, one after the other (v411, H: "Geht background processing in der Android app?" —
+   no, and it never will: the web has no API for sustained background compute, Chrome throttles a hidden page's timers to about
+   one task a second and then a minute, then freezes it, then discards it, and MIUI is harder still; a TWA changes none of that,
+   since it is the same Chrome renderer. What the app CAN do is work through a batch while it is open, which until v410 it did
+   not: importPhotos opened the FIRST photo of an album and left the other nine in the inbox with a Crop button, untouched until
+   each was tapped. Now they queue.) The queue holds only photos from an explicit import — never the inbox at large, which on
+   H's phone is 237 photos and would be 237 AI calls. One at a time, since the reader's pool is shared; a frame standing or any
+   card already waiting holds it, so the hand always has the floor. It survives a restart in setting `autoQueue`, and a photo is
+   taken off the queue before it is read, so a photo that fails is tried once and not for ever. A reading that never ends would hold
+   the queue for the session, so the foreground hook and the next start both call autoNext again. */
+const AUTOQ=[];
+const autoSave=()=>setSetting("autoQueue",AUTOQ.slice()).catch(()=>{});
+function autoQueueAdd(ids){ let n=0; for(const id of ids) if(!AUTOQ.includes(id)){ AUTOQ.push(id); n++; } if(n) autoSave(); }
+function autoDrop(id){ const i=AUTOQ.indexOf(id); if(i>=0){ AUTOQ.splice(i,1); autoSave(); } }
+function autoNext(){
+  if(!S.autoCard) return;
+  while(AUTOQ.length){
+    const id=AUTOQ[0];
+    if(!S.inbox.some(x=>x.id===id)||QSCARD[id]||PENDING[id]){ autoDrop(id); continue; } /* gone, already a card, or already reading */
+    if(CROP||Object.keys(PENDING).length) return; /* a frame stands, or a card is still waiting for its reading */
+    autoDrop(id); CROP={id,rect:null,auto:true}; proposeFrame(id); return; }
+}
 const QSNOTE={}, QSCARD={}, READING={}, AUTO={}, SPLIT={}, QSMORE={}; /* SPLIT[id]: one frame per element when the AI called the photo a user interface (v357–v358) · QSMORE[id]: the cards after the first, for the photo's row */ /* AUTO[id]: the photo became a card by itself (v325) — the row shows the shimmer while it reads and the finished card after */ /* READING[id]: status text while the photo is being read · QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) · QSNOTE[id] = the note under the photo after saving */
 /* greedy longest-match segmentation against CC-CEDICT (max word length 8) */
 function segmentChars(chars){
@@ -3205,6 +3230,7 @@ function shapeBox(b,W,H){
   else { const h2=w/FRAME_RATIO; if(h2>H) return null; y=Math.min(Math.max(0,y-(h2-h)/2),H-h2); h=h2; }
   return {x,y,w,h};
 }
+const AUTO_LW=440; /* the layer width H's phone reports for the Camera tab (v411) */
 async function proposeFrame(id){
   const rec=shotRec(id); if(!rec||!CROP||CROP.id!==id||CROP.auto!==true) return;
   CROP.auto="running";
@@ -3212,15 +3238,21 @@ async function proposeFrame(id){
   try{ const bmp=await createImageBitmap(rec.blob); PW=bmp.width; PH=bmp.height; try{ reg=textRegion(bmp); } finally{ bmp.close(); } }catch(err){ logErr("frame",err&&err.message||err); }
   const same=()=>CROP&&CROP.id===id&&CROP.auto==="running"&&!CROP.rect; /* Cancel, another photo or a finger meanwhile: the proposal is dropped */
   if(!same()) return;
-  const layer=document.querySelector(`.croplayer[data-id="${id}"]`), img=layer&&layer.parentElement.querySelector("img"); if(!layer) return;
+  const layer=document.querySelector(`.croplayer[data-id="${id}"]`), img=layer&&layer.parentElement.querySelector("img");
+  if(!layer&&!(S.autoCard&&!RECROP[id])) return; /* a frame the user will see needs its layer; a card made by itself does not (v411) */
   if(img&&!img.complete) await new Promise(r=>{ img.onload=r; img.onerror=r; });
   if(!same()) return;
-  const r=layer.getBoundingClientRect(); if(!r.width||!r.height) return;
+  /* the proposal is a rectangle on the photo, and the layer is only how it is shown — every step after this divides by lw/lh.
+     Off the Camera tab there is no layer to measure, so a nominal one stands in (AUTO_LW, the width H's own records show for
+     the Camera tab); the only absolutes downstream are the 8-pixel floor in cropBlob and CROP_MIN, and they then behave as they
+     do at 440. A photo that IS on screen keeps its real layer, so nothing about the existing paths moves. */
+  const r=layer?layer.getBoundingClientRect():{width:AUTO_LW,height:AUTO_LW*(PH||3)/(PW||4)};
+  if(!r.width||!r.height) return;
   const full=!reg||(reg.x1-reg.x>=0.9&&reg.y1-reg.y>=0.9), b=full?{x:0,y:0,x1:1,y1:1}:reg;
   const shaped=full?null:shapeBox(b,r.width,r.height), f=shaped||{x:b.x*r.width,y:b.y*r.height,w:(b.x1-b.x)*r.width,h:(b.y1-b.y)*r.height};
   CROP.rect={x:f.x,y:f.y,w:f.w,h:f.h,a:0,lw:r.width,lh:r.height};
   CROP.proposed=full?"whole":shaped?"16:9":"text"; delete CROP.auto;
-  const hidden=!RECROP[id]; if(hidden) CROP.hidden=true; /* the inbox never shows the proposal (v288): the reader reads it now, and the frame appears on the text it finds */
+  const hidden=!RECROP[id]||!layer; if(hidden) CROP.hidden=true; /* the inbox never shows the proposal (v288): the reader reads it now, and the frame appears on the text it finds */
   { const N=numsReset(id); N.pre=true; N.photo=[PW,PH]; N.layer=[n1(r.width),n1(r.height)]; /* v399: the ink rows' own rectangle at full precision, and the photo and layer the whole chain is measured in — the log's line rounds all three to whole percent, and on a 19-label panel it is evicted from the 40 steps before the diagnostics are ever shared */
     N.prop={r:numRect(CROP.rect),kind:CROP.proposed,hidden:!!hidden,reg:reg?[n4(reg.x),n4(reg.y),n4(reg.x1),n4(reg.y1)]:null,lineH:reg?n1(reg.lineH):null}; }
   const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),pre:true,text:`frame proposed by the app${hidden?" (not shown)":""}: ${full?"the whole photo":`${pc(f.x/r.width)}–${pc((f.x+f.w)/r.width)} % across, ${pc(f.y/r.height)}–${pc((f.y+f.h)/r.height)} % down${shaped?" (16:9)":" (the text's own box, 16:9 does not fit)"}`}${reg?`, text rows ${pc(reg.y)}–${pc(reg.y1)} %`:", no text rows found"}`}); while(READLOG.length>40) READLOG.shift();
@@ -5128,7 +5160,7 @@ async function saveNow(id,auto){ /* auto (v325): the card made by itself from a 
 function pendingCard(id){ const cid=PENDING[id]; return cid?cardOf(cid):null; }
 /* the card made by itself (v325, H: "no frame is seen during the first scan at all, just the magic wobbling over the image, and then the result is the finished card … if I want to edit something, I get a frame which I can adjust"; saved by itself on my recommendation, "Go"): Cancel while it reads drops the placeholder, nothing readable drops it too (dropAuto), and the row shows the finished card with Edit and Delete (resultHTML) */
 async function dropAuto(id,cid){ delete AUTO[id]; delete QSCARD[id]; delete QSMORE[id]; if(!cid) return; const d=cardOf(cid); if(!d||d.c) return; S.custom=S.custom.filter(x=>x.id!==cid); try{ await idbDel("custom",cid); }catch(e){} bump("byPhoto",-1); dropThumb(cid); setStats(); }
-async function cancelAuto(id){ const cid=PENDING[id]; abandonReading(id); delete PENDING[id]; await dropAuto(id,cid); renderShots(); }
+async function cancelAuto(id){ const cid=PENDING[id]; abandonReading(id); delete PENDING[id]; autoDrop(id); await dropAuto(id,cid); renderShots(); autoNext(); } /* Cancel drops this photo from the batch, not the batch (v411) */
 const resultHTML=d=>`<div class="result" data-card="${esc(d.id)}"><div class="front">${frontHTML(d)}</div><div class="back">${backHTML(d)}</div>${flagNoteHTML(d)}</div>`; /* the finished card in the photo's place: the front's boxes and the back, as in the detail */
 /* one card per label (v357): the answer's lines with their own pinyin, meaning and frame become N cards — the placeholder
    is the first, the rest are saved beside it, each with its own 16:9 window of the panel (v329) and its own frame, so Crop
@@ -5210,16 +5242,18 @@ async function finishPending(id){
   finally{ delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; dropExtraShot(id); }
   S.queue=buildQueue(false); aiAutoSoon(); setStats();
   if(S.mode==="cards"&&!S.editing) render(); else renderShots(); /* the list or the detail shows the filled card at once */
+  autoNext(); /* the next photo of the batch (v411) */
 }
 async function failPending(id,why,msg){
   const ph=pendingCard(id); delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; if(!ph||!ph.reading) return;
   dropExtraShot(id);
-  if(ph.reading.auto&&!ph.c){ await dropAuto(id,ph.id); delete READING[id]; QSNOTE[id]=/^the reader did not load/.test(msg||"")?failText("Reading failed: "+msg):t("Nothing could be read. Tap Crop to frame the text by hand."); /* a reader that never loaded is not a photo without text (v335) */ if(S.mode==="cards"&&!S.editing) render(); else renderShots(); return; } /* a card made by itself with nothing to show is no card (v325): the photo stays with Crop */
+  if(ph.reading.auto&&!ph.c){ await dropAuto(id,ph.id); delete READING[id]; QSNOTE[id]=/^the reader did not load/.test(msg||"")?failText("Reading failed: "+msg):t("Nothing could be read. Tap Crop to frame the text by hand."); /* a reader that never loaded is not a photo without text (v335) */ if(S.mode==="cards"&&!S.editing) render(); else renderShots(); autoNext(); return; } /* a card made by itself with nothing to show is no card (v325): the photo stays with Crop */
   if(ph.c) delete ph.reading; else ph.reading.failed=why; /* a card framed again in the Edit form keeps its text and forgets the frame (v241, v243); an empty card keeps the failure for "Nothing read yet" */
   ph.flag=true; ph.flagNote=ph.c?t("the new frame could not be read — the old text stays"):t("the reading failed — edit the card or frame the photo again");
   try{ await idbPut("custom",ph); }catch(e){}
   QSNOTE[id]="Card saved, but nothing could be read — edit the card or frame the photo again."; setStats();
   if(S.mode==="cards"&&!S.editing) render(); else renderShots(); /* the list or the detail shows the filled card at once */
+  autoNext(); /* v411 */
 }
 async function resumePending(){
   for(const d of S.custom.filter(d=>d.reading&&!d.reading.failed)){
@@ -5906,7 +5940,13 @@ function renderShots(){
     return;
   }
   const busy=!!CROP||S.inbox.some(s=>PENDING[s.id]); /* no marking while a frame stands or a photo is being read (v351) */
-  box.innerHTML=`<div class="listhead">${t("Inbox ({0})",S.inbox.length)}</div>`+pending+
+  /* the batch, and the one thing the user has to know about it (v411, H: "Maybe we should also mention somewhere that the app
+     has to be open to process the images, but please don't make it sound stupid. Make it sound somehow acceptable."): the line
+     says what the app is doing for you and what keeps it doing it, and names the recovery in the same breath — nothing is lost,
+     it is only deferred, which is what makes the constraint acceptable rather than a shrug */
+  const waiting=AUTOQ.filter(id=>S.inbox.some(x=>x.id===id)).length; /* what is left of the batch, not of the inbox — H's holds 237 photos */
+  const batch=waiting?`<div class="batchline">${esc(t("{0} to go.",nOf(waiting,"photo")))} ${esc(t("They finish while the app is open, and pick up where they stopped next time."))}</div>`:"";
+  box.innerHTML=`<div class="listhead">${t("Inbox ({0})",S.inbox.length)}</div>`+batch+pending+
     S.inbox.map(s=>{
       const dt=new Date(s.ts).toLocaleString(LANG_LOCALE[LANG]);
       const cropping=CROP && CROP.id===s.id, shown=!!(cropping&&CROP.rect&&!CROP.hidden), zoomed=!!(shown&&CROP.zoom);
@@ -5985,9 +6025,10 @@ async function importPhotos(files){
   window.scrollTo({top:0});
   await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0))); /* let the placeholder paint first */
   /* several photos from the album: all land in the inbox, the first one opens in crop mode */
-  let first=null;
-  for(const file of files){ const id=await addPhoto(file); if(!first) first=id; }
+  let first=null; const added=[];
+  for(const file of files){ const id=await addPhoto(file); if(id) added.push(id); if(!first) first=id; }
   CROP=first?{id:first,rect:null,auto:true}:null; PENDING_SHOT=false; /* the frame is proposed by the app (v203) */
+  if(S.autoCard&&added.length>1) autoQueueAdd(added.slice(1)); /* the rest follow one after the other (v411) — the first is already in hand */
   if(S.mode!=="inbox"){ S.mode="inbox"; render(); } else renderShots();
   window.scrollTo({top:0});
 }
