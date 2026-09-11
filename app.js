@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=421; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=422; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2070,8 +2070,11 @@ function backHTML(d){
   const glossBlock = d.kind==="sign" ? `
     ${d.mt&&!d.mt.verified?`<span class="flag">${t("meaning unverified")}${d.mt.pending?t(" (translation pending)"):""}${d.mt.suspect?t(" (reading uncertain: {0})",esc(d.mt.suspect)):""}</span>`:""}
 ` : "";
+  /* the linked row is not part of the answer any more (v422, H: "Die 'also in another photo' Zeile nach unten schieben"): it
+     stood between the parts row and the grades, so reference material sat in the middle of the answer-then-grade path. Each
+     caller places it now, below its own actions. */
   return `${simpRefHTML(d)}<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}</div>${charsHTML(d)}
-    ${d.kind==="sign"?glossBlock:wordBlock}${linkedHTML(d)}`;
+    ${d.kind==="sign"?glossBlock:wordBlock}`;
 }
 /* the other cards with the same text (v122, H: "if one character connects to various photos, then link them"): their
    crops in a row on the back and in the card detail; a tap opens that card */
@@ -2132,7 +2135,7 @@ function renderStudy(main){
     const grds=[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>
       `<button class="grade" data-g="${g}"><span class="lbl">${t(l)}</span></button>`).join("");
     back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="grades">${grds}</div>
-      <div class="backacts"><button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}</button><button class="del" id="edit-card">${t("✎ Edit")}</button></div></div>`;
+      <div class="backacts"><button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}</button><button class="del" id="edit-card">${t("✎ Edit")}</button></div>${linkedHTML(d)}</div>`;
   } else {
     back=swipeHint(d);
   }
@@ -2403,6 +2406,7 @@ function renderCardDetail(main,c){
       <button class="btn danger" id="d-del"${d.c?"":' style="grid-column:1/-1"'}>${t("Delete card")}</button>
     </div>
     <div class="badge" style="margin-top:14px">${esc(stat)}</div>
+    ${linkedHTML(d)}
   </div>`;
   $("#back").onclick=backToList;
   /* the preview behaves like the test: tap the photo for the whole picture, tap the character to hide and show the answer (H) */
@@ -5287,7 +5291,7 @@ function pendingCard(id){ const cid=PENDING[id]; return cid?cardOf(cid):null; }
 /* the card made by itself (v325, H: "no frame is seen during the first scan at all, just the magic wobbling over the image, and then the result is the finished card … if I want to edit something, I get a frame which I can adjust"; saved by itself on my recommendation, "Go"): Cancel while it reads drops the placeholder, nothing readable drops it too (dropAuto), and the row shows the finished card with Edit and Delete (resultHTML) */
 async function dropAuto(id,cid){ delete AUTO[id]; delete QSCARD[id]; delete QSMORE[id]; if(!cid) return; const d=cardOf(cid); if(!d||d.c) return; S.custom=S.custom.filter(x=>x.id!==cid); try{ await idbDel("custom",cid); }catch(e){} bump("byPhoto",-1); dropThumb(cid); setStats(); }
 async function cancelAuto(id){ const cid=PENDING[id]; abandonReading(id); delete PENDING[id]; autoDrop(id); await dropAuto(id,cid); renderShots(); autoNext(); } /* Cancel drops this photo from the batch, not the batch (v411) */
-const resultHTML=d=>`<div class="result" data-card="${esc(d.id)}"><div class="front">${frontHTML(d)}</div><div class="back">${backHTML(d)}</div>${flagNoteHTML(d)}</div>`; /* the finished card in the photo's place: the front's boxes and the back, as in the detail */
+const resultHTML=d=>`<div class="result" data-card="${esc(d.id)}"><div class="front">${frontHTML(d)}</div><div class="back">${backHTML(d)}${linkedHTML(d)}</div>${flagNoteHTML(d)}</div>`; /* the finished card in the photo's place: the front's boxes and the back, as in the detail */
 /* one card per label (v357): the answer's lines with their own pinyin, meaning and frame become N cards — the placeholder
    is the first, the rest are saved beside it, each with its own 16:9 window of the panel (v329) and its own frame, so Crop
    again starts on that label. Every card is built by readingCard from a one-line copy of the reading, so it gets its parts
