@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=406; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=407; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -4230,7 +4230,7 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
    neighbour's. Measured on H's own photo at its own 1600 px with his own texts: 18 of the 19 labels on their own
    characters, none on another's, where v385 gave all 19 the whole panel. */
 const RL_STEP=0.6, RL_SUP=3, RL_DUP=0.6, RL_TILES=8, RL_GAP=0.55, RL_WMIN=0.8, RL_WMAX=12, RL_PX=64, RL_ROOM=[0.3,0.5], RL_CAP=420, RL_HIT=0.6, RL_WEAK=0.5, RL_GROW=[0.22,0.45], RL_WIDE=[0.6,1.8], RL_COL=0.6, RL_HGT=[0.6,1.6];
-const LB_STEP=10, LB_ROUND=0.8, RL_ROW=0.8, RL_FLOOR=0.15, RL_TIGHT=1.4, RL_CLEAR=0.5, RL_DUPX=0.6, RL_ICON=1.2, RL_ICONH=2.2, RL_ICONX=0.5, RL_ICONJOIN=0.6, RL_ICONMAX=4, DIAL_W=4, DIAL_OFF=0.12, DIAL_REACH=0.3, DIAL_PITCH=2.5, RL_SIDEGAP=0.8, RL_SIDEW=1.6; /* a drawn grid lands on round pixels (v390) */
+const LB_STEP=10, LB_ROUND=0.8, RL_ROW=0.8, RL_FLOOR=0.15, RL_TIGHT=1.4, RL_CLEAR=0.5, RL_DUPX=0.6, RL_ICON=1.2, RL_ICONH=2.2, RL_ICONX=0.5, RL_ICONJOIN=0.6, RL_ICONMAX=4, DIAL_W=4, DIAL_OFF=0.12, DIAL_REACH=0.3, DIAL_PITCH=2.5, RL_SIDEGAP=0.8, RL_SIDEW=1.6, RL_BANDMIN=0.5; /* a drawn grid lands on round pixels (v390) */
 function labelRunsOf(gy,labels,uni){ /* the picture's own rows of characters, and the runs of each row, in the grey copy's pixels */
   const {g,W,Hh}=gy, med=a=>{ const t=a.slice().sort((x,y)=>x-y); return t[t.length>>1]||0.05; };
   const bw=med(labels.map(l=>l.box[2]-l.box[0])), bh=med(labels.map(l=>l.box[3]-l.box[1]));
@@ -4271,10 +4271,19 @@ const lcsLen=(a,b)=>{ let prev=new Uint16Array(b.length+1), cur=new Uint16Array(
   for(let i=0;i<a.length;i++){ for(let j=0;j<b.length;j++) cur[j+1]=a[i]===b[j]?prev[j]+1:Math.max(prev[j+1],cur[j]);
     const t=prev; prev=cur; cur=t; cur.fill(0); }
   return prev[b.length]; };
-function labelHit(read,zh){ /* a run's reading against one label's text */
+function hitCore(read,zh){
   const a=[...read].filter(c=>CJK.test(c)||/[0-9]/.test(c)), b=[...zh].filter(c=>CJK.test(c)||/[0-9]/.test(c));
   if(!a.length||!b.length||Math.abs(a.length-b.length)>1) return 0; /* a fragment, or a run of several labels, is not this label */
   return lcsLen(a,b)/Math.max(a.length,b.length); }
+/* the model hands a button and its long-press hint back as one label — 洗衣液长按童锁, +烘干长按单烘, 时间长按远程 —
+   and on the panel those are two rows of ink in two different sizes, so no single run can ever read as seven characters:
+   hitCore wants the counts within one and gets three against seven, and the label was never matched at all (v407, H's
+   washing machine at v406: five of the fifteen cards that kept the whole panel were exactly these). The head before
+   长按 is matched instead, and the cut then reaches down to the sub-line's own run (below). A label the model did give
+   as its own — 长按添衣 on the same panel — has no head and is matched whole as before. */
+const labelHead=zh=>{ const i=String(zh||"").indexOf("长按"); return i>0?zh.slice(0,i):""; };
+function labelHit(read,zh){ const f=hitCore(read,zh); if(f) return f; const h=labelHead(zh); return h?hitCore(read,h):0; }
+const headMatched=(read,zh)=>{ const h=labelHead(zh); return !!read&&!!h&&!hitCore(read,zh)&&hitCore(read,h)>0; };
 function growRun(r,runs,self){ /* the column cut is the ink's own extent, so it clips the first and last stroke and the
     band is thinner than the characters (v388, H: "still a few missing or unprecise crops"): give the run back a
     quarter of its width sideways and a third of its height up and down, but never more than half the way to its
@@ -4441,6 +4450,17 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
      away, is no taller than RL_ICONH of it, and begins under the characters of the row above — a run that reaches into
      that row is that row's label, not this card's symbol (its own run runs a few pixels past its row's median band,
      so the test is on where the run begins, not where it ends). A label with nothing over it is cut as before. */
+  /* a row whose runs the reader found as slivers gets a band ten times thinner than the rows above it, and its cards
+     come out as a strip with the characters sliced (v407, H's washing machine at v406: 漂洗 and 温度长按联网 were
+     placed and cut at 3.3 % of the picture's height against 16 % for 羽绒 on the same panel). A panel's rows are of
+     one order of height, so a band under RL_BANDMIN of the median band is grown around its own centre to that floor —
+     never shrunk, and only where three rows or more give a median worth trusting. */
+  { const hs=rowBand.filter(Boolean).map(b=>b.y1-b.y0);
+    if(hs.length>=3){ const med=median(hs), floor=RL_BANDMIN*med;
+      rowBand.forEach((b,ri)=>{ if(!b||b.y1-b.y0>=floor) return;
+        const cy=(b.y0+b.y1)/2, y0=Math.max(0,cy-floor/2), y1=Math.min(gy.Hh,cy+floor/2);
+        rowBand[ri]={y0,y1};
+        rowsAll[ri].at.forEach(j=>{ if(pick[j]>=0&&cut[j]) cut[j]={...cut[j],y0,y1}; }); }); } }
   const floors=rowBand.filter(Boolean).map(b=>b.y1), iconTop=labels.map(()=>null);
   labels.forEach((l,j)=>{ const c=cut[j]; if(pick[j]<0||!c) return;
     const h=c.y1-c.y0, w=c.x1-c.x0; let stop=0, top=c.y0;
@@ -4455,6 +4475,17 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
         if(!found||o.y1>found.y1) found=o; }
       if(!found||found.y0>=top) break; top=found.y0; }
     if(top<c.y0){ iconTop[j]=top; cut[j]={...c,y0:top}; }
+  });
+  /* and down to the sub-line of a label matched on its head (v407): the run below that covers the label's own columns,
+     no further than RL_ICON of the band's height and no taller than RL_ICONH of it — the same bounds the symbol above
+     is taken with, mirrored. The nearest one only, so a card cannot swallow the row under it. */
+  labels.forEach((l,j)=>{ const c=cut[j]; if(pick[j]<0||!c||!headMatched(read[j],l.zh)) return;
+    const h=c.y1-c.y0, w=c.x1-c.x0; let found=null;
+    for(const o of runs){
+      if(o.y0<c.y1||o.y0-c.y1>RL_ICON*h||o.y1-o.y0>RL_ICONH*h) continue;
+      if(Math.min(o.x1,c.x1)-Math.max(o.x0,c.x0)<RL_ICONX*Math.min(w,o.x1-o.x0)) continue;
+      if(!found||o.y0<found.y0) found=o; }
+    if(found&&found.y1>c.y1) cut[j]={...c,y1:found.y1};
   });
   /* and a label whose own symbol the reader did not find as a run takes its row's (v392, H: "Do not cut off parts of
      the symbols or the characters.") — the sock over 袜子 is dim and left no run of its own, so its card showed the
