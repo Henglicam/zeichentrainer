@@ -383,8 +383,11 @@ body.noscroll{overflow:hidden}
 .undo .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* the update note (v408) is a toast, not an action bar: it has no button, so it hugs its text, wraps instead of
    clipping it, and pads evenly. Until v412 it borrowed .undo whole and every note was cut at about half (v413). */
-#updated{display:block;left:0;right:0;margin-inline:auto;transform:none;width:fit-content;max-width:min(calc(100% - 32px),408px);padding:11px 16px;text-align:center;text-wrap:balance;animation:noteup .18s ease-out}
-#updated .t{flex:none;min-width:0;overflow:visible;text-overflow:clip;white-space:normal;display:block}
+#updated{display:flex;align-items:center;gap:8px;left:0;right:0;margin-inline:auto;transform:none;width:fit-content;max-width:min(calc(100% - 32px),408px);padding:8px 8px 8px 16px;animation:noteup .18s ease-out;cursor:pointer}
+#updated .t{flex:1 1 auto;min-width:0;overflow:visible;text-overflow:clip;white-space:normal;display:block;text-align:center;text-wrap:balance}
+/* it waits until it is tapped away (v416), so it needs a way out: the whole line takes the tap, the × says so */
+#updated .x{flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:none;background:none;color:var(--label2);font-size:20px;line-height:1;border-radius:999px;cursor:pointer;padding:0}
+#updated .x:active{background:var(--fill)}
 /* marking many cards or photos (v351): the mark at the right end of the row, off the picture (v355), and the bar of the Undo line with Delete N and Done */
 .crow.pick,.shot.pick{cursor:pointer}
 .crow.pick{grid-template-columns:124px 1fr auto 22px}

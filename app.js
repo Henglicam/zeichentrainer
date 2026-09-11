@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=415; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=416; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1801,6 +1801,7 @@ function renderMore(main){
     <div class="listhead">Start over</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>`:""}
     <div class="listhead">${t("About")}</div>
+    <div class="mrow"><div><div class="t">${t("Update notes")}</div><div class="s"><label class="check" style="margin:0"><input type="checkbox" id="update-note"${updateNoteOn()?" checked":""}> ${t("Tell me what is new after an update.")}</label></div></div></div>
     <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s" id="about-s">${esc(aboutText())}</div>${whatsNewHTML()}</div></div>
   </div>`;
   $("#export").onclick=exportData;
@@ -1817,6 +1818,7 @@ function renderMore(main){
     if(!navigator.onLine){ st.textContent=t("No connection. Try again when online."); return; }
     b.disabled=true; st.textContent=t("Sending …");
     try{ await sendFeedback(text); tx.value=""; st.textContent=t("Thank you, sent."); }catch(err){ st.textContent=t("Could not send: {0}",err&&err.message||err); } b.disabled=false; };
+  $("#update-note").onchange=async e=>{ await setSetting("updateNote",!!e.target.checked); if(!e.target.checked) hideUpdated(); };
   $("#share-usage").onchange=async e=>{ await setSetting("shareUsage",!!e.target.checked); $("#share-status").textContent=shareNote(); sendReport(); };
   $("#import").onclick=()=>$("#imp").click();
   $("#share-flag").onclick=shareFlagged;
@@ -2740,6 +2742,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  416:"The update note now waits until you tap it away — and More lets you switch it off.",
   415:"Pulling the page down no longer reloads the app and throws you back to Learn.",
   414:"Swipe a card left or right, before you open it, to pick another one from the session.",
   413:"Update notes now show in full, instead of being cut off halfway.",
@@ -2749,28 +2752,34 @@ const WHATS_NEW={
   407:"A photo of a control panel now makes one card per button, each with its own picture.",
   402:"The app speaks Russian, Vietnamese, Thai and Indonesian too.",
 };
-const NEW_MS=6000; /* a beat longer than the Undo line: this one is read, not acted on — and longer still for a longer note (v413) */
-const newMs=s=>Math.min(12000,Math.max(NEW_MS,3000+String(s).length*55)); /* about 200 words a minute, with a floor and a ceiling */
+/* the note waits until it is tapped away (v416, H: "Was mich uebrigens an dem Update Pop-up gestoert hat, ist, dass es ziemlich
+   schnell wieder weggeht. Koennen wir das nicht so machen, dass man das aktiv irgendwie wegklicken muss? Und damit es nicht nervt
+   koennen wir im menu ja ein haekchen fuer update notifications on/off setzen. Default on."): the timer of v408–v415 is gone, since
+   a line nobody finished reading is the fault v413 spent a version on. Setting "updateNote", absent = on. */
+const updateNoteOn=()=>S.settings.updateNote!==false;
 const newsList=()=>Object.keys(WHATS_NEW).map(Number).sort((a,b)=>b-a);
 const newsSince=v=>newsList().filter(n=>n>v&&n<=APP_V).map(n=>({v:n,s:WHATS_NEW[n]})); /* what this phone has not been shown yet, newest first */
 function whatsNewHTML(){ const ns=newsList().slice(0,5); if(!ns.length) return "";
   return `<div class="s" style="margin-top:8px">${esc(t("What is new"))}</div>`+ns.map(n=>`<div class="s">v${n} — ${esc(t(WHATS_NEW[n]))}</div>`).join(""); }
+function hideUpdated(){ const e=$("#updated"); if(e) e.remove(); }
 function showUpdated(notes){
   const el=document.createElement("div"); el.className="undo"; el.id="updated"; el.setAttribute("role","status");
   const line=notes.length?t("Updated — {0}",t(notes[0].s)):t("Updated.");
   const more=notes.length>1?" "+t("More under About."):"";
-  el.innerHTML=`<span class="t">${esc(line+more)}</span>`;
-  document.body.appendChild(el); setTimeout(()=>{ const e=$("#updated"); if(e) e.remove(); },newMs(line+more));
+  el.innerHTML=`<span class="t">${esc(line+more)}</span><button class="x" type="button" aria-label="${esc(t("Close"))}">✕</button>`;
+  el.onclick=hideUpdated; /* the whole line takes the tap, not only the × */
+  document.body.appendChild(el);
 }
 /* at boot, once: a phone that has seen a version before and now runs a newer one gets the line. A fresh install writes
    the version down and says nothing — there is nothing it was updated from. */
 function updateNote(){
   const seen=+S.settings.seenVer||0;
   setSetting("seenVer",APP_V).catch(()=>{});
-  if(!seen||seen>=APP_V) return;
+  if(!seen||seen>=APP_V||!updateNoteOn()) return; /* the version is written down either way, so switching the note on later does not flood */
   showUpdated(newsSince(seen));
 }
 const UNDO_MS=5000; let UNDO=null;
+/* the Undo line and the update note share the one place above the tab bar (v416): the user's own action wins */
 function undoText(){
   const cards=UNDO.items.filter(i=>i.kind==="card"), photos=UNDO.items.filter(i=>i.kind==="photo");
   if(cards.length&&photos.length) return t("Deleted {0} and {1}",nOf(cards.length,"card"),nOf(photos.length,"photo"));
@@ -2780,6 +2789,7 @@ function undoText(){
   return t("Deleted {0}",nOf(photos.length,"photo"));
 }
 function showUndo(item){
+  hideUpdated(); /* the two share the one place above the tab bar (v416) */
   if(!UNDO) UNDO={items:[],timer:null};
   UNDO.items.push(item); clearTimeout(UNDO.timer); UNDO.timer=setTimeout(hideUndo,UNDO_MS);
   let el=$("#undo");
