@@ -34,6 +34,7 @@ function nOf(n,w,pl){ n=n||0; const tr=wordOf(n,w,pl); return tr.includes("{0}")
 const L10N={
 en:{"capsule:Done":"Done","pad:Undo":"Undo","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
 de:{
+  "Updated.":"Aktualisiert.",
   "{0} to go, while the app is open.":"Noch {0}, solange die App offen ist.",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"Aus Galerie nimmt mehrere Fotos auf einmal – alle werden nacheinander zu Karten, solange die App offen ist.",
   "Check all cards again":"Alle Karten neu prüfen",
@@ -276,11 +277,12 @@ de:{
   /* the notice sheet and the pointer to the guide (v266) */
   "OK":"OK","New here? The guide explains the app in six short sections.":"Neu hier? Die Anleitung erklärt die App in sechs kurzen Abschnitten.",
   /* Undo after Delete (v268) */
-  "Deleted “{0}”":"„{0}“ gelöscht","Card deleted":"Karte gelöscht","Updated — {0}":"Aktualisiert — {0}","Updated to {0}.":"Auf {0} aktualisiert.","More under About.":"Mehr unter Über.","What is new":"Was neu ist","Photo deleted":"Foto gelöscht","Deleted {0}":"{0} gelöscht","Deleted {0} and {1}":"{0} und {1} gelöscht","Undo":"Rückgängig",
+  "Deleted “{0}”":"„{0}“ gelöscht","Card deleted":"Karte gelöscht","Updated — {0}":"Aktualisiert — {0}","More under About.":"Mehr unter Über.","What is new":"Was neu ist","Photo deleted":"Foto gelöscht","Deleted {0}":"{0} gelöscht","Deleted {0} and {1}":"{0} und {1} gelöscht","Undo":"Rückgängig",
   /* the Progress dashboard (v274) */
   "Day streak":"Tage in Folge","Cards learned":"Karten gelernt","Due today":"Heute fällig","Reviews this week":"Wiederholungen diese Woche","Last 30 days":"Die letzten 30 Tage","Still learning":"Noch am Lernen","Known":"Sicher","Coming up: {0} due tomorrow, {1} this week.":"Demnächst: {0} morgen fällig, {1} diese Woche."
 },
 fr:{
+  "Updated.":"Mis à jour.",
   "{0} to go, while the app is open.":"Encore {0}, tant que l’appli est ouverte.",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"Depuis l'album prend plusieurs photos d'un coup – elles deviennent toutes des cartes, l'une après l'autre, tant que l'appli est ouverte.",
   "Check all cards again":"Revérifier toutes les cartes",
@@ -523,11 +525,12 @@ fr:{
   /* the notice sheet and the pointer to the guide (v266) */
   "OK":"OK","New here? The guide explains the app in six short sections.":"Nouveau ici ? Le guide explique l'appli en six courtes sections.",
   /* Undo after Delete (v268) */
-  "Deleted “{0}”":"« {0} » supprimée","Card deleted":"Carte supprimée","Updated — {0}":"Mis à jour — {0}","Updated to {0}.":"Mis à jour vers {0}.","More under About.":"Plus dans À propos.","What is new":"Quoi de neuf","Photo deleted":"Photo supprimée","Deleted {0}":"{0} supprimées","Deleted {0} and {1}":"{0} et {1} supprimées","Undo":"Annuler",
+  "Deleted “{0}”":"« {0} » supprimée","Card deleted":"Carte supprimée","Updated — {0}":"Mis à jour — {0}","More under About.":"Plus dans À propos.","What is new":"Quoi de neuf","Photo deleted":"Photo supprimée","Deleted {0}":"{0} supprimées","Deleted {0} and {1}":"{0} et {1} supprimées","Undo":"Annuler",
   /* the Progress dashboard (v274) */
   "Day streak":"Jours d'affilée","Cards learned":"Cartes apprises","Due today":"À revoir aujourd'hui","Reviews this week":"Révisions cette semaine","Last 30 days":"Les 30 derniers jours","Still learning":"En cours","Known":"Acquises","Coming up: {0} due tomorrow, {1} this week.":"À venir : {0} demain, {1} cette semaine."
 },
 es:{
+  "Updated.":"Actualizado.",
   "{0} to go, while the app is open.":"{0} más, mientras la app está abierta.",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"Desde álbum coge varias fotos a la vez: todas se convierten en cartas, una tras otra, mientras la app está abierta.",
   "Check all cards again":"Revisar todas las tarjetas",
@@ -770,11 +773,12 @@ es:{
   /* the notice sheet and the pointer to the guide (v266) */
   "OK":"OK","New here? The guide explains the app in six short sections.":"¿Nuevo aquí? La guía explica la app en seis secciones cortas.",
   /* Undo after Delete (v268) */
-  "Deleted “{0}”":"«{0}» eliminada","Card deleted":"Tarjeta eliminada","Updated — {0}":"Actualizado — {0}","Updated to {0}.":"Actualizado a {0}.","More under About.":"Más en Acerca de.","What is new":"Novedades","Photo deleted":"Foto eliminada","Deleted {0}":"{0} eliminadas","Deleted {0} and {1}":"{0} y {1} eliminadas","Undo":"Deshacer",
+  "Deleted “{0}”":"«{0}» eliminada","Card deleted":"Tarjeta eliminada","Updated — {0}":"Actualizado — {0}","More under About.":"Más en Acerca de.","What is new":"Novedades","Photo deleted":"Foto eliminada","Deleted {0}":"{0} eliminadas","Deleted {0} and {1}":"{0} y {1} eliminadas","Undo":"Deshacer",
   /* the Progress dashboard (v274) */
   "Day streak":"Días seguidos","Cards learned":"Tarjetas aprendidas","Due today":"Para hoy","Reviews this week":"Repasos esta semana","Last 30 days":"Últimos 30 días","Still learning":"En curso","Known":"Dominadas","Coming up: {0} due tomorrow, {1} this week.":"Próximamente: {0} mañana, {1} esta semana."
 },
 ja:{
+  "Updated.":"アップデートしました。",
   "{0} to go, while the app is open.":"アプリを開いている間に、あと{0}。",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"アルバムからでは写真をまとめて選べます。アプリを開いている間に、順番に全部カードになります。",
   "Check all cards again":"すべてのカードを再チェック",
@@ -1017,11 +1021,12 @@ ja:{
   /* the notice sheet and the pointer to the guide (v266) */
   "OK":"OK","New here? The guide explains the app in six short sections.":"はじめての方へ：使い方ガイドが6つの短い項目でアプリを説明します。",
   /* Undo after Delete (v268) */
-  "Deleted “{0}”":"「{0}」を削除しました","Card deleted":"カードを削除しました","Updated — {0}":"アップデート — {0}","Updated to {0}.":"{0} にアップデートしました。","More under About.":"詳しくはアプリについてへ。","What is new":"新着","Photo deleted":"写真を削除しました","Deleted {0}":"{0}を削除しました","Deleted {0} and {1}":"{0}と{1}を削除しました","Undo":"元に戻す",
+  "Deleted “{0}”":"「{0}」を削除しました","Card deleted":"カードを削除しました","Updated — {0}":"アップデート — {0}","More under About.":"詳しくはアプリについてへ。","What is new":"新着","Photo deleted":"写真を削除しました","Deleted {0}":"{0}を削除しました","Deleted {0} and {1}":"{0}と{1}を削除しました","Undo":"元に戻す",
   /* the Progress dashboard (v274) */
   "Day streak":"連続日数","Cards learned":"学んだカード","Due today":"今日の復習","Reviews this week":"今週の復習回数","Last 30 days":"過去30日","Still learning":"学習中","Known":"定着","Coming up: {0} due tomorrow, {1} this week.":"この先：明日{0}枚、今週{1}枚。"
 },
 ko:{
+  "Updated.":"업데이트했어요.",
   "{0} to go, while the app is open.":"{0} 남았어요. 앱이 열려 있는 동안 진행돼요.",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"앨범에서는 사진을 한 번에 여러 장 고를 수 있어요. 앱이 열려 있는 동안 차례대로 모두 카드가 돼요.",
   "Check all cards again":"모든 카드 다시 확인",
@@ -1264,7 +1269,7 @@ ko:{
   /* the notice sheet and the pointer to the guide (v266) */
   "OK":"확인","New here? The guide explains the app in six short sections.":"처음이세요? 사용법이 짧은 여섯 항목으로 앱을 설명해요.",
   /* Undo after Delete (v268) */
-  "Deleted “{0}”":"“{0}” 삭제했어요","Card deleted":"카드를 삭제했어요","Updated — {0}":"업데이트 — {0}","Updated to {0}.":"{0}(으)로 업데이트했어요.","More under About.":"자세한 내용은 앱 정보에.","What is new":"새로운 기능","Photo deleted":"사진을 삭제했어요","Deleted {0}":"{0} 삭제했어요","Deleted {0} and {1}":"{0}과 {1} 삭제했어요","Undo":"실행 취소",
+  "Deleted “{0}”":"“{0}” 삭제했어요","Card deleted":"카드를 삭제했어요","Updated — {0}":"업데이트 — {0}","More under About.":"자세한 내용은 앱 정보에.","What is new":"새로운 기능","Photo deleted":"사진을 삭제했어요","Deleted {0}":"{0} 삭제했어요","Deleted {0} and {1}":"{0}과 {1} 삭제했어요","Undo":"실행 취소",
   /* the Progress dashboard (v274) */
   "Day streak":"연속 일수","Cards learned":"배운 카드","Due today":"오늘 복습","Reviews this week":"이번 주 복습","Last 30 days":"지난 30일","Still learning":"학습 중","Known":"익힘","Coming up: {0} due tomorrow, {1} this week.":"다음: 내일 {0}장, 이번 주 {1}장."
 },
@@ -1272,6 +1277,7 @@ ko:{
    word, so every plural key carries a "#many" twin (5 карточек, 11 карточек, 111 карточек) that only PLURAL.ru ever looks
    up; "percent#few" is the one unit that also needs its own middle form, because English calls both of its forms "percent". */
 ru:{
+  "Updated.":"Обновлено.",
   "{0} to go, while the app is open.":"Осталось {0}, пока приложение открыто.",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"«Из альбома» берёт сразу несколько фото — пока приложение открыто, они одно за другим станут карточками.",
   "Check all cards again":"Проверить все карточки",
@@ -1514,11 +1520,12 @@ ru:{
   /* the notice sheet and the pointer to the guide (v266) */
   "OK":"ОК","New here? The guide explains the app in six short sections.":"Первый раз здесь? Инструкция объясняет приложение в шести коротких разделах.",
   /* Undo after Delete (v268) */
-  "Deleted “{0}”":"Удалено «{0}»","Card deleted":"Карточка удалена","Updated — {0}":"Обновлено — {0}","Updated to {0}.":"Обновлено до {0}.","More under About.":"Подробнее в разделе «О приложении».","What is new":"Что нового","Photo deleted":"Фото удалено","Deleted {0}":"Удалено: {0}","Deleted {0} and {1}":"Удалено: {0} и {1}","Undo":"Отменить",
+  "Deleted “{0}”":"Удалено «{0}»","Card deleted":"Карточка удалена","Updated — {0}":"Обновлено — {0}","More under About.":"Подробнее в разделе «О приложении».","What is new":"Что нового","Photo deleted":"Фото удалено","Deleted {0}":"Удалено: {0}","Deleted {0} and {1}":"Удалено: {0} и {1}","Undo":"Отменить",
   /* the Progress dashboard (v274) */
   "Day streak":"Дней подряд","Cards learned":"Выучено карточек","Due today":"Сегодня к повтору","Reviews this week":"Повторов за неделю","Last 30 days":"Последние 30 дней","Still learning":"В процессе","Known":"Освоено","Coming up: {0} due tomorrow, {1} this week.":"Впереди: завтра {0}, на этой неделе {1}."
 },
 vi:{
+  "Updated.":"Đã cập nhật.",
   "{0} to go, while the app is open.":"Còn {0}, khi ứng dụng đang mở.",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"Từ album lấy được nhiều ảnh cùng lúc — tất cả lần lượt thành thẻ khi ứng dụng đang mở.",
   "Check all cards again":"Kiểm tra lại mọi thẻ",
@@ -1761,11 +1768,12 @@ vi:{
   /* the notice sheet and the pointer to the guide (v266) */
   "OK":"OK","New here? The guide explains the app in six short sections.":"Mới dùng à? Phần hướng dẫn giải thích app trong sáu mục ngắn.",
   /* Undo after Delete (v268) */
-  "Deleted “{0}”":"Đã xóa “{0}”","Card deleted":"Đã xóa thẻ","Updated — {0}":"Đã cập nhật — {0}","Updated to {0}.":"Đã cập nhật lên {0}.","More under About.":"Xem thêm ở Giới thiệu.","What is new":"Có gì mới","Photo deleted":"Đã xóa ảnh","Deleted {0}":"Đã xóa {0}","Deleted {0} and {1}":"Đã xóa {0} và {1}","Undo":"Hoàn tác",
+  "Deleted “{0}”":"Đã xóa “{0}”","Card deleted":"Đã xóa thẻ","Updated — {0}":"Đã cập nhật — {0}","More under About.":"Xem thêm ở Giới thiệu.","What is new":"Có gì mới","Photo deleted":"Đã xóa ảnh","Deleted {0}":"Đã xóa {0}","Deleted {0} and {1}":"Đã xóa {0} và {1}","Undo":"Hoàn tác",
   /* the Progress dashboard (v274) */
   "Day streak":"Chuỗi ngày","Cards learned":"Thẻ đã học","Due today":"Đến hạn hôm nay","Reviews this week":"Lượt ôn tuần này","Last 30 days":"30 ngày qua","Still learning":"Đang học","Known":"Đã thuộc","Coming up: {0} due tomorrow, {1} this week.":"Sắp tới: {0} đến hạn ngày mai, {1} trong tuần."
 },
 th:{
+  "Updated.":"อัปเดตแล้ว",
   "{0} to go, while the app is open.":"เหลือ{0} จะทำต่อตอนเปิดแอปอยู่",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"จากอัลบั้ม เลือกรูปได้หลายรูปพร้อมกัน ทั้งหมดจะกลายเป็นการ์ดทีละใบตอนเปิดแอปอยู่",
   "Check all cards again":"ตรวจการ์ดทั้งหมดอีกครั้ง",
@@ -2008,11 +2016,12 @@ th:{
   /* the notice sheet and the pointer to the guide (v266) */
   "OK":"ตกลง","New here? The guide explains the app in six short sections.":"เพิ่งเริ่มใช้? คู่มืออธิบายแอปไว้ในหกหัวข้อสั้นๆ",
   /* Undo after Delete (v268) */
-  "Deleted “{0}”":"ลบ “{0}” แล้ว","Card deleted":"ลบการ์ดแล้ว","Updated — {0}":"อัปเดตแล้ว — {0}","Updated to {0}.":"อัปเดตเป็น {0} แล้ว","More under About.":"ดูเพิ่มที่ เกี่ยวกับ","What is new":"มีอะไรใหม่","Photo deleted":"ลบรูปแล้ว","Deleted {0}":"ลบ{0}แล้ว","Deleted {0} and {1}":"ลบ{0}และ{1}แล้ว","Undo":"เลิกทำ",
+  "Deleted “{0}”":"ลบ “{0}” แล้ว","Card deleted":"ลบการ์ดแล้ว","Updated — {0}":"อัปเดตแล้ว — {0}","More under About.":"ดูเพิ่มที่ เกี่ยวกับ","What is new":"มีอะไรใหม่","Photo deleted":"ลบรูปแล้ว","Deleted {0}":"ลบ{0}แล้ว","Deleted {0} and {1}":"ลบ{0}และ{1}แล้ว","Undo":"เลิกทำ",
   /* the Progress dashboard (v274) */
   "Day streak":"วันต่อเนื่อง","Cards learned":"การ์ดที่เรียนแล้ว","Due today":"ถึงกำหนดวันนี้","Reviews this week":"ทบทวนสัปดาห์นี้","Last 30 days":"30 วันล่าสุด","Still learning":"กำลังเรียน","Known":"จำได้แล้ว","Coming up: {0} due tomorrow, {1} this week.":"ที่กำลังจะมา: พรุ่งนี้ {0} ใบ · สัปดาห์นี้ {1} ใบ"
 },
 id:{
+  "Updated.":"Diperbarui.",
   "{0} to go, while the app is open.":"Sisa {0}, selama aplikasi terbuka.",
   "From album takes several photos at once — they all become cards, one after the other, while the app is open.":"Dari album bisa ambil beberapa foto sekaligus — semuanya jadi kartu satu per satu selama aplikasi terbuka.",
   "Check all cards again":"Periksa ulang semua kartu",
@@ -2255,7 +2264,7 @@ id:{
   /* the notice sheet and the pointer to the guide (v266) */
   "OK":"OK","New here? The guide explains the app in six short sections.":"Baru di sini? Panduannya menjelaskan aplikasi ini dalam enam bagian singkat.",
   /* Undo after Delete (v268) */
-  "Deleted “{0}”":"“{0}” dihapus","Card deleted":"Kartu dihapus","Updated — {0}":"Diperbarui — {0}","Updated to {0}.":"Diperbarui ke {0}.","More under About.":"Selengkapnya di Tentang.","What is new":"Yang baru","Photo deleted":"Foto dihapus","Deleted {0}":"{0} dihapus","Deleted {0} and {1}":"{0} dan {1} dihapus","Undo":"Urungkan",
+  "Deleted “{0}”":"“{0}” dihapus","Card deleted":"Kartu dihapus","Updated — {0}":"Diperbarui — {0}","More under About.":"Selengkapnya di Tentang.","What is new":"Yang baru","Photo deleted":"Foto dihapus","Deleted {0}":"{0} dihapus","Deleted {0} and {1}":"{0} dan {1} dihapus","Undo":"Urungkan",
   /* the Progress dashboard (v274) */
   "Day streak":"Hari beruntun","Cards learned":"Kartu dipelajari","Due today":"Hari ini","Reviews this week":"Ulangan minggu ini","Last 30 days":"30 hari terakhir","Still learning":"Masih dipelajari","Known":"Sudah hafal","Coming up: {0} due tomorrow, {1} this week.":"Berikutnya: {0} besok, {1} minggu ini."
 }

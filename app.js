@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=412; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=413; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2695,23 +2695,25 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  413:"Update notes now show in full, instead of being cut off halfway.",
   411:"Pick several photos at once and they all become cards, one after the other.",
   410:"A card no longer carries text that its own picture does not show.",
   409:"About now says plainly what leaves the phone, and that the AI can be wrong.",
   407:"A photo of a control panel now makes one card per button, each with its own picture.",
   402:"The app speaks Russian, Vietnamese, Thai and Indonesian too.",
 };
-const NEW_MS=6000; /* a beat longer than the Undo line: this one is read, not acted on */
+const NEW_MS=6000; /* a beat longer than the Undo line: this one is read, not acted on — and longer still for a longer note (v413) */
+const newMs=s=>Math.min(12000,Math.max(NEW_MS,3000+String(s).length*55)); /* about 200 words a minute, with a floor and a ceiling */
 const newsList=()=>Object.keys(WHATS_NEW).map(Number).sort((a,b)=>b-a);
 const newsSince=v=>newsList().filter(n=>n>v&&n<=APP_V).map(n=>({v:n,s:WHATS_NEW[n]})); /* what this phone has not been shown yet, newest first */
 function whatsNewHTML(){ const ns=newsList().slice(0,5); if(!ns.length) return "";
   return `<div class="s" style="margin-top:8px">${esc(t("What is new"))}</div>`+ns.map(n=>`<div class="s">v${n} — ${esc(t(WHATS_NEW[n]))}</div>`).join(""); }
 function showUpdated(notes){
   const el=document.createElement("div"); el.className="undo"; el.id="updated"; el.setAttribute("role","status");
-  const line=notes.length?t("Updated — {0}",t(notes[0].s)):t("Updated to {0}.","v"+APP_V);
+  const line=notes.length?t("Updated — {0}",t(notes[0].s)):t("Updated.");
   const more=notes.length>1?" "+t("More under About."):"";
   el.innerHTML=`<span class="t">${esc(line+more)}</span>`;
-  document.body.appendChild(el); setTimeout(()=>{ const e=$("#updated"); if(e) e.remove(); },NEW_MS);
+  document.body.appendChild(el); setTimeout(()=>{ const e=$("#updated"); if(e) e.remove(); },newMs(line+more));
 }
 /* at boot, once: a phone that has seen a version before and now runs a newer one gets the line. A fresh install writes
    the version down and says nothing — there is nothing it was updated from. */
