@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=424; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=425; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -77,7 +77,7 @@ const S = { mode:"study", progress:{}, custom:[], inbox:[],
   pendingImg:null, pendingFull:null, pendingUse:"crop", persist:null,
   peek:null, /* Learn: the id of a linked card whose photo is shown on the front instead (v155) */
   admin:false, /* the owner's rows in More unlocked for this session (v162) */
-  detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterTags:[], settings:{}, single:null, saved:null,
+  detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterStar:false, filterTags:[], settings:{}, single:null, saved:null,
   editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null,
   autoCard:window.AUTO_CARD!==false, editOpenFrame:false }; /* autoCard (v325): a photo that opens by itself becomes a card without a frame or a preview; the harness sets window.AUTO_CARD=false to keep the crop-mode flow its frame suites drive */
 
@@ -93,7 +93,9 @@ function orderCards(list,order,byDue){
   return byDue?list.slice().sort((a,b)=>S.progress[a.id].due-S.progress[b.id].due):list.slice(); /* the deck is oldest first already */
 }
 function buildQueue(includeAhead){
-  const lt=learnTags(), p=S.progress, t=today(), d=(lt.length?deck().filter(x=>lt.some(g=>hasTag(x,g))):deck()).filter(x=>x.c); /* Learn: all cards, or the tags picked in the filter sheet — several allowed since v366, a card in any of them counts (v133, v156); a card still reading has no text yet (v237) */
+  /* Learn: all cards, or the tags picked in the filter sheet — several allowed since v366, a card in any of them counts (v133, v156); a card still reading has no text yet (v237) */
+  const lt=learnTags(), p=S.progress, t=today(); let d=(lt.length?deck().filter(x=>lt.some(g=>hasTag(x,g))):deck()).filter(x=>x.c);
+  if(S.settings.learnStar&&d.some(x=>x.star)) d=d.filter(x=>x.star); /* the starred cards alone (v425); a filter that would empty the session stands down */
   const order=learnOrder();
   const due = orderCards(d.filter(x=>p[x.id] && p[x.id].due<=t),order,true).map(x=>x.id);
   const fresh = orderCards(d.filter(x=>!p[x.id]),order,false).slice(0,NEW_PER_SESSION).map(x=>x.id);
@@ -140,9 +142,14 @@ function filterGroups(scope){
   const tags=allTags(), un=untaggedCount(), tagRows=[
     ...tags.map(x=>({k:"tag:"+x, label:x, n:deck().filter(d=>hasTag(d,x)).length, on:tagOn(scope,x)})),
     ...(tags.length&&un?[{k:"tag:"+UNTAGGED, label:t("Untagged"), n:un, on:tagOn(scope,UNTAGGED)}]:[])];
-  if(scope==="learn") return [{head:t("Tags"), rows:[{k:"", label:t("All cards"), n:deck().filter(d=>d.c).length, on:!learnTags().length},...tagRows]}];
+  /* Starred (v425): the learner's own mark, a row like any other — on Cards it joins the status rows, on Learn it stands on its
+     own beside the tags, and it appears only once a card is starred, as the AI row does. */
+  const nStar=deck().filter(d=>d.star).length;
+  if(scope==="learn") return [...(nStar?[{head:t("Starred"), rows:[{k:"star", label:t("Starred"), n:nStar, on:!!S.settings.learnStar}]}]:[]),
+    {head:t("Tags"), rows:[{k:"", label:t("All cards"), n:deck().filter(d=>d.c).length, on:!learnTags().length&&!S.settings.learnStar},...tagRows]}];
   const nAi=deck().filter(d=>d.ai).length;
-  const st=[{k:"flag", label:t("⚑ Flagged"), n:S.custom.filter(d=>d.flag).length, on:S.filterFlag},
+  const st=[...(nStar?[{k:"star", label:t("Starred"), n:nStar, on:S.filterStar}]:[]),
+    {k:"flag", label:t("⚑ Flagged"), n:S.custom.filter(d=>d.flag).length, on:S.filterFlag},
     ...(nAi?[{k:"ai", label:t("AI"), n:nAi, on:S.filterAi}]:[]),
     {k:"unv", label:t("Unverified"), n:S.custom.filter(d=>d.mt&&!d.mt.verified).length, on:S.filterUnv}];
   return [{head:t("Status"), rows:st},...(tagRows.length?[{head:t("Tags"), rows:tagRows}]:[])];
@@ -181,16 +188,21 @@ function openFilterSheet(scope,after){
 /* one row tapped: the status filters and the tags are each independent toggles since v366, "" clears everything */
 async function setFilter(scope,k){
   if(scope==="learn"){ let v=learnTags().slice();
-    if(!k.startsWith("tag:")) v=[]; else { const x=k.slice(4); v=v.includes(x)?v.filter(y=>y!==x):[...v,x]; }
+    if(k==="star") await setSetting("learnStar",!S.settings.learnStar); /* an independent toggle beside the tags (v425) */
+    else if(!k.startsWith("tag:")){ v=[]; await setSetting("learnStar",false); }
+    else { const x=k.slice(4); v=v.includes(x)?v.filter(y=>y!==x):[...v,x]; }
     await setSetting("learnTag",v);
     S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false; S.single=null; S.saved=null; setStats(); return; }
-  if(!k){ S.filterFlag=false; S.filterAi=false; S.filterUnv=false; S.filterTags=[]; return; }
-  if(k==="flag") S.filterFlag=!S.filterFlag;
+  if(!k){ S.filterStar=false; S.filterFlag=false; S.filterAi=false; S.filterUnv=false; S.filterTags=[]; return; }
+  if(k==="star") S.filterStar=!S.filterStar;
+  else if(k==="flag") S.filterFlag=!S.filterFlag;
   else if(k==="ai") S.filterAi=!S.filterAi;
   else if(k==="unv") S.filterUnv=!S.filterUnv;
   else { const v=k.slice(4); S.filterTags=S.filterTags.includes(v)?S.filterTags.filter(y=>y!==v):[...S.filterTags,v]; }
 }
-function learnChipsHTML(){ if(!allTags().length) return ""; return `<div class="chipset learnchips">${filterPillHTML("learn")}</div>`; }
+function learnChipsHTML(){ const st=deck().some(d=>d.star); /* the pill shows for a starred deck too, even without a single tag (v425) */
+  if(!st&&S.settings.learnStar) setSetting("learnStar",false); /* the last star taken off leaves no row to switch the filter back off (the v308 rule) */
+  if(!allTags().length&&!st) return ""; return `<div class="chipset learnchips">${filterPillHTML("learn")}</div>`; }
 function wireLearnChips(){ wireFilterPill("learn",render); }
 /* the id of a new card: the text itself while it is free (readable in exports), else text plus a timestamp */
 const cardId = c => deck().some(d=>d.id===c) ? c+"#"+Date.now() : c;
@@ -1883,7 +1895,7 @@ const GUIDE=()=>[
     t("Grade yourself: Hard, Medium, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
     t("Swipe the closed card left or right to pick another one — nothing is graded, and the card you skip comes round again.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included."),
-    t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way.")]},
+    t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way. Tap the star on a card to mark it as one you care about — the filter then shows, or studies, your starred cards alone.")]},
   {h:t("Language and meanings"),p:[t("More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.")]},
   {h:t("What stays on the phone"),p:[t("Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak."),
     t("Once a day anonymous usage counts and the app's error messages go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.")]}];
@@ -1907,6 +1919,30 @@ async function setFlag(id,on,note){
   if(on){ upd.flag=true; if(note!==undefined){ if(note) upd.flagNote=note; else delete upd.flagNote; } }
   else { delete upd.flag; delete upd.flagNote; }
   await putCard(upd,id);
+}
+/* the star: one tap on a card row marks it, no mode and no long press (v425, H: "es muss irgendwie noch moeglich sein, dass ich
+   mir waehrend des Durchscrollens ganz schnell und unkompliziert Karten markieren kann, die mir wichtig sind"). It is the
+   learner's own mark and means nothing to the app — the review flag is the app's word for "this card looks wrong", and the two
+   must not be one thing. `star` is a card field like `flag`, so export and import carry it without a line of their own. */
+async function setStar(id,on){
+  const d=cardOf(id); if(!d) return;
+  const upd={...d}; if(on) upd.star=true; else delete upd.star;
+  await putCard(upd,id);
+}
+const starIcon=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.63 5.33 5.87.86-4.25 4.14 1 5.85L12 17.02l-5.25 2.76 1-5.85L3.5 9.79l5.87-.86z"/></svg>`;
+const starHTML=d=>`<span class="star${d.star?" on":""}" data-star="${esc(d.id)}" role="button" tabindex="-1" aria-pressed="${d.star?"true":"false"}" aria-label="${t("Star")}">${starIcon}</span>`;
+/* the tap is the learner's, not the scroll's: a finger that arrests a flick still fires a click on Chrome/Android, and the page
+   has moved between the press and that click — a deliberate tap on a list at rest has not. No timer, so a fast tap is never eaten. */
+function wireStars(root){
+  (root||document).querySelectorAll("[data-star]").forEach(el=>{
+    let y=null;
+    el.addEventListener("pointerdown",e=>{ y=window.scrollY; e.stopPropagation(); }); /* the press is the star's: without this a press and hold on it starts the row marking of v354 */
+    el.onclick=async e=>{ e.stopPropagation(); e.preventDefault();
+      if(y!==null&&Math.abs(window.scrollY-y)>0){ y=null; return; } /* the list was still moving — that was a stop, not a mark */
+      y=null; const d=cardOf(el.dataset.star); if(!d) return;
+      const on=!d.star; el.classList.toggle("on",on); el.setAttribute("aria-pressed",on?"true":"false"); /* the row stays put: a re-render would take H's scroll place with it */
+      await setStar(d.id,on); };
+  });
 }
 function flagNoteHTML(d){
   return d.flag?`<div class="flagbox">${t("⚑ Flagged for review")}${d.flagNote?`: ${esc(d.flagNote)}`:""}</div>`:"";
@@ -2351,19 +2387,20 @@ function cardsListHTML(){
   let list=S.custom.slice().sort((a,b)=>(b.at||0)-(a.at||0)); /* newest first */
   const byText=new Map(); S.custom.forEach(x=>{ if(x.c) byText.set(x.c,(byText.get(x.c)||0)+1); }); /* the same text from several photos (v122) */
   /* several rows may be ticked at once (v366): a card must match one of the ticked status rows and one of the ticked tags */
-  if(S.filterUnv||S.filterFlag||S.filterAi) list=list.filter(d=>(S.filterUnv&&d.mt&&!d.mt.verified)||(S.filterFlag&&d.flag)||(S.filterAi&&d.ai));
+  if(S.filterUnv||S.filterFlag||S.filterAi||S.filterStar) list=list.filter(d=>(S.filterUnv&&d.mt&&!d.mt.verified)||(S.filterFlag&&d.flag)||(S.filterAi&&d.ai)||(S.filterStar&&d.star));
   if(S.filterTags.length) list=list.filter(d=>S.filterTags.some(g=>hasTag(d,g)));
   if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,...Object.values(d.ms||{}),d.flagNote,...(d.tags||[])].filter(Boolean).join(" ").toLowerCase().includes(q));
   const pk=marking("cards"); /* marking (v351): the tap marks instead of opening; the mark sits at the right end of the row since v355 */
   const rows=list.map(d=>`<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
       <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
-      <span class="cs">${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}${cardStatus(d)}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`).join("");
+      <span class="cs">${pk?"":starHTML(d)}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}${cardStatus(d)}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`).join("");
   const empty=S.custom.length?t("No cards match."):t("No cards yet — take a photo under Camera, or tap + New.");
   return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length, ids:list.map(d=>d.id)};
 }
 function renderCards(main){
   const nAi=deck().filter(d=>d.ai).length;
+  if(S.filterStar&&!deck().some(d=>d.star)) S.filterStar=false; /* the last star taken off leaves no row to switch the filter back off (the v308 rule, v425) */
   if(S.filterAi&&!nAi) S.filterAi=false; /* a filter whose chip is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the list anymore" — the AI chip shows only while suggestions wait, so the filter had no chip left to switch it off and the list stood empty at "0 of 131") */
   S.filterTags=S.filterTags.filter(g=>g===UNTAGGED?allTags().length&&untaggedCount():allTags().includes(g)); /* the same for a tag: the last card of a tag re-tagged, or the last untagged card tagged */
   let {html,n,ids}=cardsListHTML();
@@ -2381,7 +2418,7 @@ function renderCards(main){
       LIST_SCROLL=window.scrollY; /* where the list stood — ← Cards comes back to it (v352) */
       S.detail=b.dataset.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); };
     if(!marking("cards")&&S.custom.length>1) longPress(b,()=>{ PICK={kind:"cards",set:new Set([b.dataset.id])}; render(); }); /* press and hold to start marking (v354) */
-  }); };
+  }); wireStars($("#clist")); };
   const refresh=()=>{ const r=cardsListHTML(); ids=r.ids; $("#clist").innerHTML=r.html; const ct=$("#cnt"); if(ct){ ct.textContent=t("{0} of {1}",r.n,deck().length); ct.hidden=r.n===deck().length; } /* the count shows only while a search or a chip narrows the list (v356) */ wire(); if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); } };
   $("#q").oninput=e=>{ S.query=e.target.value; refresh(); };
   wireFilterPill("cards",render);
@@ -2403,9 +2440,10 @@ function renderCardDetail(main,c){
     <div class="detailacts">
       ${d.c?`<button class="btn primary" id="d-test">${t("Test this card")}</button>`:""}
       <button class="btn" id="d-edit">${t("Edit")}</button>
+      <button class="btn${d.star?" on":""}" id="d-star">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>
       <button class="btn${d.flag?" on":""}" id="d-flag">${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}</button>
       ${d.c?`<button class="btn" id="d-share">${t("Share")}</button>`:""}
-      <button class="btn danger" id="d-del"${d.c?"":' style="grid-column:1/-1"'}>${t("Delete card")}</button>
+      <button class="btn danger" id="d-del"${d.c?' style="grid-column:1/-1"':""}>${t("Delete card")}</button>
     </div>
     <div class="badge" style="margin-top:14px">${esc(stat)}</div>
     ${linkedHTML(d)}
@@ -2419,6 +2457,7 @@ function renderCardDetail(main,c){
     S.single=c; S.queue=[c]; S.idx=0; S.revealed=false; S.mode="study"; render();
   };
   $("#d-edit").onclick=()=>{ S.editing=c; render(); };
+  $("#d-star").onclick=async()=>{ await setStar(c,!d.star); render(); }; /* the learner's own mark (v425) */
   $("#d-flag").onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   const sh=$("#d-share"); if(sh) sh.onclick=()=>shareCard(c); /* one image through the share sheet (v269) */
   wireSay(); wireChars(d); wireLinks();
@@ -2797,6 +2836,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  425:"Tap the star on a card to mark it, and study your starred cards from the filter.",
   423:"An update no longer sends you to another card in the middle of a session.",
   421:"Three grades instead of four — Hard, Medium, Easy, in the traffic light's colours.",
   416:"The update note now waits until you tap it away — and More lets you switch it off.",
