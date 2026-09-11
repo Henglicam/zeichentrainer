@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=429; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=430; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2079,16 +2079,22 @@ function latinUnitMeaning(w){
   const u=LATIN_UNITS[m[2].toLowerCase()]; if(!u) return "";
   return m[1]+" "+wordOf(+m[1],u[0],u[1]); /* the unit's form for this number, through the app's one plural rule (v401): 1 час, 2 часа, 24 часа, 5 часов */
 }
+const CHARS_MAX=16; /* more buttons than this is no longer a row to tap through — a card with more parts shows none */
 const cardGloss=d=>mergeUnits(d.gloss||[]); /* the stored gloss with a number and its unit as one part (v309; cards from before carry them apart) */
 function cardParts(d){
   let words=d.gloss&&d.gloss.length?cardGloss(d).map(g=>g.w):(d.kind==="sign"?(d.segs||[]).flat():(d.seg||[]).filter(x=>x!=="\n"));
   words=words.filter(w=>CJK.test(w)||NUM_PART.test(w)); /* a number with its unit is a part of the meaning and stays in the row (v336, H's 24H存包: "das 24H sollte auch in der Zeile bei den chinesischen Schriftzeichen dabei sein") */
   if(words.length<2) words=[...d.c].filter(ch=>CJK.test(ch)); /* one word → its characters */
-  return [...new Set(words)];
+  /* a part the text carries twice stays twice (v430, H on his 骑车勿盯 / 还车勿忘 card: "Da fehlt a das zweite Wu"): the row is
+     the card's own parts in the text's order, so a dedup broke the mapping from a button back to the characters it stands for
+     — measured on his card, 骑车 勿 盯 还 车 勿 忘 came out as six buttons with the second 勿 gone. It also hid the row of a one-word
+     card whose characters repeat (爸爸 left one button, under charsHTML's floor of two). The dedup was the only thing keeping a
+     long text under the cap, so where the repeats would push it past, the deduped list stands in and the row still shows. */
+  return words.length<=CHARS_MAX?words:[...new Set(words)];
 }
 function charsHTML(d){
   const parts=cardParts(d);
-  if(parts.length<2||parts.length>16) return "";
+  if(parts.length<2||parts.length>CHARS_MAX) return "";
   return `<div class="chars">${parts.map(w=>`<button class="ch" data-ch="${esc(w)}">${esc(w)}</button>`).join("")}</div><div class="chinfo" id="chinfo" hidden></div>`;
 }
 /* the parts row's dictionary and pinyin library load in the background as soon as a card's back is shown, so the first
