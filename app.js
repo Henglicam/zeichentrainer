@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=434; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=435; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -387,6 +387,86 @@ async function sendFeedback(text){
   const r=await fetch(SHARE_URL+"/rest/v1/feedback",{method:"POST",headers:{"apikey":SHARE_KEY,"Authorization":"Bearer "+SHARE_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({install:installId(),version:APP_V,text})});
   if(!r.ok){ const body=await r.text().catch(()=>""); logErr("feedback",r.status+": "+body.slice(0,300)); throw new Error(r.status===404?"the feedback table is not set up":"error "+r.status); }
 }
+/* Everything built and not yet confirmed on the phone (v434, H: "Bitte allgemeine \u201enoch zu testen\u201c Liste"),
+   grouped by what H does rather than by version — CLAUDE.md's roadmap carries 136 pending entries, and a list of 136
+   is not a checklist. Chains are folded into the one thing he can actually check: v379-v392, v406 and v407 are all
+   "the washing machine taken again", not thirteen items. The oldest entries are left out of the list on purpose and
+   counted instead: v59-v152 are in daily use and have simply never been confirmed in words, which is not the same
+   as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
+   adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
+const TO_TEST=[
+  ["photo","v434","this list — the right twelve?"],
+  ["photo","v433","empty deck: sign, poster, package"],
+  ["photo","v412","album batch: does the line read?"],
+  ["photo","v411","album: every photo becomes a card"],
+  ["photo","v405","3 photos: the right numbers kept"],
+  ["photo","v399","a numbers: line in Diagnostics"],
+  ["photo","v395","a panel: every box in the AI log"],
+  ["photo","v378","labels crisp, not over-sharpened"],
+  ["photo","v377","a panel tagged Appliance itself"],
+  ["photo","v375","one photo's labels, one batch"],
+  ["photo","v364","the kind right often enough"],
+  ["photo","v344","the finished card's row, roomy"],
+  ["photo","v335","a photo with no VPN: it ends"],
+  ["photo","v332","the shimmer glides evenly"],
+  ["photo","v329","the card picture fills the box"],
+  ["photo","v325","photo to finished card, no frame"],
+  ["photo","v236","how long a hard photo takes"],
+  ["again","v407","washer — a card per button, whole"],
+  ["again","v394","rice cooker — a card per button"],
+  ["again","v396","dishwasher and the two oven rows"],
+  ["again","v410","\u5efa\u56fd\u8089\u5939\u998d — \u7802 off the card"],
+  ["again","v400","\u957f\u5b89\u94c3\u6728 badge — flagged?"],
+  ["again","v367","a Meituan screenshot shared"],
+  ["again","v349","vending machine — \u519c\u592b\u5c71\u6cc9 whole"],
+  ["again","v348","scooter badge — \u4e5d\u53f7 or no card"],
+  ["again","v340","ARRI poster — title in, ARRI out"],
+  ["again","v334","\u7eff\u76ae\u4e66 at 18°, \u6d41\u6d6a\u5730\u7403 at 14°"],
+  ["again","v328","\u90aa\u4e0d\u538b\u6b63 from across the room"],
+  ["again","v326","street sign \u91d1\u6c47\u8def — both lines"],
+  ["again","v323","bottle — \u51c0\u542b\u91cf380ml"],
+  ["again","v309","\u7eff\u76ae\u4e66 back — 3\u6708 and 1\u65e5"],
+  ["again","v175","two-line sticker — both lines"],
+  ["app","v431","Star, Flag, Edit on one line"],
+  ["app","v430","both \u52ff in the parts row"],
+  ["app","v429","Starred studies all eleven"],
+  ["app","v428","Hard moves on in a short session"],
+  ["app","v427","the star on the Learn back"],
+  ["app","v424","an old card: no context word left"],
+  ["app","v422","linked photos below the actions"],
+  ["app","v421","three grades, no arithmetic"],
+  ["app","v420","the swipe on the unfolded screen"],
+  ["app","v419","Diagnostics: the re-cut counter"],
+  ["app","v418","one start — no green walls"],
+  ["app","v415","pull down: no refresh, no jump"],
+  ["app","v409","About — honest, not alarming?"],
+  ["app","v404","a failed boot read shows up"],
+  ["app","v403","the privacy page reads right"],
+  ["app","v402","a phone set to Thai, Viet or Indo"],
+  ["app","v401","a Russian phone"],
+  ["app","v373","one start — shade cards fixed"],
+  ["app","v370","Check-up — worth the calls?"],
+  ["app","v369","Undo last run"],
+  ["app","v368","Tag all cards over the untagged"],
+  ["app","v351","mark and delete many at once"],
+  ["app","v350","the list's thumbnails at 124×70"],
+  ["app","v341","Crop again saved before the AI"],
+  ["app","v331","a hanging AI call ends"],
+  ["app","v308","the list after Accept all"],
+  ["app","v274","the Progress dashboard"],
+  ["app","v271","the first daily row with errors"],
+  ["app","v246","Crop again on a pre-v244 card"],
+  ["app","v209","how long a reading takes now"],
+  ["app","v185","the turning frame — used at all?"],
+  ["app","v172","the provider chips"],
+  ["app","v141","the stroke matcher, other chars"],
+  ["update","v423","a mid-session reload stays put"],
+  ["update","v416","the note waits to be tapped away"],
+  ["update","v408","the note appears at all"],
+  ["update","v327","it shows seconds after a pause"],
+  ["update","v316","an update taken through the camera"]];
+const TO_TEST_OLD=66; /* v59-v152, in daily use, never confirmed in words - counted, not listed */
+const TO_TEST_GROUPS=[["photo","Take any photo"],["again","Take one of these again"],["app","In the app"],["update","After an update"]];
 /* What the app claims it can read, and what a photo has actually confirmed (v434, H after the untested menu
    board: "OK, diese liste bitte unter admin anlegen"). Owner's, English, no key in any language.
    Two halves, and the split is the whole point. The first is counted from this phone's own deck, so it cannot go
@@ -432,11 +512,18 @@ function fieldKinds(){ /* one row per kind, counted from the deck — shared by 
   return {rows,deck:deck.length,untagged:Math.max(0,deck.length-tagged),never:rows.filter(r=>!r.n).length};
 }
 const fieldNote=()=>{ const f=fieldKinds();
-  return `${f.never} of ${KINDS.length} kinds never made on this phone, ${FIELD_NEVER.length} cases never photographed at all.`; };
+  return `${TO_TEST.length} checks waiting on the phone. ${f.never} of ${KINDS.length} photo kinds never made here, ${FIELD_NEVER.length} cases never tried.`; };
 function fieldText(){
   const f=fieldKinds();
   const pad=(x,n)=>{ const s=String(x); return s+" ".repeat(Math.max(0,n-s.length)); };
-  const L=["Field tests \u00b7 v"+APP_V,"","What this phone has made ("+nOf(f.deck,"card")+")"];
+  const L=["Still to test · v"+APP_V,"",
+    TO_TEST.length+" checks waiting, "+TO_TEST_OLD+" older in daily use"];
+  for(const [g,head] of TO_TEST_GROUPS){
+    const rows=TO_TEST.filter(x=>x[0]===g);
+    L.push("","  "+head+" ("+rows.length+")");
+    for(const [,v,what] of rows) L.push("    "+pad(v,6)+what);
+  }
+  L.push("","What this phone has made ("+nOf(f.deck,"card")+")");
   for(const r of f.rows) L.push("  "+pad(r.k,15)+pad(r.n,4)+(r.n?(r.splits?"  "+nOf(r.splits,"photo")+" split":""):"  never"));
   L.push("  "+pad("no kind",15)+pad(f.untagged,4)+"  before v364, or typed");
   L.push("","What the AI is told it can read","","  confirmed by a photo on this phone");
@@ -445,7 +532,7 @@ function fieldText(){
   for(const [n,e] of FIELD_TRIED) L.push("    "+n+" \u00b7 "+e);
   L.push("","  never tried \u2014 the list to work through");
   for(const n of FIELD_NEVER) L.push("    "+n);
-  L.push("","A case moves up only when you confirm it.","The counts come from this phone; the cases","are kept in app.js against CLAUDE.md.");
+  L.push("","A line goes when you say it works.","The counts come from this phone; the lists","are kept in app.js against CLAUDE.md.");
   return L.map(x=>x.replace(/\s+$/,"")).join("\n");
 }
 function feedbackText(rows){ /* laid out like the All users report since v251 (H: "Same for feedback"): a head with the count, one block per message with a blank line between, the sender's id under the time */
@@ -1902,7 +1989,7 @@ function renderMore(main){
     <div class="listhead">Diagnostics</div>
     <div class="mrow"><div style="flex:1"><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${READLOG.length} step${READLOG.length===1?"":"s"}.</div><div class="fieldacts"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button><button class="btn mini" id="diag-copy">Copy</button></div></div></div>
     <pre class="diag" id="diag-out" hidden></pre>
-    <div class="mrow"><div style="flex:1"><div class="t">Field tests</div><div class="s" id="field-status">${fieldNote()}</div><div class="fieldacts"><button class="btn mini" id="field-show">Show</button><button class="btn mini" id="field-copy">Copy</button></div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">Still to test</div><div class="s" id="field-status">${fieldNote()}</div><div class="fieldacts"><button class="btn mini" id="field-show">Show</button><button class="btn mini" id="field-copy">Copy</button></div></div></div>
     <pre class="diag" id="field-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"install")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div><div class="fieldacts"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button><button class="btn mini" id="users-copy">Copy</button></div></div></div>
     <pre class="diag" id="users-out" hidden></pre>
