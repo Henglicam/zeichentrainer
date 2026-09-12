@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=442; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=443; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -396,6 +396,7 @@ async function sendFeedback(text){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["photo","v442","panel: card once the AI answers"],
+  ["again","v443","washer: 2 more own crops, dial: 3"],
   ["photo","v441","messy strong read: no early card"],
   ["photo","v440","clear read: card at once, refined"],
   ["photo","v439","hard photo: card seconds sooner"],
@@ -4842,6 +4843,15 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
     }
     return out; }),status);
   const nCJK=t=>[...t].filter(c=>CJK.test(c)||/[0-9]/.test(c)).length;
+  /* a merged label's measure is its head (v443, H's washing machine at v442 — 漂洗 and 柔顺剂 kept the whole panel, each
+     standing between two placed 长按 labels): the ordered fill and the half-reading pass compare a candidate's width per
+     character with the row's, and the row's was the placed run's width over the WHOLE label's count — 时间长按远程 is six
+     characters on a run two characters wide, so a plain two-character neighbour measured three times too wide and failed
+     RL_WIDE every time. The head before 长按 is the width the run has (its sub-line stands under it at half size), and
+     a run that read the whole label holds two lines, so its height counts as two. Measured from H's own records: 漂洗
+     at 2.9 and 柔顺剂 at 2.2 of the row's per-character width against RL_WIDE's 1.8; by the head 0.96 and 0.73. */
+  const nHead=j=>{ const zh=labels[j].zh; return nCJK(labelHead(zh)||zh)||nCJK(zh); };
+  const linesOf=(j,i)=>labelHead(labels[j].zh)&&i>=0&&(got[i]||[]).some(rd=>hitCore(rd,labels[j].zh)>0)?2:1; /* the run read the sub-line too — any of its four readings, since a clean head reading (1.0) outranks a whole-label one (0.83) as the stored best and would count a two-line run as one */
   const score=(i,j)=>Math.max(0,...(got[i]||[]).map(rd=>labelHit(rd,labels[j].zh)));
   const pairs=[]; /* every run against every label, the surest pairing first; each run and each label used once */
   for(let i=0;i<runs.length;i++) for(let j=0;j<labels.length;j++){ const v=score(i,j); if(v>=RL_HIT) pairs.push([v,i,j]); }
@@ -4871,11 +4881,11 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
   for(let i=0;i<runs.length;i++) for(let j=0;j<labels.length;j++){ if(pick[j]>=0) continue;
     const v=score(i,j); if(v>=RL_WEAK&&v<RL_HIT) weak.push([v,i,j]); }
   weak.sort((a,b)=>b[0]-a[0]);
-  const perChar=rows.map(rw=>{ const v=rw.at.filter(j=>pick[j]>=0).map(j=>{ const n=nCJK(labels[j].zh); return n?(runs[pick[j]].x1-runs[pick[j]].x0)/n:0; })
+  const perChar=rows.map(rw=>{ const v=rw.at.filter(j=>pick[j]>=0).map(j=>{ const n=nHead(j); return n?(runs[pick[j]].x1-runs[pick[j]].x0)/n:0; })
     .filter(x=>x>0).sort((a,b)=>a-b); return v[v.length>>1]||0; });
   for(const [,i,j] of weak){ if(ur.has(i)||pick[j]>=0) continue;
     const bd=band[rowOf.get(j)], r=runs[i]; if(!bd) continue;
-    const pw=perChar[rowOf.get(j)], cw=(r.x1-r.x0)/Math.max(1,nCJK(labels[j].zh)); /* a run far wider than the row's characters holds more than this label */
+    const pw=perChar[rowOf.get(j)], cw=(r.x1-r.x0)/Math.max(1,nHead(j)); /* a run far wider than the row's characters holds more than this label */
     if(pw&&(cw<RL_WIDE[0]*pw||cw>RL_WIDE[1]*pw)) continue;
     if(Math.min(bd.y1,r.y1)-Math.max(bd.y0,r.y0)<0.5*Math.min(bd.y1-bd.y0,r.y1-r.y0)) continue;
     const at=rows[rowOf.get(j)].at, k=at.indexOf(j);
@@ -4895,8 +4905,8 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
     rows.forEach((rw,ri)=>{
       const at=rw.at, ps=at.filter(j=>pick[j]>=0), bd=band[ri];
       if(!bd||!ps.length||ps.length===at.length) return;
-      const rh=median(ps.map(j=>runs[pick[j]].y1-runs[pick[j]].y0))||1;
-      const pw=median(ps.map(j=>{ const n=nCJK(labels[j].zh); return n?(runs[pick[j]].x1-runs[pick[j]].x0)/n:0; }).filter(v=>v>0))||0;
+      const rh=median(ps.map(j=>(runs[pick[j]].y1-runs[pick[j]].y0)/linesOf(j,pick[j])))||1; /* one line's height, also where the run read a label's sub-line with it (v443) */
+      const pw=median(ps.map(j=>{ const n=nHead(j); return n?(runs[pick[j]].x1-runs[pick[j]].x0)/n:0; }).filter(v=>v>0))||0;
       const cand=runs.map((r,i)=>({r,i})).filter(({r,i})=>!ur.has(i)
         &&Math.min(bd.y1,r.y1)-Math.max(bd.y0,r.y0)>=0.5*Math.min(bd.y1-bd.y0,r.y1-r.y0)
         &&r.y1-r.y0>=RL_HGT[0]*rh&&r.y1-r.y0<=RL_HGT[1]*rh
@@ -4918,14 +4928,19 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
         const one=groups.map(g=>g.slice().sort((a,b)=>Math.abs((a.r.y1-a.r.y0)-rh)-Math.abs((b.r.y1-b.r.y0)-rh))[0]);
         /* then the columns decide: the runs nearest the columns the placed labels established are this gap's, and they
            count only when the next candidate stands clearly further out (RL_CLEAR of a run's width), so an ambiguous
-           row still keeps the whole picture rather than risk a neighbour's button */
+           row still keeps the whole picture rather than risk a neighbour's button. And the gap must be closed on both
+           sides (v443): v391 let a run of unread labels at a row's end take the free runs beyond the last placed one,
+           and a label the model omits — ordinary, H's answers carry 20, 21 and 25 labels for one panel — leaves its own
+           run free exactly there, on a column another row vouches for; with the head-based width (above) admitting real
+           runs, 漂洗 took 温度's button in the probe whenever 温度 was left out of the answer. A row's last label the
+           reader cannot read keeps the whole picture, which is the honest answer (v380). */
         let chosen=null;
-        if((L||R)&&one.length>=gap.length&&gap.length){
+        if(L&&R&&one.length>=gap.length&&gap.length){ /* a placed label on BOTH sides (v443): a row's end has no second bound, and a label the model omitted leaves its run free there — measured, 漂洗 took 温度's button with 温度 left out of the answer */
           const dist=r=>Math.min(...cols.map(c=>Math.abs(mid(r)-c)));
           const rank=one.slice().sort((a,b)=>dist(a.r)-dist(b.r)), take=rank.slice(0,gap.length);
           if(one.length===gap.length||dist(rank[gap.length].r)>=dist(take[take.length-1].r)+RL_CLEAR*medW){
             const sel=take.slice().sort((a,b)=>mid(a.r)-mid(b.r));
-            if(gap.every((j,t)=>{ const w=(sel[t].r.x1-sel[t].r.x0)/Math.max(1,nCJK(labels[j].zh)); return !pw||(w>=RL_WIDE[0]*pw&&w<=RL_WIDE[1]*pw); })) chosen=sel; } }
+            if(gap.every((j,t)=>{ const w=(sel[t].r.x1-sel[t].r.x0)/Math.max(1,nHead(j)); return !pw||(w>=RL_WIDE[0]*pw&&w<=RL_WIDE[1]*pw); })) chosen=sel; } }
         if(chosen) chosen.forEach(({r,i},t)=>{ ur.add(i); pick[gap[t]]=i; ordered++; });
         k=e;
       }
@@ -5079,7 +5094,8 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
   }
   labels.forEach((l,j)=>{ if(pick[j]<0) return; const g=island.has(j)?cut[j]:growRun(cut[j],runs,runs[pick[j]]);
     rects[j]={x0:g.x0/gy.W,y0:g.y0/gy.Hh,x1:g.x1/gy.W,y1:g.y1/gy.Hh,read:read[j]}; });
-  return {rects,bands,runs:runs.length,hit,filled,ordered};
+  const two=labels.filter((l,j)=>pick[j]>=0&&linesOf(j,pick[j])===2).length; /* v443: how many placed runs held a label and its sub-line, for the record */
+  return {rects,bands,runs:runs.length,hit,filled,ordered,two};
 }
 function snapBox(bmp,box,n,lens,skip){ /* lens: the answer's lines' character counts (v305); skip: the fine print's boxes as fractions (v328) — a blob whose centre lies in one is not the text */
   const k=Math.min(1,800/Math.max(bmp.width,bmp.height)), W=Math.max(1,Math.round(bmp.width*k)), Hh=Math.max(1,Math.round(bmp.height*k));
@@ -5397,7 +5413,7 @@ async function cropSign(id,opts){
               let found=null; try{ found=await readLabels(sb,gy,lab,pic.box,()=>{}); }catch(e){ found=null; logErr("split",e&&e.message||String(e)); }
               if(sb!==b) sb.close(); if(stale()) return;
               if(found&&found.hit+found.filled+found.ordered>=SPLIT_MIN){
-                N.found={bands:found.bands,runs:found.runs,hit:found.hit,filled:found.filled,ordered:found.ordered,
+                N.found={bands:found.bands,runs:found.runs,hit:found.hit,filled:found.filled,ordered:found.ordered,two:found.two||0,
                   rects:found.rects.map(q=>q?[n4(q.x0),n4(q.y0),n4(q.x1),n4(q.y1),String(q.read||"").slice(0,12)]:null)}; /* v399: the rectangle each label was placed on, in fractions of the picture, and the run's reading that named it — the log prints these as whole percent, one line a label, and on a 20-label panel those lines evict the proposal from the 40 steps */
                 logRead(`the picture's own characters stand in ${found.bands} ${found.bands===1?"row":"rows"}, ${found.runs} runs; the reader named ${found.hit} of the ${lab.length} labels`+(found.filled?`, and ${found.filled} more by half a reading and their row's order`:"")+(found.ordered?`, and ${found.ordered} more by their row's order alone`:""));
                 const pcv=v=>Math.round(v*100);
@@ -5434,7 +5450,21 @@ async function cropSign(id,opts){
           const placed=PLACED[id]||(CROP&&CROP.id===id&&CROP.followed?CROP.rect:null); /* only a frame this box actually moved (v410) */
           const gone=cut&&placed&&picSeen.base?outsideWindow(pic,placed,seenBase,W,Hh,seenAngle):null; /* picSeen.base is null on the regrow branch and only there: after a v314 cut, a v318 side, a v348 noText or a v393 tiny re-ask the app has just spent a second Qwen call to RECOVER a line, and the snap then trims its region off the union — measured, the rule deleted the very line the re-ask existed for (verify-aiframe cutline) */
           if(gone) logRead(`a line outside the picture this card will carry, left off it: ${gone.join(" | ")}`); }
-        if(splitWhole&&W&&Hh&&seenBase&&pic.labels&&pic.labels.length>=SPLIT_MIN){ /* the boxes are a drawing: the cards keep their texts and get the frame's own picture (v380) */
+        /* when the reader found nothing at all in the picture, a label whose box touches the picture's edge — where that edge
+           is the photo's own — is cut off by the photo and gets no card (v443, H's dial photo at v442: the model listed 羽绒,
+           血渍洗 and 时间长按远程 from the sliver of the next block at the right edge, the reader found none of the six labels,
+           and three cards carried the whole dial with their text half outside it — "der Text passt nicht zum Bild"). The v312
+           rule asks the model to leave out a line the edge cuts; a box on the edge in a picture the reader could read nothing
+           of is that line. Only in the whole-picture branch: where the reader placed the panel's labels, an unplaced label at
+           the edge keeps the whole picture as before — measured, the rule over both branches dropped 混合, a real label whose
+           drawn box touches the left edge of H's wide shot and which the reader misses there. Never on a proposal that ends
+           inside the photo (there is more beyond it, v313). */
+        const edgeCut=(l,sb)=>{ const b=l.box||[0,0,0,0]; return (b[0]<=0.02&&sb.x<=0.005*sb.lw)||(b[2]>=0.98&&sb.x+sb.w>=0.995*sb.lw)||(b[1]<=0.02&&sb.y<=0.005*sb.lh)||(b[3]>=0.98&&sb.y+sb.h>=0.995*sb.lh); };
+        const edgeOut=(zhs)=>{ if(!zhs.length) return; N.edgeOut=zhs.slice(); logRead(zhs.join(", ")+(zhs.length===1?" stands":" stand")+" at the picture's edge, in a picture whose labels the reader could not find — cut off by the photo, "+(zhs.length===1?"no card for it":"no cards for them")); };
+        if(splitWhole&&!seenAngle&&W&&Hh&&seenBase&&pic.labels&&pic.labels.length>=SPLIT_MIN){ /* never on a straightened copy: its edge is not the photo's along the rows, so a label a little inside the photo can stand at the copy's edge · the boxes are a drawing: the cards keep their texts and get the frame's own picture (v380) */
+          const gone=pic.labels.filter(l=>edgeCut(l,seenBase)); /* only while SPLIT_MIN labels remain: fewer would fall to the one-card path, whose text is the whole answer with the dropped lines still in it */
+          if(gone.length&&pic.labels.length-gone.length>=SPLIT_MIN){ edgeOut(gone.map(l=>l.zh)); pic.labels=pic.labels.filter(l=>!edgeCut(l,seenBase)); } }
+        if(splitWhole&&W&&Hh&&seenBase&&pic.labels&&pic.labels.length>=SPLIT_MIN){
           const one=PLACED[id]||seenBase;
           SPLIT[id]=pic.labels.map(()=>one);
           N.split=numFrames(SPLIT[id]); N.splitWhole=true; /* v399 */
