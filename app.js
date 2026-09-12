@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=438; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=439; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -395,6 +395,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v439","hard photo: card seconds sooner"],
   ["photo","v438","AI unreachable, weak read: no card"],
   ["photo","v437","Crop during the scan: frame it yourself"],
   ["again","v436","the signpost — a plate per card"],
@@ -3032,6 +3033,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  439:"Photos the reader cannot make sense of — an appliance panel, a busy shopfront — now become cards several seconds sooner.",
   438:"When the AI cannot be reached and the reading is unsure, no card is made — the photo stays under Camera with Crop.",
   437:"Tap Crop while a photo is being read to stop the automatic card and set the frame yourself.",
   429:"Picking Starred now studies all your starred cards, not only the ones due today.",
@@ -4418,6 +4420,19 @@ async function frameOnText(id,orig,base,rect,angle,by,grow,sure){ /* sure (v333)
    stand below with their own notes: the column pass for a character fused with a streak (v303), the width budget per
    line (v305) and the shadow pass beyond the line's ends (v306). */
 const SKEW_TRUST=12; /* an unconfirmed straightening beyond this many degrees is not trusted for the picture the AI sees (v346) */
+/* The picture goes to the AI at the quick look, beside the rest of the reading (v439, H: "Du musst mit den
+   Uebersetzungen schneller werden", then "Miss B erstmal", then "B"). The quick look knows after well under a second
+   whether the frame holds readable text; when it does not, the reading almost always ends weak and the picture is sent
+   anyway — after every remaining pass has run and been thrown away. Measured over 40 real photos (H's washing machine,
+   rice cooker, dishwasher, both Panasonic ovens, Meituan, Taobao, the granite sign, the Nongfu bottle, every poster):
+   the quick look calls 33 of them unreadable, 28 of those really end weak, and the wait between the quick look and the
+   moment the picture is sent today is 3.6 s at the median, 13.1 s at the worst — Meituan 13.1, pana5 7.9, the Nongfu
+   bottle 7.4, the granite sign 7.3, the washing machine 6.6, the dishwasher 5.6, the rice cooker 3.5. The saving is
+   min(that wait, the call's own duration), so on a panel the whole Qwen call disappears inside the reader's time.
+   The cost, measured: 5 of the 33 end strong after all, and of those five two (pana6, Taobao) read confident garbage
+   that the text check rejects, so picOnBad would have sent the picture anyway and gets the early answer instead — three
+   genuinely wasted calls per 40 photos, +7.5 %, far under the relay's 200 a day. */
+const EARLY={}; /* photo id -> {run, base, guesses, at, p} — the picture call already on its way */
 const SNAP_ROOM=1, SNAP_MIN=0.15, SNAP_MAX=0.95, SNAP_COL=0.15, SNAP_WIDE=1.6, SNAP_GAP=0.8, SNAP_BAR=1.6, SNAP_STACK=0.5; /* BAR: how much wider than tall a blob must be to be read as one stroke of a character written in bars · STACK: how far apart two of them may stand */
 const SNAP_REACH=0.85; /* how much of the AI's box the coloured ink must reach across beside the grey pick's (v349, H's vending machine at v347 "Vending machine works not yet": the red text on glass reaches 77 % of the box against the grey cut's 89 %, so v347's "at least as much" blocked the switch on the phone's own pixels; H's 流浪地球 poster, the case the guard is for, reaches 56 against 92) */
 /* A photo of a user interface, one card per element (v357–v358, H's rice cooker panel — eleven buttons, 低卡饭 柴火饭 快煮
@@ -5205,7 +5220,7 @@ async function cropSign(id,opts){
   LAST_READ.passes=null; const N=numsReset(id,true); status("cutting out the frame …"); /* v399: the numbers of this reading, keeping the proposal proposeFrame put down before it */
   let cardImg=null; /* the card's picture from this reading — kept on the reading, not in the one global slot, so a reading finishing in the background cannot hand its picture to another photo's card (v237) */
   try{
-    READ_APP[id]=opts&&opts.app!==undefined?!!opts.app:!!(CROP&&CROP.id===id&&(CROP.hidden||CROP.proposed)); delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; /* the app's own frame, not the hand's (v304: the placement may move it for a card saved with Save now) */
+    READ_APP[id]=opts&&opts.app!==undefined?!!opts.app:!!(CROP&&CROP.id===id&&(CROP.hidden||CROP.proposed)); delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete EARLY[id]; /* the app's own frame, not the hand's (v304: the placement may move it for a card saved with Save now) */
     const base=opts&&opts.rect||(CROP&&CROP.id===id?CROP.rect:null); /* the frame the reading starts from: a placed frame's rectangle is mapped from its cut, not from whatever frame stands when the placement lands (v297 — the quick look's placed frame had shifted the AI's box) */
     const r=opts&&opts.blob?{blob:opts.blob}:await cropBlob(id,opts&&opts.rect);
     if(stale()) return;
@@ -5234,7 +5249,15 @@ async function cropSign(id,opts){
         const ok=textLike(lines);
         N.qk={k:n4(k),like:ok,lines:read.slice(0,8).map(l=>({t:(l.t||"").slice(0,40),cf:(l.cf||[]).slice(0,40),bx:(l.bx||[]).slice(0,40).map(b=>[Math.round(b.x0),Math.round(b.y0),Math.round(b.x1),Math.round(b.y1)])})),tall:lines.length,fine:fine.length}; /* v399: textLike wants three boxes at SURE_BOX averaging PLACE_CF, and tallLines the box heights against Hink — neither can be checked against a rounded mean, which is all the log has ever carried */
         logRead(`quick look: ${read.length?read.map(l=>l.t).join(" | ")+` at ${Math.round(meanCf(read))} %`:"nothing"}${fine.length?` — fine print beside taller ink, left out: ${fine.map(l=>l.t).join(" | ")}`:""}${lines.length&&!ok?" — not text, no frame from it":read.length&&!lines.length?" — nothing left to frame":""}`); /* Diagnostics (v296) */
-        if(ok) rect=rectOfLines(bmp,lines); /* garbage places no frame (v296) */ } finally{ bmp.close(); }
+        if(ok) rect=rectOfLines(bmp,lines); /* garbage places no frame (v296) */
+        /* the reading will almost certainly end weak: send the picture now instead of after the passes (v439). Only under
+           SKEW_TRUST, because trustAngle needs every pass and below that angle picBase is the same either way — the bytes
+           sent are byte for byte what the weak path would send below. Measured: 2 of 40 photos are excluded by it. */
+        if(!ok&&!EARLY[id]&&Math.abs(dk.angle||0)<SKEW_TRUST&&pictureProvider()&&aiAutoOn()&&navigator.onLine){
+          const eb={orig:r.blob,dk,base}, eg=[...new Set(read.map(l=>l.t).filter(Boolean))].slice(0,6);
+          EARLY[id]={run,base:eb,guesses:eg,at:Date.now(),p:aiReadPicture(eb.dk.blob,eg,()=>{},N).then(x=>({pic:x}),e=>({err:e&&e.message||String(e)}))};
+          logRead(`the quick look found no readable text — the AI gets the picture now, beside the reading (${eg.length} guesses)`); }
+        } finally{ bmp.close(); }
       if(rect){ await placeRect(rect); if(stale()) return;
         if(CROP&&CROP.id===id&&CROP.hidden){ delete CROP.hidden; logRead("frame shown as proposed — the text fills it"); renderShots(); } } } /* nothing to move: the proposal is the frame, from now */
     status("reading the text …");
@@ -5416,7 +5439,14 @@ async function cropSign(id,opts){
       let picBase={orig:r.blob,dk:trustAngle?dk:null,base};
       if(!trustAngle){ logRead(`the straightening of ${(dk.angle||0).toFixed(1)}° is not confirmed by the reading — the AI gets the frame as it is`); }
       if(placedCut){ logRead("the AI gets the whole proposal, not the placed frame's cut"); }
-      picSeen=picBase; try{ pic=await aiReadPicture(picBase.dk?picBase.dk.blob:picBase.orig,guesses,status,N); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
+      picSeen=picBase;
+      const early=EARLY[id]&&EARLY[id].run===run&&trustAngle?EARLY[id]:null; /* the quick look already sent it (v439); trustAngle is true by the angle guard there, tested again so a later rule cannot silently change the bytes */
+      if(early){ picSeen=picBase=early.base; const t0=Date.now(), e=await early.p; if(stale()) return;
+        const wait=Date.now()-t0, ahead=t0-early.at; /* ahead: the overlap this won — the picture was already that long on its way when the reading arrived here */
+        N.early={ahead,wait,guesses:early.guesses.length,ok:!!e.pic}; /* v399: the field's own numbers for the saving, which is min(ahead, the call's duration) */
+        logRead(`the AI got the picture at the quick look, ${(ahead/1000).toFixed(1)} s before this point — waited ${(wait/1000).toFixed(1)} s for the answer`);
+        if(e.pic) pic=e.pic; else { r.picErr=e.err; logErr("picture",r.picErr); } }
+      else try{ pic=await aiReadPicture(picBase.dk?picBase.dk.blob:picBase.orig,guesses,status,N); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
       if(stale()) return; r.pic=pic?{zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped}:null;
       N.pic=numPic(pic); if(r.picErr) N.picErr=String(r.picErr).slice(0,120); /* v399 */
       if(pic&&pic.dropped&&pic.dropped.length){ logRead(`fine print left out of the AI's answer: ${pic.dropped.join(" | ")}`); } /* Diagnostics (v312) */
@@ -5491,6 +5521,8 @@ async function cropSign(id,opts){
     SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r, alts, trad:tradPhoto, tradDetected:tradPhoto, tradText:tradPhoto?s2t(bestT):""};
     SIGN[id].cardImg=cardImg; SIGN[id].weak=weak; /* for the card saved before the reading (v237): its picture, and the flag when the reading was weak */
     SIGN[id].picBlob=trustAngle?dk.blob:r.blob; SIGN[id].picAsked=r.pic!==undefined;
+    if(EARLY[id]&&EARLY[id].run===run&&r.pic===undefined) SIGN[id].picEarly=EARLY[id]; /* the reading ended strong and the early answer was never used: picOnBad takes it instead of asking again (v439) */
+    delete EARLY[id]; /* the weak path has consumed it or SIGN carries it now — the register must not keep the crop and its straightened copy alive for the session (a photo read once is never read again, so nothing else would ever clear it) */
     /* and the way in for that picture (v406): the text check answers after done(r), so picOnBad hands its answer back here
        and it gets the same placement, snap, drawing test and split the weak path's answer gets. The picture is the very one
        picBlob names, so picSeen must be built the same way or the box would map through another frame. */
@@ -6196,8 +6228,11 @@ const picMark=()=>`<span class="picmark" title="${t("Read from the picture by th
    as there; a bad answer or a failed call leaves the garbage verdict as before. Once per reading (`picAsked`). */
 async function picOnBad(sg,guesses,status){
   if(!sg||sg.picAsked||!sg.picBlob||!pictureProvider()||!aiAutoOn()||!navigator.onLine) return null;
-  sg.picAsked=true; logRead("the text check called the reading garbage — the AI gets the picture");
-  try{ const pic=await aiReadPicture(sg.picBlob,[...new Set(guesses.filter(Boolean))].slice(0,6),status||(()=>{})); if(sg.region) sg.region.pic={zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped}; if(pic&&pic.bad) sg.noText=true; return pic&&!pic.bad?pic:null; }
+  sg.picAsked=true;
+  const early=sg.picEarly; /* the quick look called the text unreadable, the reading came out strong anyway and the text check now rejects it — the picture has been on its way the whole time (v439) */
+  logRead(early?`the text check called the reading garbage — the picture answer asked at the quick look ${((Date.now()-early.at)/1000).toFixed(1)} s ago is used`:"the text check called the reading garbage — the AI gets the picture");
+  try{ const pic=early?(await early.p).pic:await aiReadPicture(sg.picBlob,[...new Set(guesses.filter(Boolean))].slice(0,6),status||(()=>{}));
+    if(!pic) return null; if(sg.region) sg.region.pic={zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped}; if(pic&&pic.bad) sg.noText=true; return pic&&!pic.bad?pic:null; }
   catch(err){ logErr("picture",err&&err.message||String(err)); return null; }
 }
 async function signAskAI(id){
