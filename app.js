@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=437; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=438; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -395,6 +395,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v438","AI unreachable, weak read: no card"],
   ["photo","v437","Crop during the scan: frame it yourself"],
   ["again","v436","the signpost — a plate per card"],
   ["photo","v434","this list — the right twelve?"],
@@ -3031,6 +3032,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  438:"When the AI cannot be reached and the reading is unsure, no card is made — the photo stays under Camera with Crop.",
   437:"Tap Crop while a photo is being read to stop the automatic card and set the frame yourself.",
   429:"Picking Starred now studies all your starred cards, not only the ones due today.",
   427:"Tap the star on a card — in the list or while learning — to mark it, and study your starred cards from the filter.",
@@ -5600,6 +5602,8 @@ async function finishPending(id){
     if(sg&&sg.aiPromise) await sg.aiPromise;
     /* the AI looked at the picture and found no Chinese text in it (v348, H's scooter badge 九号 Fz110: the frame sat on the yellow plate, Qwen said "no Chinese characters" — correctly — and the card was made from the reader's garbage 量词口还 all the same: "voll falsch!"): a card the app makes by itself is not made then, the photo stays with Crop. A text check that calls the reading garbage is weaker evidence — it never saw the picture — and still makes a flagged card, as in v325. */
     if(ph.reading.auto&&!ph.c&&sg&&SIGN[id]===sg&&sg.noText){ logRead("the AI found no Chinese text in the picture — no card"); return failPending(id,"the AI found no Chinese text in the picture"); }
+    /* the AI never saw the picture and the reading is weak (v438, H's emergency signpost, 2026-09-12: the picture call died twice — "The AI could not be reached", 83 s — and the card was the reader's own garbage 人已国二本 / 二二二 / 区国名于 under the whole photo; H: "Diese Schilder hat er nicht geschafft zu trennen und ordentlich zu interpretieren", then "Go" on no card): a weak reading is exactly the case the picture exists for, so with no answer to it there is nothing to build a card from — unless the text check confirmed the reading (sg.ai.ok), which is the one evidence left. The photo stays with Crop and the row says why. Offline the picture is never asked (no picErr), so an offline reading still makes its flagged card as before — named in CLAUDE.md, not changed here. */
+    if(ph.reading.auto&&!ph.c&&sg&&SIGN[id]===sg&&sg.weak&&sg.region&&sg.region.picErr&&!(sg.ai&&sg.ai.ok)){ logRead("the AI could not be reached and the reading is weak — no card"); return failPending(id,"the AI could not be reached and the reading is weak"); }
     /* several labels on one photo, one card each (v357): the answer's lines, its per-line pinyin and meanings and the frames
        SPLIT[id] carries — the placeholder becomes the first label's card, the rest are saved beside it. Only when every line
        has its own pinyin and its own meaning; if the model joined them, nothing is split and the photo makes one card as before. */
@@ -5636,7 +5640,7 @@ async function finishPending(id){
 async function failPending(id,why,msg){
   const ph=pendingCard(id); delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; if(!ph||!ph.reading) return;
   dropExtraShot(id);
-  if(ph.reading.auto&&!ph.c){ await dropAuto(id,ph.id); delete READING[id]; QSNOTE[id]=/^the reader did not load/.test(msg||"")?failText("Reading failed: "+msg):t("Nothing could be read. Tap Crop to frame the text by hand."); /* a reader that never loaded is not a photo without text (v335) */ if(S.mode==="cards"&&!S.editing) render(); else renderShots(); autoNext(); return; } /* a card made by itself with nothing to show is no card (v325): the photo stays with Crop */
+  if(ph.reading.auto&&!ph.c){ await dropAuto(id,ph.id); delete READING[id]; QSNOTE[id]=/^the reader did not load/.test(msg||"")?failText("Reading failed: "+msg):/^the AI could not be reached/.test(why||"")?t("The AI could not be reached, and the reading alone was too unsure for a card. Tap Crop to read the photo again."):t("Nothing could be read. Tap Crop to frame the text by hand."); /* a reader that never loaded is not a photo without text (v335) */ if(S.mode==="cards"&&!S.editing) render(); else renderShots(); autoNext(); return; } /* a card made by itself with nothing to show is no card (v325): the photo stays with Crop */
   if(ph.c) delete ph.reading; else ph.reading.failed=why; /* a card framed again in the Edit form keeps its text and forgets the frame (v241, v243); an empty card keeps the failure for "Nothing read yet" */
   ph.flag=true; ph.flagNote=ph.c?t("the new frame could not be read — the old text stays"):t("the reading failed — edit the card or frame the photo again");
   try{ await idbPut("custom",ph); }catch(e){}
