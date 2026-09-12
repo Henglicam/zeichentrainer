@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=433; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=434; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -386,6 +386,67 @@ async function fetchReport(what){
 async function sendFeedback(text){
   const r=await fetch(SHARE_URL+"/rest/v1/feedback",{method:"POST",headers:{"apikey":SHARE_KEY,"Authorization":"Bearer "+SHARE_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({install:installId(),version:APP_V,text})});
   if(!r.ok){ const body=await r.text().catch(()=>""); logErr("feedback",r.status+": "+body.slice(0,300)); throw new Error(r.status===404?"the feedback table is not set up":"error "+r.status); }
+}
+/* What the app claims it can read, and what a photo has actually confirmed (v434, H after the untested menu
+   board: "OK, diese liste bitte unter admin anlegen"). Owner's, English, no key in any language.
+   Two halves, and the split is the whole point. The first is counted from this phone's own deck, so it cannot go
+   stale — a kind with no card is a kind H has never made. The second is picSystem()'s own promise list, which no
+   tag can measure: a timetable and a shelf of price labels are both "apart" cases that end up tagged Transport or
+   Product, so the deck cannot say whether either was ever photographed. That half is kept by hand against the
+   field-confirmed record in CLAUDE.md — a case moves out of "never tried" only when H says on the phone that it
+   works, and out of "tried" the same way. It exists because at v433 the empty deck advertised menu boards that no
+   photo had ever read, and only H's own memory caught it. */
+const FIELD_OK=[ /* H said on the phone that it works */
+  ["poster","邪不压正, 流浪地球, 绿皮书"],
+  ["shop sign","虞西苏面馆, 奈斯餐吧"],
+  ["product label","24H存包, 養樂多"],
+  ["door plate","推"],
+  ["sticker","减震单车"],
+  ["appliance panel","rice cooker, washer"]];
+const FIELD_TRIED=[ /* a photo exists; the fix after it is not field-checked */
+  ["street sign","金汇路, 停车入位"],
+  ["car badge","北京现代, 九号, 长安铃木"],
+  ["carton, calligraphy","椰子水, 志在千里"],
+  ["vending machine","农夫山泉, never split"],
+  ["phone app screen","Meituan — harness only"],
+  ["menu board","one try, went wrong"]];
+const FIELD_NEVER=[ /* no photo has ever been taken of these */
+  "dish list, price list of food","shelf of price labels","wall of notices",
+  "building directory","bus stop board","row of shopfronts",
+  "care label of clothing","section headings on a package",
+  "form or receipt","timetable or price list",
+  "remote, keypad, lift panel","ticket machine, cash machine"];
+function fieldKinds(){ /* one row per kind, counted from the deck — shared by the report and the row's line */
+  const deck=S.custom||[], perShot={};
+  for(const d of deck) if(d.shot) perShot[d.shot]=(perShot[d.shot]||0)+1;
+  /* a language switch leaves the old tags as they are (v364), so every column's word for the kind counts */
+  const words=k=>{ const set=new Set([k]); for(const c of Object.keys(L10N)){ const w=L10N[c]["kind:"+k]; if(w) set.add(w); } return set; };
+  let tagged=0;
+  const rows=KINDS.map(k=>{
+    const w=words(k), cards=deck.filter(d=>(d.tags||[]).some(x=>w.has(x)));
+    tagged+=cards.length;
+    const shots=new Set(cards.map(d=>d.shot).filter(Boolean));
+    let splits=0; shots.forEach(sh=>{ if(perShot[sh]>1) splits++; });
+    return {k,n:cards.length,splits};
+  });
+  return {rows,deck:deck.length,untagged:Math.max(0,deck.length-tagged),never:rows.filter(r=>!r.n).length};
+}
+const fieldNote=()=>{ const f=fieldKinds();
+  return `${f.never} of ${KINDS.length} kinds never made on this phone, ${FIELD_NEVER.length} cases never photographed at all.`; };
+function fieldText(){
+  const f=fieldKinds();
+  const pad=(x,n)=>{ const s=String(x); return s+" ".repeat(Math.max(0,n-s.length)); };
+  const L=["Field tests \u00b7 v"+APP_V,"","What this phone has made ("+nOf(f.deck,"card")+")"];
+  for(const r of f.rows) L.push("  "+pad(r.k,15)+pad(r.n,4)+(r.n?(r.splits?"  "+nOf(r.splits,"photo")+" split":""):"  never"));
+  L.push("  "+pad("no kind",15)+pad(f.untagged,4)+"  before v364, or typed");
+  L.push("","What the AI is told it can read","","  confirmed by a photo on this phone");
+  for(const [n,e] of FIELD_OK) L.push("    "+n+" \u00b7 "+e);
+  L.push("","  tried, the fix after it unconfirmed");
+  for(const [n,e] of FIELD_TRIED) L.push("    "+n+" \u00b7 "+e);
+  L.push("","  never tried \u2014 the list to work through");
+  for(const n of FIELD_NEVER) L.push("    "+n);
+  L.push("","A case moves up only when you confirm it.","The counts come from this phone; the cases","are kept in app.js against CLAUDE.md.");
+  return L.map(x=>x.replace(/\s+$/,"")).join("\n");
 }
 function feedbackText(rows){ /* laid out like the All users report since v251 (H: "Same for feedback"): a head with the count, one block per message with a blank line between, the sender's id under the time */
   const day=t=>String(t||"").replace("T"," ").slice(0,16);
@@ -1841,6 +1902,8 @@ function renderMore(main){
     <div class="listhead">Diagnostics</div>
     <div class="mrow"><div style="flex:1"><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${READLOG.length} step${READLOG.length===1?"":"s"}.</div><div class="fieldacts"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button><button class="btn mini" id="diag-copy">Copy</button></div></div></div>
     <pre class="diag" id="diag-out" hidden></pre>
+    <div class="mrow"><div style="flex:1"><div class="t">Field tests</div><div class="s" id="field-status">${fieldNote()}</div><div class="fieldacts"><button class="btn mini" id="field-show">Show</button><button class="btn mini" id="field-copy">Copy</button></div></div></div>
+    <pre class="diag" id="field-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"install")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div><div class="fieldacts"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button><button class="btn mini" id="users-copy">Copy</button></div></div></div>
     <pre class="diag" id="users-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">Feedback</div><div class="s" id="fb-in-status">${FEEDBACK?`${nOf(FEEDBACK.rows.length,"message")}, fetched ${new Date(FEEDBACK.at).toLocaleTimeString()}.`:"The messages users sent from the app, newest first."}</div><div class="fieldacts"><button class="btn mini" id="fb-show">Show</button><button class="btn mini" id="fb-share">Share</button><button class="btn mini" id="fb-copy">Copy</button></div></div></div>
@@ -1877,6 +1940,8 @@ function renderMore(main){
     storageFacts(); /* v399: fresh numbers for the head line while More is open */
     $("#diag-show").onclick=()=>{ const o=$("#diag-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=diagText(); };
     $("#diag-share").onclick=shareDiag;
+    $("#field-show").onclick=()=>{ const o=$("#field-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=fieldText(); };
+    $("#field-copy").onclick=()=>copyText(fieldText(),$("#field-status"));
     $("#diag-copy").onclick=()=>copyText(diagText(),$("#diag-status"));
     $("#users-copy").onclick=async()=>{ const st=$("#users-status"); try{ const rows=(USERS&&USERS.rows)||(await fetchAllUsers()).rows; await copyText(allUsersText(rows),st); }catch(err){ st.textContent="Could not fetch: "+(err&&err.message||err); } };
     $("#fb-copy").onclick=async()=>{ const st=$("#fb-in-status"); try{ const rows=(FEEDBACK&&FEEDBACK.rows)||(await fetchFeedback()).rows; await copyText(feedbackText(rows),st); }catch(err){ st.textContent="Could not fetch: "+(err&&err.message||err); } };
