@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=435; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=436; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -395,6 +395,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["again","v436","the signpost — a plate per card"],
   ["photo","v434","this list — the right twelve?"],
   ["photo","v433","empty deck: sign, poster, package"],
   ["photo","v412","album batch: does the line read?"],
@@ -4680,6 +4681,14 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
   const mw=med(ws), one=[]; /* the picture's edge clips a box or two, so the rule is the share of boxes of one size, not their spread */
   for(let k=0;k<lab.length;k++) if(Math.abs(ws[k]-mw)<=LB_TMPL*mw) one.push(k);
   if(one.length<0.8*lab.length) return roundGrid(lab,W);
+  /* A stack of plates is not a lattice (v436, H's emergency signpost: five arrow plates one under the other, the model's five
+     boxes all 156–680 of a 715 px picture for labels of four and five characters, so the width rule called it a drawing and
+     every card got the whole signpost). The boxes share one x range, so their union's width IS their width and "all of one
+     width" is a tautology that carries no evidence either way — the round pixels alone decide then. A real lattice's cells are
+     a fraction of the union across (H's washer 60 px of some 300, the dishwasher's row a fifth of it), so nothing that rule
+     was built for is touched. */
+  const uw=(Math.max(...lab.map(l=>l.box[2]))-Math.min(...lab.map(l=>l.box[0])))*W;
+  if(uw>0&&one.filter(k=>ws[k]>=LB_FULLW*uw).length>=0.8*lab.length) return roundGrid(lab,W);
   /* Two ideas were tried on top of this rule and both are gone. The pitch as a second tell (v382, dropped in v383): a panel's
      buttons of one block *are* evenly spaced, so a measurement gives the same regular gaps a lattice does. And asking the model
      again, one strip per row (v382–v383, dropped in v385): H's own three strip answers, read from the AI log the moment it
@@ -4703,7 +4712,7 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
    neighbour's. Measured on H's own photo at its own 1600 px with his own texts: 18 of the 19 labels on their own
    characters, none on another's, where v385 gave all 19 the whole panel. */
 const RL_STEP=0.6, RL_SUP=3, RL_DUP=0.6, RL_TILES=8, RL_GAP=0.55, RL_WMIN=0.8, RL_WMAX=12, RL_PX=64, RL_ROOM=[0.3,0.5], RL_CAP=420, RL_HIT=0.6, RL_WEAK=0.5, RL_GROW=[0.22,0.45], RL_WIDE=[0.6,1.8], RL_COL=0.6, RL_HGT=[0.6,1.6];
-const LB_STEP=10, LB_ROUND=0.8, RL_ROW=0.8, RL_FLOOR=0.15, RL_TIGHT=1.4, RL_CLEAR=0.5, RL_DUPX=0.6, RL_ICON=1.2, RL_ICONH=2.2, RL_ICONX=0.5, RL_ICONJOIN=0.6, RL_ICONMAX=4, DIAL_W=4, DIAL_OFF=0.12, DIAL_REACH=0.3, DIAL_PITCH=2.5, RL_SIDEGAP=0.8, RL_SIDEW=1.6, RL_BANDMIN=0.5; /* a drawn grid lands on round pixels (v390) */
+const LB_STEP=10, LB_ROUND=0.8, LB_FULLW=0.9, RL_ROW=0.8, RL_FLOOR=0.15, RL_TIGHT=1.4, RL_CLEAR=0.5, RL_DUPX=0.6, RL_ICON=1.2, RL_ICONH=2.2, RL_ICONX=0.5, RL_ICONJOIN=0.6, RL_ICONMAX=4, DIAL_W=4, DIAL_OFF=0.12, DIAL_REACH=0.3, DIAL_PITCH=2.5, RL_SIDEGAP=0.8, RL_SIDEW=1.6, RL_BANDMIN=0.5; /* a drawn grid lands on round pixels (v390) · FULLW: a box this much of the label boxes' own union is as wide as the union, and "all the boxes are one width" then says nothing (v436) */
 function labelRunsOf(gy,labels,uni){ /* the picture's own rows of characters, and the runs of each row, in the grey copy's pixels */
   const {g,W,Hh}=gy, med=a=>{ const t=a.slice().sort((x,y)=>x-y); return t[t.length>>1]||0.05; };
   const bw=med(labels.map(l=>l.box[2]-l.box[0])), bh=med(labels.map(l=>l.box[3]-l.box[1]));
@@ -5331,7 +5340,7 @@ async function cropSign(id,opts){
                the labels' character counts, and roundGrid asks whether those pixels are multiples of ten to within 0.3 — both
                are destroyed by the whole percent the log prints, and v390's field regression was exactly this test not firing */
             const tW=pic.picW||W, tmpl=why?false:templateBoxes(lab,tW);
-            N.tmpl={W:tW,why:why||"",scale,widths:lab.map(l=>n1((l.box[2]-l.box[0])*tW)),ns:lab.map(l=>[...l.zh].filter(c=>CJK.test(c)).length),round:why?null:roundGrid(lab,tW),drawing:!!tmpl};
+            N.tmpl={W:tW,why:why||"",scale,widths:lab.map(l=>n1((l.box[2]-l.box[0])*tW)),ns:lab.map(l=>[...l.zh].filter(c=>CJK.test(c)).length),round:why?null:roundGrid(lab,tW),uw:n1((Math.max(...lab.map(l=>l.box[2]))-Math.min(...lab.map(l=>l.box[0])))*tW),drawing:!!tmpl}; /* uw: the label boxes' own union across — a width equal to it is the v436 tautology */
             if(why){ logRead(`the AI calls these ${lab.length} texts separate labels, but ${why} — one card`); }
             else if(tmpl){ /* the boxes are a drawing, not a measurement (v380): the model cannot say where anything is, so the reader looks (v386) */
               logRead(`the AI's ${lab.length} label boxes are all the same size — a drawing of the grid, not a measurement: the reader looks for the labels in the picture itself`);
