@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=441; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=442; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -395,6 +395,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v442","panel: card once the AI answers"],
   ["photo","v441","messy strong read: no early card"],
   ["photo","v440","clear read: card at once, refined"],
   ["photo","v439","hard photo: card seconds sooner"],
@@ -3035,6 +3036,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  442:"A hard photo becomes a card as soon as the AI has answered — the reader no longer has to finish first.",
   440:"When the reader is sure of a photo, the card shows at once — the AI's check refines it a moment later.",
   439:"Photos the reader cannot make sense of — an appliance panel, a busy shopfront — now become cards several seconds sooner.",
   438:"When the AI cannot be reached and the reading is unsure, no card is made — the photo stays under Camera with Crop.",
@@ -4137,7 +4139,7 @@ function inkHeight(bmp){
    handled and its next job dispatched; the readings are byte-identical, only the order of work changes */
 function staged(makers){
   const out=[]; let chain=Promise.resolve();
-  makers.forEach((mk,i)=>{ out.push(chain=chain.then(()=>i?new Promise(r=>setTimeout(r,0)).then(mk):mk())); });
+  makers.forEach((mk,i)=>{ chain=chain.then(()=>i?new Promise(r=>setTimeout(r,0)).then(mk):mk()); chain.catch(()=>{}); out.push(chain); }); /* a copy nobody awaits any more — a reading stopped for the picture answer closes its bitmap first (v442) — must not surface as an unhandled rejection in the error log */
   return out;
 }
 /* one reading pass: the lines with their symbols (text, confidence, box) */
@@ -4243,8 +4245,8 @@ async function secondLook(w,dk,passes,status,r,Hink){
     const keep=(mode,tra,k,lines)=>{ const sc=k===1?lines:scaleBoxes(lines,k); passes.push({lines:sc,img:dk2.blob,angle:dk2.angle,tightened:true,scale:k,bw:mode==="bw",chroma:mode==="chroma",tra:!!tra}); tightLines.push(...sc); };
     const readTight=async(mode,tra)=>{
       const srcs=srcsOf(mode);
-      if(tra){ for(let i=0;i<scales.length;i++){ const lines=await readPassTra(await srcs[i],status); if(!lines) return; keep(mode,tra,scales[i],lines); } return; }
-      const res=await runPasses(scales.map((k,i)=>async ww=>readPass(ww,await srcs[i],status)),status); /* the simplified passes side by side (v209) */
+      if(tra){ for(let i=0;i<scales.length;i++){ if(r.stop) return; const lines=await readPassTra(await srcs[i],status); if(!lines) return; keep(mode,tra,scales[i],lines); } return; }
+      const res=await runPasses(scales.map((k,i)=>async ww=>r.stop?null:readPass(ww,await srcs[i],status)),status); /* the simplified passes side by side (v209); a stopped reading lets the queued jobs fall through (v442) */
       res.forEach((lines,i)=>{ if(lines) keep(mode,false,scales[i],lines); }); };
     /* the black-and-white and chromaticity copies are made while the colour passes run, one per turn of the event loop,
        so the main thread's work overlaps the workers' (v236); a clear reading throws them away unused — the fast path
@@ -4253,6 +4255,8 @@ async function secondLook(w,dk,passes,status,r,Hink){
     (async()=>{ await new Promise(r=>setTimeout(r,0)); if(!colourDone){ srcsOf("bw"); } await Promise.all(srcsOf("bw")).catch(()=>{}); if(!colourDone) Promise.all(srcsOf("chroma")).catch(()=>{}); })().catch(()=>{}); /* the copies are thrown away when the colour passes finished first, and the deferred makers then run after bmp2.close() — without the catch that detached-bitmap error lands in the phone's error log (v403) */
     await colourRun;
     if(r.onTight) await r.onTight(textArea); /* the frame appears on the text now, before the copies and the traditional reader (v288: the first look that knows where the text is) */
+    const stopHere=at=>{ if(!r.stop) return false; r.stopAt=r.stopAt||at; bmp2.close(); return true; }; /* the picture answer is in (v442): the close look ends here — after onTight, so an answer without a usable box still has the reader's placement to fall back on */
+    if(stopHere("the close look")) return textArea;
     /* a clear reading skips the copies (v209): two colour passes agreeing on the same text of dictionary words at 95 % or
        more — the black-and-white and chromaticity copies exist for light-on-colour and shaded text, where the colour
        passes are not clear; on a clean print sign they only lose (measured: the ten regression images read the same) */
@@ -4267,11 +4271,12 @@ async function secondLook(w,dk,passes,status,r,Hink){
     let traRun=null; const traBuf=[];
     if(agreed){ r.clear=true; status("the reading is clear …"); }
     else {
-      if(weak()) traRun=(async()=>{ for(const mode of ["colour","bw","chroma"]){ const srcs=srcsOf(mode); for(let i=0;i<scales.length;i++){ if(r.done) return; const lines=await readPassTra(await srcs[i],status); if(!lines) break; traBuf.push([mode,scales[i],lines]); } } })().catch(()=>{}); /* r.done: the reading ended without it — stop (v290) */
-      await readTight("bw"); await readTight("chroma"); /* the copies otherwise (v96) */
+      if(weak()) traRun=(async()=>{ for(const mode of ["colour","bw","chroma"]){ const srcs=srcsOf(mode); for(let i=0;i<scales.length;i++){ if(r.done||r.stop) return; const lines=await readPassTra(await srcs[i],status); if(!lines) break; traBuf.push([mode,scales[i],lines]); } } })().catch(()=>{}); /* r.done: the reading ended without it — stop (v290) */
+      await readTight("bw"); if(stopHere("the black-and-white copies")) return textArea; await readTight("chroma"); if(stopHere("the chromaticity copies")) return textArea; /* the copies otherwise (v96) */
     }
     /* still weak? the traditional reader on all three — it knows glyphs the simplified one can only approximate */
     if(weak()){ if(traRun){ await traRun; traBuf.forEach(([mode,k,lines])=>keep(mode,true,k,lines)); } else for(const mode of ["colour","bw","chroma"]) await readTight(mode,true); }
+    if(stopHere("the traditional reader")) return textArea;
     bmp2.close();
     /* Merge line by line: every reading tends to get some line right and lose another, so the lines of all tight
        passes are clustered by their vertical band and the most confident reading of each band is kept. */
@@ -4438,6 +4443,7 @@ const SKEW_TRUST=12; /* an unconfirmed straightening beyond this many degrees is
    that the text check rejects, so picOnBad would have sent the picture anyway and gets the early answer instead — three
    genuinely wasted calls per 40 photos, +7.5 %, far under the relay's 200 a day. */
 const EARLY={}; /* photo id -> {run, base, guesses, at, p} — the picture call already on its way */
+const SKEW_STOP=1.5; /* the reading stops for a good early answer only where the reader did not straighten the frame (v442): deskewBlob leaves anything under 1.5° alone, so this is "no straightening" — a turned frame keeps every pass, since sureAngle (the v333/v334 trim of a turned frame that leaves the photo) needs them, and the field-confirmed posters at −8° and 18° stay on the path that confirmed them */
 const SNAP_ROOM=1, SNAP_MIN=0.15, SNAP_MAX=0.95, SNAP_COL=0.15, SNAP_WIDE=1.6, SNAP_GAP=0.8, SNAP_BAR=1.6, SNAP_STACK=0.5; /* BAR: how much wider than tall a blob must be to be read as one stroke of a character written in bars · STACK: how far apart two of them may stand */
 const SNAP_REACH=0.85; /* how much of the AI's box the coloured ink must reach across beside the grey pick's (v349, H's vending machine at v347 "Vending machine works not yet": the red text on glass reaches 77 % of the box against the grey cut's 89 %, so v347's "at least as much" blocked the switch on the phone's own pixels; H's 流浪地球 poster, the case the guard is for, reaches 56 against 92) */
 /* A photo of a user interface, one card per element (v357–v358, H's rice cooker panel — eleven buttons, 低卡饭 柴火饭 快煮
@@ -5261,7 +5267,14 @@ async function cropSign(id,opts){
         if(!ok&&!EARLY[id]&&Math.abs(dk.angle||0)<SKEW_TRUST&&pictureProvider()&&aiAutoOn()&&navigator.onLine){
           const eb={orig:r.blob,dk,base}, eg=[...new Set(read.map(l=>l.t).filter(Boolean))].slice(0,6);
           EARLY[id]={run,base:eb,guesses:eg,at:Date.now(),p:aiReadPicture(eb.dk.blob,eg,()=>{},N).then(x=>({pic:x}),e=>({err:e&&e.message||String(e)}))};
-          logRead(`the quick look found no readable text — the AI gets the picture now, beside the reading (${eg.length} guesses)`); }
+          logRead(`the quick look found no readable text — the AI gets the picture now, beside the reading (${eg.length} guesses)`);
+          /* a good answer ends the reading at its next step (v442, H's "Go" on the measured lever): on the weak path every pass
+             after the quick look is thrown away once the picture answer is in, and on a panel the reader works 20–33 s on H's
+             phone against Qwen's 3–10 s. A flag, never a throw; only a good answer of this run (a bad one must never stop it —
+             the reader may still end strong and right, v348/v438), only under SKEW_STOP; secondLook and the whole-frame
+             fallback check r.stop between their awaited batches, so the pool is idle at every exit and readLabels never
+             shares a worker with an abandoned job. The stop does not call done(r) — placeFromPicture honours this run. */
+          EARLY[id].p.then(e=>{ if(stale()||r.done||r.stop||r.passesDone||!e||!e.pic||e.pic.bad||Math.abs(dk.angle||0)>=SKEW_STOP) return; r.stop=Date.now(); logRead("the AI has answered while the reader is still at work — the reading stops at its next step"); }); }
         } finally{ bmp.close(); }
       if(rect){ await placeRect(rect); if(stale()) return;
         if(CROP&&CROP.id===id&&CROP.hidden){ delete CROP.hidden; logRead("frame shown as proposed — the text fills it"); renderShots(); } } } /* nothing to move: the proposal is the frame, from now */
@@ -5279,13 +5292,14 @@ async function cropSign(id,opts){
       await place(cardRect); if(stale()) return;
       if(CROP&&CROP.id===id&&CROP.hidden){ delete CROP.hidden; logRead("frame shown as proposed"); renderShots(); } /* nothing tighter found: the proposal itself */
     }
-    if(Math.max(0,...passes.map(p=>effScore(p.lines,Hink)))<WEAK_READ){ /* weak or nothing: the whole frame as black-and-white and chromaticity copies, sizes from the ink */
+    if(Math.max(0,...passes.map(p=>effScore(p.lines,Hink)))<WEAK_READ&&!r.stop){ /* weak or nothing: the whole frame as black-and-white and chromaticity copies, sizes from the ink — unless the picture answer is already in (v442) */
       status("trying a black-and-white copy …");
       const bmp=await createImageBitmap(dk.blob), H=Hink||bmp.height/1.6;
       const combos=[]; for(const k of [...new Set([45,65,90].map(px=>Math.min(1.5,px/H).toFixed(2)))].map(Number)) for(const mode of ["bw","chroma"]) combos.push({k,mode}); /* distinct scales only (v144: with a tiny ink height all three clamped to 1.5, and one pass counted three times in the agreement bonus and the traditional vote) */
       const srcs=staged(combos.map(c=>()=>c.mode==="bw"?toBW(bmp,c.k):toChroma(bmp,c.k))); /* the first copy at once, the rest while the readers work (v236) */
       /* the simplified passes side by side on the pool, the traditional ones on their own worker at the same time (v209) */
-      const [sim,tra]=await Promise.all([runPasses(combos.map((c,i)=>async ww=>readPass(ww,await srcs[i],status)),status),(async()=>{ const out=[]; for(let i=0;i<combos.length;i++) out.push(await readPassTra(await srcs[i],status)); return out; })()]);
+      const [sim,tra]=await Promise.all([runPasses(combos.map((c,i)=>async ww=>r.stop?null:readPass(ww,await srcs[i],status)),status),(async()=>{ const out=[]; for(let i=0;i<combos.length;i++){ if(r.stop) break; out.push(await readPassTra(await srcs[i],status)); } return out; })()]);
+      if(r.stop) r.stopAt=r.stopAt||"the whole frame";
       for(let i=0;i<combos.length;i++){ const c=combos[i];
         for(const [lines,isTra] of [[sim[i],false],[tra[i],true]]){ if(!lines) continue; passes.push({lines:scaleBoxes(lines,c.k),img:dk.blob,angle:dk.angle,tightened:false,scale:c.k,bw:c.mode==="bw",chroma:c.mode==="chroma",tra:isTra}); } }
       bmp.close();
@@ -5307,6 +5321,8 @@ async function cropSign(id,opts){
     LAST_READ.passes=r.passes; saveReadLog();
     const best=passes[0], lines=best.lines;
     N.eff=n1(effScore(lines,Hink)); N.weak=N.eff<WEAK_READ; N.nPass=passes.length; /* v399: effScore >= WEAK_READ decides whether the AI is asked at all, and the log states neither it nor Hink */
+    r.passesDone=true; /* v442: an answer landing from here on stops nothing — the passes are all read, and the weak block below simply takes it (without this the .then above logged "the reading stops" during the weak block's own await, on a reading that had finished) */
+    if(r.stop){ N.stop={at:r.stopAt||"the first pass",passes:passes.length,ms:Date.now()-r.stop}; logRead(`the reading stopped at ${r.stopAt||"the first pass"} for the picture answer — ${passes.length} passes read, the rest left out`); } /* v442, and v399's rule: N.weak and N.eff are the partial set's from here, so the record says so */
     N.best={t:lines.map(l=>(l.t||"").slice(0,40)).join("|").slice(0,160),tight:!!best.tightened,k:typeof best.scale==="string"?best.scale:n4(best.scale||1),bw:!!best.bw,ch:!!best.chroma,tra:!!best.tra,
       lines:lines.slice(0,6).map(l=>({cf:(l.cf||[]).slice(0,40),bx:(l.bx||[]).slice(0,40).map(b=>[Math.round(b.x0),Math.round(b.y0),Math.round(b.x1),Math.round(b.y1)])}))};
     /* the reading's winning pass places the frame when nothing else did (v321, H's Nongfu Spring bottle taken again at v320: the quick look read garbage, the close look's band sat on the mountain logo, and the text 农夫山泉 / 饮用天然水 was read by the whole-frame fallback at 98 % — a pass that could not place the frame, since only the close look's tight passes did —, so the card's picture kept the logo above the text: "das Bild über der Schrift gehört auch nicht rein"): a strong whole-frame pass whose lines pass the placement bar (textLike, the fine print left out) gives the frame the way the quick look does, while the frame is still the app's and untouched — Diagnostics "frame placed on the text by the reading: …" */
