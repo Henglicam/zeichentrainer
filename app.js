@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=439; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=440; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -395,6 +395,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v440","clear read: card at once, refined"],
   ["photo","v439","hard photo: card seconds sooner"],
   ["photo","v438","AI unreachable, weak read: no card"],
   ["photo","v437","Crop during the scan: frame it yourself"],
@@ -2061,7 +2062,7 @@ function renderMore(main){
    the app, "Go"): one scrolling page in the app's language, six short sections, text only, offline; it describes what the app does today,
    nothing planned, and changes in the same PR as the screen it describes. More → Help → Open; ← Back returns to More. ---------- */
 const GUIDE=()=>[
-  {h:t("Take a photo"),p:[t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card by itself — you see the finished card with Edit and Delete under it. Edit shows the photo with the frame the app used: drag a corner or the inside to fit it, the round handle turns it, let go and the reading starts again."),
+  {h:t("Take a photo"),p:[t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card by itself — you see the finished card with Edit and Delete under it. Edit shows the photo with the frame the app used: drag a corner or the inside to fit it, the round handle turns it, let go and the reading starts again.")+" "+t("When the reading is clear, the card shows at once, and the AI's check refines it a moment later."),
     t("A photo of a control panel, or of several signs beside each other — a rice cooker’s buttons, the items of a menu board — becomes one card per label, each with its own cut of the photo."),
     t("Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in."),
     t("From album takes several photos at once — they all become cards, one after the other, while the app is open.")]},
@@ -3033,6 +3034,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  440:"When the reader is sure of a photo, the card shows at once — the AI's check refines it a moment later.",
   439:"Photos the reader cannot make sense of — an appliance panel, a busy shopfront — now become cards several seconds sooner.",
   438:"When the AI cannot be reached and the reading is unsure, no card is made — the photo stays under Camera with Crop.",
   437:"Tap Crop while a photo is being read to stop the automatic card and set the frame yourself.",
@@ -3379,7 +3381,7 @@ async function findFrame(fullBlob,cropBlob){
     return {x:+(bx/fw).toFixed(4),y:+(by/fh).toFixed(4),w:+(cw/fw).toFixed(4),h:+(ch/fh).toFixed(4),a:0};
   }catch(e){ return null; } finally{ if(F) F.close(); if(C) C.close(); }
 }
-const abandonReading=id=>{ clearTimeout(READ_TIMER[id]); READ_RUN[id]=(READ_RUN[id]||0)+1; delete SIGN[id]; delete READING[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; }; /* a running reading of this photo abandons at its next step instead of delivering a result (v117); the inbox's Cancel, the Edit form's Crop again and an edit over a pending reading share it (v243) */
+const abandonReading=id=>{ clearTimeout(READ_TIMER[id]); READ_RUN[id]=(READ_RUN[id]||0)+1; delete SIGN[id]; delete READING[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; }; /* a running reading of this photo abandons at its next step instead of delivering a result (v117); the inbox's Cancel, the Edit form's Crop again and an edit over a pending reading share it (v243) */
 const SHOTS_EXTRA={}, RECROP={}; /* the Edit form's Crop again (v239): the card's whole photo as a photo record outside the inbox (SHOTS_EXTRA[id]={id,blob,ts}), and the form's hooks — redraw (the frame view in place of renderShots), onRead (the reading's result), onImage (Image only), end */
 const shotRec=id=>S.inbox.find(s=>s.id===id)||SHOTS_EXTRA[id]||null;
 /* a batch of photos becomes a batch of cards, one after the other (v411, H: "Geht background processing in der Android app?" —
@@ -3405,6 +3407,7 @@ function autoNext(){
     autoDrop(id); CROP={id,rect:null,auto:true}; proposeFrame(id); return; }
 }
 const QSNOTE={}, QSCARD={}, READING={}, AUTO={}, SPLIT={}, QSMORE={}; /* SPLIT[id]: one frame per element when the AI called the photo a user interface (v357–v358) · QSMORE[id]: the cards after the first, for the photo's row */ /* AUTO[id]: the photo became a card by itself (v325) — the row shows the shimmer while it reads and the finished card after */ /* READING[id]: status text while the photo is being read · QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) · QSNOTE[id] = the note under the photo after saving */
+const PROV={}; /* photo id → {card,at}: the card as the reader read it, shown in the row while the text check runs (v440, H: "erst mal ein OCR Ergebnis zeigen … work in progress"); only when the reading is strong — a weak reading's text is the garbage the picture call exists for — and never written to the card: the record stays the placeholder until finishPending fills it, so every rule that reads an empty c (v438's gate, Learn's queue, the list's "Reading …") is untouched */
 /* greedy longest-match segmentation against CC-CEDICT (max word length 8) */
 function segmentChars(chars){
   const out=[]; let k=0;
@@ -5220,7 +5223,7 @@ async function cropSign(id,opts){
   LAST_READ.passes=null; const N=numsReset(id,true); status("cutting out the frame …"); /* v399: the numbers of this reading, keeping the proposal proposeFrame put down before it */
   let cardImg=null; /* the card's picture from this reading — kept on the reading, not in the one global slot, so a reading finishing in the background cannot hand its picture to another photo's card (v237) */
   try{
-    READ_APP[id]=opts&&opts.app!==undefined?!!opts.app:!!(CROP&&CROP.id===id&&(CROP.hidden||CROP.proposed)); delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete EARLY[id]; /* the app's own frame, not the hand's (v304: the placement may move it for a card saved with Save now) */
+    READ_APP[id]=opts&&opts.app!==undefined?!!opts.app:!!(CROP&&CROP.id===id&&(CROP.hidden||CROP.proposed)); delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete EARLY[id]; delete PROV[id]; /* the app's own frame, not the hand's (v304: the placement may move it for a card saved with Save now) */
     const base=opts&&opts.rect||(CROP&&CROP.id===id?CROP.rect:null); /* the frame the reading starts from: a placed frame's rectangle is mapped from its cut, not from whatever frame stands when the placement lands (v297 — the quick look's placed frame had shifted the AI's box) */
     const r=opts&&opts.blob?{blob:opts.blob}:await cropBlob(id,opts&&opts.rect);
     if(stale()) return;
@@ -5534,6 +5537,7 @@ async function cropSign(id,opts){
     if(pic&&pic.bad){ const sg=SIGN[id]; sg.noText=true; sg.ai={zh:bestT,zht:"",p:"",m:"",note:pic.note,ok:false,bad:true,pic:true}; sg.flag=true; sg.flagNote=t("the reading looks wrong"); } /* the AI saw the picture and found no readable text: the reading is marked wrong, no text check on it */
     done(r); numsFile(id); delete READING[id]; renderShots();
     if(aiAutoOn()&&!(pic&&pic.bad)&&!RECROP[id]) signAskAI(id); /* every reading is checked without a tap (the Edit form asks through its own button, v239) */
+    if(AUTO[id]&&PENDING[id]&&!weak&&navigator.onLine&&SIGN[id]&&SIGN[id].aiBusy) provisionalCard(id,SIGN[id]); /* the card as read, while the check runs (v440): signAskAI has set aiBusy synchronously by here, so a reading the check will not wait for (no AI, no Chinese line) gets no provisional and finishPending builds at once; offline the check dies within seconds and the card follows at once anyway, and a provisional there would only run the offline model a second time */
     if(PENDING[id]) finishPending(id);
     if(RECROP[id]) RECROP[id].onRead(SIGN[id]);
   }catch(err){ if(stale()) return; status("Reading failed: "+(err&&err.message||err)); done(); logErr("read",err&&(err.stack||err.message)||err); if(PENDING[id]) failPending(id,"the reading failed",String(err&&err.message||err)); }
@@ -5566,8 +5570,30 @@ async function saveNow(id,auto){ /* auto (v325): the card made by itself from a 
   setStats(); renderShots();
 }
 function pendingCard(id){ const cid=PENDING[id]; return cid?cardOf(cid):null; }
+/* The card as the reader read it, before the AI has answered (v440, H: "Du musst mit den Uebersetzungen schneller werden. Waere es
+   nicht moeglich, dass Du ziemlich schnell erst mal ein OCR Ergebnis zeigst … und das auch irgendwie angezeigt wird, dass das
+   noch Work in Progress ist, damit man zumindest mal gleich was sieht?"): on a strong reading the row shows the finished card's
+   own front and back — the reader's characters, the app's pinyin, the meaning word by word — with the check's bar under it
+   in place of Edit and Delete, and the AI's answer replaces it when it comes. Built by readingCard exactly as finishPending
+   will build the real one, on the same window cut, so the picture does not jump; the only difference is the text the AI may
+   correct. Only the automatic card, only while the check is actually running (aiBusy), and nothing is written to the record —
+   a provisional that landed after the check answered would be a flicker before the real card, so it stands down then. */
+async function provisionalCard(id,sg){
+  const ph=pendingCard(id); if(!ph||!ph.reading||!ph.reading.auto||ph.c) return;
+  try{
+    const built=await readingCard(id,sg); if(!built||!built.card.c) return;
+    const fr=PLACED[id]||(ph.reading.rect&&ph.reading.rect.lw?ph.reading.rect:null);
+    const win=fr?await windowCut(id,fr):null;
+    const img=win?await cardJpeg(win.blob):ph.img;
+    if(SIGN[id]!==sg||!sg.aiBusy||PENDING[id]!==ph.id) return; /* the check answered meanwhile, or the reading was replaced — the finished card is on its way */
+    const {id:_i,at:_a,img:_m,shot:_s,mt:_t,...fields}=built.card;
+    PROV[id]={card:{...fields,id:ph.id,at:ph.at,shot:id,img},at:Date.now()};
+    logRead("the reading is strong — the row shows the card as read while the AI checks it");
+    renderShots();
+  }catch(err){ logErr("provisional",err&&err.message||String(err)); }
+}
 /* the card made by itself (v325, H: "no frame is seen during the first scan at all, just the magic wobbling over the image, and then the result is the finished card … if I want to edit something, I get a frame which I can adjust"; saved by itself on my recommendation, "Go"): Cancel while it reads drops the placeholder, nothing readable drops it too (dropAuto), and the row shows the finished card with Edit and Delete (resultHTML) */
-async function dropAuto(id,cid){ delete AUTO[id]; delete QSCARD[id]; delete QSMORE[id]; if(!cid) return; const d=cardOf(cid); if(!d||d.c) return; S.custom=S.custom.filter(x=>x.id!==cid); try{ await idbDel("custom",cid); }catch(e){} bump("byPhoto",-1); dropThumb(cid); setStats(); }
+async function dropAuto(id,cid){ delete AUTO[id]; delete QSCARD[id]; delete QSMORE[id]; delete PROV[id]; if(!cid) return; const d=cardOf(cid); if(!d||d.c) return; S.custom=S.custom.filter(x=>x.id!==cid); try{ await idbDel("custom",cid); }catch(e){} bump("byPhoto",-1); dropThumb(cid); setStats(); }
 async function cancelAuto(id){ const cid=PENDING[id]; abandonReading(id); delete PENDING[id]; autoDrop(id); await dropAuto(id,cid); renderShots(); autoNext(); } /* Cancel drops this photo from the batch, not the batch (v411) */
 /* The frame right after the shutter (v437, H: "Ich moechte ein Foto direkt nach der Aufnahme bearbeiten koennen, inklusive
    Drehen, Schieben und Croppen"). Turning, moving and cropping have existed since v185 — they were simply two taps away, since
@@ -5584,7 +5610,7 @@ async function editAuto(id){
   await cancelAuto(id);
   if(CROP&&CROP.id===id&&f) await placeFrame(id,f,{noRead:true,found:true});
 }
-const resultHTML=d=>`<div class="result" data-card="${esc(d.id)}"><div class="front">${frontHTML(d)}</div><div class="back">${backHTML(d)}${linkedHTML(d)}</div>${flagNoteHTML(d)}</div>`; /* the finished card in the photo's place: the front's boxes and the back, as in the detail */
+const resultHTML=(d,prov)=>`<div class="result" data-card="${esc(d.id)}"${prov?` data-prov="${esc(prov)}"`:""}><div class="front">${frontHTML(d)}</div><div class="back">${backHTML(d)}${linkedHTML(d)}</div>${flagNoteHTML(d)}</div>`; /* the finished card in the photo's place: the front's boxes and the back, as in the detail */
 /* one card per label (v357): the answer's lines with their own pinyin, meaning and frame become N cards — the placeholder
    is the first, the rest are saved beside it, each with its own 16:9 window of the panel (v329) and its own frame, so Crop
    again starts on that label. Every card is built by readingCard from a one-line copy of the reading, so it gets its parts
@@ -5643,7 +5669,7 @@ async function finishPending(id){
       logRead(`the labels have their frames, but ${!ph.reading.auto?"the card was not made by the app itself":!sg||SIGN[id]!==sg?"the reading was replaced meanwhile":!sg.ai||!sg.ai.ok?"the picture answer was not used as the reading":"the AI called the picture unreadable"} — one card`);
     if(SPLIT[id]&&ph.reading.auto&&sg&&SIGN[id]===sg&&sg.ai&&sg.ai.ok&&!sg.ai.bad){
       const made=await splitCards(id,sg,ph);
-      if(made){ delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; dropExtraShot(id); /* before the row is drawn, or it shows the reading again */
+      if(made){ delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; dropExtraShot(id); /* before the row is drawn, or it shows the reading again */
         S.queue=buildQueue(false); aiAutoSoon(); setStats();
         if(S.mode==="cards"&&!S.editing) render(); else renderShots();
         return; } }
@@ -5664,13 +5690,13 @@ async function finishPending(id){
     try{ await idbPut("custom",ph); }catch(e){}
     if(!auto) QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}.`+(mt.pending?" Translation pending.":"")+(ph.flag?" Flagged for review.":"");
   }catch(err){ logErr("savenow",err&&(err.stack||err.message)||err); return failPending(id,"the reading failed"); }
-  finally{ delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; dropExtraShot(id); }
+  finally{ delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; dropExtraShot(id); }
   S.queue=buildQueue(false); aiAutoSoon(); setStats();
   if(S.mode==="cards"&&!S.editing) render(); else renderShots(); /* the list or the detail shows the filled card at once */
   autoNext(); /* the next photo of the batch (v411) */
 }
 async function failPending(id,why,msg){
-  const ph=pendingCard(id); delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; if(!ph||!ph.reading) return;
+  const ph=pendingCard(id); delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; if(!ph||!ph.reading) return;
   dropExtraShot(id);
   if(ph.reading.auto&&!ph.c){ await dropAuto(id,ph.id); delete READING[id]; QSNOTE[id]=/^the reader did not load/.test(msg||"")?failText("Reading failed: "+msg):/^the AI could not be reached/.test(why||"")?t("The AI could not be reached, and the reading alone was too unsure for a card. Tap Crop to read the photo again."):t("Nothing could be read. Tap Crop to frame the text by hand."); /* a reader that never loaded is not a photo without text (v335) */ if(S.mode==="cards"&&!S.editing) render(); else renderShots(); autoNext(); return; } /* a card made by itself with nothing to show is no card (v325): the photo stays with Crop */
   if(ph.c) delete ph.reading; else ph.reading.failed=why; /* a card framed again in the Edit form keeps its text and forgets the frame (v241, v243); an empty card keeps the failure for "Nothing read yet" */
@@ -6383,6 +6409,10 @@ function renderShots(){
       const cropping=CROP && CROP.id===s.id, shown=!!(cropping&&CROP.rect&&!CROP.hidden), zoomed=!!(shown&&CROP.zoom);
       const working=!!(AUTO[s.id]&&PENDING[s.id]&&READING[s.id]&&!READ_FAIL.test(READING[s.id]));
       const results=!cropping&&AUTO[s.id]&&!PENDING[s.id]&&QSCARD[s.id]?[QSCARD[s.id],...(QSMORE[s.id]||[])].map(cardOf).filter(d=>d&&d.c):[]; /* the card made by itself (v325): the shimmer while it reads, the finished card after — one card per label since v357 */
+      const prov=!cropping&&AUTO[s.id]&&PENDING[s.id]&&PROV[s.id]&&PROV[s.id].card.c?PROV[s.id].card:null; /* the card as read, while the text check runs (v440): the finished card's own look with the check's bar and Crop / Cancel under it, so what is shown is a card and what is said is that it is still being checked */
+      if(prov) return `<div class="shot">${resultHTML(prov,s.id)}
+        <div class="ocr" id="ocr-${s.id}"><div class="reading"><div class="bar"><i></i></div><div class="readrow"><span class="badge">${t(AI_BUSY_TEXT)}</span><span class="acts"><button class="ocr-btn" data-autoedit="${s.id}">${t("Crop")}</button><button class="del" data-autocancel="${s.id}">${t("Cancel")}</button></span></div></div></div>
+      </div>`;
       if(results.length) return `<div class="shot">${results.length>1?`<div class="listhead reshead">${t("{0} cards from this photo",results.length)}</div>`:""}${results.map(d=>`${resultHTML(d)}
         <div class="detailacts"><button class="btn" data-resedit="${esc(d.id)}">${t("Edit")}</button><button class="btn danger" data-resdel="${esc(d.id)}">${t("Delete card")}</button></div>`).join("")}
         <div class="ocr" id="ocr-${s.id}">${qsAiBox(s.id)}</div>
@@ -6410,7 +6440,7 @@ function renderShots(){
   box.querySelectorAll("[data-autocancel]").forEach(b=> b.onclick=()=>cancelAuto(b.dataset.autocancel)); /* the card made by itself (v325): Cancel drops the placeholder, the photo stays */
   box.querySelectorAll("[data-resedit]").forEach(b=> b.onclick=()=>{ const cid=b.dataset.resedit; if(!cardOf(cid)) return; S.editing=cid; S.editFrom="camera"; S.editOpenFrame=true; S.fullPic=false; render(); window.scrollTo({top:0}); }); /* Edit opens the form with the photo and the frame the card was cut with */
   box.querySelectorAll("[data-resdel]").forEach(b=> b.onclick=async()=>{ const cid=b.dataset.resdel; if(cardOf(cid)) await delCustom(cid); renderShots(); }); /* at once, with Undo (v268) — Undo brings the result back, the photo stays with Crop meanwhile */
-  box.querySelectorAll(".result").forEach(el=>{ const d=cardOf(el.dataset.card); if(!d) return;
+  box.querySelectorAll(".result").forEach(el=>{ const d=el.dataset.prov?(PROV[el.dataset.prov]||{}).card:cardOf(el.dataset.card); if(!d) return; /* the provisional card lives in PROV, not in the deck (v440) */
     el.querySelectorAll("[data-pic]").forEach(p=> p.onclick=e=>{ e.stopPropagation(); S.fullPic=!S.fullPic; renderShots(); }); /* the photo's tap: the whole picture and back, as on the front */
     el.querySelectorAll(".chars:not(.sub) .ch").forEach(c=> c.onclick=e=>{ e.stopPropagation(); charInfo(c.dataset.ch,c,d); }); });
   wireSay(box); wireLinks(box);
