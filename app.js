@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=436; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=437; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -395,6 +395,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v437","Crop during the scan: frame it yourself"],
   ["again","v436","the signpost — a plate per card"],
   ["photo","v434","this list — the right twelve?"],
   ["photo","v433","empty deck: sign, poster, package"],
@@ -2060,7 +2061,7 @@ function renderMore(main){
 const GUIDE=()=>[
   {h:t("Take a photo"),p:[t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card by itself — you see the finished card with Edit and Delete under it. Edit shows the photo with the frame the app used: drag a corner or the inside to fit it, the round handle turns it, let go and the reading starts again."),
     t("A photo of a control panel, or of several signs beside each other — a rice cooker’s buttons, the items of a menu board — becomes one card per label, each with its own cut of the photo."),
-    t("Crop frames a photo by hand, with a preview before the card is saved. In a hurry there? Save now makes the card at once and the reading fills it in."),
+    t("Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in."),
     t("From album takes several photos at once — they all become cards, one after the other, while the app is open.")]},
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
     t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.")]},
@@ -3030,6 +3031,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  437:"Tap Crop while a photo is being read to stop the automatic card and set the frame yourself.",
   429:"Picking Starred now studies all your starred cards, not only the ones due today.",
   427:"Tap the star on a card — in the list or while learning — to mark it, and study your starred cards from the filter.",
   423:"An update no longer sends you to another card in the middle of a session.",
@@ -3521,7 +3523,7 @@ async function showCropPreview(id,opts){
   _prevURL=URL.createObjectURL(r.blob);
   box.innerHTML=`<div class="croppreview">
     <img src="${_prevURL}" alt="selected area">
-    <div class="badge" style="margin:6px 0 8px">${noRead?t("The frame the card was cut with — adjust it to read again.")+(opts.win==="in"?t(" Tap outside the frame for the whole photo."):opts.win==="out"?t(" Tap outside the frame to enlarge it again."):""):t("Reading in a moment — drag a corner first if the frame is off.")}</div>
+    <div class="badge" style="margin:6px 0 8px">${noRead?(opts.found?t("The frame the app found — adjust it, then read."):t("The frame the card was cut with — adjust it to read again."))+(opts.win==="in"?t(" Tap outside the frame for the whole photo."):opts.win==="out"?t(" Tap outside the frame to enlarge it again."):""):t("Reading in a moment — drag a corner first if the frame is off.")}</div>
     <div class="cropacts">
       <button class="del" data-cropread="${id}">${t("Read now")}</button>
       <button class="del" data-cropok="${id}">${t("Image only")}</button>
@@ -5533,6 +5535,21 @@ function pendingCard(id){ const cid=PENDING[id]; return cid?cardOf(cid):null; }
 /* the card made by itself (v325, H: "no frame is seen during the first scan at all, just the magic wobbling over the image, and then the result is the finished card … if I want to edit something, I get a frame which I can adjust"; saved by itself on my recommendation, "Go"): Cancel while it reads drops the placeholder, nothing readable drops it too (dropAuto), and the row shows the finished card with Edit and Delete (resultHTML) */
 async function dropAuto(id,cid){ delete AUTO[id]; delete QSCARD[id]; delete QSMORE[id]; if(!cid) return; const d=cardOf(cid); if(!d||d.c) return; S.custom=S.custom.filter(x=>x.id!==cid); try{ await idbDel("custom",cid); }catch(e){} bump("byPhoto",-1); dropThumb(cid); setStats(); }
 async function cancelAuto(id){ const cid=PENDING[id]; abandonReading(id); delete PENDING[id]; autoDrop(id); await dropAuto(id,cid); renderShots(); autoNext(); } /* Cancel drops this photo from the batch, not the batch (v411) */
+/* The frame right after the shutter (v437, H: "Ich moechte ein Foto direkt nach der Aufnahme bearbeiten koennen, inklusive
+   Drehen, Schieben und Croppen"). Turning, moving and cropping have existed since v185 — they were simply two taps away, since
+   v325 sends a fresh photo straight to a card with no frame: Cancel and then Crop, or the finished card's Edit. Crop beside
+   Cancel stops the automatic card exactly as Cancel does and lays the frame the app holds at that moment on the photo — the
+   placement when the reader or the AI has already moved it (PLACED, v304), else the proposal the reading started from — so the
+   hand corrects the app's best guess instead of drawing on an empty layer. Two orderings matter: PLACED is read BEFORE
+   cancelAuto, whose abandonReading deletes it, and CROP is set before it too, so the autoNext inside it sees a standing frame
+   and the rest of a batch waits (v411). No reading until the frame moves, as Crop again does (v244). */
+async function editAuto(id){
+  const ph=pendingCard(id), p=PLACED[id]||(ph&&ph.reading&&ph.reading.rect);
+  const f=p&&p.lw&&p.lh?frameOf(p):null;
+  CROP={id,rect:null};
+  await cancelAuto(id);
+  if(CROP&&CROP.id===id&&f) await placeFrame(id,f,{noRead:true,found:true});
+}
 const resultHTML=d=>`<div class="result" data-card="${esc(d.id)}"><div class="front">${frontHTML(d)}</div><div class="back">${backHTML(d)}${linkedHTML(d)}</div>${flagNoteHTML(d)}</div>`; /* the finished card in the photo's place: the front's boxes and the back, as in the detail */
 /* one card per label (v357): the answer's lines with their own pinyin, meaning and frame become N cards — the placeholder
    is the first, the rest are saved beside it, each with its own 16:9 window of the panel (v329) and its own frame, so Crop
@@ -6338,7 +6355,7 @@ function renderShots(){
         </div>
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">${t("Cancel")}</button>`
-          :AUTO[s.id]&&PENDING[s.id]?`<button class="del" data-autocancel="${s.id}">${t("Cancel")}</button>`
+          :AUTO[s.id]&&PENDING[s.id]?`<button class="ocr-btn" data-autoedit="${s.id}">${t("Crop")}</button><button class="del" data-autocancel="${s.id}">${t("Cancel")}</button>`
           :`${PENDING[s.id]?"":`<button class="ocr-btn" data-crop="${s.id}">${t("Crop")}</button>`}<button class="del" data-del="${s.id}">${t("Delete")}</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${PENDING[s.id]?readingHTML(READING[s.id]||AI_BUSY_TEXT,s.id):SIGN[s.id]?signEditorHTML(s.id):READING[s.id]?readingHTML(READING[s.id],s.id):cropping
           ?CROP.auto?busyHTML(t("Finding the text …")):`<span class="badge">${t("Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.")}</span>`
@@ -6350,6 +6367,7 @@ function renderShots(){
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
   box.onclick=e=>{ const b=e.target.closest("[data-savenow]"); if(b){ b.disabled=true; saveNow(b.dataset.savenow); } }; /* the button is inside the reading box, which every status re-renders (v237) */
   box.querySelectorAll("[data-cropcancel]").forEach(b=> b.onclick=()=>{ abandonReading(b.dataset.cropcancel); CROP=null; renderShots(); });
+  box.querySelectorAll("[data-autoedit]").forEach(b=> b.onclick=()=>editAuto(b.dataset.autoedit)); /* the frame right after the shutter (v437) */
   box.querySelectorAll("[data-autocancel]").forEach(b=> b.onclick=()=>cancelAuto(b.dataset.autocancel)); /* the card made by itself (v325): Cancel drops the placeholder, the photo stays */
   box.querySelectorAll("[data-resedit]").forEach(b=> b.onclick=()=>{ const cid=b.dataset.resedit; if(!cardOf(cid)) return; S.editing=cid; S.editFrom="camera"; S.editOpenFrame=true; S.fullPic=false; render(); window.scrollTo({top:0}); }); /* Edit opens the form with the photo and the frame the card was cut with */
   box.querySelectorAll("[data-resdel]").forEach(b=> b.onclick=async()=>{ const cid=b.dataset.resdel; if(cardOf(cid)) await delCustom(cid); renderShots(); }); /* at once, with Undo (v268) — Undo brings the result back, the photo stays with Crop meanwhile */
