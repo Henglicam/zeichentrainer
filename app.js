@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=463; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=464; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -415,6 +415,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v464","delete the last card of a photo: the photo goes, Undo brings both"],
   ["app","v463","Camera: only the photos still being worked on, the rest one tap away"],
   ["app","v462","Camera: the tiles, and a tap opening a photo full width"],
   ["again","v461","a page card: neutral frames on the photo, no dots anywhere"],
@@ -2399,6 +2400,13 @@ function endSingle(){
 }
 function renderStudy(main){
   if(!S.ready){ main.innerHTML=`<div class="badge">${t("Loading …")}</div>`; return; }
+  /* a card deleted while the session stands leaves its id behind in the queue, and the screen then read a card that is
+     not there any more — found at v464 and pre-existing: delete the card Learn is ON from the Cards tab, let the Undo
+     line go, come back to Learn, and renderStudy crashed on the missing card. The queue is the session's, so it is
+     pruned here rather than rebuilt: the place in it is kept, and a session that runs out falls through to the done
+     screen as it always did. */
+  if(S.queue.some(id=>!cardOf(id))){ const gone=S.queue.slice(0,S.idx).filter(id=>!cardOf(id)).length;
+    S.queue=S.queue.filter(id=>cardOf(id)); S.idx=Math.max(0,Math.min(S.idx-gone,S.queue.length)); }
   if(!deck().length){
     main.innerHTML=wxNoteHTML()+`<div class="done">
       <div class="mark">始</div>
@@ -3255,8 +3263,21 @@ async function delCustom(id){
   delete S.progress[id]; dropThumb(id);
   /* a text deleted out of its page leaves the page (v453); the last one takes the page with it — an Undo then brings the text back as a card of its own */
   if(d&&d.page){ const pg=cardOf(d.page); if(pg&&(pg.items||[]).includes(id)){ const u={...pg,items:pg.items.filter(x=>x!==id)}; if(u.items.length) await putCard(u,pg.id); else { S.custom=S.custom.filter(x=>x.id!==pg.id); try{ await idbDel("custom",pg.id); }catch(e){} dropThumb(pg.id); } } }
+  /* the photo goes with its last card (v464, H: "And if I remove the card, then the photo also goes, which is good."):
+     only when NO card references it any more — a text deleted out of a page leaves its siblings behind, and they still
+     need the picture. keepPhoto is deliberately not called: by the test above there is nobody left to hand a copy to,
+     which is the whole point. The photo rides on the card's own Undo item, so five seconds put both back. */
+  let shot=null;
+  if(d&&d.shot&&!S.custom.some(x=>x.shot===d.shot)){
+    const si=S.inbox.findIndex(x=>x.id===d.shot);
+    if(si>=0){ shot={rec:S.inbox[si],idx:si};
+      S.inbox=S.inbox.filter(x=>x.id!==d.shot);
+      try{ await idbDel("inbox",d.shot); }catch(e){}
+      if(IMGURL[d.shot]){ URL.revokeObjectURL(IMGURL[d.shot]); delete IMGURL[d.shot]; }
+      if(CROP&&CROP.id===d.shot) CROP=null; }
+  }
   setStats();
-  if(d) showUndo({kind:"card",d,prog,idx,items});
+  if(d) showUndo({kind:"card",d,prog,idx,items,shot});
 }
 /* Undo after Delete (v268, idea 3 of the improvement list — a card or photo deleted by mistake was gone): the card's Delete
    and the inbox's Delete act at once, no sheet, and a line above the tab bar says "Deleted “学”" with Undo for UNDO_MS;
@@ -3274,6 +3295,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  464:"Deleting the last card made from a photo now deletes the photo too — one Undo puts both back.",
   463:"The Camera tab now shows only the photos still being worked on. The ones that already made cards are one tap away at the foot of the list — their pictures stay on their cards either way.",
   462:"The Camera tab shows your photos as tiles, two in a row — tap one to open it. The switch beside Inbox goes back to the long list.",
   461:"The words on a photo card are framed now instead of dotted, and the frame gives nothing away — you still find out whether you know a word by opening it.",
@@ -3415,6 +3437,7 @@ async function undoDelete(){
       bump("deleted",-1);
       for(const x of it.items||[]){ if(S.custom.some(y=>y.id===x.d.id)) continue; S.custom.splice(Math.min(x.idx,S.custom.length),0,x.d); try{ await idbPut("custom",x.d); }catch(e){} if(x.prog){ S.progress[x.d.id]=x.prog; try{ await idbPut("progress",{id:x.d.id,...x.prog}); }catch(e){} } bump("deleted",-1); } /* the page's texts with it (v453) */
       if(d.page){ const pg=cardOf(d.page); if(pg&&pg.items&&!pg.items.includes(d.id)) await putCard({...pg,items:[...pg.items,d.id]},pg.id); } /* a text back into its page (v453) */
+      if(it.shot&&!S.inbox.some(x=>x.id===it.shot.rec.id)){ S.inbox.splice(Math.min(it.shot.idx,S.inbox.length),0,it.shot.rec); try{ await idbPut("inbox",it.shot.rec); }catch(e){} } /* the photo that went with its last card (v464) */
       if(S.mode==="study"&&!S.queue.includes(d.id)&&d.c&&!isPage(d)){ S.queue.splice(S.idx,0,d.id); S.revealed=false; S.fullPic=false; } /* deleted from the study back: the card comes next again */
     } else {
       const rec=it.rec; if(S.inbox.some(x=>x.id===rec.id)) continue;
