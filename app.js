@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=476; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=477; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -79,7 +79,7 @@ const S = { mode:"study", progress:{}, custom:[], inbox:[],
   pendingImg:null, pendingFull:null, pendingUse:"crop", persist:null,
   peek:null, /* Learn: the id of a linked card whose photo is shown on the front instead (v155) */
   admin:false, /* the owner's rows in More unlocked for this session (v162) */
-  detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterStar:false, filterTags:[], settings:{}, single:null, saved:null,
+  detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterStar:false, filterTags:[], settings:{}, single:null, saved:null, cardsTab:"cards",
   editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null,
   autoCard:window.AUTO_CARD!==false, editOpenFrame:false, openShot:null }; /* autoCard (v325): a photo that opens by itself becomes a card without a frame or a preview; the harness sets window.AUTO_CARD=false to keep the crop-mode flow its frame suites drive */
 
@@ -138,6 +138,7 @@ const isPage=d=>!!(d&&d.kind==="page");
 const pageItems=pg=>(pg&&pg.items||[]).map(cardOf).filter(Boolean);
 const inPage=d=>!!(d&&d.page&&cardOf(d.page)); /* an item of a page that still exists: the list shows the page, not the item */
 const deckCount=()=>deck().filter(d=>!inPage(d)).length;
+const tabCount=()=>tabPool().length; /* the Cards count is the open tab's own (v477) */
 const pageOfShot=shot=>deck().find(d=>isPage(d)&&d.shot===shot)||null;
 /* the items of one page come one after the other in a session (the spec's "Learn walks a page as one group"): the first
    item the order reaches brings the page's other queued items in behind it, in the order they had */
@@ -185,12 +186,17 @@ function filterGroups(scope){
   const nStar=deck().filter(d=>d.star).length;
   if(scope==="learn") return [...(nStar?[{head:t("Starred"), rows:[{k:"star", label:t("Starred"), n:nStar, on:!!S.settings.learnStar}]}]:[]),
     {head:t("Tags"), rows:[{k:"", label:t("All cards"), n:deck().filter(d=>d.c).length, on:!learnTags().length&&!S.settings.learnStar},...tagRows]}];
-  const nAi=deck().filter(d=>d.ai).length;
-  const st=[...(nStar?[{k:"star", label:t("Starred"), n:nStar, on:S.filterStar}]:[]),
-    {k:"flag", label:t("⚑ Flagged"), n:S.custom.filter(d=>d.flag).length, on:S.filterFlag},
-    ...(nAi?[{k:"ai", label:t("AI"), n:nAi, on:S.filterAi}]:[]),
-    {k:"unv", label:t("Unverified"), n:S.custom.filter(d=>d.mt&&!d.mt.verified).length, on:S.filterUnv}];
-  return [{head:t("Status"), rows:st},...(tagRows.length?[{head:t("Tags"), rows:tagRows}]:[])];
+  /* on Cards the numbers are the OPEN TAB's own and follow the list's own page rule (v477): the sheet used to count raw
+     records over the whole deck while the list counts a page once and lets it match through its texts, so the two never
+     agreed — with two tabs that gap would read as broken ("⚑ Flagged (12)" over a list of one). */
+  const pool=tabPool(), cnt=f=>pool.filter(d=>anyOf(d,f)).length;
+  const nAi=deck().filter(d=>d.ai).length; /* a row's VISIBILITY stays deck-wide — a row that vanished on one tab while its filter was on is the v308 trap; only the numbers follow the tab */
+  const st=[...(nStar?[{k:"star", label:t("Starred"), n:pool.filter(d=>d.star).length, on:S.filterStar}]:[]),
+    {k:"flag", label:t("⚑ Flagged"), n:cnt(d=>d.flag), on:S.filterFlag},
+    ...(nAi?[{k:"ai", label:t("AI"), n:cnt(d=>d.ai), on:S.filterAi}]:[]),
+    {k:"unv", label:t("Unverified"), n:cnt(d=>d.mt&&!d.mt.verified), on:S.filterUnv}];
+  const tabRows=tagRows.map(r=>r.k==="tag:"+UNTAGGED?{...r,n:pool.filter(d=>anyOf(d,x=>!(x.tags||[]).length)).length}:{...r,n:cnt(d=>hasTag(d,r.label))});
+  return [{head:t("Status"), rows:st},...(tabRows.length?[{head:t("Tags"), rows:tabRows}]:[])];
 }
 const filterOn=scope=>filterGroups(scope).flatMap(g=>g.rows).filter(r=>r.on&&r.k);
 /* the pill: the filter's own name while one is set, "All cards" while none is */
@@ -415,6 +421,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v477","Cards: the two tabs"],
   ["app","v476","AI switch off: no run resumes"],
   ["app","v473","More: AI row: picture, not frame"],
   ["photo","v472","no garbage card when Qwen refuses"],
@@ -710,7 +717,7 @@ async function boot(){
   S.ready=true;
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
   const rv=S.settings.resumeView; if(rv){ delete S.settings.resumeView; idbDel("settings","resumeView").catch(()=>{}); } /* the screen the update's reload left (v327): back to it, so the reload is not felt */
-  if(rv&&Date.now()-(rv.at||0)<RESUME_MAX&&(rv.own!==false||navReload())){ if(["study","cards","inbox","more","guide"].includes(rv.mode)) S.mode=rv.mode; if(S.mode==="cards"&&rv.detail&&S.custom.some(d=>d.id===rv.detail)) S.detail=rv.detail; if(typeof rv.query==="string") S.query=rv.query;
+  if(rv&&Date.now()-(rv.at||0)<RESUME_MAX&&(rv.own!==false||navReload())){ if(["study","cards","inbox","more","guide"].includes(rv.mode)) S.mode=rv.mode; if(S.mode==="cards"&&rv.detail&&S.custom.some(d=>d.id===rv.detail)) S.detail=rv.detail; if(typeof rv.query==="string") S.query=rv.query; if(rv.tab==="pages"||rv.tab==="cards") S.cardsTab=rv.tab;
     /* the session as it stood (v423): the queue's ids, minus any card that is gone or has no text, with the place in it, the
        open answer and the day's count — so a reload in Learn comes back on the same card instead of at the top of a queue
        built afresh, where a card already graded is no longer due and the next one takes its place. */
@@ -2172,7 +2179,7 @@ const GUIDE=()=>[
   {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.")+" "+t("A card from a screen or a panel shows the whole picture with a frame around every text and its own lit up, and says which one it is, 1 of 4; a tap on the photo shows the text alone."),
     t("Grade yourself: Hard, Medium, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
     t("Swipe the closed card left or right to pick another one — nothing is graded, and a card you skip stays due for next time.")]},
-  {h:t("Cards"),p:[t("All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included. Push an open card sideways for the next one in the list."),
+  {h:t("Cards"),p:[t("All your cards, newest first. Once a photo has made a multicard, two tabs split them — Cards and Multicards. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included. Push an open card sideways for the next one in the list."),
     t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together; old photos are cleared out under More → Your data → Photos. Tap the star on a card to mark it as one you care about — the filter then shows them alone, and Learn studies all of them, due or not.")]},
   {h:t("Language and meanings"),p:[t("More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.")]},
   {h:t("What stays on the phone"),p:[t("Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends a card's Chinese text, pinyin and meaning, and, when the reading is hard, a picture of the text — sometimes the whole photo."),
@@ -2751,11 +2758,23 @@ function backToList(){
 }
 /* the list the Cards tab shows: newest first, narrowed by the ticked filter rows and the search. Its own function since
    v445, because the card detail swipes through exactly this list and must not build its HTML to learn the order. */
+/* Two tabs under Cards (v477, H: "there should be actually two different tabs for cards. under cards. One for multi cards
+   and one for normal cards."): one scope bar under the search field, Cards and Multicards, and everything below it — the
+   search, the filter sheet, the count, the marking, the tile grid, the place the list is put back to (v352/v445) and the
+   swipe's neighbours — reads this one list, so nothing had to be taught about the split twice. The bar appears only while
+   a page exists (the v308 rule: a control for a set that is empty is a control over nothing), so a deck with no multicard
+   is exactly what it was. Cards is the default and comes first: it is the bigger half of every deck, and a tab you land on
+   should be the one you use most — H's own order ("one for multi cards and one for normal") is a list, not a layout. */
+const pagesInDeck=()=>S.custom.some(d=>isPage(d));
+const onPages=()=>pagesInDeck()&&S.cardsTab==="pages";
+/* the records the open tab lists, before the search and the filters — and the page-aware predicate the list, the count and
+   the filter sheet's own numbers all read, so the sheet can never say "12" over a list of one (v477) */
+const tabPool=()=>{ const pages=onPages(); return S.custom.filter(d=>!inPage(d)&&(pagesInDeck()?(isPage(d)===pages):true)); };
+const anyOf=(d,f)=>isPage(d)?(!!f(d)||pageItems(d).some(f)):!!f(d); /* a page matches a filter or a search when it or any of its texts does (v453) */
 function cardsList(){
   const q=S.query.trim().toLowerCase();
-  let list=S.custom.filter(d=>!inPage(d)).sort((a,b)=>(b.at||0)-(a.at||0)); /* newest first; a page's texts sit inside its row (v453) */
-  /* a page matches a filter or a search when it or any of its texts does (v453) */
-  const any=(d,f)=>isPage(d)?(!!f(d)||pageItems(d).some(f)):!!f(d);
+  let list=tabPool().sort((a,b)=>(b.at||0)-(a.at||0)); /* newest first; a page's texts sit inside its row (v453) */
+  const any=anyOf;
   const fieldsOf=d=>isPage(d)?[d.c,...(d.tags||[]),...pageItems(d).flatMap(fieldsOf)]:[d.c,d.trad,d.p,d.m,...Object.values(d.ms||{}),d.flagNote,...(d.tags||[])];
   /* several rows may be ticked at once (v366): a card must match one of the ticked status rows and one of the ticked tags */
   if(S.filterUnv||S.filterFlag||S.filterAi||S.filterStar) list=list.filter(d=>(S.filterUnv&&any(d,x=>x.mt&&!x.mt.verified))||(S.filterFlag&&any(d,x=>x.flag))||(S.filterAi&&any(d,x=>x.ai))||(S.filterStar&&d.star));
@@ -2819,10 +2838,11 @@ function renderCards(main){
   let {html,n,ids}=cardsListHTML();
   main.innerHTML=`<div class="pane">
     <div class="cardsbar"><input id="q" type="search" placeholder="${t("Search")}" value="${esc(S.query)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="btn mini primary" id="newcard">${t("+ New")}</button></div>
+    ${pagesInDeck()&&!marking("cards")?`<div class="seg scope" id="cardstabs" role="tablist"><button class="segbtn${onPages()?"":" on"}" data-ctab="cards" role="tab" aria-selected="${onPages()?"false":"true"}">${t("Cards")}</button><button class="segbtn${onPages()?" on":""}" data-ctab="pages" role="tab" aria-selected="${onPages()?"true":"false"}">${t("Multicards")}</button></div>`:""}
     ${nAi?`<div class="aibar"><span>${nOf(nAi,"AI suggestion waiting","AI suggestions waiting")}</span><button class="btn mini primary" id="ai-acceptall">${t("Accept all")}</button></div>`:""}
     ${marking("cards")
       ?`<div class="chips"><span class="badge" id="pick-n">${t("{0} selected",PICK.set.size)}</span><span class="cend"><button class="del" id="pick-all"></button></span></div>` /* the chips make room for the marking (v354) */
-      :`<div class="chips"><span class="chipset">${filterPillHTML("cards")}</span><span class="cend"><span class="badge" id="cnt"${n===deckCount()?" hidden":""}>${t("{0} of {1}",n,deckCount())}</span></span></div>`}
+      :`<div class="chips"><span class="chipset">${filterPillHTML("cards")}</span><span class="cend"><span class="badge" id="cnt"${n===tabCount()?" hidden":""}>${t("{0} of {1}",n,tabCount())}</span></span></div>`}
     <div class="clist tiles" id="clist">${html}</div>
   </div>`;
   const wire=()=>{ document.querySelectorAll("#clist .ctile").forEach(b=>{ /* the list is tiles since v465; #pitems keeps its rows */
@@ -2832,8 +2852,9 @@ function renderCards(main){
       S.detail=b.dataset.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); };
     if(!marking("cards")&&S.custom.length>1) longPress(b,()=>{ PICK={kind:"cards",set:new Set([b.dataset.id])}; render(); }); /* press and hold to start marking (v354) */
   }); wireStars($("#clist")); };
-  const refresh=()=>{ const r=cardsListHTML(); ids=r.ids; $("#clist").innerHTML=r.html; const ct=$("#cnt"); if(ct){ ct.textContent=t("{0} of {1}",r.n,deckCount()); ct.hidden=r.n===deckCount(); } /* the count shows only while a search or a chip narrows the list (v356) */ wire(); if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); } };
+  const refresh=()=>{ const r=cardsListHTML(); ids=r.ids; $("#clist").innerHTML=r.html; const ct=$("#cnt"); if(ct){ ct.textContent=t("{0} of {1}",r.n,tabCount()); ct.hidden=r.n===tabCount(); } /* the count shows only while a search or a chip narrows the list (v356) */ wire(); if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); } };
   $("#q").oninput=e=>{ S.query=e.target.value; refresh(); };
+  document.querySelectorAll("#cardstabs [data-ctab]").forEach(b=> b.onclick=()=>{ if(S.cardsTab===b.dataset.ctab) return; S.cardsTab=b.dataset.ctab; LIST_CARD=null; LIST_SCROLL=0; render(); window.scrollTo(0,0); }); /* a tab change is a different list, so the row ← Cards would come back to is dropped with it (v477) */
   wireFilterPill("cards",render);
   const aa=$("#ai-acceptall"); if(aa) aa.onclick=async()=>{ aa.disabled=true; await aiAcceptAll(); render(); };
   if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); }
@@ -2892,7 +2913,9 @@ function renderPageDetail(main,d){
   wireSwipe(main.querySelector(".card"), sw?detailSwipe(list,li,main):null);
 }
 /* the swipe options shared by the two detail screens (v460): the neighbour may be a page or an ordinary card, so the peer
-   dispatches on the record and hands makePeer the class its body needs */
+   dispatches on the record and hands makePeer the class its body needs. Since v477 the two tabs mean a page's neighbours
+   are pages and an ordinary card's are ordinary cards, so in practice each screen only ever sees its own kind — the
+   dispatch stays because it is what makes that true by construction rather than by luck. */
 function detailSwipe(list,li,main){
   return {n:list.length, idx:li,
     peer:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return null; /* the deck is read live, never the captured list (v445) */
@@ -3340,6 +3363,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  477:"Once a photo has made a multicard, the Cards tab splits in two — Cards and Multicards — so a multicard is never lost among the ordinary ones.",
   476:"Unticking the AI review now also stops an interrupted Check-up, Translate all or Tag all run from carrying on by itself — it waits until you press the button again.",
   472:"When the AI cannot check a photo at all, no card is made from a reading that does not look right — the photo stays with Crop and the app says so. And a provider that refuses is not asked again on the next photo.",
   471:"A photo you are done with now leaves the Camera tab: the finished card stays on screen while you are there, and the next time you open the tab the camera is clean again.",
@@ -7517,13 +7541,13 @@ let RELOADING=false, VIEW_KEY="";
    one and the app looks as if it jumped by itself; the Done capsule went back to 0 with it. The queue is card ids, so the
    note stays small. What it still cannot restore: a single-card test from the Cards list (S.single/S.saved) — a reload there
    comes back in the ordinary session. */
-const viewNow=own=>({mode:S.mode,detail:S.detail,query:S.query,scroll:window.scrollY,at:Date.now(),own:!!own,
+const viewNow=own=>({mode:S.mode,detail:S.detail,query:S.query,tab:S.cardsTab,scroll:window.scrollY,at:Date.now(),own:!!own,
   ...(S.mode==="study"&&!S.single?{queue:S.queue,idx:S.idx,revealed:S.revealed,done:S.done,ahead:S.ahead}:{})});
 const noteView=()=>{ if(!RELOADING&&S.ready){ VIEW_KEY=""; setSetting("resumeView",viewNow(false)).catch(()=>{}); } };
 /* the note has to be on disk BEFORE the gesture: a pull-to-refresh tears the document down at once, and an IndexedDB write
    started in pagehide is not guaranteed to commit (measured — it did not). So every change of screen writes it, which is one
    small put per navigation inside the app; the scroll is refreshed when the app goes to the background and by reloadNow. */
-function noteViewSoon(){ if(RELOADING||!S.ready) return; const k=S.mode+"|"+(S.detail||"")+"|"+(S.query||"")+(S.mode==="study"?"|"+S.idx+"|"+(S.revealed?1:0):""); if(k===VIEW_KEY) return; /* v423: inside Learn the card and whether its answer is open are part of the screen, so each one is noted as it comes up */ VIEW_KEY=k; setSetting("resumeView",viewNow(false)).catch(()=>{}); }
+function noteViewSoon(){ if(RELOADING||!S.ready) return; const k=S.mode+"|"+(S.detail||"")+"|"+(S.query||"")+"|"+S.cardsTab+(S.mode==="study"?"|"+S.idx+"|"+(S.revealed?1:0):""); if(k===VIEW_KEY) return; /* v423: inside Learn the card and whether its answer is open are part of the screen, so each one is noted as it comes up */ VIEW_KEY=k; setSetting("resumeView",viewNow(false)).catch(()=>{}); }
 document.addEventListener("visibilitychange",()=>{ if(document.hidden) noteView(); });
 window.addEventListener("pagehide",noteView);
 const navReload=()=>{ try{ const n=performance.getEntriesByType("navigation")[0]; return !!n&&n.type==="reload"; }catch(e){ return false; } };
