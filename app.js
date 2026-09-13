@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=446; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=447; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -395,6 +395,9 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v447","panel that reads strong: cards per button, not one garbage card"],
+  ["photo","v447","dial/3-label panel: no card cut to a sliver"],
+  ["photo","v447","rice cooker clock: every button, not only 时 and 分"],
   ["photo","v446","straight-on panel: no card missing"],
   ["app","v445","Cards: swipe an open card sideways"],
   ["again","v444","washer: 3 leading labels get crops"],
@@ -944,7 +947,9 @@ async function migrateAi(){
 const pictureOn=()=>S.settings.aiPicture!==false;
 function pictureProvider(){ if(!pictureOn()) return null; return [aiProvider(),...Object.keys(AI_PROVIDERS)].find(pv=>AI_PROVIDERS[pv].vision&&(aiKey(pv)||viaRelay(pv))&&aiBase(pv))||null; }
 const pictureModel=pv=>AI_PROVIDERS[pv].vmodel||aiModel(pv);
-const PIC_SMALL=0.15, PIC_EDGE=0.05, PIC_SIDE=[0.35,0.6]; /* an answer's box smaller than this share of the picture, against an edge, means the app's frame was pointed at the wrong place (v393) */
+const PIC_SMALL=0.15, PIC_EDGE=0.05, PIC_SIDE=[0.35,0.6], PIC_TINY=0.06; /* an answer's box smaller than PIC_SMALL of the
+   picture, against an edge, means the app's frame was pointed at the wrong place (v393) — and smaller than PIC_TINY it means
+   that wherever it sits (v447): the frame is then more than sixteen times the area of the text the model found in it */
 const PIC_MAX=800;
 async function pictureJpeg(blob){
   const bmp=await createImageBitmap(blob); const k=Math.min(1,PIC_MAX/Math.max(bmp.width,bmp.height));
@@ -3113,6 +3118,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  447:"A photo of a control panel now makes one card per button far more often — and no card shows a sliver of the panel instead of its own button.",
   446:"A photo of a control panel taken straight-on no longer loses cards — every label the AI reads gets one.",
   445:"Open a card from the list and push it sideways — the next card of the list slides in, as in Learn.",
   442:"A hard photo becomes a card as soon as the AI has answered — the reader no longer has to finish first.",
@@ -4774,7 +4780,14 @@ function roundGrid(lab,W){ /* the boxes drawn on a round grid (v390, H's washing
      showed a neighbour's button). Every number of that answer is a multiple of ten. A measurement of a photo lands on arbitrary
      pixels (H's rice cooker: 158, 236, 255, 285); a drawing lands on round ones. Pixel answers only — on the 0–1000 grid a round
      number is just two digits of precision, and a real measurement may well be written that way. */
-  if(!lab||lab.length<4||!lab.every(l=>l.scale==="px")) return false;
+  /* The floor is SPLIT_MIN, not a number of its own (v447, H's washing-machine dial at v446: the model answered 左筒 /
+     右筒 / 下筒 with boxes [130,230,310,360], [420,230,580,360], [290,660,450,740] — every x a multiple of ten on a 677 px
+     picture, a textbook drawing — and this line returned false on the count alone, so the boxes were used to cut and 右筒's
+     card came out as a 16.5 × 31.2 sliver of the dial while 左筒 got the whole of it. The gate was inherited from the width
+     rule below, where four fifths of the boxes being of one size is a statistic that wants a few samples; roundGrid asks a
+     different question and every box answers it on its own. aiReadPicture drops `labels` below SPLIT_MIN (v357), so this is
+     the whole range in which the verdict can matter, and it guards the empty array rather than a count. */
+  if(!lab||lab.length<SPLIT_MIN||!lab.every(l=>l.scale==="px")) return false;
   let round=0;
   for(const l of lab) for(const v of [l.box[0]*W,l.box[2]*W]){ const r=Math.round(v); if(Math.abs(v-r)<0.3&&r%LB_STEP===0) round++; }
   return round>=LB_ROUND*lab.length*2;
@@ -4784,12 +4797,12 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
      so every card showed its neighbour's button). A drift like that cannot be told from the truth — the boxes are internally
      consistent, the plan places as many labels either way — so the boxes are not used to cut a picture at all. The tell is that
      labels of two and of seven characters got the same box: a measurement follows the characters, a drawing does not. */
-  if(!lab||lab.length<4) return false;
+  if(!lab||lab.length<SPLIT_MIN) return ""; /* v447: aiReadPicture has already dropped a shorter list, so this guards the empty array — the width rule below still needs its own four fifths, and falls through to roundGrid when it has not got them */
   const med=a=>{ const t=a.slice().sort((x,y)=>x-y); return t[t.length>>1]||1; };
   const ws=lab.map(l=>(l.box[2]-l.box[0])*W); /* the width, not the height: a label of k characters is k characters wide, while a box's height is its row's style and honestly differs from row to row (H's panel: every box 60 px wide, the rows 50 and 30 px tall) */
   const mw=med(ws), one=[]; /* the picture's edge clips a box or two, so the rule is the share of boxes of one size, not their spread */
   for(let k=0;k<lab.length;k++) if(Math.abs(ws[k]-mw)<=LB_TMPL*mw) one.push(k);
-  if(one.length<0.8*lab.length) return roundGrid(lab,W);
+  if(one.length<0.8*lab.length) return roundGrid(lab,W)&&"round";
   /* A stack of plates is not a lattice (v436, H's emergency signpost: five arrow plates one under the other, the model's five
      boxes all 156–680 of a 715 px picture for labels of four and five characters, so the width rule called it a drawing and
      every card got the whole signpost). The boxes share one x range, so their union's width IS their width and "all of one
@@ -4797,7 +4810,7 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
      a fraction of the union across (H's washer 60 px of some 300, the dishwasher's row a fifth of it), so nothing that rule
      was built for is touched. */
   const uw=(Math.max(...lab.map(l=>l.box[2]))-Math.min(...lab.map(l=>l.box[0])))*W;
-  if(uw>0&&one.filter(k=>ws[k]>=LB_FULLW*uw).length>=0.8*lab.length) return roundGrid(lab,W);
+  if(uw>0&&one.filter(k=>ws[k]>=LB_FULLW*uw).length>=0.8*lab.length) return roundGrid(lab,W)&&"round";
   /* Two ideas were tried on top of this rule and both are gone. The pitch as a second tell (v382, dropped in v383): a panel's
      buttons of one block *are* evenly spaced, so a measurement gives the same regular gaps a lattice does. And asking the model
      again, one strip per row (v382–v383, dropped in v385): H's own three strip answers, read from the AI log the moment it
@@ -4806,7 +4819,7 @@ function templateBoxes(lab,W){ /* the answer's label boxes drawn to a grid, not 
      localise on it; a second question gets a second drawing, and the strips' own y squashed the answer's three rows into two,
      so labelPlan found nothing to line up. Three calls and two minutes for a worse answer. */
   const ns=one.map(k=>[...lab[k].zh].filter(c=>CJK.test(c)).length||1);
-  return Math.max(...ns)>Math.min(...ns)||roundGrid(lab,W); /* labels of one length may honestly measure the same width — then the round pixels decide */
+  return Math.max(...ns)>Math.min(...ns)?"width":(roundGrid(lab,W)&&"round"); /* labels of one length may honestly measure the same width — then the round pixels decide */
 }
 /* One card per label when the model's boxes are a drawing (v386, H's washing machine at v385: the model reads that panel
    perfectly and cannot say where anything is — measured on his own answers, the bright right-hand block within a point of
@@ -5492,10 +5505,10 @@ async function cropSign(id,opts){
                the labels' character counts, and roundGrid asks whether those pixels are multiples of ten to within 0.3 — both
                are destroyed by the whole percent the log prints, and v390's field regression was exactly this test not firing */
             const tW=pic.picW||W, tmpl=why?false:templateBoxes(lab,tW);
-            N.tmpl={W:tW,why:why||"",scale,widths:lab.map(l=>n1((l.box[2]-l.box[0])*tW)),ns:lab.map(l=>[...l.zh].filter(c=>CJK.test(c)).length),round:why?null:roundGrid(lab,tW),uw:n1((Math.max(...lab.map(l=>l.box[2]))-Math.min(...lab.map(l=>l.box[0])))*tW),drawing:!!tmpl}; /* uw: the label boxes' own union across — a width equal to it is the v436 tautology */
+            N.tmpl={W:tW,why:why||"",scale,widths:lab.map(l=>n1((l.box[2]-l.box[0])*tW)),ns:lab.map(l=>[...l.zh].filter(c=>CJK.test(c)).length),round:why?null:roundGrid(lab,tW),uw:n1((Math.max(...lab.map(l=>l.box[2]))-Math.min(...lab.map(l=>l.box[0])))*tW),drawing:!!tmpl,tell:tmpl||""}; /* uw: the label boxes' own union across — a width equal to it is the v436 tautology */
             if(why){ logRead(`the AI calls these ${lab.length} texts separate labels, but ${why} — one card`); }
             else if(tmpl){ /* the boxes are a drawing, not a measurement (v380): the model cannot say where anything is, so the reader looks (v386) */
-              logRead(`the AI's ${lab.length} label boxes are all the same size — a drawing of the grid, not a measurement: the reader looks for the labels in the picture itself`);
+              logRead(`the AI's ${lab.length} label boxes are ${tmpl==="round"?"drawn on round pixels":"all the same size"} — a drawing of the grid, not a measurement: the reader looks for the labels in the picture itself`); /* v447: the sentence used to claim the width tell whichever one fired, and on H's dial (widths 180, 160, 160) it was the round pixels — a record that names the wrong reason is the v399 fault one level down */
               const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen;
               const sb=src===seen?b:await createImageBitmap(src); const gy=labelGrey(sb,pic.box);
               let found=null; try{ found=await readLabels(sb,gy,lab,pic.box,()=>{}); }catch(e){ found=null; logErr("split",e&&e.message||String(e)); }
@@ -5607,9 +5620,21 @@ async function cropSign(id,opts){
          afterwards: when the answer's box covers under PIC_SMALL of the picture and lies against one of its edges,
          the text the model found is at the border of what the app chose, and there is very likely more beyond it. The
          frame then reaches the whole photo and the AI reads once more, as it does for a bad answer (v348). */
-      const pbox=pic&&!pic.bad&&pic.box, tiny=!!(pbox&&(pbox[2]-pbox[0])*(pbox[3]-pbox[1])<PIC_SMALL
+      /* v447, H's rice cooker again at v446 ("Only 2 Cards??"): the answer was 时 / 分 alone with the note "Labels for a
+         digital clock or timer display", and everything downstream was right — the two boxes were honestly measured, and both
+         cards landed on their own character. What was wrong is that the AI was never shown the buttons: the ink rows had cut
+         the panel to a band 34–70 % down, where v393 measured this very appliance's label rows at 22–25 % and 79–82 %. The
+         v393 re-ask exists for exactly this and did not fire, because its box must sit within PIC_EDGE of a picture edge and
+         this one sits at 79–88 % across, 0.125 away from the nearest — while covering 3.7 % of the picture. A box that small
+         in BOTH directions says the frame is pointed at a fragment wherever in the picture it sits, so PIC_TINY asks the area
+         alone. Measured against the 28 ordinary-sign answers of the aiframe corpus: the side test already excludes every one
+         of them (the smallest no-edge box is 九号 at 5.4 % of its picture but 38 % of its width, the next 突破光影边界 at 74 %),
+         so 0 of 28 fire at any area threshold from 2 % to 10 % — the corpus cannot choose the number, and 6 % is picked for
+         its margin over H's own 3.7 %, not fitted to data. It costs one more picture call on such a photo. */
+      const parea=pic&&!pic.bad&&pic.box?(pic.box[2]-pic.box[0])*(pic.box[3]-pic.box[1]):1;
+      const pbox=pic&&!pic.bad&&pic.box, tiny=!!(pbox&&parea<PIC_SMALL
         &&pbox[2]-pbox[0]<PIC_SIDE[0]&&pbox[3]-pbox[1]<PIC_SIDE[1] /* small in both directions: a box that spans much of one is a line running along that edge, and the v313 grow past that edge is its answer — H's 北京现代 badge, whose box is 37 % of the picture's width along its top */
-        &&(pbox[0]<PIC_EDGE||pbox[1]<PIC_EDGE||pbox[2]>1-PIC_EDGE||pbox[3]>1-PIC_EDGE));
+        &&(parea<PIC_TINY||pbox[0]<PIC_EDGE||pbox[1]<PIC_EDGE||pbox[2]>1-PIC_EDGE||pbox[3]>1-PIC_EDGE));
       if(pic&&(noText||tiny||!pic.bad&&pic.cut)&&(PENDING[id]&&!RECROP[id]?READ_APP[id]:CROP&&CROP.id===id&&CROP.proposed)){
         const cur=base; /* the picture the AI saw is the proposal's (v319), whatever the reader placed meanwhile */
         const pic0cut=pic&&pic.cut||"";
@@ -5619,7 +5644,7 @@ async function cropSign(id,opts){
           if(nr.w>cur.w+1||nr.h>cur.h+1){ let cut=await cropBlob(id,nr); if(stale()) return;
             if(cut){ if(PENDING[id]&&!RECROP[id]) PLACED[id]=nr; else if(CROP&&CROP.id===id&&CROP.proposed){ CROP.rect=nr; CROP.proposed="text"; CROP.followed=true; delete CROP.hidden; } else cut=null; }
             if(cut){ placedCut=cut.blob; renderShots(); const pc=v=>Math.round(v*100);
-              logRead((noText?"the AI found no Chinese text in the picture — the frame reaches the whole photo":tiny?`the AI found the text in ${Math.round((pbox[2]-pbox[0])*(pbox[3]-pbox[1])*100)} % of the picture, against its edge — the frame reaches the whole photo`:`the AI says the picture's ${pic.cut} edge cuts off a line — the frame reaches beyond it`)+` (${pc(nr.x/nr.lw)}–${pc((nr.x+nr.w)/nr.lw)} % across, ${pc(nr.y/nr.lh)}–${pc((nr.y+nr.h)/nr.lh)} % down) and the AI reads again`);
+              logRead((noText?"the AI found no Chinese text in the picture — the frame reaches the whole photo":tiny?`the AI found the text in ${Math.round(parea*100)} % of the picture${parea<PIC_TINY?"":", against its edge"} — the frame reaches the whole photo`:`the AI says the picture's ${pic.cut} edge cuts off a line — the frame reaches beyond it`)+` (${pc(nr.x/nr.lw)}–${pc((nr.x+nr.w)/nr.lw)} % across, ${pc(nr.y/nr.lh)}–${pc((nr.y+nr.h)/nr.lh)} % down) and the AI reads again`);
               picBase={orig:placedCut,dk:null,base:null}; picSeen=picBase;
               try{ pic=await aiReadPicture(placedCut,guesses,status,N); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
               if(stale()) return; r.pic=pic?{zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped,cut:pic.cut}:null;
@@ -5663,8 +5688,10 @@ async function cropSign(id,opts){
     const tradPhoto=s2t(bestT)!==bestT&&tradPhotoOf(lines.map(x=>x.t),passes,score); r.trad=tradPhoto; /* a text without a traditional form (推) has nothing to vote on */
     SIGN[id]={lines:lines.map(x=>x.t), orig:lines.map(x=>x.t), conf:lines.map(x=>x.cf), boxes:lines.map(x=>x.bx), img:best.img, angle:best.angle||0, tightened:best.tightened, region:r, alts, trad:tradPhoto, tradDetected:tradPhoto, tradText:tradPhoto?s2t(bestT):""};
     SIGN[id].cardImg=cardImg; SIGN[id].weak=weak; /* for the card saved before the reading (v237): its picture, and the flag when the reading was weak */
+    SIGN[id].sureLines=sureLines(lines); /* v447: v441 computes this only where a provisional card could be shown; the text check needs the same question later, and one evaluation cannot drift from the other */
     SIGN[id].picBlob=trustAngle?dk.blob:r.blob; SIGN[id].picAsked=r.pic!==undefined;
-    if(EARLY[id]&&EARLY[id].run===run&&r.pic===undefined) SIGN[id].picEarly=EARLY[id]; /* the reading ended strong and the early answer was never used: picOnBad takes it instead of asking again (v439) */
+    if(EARLY[id]&&EARLY[id].run===run&&r.pic===undefined){ SIGN[id].picEarly=EARLY[id]; /* the reading ended strong and the early answer was never used: picOnBad or picPanel takes it instead of asking again (v439, v447) */
+      N.early={ahead:Date.now()-EARLY[id].at,wait:0,guesses:EARLY[id].guesses.length,ok:null,parked:true}; } /* v447: N.early was written only where the WEAK path consumes the answer, so a strong reading that parked a paid-for picture call left a record with no early, no pic, no tmpl and no split — H's own photo 2 read exactly like a photo the AI was never asked about, and only the `prompt` field aiReadPicture writes gave it away. The record must say a call went out even when nothing used it. */
     delete EARLY[id]; /* the weak path has consumed it or SIGN carries it now — the register must not keep the crop and its straightened copy alive for the session (a photo read once is never read again, so nothing else would ever clear it) */
     /* and the way in for that picture (v406): the text check answers after done(r), so picOnBad hands its answer back here
        and it gets the same placement, snap, drawing test and split the weak path's answer gets. The picture is the very one
@@ -6405,6 +6432,29 @@ async function picOnBad(sg,guesses,status){
     if(!pic) return null; if(sg.region) sg.region.pic={zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped}; if(pic&&pic.bad) sg.noText=true; return pic&&!pic.bad?pic:null; }
   catch(err){ logErr("picture",err&&err.message||String(err)); return null; }
 }
+/* The reading ended strong, so the weak path never used the early answer, and the text check did not call it garbage
+   either — but the answer already paid for says this picture is a panel of separate labels (v447, H's washing machine at
+   v446, 2026-09-13). His middle photo read 是和会赂 | 混合快速者洗 | 中印节 | 袜子云程序。简自洁 at effScore 258 — confident
+   garbage, over WEAK_READ — so no picture went out on the weak path, and DeepSeek tidied that text instead of rejecting
+   it, so picOnBad never ran either. Meanwhile a complete Qwen reply naming all ten buttons (混合, 快速, 单脱水, 煮洗, 袜子,
+   云程序, 筒自洁, 洗衣液长按童锁, 柔顺剂, +烘干长按单烘, apart:true, kind Appliance) sat in picEarly, 24.2 s and 88 KB
+   already spent on it, and was thrown away: one card of garbage where ten were in hand.
+   Three conditions, each earned. The answer must be a panel — `apart` with SPLIT_MIN labels or more — which is a shape a
+   reader's lines can never take and which no ordinary sign produces (measured: all 32 cases of the aiframe corpus answer
+   with no labels at all, so nothing outside a panel can reach this). The reading must NOT be read surely line by line
+   (v441's own test, which on this photo already said held with 是和会赂 at 87 and 中印节 at 90): a character every pass
+   read clearly is not the AI's to change, the v143 rule. And the picture must already be on its way — this never starts a
+   call, it only consumes one that the quick look sent. */
+async function picPanel(sg){
+  if(!sg||sg.picAsked||!sg.picEarly||sg.sureLines) return null;
+  let e=null; try{ e=await sg.picEarly.p; }catch(_){ return null; } /* the wait is the rest of a call already in flight; the shimmer stands meanwhile, since v441 withheld the provisional for this very reading */
+  const pic=e&&e.pic;
+  if(!pic||pic.bad||!pic.apart||!Array.isArray(pic.labels)||pic.labels.length<SPLIT_MIN) return null;
+  sg.picAsked=true;
+  logRead(`the reading is strong but not read surely, and the AI calls this picture ${pic.labels.length} separate labels — the picture answer asked at the quick look ${((Date.now()-sg.picEarly.at)/1000).toFixed(1)} s ago is used`);
+  if(sg.region) sg.region.pic={zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped};
+  return pic;
+}
 async function signAskAI(id){
   const sg=SIGN[id]; if(!sg||sg.aiBusy) return;
   signPreview(id);
@@ -6414,7 +6464,7 @@ async function signAskAI(id){
     const c=lines.join("\n"), res=(sg.res||[]).filter(Boolean);
     const [r]=await aiAsk([{kind:"sign",c,p:res.map(x=>x.py).join(" / "),m:sg.mean||"",gloss:res.flatMap(x=>x.gloss),alts:sg.alts,trad:!!sg.trad,mt:{src:"gloss",verified:false,suspect:"read from a photo by OCR"}}]);
     if(!SIGN[id]) return;
-    const pic=r.bad?await picOnBad(sg,[c,...(sg.alts||[])]):null; if(!SIGN[id]) return; /* the text check calls the reading garbage: the picture goes to the AI that takes pictures (v302) */
+    const pic=r.bad?await picOnBad(sg,[c,...(sg.alts||[])]):await picPanel(sg); if(!SIGN[id]) return; /* the text check calls the reading garbage: the picture goes to the AI that takes pictures (v302) — or it does not, and a panel answer is already in hand (v447) */
     if(pic&&sg.placePic){ try{ await sg.placePic(pic); }catch(e){ logErr("snap",e&&e.message||String(e)); } if(!SIGN[id]) return; } /* v406: the same placement the weak path's answer gets — without it a panel that reaches the AI this way made one card */
     if(pic){ const zh=pic.zh.split("\n"); sg.lines=zh; sg.orig=zh.slice(); sg.conf=[]; sg.boxes=zh.map(()=>[]); sg.alts=[c,...(sg.alts||[])].filter(x=>x&&x!==pic.zh).slice(0,6); sg.trad=!!pic.zht; sg.tradDetected=!!pic.zht; sg.tradText=pic.zht||""; sg.weak=false;
       sg.ai={zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,ml:pic.ml,note:pic.note,kind:pic.kind,ok:true,bad:false,pic:true,labels:pic.labels||null}; } /* as the weak path's answer: open characters, no boxes, the reader's texts as the alternatives, the mark on the label */
