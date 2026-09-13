@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=472; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=473; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -415,6 +415,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v473","More: AI row says picture, not frame"],
   ["photo","v472","no garbage card when Qwen refuses"],
   ["app","v471","Camera clean on the next visit"],
   ["app","v470","Camera: shutter alone, centred"],
@@ -1404,7 +1405,7 @@ function renderAiRow(){
   const who=`${AI_PROVIDERS[textProvider()].short} (${aiModel(textProvider())})`, pic=ppv?`${AI_PROVIDERS[ppv].short} (${pictureModel(ppv)})`:"";
   st.textContent=!aiOn()?t("Off. The app's owner sets it up under Advanced settings.")
     :S.settings.aiAuto===false?(pic?t("Off. {0} and {1} are set up{2} — tick the box to check new cards.",who,pic,relayed?t(" through the app owner's relay"):""):t("Off. {0} is set up{1} — tick the box to check new cards.",who,relayed?t(" through the app owner's relay"):"")) /* the line follows the switch (v196, H: "it cannot say On when I've unticked the checkbox") */
-    :(pic?t("On{0}: {1} checks the text, {2} reads the framed area when the reading is weak.",relayed?t(", through the app owner's relay"):"",who,pic):t("On{0}: {1} checks the text. Photos never leave the phone.",relayed?t(", through the app owner's relay"):"",who));
+    :(pic?t("On{0}: {1} checks the text, {2} reads a picture of it when the reading is hard.",relayed?t(", through the app owner's relay"):"",who,pic):t("On{0}: {1} checks the text. Photos never leave the phone.",relayed?t(", through the app owner's relay"):"",who));
   if(btn) btn.textContent=aiOn()?"Settings":"Set up";
   run.hidden=!aiOn(); run.disabled=!q;
   run.textContent=q?t("Ask AI"):t("Nothing to review");
@@ -2065,7 +2066,7 @@ function renderMore(main){
       <div class="field" id="ai-basefield" hidden><label>API base URL</label><input id="ai-base" class="mono" autocomplete="off" placeholder="https://…/v1"></div>
       <div class="field"><label>API key (stays on this phone)</label><input id="ai-key" type="password" autocomplete="off"></div>
       <div class="field"><label>Model</label><input id="ai-model" class="mono" autocomplete="off"></div>
-      <div class="field" id="ai-picfield" hidden><label class="check"><input type="checkbox" id="ai-picture"${pictureOn()?" checked":""}> Send the framed area to the AI when the reading is weak</label></div>
+      <div class="field" id="ai-picfield" hidden><label class="check"><input type="checkbox" id="ai-picture"${pictureOn()?" checked":""}> Send a picture of the text to the AI when the reading is hard</label></div>
       <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" id="ai-save">Save</button><button class="del" id="ai-remove">Remove key</button></div>
     </div>`:""}
     <div class="mrow"><div style="flex:1"><div class="t">${t("Review queue")}</div><div class="s" id="ai-runstatus"></div><div class="fieldacts"><button class="btn mini" id="ai-run" hidden></button></div></div></div>
