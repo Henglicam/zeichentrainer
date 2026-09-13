@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=456; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=457; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -415,6 +415,8 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["again","v457","a CLEAN directory board: one page card, dots on the plates"],
+  ["app","v457","a plain one- or two-line sign: still no AI picture call"],
   ["again","v456","798 directory board: all plates on the card, none dropped"],
   ["again","v455","798 directory board / two signs in one photo: several cards"],
   ["app","v454","album batch: Waiting lines, and all photos read"],
@@ -3239,6 +3241,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  457:"A photo with several separate texts — a directory board, a menu, a control panel, an app screen — becomes one card with a dot on every text even when the characters were easy to read.",
   456:"A board or a directory now keeps its small plates: the shop names and menu rows under a big headline stay on the card instead of being dropped as fine print.",
   455:"A board or a directory whose plates are smaller than its headline is read as the separate signs it is, instead of as one text.",
   454:"Several photos from the album go through one after the other again: the ones still waiting say so, and a photo that becomes several cards no longer stops the rest.",
@@ -3601,7 +3604,11 @@ async function findFrame(fullBlob,cropBlob){
     return {x:+(bx/fw).toFixed(4),y:+(by/fh).toFixed(4),w:+(cw/fw).toFixed(4),h:+(ch/fh).toFixed(4),a:0};
   }catch(e){ return null; } finally{ if(F) F.close(); if(C) C.close(); }
 }
-const abandonReading=id=>{ clearTimeout(READ_TIMER[id]); READ_RUN[id]=(READ_RUN[id]||0)+1; delete SIGN[id]; delete READING[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; }; /* a running reading of this photo abandons at its next step instead of delivering a result (v117); the inbox's Cancel, the Edit form's Crop again and an edit over a pending reading share it (v243) */
+const abandonReading=id=>{ clearTimeout(READ_TIMER[id]); READ_RUN[id]=(READ_RUN[id]||0)+1; delete SIGN[id]; delete READING[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; delete EARLY[id]; };
+/* v457: EARLY too. v439 deleted it only where a finished reading hands it to SIGN, so a photo whose reading was ABANDONED
+   — Cancel on the scanning row, the v437 Crop, a frame the hand moved — kept its crop and its straightened copy alive for
+   the whole session, and v457 fires the early call on more photos than v439 did. Cancel still cannot un-send: by the time
+   the button is tapped the picture has usually gone. */ /* a running reading of this photo abandons at its next step instead of delivering a result (v117); the inbox's Cancel, the Edit form's Crop again and an edit over a pending reading share it (v243) */
 const SHOTS_EXTRA={}, RECROP={}; /* the Edit form's Crop again (v239): the card's whole photo as a photo record outside the inbox (SHOTS_EXTRA[id]={id,blob,ts}), and the form's hooks — redraw (the frame view in place of renderShots), onRead (the reading's result), onImage (Image only), end */
 const shotRec=id=>S.inbox.find(s=>s.id===id)||SHOTS_EXTRA[id]||null;
 /* a batch of photos becomes a batch of cards, one after the other (v411, H: "Geht background processing in der Android app?" —
@@ -3775,15 +3782,22 @@ function textRegion(bmp){
   const k=Math.min(1,360/Math.max(bmp.width,bmp.height)), cv=chromaCanvas(bmp,k), W=cv.width, Hh=cv.height, d=cv.getContext("2d").getImageData(0,0,W,Hh).data;
   const on=(x,y)=>d[(y*W+x)*4]<128;
   const rows=[]; for(let y=0;y<Hh;y++){ let ink=0,edges=0,prev=false; for(let x=0;x<W;x++){ const o=on(x,y); if(o) ink++; if(o!==prev){ edges++; prev=o; } } rows.push(ink/W>0.02&&ink/W<0.7&&edges>=4); }
-  let y0=-1,y1=-1,run=0; const heights=[];
-  for(let y=0;y<=Hh;y++){ if(y<Hh&&rows[y]) run++; else { if(run>=3){ if(y0<0) y0=y-run; y1=y; heights.push(run); } run=0; } }
+  let y0=-1,y1=-1,run=0; const heights=[], bands=[];
+  for(let y=0;y<=Hh;y++){ if(y<Hh&&rows[y]) run++; else { if(run>=3){ if(y0<0) y0=y-run; y1=y; heights.push(run); bands.push([y-run,y]); } run=0; } }
   if(y0<0) return null;
   const lineH=median(heights), need=Math.max(2,0.03*(y1-y0));
+  /* how many separated blocks of text the ink forms (v457): the row runs are already here and their gaps were thrown away.
+     Two runs belong to the same block when the gap between them is under MULTI_GAP of one line's height — a sign's two
+     lines, a phrase wrapped over two rows. A board's name over its plates, a menu's sections, a panel's rows of buttons,
+     two signs a doorway apart are separate blocks. Read off the ink, not off the reader: on a directory board the quick
+     look reads the big name and misses the plates entirely (measured), so the reader's own lines cannot answer this. */
+  let blocks=bands.length?1:0;
+  for(let i=1;i<bands.length;i++) if(bands[i][0]-bands[i-1][1]>MULTI_GAP*lineH) blocks++;
   let x0=-1,x1=-1; run=0;
   for(let x=0;x<=W;x++){ let ink=0; if(x<W) for(let y=y0;y<y1;y++) if(on(x,y)) ink++; if(x<W&&ink>=need) run++; else { if(run>=3){ if(x0<0) x0=x-run; x1=x; } run=0; } }
   if(x0<0) return null;
   const pad=Math.max(lineH,0.03*Math.max(W,Hh));
-  return {x:Math.max(0,x0-pad)/W, y:Math.max(0,y0-pad)/Hh, x1:Math.min(W,x1+pad)/W, y1:Math.min(Hh,y1+pad)/Hh, lineH:lineH/k};
+  return {x:Math.max(0,x0-pad)/W, y:Math.max(0,y0-pad)/Hh, x1:Math.min(W,x1+pad)/W, y1:Math.min(Hh,y1+pad)/Hh, lineH:lineH/k, blocks};
 }
 /* the proposed frame's shape (v207, H: "propose a certain aspect ratio that fits for most images — uniformity across image
    previews"): the padded text box is widened, never narrowed, to FRAME_RATIO 16:9 — the Cards list's 124×70 thumbnails —
@@ -3807,6 +3821,29 @@ function rectOfLines(bmp,lines){ /* the frame around these lines, in the straigh
   return {x0:Math.max(0,ext.x0-Hb*FRAME_ROOM),y0:Math.max(0,y0+Hb/2-Hb*FRAME_ROOM),x1:Math.min(bmp.width,ext.x1+Hb*FRAME_ROOM),y1:Math.min(bmp.height,y1-Hb/2+Hb*FRAME_ROOM)};
 }
 function tallLines(lines,Hink){ if(!(Hink>0)) return lines; return lines.filter(l=>{ const h=boxHeight([l]); return !h||h>=PLACE_H*Hink; }); }
+/* how many separated blocks of text the quick look found (v457, H's rule: "immer wenn auf dem Foto mehr als ein
+   zusammenhaengender Wortstring auftaucht ... Ein zusammenhaengender Satz oder ein zusammenhaengender Ausdruck muss
+   natuerlich als eins interpretiert werden. Aber wenn diese Cluster quasi als getrennte Cluster erkennt werden koennen,
+   dann ist es eine Multikarte"). Two lines belong to the same block when they share columns and stand within MULTI_GAP of
+   one line's height of each other — a sign's two lines, a phrase wrapped over two rows. A board's name over its plates, a
+   menu's sections, two signs a doorway apart are separate blocks. This is geometry the app already has (the quick look's
+   own symbol boxes), not a threshold fitted to a photo: the v386 rule. */
+const MULTI_GAP=1.2;
+function lineExtent(l){ const b=(l&&l.bx)||[]; if(!b.length) return null;
+  return {x0:Math.min(...b.map(q=>q.x0)),x1:Math.max(...b.map(q=>q.x1)),y0:Math.min(...b.map(q=>q.y0)),y1:Math.max(...b.map(q=>q.y1))}; }
+function textBlocks(lines){
+  const ex=lines.map(lineExtent).filter(Boolean).sort((a,b)=>a.y0-b.y0);
+  if(ex.length<2) return ex.length;
+  const blocks=[];
+  for(const e of ex){
+    const h=Math.max(1,e.y1-e.y0);
+    const g=blocks.find(b=>Math.min(b.x1,e.x1)-Math.max(b.x0,e.x0)>0 /* they share columns */
+      && e.y0-b.y1<=MULTI_GAP*Math.max(h,b.y1-b.y0) /* and follow each other closely enough to be one text */);
+    if(g){ g.x0=Math.min(g.x0,e.x0); g.x1=Math.max(g.x1,e.x1); g.y1=Math.max(g.y1,e.y1); }
+    else blocks.push({...e});
+  }
+  return blocks.length;
+}
 let FRAME_WAIT=2000; /* the ink-row proposal is shown as the frame when the reader has not placed one within this time (v289, H: "Show the ink-row frame after 2 seconds if the reader is slower") */
 function shapeBox(b,W,H){
   let x=b.x*W, y=b.y*H, w=(b.x1-b.x)*W, h=(b.y1-b.y)*H;
@@ -3840,7 +3877,7 @@ async function proposeFrame(id){
   CROP.proposed=full?"whole":shaped?"16:9":"text"; delete CROP.auto;
   const hidden=!RECROP[id]||!layer; if(hidden) CROP.hidden=true; /* the inbox never shows the proposal (v288): the reader reads it now, and the frame appears on the text it finds */
   { const N=numsReset(id); N.pre=true; N.photo=[PW,PH]; N.layer=[n1(r.width),n1(r.height)]; /* v399: the ink rows' own rectangle at full precision, and the photo and layer the whole chain is measured in — the log's line rounds all three to whole percent, and on a 19-label panel it is evicted from the 40 steps before the diagnostics are ever shared */
-    N.prop={r:numRect(CROP.rect),kind:CROP.proposed,hidden:!!hidden,reg:reg0?[n4(reg0.x),n4(reg0.y),n4(reg0.x1),n4(reg0.y1)]:null,lineH:reg0?n1(reg0.lineH):null,shared,screenshot,src:rec.src||null,flat}; } /* v450: the rows the ink found even when a shared screenshot set them aside, and the flatness — inside prop, the one field numsReset keeps when the reading starts */
+    N.prop={r:numRect(CROP.rect),kind:CROP.proposed,hidden:!!hidden,reg:reg0?[n4(reg0.x),n4(reg0.y),n4(reg0.x1),n4(reg0.y1)]:null,lineH:reg0?n1(reg0.lineH):null,blocks:reg0&&reg0.blocks||0,shared,screenshot,src:rec.src||null,flat}; } /* v450: the rows the ink found even when a shared screenshot set them aside, and the flatness — inside prop, the one field numsReset keeps when the reading starts */
   const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),pre:true,text:`frame proposed by the app${hidden?" (not shown)":""}: ${full?"the whole photo":`${pc(f.x/r.width)}–${pc((f.x+f.w)/r.width)} % across, ${pc(f.y/r.height)}–${pc((f.y+f.h)/r.height)} % down${shaped?" (16:9)":" (the text's own box, 16:9 does not fit)"}`}${whole0&&reg0?` — ${shared?"a shared screenshot":"a screenshot from the album"} is read whole, its text rows ${pc(reg0.y)}–${pc(reg0.y1)} % set aside`:reg?`, text rows ${pc(reg.y)}–${pc(reg.y1)} %`:", no text rows found"}`}); while(READLOG.length>40) READLOG.shift();
   if(hidden){
     cropSign(id);
@@ -4687,6 +4724,13 @@ const SNAP_REACH=0.85; /* how much of the AI's box the coloured ink must reach a
    stood side by side and whether any box was taller than twice its width — a panel whose labels sit in one column would have
    failed both, and the geometry was the app's invention; it is gone. */
 const SPLIT_MIN=2, SPLIT_MAX=30, SPLIT_PX=8, CROP_MIN=8.5; /* SPLIT_PX: in the copy's own pixels, the smallest label a frame is made from · CROP_MIN: the smallest frame cropBlob cuts, in the layer's pixels */
+/* v457: this many separated blocks of text (textBlocks, above) make a board, a directory, a menu, a panel or a screen, and
+   the model has to be asked about it even when the text read cleanly. Until v456 a page card needed a picture answer, a
+   picture answer needed the reader to STRUGGLE, and a clean directory board therefore never reached the model at all
+   (measured: the same board with the same mocked answer gives 0 calls and 1 card when the quick look likes it, 4 cards and
+   a page when it does not). H's rule is "immer wenn auf dem Foto mehr als ein zusammenhaengender Wortstring auftaucht",
+   not "whenever the reader failed". v319 rejected asking on EVERY photo and that stands: one block, one call fewer. */
+const MULTI_BLOCKS=2;
 function photoFrameOf(base,W,Hh,rect,angle){ /* a rectangle of the straightened copy as a frame on the photo — frameOnText's own upright mapping, without its side effects */
   const sc=W/base.w, {x0,y0,x1,y1}=unrotatedBox(W,Hh,rect,angle);
   if(!(x1-x0>=SPLIT_PX&&y1-y0>=SPLIT_PX)) return null; /* in the copy's own pixels: a label is measured against the photo, not against the layer — a button 35 px tall in a 1600 px photo is under 8 px on a 338 px layer and is a good card picture all the same */
@@ -5513,23 +5557,24 @@ async function cropSign(id,opts){
       status("looking for the text …"); const bmp=await createImageBitmap(dk.blob); const k=Math.min(1,FIRST_MAX/Math.max(bmp.width,bmp.height)); const src=k<1?await toJpeg(bmp,k):dk.blob;
       let rect=null; try{ const read=scaleBoxes(await readPass(w,src,status),k); if(stale()) return; const lines=tallLines(read,Hink), fine=read.filter(l=>!lines.includes(l)); /* fine print beside taller ink places nothing (v320) */
         const ok=textLike(lines);
-        N.qk={k:n4(k),like:ok,lines:read.slice(0,8).map(l=>({t:(l.t||"").slice(0,40),cf:(l.cf||[]).slice(0,40),bx:(l.bx||[]).slice(0,40).map(b=>[Math.round(b.x0),Math.round(b.y0),Math.round(b.x1),Math.round(b.y1)])})),tall:lines.length,fine:fine.length}; /* v399: textLike wants three boxes at SURE_BOX averaging PLACE_CF, and tallLines the box heights against Hink — neither can be checked against a rounded mean, which is all the log has ever carried */
+        const inkB=(N.prop&&N.prop.blocks)||0, readB=textBlocks(read), blocks=Math.max(inkB,readB), several=blocks>=MULTI_BLOCKS; /* the ink's own bands first (the reader misses a board's small plates entirely), the reader's blocks as the second route */ /* v457: several separated blocks of text — a board, a directory, a menu, a panel, a screen, or two signs a doorway apart. The model has to be asked even when the big text read cleanly, or H's "Multikarte" would depend on how badly the reader did. */
+        N.qk={k:n4(k),like:ok,blocks,inkB,readB,several,lines:read.slice(0,8).map(l=>({t:(l.t||"").slice(0,40),cf:(l.cf||[]).slice(0,40),bx:(l.bx||[]).slice(0,40).map(b=>[Math.round(b.x0),Math.round(b.y0),Math.round(b.x1),Math.round(b.y1)])})),tall:lines.length,fine:fine.length}; /* v399: textLike wants three boxes at SURE_BOX averaging PLACE_CF, and tallLines the box heights against Hink — neither can be checked against a rounded mean, which is all the log has ever carried */
         logRead(`quick look: ${read.length?read.map(l=>l.t).join(" | ")+` at ${Math.round(meanCf(read))} %`:"nothing"}${fine.length?` — fine print beside taller ink, left out: ${fine.map(l=>l.t).join(" | ")}`:""}${lines.length&&!ok?" — not text, no frame from it":read.length&&!lines.length?" — nothing left to frame":""}`); /* Diagnostics (v296) */
         if(ok) rect=rectOfLines(bmp,lines); /* garbage places no frame (v296) */
         /* the reading will almost certainly end weak: send the picture now instead of after the passes (v439). Only under
            SKEW_TRUST, because trustAngle needs every pass and below that angle picBase is the same either way — the bytes
            sent are byte for byte what the weak path would send below. Measured: 2 of 40 photos are excluded by it. */
-        if(!ok&&!EARLY[id]&&Math.abs(dk.angle||0)<SKEW_TRUST&&pictureProvider()&&aiAutoOn()&&navigator.onLine){
+        if((!ok||several)&&!EARLY[id]&&Math.abs(dk.angle||0)<SKEW_TRUST&&pictureProvider()&&aiAutoOn()&&navigator.onLine){
           const eb={orig:r.blob,dk,base}, eg=[...new Set(read.map(l=>l.t).filter(Boolean))].slice(0,6);
           EARLY[id]={run,base:eb,guesses:eg,at:Date.now(),p:aiReadPicture(eb.dk.blob,eg,()=>{},N).then(x=>({pic:x}),e=>({err:e&&e.message||String(e)}))};
-          logRead(`the quick look found no readable text — the AI gets the picture now, beside the reading (${eg.length} guesses)`);
+          logRead(`${ok?`the quick look read the text but found it in ${blocks} separated blocks — a board, not one sign`:"the quick look found no readable text"} — the AI gets the picture now, beside the reading (${eg.length} guesses)`);
           /* a good answer ends the reading at its next step (v442, H's "Go" on the measured lever): on the weak path every pass
              after the quick look is thrown away once the picture answer is in, and on a panel the reader works 20–33 s on H's
              phone against Qwen's 3–10 s. A flag, never a throw; only a good answer of this run (a bad one must never stop it —
              the reader may still end strong and right, v348/v438), only under SKEW_STOP; secondLook and the whole-frame
              fallback check r.stop between their awaited batches, so the pool is idle at every exit and readLabels never
              shares a worker with an abandoned job. The stop does not call done(r) — placeFromPicture honours this run. */
-          EARLY[id].p.then(e=>{ if(stale()||r.done||r.stop||r.passesDone||!e||!e.pic||e.pic.bad||Math.abs(dk.angle||0)>=SKEW_STOP) return; r.stop=Date.now(); logRead("the AI has answered while the reader is still at work — the reading stops at its next step"); }); }
+          EARLY[id].p.then(e=>{ if(stale()||ok||r.done||r.stop||r.passesDone||!e||!e.pic||e.pic.bad||Math.abs(dk.angle||0)>=SKEW_STOP) return; r.stop=Date.now(); /* v457: never on the `several` trigger — there the quick look LIKED the reading, so cutting the passes short would lower effScore, turn a good reading weak and hand the card to the model. v442's stop is for a reading that was going to be garbage anyway. */ logRead("the AI has answered while the reader is still at work — the reading stops at its next step"); }); }
         } finally{ bmp.close(); }
       if(rect){ await placeRect(rect); if(stale()) return;
         if(CROP&&CROP.id===id&&CROP.hidden){ delete CROP.hidden; logRead("frame shown as proposed — the text fills it"); renderShots(); } } } /* nothing to move: the proposal is the frame, from now */
@@ -6613,13 +6658,40 @@ async function picOnBad(sg,guesses,status){
    (v441's own test, which on this photo already said held with 是和会赂 at 87 and 中印节 at 90): a character every pass
    read clearly is not the AI's to change, the v143 rule. And the picture must already be on its way — this never starts a
    call, it only consumes one that the quick look sent. */
-async function picPanel(sg){
-  if(!sg||sg.picAsked||!sg.picEarly||sg.sureLines) return null;
+/* the answer's own elements as one bag of characters (v457): does this panel answer still hold everything the reader read
+   surely? A multiset over pic.zh and every label's zh, not a per-label hitCore — a panel row the reader read as one line
+   (混合快速单脱水) has to match three labels of three characters each, and hitCore refuses any pair whose lengths differ by
+   more than one. Order-free, so reading order cannot cost a card; digits count, since a number belongs to its line (v323).
+   PANEL_COVER tolerates one reader slip in five, and its failure direction is always "keep today's one card", never a
+   wrong card. Unfitted — there is no corpus here to fit it to, and N.panel is what the field will settle it with. */
+const PANEL_COVER=0.8;
+const inBag=c=>CJK.test(c)||/[0-9]/.test(c);
+function panelCovers(pic,lines){
+  const pool=new Map();
+  for(const c of [pic.zh||"",...(pic.labels||[]).map(l=>l.zh||"")].join("")) if(inBag(c)) pool.set(c,(pool.get(c)||0)+1);
+  return lines.every(l=>{ const a=[...String(l||"")].filter(inBag); if(!a.length) return true;
+    const p=new Map(pool); let hit=0;
+    for(const c of a){ const n=p.get(c)||0; if(n){ p.set(c,n-1); hit++; } }
+    return hit>=PANEL_COVER*a.length; });
+}
+async function picPanel(sg,id){
+  if(!sg||sg.picAsked||!sg.picEarly) return null;
   let e=null; try{ e=await sg.picEarly.p; }catch(_){ return null; } /* the wait is the rest of a call already in flight; the shimmer stands meanwhile, since v441 withheld the provisional for this very reading */
   const pic=e&&e.pic;
   if(!pic||pic.bad||!pic.apart||!Array.isArray(pic.labels)||pic.labels.length<SPLIT_MIN) return null;
+  /* v441's sureLines guard is the v143 rule — a character every pass read clearly is not the AI's to change. But that rule
+     is about the TEXT of a card, and a panel answer is about its SEGMENTATION. What sureLines actually protects on this
+     path is narrower than "do not use the answer": signAskAI replaces sg.lines with the model's zh and splitCards then
+     builds the cards from sg.ai.labels ALONE — so a line the reader read at 99 % that the model did not list is not
+     merged, it is GONE. That, and only that, is what has to be refused. panelCovers asks it directly: every surely-read
+     line's characters must be found among the answer's own elements. A first cut compared the counts instead
+     (labels.length > lines.length) and would have let a board's headline vanish whenever the model listed four plates
+     without it. */
+  const covers=panelCovers(pic,sg.lines||[]);
+  if(id){ const N=numsFor(id); if(N) N.panel={labels:pic.labels.length,sure:!!sg.sureLines,covers,lines:(sg.lines||[]).length,used:!(sg.sureLines&&!covers)}; } /* v399: the record says which way the guard went, so the field settles PANEL_COVER rather than a guess */
+  if(sg.sureLines&&!covers){ logRead(`the reading is read surely and the AI's ${pic.labels.length} elements do not hold every line of it — the panel answer is not used`); return null; }
   sg.picAsked=true;
-  logRead(`the reading is strong but not read surely, and the AI calls this picture ${pic.labels.length} separate labels — the picture answer asked at the quick look ${((Date.now()-sg.picEarly.at)/1000).toFixed(1)} s ago is used`);
+  logRead(`${sg.sureLines?`the reading is strong and read surely, but the AI calls this picture ${pic.labels.length} separate labels and its elements hold every line the reader was sure of — it is telling us about texts the reader never saw`:`the reading is strong but not read surely, and the AI calls this picture ${pic.labels.length} separate labels`} — the picture answer asked at the quick look ${((Date.now()-sg.picEarly.at)/1000).toFixed(1)} s ago is used`);
   if(sg.region) sg.region.pic={zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped};
   return pic;
 }
@@ -6634,7 +6706,7 @@ async function signAskAI(id){
     try{ [r]=await aiAsk([{kind:"sign",c,p:res.map(x=>x.py).join(" / "),m:sg.mean||"",gloss:res.flatMap(x=>x.gloss),alts:sg.alts,trad:!!sg.trad,mt:{src:"gloss",verified:false,suspect:"read from a photo by OCR"}}]); }catch(err){ checkErr=err; }
     if(!SIGN[id]) return;
     if(checkErr){ const N=numsFor(id); N.checkErr=String(checkErr&&checkErr.message||checkErr).slice(0,160); logRead(`the text check failed: ${N.checkErr}`); } /* v451, H's order screen from the album, 2026-09-13: the relay answered 500 "counter 401", the catch below set aiErr, and the parked Qwen answer — apart, App, four labels — was thrown away for a card of the reader's garbage. A check that never answered is no verdict on the picture answer already in hand, so picPanel runs on this path too, and the record names the failure (the v399 rule). */
-    const pic=checkErr?await picPanel(sg):r.bad?await picOnBad(sg,[c,...(sg.alts||[])]):await picPanel(sg); if(!SIGN[id]) return; /* the text check calls the reading garbage: the picture goes to the AI that takes pictures (v302) — or it does not, and a panel answer is already in hand (v447) — or it never answered, and the panel answer in hand is used all the same (v451) */
+    const pic=checkErr?await picPanel(sg,id):r.bad?await picOnBad(sg,[c,...(sg.alts||[])]):await picPanel(sg,id); if(!SIGN[id]) return; /* the text check calls the reading garbage: the picture goes to the AI that takes pictures (v302) — or it does not, and a panel answer is already in hand (v447) — or it never answered, and the panel answer in hand is used all the same (v451) */
     if(checkErr&&!pic) throw checkErr; /* nothing in hand: the failure stands as before v451 — the offline model, the gloss, pending */
     if(pic&&sg.placePic){ try{ await sg.placePic(pic); }catch(e){ logErr("snap",e&&e.message||String(e)); } if(!SIGN[id]) return; } /* v406: the same placement the weak path's answer gets — without it a panel that reaches the AI this way made one card */
     if(pic){ const zh=pic.zh.split("\n"); sg.lines=zh; sg.orig=zh.slice(); sg.conf=[]; sg.boxes=zh.map(()=>[]); sg.alts=[c,...(sg.alts||[])].filter(x=>x&&x!==pic.zh).slice(0,6); sg.trad=!!pic.zht; sg.tradDetected=!!pic.zht; sg.tradText=pic.zht||""; sg.weak=false;
