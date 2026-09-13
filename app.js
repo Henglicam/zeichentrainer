@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=475; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=476; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -415,6 +415,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v476","AI switch off: no run resumes"],
   ["app","v473","More: AI row: picture, not frame"],
   ["photo","v472","no garbage card when Qwen refuses"],
   ["app","v471","Camera clean on the next visit"],
@@ -1219,6 +1220,9 @@ function picBoxPix(b,w,h){
 }
 function aiQueue(){ return deck().filter(d=>d.c&&!isPage(d)&&(d.flag||(d.mt&&(d.mt.pending||d.mt.suspect)))); } /* a card still waiting for its reading has no text to check (v237) */
 function aiAutoOn(){ return aiOn()&&S.settings.aiAuto!==false; }
+/* the three bulk runs promise to pick themselves up again — true only while the switch lets the app call the AI without a tap (v476); with it off the run waits for the row's own button, and the line must not say otherwise */
+const sp=x=>x?" "+x:"";
+function resumeNote(){ return aiAutoOn()?t("It goes on by itself when the AI can be reached again."):""; }
 /* the online AI is the meaning source whenever it can be reached; the offline model is the fallback */
 function aiLive(){ return aiAutoOn()&&navigator.onLine; }
 /* "obviously false" OCR: mean symbol confidence below the threshold, or words no dictionary knows */
@@ -1428,6 +1432,7 @@ function renderAiRow(){
     await setAiAccount(pv,{key:key||aiKey(pv), model:model||AI_PROVIDERS[pv].model, base:$("#ai-base").value.trim()});
     if(key||aiKey(pv)) await setSetting("aiProvider",pv);
     if(AI_PROVIDERS[pv].vision) await setSetting("aiPicture",$("#ai-picture").checked);
+    await setSetting("aiRelay",$("#ai-relay").checked); /* v476: read since v191 and written nowhere until now — the relay could only be switched off by hand-editing IndexedDB */
     form.hidden=true; renderAiRow();
   };
   /* Remove key takes the shown provider's key only; when that was the active one, the next provider with a key takes
@@ -1590,17 +1595,17 @@ async function applyStage(st,list){ const rows=[], before={}; for(const x of lis
 async function rememberTranslate(on){ if(on){ S.settings.translateRun={lang:LANG,at:Date.now()}; await setSetting("translateRun",S.settings.translateRun); } else if(S.settings.translateRun){ delete S.settings.translateRun; await idbDel("settings","translateRun").catch(()=>{}); } }
 function resumeTranslate(){ const r=S.settings.translateRun; if(!r||(TRANSLATE&&TRANSLATE.running)) return;
   if(!toTranslate().length){ rememberTranslate(false); return; } /* nothing is left for the app's language (a switched language just means other cards are left, v263) */
-  if(!aiOn()||!navigator.onLine) return; translateAll(); }
+  if(!aiAutoOn()||!navigator.onLine) return; translateAll(); } /* v476: aiAutoOn, not aiOn — the switch under More is what says whether the app may talk to the AI WITHOUT a tap, and a resume is exactly that; the button below still continues the run by hand */
 function translateRowHTML(){
   const n=toTranslate().length, tr=TRANSLATE; if(!(n||tr)||!aiOn()) return "";
   const name=(LANGS.find(([c])=>c===LANG)||[])[1]||LANG;
-  const line=tr&&tr.running?busyHTML(t("Translating {0} of {1} …",tr.at,tr.total)+" "+t("The cards change together when all are done.")):tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n)+" "+t("The cards change together when all are done.")+" "+t("It goes on by itself when the AI can be reached again."):tr?t("Done — {0} translated.",nOf(tr.done,"card")):nOf(n,"card has its meaning in another language.","cards have their meaning in another language.");
+  const line=tr&&tr.running?busyHTML(t("Translating {0} of {1} …",tr.at,tr.total)+" "+t("The cards change together when all are done.")):tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n)+" "+t("The cards change together when all are done.")+sp(resumeNote()):tr?t("Done — {0} translated.",nOf(tr.done,"card")):nOf(n,"card has its meaning in another language.","cards have their meaning in another language.");
   return `<div class="mrow"><div style="flex:1"><div class="t">${t("Meanings")}</div><div class="s" id="translate-status">${line}</div>${n?`<div class="fieldacts"><button class="btn mini" id="translate-all"${tr&&tr.running?" disabled":""}>${t("Translate all cards into {0}",name)}</button></div>`:""}</div></div>`; /* the button under the sentence, as the Feedback row's Send — its label is long in every language */
 }
 function translateRefresh(){ const st=$("#translate-status"), b=$("#translate-all"), tr=TRANSLATE; if(!st) return; /* the row as it stands now, whatever page was shown meanwhile */
   const n=toTranslate().length;
   if(tr&&tr.running) st.innerHTML=busyHTML(t("Translating {0} of {1} …",tr.at,tr.total)+" "+t("The cards change together when all are done.")); /* the moving bar with the count of the card the AI is on */
-  else st.textContent=tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n)+" "+t("The cards change together when all are done.")+" "+t("It goes on by itself when the AI can be reached again."):tr?t("Done — {0} translated.",nOf(tr.done,"card")):nOf(n,"card has its meaning in another language.","cards have their meaning in another language.");
+  else st.textContent=tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} translated, {1} left.",tr.done,n)+" "+t("The cards change together when all are done.")+sp(resumeNote()):tr?t("Done — {0} translated.",nOf(tr.done,"card")):nOf(n,"card has its meaning in another language.","cards have their meaning in another language.");
   if(b){ b.disabled=!!(tr&&tr.running); if(!n&&!(tr&&tr.running)) b.remove(); } }
 async function translateAll(){
   if(TRANSLATE&&TRANSLATE.running){ translateRefresh(); return; }
@@ -1651,18 +1656,18 @@ async function rememberTagRun(on){ if(on){ S.settings.tagRun={at:Date.now()}; aw
   else if(S.settings.tagRun){ delete S.settings.tagRun; await idbDel("settings","tagRun").catch(()=>{}); } }
 function resumeTagAll(){ if(!S.settings.tagRun||(TAGALL&&TAGALL.running)) return;
   if(!toTag().length){ rememberTagRun(false); return; }
-  if(!aiOn()||!navigator.onLine) return; tagAll(); }
+  if(!aiAutoOn()||!navigator.onLine) return; tagAll(); } /* v476, as resumeTranslate */
 function tagRowHTML(){
   const n=toTag().length, tr=TAGALL; if(!(n||tr)||!aiOn()) return "";
   const line=tr&&tr.running?busyHTML(t("Tagging {0} of {1} …",tr.at,tr.total)+" "+t("The cards change together when all are done."))
-    :tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} tagged, {1} left.",tr.done,n)+" "+t("It goes on by itself when the AI can be reached again.")
+    :tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} tagged, {1} left.",tr.done,n)+sp(resumeNote())
     :tr?t("Done — {0} tagged.",nOf(tr.done,"card")):t("{0} carry no tag yet.",nOf(n,"card"));
   return `<div class="mrow"><div style="flex:1"><div class="t">${t("Tags")}</div><div class="s" id="tagall-status">${line}</div>${n?`<div class="fieldacts"><button class="btn mini" id="tag-all"${tr&&tr.running?" disabled":""}>${t("Tag all cards")}</button></div>`:""}</div></div>`;
 }
 function tagRefresh(){ const st=$("#tagall-status"), b=$("#tag-all"), tr=TAGALL; if(!st) return;
   const n=toTag().length;
   if(tr&&tr.running) st.innerHTML=busyHTML(t("Tagging {0} of {1} …",tr.at,tr.total)+" "+t("The cards change together when all are done."));
-  else st.textContent=tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} tagged, {1} left.",tr.done,n)+" "+t("It goes on by itself when the AI can be reached again.")
+  else st.textContent=tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} tagged, {1} left.",tr.done,n)+sp(resumeNote())
     :tr?t("Done — {0} tagged.",nOf(tr.done,"card")):t("{0} carry no tag yet.",nOf(n,"card"));
   if(b){ b.disabled=!!(tr&&tr.running); if(!n&&!(tr&&tr.running)) b.remove(); } }
 async function tagAll(){
@@ -1703,10 +1708,10 @@ async function rememberRecheck(on,done){ if(on){ S.settings.recheckRun={at:(S.se
   else if(S.settings.recheckRun){ delete S.settings.recheckRun; await idbDel("settings","recheckRun").catch(()=>{}); } }
 function resumeRecheck(){ if(!S.settings.recheckRun||(RECHECK&&RECHECK.running)) return;
   if(!recheckLeft().length){ rememberRecheck(false); return; }
-  if(!aiOn()||!navigator.onLine) return; recheckAll(); }
+  if(!aiAutoOn()||!navigator.onLine) return; recheckAll(); } /* v476, as resumeTranslate */
 function recheckLine(){ const tr=RECHECK, left=recheckLeft().length;
   if(tr&&tr.running) return null; /* the moving bar, drawn by the callers */
-  if(tr&&tr.failed) return t("The AI could not be reached")+". "+t("{0} checked, {1} left.",tr.done,left)+" "+t("It goes on by itself when the AI can be reached again.");
+  if(tr&&tr.failed) return t("The AI could not be reached")+". "+t("{0} checked, {1} left.",tr.done,left)+sp(resumeNote());
   if(tr) return tr.found?t("Done — {0} could be better. See them on the Cards tab.",nOf(tr.found,"card")):t("Done — nothing to change. Your cards are in good shape.");
   return t("The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it."); }
 /* The pictures already on the phone: one quiet pass (v373, H: "Run the brightening over my deck now and remove the
@@ -2067,6 +2072,7 @@ function renderMore(main){
       <div class="field"><label>API key (stays on this phone)</label><input id="ai-key" type="password" autocomplete="off"></div>
       <div class="field"><label>Model</label><input id="ai-model" class="mono" autocomplete="off"></div>
       <div class="field" id="ai-picfield" hidden><label class="check"><input type="checkbox" id="ai-picture"${pictureOn()?" checked":""}> Send a picture of the text to the AI when the reading is hard</label></div>
+      <div class="field"><label class="check"><input type="checkbox" id="ai-relay"${relayOn()?" checked":""}> Use the app owner's relay when this phone has no key of its own</label></div>
       <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" id="ai-save">Save</button><button class="del" id="ai-remove">Remove key</button></div>
     </div>`:""}
     <div class="mrow"><div style="flex:1"><div class="t">${t("Review queue")}</div><div class="s" id="ai-runstatus"></div><div class="fieldacts"><button class="btn mini" id="ai-run" hidden></button></div></div></div>
@@ -3334,6 +3340,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  476:"Unticking the AI review now also stops an interrupted Check-up, Translate all or Tag all run from carrying on by itself — it waits until you press the button again.",
   472:"When the AI cannot check a photo at all, no card is made from a reading that does not look right — the photo stays with Crop and the app says so. And a provider that refuses is not asked again on the next photo.",
   471:"A photo you are done with now leaves the Camera tab: the finished card stays on screen while you are there, and the next time you open the tab the camera is clean again.",
   470:"The Camera tab is the camera now: with nothing being processed you get the shutter alone, in the middle of the screen. Photos that already made cards live on those cards, and More → Your data → Photos clears out the rest.",
