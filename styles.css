@@ -127,7 +127,7 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 .shutter .sh-t{font-size:17px;font-weight:600}
 .shutter:active{background:var(--card2)}
 .snaprow{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
-#shots:not(:empty){margin-top:18px}
+#shots:not(:empty){margin-top:24px} /* the Inbox head used to carry this gap (v471) */
 .btn.primary{background:var(--tint);color:#fff}
 .btn.danger{background:var(--tint-soft);color:var(--tint)}
 .btn.mini{min-height:44px;padding:10px 14px;font-size:15px;white-space:nowrap}
@@ -471,8 +471,6 @@ body.noscroll{overflow:hidden}
    photo being read sits full width among the tiles without a second layout. */
 #shots.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
 #shots.tiles>.listhead,#shots.tiles>.batchline,#shots.tiles>.shot,#shots.tiles>.badge{grid-column:1/-1}
-.listhead.inboxhead{display:flex;align-items:center;gap:8px}
-.listhead.inboxhead .segbtn{display:inline-flex;align-items:center;justify-content:center;padding:5px 11px;min-height:26px}
 .tile{display:block;padding:0;border:0;background:var(--card);border-radius:var(--rc);overflow:hidden;box-shadow:var(--shadow);text-align:start;font:inherit;color:inherit;width:100%;cursor:pointer}
 .tile .tw{position:relative;display:block;aspect-ratio:4/3;background:var(--card2)}
 .tile .tw img{width:100%;height:100%;object-fit:cover;display:block}
@@ -545,7 +543,11 @@ body.noscroll{overflow:hidden}
 .plegend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
 
 /* the batch of photos working itself through, and the one thing the user has to know about it (v411) */
-.batchline{margin:2px 4px 10px;font-size:13px;line-height:1.4;color:var(--label2)}
+/* the batch line is the only text left on the Camera tab (v471): it says something rather than naming something,
+   so it gets the weight of a status chip — the clock of the waiting tiles beside it — instead of reading as a
+   stray grey caption in the middle of the screen (H: "der kleine Text da in der Mitte sieht total unsexy aus") */
+.batchline{display:inline-flex;align-items:center;gap:7px;justify-self:start;margin:0 0 12px;padding:7px 13px 7px 11px;border-radius:999px;background:var(--tint-soft);color:var(--tint);font-size:14px;font-weight:500;line-height:1.35;text-align:start}
+.batchline svg{flex:none}
 /* v452: a card that is one of several from one photo shows the page itself on the closed Learn front and in the detail — the whole picture in its own shape (the one exception to v223's "both boxes the same shape"), the blurred fill around it; the dots as on the Camera tab, the card's own lit; the dots take no tap there. The cap keeps the closed front — page, text box, pill and hint — above the tab bar: 100vh minus what the rest of the screen takes (measured 500 px at 390×844 with the hint, 344 px of page there, 240 at 360×740), never over 56vh on a tall screen; the revealed card shows the card's own cut, since the grades then own the screen (v421). The 16 px frame keeps a dot at the picture's own edge whole (a title at y 0, a label at the right edge — measured clipped by 14 px without it). */
 .picbox.page{--pageh:clamp(180px,calc(100vh - 500px),56vh);aspect-ratio:auto;height:auto;max-height:var(--pageh);display:flex;justify-content:center;align-items:center}
 .picbox.page .pagewrap{position:relative;display:block;margin:16px;max-width:calc(100% - 32px);max-height:calc(var(--pageh) - 32px);line-height:0}

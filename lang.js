@@ -77,8 +77,6 @@ de:{
   "Processing photo …":"Foto wird verarbeitet …",
   
   "Inbox ({0})":"Eingang ({0})",
-  "List":"Liste",
-  "Tiles":"Kacheln",
   
   
   "Crop":"Ausschnitt",
@@ -343,8 +341,6 @@ fr:{
   "Processing photo …":"Traitement de la photo …",
   
   "Inbox ({0})":"Reçues ({0})",
-  "List":"Liste",
-  "Tiles":"Vignettes",
   
   
   "Crop":"Cadrer",
@@ -609,8 +605,6 @@ es:{
   "Processing photo …":"Procesando la foto …",
   
   "Inbox ({0})":"Bandeja ({0})",
-  "List":"Lista",
-  "Tiles":"Mosaico",
   
   
   "Crop":"Recortar",
@@ -875,8 +869,6 @@ ja:{
   "Processing photo …":"写真を処理中 …",
   
   "Inbox ({0})":"受信 ({0})",
-  "List":"リスト",
-  "Tiles":"タイル",
   
   
   "Crop":"切り抜き",
@@ -1141,8 +1133,6 @@ ko:{
   "Processing photo …":"사진 처리 중 …",
   
   "Inbox ({0})":"받은 사진 ({0})",
-  "List":"목록",
-  "Tiles":"타일",
   
   
   "Crop":"자르기",
@@ -1410,8 +1400,6 @@ ru:{
   "Processing photo …":"Обрабатываю фото …",
   
   "Inbox ({0})":"Входящие ({0})",
-  "List":"Список",
-  "Tiles":"Плитка",
   
   
   "Crop":"Обрезать",
@@ -1676,8 +1664,6 @@ vi:{
   "Processing photo …":"Đang xử lý ảnh …",
   
   "Inbox ({0})":"Ảnh chờ ({0})",
-  "List":"Danh sách",
-  "Tiles":"Ô vuông",
   
   
   "Crop":"Cắt ảnh",
@@ -1942,8 +1928,6 @@ th:{
   "Processing photo …":"กำลังเตรียมรูป …",
   
   "Inbox ({0})":"รูปที่รอ ({0})",
-  "List":"รายการ",
-  "Tiles":"ตาราง",
   
   
   "Crop":"ครอบตัด",
@@ -2208,8 +2192,6 @@ id:{
   "Processing photo …":"Memproses foto …",
   
   "Inbox ({0})":"Kotak masuk ({0})",
-  "List":"Daftar",
-  "Tiles":"Petak",
   
   
   "Crop":"Pangkas",

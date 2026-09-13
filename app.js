@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=470; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=471; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -415,6 +415,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v471","Camera clean again on the next visit"],
   ["app","v470","Camera: shutter alone, centred; work below"],
   ["app","v469","Cards: the star whole, not cut at the edge"],
   ["app","v468","Camera: no old photos; archive deletes in bulk"],
@@ -733,6 +734,7 @@ function wireChrome(){
   document.querySelectorAll(".tab").forEach(b=>{
     b.onclick=()=>{ const m=b.dataset.mode;
       S.editing=null; S.editFrom=null; S.detailFrom=null; S.openShot=null; /* a tab tap always leaves the edit form, the way back to a photo (v448), the photo opened from the grid (v462) and the photos already done (v463) */
+      if(m==="inbox") clearResults(); /* … and the finished results of the last capture, so the Camera tab opens on the camera (v471) */
       endPick();                                            /* … and any marking (v351) */
       if(CROP&&RECROP[CROP.id]) RECROP[CROP.id].end();      /* … and its Crop again (v239) */
       if(m==="cards" && (S.mode==="cards"||S.mode==="add")) S.detail=null; /* Cards again → back to the list */
@@ -3316,6 +3318,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  471:"A photo you are done with now leaves the Camera tab: the finished card stays on screen while you are there, and the next time you open the tab the camera is clean again.",
   470:"The Camera tab is the camera now: with nothing being processed you get the shutter alone, in the middle of the screen. Photos that already made cards live on those cards, and More → Your data → Photos clears out the rest.",
   468:"The Camera tab now keeps only the photos it is actually working on — everything from earlier, whether it made a card or not, is one tap away at the foot of the list.",
   467:"A photo with many texts is clean again — nothing is framed until you tap a text, and then only that one.",
@@ -6913,13 +6916,12 @@ async function warmReader(){ /* the Camera tab loads the reader ahead of the fir
 const REGION_MIN=2; /* a photo that made this many cards is a marked photo — the split's own SPLIT_MIN */
 const REGION_HIT=44; /* the smallest tap target in CSS px: a small label's box is grown around its centre for the hit test only, never for the drawing */
 let INBOX_SCROLL=0, LOOKUP=null; /* INBOX_SCROLL: where the photo was when More opened the detail · LOOKUP: the open sheet {shot,rid,el} */
-/* the inbox as tiles, two photos a row (v462, H: "Fuer Fotos bitte auch eine kleinere Kachelansicht mit jeweils zwei
-   Fotos in einer Reihe."): 237 photos one under the other at full width is a long scroll to find one. A tile is the
-   photo, when it is taken and how many cards it made; a tap opens that photo full width, where it is exactly the row
-   of the list view with its frame, its reading and its buttons. A photo that is BUSY — a frame standing, a reading
-   running, a finished card, a note, a place in the batch queue — is always full width, whichever view is on, so
-   nothing that is happening can hide in a tile. Setting inboxView, absent = tiles. */
-function inboxTiles(){ return S.settings.inboxView!=="list"; }
+/* the inbox as tiles, two photos a row (v462): a tile is the photo, when it was taken and how many cards it made;
+   a tap opens it full width with its frame, its reading and its buttons. A photo that is BUSY — a frame standing, a
+   reading running, a finished card, a note, a place in the batch queue — is always full width, so nothing that is
+   happening can hide in a tile. The List/Tiles switch is gone since v471 (H: "Das Listen/Kachelsymbol auf der rechten
+   Seite macht keinen Sinn"): since v470 the tab lists only what is being worked on, which is a handful of photos, and
+   a long list of a handful is not a view worth a control. Setting inboxView is dead and is read nowhere. */
 /* the Camera tab lists the photos still being WORKED ON, not everything ever shot (v468, H: "I'm still seeing old photos
    in the camera screen … only photos that are being processed should still be visible there"; the same sentence he gave
    at v463, "I actually only need the photo list for photos that are still being processed").
@@ -6944,13 +6946,25 @@ function shotDone(s){
   if(AUTOQ.includes(s.id)) return false; /* the only busy flag that survives a reload (setting autoQueue, v411) */
   return s.id!==S.openShot; /* a photo tapped open, or one whose crop was just cancelled, never vanishes under the thumb */
 }
-const ICON_LIST=`<svg viewBox="0 0 16 16" aria-hidden="true" style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round"><path d="M2 4h12M2 8h12M2 12h12"/></svg>`;
-const ICON_TILES=`<svg viewBox="0 0 16 16" aria-hidden="true" style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.5"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/></svg>`;
 const ICON_CAM=`<svg viewBox="0 0 48 40" aria-hidden="true" style="width:56px;height:56px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linejoin:round"><rect x="2" y="8" width="44" height="30" rx="6"/><path d="M17 8l3.2-5h7.6L31 8"/><circle cx="24" cy="23" r="8.6"/></svg>`;
 const ICON_WAIT=`<svg viewBox="0 0 16 16" aria-hidden="true" style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.5V8l2.5 1.7"/></svg>`;
 /* the photo that is being worked on right now — a frame standing, a reading running, a card or a note under it. The
    opposite of shotDone's first two lines, minus the batch queue: a photo WAITING for its turn is not being worked on
    (v454's own words), which is why it may sit in a tile while this one may not (v466). */
+/* a finished photo leaves the Camera tab (v471, H: "hier hat weder Multicard funktioniert noch, dass die prozessierten
+   Fotos von der Kameraseite verschwinden, wenn sie fertig sind"): v325's finished card sits in the photo's own row, so
+   the shutter's result is right there with Edit and Delete — and AUTO/QSCARD/QSNOTE then kept that photo listed for the
+   WHOLE session, which is the thing H has now named three versions running (v463, v468, v470). The result belongs to the
+   capture, not to the tab: opening the Camera tab clears every result whose photo has nothing left to do, so the tab
+   opens on the camera and the card is found where it lives, under Cards. Nothing is deleted — only the row's memory of
+   it; the card, its picture and the photo are untouched, which is why this is safe where deleting the record is not. */
+function clearResults(){
+  for(const s of S.inbox){
+    if(CROP&&CROP.id===s.id) continue;
+    if(PENDING[s.id]||READING[s.id]||SIGN[s.id]||PROV[s.id]||AUTOQ.includes(s.id)) continue; /* still being worked on */
+    delete AUTO[s.id]; delete QSCARD[s.id]; delete QSMORE[s.id]; delete QSNOTE[s.id];
+  }
+}
 function shotBusy(s){ return !!((CROP&&CROP.id===s.id)||PENDING[s.id]||READING[s.id]||SIGN[s.id]||AUTO[s.id]||PROV[s.id]||QSCARD[s.id]||QSNOTE[s.id]); }
 function photoRegions(rec,byShot){
   const cards=byShot?(byShot.get(rec.id)||[]):S.custom.filter(d=>d.shot===rec.id), rs=[];
@@ -7073,8 +7087,7 @@ function renderShots(){
      it is only deferred, which is what makes the constraint acceptable rather than a shrug */
   const waiting=AUTOQ.filter(id=>S.inbox.some(x=>x.id===id)).length; /* what is left of the batch, not of the inbox — H's holds 237 photos */
   const byShot=new Map(); for(const d of S.custom) if(d.shot){ const a=byShot.get(d.shot); if(a) a.push(d); else byShot.set(d.shot,[d]); } /* the cards by photo, once per render (v448) */
-  const batch=waiting?`<div class="batchline">${esc(t("{0} to go, while the app is open.",nOf(waiting,"photo")))}</div>`:"";
-  const tiles=inboxTiles();
+  const batch=waiting?`<div class="batchline">${ICON_WAIT}<span>${esc(t("{0} to go, while the app is open.",nOf(waiting,"photo")))}</span></div>`:"";
   const rest=S.inbox.filter(s=>!shotDone(s));
   /* the one in hand on top, the ones waiting behind it (v466). A photo is unshifted as it is added, so an album batch lands
      newest-first and the photo actually being read — the first of the pick — comes LAST; without this the full-width active
@@ -7082,15 +7095,14 @@ function renderShots(){
      open stays where it was tapped (v462). */
   const shown=[...rest.filter(shotBusy),...rest.filter(s=>!shotBusy(s))];
   const foot=""; /* v470: no archive line — a photo that made a card lives on that card, and More → Your data → Photos prunes them all */
-  box.classList.toggle("tiles",tiles);
+  box.classList.add("tiles"); /* v471: tiles are the only layout */
   /* nothing to work on: the Camera tab IS the camera, and the shutter sits in the middle of the screen (v470, H:
      "if all photos are processed, then there's only the camera frame on the camera page centered in the middle") */
   const pane=box.closest(".pane"); if(pane) pane.classList.toggle("camonly",!shown.length&&!PENDING_SHOT&&!waiting);
-  /* nothing to work on means no head: the shutter is the screen, and the archive's own line is all that is left under it */
-  const head=shown.length?`<div class="listhead inboxhead"><span>${t("Inbox ({0})",shown.length)}</span><span class="seg">`+
-      `<button class="segbtn${tiles?"":" on"}" data-inbox="list" aria-label="${t("List")}" title="${t("List")}">${ICON_LIST}</button>`+
-      `<button class="segbtn${tiles?" on":""}" data-inbox="tiles" aria-label="${t("Tiles")}" title="${t("Tiles")}">${ICON_TILES}</button></span></div>`:"";
-  box.innerHTML=head+batch+pending+
+  /* no head at all (v471, H: "der kleine Text da in der Mitte sieht total unsexy aus"): "Inbox (3)" over three tiles
+     of the work in hand says nothing the tiles do not, and it was the one small grey label left on the screen. What is
+     left is the batch line, which carries information rather than a name. */
+  box.innerHTML=batch+pending+
     shown.map(s=>{
       const dt=new Date(s.ts).toLocaleString(LANG_LOCALE[LANG]);
       const cropping=CROP && CROP.id===s.id, shown=!!(cropping&&CROP.rect&&!CROP.hidden), zoomed=!!(shown&&CROP.zoom);
@@ -7105,7 +7117,7 @@ function renderShots(){
          batch is a tile too since v466 (H: "Und zwar jeweils zwei pro Reihe") — nothing is happening to it yet, which is why
          v454 gave it a plain line and no bar; the clock says which one it is and the batch line above says how many are to go. */
       const qd=AUTOQ.includes(s.id);
-      if(tiles&&!cropping&&!PENDING[s.id]&&!results.length&&!prov&&!SIGN[s.id]&&!READING[s.id]&&!QSNOTE[s.id]&&S.openShot!==s.id){
+      if(!cropping&&!PENDING[s.id]&&!results.length&&!prov&&!SIGN[s.id]&&!READING[s.id]&&!QSNOTE[s.id]&&S.openShot!==s.id){
         const n=(byShot.get(s.id)||[]).filter(d=>d.c&&!isPage(d)).length;
         return `<button class="tile${qd?" wait":""}" data-tile="${s.id}"${!busy&&S.inbox.length>1?` data-lp="${s.id}"`:""}>
           <span class="tw"><img src="${shotURL(s)}" alt="photo" loading="lazy" decoding="async">${n?`<span class="cnt">${n}</span>`:""}${qd?`<span class="wt" title="${esc(t("Waiting for its turn …"))}" aria-label="${esc(t("Waiting for its turn …"))}">${ICON_WAIT}</span>`:""}</span>
@@ -7131,7 +7143,6 @@ function renderShots(){
           :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
     }).join("")+foot;
-  box.querySelectorAll("[data-inbox]").forEach(b=> b.onclick=async()=>{ const v=b.dataset.inbox; if(inboxTiles()===(v==="tiles")) return; S.openShot=null; await setSetting("inboxView",v); renderShots(); window.scrollTo(0,0); });
   box.querySelectorAll("[data-tile]").forEach(b=> b.onclick=()=>{ S.openShot=b.dataset.tile; renderShots(); const el=box.querySelector(`.shot[data-open]`); if(el) el.scrollIntoView({block:"nearest"}); }); /* a tap opens that photo full width, where it is the list view's own row */
   box.querySelectorAll("[data-lp]").forEach(el=> longPress(el,()=>{ PICK={kind:"shots",set:new Set([el.dataset.lp])}; renderShots(); })); /* press and hold a photo to start marking (v354) */
   wireRegions(box); /* the dots on a marked photo (v448) */
