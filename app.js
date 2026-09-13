@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=449; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=450; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -395,6 +395,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["again","v450","Meituan order screen SHARED: dots on 下单确认, 颐堤港店"],
   ["again","v449","Meituan order screen: dots on 下单确认, 颐堤港店, the buttons"],
   ["again","v449","wide shopfront sign: the whole sign in the card picture"],
   ["again","v448","washer/Meituan: dots, tap → sheet, grade → colour"],
@@ -3129,6 +3130,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  450:"A screenshot shared to the app is now read whole, so its title and headings get their dots too.",
   449:"A photo of an app screen or a board now gets a card for its headings and buttons too, not only its main items — and a card's picture no longer cuts off the end of a wide sign.",
   448:"A photo that made several cards — a control panel, an app screen — now shows a dot on each of its texts. Tap one to see it, hear it and grade it right on the photo.",
   447:"A photo of a control panel now makes one card per button far more often — and no card shows a sliver of the panel instead of its own button.",
@@ -3649,6 +3651,9 @@ async function showCropPreview(id,opts){
    photo when nothing stands out or the text fills it (H's "no crop at all"). Then the usual wait and the reading. The
    frame is adjustable like a drawn one; the Crop button never proposes, so Cancel, then Crop, gives the empty layer
    to draw on as before. On the phone only, no upload: about 100 ms on a 360 px copy. */
+function flatShare(bmp){ /* v450: the share of the picture whose 3×3 neighbourhood is exactly one shade on a 240 px grey copy — a screenshot's flat panels against a photo's grain. Recorded on every reading (N.prop.flat), a gate nowhere yet: it is calibrated against real photos from the field before it decides anything (an overexposed sky is flat too). */
+  try{ const k=Math.min(1,240/Math.max(bmp.width,bmp.height)), W=Math.max(3,Math.round(bmp.width*k)), Hh=Math.max(3,Math.round(bmp.height*k)), cv=document.createElement("canvas"); cv.width=W; cv.height=Hh; const ctx=cv.getContext("2d",{willReadFrequently:true}); ctx.drawImage(bmp,0,0,W,Hh); const d=ctx.getImageData(0,0,W,Hh).data, g=new Uint8Array(W*Hh); for(let i=0,j=0;i<d.length;i+=4,j++) g[j]=(d[i]*77+d[i+1]*151+d[i+2]*28)>>8;
+    let n=0, flat=0; for(let y=1;y<Hh-1;y+=2) for(let x=1;x<W-1;x+=2){ const c=g[y*W+x]; n++; let same=true; for(let dy=-1;dy<=1&&same;dy++) for(let dx=-1;dx<=1;dx++) if(g[(y+dy)*W+x+dx]!==c){ same=false; break; } if(same) flat++; } return n?+(flat/n).toFixed(3):null; }catch(e){ return null; } }
 function textRegion(bmp){
   const k=Math.min(1,360/Math.max(bmp.width,bmp.height)), cv=chromaCanvas(bmp,k), W=cv.width, Hh=cv.height, d=cv.getContext("2d").getImageData(0,0,W,Hh).data;
   const on=(x,y)=>d[(y*W+x)*4]<128;
@@ -3696,8 +3701,10 @@ const AUTO_LW=440; /* the layer width H's phone reports for the Camera tab (v411
 async function proposeFrame(id){
   const rec=shotRec(id); if(!rec||!CROP||CROP.id!==id||CROP.auto!==true) return;
   CROP.auto="running";
-  let reg=null, PW=0, PH=0;
-  try{ const bmp=await createImageBitmap(rec.blob); PW=bmp.width; PH=bmp.height; try{ reg=textRegion(bmp); } finally{ bmp.close(); } }catch(err){ logErr("frame",err&&err.message||err); }
+  let reg=null, PW=0, PH=0, flat=null;
+  try{ const bmp=await createImageBitmap(rec.blob); PW=bmp.width; PH=bmp.height; try{ reg=textRegion(bmp); flat=flatShare(bmp); } finally{ bmp.close(); } }catch(err){ logErr("frame",err&&err.message||err); }
+  /* a screenshot shared to the app is read whole (v450, H's Meituan order screen, 2026-09-13: the ink rows proposed 21–81 % × 26–98 % — from the first food photo down — so the title 下单确认, the shop line 颐堤港店 and the table line were never in the picture the AI saw, and no prompt can list what it was not shown. The reason is structural: textRegion works on the chromaticity copy, which sees the COLOURED blocks of a screen — photos, buttons, a tinted header — and not black text on white, so on a screenshot it proposes the pictures and misses the words. The share sheet is the screenshot route by design (v163), so a photo that came through it takes the whole image as its frame; the rows the ink found stay in the record and the log, so the override is visible. The image's flatness is recorded on every photo (N.prop.flat) and gates nothing yet — the content signal for a screenshot that came from the album is calibrated on real photos first (the v399 rule). What it costs: a camera photo shared through the share sheet loses the ink-row proposal and is read whole, as the v348/v393 re-asks already read many. */
+  const reg0=reg, shared=!!rec.shared; if(shared&&reg) reg=null;
   const same=()=>CROP&&CROP.id===id&&CROP.auto==="running"&&!CROP.rect; /* Cancel, another photo or a finger meanwhile: the proposal is dropped */
   if(!same()) return;
   const layer=document.querySelector(`.croplayer[data-id="${id}"]`), img=layer&&layer.parentElement.querySelector("img");
@@ -3716,8 +3723,8 @@ async function proposeFrame(id){
   CROP.proposed=full?"whole":shaped?"16:9":"text"; delete CROP.auto;
   const hidden=!RECROP[id]||!layer; if(hidden) CROP.hidden=true; /* the inbox never shows the proposal (v288): the reader reads it now, and the frame appears on the text it finds */
   { const N=numsReset(id); N.pre=true; N.photo=[PW,PH]; N.layer=[n1(r.width),n1(r.height)]; /* v399: the ink rows' own rectangle at full precision, and the photo and layer the whole chain is measured in — the log's line rounds all three to whole percent, and on a 19-label panel it is evicted from the 40 steps before the diagnostics are ever shared */
-    N.prop={r:numRect(CROP.rect),kind:CROP.proposed,hidden:!!hidden,reg:reg?[n4(reg.x),n4(reg.y),n4(reg.x1),n4(reg.y1)]:null,lineH:reg?n1(reg.lineH):null}; }
-  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),pre:true,text:`frame proposed by the app${hidden?" (not shown)":""}: ${full?"the whole photo":`${pc(f.x/r.width)}–${pc((f.x+f.w)/r.width)} % across, ${pc(f.y/r.height)}–${pc((f.y+f.h)/r.height)} % down${shaped?" (16:9)":" (the text's own box, 16:9 does not fit)"}`}${reg?`, text rows ${pc(reg.y)}–${pc(reg.y1)} %`:", no text rows found"}`}); while(READLOG.length>40) READLOG.shift();
+    N.prop={r:numRect(CROP.rect),kind:CROP.proposed,hidden:!!hidden,reg:reg0?[n4(reg0.x),n4(reg0.y),n4(reg0.x1),n4(reg0.y1)]:null,lineH:reg0?n1(reg0.lineH):null,shared,flat}; } /* v450: the rows the ink found even when a shared screenshot set them aside, and the flatness — inside prop, the one field numsReset keeps when the reading starts */
+  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),pre:true,text:`frame proposed by the app${hidden?" (not shown)":""}: ${full?"the whole photo":`${pc(f.x/r.width)}–${pc((f.x+f.w)/r.width)} % across, ${pc(f.y/r.height)}–${pc((f.y+f.h)/r.height)} % down${shaped?" (16:9)":" (the text's own box, 16:9 does not fit)"}`}${shared&&reg0?` — a shared screenshot is read whole, its text rows ${pc(reg0.y)}–${pc(reg0.y1)} % set aside`:reg?`, text rows ${pc(reg.y)}–${pc(reg.y1)} %`:", no text rows found"}`}); while(READLOG.length>40) READLOG.shift();
   if(hidden){
     cropSign(id);
     if(S.autoCard){ saveNow(id,true); return; } /* the card by itself (v325): no frame, no preview — the reading fills the card, the reader's or the AI's placement becomes its frame (PLACED, v304), and the row shows the finished card */
@@ -6779,11 +6786,11 @@ async function takeShared(){
   try{
     const c=await caches.open("zt-share"), keys=await c.keys(), files=[];
     for(const k of keys){ const r=await c.match(k); if(r){ const b=await r.blob(); if(b.size) files.push(b); } await c.delete(k); }
-    if(files.length) await importPhotos(files);
+    if(files.length) await importPhotos(files,{shared:true}); /* v450: a screenshot shared to the app is read whole — see proposeFrame */
   }catch(err){ logErr("share",err&&(err.stack||err.message)||err); }
 }
-async function importPhotos(files){
-  if(!files.length) return;
+async function importPhotos(files,opts){
+  if(!files.length) return; opts=opts||{};
   /* show something immediately: downscaling a 12-MP photo takes 1–3 s on the phone,
      and Chrome often does not repaint after the camera until the page is touched */
   PENDING_SHOT=true;
@@ -6792,13 +6799,13 @@ async function importPhotos(files){
   await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0))); /* let the placeholder paint first */
   /* several photos from the album: all land in the inbox, the first one opens in crop mode */
   let first=null; const added=[];
-  for(const file of files){ const id=await addPhoto(file); if(id) added.push(id); if(!first) first=id; }
+  for(const file of files){ const id=await addPhoto(file,opts.shared); if(id) added.push(id); if(!first) first=id; }
   CROP=first?{id:first,rect:null,auto:true}:null; PENDING_SHOT=false; /* the frame is proposed by the app (v203) */
   if(S.autoCard&&added.length>1) autoQueueAdd(added.slice(1)); /* the rest follow one after the other (v411) — the first is already in hand */
   if(S.mode!=="inbox"){ S.mode="inbox"; render(); } else renderShots();
   window.scrollTo({top:0});
 }
-async function addPhoto(file){
+async function addPhoto(file,shared){
   /* bake in EXIF rotation + downscale to max 1600px: keeps the inbox small
      and the OCR boxes aligned with the displayed image */
   let blob=file;
@@ -6811,7 +6818,7 @@ async function addPhoto(file){
     bmp.close();
     blob=(await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85)))||file;
   }catch(err){}
-  const rec={ id:"shot_"+Date.now()+"_"+Math.floor(Math.random()*1000), blob, ts:Date.now() };
+  const rec={ id:"shot_"+Date.now()+"_"+Math.floor(Math.random()*1000), blob, ts:Date.now() }; if(shared) rec.shared=true; /* v450: came through the share sheet (v163) — a screenshot, by the route's own design */
   S.inbox.unshift(rec);
   try{ await idbPut("inbox",rec); }catch(err){}
   return rec.id;
