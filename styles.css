@@ -103,6 +103,10 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 /* the carousel of v417: the card follows the thumb, the neighbour rides beside it and the pair slides one card width so the next one snaps into place. No tilt and no fade — H: "Die muessen nicht so zur Seite wegkippen wie bei Tinder." */
 .card.swipe{touch-action:pan-y}
 .card.peer{position:absolute;pointer-events:none}
+/* the peer is a sibling of .pane and paints above it, so a taller neighbour slid over the detail's buttons, its SRS line
+   and its linked row — none of which move with the gesture (measured: 527 px of overlap, the six buttons visibly sliced).
+   Everything under the card steps aside while a card is being pushed and comes back with the render. (v445) */
+.pane.swiping>.detailacts,.pane.swiping>.badge,.pane.swiping>.linked{visibility:hidden}
 .card.sliding{transition:transform .22s cubic-bezier(.22,.61,.36,1)}
 @media (prefers-reduced-motion:reduce){.card.sliding{transition:none}}
 .hint{margin-top:18px;font-size:13px;color:var(--label3)}
