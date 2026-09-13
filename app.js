@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=471; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=472; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -415,40 +415,41 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["app","v471","Camera clean again on the next visit"],
-  ["app","v470","Camera: shutter alone, centred; work below"],
-  ["app","v469","Cards: the star whole, not cut at the edge"],
-  ["app","v468","Camera: no old photos; archive deletes in bulk"],
+  ["photo","v472","no garbage card when Qwen refuses"],
+  ["app","v471","Camera clean on the next visit"],
+  ["app","v470","Camera: shutter alone, centred"],
+  ["app","v469","Cards: the star whole at the edge"],
+  ["app","v468","Camera: no old photos listed"],
   ["again","v467","Meituan screen: clean, tap to frame"],
   ["app","v466","Camera: shutter first, work below"],
   ["app","v465","Cards as tiles: find a card faster?"],
-  ["app","v464","delete the last card of a photo: the photo goes, Undo brings both"],
-  ["app","v463","Camera: only the photos still being worked on, the rest one tap away"],
-  ["app","v462","Camera: the tiles, and a tap opening a photo full width"],
-  ["again","v461","a page card: neutral frames on the photo, no dots anywhere"],
-  ["app","v461","Cards list: a Multicard tells itself apart at a glance"],
-  ["app","v461","Learn on a page card: the word you are on is the only one lit"],
-  ["app","v460","swipe a page card left and right; a dot still opens its sheet"],
-  ["app","v459","More and the guide in German: the new sentence, no overflow"],
-  ["app","v458","Start over: streak and 30-day strip at zero afterwards"],
-  ["again","v457","a CLEAN directory board: one page card, dots on the plates"],
-  ["app","v457","a plain one- or two-line sign: still no AI picture call"],
-  ["again","v456","798 directory board: all plates on the card, none dropped"],
-  ["again","v455","798 directory board / two signs in one photo: several cards"],
-  ["app","v454","album batch: Waiting lines, and all photos read"],
-  ["again","v453","Meituan screen from the ALBUM: one page card"],
-  ["again","v453","washing machine: ONE page card, dots on buttons"],
-  ["app","v453","Cards: page row, detail, dot grade, delete"],
+  ["app","v464","delete a photo's last card: both go"],
+  ["app","v463","Camera: only what is processing"],
+  ["app","v462","Camera tiles; tap opens full width"],
+  ["again","v461","page card: clean frames, no dots"],
+  ["app","v461","Cards list: a Multicard stands out"],
+  ["app","v461","page card in Learn: one word lit"],
+  ["app","v460","swipe a page card; dots still tap"],
+  ["app","v459","More + guide in German: no overflow"],
+  ["app","v458","Start over: Progress at zero after"],
+  ["again","v457","clean board: page card with dots"],
+  ["app","v457","plain sign: still no picture call"],
+  ["again","v456","798 board: every plate on the card"],
+  ["again","v455","798 board, two signs: many cards"],
+  ["app","v454","album batch: Waiting, all read"],
+  ["again","v453","Meituan from ALBUM: one page card"],
+  ["again","v453","washer: ONE page card with dots"],
+  ["app","v453","Cards: page row, dot grade, delete"],
   ["app","v452","Learn: page with dots, own dot lit"],
   ["photo","v451","check dead: cards from the picture"],
-  ["again","v450","Meituan order screen SHARED: dots on 下单确认, 颐堤港店"],
-  ["again","v449","Meituan order screen: dots on 下单确认, 颐堤港店, the buttons"],
-  ["again","v449","wide shopfront sign: the whole sign in the card picture"],
-  ["again","v448","washer/Meituan: dots, tap → sheet, grade → colour"],
-  ["app","v448","dots: More → detail, Back → same photo"],
-  ["photo","v447","panel that reads strong: cards per button, not one garbage card"],
-  ["photo","v447","dial/3-label panel: no card cut to a sliver"],
-  ["photo","v447","rice cooker clock: every button, not only 时 and 分"],
+  ["again","v450","Meituan SHARED: dots on headings"],
+  ["again","v449","Meituan: dots on 下单确认 too"],
+  ["again","v449","wide shopfront: whole sign cropped"],
+  ["again","v448","washer/Meituan: dots, sheet, grade"],
+  ["app","v448","dots: More → detail → same photo"],
+  ["photo","v447","panel reads strong: card per button"],
+  ["photo","v447","dial panel: no card cut to a sliver"],
+  ["photo","v447","rice cooker: every button, not 2"],
   ["photo","v446","straight-on panel: no card missing"],
   ["app","v445","Cards: swipe an open card sideways"],
   ["again","v444","washer: 3 leading labels get crops"],
@@ -458,7 +459,7 @@ const TO_TEST=[
   ["photo","v440","clear read: card at once, refined"],
   ["photo","v439","hard photo: card seconds sooner"],
   ["photo","v438","AI unreachable, weak read: no card"],
-  ["photo","v437","Crop during the scan: frame it yourself"],
+  ["photo","v437","Crop during the scan"],
   ["again","v436","the signpost — a plate per card"],
   ["photo","v434","this list — the right twelve?"],
   ["photo","v433","empty deck: sign, poster, package"],
@@ -1013,6 +1014,20 @@ const picSystem=()=>`You read the Chinese text on a photo for an adult learning 
 /* Qwen's hybrid models think by default, and the thinking takes many seconds before the short JSON comes (v208, H with Qwen
    as the active provider: "Check pinyin and meaning takes way too long" — until v207 only the picture path switched it off) */
 function noThinking(pv,model,body){ if(pv==="qwen"&&/^qwen3/.test(model)) body.enable_thinking=false; return body; }
+/* the picture provider REFUSES (v472, H's record of 2026-09-13: Qwen answered 403 "Free quota exhausted" on every
+   photo of the evening, and the app kept sending — 88–134 KB and twenty-odd seconds of waiting per photo, all of it
+   certain to fail). A 4xx that is not 429 is a refusal, not a hiccup: no funds, a dead key, a forbidden call — the next
+   photo gets the same answer. So a refusal stands the picture path down for PIC_DOWN and any answer clears it; a 5xx, a
+   timeout and a dead connection are transient and change nothing. The shape is v189's ORIGIN_DOWN one layer up. A 429
+   is deliberately NOT a refusal: the provider's own rate limit clears in seconds, and the relay's daily cap already has
+   its own sentence. While the path is down the weak reading still gets a picErr, so v438/v472's no-card gate still sees
+   that the AI never judged the picture — without that the app would quietly go back to building garbage cards. */
+const PIC_DOWN=10*60*1000; let PIC_DOWN_AT=0, PIC_DOWN_WHY="";
+function picDown(){ return !!PIC_DOWN_AT&&Date.now()-PIC_DOWN_AT<PIC_DOWN; }
+function picRefused(err){ const st=err&&err.status; if(st>=400&&st<500&&st!==429){ PIC_DOWN_AT=Date.now(); PIC_DOWN_WHY=String((err&&err.message)||err||"").slice(0,140); } }
+function picOk(){ PIC_DOWN_AT=0; PIC_DOWN_WHY=""; }
+const PIC_DOWN_TEXT=()=>`the picture provider refused the last call and is not asked again for ${Math.round(PIC_DOWN/60000)} minutes: ${PIC_DOWN_WHY}`;
+function pictureUp(){ return !!pictureProvider()&&aiAutoOn()&&navigator.onLine&&!picDown(); } /* the one switch covers text and pictures (v193) */
 async function aiReadPicture(blob,alts,status,rec){
   const pv=pictureProvider(); if(!pv) throw new Error("no picture provider");
   const key=aiKey(pv), model=pictureModel(pv), pic=await pictureJpeg(blob), relay=!key&&viaRelay(pv);
@@ -1029,7 +1044,7 @@ async function aiReadPicture(blob,alts,status,rec){
       noThinking(pv,model,body);
       r=relay?await relayFetch(pv,body,PIC_TIMEOUT_MS):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)},PIC_TIMEOUT_MS); }
   }catch(err){ logAi({model,req,err:"no connection: "+(err&&err.message||err)}); throw new Error(AI_NET_ERR); }
-  if(!r.ok){ const t=await apiErrText(r); logAi({model,status:r.status,req,err:t}); throw new Error(relay?relayError(r,t):"API error "+r.status+(t?": "+t:"")); }
+  if(!r.ok){ const t=await apiErrText(r); logAi({model,status:r.status,req,err:t}); const e=new Error(relay?relayError(r,t):"API error "+r.status+(t?": "+t:"")); e.status=r.status; throw e; }
   const data=await r.json(); countTokens(pv,data); bump("pics"); bumpModel(model); /* the usage counters and the daily row count the picture readings (v178, H) and the model (v179) */
   const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
   logAi({model,status:r.status,ms:Date.now()-t0,req,res:raw.slice(0,AI_LOG_RES)});
@@ -1988,7 +2003,7 @@ function oldShots(){ const cut=Date.now()-OLD_DAYS*DAY; return S.inbox.filter(sh
 function shotsNote(){ const n=S.inbox.length, o=oldShots().length; return t("{0} in the inbox",nOf(n,"photo"))+(o?t(", {0} older than {1} days",o,OLD_DAYS):"")+"."; }
 async function cleanupShots(){
   const list=oldShots(); if(!list.length) return;
-  if(!await askSheet({title:list.length>1?t("Delete {0} old photos?",list.length):t("Delete one old photo?"),text:t("The cards keep their own picture."),ok:t("Delete")})) return;
+  if(!await askSheet({title:list.length>1?t("Delete {0} old photos?",list.length):t("Delete one old photo?"),text:t("Cards made from them keep their own picture. A photo that never made a card is gone."),ok:t("Delete")})) return;
   for(const sh of list) await delShot(sh.id);
   const st=$("#shots-status"); if(st) st.textContent=shotsNote(); const b=$("#cleanshots"); if(b) b.remove();
 }
@@ -2069,7 +2084,7 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">Offline translation</div><div class="s" id="nmt-status">Checking …</div></div><button class="btn mini" id="nmt-btn" hidden></button></div>
     <div class="mrow"><div><div class="t">Text recognition</div><div class="s" id="ocr-status">Checking …</div></div><button class="btn mini" id="ocr-btn" hidden></button></div>
     <div class="listhead">Updates without a VPN</div>
-    <div class="mrow"><div style="flex:1"><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div><div class="inrow"><input id="mirror-url" class="mono" autocomplete="off" placeholder="Mirror address" title="Mirror address (a copy of the app reachable in China)" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"><button class="btn mini" id="mirror-check">Check now</button></div></div></div>
+    <div class="mrow"><div style="flex:1;min-width:0"><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div><div class="inrow"><input id="mirror-url" class="mono" autocomplete="off" placeholder="Mirror address" title="Mirror address (a copy of the app reachable in China)" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"><button class="btn mini" id="mirror-check">Check now</button></div></div></div>
     <div class="listhead">Diagnostics</div>
     <div class="mrow"><div style="flex:1"><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${READLOG.length} step${READLOG.length===1?"":"s"}.</div><div class="fieldacts"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button><button class="btn mini" id="diag-copy">Copy</button></div></div></div>
     <pre class="diag" id="diag-out" hidden></pre>
@@ -2151,7 +2166,7 @@ const GUIDE=()=>[
     t("Grade yourself: Hard, Medium, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
     t("Swipe the closed card left or right to pick another one — nothing is graded, and a card you skip stays due for next time.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included. Push an open card sideways for the next one in the list."),
-    t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way. Tap the star on a card to mark it as one you care about — the filter then shows them alone, and Learn studies all of them, due or not.")]},
+    t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together; old photos are cleared out under More → Your data → Photos. Tap the star on a card to mark it as one you care about — the filter then shows them alone, and Learn studies all of them, due or not.")]},
   {h:t("Language and meanings"),p:[t("More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.")]},
   {h:t("What stays on the phone"),p:[t("Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends a card's Chinese text, pinyin and meaning, and, when the reading is hard, a picture of the text — sometimes the whole photo."),
     t("Once a day anonymous usage counts and the app's error messages go to the app's owner; switch that off under Privacy. Questions or ideas? More → Feedback.")]}];
@@ -3318,6 +3333,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  472:"When the AI cannot check a photo at all, no card is made from a reading that does not look right — the photo stays with Crop and the app says so. And a provider that refuses is not asked again on the next photo.",
   471:"A photo you are done with now leaves the Camera tab: the finished card stays on screen while you are there, and the next time you open the tab the camera is clean again.",
   470:"The Camera tab is the camera now: with nothing being processed you get the shutter alone, in the middle of the screen. Photos that already made cards live on those cards, and More → Your data → Photos clears out the rest.",
   468:"The Camera tab now keeps only the photos it is actually working on — everything from earlier, whether it made a card or not, is one tap away at the foot of the list.",
@@ -5654,9 +5670,9 @@ async function cropSign(id,opts){
         /* the reading will almost certainly end weak: send the picture now instead of after the passes (v439). Only under
            SKEW_TRUST, because trustAngle needs every pass and below that angle picBase is the same either way — the bytes
            sent are byte for byte what the weak path would send below. Measured: 2 of 40 photos are excluded by it. */
-        if((!ok||several)&&!EARLY[id]&&Math.abs(dk.angle||0)<SKEW_TRUST&&pictureProvider()&&aiAutoOn()&&navigator.onLine){
+        if((!ok||several)&&!EARLY[id]&&Math.abs(dk.angle||0)<SKEW_TRUST&&pictureUp()){
           const eb={orig:r.blob,dk,base}, eg=[...new Set(read.map(l=>l.t).filter(Boolean))].slice(0,6);
-          EARLY[id]={run,base:eb,guesses:eg,at:Date.now(),p:aiReadPicture(eb.dk.blob,eg,()=>{},N).then(x=>({pic:x}),e=>({err:e&&e.message||String(e)}))};
+          EARLY[id]={run,base:eb,guesses:eg,at:Date.now(),p:aiReadPicture(eb.dk.blob,eg,()=>{},N).then(x=>{picOk();return{pic:x};},e=>{picRefused(e);return{err:e&&e.message||String(e)};})};
           logRead(`${ok?`the quick look read the text but found it in ${blocks} separated blocks — a board, not one sign`:"the quick look found no readable text"} — the AI gets the picture now, beside the reading (${eg.length} guesses)`);
           /* a good answer ends the reading at its next step (v442, H's "Go" on the measured lever): on the weak path every pass
              after the quick look is thrown away once the picture answer is in, and on a panel the reader works 20–33 s on H's
@@ -5875,7 +5891,9 @@ async function cropSign(id,opts){
             const where=SPLIT[id].map((f,k)=>pic.labels[k].zh+" "+pc(f.x/f.lw)+"–"+pc((f.x+f.w)/f.lw)+" %").join(", ");
             logRead("the AI calls these "+pic.labels.length+" texts separate labels — one card each: "+where); } } }
         return placedCut; };
-    if(weak&&pictureProvider()&&aiAutoOn()&&navigator.onLine){ /* the one switch covers text and pictures (v193, H: the picture went out while the check was off — "counterintuitive") */
+    if(weak&&pictureProvider()&&aiAutoOn()&&navigator.onLine&&picDown()){ /* v472: the provider refused a moment ago — say so, and let the no-card gate see that the picture was never judged */
+      r.picErr=PIC_DOWN_TEXT(); N.picErr=String(r.picErr).slice(0,120); logRead(r.picErr); }
+    else if(weak&&pictureUp()){ /* the one switch covers text and pictures (v193, H: the picture went out while the check was off — "counterintuitive") */
       const guesses=[...new Set(passes.map(textOf).filter(Boolean))].slice(0,6);
       /* the whole straightened frame — or the placed frame's cut (v301) —, never the second look's band (v175, H's two-line sticker 骑车勿盯 / 还车勿忘: the tight band held the lower line only, and the AI read that line alone) */
       /* always the frame the reading started from with its straightening, so the AI's box can move the frame anywhere in it (v319; v301–v318 sent the placed frame's cut when the frame stood on text the reader had read, and the AI could only centre the frame inside it — H's Nongfu Spring bottle: a garbage placement on the label's corner, and the AI saw 泉 alone twice; since v319 the reader places only from a sure reading, and a reading that still ends weak is fragile, so the AI decides from the whole proposal — the main text only, without fine print or a line the edge cuts, v312) */
@@ -5889,7 +5907,7 @@ async function cropSign(id,opts){
         N.early={ahead,wait,guesses:early.guesses.length,ok:!!e.pic}; /* v399: the field's own numbers for the saving, which is min(ahead, the call's duration) */
         logRead(`the AI got the picture at the quick look, ${(ahead/1000).toFixed(1)} s before this point — waited ${(wait/1000).toFixed(1)} s for the answer`);
         if(e.pic) pic=e.pic; else { r.picErr=e.err; logErr("picture",r.picErr); } }
-      else try{ pic=await aiReadPicture(picBase.dk?picBase.dk.blob:picBase.orig,guesses,status,N); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
+      else try{ pic=await aiReadPicture(picBase.dk?picBase.dk.blob:picBase.orig,guesses,status,N); picOk(); }catch(err){ picRefused(err); r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
       if(stale()) return; r.pic=pic?{zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped}:null;
       N.pic=numPic(pic); if(r.picErr) N.picErr=String(r.picErr).slice(0,120); /* v399 */
       if(pic&&pic.dropped&&pic.dropped.length){ logRead(`fine print left out of the AI's answer: ${pic.dropped.join(" | ")}`); } /* Diagnostics (v312) */
@@ -5933,7 +5951,7 @@ async function cropSign(id,opts){
             if(cut){ placedCut=cut.blob; renderShots(); const pc=v=>Math.round(v*100);
               logRead((noText?"the AI found no Chinese text in the picture — the frame reaches the whole photo":tiny?`the AI found the text in ${Math.round(parea*100)} % of the picture${parea<PIC_TINY?"":", against its edge"} — the frame reaches the whole photo`:`the AI says the picture's ${pic.cut} edge cuts off a line — the frame reaches beyond it`)+` (${pc(nr.x/nr.lw)}–${pc((nr.x+nr.w)/nr.lw)} % across, ${pc(nr.y/nr.lh)}–${pc((nr.y+nr.h)/nr.lh)} % down) and the AI reads again`);
               picBase={orig:placedCut,dk:null,base:null}; picSeen=picBase;
-              try{ pic=await aiReadPicture(placedCut,guesses,status,N); }catch(err){ r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); N.picErr2=String(r.picErr).slice(0,120); } /* v449: a second call that dies left no trace at all — N.picErr is written before the re-ask, and `pic` silently keeps the first answer */
+              try{ pic=await aiReadPicture(placedCut,guesses,status,N); picOk(); }catch(err){ picRefused(err); r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); N.picErr2=String(r.picErr).slice(0,120); } /* v449: a second call that dies left no trace at all — N.picErr is written before the re-ask, and `pic` silently keeps the first answer */
               if(stale()) return; r.pic=pic?{zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped,cut:pic.cut}:null;
               N.reask={why:noText?"no Chinese text":tiny?"tiny box against an edge":"cut: "+pic0cut,frame:numRect(nr)}; N.pic2=numPic(pic); } } } } /* v399: the frame the second question was asked from, and the answer to it */
     }
@@ -6134,7 +6152,19 @@ async function finishPending(id){
     /* the AI looked at the picture and found no Chinese text in it (v348, H's scooter badge 九号 Fz110: the frame sat on the yellow plate, Qwen said "no Chinese characters" — correctly — and the card was made from the reader's garbage 量词口还 all the same: "voll falsch!"): a card the app makes by itself is not made then, the photo stays with Crop. A text check that calls the reading garbage is weaker evidence — it never saw the picture — and still makes a flagged card, as in v325. */
     if(ph.reading.auto&&!ph.c&&sg&&SIGN[id]===sg&&sg.noText){ logRead("the AI found no Chinese text in the picture — no card"); return failPending(id,"the AI found no Chinese text in the picture"); }
     /* the AI never saw the picture and the reading is weak (v438, H's emergency signpost, 2026-09-12: the picture call died twice — "The AI could not be reached", 83 s — and the card was the reader's own garbage 人已国二本 / 二二二 / 区国名于 under the whole photo; H: "Diese Schilder hat er nicht geschafft zu trennen und ordentlich zu interpretieren", then "Go" on no card): a weak reading is exactly the case the picture exists for, so with no answer to it there is nothing to build a card from — unless the text check confirmed the reading (sg.ai.ok), which is the one evidence left. The photo stays with Crop and the row says why. Offline the picture is never asked (no picErr), so an offline reading still makes its flagged card as before — named in CLAUDE.md, not changed here. */
-    if(ph.reading.auto&&!ph.c&&sg&&SIGN[id]===sg&&sg.weak&&sg.region&&sg.region.picErr&&!(sg.ai&&sg.ai.ok)){ logRead("the AI could not be reached and the reading is weak — no card"); return failPending(id,"the AI could not be reached and the reading is weak"); }
+    /* v472 widens that gate by exactly one case, and H's own record is the reason. His screenshot of 2026-09-13 read
+       自回回回还 | 还一一一 at effScore 183 — three points over WEAK_READ, so `weak` was false and this gate did not fire —
+       while three independent signals all said the text was worthless: v441's own per-line test held the provisional
+       back ("a line is read under 95 %", 94 and 93), DeepSeek answered bad:true TWICE ("OCR garbage: no plausible sign,
+       menu or product text can be made of these repeated 回/还/一 characters"), and the picture call that could have
+       settled it came back 403 Free quota exhausted. The app measured all three and built the card anyway, verified and
+       unflagged-looking, with the whole screenshot as its picture. Three agreeing signals are as safe as this gets: the
+       reader unsure of its own lines, the text model rejecting them, and no picture answer at all. A reading whose every
+       line IS read surely keeps its card even against a bad verdict — that is the v143 rule, and the v348 finding that a
+       text-only garbage verdict is weaker evidence than the picture's. */
+    const noPic=sg&&SIGN[id]===sg&&sg.region&&sg.region.picErr&&!(sg.ai&&sg.ai.ok);
+    const unsure=sg&&(sg.weak||(sg.ai&&sg.ai.bad&&!sg.sureLines));
+    if(ph.reading.auto&&!ph.c&&noPic&&unsure){ const why=sg.weak?"the AI could not check the photo and the reading is weak":"the AI could not check the photo and the text check called the reading garbage"; logRead(why+" — no card"); return failPending(id,why); }
     /* several labels on one photo, one card each (v357): the answer's lines, its per-line pinyin and meanings and the frames
        SPLIT[id] carries — the placeholder becomes the first label's card, the rest are saved beside it. Only when every line
        has its own pinyin and its own meaning; if the model joined them, nothing is split and the photo makes one card as before. */
@@ -6172,7 +6202,7 @@ async function finishPending(id){
 async function failPending(id,why,msg){
   const ph=pendingCard(id); delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; if(!ph||!ph.reading) return;
   dropExtraShot(id);
-  if(ph.reading.auto&&!ph.c){ await dropAuto(id,ph.id); delete READING[id]; QSNOTE[id]=/^the reader did not load/.test(msg||"")?failText("Reading failed: "+msg):/^the AI could not be reached/.test(why||"")?t("The AI could not be reached, and the reading alone was too unsure for a card. Tap Crop to read the photo again."):t("Nothing could be read. Tap Crop to frame the text by hand."); /* a reader that never loaded is not a photo without text (v335) */ if(S.mode==="cards"&&!S.editing) render(); else renderShots(); autoNext(); return; } /* a card made by itself with nothing to show is no card (v325): the photo stays with Crop */
+  if(ph.reading.auto&&!ph.c){ await dropAuto(id,ph.id); delete READING[id]; QSNOTE[id]=/^the reader did not load/.test(msg||"")?failText("Reading failed: "+msg):/^the AI could not check the photo/.test(why||"")?t("The AI could not check this photo, and the reading alone was not good enough for a card. Tap Crop to read the photo again."):t("Nothing could be read. Tap Crop to frame the text by hand."); /* a reader that never loaded is not a photo without text (v335) */ if(S.mode==="cards"&&!S.editing) render(); else renderShots(); autoNext(); return; } /* a card made by itself with nothing to show is no card (v325): the photo stays with Crop */
   if(ph.c) delete ph.reading; else ph.reading.failed=why; /* a card framed again in the Edit form keeps its text and forgets the frame (v241, v243); an empty card keeps the failure for "Nothing read yet" */
   ph.flag=true; ph.flagNote=ph.c?t("the new frame could not be read — the old text stays"):t("the reading failed — edit the card or frame the photo again");
   try{ await idbPut("custom",ph); }catch(e){}
@@ -6726,14 +6756,43 @@ const picMark=()=>`<span class="picmark" title="${t("Read from the picture by th
    takes pictures, the automatic check on, online) and this reading has not sent its picture yet, the picture goes now —
    the placed frame's cut, else the straightened frame, as the weak path sends it — and a good answer replaces the reading
    as there; a bad answer or a failed call leaves the garbage verdict as before. Once per reading (`picAsked`). */
-async function picOnBad(sg,guesses,status){
+async function picOnBad(sg,guesses,status,id){
   if(!sg||sg.picAsked||!sg.picBlob||!pictureProvider()||!aiAutoOn()||!navigator.onLine) return null;
-  sg.picAsked=true;
   const early=sg.picEarly; /* the quick look called the text unreadable, the reading came out strong anyway and the text check now rejects it — the picture has been on its way the whole time (v439) */
-  logRead(early?`the text check called the reading garbage — the picture answer asked at the quick look ${((Date.now()-early.at)/1000).toFixed(1)} s ago is used`:"the text check called the reading garbage — the AI gets the picture");
-  try{ const pic=early?(await early.p).pic:await aiReadPicture(sg.picBlob,[...new Set(guesses.filter(Boolean))].slice(0,6),status||(()=>{}));
+  /* the breaker stops a NEW call, never the consumption of one already paid for — a first cut of v472 put pictureUp()
+     in the guard above and the parked 403 then left no picErr at all, so the no-card gate below went quiet and the
+     garbage card came back. Its own suite caught it; the rule is that a circuit breaker belongs at the dial, not at
+     the earpiece. */
+  if(!early&&picDown()){ sg.picAsked=true; noPicture(sg,id,PIC_DOWN_TEXT(),"the text check called the reading garbage, and "+PIC_DOWN_TEXT(),true); return null; }
+  sg.picAsked=true;
+  try{
+    let pic=null;
+    if(early){
+      const e=await early.p;
+      /* the parked call may have FAILED, and until v472 this path said "the picture answer … is used" whatever came back
+         (H's screenshot diagnostics of 2026-09-13: Qwen answered 403 "Free quota exhausted", nothing was used, and the
+         reading log claimed it was). A record that states something that did not happen is the v384/v395/v399/v405 fault
+         one path further on — and here it also hid the failure from the numbers and from the no-card gate below. */
+      if(!e||!e.pic){ const err=(e&&e.err)||"no answer"; noPicture(sg,id,err,`the text check called the reading garbage, and the picture the AI was asked for at the quick look never came: ${err}`); return null; }
+      pic=e.pic;
+      logRead(`the text check called the reading garbage — the picture answer asked at the quick look ${((Date.now()-early.at)/1000).toFixed(1)} s ago is used`);
+    } else {
+      logRead("the text check called the reading garbage — the AI gets the picture");
+      pic=await aiReadPicture(sg.picBlob,[...new Set(guesses.filter(Boolean))].slice(0,6),status||(()=>{})); picOk();
+    }
     if(!pic) return null; if(sg.region) sg.region.pic={zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped}; if(pic&&pic.bad) sg.noText=true; return pic&&!pic.bad?pic:null; }
-  catch(err){ logErr("picture",err&&err.message||String(err)); return null; }
+  catch(err){ picRefused(err); noPicture(sg,id,err&&err.message||String(err),null); return null; }
+}
+/* one place that writes down a picture call that did not answer (v472): the reading's own record (so the no-card gate
+   below can see it), the numbers (so the next diagnostics says a paid-for call failed), the error log (so the daily row
+   and All users carry it), and the reading log when there is something to say. Idempotent on picErr — the weak path may
+   already have recorded the same failure. */
+function noPicture(sg,id,err,line,quiet){
+  const msg=String(err||"no answer");
+  if(sg&&sg.region&&!sg.region.picErr) sg.region.picErr=msg;
+  if(id){ const N=numsFor(id); if(N){ if(!N.picErr) N.picErr=msg.slice(0,120); if(N.early) N.early.ok=false; } }
+  if(line) logRead(line);
+  if(!quiet) logErr("picture",msg); /* the stood-down path has nothing new to report — the refusal it stands on is already in the log */
 }
 /* The reading ended strong, so the weak path never used the early answer, and the text check did not call it garbage
    either — but the answer already paid for says this picture is a panel of separate labels (v447, H's washing machine at
@@ -6766,7 +6825,8 @@ function panelCovers(pic,lines){
 }
 async function picPanel(sg,id){
   if(!sg||sg.picAsked||!sg.picEarly) return null;
-  let e=null; try{ e=await sg.picEarly.p; }catch(_){ return null; } /* the wait is the rest of a call already in flight; the shimmer stands meanwhile, since v441 withheld the provisional for this very reading */
+  let e=null; try{ e=await sg.picEarly.p; }catch(err){ e={err:err&&err.message||String(err)}; } /* the wait is the rest of a call already in flight; the shimmer stands meanwhile, since v441 withheld the provisional for this very reading */
+  if(e&&e.err){ noPicture(sg,id,e.err,null); return null; } /* v472: a parked call that failed was swallowed here without a word in the record */
   const pic=e&&e.pic;
   if(!pic||pic.bad||!pic.apart||!Array.isArray(pic.labels)||pic.labels.length<SPLIT_MIN) return null;
   /* v441's sureLines guard is the v143 rule — a character every pass read clearly is not the AI's to change. But that rule
@@ -6796,7 +6856,7 @@ async function signAskAI(id){
     try{ [r]=await aiAsk([{kind:"sign",c,p:res.map(x=>x.py).join(" / "),m:sg.mean||"",gloss:res.flatMap(x=>x.gloss),alts:sg.alts,trad:!!sg.trad,mt:{src:"gloss",verified:false,suspect:"read from a photo by OCR"}}]); }catch(err){ checkErr=err; }
     if(!SIGN[id]) return;
     if(checkErr){ const N=numsFor(id); N.checkErr=String(checkErr&&checkErr.message||checkErr).slice(0,160); logRead(`the text check failed: ${N.checkErr}`); } /* v451, H's order screen from the album, 2026-09-13: the relay answered 500 "counter 401", the catch below set aiErr, and the parked Qwen answer — apart, App, four labels — was thrown away for a card of the reader's garbage. A check that never answered is no verdict on the picture answer already in hand, so picPanel runs on this path too, and the record names the failure (the v399 rule). */
-    const pic=checkErr?await picPanel(sg,id):r.bad?await picOnBad(sg,[c,...(sg.alts||[])]):await picPanel(sg,id); if(!SIGN[id]) return; /* the text check calls the reading garbage: the picture goes to the AI that takes pictures (v302) — or it does not, and a panel answer is already in hand (v447) — or it never answered, and the panel answer in hand is used all the same (v451) */
+    const pic=checkErr?await picPanel(sg,id):r.bad?await picOnBad(sg,[c,...(sg.alts||[])],null,id):await picPanel(sg,id); if(!SIGN[id]) return; /* the text check calls the reading garbage: the picture goes to the AI that takes pictures (v302) — or it does not, and a panel answer is already in hand (v447) — or it never answered, and the panel answer in hand is used all the same (v451) */
     if(checkErr&&!pic) throw checkErr; /* nothing in hand: the failure stands as before v451 — the offline model, the gloss, pending */
     if(pic&&sg.placePic){ try{ await sg.placePic(pic); }catch(e){ logErr("snap",e&&e.message||String(e)); } if(!SIGN[id]) return; } /* v406: the same placement the weak path's answer gets — without it a panel that reaches the AI this way made one card */
     if(pic){ const zh=pic.zh.split("\n"); sg.lines=zh; sg.orig=zh.slice(); sg.conf=[]; sg.boxes=zh.map(()=>[]); sg.alts=[c,...(sg.alts||[])].filter(x=>x&&x!==pic.zh).slice(0,6); sg.trad=!!pic.zht; sg.tradDetected=!!pic.zht; sg.tradText=pic.zht||""; sg.weak=false;
@@ -6924,22 +6984,17 @@ let INBOX_SCROLL=0, LOOKUP=null; /* INBOX_SCROLL: where the photo was when More 
    a long list of a handful is not a view worth a control. Setting inboxView is dead and is read nowhere. */
 /* the Camera tab lists the photos still being WORKED ON, not everything ever shot (v468, H: "I'm still seeing old photos
    in the camera screen … only photos that are being processed should still be visible there"; the same sentence he gave
-   at v463, "I actually only need the photo list for photos that are still being processed").
-   v463 read that as "the work still to do" and gated the archive on a card EXISTING — so a photo that never made a card
-   was never archived and stayed listed for ever. That was not an oversight: v463 decided it the other way and froze it
-   in a suite ("three that made nothing — the list shows the three still to do"). The field has now contradicted it.
-   Four ways a photo lands there, and the second is the one with no trace at all: a photo from before v325, when a photo
-   did not yet become a card by itself; a reading that FAILED, where failPending deletes the card it was going to make
-   and leaves only QSNOTE, which is memory-only — so after the next reload (v327 reloads after four seconds at rest)
-   there is no card, no note and no flag; a crop cancelled and never taken up again; and a photo never acted on.
-   All four share one property — no card being made and nothing happening — so one predicate covers every one of them.
-   What is archived is NOT deleted: the photo stays in S.inbox and in IndexedDB, its pixels untouched (a hide writes no
-   bytes, which is what keeps this clear of v463's own 1.16 MB → 17.26 MB measurement — that forbids moving the photo
-   into the cards, not hiding it). It is one tap away at the foot of the list, and because pickList opens to the whole
-   photo stays in S.inbox and in IndexedDB, reached through its card exactly as before. v470 took the archive line
-   away entirely (H: "Why should we keep them? They are just there useless … if all photos are processed, then there's
-   only the camera frame on the camera page"): a photo that made a card is reached from that card, and every photo —
-   carded or not — is now pruned in one place, More → Your data → Photos. The Camera tab is the camera. */
+   at v463, "I actually only need the photo list for photos that are still being processed", and again at v470 and v471).
+   v463 read it as "the work still to do" and gated an archive line on a card EXISTING — so a photo that never made a card
+   stayed listed for ever. Four ways a photo lands in that state, and the second leaves no trace at all: a photo from
+   before v325, when a photo did not yet become a card by itself; a reading that FAILED, where failPending deletes the
+   card it was going to make and leaves only QSNOTE, which is memory-only — so after the next reload (v327 reloads after
+   four seconds at rest) there is no card, no note and no flag; a crop cancelled and never taken up again; and a photo
+   never acted on. All four share one property — nothing being made and nothing happening — so one predicate covers them.
+   v470 took the archive line away entirely (H: "Why should we keep them? They are just there useless"), and v471 the
+   finished RESULT with it (clearResults, above): nothing is deleted, the photo stays in S.inbox with its pixels
+   untouched and is reached from its card, and every photo — carded or not — is pruned in one place, More → Your data →
+   Photos. The Camera tab is the camera. */
 function shotDone(s){
   if(CROP&&CROP.id===s.id) return false;
   if(PENDING[s.id]||READING[s.id]||SIGN[s.id]||AUTO[s.id]||PROV[s.id]||QSCARD[s.id]||QSNOTE[s.id]) return false;
@@ -7094,7 +7149,6 @@ function renderShots(){
      photo would sit between two tiles and break the grid's pairs. S.openShot is deliberately not part of it: a tile tapped
      open stays where it was tapped (v462). */
   const shown=[...rest.filter(shotBusy),...rest.filter(s=>!shotBusy(s))];
-  const foot=""; /* v470: no archive line — a photo that made a card lives on that card, and More → Your data → Photos prunes them all */
   box.classList.add("tiles"); /* v471: tiles are the only layout */
   /* nothing to work on: the Camera tab IS the camera, and the shutter sits in the middle of the screen (v470, H:
      "if all photos are processed, then there's only the camera frame on the camera page centered in the middle") */
@@ -7142,7 +7196,7 @@ function renderShots(){
           :AUTOQ.includes(s.id)?`<span class="badge">${t("Waiting for its turn …")}</span>` /* a photo of the batch still in the queue says so (v454, H: "sonst denkt man, dass sich die App verschluckt hat") — a plain line, no bar: nothing is happening to this photo yet, and the batch line above says the work goes on */
           :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
-    }).join("")+foot;
+    }).join(""); /* no foot: v470 took the archive line away, v471 the head and the switch */
   box.querySelectorAll("[data-tile]").forEach(b=> b.onclick=()=>{ S.openShot=b.dataset.tile; renderShots(); const el=box.querySelector(`.shot[data-open]`); if(el) el.scrollIntoView({block:"nearest"}); }); /* a tap opens that photo full width, where it is the list view's own row */
   box.querySelectorAll("[data-lp]").forEach(el=> longPress(el,()=>{ PICK={kind:"shots",set:new Set([el.dataset.lp])}; renderShots(); })); /* press and hold a photo to start marking (v354) */
   wireRegions(box); /* the dots on a marked photo (v448) */
