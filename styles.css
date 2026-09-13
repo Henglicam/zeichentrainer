@@ -65,6 +65,8 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 
 /* study */
 .card{width:100%;max-width:440px;text-align:center;background:var(--card);border-radius:var(--rc);padding:22px 18px 18px;box-shadow:var(--shadow)}
+/* the page detail's body lives in a .card so the swipe of v445 can find and move it, but it brings its own surfaces — the photo block and the list of texts — so the card's own box is taken off (v460) */
+.card.bare{background:none;padding:0;box-shadow:none;border-radius:0;text-align:start;max-width:none}
 .tags{display:flex;justify-content:center;gap:8px;margin-bottom:16px;font-size:13px;font-weight:500}
 .tags span{padding:3px 10px;border-radius:999px;background:var(--card2);color:var(--label2)}
 .tags .n{color:var(--tint);background:var(--tint-soft)} .tags .r{color:var(--ok);background:var(--ok-soft)}
