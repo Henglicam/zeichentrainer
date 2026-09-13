@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=461; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=462; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -81,7 +81,7 @@ const S = { mode:"study", progress:{}, custom:[], inbox:[],
   admin:false, /* the owner's rows in More unlocked for this session (v162) */
   detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterStar:false, filterTags:[], settings:{}, single:null, saved:null,
   editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null,
-  autoCard:window.AUTO_CARD!==false, editOpenFrame:false }; /* autoCard (v325): a photo that opens by itself becomes a card without a frame or a preview; the harness sets window.AUTO_CARD=false to keep the crop-mode flow its frame suites drive */
+  autoCard:window.AUTO_CARD!==false, editOpenFrame:false, openShot:null }; /* autoCard (v325): a photo that opens by itself becomes a card without a frame or a preview; the harness sets window.AUTO_CARD=false to keep the crop-mode flow its frame suites drive */
 
 function deck(){ return S.custom; }
 /* the order of a Learn session (v153, H: "provide choices for the order in which the flash cards are shown"): due cards
@@ -415,6 +415,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v462","Camera: the tiles, and a tap opening a photo full width"],
   ["again","v461","a page card: neutral frames on the photo, no dots anywhere"],
   ["app","v461","Cards list: a Multicard tells itself apart at a glance"],
   ["app","v461","Learn on a page card: the word you are on is the only one lit"],
@@ -723,7 +724,7 @@ const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 function wireChrome(){
   document.querySelectorAll(".tab").forEach(b=>{
     b.onclick=()=>{ const m=b.dataset.mode;
-      S.editing=null; S.editFrom=null; S.detailFrom=null;    /* a tab tap always leaves the edit form, and the way back to a photo (v448) */
+      S.editing=null; S.editFrom=null; S.detailFrom=null; S.openShot=null; /* a tab tap always leaves the edit form, the way back to a photo (v448) and the photo opened from the grid (v462) */
       endPick();                                            /* … and any marking (v351) */
       if(CROP&&RECROP[CROP.id]) RECROP[CROP.id].end();      /* … and its Crop again (v239) */
       if(m==="cards" && (S.mode==="cards"||S.mode==="add")) S.detail=null; /* Cards again → back to the list */
@@ -3272,6 +3273,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  462:"The Camera tab shows your photos as tiles, two in a row — tap one to open it. The switch beside Inbox goes back to the long list.",
   461:"The words on a photo card are framed now instead of dotted, and the frame gives nothing away — you still find out whether you know a word by opening it.",
   460:"A card that holds several texts can be pushed sideways like any other card, and the photo itself takes the swipe.",
   459:"The app now says exactly what leaves your phone: which cards go to the AI and when, and that sometimes the whole photo goes with them.",
@@ -6860,6 +6862,15 @@ async function warmReader(){ /* the Camera tab loads the reader ahead of the fir
 const REGION_MIN=2; /* a photo that made this many cards is a marked photo — the split's own SPLIT_MIN */
 const REGION_HIT=44; /* the smallest tap target in CSS px: a small label's box is grown around its centre for the hit test only, never for the drawing */
 let INBOX_SCROLL=0, LOOKUP=null; /* INBOX_SCROLL: where the photo was when More opened the detail · LOOKUP: the open sheet {shot,rid,el} */
+/* the inbox as tiles, two photos a row (v462, H: "Fuer Fotos bitte auch eine kleinere Kachelansicht mit jeweils zwei
+   Fotos in einer Reihe."): 237 photos one under the other at full width is a long scroll to find one. A tile is the
+   photo, when it is taken and how many cards it made; a tap opens that photo full width, where it is exactly the row
+   of the list view with its frame, its reading and its buttons. A photo that is BUSY — a frame standing, a reading
+   running, a finished card, a note, a place in the batch queue — is always full width, whichever view is on, so
+   nothing that is happening can hide in a tile. Setting inboxView, absent = tiles. */
+function inboxTiles(){ return S.settings.inboxView!=="list"; }
+const ICON_LIST=`<svg viewBox="0 0 16 16" aria-hidden="true" style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round"><path d="M2 4h12M2 8h12M2 12h12"/></svg>`;
+const ICON_TILES=`<svg viewBox="0 0 16 16" aria-hidden="true" style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.5"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/></svg>`;
 function photoRegions(rec,byShot){
   const cards=byShot?(byShot.get(rec.id)||[]):S.custom.filter(d=>d.shot===rec.id), rs=[];
   for(const d of cards){ const f=d.frame; if(!d.c||!f||!isFinite(f.x)||!isFinite(f.y)||!isFinite(f.w)||!isFinite(f.h)||f.w<=0||f.h<=0) continue;
@@ -6964,7 +6975,11 @@ function renderShots(){
   const waiting=AUTOQ.filter(id=>S.inbox.some(x=>x.id===id)).length; /* what is left of the batch, not of the inbox — H's holds 237 photos */
   const byShot=new Map(); for(const d of S.custom) if(d.shot){ const a=byShot.get(d.shot); if(a) a.push(d); else byShot.set(d.shot,[d]); } /* the cards by photo, once per render (v448) */
   const batch=waiting?`<div class="batchline">${esc(t("{0} to go, while the app is open.",nOf(waiting,"photo")))}</div>`:"";
-  box.innerHTML=`<div class="listhead">${t("Inbox ({0})",S.inbox.length)}</div>`+batch+pending+
+  const tiles=inboxTiles();
+  box.classList.toggle("tiles",tiles);
+  box.innerHTML=`<div class="listhead inboxhead"><span>${t("Inbox ({0})",S.inbox.length)}</span><span class="seg">`+
+      `<button class="segbtn${tiles?"":" on"}" data-inbox="list" aria-label="${t("List")}" title="${t("List")}">${ICON_LIST}</button>`+
+      `<button class="segbtn${tiles?" on":""}" data-inbox="tiles" aria-label="${t("Tiles")}" title="${t("Tiles")}">${ICON_TILES}</button></span></div>`+batch+pending+
     S.inbox.map(s=>{
       const dt=new Date(s.ts).toLocaleString(LANG_LOCALE[LANG]);
       const cropping=CROP && CROP.id===s.id, shown=!!(cropping&&CROP.rect&&!CROP.hidden), zoomed=!!(shown&&CROP.zoom);
@@ -6975,11 +6990,18 @@ function renderShots(){
       if(prov) return `<div class="shot">${resultHTML(prov,s.id)}
         <div class="ocr" id="ocr-${s.id}"><div class="reading"><div class="bar"><i></i></div><div class="readrow"><span class="badge">${t(AI_BUSY_TEXT)}</span><span class="acts"><button class="ocr-btn" data-autoedit="${s.id}">${t("Crop")}</button><button class="del" data-autocancel="${s.id}">${t("Cancel")}</button></span></div></div></div>
       </div>`;
+      /* a tile only when nothing is happening to this photo and it is not the one opened from the grid */
+      if(tiles&&!cropping&&!PENDING[s.id]&&!results.length&&!prov&&!SIGN[s.id]&&!READING[s.id]&&!QSNOTE[s.id]&&!AUTOQ.includes(s.id)&&S.openShot!==s.id){
+        const n=(byShot.get(s.id)||[]).filter(d=>d.c&&!isPage(d)).length;
+        return `<button class="tile" data-tile="${s.id}"${!busy&&S.inbox.length>1?` data-lp="${s.id}"`:""}>
+          <span class="tw"><img src="${shotURL(s)}" alt="photo" loading="lazy" decoding="async">${n?`<span class="cnt">${n}</span>`:""}</span>
+          <span class="tmeta"><span class="ts">${esc(new Date(s.ts).toLocaleString(LANG_LOCALE[LANG],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}))}</span></span></button>`;
+      }
       if(results.length&&!rs.length) return `<div class="shot">${results.length>1?`<div class="listhead reshead">${t("{0} cards from this photo",results.length)}</div>`:""}${results.map(d=>`${resultHTML(d)}
         <div class="detailacts"><button class="btn" data-resedit="${esc(d.id)}">${t("Edit")}</button><button class="btn danger" data-resdel="${esc(d.id)}">${t("Delete card")}</button></div>`).join("")}
         <div class="ocr" id="ocr-${s.id}">${qsAiBox(s.id)}</div>
       </div>`;
-      return `<div class="shot"${!busy&&!AUTO[s.id]&&S.inbox.length>1?` data-lp="${s.id}"`:""}>
+      return `<div class="shot"${S.openShot===s.id?' data-open="1"':""}${!busy&&!AUTO[s.id]&&S.inbox.length>1?` data-lp="${s.id}"`:""}>
         <div class="shotwrap">
           ${zoomed?`<div class="shotzoom" style="${zoomStyle(s)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(s)}" alt="photo">`}${working?`<div class="scan" aria-hidden="true"></div>`:""}${rs.length?regionsHTML(s,rs):""}
           ${cropping?`<div class="croplayer${shown?" framed":""}${zoomed?" zoomed":""}" data-id="${s.id}">${zoomed?"":`<div class="croprect${READING[s.id]&&!READ_FAIL.test(READING[s.id])?" working":""}"${cropRectStyle()}>${READING[s.id]&&!READ_FAIL.test(READING[s.id])?`<div class="work" aria-hidden="true"><svg><rect/></svg></div>`:""}<div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="${t("Turn the frame")}"></div></div>`}</div>`:""}
@@ -6995,6 +7017,8 @@ function renderShots(){
           :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
     }).join("");
+  box.querySelectorAll("[data-inbox]").forEach(b=> b.onclick=async()=>{ const v=b.dataset.inbox; if(inboxTiles()===(v==="tiles")) return; S.openShot=null; await setSetting("inboxView",v); renderShots(); window.scrollTo(0,0); });
+  box.querySelectorAll("[data-tile]").forEach(b=> b.onclick=()=>{ S.openShot=b.dataset.tile; renderShots(); const el=box.querySelector(`.shot[data-open]`); if(el) el.scrollIntoView({block:"nearest"}); }); /* a tap opens that photo full width, where it is the list view's own row */
   box.querySelectorAll("[data-lp]").forEach(el=> longPress(el,()=>{ PICK={kind:"shots",set:new Set([el.dataset.lp])}; renderShots(); })); /* press and hold a photo to start marking (v354) */
   wireRegions(box); /* the dots on a marked photo (v448) */
   box.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>delShot(b.dataset.del,true));
