@@ -304,6 +304,11 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 .lookup .pin{margin-top:8px} .lookup .mean{margin-top:4px}
 .lookup .grades{margin-top:16px} .lookup .grade{min-height:54px}
 .lookup .lkacts{display:flex;justify-content:center;margin-top:8px} .lookup .lkacts .del{padding:8px 14px}
+/* the lookup sheet grades nothing since v478: the one action that turns this text into a flashcard, or the state when it
+   already is one (H: "multi cards don't really need the got it or learn again buttons" · "I should also instantly get the
+   option to make it a flashcard") */
+.lookup .lkmake{margin-top:14px} .lookup .lkmake .btn{width:100%}
+.lookup .lkstate{margin-top:14px;text-align:center}
 /* the card made by itself (v325, H: "no frame during the first scan, just the magic wobbling over the image, and then the result is the finished card"): a soft band of light sweeps the photo while the app reads — nothing on the photo but light, no frame; still under reduced motion (a faint veil) */
 .shotwrap .scan{position:absolute;inset:0;border-radius:10px;overflow:hidden;pointer-events:none}
 .shotwrap .scan::before{content:"";position:absolute;top:-30%;bottom:-30%;left:0;width:45%;transform:translateX(-150%) skewX(-14deg);will-change:transform;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.28) 35%,rgba(255,255,255,.55) 50%,rgba(255,255,255,.28) 65%,rgba(255,255,255,0));animation:scan 1.7s linear infinite} /* v332 (H: "the scanning effect stutters at the top left, it must run smoothly"): the band moves by transform alone, so the compositor drives it while the reader's copies keep the main thread busy (until v331 it animated left — a layout property, drawn by the main thread and frozen with it); linear, and it starts well outside the box, so the skewed band's top corner no longer pops in at the top left on every loop */
@@ -516,6 +521,7 @@ body.noscroll{overflow:hidden}
 .ctile .tmarks{position:absolute;left:6px;bottom:6px;z-index:3;display:flex;gap:4px}
 .ctile .tm{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;font-family:var(--sans);font-size:10px;font-weight:700;font-style:normal;color:#fff}
 .ctile .tm.flag{background:var(--tint)} .ctile .tm.ai{background:var(--ok)}
+.ctile .tm.multi{background:var(--label2);padding:0 4px} .ctile .tm.multi svg{width:12px;height:12px;fill:none;stroke:#fff;stroke-width:1.5;stroke-linejoin:round} /* a card derived from a multicard (v478) */
 .ctile.pick .tick{position:absolute;right:6px;top:6px;z-index:3}
 .ctile.pick.on{box-shadow:0 0 0 2px var(--tint),var(--shadow)}
 /* a Multicard tile carries v461's two tells: the picture on a stack of plates with the count, and a bar for how far
@@ -563,6 +569,12 @@ body.noscroll{overflow:hidden}
    and is still far more present than the grey it replaced. */
 .batchline{display:block;margin:0 2px 12px 4px;font-size:13px;font-weight:500;line-height:1.4;color:var(--tint);text-align:start}
 /* v452: a card that is one of several from one photo shows the page itself on the closed Learn front and in the detail — the whole picture in its own shape (the one exception to v223's "both boxes the same shape"), the blurred fill around it; the dots as on the Camera tab, the card's own lit; the dots take no tap there. The cap keeps the closed front — page, text box, pill and hint — above the tab bar: 100vh minus what the rest of the screen takes (measured 500 px at 390×844 with the hint, 344 px of page there, 240 at 360×740), never over 56vh on a tall screen; the revealed card shows the card's own cut, since the grades then own the screen (v421). The 16 px frame keeps a dot at the picture's own edge whole (a title at y 0, a label at the right edge — measured clipped by 14 px without it). */
+/* the carousel (v478): one multicard per slide, swiped sideways where the photo normally sits, most looked-at first. The
+   slides snap, so a half-shown neighbour says there is another one without a control of its own. */
+.pgcar{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.pgcar::-webkit-scrollbar{display:none}
+.pgslide{flex:0 0 92%;scroll-snap-align:center;min-width:0}
+.pgslide .picbox.page{width:100%}
 .picbox.page{--pageh:clamp(180px,calc(100vh - 500px),56vh);aspect-ratio:auto;height:auto;max-height:var(--pageh);display:flex;justify-content:center;align-items:center}
 .picbox.page .pagewrap{position:relative;display:block;margin:16px;max-width:calc(100% - 32px);max-height:calc(var(--pageh) - 32px);line-height:0}
 .picbox.page .pagewrap .signimg{position:static;width:auto;height:auto;max-width:100%;max-height:calc(var(--pageh) - 32px);display:block}

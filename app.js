@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=477; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=478; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -100,7 +100,7 @@ function orderCards(list,order,byDue){
    `star` says whether the star filter really applied, which the session needs (v429): it stands down when nothing in
    reach is starred, and then the session is an ordinary one. */
 function learnDeck(){
-  const lt=learnTags(); const d=(lt.length?deck().filter(x=>lt.some(g=>hasTag(x,g))):deck()).filter(x=>x.c&&!isPage(x)); /* a page is studied through its items (v453) */
+  const lt=learnTags(); const d=(lt.length?deck().filter(x=>lt.some(g=>hasTag(x,g))):deck()).filter(x=>x.c&&!isPage(x)&&!hiddenCard(x)); /* a page is studied through its items (v453), and since v478 only through the ones that earned a card of their own */
   const star=!!S.settings.learnStar&&d.some(x=>x.star); /* a filter that would empty the session stands down */
   return {cards:star?d.filter(x=>x.star):d, star};
 }
@@ -137,9 +137,76 @@ const cardOf = id => deck().find(d=>d.id===id); /* cards are addressed by id eve
 const isPage=d=>!!(d&&d.kind==="page");
 const pageItems=pg=>(pg&&pg.items||[]).map(cardOf).filter(Boolean);
 const inPage=d=>!!(d&&d.page&&cardOf(d.page)); /* an item of a page that still exists: the list shows the page, not the item */
-const deckCount=()=>deck().filter(d=>!inPage(d)).length;
+const deckCount=()=>deck().filter(d=>!hiddenCard(d)).length;
 const tabCount=()=>tabPool().length; /* the Cards count is the open tab's own (v477) */
 const pageOfShot=shot=>deck().find(d=>isPage(d)&&d.shot===shot)||null;
+/* DERIVED CARDS (v478, H across five messages: "please analyze whether certain buttons or certain fields appear again and
+   again in multicards and then make flashcards for learning out of them" · "either a text appears again and again on a
+   multicard or I tap a certain text again and again on a multicard. both cases become a flashcard" · "When I select a word
+   on a multicard, I think I should also instantly get the option to make it a flashcard" · "I think multi cards don't
+   really need the got it or learn again buttons" · "flash cards generated from multi cards should be somehow marked as
+   such." — SPEC-derived-cards.md, and H's "Go as per your recommendation" on its four settled decisions).
+
+   A MULTICARD IS A REFERENCE NOW, not a learning surface: its texts are still cards with their own progress row, star,
+   flag, tags and AI check — nothing is deleted and nothing is merged — but Learn studies only the ones that have EARNED a
+   card, and the lookup sheet grades nothing. A text earns it three ways:
+     T1  it stands on DERIVE_PAGES multicards or more (a button you meet again and again)
+     T2  you look it up DERIVE_LOOKS times on one multicard
+     R9  you tap "Make this a flashcard" on it, which is the cheapest and surest of the three and is why the two
+         thresholds are allowed to be unfitted guesses: a wrong one costs patience, never a card H wanted and cannot have.
+   THE COST, named because H approved it (D3): a text that has not qualified leaves Learn AT ONCE — his ~20 washing-machine
+   texts drop out of the due deck on the day this ships and come back one at a time. Nothing is lost: the progress rows
+   stay where they are, so a promoted text returns with its whole history.
+   ONE FIELD, `derived:true`. The sources are NOT stored: `sourcesOf` derives them from the deck, so a page photographed
+   later joins a card's carousel by itself and there is no second copy of the truth to drift (the v401 lesson). */
+const DERIVE_PAGES=2, DERIVE_LOOKS=3;
+const isDerived=d=>!!(d&&d.derived);
+const hiddenCard=d=>inPage(d)&&!isDerived(d); /* an item of a page is listed through its page — unless it has earned a card of its own */
+/* the look-up counter (T2). It may NOT be keyed by card id — cardId recycles a freed text as the id of the next card with
+   that text (v118), so a count would transfer between unrelated cards — so the key is the page and the text; it lives in
+   `settings` and therefore MUST be in RESET_KEYS (the v458 leak) and its debounced writer in resetAll's clearTimeout line. */
+const lookKey=(pid,zh)=>pid+"|"+String(zh||"").replace(/\n/g," ");
+const lookCount=(pid,zh)=>(S.settings.lookups||{})[lookKey(pid,zh)]||0;
+const LOOK_MAX=2000; let _lookT=null;
+function bumpLook(pid,zh){ const m={...(S.settings.lookups||{})}; const k=lookKey(pid,zh); m[k]=(m[k]||0)+1;
+  const ks=Object.keys(m); if(ks.length>LOOK_MAX){ ks.sort((a,b)=>m[a]-m[b]); while(ks.length>LOOK_MAX) delete m[ks.shift()]; } /* the least-looked-at go first: the counter is evidence of interest, and a deck of 237 photos must not grow it without end */
+  S.settings.lookups=m; clearTimeout(_lookT); _lookT=setTimeout(()=>{ setSetting("lookups",m).catch(()=>{}); },500);
+  return m[k]; }
+/* the multicards this card's text stands on, most looked-at first (D2: "order of use" means look-ups OF THIS TEXT on that
+   multicard, which is the number T2 already counts, so the carousel's sort is free) */
+function sourcesOf(d){
+  if(!d||!d.c) return [];
+  const out=new Map();
+  for(const x of deck()){ if(!x.page||x.c!==d.c) continue; const pg=cardOf(x.page); if(!pg||!isPage(pg)||out.has(pg.id)) continue;
+    out.set(pg.id,{page:pg,item:x,n:lookCount(pg.id,d.c)}); }
+  return [...out.values()].sort((a,b)=>(b.n-a.n)||((b.page.at||0)-(a.page.at||0)));
+}
+/* promote one of a page's texts to a card of its own. The item KEEPS its id, its progress row, its star, its flag and its
+   tags — it was always a real card, it simply starts being studied — so nothing is stranded and Learn never holds two
+   cards for one text (this is v118 inverted, deliberately and only inside multicards). */
+async function promote(id){ const d=cardOf(id); if(!d||!d.page||isDerived(d)||!d.c) return null;
+  const rec={...d,derived:true}; await putCard(rec);
+  /* a card made on purpose joins TODAY's session, at its end — the session is built at boot and nothing else rebuilds it,
+     so without this the reward for tapping "Make this a flashcard" would be a card that appears after the next reload.
+     Appending is what an "again" grade already does (v428), so the place in the queue is not disturbed. */
+  if(!S.queue.includes(rec.id)) S.queue.push(rec.id);
+  return rec; }
+/* the automatic half: run after a look-up and once at boot, so an existing deck earns its first cards without a tap */
+async function promoteCheck(){
+  if(!S.custom.length) return 0; let n=0;
+  const byText=new Map();
+  for(const x of deck()){ if(!x.c||!inPage(x)) continue; if(!byText.has(x.c)) byText.set(x.c,[]); byText.get(x.c).push(x); }
+  for(const [zh,items] of byText){
+    if(items.some(isDerived)) continue;
+    const pages=new Set(items.map(x=>x.page));
+    const looked=items.find(x=>lookCount(x.page,zh)>=DERIVE_LOOKS);
+    if(pages.size<DERIVE_PAGES&&!looked) continue;
+    /* the one with a learning history wins, else the oldest — so a promotion never throws progress away */
+    const pick=looked||items.slice().sort((a,b)=>((S.progress[b.id]?1:0)-(S.progress[a.id]?1:0))||((a.at||0)-(b.at||0)))[0];
+    if(await promote(pick.id)) n++;
+  }
+  return n;
+}
 /* the items of one page come one after the other in a session (the spec's "Learn walks a page as one group"): the first
    item the order reaches brings the page's other queued items in behind it, in the order they had */
 function groupPages(q){ const seen=new Set(), out=[]; for(const id of q){ if(seen.has(id)) continue; const d=cardOf(id); if(d&&inPage(d)){ for(const x of q){ const y=cardOf(x); if(!seen.has(x)&&y&&y.page===d.page){ seen.add(x); out.push(x); } } continue; } seen.add(id); out.push(id); } return out; }
@@ -421,6 +488,8 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v478","Multicard: make a text a card"],
+  ["app","v478","Learn: only derived cards"],
   ["app","v477","Cards: the two tabs"],
   ["app","v476","AI switch off: no run resumes"],
   ["app","v473","More: AI row: picture, not frame"],
@@ -732,6 +801,7 @@ async function boot(){
   aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); resumeTagAll(); resumeRecheck(); });
   /* an interrupted Translate-all, Tag-all or Check-up run, and the deck's two one-off passes, go on by themselves (v262, v368, v370, v373, v398) */
   setTimeout(updateNote,1200); /* v408: after the restored screen is up, not during the first paint */
+  setTimeout(()=>{ promoteCheck().then(n=>{ if(n){ S.queue=buildQueue(false); S.idx=0; render(); } }).catch(()=>{}); },2200); /* T1 on the deck as it stands, so an existing multicard earns its first cards without a tap (v478) */
   setTimeout(()=>{ resumeTranslate(); resumeTagAll(); resumeRecheck(); brightenPass().catch(()=>{}).then(()=>recutPass().catch(()=>{})); },2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ resumeTranslate(); resumeTagAll(); resumeRecheck(); autoNext(); } }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262); a batch of photos held up by a reading that never ended goes on too (v411) */
   sendReport(); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) sendReport(); else if(REPORT_DIRTY) sendReport(true); }); /* the day's first row on foreground, a second one on background when cards changed (v219) */
 }
@@ -1275,6 +1345,11 @@ async function syncMeanings(){
   return rows.length;
 }
 const langName=code=>(LANGS.find(([c])=>c===code)||[code,code])[1]; /* a language's own name (Deutsch, 日本語) */
+/* the mark (v478, H: "flash cards generated from multi cards should be somehow marked as such"). Two places, because one
+   is only half honoured: a quiet pill beside Traditional wherever a card's pills are drawn, and a chip on the Cards tile. */
+const srcLabel=d=>{ const n=Math.max(1,sourcesOf(d).length); return n>1?t("From {0} multicards",n):t("From a multicard"); }; /* two keys rather than a count word: "Из {0} мультикарточек" needs the genitive plural after a numeral and a fixed phrase at one, which no plural table of this app gets right by itself (the v412 rule: no agreement across a key boundary) */
+const derivedPill=d=>{ if(!isDerived(d)) return ""; const lbl=srcLabel(d);
+  return `<span class="pill multi" title="${esc(lbl)}">${esc(lbl)}</span>`; };
 const mlPill=d=>d.m&&mlOf(d)!==LANG?`<span class="pill lang" title="${esc(t("The meaning is in another language than the app."))}">${esc(langName(mlOf(d)))}</span>`:""; /* a card whose meaning is in another language than the app (v258, PR 5): the pill names it, on the back and in the Cards list; Translate all or an AI check takes it away */
 /* the model's meaning is taken only when it is a meaning and not the Chinese text echoed (v97; since v256 by language: a Japanese
    meaning is kanji and kana, a Korean one hangul — Latin letters are no longer the test there; an all-Han answer that is the text itself is dropped) */
@@ -1932,7 +2007,7 @@ function reportData(){
     byPhoto:n("byPhoto"), byHand:n("byHand"), deleted:n("deleted"),
     aiCalls:n("aiCalls"), aiIn:n("aiIn"), aiOut:n("aiOut"), aiCallsMonth:mn("aiCalls"), aiInMonth:mn("aiIn"), aiOutMonth:mn("aiOut"), pics:n("pics"), picsMonth:mn("pics"), models:u.models||{}, modelsMonth:m.models||{},
     ai:aiOn()?aiProvider()+" "+aiModel():null, inbox:S.inbox.length, tags:allTags().length, lang:navigator.language||null,
-    regionTaps:n("regionTaps"), regionGrades:n("regionGrades"), /* the photo's sheet opened, and a grade given in it (v448) */
+    regionTaps:n("regionTaps"), regionGrades:n("regionGrades"), regionCards:n("regionCards"), /* the photo's sheet opened, a grade given in it on a marked photo (v448), and a multicard's text turned into a flashcard (v478) */
     errors:reportErrors()};
 }
 /* the app's last errors ride in the daily row (v271, H: "Can the app send automatic error logs from other users?" → "Go"): the kind
@@ -2180,6 +2255,7 @@ const GUIDE=()=>[
     t("Grade yourself: Hard, Medium, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
     t("Swipe the closed card left or right to pick another one — nothing is graded, and a card you skip stays due for next time.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Once a photo has made a multicard, two tabs split them — Cards and Multicards. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included. Push an open card sideways for the next one in the list."),
+    t("Tap a text on a multicard to turn it into a flashcard. A text you meet on two multicards, or look up three times, becomes one by itself — and Learn studies those, never the multicard itself."),
     t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together; old photos are cleared out under More → Your data → Photos. Tap the star on a card to mark it as one you care about — the filter then shows them alone, and Learn studies all of them, due or not.")]},
   {h:t("Language and meanings"),p:[t("More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.")]},
   {h:t("What stays on the phone"),p:[t("Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends a card's Chinese text, pinyin and meaning, and, when the reading is hard, a picture of the text — sometimes the whole photo."),
@@ -2281,12 +2357,26 @@ function pageOf(d){
 }
 function pageHTML(d,pg){
   const u=urlOf(pg.blob);
-  return `<div class="picbox page" data-pic="1"><img class="picbg" src="${u}" alt="" aria-hidden="true"><div class="pagewrap"><img class="signimg" src="${u}" alt="photo">${regionsHTML({id:pg.shot},pg.rs,{learn:true,me:d.id})}</div></div>`; /* the wrapper shrinks to the picture's rendered size, so the regions' percent coordinates land on it; the blurred fill shows beside a tall page */
+  return `<div class="picbox page" data-pic="1"><img class="picbg" src="${u}" alt="" aria-hidden="true"><div class="pagewrap"><img class="signimg" src="${u}" alt="photo">${regionsHTML({id:pg.shot},pg.rs,{learn:true,me:pg.me||d.id})}</div></div>`; /* the wrapper shrinks to the picture's rendered size, so the regions' percent coordinates land on it; the blurred fill shows beside a tall page */
 }
+/* every multicard this card's text stands on, as pages, most looked-at first (v478, R6: "The multicard reference in such a
+   flashcard should also be the multicard that has been used most. Or at least being sorted in the order of use. Multiple
+   multicards could be shown as thumbnail carousel in the location where the photo normally sits."). Each slide carries its
+   own `me` — the sibling text on THAT photo — so the frame is drawn around this card's text wherever it stands (R7). One
+   source is exactly v452's page front and renders through the same function, so there is one way of drawing a page. */
+function pagesOf(d){
+  const src=sourcesOf(d); if(src.length<2) return null;
+  const out=src.map(x=>{ const rs=photoRegions({id:x.page.shot}), blob=fullPhoto(x.page)||fullPhoto(x.item);
+    return (blob&&rs.length>=REGION_MIN&&rs.some(r=>r.card===x.item.id))?{shot:x.page.shot,rs,blob,me:x.item.id}:null; }).filter(Boolean);
+  return out.length>=2?out:null;
+}
+function carouselHTML(d,pgs){ return `<div class="pgcar">${pgs.map(pg=>`<div class="pgslide">${pageHTML(d,pg)}</div>`).join("")}</div>`; }
 function frontPic(d,o){
   const pk=S.peek&&S.peek!==d.id?cardOf(S.peek):null; /* Learn: a linked card's photo, tapped in the "Also on another photo" row (v155) */
   const full=pk?fullPhoto(pk):fullPhoto(d);
   const pg=o&&o.page&&!pk?pageOf(d):null; /* v452: the page with its dots by default, the card's own cut on a tap */
+  const car=o&&o.page&&!pk&&!S.fullPic?pagesOf(d):null; /* v478: a derived card whose text stands on several multicards shows them all, side by side */
+  if(car) return carouselHTML(d,car);
   if(pg&&!S.fullPic) return pageHTML(d,pg);
   const blob=pk?(pk.img||full):(S.fullPic&&full&&!pg?full:d.img); if(!blob) return "";
   /* the crop sits in a fixed 16:9 box at the card's width, fitted inside on the card's grey surface, so every card has the
@@ -2416,7 +2506,7 @@ function backHTML(d){
   /* the linked row is not part of the answer any more (v422, H: "Die 'also in another photo' Zeile nach unten schieben"): it
      stood between the parts row and the grades, so reference material sat in the middle of the answer-then-grade path. Each
      caller places it now, below its own actions. */
-  return `${simpRefHTML(d)}<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}</div>${charsHTML(d)}
+  return `${simpRefHTML(d)}<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}${derivedPill(d)}</div>${charsHTML(d)}
     ${glossBlock}`;
 }
 /* the other cards with the same text (v122, H: "if one character connects to various photos, then link them"): their
@@ -2769,7 +2859,7 @@ const pagesInDeck=()=>S.custom.some(d=>isPage(d));
 const onPages=()=>pagesInDeck()&&S.cardsTab==="pages";
 /* the records the open tab lists, before the search and the filters — and the page-aware predicate the list, the count and
    the filter sheet's own numbers all read, so the sheet can never say "12" over a list of one (v477) */
-const tabPool=()=>{ const pages=onPages(); return S.custom.filter(d=>!inPage(d)&&(pagesInDeck()?(isPage(d)===pages):true)); };
+const tabPool=()=>{ const pages=onPages(); return S.custom.filter(d=>!hiddenCard(d)&&(pagesInDeck()?(isPage(d)===pages):true)); }; /* a derived card is listed on Cards even though it is still one of its page's texts (v478) */
 const anyOf=(d,f)=>isPage(d)?(!!f(d)||pageItems(d).some(f)):!!f(d); /* a page matches a filter or a search when it or any of its texts does (v453) */
 function cardsList(){
   const q=S.query.trim().toLowerCase();
@@ -2804,7 +2894,7 @@ function cardTileHTML(d,pk){
       ${pg?`<span class="tstack">`:""}<span class="tw">${pic?`<img class="tbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:`<span class="tglyph hanzi">${esc([...((pg?(its[0]&&its[0].c):d.c)||"?")][0]||"?")}</span>`}
         ${pk?`<span class="tick" aria-hidden="true"></span>`:starHTML(d)}
         ${pg?`<span class="cnt">${its.length}</span>`:""}
-        ${(flag||ai)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}</span>`:""}</span>
+        ${(flag||ai||isDerived(d))?`<span class="tmarks">${isDerived(d)?`<i class="tm multi" title="${esc(srcLabel(d))}">${ICON_MULTI}</i>`:""}${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}</span>`:""}</span>
 ${pg?`</span><span class="prog" aria-hidden="true"><i style="width:${its.length?Math.round(known/its.length*100):0}%"></i></span>`:""}
       <span class="th${pg?" title":" hanzi"}">${head||`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>
       <span class="ts2">${pg?esc(t("{0} texts on this page, {1} known.",its.length,known)):cardStatus(d)}</span></button>`;
@@ -2819,7 +2909,7 @@ function cardsListHTML(){
 function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page detail's item list carries the dot's own state before the status */
   return `<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
-      <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
+      <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${derivedPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
       <span class="cs">${dot?stateMark(d.id):""}${pk?"":starHTML(d)}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}${cardStatus(d)}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
 }
 /* a filter whose row is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the
@@ -3363,6 +3453,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  478:"A multicard is a reference now: tap any text on it to turn that text into a flashcard, and a text you meet on two multicards or look up three times becomes one by itself. Learn studies those cards, not the multicard.",
   477:"Once a photo has made a multicard, the Cards tab splits in two — Cards and Multicards — so a multicard is never lost among the ordinary ones.",
   476:"Unticking the AI review now also stops an interrupted Check-up, Translate all or Tag all run from carrying on by itself — it waits until you press the button again.",
   472:"When the AI cannot check a photo at all, no card is made from a reading that does not look right — the photo stays with Crop and the app says so. And a provider that refuses is not asked again on the next photo.",
@@ -7065,9 +7156,13 @@ function regionState(r){ if(!r.card) return 0; const p=S.progress[r.card]; if(!p
 /* the two states, wherever a card is listed or opened: a red cross for one still to learn, a green check for one ticked
    off (v461, H: "Rot mitm Kreuz drauf heisst, kann ich noch nicht. Gruen mitm Haken drauf heisst, okay, kann ich
    abgehakt."). Drawn as inline SVG — the app ships no icon font and no emoji in the UI. */
+const ICON_MULTI=`<svg viewBox="0 0 14 14" aria-hidden="true"><rect x="1.2" y="3.6" width="8.2" height="7.2" rx="1.6"/><path d="M4.6 3.6V2.6a1.4 1.4 0 0 1 1.4-1.4h5.4a1.4 1.4 0 0 1 1.4 1.4v5.4a1.4 1.4 0 0 1-1.4 1.4h-1"/></svg>`; /* two plates, the album language of v461/v465 in one small mark (v478) */
 const MARK_TICK=`<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.6 6.4 4.9 8.7 9.5 3.7"/></svg>`;
 const MARK_CROSS=`<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.7 3.7 8.3 8.3M8.3 3.7 3.7 8.3"/></svg>`;
-function stateMark(id){ const st=regionState({card:id}); return `<i class="pdot s${st}" aria-hidden="true">${st===2?MARK_TICK:MARK_CROSS}</i>`; }
+/* v478: only a text that has earned a card of its own carries the cross or the check — an unpromoted text has no
+   learning state, and a red cross meaning "you cannot do this yet" would be false about a text nobody is being asked to learn.
+   The marks themselves are v461's and stay as they are; this narrows WHERE they show, it does not take them away. */
+function stateMark(id){ const d=cardOf(id); if(d&&d.page&&!isDerived(d)) return ""; const st=regionState({card:id}); return `<i class="pdot s${st}" aria-hidden="true">${st===2?MARK_TICK:MARK_CROSS}</i>`; }
 function regionsHTML(rec,rs,o){
   const learn=!!(o&&o.learn); /* v452: on the Learn front the frames take no tap (the photo's own tap and the swipe own the surface) and the card's own is the only one lit */
   const tag=learn?"span":"button";
@@ -7101,11 +7196,26 @@ function wireRegions(root){
 function openLookup(shot,rid){
   const r=regionOf(shot,rid), d=r&&r.card&&cardOf(r.card); if(!r||!d) return;
   bump("regionTaps");
+  /* the look-up is counted once per opening, and never when the same text is tapped again while its own sheet stands —
+     that was the one dirty edge of T2's signal (SPEC-derived-cards.md, Q5) and it is cheap to remove. A tap that misses
+     a small region and lands on the nearest one (v448's 44 px rule) still counts: it is a look-up either way. */
+  const pid=d.page&&cardOf(d.page)&&isPage(cardOf(d.page))?d.page:null;
+  let promoted=isDerived(d);
+  if(pid&&!(LOOKUP&&LOOKUP.rid===rid)){ const n=bumpLook(pid,d.c);
+    /* T2: the third look-up IS the promotion. The sheet shows the state at once and the write lands right after — the
+       optimism is safe, since promote() can only fail on a card that is already gone. */
+    if(!promoted&&n>=DERIVE_LOOKS){ promoted=true; promote(d.id).then(afterPromote); } }
+  /* the sheet grades nothing since v478 (H: "I think multi cards don't really need the got it or learn again buttons").
+     A multicard is a reference; what it offers instead is the one action that turns this text into a flashcard, or the
+     state when it already is one. */
+  const done=promoted;
   const html=`<div class="sheet lookup" role="dialog" aria-label="${esc(d.c)}">
     <button class="x" id="lk-close" aria-label="${t("Close")}">×</button>
     <div class="zh hanzi">${esc((d.trad||d.c).replace(/\n/g," / "))}</div>${d.trad?`<div class="script"><span class="pill trad">${t("Traditional")}</span></div>`:""}
     <div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}</div>
-    <div class="grades">${[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>`<button class="grade" data-g="${g}" data-lg="${g}"><span class="lbl">${t(l)}</span></button>`).join("")}</div>
+    ${pid?(done?`<div class="lkstate"><span class="pill card">${t("Already a flashcard")}</span></div>`
+              :`<div class="lkmake"><button class="btn primary" id="lk-make">${t("Make this a flashcard")}</button></div>`)
+        :`<div class="grades">${[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>`<button class="grade" data-g="${g}" data-lg="${g}"><span class="lbl">${t(l)}</span></button>`).join("")}</div>`}
     <div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div></div>`;
   let el=LOOKUP&&LOOKUP.el; const swap=!!el;
   if(!el){ el=document.createElement("div"); el.className="ask lookup"; document.body.appendChild(el); }
@@ -7119,10 +7229,14 @@ function openLookup(shot,rid){
   el.querySelector("#lk-close").onclick=closeLookup;
   wireSay(el);
   el.querySelectorAll("[data-lg]").forEach(b=> b.onclick=()=>gradeRegion(b.dataset.lg));
+  const mk=el.querySelector("#lk-make");
+  if(mk) mk.onclick=async()=>{ mk.disabled=true; const cid=LOOKUP&&LOOKUP.card; if(!cid) return;
+    bump("regionCards"); await promote(cid); afterPromote(); };
   el.querySelector("#lk-more").onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, from=LOOKUP&&LOOKUP.from; closeLookup(); if(!cid||!cardOf(cid)) return; if(!from) INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom=from?"page:"+from:"inbox"; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
 }
-function closeLookup(){ if(!LOOKUP) return; const L=LOOKUP; LOOKUP=null; markRegion(null); L.el.remove(); document.removeEventListener("pointerdown",L.onDown,true); document.removeEventListener("keydown",L.onKey); }
-/* the grade is the decision (H): it writes the review — and, in phase 2, makes the card first — and the dot takes the card's colour at once */
+/* the grade stays on a MARKED PHOTO that is not a multicard — v448's own screen, which every photo from before v453
+   still is, and whose texts are ordinary flashcards already. H's "multi cards don't really need the got it or learn again
+   buttons" is about multicards, so that is the only place the grades went (v478). */
 async function gradeRegion(g){
   const L=LOOKUP; if(!L) return; const d=cardOf(L.card); if(!d) return;
   bump("regionGrades");
@@ -7130,6 +7244,14 @@ async function gradeRegion(g){
   closeLookup();
   if(S.mode==="inbox") renderShots(); else if(S.mode==="cards"&&S.detail) render(); setStats(); /* the page detail's dot takes the colour too (v453) */
 }
+/* a promotion changes the deck, the Learn queue and the page's own row list, and it may happen while the sheet stands —
+   so the screen is drawn again and the sheet rebuilt from the card as it now is (the swap branch keeps it in place) */
+function afterPromote(){
+  if(S.mode==="inbox") renderShots(); else if(S.mode==="cards") render();
+  setStats();
+  if(LOOKUP) openLookup(LOOKUP.shot,LOOKUP.rid);
+}
+function closeLookup(){ if(!LOOKUP) return; const L=LOOKUP; LOOKUP=null; markRegion(null); L.el.remove(); document.removeEventListener("pointerdown",L.onDown,true); document.removeEventListener("keydown",L.onKey); }
 function backToPhoto(){ const y=INBOX_SCROLL; S.detail=null; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.mode="inbox"; render(); requestAnimationFrame(()=>window.scrollTo(0,y)); }
 function renderInbox(main){
   warmReader();
@@ -7445,7 +7567,7 @@ async function importData(e){
    without a VPN; and `brightPass` / `recutPass` / `recutStat`, which hold no content and whose pass may be running at
    this moment and would write them straight back. */
 const RESET_KEYS=["ailog","readlog","errlog","lastRun","translateStage","tagStage","translateRun","tagRun","recheckRun",
-  "resumeView","autoQueue","days","daily","lastExport"];
+  "resumeView","autoQueue","days","daily","lastExport","lookups"]; /* lookups (v478) holds the photos' own characters as its keys — the v458 rule */
 async function resetAll(){
   if(!await askSheet({title:t("Start over?"),text:t("All progress, cards and inbox photos on this phone will be deleted."),ok:t("Delete everything")})) return;
   /* until v457 these three were wrapped in one empty catch and the in-memory wipe below ran anyway, so a clear that was
@@ -7459,7 +7581,7 @@ async function resetAll(){
   /* the debounced writers hold the OLD object and fire up to 800 ms later, so a delete without this measured as usage
      surviving the reset with its 310 reviews intact — bump, bumpModel and dailyBump each close over the object they were
      going to write, and saveReadLog/saveAiLog would re-create their key as an empty husk */
-  clearTimeout(_usageTimer); clearTimeout(_dailyTimer); clearTimeout(_ailogT); clearTimeout(_readlogT);
+  clearTimeout(_usageTimer); clearTimeout(_dailyTimer); clearTimeout(_ailogT); clearTimeout(_readlogT); clearTimeout(_lookT);
   const kept=[];
   for(const k of RESET_KEYS){ delete S.settings[k]; try{ await idbDel("settings",k); }catch(e){ kept.push(k); } }
   if(kept.length) logErr("reset","could not delete: "+kept.join(", "));
