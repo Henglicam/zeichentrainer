@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=465; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=466; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -415,6 +415,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v466","Camera: shutter first, work below"],
   ["app","v465","Cards as tiles: find a card faster?"],
   ["app","v464","delete the last card of a photo: the photo goes, Undo brings both"],
   ["app","v463","Camera: only the photos still being worked on, the rest one tap away"],
@@ -3307,6 +3308,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  466:"The Camera tab opens on the shutter now — the photos still being worked on sit under it, two in a row.",
   465:"Cards are photo tiles now, two in a row, each under its own heading — the picture is what you recognise a card by.",
   464:"Deleting the last card made from a photo now deletes the photo too — one Undo puts both back.",
   463:"The Camera tab now shows only the photos still being worked on. The ones that already made cards are one tap away at the foot of the list — their pictures stay on their cards either way.",
@@ -6922,6 +6924,12 @@ function shotDone(s,byShot){
 }
 const ICON_LIST=`<svg viewBox="0 0 16 16" aria-hidden="true" style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round"><path d="M2 4h12M2 8h12M2 12h12"/></svg>`;
 const ICON_TILES=`<svg viewBox="0 0 16 16" aria-hidden="true" style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.5"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/></svg>`;
+const ICON_CAM=`<svg viewBox="0 0 48 40" aria-hidden="true" style="width:56px;height:56px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linejoin:round"><rect x="2" y="8" width="44" height="30" rx="6"/><path d="M17 8l3.2-5h7.6L31 8"/><circle cx="24" cy="23" r="8.6"/></svg>`;
+const ICON_WAIT=`<svg viewBox="0 0 16 16" aria-hidden="true" style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.5V8l2.5 1.7"/></svg>`;
+/* the photo that is being worked on right now — a frame standing, a reading running, a card or a note under it. The
+   opposite of shotDone's first two lines, minus the batch queue: a photo WAITING for its turn is not being worked on
+   (v454's own words), which is why it may sit in a tile while this one may not (v466). */
+function shotBusy(s){ return !!((CROP&&CROP.id===s.id)||PENDING[s.id]||READING[s.id]||SIGN[s.id]||AUTO[s.id]||PROV[s.id]||QSCARD[s.id]||QSNOTE[s.id]); }
 function photoRegions(rec,byShot){
   const cards=byShot?(byShot.get(rec.id)||[]):S.custom.filter(d=>d.shot===rec.id), rs=[];
   for(const d of cards){ const f=d.frame; if(!d.c||!f||!isFinite(f.x)||!isFinite(f.y)||!isFinite(f.w)||!isFinite(f.h)||f.w<=0||f.h<=0) continue;
@@ -6993,9 +7001,15 @@ async function gradeRegion(g){
 function backToPhoto(){ const y=INBOX_SCROLL; S.detail=null; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.mode="inbox"; render(); requestAnimationFrame(()=>window.scrollTo(0,y)); }
 function renderInbox(main){
   warmReader();
+  /* the Camera tab opens on the shutter, not on a list of photos (v466, H: "Auf der Kameraseite dürften nach meiner Logik im
+     Normalfall keine Fotos mehr zu sehen sein, da sie ja alle verarbeitet wurden … in der Kameraseite normalerweise gleich immer
+     das Kamerabild zu sehen ist"). Not a live viewfinder: getUserMedia would either make the preview decorative or capture from
+     the raw stream and lose MIUI's focus, HDR, zoom and stabilisation — the pixels the whole reading pipeline stands on — and
+     v186 already reverted direct capture. So the big card IS the shutter and a tap opens the phone's own camera, as it always did. */
   main.innerHTML=`<div class="pane">
     <div class="lead">${t("Photos stay on this phone. Take one — the card is made for you.")}</div>
-    <div class="snaprow"><button class="btn primary" id="snap">${t("Take photo")}</button><button class="btn" id="pick">${t("From album")}</button></div>
+    <button class="shutter" id="snap"><span class="sh-f" aria-hidden="true"></span><span class="sh-ic" aria-hidden="true">${ICON_CAM}</span><span class="sh-t">${t("Take photo")}</span></button>
+    <div class="snaprow"><button class="btn" id="pick">${t("From album")}</button></div>
     <div id="shots"></div>
   </div>`;
   $("#snap").onclick=()=>{ PICKING=Date.now(); $("#cam").click(); };
@@ -7010,7 +7024,7 @@ function renderShots(){
   if(CROP&&RECROP[CROP.id]){ RECROP[CROP.id].redraw(); return; } /* the Edit form's Crop again draws its own frame view (v239) */
   const box=$("#shots"); if(!box) return;
   const pending=PENDING_SHOT?`<div class="shot pending"><div class="badge">${t("Processing photo …")}</div></div>`:"";
-  if(!S.inbox.length){ if(PICK) endPick(); box.innerHTML=pending||`<div class="badge" style="margin-top:18px">${t("No photos yet.")}</div>`; return; }
+  if(!S.inbox.length){ if(PICK) endPick(); box.innerHTML=pending||`<div class="badge">${t("No photos yet.")}</div>`; return; }
   if(marking("shots")){ /* the photo picker (v351): the photos alone with a tick — no frame, no reading box, no result card */
     box.innerHTML=`<div class="listhead pickhead"><span class="badge" id="pick-n">${t("{0} selected",PICK.set.size)}</span><button class="del" id="pick-all"></button></div>`+
       pickList().map(s=>`<div class="shot pick${PICK.set.has(s.id)?" on":""}" data-pickshot="${s.id}">
@@ -7029,12 +7043,19 @@ function renderShots(){
   const byShot=new Map(); for(const d of S.custom) if(d.shot){ const a=byShot.get(d.shot); if(a) a.push(d); else byShot.set(d.shot,[d]); } /* the cards by photo, once per render (v448) */
   const batch=waiting?`<div class="batchline">${esc(t("{0} to go, while the app is open.",nOf(waiting,"photo")))}</div>`:"";
   const tiles=inboxTiles();
-  const done=S.inbox.filter(s=>shotDone(s,byShot)), shown=S.allShots?S.inbox:S.inbox.filter(s=>!done.includes(s));
+  const done=S.inbox.filter(s=>shotDone(s,byShot)), rest=S.allShots?S.inbox:S.inbox.filter(s=>!done.includes(s));
+  /* the one in hand on top, the ones waiting behind it (v466). A photo is unshifted as it is added, so an album batch lands
+     newest-first and the photo actually being read — the first of the pick — comes LAST; without this the full-width active
+     photo would sit between two tiles and break the grid's pairs. S.openShot is deliberately not part of it: a tile tapped
+     open stays where it was tapped (v462). */
+  const shown=[...rest.filter(shotBusy),...rest.filter(s=>!shotBusy(s))];
   const foot=done.length?`<div class="shotfoot"><button class="del" id="allshots">${esc(S.allShots?t("Hide them"):t("Show {0} that already made cards",nOf(done.length,"photo")))}</button></div>`:"";
   box.classList.toggle("tiles",tiles);
-  box.innerHTML=`<div class="listhead inboxhead"><span>${t("Inbox ({0})",shown.length)}</span><span class="seg">`+
+  /* nothing to work on means no head: the shutter is the screen, and the archive's own line is all that is left under it */
+  const head=shown.length?`<div class="listhead inboxhead"><span>${t("Inbox ({0})",shown.length)}</span><span class="seg">`+
       `<button class="segbtn${tiles?"":" on"}" data-inbox="list" aria-label="${t("List")}" title="${t("List")}">${ICON_LIST}</button>`+
-      `<button class="segbtn${tiles?" on":""}" data-inbox="tiles" aria-label="${t("Tiles")}" title="${t("Tiles")}">${ICON_TILES}</button></span></div>`+batch+pending+
+      `<button class="segbtn${tiles?" on":""}" data-inbox="tiles" aria-label="${t("Tiles")}" title="${t("Tiles")}">${ICON_TILES}</button></span></div>`:"";
+  box.innerHTML=head+batch+pending+
     shown.map(s=>{
       const dt=new Date(s.ts).toLocaleString(LANG_LOCALE[LANG]);
       const cropping=CROP && CROP.id===s.id, shown=!!(cropping&&CROP.rect&&!CROP.hidden), zoomed=!!(shown&&CROP.zoom);
@@ -7045,11 +7066,14 @@ function renderShots(){
       if(prov) return `<div class="shot">${resultHTML(prov,s.id)}
         <div class="ocr" id="ocr-${s.id}"><div class="reading"><div class="bar"><i></i></div><div class="readrow"><span class="badge">${t(AI_BUSY_TEXT)}</span><span class="acts"><button class="ocr-btn" data-autoedit="${s.id}">${t("Crop")}</button><button class="del" data-autocancel="${s.id}">${t("Cancel")}</button></span></div></div></div>
       </div>`;
-      /* a tile only when nothing is happening to this photo and it is not the one opened from the grid */
-      if(tiles&&!cropping&&!PENDING[s.id]&&!results.length&&!prov&&!SIGN[s.id]&&!READING[s.id]&&!QSNOTE[s.id]&&!AUTOQ.includes(s.id)&&S.openShot!==s.id){
+      /* a tile when nothing is happening to this photo and it is not the one opened from the grid. A photo still WAITING in the
+         batch is a tile too since v466 (H: "Und zwar jeweils zwei pro Reihe") — nothing is happening to it yet, which is why
+         v454 gave it a plain line and no bar; the clock says which one it is and the batch line above says how many are to go. */
+      const qd=AUTOQ.includes(s.id);
+      if(tiles&&!cropping&&!PENDING[s.id]&&!results.length&&!prov&&!SIGN[s.id]&&!READING[s.id]&&!QSNOTE[s.id]&&S.openShot!==s.id){
         const n=(byShot.get(s.id)||[]).filter(d=>d.c&&!isPage(d)).length;
-        return `<button class="tile" data-tile="${s.id}"${!busy&&S.inbox.length>1?` data-lp="${s.id}"`:""}>
-          <span class="tw"><img src="${shotURL(s)}" alt="photo" loading="lazy" decoding="async">${n?`<span class="cnt">${n}</span>`:""}</span>
+        return `<button class="tile${qd?" wait":""}" data-tile="${s.id}"${!busy&&S.inbox.length>1?` data-lp="${s.id}"`:""}>
+          <span class="tw"><img src="${shotURL(s)}" alt="photo" loading="lazy" decoding="async">${n?`<span class="cnt">${n}</span>`:""}${qd?`<span class="wt" title="${esc(t("Waiting for its turn …"))}" aria-label="${esc(t("Waiting for its turn …"))}">${ICON_WAIT}</span>`:""}</span>
           <span class="tmeta"><span class="ts">${esc(new Date(s.ts).toLocaleString(LANG_LOCALE[LANG],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}))}</span></span></button>`;
       }
       if(results.length&&!rs.length) return `<div class="shot">${results.length>1?`<div class="listhead reshead">${t("{0} cards from this photo",results.length)}</div>`:""}${results.map(d=>`${resultHTML(d)}
