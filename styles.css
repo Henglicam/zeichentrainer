@@ -257,12 +257,16 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 
 .shotwrap{position:relative;margin-bottom:8px}
 .shotwrap img{margin-bottom:0;border-radius:10px}
-/* a marked photo (v448, photo mode phase 1): every card's own frame as a region on the photo with a dot in the card's state; the outlines show for two seconds when the photo first renders, then only the dots stay — the photo stays a photo */
+/* a marked photo (v448, redrawn in v461): every card's own frame drawn permanently on the photo as a NEUTRAL outline —
+   a white core with a dark flank on each side, so the boundary is carried by the EDGE between the runs and survives a
+   white sign, a black appliance panel and a red shop front without a colour of its own. Nothing else is painted on the
+   picture: no dot, no colour, no cross and no check, because a frame that says "you know this one" gives the answer
+   away before it was asked (v461). .ff IS the frame and is its own size container, so a word only a few pixels tall —
+   a panel button label renders about 16 x 9 px — thins its stroke instead of drowning in it. */
 .shotwrap .regions{position:absolute;inset:0;border-radius:10px}
-.region{position:absolute;padding:0;margin:0;background:none;border:1.5px dashed rgba(255,255,255,0);outline:1px solid rgba(0,0,0,0);cursor:pointer;transition:border-color .5s,outline-color .5s;transform-origin:center;box-sizing:border-box;min-width:0;min-height:0}
-.regions.show .region{border-color:rgba(255,255,255,.95);outline-color:rgba(0,0,0,.45);transition:none}
-.region .dot{position:absolute;right:-6px;top:-6px;width:12px;height:12px;border-radius:50%;background:var(--label3);box-shadow:0 0 0 2px #fff,0 1px 3px rgba(0,0,0,.4)}
-.region.s1 .dot{background:var(--tint)} .region.s2 .dot{background:var(--ok)}
+.region{position:absolute;padding:0;margin:0;background:none;border:0;cursor:pointer;transform-origin:center;box-sizing:border-box;min-width:0;min-height:0;container-type:size}
+.region .ff{position:absolute;inset:0;border-radius:6px;box-shadow:inset 0 0 0 1.7px rgba(255,255,255,.95), inset 0 0 0 3px rgba(0,0,0,.38), 0 0 0 1px rgba(0,0,0,.45)}
+@container (max-height:14px) or (max-width:26px){ .region .ff{border-radius:3.5px;box-shadow:inset 0 0 0 1.3px rgba(255,255,255,.95), 0 0 0 1px rgba(0,0,0,.5)} }
 .regline{font-size:13px;color:var(--label2);margin:0 2px 8px}
 /* the sheet over the photo — not modal: no scrim, the page scrolls, the next dot can be tapped while it stands */
 .ask.lookup{background:none;pointer-events:none}
@@ -468,14 +472,30 @@ body.noscroll{overflow:hidden}
 .picbox.page .pagewrap{position:relative;display:block;margin:16px;max-width:calc(100% - 32px);max-height:calc(var(--pageh) - 32px);line-height:0}
 .picbox.page .pagewrap .signimg{position:static;width:auto;height:auto;max-width:100%;max-height:calc(var(--pageh) - 32px);display:block}
 .picbox.page .regions{position:absolute;inset:0;pointer-events:none}
-.regions.learn .region{border-color:transparent;outline-color:transparent;cursor:default}
-.regions.learn .region.me .dot{width:18px;height:18px;right:-9px;top:-9px;background:var(--tint);box-shadow:0 0 0 2px #fff,0 0 0 6px var(--tint-soft),0 1px 4px rgba(0,0,0,.45);animation:pulse 1.4s ease-in-out infinite}
+/* Learn: a spotlight, and it is still (v461 — the pulsing dot of v452 is gone). One extra shadow on the studied word's
+   own frame darkens the whole photo around it, clipped by the regions box; no second element and no animation. It says
+   WHICH word, never whether you know it. */
+.picbox.page .regions{overflow:hidden}
+.regions.learn .region{cursor:default;z-index:1}
+.regions.learn .region.me{z-index:3}
+.regions.learn .region.me .ff{box-shadow:inset 0 0 0 2px #fff, inset 0 0 0 3.4px rgba(0,0,0,.45), 0 0 0 9999px rgba(0,0,0,.34)}
 .pill.page{color:var(--tint);background:var(--tint-soft)} .script .pill+.pill{margin-left:6px}
-@media (prefers-reduced-motion:reduce){.regions.learn .region.me .dot{animation:none}}
 /* the page card (v453): one row for a whole screen — its title in the UI font, the photo with the dots in its detail, and each text's dot state before its status in the item list */
 .ct .c.title{font-family:inherit;font-size:16px;font-weight:600;line-height:1.3;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden} /* a title is a sentence, not a hanzi line: it wraps to two lines before it is cut */
 .ptitle{font-size:15px;font-weight:600;line-height:1.3;margin:0 2px 2px;color:var(--label)}
 .pagecard .shotwrap img{width:100%;display:block;border-radius:10px}
 .pagecard+.clist{margin-top:0}
-.crow .pdot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--label3);margin-right:6px;vertical-align:middle}
-.crow .pdot.s1{background:var(--tint)} .crow .pdot.s2{background:var(--ok)}
+/* the two states, where a card is listed or opened (v461): a red cross for one still to learn, a green check for one
+   ticked off. Colour is never the only channel — the glyph is, which is what the owner asked for. */
+.crow .pdot{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--tint);margin-right:6px;vertical-align:middle;flex:none}
+.crow .pdot.s2{background:var(--ok)}
+.crow .pdot svg{width:12px;height:12px;stroke:#fff;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+/* the Multicard's row: the thumbnail is a stack of plates with the count on it, and a bar says how far through it you
+   are. The three plates together are exactly the 124 x 70 the row's first column already reserves, so no row grows. */
+.crow.page .thumbbox.stack,.crow.page .thumb.glyph.stack{position:relative;overflow:visible;background:none;box-shadow:none}
+.crow.page .stack .inner{position:absolute;left:0;bottom:0;width:114px;height:60px;border-radius:10px;overflow:hidden;background:var(--card2);box-shadow:inset 0 0 0 1px var(--sep);z-index:2;display:grid;place-items:center}
+.crow.page .stack::before,.crow.page .stack::after{content:"";position:absolute;width:114px;height:60px;border-radius:10px;background:var(--card2);box-shadow:inset 0 0 0 1px var(--sep)}
+.crow.page .stack::before{left:5px;bottom:5px;z-index:1} .crow.page .stack::after{left:10px;bottom:10px;z-index:0}
+.crow.page .stack .cnt{position:absolute;left:88px;bottom:4px;z-index:3;min-width:22px;height:20px;padding:0 6px;border-radius:999px;background:rgba(0,0,0,.62);color:#fff;font-family:var(--sans);font-size:12px;font-weight:600;line-height:20px;text-align:center}
+.crow.page .prog{display:block;height:4px;border-radius:2px;background:var(--fill);margin:5px 0 3px;overflow:hidden;max-width:170px}
+.crow.page .prog i{display:block;height:100%;border-radius:2px;background:var(--ok)}

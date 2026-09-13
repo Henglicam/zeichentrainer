@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=460; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=461; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -415,6 +415,9 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["again","v461","a page card: neutral frames on the photo, no dots anywhere"],
+  ["app","v461","Cards list: a Multicard tells itself apart at a glance"],
+  ["app","v461","Learn on a page card: the word you are on is the only one lit"],
   ["app","v460","swipe a page card left and right; a dot still opens its sheet"],
   ["app","v459","More and the guide in German: the new sentence, no overflow"],
   ["app","v458","Start over: streak and 30-day strip at zero afterwards"],
@@ -2726,19 +2729,25 @@ function cardsListHTML(){
   return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length, ids:list.map(d=>d.id)};
 }
 /* the page's row (v453): the whole photo in the list's box, the title, how many texts and how many are known, the first
-   texts as its "meaning" line, the pills of its texts (AI, ⚑) and the star; the tap opens the page detail */
+   texts as its "meaning" line, the pills of its texts (AI, ⚑) and the star; the tap opens the page detail.
+   A MULTICARD IS UNMISTAKABLE IN THE LIST (v461, H: "Die Multicards muessen in den Listen auch irgendwie anders
+   angezeigt werden. Man muss sofort sehen, dass das eine Multicard ist und keine normale Flashcard."): the thumbnail
+   becomes a stack of plates with the count on it — the language iOS Photos uses for an album — and a bar under the
+   title says how far through it you are. Both live inside the row's existing 124px column, so no row grows and the
+   list's rhythm does not move. */
 function pageRowHTML(d,pk){
   const its=pageItems(d), known=its.filter(x=>regionState({card:x.id})===2).length, full=fullPhoto(d);
+  const done=its.length?Math.round(known/its.length*100):0;
   return `<button class="crow page${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
-      ${full?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...((its[0]&&its[0].c)||d.c||"")][0]||"")}</span>`}
-      <span class="ct"><span class="c title">${esc(d.c)}</span><span class="p">${esc(t("{0} texts on this page, {1} known.",its.length,known))}</span>${(d.tags||[]).length?`<span class="pills">${(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}</span>`:""}<span class="m hanzi">${esc(its.slice(0,4).map(x=>x.c.replace(/\n/g," ")).join(" · "))}${its.length>4?" …":""}</span></span>
+      ${full?`<span class="thumbbox stack"><span class="inner"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span><span class="cnt">${its.length}</span></span>`:`<span class="thumb glyph stack"><span class="inner">${esc([...((its[0]&&its[0].c)||d.c||"")][0]||"")}</span><span class="cnt">${its.length}</span></span>`}
+      <span class="ct"><span class="c title">${esc(d.c)}</span><span class="prog" aria-hidden="true"><i style="width:${done}%"></i></span><span class="p">${esc(t("{0} texts on this page, {1} known.",its.length,known))}</span>${(d.tags||[]).length?`<span class="pills">${(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}</span>`:""}<span class="m hanzi">${esc(its.slice(0,4).map(x=>x.c.replace(/\n/g," ")).join(" · "))}${its.length>4?" …":""}</span></span>
       <span class="cs">${pk?"":starHTML(d)}${its.some(x=>x.ai)?`<span class="pill ai">${t("AI")}</span>`:""}${its.some(x=>x.flag)?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
 }
 function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page detail's item list carries the dot's own state before the status */
   return `<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
       <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
-      <span class="cs">${dot?`<i class="pdot s${regionState({card:d.id})}" aria-hidden="true"></i>`:""}${pk?"":starHTML(d)}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}${cardStatus(d)}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
+      <span class="cs">${dot?stateMark(d.id):""}${pk?"":starHTML(d)}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}${cardStatus(d)}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
 }
 /* a filter whose row is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the
    list anymore" — the AI chip shows only while suggestions wait, so the filter had no chip left to switch it off and the
@@ -3263,6 +3272,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  461:"The words on a photo card are framed now instead of dotted, and the frame gives nothing away — you still find out whether you know a word by opening it.",
   460:"A card that holds several texts can be pushed sideways like any other card, and the photo itself takes the swipe.",
   459:"The app now says exactly what leaves your phone: which cards go to the AI and when, and that sometimes the whole photo goes with them.",
   457:"A photo with several separate texts — a directory board, a menu, a control panel, an app screen — becomes one card with a dot on every text even when the characters were easy to read.",
@@ -6835,18 +6845,20 @@ async function warmReader(){ /* the Camera tab loads the reader ahead of the fir
    Shopschilder nicht", then "a pop up … with the pinyin and the characters and the translation and the rating", then
    "Go, the grade makes the card") ----------
    A photo that made two cards or more — a split panel (v358), a screenshot, several hand-drawn frames — is a MARKED photo:
-   every card's own frame (v244) is drawn on it as a region with a dot in the card's state, grey for a text without a
-   card (phase 2), the tint for a card new or still learning, green for a known one (KNOWN_DAYS). A tap opens a sheet over
-   the photo — characters, pinyin with the speaker, meaning, the three grades, More — and a grade is a review like one in
-   Learn (recordGrade), which recolours the dot at once; closing the sheet writes nothing. A photo that made one card keeps
+   every card's own frame (v244) is drawn on it as a region — since v461 a permanent NEUTRAL outline and nothing else.
+   A tap opens a sheet over the photo — characters, pinyin with the speaker, meaning, the three grades, More — and a
+   grade is a review like one in Learn (recordGrade); closing the sheet writes nothing.
+   THE PHOTO GIVES NOTHING AWAY (v461, H: "The two states are only living in the cards. It's the same like when you get
+   a new flashcard and you don't know the answer, you also don't see the state. Only if you open the card, then you see
+   the state."): every frame is identical, so the picture cannot tell you the answer before you have answered it. Not yet
+   and Got it live in the page's own list of texts and in the sheet a tap opens. The dots of v448 and their two-second
+   outline flash are gone with it. A photo that made one card keeps
    the finished card of v325: the switch is the split's own, the model's `apart`, and the one-text flow does not move.
    Phase 1 derives the regions from the cards at render time and writes nothing to the photo record — a put of a record
    that holds a Blob rewrites the Blob, and 237 photos at boot would be 70 MB of writes for data the cards already carry;
    phase 2 stores the model's own regions, since a text without a card has no other home. */
 const REGION_MIN=2; /* a photo that made this many cards is a marked photo — the split's own SPLIT_MIN */
 const REGION_HIT=44; /* the smallest tap target in CSS px: a small label's box is grown around its centre for the hit test only, never for the drawing */
-const REGION_FLASH=2000; /* the outlines show this long when a marked photo first renders, then fade to the dots */
-const REGIONS_SHOWN=new Set(); /* the photos whose outlines have flashed this session — a status re-render must not flash them again */
 let INBOX_SCROLL=0, LOOKUP=null; /* INBOX_SCROLL: where the photo was when More opened the detail · LOOKUP: the open sheet {shot,rid,el} */
 function photoRegions(rec,byShot){
   const cards=byShot?(byShot.get(rec.id)||[]):S.custom.filter(d=>d.shot===rec.id), rs=[];
@@ -6856,19 +6868,25 @@ function photoRegions(rec,byShot){
   return rs.length>=REGION_MIN?rs:[];
 }
 function regionOf(shot,rid){ return photoRegions({id:shot}).find(r=>r.rid===rid)||null; } /* the regions are the cards' (v448), so a page whose inbox photo is gone still has them (v453) */
-function regionState(r){ if(!r.card) return 0; const p=S.progress[r.card]; if(!p||!p.reps) return 1; return p.interval>=KNOWN_DAYS?2:1; } /* 0 no card · 1 new or learning · 2 known */
+function regionState(r){ if(!r.card) return 0; const p=S.progress[r.card]; if(!p||!p.reps) return 1; return p.interval>=KNOWN_DAYS?2:1; } /* 0 no card · 1 still to learn · 2 known — read by the page's list and the count line, NEVER by the photo (v461) */
+/* the two states, wherever a card is listed or opened: a red cross for one still to learn, a green check for one ticked
+   off (v461, H: "Rot mitm Kreuz drauf heisst, kann ich noch nicht. Gruen mitm Haken drauf heisst, okay, kann ich
+   abgehakt."). Drawn as inline SVG — the app ships no icon font and no emoji in the UI. */
+const MARK_TICK=`<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.6 6.4 4.9 8.7 9.5 3.7"/></svg>`;
+const MARK_CROSS=`<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.7 3.7 8.3 8.3M8.3 3.7 3.7 8.3"/></svg>`;
+function stateMark(id){ const st=regionState({card:id}); return `<i class="pdot s${st}" aria-hidden="true">${st===2?MARK_TICK:MARK_CROSS}</i>`; }
 function regionsHTML(rec,rs,o){
-  const learn=!!(o&&o.learn); /* v452: on the Learn front the dots take no tap (the photo's own tap and the swipe own the surface), never flash, and the card's own is lit */
-  const fresh=!learn&&!REGIONS_SHOWN.has(rec.id); if(fresh) REGIONS_SHOWN.add(rec.id);
+  const learn=!!(o&&o.learn); /* v452: on the Learn front the frames take no tap (the photo's own tap and the swipe own the surface) and the card's own is the only one lit */
   const tag=learn?"span":"button";
-  return `<div class="regions${fresh?" show":""}${learn?" learn":""}"${learn?"":` data-regions="${rec.id}"`}>${rs.map(r=>{ const b=r.box, pc=x=>(x*100).toFixed(2)+"%";
-    return `<${tag} class="region s${regionState(r)}${learn&&o.me===r.card?" me":""}" ${learn?"data-rid":"data-region"}="${esc(r.rid)}" style="left:${pc(b.x)};top:${pc(b.y)};width:${pc(b.w)};height:${pc(b.h)}${b.a?`;transform:rotate(${b.a}deg)`:""}"${learn?' aria-hidden="true"':` aria-label="${esc(r.zh.replace(/\n/g," "))}"`}><i class="dot" aria-hidden="true"></i></${tag}>`; }).join("")}</div>`;
+  /* no state class on the photo: the frame is the same for every word, and .ff is the frame itself — its own container,
+     so it can thin its stroke when the word is only a few pixels tall (a panel button label renders about 16 x 9 px) */
+  return `<div class="regions${learn?" learn":""}"${learn?"":` data-regions="${rec.id}"`}>${rs.map(r=>{ const b=r.box, pc=x=>(x*100).toFixed(2)+"%";
+    return `<${tag} class="region${learn&&o.me===r.card?" me":""}" ${learn?"data-rid":"data-region"}="${esc(r.rid)}" style="left:${pc(b.x)};top:${pc(b.y)};width:${pc(b.w)};height:${pc(b.h)}${b.a?`;transform:rotate(${b.a}deg)`:""}"${learn?' aria-hidden="true"':` aria-label="${esc(r.zh.replace(/\n/g," "))}"`}><i class="ff" aria-hidden="true"></i></${tag}>`; }).join("")}</div>`;
 }
 function regionLine(rs,pg){ const known=rs.filter(r=>regionState(r)===2).length; return pg?t("{0} texts on this page, {1} known.",rs.filter(r=>r.card).length,known):t("{0} cards from this photo, {1} known.",rs.filter(r=>r.card).length,known); } /* pg (v453): the photo's cards are one page's texts */
 function wireRegions(root){
   root.querySelectorAll("[data-regions]").forEach(box=>{
     const shot=box.dataset.regions;
-    if(box.classList.contains("show")) setTimeout(()=>box.classList.remove("show"),REGION_FLASH);
     box.querySelectorAll("[data-region]").forEach(b=> b.onclick=e=>{ e.stopPropagation(); openLookup(shot,b.dataset.region); });
     /* a tap beside a small region still opens it: the nearest region whose box, grown to REGION_HIT around its centre, holds the point */
     box.onclick=e=>{ if(e.target!==box) return; const x=e.clientX, y=e.clientY; let best=null, bd=Infinity;
@@ -6878,7 +6896,7 @@ function wireRegions(root){
   });
 }
 /* the sheet over the photo: the flashcard without the photo, since the photo is right there. Not modal on purpose — the
-   page keeps scrolling and the next dot can be tapped while it stands, which swaps its content in place. */
+   page keeps scrolling and the next word can be tapped while it stands, which swaps its content in place. */
 function openLookup(shot,rid){
   const r=regionOf(shot,rid), d=r&&r.card&&cardOf(r.card); if(!r||!d) return;
   bump("regionTaps");
