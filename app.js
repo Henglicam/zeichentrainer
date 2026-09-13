@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=466; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=467; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -415,6 +415,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["again","v467","Meituan screen: clean, tap to frame"],
   ["app","v466","Camera: shutter first, work below"],
   ["app","v465","Cards as tiles: find a card faster?"],
   ["app","v464","delete the last card of a photo: the photo goes, Undo brings both"],
@@ -2132,8 +2133,8 @@ function renderMore(main){
    the app, "Go"): one scrolling page in the app's language, six short sections, text only, offline; it describes what the app does today,
    nothing planned, and changes in the same PR as the screen it describes. More → Help → Open; ← Back returns to More. ---------- */
 const GUIDE=()=>[
-  {h:t("Take a photo"),p:[t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card by itself — you see the finished card with Edit and Delete under it. Edit shows the photo with the frame the app used: drag a corner or the inside to fit it, the round handle turns it, let go and the reading starts again.")+" "+t("When the reading is clear, the card shows at once, and the AI's check refines it a moment later.")+" "+t("A photo that made several cards frames each of its texts — tap one for its characters, pinyin and meaning, and grade it right there."),
-    t("A photo with several texts — an app screen, a control panel, a menu board — becomes one card for the whole picture with a frame around every text: one tile under Cards, and Learn goes through its texts one by one."),
+  {h:t("Take a photo"),p:[t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card by itself — you see the finished card with Edit and Delete under it. Edit shows the photo with the frame the app used: drag a corner or the inside to fit it, the round handle turns it, let go and the reading starts again.")+" "+t("When the reading is clear, the card shows at once, and the AI's check refines it a moment later.")+" "+t("A photo that made several cards keeps every one of them in its place — tap a text on it for its characters, pinyin and meaning, and grade it right there."),
+    t("A photo with several texts — an app screen, a control panel, a menu board — becomes one card for the whole picture: one tile under Cards, tap any text on it to look it up, and Learn goes through its texts one by one."),
     t("Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in."),
     t("From album takes several photos at once — they all become cards, one after the other, while the app is open.")]},
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
@@ -2834,6 +2835,7 @@ function pageBodyHTML(d){
       <div class="shotwrap">${full?`<img src="${urlOf(full)}" alt="photo">`:""}${rs.length?regionsHTML({id:d.shot},rs):""}</div>
       <div class="ptitle">${esc(d.c)}</div>
       <div class="regline">${esc(t("{0} texts on this page, {1} known.",its.length,known))}</div>
+      <div class="taphint">${esc(t("Tap any text on the photo."))}</div>
     </div>
     <div class="clist" id="pitems">${sorted.map(x=>cardRowHTML(x,false,new Map(),true)).join("")}</div>`;
 }
@@ -3308,6 +3310,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  467:"A photo with many texts is clean again — nothing is framed until you tap a text, and then only that one.",
   466:"The Camera tab opens on the shutter now — the photos still being worked on sit under it, two in a row.",
   465:"Cards are photo tiles now, two in a row, each under its own heading — the picture is what you recognise a card by.",
   464:"Deleting the last card made from a photo now deletes the photo too — one Undo puts both back.",
@@ -6954,6 +6957,13 @@ function regionsHTML(rec,rs,o){
     return `<${tag} class="region${learn&&o.me===r.card?" me":""}" ${learn?"data-rid":"data-region"}="${esc(r.rid)}" style="left:${pc(b.x)};top:${pc(b.y)};width:${pc(b.w)};height:${pc(b.h)}${b.a?`;transform:rotate(${b.a}deg)`:""}"${learn?' aria-hidden="true"':` aria-label="${esc(r.zh.replace(/\n/g," "))}"`}><i class="ff" aria-hidden="true"></i></${tag}>`; }).join("")}</div>`;
 }
 function regionLine(rs,pg){ const known=rs.filter(r=>regionState(r)===2).length; return pg?t("{0} texts on this page, {1} known.",rs.filter(r=>r.card).length,known):t("{0} cards from this photo, {1} known.",rs.filter(r=>r.card).length,known); } /* pg (v453): the photo's cards are one page's texts */
+/* the photo gives nothing away until it is asked (v467, H: "Gerade chinesische Apps können ja extrem voll mit Text sein …
+   Ich möchte, dass in der Default Ansicht nichts eingerahmt ist. Und wenn ich auf ein Textelement drauftippe, dann erscheint
+   der Rahmen."). A Chinese app screen carries thirty texts, and thirty permanent frames are a wall of ink over the picture
+   they are supposed to point into. The TAP TARGETS do not move — only the ink goes — so v448's nearest-region rule still
+   finds a word a few pixels tall from 44 px away. Learn is deliberately untouched: there the one lit frame with its
+   spotlight says WHICH word this card is, and there is no tap to ask with. */
+function markRegion(rid){ document.querySelectorAll(".regions .region").forEach(e=> e.classList.toggle("on",!!rid&&e.dataset.region===rid)); }
 function wireRegions(root){
   root.querySelectorAll("[data-regions]").forEach(box=>{
     const shot=box.dataset.regions;
@@ -6964,6 +6974,7 @@ function wireRegions(root){
         if(Math.abs(x-cx)>hw||Math.abs(y-cy)>hh) return; const d=Math.hypot(x-cx,y-cy); if(d<bd){ bd=d; best=b; } });
       if(best) openLookup(shot,best.dataset.region); };
   });
+  markRegion(LOOKUP?LOOKUP.rid:null); /* a re-render (a grade writes the row and draws the photo again) rebuilds the regions — the open one keeps its frame */
 }
 /* the sheet over the photo: the flashcard without the photo, since the photo is right there. Not modal on purpose — the
    page keeps scrolling and the next word can be tapped while it stands, which swaps its content in place. */
@@ -6984,12 +6995,13 @@ function openLookup(shot,rid){
     LOOKUP.onDown=e=>{ if(!LOOKUP||e.target.closest(".sheet.lookup")||e.target.closest("[data-region]")||e.target.closest("[data-regions]")) return; closeLookup(); };
     LOOKUP.onKey=e=>{ if(e.key==="Escape") closeLookup(); };
     document.addEventListener("pointerdown",LOOKUP.onDown,true); document.addEventListener("keydown",LOOKUP.onKey); }
+  markRegion(rid); /* the frame appears on the text that was tapped, and only there (v467) */
   el.querySelector("#lk-close").onclick=closeLookup;
   wireSay(el);
   el.querySelectorAll("[data-lg]").forEach(b=> b.onclick=()=>gradeRegion(b.dataset.lg));
   el.querySelector("#lk-more").onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, from=LOOKUP&&LOOKUP.from; closeLookup(); if(!cid||!cardOf(cid)) return; if(!from) INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom=from?"page:"+from:"inbox"; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
 }
-function closeLookup(){ if(!LOOKUP) return; const L=LOOKUP; LOOKUP=null; L.el.remove(); document.removeEventListener("pointerdown",L.onDown,true); document.removeEventListener("keydown",L.onKey); }
+function closeLookup(){ if(!LOOKUP) return; const L=LOOKUP; LOOKUP=null; markRegion(null); L.el.remove(); document.removeEventListener("pointerdown",L.onDown,true); document.removeEventListener("keydown",L.onKey); }
 /* the grade is the decision (H): it writes the review — and, in phase 2, makes the card first — and the dot takes the card's colour at once */
 async function gradeRegion(g){
   const L=LOOKUP; if(!L) return; const d=cardOf(L.card); if(!d) return;
@@ -7085,7 +7097,7 @@ function renderShots(){
           ${zoomed?`<div class="shotzoom" style="${zoomStyle(s)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(s)}" alt="photo">`}${working?`<div class="scan" aria-hidden="true"></div>`:""}${rs.length?regionsHTML(s,rs):""}
           ${cropping?`<div class="croplayer${shown?" framed":""}${zoomed?" zoomed":""}" data-id="${s.id}">${zoomed?"":`<div class="croprect${READING[s.id]&&!READ_FAIL.test(READING[s.id])?" working":""}"${cropRectStyle()}>${READING[s.id]&&!READ_FAIL.test(READING[s.id])?`<div class="work" aria-hidden="true"><svg><rect/></svg></div>`:""}<div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="${t("Turn the frame")}"></div></div>`}</div>`:""}
         </div>
-        ${rs.length?(pg=>`${pg?`<div class="ptitle">${esc(pg.c)}</div>`:""}<div class="regline">${esc(regionLine(rs,pg))}</div>`)(pageOfShot(s.id)):""}
+        ${rs.length?(pg=>`${pg?`<div class="ptitle">${esc(pg.c)}</div>`:""}<div class="regline">${esc(regionLine(rs,pg))}</div><div class="taphint">${esc(t("Tap any text on the photo."))}</div>`)(pageOfShot(s.id)):""}
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">${t("Cancel")}</button>`
           :AUTO[s.id]&&PENDING[s.id]?`<button class="ocr-btn" data-autoedit="${s.id}">${t("Crop")}</button><button class="del" data-autocancel="${s.id}">${t("Cancel")}</button>`

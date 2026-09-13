@@ -281,7 +281,14 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 .region{position:absolute;padding:0;margin:0;background:none;border:0;cursor:pointer;transform-origin:center;box-sizing:border-box;min-width:0;min-height:0;container-type:size}
 .region .ff{position:absolute;inset:0;border-radius:6px;box-shadow:inset 0 0 0 1.7px rgba(255,255,255,.95), inset 0 0 0 3px rgba(0,0,0,.38), 0 0 0 1px rgba(0,0,0,.45)}
 @container (max-height:14px) or (max-width:26px){ .region .ff{border-radius:3.5px;box-shadow:inset 0 0 0 1.3px rgba(255,255,255,.95), 0 0 0 1px rgba(0,0,0,.5)} }
-.regline{font-size:13px;color:var(--label2);margin:0 2px 8px}
+/* nothing is framed until a text is tapped (v467, H: "in der Default Ansicht nichts eingerahmt … und wenn ich auf ein
+   Textelement drauftippe, dann erscheint der Rahmen"). Only the ink goes — the .region buttons keep their place and their
+   size, so every tap target and v448's 44 px nearest-region rule are exactly where they were. Learn keeps its frames:
+   there the lit one with its spotlight says which word the card is, and there is no tap to ask with. */
+.regions:not(.learn) .region .ff{opacity:0}
+.regions:not(.learn) .region.on .ff{opacity:1}
+.regline{font-size:13px;color:var(--label2);margin:0 2px 4px}
+.taphint{font-size:13px;color:var(--label3);margin:0 2px 8px}
 /* the sheet over the photo — not modal: no scrim, the page scrolls, the next dot can be tapped while it stands */
 .ask.lookup{background:none;pointer-events:none}
 .ask .sheet.lookup{pointer-events:auto;position:relative;padding:18px 16px 14px;box-shadow:0 -2px 24px rgba(0,0,0,.28),0 0 0 1px var(--sep)}
