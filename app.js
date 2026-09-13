@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=469; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=470; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -81,7 +81,7 @@ const S = { mode:"study", progress:{}, custom:[], inbox:[],
   admin:false, /* the owner's rows in More unlocked for this session (v162) */
   detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterStar:false, filterTags:[], settings:{}, single:null, saved:null,
   editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null,
-  autoCard:window.AUTO_CARD!==false, editOpenFrame:false, openShot:null, allShots:false }; /* autoCard (v325): a photo that opens by itself becomes a card without a frame or a preview; the harness sets window.AUTO_CARD=false to keep the crop-mode flow its frame suites drive */
+  autoCard:window.AUTO_CARD!==false, editOpenFrame:false, openShot:null }; /* autoCard (v325): a photo that opens by itself becomes a card without a frame or a preview; the harness sets window.AUTO_CARD=false to keep the crop-mode flow its frame suites drive */
 
 function deck(){ return S.custom; }
 /* the order of a Learn session (v153, H: "provide choices for the order in which the flash cards are shown"): due cards
@@ -415,6 +415,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v470","Camera: shutter alone, centred; work below"],
   ["app","v469","Cards: the star whole, not cut at the edge"],
   ["app","v468","Camera: no old photos; archive deletes in bulk"],
   ["again","v467","Meituan screen: clean, tap to frame"],
@@ -731,7 +732,7 @@ const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 function wireChrome(){
   document.querySelectorAll(".tab").forEach(b=>{
     b.onclick=()=>{ const m=b.dataset.mode;
-      S.editing=null; S.editFrom=null; S.detailFrom=null; S.openShot=null; S.allShots=false; /* a tab tap always leaves the edit form, the way back to a photo (v448), the photo opened from the grid (v462) and the photos already done (v463) */
+      S.editing=null; S.editFrom=null; S.detailFrom=null; S.openShot=null; /* a tab tap always leaves the edit form, the way back to a photo (v448), the photo opened from the grid (v462) and the photos already done (v463) */
       endPick();                                            /* … and any marking (v351) */
       if(CROP&&RECROP[CROP.id]) RECROP[CROP.id].end();      /* … and its Crop again (v239) */
       if(m==="cards" && (S.mode==="cards"||S.mode==="add")) S.detail=null; /* Cards again → back to the list */
@@ -1978,8 +1979,11 @@ function backupNote(){
   return warn?`<span class="warn">${txt} ${t("Export now — the cards exist only on this phone.")}</span>`:txt;
 }
 /* inbox photos older than 30 days that already became a card */
-function oldShots(){ const cut=Date.now()-OLD_DAYS*DAY; return S.inbox.filter(sh=>sh.ts<cut && S.custom.some(d=>d.shot===sh.id)); }
-function shotsNote(){ const n=S.inbox.length, o=oldShots().length; return t("{0} in the inbox",nOf(n,"photo"))+(o?t(", {0} older than {1} days and already turned into cards",o,OLD_DAYS):"")+"."; }
+/* every photo older than OLD_DAYS, whether it made a card or not (v470). Until then this required a card, so the one
+   population the Camera tab no longer lists — a photo that made nothing — was reachable by no bulk tool at all. A
+   card-less photo costs nothing to delete: keepPhoto finds no card to hand a copy to, so no bytes are written. */
+function oldShots(){ const cut=Date.now()-OLD_DAYS*DAY; return S.inbox.filter(sh=>sh.ts<cut); }
+function shotsNote(){ const n=S.inbox.length, o=oldShots().length; return t("{0} in the inbox",nOf(n,"photo"))+(o?t(", {0} older than {1} days",o,OLD_DAYS):"")+"."; }
 async function cleanupShots(){
   const list=oldShots(); if(!list.length) return;
   if(!await askSheet({title:list.length>1?t("Delete {0} old photos?",list.length):t("Delete one old photo?"),text:t("The cards keep their own picture."),ok:t("Delete")})) return;
@@ -3312,6 +3316,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  470:"The Camera tab is the camera now: with nothing being processed you get the shutter alone, in the middle of the screen. Photos that already made cards live on those cards, and More → Your data → Photos clears out the rest.",
   468:"The Camera tab now keeps only the photos it is actually working on — everything from earlier, whether it made a card or not, is one tap away at the foot of the list.",
   467:"A photo with many texts is clean again — nothing is framed until you tap a text, and then only that one.",
   466:"The Camera tab opens on the shutter now — the photos still being worked on sit under it, two in a row.",
@@ -6929,7 +6934,10 @@ function inboxTiles(){ return S.settings.inboxView!=="list"; }
    What is archived is NOT deleted: the photo stays in S.inbox and in IndexedDB, its pixels untouched (a hide writes no
    bytes, which is what keeps this clear of v463's own 1.16 MB → 17.26 MB measurement — that forbids moving the photo
    into the cards, not hiding it). It is one tap away at the foot of the list, and because pickList opens to the whole
-   inbox once S.allShots is set, the bulk route survives intact: tap the line, long-press, All, Delete. */
+   photo stays in S.inbox and in IndexedDB, reached through its card exactly as before. v470 took the archive line
+   away entirely (H: "Why should we keep them? They are just there useless … if all photos are processed, then there's
+   only the camera frame on the camera page"): a photo that made a card is reached from that card, and every photo —
+   carded or not — is now pruned in one place, More → Your data → Photos. The Camera tab is the camera. */
 function shotDone(s){
   if(CROP&&CROP.id===s.id) return false;
   if(PENDING[s.id]||READING[s.id]||SIGN[s.id]||AUTO[s.id]||PROV[s.id]||QSCARD[s.id]||QSNOTE[s.id]) return false;
@@ -7039,14 +7047,16 @@ function renderInbox(main){
   $("#pick").onclick=()=>{ PICKING=Date.now(); $("#album").click(); };
   renderShots();
 }
-function pickList(){ return S.allShots?S.inbox:S.inbox.filter(s=>!shotDone(s)); } /* the marking marks what the list shows, never a photo hidden from it (v463) — and with the archive open that IS the whole inbox, which is what keeps a bulk delete of the old photos reachable (v468) */
+function pickList(){ return S.inbox.filter(s=>!shotDone(s)); } /* the marking marks what the list shows, never a photo hidden from it (v463); the bulk prune of everything else is More → Your data → Photos (v470) */
 const IMGURL={}; // cache object URLs per photo — renderShots re-runs on every selection
 function shotURL(s){ return IMGURL[s.id]||(IMGURL[s.id]=URL.createObjectURL(s.blob)); }
 function renderShots(){
   if(CROP&&RECROP[CROP.id]){ RECROP[CROP.id].redraw(); return; } /* the Edit form's Crop again draws its own frame view (v239) */
   const box=$("#shots"); if(!box) return;
   const pending=PENDING_SHOT?`<div class="shot pending"><div class="badge">${t("Processing photo …")}</div></div>`:"";
-  if(!S.inbox.length){ if(PICK) endPick(); box.innerHTML=pending||`<div class="badge">${t("No photos yet.")}</div>`; return; }
+  if(!S.inbox.length){ if(PICK) endPick(); box.innerHTML=pending; const p0=box.closest(".pane"); if(p0) p0.classList.toggle("camonly",!PENDING_SHOT); return; }
+  /* an empty inbox is the most "everything is processed" state there is, so it gets the same clean camera as the rest
+     (v470). The "No photos yet." badge went with the archive line: the centred shutter says it. */
   if(marking("shots")){ /* the photo picker (v351): the photos alone with a tick — no frame, no reading box, no result card */
     box.innerHTML=`<div class="listhead pickhead"><span class="badge" id="pick-n">${t("{0} selected",PICK.set.size)}</span><button class="del" id="pick-all"></button></div>`+
       pickList().map(s=>`<div class="shot pick${PICK.set.has(s.id)?" on":""}" data-pickshot="${s.id}">
@@ -7065,14 +7075,17 @@ function renderShots(){
   const byShot=new Map(); for(const d of S.custom) if(d.shot){ const a=byShot.get(d.shot); if(a) a.push(d); else byShot.set(d.shot,[d]); } /* the cards by photo, once per render (v448) */
   const batch=waiting?`<div class="batchline">${esc(t("{0} to go, while the app is open.",nOf(waiting,"photo")))}</div>`:"";
   const tiles=inboxTiles();
-  const done=S.inbox.filter(shotDone), rest=S.allShots?S.inbox:S.inbox.filter(s=>!done.includes(s));
+  const rest=S.inbox.filter(s=>!shotDone(s));
   /* the one in hand on top, the ones waiting behind it (v466). A photo is unshifted as it is added, so an album batch lands
      newest-first and the photo actually being read — the first of the pick — comes LAST; without this the full-width active
      photo would sit between two tiles and break the grid's pairs. S.openShot is deliberately not part of it: a tile tapped
      open stays where it was tapped (v462). */
   const shown=[...rest.filter(shotBusy),...rest.filter(s=>!shotBusy(s))];
-  const foot=done.length?`<div class="shotfoot"><button class="del" id="allshots">${esc(S.allShots?t("Hide them"):t("Show {0} from earlier",nOf(done.length,"photo")))}</button></div>`:"";
+  const foot=""; /* v470: no archive line — a photo that made a card lives on that card, and More → Your data → Photos prunes them all */
   box.classList.toggle("tiles",tiles);
+  /* nothing to work on: the Camera tab IS the camera, and the shutter sits in the middle of the screen (v470, H:
+     "if all photos are processed, then there's only the camera frame on the camera page centered in the middle") */
+  const pane=box.closest(".pane"); if(pane) pane.classList.toggle("camonly",!shown.length&&!PENDING_SHOT&&!waiting);
   /* nothing to work on means no head: the shutter is the screen, and the archive's own line is all that is left under it */
   const head=shown.length?`<div class="listhead inboxhead"><span>${t("Inbox ({0})",shown.length)}</span><span class="seg">`+
       `<button class="segbtn${tiles?"":" on"}" data-inbox="list" aria-label="${t("List")}" title="${t("List")}">${ICON_LIST}</button>`+
@@ -7118,7 +7131,6 @@ function renderShots(){
           :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
     }).join("")+foot;
-  const all=box.querySelector("#allshots"); if(all) all.onclick=()=>{ S.allShots=!S.allShots; S.openShot=null; renderShots(); }; /* let a pinned photo go, or one lingers after "Hide them" and the hide looks broken (v468) */
   box.querySelectorAll("[data-inbox]").forEach(b=> b.onclick=async()=>{ const v=b.dataset.inbox; if(inboxTiles()===(v==="tiles")) return; S.openShot=null; await setSetting("inboxView",v); renderShots(); window.scrollTo(0,0); });
   box.querySelectorAll("[data-tile]").forEach(b=> b.onclick=()=>{ S.openShot=b.dataset.tile; renderShots(); const el=box.querySelector(`.shot[data-open]`); if(el) el.scrollIntoView({block:"nearest"}); }); /* a tap opens that photo full width, where it is the list view's own row */
   box.querySelectorAll("[data-lp]").forEach(el=> longPress(el,()=>{ PICK={kind:"shots",set:new Set([el.dataset.lp])}; renderShots(); })); /* press and hold a photo to start marking (v354) */

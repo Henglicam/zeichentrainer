@@ -481,7 +481,12 @@ body.noscroll{overflow:hidden}
 .tile .tmeta{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 9px 8px}
 .tile .ts{font-family:var(--mono);font-size:11px;color:var(--label3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile:active{background:var(--card2)}
-.shotfoot{grid-column:1/-1;text-align:center;margin:14px 0 4px} .shotfoot .del{font-size:14px;padding:8px 12px}
+/* with nothing being worked on the Camera tab is the camera: the shutter and From album sit in the middle of what is
+   left of the screen, and the lead line goes with them rather than pinning them to the top (v470). The pane is inside
+   a column #main, so centring is one justify-content once the pane is allowed to take the height. */
+.pane.camonly{flex:1;display:flex;flex-direction:column;justify-content:center;padding-bottom:8vh}
+.pane.camonly>.lead{margin-bottom:18px}
+.pane.camonly>#shots{display:none} .shotfoot .del{font-size:14px;padding:8px 12px}
 /* the Cards list as photo tiles, two in a row (v465): the card's own picture with its heading under it. The grid lives
    on the list, so the empty badge and anything else that is not a tile spans both columns. */
 .clist.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:stretch;border-radius:0;overflow:visible;box-shadow:none;background:none}
