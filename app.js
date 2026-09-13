@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=457; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=458; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -415,6 +415,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v458","Start over: streak and 30-day strip at zero afterwards"],
   ["again","v457","a CLEAN directory board: one page card, dots on the plates"],
   ["app","v457","a plain one- or two-line sign: still no AI picture call"],
   ["again","v456","798 directory board: all plates on the card, none dropped"],
@@ -7148,10 +7149,49 @@ async function importData(e){
 }
 
 /* ---------- Reset ---------- */
+/* what "Start over" has to take with the three stores (v457's audit, measured on a seeded phone: after "Delete everything"
+   SEVEN settings still held Chinese text read off the user's photos, and the Progress dashboard still showed a four-day
+   streak and two busy days over an empty deck). Two groups, and the first is the one that matters:
+     — the app's own logs, which carry the photos' own characters: `ailog` (the last three AI exchanges, the request up to
+       AI_LOG_REQ and the raw reply up to AI_LOG_RES), `readlog` (the reading's steps and the numsRing, which keeps the
+       model's zh per reading) and `errlog` — the last one UNREDACTED, since noHan runs only on the way to the daily row;
+     — everything keyed by a card id, which since v118 IS the card's text while it is free: `lastRun` (the previous run's
+       meanings and tags, card by card), `translateStage`, `tagStage`, `recheckRun.done`, `resumeView.card`;
+     — and the learner's own progress the sheet has promised to delete since v82 and never did: `days` (the streak) and
+       `daily` (the 30-day strip), which are what More → Progress actually reads.
+   What SURVIVES, deliberately, and each for its own reason: the API keys and the provider choice (wiping them would be
+   hostile, and v172 exists because a key was lost once); the three outbound switches aiAuto / aiPicture / aiRelay, all of
+   which are `!==false` defaults, so DELETING them would silently switch the AI review and the picture path back ON — a
+   privacy wipe that re-enables privacy switches is indefensible; `installId` and `usage`, the owner's own continuous
+   series (v220's "one line per browser storage": a new id forks it, and `usage` carries no card content and is read by no
+   learner-facing screen since v274 — Progress reads the deck, the progress rows, `days` and `daily`); `nmt`, whose 50 MB
+   live in a cache this does not touch, so deleting the flag would make the row lie; `mirror`, the only update path
+   without a VPN; and `brightPass` / `recutPass` / `recutStat`, which hold no content and whose pass may be running at
+   this moment and would write them straight back. */
+const RESET_KEYS=["ailog","readlog","errlog","lastRun","translateStage","tagStage","translateRun","tagRun","recheckRun",
+  "resumeView","autoQueue","days","daily","lastExport"];
 async function resetAll(){
   if(!await askSheet({title:t("Start over?"),text:t("All progress, cards and inbox photos on this phone will be deleted."),ok:t("Delete everything")})) return;
-  try{ await Promise.all([idbClear("progress"),idbClear("custom"),idbClear("inbox")]); }catch(e){}
+  /* until v457 these three were wrapped in one empty catch and the in-memory wipe below ran anyway, so a clear that was
+     REFUSED — a second tab holding the database open, a quota error — painted an empty deck over data that was still
+     there and the user could not tell (openDB has no onblocked handler, so a second tab is the likely cause) */
+  let failed=null;
+  try{ await Promise.all([idbClear("progress"),idbClear("custom"),idbClear("inbox")]); }catch(e){ failed=e&&e.message||String(e); }
+  if(failed){ logErr("reset","the stores could not be cleared: "+failed); noteSheet("Start over?","Nothing was deleted — close the app's other tabs and try again."); /* the owner's row, the owner's English (CLAUDE.md's rule for Reset, Diagnostics and All users); the sheet's own three strings above are translated, which is a pre-existing inconsistency and not this PR's to change */ return; }
+  /* one failure must not leave the rest behind (the old code swallowed the store clear whole): each key is deleted on its
+     own and what could not be deleted is named in the error log, so a phone that kept something says so */
+  /* the debounced writers hold the OLD object and fire up to 800 ms later, so a delete without this measured as usage
+     surviving the reset with its 310 reviews intact — bump, bumpModel and dailyBump each close over the object they were
+     going to write, and saveReadLog/saveAiLog would re-create their key as an empty husk */
+  clearTimeout(_usageTimer); clearTimeout(_dailyTimer); clearTimeout(_ailogT); clearTimeout(_readlogT);
+  const kept=[];
+  for(const k of RESET_KEYS){ delete S.settings[k]; try{ await idbDel("settings",k); }catch(e){ kept.push(k); } }
+  if(kept.length) logErr("reset","could not delete: "+kept.join(", "));
   S.progress={}; S.custom=[]; S.inbox=[];
+  ERRLOG.length=0; READLOG.length=0; AILOG.length=0; AUTOQ.length=0; /* the same three logs in memory, or they would be written back at the next step (v267/v384's own debounce) */
+  LAST_READ.passes=null; LAST_READ.nums=null; LAST_READ.ring=[];
+  for(const k of Object.keys(NUMSOF)) delete NUMSOF[k];
+  TRANSLATE=null; TAGALL=null; RECHECK=null;
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
   render();
 }
