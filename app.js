@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=443; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=446; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -395,6 +395,9 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v446","straight-on panel: no card missing"],
+  ["app","v445","Cards: swipe an open card sideways"],
+  ["again","v444","washer: 3 leading labels get crops"],
   ["photo","v442","panel: card once the AI answers"],
   ["again","v443","washer: 2 more own crops, dial: 3"],
   ["photo","v441","messy strong read: no early card"],
@@ -2074,7 +2077,7 @@ const GUIDE=()=>[
   {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out."),
     t("Grade yourself: Hard, Medium, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
     t("Swipe the closed card left or right to pick another one — nothing is graded, and a card you skip stays due for next time.")]},
-  {h:t("Cards"),p:[t("All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included."),
+  {h:t("Cards"),p:[t("All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included. Push an open card sideways for the next one in the list."),
     t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way. Tap the star on a card to mark it as one you care about — the filter then shows them alone, and Learn studies all of them, due or not.")]},
   {h:t("Language and meanings"),p:[t("More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.")]},
   {h:t("What stays on the phone"),p:[t("Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak."),
@@ -2311,7 +2314,8 @@ function wireLinks(root){ (root||document).querySelectorAll("[data-link]").forEa
   /* in Learn the tap shows that photo on the card in place, a second tap returns — the session goes on (v155, H: "I'm
      getting out of the learn mode. That should not happen"); in the Cards detail it opens the other card as before */
   if(S.mode==="study"){ S.peek=S.peek===b.dataset.link?null:b.dataset.link; S.fullPic=false; render(); return; }
-  S.mode="cards"; S.detail=b.dataset.link; S.detailHide=false; S.fullPic=false; S.editing=null; render(); window.scrollTo({top:0}); }); }
+  S.mode="cards"; S.detail=b.dataset.link; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; /* not a row tap: ← Cards falls back to the remembered scroll, and a swipe from here does not move a row offset that belongs to another part of the list (v352, v445) */
+  render(); window.scrollTo({top:0}); }); }
 function endSingle(){
   /* leave single-card test mode and restore the session queue */
   const c=S.single; S.single=null;
@@ -2376,7 +2380,12 @@ function renderStudy(main){
   if(S.revealed) warmParts();
   /* tap on the photo: crop ⇄ whole photo; tap on the character: back on and off */
   const rv=$("#reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); return; } S.revealed=!S.revealed; render(); };
-  wireSwipe(main.querySelector(".card"));
+  /* the closed card is swiped to pick another card of the session (v414/v417); the detail does the same down the
+     Cards list since v445, so wireSwipe is told which list it moves through rather than reading S.queue itself */
+  wireSwipe(main.querySelector(".card"), S.revealed||S.queue.length<2?null:{
+    n:S.queue.length, idx:S.idx, centred:true,
+    peer:i=>{ const nd=cardOf(S.queue[i]); return nd?`<div class="front">${frontHTML(nd)}</div>${swipeHint(nd)}`:null; },
+    go:i=>{ S.idx=i; S.revealed=false; S.fullPic=false; S.peek=null; render(); window.scrollTo({top:0}); }});
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
   const st=$("#star-card"); if(st) st.onclick=async()=>{ await setStar(c,!d.star); render(); }; /* the learner's own mark, here too (v427) — the same field the Cards list writes */
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
@@ -2394,18 +2403,23 @@ function renderStudy(main){
 const SW_SLOP=12, SW_MIN=60, SW_GAP=16, SW_MS=220;
 /* the closed card is pushed sideways and the next one slides in from the other side and snaps into place (v414, the carousel of v417 — H: "Ich moechte die Karten quasi nach links schieben und die naechste Karte kommt von rechts rein und rastet geschmeidig ein … Die muessen nicht so zur Seite wegkippen wie bei Tinder"). Nothing is graded: only S.idx moves; a card swiped past returns in the next session, not in this one (v417). */
 function swipeHint(d){ return showHints()?`<div class="hint">${t("Tap the character to reveal")}${fullPhoto(d)?t(", or the photo for the whole picture"):""}.${S.queue.length>1?" "+t("Swipe left or right to pick another card."):""}</div>`:""; }
-function wireSwipe(card){
-  if(!card||S.revealed||S.queue.length<2) return;
+function wireSwipe(card,o){
+  /* o: {n, idx, peer(i) -> the neighbour's inner HTML or null, go(i), centred} — the caller owns the list and what a
+     move means, so the same gesture serves Learn's session queue and the Cards list's own order (v445) */
+  if(!card||!o||o.n<2) return;
   card.classList.add("swipe");
-  const par=card.parentElement;
+  /* the peer is placed against the card's own offsetParent, which is #main on both screens — the Learn card sits in it
+     directly, the detail card inside a .pane that is not positioned — so offsetLeft/offsetTop are always its coordinates */
+  const par=card.offsetParent||card.parentElement;
   let x0=0,y0=0,dx=0,on=false,ate=false,pid=null,peer=null,step=0,shift=0;
-  const at=i=>i>=0&&i<S.queue.length;
+  const at=i=>i>=0&&i<o.n;
+  const busy=v=>{ if(o.busy) o.busy(v); };
   const dropPeer=()=>{ if(peer){ peer.remove(); peer=null; } };
   /* the neighbour is an absolutely placed copy of the card beside it, so the page's layout never moves while the finger does */
   const makePeer=s=>{
     dropPeer(); step=s;
-    if(!at(S.idx+s)) return;
-    const d=cardOf(S.queue[S.idx+s]); if(!d) return;
+    if(!at(o.idx+s)) return;
+    const html=o.peer(o.idx+s); if(html==null) return;
     /* far enough that the pair leaves the screen, not merely one card width (v419, H on his Xiaomi Mix Fold unfolded:
        "Sieht der Swipe im aufgeklappten Zustand auf dem großen Screen noch etwas komisch aus, weil die Karten links und
        rechts dann einfach plötzlich verschwinden. Die müssten eigentlich dann rausfliegen."). A card is at most 440 px
@@ -2417,7 +2431,8 @@ function wireSwipe(card){
     shift=Math.max(card.offsetWidth+SW_GAP, par.offsetWidth-card.offsetLeft, card.offsetLeft+card.offsetWidth);
     peer=document.createElement("div");
     peer.className="card peer";
-    peer.innerHTML=`<div class="front">${frontHTML(d)}</div>${swipeHint(d)}`;
+    peer.innerHTML=html;
+    peer.querySelectorAll("[id]").forEach(el=>el.removeAttribute("id")); /* a copy of the detail card carries its ids — the page must keep only one of each */
     peer.style.left=card.offsetLeft+"px"; peer.style.top=card.offsetTop+"px"; peer.style.width=card.offsetWidth+"px";
     peer.style.transform=`translateX(${s*shift}px)`;
     par.appendChild(peer);
@@ -2425,7 +2440,7 @@ function wireSwipe(card){
        unterschiedlich hohe Karten in der Vertikalen. Bitte vermeiden."): Learn centres the card in what is left of the
        screen (measured, a two-line sign card sits 20 px lower than a one-character one and their middles are the same
        pixel), so a top-aligned neighbour slides in at the wrong height and hops to its own place at the render. */
-    peer.style.top=Math.round(card.offsetTop+(card.offsetHeight-peer.offsetHeight)/2)+"px";
+    if(o.centred) peer.style.top=Math.round(card.offsetTop+(card.offsetHeight-peer.offsetHeight)/2)+"px"; /* Learn centres its card in what is left of the screen; the detail card is top-aligned in its pane and stays where it is */
   };
   const put=v=>{ card.style.transform=v?`translateX(${v}px)`:""; if(peer) peer.style.transform=`translateX(${step*shift+v}px)`; };
   card.addEventListener("click",e=>{ if(ate){ ate=false; e.stopPropagation(); e.preventDefault(); } },true); /* the stroke's own closing click must not reveal the card */
@@ -2439,27 +2454,33 @@ function wireSwipe(card){
     /* the browser is the arbiter of a scroll: .card.swipe is touch-action:pan-y, so a real pan cancels the pointer. Until then a stroke that began with a little downward drift may still turn into a swipe — the v414 rule latched on the first vertical move and killed the gesture for the whole touch. */
     if(!on){
       if(Math.abs(ax)<SW_SLOP||Math.abs(ax)<=Math.abs(ay)) return;
-      on=true; ate=true; card.setPointerCapture(e.pointerId); makePeer(ax<0?1:-1);
+      on=true; ate=true; busy(true); card.setPointerCapture(e.pointerId); makePeer(ax<0?1:-1);
     }
     const want=ax<0?1:-1;
     if(want!==step&&Math.abs(ax)>SW_SLOP) makePeer(want); /* the finger turned round mid-stroke */
     dx=peer?ax:ax/4; /* at either end of the queue the card gives a little and springs back */
     put(dx);
   });
-  const end=e=>{
+  /* pointercancel means the platform took the gesture away (the page backgrounded mid-stroke, a system back-gesture, the
+     browser taking the pan): the card springs back rather than committing, and `ate` is cleared — a cancelled stroke
+     fires no click, so the click eater would otherwise swallow the next tap anywhere in the card. On the Learn front
+     that cost one tap-to-reveal; on the card detail (v445) it cost the Accept of an AI suggestion. Measured on both. */
+  const end=(e,cancel)=>{
     if(e.pointerId!==pid) return; pid=null;
+    if(cancel) ate=false;
     if(!on) return;
     on=false;
-    const go=peer&&Math.abs(dx)>=SW_MIN;
+    const go=!cancel&&peer&&Math.abs(dx)>=SW_MIN;
     card.classList.add("sliding"); if(peer) peer.classList.add("sliding");
     put(go?-step*shift:0);
     setTimeout(()=>{
       card.classList.remove("sliding");
-      if(!go){ dropPeer(); card.style.transform=""; return; }
-      S.idx+=step; S.revealed=false; S.fullPic=false; S.peek=null; render(); window.scrollTo({top:0});
+      if(!go){ dropPeer(); card.style.transform=""; busy(false); return; }
+      busy(false);
+      o.go(o.idx+step);
     },SW_MS);
   };
-  card.addEventListener("pointerup",end); card.addEventListener("pointercancel",end);
+  card.addEventListener("pointerup",e=>end(e,false)); card.addEventListener("pointercancel",e=>end(e,true));
 }
 
 async function grade(g){
@@ -2581,16 +2602,34 @@ function cardStatus(d){
 }
 /* The list keeps its place (v351): a row tap notes where the list stood, the detail's ← Cards puts it back —
    H: "going back by pressing the arrow … please be at the place where the card was and not at the top of the list". */
-let LIST_SCROLL=0;
-function backToList(){ S.detail=null; S.detailHide=false; S.fullPic=false; render(); const y=LIST_SCROLL; requestAnimationFrame(()=>window.scrollTo(0,y)); }
-function cardsListHTML(){
+/* where the list stood when a row was tapped, which row it was and where on screen it sat (v352, v445) */
+let LIST_SCROLL=0, LIST_CARD=null, LIST_OFF=0;
+function backToList(){
+  const id=LIST_CARD, off=LIST_OFF, y=LIST_SCROLL;
+  S.detail=null; S.detailHide=false; S.fullPic=false; render();
+  requestAnimationFrame(()=>{
+    /* the row of the card the swipe ended on, put back where the tapped row sat (v445). With no swipe this lands on
+       LIST_SCROLL to the pixel — the tapped row's own viewport offset is exactly what LIST_OFF holds — so v352 is
+       unchanged; a card deleted or filtered away meanwhile falls back to the remembered scroll. */
+    let row=null; if(id) for(const b of document.querySelectorAll(".crow")) if(b.dataset.id===id){ row=b; break; }
+    if(row) window.scrollTo(0,Math.max(0,Math.round(row.getBoundingClientRect().top+window.scrollY-off)));
+    else window.scrollTo(0,y);
+  });
+}
+/* the list the Cards tab shows: newest first, narrowed by the ticked filter rows and the search. Its own function since
+   v445, because the card detail swipes through exactly this list and must not build its HTML to learn the order. */
+function cardsList(){
   const q=S.query.trim().toLowerCase();
   let list=S.custom.slice().sort((a,b)=>(b.at||0)-(a.at||0)); /* newest first */
-  const byText=new Map(); S.custom.forEach(x=>{ if(x.c) byText.set(x.c,(byText.get(x.c)||0)+1); }); /* the same text from several photos (v122) */
   /* several rows may be ticked at once (v366): a card must match one of the ticked status rows and one of the ticked tags */
   if(S.filterUnv||S.filterFlag||S.filterAi||S.filterStar) list=list.filter(d=>(S.filterUnv&&d.mt&&!d.mt.verified)||(S.filterFlag&&d.flag)||(S.filterAi&&d.ai)||(S.filterStar&&d.star));
   if(S.filterTags.length) list=list.filter(d=>S.filterTags.some(g=>hasTag(d,g)));
   if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,...Object.values(d.ms||{}),d.flagNote,...(d.tags||[])].filter(Boolean).join(" ").toLowerCase().includes(q));
+  return list;
+}
+function cardsListHTML(){
+  const list=cardsList();
+  const byText=new Map(); S.custom.forEach(x=>{ if(x.c) byText.set(x.c,(byText.get(x.c)||0)+1); }); /* the same text from several photos (v122) */
   const pk=marking("cards"); /* marking (v351): the tap marks instead of opening; the mark sits at the right end of the row since v355 */
   const rows=list.map(d=>`<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
@@ -2599,11 +2638,19 @@ function cardsListHTML(){
   const empty=S.custom.length?t("No cards match."):t("No cards yet — take a photo under Camera, or tap + New.");
   return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length, ids:list.map(d=>d.id)};
 }
+/* a filter whose row is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the
+   list anymore" — the AI chip shows only while suggestions wait, so the filter had no chip left to switch it off and the
+   list stood empty at "0 of 131"; the same for the star, v425, and for a tag whose last card was re-tagged). Its own
+   function since v445: the card detail reads cardsList() to know its neighbours, and an Accept or a cleared star taken
+   ON the open card would otherwise leave the detail looking at a card its own list says is not there. */
+function normaliseFilters(){
+  if(S.filterStar&&!deck().some(d=>d.star)) S.filterStar=false;
+  if(S.filterAi&&!deck().some(d=>d.ai)) S.filterAi=false;
+  S.filterTags=S.filterTags.filter(g=>g===UNTAGGED?allTags().length&&untaggedCount():allTags().includes(g));
+}
 function renderCards(main){
   const nAi=deck().filter(d=>d.ai).length;
-  if(S.filterStar&&!deck().some(d=>d.star)) S.filterStar=false; /* the last star taken off leaves no row to switch the filter back off (the v308 rule, v425) */
-  if(S.filterAi&&!nAi) S.filterAi=false; /* a filter whose chip is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the list anymore" — the AI chip shows only while suggestions wait, so the filter had no chip left to switch it off and the list stood empty at "0 of 131") */
-  S.filterTags=S.filterTags.filter(g=>g===UNTAGGED?allTags().length&&untaggedCount():allTags().includes(g)); /* the same for a tag: the last card of a tag re-tagged, or the last untagged card tagged */
+  normaliseFilters();
   let {html,n,ids}=cardsListHTML();
   main.innerHTML=`<div class="pane">
     <div class="cardsbar"><input id="q" type="search" placeholder="${t("Search")}" value="${esc(S.query)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="btn mini primary" id="newcard">${t("+ New")}</button></div>
@@ -2616,7 +2663,7 @@ function renderCards(main){
   const wire=()=>{ document.querySelectorAll(".crow").forEach(b=>{
     b.onclick=()=>{
       if(marking("cards")){ pickToggle(b.dataset.id); b.classList.toggle("on"); pickBar(()=>delPicked("cards")); return; } /* while marking a tap marks the row instead of opening it (v351) */
-      LIST_SCROLL=window.scrollY; /* where the list stood — ← Cards comes back to it (v352) */
+      LIST_SCROLL=window.scrollY; LIST_CARD=b.dataset.id; LIST_OFF=b.getBoundingClientRect().top; /* where the list stood and which row this is — ← Cards comes back to it (v352), to this row after a swipe (v445) */
       S.detail=b.dataset.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); };
     if(!marking("cards")&&S.custom.length>1) longPress(b,()=>{ PICK={kind:"cards",set:new Set([b.dataset.id])}; render(); }); /* press and hold to start marking (v354) */
   }); wireStars($("#clist")); };
@@ -2628,16 +2675,28 @@ function renderCards(main){
   $("#newcard").onclick=()=>{ endPick(); S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; S.mode="add"; render(); }; /* a card from scratch starts without a picture (v188); the photo path comes in through cropOk with its own pending image */
   wire();
 }
+/* the card detail's own card, so the render and the swipe's neighbour copy cannot drift apart (v445 — the v417 lesson:
+   Learn's hint had to become swipeHint for the same reason). sw: another card of the list stands beside this one. */
+function detailCardHTML(d,sw){
+  const p=S.progress[d.id];
+  const hint=k=>showHints()?`<div class="hint">${t(k)}${fullPhoto(d)?t(", or the photo for the whole picture"):""}.${sw?" "+t("Swipe left or right to pick another card."):""}</div>`:"";
+  return `${tagsHTML(d,!p)}<div class="front tap" id="d-reveal">${frontHTML(d)}</div>
+      ${d.c&&d.reading&&!d.reading.failed?`<div class="hint">${t("The new frame is being read — the text follows when it is done.")}</div>`:""}${!d.c?`${d.reading&&d.reading.failed?"":`<div class="hint">${t("The text, pinyin and meaning follow when the reading is done.")}</div>`}${flagNoteHTML(d)}` /* a card still waiting for its reading has no back (v237) */
+        :S.detailHide?hint("Tap the character to show the answer")
+        :`<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}${hint("Tap the character to hide the answer")}`}`;
+}
 function renderCardDetail(main,c){
   const d=cardOf(c); if(!d){ S.detail=null; return renderCards(main); }
   const p=S.progress[c];
   const stat=p?t("Interval {0} d, ease {1}, {2}, next {3}.",p.interval,p.ease.toFixed(2),nOf(p.reps,"review"),new Date(p.due).toLocaleDateString(LANG_LOCALE[LANG])):t("Not studied yet.");
+  /* the open card is pushed sideways to the next card of the Cards list (v445, H: "Open cards swipe" on the two readings
+     of "Bitte Cards auch swipebar machen"). The neighbours are the list's own order, so a search or a ticked filter
+     decides who they are, exactly as the row tap did. */
+  normaliseFilters(); /* an Accept or a star cleared on the open card must not strand it outside its own list (v308's rule, v445) */
+  const list=cardsList(), li=list.findIndex(x=>x.id===c), sw=li>=0&&list.length>1;
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back">${t("← Cards")}</button><span class="badge">${!d.c?(d.reading&&d.reading.failed?t("Nothing read yet"):t("Reading …")):d.reading&&!d.reading.failed?t("Reading …"):(x=>x?x[0].toUpperCase()+x.slice(1):"")([d.mt&&!d.mt.verified?t("unverified"):"",d.mt&&d.mt.pending?t("translation pending"):"",d.mt&&d.mt.suspect?t("reading uncertain"):""].filter(Boolean).join(", "))}</span></div>
-    <div class="card">${tagsHTML(d,!p)}<div class="front tap" id="d-reveal">${frontHTML(d)}</div>
-      ${d.c&&d.reading&&!d.reading.failed?`<div class="hint">${t("The new frame is being read — the text follows when it is done.")}</div>`:""}${!d.c?`${d.reading&&d.reading.failed?"":`<div class="hint">${t("The text, pinyin and meaning follow when the reading is done.")}</div>`}${flagNoteHTML(d)}` /* a card still waiting for its reading has no back (v237) */
-        :S.detailHide?(showHints()?`<div class="hint">${t("Tap the character to show the answer")}${fullPhoto(d)?t(", or the photo for the whole picture"):""}.</div>`:"")
-        :`<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}${showHints()?`<div class="hint">${t("Tap the character to hide the answer")}${fullPhoto(d)?t(", or the photo for the whole picture"):""}.</div>`:""}`}</div>
+    <div class="card">${detailCardHTML(d,sw)}</div>
     <div class="detailacts">
       ${d.c?`<button class="btn primary" id="d-test">${t("Test this card")}</button>`:""}
       <button class="btn" id="d-edit">${t("Edit")}</button>
@@ -2664,6 +2723,23 @@ function renderCardDetail(main,c){
   wireSay(); wireChars(d); wireLinks();
   wireAi();
   const del=$("#d-del"); if(del) del.onclick=async()=>{ await delCustom(c); S.detail=null; render(); }; /* at once, with Undo (v268) */
+  /* the swipe changes the card, and the two pieces of view state go opposite ways because they mean different things.
+     S.detailHide is a way of READING — "I am testing myself" — and survives the swipe: the detail is not a test that
+     must come closed, which is why Learn resets S.revealed and this does not. S.fullPic is about THIS photo — "show me
+     the whole picture of this card" — so it is dropped at the commit, as every other path that changes the card drops
+     it (the row tap, the linked hop, Learn's next card), and the peer is built with it already off, or the neighbour
+     would slide in showing its whole photo and jump to the crop the moment it landed. */
+  wireSwipe(main.querySelector(".card"), sw?{
+    n:list.length, idx:li,
+    /* the deck is read LIVE, never the list captured when the card was drawn: a card deleted between the wire and the
+       commit would otherwise ride in as a ghost and land the detail on a dead id, which falls back to the list without
+       a word (measured). Learn has always done it this way. */
+    peer:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; const h=detailCardHTML(nd,true); S.fullPic=fp; return h; },
+    go:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return; if(LIST_CARD) LIST_CARD=nd.id; /* only when a row tap put us here — a hop through the linked row left LIST_OFF pointing at another part of the list */
+      S.detail=nd.id; S.fullPic=false; render(); }, /* NO scrollTo: Learn's card never scrolls (maxScroll 0), the detail's routinely does,
+       and the peer slides in at document coordinates — resetting the scroll teleported the card that had just snapped
+       into place by exactly the scroll amount (measured 199.8 px at scroll 200), which is the v418 complaint again */
+    busy:on=>{ const pn=main.querySelector(".pane"); if(pn) pn.classList.toggle("swiping",on); }}:null);
 }
 function renderEdit(main,c){
   const d=cardOf(c); if(!d){ S.editing=null; S.editFrom=null; return render(); }
@@ -3037,6 +3113,8 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  446:"A photo of a control panel taken straight-on no longer loses cards — every label the AI reads gets one.",
+  445:"Open a card from the list and push it sideways — the next card of the list slides in, as in Learn.",
   442:"A hard photo becomes a card as soon as the AI has answered — the reader no longer has to finish first.",
   440:"When the reader is sure of a photo, the card shows at once — the AI's check refines it a moment later.",
   439:"Photos the reader cannot make sense of — an appliance panel, a busy shopfront — now become cards several seconds sooner.",
@@ -4907,35 +4985,45 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
       if(!bd||!ps.length||ps.length===at.length) return;
       const rh=median(ps.map(j=>(runs[pick[j]].y1-runs[pick[j]].y0)/linesOf(j,pick[j])))||1; /* one line's height, also where the run read a label's sub-line with it (v443) */
       const pw=median(ps.map(j=>{ const n=nHead(j); return n?(runs[pick[j]].x1-runs[pick[j]].x0)/n:0; }).filter(v=>v>0))||0;
-      const cand=runs.map((r,i)=>({r,i})).filter(({r,i})=>!ur.has(i)
+      const cand0=runs.map((r,i)=>({r,i})).filter(({r,i})=>!ur.has(i)
         &&Math.min(bd.y1,r.y1)-Math.max(bd.y0,r.y0)>=0.5*Math.min(bd.y1-bd.y0,r.y1-r.y0)
-        &&r.y1-r.y0>=RL_HGT[0]*rh&&r.y1-r.y0<=RL_HGT[1]*rh
-        &&cols.some(c=>Math.abs(mid(r)-c)<=RL_COL*medW)).sort((a,b)=>mid(a.r)-mid(b.r));
+        &&r.y1-r.y0>=RL_HGT[0]*rh&&r.y1-r.y0<=RL_HGT[1]*rh).sort((a,b)=>mid(a.r)-mid(b.r));
+      const cand=cand0.filter(({r})=>cols.some(c=>Math.abs(mid(r)-c)<=RL_COL*medW)); /* v444: the columns filter the pick, and cand0 — the band's runs the columns do not vouch for — says whether the gap is unambiguous at all */
+      const byX=list=>{ const gs=[]; /* the free candidates covering the same columns are one run seen several times */
+        for(const f of list.slice().sort((a,b)=>mid(a.r)-mid(b.r))){
+          const g=gs.find(g0=>{ const o=g0[0].r; return Math.min(o.x1,f.r.x1)-Math.max(o.x0,f.r.x0)>=RL_DUPX*Math.min(o.x1-o.x0,f.r.x1-f.r.x0); });
+          if(g) g.push(f); else gs.push([f]); }
+        return gs; };
       for(let k=0;k<at.length;){
         if(pick[at[k]]>=0){ k++; continue; }
         let e=k; while(e<at.length&&pick[at[e]]<0) e++;
         const gap=at.slice(k,e), L=k>0?runs[pick[at[k-1]]]:null, R=e<at.length?runs[pick[at[e]]]:null;
-        const free=cand.filter(({i,r})=>!ur.has(i)&&(!L||mid(r)>L.x1)&&(!R||mid(r)<R.x0));
+        const inGap=({i,r})=>!ur.has(i)&&(!L||mid(r)>L.x1)&&(!R||mid(r)<R.x0);
+        const free=cand.filter(inGap), g0=byX(cand0.filter(inGap)); /* v444: every run of the band standing in the gap, columns or not */
         /* as many free runs as labels was the rule until v391, and on a photo whose search finds twice as many runs it
            never holds — H's panel at v390 found 166 runs where it had found 90, and not one of its four unread labels
            was placed. First the same characters stand in several of the picture's bands when the lattice is fine, so
            one label's column offers three candidates that are one run seen three times: the free candidates covering
            the same columns are collapsed into one, the one whose height is nearest the row's own. */
-        const groups=[];
-        for(const f of free.slice().sort((a,b)=>mid(a.r)-mid(b.r))){
-          const g=groups.find(g0=>{ const o=g0[0].r; return Math.min(o.x1,f.r.x1)-Math.max(o.x0,f.r.x0)>=RL_DUPX*Math.min(o.x1-o.x0,f.r.x1-f.r.x0); });
-          if(g) g.push(f); else groups.push([f]); }
-        const one=groups.map(g=>g.slice().sort((a,b)=>Math.abs((a.r.y1-a.r.y0)-rh)-Math.abs((b.r.y1-b.r.y0)-rh))[0]);
+        const one=byX(free).map(g=>g.slice().sort((a,b)=>Math.abs((a.r.y1-a.r.y0)-rh)-Math.abs((b.r.y1-b.r.y0)-rh))[0]);
         /* then the columns decide: the runs nearest the columns the placed labels established are this gap's, and they
            count only when the next candidate stands clearly further out (RL_CLEAR of a run's width), so an ambiguous
-           row still keeps the whole picture rather than risk a neighbour's button. And the gap must be closed on both
-           sides (v443): v391 let a run of unread labels at a row's end take the free runs beyond the last placed one,
-           and a label the model omits — ordinary, H's answers carry 20, 21 and 25 labels for one panel — leaves its own
-           run free exactly there, on a column another row vouches for; with the head-based width (above) admitting real
-           runs, 漂洗 took 温度's button in the probe whenever 温度 was left out of the answer. A row's last label the
-           reader cannot read keeps the whole picture, which is the honest answer (v380). */
+           row still keeps the whole picture rather than risk a neighbour's button. And a gap is filled only where a
+           placed label stands after it (v444, H's three close-ups at v443 — 洗衣液长按童锁, 柔顺剂 and 血渍洗 kept the
+           whole panel, every one of them the FIRST label of its row): v443 asked for a placed label on BOTH sides,
+           which a row's leading gap can never have, so it refused exactly the labels v389 exists for and cost H three
+           cards in the field. A TRAILING gap is the dangerous one and stays refused: when the model omits a row's last
+           label — ordinary, H's answers for this panel carried 20, 21 and 25 labels on three runs — that label's own
+           run stands free at the row's end on a column another row vouches for, and the unread label before it takes
+           the neighbour's button (measured on H's own wash.jpg: 漂洗←温度, 血渍洗←内裤).
+           `g0` counts the band's candidates in the gap before the columns filter them, so a run nobody vouches for
+           still makes the order ambiguous — but it is NOT every run of the band: cand0 keeps the RL_HGT height test, and
+           on H's photo 42 of the 68 runs overlapping row 0 fall outside that window and are invisible to the count. So
+           the guard is empirical, not principled, and its limit is named rather than hidden: with the model omitting a
+           row's FIRST label the mirror still slides (柔顺剂←洗衣液). Counting g0 on band overlap alone — what the
+           obvious repair would be — was measured and costs twoLine's 漂洗 its own crop (own 17 → 16). */
         let chosen=null;
-        if(L&&R&&one.length>=gap.length&&gap.length){ /* a placed label on BOTH sides (v443): a row's end has no second bound, and a label the model omitted leaves its run free there — measured, 漂洗 took 温度's button with 温度 left out of the answer */
+        if(R&&one.length>=gap.length&&gap.length&&g0.length<=gap.length){
           const dist=r=>Math.min(...cols.map(c=>Math.abs(mid(r)-c)));
           const rank=one.slice().sort((a,b)=>dist(a.r)-dist(b.r)), take=rank.slice(0,gap.length);
           if(one.length===gap.length||dist(rank[gap.length].r)>=dist(take[take.length-1].r)+RL_CLEAR*medW){
@@ -5450,20 +5538,24 @@ async function cropSign(id,opts){
           const placed=PLACED[id]||(CROP&&CROP.id===id&&CROP.followed?CROP.rect:null); /* only a frame this box actually moved (v410) */
           const gone=cut&&placed&&picSeen.base?outsideWindow(pic,placed,seenBase,W,Hh,seenAngle):null; /* picSeen.base is null on the regrow branch and only there: after a v314 cut, a v318 side, a v348 noText or a v393 tiny re-ask the app has just spent a second Qwen call to RECOVER a line, and the snap then trims its region off the union — measured, the rule deleted the very line the re-ask existed for (verify-aiframe cutline) */
           if(gone) logRead(`a line outside the picture this card will carry, left off it: ${gone.join(" | ")}`); }
-        /* when the reader found nothing at all in the picture, a label whose box touches the picture's edge — where that edge
-           is the photo's own — is cut off by the photo and gets no card (v443, H's dial photo at v442: the model listed 羽绒,
-           血渍洗 and 时间长按远程 from the sliver of the next block at the right edge, the reader found none of the six labels,
-           and three cards carried the whole dial with their text half outside it — "der Text passt nicht zum Bild"). The v312
-           rule asks the model to leave out a line the edge cuts; a box on the edge in a picture the reader could read nothing
-           of is that line. Only in the whole-picture branch: where the reader placed the panel's labels, an unplaced label at
-           the edge keeps the whole picture as before — measured, the rule over both branches dropped 混合, a real label whose
-           drawn box touches the left edge of H's wide shot and which the reader misses there. Never on a proposal that ends
-           inside the photo (there is more beyond it, v313). */
-        const edgeCut=(l,sb)=>{ const b=l.box||[0,0,0,0]; return (b[0]<=0.02&&sb.x<=0.005*sb.lw)||(b[2]>=0.98&&sb.x+sb.w>=0.995*sb.lw)||(b[1]<=0.02&&sb.y<=0.005*sb.lh)||(b[3]>=0.98&&sb.y+sb.h>=0.995*sb.lh); };
-        const edgeOut=(zhs)=>{ if(!zhs.length) return; N.edgeOut=zhs.slice(); logRead(zhs.join(", ")+(zhs.length===1?" stands":" stand")+" at the picture's edge, in a picture whose labels the reader could not find — cut off by the photo, "+(zhs.length===1?"no card for it":"no cards for them")); };
-        if(splitWhole&&!seenAngle&&W&&Hh&&seenBase&&pic.labels&&pic.labels.length>=SPLIT_MIN){ /* never on a straightened copy: its edge is not the photo's along the rows, so a label a little inside the photo can stand at the copy's edge · the boxes are a drawing: the cards keep their texts and get the frame's own picture (v380) */
-          const gone=pic.labels.filter(l=>edgeCut(l,seenBase)); /* only while SPLIT_MIN labels remain: fewer would fall to the one-card path, whose text is the whole answer with the dropped lines still in it */
-          if(gone.length&&pic.labels.length-gone.length>=SPLIT_MIN){ edgeOut(gone.map(l=>l.zh)); pic.labels=pic.labels.filter(l=>!edgeCut(l,seenBase)); } }
+        /* v443 had a rule here: a label the reader could not place whose box touched the picture's edge got no card,
+           on the reading that the photo had cut it off. H's dial photo (2026-09-13) disproved it and it is gone — do not
+           rebuild it. Measured on his own verbatim answer, driven through two serving roots: on a reading straightened
+           by 0° it deletes 羽绒, 血清洗 and 时间长按远程 (v443 three cards, v446 six), whose ink ends at 92–95 % across
+           with 5–8.6 % of clear panel to the right of each — every one of them WHOLE inside the picture its card would
+           have carried. The error is structural, not a threshold: this branch is reached only where
+           templateBoxes has just ruled these very coordinates A DRAWING rather than a measurement (splitWhole), so the
+           rule read x1 off numbers the app had refused one line earlier — and a lattice clamped flush to the picture's
+           edge is the drawing's default, not evidence of truncation (his box for 时间长按远程 lands off the panel
+           entirely). It also inverted the evidence it cited: v312 makes the model LEAVE OUT a line the edge cuts, and
+           his answer complied — the one genuinely clipped label is absent from the list while the three whole ones are
+           present, so a label that IS listed is one the model judged not cut. And note what it did NOT do: H's own dial
+           reading carries seenAng 2 and the guard was !seenAngle, so on the photo that prompted the rule it never ran —
+           both trees give six cards there, and the three wrong cards he reported are a CROP failure (the reader names
+           0 of 6 labels on a dark backlit panel), not this. What was removed is therefore latent: it costs cards only
+           on a panel held straight, which is the ordinary way to photograph one. If a truly cut listed label ever does
+           turn up, the answer is v400's: flag the card, visibly and reversibly — never a silent drop, which removes
+           the evidence of the defect instead of fixing it. */
         if(splitWhole&&W&&Hh&&seenBase&&pic.labels&&pic.labels.length>=SPLIT_MIN){
           const one=PLACED[id]||seenBase;
           SPLIT[id]=pic.labels.map(()=>one);
