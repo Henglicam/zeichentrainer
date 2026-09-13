@@ -495,7 +495,12 @@ body.noscroll{overflow:hidden}
 .ctile .th .lbl{font-size:15px;font-weight:400;color:var(--label2)}
 .ctile .ts2{display:block;margin:3px 10px 0;font-size:12px;color:var(--label3);min-height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ctile .ts2 .st{font-size:12px} .ctile .ts2 .st.due{color:var(--tint);font-weight:600}
-.ctile .star{position:absolute;right:2px;top:2px;z-index:3;width:34px;height:34px;display:grid;place-items:center;filter:drop-shadow(0 1px 2px rgba(0,0,0,.55))}
+/* the star on a tile must RESET the row layout's negative margin (v469, H: "das Sternchen zu weit rechts an der
+   Kante. Wird leicht angeschnitten"). The base .star carries margin:-6px -11px -6px 0, written to pull its 44 px
+   touch target into a list row without widening it; the tile rule never undid it, so right:2px resolved to -9px and
+   top:2px to -4px, and .ctile is overflow:hidden — three pixels of the glyph were cut off every tile. Placed so the
+   glyph lands exactly where .ctile.pick .tick does, 6 px in, and nothing moves when the marking starts. */
+.ctile .star{position:absolute;right:0;top:0;margin:0;z-index:3;width:34px;height:34px;display:grid;place-items:center;filter:drop-shadow(0 1px 2px rgba(0,0,0,.55))}
 .ctile .star svg{stroke:#fff} .ctile .star.on svg{stroke:var(--tint);fill:var(--tint)}
 .ctile .cnt{position:absolute;right:6px;bottom:6px;z-index:3;min-width:20px;height:19px;padding:0 6px;border-radius:999px;background:rgba(0,0,0,.62);color:#fff;font-family:var(--sans);font-size:11px;font-weight:600;line-height:19px;text-align:center}
 .ctile .tmarks{position:absolute;left:6px;bottom:6px;z-index:3;display:flex;gap:4px}
