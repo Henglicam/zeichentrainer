@@ -255,6 +255,22 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 
 .shotwrap{position:relative;margin-bottom:8px}
 .shotwrap img{margin-bottom:0;border-radius:10px}
+/* a marked photo (v448, photo mode phase 1): every card's own frame as a region on the photo with a dot in the card's state; the outlines show for two seconds when the photo first renders, then only the dots stay — the photo stays a photo */
+.shotwrap .regions{position:absolute;inset:0;border-radius:10px}
+.region{position:absolute;padding:0;margin:0;background:none;border:1.5px dashed rgba(255,255,255,0);outline:1px solid rgba(0,0,0,0);cursor:pointer;transition:border-color .5s,outline-color .5s;transform-origin:center;box-sizing:border-box;min-width:0;min-height:0}
+.regions.show .region{border-color:rgba(255,255,255,.95);outline-color:rgba(0,0,0,.45);transition:none}
+.region .dot{position:absolute;right:-6px;top:-6px;width:12px;height:12px;border-radius:50%;background:var(--label3);box-shadow:0 0 0 2px #fff,0 1px 3px rgba(0,0,0,.4)}
+.region.s1 .dot{background:var(--tint)} .region.s2 .dot{background:var(--ok)}
+.regline{font-size:13px;color:var(--label2);margin:0 2px 8px}
+/* the sheet over the photo — not modal: no scrim, the page scrolls, the next dot can be tapped while it stands */
+.ask.lookup{background:none;pointer-events:none}
+.ask .sheet.lookup{pointer-events:auto;position:relative;padding:18px 16px 14px;box-shadow:0 -2px 24px rgba(0,0,0,.28),0 0 0 1px var(--sep)}
+.lookup .x{position:absolute;right:8px;top:6px;width:34px;height:34px;border:none;background:none;color:var(--label2);font-size:24px;line-height:34px;cursor:pointer;padding:0}
+.lookup .zh{font-family:var(--hanzi);font-size:40px;line-height:1.25;color:var(--label);padding-right:36px;word-break:keep-all}
+.lookup .script{margin:4px 0 0}
+.lookup .pin{margin-top:8px} .lookup .mean{margin-top:4px}
+.lookup .grades{margin-top:16px} .lookup .grade{min-height:54px}
+.lookup .lkacts{display:flex;justify-content:center;margin-top:8px} .lookup .lkacts .del{padding:8px 14px}
 /* the card made by itself (v325, H: "no frame during the first scan, just the magic wobbling over the image, and then the result is the finished card"): a soft band of light sweeps the photo while the app reads — nothing on the photo but light, no frame; still under reduced motion (a faint veil) */
 .shotwrap .scan{position:absolute;inset:0;border-radius:10px;overflow:hidden;pointer-events:none}
 .shotwrap .scan::before{content:"";position:absolute;top:-30%;bottom:-30%;left:0;width:45%;transform:translateX(-150%) skewX(-14deg);will-change:transform;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.28) 35%,rgba(255,255,255,.55) 50%,rgba(255,255,255,.28) 65%,rgba(255,255,255,0));animation:scan 1.7s linear infinite} /* v332 (H: "the scanning effect stutters at the top left, it must run smoothly"): the band moves by transform alone, so the compositor drives it while the reader's copies keep the main thread busy (until v331 it animated left — a layout property, drawn by the main thread and frozen with it); linear, and it starts well outside the box, so the skewed band's top corner no longer pops in at the top left on every loop */

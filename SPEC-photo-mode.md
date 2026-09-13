@@ -1,0 +1,125 @@
+# Photo mode — specification, draft 3 (2026-09-13)
+
+H's idea, in his words: "Ich mach ein Foto von irgendwas, oder einen Screenshot von einer chinesischen App. Der Zeichentrainer analysiert das, segmentiert die verschiedenen Character-Strings. Und ich kann dann als Mensch auf irgendwas drauftippen, was ich nicht verstehe, und dafür öffnet sich eine Flashcard. Ich habe keine Flashcards mehr, durch die ich scrolle, sondern Fotos. Und wenn ich etwas nicht verstehe, tippe ich drauf, und es öffnet sich das, was wir für Flashcards gemacht haben."
+
+**In one sentence:** a photo of a user interface — an appliance panel, a screenshot of an app, a wall of labels — becomes the thing you browse, every text on it becomes a tap target, and the card opens on the text you tapped. **A photo of one text — a shop sign, a poster, a package — stays what it is today: photo in, finished card out.** Builds on PWA v447. Every constraint in CLAUDE.md applies unchanged. Nothing here is built.
+
+**Draft 2 (H, the same day: "für die User Interfaces, Screenshots von Apps, Reiskocher, Waschmaschine und all sowas, was nicht so richtig funktioniert, die Tipp-aufs-Foto-Geschichte implementieren, aber für Shopschilder und so einfache Sachen, die jetzt schon super funktionieren, nicht"):** photo mode is for the `apart:true` photos only. The switch is the model's own verdict, which the app already reads: `apart:true` with `SPLIT_MIN` labels or more (a panel, a screenshot, a row of signs) makes a marked photo; `apart:false` (a sign, a poster, a label) makes a card as since v325. That is where the cards are worst — every crop complaint of v359–v447 is a panel — and where the deck floods; the one-text flow H approved at v325 does not move. D1 is decided as C below. **Draft 3 (H: "you tip on the text and then opens a pop up that is like the flashcard but without the photo, only with the pinyin and the characters and the translation and the rating … close it again and tip on another word", then "Go, the grade makes the card"):** the tap opens a **sheet over the photo**, not the card detail, and **the grade is what makes the card** — a sheet closed without a grade is a lookup and writes nothing. D2–D5 are decided with it (§ 8).
+
+## 1. What changes for H on the phone
+
+Today: photo → the app makes cards → H scrolls the **Cards** list or studies in **Learn**. A panel photo makes twenty cards at once, most of them buttons H already knows, and the pictures of those cards are the app's weakest — the neighbour's button, the whole panel, a sliver.
+
+With photo mode: a **panel or a screenshot** → the app finds the texts on it and marks them → H scrolls his **photos** → taps a text he does not understand → **a sheet slides up over the photo** with the characters, the pinyin and the speaker, the meaning and the three grades Hard, Medium, Easy. **A grade makes the card and writes the review; closing the sheet without one is a lookup and writes nothing.** Tap outside, or tap the next dot, and the sheet closes or swaps. Texts he never grades never become cards. A label the reader could not place still shows *where it stands* on the photo, which the whole-panel card never could. **A sign, a poster or a package** → the finished card, exactly as today. Learn stays the study screen; the Cards list stays for search and filters.
+
+The three taps on a panel: shutter (or share a screenshot) → tap the text → read it, and grade it if it is worth keeping. No frame, no list of twenty cards, no deciding what to keep beyond the grade you would give anyway. The one tap on a sign: shutter → the card.
+
+## 2. What already exists and is reused
+
+Almost all of the machinery is in the app; what is missing is the view and one change of what the pipeline writes.
+
+| Piece | Exists as | Used for |
+|---|---|---|
+| Finding every text on a panel or screenshot | the split of v357–v447: the model's `apart`/`labels`, the drawing test, the reader's run search (`labelRunsOf`, `readLabels`), `photoFrameOf` | the segmentation — one region per label |
+| Finding the one text on a sign or poster | the frame chain of v287–v348 (quick look, close look, the AI's box, the snap) | one region per single-text photo |
+| Where a text stands on its photo | every card since v244 carries `frame` `{x,y,w,h,a}` as fractions of the photo, and `shot` names the photo | the tap target's rectangle — for every card H already has, the region is known today |
+| The card opened on a tap | the card detail (`detailCardHTML`, v445's swipe between neighbours through `wireSwipe(card,o)`) | the flashcard that opens |
+| A card built from a reading without writing it | `readingCard` and v440's `provisionalCard` | making the card at the moment of the tap |
+| The card's picture | `windowRect`/`windowCut` (16:9 window, v329) or the label's own cut (v362), through `cardJpeg` | the picture of a card made from a region |
+| The photo list | the Camera tab's inbox (`renderInbox`, newest first, Take photo and From album at the top since v353) | the photo browser |
+| A screenshot shared from another app | the share target (v163), the App kind (v367) | the same path |
+| A photo with nothing readable | v438's row "The AI could not be reached …", the Crop button | the fallback: frame it by hand |
+| What H knows and what he does not | the progress rows (`interval`, `KNOWN_DAYS` 21) | the state colour of a region (phase 3) |
+
+## 3. Data model
+
+A photo record in `inbox` is `{id, blob, ts}` today. It gains **`regions`**, the texts found on it:
+
+```
+regions:[{
+  rid:"r1",                         // stable within the photo
+  zh:"混合", p:"hùn hé", m:"mixed", ml:"en",   // the model's own reading of this element (v358: every label carries its own p and m)
+  box:{x,y,w,h,a},                  // fractions of the photo, as `frame` on a card — photoFrameOf's output
+  placed:"reader"|"model"|"none",   // how the box was found: the reader's run (v386+), the model's measured box, or nothing — then box is the whole photo (v380)
+  kind:"Appliance",                 // the photo's kind (v364/v377), one per photo, copied here so a region without a card can still say what it is
+  ai:{…},                           // the raw answer's entry for this label, for the card's own record when it is made
+  card:null|"混合#1757…"            // the card this region became, once tapped
+}],
+regionsAt:1757…, regionsV:448,      // when and by which build the photo was analysed
+regionsErr:"…"                      // why it was not (the AI could not be reached, nothing found)
+```
+
+Cards are **unchanged**: a card made from a region carries `shot`, `frame` (= the region's box), `v`, and the region's `rid` as **`region`** so the link survives a re-analysis. Export and import carry `regions` on nothing — regions are cheap to rebuild and the photos themselves leave the phone only with "Include photos" (v166), where `regions` rides along inside the photo record as any field would.
+
+**Existing photos (migration at boot, once):** for every inbox photo that made **two or more cards** (a split panel of v358+, or several hand-drawn frames), its regions are built from the cards that name it in `shot` — one region per card, `box`=`frame`, `card`=the card's id — so every panel H has photographed shows as tap targets from the first start, with no AI call. A photo that made one card is a one-text photo and gets no regions; its row stays the finished card of v325. A photo with no cards gets no regions and is marked **not analysed**; the backlog is not analysed by itself (H's inbox holds 237 photos, the relay's cap is 200 calls a phone a day — v411's rule that only an explicit act costs a call). A tap on such a photo's "Find the texts" runs the analysis for that photo alone.
+
+## 4. The photo browser
+
+**Where:** the Camera tab (**D2** below). The inbox row is the surface — the photo full width, as today, with its regions drawn on it. Take photo and From album stay at the top (v353). Under a marked photo one line, "6 texts · 2 cards · 1 known" (or "Finding the texts …" with the shimmer of v325, or v438's sentence), and Crop / Delete as today. **A one-text photo's row is unchanged:** the finished card with Edit and Delete card (v325/v344), no regions.
+
+**The regions on the photo:** each region is an absolutely positioned element over the photo in percent coordinates (as `cropRectStyle` draws the frame), turned by `a` where the frame was turned. The tap target is never smaller than 44 × 44 CSS px — a small label's box is grown around its centre to that floor for the hit test only, never for the drawing; two regions whose grown targets overlap resolve a tap to the nearer centre. A tap on the photo outside every region does what it does today (the whole-photo view).
+
+**How a region looks (D3):** the recommendation is a **thin outline in the frame's own white-on-dark dash** (the crop frame's look, v50) that shows for two seconds when the photo scrolls into view or the analysis ends, and then fades to **a small dot at the region's corner**, so the photo stays a photo. A region that is a card carries a filled dot whose colour is the card's state (§ 7) — from the first phase, since the dots are what makes a marked photo more than a list. Nothing is dimmed, nothing covers the characters.
+
+**Scrolling:** the inbox scrolls vertically as today; photos stay lazy (their object URLs are made as they come into view, as the list's thumbnails are since v213). The 237-photo inbox must scroll at 60 frames a second with regions drawn — measured before merge, as v307 measured the list.
+
+**Marking and deleting** photos (v351–v355, long press) are untouched.
+
+## 5. The tap
+
+1. H taps a region. The **sheet** of v222/v365 (`.ask` backdrop, `askup` slide, `.sheet`) opens over the photo, which stays visible above it: the characters in the Hanzi font (the traditional form when the card has one, with the Traditional pill), the pinyin semibold in the tint with the **speaker**, the meaning (in the app's language when the card has it, with the language pill otherwise), then the **three grade tiles** of v421 — Hard red, Medium amber, Easy green — and under them one quiet line **More**, which opens the full card detail (Edit, Flag, Share, the parts row, the linked photos). No picture in the sheet: the photo is right there.
+2. **A grade is the decision.** If the region is not a card yet, the grade **makes the card** first — `readingCard` from the region's own `zh`/`p`/`m`/`ai` (what `splitCards` does per label today), the picture cut from the photo at the region's box (`cropBlob` through `cardJpeg`, the label's own cut as in v362), `frame`=`box`, `shot`, `region`=`rid`, `tags` with the photo's kind, `mt` as the split's cards get it, written to IndexedDB — then `schedule()` writes the review with that grade (Hard = `again`, due today; Medium = `good`; Easy = `easy`), `dailyBump` and the streak as in Learn, and the sheet closes. The region's `card` is set and its dot takes the card's colour at once. A card that already exists is graded as Learn grades it, whether or not it is due — the same rule as a starred session (v429): a grade given on purpose counts.
+3. **Closing without a grade** — the backdrop, Escape, or a tap on another dot — writes nothing. The word was looked up. No card, no review, the dot stays as it was. A tap on another dot while the sheet is open **swaps** the sheet's content to that region without the slide, so a screenshot with fifteen labels is fifteen taps and nothing else.
+4. **More** opens the card detail on the region's card; a region that is not a card yet is made into one by More too, since the detail needs a record (Undo under it, v268). ← in the detail returns to the photo at the same scroll (v352's rule, on the inbox).
+5. **Delete card** in the detail (v268, with Undo) clears `card` on the region and returns to the photo; the region stays a tap target and its dot goes grey.
+6. **Edit** opens the Edit form as today; Crop again starts from the region's box (`frame`), as it does for every card since v244. A frame moved there updates the region's box on Save.
+7. No swipe between regions in the sheet: the next dot is the swipe. (Draft 2 had v445's swipe on the card detail; it goes, since the detail is no longer the tap's target.)
+
+**A region the reader could not place** (`placed:"none"`, the v380 case) is not drawn on the photo; it is a chip under the photo with its text ("洗衣液", "柔顺剂"), and the chip is its tap target for the same sheet. The card it makes carries the frame's own picture, as today. A learner can still reach every text the model read, and the photo shows only what the app can point at.
+
+**A grade in the sheet is a review:** it counts in `daily`, the streak, the Progress dashboard and the usage counters (`reviews`), like a grade in Learn. Two new counters in `usage`: `regionTaps` (the sheet opened) and `regionGrades` (a grade given in it); both go into the daily row (v170) so the field can say whether the mode is used and how often a lookup becomes a card.
+
+## 6. The pipeline: the split writes regions, the single card stays (**D1 = C**)
+
+Today the automatic card path (v325) ends in `finishPending` → one card, or `splitCards` → N cards. The branch between the two already exists, and it is the switch:
+
+- **A panel or a screenshot** (`apart` with `SPLIT_MIN` labels or more, the placement of v359–v447): one region per label, `box` from the placement, `placed` saying how. Everything up to the cut is unchanged — the drawing test, the run search, the row bands, the free-standing element (v392), the merged-label head (v407/v443), the ordered fill (v444), the paid-for answer consumed on a strong reading (v447). Only the last step changes: **`splitCards` writes regions, not cards.** The placeholder card of v325 is dropped as `cancelAuto` drops it, and the photo's row becomes the marked photo.
+- **A single text** (a sign, a poster, a label — `apart:false`, or fewer than `SPLIT_MIN` labels): **unchanged.** `finishPending` makes the finished card as since v325, with the v410 line filter and the v400 agreement check as today. No region, no dot, no extra tap.
+- **The verdict is the model's and is sometimes wrong.** A poster answered `apart:true` becomes a marked photo instead of a card — one tap from its card, an inconvenience and not a loss. A panel answered `apart:false` makes one card, as it does today. `N.apart` is already in the numbers record, so a wrong verdict is diagnosable.
+- **Nothing readable** (v348's `noText`, v438's unreached AI on a weak reading): no regions, `regionsErr` set, the row's sentence as today, Crop as the way in.
+- **Crop by hand** (the frame, Save card, Save now, the v437 Crop right after the shutter): unchanged — a hand-drawn frame makes a card as today, and that card's frame is added to the photo as a region with `card` set. The hand always has the floor.
+- **From album with several photos** (v411): the batch analyses them one after the other into regions; the line under Inbox stays.
+- **v440's provisional card** becomes the provisional **regions**: on a strong reading the outlines appear at once with the check's bar under the photo, and the AI's answer refines the texts in place. The v441 gate holds them back the same way.
+
+What this changes for H, said plainly: **a photo of a sign still makes its card by itself** (v325 stands). **A photo of a panel no longer makes twenty cards;** it makes a marked photo, and each card comes with a tap. The v358 head line "11 cards from this photo" and the list of cards under the photo go, replaced by the photo with its dots.
+
+## 7. State on the photo (in phase 1)
+
+Every card has a progress row, so the photo can show what H knows: the region's dot in **grey** for a text with no card, **tint** for a card that is new or still learning (interval under `KNOWN_DAYS` 21), **green** (`--ok`) for a known card. A screenshot of Meituan's home screen then shows at a glance which of the fifteen functions H can read — the photo is the progress report. A line under the photo: "6 texts · 4 known". This is the part that makes the mode more than a different list, and it is cheap: one lookup per region at render. It ships in phase 1, not later — a Meituan screen whose dots turn green one by one is the demo of the app.
+
+## 8. Decisions (all taken, drafts 2 and 3)
+
+- **D1 — What makes a card. Decided: C** (H, draft 2). A one-text photo makes its card at analysis time as today; a panel or screenshot makes regions, and a card is made by the tap. Draft 1 had recommended B (regions on every photo, the tap always) for the deck's sake — a panel photo puts twenty cards into Learn of which H knows most, and the star of v425–v429 exists because the deck had stopped meaning "what I want to learn". C keeps that gain where the flood is and where the crops are worst, and takes nothing from the one-sign flow H approved at v325. Rejected with it: A (every region a card, the view only), which would leave the flood and the neighbour's-button pictures as they are.
+- **D2 — Where the photos live. Decided: A.** *(A)* The Camera tab's inbox is the browser; the finished-card rows under a photo (v325's `resultHTML`, v358's "11 cards from this photo" list) go, since the photo itself now carries them. *(B)* A separate "Photos" screen reached from the inbox row (tap the photo → full-screen photo with regions), the inbox as today. *(C)* The Cards tab becomes Photos, with the card list behind a chip. A is one screen fewer and matches "I scroll photos"; C would take the search and the filters away from where they are. Four tabs stay (v25).
+- **D3 — How visible the regions are. Decided: outline that fades to a dot.** Outline that fades to a dot, dots only, outlines always, or nothing drawn (tap anywhere, nearest region answers). A photo covered in rectangles is the thing H did not want at v288 ("only show the frame after identifying the right area").
+- **D4 — The backlog. Decided: from the cards only.** Existing photos get regions from their cards only, and "Find the texts" per photo on demand; or one batch over the whole inbox, at up to 237 relay calls.
+- **D5 — Lookup or learn. Decided: the grade makes the card** (H, draft 3). Draft 2 had recommended that the tap makes the card with Undo; H's sheet with the grades in it settles it better: a sheet closed without a grade is a lookup and costs nothing, a grade is a card and a review in one tap. No "+ Learn" button, no decision beyond the grade the learner would give anyway. What it costs: a word H reads in the sheet and does not grade is not in the deck — which is the point.
+- **D6 — Deleting a marked photo.** Photos → Delete N (v214, photos older than 30 days that became a card) skips a marked photo with regions that are not cards yet, and the per-photo Delete's Undo line says "3 texts on this photo have no card yet." before the photo goes. A region that is a card keeps its card, which keeps the photo's copy as today (`keepPhoto`).
+
+## 9. What it costs and what it cannot do
+
+- **No new AI call.** Regions come from the answer the app already asks for; a tap costs one `cropBlob` and one IndexedDB write. Analysing an old photo on demand costs one picture call, as a photo does today.
+- **The segmentation is as good as the split is, no better.** On H's washing machine that is 15–17 of 20 labels with their own place and none on a neighbour's (v386–v447); the rest are chips under the photo (§ 5). A label the model omits is not a region; Crop is the way in, as today. A poster's title and its credits are one region when the model says `apart:false` — the parts row inside the card covers the words.
+- **Nothing runs while the app is away** (v411). A shared screenshot is analysed when the app is open.
+- **A region is the model's reading.** 血清洗 for 血渍洗 (v447) is on the region and on the card it makes; the AI check and Edit fix it as they fix a card today.
+- **One `cardJpeg` per tapped region**, not per label — a panel photo no longer costs twenty cuts and twenty writes at once.
+- **Learn's queue shrinks** where a panel used to fill it, which is the point, and the "N cards from this photo" head line and the per-photo card list go (D2 A). The one-text flow costs nothing new.
+- **Two paths for what a photo becomes** instead of one — the branch already exists in `finishPending` against `splitCards`, so it is the same branch with a different last step.
+- **Not built, named:** regions drawn on the Learn card's whole-photo view (the tap there reveals the card, v82's rule, and a second tap layer would compete with it); a region for a word inside a line (the parts row does that); analysing the whole backlog by itself (D4).
+
+## 10. Phases
+
+1. **The view on today's panels, with the state colours (no pipeline change, low risk):** `regions` on the photo record, built at boot from the cards' `frame` and `shot` for every photo that made two or more cards; the inbox draws them with the dot's colour from the progress rows and the "6 texts · 2 cards · 1 known" line; a tap opens the sheet with characters, pinyin, speaker, meaning, the three grades and More; a grade writes the review and recolours the dot; closing writes nothing; More opens the detail and ← returns to the photo. Every panel H has photographed becomes a tap map from the first start; every sign stays as it is. Two counters in the daily usage row — the sheet opened, a grade given in it — so the field can say whether the mode is used (v170's row, nothing new sent beyond two counts). The guide's Cards section gains the sentence (the v259 rule), a `WHATS_NEW` line and a `TO_TEST` line. Suites: a seeded panel photo with three cards of three states → three regions at boot in three colours, a seeded one-card photo → no regions and the v325 row, the tap opening the sheet with the right word, a grade writing the progress row and recolouring the dot, a close writing nothing, the swap to another dot, More opening the detail and ← returning at the same scroll, the 44 px floor, no overflow, 60 fps over 200 photos.
+2. **The split writes regions (D1 = C):** `splitCards` writes regions and drops the placeholder; the grade makes the card from the region; the provisional regions of v440 on a strong panel reading; the chips for unplaced labels; "Find the texts" on an old multi-card photo; the guide's first two sections rewritten (the v259 rule), a `WHATS_NEW` line and a `TO_TEST` line. `finishPending`'s single-card path is not touched. Suites: the panel suite's fixtures give the same placements as regions (the count of regions equals today's count of cards, `own`/`wrong` unchanged), the autocard suite's lone sign still makes its finished card, a panel makes a marked photo and no card, Cancel, the v438 no-card case, Crop by hand still a card, the batch.
+
+Field check after each phase, on the Xiaomi: the washing machine and the rice cooker (marked photos), the Meituan screenshot (the dots), a lone sign (the finished card as before), and a photo with nothing readable. The decision on phase 2 comes from phase 1's two counters after two weeks with H's class: taps that come and Learn reviews that do not fall.
