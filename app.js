@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=444; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=445; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -395,6 +395,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v445","Cards: swipe an open card sideways"],
   ["again","v444","washer: 3 leading labels get crops"],
   ["photo","v442","panel: card once the AI answers"],
   ["again","v443","washer: 2 more own crops, dial: 3"],
@@ -2075,7 +2076,7 @@ const GUIDE=()=>[
   {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out."),
     t("Grade yourself: Hard, Medium, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
     t("Swipe the closed card left or right to pick another one — nothing is graded, and a card you skip stays due for next time.")]},
-  {h:t("Cards"),p:[t("All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included."),
+  {h:t("Cards"),p:[t("All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included. Push an open card sideways for the next one in the list."),
     t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together — a photo in the Camera tab the same way. Tap the star on a card to mark it as one you care about — the filter then shows them alone, and Learn studies all of them, due or not.")]},
   {h:t("Language and meanings"),p:[t("More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.")]},
   {h:t("What stays on the phone"),p:[t("Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends the Chinese text, pinyin and meaning of a card, and the framed part of a photo only when the reading is weak."),
@@ -2377,7 +2378,12 @@ function renderStudy(main){
   if(S.revealed) warmParts();
   /* tap on the photo: crop ⇄ whole photo; tap on the character: back on and off */
   const rv=$("#reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); return; } S.revealed=!S.revealed; render(); };
-  wireSwipe(main.querySelector(".card"));
+  /* the closed card is swiped to pick another card of the session (v414/v417); the detail does the same down the
+     Cards list since v445, so wireSwipe is told which list it moves through rather than reading S.queue itself */
+  wireSwipe(main.querySelector(".card"), S.revealed||S.queue.length<2?null:{
+    n:S.queue.length, idx:S.idx, centred:true,
+    peer:i=>{ const nd=cardOf(S.queue[i]); return nd?`<div class="front">${frontHTML(nd)}</div>${swipeHint(nd)}`:null; },
+    go:i=>{ S.idx=i; S.revealed=false; S.fullPic=false; S.peek=null; render(); window.scrollTo({top:0}); }});
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
   const st=$("#star-card"); if(st) st.onclick=async()=>{ await setStar(c,!d.star); render(); }; /* the learner's own mark, here too (v427) — the same field the Cards list writes */
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
@@ -2395,18 +2401,22 @@ function renderStudy(main){
 const SW_SLOP=12, SW_MIN=60, SW_GAP=16, SW_MS=220;
 /* the closed card is pushed sideways and the next one slides in from the other side and snaps into place (v414, the carousel of v417 — H: "Ich moechte die Karten quasi nach links schieben und die naechste Karte kommt von rechts rein und rastet geschmeidig ein … Die muessen nicht so zur Seite wegkippen wie bei Tinder"). Nothing is graded: only S.idx moves; a card swiped past returns in the next session, not in this one (v417). */
 function swipeHint(d){ return showHints()?`<div class="hint">${t("Tap the character to reveal")}${fullPhoto(d)?t(", or the photo for the whole picture"):""}.${S.queue.length>1?" "+t("Swipe left or right to pick another card."):""}</div>`:""; }
-function wireSwipe(card){
-  if(!card||S.revealed||S.queue.length<2) return;
+function wireSwipe(card,o){
+  /* o: {n, idx, peer(i) -> the neighbour's inner HTML or null, go(i), centred} — the caller owns the list and what a
+     move means, so the same gesture serves Learn's session queue and the Cards list's own order (v445) */
+  if(!card||!o||o.n<2) return;
   card.classList.add("swipe");
-  const par=card.parentElement;
+  /* the peer is placed against the card's own offsetParent, which is #main on both screens — the Learn card sits in it
+     directly, the detail card inside a .pane that is not positioned — so offsetLeft/offsetTop are always its coordinates */
+  const par=card.offsetParent||card.parentElement;
   let x0=0,y0=0,dx=0,on=false,ate=false,pid=null,peer=null,step=0,shift=0;
-  const at=i=>i>=0&&i<S.queue.length;
+  const at=i=>i>=0&&i<o.n;
   const dropPeer=()=>{ if(peer){ peer.remove(); peer=null; } };
   /* the neighbour is an absolutely placed copy of the card beside it, so the page's layout never moves while the finger does */
   const makePeer=s=>{
     dropPeer(); step=s;
-    if(!at(S.idx+s)) return;
-    const d=cardOf(S.queue[S.idx+s]); if(!d) return;
+    if(!at(o.idx+s)) return;
+    const html=o.peer(o.idx+s); if(html==null) return;
     /* far enough that the pair leaves the screen, not merely one card width (v419, H on his Xiaomi Mix Fold unfolded:
        "Sieht der Swipe im aufgeklappten Zustand auf dem großen Screen noch etwas komisch aus, weil die Karten links und
        rechts dann einfach plötzlich verschwinden. Die müssten eigentlich dann rausfliegen."). A card is at most 440 px
@@ -2418,7 +2428,8 @@ function wireSwipe(card){
     shift=Math.max(card.offsetWidth+SW_GAP, par.offsetWidth-card.offsetLeft, card.offsetLeft+card.offsetWidth);
     peer=document.createElement("div");
     peer.className="card peer";
-    peer.innerHTML=`<div class="front">${frontHTML(d)}</div>${swipeHint(d)}`;
+    peer.innerHTML=html;
+    peer.querySelectorAll("[id]").forEach(el=>el.removeAttribute("id")); /* a copy of the detail card carries its ids — the page must keep only one of each */
     peer.style.left=card.offsetLeft+"px"; peer.style.top=card.offsetTop+"px"; peer.style.width=card.offsetWidth+"px";
     peer.style.transform=`translateX(${s*shift}px)`;
     par.appendChild(peer);
@@ -2426,7 +2437,7 @@ function wireSwipe(card){
        unterschiedlich hohe Karten in der Vertikalen. Bitte vermeiden."): Learn centres the card in what is left of the
        screen (measured, a two-line sign card sits 20 px lower than a one-character one and their middles are the same
        pixel), so a top-aligned neighbour slides in at the wrong height and hops to its own place at the render. */
-    peer.style.top=Math.round(card.offsetTop+(card.offsetHeight-peer.offsetHeight)/2)+"px";
+    if(o.centred) peer.style.top=Math.round(card.offsetTop+(card.offsetHeight-peer.offsetHeight)/2)+"px"; /* Learn centres its card in what is left of the screen; the detail card is top-aligned in its pane and stays where it is */
   };
   const put=v=>{ card.style.transform=v?`translateX(${v}px)`:""; if(peer) peer.style.transform=`translateX(${step*shift+v}px)`; };
   card.addEventListener("click",e=>{ if(ate){ ate=false; e.stopPropagation(); e.preventDefault(); } },true); /* the stroke's own closing click must not reveal the card */
@@ -2457,7 +2468,7 @@ function wireSwipe(card){
     setTimeout(()=>{
       card.classList.remove("sliding");
       if(!go){ dropPeer(); card.style.transform=""; return; }
-      S.idx+=step; S.revealed=false; S.fullPic=false; S.peek=null; render(); window.scrollTo({top:0});
+      o.go(o.idx+step);
     },SW_MS);
   };
   card.addEventListener("pointerup",end); card.addEventListener("pointercancel",end);
@@ -2582,16 +2593,34 @@ function cardStatus(d){
 }
 /* The list keeps its place (v351): a row tap notes where the list stood, the detail's ← Cards puts it back —
    H: "going back by pressing the arrow … please be at the place where the card was and not at the top of the list". */
-let LIST_SCROLL=0;
-function backToList(){ S.detail=null; S.detailHide=false; S.fullPic=false; render(); const y=LIST_SCROLL; requestAnimationFrame(()=>window.scrollTo(0,y)); }
-function cardsListHTML(){
+/* where the list stood when a row was tapped, which row it was and where on screen it sat (v352, v445) */
+let LIST_SCROLL=0, LIST_CARD=null, LIST_OFF=0;
+function backToList(){
+  const id=LIST_CARD, off=LIST_OFF, y=LIST_SCROLL;
+  S.detail=null; S.detailHide=false; S.fullPic=false; render();
+  requestAnimationFrame(()=>{
+    /* the row of the card the swipe ended on, put back where the tapped row sat (v445). With no swipe this lands on
+       LIST_SCROLL to the pixel — the tapped row's own viewport offset is exactly what LIST_OFF holds — so v352 is
+       unchanged; a card deleted or filtered away meanwhile falls back to the remembered scroll. */
+    let row=null; if(id) for(const b of document.querySelectorAll(".crow")) if(b.dataset.id===id){ row=b; break; }
+    if(row) window.scrollTo(0,Math.max(0,Math.round(row.getBoundingClientRect().top+window.scrollY-off)));
+    else window.scrollTo(0,y);
+  });
+}
+/* the list the Cards tab shows: newest first, narrowed by the ticked filter rows and the search. Its own function since
+   v445, because the card detail swipes through exactly this list and must not build its HTML to learn the order. */
+function cardsList(){
   const q=S.query.trim().toLowerCase();
   let list=S.custom.slice().sort((a,b)=>(b.at||0)-(a.at||0)); /* newest first */
-  const byText=new Map(); S.custom.forEach(x=>{ if(x.c) byText.set(x.c,(byText.get(x.c)||0)+1); }); /* the same text from several photos (v122) */
   /* several rows may be ticked at once (v366): a card must match one of the ticked status rows and one of the ticked tags */
   if(S.filterUnv||S.filterFlag||S.filterAi||S.filterStar) list=list.filter(d=>(S.filterUnv&&d.mt&&!d.mt.verified)||(S.filterFlag&&d.flag)||(S.filterAi&&d.ai)||(S.filterStar&&d.star));
   if(S.filterTags.length) list=list.filter(d=>S.filterTags.some(g=>hasTag(d,g)));
   if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,...Object.values(d.ms||{}),d.flagNote,...(d.tags||[])].filter(Boolean).join(" ").toLowerCase().includes(q));
+  return list;
+}
+function cardsListHTML(){
+  const list=cardsList();
+  const byText=new Map(); S.custom.forEach(x=>{ if(x.c) byText.set(x.c,(byText.get(x.c)||0)+1); }); /* the same text from several photos (v122) */
   const pk=marking("cards"); /* marking (v351): the tap marks instead of opening; the mark sits at the right end of the row since v355 */
   const rows=list.map(d=>`<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
@@ -2617,7 +2646,7 @@ function renderCards(main){
   const wire=()=>{ document.querySelectorAll(".crow").forEach(b=>{
     b.onclick=()=>{
       if(marking("cards")){ pickToggle(b.dataset.id); b.classList.toggle("on"); pickBar(()=>delPicked("cards")); return; } /* while marking a tap marks the row instead of opening it (v351) */
-      LIST_SCROLL=window.scrollY; /* where the list stood — ← Cards comes back to it (v352) */
+      LIST_SCROLL=window.scrollY; LIST_CARD=b.dataset.id; LIST_OFF=b.getBoundingClientRect().top; /* where the list stood and which row this is — ← Cards comes back to it (v352), to this row after a swipe (v445) */
       S.detail=b.dataset.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); };
     if(!marking("cards")&&S.custom.length>1) longPress(b,()=>{ PICK={kind:"cards",set:new Set([b.dataset.id])}; render(); }); /* press and hold to start marking (v354) */
   }); wireStars($("#clist")); };
@@ -2629,16 +2658,27 @@ function renderCards(main){
   $("#newcard").onclick=()=>{ endPick(); S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; S.mode="add"; render(); }; /* a card from scratch starts without a picture (v188); the photo path comes in through cropOk with its own pending image */
   wire();
 }
+/* the card detail's own card, so the render and the swipe's neighbour copy cannot drift apart (v445 — the v417 lesson:
+   Learn's hint had to become swipeHint for the same reason). sw: another card of the list stands beside this one. */
+function detailCardHTML(d,sw){
+  const p=S.progress[d.id];
+  const hint=k=>showHints()?`<div class="hint">${t(k)}${fullPhoto(d)?t(", or the photo for the whole picture"):""}.${sw?" "+t("Swipe left or right to pick another card."):""}</div>`:"";
+  return `${tagsHTML(d,!p)}<div class="front tap" id="d-reveal">${frontHTML(d)}</div>
+      ${d.c&&d.reading&&!d.reading.failed?`<div class="hint">${t("The new frame is being read — the text follows when it is done.")}</div>`:""}${!d.c?`${d.reading&&d.reading.failed?"":`<div class="hint">${t("The text, pinyin and meaning follow when the reading is done.")}</div>`}${flagNoteHTML(d)}` /* a card still waiting for its reading has no back (v237) */
+        :S.detailHide?hint("Tap the character to show the answer")
+        :`<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}${hint("Tap the character to hide the answer")}`}`;
+}
 function renderCardDetail(main,c){
   const d=cardOf(c); if(!d){ S.detail=null; return renderCards(main); }
   const p=S.progress[c];
   const stat=p?t("Interval {0} d, ease {1}, {2}, next {3}.",p.interval,p.ease.toFixed(2),nOf(p.reps,"review"),new Date(p.due).toLocaleDateString(LANG_LOCALE[LANG])):t("Not studied yet.");
+  /* the open card is pushed sideways to the next card of the Cards list (v445, H: "Open cards swipe" on the two readings
+     of "Bitte Cards auch swipebar machen"). The neighbours are the list's own order, so a search or a ticked filter
+     decides who they are, exactly as the row tap did. */
+  const list=cardsList(), li=list.findIndex(x=>x.id===c), sw=li>=0&&list.length>1;
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back">${t("← Cards")}</button><span class="badge">${!d.c?(d.reading&&d.reading.failed?t("Nothing read yet"):t("Reading …")):d.reading&&!d.reading.failed?t("Reading …"):(x=>x?x[0].toUpperCase()+x.slice(1):"")([d.mt&&!d.mt.verified?t("unverified"):"",d.mt&&d.mt.pending?t("translation pending"):"",d.mt&&d.mt.suspect?t("reading uncertain"):""].filter(Boolean).join(", "))}</span></div>
-    <div class="card">${tagsHTML(d,!p)}<div class="front tap" id="d-reveal">${frontHTML(d)}</div>
-      ${d.c&&d.reading&&!d.reading.failed?`<div class="hint">${t("The new frame is being read — the text follows when it is done.")}</div>`:""}${!d.c?`${d.reading&&d.reading.failed?"":`<div class="hint">${t("The text, pinyin and meaning follow when the reading is done.")}</div>`}${flagNoteHTML(d)}` /* a card still waiting for its reading has no back (v237) */
-        :S.detailHide?(showHints()?`<div class="hint">${t("Tap the character to show the answer")}${fullPhoto(d)?t(", or the photo for the whole picture"):""}.</div>`:"")
-        :`<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}${showHints()?`<div class="hint">${t("Tap the character to hide the answer")}${fullPhoto(d)?t(", or the photo for the whole picture"):""}.</div>`:""}`}</div>
+    <div class="card">${detailCardHTML(d,sw)}</div>
     <div class="detailacts">
       ${d.c?`<button class="btn primary" id="d-test">${t("Test this card")}</button>`:""}
       <button class="btn" id="d-edit">${t("Edit")}</button>
@@ -2665,6 +2705,13 @@ function renderCardDetail(main,c){
   wireSay(); wireChars(d); wireLinks();
   wireAi();
   const del=$("#d-del"); if(del) del.onclick=async()=>{ await delCustom(c); S.detail=null; render(); }; /* at once, with Undo (v268) */
+  /* the answer stays shown or hidden as the user left it — the detail is where a card is read, not a test that must come
+     closed (Learn's swipe resets S.revealed for that reason) — while the whole photo goes back to the crop, since that
+     view is about this photo. The peer is built as it will land, so nothing moves at the render. */
+  wireSwipe(main.querySelector(".card"), sw?{
+    n:list.length, idx:li,
+    peer:j=>{ const nd=list[j]; if(!nd) return null; const fp=S.fullPic; S.fullPic=false; const h=detailCardHTML(nd,true); S.fullPic=fp; return h; },
+    go:j=>{ const nd=list[j]; if(!nd) return; LIST_CARD=nd.id; S.detail=nd.id; S.fullPic=false; render(); window.scrollTo(0,0); }}:null);
 }
 function renderEdit(main,c){
   const d=cardOf(c); if(!d){ S.editing=null; S.editFrom=null; return render(); }
@@ -3038,6 +3085,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  445:"Open a card from the list and push it sideways — the next card of the list slides in, as in Learn.",
   442:"A hard photo becomes a card as soon as the AI has answered — the reader no longer has to finish first.",
   440:"When the reader is sure of a photo, the card shows at once — the AI's check refines it a moment later.",
   439:"Photos the reader cannot make sense of — an appliance panel, a busy shopfront — now become cards several seconds sooner.",
