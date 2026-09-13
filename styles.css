@@ -222,8 +222,12 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 .ct .m{font-size:14px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cs{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
 .st{font-size:12px;font-weight:500;color:var(--label2)} .st.due{color:var(--tint)}
-.detailacts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
-.detailacts .primary{grid-column:1/-1} .detailacts .btn{font-size:15px;padding:12px 8px;white-space:nowrap}
+/* the six buttons of the card detail. minmax(0,1fr) and a label that may wrap, since v472: `1fr` is minmax(auto,1fr),
+   so a nowrap label made the track's min-content its own width and the whole grid overflowed the card — measured at
+   360 px in Indonesian +21 px, German +6, Spanish +1, which is the v427 fault (a class written for one shape borrowed
+   by another) in its grid form. A two-line label inside a button is the right failure, an overflowing grid is not. */
+.detailacts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:16px}
+.detailacts .primary{grid-column:1/-1} .detailacts .btn{font-size:15px;padding:12px 8px;white-space:normal;line-height:1.25}
 .pill{font-size:11px;font-weight:600;border-radius:999px;padding:2px 8px;color:var(--label2);background:var(--card2);margin-left:6px;vertical-align:middle;white-space:nowrap;display:inline-block}
 .pill.flagged{color:var(--tint);background:var(--tint-soft)}
 .pill.ai{color:var(--ok);background:var(--ok-soft)}
@@ -421,7 +425,8 @@ body.noscroll{overflow:hidden}
 /* a text box inside a More row (the Feedback row, v218): the form field's look on the row's secondary surface, full width, growing with its text */
 .mrow textarea{width:100%;background:var(--card2);border:none;border-radius:10px;color:var(--label);font-family:var(--sans);font-size:17px;padding:12px 14px;outline:none;box-shadow:none;margin-top:10px;resize:none;overflow:hidden;line-height:1.35;min-height:46px;display:block}
 .mrow textarea:focus{box-shadow:inset 0 0 0 2px var(--tint)} .mrow textarea::placeholder{color:var(--label3)}
-.mrow .inrow{display:flex;gap:8px;align-items:center;margin-top:10px} /* an input with its button inside a More row, in the Feedback box's field look (v282) */
+.mrow .inrow{display:flex;gap:8px;align-items:center;margin-top:10px;min-width:0}
+#mirror-status{overflow-wrap:anywhere} /* the mirror address is one unbreakable token, and its min-content pushed the owner's row 6 px past a 360 px screen (v472) */ /* an input with its button inside a More row, in the Feedback box's field look (v282) */
 .mrow .inrow input{flex:1;min-width:0;background:var(--card2);border:none;border-radius:10px;color:var(--label);font-family:var(--sans);font-size:17px;padding:10px 14px;outline:none;box-shadow:none}
 .mrow .inrow input.mono{font-family:var(--mono);font-size:14px} .mrow .inrow input:focus{box-shadow:inset 0 0 0 2px var(--tint)} .mrow .inrow input::placeholder{color:var(--label3)}
 .mrow .err{margin:8px 0 0}
@@ -484,7 +489,7 @@ body.noscroll{overflow:hidden}
    a column #main, so centring is one justify-content once the pane is allowed to take the height. */
 .pane.camonly{flex:1;display:flex;flex-direction:column;justify-content:center;padding-bottom:8vh}
 .pane.camonly>.lead{margin-bottom:18px}
-.pane.camonly>#shots{display:none} .shotfoot .del{font-size:14px;padding:8px 12px}
+.pane.camonly>#shots{display:none}
 /* the Cards list as photo tiles, two in a row (v465): the card's own picture with its heading under it. The grid lives
    on the list, so the empty badge and anything else that is not a tile spans both columns. */
 .clist.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:stretch;border-radius:0;overflow:visible;box-shadow:none;background:none}
