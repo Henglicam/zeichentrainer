@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=452; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=453; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -100,7 +100,7 @@ function orderCards(list,order,byDue){
    `star` says whether the star filter really applied, which the session needs (v429): it stands down when nothing in
    reach is starred, and then the session is an ordinary one. */
 function learnDeck(){
-  const lt=learnTags(); const d=(lt.length?deck().filter(x=>lt.some(g=>hasTag(x,g))):deck()).filter(x=>x.c);
+  const lt=learnTags(); const d=(lt.length?deck().filter(x=>lt.some(g=>hasTag(x,g))):deck()).filter(x=>x.c&&!isPage(x)); /* a page is studied through its items (v453) */
   const star=!!S.settings.learnStar&&d.some(x=>x.star); /* a filter that would empty the session stands down */
   return {cards:star?d.filter(x=>x.star):d, star};
 }
@@ -120,9 +120,29 @@ function buildQueue(includeAhead){
   if(star) q=[...q,...d.filter(x=>p[x.id]&&p[x.id].due>t).sort((a,b)=>p[a.id].due-p[b.id].due).map(x=>x.id)];
   if(includeAhead && q.length===0)
     q = d.filter(x=>p[x.id]).sort((a,b)=>p[a.id].due-p[b.id].due).slice(0,8).map(x=>x.id);
-  return q;
+  return groupPages(q); /* the texts of one page one after the other (v453) */
 }
 const cardOf = id => deck().find(d=>d.id===id); /* cards are addressed by id everywhere; the text is c */
+/* The page card (v453, H, 2026-09-13, on the nine cards his Meituan order screen made: "Ich hatte doch gesagt, bitte bei
+   Screenshots nicht für jeden Wortstring eine einzelne Karte anlegen, sondern den Screenshot unter Cards und in learn
+   speichern mit den Punkten drauf." — the D7 of SPEC-photo-mode.md, built): a screenshot, or a picture the model calls an
+   app screen, makes ONE card for the whole page — kind "page", its title the model's name for the screen ("Meituan — order
+   confirmation, 颐堤港店"), the whole photo its picture, the texts on it its items. The items are the split's own cards as
+   before (text, pinyin, meaning, frame, crop, progress row, AI check, Translate all — everything that already works),
+   each carrying page:<the page's id>, and the page carries items:[their ids]; what changes is what the learner sees: one
+   row under Cards with the photo and the title, one detail with the dots and the item list, the Camera tab's marked
+   photo with the title over its line, and Learn walking the page's texts one after the other (buildQueue groups them).
+   The Deck capsule counts the page once and not its items. A page is never sent to the AI and never studied itself:
+   every batch over the deck skips it (isPage), and an item whose page is gone is an ordinary card again (inPage). */
+const isPage=d=>!!(d&&d.kind==="page");
+const pageItems=pg=>(pg&&pg.items||[]).map(cardOf).filter(Boolean);
+const inPage=d=>!!(d&&d.page&&cardOf(d.page)); /* an item of a page that still exists: the list shows the page, not the item */
+const deckCount=()=>deck().filter(d=>!inPage(d)).length;
+const pageOfShot=shot=>deck().find(d=>isPage(d)&&d.shot===shot)||null;
+/* the items of one page come one after the other in a session (the spec's "Learn walks a page as one group"): the first
+   item the order reaches brings the page's other queued items in behind it, in the order they had */
+function groupPages(q){ const seen=new Set(), out=[]; for(const id of q){ if(seen.has(id)) continue; const d=cardOf(id); if(d&&inPage(d)){ for(const x of q){ const y=cardOf(x); if(!seen.has(x)&&y&&y.page===d.page){ seen.add(x); out.push(x); } } continue; } seen.add(id); out.push(id); } return out; }
+function pageTitle(ai,first){ const g=(ai&&ai.pageInfo)||{}; let s=[g.name,g.what].filter(Boolean).join(" — "); if(g.place) s+=(s?", ":"")+g.place; return s||((kindTag(ai&&ai.kind)||t("kind:App"))+" — "+String(first||"").replace(/\n/g," ")); }
 /* Tags (v133, H: "make the cards sortable, for Chinese class, HSK …"): free labels on a card, several allowed; the
    forms offer the labels already in use as chips, and the Cards tab and the Learn tab each filter by any number of them (v366) */
 const parseTags=str=>[...new Set(String(str||"").split(/[,，;；]/).map(t=>t.trim()).filter(Boolean))];
@@ -303,7 +323,7 @@ const numFrames=fs=>{ const a=fs.filter(Boolean)[0]; return a?{lw:n1(a.lw),lh:n1
 const numPic=p=>p?{pw:p.picW,ph:p.picH,box:numFrac(p.box),alt:numFrac(p.boxAlt),sc:p.boxScale||null,model:p.model||"",
   boxes:Array.isArray(p.boxes)?p.boxes.map(numFrac):null,drop:(p.dropped||[]).map(x=>String(x).slice(0,24)),dropB:(p.droppedBoxes||[]).map(numFrac),
   out:(p.outside||[]).map(x=>String(x).slice(0,24)),
-  cut:p.cut||"",bad:!!p.bad,apart:!!p.apart,kind:p.kind||"",zh:String(p.zh||"").slice(0,200),
+  cut:p.cut||"",bad:!!p.bad,apart:!!p.apart,kind:p.kind||"",page:p.pageInfo||null,zh:String(p.zh||"").slice(0,200),
   labels:(p.labels||[]).map(l=>({zh:l.zh,box:numFrac(l.box),sc:l.scale}))}:null;
 const NUMS_KEEP=3; /* readings kept in the shared text (v405) — three covers a photo taken, looked at and taken again */
 const NUMS_OLD=6000; /* the older two are trimmed harder than the newest: a 19-label panel measures 6.1 KB whole, so this
@@ -395,6 +415,9 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["again","v453","Meituan screen from the ALBUM: one page card"],
+  ["again","v453","washing machine: ONE page card, dots on buttons"],
+  ["app","v453","Cards: page row, detail, dot grade, delete"],
   ["app","v452","Learn: page with dots, own dot lit"],
   ["photo","v451","check dead: cards from the picture"],
   ["again","v450","Meituan order screen SHARED: dots on 下单确认, 颐堤港店"],
@@ -519,7 +542,7 @@ const FIELD_NEVER=[ /* no photo has ever been taken of these */
   "remote, keypad, lift panel","ticket machine, cash machine"];
 function fieldKinds(){ /* one row per kind, counted from the deck — shared by the report and the row's line */
   const deck=S.custom||[], perShot={};
-  for(const d of deck) if(d.shot) perShot[d.shot]=(perShot[d.shot]||0)+1;
+  for(const d of deck) if(d.shot&&!isPage(d)) perShot[d.shot]=(perShot[d.shot]||0)+1;
   /* a language switch leaves the old tags as they are (v364), so every column's word for the kind counts */
   const words=k=>{ const set=new Set([k]); for(const c of Object.keys(L10N)){ const w=L10N[c]["kind:"+k]; if(w) set.add(w); } return set; };
   let tagged=0;
@@ -712,7 +735,7 @@ function setStats(){
   $("#stat-deck").style.display=inStudy?"none":""; /* three pills overflow a 390px top bar */
   $("#stat-open .v").textContent=remaining;
   $("#stat-done .j").textContent=S.done;
-  $("#stat-deck .v").textContent=deck().length;
+  $("#stat-deck .v").textContent=deckCount(); /* a page counts once, not its texts (v453) */
   document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.mode===S.mode||(b.dataset.mode==="cards"&&S.mode==="add")||(b.dataset.mode==="more"&&S.mode==="guide")));
 }
 
@@ -964,7 +987,7 @@ async function pictureJpeg(blob){
   const out=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
   const b64=(await blobToB64(out)).d; return {b64,w:cv.width,h:cv.height,kb:Math.round(out.size/1024)};
 }
-const picSystem=()=>`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","box":[left,top,right,bottom],"boxes":[[left,top,right,bottom],…],"cut":"…","apart":true|false,"labels":[{"zh":"…","p":"…","m":"…","box":[left,top,right,bottom]},…],"kind":"…","bad":true|false}. "zh" = the main Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without lines of Latin letters (a brand's English name), without numbers of the decoration and nothing you cannot see — a number that belongs to a Chinese line stays in that line with its unit, as written (净含量380ml, 30分钟, 3月1日): the learner reads it as part of the line — the main text only: leave out fine print, that is lines whose characters are under a third the height of the largest characters (dates, credits, small notes, slogans in small type), and leave out any line the picture's edge cuts off; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural ${meaningLangName()} meaning of the text as a sign or name (short, ${meaningLangName()} only); when the text is a brand, shop or product name, "m" is that name as it is known (the romanised or the international name), followed in brackets by what it is, in ${meaningLangName()} — e.g. "Mixue Bingcheng (ice-cream and bubble-tea chain)", never the bare name alone; when the text has several lines that say different things (a film poster: the title, then credits), "m" gives one short meaning per line, in the same order, joined with " / " as the pinyin is — e.g. "The Wandering Earth (film) / a film by / producer, original novel / Guo Fan, Liu Cixin" — so the learner sees which line means what; lines that form one phrase keep one meaning; "note" = one short remark if needed; "box" = where the text you read stands in the picture — one rectangle around all its lines, [left, top, right, bottom] in pixels of the picture (its size is given with the picture), tight around the characters; "boxes" = the same for each line of "zh" on its own, one rectangle per line in the same order — leave "boxes" out entirely when you give "labels", whose entries carry their own rectangles; "cut" = the edges of the picture that cut off a line of Chinese text you left out because of that — "top", "bottom", "left" or "right", several separated by commas, "" when no line is cut off; "apart" = true when the picture shows a user interface — the control panel of an appliance, a remote, a keypad, a lift panel, a vending machine, a ticket machine, a cash machine, a screenshot of a phone app — its home screen's grid of function icons (外卖, 团购, 酒店民宿, 闪购), the rows of an account page (我的订单, 待付款, 待收货, 退款/售后), a tab bar (首页, 视频, 购物车, 我的), the tab strip over a list (关注, 推荐, 新发), the blocks of a wallet or an order page, where every label names a function of its own — or several signs, labels, buttons, menu items or packages standing next to each other — a menu board, a shelf of price labels, a wall of notices, a building directory, a bus stop board, a row of shopfronts, the care instructions on a clothing label, the section headings on a package (配料表, 净含量, 保质期), the field labels of a form or a receipt (发票, 金额, 日期), the rows of a timetable or a price list —, whose Chinese texts each name their own button, setting, item or thing, so that a learner would learn them one by one; a price or an amount is never an element of its own, but it stays in the text of the item it belongs to, as any number does (宫保鸡丁 38元, 净含量380ml, 24H存包); false when the lines belong to one text (a poster's title and its credits, a sign's two lines, a brand name above a product name, a label's name and its ingredients); "labels" = only when "apart" is true: one entry per element, in reading order, left to right and top to bottom, every one of them, each with that element's own Chinese text, its own pinyin, its own meaning and its own rectangle around it — a smaller label under a bigger one (长按童锁 under 洗衣液) is an element of its own, not fine print; every Chinese text on the picture is an element, not only the main items — the screen's or the board's own title (下单确认, 我的订单), a section or group heading (配料表, 商品信息), the name of the shop, branch or place (颐堤港店) and the line of detail under it (桌号大厅05, 5人), a status or tab word (待付款, 推荐), a button (继续加菜, 确认下单), the note or warning at the foot: leave nothing out; an element printed on two lines (加速 above 省时, 轻载 above 模式) is one entry 加速省时 with one rectangle around both lines; an element that reads 汤/粥 keeps the slash in its "zh", and its pinyin and meaning stay in that one entry; when "apart" is true, "zh" holds the same elements, one per line, in the same order, and none of them counts as fine print; "kind" = what the picture shows, one word out of exactly these eight: Menu (a menu board, a dish list, a price list of food), Street sign (a street name, a traffic or direction sign, a notice board outdoors), Shop (a shopfront, a shop name, a brand over a door), Product (packaging, a label, a bottle, a box, a tin), Appliance (the panel or buttons of a machine — a rice cooker, a washing machine, a coffee machine), Transport (a station, a bus stop, a ticket machine, a lift panel, a train or metro sign), Office (a door plate, a form, a receipt, an invoice, a document), Notice (a rule, a warning, an opening time, an instruction), App (a screenshot of a phone app — its home screen, an account page, a tab bar, a shop or order page); "" when none of them fits or you are not sure — never guess; always give "kind", also when "apart" is true and you list "labels": the kind is the picture's, not one label's; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty and omit "box" and "boxes". An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`; /* the meaning in the app's language (v256) */
+const picSystem=()=>`You read the Chinese text on a photo for an adult learning to read Chinese in Beijing. The picture shows a sign, menu, product, label or logo. Answer with one JSON object only: {"zh":"…","p":"…","m":"…","note":"…","box":[left,top,right,bottom],"boxes":[[left,top,right,bottom],…],"cut":"…","apart":true|false,"labels":[{"zh":"…","p":"…","m":"…","box":[left,top,right,bottom]},…],"kind":"…","page":{"name":"…","what":"…","place":"…"},"bad":true|false}. "zh" = the main Chinese text exactly as written on the picture, in simplified characters, with a line break between the picture's lines, without lines of Latin letters (a brand's English name), without numbers of the decoration and nothing you cannot see — a number that belongs to a Chinese line stays in that line with its unit, as written (净含量380ml, 30分钟, 3月1日): the learner reads it as part of the line — the main text only: leave out fine print, that is lines whose characters are under a third the height of the largest characters (dates, credits, small notes, slogans in small type), and leave out any line the picture's edge cuts off; "p" = pinyin with tone marks, one space between syllables, " / " between lines; "m" = natural ${meaningLangName()} meaning of the text as a sign or name (short, ${meaningLangName()} only); when the text is a brand, shop or product name, "m" is that name as it is known (the romanised or the international name), followed in brackets by what it is, in ${meaningLangName()} — e.g. "Mixue Bingcheng (ice-cream and bubble-tea chain)", never the bare name alone; when the text has several lines that say different things (a film poster: the title, then credits), "m" gives one short meaning per line, in the same order, joined with " / " as the pinyin is — e.g. "The Wandering Earth (film) / a film by / producer, original novel / Guo Fan, Liu Cixin" — so the learner sees which line means what; lines that form one phrase keep one meaning; "note" = one short remark if needed; "box" = where the text you read stands in the picture — one rectangle around all its lines, [left, top, right, bottom] in pixels of the picture (its size is given with the picture), tight around the characters; "boxes" = the same for each line of "zh" on its own, one rectangle per line in the same order — leave "boxes" out entirely when you give "labels", whose entries carry their own rectangles; "cut" = the edges of the picture that cut off a line of Chinese text you left out because of that — "top", "bottom", "left" or "right", several separated by commas, "" when no line is cut off; "apart" = true when the picture shows a user interface — the control panel of an appliance, a remote, a keypad, a lift panel, a vending machine, a ticket machine, a cash machine, a screenshot of a phone app — its home screen's grid of function icons (外卖, 团购, 酒店民宿, 闪购), the rows of an account page (我的订单, 待付款, 待收货, 退款/售后), a tab bar (首页, 视频, 购物车, 我的), the tab strip over a list (关注, 推荐, 新发), the blocks of a wallet or an order page, where every label names a function of its own — or several signs, labels, buttons, menu items or packages standing next to each other — a menu board, a shelf of price labels, a wall of notices, a building directory, a bus stop board, a row of shopfronts, the care instructions on a clothing label, the section headings on a package (配料表, 净含量, 保质期), the field labels of a form or a receipt (发票, 金额, 日期), the rows of a timetable or a price list —, whose Chinese texts each name their own button, setting, item or thing, so that a learner would learn them one by one; a price or an amount is never an element of its own, but it stays in the text of the item it belongs to, as any number does (宫保鸡丁 38元, 净含量380ml, 24H存包); false when the lines belong to one text (a poster's title and its credits, a sign's two lines, a brand name above a product name, a label's name and its ingredients); "labels" = only when "apart" is true: one entry per element, in reading order, left to right and top to bottom, every one of them, each with that element's own Chinese text, its own pinyin, its own meaning and its own rectangle around it — a smaller label under a bigger one (长按童锁 under 洗衣液) is an element of its own, not fine print; every Chinese text on the picture is an element, not only the main items — the screen's or the board's own title (下单确认, 我的订单), a section or group heading (配料表, 商品信息), the name of the shop, branch or place (颐堤港店) and the line of detail under it (桌号大厅05, 5人), a status or tab word (待付款, 推荐), a button (继续加菜, 确认下单), the note or warning at the foot: leave nothing out; an element printed on two lines (加速 above 省时, 轻载 above 模式) is one entry 加速省时 with one rectangle around both lines; an element that reads 汤/粥 keeps the slash in its "zh", and its pinyin and meaning stay in that one entry; when "apart" is true, "zh" holds the same elements, one per line, in the same order, and none of them counts as fine print; "kind" = what the picture shows, one word out of exactly these eight: Menu (a menu board, a dish list, a price list of food), Street sign (a street name, a traffic or direction sign, a notice board outdoors), Shop (a shopfront, a shop name, a brand over a door), Product (packaging, a label, a bottle, a box, a tin), Appliance (the panel or buttons of a machine — a rice cooker, a washing machine, a coffee machine), Transport (a station, a bus stop, a ticket machine, a lift panel, a train or metro sign), Office (a door plate, a form, a receipt, an invoice, a document), Notice (a rule, a warning, an opening time, an instruction), App (a screenshot of a phone app — its home screen, an account page, a tab bar, a shop or order page); "" when none of them fits or you are not sure — never guess; always give "kind", also when "apart" is true and you list "labels": the kind is the picture's, not one label's; "page" = only when "apart" is true: what the whole picture is, for its title — "name" = the app, brand or board it belongs to, as it is known (Meituan, Taobao, Midea, 12306), "" when you cannot tell; "what" = what this screen or panel is, in ${meaningLangName()}, two or three words (order confirmation, home screen, wash programmes, account page); "place" = the shop, restaurant, branch or place it names, in its own characters (颐堤港店), "" when none; "bad" = true only when the picture shows no readable Chinese text — then leave "zh" empty and omit "box" and "boxes". An on-device reader tried first and produced the readings listed by the user; most of them are wrong, use them only as hints. No prose, no code fences.`; /* the meaning in the app's language (v256) */
 /* Qwen's hybrid models think by default, and the thinking takes many seconds before the short JSON comes (v208, H with Qwen
    as the active provider: "Check pinyin and meaning takes way too long" — until v207 only the picture path switched it off) */
 function noThinking(pv,model,body){ if(pv==="qwen"&&/^qwen3/.test(model)) body.enable_thinking=false; return body; }
@@ -1038,8 +1061,9 @@ async function aiReadPicture(blob,alts,status,rec){
   }
   /* what came back, in one line of the log (v374): the shape of the answer survives a restart, so a panel that made one card can
      be read back afterwards — until v373 only the split's own lines said anything, and they lived in memory */
+  const pageInfo=(()=>{ const g=x.page; if(!g||typeof g!=="object") return null; const f=k=>String(g[k]||"").trim().replace(/\s+/g," ").slice(0,60); const o={name:f("name"),what:f("what"),place:f("place")}; return o.name||o.what||o.place?o:null; })(); /* v453: the page's own title, for the page card */
   logRead(`the AI's answer: ${lines0.length} ${lines0.length===1?"line":"lines"}, apart ${apart?"yes":"no"}, ${Array.isArray(x.labels)?x.labels.length:0} labels${Array.isArray(x.labels)&&x.labels.length?" ("+(labels?labels.length:0)+" usable)":""}, ${Array.isArray(x.boxes)?x.boxes.length:0} boxes, meaning ${String(x.m||"").length} characters`);
-  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxAlt:mainAlt?mainAlt.box:null,droppedBoxesAlt:mainAlt?mainAlt.droppedBoxes:null,boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,outside:[],oneScale,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,""),kind:String(x.kind||"").trim(),apart,labels,picW:pic.w,picH:pic.h,boxScale:picScale(x.box,pic.w,pic.h)}; /* cut (v314): the edges that cut off a line the model left out */
+  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxAlt:mainAlt?mainAlt.box:null,droppedBoxesAlt:mainAlt?mainAlt.droppedBoxes:null,boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,outside:[],oneScale,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,""),kind:String(x.kind||"").trim(),pageInfo,apart,labels,picW:pic.w,picH:pic.h,boxScale:picScale(x.box,pic.w,pic.h)}; /* cut (v314): the edges that cut off a line the model left out */
 }
 /* the main text only (v312, H's 青春无烟 / 未来无限 poster: the card carried the poster's small print — the line 第39个世界无烟日 above the title and the date 2026年5月31日 世界无烟日 below it, half of it outside the frame — "wieder die Sachen ausserhalb des Crops und das Kleingedruckte mitgelesen. Bitte beides vermeiden"): the prompt asks for the main text and leaves fine print and lines the picture's edge cuts off to the model; this is the safety net from the model's own line boxes — a line whose box is under FINE_PRINT of the tallest line's height is fine print and goes, with its pinyin and meaning parts when they come one per line; the box for the frame is then the union of the lines kept */
 const FINE_PRINT=1/3;
@@ -1144,7 +1168,7 @@ function picBoxPix(b,w,h){
   const r=[Math.max(0,x0/w),Math.max(0,y0/h),Math.min(1,x1/w),Math.min(1,y1/h)];
   return r[2]-r[0]>=0.02&&r[3]-r[1]>=0.02?r:null;
 }
-function aiQueue(){ return deck().filter(d=>d.c&&(d.flag||(d.mt&&(d.mt.pending||d.mt.suspect)))); } /* a card still waiting for its reading has no text to check (v237) */
+function aiQueue(){ return deck().filter(d=>d.c&&!isPage(d)&&(d.flag||(d.mt&&(d.mt.pending||d.mt.suspect)))); } /* a card still waiting for its reading has no text to check (v237) */
 function aiAutoOn(){ return aiOn()&&S.settings.aiAuto!==false; }
 /* the online AI is the meaning source whenever it can be reached; the offline model is the fallback */
 function aiLive(){ return aiAutoOn()&&navigator.onLine; }
@@ -1317,7 +1341,7 @@ function wireAi(root){
 let _aiAutoRan=false;
 async function aiAuto(){
   if(!aiLive()||_aiAutoRan) return;
-  const list=S.custom.filter(d=>d.c&&d.mt&&(d.mt.pending||d.mt.suspect)&&!d.ai); if(!list.length) return; /* a card still waiting for its reading has no text yet (v237) */
+  const list=S.custom.filter(d=>d.c&&!isPage(d)&&d.mt&&(d.mt.pending||d.mt.suspect)&&!d.ai); if(!list.length) return; /* a card still waiting for its reading has no text yet (v237) */
   _aiAutoRan=true;
   try{ await aiReview(list); if(S.mode==="more"||S.mode==="cards"||S.mode==="inbox") render(); }catch(e){ console.warn("AI auto review:",e); logErr("ai","auto review: "+(e&&e.message||e)); } /* the console is invisible on a phone — the error log reaches Diagnostics and the daily row (v403) */
 }
@@ -1472,7 +1496,7 @@ async function setLang(code){ if(!LANGS.some(([c])=>c===code)) return; LANG=code
    language are taken from the answer, the text and the pinyin stay. The row sits under the Language chips and shows only
    while such cards exist and an AI is set up. */
 const TRANSLATE_BATCH=5; /* small batches, so the line moves every few seconds (v261, H: "no real-time progress" — with 20 per call the count stood at 0 until the first answer) */
-const toTranslate=()=>deck().filter(d=>d.c&&d.m&&mlOf(d)!==LANG);
+const toTranslate=()=>deck().filter(d=>d.c&&!isPage(d)&&d.m&&mlOf(d)!==LANG);
 /* the run's state lives here, not in the row (v257, H: "pressed Translate all, changed page, pressed again and no reaction" — the
    row had been re-rendered by the tab change, the loop wrote its progress into the old row, and the guard swallowed the second tap):
    the row is drawn from TRANSLATE, every step re-queries the row by id, and a tap while a run is on shows the progress */
@@ -1561,7 +1585,7 @@ async function translateAll(){
    card is left, resumed at boot, on reconnect and on foreground. The payload asks for the kind alone (tagOnly), so a run cannot
    change a text, a pinyin or a meaning. */
 const TAG_BATCH=10; /* the answer is one word per card, so ten fit where the translation takes five */
-const toTag=()=>deck().filter(d=>d.c&&!(d.tags&&d.tags.length));
+const toTag=()=>deck().filter(d=>d.c&&!isPage(d)&&!(d.tags&&d.tags.length));
 let TAGALL=null; /* {running, done, at, total, failed} */
 const tagStageOf=()=>S.settings.tagStage;
 async function saveTagStage(st){ S.settings.tagStage=st; await setSetting("tagStage",st); }
@@ -1623,7 +1647,7 @@ async function tagAll(){
    dropped — only a real change becomes a suggestion. Like the other runs the state lives in RECHECK, not in the row, and an
    interrupted run goes on by itself: setting recheckRun {at} marks it, and a card whose suggestion is newer than that is done. */
 const RECHECK_BATCH=5; /* the answer carries zh, pinyin and meaning per card, as the translation does */
-const toRecheck=()=>deck().filter(d=>d.c&&!d.reading);
+const toRecheck=()=>deck().filter(d=>d.c&&!isPage(d)&&!d.reading);
 const recheckLeft=()=>{ const r=S.settings.recheckRun; if(!r) return toRecheck(); const done=new Set(r.done||[]); return toRecheck().filter(d=>!done.has(d.id)); }; /* the cards this run has not asked about yet — a card whose answer matched keeps no suggestion, so the run has to remember the ids itself */
 let RECHECK=null; /* {running, done, at, total, failed, found} */
 async function rememberRecheck(on,done){ if(on){ S.settings.recheckRun={at:(S.settings.recheckRun||{}).at||Date.now(),done:done||(S.settings.recheckRun||{}).done||[]}; await setSetting("recheckRun",S.settings.recheckRun); }
@@ -1894,7 +1918,7 @@ const KNOWN_DAYS=21;
 function progressData(){
   const st=learnStats(), t0=today(), endToday=t0+DAY, endTomorrow=t0+2*DAY, endWeek=t0+7*DAY;
   let nw=0, learning=0, known=0, dueToday=0, dueTomorrow=0, dueWeek=0;
-  for(const d of deck()){ if(!d.c) continue; const p=S.progress[d.id]; if(!p||!p.reps){ nw++; continue; }
+  for(const d of deck()){ if(!d.c||isPage(d)) continue; const p=S.progress[d.id]; if(!p||!p.reps){ nw++; continue; }
     if(p.interval>=KNOWN_DAYS) known++; else learning++;
     if(p.due<endToday) dueToday++; else if(p.due<endTomorrow) dueTomorrow++;
     if(p.due>=endToday&&p.due<endWeek) dueWeek++; }
@@ -2082,7 +2106,7 @@ function renderMore(main){
    nothing planned, and changes in the same PR as the screen it describes. More → Help → Open; ← Back returns to More. ---------- */
 const GUIDE=()=>[
   {h:t("Take a photo"),p:[t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card by itself — you see the finished card with Edit and Delete under it. Edit shows the photo with the frame the app used: drag a corner or the inside to fit it, the round handle turns it, let go and the reading starts again.")+" "+t("When the reading is clear, the card shows at once, and the AI's check refines it a moment later.")+" "+t("A photo that made several cards shows a dot on each of its texts — tap one for its characters, pinyin and meaning, and grade it right there."),
-    t("A photo of a control panel, or of several signs beside each other — a rice cooker’s buttons, the items of a menu board — becomes one card per label, each with its own cut of the photo."),
+    t("A photo with several texts — an app screen, a control panel, a menu board — becomes one card for the whole picture with a dot on every text: one row under Cards, and Learn goes through its texts one by one."),
     t("Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in."),
     t("From album takes several photos at once — they all become cards, one after the other, while the app is open.")]},
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
@@ -2658,23 +2682,38 @@ function backToList(){
    v445, because the card detail swipes through exactly this list and must not build its HTML to learn the order. */
 function cardsList(){
   const q=S.query.trim().toLowerCase();
-  let list=S.custom.slice().sort((a,b)=>(b.at||0)-(a.at||0)); /* newest first */
+  let list=S.custom.filter(d=>!inPage(d)).sort((a,b)=>(b.at||0)-(a.at||0)); /* newest first; a page's texts sit inside its row (v453) */
+  /* a page matches a filter or a search when it or any of its texts does (v453) */
+  const any=(d,f)=>isPage(d)?(!!f(d)||pageItems(d).some(f)):!!f(d);
+  const fieldsOf=d=>isPage(d)?[d.c,...(d.tags||[]),...pageItems(d).flatMap(fieldsOf)]:[d.c,d.trad,d.p,d.m,...Object.values(d.ms||{}),d.flagNote,...(d.tags||[])];
   /* several rows may be ticked at once (v366): a card must match one of the ticked status rows and one of the ticked tags */
-  if(S.filterUnv||S.filterFlag||S.filterAi||S.filterStar) list=list.filter(d=>(S.filterUnv&&d.mt&&!d.mt.verified)||(S.filterFlag&&d.flag)||(S.filterAi&&d.ai)||(S.filterStar&&d.star));
-  if(S.filterTags.length) list=list.filter(d=>S.filterTags.some(g=>hasTag(d,g)));
-  if(q) list=list.filter(d=>[d.c,d.trad,d.p,d.m,...Object.values(d.ms||{}),d.flagNote,...(d.tags||[])].filter(Boolean).join(" ").toLowerCase().includes(q));
+  if(S.filterUnv||S.filterFlag||S.filterAi||S.filterStar) list=list.filter(d=>(S.filterUnv&&any(d,x=>x.mt&&!x.mt.verified))||(S.filterFlag&&any(d,x=>x.flag))||(S.filterAi&&any(d,x=>x.ai))||(S.filterStar&&d.star));
+  if(S.filterTags.length) list=list.filter(d=>S.filterTags.some(g=>any(d,x=>hasTag(x,g))));
+  if(q) list=list.filter(d=>fieldsOf(d).filter(Boolean).join(" ").toLowerCase().includes(q));
   return list;
 }
 function cardsListHTML(){
   const list=cardsList();
   const byText=new Map(); S.custom.forEach(x=>{ if(x.c) byText.set(x.c,(byText.get(x.c)||0)+1); }); /* the same text from several photos (v122) */
   const pk=marking("cards"); /* marking (v351): the tap marks instead of opening; the mark sits at the right end of the row since v355 */
-  const rows=list.map(d=>`<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
-      ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
-      <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
-      <span class="cs">${pk?"":starHTML(d)}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}${cardStatus(d)}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`).join("");
+  const rows=list.map(d=>isPage(d)?pageRowHTML(d,pk):cardRowHTML(d,pk,byText)).join("");
   const empty=S.custom.length?t("No cards match."):t("No cards yet — take a photo under Camera, or tap + New.");
   return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length, ids:list.map(d=>d.id)};
+}
+/* the page's row (v453): the whole photo in the list's box, the title, how many texts and how many are known, the first
+   texts as its "meaning" line, the pills of its texts (AI, ⚑) and the star; the tap opens the page detail */
+function pageRowHTML(d,pk){
+  const its=pageItems(d), known=its.filter(x=>regionState({card:x.id})===2).length, full=fullPhoto(d);
+  return `<button class="crow page${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
+      ${full?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...((its[0]&&its[0].c)||d.c||"")][0]||"")}</span>`}
+      <span class="ct"><span class="c title">${esc(d.c)}</span><span class="p">${esc(t("{0} texts on this page, {1} known.",its.length,known))}</span>${(d.tags||[]).length?`<span class="pills">${(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}</span>`:""}<span class="m hanzi">${esc(its.slice(0,4).map(x=>x.c.replace(/\n/g," ")).join(" · "))}${its.length>4?" …":""}</span></span>
+      <span class="cs">${pk?"":starHTML(d)}${its.some(x=>x.ai)?`<span class="pill ai">${t("AI")}</span>`:""}${its.some(x=>x.flag)?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
+}
+function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page detail's item list carries the dot's own state before the status */
+  return `<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
+      ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
+      <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
+      <span class="cs">${dot?`<i class="pdot s${regionState({card:d.id})}" aria-hidden="true"></i>`:""}${pk?"":starHTML(d)}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}${cardStatus(d)}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
 }
 /* a filter whose row is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the
    list anymore" — the AI chip shows only while suggestions wait, so the filter had no chip left to switch it off and the
@@ -2695,7 +2734,7 @@ function renderCards(main){
     ${nAi?`<div class="aibar"><span>${nOf(nAi,"AI suggestion waiting","AI suggestions waiting")}</span><button class="btn mini primary" id="ai-acceptall">${t("Accept all")}</button></div>`:""}
     ${marking("cards")
       ?`<div class="chips"><span class="badge" id="pick-n">${t("{0} selected",PICK.set.size)}</span><span class="cend"><button class="del" id="pick-all"></button></span></div>` /* the chips make room for the marking (v354) */
-      :`<div class="chips"><span class="chipset">${filterPillHTML("cards")}</span><span class="cend"><span class="badge" id="cnt"${n===deck().length?" hidden":""}>${t("{0} of {1}",n,deck().length)}</span></span></div>`}
+      :`<div class="chips"><span class="chipset">${filterPillHTML("cards")}</span><span class="cend"><span class="badge" id="cnt"${n===deckCount()?" hidden":""}>${t("{0} of {1}",n,deckCount())}</span></span></div>`}
     <div class="clist" id="clist">${html}</div>
   </div>`;
   const wire=()=>{ document.querySelectorAll(".crow").forEach(b=>{
@@ -2705,7 +2744,7 @@ function renderCards(main){
       S.detail=b.dataset.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); };
     if(!marking("cards")&&S.custom.length>1) longPress(b,()=>{ PICK={kind:"cards",set:new Set([b.dataset.id])}; render(); }); /* press and hold to start marking (v354) */
   }); wireStars($("#clist")); };
-  const refresh=()=>{ const r=cardsListHTML(); ids=r.ids; $("#clist").innerHTML=r.html; const ct=$("#cnt"); if(ct){ ct.textContent=t("{0} of {1}",r.n,deck().length); ct.hidden=r.n===deck().length; } /* the count shows only while a search or a chip narrows the list (v356) */ wire(); if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); } };
+  const refresh=()=>{ const r=cardsListHTML(); ids=r.ids; $("#clist").innerHTML=r.html; const ct=$("#cnt"); if(ct){ ct.textContent=t("{0} of {1}",r.n,deckCount()); ct.hidden=r.n===deckCount(); } /* the count shows only while a search or a chip narrows the list (v356) */ wire(); if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); } };
   $("#q").oninput=e=>{ S.query=e.target.value; refresh(); };
   wireFilterPill("cards",render);
   const aa=$("#ai-acceptall"); if(aa) aa.onclick=async()=>{ aa.disabled=true; await aiAcceptAll(); render(); };
@@ -2723,8 +2762,38 @@ function detailCardHTML(d,sw){
         :S.detailHide?hint("Tap the character to show the answer")
         :`<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}${hint("Tap the character to hide the answer")}`}`;
 }
+const fromPage=()=>typeof S.detailFrom==="string"&&S.detailFrom.startsWith("page:")?S.detailFrom.slice(5):null; /* v453: the item's detail was opened from its page */
+function backToPage(){ const pid=fromPage(); S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.detail=pid&&cardOf(pid)?pid:null; render(); window.scrollTo(0,0); }
+/* the page's own detail (v453): the whole photo with the dots — a tap opens the sheet of v448 and grades right there —, the
+   title and the line under it, then one row per text in reading order with the dot's state, the star and Delete card, which
+   takes the page's texts with it (one Undo). No Edit and no Share: the page is its photo, and its texts are edited one by one. */
+function renderPageDetail(main,d){
+  const rs=photoRegions({id:d.shot}), its=pageItems(d), full=fullPhoto(d);
+  const order=rs.map(r=>r.card), sorted=its.slice().sort((a,b)=>{ const ia=order.indexOf(a.id), ib=order.indexOf(b.id); return (ia<0?1e9:ia)-(ib<0?1e9:ib); }); /* reading order, from the dots */
+  const known=its.filter(x=>regionState({card:x.id})===2).length;
+  main.innerHTML=`<div class="pane">
+    <div class="topline"><button class="del" id="back">${t("← Cards")}</button><span class="badge">${esc((d.tags||[]).join(", "))}</span></div>
+    <div class="shot pagecard" data-page="${esc(d.id)}">
+      <div class="shotwrap">${full?`<img src="${urlOf(full)}" alt="photo">`:""}${rs.length?regionsHTML({id:d.shot},rs):""}</div>
+      <div class="ptitle">${esc(d.c)}</div>
+      <div class="regline">${esc(t("{0} texts on this page, {1} known.",its.length,known))}</div>
+    </div>
+    <div class="clist" id="pitems">${sorted.map(x=>cardRowHTML(x,false,new Map(),true)).join("")}</div>
+    <div class="detailacts">
+      <button class="btn${d.star?" on":""}" id="d-star">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>
+      <button class="btn danger" id="d-del">${t("Delete card")}</button>
+    </div>
+  </div>`;
+  $("#back").onclick=backToList;
+  wireRegions(main); /* the dots and the sheet (v448) */
+  main.querySelectorAll("#pitems .crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.id; S.detailFrom="page:"+d.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); });
+  wireStars($("#pitems"));
+  $("#d-star").onclick=async()=>{ await setStar(d.id,!d.star); render(); };
+  $("#d-del").onclick=async()=>{ await delCustom(d.id); S.detail=null; render(); }; /* at once, with Undo (v268) — the texts go with it */
+}
 function renderCardDetail(main,c){
   const d=cardOf(c); if(!d){ S.detail=null; return renderCards(main); }
+  if(isPage(d)) return renderPageDetail(main,d); /* v453 */
   const p=S.progress[c];
   const stat=p?t("Interval {0} d, ease {1}, {2}, next {3}.",p.interval,p.ease.toFixed(2),nOf(p.reps,"review"),new Date(p.due).toLocaleDateString(LANG_LOCALE[LANG])):t("Not studied yet.");
   /* the open card is pushed sideways to the next card of the Cards list (v445, H: "Open cards swipe" on the two readings
@@ -2733,7 +2802,7 @@ function renderCardDetail(main,c){
   normaliseFilters(); /* an Accept or a star cleared on the open card must not strand it outside its own list (v308's rule, v445) */
   const list=cardsList(), li=list.findIndex(x=>x.id===c), sw=li>=0&&list.length>1;
   main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">${S.detailFrom==="inbox"?t("← Back"):t("← Cards")}</button><span class="badge">${!d.c?(d.reading&&d.reading.failed?t("Nothing read yet"):t("Reading …")):d.reading&&!d.reading.failed?t("Reading …"):(x=>x?x[0].toUpperCase()+x.slice(1):"")([d.mt&&!d.mt.verified?t("unverified"):"",d.mt&&d.mt.pending?t("translation pending"):"",d.mt&&d.mt.suspect?t("reading uncertain"):""].filter(Boolean).join(", "))}</span></div>
+    <div class="topline"><button class="del" id="back">${S.detailFrom==="inbox"||fromPage()?t("← Back"):t("← Cards")}</button><span class="badge">${!d.c?(d.reading&&d.reading.failed?t("Nothing read yet"):t("Reading …")):d.reading&&!d.reading.failed?t("Reading …"):(x=>x?x[0].toUpperCase()+x.slice(1):"")([d.mt&&!d.mt.verified?t("unverified"):"",d.mt&&d.mt.pending?t("translation pending"):"",d.mt&&d.mt.suspect?t("reading uncertain"):""].filter(Boolean).join(", "))}</span></div>
     <div class="card">${detailCardHTML(d,sw)}</div>
     <div class="detailacts">
       ${d.c?`<button class="btn primary" id="d-test">${t("Test this card")}</button>`:""}
@@ -2746,7 +2815,7 @@ function renderCardDetail(main,c){
     <div class="badge" style="margin-top:14px">${esc(stat)}</div>
     ${linkedHTML(d)}
   </div>`;
-  $("#back").onclick=S.detailFrom==="inbox"?backToPhoto:backToList; /* opened from a photo's sheet (v448): ← goes back to the photo */
+  $("#back").onclick=S.detailFrom==="inbox"?backToPhoto:fromPage()?backToPage:backToList; /* opened from a photo's sheet (v448): ← goes back to the photo; from a page's row or sheet (v453): back to the page */
   /* the preview behaves like the test: tap the photo for the whole picture, tap the character to hide and show the answer (H) */
   if(!S.detailHide&&d.c) warmParts();
   const rv=$("#d-reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); return; } S.detailHide=!S.detailHide; render(); };
@@ -2760,7 +2829,7 @@ function renderCardDetail(main,c){
   const sh=$("#d-share"); if(sh) sh.onclick=()=>shareCard(c); /* one image through the share sheet (v269) */
   wireSay(); wireChars(d); wireLinks();
   wireAi();
-  const del=$("#d-del"); if(del) del.onclick=async()=>{ await delCustom(c); if(S.detailFrom==="inbox"){ backToPhoto(); return; } S.detail=null; render(); }; /* at once, with Undo (v268) */
+  const del=$("#d-del"); if(del) del.onclick=async()=>{ await delCustom(c); if(S.detailFrom==="inbox"){ backToPhoto(); return; } if(fromPage()){ backToPage(); return; } S.detail=null; render(); }; /* at once, with Undo (v268) */
   /* the swipe changes the card, and the two pieces of view state go opposite ways because they mean different things.
      S.detailHide is a way of READING — "I am testing myself" — and survives the swipe: the detail is not a test that
      must come closed, which is why Learn resets S.revealed and this does not. S.fullPic is about THIS photo — "show me
@@ -3129,11 +3198,16 @@ async function shareCard(id){
 async function delCustom(id){
   bump("deleted");
   const idx=S.custom.findIndex(x=>x.id===id), d=idx>=0?S.custom[idx]:null, prog=S.progress[id];
+  /* a page takes its texts with it, in one Undo item (v453) */
+  const items=[]; if(isPage(d)) for(const it of pageItems(d)){ items.push({d:it,prog:S.progress[it.id],idx:S.custom.findIndex(x=>x.id===it.id)}); }
+  for(const it of items){ bump("deleted"); S.custom=S.custom.filter(x=>x.id!==it.d.id); try{ await idbDel("custom",it.d.id); await idbDel("progress",it.d.id); }catch(e){} delete S.progress[it.d.id]; dropThumb(it.d.id); }
   S.custom=S.custom.filter(x=>x.id!==id);
   try{ await idbDel("custom",id); await idbDel("progress",id); }catch(e){}
   delete S.progress[id]; dropThumb(id);
+  /* a text deleted out of its page leaves the page (v453); the last one takes the page with it — an Undo then brings the text back as a card of its own */
+  if(d&&d.page){ const pg=cardOf(d.page); if(pg&&(pg.items||[]).includes(id)){ const u={...pg,items:pg.items.filter(x=>x!==id)}; if(u.items.length) await putCard(u,pg.id); else { S.custom=S.custom.filter(x=>x.id!==pg.id); try{ await idbDel("custom",pg.id); }catch(e){} dropThumb(pg.id); } } }
   setStats();
-  if(d) showUndo({kind:"card",d,prog,idx});
+  if(d) showUndo({kind:"card",d,prog,idx,items});
 }
 /* Undo after Delete (v268, idea 3 of the improvement list — a card or photo deleted by mistake was gone): the card's Delete
    and the inbox's Delete act at once, no sheet, and a line above the tab bar says "Deleted “学”" with Undo for UNDO_MS;
@@ -3151,6 +3225,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  453:"A photo with several texts — a screenshot, a control panel, a menu board — now makes one card for the whole picture, with a dot on every text; Learn goes through them one by one.",
   452:"A card from a screen or panel now shows the whole picture in Learn, with a dot on every text and its own dot lit.",
   451:"When the text check cannot be reached, a screenshot or panel still gets its cards from the picture the AI already read.",
   450:"A screenshot shared to the app is now read whole, so its title and headings get their dots too.",
@@ -3280,7 +3355,9 @@ async function undoDelete(){
       S.custom.splice(Math.min(it.idx,S.custom.length),0,d); try{ await idbPut("custom",d); }catch(e){}
       if(it.prog){ S.progress[d.id]=it.prog; try{ await idbPut("progress",{id:d.id,...it.prog}); }catch(e){} }
       bump("deleted",-1);
-      if(S.mode==="study"&&!S.queue.includes(d.id)&&d.c){ S.queue.splice(S.idx,0,d.id); S.revealed=false; S.fullPic=false; } /* deleted from the study back: the card comes next again */
+      for(const x of it.items||[]){ if(S.custom.some(y=>y.id===x.d.id)) continue; S.custom.splice(Math.min(x.idx,S.custom.length),0,x.d); try{ await idbPut("custom",x.d); }catch(e){} if(x.prog){ S.progress[x.d.id]=x.prog; try{ await idbPut("progress",{id:x.d.id,...x.prog}); }catch(e){} } bump("deleted",-1); } /* the page's texts with it (v453) */
+      if(d.page){ const pg=cardOf(d.page); if(pg&&pg.items&&!pg.items.includes(d.id)) await putCard({...pg,items:[...pg.items,d.id]},pg.id); } /* a text back into its page (v453) */
+      if(S.mode==="study"&&!S.queue.includes(d.id)&&d.c&&!isPage(d)){ S.queue.splice(S.idx,0,d.id); S.revealed=false; S.fullPic=false; } /* deleted from the study back: the card comes next again */
     } else {
       const rec=it.rec; if(S.inbox.some(x=>x.id===rec.id)) continue;
       S.inbox.splice(Math.min(it.idx,S.inbox.length),0,rec); try{ await idbPut("inbox",rec); }catch(e){}
@@ -3727,7 +3804,7 @@ async function proposeFrame(id){
   let reg=null, PW=0, PH=0, flat=null;
   try{ const bmp=await createImageBitmap(rec.blob); PW=bmp.width; PH=bmp.height; try{ reg=textRegion(bmp); flat=flatShare(bmp); } finally{ bmp.close(); } }catch(err){ logErr("frame",err&&err.message||err); }
   /* a screenshot shared to the app is read whole (v450, H's Meituan order screen, 2026-09-13: the ink rows proposed 21–81 % × 26–98 % — from the first food photo down — so the title 下单确认, the shop line 颐堤港店 and the table line were never in the picture the AI saw, and no prompt can list what it was not shown. The reason is structural: textRegion works on the chromaticity copy, which sees the COLOURED blocks of a screen — photos, buttons, a tinted header — and not black text on white, so on a screenshot it proposes the pictures and misses the words. The share sheet is the screenshot route by design (v163), so a photo that came through it takes the whole image as its frame; the rows the ink found stay in the record and the log, so the override is visible. The image's flatness is recorded on every photo (N.prop.flat) and gates nothing yet — the content signal for a screenshot that came from the album is calibrated on real photos first (the v399 rule). What it costs: a camera photo shared through the share sheet loses the ink-row proposal and is read whole, as the v348/v393 re-asks already read many. */
-  const reg0=reg, shared=!!rec.shared; if(shared&&reg) reg=null;
+  const reg0=reg, shared=!!rec.shared, screenshot=!!rec.screenshot, whole0=shared||screenshot; if(whole0&&reg) reg=null; /* v453: a screenshot from the album (photoSource) is read whole like a shared one */
   const same=()=>CROP&&CROP.id===id&&CROP.auto==="running"&&!CROP.rect; /* Cancel, another photo or a finger meanwhile: the proposal is dropped */
   if(!same()) return;
   const layer=document.querySelector(`.croplayer[data-id="${id}"]`), img=layer&&layer.parentElement.querySelector("img");
@@ -3746,8 +3823,8 @@ async function proposeFrame(id){
   CROP.proposed=full?"whole":shaped?"16:9":"text"; delete CROP.auto;
   const hidden=!RECROP[id]||!layer; if(hidden) CROP.hidden=true; /* the inbox never shows the proposal (v288): the reader reads it now, and the frame appears on the text it finds */
   { const N=numsReset(id); N.pre=true; N.photo=[PW,PH]; N.layer=[n1(r.width),n1(r.height)]; /* v399: the ink rows' own rectangle at full precision, and the photo and layer the whole chain is measured in — the log's line rounds all three to whole percent, and on a 19-label panel it is evicted from the 40 steps before the diagnostics are ever shared */
-    N.prop={r:numRect(CROP.rect),kind:CROP.proposed,hidden:!!hidden,reg:reg0?[n4(reg0.x),n4(reg0.y),n4(reg0.x1),n4(reg0.y1)]:null,lineH:reg0?n1(reg0.lineH):null,shared,flat}; } /* v450: the rows the ink found even when a shared screenshot set them aside, and the flatness — inside prop, the one field numsReset keeps when the reading starts */
-  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),pre:true,text:`frame proposed by the app${hidden?" (not shown)":""}: ${full?"the whole photo":`${pc(f.x/r.width)}–${pc((f.x+f.w)/r.width)} % across, ${pc(f.y/r.height)}–${pc((f.y+f.h)/r.height)} % down${shaped?" (16:9)":" (the text's own box, 16:9 does not fit)"}`}${shared&&reg0?` — a shared screenshot is read whole, its text rows ${pc(reg0.y)}–${pc(reg0.y1)} % set aside`:reg?`, text rows ${pc(reg.y)}–${pc(reg.y1)} %`:", no text rows found"}`}); while(READLOG.length>40) READLOG.shift();
+    N.prop={r:numRect(CROP.rect),kind:CROP.proposed,hidden:!!hidden,reg:reg0?[n4(reg0.x),n4(reg0.y),n4(reg0.x1),n4(reg0.y1)]:null,lineH:reg0?n1(reg0.lineH):null,shared,screenshot,src:rec.src||null,flat}; } /* v450: the rows the ink found even when a shared screenshot set them aside, and the flatness — inside prop, the one field numsReset keeps when the reading starts */
+  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),pre:true,text:`frame proposed by the app${hidden?" (not shown)":""}: ${full?"the whole photo":`${pc(f.x/r.width)}–${pc((f.x+f.w)/r.width)} % across, ${pc(f.y/r.height)}–${pc((f.y+f.h)/r.height)} % down${shaped?" (16:9)":" (the text's own box, 16:9 does not fit)"}`}${whole0&&reg0?` — ${shared?"a shared screenshot":"a screenshot from the album"} is read whole, its text rows ${pc(reg0.y)}–${pc(reg0.y1)} % set aside`:reg?`, text rows ${pc(reg.y)}–${pc(reg.y1)} %`:", no text rows found"}`}); while(READLOG.length>40) READLOG.shift();
   if(hidden){
     cropSign(id);
     if(S.autoCard){ saveNow(id,true); return; } /* the card by itself (v325): no frame, no preview — the reading fills the card, the reader's or the AI's placement becomes its frame (PLACED, v304), and the row shows the finished card */
@@ -5716,7 +5793,7 @@ async function cropSign(id,opts){
       if(N.reask) N.pic2=numPic(pic); else N.pic=numPic(pic); /* v449: after a re-ask the second answer belongs in pic2 — until v448 this line overwrote N.pic with it, so both fields carried the same answer and the first one, the one that decided the re-ask, was gone from the record (H's shopfront of 13 Sep could not be diagnosed for that reason — the v384/v395/v404/v405/v447 shape) */ /* v410: numPic ran before the placement, so `out` was always empty in the record — the v384/v395/v405 shape, a record that does not say what happened */
       cardImg=placedCut||r.blob; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=cardImg; /* the card image is the crop as framed (the placed frame's cut, v288), not the second look's band */
       SIGN[id]={lines:zh, orig:zh.slice(), conf:[], boxes:zh.map(()=>[]), img:dk.blob, angle:dk.angle||0, tightened:false, region:r, alts:guesses, trad:!!pic.zht, tradDetected:!!pic.zht, tradText:pic.zht||"",
-        ai:{zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,ml:pic.ml,note:pic.note,kind:pic.kind,ok:true,bad:false,pic:true,labels:pic.labels||null}, cardImg, weak:false};
+        ai:{zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,ml:pic.ml,note:pic.note,kind:pic.kind,pageInfo:pic.pageInfo||null,ok:true,bad:false,pic:true,labels:pic.labels||null}, cardImg, weak:false};
       done(r); numsFile(id); delete READING[id]; renderShots(); if(PENDING[id]) finishPending(id); if(RECROP[id]) RECROP[id].onRead(SIGN[id]); return;
     }
     if(!lines.length){ status("No Chinese characters recognized — frame the characters tightly and try again."); done(r); numsFile(id); if(PENDING[id]) failPending(id,"no Chinese characters recognized"); return; }
@@ -5875,12 +5952,27 @@ async function splitCards(id,sg,ph){
     if(o.img) card.img=o.img; else delete card.img;
     rows.push(card); more.push(card.id);
   }
+  /* the page card (v453): every photo whose texts stand apart — a screenshot, an app screen, a control panel, a menu board —
+     makes one card for the whole picture, its texts the cards just built (H, on the first cut's screenshot-only gate: "Immer
+     wenn auf dem Foto mehr als ein zusammenhängender Wortstring auftaucht, wird die Karte als Multikarte behandelt mit den
+     Punkten drauf."); the page is written in the same transaction. The record keeps which tell brought the photo here. */
+  const shotRec=S.inbox.find(x=>x.id===id), screen=!!(shotRec&&(shotRec.shared||shotRec.screenshot)), kindApp=/^app$/i.test(String(sg.ai.kind||""));
+  let pg=null;
+  {
+    let pid="page#"+at0; while(taken.has(pid)) pid+="-"; taken.add(pid);
+    const kt=kindTag(sg.ai.kind);
+    pg={id:pid,kind:"page",t:"Page",c:pageTitle(sg.ai,rows[0].c),name:sg.ai.pageInfo||null,p:"",m:"",ml:LANG,at:at0,shot:id,items:rows.map(r=>r.id),mt:{src:"llm",verified:true},v:APP_V};
+    if(kt) pg.tags=[kt];
+    for(const r of rows) r.page=pid;
+  }
+  const n=rows.length; if(pg) rows.push(pg);
   numCards(id,rows.map(d=>d.id)); numsFile(id); /* v399 */
   try{ await idbPutMany("custom",rows); }catch(e){ logErr("split",e&&e.message||String(e)); return null; } /* all the labels together or none (v264's rule): half of them saved while the placeholder still carries its reading would be read again at the next start and doubled */
   for(let k=0;k<rest.length;k++){ bump("byPhoto"); S.custom.push(rows[k+1]); }
+  if(pg){ S.custom.push(pg); numSet(id,"page",{id:pg.id,title:pg.c,why:screen?(shotRec.shared?"shared":"screenshot"):kindApp?"kind App":"split",n}); logRead(`one page card for the ${screen?"screenshot":kindApp?"app screen":"picture"}: ${pg.c} — its ${n} texts are its dots`); }
   QSMORE[id]=more; QSCARD[id]=ph.id;
-  logRead(`${rows.length} cards from this photo: ${rows.map(c=>c.c).join(", ")}`);
-  return rows.length;
+  logRead(`${n} cards from this photo: ${rows.slice(0,n).map(c=>c.c).join(", ")}`);
+  return n;
 }
 async function finishPending(id){
   const sg=SIGN[id], ph=pendingCard(id); if(!ph){ delete PENDING[id]; return; }
@@ -6528,7 +6620,7 @@ async function signAskAI(id){
     if(checkErr&&!pic) throw checkErr; /* nothing in hand: the failure stands as before v451 — the offline model, the gloss, pending */
     if(pic&&sg.placePic){ try{ await sg.placePic(pic); }catch(e){ logErr("snap",e&&e.message||String(e)); } if(!SIGN[id]) return; } /* v406: the same placement the weak path's answer gets — without it a panel that reaches the AI this way made one card */
     if(pic){ const zh=pic.zh.split("\n"); sg.lines=zh; sg.orig=zh.slice(); sg.conf=[]; sg.boxes=zh.map(()=>[]); sg.alts=[c,...(sg.alts||[])].filter(x=>x&&x!==pic.zh).slice(0,6); sg.trad=!!pic.zht; sg.tradDetected=!!pic.zht; sg.tradText=pic.zht||""; sg.weak=false;
-      sg.ai={zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,ml:pic.ml,note:pic.note,kind:pic.kind,ok:true,bad:false,pic:true,labels:pic.labels||null}; } /* as the weak path's answer: open characters, no boxes, the reader's texts as the alternatives, the mark on the label */
+      sg.ai={zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,ml:pic.ml,note:pic.note,kind:pic.kind,pageInfo:pic.pageInfo||null,ok:true,bad:false,pic:true,labels:pic.labels||null}; } /* as the weak path's answer: open characters, no boxes, the reader's texts as the alternatives, the mark on the label */
     else {
     let zh=r.zh&&CJK.test(r.zh)&&!r.bad?r.zh.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):c;
     zh=recutLines(zh,lines); /* the model often drops the line breaks — the photo's lines win */
@@ -6649,7 +6741,7 @@ function photoRegions(rec,byShot){
   rs.sort((a,b)=>(a.box.y-b.box.y)||(a.box.x-b.box.x)); /* reading order: top to bottom, left to right */
   return rs.length>=REGION_MIN?rs:[];
 }
-function regionOf(shot,rid){ const rec=S.inbox.find(x=>x.id===shot); return rec?photoRegions(rec).find(r=>r.rid===rid)||null:null; }
+function regionOf(shot,rid){ return photoRegions({id:shot}).find(r=>r.rid===rid)||null; } /* the regions are the cards' (v448), so a page whose inbox photo is gone still has them (v453) */
 function regionState(r){ if(!r.card) return 0; const p=S.progress[r.card]; if(!p||!p.reps) return 1; return p.interval>=KNOWN_DAYS?2:1; } /* 0 no card · 1 new or learning · 2 known */
 function regionsHTML(rec,rs,o){
   const learn=!!(o&&o.learn); /* v452: on the Learn front the dots take no tap (the photo's own tap and the swipe own the surface), never flash, and the card's own is lit */
@@ -6658,7 +6750,7 @@ function regionsHTML(rec,rs,o){
   return `<div class="regions${fresh?" show":""}${learn?" learn":""}"${learn?"":` data-regions="${rec.id}"`}>${rs.map(r=>{ const b=r.box, pc=x=>(x*100).toFixed(2)+"%";
     return `<${tag} class="region s${regionState(r)}${learn&&o.me===r.card?" me":""}" ${learn?"data-rid":"data-region"}="${esc(r.rid)}" style="left:${pc(b.x)};top:${pc(b.y)};width:${pc(b.w)};height:${pc(b.h)}${b.a?`;transform:rotate(${b.a}deg)`:""}"${learn?' aria-hidden="true"':` aria-label="${esc(r.zh.replace(/\n/g," "))}"`}><i class="dot" aria-hidden="true"></i></${tag}>`; }).join("")}</div>`;
 }
-function regionLine(rs){ const known=rs.filter(r=>regionState(r)===2).length; return t("{0} cards from this photo, {1} known.",rs.filter(r=>r.card).length,known); }
+function regionLine(rs,pg){ const known=rs.filter(r=>regionState(r)===2).length; return pg?t("{0} texts on this page, {1} known.",rs.filter(r=>r.card).length,known):t("{0} cards from this photo, {1} known.",rs.filter(r=>r.card).length,known); } /* pg (v453): the photo's cards are one page's texts */
 function wireRegions(root){
   root.querySelectorAll("[data-regions]").forEach(box=>{
     const shot=box.dataset.regions;
@@ -6684,7 +6776,8 @@ function openLookup(shot,rid){
     <div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div></div>`;
   let el=LOOKUP&&LOOKUP.el; const swap=!!el;
   if(!el){ el=document.createElement("div"); el.className="ask lookup"; document.body.appendChild(el); }
-  el.innerHTML=html; LOOKUP={shot,rid,el,card:d.id};
+  const from=S.mode==="cards"&&S.detail&&isPage(cardOf(S.detail))?S.detail:null; /* v453: opened on a page's detail — More and ← Back come back to it */
+  el.innerHTML=html; LOOKUP={shot,rid,el,card:d.id,from};
   if(!swap){ /* the sheet stands until it is closed: a tap anywhere outside it that is not on a region, or Escape */
     LOOKUP.onDown=e=>{ if(!LOOKUP||e.target.closest(".sheet.lookup")||e.target.closest("[data-region]")||e.target.closest("[data-regions]")) return; closeLookup(); };
     LOOKUP.onKey=e=>{ if(e.key==="Escape") closeLookup(); };
@@ -6692,7 +6785,7 @@ function openLookup(shot,rid){
   el.querySelector("#lk-close").onclick=closeLookup;
   wireSay(el);
   el.querySelectorAll("[data-lg]").forEach(b=> b.onclick=()=>gradeRegion(b.dataset.lg));
-  el.querySelector("#lk-more").onclick=()=>{ const cid=LOOKUP&&LOOKUP.card; closeLookup(); if(!cid||!cardOf(cid)) return; INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom="inbox"; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
+  el.querySelector("#lk-more").onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, from=LOOKUP&&LOOKUP.from; closeLookup(); if(!cid||!cardOf(cid)) return; if(!from) INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom=from?"page:"+from:"inbox"; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
 }
 function closeLookup(){ if(!LOOKUP) return; const L=LOOKUP; LOOKUP=null; L.el.remove(); document.removeEventListener("pointerdown",L.onDown,true); document.removeEventListener("keydown",L.onKey); }
 /* the grade is the decision (H): it writes the review — and, in phase 2, makes the card first — and the dot takes the card's colour at once */
@@ -6701,7 +6794,7 @@ async function gradeRegion(g){
   bump("regionGrades");
   await recordGrade(L.card,g);
   closeLookup();
-  if(S.mode==="inbox") renderShots(); setStats();
+  if(S.mode==="inbox") renderShots(); else if(S.mode==="cards"&&S.detail) render(); setStats(); /* the page detail's dot takes the colour too (v453) */
 }
 function backToPhoto(){ const y=INBOX_SCROLL; S.detail=null; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.mode="inbox"; render(); requestAnimationFrame(()=>window.scrollTo(0,y)); }
 function renderInbox(main){
@@ -6759,7 +6852,7 @@ function renderShots(){
           ${zoomed?`<div class="shotzoom" style="${zoomStyle(s)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(s)}" alt="photo">`}${working?`<div class="scan" aria-hidden="true"></div>`:""}${rs.length?regionsHTML(s,rs):""}
           ${cropping?`<div class="croplayer${shown?" framed":""}${zoomed?" zoomed":""}" data-id="${s.id}">${zoomed?"":`<div class="croprect${READING[s.id]&&!READ_FAIL.test(READING[s.id])?" working":""}"${cropRectStyle()}>${READING[s.id]&&!READ_FAIL.test(READING[s.id])?`<div class="work" aria-hidden="true"><svg><rect/></svg></div>`:""}<div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="${t("Turn the frame")}"></div></div>`}</div>`:""}
         </div>
-        ${rs.length?`<div class="regline">${esc(regionLine(rs))}</div>`:""}
+        ${rs.length?(pg=>`${pg?`<div class="ptitle">${esc(pg.c)}</div>`:""}<div class="regline">${esc(regionLine(rs,pg))}</div>`)(pageOfShot(s.id)):""}
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">${t("Cancel")}</button>`
           :AUTO[s.id]&&PENDING[s.id]?`<button class="ocr-btn" data-autoedit="${s.id}">${t("Crop")}</button><button class="del" data-autocancel="${s.id}">${t("Cancel")}</button>`
@@ -6803,7 +6896,7 @@ let PENDING_SHOT=false; /* a photo is being processed — the inbox shows a plac
 async function onPhoto(e){
   const files=[...(e.target.files||[])].filter(f=>f&&f.type.startsWith("image/"));
   e.target.value="";
-  await importPhotos(files);
+  await importPhotos(files,{album:e.target.id==="album"}); /* v453: only the album's photos are probed for a screenshot — a photo the camera app hands over is a camera photo by its route, as a shared one is a screenshot by its route (v450) */
 }
 /* A screenshot shared to the app from another app (v163, H: "a fast and easy function to translate screenshots"): the
    manifest's share target posts the files to ./share, the worker parks them in the cache "zt-share" and opens the app
@@ -6827,18 +6920,50 @@ async function importPhotos(files,opts){
   await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0))); /* let the placeholder paint first */
   /* several photos from the album: all land in the inbox, the first one opens in crop mode */
   let first=null; const added=[];
-  for(const file of files){ const id=await addPhoto(file,opts.shared); if(id) added.push(id); if(!first) first=id; }
+  for(const file of files){ const id=await addPhoto(file,opts.shared,opts.album); if(id) added.push(id); if(!first) first=id; }
   CROP=first?{id:first,rect:null,auto:true}:null; PENDING_SHOT=false; /* the frame is proposed by the app (v203) */
   if(S.autoCard&&added.length>1) autoQueueAdd(added.slice(1)); /* the rest follow one after the other (v411) — the first is already in hand */
   if(S.mode!=="inbox"){ S.mode="inbox"; render(); } else renderShots();
   window.scrollTo({top:0});
 }
-async function addPhoto(file,shared){
+/* A screenshot picked from the album is told from a camera photo by what the file carries (v453, H, 2026-09-13, his Meituan order screen from the album twice: "Es werden immer noch nicht alle Zeichen im screenshot übersetzt" — v450's rule is the share sheet's, and he picks screenshots from the album, so both records carry shared:false and the ink rows cut the title away). A camera writes its Make and Model into the JPEG's EXIF block; a screenshot is a PNG, or a JPEG without them (MIUI saves screenshots as JPEG with no camera tag) — and its pixels are the screen's own size, which is recorded as the second signal and counts when it matches. The probe reads the file's first 128 KB and never leaves the phone; the route decides where it runs: the album only, since a photo from the camera input is a camera photo whatever its EXIF says, and a shared one is a screenshot already (v450). What it costs: a camera photo whose EXIF an app stripped on the way (a photo forwarded through WeChat) is read whole like a screenshot — the v348/v393 re-asks already read many whole, and the record says which tell fired (N.prop.src), so the field can correct the rule. */
+async function photoSource(file){
+  const head=new Uint8Array(await file.slice(0,131072).arrayBuffer());
+  const png=head.length>7&&head[0]===0x89&&head[1]===0x50&&head[2]===0x4E&&head[3]===0x47;
+  let cam=null; /* the camera's own Make and Model from the EXIF block, "" when the JPEG carries none */
+  if(!png&&head[0]===0xFF&&head[1]===0xD8){
+    let i=2;
+    while(i+4<head.length&&head[i]===0xFF){
+      const m=head[i+1], len=(head[i+2]<<8)|head[i+3];
+      if(m===0xE1&&head[i+4]===0x45&&head[i+5]===0x78&&head[i+6]===0x69&&head[i+7]===0x66){ cam=exifCamera(head,i+10,Math.min(head.length,i+2+len)); break; }
+      if(m===0xDA||m===0xD9) break; /* the image data — no EXIF after it */
+      if(len<2) break; i+=2+len;
+    }
+  }
+  const sw=Math.round(screen.width*(devicePixelRatio||1)), sh=Math.round(screen.height*(devicePixelRatio||1));
+  return {png,cam:cam||"",sw,sh,screenshot:png||!cam};
+}
+function exifCamera(b,off,end){ /* IFD0's Make (0x010F) and Model (0x0110), joined; null when neither is there */
+  try{
+    const dv=new DataView(b.buffer,b.byteOffset,b.byteLength);
+    if(off+8>end) return null;
+    const le=b[off]===0x49&&b[off+1]===0x49, u16=p=>dv.getUint16(p,le), u32=p=>dv.getUint32(p,le);
+    if(u16(off+2)!==42) return null;
+    const ifd=off+u32(off+4); if(ifd+2>end) return null;
+    const n=u16(ifd); let out="";
+    for(let k=0;k<n;k++){ const e=ifd+2+k*12; if(e+12>end) break; const tag=u16(e), type=u16(e+2), cnt=u32(e+4);
+      if((tag===0x010F||tag===0x0110)&&type===2&&cnt>1){ const p=cnt<=4?e+8:off+u32(e+8); if(p+cnt<=end){ let x=""; for(let j=0;j<cnt-1;j++) x+=String.fromCharCode(b[p+j]); x=x.replace(/\0/g,"").trim(); if(x) out+=(out?" ":"")+x; } } }
+    return out||null;
+  }catch(e){ return null; }
+}
+async function addPhoto(file,shared,album){
   /* bake in EXIF rotation + downscale to max 1600px: keeps the inbox small
      and the OCR boxes aligned with the displayed image */
-  let blob=file;
+  let blob=file, src=null;
+  if(album&&!shared){ try{ src=await photoSource(file); }catch(err){ src=null; } } /* v453: is this a screenshot? */
   try{
     const bmp=await createImageBitmap(file);
+    if(src){ src.w=bmp.width; src.h=bmp.height; src.dims=(bmp.width===src.sw&&bmp.height===src.sh)||(bmp.width===src.sh&&bmp.height===src.sw); if(src.dims) src.screenshot=true; } /* the screen's own size is the second tell */
     const sc=Math.min(1,1600/Math.max(bmp.width,bmp.height));
     const cv=document.createElement("canvas");
     cv.width=Math.round(bmp.width*sc); cv.height=Math.round(bmp.height*sc);
@@ -6847,6 +6972,7 @@ async function addPhoto(file,shared){
     blob=(await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85)))||file;
   }catch(err){}
   const rec={ id:"shot_"+Date.now()+"_"+Math.floor(Math.random()*1000), blob, ts:Date.now() }; if(shared) rec.shared=true; /* v450: came through the share sheet (v163) — a screenshot, by the route's own design */
+  if(src){ rec.src={png:src.png,cam:src.cam,w:src.w||0,h:src.h||0,sw:src.sw,sh:src.sh,dims:!!src.dims}; if(src.screenshot) rec.screenshot=true; } /* v453: a screenshot from the album, and what said so */
   S.inbox.unshift(rec);
   try{ await idbPut("inbox",rec); }catch(err){}
   return rec.id;
