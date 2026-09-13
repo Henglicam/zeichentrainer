@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=455; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=456; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -323,7 +323,7 @@ const numFrames=fs=>{ const a=fs.filter(Boolean)[0]; return a?{lw:n1(a.lw),lh:n1
 const numPic=p=>p?{pw:p.picW,ph:p.picH,box:numFrac(p.box),alt:numFrac(p.boxAlt),sc:p.boxScale||null,model:p.model||"",
   boxes:Array.isArray(p.boxes)?p.boxes.map(numFrac):null,drop:(p.dropped||[]).map(x=>String(x).slice(0,24)),dropB:(p.droppedBoxes||[]).map(numFrac),
   out:(p.outside||[]).map(x=>String(x).slice(0,24)),
-  cut:p.cut||"",bad:!!p.bad,apart:!!p.apart,kind:p.kind||"",page:p.pageInfo||null,zh:String(p.zh||"").slice(0,200),
+  cut:p.cut||"",bad:!!p.bad,apart:!!p.apart,kind:p.kind||"",keptAll:p.keptAll||"",page:p.pageInfo||null,zh:String(p.zh||"").slice(0,200),
   labels:(p.labels||[]).map(l=>({zh:l.zh,box:numFrac(l.box),sc:l.scale}))}:null;
 const NUMS_KEEP=3; /* readings kept in the shared text (v405) — three covers a photo taken, looked at and taken again */
 const NUMS_OLD=6000; /* the older two are trimmed harder than the newest: a 19-label panel measures 6.1 KB whole, so this
@@ -415,6 +415,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["again","v456","798 directory board: all plates on the card, none dropped"],
   ["again","v455","798 directory board / two signs in one photo: several cards"],
   ["app","v454","album batch: Waiting lines, and all photos read"],
   ["again","v453","Meituan screen from the ALBUM: one page card"],
@@ -1030,16 +1031,19 @@ async function aiReadPicture(blob,alts,status,rec){
       if(mp.length===lines0.length) x.m=mp.filter((v,i)=>keep[i]).join(" / ");
       if(lineBoxes&&lineBoxes.length===lines0.length) lineBoxes=lineBoxes.filter((v,i)=>keep[i]);
       lines0=lines0.filter((l,i)=>keep[i]); } }
-  const main=mainLines(lines0,x.p,x.m,lineBoxes?lineBoxes.map(b=>picBox(b,pic.w,pic.h)):null,picBox(x.box,pic.w,pic.h));
+  /* v456: the fine-print filter stands down where the prompt itself calls the small text an element — the answer says the
+     texts stand apart, or its "kind" is one of the list-shaped pictures. Computed here, above the filter, because the
+     filter runs before the labels are read and would otherwise delete what v455 just asked the model to include. */
+  const apart=!!x.apart, kindRaw=String(x.kind||"").trim(), keepAll=apart||FINE_KEEP.has(kindRaw);
+  const main=mainLines(lines0,x.p,x.m,lineBoxes?lineBoxes.map(b=>picBox(b,pic.w,pic.h)):null,picBox(x.box,pic.w,pic.h),keepAll);
   const oneScale=!lineBoxes||lineBoxes.every(b=>{ const sc=picScale(b,pic.w,pic.h); return !sc||sc===picScale(x.box,pic.w,pic.h); }); /* v410: every line box read the way the union box is read, or the comparison below means nothing (the v379 trap) */
-  const altBox=picBoxPix(x.box,pic.w,pic.h), mainAlt=altBox?mainLines(lines0,x.p,x.m,lineBoxes?lineBoxes.map(b=>picBoxPix(b,pic.w,pic.h)||picBox(b,pic.w,pic.h)):null,altBox):null; /* the second reading of a box that passes the picture's edge (v340), through the fine-print rule like the first (v343 polish): its box is the kept lines' union too, and its dropped boxes are its own */
+  const altBox=picBoxPix(x.box,pic.w,pic.h), mainAlt=altBox?mainLines(lines0,x.p,x.m,lineBoxes?lineBoxes.map(b=>picBoxPix(b,pic.w,pic.h)||picBox(b,pic.w,pic.h)):null,altBox,keepAll):null; /* the second reading of a box that passes the picture's edge (v340), through the fine-print rule like the first (v343 polish): its box is the kept lines' union too, and its dropped boxes are its own */
   const zhRaw=main.lines.join("\n"), zh=t2s(zhRaw), m=saneM(main.m,zh);
   /* the elements of a user interface, and of any picture of separate signs or labels (v358, H: "you have to find out if the image is
      a user interface and then put a card for each and every single element of it", then "Also for all kinds of signs and labels"): one question — "ui" — and the answer's own list of elements. Data, not one joined string: the
      pinyin of 汤/粥 is "tāng / zhōu" and its meaning "soup / congee", so splitting the joined "p" and "m" on " / " gives more parts
      than there are labels and the app could not tell them apart. The fine-print rule of v312 does not touch this list — a small
      label under a bigger one is an element of the panel, not a poster's credits — so the labels are read from the raw answer. */
-  const apart=!!x.apart;
   let labels=null;
   if(apart&&Array.isArray(x.labels)&&x.labels.length>=SPLIT_MIN){
     /* the labels are read the way most of them are read (v379, H's washing machine at v378: the model's grid puts the last
@@ -1064,14 +1068,22 @@ async function aiReadPicture(blob,alts,status,rec){
   /* what came back, in one line of the log (v374): the shape of the answer survives a restart, so a panel that made one card can
      be read back afterwards — until v373 only the split's own lines said anything, and they lived in memory */
   const pageInfo=(()=>{ const g=x.page; if(!g||typeof g!=="object") return null; const f=k=>String(g[k]||"").trim().replace(/\s+/g," ").slice(0,60); const o={name:f("name"),what:f("what"),place:f("place")}; return o.name||o.what||o.place?o:null; })(); /* v453: the page's own title, for the page card */
+  if(keepAll&&lineBoxes) logRead(`the small lines of this answer are elements, not fine print (${apart?"the texts stand apart":"kind "+kindRaw}) — none of them is left out`); /* v456: the v312 rule stood down, and the record says why (the v399 rule) */
   logRead(`the AI's answer: ${lines0.length} ${lines0.length===1?"line":"lines"}, apart ${apart?"yes":"no"}, ${Array.isArray(x.labels)?x.labels.length:0} labels${Array.isArray(x.labels)&&x.labels.length?" ("+(labels?labels.length:0)+" usable)":""}, ${Array.isArray(x.boxes)?x.boxes.length:0} boxes, meaning ${String(x.m||"").length} characters`);
-  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxAlt:mainAlt?mainAlt.box:null,droppedBoxesAlt:mainAlt?mainAlt.droppedBoxes:null,boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,outside:[],oneScale,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,""),kind:String(x.kind||"").trim(),pageInfo,apart,labels,picW:pic.w,picH:pic.h,boxScale:picScale(x.box,pic.w,pic.h)}; /* cut (v314): the edges that cut off a line the model left out */
+  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxAlt:mainAlt?mainAlt.box:null,droppedBoxesAlt:mainAlt?mainAlt.droppedBoxes:null,boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,outside:[],oneScale,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,""),kind:kindRaw,keptAll:keepAll?(apart?"apart":"kind "+kindRaw):"",pageInfo,apart,labels,picW:pic.w,picH:pic.h,boxScale:picScale(x.box,pic.w,pic.h)}; /* cut (v314): the edges that cut off a line the model left out */
 }
 /* the main text only (v312, H's 青春无烟 / 未来无限 poster: the card carried the poster's small print — the line 第39个世界无烟日 above the title and the date 2026年5月31日 世界无烟日 below it, half of it outside the frame — "wieder die Sachen ausserhalb des Crops und das Kleingedruckte mitgelesen. Bitte beides vermeiden"): the prompt asks for the main text and leaves fine print and lines the picture's edge cuts off to the model; this is the safety net from the model's own line boxes — a line whose box is under FINE_PRINT of the tallest line's height is fine print and goes, with its pinyin and meaning parts when they come one per line; the box for the frame is then the union of the lines kept */
 const FINE_PRINT=1/3;
-function mainLines(lines,p,m,boxes,box){
+/* the kinds on which a smaller line under a bigger one is an element of its own, not fine print (v456): the prompt's own
+   "zh" clause names them — "on a board, a directory, a menu, a panel or a screen the small plates, rows, brand names and
+   buttons under a big headline ... belong in the answer, every one of them" — and these five of the nine KINDS are exactly
+   those pictures. Street sign, Shop, Product and Notice keep the filter, since that is where a poster's credits, a date
+   line and a package's small print live (v312's own case is a poster). */
+const FINE_KEEP=new Set(["Menu","App","Appliance","Transport","Office"]);
+function mainLines(lines,p,m,boxes,box,keepAll){
   const out={lines,p:String(p||""),m:String(m||""),box,boxes:null,dropped:[],droppedBoxes:[]};
   if(!boxes||boxes.length!==lines.length||boxes.some(b=>!b)||lines.length<2) return out;
+  if(keepAll) return {...out,boxes}; /* v456: on a board the small plates ARE the answer — the prompt says so since v455 and this rule deleted them again (H's 龙人居 notice board: seven lines answered, five dropped). The box stays the model's own union, so the frame spans the whole board and no plate lands in snapBox's skip list. */
   const hs=boxes.map(b=>b[3]-b[1]), hmax=Math.max(...hs), keep=hs.map(h=>h>=FINE_PRINT*hmax);
   if(keep.every(Boolean)) return {...out,boxes};
   const pp=out.p.split(/\s*\/\s*/), mp=out.m.split(/\s*\/\s*/);
@@ -3227,6 +3239,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  456:"A board or a directory now keeps its small plates: the shop names and menu rows under a big headline stay on the card instead of being dropped as fine print.",
   455:"A board or a directory whose plates are smaller than its headline is read as the separate signs it is, instead of as one text.",
   454:"Several photos from the album go through one after the other again: the ones still waiting say so, and a photo that becomes several cards no longer stops the rest.",
   453:"A photo with several texts — a screenshot, a control panel, a menu board — now makes one card for the whole picture, with a dot on every text; Learn goes through them one by one.",
