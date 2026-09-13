@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=450; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=451; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -395,6 +395,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v451","check dead: cards from the picture"],
   ["again","v450","Meituan order screen SHARED: dots on 下单确认, 颐堤港店"],
   ["again","v449","Meituan order screen: dots on 下单确认, 颐堤港店, the buttons"],
   ["again","v449","wide shopfront sign: the whole sign in the card picture"],
@@ -3130,6 +3131,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  451:"When the text check cannot be reached, a screenshot or panel still gets its cards from the picture the AI already read.",
   450:"A screenshot shared to the app is now read whole, so its title and headings get their dots too.",
   449:"A photo of an app screen or a board now gets a card for its headings and buttons too, not only its main items — and a card's picture no longer cuts off the end of a wide sign.",
   448:"A photo that made several cards — a control panel, an app screen — now shows a dot on each of its texts. Tap one to see it, hear it and grade it right on the photo.",
@@ -6497,9 +6499,12 @@ async function signAskAI(id){
   sg.aiBusy="Asking the AI …"; delete sg.aiErr; renderShots();
   sg.aiPromise=(async()=>{ try{
     const c=lines.join("\n"), res=(sg.res||[]).filter(Boolean);
-    const [r]=await aiAsk([{kind:"sign",c,p:res.map(x=>x.py).join(" / "),m:sg.mean||"",gloss:res.flatMap(x=>x.gloss),alts:sg.alts,trad:!!sg.trad,mt:{src:"gloss",verified:false,suspect:"read from a photo by OCR"}}]);
+    let r=null, checkErr=null;
+    try{ [r]=await aiAsk([{kind:"sign",c,p:res.map(x=>x.py).join(" / "),m:sg.mean||"",gloss:res.flatMap(x=>x.gloss),alts:sg.alts,trad:!!sg.trad,mt:{src:"gloss",verified:false,suspect:"read from a photo by OCR"}}]); }catch(err){ checkErr=err; }
     if(!SIGN[id]) return;
-    const pic=r.bad?await picOnBad(sg,[c,...(sg.alts||[])]):await picPanel(sg); if(!SIGN[id]) return; /* the text check calls the reading garbage: the picture goes to the AI that takes pictures (v302) — or it does not, and a panel answer is already in hand (v447) */
+    if(checkErr){ const N=numsFor(id); N.checkErr=String(checkErr&&checkErr.message||checkErr).slice(0,160); logRead(`the text check failed: ${N.checkErr}`); } /* v451, H's order screen from the album, 2026-09-13: the relay answered 500 "counter 401", the catch below set aiErr, and the parked Qwen answer — apart, App, four labels — was thrown away for a card of the reader's garbage. A check that never answered is no verdict on the picture answer already in hand, so picPanel runs on this path too, and the record names the failure (the v399 rule). */
+    const pic=checkErr?await picPanel(sg):r.bad?await picOnBad(sg,[c,...(sg.alts||[])]):await picPanel(sg); if(!SIGN[id]) return; /* the text check calls the reading garbage: the picture goes to the AI that takes pictures (v302) — or it does not, and a panel answer is already in hand (v447) — or it never answered, and the panel answer in hand is used all the same (v451) */
+    if(checkErr&&!pic) throw checkErr; /* nothing in hand: the failure stands as before v451 — the offline model, the gloss, pending */
     if(pic&&sg.placePic){ try{ await sg.placePic(pic); }catch(e){ logErr("snap",e&&e.message||String(e)); } if(!SIGN[id]) return; } /* v406: the same placement the weak path's answer gets — without it a panel that reaches the AI this way made one card */
     if(pic){ const zh=pic.zh.split("\n"); sg.lines=zh; sg.orig=zh.slice(); sg.conf=[]; sg.boxes=zh.map(()=>[]); sg.alts=[c,...(sg.alts||[])].filter(x=>x&&x!==pic.zh).slice(0,6); sg.trad=!!pic.zht; sg.tradDetected=!!pic.zht; sg.tradText=pic.zht||""; sg.weak=false;
       sg.ai={zh:pic.zh,zht:pic.zht,p:pic.p,m:pic.m,ml:pic.ml,note:pic.note,kind:pic.kind,ok:true,bad:false,pic:true,labels:pic.labels||null}; } /* as the weak path's answer: open characters, no boxes, the reader's texts as the alternatives, the mark on the label */
