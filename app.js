@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=459; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=460; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -415,6 +415,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v460","swipe a page card left and right; a dot still opens its sheet"],
   ["app","v459","More and the guide in German: the new sentence, no overflow"],
   ["app","v458","Start over: streak and 30-day strip at zero afterwards"],
   ["again","v457","a CLEAN directory board: one page card, dots on the plates"],
@@ -2488,7 +2489,9 @@ function wireSwipe(card,o){
   const makePeer=s=>{
     dropPeer(); step=s;
     if(!at(o.idx+s)) return;
-    const html=o.peer(o.idx+s); if(html==null) return;
+    const got=o.peer(o.idx+s); if(got==null) return;
+    const html=typeof got==="string"?got:got.html, cls=typeof got==="string"?"":(got.cls||""); /* v460: a page neighbour needs its own class, since its body is not an ordinary card's */
+    if(html==null) return;
     /* far enough that the pair leaves the screen, not merely one card width (v419, H on his Xiaomi Mix Fold unfolded:
        "Sieht der Swipe im aufgeklappten Zustand auf dem großen Screen noch etwas komisch aus, weil die Karten links und
        rechts dann einfach plötzlich verschwinden. Die müssten eigentlich dann rausfliegen."). A card is at most 440 px
@@ -2499,7 +2502,7 @@ function wireSwipe(card,o){
        nothing about the phone moves) and on the unfolded screen is about three times it. */
     shift=Math.max(card.offsetWidth+SW_GAP, par.offsetWidth-card.offsetLeft, card.offsetLeft+card.offsetWidth);
     peer=document.createElement("div");
-    peer.className="card peer";
+    peer.className="card peer"+(cls?" "+cls:"");
     peer.innerHTML=html;
     peer.querySelectorAll("[id]").forEach(el=>el.removeAttribute("id")); /* a copy of the detail card carries its ids — the page must keep only one of each */
     peer.style.left=card.offsetLeft+"px"; peer.style.top=card.offsetTop+"px"; peer.style.width=card.offsetWidth+"px";
@@ -2519,7 +2522,11 @@ function wireSwipe(card,o){
   const put=v=>{ card.style.transform=v?`translateX(${v}px)`:""; if(peer) peer.style.transform=`translateX(${step*shift+v}px)`; };
   card.addEventListener("click",e=>{ if(ate){ ate=false; e.stopPropagation(); e.preventDefault(); } },true); /* the stroke's own closing click must not reveal the card */
   card.addEventListener("pointerdown",e=>{
-    if(e.target.closest("button,a,input,textarea,.chip")) return;
+    /* a real control must not be hijacked by a stroke that drifts off it — but a dot on the photo (v448) and a row of the
+       page's own texts (v453) are CONTENT that happens to be a <button>, and on a page detail they cover the whole card.
+       That is why H could not swipe a Multikarte at all (v460): every press landed on one. A tap still reaches them, since
+       the gesture only takes over past SW_SLOP and only eats its own closing click. */
+    if(e.target.closest("button:not(.region):not(.crow),a,input,textarea,.chip")) return;
     x0=e.clientX; y0=e.clientY; dx=0; on=false; pid=e.pointerId;
   });
   card.addEventListener("pointermove",e=>{
@@ -2785,18 +2792,25 @@ function backToPage(){ const pid=fromPage(); S.detailFrom=null; S.detailHide=fal
 /* the page's own detail (v453): the whole photo with the dots — a tap opens the sheet of v448 and grades right there —, the
    title and the line under it, then one row per text in reading order with the dot's state, the star and Delete card, which
    takes the page's texts with it (one Undo). No Edit and no Share: the page is its photo, and its texts are edited one by one. */
-function renderPageDetail(main,d){
+/* the page detail's own body (v460): the photo with its dots, the title, the line and the page's texts — factored out of
+   renderPageDetail so the swipe's peer can draw a page neighbour with it, exactly as detailCardHTML draws an ordinary one */
+function pageBodyHTML(d){
   const rs=photoRegions({id:d.shot}), its=pageItems(d), full=fullPhoto(d);
-  const order=rs.map(r=>r.card), sorted=its.slice().sort((a,b)=>{ const ia=order.indexOf(a.id), ib=order.indexOf(b.id); return (ia<0?1e9:ia)-(ib<0?1e9:ib); }); /* reading order, from the dots */
+  const order=rs.map(r=>r.card), sorted=its.slice().sort((a,b)=>{ const ia=order.indexOf(a.id), ib=order.indexOf(b.id); return (ia<0?1e9:ia)-(ib<0?1e9:ib); });
   const known=its.filter(x=>regionState({card:x.id})===2).length;
-  main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">${t("← Cards")}</button><span class="badge">${esc((d.tags||[]).join(", "))}</span></div>
-    <div class="shot pagecard" data-page="${esc(d.id)}">
+  return `<div class="shot pagecard" data-page="${esc(d.id)}">
       <div class="shotwrap">${full?`<img src="${urlOf(full)}" alt="photo">`:""}${rs.length?regionsHTML({id:d.shot},rs):""}</div>
       <div class="ptitle">${esc(d.c)}</div>
       <div class="regline">${esc(t("{0} texts on this page, {1} known.",its.length,known))}</div>
     </div>
-    <div class="clist" id="pitems">${sorted.map(x=>cardRowHTML(x,false,new Map(),true)).join("")}</div>
+    <div class="clist" id="pitems">${sorted.map(x=>cardRowHTML(x,false,new Map(),true)).join("")}</div>`;
+}
+function renderPageDetail(main,d){
+  normaliseFilters(); /* the same rule as the ordinary detail (v308/v445): a star cleared on the open page must not strand it outside its own list */
+  const list=cardsList(), li=list.findIndex(x=>x.id===d.id), sw=li>=0&&list.length>1;
+  main.innerHTML=`<div class="pane">
+    <div class="topline"><button class="del" id="back">${t("← Cards")}</button><span class="badge">${esc((d.tags||[]).join(", "))}</span></div>
+    <div class="card bare">${pageBodyHTML(d)}</div>
     <div class="detailacts">
       <button class="btn${d.star?" on":""}" id="d-star">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>
       <button class="btn danger" id="d-del">${t("Delete card")}</button>
@@ -2808,6 +2822,22 @@ function renderPageDetail(main,d){
   wireStars($("#pitems"));
   $("#d-star").onclick=async()=>{ await setStar(d.id,!d.star); render(); };
   $("#d-del").onclick=async()=>{ await delCustom(d.id); S.detail=null; render(); }; /* at once, with Undo (v268) — the texts go with it */
+  /* a page is swiped like any other open card (v460, H: "Multicards lassen sich nicht swipen"): v445 gave the Cards
+     detail its carousel and v453's page renders through this function instead, which never called wireSwipe — so the one
+     card kind that holds several texts was the one kind you could not push aside. The neighbours are the same list. */
+  wireSwipe(main.querySelector(".card"), sw?detailSwipe(list,li,main):null);
+}
+/* the swipe options shared by the two detail screens (v460): the neighbour may be a page or an ordinary card, so the peer
+   dispatches on the record and hands makePeer the class its body needs */
+function detailSwipe(list,li,main){
+  return {n:list.length, idx:li,
+    peer:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return null; /* the deck is read live, never the captured list (v445) */
+      const fp=S.fullPic; S.fullPic=false;
+      const h=isPage(nd)?{html:pageBodyHTML(nd),cls:"bare"}:detailCardHTML(nd,true); /* no swipe hint on a page: its line is a count, and the ordinary detail's hint already teaches the gesture (v226 takes hints away after 20 reviews anyway) */
+      S.fullPic=fp; return h; },
+    go:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return; if(LIST_CARD) LIST_CARD=nd.id;
+      S.detail=nd.id; S.fullPic=false; render(); },
+    busy:on=>{ const pn=main.querySelector(".pane"); if(pn) pn.classList.toggle("swiping",on); }};
 }
 function renderCardDetail(main,c){
   const d=cardOf(c); if(!d){ S.detail=null; return renderCards(main); }
@@ -2854,17 +2884,7 @@ function renderCardDetail(main,c){
      the whole picture of this card" — so it is dropped at the commit, as every other path that changes the card drops
      it (the row tap, the linked hop, Learn's next card), and the peer is built with it already off, or the neighbour
      would slide in showing its whole photo and jump to the crop the moment it landed. */
-  wireSwipe(main.querySelector(".card"), sw?{
-    n:list.length, idx:li,
-    /* the deck is read LIVE, never the list captured when the card was drawn: a card deleted between the wire and the
-       commit would otherwise ride in as a ghost and land the detail on a dead id, which falls back to the list without
-       a word (measured). Learn has always done it this way. */
-    peer:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; const h=detailCardHTML(nd,true); S.fullPic=fp; return h; },
-    go:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return; if(LIST_CARD) LIST_CARD=nd.id; /* only when a row tap put us here — a hop through the linked row left LIST_OFF pointing at another part of the list */
-      S.detail=nd.id; S.fullPic=false; render(); }, /* NO scrollTo: Learn's card never scrolls (maxScroll 0), the detail's routinely does,
-       and the peer slides in at document coordinates — resetting the scroll teleported the card that had just snapped
-       into place by exactly the scroll amount (measured 199.8 px at scroll 200), which is the v418 complaint again */
-    busy:on=>{ const pn=main.querySelector(".pane"); if(pn) pn.classList.toggle("swiping",on); }}:null);
+  wireSwipe(main.querySelector(".card"), sw?detailSwipe(list,li,main):null); /* v460: the same options the page detail uses, so a neighbour that is a page renders as one */
 }
 function renderEdit(main,c){
   const d=cardOf(c); if(!d){ S.editing=null; S.editFrom=null; return render(); }
@@ -3243,6 +3263,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  460:"A card that holds several texts can be pushed sideways like any other card, and the photo itself takes the swipe.",
   459:"The app now says exactly what leaves your phone: which cards go to the AI and when, and that sometimes the whole photo goes with them.",
   457:"A photo with several separate texts — a directory board, a menu, a control panel, an app screen — becomes one card with a dot on every text even when the characters were easy to read.",
   456:"A board or a directory now keeps its small plates: the shop names and menu rows under a big headline stay on the card instead of being dropped as fine print.",
