@@ -461,10 +461,10 @@ body.noscroll{overflow:hidden}
 
 /* the batch of photos working itself through, and the one thing the user has to know about it (v411) */
 .batchline{margin:2px 4px 10px;font-size:13px;line-height:1.4;color:var(--label2)}
-/* v452: a card that is one of several from one photo shows the page itself on the Learn front and in the detail — the whole picture in its own shape (the one exception to v223's "both boxes the same shape"), capped so the grades stay on the screen, the blurred fill beside a tall page; the dots as on the Camera tab, the card's own lit; the dots take no tap there */
-.picbox.page{aspect-ratio:auto;height:auto;max-height:56vh;display:flex;justify-content:center;align-items:center}
-.picbox.page .pagewrap{position:relative;display:block;max-width:100%;max-height:56vh;line-height:0}
-.picbox.page .pagewrap .signimg{position:static;width:auto;height:auto;max-width:100%;max-height:56vh;display:block}
+/* v452: a card that is one of several from one photo shows the page itself on the closed Learn front and in the detail — the whole picture in its own shape (the one exception to v223's "both boxes the same shape"), the blurred fill around it; the dots as on the Camera tab, the card's own lit; the dots take no tap there. The cap keeps the closed front — page, text box, pill and hint — above the tab bar: 100vh minus what the rest of the screen takes (measured 500 px at 390×844 with the hint, 344 px of page there, 240 at 360×740), never over 56vh on a tall screen; the revealed card shows the card's own cut, since the grades then own the screen (v421). The 16 px frame keeps a dot at the picture's own edge whole (a title at y 0, a label at the right edge — measured clipped by 14 px without it). */
+.picbox.page{--pageh:clamp(180px,calc(100vh - 500px),56vh);aspect-ratio:auto;height:auto;max-height:var(--pageh);display:flex;justify-content:center;align-items:center}
+.picbox.page .pagewrap{position:relative;display:block;margin:16px;max-width:calc(100% - 32px);max-height:calc(var(--pageh) - 32px);line-height:0}
+.picbox.page .pagewrap .signimg{position:static;width:auto;height:auto;max-width:100%;max-height:calc(var(--pageh) - 32px);display:block}
 .picbox.page .regions{position:absolute;inset:0;pointer-events:none}
 .regions.learn .region{border-color:transparent;outline-color:transparent;cursor:default}
 .regions.learn .region.me .dot{width:18px;height:18px;right:-9px;top:-9px;background:var(--tint);box-shadow:0 0 0 2px #fff,0 0 0 6px var(--tint-soft),0 1px 4px rgba(0,0,0,.45);animation:pulse 1.4s ease-in-out infinite}

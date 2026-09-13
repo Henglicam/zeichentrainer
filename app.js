@@ -2087,7 +2087,7 @@ const GUIDE=()=>[
     t("From album takes several photos at once — they all become cards, one after the other, while the app is open.")]},
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
     t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.")]},
-  {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.")+" "+t("A card from a screen or a panel shows the whole picture with a dot on every text, its own dot lit, and is marked Page."),
+  {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.")+" "+t("A card from a screen or a panel shows the whole picture with a dot on every text and its own dot lit, and says which one it is, 1 of 4; a tap on the photo shows the text alone."),
     t("Grade yourself: Hard, Medium, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
     t("Swipe the closed card left or right to pick another one — nothing is graded, and a card you skip stays due for next time.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included. Push an open card sideways for the next one in the list."),
@@ -2183,7 +2183,7 @@ async function dedupePhotos(){
   return dup.length;
 }
 /* the photo on the front: the crop, or — after a tap on it — the whole photo (S.fullPic) */
-/* a card that is one of several from one photo shows the page itself on the Learn front — the whole picture in its own shape with a dot on every text and its own dot lit (v452, H on the v448 dots over his Meituan order screen: "So ähnlich wie Du es jetzt auf der Kameraseite anzeigst, so sollte es auch auf der Learn Seite für die entsprechende Karte beziehungsweise den Screenshot angezeigt werden. und dementsprechend auch irgendwie markiert werden als Multicard oder whatever der beste Name ist."). The regions are v448's, derived from the cards at render time; nothing is written. The mark is the pill "Page" — a learner's word for what the picture is, not for how it is stored (v225's rule; "Multi-card" is jargon). Only where the caller asks for it (Learn and the detail): the Camera tab's finished card and the provisional keep the crop. */
+/* a card that is one of several from one photo shows the page itself on the Learn front — the whole picture in its own shape with a dot on every text and its own dot lit (v452, H on the v448 dots over his Meituan order screen: "So ähnlich wie Du es jetzt auf der Kameraseite anzeigst, so sollte es auch auf der Learn Seite für die entsprechende Karte beziehungsweise den Screenshot angezeigt werden. und dementsprechend auch irgendwie markiert werden als Multicard oder whatever der beste Name ist."). The regions are v448's, derived from the cards at render time; nothing is written. The mark is the pill "Page" — first "Page", then the count "1 of 4" (v225's rule: a learner's words; "Page" read as "side" in German and "face" in Thai, "Multi-card" is jargon). Only where the caller asks for it (Learn and the detail): the Camera tab's finished card and the provisional keep the crop. */
 function pageOf(d){
   if(!d||!d.shot||!d.c) return null;
   const rs=photoRegions({id:d.shot}); if(rs.length<REGION_MIN||!rs.some(r=>r.card===d.id)) return null;
@@ -2210,7 +2210,7 @@ function frontPic(d,o){
 const waitingHTML=d=>d.reading&&d.reading.failed?`<span class="wait failed">${t("Nothing could be read.")}</span>`:`<span class="wait">${busyHTML(t("Reading the text …"))}</span>`;
 function frontHTML(d,o){
   const pg=o&&o.page&&!(S.peek&&S.peek!==d.id)?pageOf(d):null; /* v452 */
-  const scriptNote=(d.trad||pg)?`<div class="script">${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${pg?`<span class="pill page">${t("Page")}</span>`:""}</div>`:""; /* one pill under the box (v227, H's "Go" on the design review — until v226 two lines, "Traditional characters, as on the photo" and "Simplified 养乐多"); the simplified form sits on the back now (simpRefHTML), plain words, no 简/繁 shorthand (H, v106) */
+  const scriptNote=(d.trad||pg)?`<div class="script">${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${pg?`<span class="pill page">${t("{0} of {1}",pg.rs.findIndex(r=>r.card===d.id)+1,pg.rs.length)}</span>`:""}</div>`:""; /* v452: "1 of 4" in reading order — the count says "one of several on this photo" in every language without a word to define ("Page" was measured to read as "side" in German and "face" in Thai) */ /* one pill under the box (v227, H's "Go" on the design review — until v226 two lines, "Traditional characters, as on the photo" and "Simplified 养乐多"); the simplified form sits on the back now (simpRefHTML), plain words, no 简/繁 shorthand (H, v106) */
   if(d.kind==="sign"){
     /* sign card: the picture is the exercise, text underneath wrapped only between words */
     const lines0=(d.trad||d.c).split("\n");
@@ -2402,7 +2402,7 @@ function renderStudy(main){
   /* front: no tag row (theme / new / custom is noise while learning); tapping the photo or the character reveals */
   main.innerHTML=wxNoteHTML()+learnChipsHTML()+`<div class="card">
     ${S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:""}
-    <div class="front tap" id="reveal">${frontHTML(d,{page:true})}</div>
+    <div class="front tap" id="reveal">${frontHTML(d,{page:!S.revealed})}</div>
     ${back}</div>`;
   if(S.revealed) warmParts();
   /* tap on the photo: crop ⇄ whole photo; tap on the character: back on and off */
@@ -2411,7 +2411,7 @@ function renderStudy(main){
      Cards list since v445, so wireSwipe is told which list it moves through rather than reading S.queue itself */
   wireSwipe(main.querySelector(".card"), S.revealed||S.queue.length<2?null:{
     n:S.queue.length, idx:S.idx, centred:true,
-    peer:i=>{ const nd=cardOf(S.queue[i]); return nd?`<div class="front">${frontHTML(nd,{page:true})}</div>${swipeHint(nd)}`:null; },
+    peer:i=>{ const nd=cardOf(S.queue[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ return `<div class="front">${frontHTML(nd,{page:true})}</div>${swipeHint(nd)}`; } finally{ S.fullPic=fp; } }, /* the neighbour arrives as its own closed front — with the live fullPic a page card toggled to its cut sent the neighbour in as a cut and it jumped to the page (v452) */
     go:i=>{ S.idx=i; S.revealed=false; S.fullPic=false; S.peek=null; render(); window.scrollTo({top:0}); }});
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
   const st=$("#star-card"); if(st) st.onclick=async()=>{ await setStar(c,!d.star); render(); }; /* the learner's own mark, here too (v427) — the same field the Cards list writes */
@@ -2429,7 +2429,7 @@ function renderStudy(main){
    still due, so the next session's queue picks it up). Only while the back is closed; once it is open the grades own the screen. */
 const SW_SLOP=12, SW_MIN=60, SW_GAP=16, SW_MS=220;
 /* the closed card is pushed sideways and the next one slides in from the other side and snaps into place (v414, the carousel of v417 — H: "Ich moechte die Karten quasi nach links schieben und die naechste Karte kommt von rechts rein und rastet geschmeidig ein … Die muessen nicht so zur Seite wegkippen wie bei Tinder"). Nothing is graded: only S.idx moves; a card swiped past returns in the next session, not in this one (v417). */
-function swipeHint(d){ return showHints()?`<div class="hint">${t("Tap the character to reveal")}${fullPhoto(d)?(pageOf(d)?t(", or the photo for the text alone"):t(", or the photo for the whole picture")):""}.${S.queue.length>1?" "+t("Swipe left or right to pick another card."):""}</div>`:""; }
+function swipeHint(d){ return showHints()?`<div class="hint">${t("Tap the character to reveal")}${fullPhoto(d)?(pageOf(d)&&!S.fullPic&&!S.peek&&!S.revealed?t(", or the photo for the text alone"):t(", or the photo for the whole picture")):""}.${S.queue.length>1?" "+t("Swipe left or right to pick another card."):""}</div>`:""; }
 function wireSwipe(card,o){
   /* o: {n, idx, peer(i) -> the neighbour's inner HTML or null, go(i), centred} — the caller owns the list and what a
      move means, so the same gesture serves Learn's session queue and the Cards list's own order (v445) */
@@ -2467,7 +2467,12 @@ function wireSwipe(card,o){
        unterschiedlich hohe Karten in der Vertikalen. Bitte vermeiden."): Learn centres the card in what is left of the
        screen (measured, a two-line sign card sits 20 px lower than a one-character one and their middles are the same
        pixel), so a top-aligned neighbour slides in at the wrong height and hops to its own place at the render. */
-    if(o.centred) peer.style.top=Math.round(card.offsetTop+(card.offsetHeight-peer.offsetHeight)/2)+"px"; /* Learn centres its card in what is left of the screen; the detail card is top-aligned in its pane and stays where it is */
+    if(o.centred){ /* v452: centred in the free space between the chip row and the bottom of the screen — not on the card, which is itself top-anchored once it is taller than that space — never above the row, and placed again once the neighbour's picture has decoded, since a page's photo has no height at the first measurement (measured: a page neighbour hopped 237 px at the snap, the v418 complaint back) */
+      const p=peer, prev=card.previousElementSibling, pr=par.getBoundingClientRect();
+      const floor=prev?prev.offsetTop+prev.offsetHeight:(parseFloat(getComputedStyle(par).paddingTop)||0);
+      const bottom=Math.min(par.clientHeight,window.innerHeight-pr.top)-(parseFloat(getComputedStyle(par).paddingBottom)||0);
+      const place=()=>{ if(peer!==p) return; p.style.top=Math.round(Math.max(floor,floor+(bottom-floor-p.offsetHeight)/2))+"px"; };
+      place(); p.querySelectorAll("img").forEach(im=>{ if(!im.complete) im.addEventListener("load",place,{once:true}); }); }
   };
   const put=v=>{ card.style.transform=v?`translateX(${v}px)`:""; if(peer) peer.style.transform=`translateX(${step*shift+v}px)`; };
   card.addEventListener("click",e=>{ if(ate){ ate=false; e.stopPropagation(); e.preventDefault(); } },true); /* the stroke's own closing click must not reveal the card */
@@ -2712,7 +2717,7 @@ function renderCards(main){
    Learn's hint had to become swipeHint for the same reason). sw: another card of the list stands beside this one. */
 function detailCardHTML(d,sw){
   const p=S.progress[d.id];
-  const hint=k=>showHints()?`<div class="hint">${t(k)}${fullPhoto(d)?(pageOf(d)?t(", or the photo for the text alone"):t(", or the photo for the whole picture")):""}.${sw?" "+t("Swipe left or right to pick another card."):""}</div>`:"";
+  const hint=k=>showHints()?`<div class="hint">${t(k)}${fullPhoto(d)?(pageOf(d)&&!S.fullPic&&!S.peek?t(", or the photo for the text alone"):t(", or the photo for the whole picture")):""}.${sw?" "+t("Swipe left or right to pick another card."):""}</div>`:"";
   return `${tagsHTML(d,!p)}<div class="front tap" id="d-reveal">${frontHTML(d,{page:true})}</div>
       ${d.c&&d.reading&&!d.reading.failed?`<div class="hint">${t("The new frame is being read — the text follows when it is done.")}</div>`:""}${!d.c?`${d.reading&&d.reading.failed?"":`<div class="hint">${t("The text, pinyin and meaning follow when the reading is done.")}</div>`}${flagNoteHTML(d)}` /* a card still waiting for its reading has no back (v237) */
         :S.detailHide?hint("Tap the character to show the answer")
