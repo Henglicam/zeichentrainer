@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=443; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=444; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -395,6 +395,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["again","v444","washer: 3 leading labels get crops"],
   ["photo","v442","panel: card once the AI answers"],
   ["again","v443","washer: 2 more own crops, dial: 3"],
   ["photo","v441","messy strong read: no early card"],
@@ -4907,35 +4908,40 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
       if(!bd||!ps.length||ps.length===at.length) return;
       const rh=median(ps.map(j=>(runs[pick[j]].y1-runs[pick[j]].y0)/linesOf(j,pick[j])))||1; /* one line's height, also where the run read a label's sub-line with it (v443) */
       const pw=median(ps.map(j=>{ const n=nHead(j); return n?(runs[pick[j]].x1-runs[pick[j]].x0)/n:0; }).filter(v=>v>0))||0;
-      const cand=runs.map((r,i)=>({r,i})).filter(({r,i})=>!ur.has(i)
+      const cand0=runs.map((r,i)=>({r,i})).filter(({r,i})=>!ur.has(i)
         &&Math.min(bd.y1,r.y1)-Math.max(bd.y0,r.y0)>=0.5*Math.min(bd.y1-bd.y0,r.y1-r.y0)
-        &&r.y1-r.y0>=RL_HGT[0]*rh&&r.y1-r.y0<=RL_HGT[1]*rh
-        &&cols.some(c=>Math.abs(mid(r)-c)<=RL_COL*medW)).sort((a,b)=>mid(a.r)-mid(b.r));
+        &&r.y1-r.y0>=RL_HGT[0]*rh&&r.y1-r.y0<=RL_HGT[1]*rh).sort((a,b)=>mid(a.r)-mid(b.r));
+      const cand=cand0.filter(({r})=>cols.some(c=>Math.abs(mid(r)-c)<=RL_COL*medW)); /* v444: the columns filter the pick, and cand0 — the band's runs the columns do not vouch for — says whether the gap is unambiguous at all */
+      const byX=list=>{ const gs=[]; /* the free candidates covering the same columns are one run seen several times */
+        for(const f of list.slice().sort((a,b)=>mid(a.r)-mid(b.r))){
+          const g=gs.find(g0=>{ const o=g0[0].r; return Math.min(o.x1,f.r.x1)-Math.max(o.x0,f.r.x0)>=RL_DUPX*Math.min(o.x1-o.x0,f.r.x1-f.r.x0); });
+          if(g) g.push(f); else gs.push([f]); }
+        return gs; };
       for(let k=0;k<at.length;){
         if(pick[at[k]]>=0){ k++; continue; }
         let e=k; while(e<at.length&&pick[at[e]]<0) e++;
         const gap=at.slice(k,e), L=k>0?runs[pick[at[k-1]]]:null, R=e<at.length?runs[pick[at[e]]]:null;
-        const free=cand.filter(({i,r})=>!ur.has(i)&&(!L||mid(r)>L.x1)&&(!R||mid(r)<R.x0));
+        const inGap=({i,r})=>!ur.has(i)&&(!L||mid(r)>L.x1)&&(!R||mid(r)<R.x0);
+        const free=cand.filter(inGap), g0=byX(cand0.filter(inGap)); /* v444: every run of the band standing in the gap, columns or not */
         /* as many free runs as labels was the rule until v391, and on a photo whose search finds twice as many runs it
            never holds — H's panel at v390 found 166 runs where it had found 90, and not one of its four unread labels
            was placed. First the same characters stand in several of the picture's bands when the lattice is fine, so
            one label's column offers three candidates that are one run seen three times: the free candidates covering
            the same columns are collapsed into one, the one whose height is nearest the row's own. */
-        const groups=[];
-        for(const f of free.slice().sort((a,b)=>mid(a.r)-mid(b.r))){
-          const g=groups.find(g0=>{ const o=g0[0].r; return Math.min(o.x1,f.r.x1)-Math.max(o.x0,f.r.x0)>=RL_DUPX*Math.min(o.x1-o.x0,f.r.x1-f.r.x0); });
-          if(g) g.push(f); else groups.push([f]); }
-        const one=groups.map(g=>g.slice().sort((a,b)=>Math.abs((a.r.y1-a.r.y0)-rh)-Math.abs((b.r.y1-b.r.y0)-rh))[0]);
+        const one=byX(free).map(g=>g.slice().sort((a,b)=>Math.abs((a.r.y1-a.r.y0)-rh)-Math.abs((b.r.y1-b.r.y0)-rh))[0]);
         /* then the columns decide: the runs nearest the columns the placed labels established are this gap's, and they
            count only when the next candidate stands clearly further out (RL_CLEAR of a run's width), so an ambiguous
-           row still keeps the whole picture rather than risk a neighbour's button. And the gap must be closed on both
-           sides (v443): v391 let a run of unread labels at a row's end take the free runs beyond the last placed one,
-           and a label the model omits — ordinary, H's answers carry 20, 21 and 25 labels for one panel — leaves its own
-           run free exactly there, on a column another row vouches for; with the head-based width (above) admitting real
-           runs, 漂洗 took 温度's button in the probe whenever 温度 was left out of the answer. A row's last label the
-           reader cannot read keeps the whole picture, which is the honest answer (v380). */
+           row still keeps the whole picture rather than risk a neighbour's button. And the gap must be unambiguous
+           BEFORE the columns are consulted (v444, H's three close-ups at v443 — 洗衣液长按童锁, 柔顺剂 and 血渍洗 kept
+           the whole panel, every one of them the FIRST label of its row): v443 asked for a placed label on both sides,
+           which a row's leading gap can never have, so it refused exactly the labels v389 exists for. What the v443
+           refute really found is that the column test can throw out the unread label's own run and keep the omitted
+           neighbour's — so the count that decides is the band's own runs standing in the gap, columns or not: more of
+           them than labels and a run nobody vouches for stands in the gap, the order is not unambiguous, and the whole
+           picture is the honest answer (v380). 漂洗 with 温度 left out of the answer then still refuses (two runs, one
+           label), while a row's first label with only its own run in front of its neighbour is placed again. */
         let chosen=null;
-        if(L&&R&&one.length>=gap.length&&gap.length){ /* a placed label on BOTH sides (v443): a row's end has no second bound, and a label the model omitted leaves its run free there — measured, 漂洗 took 温度's button with 温度 left out of the answer */
+        if((L||R)&&one.length>=gap.length&&gap.length&&g0.length<=gap.length){
           const dist=r=>Math.min(...cols.map(c=>Math.abs(mid(r)-c)));
           const rank=one.slice().sort((a,b)=>dist(a.r)-dist(b.r)), take=rank.slice(0,gap.length);
           if(one.length===gap.length||dist(rank[gap.length].r)>=dist(take[take.length-1].r)+RL_CLEAR*medW){
