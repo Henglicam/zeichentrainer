@@ -548,11 +548,15 @@ body.noscroll{overflow:hidden}
 .plegend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
 
 /* the batch of photos working itself through, and the one thing the user has to know about it (v411) */
-/* the batch line is the only text left on the Camera tab (v471): it says something rather than naming something,
-   so it gets the weight of a status chip — the clock of the waiting tiles beside it — instead of reading as a
-   stray grey caption in the middle of the screen (H: "der kleine Text da in der Mitte sieht total unsexy aus") */
-.batchline{display:inline-flex;align-items:center;gap:7px;justify-self:start;margin:0 0 12px;padding:7px 13px 7px 11px;border-radius:999px;background:var(--tint-soft);color:var(--tint);font-size:14px;font-weight:500;line-height:1.35;text-align:start}
-.batchline svg{flex:none}
+/* the batch line is the only text left on the Camera tab (v471): it says something rather than naming something, so it
+   gets colour and weight instead of reading as a stray grey caption (H: "der kleine Text da in der Mitte sieht total
+   unsexy aus"). v471 made it a PILL with the waiting tiles' clock in it, and v473's audit measured what that cost:
+   v412 spent a whole version getting this sentence onto ONE line in all 30 language × count combinations at 360 px,
+   and the pill's 22 px of side padding plus the 19 px icon broke that in 9 to 13 of the 30 (fr, es, ko, ru) — the same
+   ground on which v412 itself dropped a candidate line. Measured over every variant: only 4 px of side padding and no
+   icon fits everywhere, so the line keeps v412's own geometry and takes its presence from --tint-soft, the tint and
+   weight 500. The clock stays where it belongs, on the waiting tiles themselves. */
+.batchline{display:block;margin:0 0 12px;padding:7px 4px;border-radius:10px;background:var(--tint-soft);color:var(--tint);font-size:13px;font-weight:500;line-height:1.4;text-align:center}
 /* v452: a card that is one of several from one photo shows the page itself on the closed Learn front and in the detail — the whole picture in its own shape (the one exception to v223's "both boxes the same shape"), the blurred fill around it; the dots as on the Camera tab, the card's own lit; the dots take no tap there. The cap keeps the closed front — page, text box, pill and hint — above the tab bar: 100vh minus what the rest of the screen takes (measured 500 px at 390×844 with the hint, 344 px of page there, 240 at 360×740), never over 56vh on a tall screen; the revealed card shows the card's own cut, since the grades then own the screen (v421). The 16 px frame keeps a dot at the picture's own edge whole (a title at y 0, a label at the right edge — measured clipped by 14 px without it). */
 .picbox.page{--pageh:clamp(180px,calc(100vh - 500px),56vh);aspect-ratio:auto;height:auto;max-height:var(--pageh);display:flex;justify-content:center;align-items:center}
 .picbox.page .pagewrap{position:relative;display:block;margin:16px;max-width:calc(100% - 32px);max-height:calc(var(--pageh) - 32px);line-height:0}

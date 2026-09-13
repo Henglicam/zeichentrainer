@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=473; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=474; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -7143,7 +7143,7 @@ function renderShots(){
      it is only deferred, which is what makes the constraint acceptable rather than a shrug */
   const waiting=AUTOQ.filter(id=>S.inbox.some(x=>x.id===id)).length; /* what is left of the batch, not of the inbox — H's holds 237 photos */
   const byShot=new Map(); for(const d of S.custom) if(d.shot){ const a=byShot.get(d.shot); if(a) a.push(d); else byShot.set(d.shot,[d]); } /* the cards by photo, once per render (v448) */
-  const batch=waiting?`<div class="batchline">${ICON_WAIT}<span>${esc(t("{0} to go, while the app is open.",nOf(waiting,"photo")))}</span></div>`:"";
+  const batch=waiting?`<div class="batchline"><span>${esc(t("{0} to go, while the app is open.",nOf(waiting,"photo")))}</span></div>`:"";
   const rest=S.inbox.filter(s=>!shotDone(s));
   /* the one in hand on top, the ones waiting behind it (v466). A photo is unshifted as it is added, so an album batch lands
      newest-first and the photo actually being read — the first of the pick — comes LAST; without this the full-width active
