@@ -459,6 +459,7 @@ body.noscroll{overflow:hidden}
 .tile .tmeta{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 9px 8px}
 .tile .ts{font-family:var(--mono);font-size:11px;color:var(--label3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile:active{background:var(--card2)}
+.shotfoot{grid-column:1/-1;text-align:center;margin:14px 0 4px} .shotfoot .del{font-size:14px;padding:8px 12px}
 .listhead.pickhead{display:flex;align-items:center;justify-content:space-between;gap:8px} .listhead.pickhead .del{padding:2px 2px;min-height:0;font-size:14px}
 .undo button{background:none;border:none;font-family:var(--sans);font-size:16px;font-weight:600;color:var(--tint);padding:0 10px;min-height:44px;cursor:pointer;flex:none}
 @keyframes undoup{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}

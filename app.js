@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=462; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=463; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -81,7 +81,7 @@ const S = { mode:"study", progress:{}, custom:[], inbox:[],
   admin:false, /* the owner's rows in More unlocked for this session (v162) */
   detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterStar:false, filterTags:[], settings:{}, single:null, saved:null,
   editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null,
-  autoCard:window.AUTO_CARD!==false, editOpenFrame:false, openShot:null }; /* autoCard (v325): a photo that opens by itself becomes a card without a frame or a preview; the harness sets window.AUTO_CARD=false to keep the crop-mode flow its frame suites drive */
+  autoCard:window.AUTO_CARD!==false, editOpenFrame:false, openShot:null, allShots:false }; /* autoCard (v325): a photo that opens by itself becomes a card without a frame or a preview; the harness sets window.AUTO_CARD=false to keep the crop-mode flow its frame suites drive */
 
 function deck(){ return S.custom; }
 /* the order of a Learn session (v153, H: "provide choices for the order in which the flash cards are shown"): due cards
@@ -415,6 +415,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v463","Camera: only the photos still being worked on, the rest one tap away"],
   ["app","v462","Camera: the tiles, and a tap opening a photo full width"],
   ["again","v461","a page card: neutral frames on the photo, no dots anywhere"],
   ["app","v461","Cards list: a Multicard tells itself apart at a glance"],
@@ -724,7 +725,7 @@ const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 function wireChrome(){
   document.querySelectorAll(".tab").forEach(b=>{
     b.onclick=()=>{ const m=b.dataset.mode;
-      S.editing=null; S.editFrom=null; S.detailFrom=null; S.openShot=null; /* a tab tap always leaves the edit form, the way back to a photo (v448) and the photo opened from the grid (v462) */
+      S.editing=null; S.editFrom=null; S.detailFrom=null; S.openShot=null; S.allShots=false; /* a tab tap always leaves the edit form, the way back to a photo (v448), the photo opened from the grid (v462) and the photos already done (v463) */
       endPick();                                            /* … and any marking (v351) */
       if(CROP&&RECROP[CROP.id]) RECROP[CROP.id].end();      /* … and its Crop again (v239) */
       if(m==="cards" && (S.mode==="cards"||S.mode==="add")) S.detail=null; /* Cards again → back to the list */
@@ -3273,6 +3274,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  463:"The Camera tab now shows only the photos still being worked on. The ones that already made cards are one tap away at the foot of the list — their pictures stay on their cards either way.",
   462:"The Camera tab shows your photos as tiles, two in a row — tap one to open it. The switch beside Inbox goes back to the long list.",
   461:"The words on a photo card are framed now instead of dotted, and the frame gives nothing away — you still find out whether you know a word by opening it.",
   460:"A card that holds several texts can be pushed sideways like any other card, and the photo itself takes the swipe.",
@@ -6869,6 +6871,19 @@ let INBOX_SCROLL=0, LOOKUP=null; /* INBOX_SCROLL: where the photo was when More 
    running, a finished card, a note, a place in the batch queue — is always full width, whichever view is on, so
    nothing that is happening can hide in a tile. Setting inboxView, absent = tiles. */
 function inboxTiles(){ return S.settings.inboxView!=="list"; }
+/* the Camera tab lists the photos still being processed, not everything ever shot (v463, H: "I actually only need the
+   photo list for photos that are still being processed."). A photo is DONE once it has made a card and nothing is
+   happening to it any more; its pixels stay exactly where they were — stored once, reached through the card (the
+   whole-photo tap, Crop again, the page) — it is only no longer listed. The ones already done are one tap away at the
+   foot of the list, because an old photo can still be cropped again into a second card, and More → Your data → Photos
+   still clears out the old ones. */
+function shotDone(s,byShot){
+  if(CROP&&CROP.id===s.id) return false;
+  if(PENDING[s.id]||READING[s.id]||SIGN[s.id]||AUTO[s.id]||PROV[s.id]||QSCARD[s.id]||QSNOTE[s.id]) return false;
+  if(AUTOQ.includes(s.id)) return false;
+  const cards=byShot?byShot.get(s.id):S.custom.filter(d=>d.shot===s.id);
+  return !!(cards&&cards.some(d=>d.c));
+}
 const ICON_LIST=`<svg viewBox="0 0 16 16" aria-hidden="true" style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round"><path d="M2 4h12M2 8h12M2 12h12"/></svg>`;
 const ICON_TILES=`<svg viewBox="0 0 16 16" aria-hidden="true" style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.5"><rect x="2" y="2" width="5" height="5" rx="1.2"/><rect x="9" y="2" width="5" height="5" rx="1.2"/><rect x="2" y="9" width="5" height="5" rx="1.2"/><rect x="9" y="9" width="5" height="5" rx="1.2"/></svg>`;
 function photoRegions(rec,byShot){
@@ -6951,6 +6966,8 @@ function renderInbox(main){
   $("#pick").onclick=()=>{ PICKING=Date.now(); $("#album").click(); };
   renderShots();
 }
+function pickList(){ const by=new Map(); for(const d of S.custom) if(d.shot){ const a=by.get(d.shot); if(a) a.push(d); else by.set(d.shot,[d]); }
+  return S.allShots?S.inbox:S.inbox.filter(s=>!shotDone(s,by)); } /* the marking marks what the list shows, never a photo hidden from it (v463) */
 const IMGURL={}; // cache object URLs per photo — renderShots re-runs on every selection
 function shotURL(s){ return IMGURL[s.id]||(IMGURL[s.id]=URL.createObjectURL(s.blob)); }
 function renderShots(){
@@ -6960,11 +6977,11 @@ function renderShots(){
   if(!S.inbox.length){ if(PICK) endPick(); box.innerHTML=pending||`<div class="badge" style="margin-top:18px">${t("No photos yet.")}</div>`; return; }
   if(marking("shots")){ /* the photo picker (v351): the photos alone with a tick — no frame, no reading box, no result card */
     box.innerHTML=`<div class="listhead pickhead"><span class="badge" id="pick-n">${t("{0} selected",PICK.set.size)}</span><button class="del" id="pick-all"></button></div>`+
-      S.inbox.map(s=>`<div class="shot pick${PICK.set.has(s.id)?" on":""}" data-pickshot="${s.id}">
+      pickList().map(s=>`<div class="shot pick${PICK.set.has(s.id)?" on":""}" data-pickshot="${s.id}">
         <div class="shotwrap"><img src="${shotURL(s)}" alt="photo"></div>
         <div class="meta"><span class="ts">${new Date(s.ts).toLocaleString(LANG_LOCALE[LANG])}</span><span class="tick" aria-hidden="true"></span></div></div>`).join("");
     box.querySelectorAll("[data-pickshot]").forEach(el=> el.onclick=()=>{ pickToggle(el.dataset.pickshot); el.classList.toggle("on"); pickBar(()=>delPicked("shots")); });
-    pickAllBtn(S.inbox.map(s=>s.id),renderShots); pickBar(()=>delPicked("shots"));
+    pickAllBtn(pickList().map(s=>s.id),renderShots); pickBar(()=>delPicked("shots"));
     return;
   }
   const busy=!!CROP||S.inbox.some(s=>PENDING[s.id]); /* no marking while a frame stands or a photo is being read (v351) */
@@ -6976,11 +6993,13 @@ function renderShots(){
   const byShot=new Map(); for(const d of S.custom) if(d.shot){ const a=byShot.get(d.shot); if(a) a.push(d); else byShot.set(d.shot,[d]); } /* the cards by photo, once per render (v448) */
   const batch=waiting?`<div class="batchline">${esc(t("{0} to go, while the app is open.",nOf(waiting,"photo")))}</div>`:"";
   const tiles=inboxTiles();
+  const done=S.inbox.filter(s=>shotDone(s,byShot)), shown=S.allShots?S.inbox:S.inbox.filter(s=>!done.includes(s));
+  const foot=done.length?`<div class="shotfoot"><button class="del" id="allshots">${esc(S.allShots?t("Hide them"):t("Show {0} that already made cards",nOf(done.length,"photo")))}</button></div>`:"";
   box.classList.toggle("tiles",tiles);
-  box.innerHTML=`<div class="listhead inboxhead"><span>${t("Inbox ({0})",S.inbox.length)}</span><span class="seg">`+
+  box.innerHTML=`<div class="listhead inboxhead"><span>${t("Inbox ({0})",shown.length)}</span><span class="seg">`+
       `<button class="segbtn${tiles?"":" on"}" data-inbox="list" aria-label="${t("List")}" title="${t("List")}">${ICON_LIST}</button>`+
       `<button class="segbtn${tiles?" on":""}" data-inbox="tiles" aria-label="${t("Tiles")}" title="${t("Tiles")}">${ICON_TILES}</button></span></div>`+batch+pending+
-    S.inbox.map(s=>{
+    shown.map(s=>{
       const dt=new Date(s.ts).toLocaleString(LANG_LOCALE[LANG]);
       const cropping=CROP && CROP.id===s.id, shown=!!(cropping&&CROP.rect&&!CROP.hidden), zoomed=!!(shown&&CROP.zoom);
       const working=!!(AUTO[s.id]&&PENDING[s.id]&&READING[s.id]&&!READ_FAIL.test(READING[s.id]));
@@ -7016,7 +7035,8 @@ function renderShots(){
           :AUTOQ.includes(s.id)?`<span class="badge">${t("Waiting for its turn …")}</span>` /* a photo of the batch still in the queue says so (v454, H: "sonst denkt man, dass sich die App verschluckt hat") — a plain line, no bar: nothing is happening to this photo yet, and the batch line above says the work goes on */
           :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
-    }).join("");
+    }).join("")+foot;
+  const all=box.querySelector("#allshots"); if(all) all.onclick=()=>{ S.allShots=!S.allShots; renderShots(); };
   box.querySelectorAll("[data-inbox]").forEach(b=> b.onclick=async()=>{ const v=b.dataset.inbox; if(inboxTiles()===(v==="tiles")) return; S.openShot=null; await setSetting("inboxView",v); renderShots(); window.scrollTo(0,0); });
   box.querySelectorAll("[data-tile]").forEach(b=> b.onclick=()=>{ S.openShot=b.dataset.tile; renderShots(); const el=box.querySelector(`.shot[data-open]`); if(el) el.scrollIntoView({block:"nearest"}); }); /* a tap opens that photo full width, where it is the list view's own row */
   box.querySelectorAll("[data-lp]").forEach(el=> longPress(el,()=>{ PICK={kind:"shots",set:new Set([el.dataset.lp])}; renderShots(); })); /* press and hold a photo to start marking (v354) */
