@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=447; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=448; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -395,6 +395,8 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["again","v448","washer/Meituan: dots, tap → sheet, grade → colour"],
+  ["app","v448","dots: More → detail, Back → same photo"],
   ["photo","v447","panel that reads strong: cards per button, not one garbage card"],
   ["photo","v447","dial/3-label panel: no card cut to a sliver"],
   ["photo","v447","rice cooker clock: every button, not only 时 and 分"],
@@ -682,7 +684,7 @@ const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 function wireChrome(){
   document.querySelectorAll(".tab").forEach(b=>{
     b.onclick=()=>{ const m=b.dataset.mode;
-      S.editing=null; S.editFrom=null;                       /* a tab tap always leaves the edit form */
+      S.editing=null; S.editFrom=null; S.detailFrom=null;    /* a tab tap always leaves the edit form, and the way back to a photo (v448) */
       endPick();                                            /* … and any marking (v351) */
       if(CROP&&RECROP[CROP.id]) RECROP[CROP.id].end();      /* … and its Crop again (v239) */
       if(m==="cards" && (S.mode==="cards"||S.mode==="add")) S.detail=null; /* Cards again → back to the list */
@@ -1840,6 +1842,7 @@ function reportData(){
     byPhoto:n("byPhoto"), byHand:n("byHand"), deleted:n("deleted"),
     aiCalls:n("aiCalls"), aiIn:n("aiIn"), aiOut:n("aiOut"), aiCallsMonth:mn("aiCalls"), aiInMonth:mn("aiIn"), aiOutMonth:mn("aiOut"), pics:n("pics"), picsMonth:mn("pics"), models:u.models||{}, modelsMonth:m.models||{},
     ai:aiOn()?aiProvider()+" "+aiModel():null, inbox:S.inbox.length, tags:allTags().length, lang:navigator.language||null,
+    regionTaps:n("regionTaps"), regionGrades:n("regionGrades"), /* the photo's sheet opened, and a grade given in it (v448) */
     errors:reportErrors()};
 }
 /* the app's last errors ride in the daily row (v271, H: "Can the app send automatic error logs from other users?" → "Go"): the kind
@@ -2073,7 +2076,7 @@ function renderMore(main){
    the app, "Go"): one scrolling page in the app's language, six short sections, text only, offline; it describes what the app does today,
    nothing planned, and changes in the same PR as the screen it describes. More → Help → Open; ← Back returns to More. ---------- */
 const GUIDE=()=>[
-  {h:t("Take a photo"),p:[t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card by itself — you see the finished card with Edit and Delete under it. Edit shows the photo with the frame the app used: drag a corner or the inside to fit it, the round handle turns it, let go and the reading starts again.")+" "+t("When the reading is clear, the card shows at once, and the AI's check refines it a moment later."),
+  {h:t("Take a photo"),p:[t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card by itself — you see the finished card with Edit and Delete under it. Edit shows the photo with the frame the app used: drag a corner or the inside to fit it, the round handle turns it, let go and the reading starts again.")+" "+t("When the reading is clear, the card shows at once, and the AI's check refines it a moment later.")+" "+t("A photo that made several cards shows a dot on each of its texts — tap one for its characters, pinyin and meaning, and grade it right there."),
     t("A photo of a control panel, or of several signs beside each other — a rice cooker’s buttons, the items of a menu board — becomes one card per label, each with its own cut of the photo."),
     t("Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in."),
     t("From album takes several photos at once — they all become cards, one after the other, while the app is open.")]},
@@ -2488,10 +2491,11 @@ function wireSwipe(card,o){
   card.addEventListener("pointerup",e=>end(e,false)); card.addEventListener("pointercancel",e=>end(e,true));
 }
 
-async function grade(g){
+/* one grade on one card — the schedule, the leech flag, the streak's day and the day's count. Learn's grade() and the
+   photo's sheet (v448) both write through here, so a grade given on a photo is a review like any other */
+async function recordGrade(c,g){
   bump("reviews");
-  const c=S.queue[S.idx], sched=S.progress[c]||null;
-  const s=schedule(sched,g);
+  const s=schedule(S.progress[c]||null,g);
   S.progress[c]=s;
   try{ await idbPut("progress",{id:c,...s}); }catch(e){}
   const d=cardOf(c);
@@ -2499,6 +2503,11 @@ async function grade(g){
   const day=dayKey(), days=S.settings.days||[];
   if(days[days.length-1]!==day){ days.push(day); if(days.length>400) days.shift(); await setSetting("days",days); }
   dailyBump(day);
+  return s;
+}
+async function grade(g){
+  const c=S.queue[S.idx];
+  await recordGrade(c,g);
   if(S.single){ nextSingle(c); return; }
   /* never the same card twice in a row with nothing in between (v428, H: "jetzt haengt der star filter bei dieser einen karte"):
      "again" puts the card back at the end of the queue, and when the session holds nothing after it that end is now — the screen
@@ -2700,7 +2709,7 @@ function renderCardDetail(main,c){
   normaliseFilters(); /* an Accept or a star cleared on the open card must not strand it outside its own list (v308's rule, v445) */
   const list=cardsList(), li=list.findIndex(x=>x.id===c), sw=li>=0&&list.length>1;
   main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">${t("← Cards")}</button><span class="badge">${!d.c?(d.reading&&d.reading.failed?t("Nothing read yet"):t("Reading …")):d.reading&&!d.reading.failed?t("Reading …"):(x=>x?x[0].toUpperCase()+x.slice(1):"")([d.mt&&!d.mt.verified?t("unverified"):"",d.mt&&d.mt.pending?t("translation pending"):"",d.mt&&d.mt.suspect?t("reading uncertain"):""].filter(Boolean).join(", "))}</span></div>
+    <div class="topline"><button class="del" id="back">${S.detailFrom==="inbox"?t("← Back"):t("← Cards")}</button><span class="badge">${!d.c?(d.reading&&d.reading.failed?t("Nothing read yet"):t("Reading …")):d.reading&&!d.reading.failed?t("Reading …"):(x=>x?x[0].toUpperCase()+x.slice(1):"")([d.mt&&!d.mt.verified?t("unverified"):"",d.mt&&d.mt.pending?t("translation pending"):"",d.mt&&d.mt.suspect?t("reading uncertain"):""].filter(Boolean).join(", "))}</span></div>
     <div class="card">${detailCardHTML(d,sw)}</div>
     <div class="detailacts">
       ${d.c?`<button class="btn primary" id="d-test">${t("Test this card")}</button>`:""}
@@ -2713,7 +2722,7 @@ function renderCardDetail(main,c){
     <div class="badge" style="margin-top:14px">${esc(stat)}</div>
     ${linkedHTML(d)}
   </div>`;
-  $("#back").onclick=backToList;
+  $("#back").onclick=S.detailFrom==="inbox"?backToPhoto:backToList; /* opened from a photo's sheet (v448): ← goes back to the photo */
   /* the preview behaves like the test: tap the photo for the whole picture, tap the character to hide and show the answer (H) */
   if(!S.detailHide&&d.c) warmParts();
   const rv=$("#d-reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); return; } S.detailHide=!S.detailHide; render(); };
@@ -2727,7 +2736,7 @@ function renderCardDetail(main,c){
   const sh=$("#d-share"); if(sh) sh.onclick=()=>shareCard(c); /* one image through the share sheet (v269) */
   wireSay(); wireChars(d); wireLinks();
   wireAi();
-  const del=$("#d-del"); if(del) del.onclick=async()=>{ await delCustom(c); S.detail=null; render(); }; /* at once, with Undo (v268) */
+  const del=$("#d-del"); if(del) del.onclick=async()=>{ await delCustom(c); if(S.detailFrom==="inbox"){ backToPhoto(); return; } S.detail=null; render(); }; /* at once, with Undo (v268) */
   /* the swipe changes the card, and the two pieces of view state go opposite ways because they mean different things.
      S.detailHide is a way of READING — "I am testing myself" — and survives the swipe: the detail is not a test that
      must come closed, which is why Learn resets S.revealed and this does not. S.fullPic is about THIS photo — "show me
@@ -3118,6 +3127,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  448:"A photo that made several cards — a control panel, an app screen — now shows a dot on each of its texts. Tap one to see it, hear it and grade it right on the photo.",
   447:"A photo of a control panel now makes one card per button far more often — and no card shows a sliver of the panel instead of its own button.",
   446:"A photo of a control panel taken straight-on no longer loses cards — every label the AI reads gets one.",
   445:"Open a card from the list and push it sideways — the next card of the list slides in, as in Learn.",
@@ -6563,6 +6573,84 @@ async function warmReader(){ /* the Camera tab loads the reader ahead of the fir
   if(READER_WARMED||_ocrWorker||_ocrLoading) return; READER_WARMED=true;
   try{ if(await ocrCached()<OCR_FILES.length) return; await ocrWorker(()=>{}); }catch(e){}
 }
+/* ---------- Photo mode, phase 1 (v448, SPEC-photo-mode.md — H: "ich tippe auf irgendwas, was ich nicht verstehe, und dafür
+   öffnet sich eine Flashcard", then "für die User Interfaces, Screenshots von Apps, Reiskocher, Waschmaschine … aber für
+   Shopschilder nicht", then "a pop up … with the pinyin and the characters and the translation and the rating", then
+   "Go, the grade makes the card") ----------
+   A photo that made two cards or more — a split panel (v358), a screenshot, several hand-drawn frames — is a MARKED photo:
+   every card's own frame (v244) is drawn on it as a region with a dot in the card's state, grey for a text without a
+   card (phase 2), the tint for a card new or still learning, green for a known one (KNOWN_DAYS). A tap opens a sheet over
+   the photo — characters, pinyin with the speaker, meaning, the three grades, More — and a grade is a review like one in
+   Learn (recordGrade), which recolours the dot at once; closing the sheet writes nothing. A photo that made one card keeps
+   the finished card of v325: the switch is the split's own, the model's `apart`, and the one-text flow does not move.
+   Phase 1 derives the regions from the cards at render time and writes nothing to the photo record — a put of a record
+   that holds a Blob rewrites the Blob, and 237 photos at boot would be 70 MB of writes for data the cards already carry;
+   phase 2 stores the model's own regions, since a text without a card has no other home. */
+const REGION_MIN=2; /* a photo that made this many cards is a marked photo — the split's own SPLIT_MIN */
+const REGION_HIT=44; /* the smallest tap target in CSS px: a small label's box is grown around its centre for the hit test only, never for the drawing */
+const REGION_FLASH=2000; /* the outlines show this long when a marked photo first renders, then fade to the dots */
+const REGIONS_SHOWN=new Set(); /* the photos whose outlines have flashed this session — a status re-render must not flash them again */
+let INBOX_SCROLL=0, LOOKUP=null; /* INBOX_SCROLL: where the photo was when More opened the detail · LOOKUP: the open sheet {shot,rid,el} */
+function photoRegions(rec,byShot){
+  const cards=byShot?(byShot.get(rec.id)||[]):S.custom.filter(d=>d.shot===rec.id), rs=[];
+  for(const d of cards){ const f=d.frame; if(!d.c||!f||!isFinite(f.x)||!isFinite(f.y)||!isFinite(f.w)||!isFinite(f.h)||f.w<=0||f.h<=0) continue;
+    rs.push({rid:"c:"+d.id,zh:d.c,box:f,placed:"card",card:d.id}); }
+  rs.sort((a,b)=>(a.box.y-b.box.y)||(a.box.x-b.box.x)); /* reading order: top to bottom, left to right */
+  return rs.length>=REGION_MIN?rs:[];
+}
+function regionOf(shot,rid){ const rec=S.inbox.find(x=>x.id===shot); return rec?photoRegions(rec).find(r=>r.rid===rid)||null:null; }
+function regionState(r){ if(!r.card) return 0; const p=S.progress[r.card]; if(!p||!p.reps) return 1; return p.interval>=KNOWN_DAYS?2:1; } /* 0 no card · 1 new or learning · 2 known */
+function regionsHTML(rec,rs){
+  const fresh=!REGIONS_SHOWN.has(rec.id); if(fresh) REGIONS_SHOWN.add(rec.id);
+  return `<div class="regions${fresh?" show":""}" data-regions="${rec.id}">${rs.map(r=>{ const b=r.box, pc=x=>(x*100).toFixed(2)+"%";
+    return `<button class="region s${regionState(r)}" data-region="${esc(r.rid)}" style="left:${pc(b.x)};top:${pc(b.y)};width:${pc(b.w)};height:${pc(b.h)}${b.a?`;transform:rotate(${b.a}deg)`:""}" aria-label="${esc(r.zh.replace(/\n/g," "))}"><i class="dot" aria-hidden="true"></i></button>`; }).join("")}</div>`;
+}
+function regionLine(rs){ const known=rs.filter(r=>regionState(r)===2).length; return t("{0} cards from this photo, {1} known.",rs.filter(r=>r.card).length,known); }
+function wireRegions(root){
+  root.querySelectorAll("[data-regions]").forEach(box=>{
+    const shot=box.dataset.regions;
+    if(box.classList.contains("show")) setTimeout(()=>box.classList.remove("show"),REGION_FLASH);
+    box.querySelectorAll("[data-region]").forEach(b=> b.onclick=e=>{ e.stopPropagation(); openLookup(shot,b.dataset.region); });
+    /* a tap beside a small region still opens it: the nearest region whose box, grown to REGION_HIT around its centre, holds the point */
+    box.onclick=e=>{ if(e.target!==box) return; const x=e.clientX, y=e.clientY; let best=null, bd=Infinity;
+      box.querySelectorAll("[data-region]").forEach(b=>{ const r=b.getBoundingClientRect(), cx=(r.left+r.right)/2, cy=(r.top+r.bottom)/2, hw=Math.max(r.width,REGION_HIT)/2, hh=Math.max(r.height,REGION_HIT)/2;
+        if(Math.abs(x-cx)>hw||Math.abs(y-cy)>hh) return; const d=Math.hypot(x-cx,y-cy); if(d<bd){ bd=d; best=b; } });
+      if(best) openLookup(shot,best.dataset.region); };
+  });
+}
+/* the sheet over the photo: the flashcard without the photo, since the photo is right there. Not modal on purpose — the
+   page keeps scrolling and the next dot can be tapped while it stands, which swaps its content in place. */
+function openLookup(shot,rid){
+  const r=regionOf(shot,rid), d=r&&r.card&&cardOf(r.card); if(!r||!d) return;
+  bump("regionTaps");
+  const html=`<div class="sheet lookup" role="dialog" aria-label="${esc(d.c)}">
+    <button class="x" id="lk-close" aria-label="${t("Close")}">×</button>
+    <div class="zh hanzi">${esc((d.trad||d.c).replace(/\n/g," / "))}</div>${d.trad?`<div class="script"><span class="pill trad">${t("Traditional")}</span></div>`:""}
+    <div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}</div>
+    <div class="grades">${[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>`<button class="grade" data-g="${g}" data-lg="${g}"><span class="lbl">${t(l)}</span></button>`).join("")}</div>
+    <div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div></div>`;
+  let el=LOOKUP&&LOOKUP.el; const swap=!!el;
+  if(!el){ el=document.createElement("div"); el.className="ask lookup"; document.body.appendChild(el); }
+  el.innerHTML=html; LOOKUP={shot,rid,el,card:d.id};
+  if(!swap){ /* the sheet stands until it is closed: a tap anywhere outside it that is not on a region, or Escape */
+    LOOKUP.onDown=e=>{ if(!LOOKUP||e.target.closest(".sheet.lookup")||e.target.closest("[data-region]")||e.target.closest("[data-regions]")) return; closeLookup(); };
+    LOOKUP.onKey=e=>{ if(e.key==="Escape") closeLookup(); };
+    document.addEventListener("pointerdown",LOOKUP.onDown,true); document.addEventListener("keydown",LOOKUP.onKey); }
+  el.querySelector("#lk-close").onclick=closeLookup;
+  wireSay(el);
+  el.querySelectorAll("[data-lg]").forEach(b=> b.onclick=()=>gradeRegion(b.dataset.lg));
+  el.querySelector("#lk-more").onclick=()=>{ const cid=LOOKUP&&LOOKUP.card; closeLookup(); if(!cid||!cardOf(cid)) return; INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom="inbox"; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
+}
+function closeLookup(){ if(!LOOKUP) return; const L=LOOKUP; LOOKUP=null; L.el.remove(); document.removeEventListener("pointerdown",L.onDown,true); document.removeEventListener("keydown",L.onKey); }
+/* the grade is the decision (H): it writes the review — and, in phase 2, makes the card first — and the dot takes the card's colour at once */
+async function gradeRegion(g){
+  const L=LOOKUP; if(!L) return; const d=cardOf(L.card); if(!d) return;
+  bump("regionGrades");
+  await recordGrade(L.card,g);
+  closeLookup();
+  if(S.mode==="inbox") renderShots(); setStats();
+}
+function backToPhoto(){ const y=INBOX_SCROLL; S.detail=null; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.mode="inbox"; render(); requestAnimationFrame(()=>window.scrollTo(0,y)); }
 function renderInbox(main){
   warmReader();
   main.innerHTML=`<div class="pane">
@@ -6596,6 +6684,7 @@ function renderShots(){
      says what the app is doing for you and what keeps it doing it, and names the recovery in the same breath — nothing is lost,
      it is only deferred, which is what makes the constraint acceptable rather than a shrug */
   const waiting=AUTOQ.filter(id=>S.inbox.some(x=>x.id===id)).length; /* what is left of the batch, not of the inbox — H's holds 237 photos */
+  const byShot=new Map(); for(const d of S.custom) if(d.shot){ const a=byShot.get(d.shot); if(a) a.push(d); else byShot.set(d.shot,[d]); } /* the cards by photo, once per render (v448) */
   const batch=waiting?`<div class="batchline">${esc(t("{0} to go, while the app is open.",nOf(waiting,"photo")))}</div>`:"";
   box.innerHTML=`<div class="listhead">${t("Inbox ({0})",S.inbox.length)}</div>`+batch+pending+
     S.inbox.map(s=>{
@@ -6603,19 +6692,21 @@ function renderShots(){
       const cropping=CROP && CROP.id===s.id, shown=!!(cropping&&CROP.rect&&!CROP.hidden), zoomed=!!(shown&&CROP.zoom);
       const working=!!(AUTO[s.id]&&PENDING[s.id]&&READING[s.id]&&!READ_FAIL.test(READING[s.id]));
       const results=!cropping&&AUTO[s.id]&&!PENDING[s.id]&&QSCARD[s.id]?[QSCARD[s.id],...(QSMORE[s.id]||[])].map(cardOf).filter(d=>d&&d.c):[]; /* the card made by itself (v325): the shimmer while it reads, the finished card after — one card per label since v357 */
+      const rs=!cropping&&!PENDING[s.id]?photoRegions(s,byShot):[]; /* a marked photo (v448): two cards or more from this photo, each a tap target on it */
       const prov=!cropping&&AUTO[s.id]&&PENDING[s.id]&&PROV[s.id]&&PROV[s.id].card.c?PROV[s.id].card:null; /* the card as read, while the text check runs (v440): the finished card's own look with the check's bar and Crop / Cancel under it, so what is shown is a card and what is said is that it is still being checked */
       if(prov) return `<div class="shot">${resultHTML(prov,s.id)}
         <div class="ocr" id="ocr-${s.id}"><div class="reading"><div class="bar"><i></i></div><div class="readrow"><span class="badge">${t(AI_BUSY_TEXT)}</span><span class="acts"><button class="ocr-btn" data-autoedit="${s.id}">${t("Crop")}</button><button class="del" data-autocancel="${s.id}">${t("Cancel")}</button></span></div></div></div>
       </div>`;
-      if(results.length) return `<div class="shot">${results.length>1?`<div class="listhead reshead">${t("{0} cards from this photo",results.length)}</div>`:""}${results.map(d=>`${resultHTML(d)}
+      if(results.length&&!rs.length) return `<div class="shot">${results.length>1?`<div class="listhead reshead">${t("{0} cards from this photo",results.length)}</div>`:""}${results.map(d=>`${resultHTML(d)}
         <div class="detailacts"><button class="btn" data-resedit="${esc(d.id)}">${t("Edit")}</button><button class="btn danger" data-resdel="${esc(d.id)}">${t("Delete card")}</button></div>`).join("")}
         <div class="ocr" id="ocr-${s.id}">${qsAiBox(s.id)}</div>
       </div>`;
       return `<div class="shot"${!busy&&!AUTO[s.id]&&S.inbox.length>1?` data-lp="${s.id}"`:""}>
         <div class="shotwrap">
-          ${zoomed?`<div class="shotzoom" style="${zoomStyle(s)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(s)}" alt="photo">`}${working?`<div class="scan" aria-hidden="true"></div>`:""}
+          ${zoomed?`<div class="shotzoom" style="${zoomStyle(s)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(s)}" alt="photo">`}${working?`<div class="scan" aria-hidden="true"></div>`:""}${rs.length?regionsHTML(s,rs):""}
           ${cropping?`<div class="croplayer${shown?" framed":""}${zoomed?" zoomed":""}" data-id="${s.id}">${zoomed?"":`<div class="croprect${READING[s.id]&&!READ_FAIL.test(READING[s.id])?" working":""}"${cropRectStyle()}>${READING[s.id]&&!READ_FAIL.test(READING[s.id])?`<div class="work" aria-hidden="true"><svg><rect/></svg></div>`:""}<div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="${t("Turn the frame")}"></div></div>`}</div>`:""}
         </div>
+        ${rs.length?`<div class="regline">${esc(regionLine(rs))}</div>`:""}
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">${t("Cancel")}</button>`
           :AUTO[s.id]&&PENDING[s.id]?`<button class="ocr-btn" data-autoedit="${s.id}">${t("Crop")}</button><button class="del" data-autocancel="${s.id}">${t("Cancel")}</button>`
@@ -6626,6 +6717,7 @@ function renderShots(){
       </div>`;
     }).join("");
   box.querySelectorAll("[data-lp]").forEach(el=> longPress(el,()=>{ PICK={kind:"shots",set:new Set([el.dataset.lp])}; renderShots(); })); /* press and hold a photo to start marking (v354) */
+  wireRegions(box); /* the dots on a marked photo (v448) */
   box.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>delShot(b.dataset.del,true));
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
   box.onclick=e=>{ const b=e.target.closest("[data-savenow]"); if(b){ b.disabled=true; saveNow(b.dataset.savenow); } }; /* the button is inside the reading box, which every status re-renders (v237) */
