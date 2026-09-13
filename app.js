@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=464; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=465; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -415,6 +415,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v465","Cards as tiles: find a card faster?"],
   ["app","v464","delete the last card of a photo: the photo goes, Undo brings both"],
   ["app","v463","Camera: only the photos still being worked on, the rest one tap away"],
   ["app","v462","Camera: the tiles, and a tap opening a photo full width"],
@@ -2130,13 +2131,13 @@ function renderMore(main){
    the app, "Go"): one scrolling page in the app's language, six short sections, text only, offline; it describes what the app does today,
    nothing planned, and changes in the same PR as the screen it describes. More → Help → Open; ← Back returns to More. ---------- */
 const GUIDE=()=>[
-  {h:t("Take a photo"),p:[t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card by itself — you see the finished card with Edit and Delete under it. Edit shows the photo with the frame the app used: drag a corner or the inside to fit it, the round handle turns it, let go and the reading starts again.")+" "+t("When the reading is clear, the card shows at once, and the AI's check refines it a moment later.")+" "+t("A photo that made several cards shows a dot on each of its texts — tap one for its characters, pinyin and meaning, and grade it right there."),
-    t("A photo with several texts — an app screen, a control panel, a menu board — becomes one card for the whole picture with a dot on every text: one row under Cards, and Learn goes through its texts one by one."),
+  {h:t("Take a photo"),p:[t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card by itself — you see the finished card with Edit and Delete under it. Edit shows the photo with the frame the app used: drag a corner or the inside to fit it, the round handle turns it, let go and the reading starts again.")+" "+t("When the reading is clear, the card shows at once, and the AI's check refines it a moment later.")+" "+t("A photo that made several cards frames each of its texts — tap one for its characters, pinyin and meaning, and grade it right there."),
+    t("A photo with several texts — an app screen, a control panel, a menu board — becomes one card for the whole picture with a frame around every text: one tile under Cards, and Learn goes through its texts one by one."),
     t("Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in."),
     t("From album takes several photos at once — they all become cards, one after the other, while the app is open.")]},
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
     t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.")]},
-  {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.")+" "+t("A card from a screen or a panel shows the whole picture with a dot on every text and its own dot lit, and says which one it is, 1 of 4; a tap on the photo shows the text alone."),
+  {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.")+" "+t("A card from a screen or a panel shows the whole picture with a frame around every text and its own lit up, and says which one it is, 1 of 4; a tap on the photo shows the text alone."),
     t("Grade yourself: Hard, Medium, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
     t("Swipe the closed card left or right to pick another one — nothing is graded, and a card you skip stays due for next time.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included. Push an open card sideways for the next one in the list."),
@@ -2730,28 +2731,39 @@ function cardsList(){
   if(q) list=list.filter(d=>fieldsOf(d).filter(Boolean).join(" ").toLowerCase().includes(q));
   return list;
 }
+/* The Cards list is photo tiles, two in a row (v465, H: "Ich bin auch nicht zufrieden mit der Cards Ansicht. Ich finde,
+   das sollten immer nur die Fotokacheln sein, jeweils zwei in einer Reihe mit deren Ueberschrift."): the card's own
+   picture with its heading under it — the Chinese text for a card, the model's title for a page — and nothing else in
+   words. What is not text keeps its place ON the picture: the star at its top-right (one tap while scrolling, v425),
+   the review flag and the waiting AI answer as small marks, the number of texts on a page, and the due date as a quiet
+   chip, because a deck you cannot see the due cards in is a deck you cannot plan. A card without a picture keeps the
+   glyph tile the row list gave it. The marking, the search, the filter, the place the list is put back to (v352/v445)
+   and the swipe on the open card are untouched — only the row became a tile.
+   A MULTICARD IS UNMISTAKABLE (v461, H: "Man muss sofort sehen, dass das eine Multicard ist und keine normale
+   Flashcard."), and the two tells of v461's row come with it: the picture sits on a stack of plates — the language iOS
+   Photos uses for an album — with the count on it, and a bar under the picture says how far through it you are.
+   pageRowHTML is gone with the row list; cardRowHTML stays, since the page detail still lists its texts as rows. */
+function cardTileHTML(d,pk){
+  const pg=isPage(d), its=pg?pageItems(d):null;
+  const known=pg?its.filter(x=>regionState({card:x.id})===2).length:0;
+  const pic=pg?fullPhoto(d):d.img;
+  const head=pg?esc(d.c):esc((d.trad||d.c||"").replace(/\n/g," "));
+  const flag=pg?its.some(x=>x.flag):d.flag, ai=pg?its.some(x=>x.ai):d.ai;
+  return `<button class="ctile${pg?" page":""}${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}"${pk?"":` data-lp="${esc(d.id)}"`}>
+      ${pg?`<span class="tstack">`:""}<span class="tw">${pic?`<img class="tbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:`<span class="tglyph hanzi">${esc([...((pg?(its[0]&&its[0].c):d.c)||"?")][0]||"?")}</span>`}
+        ${pk?`<span class="tick" aria-hidden="true"></span>`:starHTML(d)}
+        ${pg?`<span class="cnt">${its.length}</span>`:""}
+        ${(flag||ai)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}</span>`:""}</span>
+${pg?`</span><span class="prog" aria-hidden="true"><i style="width:${its.length?Math.round(known/its.length*100):0}%"></i></span>`:""}
+      <span class="th${pg?" title":" hanzi"}">${head||`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>
+      <span class="ts2">${pg?esc(t("{0} texts on this page, {1} known.",its.length,known)):cardStatus(d)}</span></button>`;
+}
 function cardsListHTML(){
   const list=cardsList();
-  const byText=new Map(); S.custom.forEach(x=>{ if(x.c) byText.set(x.c,(byText.get(x.c)||0)+1); }); /* the same text from several photos (v122) */
-  const pk=marking("cards"); /* marking (v351): the tap marks instead of opening; the mark sits at the right end of the row since v355 */
-  const rows=list.map(d=>isPage(d)?pageRowHTML(d,pk):cardRowHTML(d,pk,byText)).join("");
+  const pk=marking("cards"); /* marking (v351): the tap marks instead of opening */
+  const rows=list.map(d=>cardTileHTML(d,pk)).join("");
   const empty=S.custom.length?t("No cards match."):t("No cards yet — take a photo under Camera, or tap + New.");
-  return {html:rows||`<div class="badge" style="margin-top:20px">${empty}</div>`, n:list.length, ids:list.map(d=>d.id)};
-}
-/* the page's row (v453): the whole photo in the list's box, the title, how many texts and how many are known, the first
-   texts as its "meaning" line, the pills of its texts (AI, ⚑) and the star; the tap opens the page detail.
-   A MULTICARD IS UNMISTAKABLE IN THE LIST (v461, H: "Die Multicards muessen in den Listen auch irgendwie anders
-   angezeigt werden. Man muss sofort sehen, dass das eine Multicard ist und keine normale Flashcard."): the thumbnail
-   becomes a stack of plates with the count on it — the language iOS Photos uses for an album — and a bar under the
-   title says how far through it you are. Both live inside the row's existing 124px column, so no row grows and the
-   list's rhythm does not move. */
-function pageRowHTML(d,pk){
-  const its=pageItems(d), known=its.filter(x=>regionState({card:x.id})===2).length, full=fullPhoto(d);
-  const done=its.length?Math.round(known/its.length*100):0;
-  return `<button class="crow page${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
-      ${full?`<span class="thumbbox stack"><span class="inner"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span><span class="cnt">${its.length}</span></span>`:`<span class="thumb glyph stack"><span class="inner">${esc([...((its[0]&&its[0].c)||d.c||"")][0]||"")}</span><span class="cnt">${its.length}</span></span>`}
-      <span class="ct"><span class="c title">${esc(d.c)}</span><span class="prog" aria-hidden="true"><i style="width:${done}%"></i></span><span class="p">${esc(t("{0} texts on this page, {1} known.",its.length,known))}</span>${(d.tags||[]).length?`<span class="pills">${(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}</span>`:""}<span class="m hanzi">${esc(its.slice(0,4).map(x=>x.c.replace(/\n/g," ")).join(" · "))}${its.length>4?" …":""}</span></span>
-      <span class="cs">${pk?"":starHTML(d)}${its.some(x=>x.ai)?`<span class="pill ai">${t("AI")}</span>`:""}${its.some(x=>x.flag)?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
+  return {html:rows||`<div class="badge" style="margin-top:20px;grid-column:1/-1">${empty}</div>`, n:list.length, ids:list.map(d=>d.id)};
 }
 function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page detail's item list carries the dot's own state before the status */
   return `<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
@@ -2779,9 +2791,9 @@ function renderCards(main){
     ${marking("cards")
       ?`<div class="chips"><span class="badge" id="pick-n">${t("{0} selected",PICK.set.size)}</span><span class="cend"><button class="del" id="pick-all"></button></span></div>` /* the chips make room for the marking (v354) */
       :`<div class="chips"><span class="chipset">${filterPillHTML("cards")}</span><span class="cend"><span class="badge" id="cnt"${n===deckCount()?" hidden":""}>${t("{0} of {1}",n,deckCount())}</span></span></div>`}
-    <div class="clist" id="clist">${html}</div>
+    <div class="clist tiles" id="clist">${html}</div>
   </div>`;
-  const wire=()=>{ document.querySelectorAll(".crow").forEach(b=>{
+  const wire=()=>{ document.querySelectorAll("#clist .ctile").forEach(b=>{ /* the list is tiles since v465; #pitems keeps its rows */
     b.onclick=()=>{
       if(marking("cards")){ pickToggle(b.dataset.id); b.classList.toggle("on"); pickBar(()=>delPicked("cards")); return; } /* while marking a tap marks the row instead of opening it (v351) */
       LIST_SCROLL=window.scrollY; LIST_CARD=b.dataset.id; LIST_OFF=b.getBoundingClientRect().top; /* where the list stood and which row this is — ← Cards comes back to it (v352), to this row after a swipe (v445) */
@@ -3295,6 +3307,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  465:"Cards are photo tiles now, two in a row, each under its own heading — the picture is what you recognise a card by.",
   464:"Deleting the last card made from a photo now deletes the photo too — one Undo puts both back.",
   463:"The Camera tab now shows only the photos still being worked on. The ones that already made cards are one tap away at the foot of the list — their pictures stay on their cards either way.",
   462:"The Camera tab shows your photos as tiles, two in a row — tap one to open it. The switch beside Inbox goes back to the long list.",
