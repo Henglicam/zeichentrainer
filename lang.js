@@ -75,12 +75,12 @@ de:{
   "Take photo":"Foto aufnehmen",
   "From album":"Aus dem Album",
   "Processing photo …":"Foto wird verarbeitet …",
-  "No photos yet.":"Noch keine Fotos.",
+  
   "Inbox ({0})":"Eingang ({0})",
   "List":"Liste",
   "Tiles":"Kacheln",
-  "Show {0} from earlier":"{0} von früher zeigen",
-  "Hide them":"Wieder ausblenden",
+  
+  
   "Crop":"Ausschnitt",
   "Turn the frame":"Rahmen drehen",
   "Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.":"Zieh mit dem Finger einen Rahmen über den Text – die Ecken ändern die Größe, Ziehen innen verschiebt ihn, der runde Griff dreht ihn.",
@@ -230,7 +230,7 @@ de:{
   "{0} ready. Accept or dismiss them under Cards.":"{0} bereit. Unter Karten annehmen oder verwerfen.","Failed: {0}":"Fehlgeschlagen: {0}","Link copied.":"Link kopiert.","The link: {0}":"Der Link: {0}",
   "Off. Nothing is sent.":"Aus. Es wird nichts gesendet.","Last sent today.":"Zuletzt heute gesendet.","Last sent {0}.":"Zuletzt gesendet am {0}.","Not sent yet.":"Noch nicht gesendet.",
   "Last export: today.":"Letzter Export: heute.","Last export: {0} ago.":"Letzter Export: vor {0}.","Never exported.":"Nie exportiert.","Export now — the cards exist only on this phone.":"Jetzt exportieren — die Karten gibt es nur auf diesem Telefon.",
-  "{0} in the inbox":"{0} im Eingang",", {0} older than {1} days and already turned into cards":", {0} davon älter als {1} Tage und schon zu Karten geworden","Delete {0} old photos?":"{0} alte Fotos löschen?","Delete one old photo?":"Ein altes Foto löschen?",
+  "{0} in the inbox":"{0} im Eingang",", {0} older than {1} days":", {0} davon älter als {1} Tage","Delete {0} old photos?":"{0} alte Fotos löschen?","Delete one old photo?":"Ein altes Foto löschen?",
   "The cards keep their own picture.":"Die Karten behalten ihr eigenes Bild.","Persistent on this phone.":"Dauerhaft auf diesem Telefon gespeichert.","Not persistent yet. Install the app so the system keeps the data.":"Noch nicht dauerhaft. Installiere die App, damit das System die Daten behält.",
   "Checking …":"Prüfe …","Share":"Teilen","Share the app":"App teilen","Send the link to a friend. The app installs from any browser, no store.":"Schick den Link einem Freund. Die App installiert sich aus jedem Browser, ohne Store.",
   "Feedback":"Feedback","Tell the app's owner what works and what does not.":"Sag dem Besitzer der App, was funktioniert und was nicht.","Your message":"Deine Nachricht","Send":"Senden",
@@ -341,12 +341,12 @@ fr:{
   "Take photo":"Prendre une photo",
   "From album":"Depuis l'album",
   "Processing photo …":"Traitement de la photo …",
-  "No photos yet.":"Pas encore de photos.",
+  
   "Inbox ({0})":"Reçues ({0})",
   "List":"Liste",
   "Tiles":"Vignettes",
-  "Show {0} from earlier":"Afficher {0} d'avant",
-  "Hide them":"Masquer",
+  
+  
   "Crop":"Cadrer",
   "Turn the frame":"Tourner le cadre",
   "Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.":"Trace un cadre avec le doigt sur le texte – les coins le redimensionnent, glisser à l'intérieur le déplace, la poignée ronde le tourne.",
@@ -495,7 +495,7 @@ fr:{
   "{0} ready. Accept or dismiss them under Cards.":"{0} prêtes. Accepte-les ou rejette-les sous Cartes.","Failed: {0}":"Échec : {0}","Link copied.":"Lien copié.","The link: {0}":"Le lien : {0}",
   "Off. Nothing is sent.":"Désactivé. Rien n'est envoyé.","Last sent today.":"Dernier envoi aujourd'hui.","Last sent {0}.":"Dernier envoi le {0}.","Not sent yet.":"Pas encore envoyé.",
   "Last export: today.":"Dernier export : aujourd'hui.","Last export: {0} ago.":"Dernier export : il y a {0}.","Never exported.":"Jamais exporté.","Export now — the cards exist only on this phone.":"Exporte maintenant — les cartes n'existent que sur ce téléphone.",
-  "{0} in the inbox":"{0} dans la boîte",", {0} older than {1} days and already turned into cards":", dont {0} de plus de {1} jours déjà devenues des cartes","Delete {0} old photos?":"Supprimer {0} anciennes photos ?","Delete one old photo?":"Supprimer une ancienne photo ?",
+  "{0} in the inbox":"{0} dans la boîte",", {0} older than {1} days":", dont {0} de plus de {1} jours","Delete {0} old photos?":"Supprimer {0} anciennes photos ?","Delete one old photo?":"Supprimer une ancienne photo ?",
   "The cards keep their own picture.":"Les cartes gardent leur propre image.","Persistent on this phone.":"Conservé durablement sur ce téléphone.","Not persistent yet. Install the app so the system keeps the data.":"Pas encore durable. Installe l'appli pour que le système garde les données.",
   "Checking …":"Vérification …","Share":"Partager","Share the app":"Partager l'appli","Send the link to a friend. The app installs from any browser, no store.":"Envoie le lien à un ami. L'appli s'installe depuis n'importe quel navigateur, sans store.",
   "Feedback":"Commentaires","Tell the app's owner what works and what does not.":"Dites au propriétaire de l'appli ce qui marche et ce qui ne marche pas.","Your message":"Ton message","Send":"Envoyer",
@@ -607,12 +607,12 @@ es:{
   "Take photo":"Hacer foto",
   "From album":"Del álbum",
   "Processing photo …":"Procesando la foto …",
-  "No photos yet.":"Aún no hay fotos.",
+  
   "Inbox ({0})":"Bandeja ({0})",
   "List":"Lista",
   "Tiles":"Mosaico",
-  "Show {0} from earlier":"Mostrar {0} de antes",
-  "Hide them":"Ocultar",
+  
+  
   "Crop":"Recortar",
   "Turn the frame":"Girar el marco",
   "Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.":"Dibuja un marco con el dedo sobre el texto: las esquinas cambian el tamaño, arrastrar dentro lo mueve, el asa redonda lo gira.",
@@ -761,7 +761,7 @@ es:{
   "{0} ready. Accept or dismiss them under Cards.":"{0} listas. Acéptalas o descártalas en Tarjetas.","Failed: {0}":"Error: {0}","Link copied.":"Enlace copiado.","The link: {0}":"El enlace: {0}",
   "Off. Nothing is sent.":"Desactivado. No se envía nada.","Last sent today.":"Último envío hoy.","Last sent {0}.":"Último envío el {0}.","Not sent yet.":"Aún no enviado.",
   "Last export: today.":"Última exportación: hoy.","Last export: {0} ago.":"Última exportación: hace {0}.","Never exported.":"Nunca exportado.","Export now — the cards exist only on this phone.":"Exporta ahora — las tarjetas solo existen en este teléfono.",
-  "{0} in the inbox":"{0} en la bandeja",", {0} older than {1} days and already turned into cards":", {0} de más de {1} días y ya convertidas en tarjetas","Delete {0} old photos?":"¿Eliminar {0} fotos antiguas?","Delete one old photo?":"¿Eliminar una foto antigua?",
+  "{0} in the inbox":"{0} en la bandeja",", {0} older than {1} days":", {0} de más de {1} días","Delete {0} old photos?":"¿Eliminar {0} fotos antiguas?","Delete one old photo?":"¿Eliminar una foto antigua?",
   "The cards keep their own picture.":"Las tarjetas conservan su propia imagen.","Persistent on this phone.":"Guardado de forma permanente en este teléfono.","Not persistent yet. Install the app so the system keeps the data.":"Aún no es permanente. Instala la app para que el sistema conserve los datos.",
   "Checking …":"Comprobando …","Share":"Compartir","Share the app":"Compartir la app","Send the link to a friend. The app installs from any browser, no store.":"Envía el enlace a un amigo. La app se instala desde cualquier navegador, sin tienda.",
   "Feedback":"Comentarios","Tell the app's owner what works and what does not.":"Cuéntale al propietario de la app qué funciona y qué no.","Your message":"Tu mensaje","Send":"Enviar",
@@ -873,12 +873,12 @@ ja:{
   "Take photo":"写真を撮る",
   "From album":"アルバムから",
   "Processing photo …":"写真を処理中 …",
-  "No photos yet.":"写真はまだありません。",
+  
   "Inbox ({0})":"受信 ({0})",
   "List":"リスト",
   "Tiles":"タイル",
-  "Show {0} from earlier":"以前の{0}を表示",
-  "Hide them":"隠す",
+  
+  
   "Crop":"切り抜き",
   "Turn the frame":"枠を回す",
   "Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.":"指で文字の上に枠を描いてください。角で大きさを変え、中をドラッグして動かし、丸いつまみで回します。",
@@ -1027,7 +1027,7 @@ ja:{
   "{0} ready. Accept or dismiss them under Cards.":"{0}ができました。カードで採用または却下してください。","Failed: {0}":"失敗：{0}","Link copied.":"リンクをコピーしました。","The link: {0}":"リンク：{0}",
   "Off. Nothing is sent.":"オフ。何も送信されません。","Last sent today.":"最終送信：今日","Last sent {0}.":"最終送信：{0}","Not sent yet.":"まだ送信していません。",
   "Last export: today.":"最終エクスポート：今日","Last export: {0} ago.":"最終エクスポート：{0}前","Never exported.":"エクスポートしたことがありません。","Export now — the cards exist only on this phone.":"今すぐエクスポートしてください。カードはこの端末にしかありません。",
-  "{0} in the inbox":"受信箱に{0}",", {0} older than {1} days and already turned into cards":"、うち{0}枚は{1}日より古くカードになっています","Delete {0} old photos?":"古い写真{0}枚を削除しますか？","Delete one old photo?":"古い写真1枚を削除しますか？",
+  "{0} in the inbox":"受信箱に{0}",", {0} older than {1} days":"、うち{0}枚は{1}日より古いもの","Delete {0} old photos?":"古い写真{0}枚を削除しますか？","Delete one old photo?":"古い写真1枚を削除しますか？",
   "The cards keep their own picture.":"カードの画像はそのまま残ります。","Persistent on this phone.":"この端末に永続的に保存されています。","Not persistent yet. Install the app so the system keeps the data.":"まだ永続的ではありません。データを保持するにはアプリをインストールしてください。",
   "Checking …":"確認中…","Share":"共有","Share the app":"アプリを共有","Send the link to a friend. The app installs from any browser, no store.":"友だちにリンクを送ってください。アプリはどのブラウザからでもインストールできます。ストアは不要です。",
   "Feedback":"フィードバック","Tell the app's owner what works and what does not.":"アプリの所有者に、うまくいくこと・いかないことを伝えてください。","Your message":"メッセージ","Send":"送信",
@@ -1139,12 +1139,12 @@ ko:{
   "Take photo":"사진 찍기",
   "From album":"앨범에서",
   "Processing photo …":"사진 처리 중 …",
-  "No photos yet.":"아직 사진이 없어요.",
+  
   "Inbox ({0})":"받은 사진 ({0})",
   "List":"목록",
   "Tiles":"타일",
-  "Show {0} from earlier":"이전 {0} 보기",
-  "Hide them":"숨기기",
+  
+  
   "Crop":"자르기",
   "Turn the frame":"틀 돌리기",
   "Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.":"손가락으로 글자 위에 틀을 그리세요. 모서리로 크기를 바꾸고, 안쪽을 끌어 옮기고, 둥근 손잡이로 돌려요.",
@@ -1293,7 +1293,7 @@ ko:{
   "{0} ready. Accept or dismiss them under Cards.":"{0} 준비됨. 카드에서 수락하거나 무시하세요.","Failed: {0}":"실패: {0}","Link copied.":"링크를 복사했어요.","The link: {0}":"링크: {0}",
   "Off. Nothing is sent.":"꺼짐. 아무것도 전송되지 않아요.","Last sent today.":"마지막 전송: 오늘.","Last sent {0}.":"마지막 전송: {0}.","Not sent yet.":"아직 전송되지 않았어요.",
   "Last export: today.":"마지막 내보내기: 오늘.","Last export: {0} ago.":"마지막 내보내기: {0} 전.","Never exported.":"내보낸 적이 없어요.","Export now — the cards exist only on this phone.":"지금 내보내세요. 카드는 이 휴대폰에만 있어요.",
-  "{0} in the inbox":"받은 사진함에 {0}",", {0} older than {1} days and already turned into cards":", 그중 {0}장은 {1}일이 지났고 이미 카드가 되었어요","Delete {0} old photos?":"오래된 사진 {0}장을 삭제할까요?","Delete one old photo?":"오래된 사진 1장을 삭제할까요?",
+  "{0} in the inbox":"받은 사진함에 {0}",", {0} older than {1} days":", 그중 {0}장은 {1}일이 지났어요","Delete {0} old photos?":"오래된 사진 {0}장을 삭제할까요?","Delete one old photo?":"오래된 사진 1장을 삭제할까요?",
   "The cards keep their own picture.":"카드의 사진은 그대로 남아요.","Persistent on this phone.":"이 휴대폰에 영구 저장돼요.","Not persistent yet. Install the app so the system keeps the data.":"아직 영구 저장이 아니에요. 데이터를 유지하려면 앱을 설치하세요.",
   "Checking …":"확인 중…","Share":"공유","Share the app":"앱 공유","Send the link to a friend. The app installs from any browser, no store.":"친구에게 링크를 보내세요. 앱은 어떤 브라우저에서든 스토어 없이 설치돼요.",
   "Feedback":"피드백","Tell the app's owner what works and what does not.":"앱 소유자에게 잘 되는 점과 안 되는 점을 알려주세요.","Your message":"메시지","Send":"보내기",
@@ -1408,12 +1408,12 @@ ru:{
   "Take photo":"Сделать фото",
   "From album":"Из галереи",
   "Processing photo …":"Обрабатываю фото …",
-  "No photos yet.":"Фото пока нет.",
+  
   "Inbox ({0})":"Входящие ({0})",
   "List":"Список",
   "Tiles":"Плитка",
-  "Show {0} from earlier":"Показать {0} из старых",
-  "Hide them":"Скрыть",
+  
+  
   "Crop":"Обрезать",
   "Turn the frame":"Повернуть рамку",
   "Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.":"Обведи текст пальцем — углы меняют размер, движение внутри переносит рамку, круглая ручка её поворачивает.",
@@ -1563,7 +1563,7 @@ ru:{
   "{0} ready. Accept or dismiss them under Cards.":"Готово: {0}. Прими или отклони во вкладке «Карточки».","Failed: {0}":"Не получилось: {0}","Link copied.":"Ссылка скопирована.","The link: {0}":"Ссылка: {0}",
   "Off. Nothing is sent.":"Выключено. Ничего не отправляется.","Last sent today.":"Последняя отправка сегодня.","Last sent {0}.":"Последняя отправка: {0}.","Not sent yet.":"Пока не отправлялось.",
   "Last export: today.":"Последний экспорт: сегодня.","Last export: {0} ago.":"Последний экспорт: {0} назад.","Never exported.":"Экспорта ещё не было.","Export now — the cards exist only on this phone.":"Сделай экспорт — карточки есть только на этом телефоне.",
-  "{0} in the inbox":"Во входящих {0}",", {0} older than {1} days and already turned into cards":", из них {0} старше {1} дней и уже стали карточками","Delete {0} old photos?":"Удалить {0} старых фото?","Delete one old photo?":"Удалить одно старое фото?",
+  "{0} in the inbox":"Во входящих {0}",", {0} older than {1} days":", из них {0} старше {1} дней","Delete {0} old photos?":"Удалить {0} старых фото?","Delete one old photo?":"Удалить одно старое фото?",
   "The cards keep their own picture.":"У карточек остаётся своя картинка.","Persistent on this phone.":"Хранится надёжно на этом телефоне.","Not persistent yet. Install the app so the system keeps the data.":"Пока ненадёжно. Установи приложение, чтобы система не удаляла данные.",
   "Checking …":"Проверяю …","Share":"Поделиться","Share the app":"Поделиться приложением","Send the link to a friend. The app installs from any browser, no store.":"Отправь ссылку другу. Приложение ставится из любого браузера, без магазина.",
   "Feedback":"Отзыв","Tell the app's owner what works and what does not.":"Расскажи владельцу приложения, что работает, а что нет.","Your message":"Твоё сообщение","Send":"Отправить",
@@ -1674,12 +1674,12 @@ vi:{
   "Take photo":"Chụp ảnh",
   "From album":"Từ thư viện",
   "Processing photo …":"Đang xử lý ảnh …",
-  "No photos yet.":"Chưa có ảnh nào.",
+  
   "Inbox ({0})":"Ảnh chờ ({0})",
   "List":"Danh sách",
   "Tiles":"Ô vuông",
-  "Show {0} from earlier":"Xem {0} trước đó",
-  "Hide them":"Ẩn đi",
+  
+  
   "Crop":"Cắt ảnh",
   "Turn the frame":"Xoay khung",
   "Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.":"Dùng ngón tay vẽ một khung quanh chữ — kéo góc để đổi cỡ, kéo bên trong để dời, tay cầm tròn để xoay.",
@@ -1829,7 +1829,7 @@ vi:{
   "{0} ready. Accept or dismiss them under Cards.":"{0} đã sẵn sàng. Áp dụng hoặc bỏ qua ở tab Thẻ.","Failed: {0}":"Không được: {0}","Link copied.":"Đã sao chép liên kết.","The link: {0}":"Liên kết: {0}",
   "Off. Nothing is sent.":"Tắt. Không gửi gì cả.","Last sent today.":"Gửi lần cuối hôm nay.","Last sent {0}.":"Gửi lần cuối {0}.","Not sent yet.":"Chưa gửi lần nào.",
   "Last export: today.":"Xuất lần cuối: hôm nay.","Last export: {0} ago.":"Xuất lần cuối: {0} trước.","Never exported.":"Chưa xuất bao giờ.","Export now — the cards exist only on this phone.":"Xuất ngay đi — thẻ chỉ có trên máy này thôi.",
-  "{0} in the inbox":"{0} đang chờ",", {0} older than {1} days and already turned into cards":", {0} tấm cũ hơn {1} ngày và đã thành thẻ rồi","Delete {0} old photos?":"Xóa {0} ảnh cũ?","Delete one old photo?":"Xóa một ảnh cũ?",
+  "{0} in the inbox":"{0} đang chờ",", {0} older than {1} days":", {0} tấm cũ hơn {1} ngày","Delete {0} old photos?":"Xóa {0} ảnh cũ?","Delete one old photo?":"Xóa một ảnh cũ?",
   "The cards keep their own picture.":"Các thẻ vẫn giữ ảnh riêng của mình.","Persistent on this phone.":"Đã lưu chắc chắn trên máy này.","Not persistent yet. Install the app so the system keeps the data.":"Chưa lưu chắc chắn. Cài app để hệ thống giữ lại dữ liệu.",
   "Checking …":"Đang kiểm tra …","Share":"Chia sẻ","Share the app":"Chia sẻ app","Send the link to a friend. The app installs from any browser, no store.":"Gửi liên kết cho bạn bè. App cài được từ mọi trình duyệt, không cần cửa hàng.",
   "Feedback":"Góp ý","Tell the app's owner what works and what does not.":"Nói cho chủ app biết cái gì chạy tốt, cái gì chưa.","Your message":"Lời nhắn của bạn","Send":"Gửi",
@@ -1940,12 +1940,12 @@ th:{
   "Take photo":"ถ่ายรูป",
   "From album":"จากอัลบั้ม",
   "Processing photo …":"กำลังเตรียมรูป …",
-  "No photos yet.":"ยังไม่มีรูป",
+  
   "Inbox ({0})":"รูปที่รอ ({0})",
   "List":"รายการ",
   "Tiles":"ตาราง",
-  "Show {0} from earlier":"ดู{0}จากก่อนหน้านี้",
-  "Hide them":"ซ่อน",
+  
+  
   "Crop":"ครอบตัด",
   "Turn the frame":"หมุนกรอบ",
   "Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.":"ลากนิ้ววาดกรอบทับตัวอักษร มุมใช้ปรับขนาด ลากด้านในเพื่อย้าย ปุ่มกลมใช้หมุน",
@@ -2095,7 +2095,7 @@ th:{
   "{0} ready. Accept or dismiss them under Cards.":"{0} พร้อมแล้ว รับไว้หรือไม่รับได้ที่แท็บการ์ด","Failed: {0}":"ไม่สำเร็จ: {0}","Link copied.":"คัดลอกลิงก์แล้ว","The link: {0}":"ลิงก์: {0}",
   "Off. Nothing is sent.":"ปิดอยู่ ไม่ส่งอะไรเลย","Last sent today.":"ส่งล่าสุดวันนี้","Last sent {0}.":"ส่งล่าสุด {0}","Not sent yet.":"ยังไม่เคยส่ง",
   "Last export: today.":"ส่งออกล่าสุด: วันนี้","Last export: {0} ago.":"ส่งออกล่าสุด: {0}ที่แล้ว","Never exported.":"ยังไม่เคยส่งออก","Export now — the cards exist only on this phone.":"ส่งออกเลย — การ์ดมีอยู่แค่ในเครื่องนี้",
-  "{0} in the inbox":"{0} รออยู่",", {0} older than {1} days and already turned into cards":" ในจำนวนนี้ {0} ใบเก่ากว่า {1} วัน และกลายเป็นการ์ดแล้ว","Delete {0} old photos?":"ลบรูปเก่า {0} ใบไหม","Delete one old photo?":"ลบรูปเก่า 1 ใบไหม",
+  "{0} in the inbox":"{0} รออยู่",", {0} older than {1} days":" ในจำนวนนี้ {0} ใบเก่ากว่า {1} วัน","Delete {0} old photos?":"ลบรูปเก่า {0} ใบไหม","Delete one old photo?":"ลบรูปเก่า 1 ใบไหม",
   "The cards keep their own picture.":"การ์ดยังเก็บรูปของตัวเองไว้","Persistent on this phone.":"เก็บถาวรในเครื่องนี้แล้ว","Not persistent yet. Install the app so the system keeps the data.":"ยังไม่ถาวร ติดตั้งแอปเพื่อให้ระบบเก็บข้อมูลไว้",
   "Checking …":"กำลังตรวจ …","Share":"แชร์","Share the app":"แชร์แอปนี้","Send the link to a friend. The app installs from any browser, no store.":"ส่งลิงก์ให้เพื่อน ติดตั้งได้จากเบราว์เซอร์ไหนก็ได้ ไม่ต้องผ่านสโตร์",
   "Feedback":"ส่งความเห็น","Tell the app's owner what works and what does not.":"บอกเจ้าของแอปว่าอะไรใช้ดี อะไรยังไม่ดี","Your message":"ข้อความของคุณ","Send":"ส่ง",
@@ -2206,12 +2206,12 @@ id:{
   "Take photo":"Ambil foto",
   "From album":"Dari album",
   "Processing photo …":"Memproses foto …",
-  "No photos yet.":"Belum ada foto.",
+  
   "Inbox ({0})":"Kotak masuk ({0})",
   "List":"Daftar",
   "Tiles":"Petak",
-  "Show {0} from earlier":"Lihat {0} sebelumnya",
-  "Hide them":"Sembunyikan",
+  
+  
   "Crop":"Pangkas",
   "Turn the frame":"Putar bingkai",
   "Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.":"Gambar bingkai dengan jarimu di atas teksnya — tarik sudutnya untuk mengubah ukuran, tarik bagian dalamnya untuk menggeser, pegangan bulat untuk memutar.",
@@ -2361,7 +2361,7 @@ id:{
   "{0} ready. Accept or dismiss them under Cards.":"{0} siap. Terima atau abaikan di Kartu.","Failed: {0}":"Gagal: {0}","Link copied.":"Tautan disalin.","The link: {0}":"Tautannya: {0}",
   "Off. Nothing is sent.":"Mati. Tidak ada yang dikirim.","Last sent today.":"Terakhir dikirim hari ini.","Last sent {0}.":"Terakhir dikirim {0}.","Not sent yet.":"Belum pernah dikirim.",
   "Last export: today.":"Ekspor terakhir: hari ini.","Last export: {0} ago.":"Ekspor terakhir: {0} lalu.","Never exported.":"Belum pernah diekspor.","Export now — the cards exist only on this phone.":"Ekspor sekarang — kartunya cuma ada di ponsel ini.",
-  "{0} in the inbox":"{0} di kotak masuk",", {0} older than {1} days and already turned into cards":", {0} di antaranya lebih dari {1} hari dan sudah jadi kartu","Delete {0} old photos?":"Hapus {0} foto lama?","Delete one old photo?":"Hapus satu foto lama?",
+  "{0} in the inbox":"{0} di kotak masuk",", {0} older than {1} days":", {0} di antaranya lebih dari {1} hari","Delete {0} old photos?":"Hapus {0} foto lama?","Delete one old photo?":"Hapus satu foto lama?",
   "The cards keep their own picture.":"Kartu tetap punya gambarnya sendiri.","Persistent on this phone.":"Tersimpan permanen di ponsel ini.","Not persistent yet. Install the app so the system keeps the data.":"Belum permanen. Pasang aplikasinya supaya sistem menyimpan datanya.",
   "Checking …":"Memeriksa …","Share":"Bagikan","Share the app":"Bagikan aplikasinya","Send the link to a friend. The app installs from any browser, no store.":"Kirim tautannya ke teman. Aplikasinya bisa dipasang dari browser apa saja, tanpa toko aplikasi.",
   "Feedback":"Masukan","Tell the app's owner what works and what does not.":"Beri tahu pemilik aplikasi apa yang jalan dan apa yang tidak.","Your message":"Pesanmu","Send":"Kirim",
