@@ -554,9 +554,12 @@ body.noscroll{overflow:hidden}
    v412 spent a whole version getting this sentence onto ONE line in all 30 language × count combinations at 360 px,
    and the pill's 22 px of side padding plus the 19 px icon broke that in 9 to 13 of the 30 (fr, es, ko, ru) — the same
    ground on which v412 itself dropped a candidate line. Measured over every variant: only 4 px of side padding and no
-   icon fits everywhere, so the line keeps v412's own geometry and takes its presence from --tint-soft, the tint and
-   weight 500. The clock stays where it belongs, on the waiting tiles themselves. */
-.batchline{display:block;margin:0 0 12px;padding:7px 4px;border-radius:10px;background:var(--tint-soft);color:var(--tint);font-size:13px;font-weight:500;line-height:1.4;text-align:center}
+   icon fits everywhere, so the line keeps v412's own geometry and takes its presence from the tint and weight 500.
+   The clock stays where it belongs, on the waiting tiles themselves. And NO background (v475): a full-width tinted
+   rounded band sitting directly under From album — itself a full-width tinted rounded button — reads as a second
+   button and invites a tap that does nothing. Left-aligned tint at 13 px is unmistakably a caption, costs no width,
+   and is still far more present than the grey it replaced. */
+.batchline{display:block;margin:0 2px 12px 4px;font-size:13px;font-weight:500;line-height:1.4;color:var(--tint);text-align:start}
 /* v452: a card that is one of several from one photo shows the page itself on the closed Learn front and in the detail — the whole picture in its own shape (the one exception to v223's "both boxes the same shape"), the blurred fill around it; the dots as on the Camera tab, the card's own lit; the dots take no tap there. The cap keeps the closed front — page, text box, pill and hint — above the tab bar: 100vh minus what the rest of the screen takes (measured 500 px at 390×844 with the hint, 344 px of page there, 240 at 360×740), never over 56vh on a tall screen; the revealed card shows the card's own cut, since the grades then own the screen (v421). The 16 px frame keeps a dot at the picture's own edge whole (a title at y 0, a label at the right edge — measured clipped by 14 px without it). */
 .picbox.page{--pageh:clamp(180px,calc(100vh - 500px),56vh);aspect-ratio:auto;height:auto;max-height:var(--pageh);display:flex;justify-content:center;align-items:center}
 .picbox.page .pagewrap{position:relative;display:block;margin:16px;max-width:calc(100% - 32px);max-height:calc(var(--pageh) - 32px);line-height:0}
