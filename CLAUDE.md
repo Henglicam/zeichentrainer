@@ -4,6 +4,7 @@ Working language: **English.** Reply to H in English. Short, direct, no excessiv
 
 ## What this is
 Chinese character trainer for adults (spaced repetition), a reinterpretation of 悟空识字 without the kids' aesthetic.
+**The rule (H, 2026-09-14): "Flash cards are for learning and multi cards are for looking up stuff."** A flashcard is studied — it has a progress row, a due date, a grade, a star, a place in Learn and in the Deck count. A multicard (a page card, v453) and its own texts are looked up — nothing on them is studied, counted, scheduled or graded, and the only thing a multicard text can do is generate a separate flashcard (v487). Every control, label, count and filter is judged against that one sentence; v487, v488, v491, v493, v496, v497 and v498 are its applications, and a later change that puts a learning word or a learning control on a multicard, or a look-up-only surface on a flashcard, is wrong by construction.
 User: H, product manager, Beijing, **phone-only (Android/Xiaomi, Chrome, VPN), no computer**.
 UI language: English. Learning content: Chinese + pinyin + English meaning.
 
