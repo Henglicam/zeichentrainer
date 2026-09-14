@@ -317,16 +317,6 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
    already is one (H: "multi cards don't really need the got it or learn again buttons" · "I should also instantly get the
    option to make it a flashcard") */
 .lookup .lkmake{margin-top:10px} .lookup .lkmake .btn{width:100%}
-/* the two-button vote (v487, H: "Let's have the vote button red and green) in the multicard"): the app's own cross and
-   check of v461 in the two states' own colours, on the soft ground rather than filled — a filled amber/green pair does
-   not carry its label, the v421 finding */
-.lookup .vote{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
-.lookup .vt{display:flex;align-items:center;justify-content:center;gap:7px;min-height:52px;border:0;border-radius:var(--r);font:600 16px/1.2 var(--ui);cursor:pointer}
-.lookup .vt i{display:inline-flex;width:18px;height:18px}
-.lookup .vt .lbl{color:inherit;margin:0} /* the page-wide .lbl rule sets --label2 and a right margin, and inheritance loses to any matching rule — the v421 lesson, which cost three grade tiles their colour */
-.lookup .vt svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.lookup .vt.no{background:var(--tint-soft);color:var(--tint)}
-.lookup .vt.yes{background:var(--ok-soft);color:var(--ok)}
 .pill.multi{background:var(--fill);color:var(--label2)}
 button.pill.multi{border:0;font:inherit;cursor:pointer} /* the reference is a way back to the multicard, not only a label */
 /* the card made by itself (v325, H: "no frame during the first scan, just the magic wobbling over the image, and then the result is the finished card"): a soft band of light sweeps the photo while the app reads — nothing on the photo but light, no frame; still under reduced motion (a faint veil) */
@@ -613,7 +603,8 @@ body.noscroll{overflow:hidden}
 /* the two states, where a card is listed or opened (v461): a red cross for one still to learn, a green check for one
    ticked off. Colour is never the only channel — the glyph is, which is what the owner asked for. */
 .crow .pdot{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--tint);margin-right:6px;vertical-align:middle;flex:none}
-.crow .pdot.s2{background:var(--ok)}
+.crow .pdot.made{background:var(--ok)} /* v488: this text has a flashcard */
+.crow .pdot.none{background:transparent;box-shadow:inset 0 0 0 1.5px var(--label3)} /* and this one has not — an empty ring, never a red cross, which would claim you do not know a text nobody asked you to learn */
 .crow .pdot svg{width:12px;height:12px;stroke:#fff;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
 /* the Multicard's row: the thumbnail is a stack of plates with the count on it, and a bar says how far through it you
    are. The three plates together are exactly the 124 x 70 the row's first column already reserves, so no row grows. */
