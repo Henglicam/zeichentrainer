@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=481; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=482; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -534,6 +534,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v482","Multicard line: '1 learned'"],
   ["app","v481","Cards: the AI bar's tick and cross"],
   ["app","v480","Cards: Dismiss all, then Undo"],
   ["photo","v479","two photos: each keeps its own steps"],
@@ -2972,7 +2973,7 @@ function cardTileHTML(d,pk){
         ${(flag||ai||isDerived(d))?`<span class="tmarks">${isDerived(d)?`<i class="tm multi" title="${esc(srcLabel(d))}">${ICON_MULTI}</i>`:""}${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}</span>`:""}</span>
 ${pg?`</span><span class="prog" aria-hidden="true"><i style="width:${its.length?Math.round(known/its.length*100):0}%"></i></span>`:""}
       <span class="th${pg?" title":" hanzi"}">${head||`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>
-      <span class="ts2">${pg?esc(t("{0} texts on this page, {1} known.",its.length,known)):cardStatus(d)}</span></button>`;
+      <span class="ts2">${pg?esc(t("{0} texts on this page, {1} learned.",its.length,known)):cardStatus(d)}</span></button>`;
 }
 function cardsListHTML(){
   const list=cardsList();
@@ -3051,7 +3052,7 @@ function pageBodyHTML(d){
   return `<div class="shot pagecard" data-page="${esc(d.id)}">
       <div class="shotwrap">${full?`<img src="${urlOf(full)}" alt="photo">`:""}${rs.length?regionsHTML({id:d.shot},rs):""}</div>
       <div class="ptitle">${esc(d.c)}</div>
-      <div class="regline">${esc(t("{0} texts on this page, {1} known.",its.length,known))}</div>
+      <div class="regline">${esc(t("{0} texts on this page, {1} learned.",its.length,known))}</div>
       <div class="taphint">${esc(t("Tap any text on the photo."))}</div>
     </div>
     <div class="clist" id="pitems">${sorted.map(x=>cardRowHTML(x,false,new Map(),true)).join("")}</div>`;
@@ -7249,7 +7250,7 @@ function regionsHTML(rec,rs,o){
   return `<div class="regions${learn?" learn":""}"${learn?"":` data-regions="${rec.id}"`}>${rs.map(r=>{ const b=r.box, pc=x=>(x*100).toFixed(2)+"%";
     return `<${tag} class="region${learn&&o.me===r.card?" me":""}" ${learn?"data-rid":"data-region"}="${esc(r.rid)}" style="left:${pc(b.x)};top:${pc(b.y)};width:${pc(b.w)};height:${pc(b.h)}${b.a?`;transform:rotate(${b.a}deg)`:""}"${learn?' aria-hidden="true"':` aria-label="${esc(r.zh.replace(/\n/g," "))}"`}><i class="ff" aria-hidden="true"></i></${tag}>`; }).join("")}</div>`;
 }
-function regionLine(rs,pg){ const known=rs.filter(r=>regionState(r)===2).length; return pg?t("{0} texts on this page, {1} known.",rs.filter(r=>r.card).length,known):t("{0} cards from this photo, {1} known.",rs.filter(r=>r.card).length,known); } /* pg (v453): the photo's cards are one page's texts */
+function regionLine(rs,pg){ const known=rs.filter(r=>regionState(r)===2).length; return pg?t("{0} texts on this page, {1} learned.",rs.filter(r=>r.card).length,known):t("{0} cards from this photo, {1} learned.",rs.filter(r=>r.card).length,known); } /* pg (v453): the photo's cards are one page's texts */
 /* the photo gives nothing away until it is asked (v467, H: "Gerade chinesische Apps können ja extrem voll mit Text sein …
    Ich möchte, dass in der Default Ansicht nichts eingerahmt ist. Und wenn ich auf ein Textelement drauftippe, dann erscheint
    der Rahmen."). A Chinese app screen carries thirty texts, and thirty permanent frames are a wall of ink over the picture
