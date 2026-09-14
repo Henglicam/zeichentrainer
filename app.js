@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=491; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=492; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2621,7 +2621,14 @@ function linkedHTML(d){
   return `<div class="linked"><div class="lbl">${others.length===1?t("Also on another photo"):t("Also on {0} other photos",others.length)}</div><div class="thumbs">${others.map(x=>`<button class="lnk${S.mode==="study"&&S.peek===x.id?" on":""}" data-link="${esc(x.id)}" aria-label="${S.mode==="study"?t("Show this photo"):t("Open this card")}">${x.img||fullPhoto(x)?`<img class="thumbbg" src="${thumbURL(x)}" alt="" aria-hidden="true"><img class="thumb" src="${thumbURL(x)}" alt="">`:`<span class="glyph hanzi">${esc([...x.c][0])}</span>`}</button>`).join("")}</div></div>`;
 }
 function wireSrc(root){ (root||document).querySelectorAll("[data-src]").forEach(b=> b.onclick=e=>{ e.stopPropagation();
-  const pg=cardOf(b.dataset.src); if(!pg) return; S.detail=pg.id; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.peek=null; S.mode="cards"; LIST_CARD=null; render(); window.scrollTo({top:0}); }); }
+  const pg=cardOf(b.dataset.src); if(!pg) return;
+  /* the jump is a round trip since v492 (H: "Wenn ich von einer Flashkarte aus in eine Multicard gehe, dann muss ich
+     eine Möglichkeit haben, aus der Multicard wieder zurück in die vorherige Flashcard zu kommen") — the multicard's
+     own back button then names the card it came from. The pill is a button only in the card detail (v487: a span on the
+     Learn back, since a tap that leaves a running session is the v155 complaint), so that is the only place a jump can
+     start, and S.detail is the card it started from. */
+  const from=S.mode==="cards"&&S.detail&&S.detail!==pg.id?S.detail:null;
+  S.detail=pg.id; S.detailFrom=from?"card:"+from:null; S.detailHide=false; S.fullPic=false; S.peek=null; S.mode="cards"; LIST_CARD=null; render(); window.scrollTo({top:0}); }); }
 function wireLinks(root){ (root||document).querySelectorAll("[data-link]").forEach(b=> b.onclick=()=>{
   /* in Learn the tap shows that photo on the card in place, a second tap returns — the session goes on (v155, H: "I'm
      getting out of the learn mode. That should not happen"); in the Cards detail it opens the other card as before */
@@ -3078,6 +3085,8 @@ function detailCardHTML(d,sw){
 }
 const fromPage=()=>typeof S.detailFrom==="string"&&S.detailFrom.startsWith("page:")?S.detailFrom.slice(5):null; /* v453: the item's detail was opened from its page */
 function backToPage(){ const pid=fromPage(); S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.detail=pid&&cardOf(pid)?pid:null; render(); window.scrollTo(0,0); }
+const fromCard=()=>typeof S.detailFrom==="string"&&S.detailFrom.startsWith("card:")?S.detailFrom.slice(5):null; /* v492: the multicard was opened from a generated flashcard's reference pill */
+function backToCard(){ const cid=fromCard(); S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.detail=cid&&cardOf(cid)?cid:null; render(); window.scrollTo(0,0); } /* the card deleted meanwhile falls back to the list, as backToPage does */
 /* the page's own detail (v453): the whole photo with the dots — a tap opens the sheet of v448 and grades right there —, the
    title and the line under it, then one row per text in reading order with the dot's state, the star and Delete card, which
    takes the page's texts with it (one Undo). No Edit and no Share: the page is its photo, and its texts are edited one by one. */
@@ -3099,19 +3108,19 @@ function renderPageDetail(main,d){
   normaliseFilters(); /* the same rule as the ordinary detail (v308/v445): a star cleared on the open page must not strand it outside its own list */
   const list=cardsList(), li=list.findIndex(x=>x.id===d.id), sw=li>=0&&list.length>1;
   main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">${t("← Cards")}</button><span class="badge">${esc((d.tags||[]).join(", "))}</span></div>
+    <div class="topline"><button class="del" id="back">${fromCard()?t("← Back to the flashcard"):t("← Cards")}</button><span class="badge">${esc((d.tags||[]).join(", "))}</span></div>
     <div class="card bare">${pageBodyHTML(d)}</div>
     <div class="detailacts">
       <button class="btn${d.star?" on":""}" id="d-star">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>
       <button class="btn danger" id="d-del">${t("Delete card")}</button>
     </div>
   </div>`;
-  $("#back").onclick=backToList;
+  $("#back").onclick=fromCard()?backToCard:backToList; /* opened from a generated flashcard's reference pill (v492): back to that card */
   wireRegions(main); /* the dots and the sheet (v448) */
   main.querySelectorAll("#pitems .crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.id; S.detailFrom="page:"+d.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); });
   wireStars($("#pitems"));
   $("#d-star").onclick=async()=>{ await setStar(d.id,!d.star); render(); };
-  $("#d-del").onclick=async()=>{ await delCustom(d.id); S.detail=null; render(); }; /* at once, with Undo (v268) — the texts go with it */
+  $("#d-del").onclick=async()=>{ await delCustom(d.id); if(fromCard()){ backToCard(); return; } S.detail=null; render(); }; /* at once, with Undo (v268) — the texts go with it; a generated flashcard survives its multicard (v487), so the way back is still there and its pill becomes plain text */
   /* a page is swiped like any other open card (v460, H: "Multicards lassen sich nicht swipen"): v445 gave the Cards
      detail its carousel and v453's page renders through this function instead, which never called wireSwipe — so the one
      card kind that holds several texts was the one kind you could not push aside. The neighbours are the same list. */
@@ -3128,7 +3137,9 @@ function detailSwipe(list,li,main){
       const h=isPage(nd)?{html:pageBodyHTML(nd),cls:"bare"}:detailCardHTML(nd,true); /* no swipe hint on a page: its line is a count, and the ordinary detail's hint already teaches the gesture (v226 takes hints away after 20 reviews anyway) */
       S.fullPic=fp; return h; },
     go:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return; if(LIST_CARD) LIST_CARD=nd.id;
-      S.detail=nd.id; S.fullPic=false; render(); },
+      /* the card you swipe to is not the one you came into: its back button would otherwise claim a way back that
+         belongs to another card (v492) — true of the page flag of v453 as well, which survived a swipe until now */
+      S.detail=nd.id; S.detailFrom=null; S.fullPic=false; render(); },
     busy:on=>{ const pn=main.querySelector(".pane"); if(pn) pn.classList.toggle("swiping",on); }};
 }
 function renderCardDetail(main,c){
@@ -3568,6 +3579,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  492:"Open a multicard from a flashcard and the button at the top left takes you straight back to that card.",
   490:"In the Cards list, a flashcard made from a multicard now shows that multicard's photo with its own text lit up on it — and a card you mark for deletion is ticked again.",
   489:"A flashcard made from a multicard shows that multicard's photo again, with its own text framed on it and the multicard's name under the picture.",
   487:"A multicard is a reference now: tap any text on it and press Generate flashcard to make a text-only card that names where it came from.", /* v488 corrected this line rather than adding its own: 487 and 488 reach every phone in the same update, and the note a learner reads has to be true of what is on it */
