@@ -316,8 +316,19 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 /* the lookup sheet grades nothing since v478: the one action that turns this text into a flashcard, or the state when it
    already is one (H: "multi cards don't really need the got it or learn again buttons" · "I should also instantly get the
    option to make it a flashcard") */
-.lookup .lkmake{margin-top:14px} .lookup .lkmake .btn{width:100%}
-.lookup .lkstate{margin-top:14px;text-align:center}
+.lookup .lkmake{margin-top:10px} .lookup .lkmake .btn{width:100%}
+/* the two-button vote (v487, H: "Let's have the vote button red and green) in the multicard"): the app's own cross and
+   check of v461 in the two states' own colours, on the soft ground rather than filled — a filled amber/green pair does
+   not carry its label, the v421 finding */
+.lookup .vote{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.lookup .vt{display:flex;align-items:center;justify-content:center;gap:7px;min-height:52px;border:0;border-radius:var(--r);font:600 16px/1.2 var(--ui);cursor:pointer}
+.lookup .vt i{display:inline-flex;width:18px;height:18px}
+.lookup .vt .lbl{color:inherit;margin:0} /* the page-wide .lbl rule sets --label2 and a right margin, and inheritance loses to any matching rule — the v421 lesson, which cost three grade tiles their colour */
+.lookup .vt svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.lookup .vt.no{background:var(--tint-soft);color:var(--tint)}
+.lookup .vt.yes{background:var(--ok-soft);color:var(--ok)}
+.pill.multi{background:var(--fill);color:var(--label2)}
+button.pill.multi{border:0;font:inherit;cursor:pointer} /* the reference is a way back to the multicard, not only a label */
 /* the card made by itself (v325, H: "no frame during the first scan, just the magic wobbling over the image, and then the result is the finished card"): a soft band of light sweeps the photo while the app reads — nothing on the photo but light, no frame; still under reduced motion (a faint veil) */
 .shotwrap .scan{position:absolute;inset:0;border-radius:10px;overflow:hidden;pointer-events:none}
 .shotwrap .scan::before{content:"";position:absolute;top:-30%;bottom:-30%;left:0;width:45%;transform:translateX(-150%) skewX(-14deg);will-change:transform;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.28) 35%,rgba(255,255,255,.55) 50%,rgba(255,255,255,.28) 65%,rgba(255,255,255,0));animation:scan 1.7s linear infinite} /* v332 (H: "the scanning effect stutters at the top left, it must run smoothly"): the band moves by transform alone, so the compositor drives it while the reader's copies keep the main thread busy (until v331 it animated left — a layout property, drawn by the main thread and frozen with it); linear, and it starts well outside the box, so the skewed band's top corner no longer pops in at the top left on every loop */
@@ -530,7 +541,6 @@ body.noscroll{overflow:hidden}
 .ctile .tmarks{position:absolute;left:6px;bottom:6px;z-index:3;display:flex;gap:4px}
 .ctile .tm{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;font-family:var(--sans);font-size:10px;font-weight:700;font-style:normal;color:#fff}
 .ctile .tm.flag{background:var(--tint)} .ctile .tm.ai{background:var(--ok)}
-.ctile .tm.multi{background:var(--label2);padding:0 4px} .ctile .tm.multi svg{width:12px;height:12px;fill:none;stroke:#fff;stroke-width:1.5;stroke-linejoin:round} /* a card derived from a multicard (v478) */
 .ctile.pick .tick{position:absolute;right:6px;top:6px;z-index:3}
 .ctile.pick.on{box-shadow:0 0 0 2px var(--tint),var(--shadow)}
 /* a Multicard tile carries v461's two tells: the picture on a stack of plates with the count, and a bar for how far
