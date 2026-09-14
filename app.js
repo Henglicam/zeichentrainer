@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=500; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=501; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2367,7 +2367,7 @@ function renderMore(main){
    nothing planned, and changes in the same PR as the screen it describes. More → Help → Open; ← Back returns to More. ---------- */
 const GUIDE=()=>[
   {h:t("Take a photo"),p:[t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card by itself — you see the finished card with Edit and Delete under it. Edit shows the photo with the frame the app used: drag a corner or the inside to fit it, the round handle turns it, let go and the reading starts again.")+" "+t("When the reading is clear, the card shows at once, and the AI's check refines it a moment later.")+" "+t("A photo that made several cards keeps every one of them in its place — tap a text on it for its characters, pinyin and meaning, and grade it right there."),
-    t("A photo with several texts — an app screen, a control panel, a menu board — becomes one card for the whole picture: one tile under Cards, tap any text on it to look it up, and Learn goes through its texts one by one."),
+    t("A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard for the whole picture: one tile under Multicards, tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn."),
     t("Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in."),
     t("From album takes several photos at once — they all become cards, one after the other, while the app is open.")]},
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
