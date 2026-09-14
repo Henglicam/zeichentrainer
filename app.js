@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=493; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=494; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -911,7 +911,7 @@ function wireChrome(){
   for(const id of ["#cam","#album"]){ $(id).addEventListener("change",()=>{ PICKING=0; }); $(id).addEventListener("cancel",()=>{ PICKING=0; }); } /* the pick is over, with a photo or without (v316) */
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden && S.mode==="inbox") renderShots(); });
   /* a long press on a picture, a canvas or a control is never a request for the browser's menu — the image sheet came up over the crop frame (v248, H: "Don't make those things pop up while adjusting the crop"), and v249 keeps it off every picture and control (H: "Find all such useless behaviours and remove them"); plain text and the fields keep their menus, so a meaning can still be copied */
-  document.addEventListener("contextmenu",e=>{ const t=e.target; if(t&&t.closest&&t.closest("img,canvas,button,.croplayer,.shotwrap,.drawsheet,.picbox,.thumbbox,.reticle,.ck,.chip,.tab,.grade,.seg,.linked")) e.preventDefault(); });
+  document.addEventListener("contextmenu",e=>{ const t=e.target; if(t&&t.closest&&t.closest("img,canvas,button,.croplayer,.shotwrap,.drawsheet,.picbox,.thumbbox,.reticle,.ck,.chip,.pill,.tab,.grade,.seg,.linked")) e.preventDefault(); });
   $("#imp").onchange=importData;
 }
 function setStats(){
@@ -1434,7 +1434,7 @@ const langName=code=>(LANGS.find(([c])=>c===code)||[code,code])[1]; /* a languag
    name"). A quiet pill wherever a card's pills are drawn, carrying the multicard's own headline — the model's title from
    v453, which every multicard has. It is a BUTTON while the multicard is still on the phone, so the reference is a way
    back and not only a label; once the multicard is deleted the copied title stays and the pill is plain text. */
-const srcPill=(d,tap)=>{ const n=srcName(d); if(!n) return ""; const lbl=t("From {0}",n), pg=tap&&srcPage(d);
+const srcPill=(d,tap)=>{ const n=srcName(d); if(!n) return ""; const lbl=t("From {0}",n), pg=tap&&srcPage(d); /* tap: a button that opens the multicard — the card detail, the Learn back (v494) and the camera's finished card; a span in the Cards row, where a nested button is invalid HTML, and on the Learn front, whose whole surface is the reveal tap */
   return pg?`<button class="pill multi" data-src="${esc(pg.id)}" title="${esc(lbl)}">${esc(lbl)}</button>`
            :`<span class="pill multi" title="${esc(lbl)}">${esc(lbl)}</span>`; }; /* a button only where it is not inside the Cards row's own button — a nested button is invalid HTML and the browser breaks the row apart */
 const mlPill=d=>d.m&&mlOf(d)!==LANG?`<span class="pill lang" title="${esc(t("The meaning is in another language than the app."))}">${esc(langName(mlOf(d)))}</span>`:""; /* a card whose meaning is in another language than the app (v258, PR 5): the pill names it, on the back and in the Cards list; Translate all or an AI check takes it away */
@@ -2605,14 +2605,20 @@ const HINT_REVIEWS=20;
 const showHints=()=>(usage().reviews||0)<HINT_REVIEWS;
 /* the simplified form of a traditional card, on the back above the pinyin (v227; on the front until v226, H v102) */
 const simpRefHTML=d=>d.trad?`<div class="script back"><span class="scriptref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span></div>`:"";
-function backHTML(d,o){ const tapSrc=!(o&&o.study), srcHere=!(o&&o.noSrc); /* on the Learn back the reference is plain text: a tap that left a running session is exactly what H complained about at v155 ("I'm getting out of the learn mode. That should not happen"); noSrc: the front of this same screen already carries the multicard's name under the picture (v489), and twice on one screen is noise */
+function backHTML(d,o){ const srcHere=!(o&&o.noSrc); /* noSrc: the front of this same screen already carries the multicard's name under the picture (v489), and twice on one screen is noise.
+   The reference is a BUTTON here, on the Learn back as in the detail (v494, H: "Als einer von Multicard erzeugten Flashcard komme ich momentan nicht zurueck in die Multicard"). v487 made it plain text on this
+   screen for the v155 rule — a tap must not throw you out of a running session — and the price was that from the one screen a
+   learner meets a generated card on there was no way back at all, and a finger on a plain span raises the phone's own text
+   selection instead ("Stattdessen kann ich Text markieren und komische Google Pop ups erzeugen"). v155 is kept by bringing him
+   back rather than by taking the tap away: the jump records "learn" and the multicard's back button returns to the session,
+   which is untouched — S.queue, S.idx and S.revealed are state, and a render into the Cards tab does not build a new one. */
   const glossBlock = d.kind==="sign" ? `
     ${d.mt&&!d.mt.verified?`<span class="flag">${t("meaning unverified")}${d.mt.pending?t(" (translation pending)"):""}${d.mt.suspect?t(" (reading uncertain: {0})",esc(d.mt.suspect)):""}</span>`:""}
 ` : "";
   /* the linked row is not part of the answer any more (v422, H: "Die 'also in another photo' Zeile nach unten schieben"): it
      stood between the parts row and the grades, so reference material sat in the middle of the answer-then-grade path. Each
      caller places it now, below its own actions. */
-  return `${simpRefHTML(d)}<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}${srcHere?srcPill(d,tapSrc):""}</div>${charsHTML(d)}
+  return `${simpRefHTML(d)}<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}${srcHere?srcPill(d,true):""}</div>${charsHTML(d)}
     ${glossBlock}`;
 }
 /* the other cards with the same text (v122, H: "if one character connects to various photos, then link them"): their
@@ -2635,7 +2641,8 @@ function wireSrc(root){ (root||document).querySelectorAll("[data-src]").forEach(
      Learn back, since a tap that leaves a running session is the v155 complaint), so that is the only place a jump can
      start, and S.detail is the card it started from. */
   const from=S.mode==="cards"&&S.detail&&S.detail!==pg.id?S.detail:null;
-  S.detail=pg.id; S.detailFrom=from?"card:"+from:null; S.detailHide=false; S.fullPic=false; S.peek=null; S.mode="cards"; LIST_CARD=null; render(); window.scrollTo({top:0}); }); }
+  const learn=S.mode==="study"; /* the jump started on a card being studied (v494): the session stays as it is and the back button returns to it */
+  S.detail=pg.id; S.detailFrom=from?"card:"+from:learn?"learn":null; S.detailHide=false; S.fullPic=false; S.peek=null; S.mode="cards"; LIST_CARD=null; render(); window.scrollTo({top:0}); }); }
 function wireLinks(root){ (root||document).querySelectorAll("[data-link]").forEach(b=> b.onclick=()=>{
   /* in Learn the tap shows that photo on the card in place, a second tap returns — the session goes on (v155, H: "I'm
      getting out of the learn mode. That should not happen"); in the Cards detail it opens the other card as before */
@@ -2700,7 +2707,7 @@ function renderStudy(main){
        which are right on a wide pill and too long between two one-word buttons. The label still carries the state, as the
        star's does (v427) — the row is all tint, so a colour could not say it. The card detail keeps its phrases: its buttons
        sit two to a row beside "Test this card" and "Delete card", where one word would read as the odd one out. */
-    back=`<div style="margin-top:26px">${backHTML(d,{study:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="grades">${grds}</div>
+    back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="grades">${grds}</div>
       <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button><button class="del" id="edit-card">${t("✎ Edit")}</button></div>${linkedHTML(d)}</div>`;
   } else {
     back=swipeHint(d);
@@ -3093,6 +3100,9 @@ function detailCardHTML(d,sw){
 const fromPage=()=>typeof S.detailFrom==="string"&&S.detailFrom.startsWith("page:")?S.detailFrom.slice(5):null; /* v453: the item's detail was opened from its page */
 function backToPage(){ const pid=fromPage(); S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.detail=pid&&cardOf(pid)?pid:null; render(); window.scrollTo(0,0); }
 const fromCard=()=>typeof S.detailFrom==="string"&&S.detailFrom.startsWith("card:")?S.detailFrom.slice(5):null; /* v492: the multicard was opened from a generated flashcard's reference pill */
+const fromLearn=()=>S.detailFrom==="learn";
+/* back into the session the jump started in (v494): nothing of it was touched, so the card comes back open at the same place */
+function backToLearn(){ S.detailFrom=null; S.detail=null; S.fullPic=false; S.mode="study"; render(); window.scrollTo(0,0); }
 function backToCard(){ const cid=fromCard(); S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.detail=cid&&cardOf(cid)?cid:null; render(); window.scrollTo(0,0); } /* the card deleted meanwhile falls back to the list, as backToPage does */
 /* the page's own detail (v453): the whole photo with the dots — a tap opens the sheet of v448 and grades right there —, the
    title and the line under it, then one row per text in reading order with the dot's state, the star and Delete card, which
@@ -3115,16 +3125,16 @@ function renderPageDetail(main,d){
   normaliseFilters(); /* the same rule as the ordinary detail (v308/v445): a star cleared on the open page must not strand it outside its own list */
   const list=cardsList(), li=list.findIndex(x=>x.id===d.id), sw=li>=0&&list.length>1;
   main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">${fromCard()?t("← Back to the flashcard"):onPages()?"← "+t("Multicards"):t("← Cards")}</button><span class="badge">${esc((d.tags||[]).join(", "))}</span></div>
+    <div class="topline"><button class="del" id="back">${fromCard()?t("← Back to the flashcard"):fromLearn()?t("← Back"):onPages()?"← "+t("Multicards"):t("← Cards")}</button><span class="badge">${esc((d.tags||[]).join(", "))}</span></div>
     <div class="card bare">${pageBodyHTML(d)}</div>
     <div class="detailacts">
       <button class="btn danger" id="d-del" style="grid-column:1/-1">${t("Delete card")}</button>
     </div>
   </div>`;
-  $("#back").onclick=fromCard()?backToCard:backToList; /* opened from a generated flashcard's reference pill (v492): back to that card */
+  $("#back").onclick=fromCard()?backToCard:fromLearn()?backToLearn:backToList; /* opened from a generated flashcard's reference pill (v492) or from the card being studied (v494): back to where the jump started */
   wireRegions(main); /* the dots and the sheet (v448) */
   main.querySelectorAll("#pitems .crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.id; S.detailFrom="page:"+d.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); });
-  $("#d-del").onclick=async()=>{ await delCustom(d.id); if(fromCard()){ backToCard(); return; } S.detail=null; render(); }; /* at once, with Undo (v268) — the texts go with it; a generated flashcard survives its multicard (v487), so the way back is still there and its pill becomes plain text */
+  $("#d-del").onclick=async()=>{ await delCustom(d.id); if(fromCard()){ backToCard(); return; } if(fromLearn()){ backToLearn(); return; } S.detail=null; render(); }; /* at once, with Undo (v268) — the texts go with it; a generated flashcard survives its multicard (v487), so the way back is still there and its pill becomes plain text */
   /* a page is swiped like any other open card (v460, H: "Multicards lassen sich nicht swipen"): v445 gave the Cards
      detail its carousel and v453's page renders through this function instead, which never called wireSwipe — so the one
      card kind that holds several texts was the one kind you could not push aside. The neighbours are the same list. */
@@ -3583,6 +3593,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  494:"While learning a flashcard made from a multicard, tap its name under the meaning to look at the multicard — and come straight back to the card you were on.",
   492:"Open a multicard from a flashcard and the button at the top left takes you straight back to that card.",
   490:"In the Cards list, a flashcard made from a multicard now shows that multicard's photo with its own text lit up on it — and a card you mark for deletion is ticked again.",
   489:"A flashcard made from a multicard shows that multicard's photo again, with its own text framed on it and the multicard's name under the picture.",
@@ -7541,7 +7552,7 @@ function renderShots(){
   box.querySelectorAll(".result").forEach(el=>{ const d=el.dataset.prov?(PROV[el.dataset.prov]||{}).card:cardOf(el.dataset.card); if(!d) return; /* the provisional card lives in PROV, not in the deck (v440) */
     el.querySelectorAll("[data-pic]").forEach(p=> p.onclick=e=>{ e.stopPropagation(); S.fullPic=!S.fullPic; renderShots(); }); /* the photo's tap: the whole picture and back, as on the front */
     el.querySelectorAll(".chars:not(.sub) .ch").forEach(c=> c.onclick=e=>{ e.stopPropagation(); charInfo(c.dataset.ch,c,d); }); });
-  wireSay(box); wireLinks(box);
+  wireSay(box); wireLinks(box); wireSrc(box); /* the finished card draws the reference button through backHTML; a card made from a photo never carries `from`, so this is a guard rather than a live path (v494) */
   box.querySelectorAll("[data-signai]").forEach(b=> b.onclick=()=>signAskAI(b.dataset.signai));
   box.querySelectorAll("[data-scriptset]").forEach(b=> b.onclick=async()=>{ const sg=SIGN[b.closest("[data-scriptseg]").dataset.scriptseg], on=b.dataset.scriptset==="1"; if(!sg||on===!!sg.trad) return; await setScript(sg,on); renderShots(); }); /* the mark by hand (v146); the AI is not asked again */
   wireAi(box);
