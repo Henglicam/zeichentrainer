@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=502; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=503; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -183,14 +183,20 @@ function srcPage(d){ if(!d||!d.from) return null; const pg=cardOf(d.from); retur
 const srcName=d=>{ const pg=srcPage(d); return pg?(pg.c||""):(d&&d.fromT||""); };
 /* the flashcard generated from this multicard text, if there is one — derived from the deck rather than stored on the
    item, so deleting the flashcard makes the button offer to generate again by itself (the v401 lesson) */
-const madeFrom=item=>item&&item.page&&item.c?deck().find(x=>x.from===item.page&&x.c===item.c):null;
+const madeFrom=item=>item&&item.page&&item.c?deck().find(x=>x.from===item.page&&(x.of?x.of===item.id:x.c===item.c)):null; /* by the item's id since v503 (`of`), so an edit on either side keeps the tie; a card made before v503 carries no `of` and still matches by its text */
 /* Generate flashcard (H: "that flashcard is generated without image. It's just a text"). The item keeps everything it
    has; a new card is written beside it with its own id and its own progress, so the two never fight over one row. */
 async function makeFlashcard(id){ const d=cardOf(id); if(!d||!d.page||!d.c) return null;
   const have=madeFrom(d); if(have) return have;
   const pg=cardOf(d.page), rec={ id:cardId(d.c), c:d.c, p:d.p||"", m:d.m||"", t:d.t||"Custom", at:Date.now(),
-    from:d.page, fromT:(pg&&pg.c)||"", v:APP_V };
+    from:d.page, of:d.id, fromT:(pg&&pg.c)||"", v:APP_V }; /* `of` (v503): WHICH text of the multicard, so a corrected character on either side does not strip the card of its picture and its reference */
   if(d.trad) rec.trad=d.trad;
+  /* the text's own review state travels with the card (v503): a flag with its note, the reader's other readings the AI check
+     needs, and a waiting AI suggestion — until v502 the card was born clean of all four, so a text H had flagged as wrong
+     made a flashcard that said nothing was wrong */
+  if(d.flag){ rec.flag=true; if(d.flagNote) rec.flagNote=d.flagNote; }
+  if(d.alts&&d.alts.length) rec.alts=d.alts.slice();
+  if(d.ai) rec.ai={...d.ai};
   if(d.ml) rec.ml=d.ml; if(d.ms) rec.ms={...d.ms};
   if(d.seg) rec.seg=d.seg.slice(); if(d.segs) rec.segs=d.segs.slice(); if(d.gloss) rec.gloss=d.gloss.slice();
   if(d.kind==="sign") rec.kind="sign";
@@ -2490,7 +2496,7 @@ function pageOf(d){
    but the multicard's own headline — "Better say, this is from the rice cooker multicard". */
 function srcView(d){
   const pg=srcPage(d); if(!pg||!pg.shot||!d.c) return null;
-  const me=pageItems(pg).find(x=>x.c===d.c); if(!me) return null; /* the multicard's own text this card was made of */
+  const me=pageItems(pg).find(x=>d.of?x.id===d.of:x.c===d.c); if(!me) return null; /* the multicard's own text this card was made of — by id since v503, by text for a card made before it */
   const rs=photoRegions({id:pg.shot}); if(!rs.some(r=>r.card===me.id)) return null;
   const blob=fullPhoto(pg); if(!blob) return null; /* the multicard's photo was deleted: the card keeps its text alone */
   return {shot:pg.shot,rs,blob,me:me.id,src:true};
