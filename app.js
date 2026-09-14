@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=492; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=493; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -137,6 +137,13 @@ const cardOf = id => deck().find(d=>d.id===id); /* cards are addressed by id eve
 const isPage=d=>!!(d&&d.kind==="page");
 const pageItems=pg=>(pg&&pg.items||[]).map(cardOf).filter(Boolean);
 const inPage=d=>!!(d&&d.page&&cardOf(d.page)); /* an item of a page that still exists: the list shows the page, not the item */
+/* the star is the learner's own mark on a FLASHCARD (v425). A multicard is a reference and not a flashcard, and its own
+   texts are its rows — never in the Cards list, never in Learn, never in the Deck count (v487) —, so a star on either is a
+   write nothing ever reads (H, v493: "ich darf in einer multicard kein sternchen setzen koennen. Nur in Cards."). The
+   control is gone from both, and this predicate makes a star an older build left on one INERT rather than unreachable: it
+   would otherwise count in the filter sheet's Starred row and switch a filter on over a list that can never show it, which
+   is the v308 trap. Nothing is deleted — the field stays on the record and in the export. */
+const starred=d=>!!(d&&d.star)&&!isPage(d)&&!inPage(d);
 const deckCount=()=>deck().filter(d=>!hiddenCard(d)).length;
 const tabCount=()=>tabPool().length; /* the Cards count is the open tab's own (v477) */
 const pageOfShot=shot=>deck().find(d=>isPage(d)&&d.shot===shot)||null;
@@ -242,7 +249,7 @@ function filterGroups(scope){
     ...(tags.length&&un?[{k:"tag:"+UNTAGGED, label:t("Untagged"), n:un, on:tagOn(scope,UNTAGGED)}]:[])];
   /* Starred (v425): the learner's own mark, a row like any other — on Cards it joins the status rows, on Learn it stands on its
      own beside the tags, and it appears only once a card is starred, as the AI row does. */
-  const nStar=deck().filter(d=>d.star).length;
+  const nStar=deck().filter(starred).length;
   if(scope==="learn") return [...(nStar?[{head:t("Starred"), rows:[{k:"star", label:t("Starred"), n:nStar, on:!!S.settings.learnStar}]}]:[]),
     {head:t("Tags"), rows:[{k:"", label:t("All cards"), n:deck().filter(d=>d.c).length, on:!learnTags().length&&!S.settings.learnStar},...tagRows]}];
   /* on Cards the numbers are the OPEN TAB's own and follow the list's own page rule (v477): the sheet used to count raw
@@ -250,7 +257,7 @@ function filterGroups(scope){
      agreed — with two tabs that gap would read as broken ("⚑ Flagged (12)" over a list of one). */
   const pool=tabPool(), cnt=f=>pool.filter(d=>anyOf(d,f)).length;
   const nAi=deck().filter(d=>d.ai).length; /* a row's VISIBILITY stays deck-wide — a row that vanished on one tab while its filter was on is the v308 trap; only the numbers follow the tab */
-  const st=[...(nStar?[{k:"star", label:t("Starred"), n:pool.filter(d=>d.star).length, on:S.filterStar}]:[]),
+  const st=[...(nStar?[{k:"star", label:t("Starred"), n:pool.filter(starred).length, on:S.filterStar}]:[]),
     {k:"flag", label:t("⚑ Flagged"), n:cnt(d=>d.flag), on:S.filterFlag},
     ...(nAi?[{k:"ai", label:t("AI"), n:cnt(d=>d.ai), on:S.filterAi}]:[]),
     {k:"unv", label:t("Unverified"), n:cnt(d=>d.mt&&!d.mt.verified), on:S.filterUnv}];
@@ -303,7 +310,7 @@ async function setFilter(scope,k){
   else if(k==="unv") S.filterUnv=!S.filterUnv;
   else { const v=k.slice(4); S.filterTags=S.filterTags.includes(v)?S.filterTags.filter(y=>y!==v):[...S.filterTags,v]; }
 }
-function learnChipsHTML(){ const st=deck().some(d=>d.star); /* the pill shows for a starred deck too, even without a single tag (v425) */
+function learnChipsHTML(){ const st=deck().some(starred); /* the pill shows for a starred deck too, even without a single tag (v425) */
   if(!st&&S.settings.learnStar) setSetting("learnStar",false); /* the last star taken off leaves no row to switch the filter back off (the v308 rule) */
   if(!allTags().length&&!st) return ""; return `<div class="chipset learnchips">${filterPillHTML("learn")}</div>`; }
 function wireLearnChips(){ wireFilterPill("learn",render); }
@@ -2383,7 +2390,7 @@ async function setFlag(id,on,note){
    learner's own mark and means nothing to the app — the review flag is the app's word for "this card looks wrong", and the two
    must not be one thing. `star` is a card field like `flag`, so export and import carry it without a line of their own. */
 async function setStar(id,on){
-  const d=cardOf(id); if(!d) return;
+  const d=cardOf(id); if(!d||isPage(d)||inPage(d)) return; /* a multicard and its own texts carry no star (v493) */
   const upd={...d}; if(on) upd.star=true; else delete upd.star;
   await putCard(upd,id);
 }
@@ -2694,7 +2701,7 @@ function renderStudy(main){
        star's does (v427) — the row is all tint, so a colour could not say it. The card detail keeps its phrases: its buttons
        sit two to a row beside "Test this card" and "Delete card", where one word would read as the odd one out. */
     back=`<div style="margin-top:26px">${backHTML(d,{study:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="grades">${grds}</div>
-      <div class="backacts"><button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button><button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button><button class="del" id="edit-card">${t("✎ Edit")}</button></div>${linkedHTML(d)}</div>`;
+      <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button><button class="del" id="edit-card">${t("✎ Edit")}</button></div>${linkedHTML(d)}</div>`;
   } else {
     back=swipeHint(d);
   }
@@ -2980,7 +2987,7 @@ function cardsList(){
   const any=anyOf;
   const fieldsOf=d=>isPage(d)?[d.c,...(d.tags||[]),...pageItems(d).flatMap(fieldsOf)]:[d.c,d.trad,d.p,d.m,...Object.values(d.ms||{}),d.flagNote,...(d.tags||[])];
   /* several rows may be ticked at once (v366): a card must match one of the ticked status rows and one of the ticked tags */
-  if(S.filterUnv||S.filterFlag||S.filterAi||S.filterStar) list=list.filter(d=>(S.filterUnv&&any(d,x=>x.mt&&!x.mt.verified))||(S.filterFlag&&any(d,x=>x.flag))||(S.filterAi&&any(d,x=>x.ai))||(S.filterStar&&d.star));
+  if(S.filterUnv||S.filterFlag||S.filterAi||S.filterStar) list=list.filter(d=>(S.filterUnv&&any(d,x=>x.mt&&!x.mt.verified))||(S.filterFlag&&any(d,x=>x.flag))||(S.filterAi&&any(d,x=>x.ai))||(S.filterStar&&starred(d)));
   if(S.filterTags.length) list=list.filter(d=>S.filterTags.some(g=>any(d,x=>hasTag(x,g))));
   if(q) list=list.filter(d=>fieldsOf(d).filter(Boolean).join(" ").toLowerCase().includes(q));
   return list;
@@ -3013,7 +3020,7 @@ function cardTileHTML(d,pk){
   const flag=pg?its.some(x=>x.flag):d.flag, ai=pg?its.some(x=>x.ai):d.ai;
   return `<button class="ctile${pg?" page":""}${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}"${pk?"":` data-lp="${esc(d.id)}"`}>
       ${pg?`<span class="tstack">`:""}<span class="tw${sv?" src":""}">${sv?`<img class="tbg" src="${su}" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="tpw"><img class="tpi" src="${su}" alt="" loading="lazy" decoding="async">${regionsHTML({id:sv.shot},sv.rs,{learn:true,me:sv.me,span:true})}</span>`:pic?`<img class="tbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:`<span class="tglyph hanzi">${esc([...((pg?(its[0]&&its[0].c):d.c)||"?")][0]||"?")}</span>`}
-        ${pk?`<span class="tick" aria-hidden="true"></span>`:starHTML(d)}
+        ${pk?`<span class="tick" aria-hidden="true"></span>`:pg?"":starHTML(d)}
         ${pg?`<span class="cnt">${its.length}</span>`:""}
         ${(flag||ai)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}</span>`:""}</span>
 ${pg?`</span><span class="prog" aria-hidden="true"><i style="width:${its.length?Math.round(made/its.length*100):0}%"></i></span>`:""}
@@ -3031,7 +3038,7 @@ function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page d
   return `<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
       <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${srcPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
-      <span class="cs">${dot?stateMark(d.id):""}${pk?"":starHTML(d)}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}${cardStatus(d)}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
+      <span class="cs">${dot?stateMark(d.id):""}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}${cardStatus(d)}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
 }
 /* a filter whose row is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the
    list anymore" — the AI chip shows only while suggestions wait, so the filter had no chip left to switch it off and the
@@ -3039,7 +3046,7 @@ function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page d
    function since v445: the card detail reads cardsList() to know its neighbours, and an Accept or a cleared star taken
    ON the open card would otherwise leave the detail looking at a card its own list says is not there. */
 function normaliseFilters(){
-  if(S.filterStar&&!deck().some(d=>d.star)) S.filterStar=false;
+  if(S.filterStar&&!deck().some(starred)) S.filterStar=false;
   if(S.filterAi&&!deck().some(d=>d.ai)) S.filterAi=false;
   S.filterTags=S.filterTags.filter(g=>g===UNTAGGED?allTags().length&&untaggedCount():allTags().includes(g));
 }
@@ -3108,18 +3115,15 @@ function renderPageDetail(main,d){
   normaliseFilters(); /* the same rule as the ordinary detail (v308/v445): a star cleared on the open page must not strand it outside its own list */
   const list=cardsList(), li=list.findIndex(x=>x.id===d.id), sw=li>=0&&list.length>1;
   main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">${fromCard()?t("← Back to the flashcard"):t("← Cards")}</button><span class="badge">${esc((d.tags||[]).join(", "))}</span></div>
+    <div class="topline"><button class="del" id="back">${fromCard()?t("← Back to the flashcard"):onPages()?"← "+t("Multicards"):t("← Cards")}</button><span class="badge">${esc((d.tags||[]).join(", "))}</span></div>
     <div class="card bare">${pageBodyHTML(d)}</div>
     <div class="detailacts">
-      <button class="btn${d.star?" on":""}" id="d-star">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>
-      <button class="btn danger" id="d-del">${t("Delete card")}</button>
+      <button class="btn danger" id="d-del" style="grid-column:1/-1">${t("Delete card")}</button>
     </div>
   </div>`;
   $("#back").onclick=fromCard()?backToCard:backToList; /* opened from a generated flashcard's reference pill (v492): back to that card */
   wireRegions(main); /* the dots and the sheet (v448) */
   main.querySelectorAll("#pitems .crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.id; S.detailFrom="page:"+d.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); });
-  wireStars($("#pitems"));
-  $("#d-star").onclick=async()=>{ await setStar(d.id,!d.star); render(); };
   $("#d-del").onclick=async()=>{ await delCustom(d.id); if(fromCard()){ backToCard(); return; } S.detail=null; render(); }; /* at once, with Undo (v268) — the texts go with it; a generated flashcard survives its multicard (v487), so the way back is still there and its pill becomes plain text */
   /* a page is swiped like any other open card (v460, H: "Multicards lassen sich nicht swipen"): v445 gave the Cards
      detail its carousel and v453's page renders through this function instead, which never called wireSwipe — so the one
@@ -3158,7 +3162,7 @@ function renderCardDetail(main,c){
     <div class="detailacts">
       ${d.c?`<button class="btn primary" id="d-test">${t("Test this card")}</button>`:""}
       <button class="btn" id="d-edit">${t("Edit")}</button>
-      <button class="btn${d.star?" on":""}" id="d-star">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>
+      ${inPage(d)?"":`<button class="btn${d.star?" on":""}" id="d-star">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`} <!-- a multicard's own text carries no star (v493) -->
       <button class="btn${d.flag?" on":""}" id="d-flag">${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}</button>
       ${d.c?`<button class="btn" id="d-share">${t("Share")}</button>`:""}
       <button class="btn danger" id="d-del"${d.c?' style="grid-column:1/-1"':""}>${t("Delete card")}</button>
@@ -3175,7 +3179,7 @@ function renderCardDetail(main,c){
     S.single=c; S.queue=[c]; S.idx=0; S.revealed=false; S.mode="study"; render();
   };
   $("#d-edit").onclick=()=>{ S.editing=c; render(); };
-  $("#d-star").onclick=async()=>{ await setStar(c,!d.star); render(); }; /* the learner's own mark (v425) */
+  if($("#d-star")) $("#d-star").onclick=async()=>{ await setStar(c,!d.star); render(); }; /* the learner's own mark (v425); a multicard's own text has no such button (v493) */
   $("#d-flag").onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   const sh=$("#d-share"); if(sh) sh.onclick=()=>shareCard(c); /* one image through the share sheet (v269) */
   wireSay(); wireChars(d); wireLinks(); wireSrc();
