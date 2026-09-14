@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=482; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=483; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -7766,7 +7766,7 @@ async function shellCheck(){
   ctrl.postMessage({type:"refresh"});
 }
 /* ---------- updates without a VPN: ask the worker to pull a newer shell from a mirror ---------- */
-const MIRROR_DEFAULT="https://cdn.jsdelivr.net/gh/henglicam/zeichentrainer@main/", MIRROR_EVERY=600000; /* the mirror's own cache is purged by the workflow purge-mirror.yml on every push to main (v327), so ten minutes is the lag at most */
+const MIRROR_DEFAULT="https://fastly.jsdelivr.net/gh/henglicam/zeichentrainer@main/", MIRROR_EVERY=600000; /* fastly., not cdn. (v483): cdn.jsdelivr.net is DNS-hijacked in China for a reported two fifths of users — it resolves to long-blocked addresses or to nothing, so those phones get no updates and no reader files at all. fastly.jsdelivr.net is jsDelivr's own alternative endpoint, same paths, and answered H's Xiaomi without a VPN. The mirror's own cache is purged by purge-mirror.yml on every push to main (v327), so ten minutes is the lag at most */
 const MIRROR={busy:false,last:null,at:0};
 function mirrorURL(){ const u=(S.settings.mirror||MIRROR_DEFAULT).trim(); return u.endsWith("/")?u:u+"/"; }
 function mirrorCheck(force){
