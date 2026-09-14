@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=498; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=499; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2481,7 +2481,7 @@ function srcView(d){
 const frontPage=d=>pageOf(d)||srcView(d); /* one page view for both: a card that IS one of several on a photo (v452), and one MADE from a multicard's text (v489) */
 function pageHTML(d,pg){
   const u=urlOf(pg.blob);
-  return `<div class="picbox page"${pg.src?"":` data-pic="1"`}><img class="picbg" src="${u}" alt="" aria-hidden="true"><div class="pagewrap"><img class="signimg" src="${u}" alt="photo">${regionsHTML({id:pg.shot},pg.rs,{learn:true,me:pg.me||d.id})}</div></div>`; /* the wrapper shrinks to the picture's rendered size, so the regions' percent coordinates land on it; the blurred fill shows beside a tall page */
+  return `<div class="picbox page"${pg.src?"":` data-pic="1"`}><img class="picbg" src="${u}" alt="" aria-hidden="true"><div class="pagewrap"><img class="signimg" src="${u}" alt="photo">${regionsHTML({id:pg.shot},pg.rs,{learn:true,me:pg.me||d.id,only:!!pg.src})}</div></div>`; /* v499: a generated card (src) frames its own text alone; a v452 page front still frames every text — the wrapper shrinks to the picture's rendered size, so the regions' percent coordinates land on it; the blurred fill shows beside a tall page */
 }
 function frontPic(d,o){
   const pk=S.peek&&S.peek!==d.id?cardOf(S.peek):null; /* Learn: a linked card's photo, tapped in the "Also on another photo" row (v155) */
@@ -3037,7 +3037,7 @@ function cardTileHTML(d,pk){
   const head=pg?esc(d.c):esc((d.trad||d.c||"").replace(/\n/g," "));
   const flag=pg?its.some(x=>x.flag):d.flag, ai=pg?its.some(x=>x.ai):d.ai;
   return `<button class="ctile${pg?" page":""}${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}"${pk?"":` data-lp="${esc(d.id)}"`}>
-      ${pg?`<span class="tstack">`:""}<span class="tw${sv?" src":""}">${sv?`<img class="tbg" src="${su}" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="tpw"><img class="tpi" src="${su}" alt="" loading="lazy" decoding="async">${regionsHTML({id:sv.shot},sv.rs,{learn:true,me:sv.me,span:true})}</span>`:pic?`<img class="tbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:`<span class="tglyph hanzi">${esc([...((pg?(its[0]&&its[0].c):d.c)||"?")][0]||"?")}</span>`}
+      ${pg?`<span class="tstack">`:""}<span class="tw${sv?" src":""}">${sv?`<img class="tbg" src="${su}" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="tpw"><img class="tpi" src="${su}" alt="" loading="lazy" decoding="async">${regionsHTML({id:sv.shot},sv.rs,{learn:true,me:sv.me,span:true,only:true})}</span>`:pic?`<img class="tbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:`<span class="tglyph hanzi">${esc([...((pg?(its[0]&&its[0].c):d.c)||"?")][0]||"?")}</span>`}
         ${pk?`<span class="tick" aria-hidden="true"></span>`:pg?"":starHTML(d)}
         ${pg?`<span class="cnt">${its.length}</span>`:""}
         ${(flag||ai)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}</span>`:""}</span>
@@ -7376,7 +7376,11 @@ function regionsHTML(rec,rs,o){
   /* no state class on the photo: the frame is the same for every word, and .ff is the frame itself — its own container,
      so it can thin its stroke when the word is only a few pixels tall (a panel button label renders about 16 x 9 px) */
   const wrap=(o&&o.span)?"span":"div"; /* v490: inside the Cards tile, which is a <button>, a <div> is not allowed content */
-  return `<${wrap} class="regions${learn?" learn":""}"${learn?"":` data-regions="${rec.id}"`}>${rs.map(r=>{ const b=r.box, pc=x=>(x*100).toFixed(2)+"%";
+  /* v499 (H: "bei den aus Multicards gewonnenen Flashcards immer nur das Wort einrahmen, um das es in der Karte geht, die
+     anderen nicht"): a generated flashcard's front and tile draw ONE frame, the card's own; the sibling texts are not in
+     the markup at all. The spotlight of .me still steps the rest of the picture back, so the word is found the same way. */
+  const only=!!(o&&o.only); if(only) rs=rs.filter(r=>r.card===o.me);
+  return `<${wrap} class="regions${learn?" learn":""}${only?" only":""}"${learn?"":` data-regions="${rec.id}"`}>${rs.map(r=>{ const b=r.box, pc=x=>(x*100).toFixed(2)+"%";
     return `<${tag} class="region${learn&&o.me===r.card?" me":""}" ${learn?"data-rid":"data-region"}="${esc(r.rid)}" style="left:${pc(b.x)};top:${pc(b.y)};width:${pc(b.w)};height:${pc(b.h)}${b.a?`;transform:rotate(${b.a}deg)`:""}"${learn?' aria-hidden="true"':` aria-label="${esc(r.zh.replace(/\n/g," "))}"`}><i class="ff" aria-hidden="true"></i></${tag}>`; }).join("")}</${wrap}>`;
 }
 function regionLine(rs,pg){ const n=rs.filter(r=>r.card).length; /* pg (v453): the photo's cards are one page's texts — and since v488 what a multicard counts is its flashcards, the only number on it that can move */
