@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=494; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=495; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3098,7 +3098,7 @@ function detailCardHTML(d,sw){
         :`<div style="margin-top:22px">${backHTML(d,{noSrc:!!(pg&&pg.src)})}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}${hint("Tap the character to hide the answer")}`}`;
 }
 const fromPage=()=>typeof S.detailFrom==="string"&&S.detailFrom.startsWith("page:")?S.detailFrom.slice(5):null; /* v453: the item's detail was opened from its page */
-function backToPage(){ const pid=fromPage(); S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.detail=pid&&cardOf(pid)?pid:null; render(); window.scrollTo(0,0); }
+function backToPage(){ const pid=fromPage(), cid=S.detail, fr=S.detailFrom; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.detail=pid&&cardOf(pid)?pid:null; render(); window.scrollTo(0,0); reopenLookup(cid,fr); /* v495: back to the look-up sheet More was pressed on, not to the bare multicard */ }
 const fromCard=()=>typeof S.detailFrom==="string"&&S.detailFrom.startsWith("card:")?S.detailFrom.slice(5):null; /* v492: the multicard was opened from a generated flashcard's reference pill */
 const fromLearn=()=>S.detailFrom==="learn";
 /* back into the session the jump started in (v494): nothing of it was touched, so the card comes back open at the same place */
@@ -7284,7 +7284,7 @@ async function warmReader(){ /* the Camera tab loads the reader ahead of the fir
    phase 2 stores the model's own regions, since a text without a card has no other home. */
 const REGION_MIN=2; /* a photo that made this many cards is a marked photo — the split's own SPLIT_MIN */
 const REGION_HIT=44; /* the smallest tap target in CSS px: a small label's box is grown around its centre for the hit test only, never for the drawing */
-let INBOX_SCROLL=0, LOOKUP=null; /* INBOX_SCROLL: where the photo was when More opened the detail · LOOKUP: the open sheet {shot,rid,el} */
+let INBOX_SCROLL=0, LOOKUP=null, LOOK_BACK=null; /* INBOX_SCROLL: where the photo was when More opened the detail · LOOKUP: the open sheet {shot,rid,el} · LOOK_BACK: the sheet More was pressed on, so ← Back undoes that one step (v495) */
 /* the inbox as tiles, two photos a row (v462): a tile is the photo, when it was taken and how many cards it made;
    a tap opens it full width with its frame, its reading and its buttons. A photo that is BUSY — a frame standing, a
    reading running, a finished card, a note, a place in the batch queue — is always full width, so nothing that is
@@ -7387,9 +7387,9 @@ function wireRegions(root){
 }
 /* the sheet over the photo: the flashcard without the photo, since the photo is right there. Not modal on purpose — the
    page keeps scrolling and the next word can be tapped while it stands, which swaps its content in place. */
-function openLookup(shot,rid){
+function openLookup(shot,rid,silent){
   const r=regionOf(shot,rid), d=r&&r.card&&cardOf(r.card); if(!r||!d) return;
-  bump("regionTaps");
+  if(!silent) bump("regionTaps"); /* silent: the sheet coming back with ← Back (v495) is the same look-up, not a second one */
   const pid=d.page&&cardOf(d.page)&&isPage(cardOf(d.page))?d.page:null;
   const made=pid?madeFrom(d):null; /* the flashcard this text has already generated, if any */
   const html=`<div class="sheet lookup" role="dialog" aria-label="${esc(d.c)}">
@@ -7417,7 +7417,7 @@ function openLookup(shot,rid){
   const op=el.querySelector("#lk-open");
   if(op) op.onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, it=cid&&cardOf(cid), fc=it&&madeFrom(it); if(!fc) return;
     closeLookup(); INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=fc.id; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
-  el.querySelector("#lk-more").onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, from=LOOKUP&&LOOKUP.from; closeLookup(); if(!cid||!cardOf(cid)) return; if(!from) INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom=from?"page:"+from:"inbox"; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
+  el.querySelector("#lk-more").onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, from=LOOKUP&&LOOKUP.from, shot=LOOKUP&&LOOKUP.shot, rid=LOOKUP&&LOOKUP.rid; closeLookup(); if(!cid||!cardOf(cid)) return; if(!from) INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom=from?"page:"+from:"inbox"; LOOK_BACK={shot,rid,card:cid,from:S.detailFrom}; /* v495: More is one step deeper into this look-up, so ← Back has to undo one step and not two */ S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
 }
 /* the grade. Only on a MARKED PHOTO that is not a multicard — v448's own screen, which every photo from before v453
    still is, and whose texts are ordinary flashcards — where the three grades of v421 stay, because there the tap really
@@ -7439,7 +7439,17 @@ function afterMake(){
   if(LOOKUP) openLookup(LOOKUP.shot,LOOKUP.rid);
 }
 function closeLookup(){ if(!LOOKUP) return; const L=LOOKUP; LOOKUP=null; markRegion(null); L.el.remove(); document.removeEventListener("pointerdown",L.onDown,true); document.removeEventListener("keydown",L.onKey); }
-function backToPhoto(){ const y=INBOX_SCROLL; S.detail=null; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.mode="inbox"; render(); requestAnimationFrame(()=>window.scrollTo(0,y)); }
+/* the sheet the detail was opened from comes back with it (v495, H: "If I tap on a word on a multicard, then the
+   description for that word opens and I go to more … Now if I go back, I should land where I came from (description) and
+   not at the multicard"): More is one step deeper into the same look-up, so ← Back undoes that step, not two. The note is
+   honoured only for the very card and the very flag it was taken on, so every other way out of the detail — a tab tap, a
+   swipe, a delete — leaves it stale and inert; and only while the text is really on the screen that was just drawn, so a
+   photo the Camera tab no longer lists (v470) cannot raise a sheet over the shutter. */
+function reopenLookup(card,from){ const L=LOOK_BACK; LOOK_BACK=null;
+  if(!L||L.card!==card||L.from!==from) return;
+  if(![...document.querySelectorAll(".regions [data-region]")].some(e=>e.dataset.region===L.rid)) return;
+  openLookup(L.shot,L.rid,true); }
+function backToPhoto(){ const y=INBOX_SCROLL, cid=S.detail, fr=S.detailFrom; S.detail=null; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.mode="inbox"; render(); requestAnimationFrame(()=>window.scrollTo(0,y)); reopenLookup(cid,fr); }
 function renderInbox(main){
   warmReader();
   /* the Camera tab opens on the shutter, not on a list of photos (v466, H: "Auf der Kameraseite dürften nach meiner Logik im
