@@ -250,7 +250,9 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 .scriptref .hanzi{font-family:var(--hanzi);font-size:18px;color:var(--label)}
 .script{margin:10px 0 0;text-align:center} .script .pill{margin-left:0} .script.back{margin:0 0 10px}
 .flag{display:inline-block;font-size:13px;font-weight:500;padding:4px 10px;border-radius:999px;color:var(--tint);background:var(--tint-soft);margin-top:12px}
-.aibar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;padding:8px 8px 8px 14px;border-radius:var(--r);background:var(--ok-soft);color:var(--ok);font-size:14px;font-weight:600}
+.aibar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 10px;padding:8px 8px 8px 14px;border-radius:var(--r);background:var(--ok-soft);color:var(--ok);font-size:14px;font-weight:600}
+.aibar .aiacts2{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-left:auto}
+.aibar .btn.plain{background:var(--fill);color:var(--label)} /* the quiet second action, the sheet's own Cancel look — beside a red Accept all a tinted Dismiss all would read as a second red button (v480) */
 
 /* character parts on the back */
 .chars{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:16px}
