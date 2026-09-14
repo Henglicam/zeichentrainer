@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=496; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=497; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2356,7 +2356,7 @@ const GUIDE=()=>[
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
     t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.")]},
   {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.")+" "+t("A card from a screen or a panel shows the whole picture with a frame around every text and its own lit up, and says which one it is, 1 of 4; a tap on the photo shows the text alone."),
-    t("Grade yourself: Hard, Medium, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
+    t("Grade yourself: Not yet, or Got it. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
     t("Swipe the closed card left or right to pick another one — nothing is graded, and a card you skip stays due for next time.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Once a photo has made a multicard, two tabs split them — Cards and Multicards. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included. Push an open card sideways for the next one in the list."),
     t("Tap a text on a multicard to look it up, and press Generate flashcard to make a card of it. Learn studies the flashcards, never the multicard itself."),
@@ -2700,14 +2700,21 @@ function renderStudy(main){
        feel like a decision. Hard is the old "again" (the card comes back later in the same session), Medium the old "good",
        Easy unchanged; the old "hard" grade — I knew it, barely, come back tomorrow — is gone, so a card half known repeats
        today instead. The schedule itself is untouched: every card keeps the interval and ease it has. */
-    const grds=[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>
-      `<button class="grade" data-g="${g}"><span class="lbl">${t(l)}</span></button>`).join("");
+    /* Two buttons since v497 (H, on seeing the three tiles still there: "ich hab in den flash cards immer noch hart, medium,
+       easy, anstatt [got it] und not yet", then "Go fuer Grade-Buttons"): the vote v487 built for the multicard sheet and
+       v488 took away again — a red cross NOT YET and a green check GOT IT, the app's own two states (v461). Not yet is
+       "again" (the card comes back later in the same session), Got it is "good" (the normal interval); "easy" is no longer
+       reachable from this screen and stays in schedule() for the rows that carry it, as "hard" has since v421. The cost,
+       named to H before his Go: a card he finds trivial takes the normal interval, so the deck grows to long intervals more
+       slowly. The three grades stay on a MARKED PHOTO's sheet (v448), where the tap is a review of an ordinary card. */
+    const grds=[["again","Not yet",MARK_CROSS,"no"],["good","Got it",MARK_TICK,"yes"]].map(([g,l,ic,cl])=>
+      `<button class="vt ${cl}" data-g="${g}"><i aria-hidden="true">${ic}</i><span class="lbl">${t(l)}</span></button>`).join("");
     /* Star, Flag, Edit — one word each (v431, H on the row wrapping to two lines: "Koennen wir hier nicht einfach schreiben
        Star, Flag, Edit? Eine Zeile?"): the flag carried the detail's own phrases, "⚑ Flag for review" and "⚑ Clear flag",
        which are right on a wide pill and too long between two one-word buttons. The label still carries the state, as the
        star's does (v427) — the row is all tint, so a colour could not say it. The card detail keeps its phrases: its buttons
        sit two to a row beside "Test this card" and "Delete card", where one word would read as the odd one out. */
-    back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="grades">${grds}</div>
+    back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="vote">${grds}</div>
       <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button><button class="del" id="edit-card">${t("✎ Edit")}</button></div>${linkedHTML(d)}</div>`;
   } else {
     back=swipeHint(d);
@@ -2732,7 +2739,7 @@ function renderStudy(main){
   const ed=$("#edit-card"); if(ed) ed.onclick=()=>{ S.editFrom="study"; S.editing=c; render(); };
   wireSay(); wireChars(d); wireLinks(); wireSrc(); wireLearnChips();
   wireAi();
-  document.querySelectorAll(".grade").forEach(b=> b.onclick=()=>grade(b.dataset.g));
+  document.querySelectorAll(".grade,.vt").forEach(b=> b.onclick=()=>grade(b.dataset.g)); /* .vt: the two-button vote of v497 */
 }
 
 /* Swipe the closed card sideways to pick another card of the session (v414, H: "koennen wir bitte im Lernmodus Swipes nach rechts und links
@@ -3593,6 +3600,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  497:"Two buttons under a card instead of three: Not yet, and Got it.",
   494:"While learning a flashcard made from a multicard, tap its name under the meaning to look at the multicard — and come straight back to the card you were on.",
   492:"Open a multicard from a flashcard and the button at the top left takes you straight back to that card.",
   490:"In the Cards list, a flashcard made from a multicard now shows that multicard's photo with its own text lit up on it — and a card you mark for deletion is ticked again.",
