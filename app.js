@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=489; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=490; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2985,14 +2985,22 @@ function cardsList(){
    Flashcard."), and the two tells of v461's row come with it: the picture sits on a stack of plates — the language iOS
    Photos uses for an album — with the count on it, and a bar under the picture says how far through it you are.
    pageRowHTML is gone with the row list; cardRowHTML stays, since the page detail still lists its texts as rows. */
+/* A flashcard generated from a multicard has no picture of its own (v487), so its tile was the glyph tile — v489 named
+   that and left it, and H answered the next morning: "The multicards photo is not shown in the Cards list". The tile is
+   its LEARN FRONT IN MINIATURE now: the multicard's whole photo with this card's own text framed and lit on it, which is
+   also what tells the three cards made from one multicard apart — the picture is the same, the light is not. Nothing is
+   stored (the v401 lesson): srcView(d) follows `from` to the multicard exactly as the front does, so deleting the
+   multicard's photo simply gives the glyph tile back. A multicard's own tile keeps its stack of plates, its count chip
+   and its bar, so the two can never be confused. */
 function cardTileHTML(d,pk){
   const pg=isPage(d), its=pg?pageItems(d):null;
   const made=pg?its.filter(x=>madeFrom(x)).length:0; /* v488: how many of its texts you have turned into flashcards */
+  const sv=pg?null:srcView(d), su=sv?urlOf(sv.blob):""; /* v490: the multicard's photo, derived rather than stored */
   const pic=pg?fullPhoto(d):d.img;
   const head=pg?esc(d.c):esc((d.trad||d.c||"").replace(/\n/g," "));
   const flag=pg?its.some(x=>x.flag):d.flag, ai=pg?its.some(x=>x.ai):d.ai;
   return `<button class="ctile${pg?" page":""}${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}"${pk?"":` data-lp="${esc(d.id)}"`}>
-      ${pg?`<span class="tstack">`:""}<span class="tw">${pic?`<img class="tbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:`<span class="tglyph hanzi">${esc([...((pg?(its[0]&&its[0].c):d.c)||"?")][0]||"?")}</span>`}
+      ${pg?`<span class="tstack">`:""}<span class="tw${sv?" src":""}">${sv?`<img class="tbg" src="${su}" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="tpw"><img class="tpi" src="${su}" alt="" loading="lazy" decoding="async">${regionsHTML({id:sv.shot},sv.rs,{learn:true,me:sv.me,span:true})}</span>`:pic?`<img class="tbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:`<span class="tglyph hanzi">${esc([...((pg?(its[0]&&its[0].c):d.c)||"?")][0]||"?")}</span>`}
         ${pk?`<span class="tick" aria-hidden="true"></span>`:starHTML(d)}
         ${pg?`<span class="cnt">${its.length}</span>`:""}
         ${(flag||ai)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}</span>`:""}</span>
@@ -3555,6 +3563,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  490:"In the Cards list, a flashcard made from a multicard now shows that multicard's photo with its own text lit up on it — and a card you mark for deletion is ticked again.",
   489:"A flashcard made from a multicard shows that multicard's photo again, with its own text framed on it and the multicard's name under the picture.",
   487:"A multicard is a reference now: tap any text on it and press Generate flashcard to make a text-only card that names where it came from.", /* v488 corrected this line rather than adding its own: 487 and 488 reach every phone in the same update, and the note a learner reads has to be true of what is on it */
   486:"A sign the reader read clearly keeps the picture the reader measured, instead of one the AI guessed at.",
@@ -7318,8 +7327,9 @@ function regionsHTML(rec,rs,o){
   const tag=learn?"span":"button";
   /* no state class on the photo: the frame is the same for every word, and .ff is the frame itself — its own container,
      so it can thin its stroke when the word is only a few pixels tall (a panel button label renders about 16 x 9 px) */
-  return `<div class="regions${learn?" learn":""}"${learn?"":` data-regions="${rec.id}"`}>${rs.map(r=>{ const b=r.box, pc=x=>(x*100).toFixed(2)+"%";
-    return `<${tag} class="region${learn&&o.me===r.card?" me":""}" ${learn?"data-rid":"data-region"}="${esc(r.rid)}" style="left:${pc(b.x)};top:${pc(b.y)};width:${pc(b.w)};height:${pc(b.h)}${b.a?`;transform:rotate(${b.a}deg)`:""}"${learn?' aria-hidden="true"':` aria-label="${esc(r.zh.replace(/\n/g," "))}"`}><i class="ff" aria-hidden="true"></i></${tag}>`; }).join("")}</div>`;
+  const wrap=(o&&o.span)?"span":"div"; /* v490: inside the Cards tile, which is a <button>, a <div> is not allowed content */
+  return `<${wrap} class="regions${learn?" learn":""}"${learn?"":` data-regions="${rec.id}"`}>${rs.map(r=>{ const b=r.box, pc=x=>(x*100).toFixed(2)+"%";
+    return `<${tag} class="region${learn&&o.me===r.card?" me":""}" ${learn?"data-rid":"data-region"}="${esc(r.rid)}" style="left:${pc(b.x)};top:${pc(b.y)};width:${pc(b.w)};height:${pc(b.h)}${b.a?`;transform:rotate(${b.a}deg)`:""}"${learn?' aria-hidden="true"':` aria-label="${esc(r.zh.replace(/\n/g," "))}"`}><i class="ff" aria-hidden="true"></i></${tag}>`; }).join("")}</${wrap}>`;
 }
 function regionLine(rs,pg){ const n=rs.filter(r=>r.card).length; /* pg (v453): the photo's cards are one page's texts — and since v488 what a multicard counts is its flashcards, the only number on it that can move */
   return pg?t("{0} texts on this page, {1} as flashcards.",n,rs.filter(r=>{ const d=r.card&&cardOf(r.card); return !!(d&&d.page&&madeFrom(d)); }).length)
