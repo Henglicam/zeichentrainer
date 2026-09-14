@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=484; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=485; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -554,6 +554,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v485","Rice cooker again: 11 cards"],
   ["app","v484","All users: near-cap warning"],
   ["app","v482","Multicard line: '1 learned'"],
   ["app","v481","Cards: the AI bar's tick and cross"],
@@ -3554,6 +3555,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  485:"A photo of a control panel makes one card per button again, even when the reader misread a character or two on the way.",
   480:"A whole batch of AI suggestions can be cleared in one tap: Dismiss all sits beside Accept all, and More offers one Undo in case you did not mean it.",
   478:"A multicard is a reference now: tap any text on it to turn that text into a flashcard, and a text you meet on two multicards or look up three times becomes one by itself. Learn studies those cards, not the multicard.",
   477:"Once a photo has made a multicard, the Cards tab splits in two — Cards and Multicards — so a multicard is never lost among the ordinary ones.",
@@ -7054,7 +7056,7 @@ function panelCovers(pic,lines){
     for(const c of a){ const n=p.get(c)||0; if(n){ p.set(c,n-1); hit++; } }
     return hit>=PANEL_COVER*a.length; });
 }
-async function picPanel(sg,id){
+async function picPanel(sg,id,checked){
   if(!sg||sg.picAsked||!sg.picEarly) return null;
   let e=null; try{ e=await sg.picEarly.p; }catch(err){ e={err:err&&err.message||String(err)}; } /* the wait is the rest of a call already in flight; the shimmer stands meanwhile, since v441 withheld the provisional for this very reading */
   if(e&&e.err){ noPicture(sg,id,e.err,null); return null; } /* v472: a parked call that failed was swallowed here without a word in the record */
@@ -7068,8 +7070,17 @@ async function picPanel(sg,id){
      line's characters must be found among the answer's own elements. A first cut compared the counts instead
      (labels.length > lines.length) and would have let a board's headline vanish whenever the model listed four plates
      without it. */
-  const covers=panelCovers(pic,sg.lines||[]);
-  if(id){ const N=numsFor(id); if(N) N.panel={labels:pic.labels.length,sure:!!sg.sureLines,covers,lines:(sg.lines||[]).length,used:!(sg.sureLines&&!covers)}; } /* v399: the record says which way the guard went, so the field settles PANEL_COVER rather than a guess */
+  /* and the lines it is measured against are the text check's, when the check answered (v485, H's rice cooker: the reader
+     read 国低卡饭柴火饭快者粗粮饭汤费 — 国 and 者 and 费 are slips — and the model's eleven plates covered 11 of its 14
+     characters, 0.786 against PANEL_COVER's 0.8, so eleven correct labels were thrown away by a point and a half. The
+     guard asks whether a line would be LOST, and the line that would be lost is the one the card would otherwise carry:
+     with the answer refused, signAskAI applies r and the one card reads the CHECKED text, not the reader's. DeepSeek had
+     already corrected 快者→快煮 and 汤费→汤粥 from the text alone, without seeing the picture — a second opinion that those
+     characters were slips — and against that text the eleven elements hold everything. A failed check (v451) has no such
+     text and falls back to the reader's own lines. */
+  const lines=(checked&&CJK.test(checked)?String(checked).split("\n").filter(l=>CJK.test(l)):null)||sg.lines||[];
+  const covers=panelCovers(pic,lines);
+  if(id){ const N=numsFor(id); if(N) N.panel={labels:pic.labels.length,sure:!!sg.sureLines,covers,lines:lines.length,checked:!!(checked&&CJK.test(checked)),used:!(sg.sureLines&&!covers)}; } /* v399: the record says which way the guard went, and which text it was measured against, so the field settles PANEL_COVER rather than a guess */
   if(sg.sureLines&&!covers){ logRead(id,`the reading is read surely and the AI's ${pic.labels.length} elements do not hold every line of it — the panel answer is not used`); return null; }
   sg.picAsked=true;
   logRead(id,`${sg.sureLines?`the reading is strong and read surely, but the AI calls this picture ${pic.labels.length} separate labels and its elements hold every line the reader was sure of — it is telling us about texts the reader never saw`:`the reading is strong but not read surely, and the AI calls this picture ${pic.labels.length} separate labels`} — the picture answer asked at the quick look ${((Date.now()-sg.picEarly.at)/1000).toFixed(1)} s ago is used`);
@@ -7087,7 +7098,7 @@ async function signAskAI(id){
     try{ [r]=await aiAsk([{kind:"sign",c,p:res.map(x=>x.py).join(" / "),m:sg.mean||"",gloss:res.flatMap(x=>x.gloss),alts:sg.alts,trad:!!sg.trad,mt:{src:"gloss",verified:false,suspect:"read from a photo by OCR"}}]); }catch(err){ checkErr=err; }
     if(!SIGN[id]) return;
     if(checkErr){ const N=numsFor(id); N.checkErr=String(checkErr&&checkErr.message||checkErr).slice(0,160); logRead(id,`the text check failed: ${N.checkErr}`); } /* v451, H's order screen from the album, 2026-09-13: the relay answered 500 "counter 401", the catch below set aiErr, and the parked Qwen answer — apart, App, four labels — was thrown away for a card of the reader's garbage. A check that never answered is no verdict on the picture answer already in hand, so picPanel runs on this path too, and the record names the failure (the v399 rule). */
-    const pic=checkErr?await picPanel(sg,id):r.bad?await picOnBad(sg,[c,...(sg.alts||[])],null,id):await picPanel(sg,id); if(!SIGN[id]) return; /* the text check calls the reading garbage: the picture goes to the AI that takes pictures (v302) — or it does not, and a panel answer is already in hand (v447) — or it never answered, and the panel answer in hand is used all the same (v451) */
+    const pic=checkErr?await picPanel(sg,id):r.bad?await picOnBad(sg,[c,...(sg.alts||[])],null,id):await picPanel(sg,id,r.zh); if(!SIGN[id]) return; /* the text check calls the reading garbage: the picture goes to the AI that takes pictures (v302) — or it does not, and a panel answer is already in hand (v447) — or it never answered, and the panel answer in hand is used all the same (v451) */
     if(checkErr&&!pic) throw checkErr; /* nothing in hand: the failure stands as before v451 — the offline model, the gloss, pending */
     if(pic&&sg.placePic){ try{ await sg.placePic(pic); }catch(e){ logErr("snap",e&&e.message||String(e)); } if(!SIGN[id]) return; } /* v406: the same placement the weak path's answer gets — without it a panel that reaches the AI this way made one card */
     if(pic){ const zh=pic.zh.split("\n"); sg.lines=zh; sg.orig=zh.slice(); sg.conf=[]; sg.boxes=zh.map(()=>[]); sg.alts=[c,...(sg.alts||[])].filter(x=>x&&x!==pic.zh).slice(0,6); sg.trad=!!pic.zht; sg.tradDetected=!!pic.zht; sg.tradText=pic.zht||""; sg.weak=false;
