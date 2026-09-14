@@ -32,7 +32,7 @@ function wordOf(n,w,pl){ const d=L10N[LANG], pk=pl||w+"s", f=pForm(n);
 /* a count with its word: nOf(3,"card") → "3 cards" / "3 Karten" / "カード3枚" / "3 карточки"; pl = an irregular plural key */
 function nOf(n,w,pl){ n=n||0; const tr=wordOf(n,w,pl); return tr.includes("{0}")?tr.replace("{0}",n):`${n} ${tr}`; }
 const L10N={
-en:{"card:⚑ Flagged":"⚑ Flagged","capsule:Done":"Done","pad:Undo":"Undo","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
+en:{"bar:AI suggestion":"AI suggestion","bar:AI suggestions":"AI suggestions","card:⚑ Flagged":"⚑ Flagged","capsule:Done":"Done","pad:Undo":"Undo","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
 de:{
 "⚑ Flag":"⚑ Markieren",
 "card:⚑ Flagged":"⚑ Markiert",
@@ -202,7 +202,8 @@ de:{
   "← Cards":"← Karten","Testing from the list":"Test aus der Liste",
   "{0} learned, {1} reviewed this week, streak {2}":"{0} gelernt, {1} diese Woche wiederholt, Serie {2}",
   "card":"{0} Karte","cards":"{0} Karten","day":"{0} Tag","days":"{0} Tage","review":"{0} Wiederholung","reviews":"{0} Wiederholungen","photo":"{0} Foto","photos":"{0} Fotos",
-  "AI suggestion waiting":"{0} KI-Vorschlag wartet","AI suggestions waiting":"{0} KI-Vorschläge warten",
+  "bar:AI suggestion":"{0} KI-Vorschlag","bar:AI suggestions":"{0} KI-Vorschläge",
+  
   ", or the photo for the text alone":", oder auf das Foto für den Text allein","A card from a screen or a panel shows the whole picture with a frame around every text and its own lit up, and says which one it is, 1 of 4; a tap on the photo shows the text alone.":"Eine Karte von einem Bildschirm oder einem Bedienfeld zeigt das ganze Bild mit einem Rahmen um jeden Text, ihr eigener leuchtet, und sagt, die wievielte sie ist – 1 von 4; ein Tipp aufs Foto zeigt den Text allein.","Traditional":"Langzeichen","Simplified":"Kurzzeichen","Nothing could be read.":"Es konnte nichts gelesen werden.","Reading the text …":"Text wird gelesen …",
   "meaning unverified":"Bedeutung ungeprüft"," (translation pending)":" (Übersetzung ausstehend)"," (reading uncertain: {0})":" (Lesung unsicher: {0})",
   "Also on another photo":"Auch auf einem anderen Foto","Also on {0} other photos":"Auch auf {0} anderen Fotos","Show this photo":"Dieses Foto zeigen","Open this card":"Diese Karte öffnen",
@@ -471,7 +472,8 @@ fr:{
   "← Cards":"← Cartes","Testing from the list":"Test depuis la liste",
   "{0} learned, {1} reviewed this week, streak {2}":"{0} apprises, {1} révisées cette semaine, série de {2}",
   "card":"{0} carte","cards":"{0} cartes","day":"{0} jour","days":"{0} jours","review":"{0} révision","reviews":"{0} révisions","photo":"{0} photo","photos":"{0} photos",
-  "AI suggestion waiting":"{0} suggestion de l'IA en attente","AI suggestions waiting":"{0} suggestions de l'IA en attente",
+  "bar:AI suggestion":"{0} suggestion de l'IA","bar:AI suggestions":"{0} suggestions de l'IA",
+  
   ", or the photo for the text alone":", ou la photo pour le texte seul","A card from a screen or a panel shows the whole picture with a frame around every text and its own lit up, and says which one it is, 1 of 4; a tap on the photo shows the text alone.":"Une carte issue d'un écran ou d'un panneau montre l'image entière avec un cadre autour de chaque texte, le sien allumé, et dit laquelle c'est — 1 sur 4 ; un tap sur la photo montre le texte seul.","Traditional":"Traditionnel","Simplified":"Simplifié","Nothing could be read.":"Rien n'a pu être lu.","Reading the text …":"Lecture du texte …",
   "meaning unverified":"sens non vérifié"," (translation pending)":" (traduction en attente)"," (reading uncertain: {0})":" (lecture incertaine : {0})",
   "Also on another photo":"Aussi sur une autre photo","Also on {0} other photos":"Aussi sur {0} autres photos","Show this photo":"Afficher cette photo","Open this card":"Ouvrir cette carte",
@@ -741,7 +743,8 @@ es:{
   "← Cards":"← Tarjetas","Testing from the list":"Prueba desde la lista",
   "{0} learned, {1} reviewed this week, streak {2}":"{0} aprendidas, {1} repasadas esta semana, racha de {2}",
   "card":"{0} tarjeta","cards":"{0} tarjetas","day":"{0} día","days":"{0} días","review":"{0} repaso","reviews":"{0} repasos","photo":"{0} foto","photos":"{0} fotos",
-  "AI suggestion waiting":"{0} sugerencia de la IA en espera","AI suggestions waiting":"{0} sugerencias de la IA en espera",
+  "bar:AI suggestion":"{0} sugerencia de la IA","bar:AI suggestions":"{0} sugerencias de la IA",
+  
   ", or the photo for the text alone":", o la foto para ver solo el texto","A card from a screen or a panel shows the whole picture with a frame around every text and its own lit up, and says which one it is, 1 of 4; a tap on the photo shows the text alone.":"Una tarjeta de una pantalla o un panel muestra la imagen entera con un marco alrededor de cada texto, el suyo encendido, y dice cuál es — 1 de 4; un toque en la foto muestra solo el texto.","Traditional":"Tradicional","Simplified":"Simplificado","Nothing could be read.":"No se pudo leer nada.","Reading the text …":"Leyendo el texto …",
   "meaning unverified":"significado sin verificar"," (translation pending)":" (traducción pendiente)"," (reading uncertain: {0})":" (lectura dudosa: {0})",
   "Also on another photo":"También en otra foto","Also on {0} other photos":"También en otras {0} fotos","Show this photo":"Mostrar esta foto","Open this card":"Abrir esta tarjeta",
@@ -1011,7 +1014,8 @@ ja:{
   "← Cards":"← カード","Testing from the list":"一覧からテスト中",
   "{0} learned, {1} reviewed this week, streak {2}":"習得 {0}、今週の復習 {1}、連続 {2}",
   "card":"カード{0}枚","cards":"カード{0}枚","day":"{0}日","days":"{0}日","review":"{0}回","reviews":"{0}回","photo":"写真{0}枚","photos":"写真{0}枚",
-  "AI suggestion waiting":"AIの提案 {0} 件","AI suggestions waiting":"AIの提案 {0} 件",
+  "bar:AI suggestion":"AIの提案 {0} 件","bar:AI suggestions":"AIの提案 {0} 件",
+  
   ", or the photo for the text alone":"。写真をタップするとこの文字だけが見られます","A card from a screen or a panel shows the whole picture with a frame around every text and its own lit up, and says which one it is, 1 of 4; a tap on the photo shows the text alone.":"画面や操作パネルからのカードは、テキストごとに枠が付いた画像全体を表示し、自分の枠が光ります。何番目かも「1 / 4」のように示し、写真をタップするとこの文字だけが見られます。","Traditional":"繁体字","Simplified":"簡体字","Nothing could be read.":"何も読み取れませんでした。","Reading the text …":"文字を読み取り中 …",
   "meaning unverified":"意味は未確認"," (translation pending)":"（翻訳待ち）"," (reading uncertain: {0})":"（読み取りが不確か: {0}）",
   "Also on another photo":"別の写真にもあります","Also on {0} other photos":"他の {0} 枚の写真にもあります","Show this photo":"この写真を表示","Open this card":"このカードを開く",
@@ -1281,7 +1285,8 @@ ko:{
   "← Cards":"← 카드","Testing from the list":"목록에서 테스트 중",
   "{0} learned, {1} reviewed this week, streak {2}":"학습 {0}, 이번 주 복습 {1}, 연속 {2}",
   "card":"카드 {0}장","cards":"카드 {0}장","day":"{0}일","days":"{0}일","review":"{0}회","reviews":"{0}회","photo":"사진 {0}장","photos":"사진 {0}장",
-  "AI suggestion waiting":"AI 제안 {0}개 대기 중","AI suggestions waiting":"AI 제안 {0}개 대기 중",
+  "bar:AI suggestion":"AI 제안 {0}개","bar:AI suggestions":"AI 제안 {0}개",
+  
   ", or the photo for the text alone":". 사진을 누르면 이 글자만 보여요","A card from a screen or a panel shows the whole picture with a frame around every text and its own lit up, and says which one it is, 1 of 4; a tap on the photo shows the text alone.":"화면이나 조작판에서 만든 카드는 텍스트마다 틀이 쳐진 사진 전체를 보여 주고, 자기 틀은 빛나요. 몇 번째인지도 「1 / 4」처럼 알려 주고, 사진을 누르면 이 글자만 보여요.","Traditional":"번체자","Simplified":"간체자","Nothing could be read.":"아무것도 읽지 못했어요.","Reading the text …":"글자를 읽는 중 …",
   "meaning unverified":"뜻 미확인"," (translation pending)":" (번역 대기)"," (reading uncertain: {0})":" (읽기 불확실: {0})",
   "Also on another photo":"다른 사진에도 있음","Also on {0} other photos":"다른 사진 {0}장에도 있음","Show this photo":"이 사진 보기","Open this card":"이 카드 열기",
@@ -1555,7 +1560,8 @@ ru:{
   "← Cards":"← Карточки","Testing from the list":"Проверка из списка",
   "{0} learned, {1} reviewed this week, streak {2}":"Выучено: {0}, повторов за неделю {1}, серия {2}",
   "card":"{0} карточка","cards":"{0} карточки","cards#many":"{0} карточек","day":"{0} день","days":"{0} дня","days#many":"{0} дней","review":"{0} повтор","reviews":"{0} повтора","reviews#many":"{0} повторов","photo":"{0} фото","photos":"{0} фото","photos#many":"{0} фото",
-  "AI suggestion waiting":"{0} предложение ИИ ждёт","AI suggestions waiting":"{0} предложения ИИ ждут","AI suggestions waiting#many":"{0} предложений ИИ ждут",
+  "bar:AI suggestion":"{0} предложение ИИ","bar:AI suggestions":"{0} предложения ИИ","bar:AI suggestions#many":"{0} предложений ИИ",
+  
   ", or the photo for the text alone":", или на фото — чтобы увидеть только этот текст","A card from a screen or a panel shows the whole picture with a frame around every text and its own lit up, and says which one it is, 1 of 4; a tap on the photo shows the text alone.":"Карточка с экрана или панели показывает всё изображение, каждый текст в рамке, своя рамка светится, и говорит, которая она по счёту — 1 из 4; нажатие на фото показывает только этот текст.","Traditional":"Традиционные","Simplified":"Упрощённые","Nothing could be read.":"Прочитать ничего не вышло.","Reading the text …":"Читаю текст …",
   "meaning unverified":"значение не проверено"," (translation pending)":" (перевод ещё не готов)"," (reading uncertain: {0})":" (чтение неточное: {0})",
   "Also on another photo":"Есть и на другом фото","Also on {0} other photos":"Есть ещё на {0} фото","Show this photo":"Показать это фото","Open this card":"Открыть эту карточку",
@@ -1825,7 +1831,8 @@ vi:{
   "← Cards":"← Thẻ","Testing from the list":"Kiểm tra từ danh sách",
   "{0} learned, {1} reviewed this week, streak {2}":"Đã học {0}, tuần này ôn {1}, chuỗi {2}",
   "card":"{0} thẻ","cards":"{0} thẻ","day":"{0} ngày","days":"{0} ngày","review":"{0} lượt ôn","reviews":"{0} lượt ôn","photo":"{0} ảnh","photos":"{0} ảnh",
-  "AI suggestion waiting":"{0} gợi ý AI đang chờ","AI suggestions waiting":"{0} gợi ý AI đang chờ",
+  "bar:AI suggestion":"{0} gợi ý AI","bar:AI suggestions":"{0} gợi ý AI",
+  
   ", or the photo for the text alone":", hoặc chạm vào ảnh để xem riêng đoạn chữ này","A card from a screen or a panel shows the whole picture with a frame around every text and its own lit up, and says which one it is, 1 of 4; a tap on the photo shows the text alone.":"Thẻ từ một màn hình hay bảng điều khiển hiện cả ảnh với một khung quanh mỗi đoạn chữ, khung của nó sáng lên, và cho biết nó là thẻ thứ mấy — 1/4; chạm vào ảnh để xem riêng đoạn chữ này.","Traditional":"Phồn thể","Simplified":"Giản thể","Nothing could be read.":"Không đọc được gì.","Reading the text …":"Đang đọc chữ …",
   "meaning unverified":"nghĩa chưa kiểm tra"," (translation pending)":" (đang chờ dịch)"," (reading uncertain: {0})":" (bản đọc chưa chắc: {0})",
   "Also on another photo":"Cũng có trên một ảnh khác","Also on {0} other photos":"Cũng có trên {0} ảnh khác","Show this photo":"Xem ảnh này","Open this card":"Mở thẻ này",
@@ -2095,7 +2102,8 @@ th:{
   "← Cards":"← การ์ด","Testing from the list":"ทดสอบจากรายการ",
   "{0} learned, {1} reviewed this week, streak {2}":"เรียนแล้ว {0} · ทบทวนสัปดาห์นี้ {1} · ต่อเนื่อง {2}",
   "card":"การ์ด {0} ใบ","cards":"การ์ด {0} ใบ","day":"{0} วัน","days":"{0} วัน","review":"{0} ครั้ง","reviews":"{0} ครั้ง","photo":"รูป {0} ใบ","photos":"รูป {0} ใบ",
-  "AI suggestion waiting":"AI เสนอมา {0} รายการ","AI suggestions waiting":"AI เสนอมา {0} รายการ",
+  "bar:AI suggestion":"AI เสนอมา {0} รายการ","bar:AI suggestions":"AI เสนอมา {0} รายการ",
+  
   ", or the photo for the text alone":" หรือแตะรูปเพื่อดูเฉพาะข้อความนี้","A card from a screen or a panel shows the whole picture with a frame around every text and its own lit up, and says which one it is, 1 of 4; a tap on the photo shows the text alone.":"การ์ดจากหน้าจอหรือแผงควบคุมจะแสดงรูปทั้งรูป มีกรอบล้อมข้อความแต่ละจุด กรอบของตัวเองจะสว่าง และบอกว่าเป็นใบที่เท่าไร เช่น 1 จาก 4 แตะรูปเพื่อดูเฉพาะข้อความนี้","Traditional":"ตัวเต็ม","Simplified":"ตัวย่อ","Nothing could be read.":"อ่านอะไรไม่ได้เลย","Reading the text …":"กำลังอ่านตัวอักษร …",
   "meaning unverified":"ความหมายยังไม่ได้ตรวจสอบ"," (translation pending)":" (รอคำแปล)"," (reading uncertain: {0})":" (การอ่านไม่แน่: {0})",
   "Also on another photo":"อยู่ในอีกรูปหนึ่งด้วย","Also on {0} other photos":"อยู่ในอีก {0} รูปด้วย","Show this photo":"ดูรูปนี้","Open this card":"เปิดการ์ดนี้",
@@ -2365,7 +2373,8 @@ id:{
   "← Cards":"← Kartu","Testing from the list":"Tes dari daftar",
   "{0} learned, {1} reviewed this week, streak {2}":"{0} dipelajari, {1} ulangan minggu ini, {2} beruntun",
   "card":"{0} kartu","cards":"{0} kartu","day":"{0} hari","days":"{0} hari","review":"{0} ulangan","reviews":"{0} ulangan","photo":"{0} foto","photos":"{0} foto",
-  "AI suggestion waiting":"{0} saran AI menunggu","AI suggestions waiting":"{0} saran AI menunggu",
+  "bar:AI suggestion":"{0} saran AI","bar:AI suggestions":"{0} saran AI",
+  
   ", or the photo for the text alone":", atau foto untuk melihat teksnya saja","A card from a screen or a panel shows the whole picture with a frame around every text and its own lit up, and says which one it is, 1 of 4; a tap on the photo shows the text alone.":"Kartu dari layar atau panel menampilkan seluruh gambar dengan bingkai di setiap teks, bingkainya sendiri menyala, dan menyebut yang ke berapa — 1 dari 4; ketuk foto untuk melihat teksnya saja.","Traditional":"Tradisional","Simplified":"Sederhana","Nothing could be read.":"Tidak ada yang bisa dibaca.","Reading the text …":"Membaca teks …",
   "meaning unverified":"arti belum diperiksa"," (translation pending)":" (menunggu terjemahan)"," (reading uncertain: {0})":" (hasil baca meragukan: {0})",
   "Also on another photo":"Ada juga di foto lain","Also on {0} other photos":"Ada juga di {0} foto lain","Show this photo":"Tampilkan foto ini","Open this card":"Buka kartu ini",
