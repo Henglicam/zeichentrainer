@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=490; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=491; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2609,9 +2609,14 @@ function backHTML(d,o){ const tapSrc=!(o&&o.study), srcHere=!(o&&o.noSrc); /* on
     ${glossBlock}`;
 }
 /* the other cards with the same text (v122, H: "if one character connects to various photos, then link them"): their
-   crops in a row on the back and in the card detail; a tap opens that card */
-const sameText=d=>deck().filter(x=>x.id!==d.id&&d.c&&x.c===d.c).sort((a,b)=>(b.at||0)-(a.at||0));
+   crops in a row on the back and in the card detail; a tap opens that card.
+   A card generated from a multicard (v487) has no photo of its own — it carries no img, no shot and no frame —, so the
+   row's own sentence ("Also on another photo") does not parse for it in either direction: it shows no row (H, v491:
+   "Bitte auch die verlinkten Fotos-Zeile bei generierten Karten rausnehmen"), and it is nobody else's other photo.
+   Its way to the multicard is the reference pill, which names it and jumps to it (v487). */
+const sameText=d=>deck().filter(x=>x.id!==d.id&&d.c&&x.c===d.c&&!x.from).sort((a,b)=>(b.at||0)-(a.at||0));
 function linkedHTML(d){
+  if(d&&d.from) return "";
   const others=sameText(d); if(!others.length) return "";
   return `<div class="linked"><div class="lbl">${others.length===1?t("Also on another photo"):t("Also on {0} other photos",others.length)}</div><div class="thumbs">${others.map(x=>`<button class="lnk${S.mode==="study"&&S.peek===x.id?" on":""}" data-link="${esc(x.id)}" aria-label="${S.mode==="study"?t("Show this photo"):t("Open this card")}">${x.img||fullPhoto(x)?`<img class="thumbbg" src="${thumbURL(x)}" alt="" aria-hidden="true"><img class="thumb" src="${thumbURL(x)}" alt="">`:`<span class="glyph hanzi">${esc([...x.c][0])}</span>`}</button>`).join("")}</div></div>`;
 }
