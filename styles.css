@@ -87,6 +87,15 @@ button,.tab,.chip,.chipset,.pill,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg
    strong label of .btn.danger, so the colour is unmistakable and the text still reads on both grounds; a filled amber tile with
    white on it does not (measured against the same text on the soft ground). No interval line under the label any more. */
 .grades{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:22px}
+/* the two-button vote on the Learn back (v497; the markup and these rules are v487's sheet vote, which v488 removed): a red
+   cross Not yet and a green check Got it, the app's own two states (v461), in the two states' soft colours */
+.vote{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px}
+.vt{display:flex;align-items:center;justify-content:center;gap:7px;min-height:62px;border:0;border-radius:var(--r);font:600 17px/1.2 var(--ui);cursor:pointer}
+.vt i{display:inline-flex;width:18px;height:18px}
+.vt .lbl{color:inherit;margin:0} /* the page-wide .lbl rule sets --label2 and a right margin, and inheritance loses to any matching rule — the v421 lesson */
+.vt svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.vt.no{background:var(--tint-soft);color:var(--tint)}
+.vt.yes{background:var(--ok-soft);color:var(--ok)}
 .grade{display:flex;align-items:center;justify-content:center;min-height:62px;background:var(--card2);
   color:var(--label);cursor:pointer;border:none;border-radius:var(--r);padding:8px 4px}
 .grade[data-g="again"]{background:var(--tint-soft);color:var(--tint)}
