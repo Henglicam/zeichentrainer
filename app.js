@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=480; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=481; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -534,6 +534,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v481","Cards: the AI bar's tick and cross"],
   ["app","v480","Cards: Dismiss all, then Undo"],
   ["photo","v479","two photos: each keeps its own steps"],
   ["app","v478","Multicard: make a text a card"],
@@ -1851,7 +1852,7 @@ async function tagAll(){
 /* Check all cards again (v370, H: "maybe Tag all cards should be a general AI re-run on all Cards? Because ai models get better
    over time?" — three ways offered, my recommendation the one that never writes: on a saved card the v143 guard is gone (the
    reader's per-character confidences are not kept), so a run that applied its answers would silently rewrite correct cards.
-   This run therefore only fills the card's own AI box: the Cards tab shows "N AI suggestions waiting — Accept all", and every
+   This run therefore only fills the card's own AI box: the Cards tab shows "N AI suggestions" with its tick and cross, and every
    card keeps its text, pinyin and meaning until H accepts. An answer equal to the card, or one the model calls garbage, is
    dropped — only a real change becomes a suggestion. Like the other runs the state lives in RECHECK, not in the row, and an
    interrupted run goes on by itself: setting recheckRun {at} marks it, and a card whose suggestion is newer than that is done. */
@@ -3003,7 +3004,7 @@ function renderCards(main){
   main.innerHTML=`<div class="pane">
     <div class="cardsbar"><input id="q" type="search" placeholder="${t("Search")}" value="${esc(S.query)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="btn mini primary" id="newcard">${t("+ New")}</button></div>
     ${pagesInDeck()&&!marking("cards")?`<div class="seg scope" id="cardstabs" role="tablist"><button class="segbtn${onPages()?"":" on"}" data-ctab="cards" role="tab" aria-selected="${onPages()?"false":"true"}">${t("Cards")}</button><button class="segbtn${onPages()?" on":""}" data-ctab="pages" role="tab" aria-selected="${onPages()?"true":"false"}">${t("Multicards")}</button></div>`:""}
-    ${nAi?`<div class="aibar"><span>${nOf(nAi,"AI suggestion waiting","AI suggestions waiting")}</span><span class="aiacts2"><button class="btn mini primary" id="ai-acceptall">${t("Accept all")}</button><button class="btn mini plain" id="ai-dismissall">${t("Dismiss all")}</button></span></div>`:""}
+    ${nAi?`<div class="aibar"><span>${nOf(nAi,"bar:AI suggestion","bar:AI suggestions")}</span><span class="aiacts2"><button class="aibtn prim" id="ai-acceptall" title="${t("Accept all")}" aria-label="${t("Accept all")}">${MARK_TICK}</button><button class="aibtn" id="ai-dismissall" title="${t("Dismiss all")}" aria-label="${t("Dismiss all")}">${MARK_CROSS}</button></span></div>`:""}
     ${marking("cards")
       ?`<div class="chips"><span class="badge" id="pick-n">${t("{0} selected",PICK.set.size)}</span><span class="cend"><button class="del" id="pick-all"></button></span></div>` /* the chips make room for the marking (v354) */
       :`<div class="chips"><span class="chipset">${filterPillHTML("cards")}</span><span class="cend"><span class="badge" id="cnt"${n===tabCount()?" hidden":""}>${t("{0} of {1}",n,tabCount())}</span></span></div>`}
