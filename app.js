@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=497; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=498; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2372,7 +2372,11 @@ function renderGuide(main){
   $("#back-more").onclick=()=>{ S.mode="more"; render(); };
 }
 function tagsHTML(d,isNew){
-  return `<div class="tags">${d.flag?`<span class="f">${t("⚑ Review")}</span>`:""}<span class="${isNew?"n":"r"}">${isNew?t("New"):t("Review")}</span></div>`; /* no card type (H, v105) */
+  /* a multicard's own text carries no learning state (v487/v488), so neither "New" nor "Review" is true of it — the row keeps
+     the review flag alone, and is not drawn at all when there is none (v498, the same reason the schedule line left that screen) */
+  const st=inPage(d)?"":`<span class="${isNew?"n":"r"}">${isNew?t("New"):t("Review")}</span>`;
+  const fl=d.flag?`<span class="f">${t("⚑ Review")}</span>`:"";
+  return fl||st?`<div class="tags">${fl}${st}</div>`:""; /* no card type (H, v105) */
 }
 /* ---------- review flag ----------
    Any card can be flagged when the OCR text, pinyin or meaning looks odd and
@@ -3177,14 +3181,18 @@ function renderCardDetail(main,c){
     <div class="topline"><button class="del" id="back">${S.detailFrom==="inbox"||fromPage()?t("← Back"):t("← Cards")}</button><span class="badge">${!d.c?(d.reading&&d.reading.failed?t("Nothing read yet"):t("Reading …")):d.reading&&!d.reading.failed?t("Reading …"):(x=>x?x[0].toUpperCase()+x.slice(1):"")([d.mt&&!d.mt.verified?t("unverified"):"",d.mt&&d.mt.pending?t("translation pending"):"",d.mt&&d.mt.suspect?t("reading uncertain"):""].filter(Boolean).join(", "))}</span></div>
     <div class="card">${detailCardHTML(d,sw)}</div>
     <div class="detailacts">
-      ${d.c?`<button class="btn primary" id="d-test">${t("Test this card")}</button>`:""}
+      ${d.c&&!inPage(d)?`<button class="btn primary" id="d-test">${t("Test this card")}</button>`:""} <!-- a multicard's own text is never studied (v487), so there is nothing to test (v498) -->
       <button class="btn" id="d-edit">${t("Edit")}</button>
       ${inPage(d)?"":`<button class="btn${d.star?" on":""}" id="d-star">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`} <!-- a multicard's own text carries no star (v493) -->
       <button class="btn${d.flag?" on":""}" id="d-flag">${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}</button>
-      ${d.c?`<button class="btn" id="d-share">${t("Share")}</button>`:""}
+      ${d.c&&!inPage(d)?`<button class="btn" id="d-share">${t("Share")}</button>`:""}
       <button class="btn danger" id="d-del"${d.c?' style="grid-column:1/-1"':""}>${t("Delete card")}</button>
     </div>
-    <div class="badge" style="margin-top:14px">${esc(stat)}</div>
+    ${inPage(d)?"":`<div class="badge" style="margin-top:14px">${esc(stat)}</div>`}
+    <!-- a multicard's own text offers Edit, Flag and Delete and nothing else (v498, H: "In Multicard nur edit, flag for review und
+         delete anbieten. alles andere raus."): Test would study a text that is never in Learn (v487), Share would send a row of
+         the multicard as if it were a card, and the schedule line would say "Not studied yet." of a text nobody is asked to study —
+         the star left this screen for the same reason at v493. An ordinary card keeps all of them. -->
     ${linkedHTML(d)}
   </div>`;
   $("#back").onclick=S.detailFrom==="inbox"?backToPhoto:fromPage()?backToPage:backToList; /* opened from a photo's sheet (v448): ← goes back to the photo; from a page's row or sheet (v453): back to the page */
