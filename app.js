@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=487; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=488; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -546,7 +546,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["app","v487","Multicard: the red/green vote and Generate flashcard"],
+  ["app","v488","Multicard: one button, and the line counts flashcards"],
   ["app","v487","Learn holds no multicard text any more"],
   ["photo","v486","Maison Marais sign again: the sign in the picture"],
   ["photo","v485","Rice cooker again: 11 cards"],
@@ -2352,7 +2352,7 @@ const GUIDE=()=>[
     t("Grade yourself: Hard, Medium, Easy. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
     t("Swipe the closed card left or right to pick another one — nothing is graded, and a card you skip stays due for next time.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Once a photo has made a multicard, two tabs split them — Cards and Multicards. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included. Push an open card sideways for the next one in the list."),
-    t("Tap a text on a multicard to vote — red for not yet, green for got it — or press Generate flashcard to make a card of it. Learn studies the flashcards, never the multicard itself."),
+    t("Tap a text on a multicard to look it up, and press Generate flashcard to make a card of it. Learn studies the flashcards, never the multicard itself."),
     t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together; old photos are cleared out under More → Your data → Photos. Tap the star on a card to mark it as one you care about — the filter then shows them alone, and Learn studies all of them, due or not.")]},
   {h:t("Language and meanings"),p:[t("More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.")]},
   {h:t("What stays on the phone"),p:[t("Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends a card's Chinese text, pinyin and meaning, and, when the reading is hard, a picture of the text — sometimes the whole photo."),
@@ -2971,7 +2971,7 @@ function cardsList(){
    pageRowHTML is gone with the row list; cardRowHTML stays, since the page detail still lists its texts as rows. */
 function cardTileHTML(d,pk){
   const pg=isPage(d), its=pg?pageItems(d):null;
-  const known=pg?its.filter(x=>regionState({card:x.id})===2).length:0;
+  const made=pg?its.filter(x=>madeFrom(x)).length:0; /* v488: how many of its texts you have turned into flashcards */
   const pic=pg?fullPhoto(d):d.img;
   const head=pg?esc(d.c):esc((d.trad||d.c||"").replace(/\n/g," "));
   const flag=pg?its.some(x=>x.flag):d.flag, ai=pg?its.some(x=>x.ai):d.ai;
@@ -2980,9 +2980,9 @@ function cardTileHTML(d,pk){
         ${pk?`<span class="tick" aria-hidden="true"></span>`:starHTML(d)}
         ${pg?`<span class="cnt">${its.length}</span>`:""}
         ${(flag||ai)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}</span>`:""}</span>
-${pg?`</span><span class="prog" aria-hidden="true"><i style="width:${its.length?Math.round(known/its.length*100):0}%"></i></span>`:""}
+${pg?`</span><span class="prog" aria-hidden="true"><i style="width:${its.length?Math.round(made/its.length*100):0}%"></i></span>`:""}
       <span class="th${pg?" title":" hanzi"}">${head||`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>
-      <span class="ts2">${pg?esc(t("{0} texts on this page, {1} learned.",its.length,known)):cardStatus(d)}</span></button>`;
+      <span class="ts2">${pg?esc(t("{0} texts on this page, {1} as flashcards.",its.length,made)):cardStatus(d)}</span></button>`;
 }
 function cardsListHTML(){
   const list=cardsList();
@@ -3057,11 +3057,11 @@ function backToPage(){ const pid=fromPage(); S.detailFrom=null; S.detailHide=fal
 function pageBodyHTML(d){
   const rs=photoRegions({id:d.shot}), its=pageItems(d), full=fullPhoto(d);
   const order=rs.map(r=>r.card), sorted=its.slice().sort((a,b)=>{ const ia=order.indexOf(a.id), ib=order.indexOf(b.id); return (ia<0?1e9:ia)-(ib<0?1e9:ib); });
-  const known=its.filter(x=>regionState({card:x.id})===2).length;
+  const made=its.filter(x=>madeFrom(x)).length;
   return `<div class="shot pagecard" data-page="${esc(d.id)}">
       <div class="shotwrap">${full?`<img src="${urlOf(full)}" alt="photo">`:""}${rs.length?regionsHTML({id:d.shot},rs):""}</div>
       <div class="ptitle">${esc(d.c)}</div>
-      <div class="regline">${esc(t("{0} texts on this page, {1} learned.",its.length,known))}</div>
+      <div class="regline">${esc(t("{0} texts on this page, {1} as flashcards.",its.length,made))}</div>
       <div class="taphint">${esc(t("Tap any text on the photo."))}</div>
     </div>
     <div class="clist" id="pitems">${sorted.map(x=>cardRowHTML(x,false,new Map(),true)).join("")}</div>`;
@@ -3539,7 +3539,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
-  487:"A multicard is a reference now: tap any text on it to vote, or press Generate flashcard to make a text-only card that names where it came from.",
+  487:"A multicard is a reference now: tap any text on it and press Generate flashcard to make a text-only card that names where it came from.", /* v488 corrected this line rather than adding its own: 487 and 488 reach every phone in the same update, and the note a learner reads has to be true of what is on it */
   486:"A sign the reader read clearly keeps the picture the reader measured, instead of one the AI guessed at.",
   485:"A photo of a control panel makes one card per button again, even when the reader misread a character or two on the way.",
   480:"A whole batch of AI suggestions can be cleared in one tap: Dismiss all sits beside Accept all, and More offers one Undo in case you did not mean it.",
@@ -7280,15 +7280,22 @@ function photoRegions(rec,byShot){
   return rs.length>=REGION_MIN?rs:[];
 }
 function regionOf(shot,rid){ return photoRegions({id:shot}).find(r=>r.rid===rid)||null; } /* the regions are the cards' (v448), so a page whose inbox photo is gone still has them (v453) */
-function regionState(r){ if(!r.card) return 0; const p=S.progress[r.card]; if(!p||!p.reps) return 1; return p.interval>=KNOWN_DAYS?2:1; } /* 0 no card · 1 still to learn · 2 known — read by the page's list and the count line, NEVER by the photo (v461) */
+/* 0 no card · 1 still to learn · 2 known — read by a MARKED PHOTO's count line, where the three grades still write the
+   row (v448), and NEVER by the photo itself (v461). A multicard has no learning state at all since v488 — nothing on it
+   is studied and its sheet grades nothing — so its list and its line count flashcards instead (madeFrom, below). */
+function regionState(r){ if(!r.card) return 0; const p=S.progress[r.card]; if(!p||!p.reps) return 1; return p.interval>=KNOWN_DAYS?2:1; }
 /* the two states, wherever a card is listed or opened: a red cross for one still to learn, a green check for one ticked
    off (v461, H: "Rot mitm Kreuz drauf heisst, kann ich noch nicht. Gruen mitm Haken drauf heisst, okay, kann ich
    abgehakt."). Drawn as inline SVG — the app ships no icon font and no emoji in the UI. */
 const MARK_TICK=`<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.6 6.4 4.9 8.7 9.5 3.7"/></svg>`;
 const MARK_CROSS=`<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.7 3.7 8.3 8.3M8.3 3.7 3.7 8.3"/></svg>`;
-/* every text of a multicard carries the cross or the check again (v487): the two-button vote in its sheet writes its own
-   progress row, so the mark says something the learner did, which is what v478's narrowing had taken away. */
-function stateMark(id){ const st=regionState({card:id}); return `<i class="pdot s${st}" aria-hidden="true">${st===2?MARK_TICK:MARK_CROSS}</i>`; }
+/* the mark on a multicard's own row, which is the only place it is drawn. It says the one thing about that text that can
+   still move (v488, H: "Not yet und Got it machen eigentlich nur Sinn in der Flashcard. Kann aus Multicard raus."):
+   whether it has a flashcard. A learning mark here would be tracking a progress row nothing can write — v478 took these
+   marks away for that reason, v487 brought them back because the vote could write it, and with the vote gone the reason
+   stands again; what replaces it is not a learning state at all. */
+function stateMark(id){ const d=cardOf(id), has=!!(d&&d.page&&madeFrom(d));
+  return `<i class="pdot${has?" made":" none"}" aria-hidden="true">${has?MARK_TICK:""}</i>`; }
 function regionsHTML(rec,rs,o){
   const learn=!!(o&&o.learn); /* v452: on the Learn front the frames take no tap (the photo's own tap and the swipe own the surface) and the card's own is the only one lit */
   const tag=learn?"span":"button";
@@ -7297,7 +7304,9 @@ function regionsHTML(rec,rs,o){
   return `<div class="regions${learn?" learn":""}"${learn?"":` data-regions="${rec.id}"`}>${rs.map(r=>{ const b=r.box, pc=x=>(x*100).toFixed(2)+"%";
     return `<${tag} class="region${learn&&o.me===r.card?" me":""}" ${learn?"data-rid":"data-region"}="${esc(r.rid)}" style="left:${pc(b.x)};top:${pc(b.y)};width:${pc(b.w)};height:${pc(b.h)}${b.a?`;transform:rotate(${b.a}deg)`:""}"${learn?' aria-hidden="true"':` aria-label="${esc(r.zh.replace(/\n/g," "))}"`}><i class="ff" aria-hidden="true"></i></${tag}>`; }).join("")}</div>`;
 }
-function regionLine(rs,pg){ const known=rs.filter(r=>regionState(r)===2).length; return pg?t("{0} texts on this page, {1} learned.",rs.filter(r=>r.card).length,known):t("{0} cards from this photo, {1} learned.",rs.filter(r=>r.card).length,known); } /* pg (v453): the photo's cards are one page's texts */
+function regionLine(rs,pg){ const n=rs.filter(r=>r.card).length; /* pg (v453): the photo's cards are one page's texts — and since v488 what a multicard counts is its flashcards, the only number on it that can move */
+  return pg?t("{0} texts on this page, {1} as flashcards.",n,rs.filter(r=>{ const d=r.card&&cardOf(r.card); return !!(d&&d.page&&madeFrom(d)); }).length)
+          :t("{0} cards from this photo, {1} learned.",n,rs.filter(r=>regionState(r)===2).length); }
 /* the photo gives nothing away until it is asked (v467, H: "Gerade chinesische Apps können ja extrem voll mit Text sein …
    Ich möchte, dass in der Default Ansicht nichts eingerahmt ist. Und wenn ich auf ein Textelement drauftippe, dann erscheint
    der Rahmen."). A Chinese app screen carries thirty texts, and thirty permanent frames are a wall of ink over the picture
@@ -7328,8 +7337,7 @@ function openLookup(shot,rid){
     <button class="x" id="lk-close" aria-label="${t("Close")}">×</button>
     <div class="zh hanzi">${esc((d.trad||d.c).replace(/\n/g," / "))}</div>${d.trad?`<div class="script"><span class="pill trad">${t("Traditional")}</span></div>`:""}
     <div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}</div>
-    ${pid?`<div class="vote">${[["again","Not yet",MARK_CROSS,"no"],["good","Got it",MARK_TICK,"yes"]].map(([g,l,ic,cl])=>`<button class="vt ${cl}" data-lg="${g}"><i aria-hidden="true">${ic}</i><span class="lbl">${t(l)}</span></button>`).join("")}</div>
-       <div class="lkmake"><button class="btn${made?"":" primary"}" id="${made?"lk-open":"lk-make"}">${t(made?"Open the flashcard":"Generate flashcard")}</button></div>`
+    ${pid?`<div class="lkmake"><button class="btn${made?"":" primary"}" id="${made?"lk-open":"lk-make"}">${t(made?"Open the flashcard":"Generate flashcard")}</button></div>`
         :`<div class="grades">${[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>`<button class="grade" data-g="${g}" data-lg="${g}"><span class="lbl">${t(l)}</span></button>`).join("")}</div>`}
     <div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div></div>`;
   let el=LOOKUP&&LOOKUP.el; const swap=!!el;
@@ -7352,11 +7360,11 @@ function openLookup(shot,rid){
     closeLookup(); INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=fc.id; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
   el.querySelector("#lk-more").onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, from=LOOKUP&&LOOKUP.from; closeLookup(); if(!cid||!cardOf(cid)) return; if(!from) INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom=from?"page:"+from:"inbox"; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
 }
-/* the vote. On a MULTICARD it is the two buttons H asked for — red Not yet, green Got it — which write the text's own
-   progress row, so the marks in the multicard's list and its "N learned" line are real even though nothing on it is
-   studied in Learn (v487). On a marked photo that is NOT a multicard — v448's own screen, which every photo from before
-   v453 still is, and whose texts are ordinary flashcards — the three grades of v421 stay, because there the tap really
-   is a review. */
+/* the grade. Only on a MARKED PHOTO that is not a multicard — v448's own screen, which every photo from before v453
+   still is, and whose texts are ordinary flashcards — where the three grades of v421 stay, because there the tap really
+   is a review. v487's red/green vote on a multicard lasted one version (v488, H: "Not yet und Got it machen eigentlich
+   nur Sinn in der Flashcard. Kann aus Multicard raus."): grading a text you are not being asked to learn is a review of
+   nothing, and the sheet is a look-up with one action. */
 async function gradeRegion(g){
   const L=LOOKUP; if(!L) return; const d=cardOf(L.card); if(!d) return;
   bump("regionGrades");
