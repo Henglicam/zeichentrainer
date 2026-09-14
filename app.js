@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=503; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=504; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -138,7 +138,7 @@ const cardOf = id => deck().find(d=>d.id===id); /* cards are addressed by id eve
    each carrying page:<the page's id>, and the page carries items:[their ids]; what changes is what the learner sees: one
    row under Cards with the photo and the title, one detail with the dots and the item list, the Camera tab's marked
    photo with the title over its line, and Learn walking the page's texts one after the other (buildQueue groups them).
-   The Deck capsule counts the page once and not its items. A page is never sent to the AI and never studied itself:
+   The Deck capsule counts neither the page nor its items (v504; v453–v503 counted the page once). A page is never sent to the AI and never studied itself:
    every batch over the deck skips it (isPage), and an item whose page is gone is an ordinary card again (inPage). */
 const isPage=d=>!!(d&&d.kind==="page");
 const pageItems=pg=>(pg&&pg.items||[]).map(cardOf).filter(Boolean);
@@ -150,7 +150,7 @@ const inPage=d=>!!(d&&d.page&&cardOf(d.page)); /* an item of a page that still e
    would otherwise count in the filter sheet's Starred row and switch a filter on over a list that can never show it, which
    is the v308 trap. Nothing is deleted — the field stays on the record and in the export. */
 const starred=d=>!!(d&&d.star)&&!isPage(d)&&!inPage(d);
-const deckCount=()=>deck().filter(d=>!hiddenCard(d)).length;
+const deckCount=()=>deck().filter(d=>!isPage(d)&&!hiddenCard(d)).length; /* flashcards only — neither a multicard nor its texts (v504); until v503 the multicard counted once (v453) */
 const tabCount=()=>tabPool().length; /* the Cards count is the open tab's own (v477) */
 const pageOfShot=shot=>deck().find(d=>isPage(d)&&d.shot===shot)||null;
 /* A MULTICARD IS A REFERENCE AND A FLASHCARD IS A FLASHCARD (v487, H, 2026-09-14, across three messages, the last two
@@ -943,7 +943,7 @@ function setStats(){
   $("#stat-deck").style.display=inStudy?"none":""; /* three pills overflow a 390px top bar */
   $("#stat-open .v").textContent=remaining;
   $("#stat-done .j").textContent=S.done;
-  $("#stat-deck .v").textContent=deckCount(); /* a page counts once, not its texts (v453) */
+  $("#stat-deck .v").textContent=deckCount(); /* flashcards only (v504): a multicard and its texts are looked up, not counted */
   document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.mode===S.mode||(b.dataset.mode==="cards"&&S.mode==="add")||(b.dataset.mode==="more"&&S.mode==="guide")));
 }
 
@@ -2378,7 +2378,7 @@ const GUIDE=()=>[
     t("From album takes several photos at once — they all become cards, one after the other, while the app is open.")]},
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
     t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.")]},
-  {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.")+" "+t("A card from a screen or a panel shows the whole picture with a frame around every text and its own lit up, and says which one it is, 1 of 4; a tap on the photo shows the text alone."),
+  {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.")+" "+t("A card made from a multicard shows the multicard's whole picture with a frame around its own text, and names the multicard under the meaning; tap that name to look the multicard up, and ← Back brings you back to the card."),
     t("Grade yourself: Not yet, or Got it. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
     t("Swipe the closed card left or right to pick another one — nothing is graded, and a card you skip stays due for next time.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Once a photo has made a multicard, two tabs split them — Cards and Multicards. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included. Push an open card sideways for the next one in the list."),
