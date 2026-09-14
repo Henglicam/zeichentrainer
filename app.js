@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=495; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=496; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -7398,7 +7398,11 @@ function openLookup(shot,rid,silent){
     <div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}</div>
     ${pid?`<div class="lkmake"><button class="btn${made?"":" primary"}" id="${made?"lk-open":"lk-make"}">${t(made?"Open the flashcard":"Generate flashcard")}</button></div>`
         :`<div class="grades">${[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>`<button class="grade" data-g="${g}" data-lg="${g}"><span class="lbl">${t(l)}</span></button>`).join("")}</div>`}
-    <div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div></div>`;
+    ${pid?"":`<div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div>`}</div>`;
+  /* a multicard's description is a look-up and nothing else (v496, H: "kein More und keine weiteren Funktionen in den Pop
+     ups. Du kannst das doch alles über die Multicards steuern."): More opened the text's own screen, which the row list
+     under the photo already opens on a tap — Edit, Flag, Delete and the rest live there. On a MARKED PHOTO (v448) More
+     stays: there is no row list, so it is the only way from the photo to the card's own screen. */
   let el=LOOKUP&&LOOKUP.el; const swap=!!el;
   if(!el){ el=document.createElement("div"); el.className="ask lookup"; document.body.appendChild(el); }
   const from=S.mode==="cards"&&S.detail&&isPage(cardOf(S.detail))?S.detail:null; /* v453: opened on a page's detail — More and ← Back come back to it */
@@ -7417,7 +7421,8 @@ function openLookup(shot,rid,silent){
   const op=el.querySelector("#lk-open");
   if(op) op.onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, it=cid&&cardOf(cid), fc=it&&madeFrom(it); if(!fc) return;
     closeLookup(); INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=fc.id; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
-  el.querySelector("#lk-more").onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, from=LOOKUP&&LOOKUP.from, shot=LOOKUP&&LOOKUP.shot, rid=LOOKUP&&LOOKUP.rid; closeLookup(); if(!cid||!cardOf(cid)) return; if(!from) INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom=from?"page:"+from:"inbox"; LOOK_BACK={shot,rid,card:cid,from:S.detailFrom}; /* v495: More is one step deeper into this look-up, so ← Back has to undo one step and not two */ S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
+  const mo=el.querySelector("#lk-more");
+  if(mo) mo.onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, from=LOOKUP&&LOOKUP.from, shot=LOOKUP&&LOOKUP.shot, rid=LOOKUP&&LOOKUP.rid; closeLookup(); if(!cid||!cardOf(cid)) return; if(!from) INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom=from?"page:"+from:"inbox"; LOOK_BACK={shot,rid,card:cid,from:S.detailFrom}; /* v495: More is one step deeper into this look-up, so ← Back has to undo one step and not two */ S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
 }
 /* the grade. Only on a MARKED PHOTO that is not a multicard — v448's own screen, which every photo from before v453
    still is, and whose texts are ordinary flashcards — where the three grades of v421 stay, because there the tap really
