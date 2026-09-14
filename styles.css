@@ -606,12 +606,6 @@ body.noscroll{overflow:hidden}
    and is still far more present than the grey it replaced. */
 .batchline{display:block;margin:0 2px 12px 4px;font-size:13px;font-weight:500;line-height:1.4;color:var(--tint);text-align:start}
 /* v452: a card that is one of several from one photo shows the page itself on the closed Learn front and in the detail — the whole picture in its own shape (the one exception to v223's "both boxes the same shape"), the blurred fill around it; the dots as on the Camera tab, the card's own lit; the dots take no tap there. The cap keeps the closed front — page, text box, pill and hint — above the tab bar: 100vh minus what the rest of the screen takes (measured 500 px at 390×844 with the hint, 344 px of page there, 240 at 360×740), never over 56vh on a tall screen; the revealed card shows the card's own cut, since the grades then own the screen (v421). The 16 px frame keeps a dot at the picture's own edge whole (a title at y 0, a label at the right edge — measured clipped by 14 px without it). */
-/* the carousel (v478): one multicard per slide, swiped sideways where the photo normally sits, most looked-at first. The
-   slides snap, so a half-shown neighbour says there is another one without a control of its own. */
-.pgcar{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-.pgcar::-webkit-scrollbar{display:none}
-.pgslide{flex:0 0 92%;scroll-snap-align:center;min-width:0}
-.pgslide .picbox.page{width:100%}
 .picbox.page{--pageh:clamp(180px,calc(100vh - 500px),56vh);aspect-ratio:auto;height:auto;max-height:var(--pageh);display:flex;justify-content:center;align-items:center}
 .picbox.page .pagewrap{position:relative;display:block;margin:16px;max-width:calc(100% - 32px);max-height:calc(var(--pageh) - 32px);line-height:0}
 .picbox.page .pagewrap .signimg{position:static;width:auto;height:auto;max-width:100%;max-height:calc(var(--pageh) - 32px);display:block}

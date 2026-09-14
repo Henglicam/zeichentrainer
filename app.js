@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=501; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=502; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2668,7 +2668,7 @@ function wireLinks(root){ (root||document).querySelectorAll("[data-link]").forEa
   /* in Learn the tap shows that photo on the card in place, a second tap returns — the session goes on (v155, H: "I'm
      getting out of the learn mode. That should not happen"); in the Cards detail it opens the other card as before */
   if(S.mode==="study"){ S.peek=S.peek===b.dataset.link?null:b.dataset.link; S.fullPic=false; render(); return; }
-  S.mode="cards"; S.detail=b.dataset.link; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; /* not a row tap: ← Cards falls back to the remembered scroll, and a swipe from here does not move a row offset that belongs to another part of the list (v352, v445) */
+  S.mode="cards"; S.detail=b.dataset.link; S.detailFrom=null; /* the way back belongs to the card you came into, not to the one you hop to (v502; the v492 swipe rule one hop along) */ S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; /* not a row tap: ← Cards falls back to the remembered scroll, and a swipe from here does not move a row offset that belongs to another part of the list (v352, v445) */
   render(); window.scrollTo({top:0}); }); }
 function endSingle(){
   /* leave single-card test mode and restore the session queue */
@@ -2893,7 +2893,9 @@ async function grade(g){
 }
 /* "Test this card" continues with the next card of the list (newest first); ← Cards stops */
 function nextSingle(c){
-  const list=S.custom.slice().sort((a,b)=>(b.at||0)-(a.at||0)).map(d=>d.id);
+  /* only what Learn can study (v502): a multicard and its own texts are never tested, so the walk down the list skips them
+     instead of opening a multicard as a study card (the v487 rule; until v501 the list was every record of the deck) */
+  const list=S.custom.filter(learnable).sort((a,b)=>(b.at||0)-(a.at||0)).map(d=>d.id);
   const next=list[list.indexOf(c)+1];
   if(!next){ endSingle(); return; }
   S.single=next; S.queue=[next]; S.idx=0; S.revealed=false; S.fullPic=false; S.peek=null; render(); window.scrollTo({top:0});
@@ -2996,7 +2998,7 @@ function backToList(){
     /* the row of the card the swipe ended on, put back where the tapped row sat (v445). With no swipe this lands on
        LIST_SCROLL to the pixel — the tapped row's own viewport offset is exactly what LIST_OFF holds — so v352 is
        unchanged; a card deleted or filtered away meanwhile falls back to the remembered scroll. */
-    let row=null; if(id) for(const b of document.querySelectorAll(".crow")) if(b.dataset.id===id){ row=b; break; }
+    let row=null; if(id) for(const b of document.querySelectorAll(".ctile")) if(b.dataset.id===id){ row=b; break; } /* the list is tiles since v465 (v502: it searched .crow, so a swiped-to card fell back to the remembered scroll every time) */
     if(row) window.scrollTo(0,Math.max(0,Math.round(row.getBoundingClientRect().top+window.scrollY-off)));
     else window.scrollTo(0,y);
   });
@@ -7457,7 +7459,7 @@ function openLookup(shot,rid,silent){
     bump("regionCards"); await makeFlashcard(cid); afterMake(); };
   const op=el.querySelector("#lk-open");
   if(op) op.onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, it=cid&&cardOf(cid), fc=it&&madeFrom(it); if(!fc) return;
-    closeLookup(); INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=fc.id; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
+    closeLookup(); INBOX_SCROLL=window.scrollY; S.mode="cards"; S.cardsTab="cards"; /* a flashcard lives on the Cards tab (v502): opened from the multicard's sheet its back read ← Multicards and landed in the multicard list, where the card is not */ S.detail=fc.id; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
   const mo=el.querySelector("#lk-more");
   if(mo) mo.onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, from=LOOKUP&&LOOKUP.from, shot=LOOKUP&&LOOKUP.shot, rid=LOOKUP&&LOOKUP.rid; closeLookup(); if(!cid||!cardOf(cid)) return; if(!from) INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom=from?"page:"+from:"inbox"; LOOK_BACK={shot,rid,card:cid,from:S.detailFrom}; /* v495: More is one step deeper into this look-up, so ← Back has to undo one step and not two */ S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
 }
