@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=483; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=484; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -503,8 +503,28 @@ function diagText(){
    answers with the latest row of every phone plus today's relay calls; the app keeps the password only in memory after
    the unlock (S.adminPw) and sends it with the request — the table itself stays unreadable for the publishable key */
 const reportUrl=()=>SHARE_URL+"/functions/v1/usage-report";
+/* Who is close to today's relay cap (v484, H: "Notify me when a user is about to hit his limit."). The caps live in
+   supabase/functions/ai-relay/index.ts and this is a SECOND COPY of them: the report reads a table, not the function's
+   constants, so the two must be changed together. The copy is named rather than hidden because the cost of drift is a
+   warning at the wrong number in a report only H reads — it cannot refuse a call or change what a phone may do.
+   The owner's own phone is skipped wherever this is used: it is exempt from the per-provider caps. Owner's, English. */
+const RELAY_CAPS={qwen:80,deepseek:400}, RELAY_WARN=0.8;
+function relayNear(r){ const out=[]; for(const [pv,cap] of Object.entries(RELAY_CAPS)){ const c=+(r&&r["relay_"+pv])||0; if(c>=Math.ceil(cap*RELAY_WARN)) out.push({pv,c,cap}); } return out; }
+const relayInstall=r=>((r&&r.data||{}).install)||(r&&r.install)||"";
+function relayNearRows(rows){ const me=installId(); return (rows||[]).filter(r=>relayInstall(r)!==me).map(r=>({r,near:relayNear(r)})).filter(x=>x.near.length); }
+const relayNearText=near=>near.map(x=>`${x.pv} ${x.c} of ${x.cap}`).join(", ");
 let USERS=null, FEEDBACK=null; /* the last answers: {at, rows} */
 async function fetchAllUsers(){ return USERS=await fetchReport("users"); }
+/* On unlock, fetch the report once and put a line above the tab bar when a phone is close to its relay cap (v484).
+   There is no push channel to build on — the app has no service-worker push handler and FCM is blocked in China, so
+   the unlock is the moment H is actually looking at the owner's rows. The answer is cached in USERS, so All users
+   costs no second call. A failure is silent on purpose: the row's own Show is where an error belongs (v198). */
+async function relayWatch(){
+  try{ const u=await fetchAllUsers(), near=relayNearRows(u.rows);
+    if(!near.length) return;
+    noteBar(near.length===1?`One phone is near today's relay cap: ${relayNearText(near[0].near)}.`:`${near.length} phones are near today's relay cap — see All users.`);
+  }catch(e){}
+}
 async function fetchFeedback(){ return FEEDBACK=await fetchReport("feedback"); }
 async function fetchReport(what){
   const r=await fetch(reportUrl(),{method:"POST",headers:{"content-type":"application/json","apikey":SHARE_KEY,"authorization":"Bearer "+SHARE_KEY},body:JSON.stringify({password:S.adminPw||"",what})});
@@ -534,6 +554,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v484","All users: near-cap warning"],
   ["app","v482","Multicard line: '1 learned'"],
   ["app","v481","Cards: the AI bar's tick and cross"],
   ["app","v480","Cards: Dismiss all, then Undo"],
@@ -767,6 +788,8 @@ function allUsersText(rows){
     row("cards",tot.cards||0), sub("from photos",tot.byPhoto||0), sub("typed by hand",tot.byHand||0), row("cards reviewed",tot.reviews||0),
     row("AI checks",tot.aiCalls||0), sub("with the photo",tot.pics||0), sub("via the owner's key today",tot.relay||0),
     "  work done by"].concat(Object.entries(models).length?Object.entries(models).map(([m,v])=>sub(m==="reader"?"on-device reader, readings":m+", checks",v)):[sub("none yet","")]).concat([""]).filter(x=>x!==null);
+  const near=relayNearRows(rows); /* v484: the phones about to be refused, at the top where H looks first */
+  const nearLines=near.length?[`Near the relay cap today (${near.length})`].concat(near.map(({r,near:nr})=>`  ${relayInstall(r)||"?"}  ${relayNearText(nr)}`)).concat([""]):[];
   const block=r=>{ const d=r.data||{}, reader=n(d.models,"reader"), cards=n(d,"cards"); return [`Phone ${d.install||"?"}`,
     `  app version ${d.version||"?"}`, `  ${d.installed?"installed on the home screen":"used in the browser"}`,
     d.device?`  device ${d.device}`:null,
@@ -776,6 +799,7 @@ function allUsersText(rows){
     `  AI checks ${n(d,"aiCalls")}, ${n(d,"pics")} with the photo`,
     reader?`  photos read ${reader}, ${n(d,"pics")} of them poorly`:null,
     `  checks via the owner's key today ${n(r,"relay_today")}`,
+    n(r,"relay_today")?`    qwen ${n(r,"relay_qwen")} of ${RELAY_CAPS.qwen}, deepseek ${n(r,"relay_deepseek")} of ${RELAY_CAPS.deepseek}`:null,
     errsOf(d).length?`  errors ${errsOf(d).length}, last ${day(errsOf(d)[errsOf(d).length-1].t)} ${errsOf(d)[errsOf(d).length-1].kind}`:null, /* the messages themselves in the section at the end (v271) */
     `  first used ${d.first||"?"}`, `  last report ${day(r.created_at)}`].filter(Boolean).join("\n"); };
   const section=(title,list)=>list.length?[`${title} (${list.length})`,""].concat(list.map(block).join("\n\n")).concat([""]):[];
@@ -786,7 +810,7 @@ function allUsersText(rows){
   if(erring.length){ /* the error messages phone by phone, newest last as the phone logged them (v271) */
     lines.push("",`Errors on phones (${erring.length})`,"");
     lines.push(erring.map(r=>{ const d=r.data||{}; return [`Phone ${d.install||"?"}, app version ${d.version||"?"}`].concat(errsOf(d).map(e=>`  ${e.t} [${e.kind}] ${e.msg}`)).join("\n"); }).join("\n\n")); }
-  return head.concat(lines.length?lines:["No rows yet."]).join("\n")+"\n";
+  return head.concat(nearLines).concat(lines.length?lines:["No rows yet."]).join("\n")+"\n";
 }
 async function shareUsers(){
   const rows=(USERS&&USERS.rows)||(await fetchAllUsers()).rows;
@@ -2310,7 +2334,7 @@ function renderMore(main){
     $("#reset").onclick=resetAll;
     $("#admin-lock").onclick=()=>{ S.admin=false; S.adminPw=null; USERS=null; FEEDBACK=null; render(); };
   } else {
-    const pw=$("#admin-pw"), go=async()=>{ const h=await sha256(pw.value); if(h===ADMIN_HASH){ S.admin=true; S.adminPw=pw.value; render(); window.scrollTo({top:0}); } else { $("#admin-err").style.display=""; pw.value=""; } };
+    const pw=$("#admin-pw"), go=async()=>{ const h=await sha256(pw.value); if(h===ADMIN_HASH){ S.admin=true; S.adminPw=pw.value; render(); window.scrollTo({top:0}); relayWatch(); } else { $("#admin-err").style.display=""; pw.value=""; } };
     $("#admin-unlock").onclick=go; pw.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
   }
   main.querySelectorAll("[data-learnorder]").forEach(b=> b.onclick=async()=>{ await setSetting("learnOrder",b.dataset.learnorder); S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false; S.single=null; S.saved=null; setStats(); main.querySelectorAll("[data-learnorder]").forEach(x=>x.classList.toggle("on",x===b)); }); /* the Learn session follows at once (v153) */
@@ -3589,13 +3613,18 @@ const newsSince=v=>newsList().filter(n=>n>v&&n<=APP_V).map(n=>({v:n,s:WHATS_NEW[
 function whatsNewHTML(){ const ns=newsList().slice(0,5); if(!ns.length) return "";
   return `<div class="s" style="margin-top:8px">${esc(t("What is new"))}</div>`+ns.map(n=>`<div class="s">v${n} — ${esc(t(WHATS_NEW[n]))}</div>`).join(""); }
 function hideUpdated(){ const e=$("#updated"); if(e) e.remove(); }
-function showUpdated(notes){
+/* the line above the tab bar: the update note's own element and place (v413/v416), shared with the owner's
+   near-cap warning (v484) so the two cannot stack or drift apart in look */
+function noteBar(text){
+  hideUpdated();
   const el=document.createElement("div"); el.className="undo"; el.id="updated"; el.setAttribute("role","status");
-  const line=notes.length?t("Updated — {0}",t(notes[0].s)):t("Updated.");
-  const more=notes.length>1?" "+t("More under About."):"";
-  el.innerHTML=`<span class="t">${esc(line+more)}</span><button class="x" type="button" aria-label="${esc(t("Close"))}">✕</button>`;
+  el.innerHTML=`<span class="t">${esc(text)}</span><button class="x" type="button" aria-label="${esc(t("Close"))}">✕</button>`;
   el.onclick=hideUpdated; /* the whole line takes the tap, not only the × */
   document.body.appendChild(el);
+}
+function showUpdated(notes){
+  const more=notes.length>1?" "+t("More under About."):"";
+  noteBar((notes.length?t("Updated — {0}",t(notes[0].s)):t("Updated."))+more);
 }
 /* at boot, once: a phone that has seen a version before and now runs a newer one gets the line. A fresh install writes
    the version down and says nothing — there is nothing it was updated from. */
