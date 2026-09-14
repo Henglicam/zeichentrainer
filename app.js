@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=499; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=500; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -99,8 +99,14 @@ function orderCards(list,order,byDue){
    One filter rule, read by the session and by the pull-forward alike — two copies would drift (the v401 lesson).
    `star` says whether the star filter really applied, which the session needs (v429): it stands down when nothing in
    reach is starred, and then the session is an ordinary one. */
+/* a card Learn can study at all (v500): it has a text, and it is neither a multicard nor one of a multicard's own texts —
+   nothing on a multicard is studied, counted or scheduled (H's rule, v487). Every count that says "learned", "due",
+   "known" or offers a Learn filter reads this one predicate, so the Progress tiles, the deck bar, the Learn sheet's
+   numbers and the session can never disagree about what is in the deck. */
+const learnable=d=>!!(d&&d.c&&!isPage(d)&&!hiddenCard(d));
+const learnPool=()=>deck().filter(learnable);
 function learnDeck(){
-  const lt=learnTags(); const d=(lt.length?deck().filter(x=>lt.some(g=>hasTag(x,g))):deck()).filter(x=>x.c&&!isPage(x)&&!hiddenCard(x)); /* a page is studied through its items (v453), and since v478 only through the ones that earned a card of their own */
+  const lt=learnTags(); const d=(lt.length?deck().filter(x=>lt.some(g=>hasTag(x,g))):deck()).filter(learnable); /* a page is studied through its items (v453), and since v478 only through the ones that earned a card of their own */
   const star=!!S.settings.learnStar&&d.some(x=>x.star); /* a filter that would empty the session stands down */
   return {cards:star?d.filter(x=>x.star):d, star};
 }
@@ -235,6 +241,12 @@ function wireTags(root,onChange){
     inp.oninput=sync; });
 }
 const learnTags=()=>{ const v=S.settings.learnTag; return Array.isArray(v)?v:v?[v]:[]; }; /* several tags since v366; a phone that stored one keeps working */
+/* the tags Learn can offer (v500): the ones on cards it can study — a tag that lives only on a multicard or its texts would
+   be a row over an empty session, the v308 trap; and a stored Learn tag whose last learnable card is gone is dropped, as
+   the Cards tab's filters are by normaliseFilters */
+const learnTagList=()=>[...new Set(learnPool().flatMap(d=>d.tags||[]))].sort((a,b)=>a.localeCompare(b));
+function normaliseLearn(){ const lt=learnTags(), known=learnTagList(), un=learnPool().some(d=>hasTag(d,UNTAGGED));
+  const keep=lt.filter(g=>g===UNTAGGED?known.length&&un:known.includes(g)); if(keep.length!==lt.length) setSetting("learnTag",keep); }
 /* the filter as one pill and a sheet (v365, H on the eight kind tags of v364: "with so many tags, we'll probably need a
    separate tags page or something like that" — four ways offered, "I like B most"): the chip row that had to be swiped
    sideways is one pill now — the filter glyph and the filter's own name — and the whole list lives in the app's own sheet,
@@ -244,14 +256,16 @@ const filterIcon=`<svg class="ficon" viewBox="0 0 24 24" aria-hidden="true" styl
 /* the rows the sheet offers, in groups: the Cards tab has the status filters and the tags, Learn the tags alone */
 const tagOn=(scope,x)=>(scope==="learn"?learnTags():S.filterTags).includes(x);
 function filterGroups(scope){
-  const tags=allTags(), un=untaggedCount(), tagRows=[
-    ...tags.map(x=>({k:"tag:"+x, label:x, n:deck().filter(d=>hasTag(d,x)).length, on:tagOn(scope,x)})),
+  /* on Learn every number is the learnable pool's own (v500): a multicard and its texts are never in a session, so a
+     tag they alone carry is no row and a Starred count over them would promise cards Learn cannot show */
+  const lp=scope==="learn"?learnPool():deck(), tags=scope==="learn"?learnTagList():allTags(), un=lp.filter(d=>hasTag(d,UNTAGGED)).length, tagRows=[
+    ...tags.map(x=>({k:"tag:"+x, label:x, n:lp.filter(d=>hasTag(d,x)).length, on:tagOn(scope,x)})),
     ...(tags.length&&un?[{k:"tag:"+UNTAGGED, label:t("Untagged"), n:un, on:tagOn(scope,UNTAGGED)}]:[])];
   /* Starred (v425): the learner's own mark, a row like any other — on Cards it joins the status rows, on Learn it stands on its
      own beside the tags, and it appears only once a card is starred, as the AI row does. */
-  const nStar=deck().filter(starred).length;
+  const nStar=lp.filter(starred).length;
   if(scope==="learn") return [...(nStar?[{head:t("Starred"), rows:[{k:"star", label:t("Starred"), n:nStar, on:!!S.settings.learnStar}]}]:[]),
-    {head:t("Tags"), rows:[{k:"", label:t("All cards"), n:deck().filter(d=>d.c).length, on:!learnTags().length&&!S.settings.learnStar},...tagRows]}];
+    {head:t("Tags"), rows:[{k:"", label:t("All cards"), n:lp.length, on:!learnTags().length&&!S.settings.learnStar},...tagRows]}];
   /* on Cards the numbers are the OPEN TAB's own and follow the list's own page rule (v477): the sheet used to count raw
      records over the whole deck while the list counts a page once and lets it match through its texts, so the two never
      agreed — with two tabs that gap would read as broken ("⚑ Flagged (12)" over a list of one). */
@@ -310,9 +324,10 @@ async function setFilter(scope,k){
   else if(k==="unv") S.filterUnv=!S.filterUnv;
   else { const v=k.slice(4); S.filterTags=S.filterTags.includes(v)?S.filterTags.filter(y=>y!==v):[...S.filterTags,v]; }
 }
-function learnChipsHTML(){ const st=deck().some(starred); /* the pill shows for a starred deck too, even without a single tag (v425) */
+function learnChipsHTML(){ const st=learnPool().some(starred); /* the pill shows for a starred deck too, even without a single tag (v425); the learnable pool's own since v500 */
   if(!st&&S.settings.learnStar) setSetting("learnStar",false); /* the last star taken off leaves no row to switch the filter back off (the v308 rule) */
-  if(!allTags().length&&!st) return ""; return `<div class="chipset learnchips">${filterPillHTML("learn")}</div>`; }
+  normaliseLearn();
+  if(!learnTagList().length&&!st) return ""; return `<div class="chipset learnchips">${filterPillHTML("learn")}</div>`; }
 function wireLearnChips(){ wireFilterPill("learn",render); }
 /* the id of a new card: the text itself while it is free (readable in exports), else text plus a timestamp */
 const cardId = c => deck().some(d=>d.id===c) ? c+"#"+Date.now() : c;
@@ -2142,7 +2157,9 @@ function shareNote(){
 const ADMIN_HASH="ee3467fab5716e0f004d387a016bddadc4570c2336c58fc6c872c351fd23a7d6";
 async function sha256(str){ const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(str)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }
 function learnStats(){
-  const rows=Object.values(S.progress), weekAgo=today()-6*DAY;
+  /* only the rows of cards Learn can study (v500): a multicard's own text keeps its progress row from before v488, and it is
+     nobody's learning — counting it said "12 learned" over a deck of three flashcards */
+  const rows=Object.entries(S.progress).filter(([id])=>learnable(cardOf(id))).map(([,r])=>r), weekAgo=today()-6*DAY;
   const total=rows.filter(r=>r.reps>0).length, week=rows.filter(r=>r.last&&r.last>=weekAgo).length;
   const days=new Set(S.settings.days||[]); let streak=0; const d=new Date();
   if(!days.has(dayKey(d))) d.setDate(d.getDate()-1); /* today not yet, count from yesterday */
@@ -2157,7 +2174,7 @@ const KNOWN_DAYS=21;
 function progressData(){
   const st=learnStats(), t0=today(), endToday=t0+DAY, endTomorrow=t0+2*DAY, endWeek=t0+7*DAY;
   let nw=0, learning=0, known=0, dueToday=0, dueTomorrow=0, dueWeek=0;
-  for(const d of deck()){ if(!d.c||isPage(d)) continue; const p=S.progress[d.id]; if(!p||!p.reps){ nw++; continue; }
+  for(const d of learnPool()){ const p=S.progress[d.id]; if(!p||!p.reps){ nw++; continue; }
     if(p.interval>=KNOWN_DAYS) known++; else learning++;
     if(p.due<endToday) dueToday++; else if(p.due<endTomorrow) dueTomorrow++;
     if(p.due>=endToday&&p.due<endWeek) dueWeek++; }
@@ -3056,7 +3073,7 @@ function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page d
   return `<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
       <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${srcPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
-      <span class="cs">${dot?stateMark(d.id):""}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}${cardStatus(d)}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
+      <span class="cs">${dot?stateMark(d.id):""}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}${dot?"":cardStatus(d)}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
 }
 /* a filter whose row is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the
    list anymore" — the AI chip shows only while suggestions wait, so the filter had no chip left to switch it off and the
