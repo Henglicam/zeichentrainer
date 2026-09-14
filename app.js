@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=479; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=480; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -534,6 +534,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v480","Cards: Dismiss all, then Undo"],
   ["photo","v479","two photos: each keeps its own steps"],
   ["app","v478","Multicard: make a text a card"],
   ["app","v478","Learn: only derived cards"],
@@ -1508,8 +1509,24 @@ async function aiAcceptAll(){
 }
 async function aiDismiss(id){
   const d=cardOf(id); if(!d||!d.ai) return;
+  await putCard(dismissed(d));
+}
+/* the card with its suggestion cleared — one shape for the single Dismiss and for Dismiss all (v480) */
+function dismissed(d){
   const upd={...d}; delete upd.ai; if(upd.mt&&upd.mt.suspect){ upd.mt={...upd.mt}; delete upd.mt.suspect; } /* seen by a human */
-  await putCard(upd);
+  return upd;
+}
+/* one tap for everything waiting: dismiss every suggestion (v480, H after a Check-up left 30 of them, most of them "looks right":
+   "There should be an option to skip all AI suggestions at once."). One transaction, not one put per card — a Check-up over a
+   whole deck answers for every card, so this is the bulk counterpart of Accept all and is undone the same way (v369/v370). */
+async function aiDismissAll(){
+  const list=deck().filter(d=>d.ai);
+  if(!list.length) return 0;
+  const before={}, rows=[]; for(const d of list){ const {img,imgFull,...rest}=d; before[d.id]=rest; rows.push(dismissed(d)); }
+  try{ await idbPutMany("custom",rows); }catch(e){ logErr("dismissall",e&&e.message||String(e)); return 0; }
+  for(const r of rows){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; }
+  await saveLastRun("dismiss","*",before,rows.length);
+  return rows.length;
 }
 function aiBoxHTML(d){
   if(!d.ai) return "";
@@ -1712,7 +1729,7 @@ async function clearLastRun(){ if(S.settings.lastRun){ delete S.settings.lastRun
 const runWhen=at=>{ const d=new Date(at), loc=LANG_LOCALE[LANG];
   return new Date(at).toDateString()===new Date().toDateString()?d.toLocaleTimeString(loc,{hour:"2-digit",minute:"2-digit"}):d.toLocaleString(loc); };
 function undoRunHTML(kind){ const r=S.settings.lastRun; if(!r||r.kind!==kind||(TRANSLATE&&TRANSLATE.running)||(TAGALL&&TAGALL.running)) return "";
-  const line=kind==="tags"?t("Tagged {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):kind==="accept"?t("Accepted the AI's changes on {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):t("Translated {0} at {1}.",nOf(r.n,"card"),runWhen(r.at));
+  const line=kind==="tags"?t("Tagged {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):kind==="accept"?t("Accepted the AI's changes on {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):kind==="dismiss"?t("Dismissed the AI's suggestions on {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):t("Translated {0} at {1}.",nOf(r.n,"card"),runWhen(r.at));
   return `<div class="mrow"><div style="flex:1"><div class="t">${t("Undo last run")}</div><div class="s" id="undorun-status">${line}</div><div class="fieldacts"><button class="btn mini" id="undo-run">${t("Undo")}</button></div></div></div>`; }
 async function undoLastRun(){ const r=S.settings.lastRun; if(!r) return;
   const rows=[]; for(const id of Object.keys(r.m)){ const d=cardOf(id); if(!d) continue; const b=r.m[id];
@@ -2191,6 +2208,7 @@ function renderMore(main){
     ${undoRunHTML("tags")}
     ${recheckRowHTML()}
     ${undoRunHTML("accept")}
+    ${undoRunHTML("dismiss")}
     <div class="listhead">${t("Share")}</div>
     <div class="mrow"><div><div class="t">${t("Share the app")}</div><div class="s" id="app-share-status">${t("Send the link to a friend. The app installs from any browser, no store.")}</div></div><button class="btn mini" id="app-share">${t("Share")}</button></div>
     <div class="mrow"><div style="flex:1"><div class="t">${t("Feedback")}</div><div class="s" id="fb-status">${t("Tell the app's owner what works and what does not.")}</div><textarea class="grow" id="fb-text" rows="2" placeholder="${t("Your message")}"></textarea><div class="fieldacts"><button class="btn mini" id="fb-send">${t("Send")}</button></div></div></div>
@@ -2985,7 +3003,7 @@ function renderCards(main){
   main.innerHTML=`<div class="pane">
     <div class="cardsbar"><input id="q" type="search" placeholder="${t("Search")}" value="${esc(S.query)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="btn mini primary" id="newcard">${t("+ New")}</button></div>
     ${pagesInDeck()&&!marking("cards")?`<div class="seg scope" id="cardstabs" role="tablist"><button class="segbtn${onPages()?"":" on"}" data-ctab="cards" role="tab" aria-selected="${onPages()?"false":"true"}">${t("Cards")}</button><button class="segbtn${onPages()?" on":""}" data-ctab="pages" role="tab" aria-selected="${onPages()?"true":"false"}">${t("Multicards")}</button></div>`:""}
-    ${nAi?`<div class="aibar"><span>${nOf(nAi,"AI suggestion waiting","AI suggestions waiting")}</span><button class="btn mini primary" id="ai-acceptall">${t("Accept all")}</button></div>`:""}
+    ${nAi?`<div class="aibar"><span>${nOf(nAi,"AI suggestion waiting","AI suggestions waiting")}</span><span class="aiacts2"><button class="btn mini primary" id="ai-acceptall">${t("Accept all")}</button><button class="btn mini plain" id="ai-dismissall">${t("Dismiss all")}</button></span></div>`:""}
     ${marking("cards")
       ?`<div class="chips"><span class="badge" id="pick-n">${t("{0} selected",PICK.set.size)}</span><span class="cend"><button class="del" id="pick-all"></button></span></div>` /* the chips make room for the marking (v354) */
       :`<div class="chips"><span class="chipset">${filterPillHTML("cards")}</span><span class="cend"><span class="badge" id="cnt"${n===tabCount()?" hidden":""}>${t("{0} of {1}",n,tabCount())}</span></span></div>`}
@@ -3003,6 +3021,7 @@ function renderCards(main){
   document.querySelectorAll("#cardstabs [data-ctab]").forEach(b=> b.onclick=()=>{ if(S.cardsTab===b.dataset.ctab) return; S.cardsTab=b.dataset.ctab; LIST_CARD=null; LIST_SCROLL=0; render(); window.scrollTo(0,0); }); /* a tab change is a different list, so the row ← Cards would come back to is dropped with it (v477) */
   wireFilterPill("cards",render);
   const aa=$("#ai-acceptall"); if(aa) aa.onclick=async()=>{ aa.disabled=true; await aiAcceptAll(); render(); };
+  const ad=$("#ai-dismissall"); if(ad) ad.onclick=async()=>{ ad.disabled=true; await aiDismissAll(); render(); };
   if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); }
   $("#newcard").onclick=()=>{ endPick(); S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; S.mode="add"; render(); }; /* a card from scratch starts without a picture (v188); the photo path comes in through cropOk with its own pending image */
   wire();
@@ -3509,6 +3528,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  480:"A whole batch of AI suggestions can be cleared in one tap: Dismiss all sits beside Accept all, and More offers one Undo in case you did not mean it.",
   478:"A multicard is a reference now: tap any text on it to turn that text into a flashcard, and a text you meet on two multicards or look up three times becomes one by itself. Learn studies those cards, not the multicard.",
   477:"Once a photo has made a multicard, the Cards tab splits in two — Cards and Multicards — so a multicard is never lost among the ordinary ones.",
   476:"Unticking the AI review now also stops an interrupted Check-up, Translate all or Tag all run from carrying on by itself — it waits until you press the button again.",
