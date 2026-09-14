@@ -1,4 +1,4 @@
-const CACHE = "zt-v482";
+const CACHE = "zt-v483";
 /* OCR assets (./vendor/, ~12 MB) live in their own cache that survives shell
    updates — otherwise every cache version bump would re-download all of
    Tesseract. Only bump this when vendor files change. */
@@ -29,7 +29,7 @@ self.addEventListener("activate", e => {
    worker to pull a newer shell from a mirror (jsDelivr serves the repo). The files land in the
    current cache and are served from there; the worker script itself stays until github.io is
    reachable again — it only carries the cache name. Model files (> 20 MB) are not mirrored. */
-let MIRROR = "https://cdn.jsdelivr.net/gh/henglicam/zeichentrainer@main/"; /* the page sends its setting on start */
+let MIRROR = "https://fastly.jsdelivr.net/gh/henglicam/zeichentrainer@main/"; /* the page sends its setting on start; fastly. since v483 — cdn.jsdelivr.net is DNS-hijacked in China */
 const TYPES = { html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8", css: "text/css; charset=utf-8", json: "application/json", webmanifest: "application/manifest+json", png: "image/png", wasm: "application/wasm", gz: "application/gzip", txt: "text/plain; charset=utf-8" };
 const typeOf = path => TYPES[path.split(".").pop()] || "application/octet-stream";
 self.addEventListener("message", e => {
