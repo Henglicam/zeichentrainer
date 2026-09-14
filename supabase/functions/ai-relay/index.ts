@@ -2,9 +2,20 @@
 // Secrets: DEEPSEEK_KEY, QWEN_KEY (Edge Functions → Secrets). SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set by Supabase.
 // The app sends {provider, body} with its installation id in x-install; the function adds the key, forwards the
 // OpenAI-style request, counts the call in relay_usage (see relay.sql) and refuses with 429 above the caps.
-const PROVIDERS: Record<string, { url: string; key: string }> = {
-  deepseek: { url: "https://api.deepseek.com/chat/completions", key: Deno.env.get("DEEPSEEK_KEY") || "" },
-  qwen: { url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", key: Deno.env.get("QWEN_KEY") || "" },
+
+// Qwen has two kinds of key on two different endpoints, and the console hands them out side by side:
+//   sk-ws-…  pay-as-you-go (按量付费)      → dashscope.aliyuncs.com
+//   sk-sp-…  a Token Plan subscription (套餐) → token-plan.cn-beijing.maas.aliyuncs.com
+// A key sent to the other one's endpoint answers 401 "Incorrect API key provided", which reads like a bad key
+// and is not one. So the endpoint follows the key's own prefix and nobody has to keep the two in step by hand.
+// QWEN_PLAN_URL overrides the Token Plan address without a redeploy of this file, should the console's path differ.
+const QWEN_PAYG = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+const QWEN_PLAN = Deno.env.get("QWEN_PLAN_URL") || "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1/chat/completions";
+const qwenUrl = (k: string) => k.startsWith("sk-sp-") ? QWEN_PLAN : QWEN_PAYG;
+// the key is trimmed: a newline picked up while pasting into the secrets form goes straight into the Bearer header
+const PROVIDERS: Record<string, { url: (key: string) => string; key: string }> = {
+  deepseek: { url: () => "https://api.deepseek.com/chat/completions", key: (Deno.env.get("DEEPSEEK_KEY") || "").trim() },
+  qwen: { url: qwenUrl, key: (Deno.env.get("QWEN_KEY") || "").trim() },
 };
 const CAP_PER_PHONE = 200, CAP_ALL = 10000; // calls per day (v409: raised from 2000 for the class rollout — the per-phone cap still bounds the expensive picture calls)
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-install", "Access-Control-Allow-Methods": "POST, OPTIONS" };
@@ -27,7 +38,7 @@ Deno.serve(async (req) => {
     if (!r.ok) return json({ error: "counter " + r.status }, 500);
     if (c.phone > CAP_PER_PHONE || c.all > CAP_ALL) return json({ error: "daily limit reached" }, 429);
   } catch (e) { return json({ error: "counter failed" }, 500); }
-  const up = await fetch(pv.url, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${pv.key}` }, body: JSON.stringify(payload.body || {}) });
+  const up = await fetch(pv.url(pv.key), { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${pv.key}` }, body: JSON.stringify(payload.body || {}) });
   const text = await up.text();
   return new Response(text, { status: up.status, headers: { ...CORS, "content-type": up.headers.get("content-type") || "application/json" } });
 });
