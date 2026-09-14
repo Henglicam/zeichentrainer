@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=478; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=479; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -319,7 +319,7 @@ function wireLearnChips(){ wireFilterPill("learn",render); }
 const cardId = c => deck().some(d=>d.id===c) ? c+"#"+Date.now() : c;
 async function setSetting(k,v){ S.settings[k]=v; try{ await idbPut("settings",{k,v}); }catch(e){} }
 /* diagnostics (H debugs alone on the phone): the last errors and the last reading's steps, shown and shared from More → Diagnostics */
-const ERRLOG=[], READLOG=[], LAST_READ={passes:null,nums:null,ring:[]}, AILOG=[]; /* AILOG: the last three AI exchanges, request and raw reply, never the key (v97) */
+const ERRLOG=[], LAST_READ={ring:[]}, AILOG=[]; /* AILOG: the last three AI exchanges, request and raw reply, never the key (v97) */
 /* The AI exchanges survive a restart too (v384, H's washing machine: five versions were tuned against his answer rebuilt from
    the reading log's rounded percentages — a box edge rounded to a whole percent is a tenth of a box width, wider than the
    tolerance the test measures — while the raw answer sat one section further down in Diagnostics and was always empty:
@@ -338,10 +338,6 @@ function logAi(entry){ AILOG.push({t:Date.now(),...entry}); while(AILOG.length>3
 let _ailogT=null; const saveAiLog=()=>{ clearTimeout(_ailogT); _ailogT=setTimeout(()=>{ setSetting("ailog",AILOG.slice()).catch(()=>{}); },800); };
 /* the last reading's steps and passes survive a restart (v267 — H's first diagnostics after the v266 update said "Last reading (0 steps)":
    the update had reloaded the page and the log lived in memory only; the error log has been persisted since v93) */
-/* Every line of the reading's later stages goes through here (v374, H's washing machine: the diagnostics arrived after a reload
-   and ended at "Asking the AI about the picture …" — the split's own lines were pushed straight into READLOG, which lives in
-   memory, so the reasons a panel did not split were never in a diagnostics text). It pushes, trims and saves like readingStatus. */
-function logRead(text){ READLOG.push({t:Date.now(),text}); while(READLOG.length>40) READLOG.shift(); saveReadLog(); }
 /* The reading's own numbers, beside its sentences (v399, H, 2026-09-10: "Ich werde dann in Zukunft einfach lauter Bilder
    knipsen und Karten generieren und dir Screenshots von den Karten schicken, von denen ich denke, dass da was nicht korrekt
    ist. Plus die Diagnostiks."). Every line of the log above rounds what it prints to whole percent, and on a label box
@@ -365,9 +361,42 @@ function numsReset(id,keep){ /* proposeFrame writes the proposal before cropSign
   const old=NUMSOF[id], pre=keep&&old&&old.pre?{photo:old.photo,layer:old.layer,prop:old.prop}:null;
   const N={v:APP_V,shot:id,at:Date.now()};
   if(pre) for(const k of Object.keys(pre)) if(pre[k]!==undefined&&pre[k]!==null) N[k]=pre[k];
+  /* v479: the same carry-over for the steps, which live on the record now. The frame's own lines — the proposal, the old crop
+     found — are pushed before the reading opens and are marked pre, so the tail of them follows the record that replaces this
+     one, exactly as v285's wipe in cropSign used to keep them. Capped, or a photo proposed and read twice stacks them up. */
+  if(old&&Array.isArray(old.log)){ const tail=[]; for(let i=old.log.length-1;i>=0&&old.log[i].pre&&tail.length<LOG_PRE_KEEP;i--) tail.unshift(old.log[i]); if(tail.length) N.log=tail; }
+  /* and the photo keeps its one place in the ring: a re-read replaces its record where it stood rather than taking a second
+     slot, so three ring entries are three photos and never one photo three times */
+  { const r=LAST_READ.ring, i=old?r.indexOf(old):-1; if(i>=0){ r[i]=N; N.ringed=true; } }
   NUMSOF[id]=N; numsGC(); return N; }
+/* Every line of the reading's later stages goes through here (v374, H's washing machine: the diagnostics arrived after a reload
+   and ended at "Asking the AI about the picture …" — the split's own lines were pushed straight into a global list, so the
+   reasons a panel did not split were never in a diagnostics text). It pushes, trims and saves like readingStatus.
+   THE LINE BELONGS TO A PHOTO (v479, H's dump of 2026-09-13: "the AI could not check the photo and the reading is weak — no
+   card" stood at step 12 of 16, before two further recognizing steps of a different photo). READLOG was one global 40-line
+   list and cropSign wiped it at its start, so a reading that began while an earlier one was still finishing — the album batch
+   of v411, where the next photo starts as soon as the last has its cards, while that one's AI check and finishPending are
+   still running — erased its predecessor's steps and then collected its predecessor's tail among its own. v406 named it and
+   left it. The steps live on the reading's own numbers record now, which is already keyed by photo and already kept three
+   deep (v399/v405), so a step can no longer be filed under the wrong photo and the two earlier readings keep their steps
+   instead of only their numbers. */
+function logRec(id){ if(!id) return null;
+  let N=NUMSOF[id]||LAST_READ.ring.find(x=>x&&x.shot===id)||null;
+  if(!N){ N=NUMSOF[id]={v:APP_V,shot:id,at:Date.now(),pre:true}; numsGC(); } /* findFrame logs before any record exists */
+  if(!Array.isArray(N.log)) N.log=[];
+  ringAdd(N);
+  return N; }
+/* the ring is in the order the readings started, which is the order the blocks are printed in. A record joins it once, at
+   its first step, and never rejoins: NUMSOF keeps six records and the ring three, so without the flag a late line from a
+   reading that had already been pushed out would put it back at the head of the ring as the newest — the misattribution
+   this whole version is about, in its last hiding place. Its steps are still filed under it; they are simply not printed. */
+function ringAdd(N){ if(!N||N.ringed) return N; N.ringed=true; const r=LAST_READ.ring; r.push(N); while(r.length>NUMS_KEEP) r.shift(); return N; }
+const lastRead=()=>LAST_READ.ring[LAST_READ.ring.length-1]||null;
+function logRead(id,text,pre){ const N=logRec(id); if(!N) return;
+  N.log.push(pre?{t:Date.now(),pre:true,text}:{t:Date.now(),text});
+  while(N.log.length>LOG_MAX) N.log.shift(); saveReadLog(); }
 /* the one place a finished reading's record is handed on: Diagnostics prints it, and the ring keeps it */
-function numsFile(id){ const N=numsFor(id); if(!N) return null; if(!N.ms) N.ms=Date.now()-N.at; LAST_READ.nums=N;
+function numsFile(id){ const N=numsFor(id); if(!N) return null; if(!N.ms) N.ms=Date.now()-N.at;
   /* the ring, not one slot (v405, H's washing machine at v404): NUMSOF holds six records but only one ever reached the
      shared text, so a session of three photos kept the last photo's numbers and threw the other two away — and H's own
      way of working is to take a lot of photos and share the ones that came out wrong, which by construction is almost
@@ -375,7 +404,7 @@ function numsFile(id){ const N=numsFor(id); if(!N) return null; if(!N.ms) N.ms=D
      The same shape as v384 (AILOG in memory alone) and v395 (the reply cut at 1500 characters), one level up.
      Filed by identity, since one reading files twice — at the end of cropSign and again once splitCards named its cards —
      and both times it is the same object, which the ring then updates in place. */
-  const r=LAST_READ.ring, i=r.indexOf(N); if(i>=0) r.splice(i,1); r.push(N); while(r.length>NUMS_KEEP) r.shift();
+  ringAdd(N); /* v479: logRec put it there at the reading's first step, and it keeps its place */
   saveReadLog(); return N; }
 const n4=v=>typeof v==="number"&&isFinite(v)?+v.toFixed(4):null; /* a fraction of an 800 px picture to a third of a pixel: roundGrid tests against 0.3 px and templateBoxes against a tenth of a box */
 const n1=v=>typeof v==="number"&&isFinite(v)?+v.toFixed(1):null; /* a copy's pixels, and degrees */
@@ -399,14 +428,17 @@ const numPic=p=>p?{pw:p.picW,ph:p.picH,box:numFrac(p.box),alt:numFrac(p.boxAlt),
   cut:p.cut||"",bad:!!p.bad,apart:!!p.apart,kind:p.kind||"",keptAll:p.keptAll||"",page:p.pageInfo||null,zh:String(p.zh||"").slice(0,200),
   labels:(p.labels||[]).map(l=>({zh:l.zh,box:numFrac(l.box),sc:l.scale}))}:null;
 const NUMS_KEEP=3; /* readings kept in the shared text (v405) — three covers a photo taken, looked at and taken again */
+const LOG_MAX=40, LOG_PRE_KEEP=4, LOG_OLD_HEAD=5, LOG_OLD_TAIL=10; /* v479: steps kept per reading (the 40 the one global list used to hold), the frame's own lines carried into the reading that follows, and how much of an earlier reading is printed — head and tail, so the proposal and the quick look stand at one end and the outcome at the other */
 const NUMS_OLD=6000; /* the older two are trimmed harder than the newest: a 19-label panel measures 6.1 KB whole, so this
    keeps a panel intact and costs at most 12 KB of the diagnostics H pastes into a chat */
 const NUMS_MAX=12000; /* one reading's numbers, measured on this build: an ordinary sign 1.9 KB, H's 19-label washing machine
    6.1 KB, and about 180 bytes a label after that — so SPLIT_MAX 30 labels come to roughly 8 KB and fit whole. Past the cap
    the blocks go in the order they are worth least: the quick look's boxes first (the reader path does not use them), then
    each label's rectangle in the copy, and the run search's own result last, since that is the one the panel work needs. */
-function numsTrim(o,cap){ const max=cap||NUMS_MAX; if(!o) return o; if(JSON.stringify(o).length<=max) return o;
-  const c={...o}; for(const k of ["qk","lrects","best","found"]){ if(c[k]!==undefined){ c[k]="dropped, over "+max+" characters"; if(JSON.stringify(c).length<=max) break; } } return c; }
+function numsTrim(o,cap){ const max=cap||NUMS_MAX; if(!o) return o;
+  const o2={...o}; delete o2.log; delete o2.passes; delete o2.ringed; /* v479: the steps and the passes live on the record now and are printed as their own lines — inside this JSON they would eat the numbers' own budget; ringed is bookkeeping */
+  if(JSON.stringify(o2).length<=max) return o2;
+  const c={...o2}; for(const k of ["qk","lrects","best","found"]){ if(c[k]!==undefined){ c[k]="dropped, over "+max+" characters"; if(JSON.stringify(c).length<=max) break; } } return c; }
 /* a fingerprint of the system prompt (v399): picSystem() is 7 200 characters and changed at v361, v363, v367, v377, v449 and v455, so an
    answer cannot be attributed to a prompt without one — the version says which code, this says which words it actually sent */
 const strHash=s=>{ let h=5381; for(let i=0;i<s.length;i++) h=(h*33^s.charCodeAt(i))>>>0; return h.toString(36); };
@@ -419,7 +451,11 @@ async function storageFacts(){ try{ if(navigator.storage&&navigator.storage.esti
     if(navigator.storage&&navigator.storage.persisted) STORAGE.persisted=await navigator.storage.persisted(); }catch(e){} }
 /* the ring as it is written down: the newest at its full cap, the older two trimmed harder (v405) */
 const numsRing=()=>LAST_READ.ring.map((N,i)=>numsTrim(N,i===LAST_READ.ring.length-1?NUMS_MAX:NUMS_OLD));
-let _readlogT=null; const saveReadLog=()=>{ clearTimeout(_readlogT); _readlogT=setTimeout(()=>{ setSetting("readlog",{steps:READLOG.slice(),passes:LAST_READ.passes||null,ring:numsRing()}).catch(()=>{}); },800); };
+/* the steps and the passes ride beside the trimmed ring, not inside it (v479): numsRing() spends a fixed character budget on
+   the numbers, and steps in that JSON would push the numbers out — which is the v395 fault (the answer cut mid-word) one
+   store along. Matched back to their reading by shot id at boot. */
+const readLogs=()=>{ const r=LAST_READ.ring.filter(Boolean); return r.map((N,i)=>({shot:N.shot,log:(N.log||[]).slice(),passes:i===r.length-1?(N.passes||null):null})); }; /* the passes of the newest only — the others are never printed, so storing them would only cost */
+let _readlogT=null; const saveReadLog=()=>{ clearTimeout(_readlogT); _readlogT=setTimeout(()=>{ setSetting("readlog",{ring:numsRing(),logs:readLogs()}).catch(()=>{}); },800); };
 function logErr(kind,msg){ ERRLOG.push({t:Date.now(),kind,msg:String(msg||"").slice(0,400)}); while(ERRLOG.length>20) ERRLOG.shift(); setSetting("errlog",ERRLOG.slice()).catch(()=>{}); }
 window.addEventListener("error",e=>logErr("error",(e.message||"")+(e.filename?` @${String(e.filename).split("/").pop()}:${e.lineno}`:"")));
 window.addEventListener("unhandledrejection",e=>{ const r=e.reason; logErr("promise",r&&(r.stack||r.message)||r); });
@@ -435,14 +471,24 @@ function diagText(){
        meaningLangName(), so a German phone gets another answer for the same picture */
     `settings · lang ${LANG} · picture to the AI ${S.settings.aiPicture===false?"off":"on"} · relay ${S.settings.aiRelay===false?"off":"on"} · auto check ${S.settings.aiAuto===false?"off":"on"} · offline model ${S.settings.nmt?"on":"off"} · mirror ${S.settings.mirror===undefined?"default":(S.settings.mirror||"off")} · brightening ${S.settings.brightPass?"done":"not yet"} · re-cut ${recutLine()}`,
     navigator.userAgent, `voices (${voiceList().length}): ${voiceList().join("; ")||"none reported"}`, ""];
-  out.push(`Last reading (${READLOG.length} steps):`);
-  READLOG.forEach(x=>out.push(`  ${ago(x.t)}  ${x.text}`));
-  if(LAST_READ.passes) out.push("  passes: "+JSON.stringify(LAST_READ.passes));
-  if(LAST_READ.nums) out.push("  numbers: "+JSON.stringify(numsTrim(LAST_READ.nums))); /* the frame chain's own values, unrounded (v399) — the prose above is for reading, this is what a harness is fed */
-  /* the two readings before it (v405): a card that came out wrong is rarely from the last photo taken */
-  const older=LAST_READ.ring.filter(N=>N&&N!==LAST_READ.nums);
+  /* v479: every block is one photo's own. The steps used to be a single global list that the next reading wiped, so an album
+     batch mixed two photos' lines into one block and the two earlier readings had no steps at all — only their numbers. */
+  const stepLines=(N,ind,head,tail)=>{ const a=(N&&N.log)||[], o=[], drop=head&&a.length>head+tail?a.length-head-tail:0;
+    a.forEach((x,i)=>{ if(drop&&i===head) o.push(`${ind}\u2026 ${drop} step${drop===1?"":"s"} left out`);
+      if(!drop||i<head||i>=head+drop) o.push(`${ind}${ago(x.t)}  ${x.text}`); });
+    return o; };
+  const now=lastRead();
+  out.push(`Last reading (${now&&now.log?now.log.length:0} steps)${now&&now.shot?" \u00b7 "+now.shot:""}:`);
+  if(now){ out.push(...stepLines(now,"  ",0,0));
+    if(now.passes) out.push("  passes: "+JSON.stringify(now.passes));
+    out.push("  numbers: "+JSON.stringify(numsTrim(now))); } /* the frame chain's own values, unrounded (v399) — the prose above is for reading, this is what a harness is fed */
+  /* the two readings before it (v405): a card that came out wrong is rarely from the last photo taken. Their steps are
+     trimmed head and tail, which keeps the frame's proposal and the quick look at one end and the outcome at the other;
+     their passes are left out, since three competitions would be some 12 KB of a text H pastes into a chat by hand. */
+  const older=LAST_READ.ring.filter(N=>N&&N!==now);
   if(older.length){ out.push("", `Earlier readings (${older.length}, newest last):`);
     older.forEach(N=>{ out.push(`  ${ago(N.at)}  ${N.shot||"?"}${Array.isArray(N.cards)?` \u00b7 ${N.cards.length} card${N.cards.length===1?"":"s"}`:""}`);
+      if(N.log&&N.log.length){ out.push(`    steps (${N.log.length}):`); out.push(...stepLines(N,"      ",LOG_OLD_HEAD,LOG_OLD_TAIL)); }
       out.push("    numbers: "+JSON.stringify(numsTrim(N,NUMS_OLD))); }); }
   out.push("", `Drawings (${DRAWLOG.length}, newest last):`);
   DRAWLOG.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.strokes.length} stroke${x.strokes.length===1?"":"s"} → ${x.alts.join(" ")||"nothing"}${x.strokes_best?` · strokes ${x.strokes_best.join(" ")} · print ${(x.ocr||[]).join(" ")||"nothing"}`:""}`); out.push("    strokes: "+JSON.stringify(x.strokes)); });
@@ -488,6 +534,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v479","two photos: each keeps its own steps"],
   ["app","v478","Multicard: make a text a card"],
   ["app","v478","Learn: only derived cards"],
   ["app","v477","Cards: the two tabs"],
@@ -765,10 +812,19 @@ async function boot(){
     sett.forEach(r=>{ S.settings[r.k]=r.v; });
     if(Array.isArray(S.settings.errlog)) ERRLOG.unshift(...S.settings.errlog.slice(-20));
     if(Array.isArray(S.settings.autoQueue)) AUTOQ.push(...S.settings.autoQueue.filter(id=>typeof id==="string")); /* v411: the batch goes on where it stopped */
-    if(S.settings.readlog&&Array.isArray(S.settings.readlog.steps)&&!READLOG.length){ READLOG.push(...S.settings.readlog.steps.slice(-40)); LAST_READ.passes=S.settings.readlog.passes||null;
+    if(S.settings.readlog&&!LAST_READ.ring.length){ const rl=S.settings.readlog;
       /* the ring since v405; a phone still holding a v404 setting has one record under nums */
-      LAST_READ.ring=(Array.isArray(S.settings.readlog.ring)?S.settings.readlog.ring:(S.settings.readlog.nums?[S.settings.readlog.nums]:[])).slice(-NUMS_KEEP);
-      LAST_READ.nums=LAST_READ.ring[LAST_READ.ring.length-1]||null; } /* the reading's numbers survive the restart with its steps (v399) */ /* the last reading before the restart (v267) */
+      LAST_READ.ring=(Array.isArray(rl.ring)?rl.ring:(rl.nums?[rl.nums]:[])).slice(-NUMS_KEEP);
+      /* v479: the steps ride beside the ring and are matched back by shot id */
+      const logs=Array.isArray(rl.logs)?rl.logs:null;
+      LAST_READ.ring.forEach(N=>{ if(!N) return; const e=logs&&logs.find(x=>x&&x.shot===N.shot);
+        N.log=e&&Array.isArray(e.log)?e.log.slice(-LOG_MAX):(Array.isArray(N.log)?N.log:[]);
+        if(e&&e.passes) N.passes=e.passes; });
+      /* a phone still holding a v478 setting: one global step list and one passes array, both the newest reading's */
+      if(!logs&&LAST_READ.ring.length){ const last=LAST_READ.ring[LAST_READ.ring.length-1];
+        if(Array.isArray(rl.steps)&&!last.log.length) last.log=rl.steps.slice(-LOG_MAX);
+        if(rl.passes&&!last.passes) last.passes=rl.passes; }
+      LAST_READ.ring.forEach(N=>{ if(N) N.ringed=true; }); } /* the reading's numbers survive the restart with its steps (v399/v267) */
     if(Array.isArray(S.settings.ailog)&&!AILOG.length) AILOG.push(...S.settings.ailog.slice(-3)); /* the last AI exchanges before the restart (v384) */
     await migrateAi();
     storageFacts(); /* v399: the quota and the usage for Diagnostics, once at boot */
@@ -1129,7 +1185,7 @@ async function aiReadPicture(blob,alts,status,rec){
   logAi({model,status:r.status,ms:Date.now()-t0,req,res:raw.slice(0,AI_LOG_RES)});
   await loadScriptTables().catch(()=>{});
   const txt=raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,""); let x; try{ x=JSON.parse(txt); if(Array.isArray(x)) x=x[0]; }catch(e){ x=mendJSON(txt); if(!x) throw new Error("could not read the model's answer");
-    logRead(`the AI's answer stopped in the middle — kept what came (${Object.keys(x).join(", ")})`); }
+    logRead(rec&&rec.shot,`the AI's answer stopped in the middle — kept what came (${Object.keys(x).join(", ")})`); }
   if(!x||typeof x!=="object") throw new Error("unexpected answer");
   let lines0=String(x.zh||"").replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean), lineBoxes=Array.isArray(x.boxes)?x.boxes:null;
   /* a line of Latin letters alone leaves the answer (v381, H's washing machine: the model answered a "Bra" line beside the
@@ -1139,7 +1195,7 @@ async function aiReadPicture(blob,alts,status,rec){
   { const keep=lines0.map(l=>CJK.test(l));
     if(keep.some(Boolean)&&!keep.every(Boolean)){
       const pp=String(x.p||"").split(/\s*\/\s*/), mp=String(x.m||"").split(/\s*\/\s*/);
-      logRead(`a line of Latin letters left out of the AI's answer: ${lines0.filter((l,i)=>!keep[i]).join(" | ")}`);
+      logRead(rec&&rec.shot,`a line of Latin letters left out of the AI's answer: ${lines0.filter((l,i)=>!keep[i]).join(" | ")}`);
       if(pp.length===lines0.length) x.p=pp.filter((v,i)=>keep[i]).join(" / ");
       if(mp.length===lines0.length) x.m=mp.filter((v,i)=>keep[i]).join(" / ");
       if(lineBoxes&&lineBoxes.length===lines0.length) lineBoxes=lineBoxes.filter((v,i)=>keep[i]);
@@ -1167,7 +1223,7 @@ async function aiReadPicture(blob,alts,status,rec){
     const tally={}; for(const l of x.labels){ const sc=picScale(l&&l.box,pic.w,pic.h,LABEL_MIN); if(sc) tally[sc]=(tally[sc]||0)+1; }
     const uni=picScale(x.box,pic.w,pic.h), how=Object.keys(tally).sort((a,b)=>tally[b]-tally[a]||(a===uni?-1:b===uni?1:0))[0]||null;
     const odd=Object.keys(tally).length-1;
-    if(odd>0) logRead(`${Object.keys(tally).map(k=>tally[k]+" "+k).join(", ")} — the labels are all read as ${how}`);
+    if(odd>0) logRead(rec&&rec.shot,`${Object.keys(tally).map(k=>tally[k]+" "+k).join(", ")} — the labels are all read as ${how}`);
     const seen=new Set();
     labels=x.labels.map(l=>{ const lz=t2s(String(l&&l.zh||"").trim().replace(/\s+/g,"")), bx=picBox(l&&l.box,pic.w,pic.h,LABEL_MIN,how);
       if(!lz||!CJK.test(lz)||!bx||seen.has(lz+"|"+bx.join())) return null; seen.add(lz+"|"+bx.join());
@@ -1181,8 +1237,8 @@ async function aiReadPicture(blob,alts,status,rec){
   /* what came back, in one line of the log (v374): the shape of the answer survives a restart, so a panel that made one card can
      be read back afterwards — until v373 only the split's own lines said anything, and they lived in memory */
   const pageInfo=(()=>{ const g=x.page; if(!g||typeof g!=="object") return null; const f=k=>String(g[k]||"").trim().replace(/\s+/g," ").slice(0,60); const o={name:f("name"),what:f("what"),place:f("place")}; return o.name||o.what||o.place?o:null; })(); /* v453: the page's own title, for the page card */
-  if(keepAll&&lineBoxes) logRead(`the small lines of this answer are elements, not fine print (${apart?"the texts stand apart":"kind "+kindRaw}) — none of them is left out`); /* v456: the v312 rule stood down, and the record says why (the v399 rule) */
-  logRead(`the AI's answer: ${lines0.length} ${lines0.length===1?"line":"lines"}, apart ${apart?"yes":"no"}, ${Array.isArray(x.labels)?x.labels.length:0} labels${Array.isArray(x.labels)&&x.labels.length?" ("+(labels?labels.length:0)+" usable)":""}, ${Array.isArray(x.boxes)?x.boxes.length:0} boxes, meaning ${String(x.m||"").length} characters`);
+  if(keepAll&&lineBoxes) logRead(rec&&rec.shot,`the small lines of this answer are elements, not fine print (${apart?"the texts stand apart":"kind "+kindRaw}) — none of them is left out`); /* v456: the v312 rule stood down, and the record says why (the v399 rule) */
+  logRead(rec&&rec.shot,`the AI's answer: ${lines0.length} ${lines0.length===1?"line":"lines"}, apart ${apart?"yes":"no"}, ${Array.isArray(x.labels)?x.labels.length:0} labels${Array.isArray(x.labels)&&x.labels.length?" ("+(labels?labels.length:0)+" usable)":""}, ${Array.isArray(x.boxes)?x.boxes.length:0} boxes, meaning ${String(x.m||"").length} characters`);
   return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(main.p,zh),m,ml:LANG,note:String(x.note||"").trim(),bad:!!x.bad||!CJK.test(zh),model,pv,box:main.box,boxAlt:mainAlt?mainAlt.box:null,droppedBoxesAlt:mainAlt?mainAlt.droppedBoxes:null,boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,outside:[],oneScale,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,""),kind:kindRaw,keptAll:keepAll?(apart?"apart":"kind "+kindRaw):"",pageInfo,apart,labels,picW:pic.w,picH:pic.h,boxScale:picScale(x.box,pic.w,pic.h)}; /* cut (v314): the edges that cut off a line the model left out */
 }
 /* the main text only (v312, H's 青春无烟 / 未来无限 poster: the card carried the poster's small print — the line 第39个世界无烟日 above the title and the date 2026年5月31日 世界无烟日 below it, half of it outside the frame — "wieder die Sachen ausserhalb des Crops und das Kleingedruckte mitgelesen. Bitte beides vermeiden"): the prompt asks for the main text and leaves fine print and lines the picture's edge cuts off to the model; this is the safety net from the model's own line boxes — a line whose box is under FINE_PRINT of the tallest line's height is fine print and goes, with its pinyin and meaning parts when they come one per line; the box for the frame is then the union of the lines kept */
@@ -2175,7 +2231,7 @@ function renderMore(main){
     <div class="listhead">Updates without a VPN</div>
     <div class="mrow"><div style="flex:1;min-width:0"><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div><div class="inrow"><input id="mirror-url" class="mono" autocomplete="off" placeholder="Mirror address" title="Mirror address (a copy of the app reachable in China)" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"><button class="btn mini" id="mirror-check">Check now</button></div></div></div>
     <div class="listhead">Diagnostics</div>
-    <div class="mrow"><div style="flex:1"><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${READLOG.length} step${READLOG.length===1?"":"s"}.</div><div class="fieldacts"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button><button class="btn mini" id="diag-copy">Copy</button></div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${(lastRead()&&lastRead().log||[]).length} step${(lastRead()&&lastRead().log||[]).length===1?"":"s"}.</div><div class="fieldacts"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button><button class="btn mini" id="diag-copy">Copy</button></div></div></div>
     <pre class="diag" id="diag-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">Still to test</div><div class="s" id="field-status">${fieldNote()}</div><div class="fieldacts"><button class="btn mini" id="field-show">Show</button><button class="btn mini" id="field-copy">Copy</button></div></div></div>
     <pre class="diag" id="field-out" hidden></pre>
@@ -3228,7 +3284,7 @@ function renderEdit(main,c){
        only when nothing is found does the app propose one (v241) */
     if(d.frame&&d.frame.w){ CROP={id:rid,rect:null}; drawRecrop(); openFrame(d.frame); }
     else if(d.img&&!removeImg){ CROP={id:rid,rect:null,locating:true}; drawRecrop();
-      findFrame(full,d.img).then(async f=>{ if(!CROP||CROP.id!==rid||!CROP.locating) return; delete CROP.locating;
+      findFrame(full,d.img,rid).then(async f=>{ if(!CROP||CROP.id!==rid||!CROP.locating) return; delete CROP.locating;
         if(f){ d.frame=f; try{ await idbPut("custom",d); }catch(e){} openFrame(f); }
         else { CROP.auto=true; drawRecrop(); proposeFrame(rid); } }); }
     else { CROP={id:rid,rect:null,auto:true}; drawRecrop(); proposeFrame(rid); } };
@@ -3814,7 +3870,7 @@ async function placeFrame(id,f,opts){ /* a stored frame onto the photo's layer, 
    at the photo's own pixels, so a grey copy of both at ≤ 240 px is searched for the position with the smallest mean
    difference — coarse grid first, then the pixels around the best; a turned frame's cut is not a plain sub-image and finds
    nothing, as does a crop from another photo; null then, and the app's proposal takes over. About 100 ms. */
-async function findFrame(fullBlob,cropBlob){
+async function findFrame(fullBlob,cropBlob,id){ /* id (v479): the line below is logged before the reading opens, and it is this photo's */
   let F=null,C=null;
   try{
     [F,C]=await Promise.all([createImageBitmap(fullBlob),createImageBitmap(cropBlob)]);
@@ -3828,7 +3884,7 @@ async function findFrame(fullBlob,cropBlob){
     let best=Infinity,bx=0,by=0;
     for(let y=0;y<=fh-ch;y+=step) for(let x=0;x<=fw-cw;x+=step){ const v=sad(x,y,step); if(v<best){ best=v; bx=x; by=y; } }
     for(let y=Math.max(0,by-step);y<=Math.min(fh-ch,by+step);y++) for(let x=Math.max(0,bx-step);x<=Math.min(fw-cw,bx+step);x++){ const v=sad(x,y,1); if(v<best){ best=v; bx=x; by=y; } }
-    READLOG.push({t:Date.now(),pre:true,text:`the old crop ${best<=22?"found":"not found"} in the photo (difference ${best.toFixed(1)})`}); while(READLOG.length>40) READLOG.shift();
+    logRead(id,`the old crop ${best<=22?"found":"not found"} in the photo (difference ${best.toFixed(1)})`,true);
     if(best>22) return null; /* the same pixels through two JPEG passes differ by a few grey levels; another place by dozens */
     return {x:+(bx/fw).toFixed(4),y:+(by/fh).toFixed(4),w:+(cw/fw).toFixed(4),h:+(ch/fh).toFixed(4),a:0};
   }catch(e){ return null; } finally{ if(F) F.close(); if(C) C.close(); }
@@ -4107,12 +4163,12 @@ async function proposeFrame(id){
   const hidden=!RECROP[id]||!layer; if(hidden) CROP.hidden=true; /* the inbox never shows the proposal (v288): the reader reads it now, and the frame appears on the text it finds */
   { const N=numsReset(id); N.pre=true; N.photo=[PW,PH]; N.layer=[n1(r.width),n1(r.height)]; /* v399: the ink rows' own rectangle at full precision, and the photo and layer the whole chain is measured in — the log's line rounds all three to whole percent, and on a 19-label panel it is evicted from the 40 steps before the diagnostics are ever shared */
     N.prop={r:numRect(CROP.rect),kind:CROP.proposed,hidden:!!hidden,reg:reg0?[n4(reg0.x),n4(reg0.y),n4(reg0.x1),n4(reg0.y1)]:null,lineH:reg0?n1(reg0.lineH):null,blocks:reg0&&reg0.blocks||0,shared,screenshot,src:rec.src||null,flat}; } /* v450: the rows the ink found even when a shared screenshot set them aside, and the flatness — inside prop, the one field numsReset keeps when the reading starts */
-  const pc=v=>Math.round(v*100); READLOG.push({t:Date.now(),pre:true,text:`frame proposed by the app${hidden?" (not shown)":""}: ${full?"the whole photo":`${pc(f.x/r.width)}–${pc((f.x+f.w)/r.width)} % across, ${pc(f.y/r.height)}–${pc((f.y+f.h)/r.height)} % down${shaped?" (16:9)":" (the text's own box, 16:9 does not fit)"}`}${whole0&&reg0?` — ${shared?"a shared screenshot":"a screenshot from the album"} is read whole, its text rows ${pc(reg0.y)}–${pc(reg0.y1)} % set aside`:reg?`, text rows ${pc(reg.y)}–${pc(reg.y1)} %`:", no text rows found"}`}); while(READLOG.length>40) READLOG.shift();
+  const pc=v=>Math.round(v*100); logRead(id,`frame proposed by the app${hidden?" (not shown)":""}: ${full?"the whole photo":`${pc(f.x/r.width)}–${pc((f.x+f.w)/r.width)} % across, ${pc(f.y/r.height)}–${pc((f.y+f.h)/r.height)} % down${shaped?" (16:9)":" (the text's own box, 16:9 does not fit)"}`}${whole0&&reg0?` — ${shared?"a shared screenshot":"a screenshot from the album"} is read whole, its text rows ${pc(reg0.y)}–${pc(reg0.y1)} % set aside`:reg?`, text rows ${pc(reg.y)}–${pc(reg.y1)} %`:", no text rows found"}`,true);
   if(hidden){
     cropSign(id);
     if(S.autoCard){ saveNow(id,true); return; } /* the card by itself (v325): no frame, no preview — the reading fills the card, the reader's or the AI's placement becomes its frame (PLACED, v304), and the row shows the finished card */
     renderShots();
-    setTimeout(()=>{ if(!(CROP&&CROP.id===id&&CROP.hidden)) return; delete CROP.hidden; logRead(`frame shown as proposed — the reader took longer than ${FRAME_WAIT/1000} s`); renderShots(); },FRAME_WAIT); /* the reader is slower: the proposal becomes the frame (v289); the reader may still move it once onto the text it finds, while no finger has touched it (v310) */
+    setTimeout(()=>{ if(!(CROP&&CROP.id===id&&CROP.hidden)) return; delete CROP.hidden; logRead(id,`frame shown as proposed — the reader took longer than ${FRAME_WAIT/1000} s`); renderShots(); },FRAME_WAIT); /* the reader is slower: the proposal becomes the frame (v289); the reader may still move it once onto the text it finds, while no finger has touched it (v310) */
     return; } /* the reading at once — no preview, no wait: there is no frame to adjust yet; cropSign's first status sets the bar's text before the render */
   renderShots(); showCropPreview(id);
 }
@@ -4552,7 +4608,9 @@ const readingHTML=(x,id)=>READ_FAIL.test(x)?`<span class="badge">${failText(x)}<
     :`<div class="reading"><div class="bar"><i></i></div><span class="ok" style="margin:0">${t("Card saved — the text follows when the reading is done.")}${stuck?t(" Still at: {0}",esc(x)):""}</span></div>`
     :`<div class="reading"><div class="bar"><i></i></div><div class="readrow"><span class="badge">${id&&CROP&&CROP.id===id&&CROP.hidden?t("Finding the text …"):t("Reading the text …")}${stuck?t(" still at: {0}",esc(x)):""}</span>${id&&CROP&&CROP.id===id&&CROP.rect&&!CROP.hidden?`<button class="btn mini" data-savenow="${id}">${t("Save now")}</button>`:""}</div></div>`)
    (!!(id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK));
-const readingStatus=(id,run)=>x=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=x; READ_AT[id]=Date.now(); const last=READLOG[READLOG.length-1]; if(last&&/^recognizing … \d+%$/.test(last.text)&&/^recognizing … \d+%$/.test(x)) last.text=x; else logRead(x); saveReadLog(); /* the reader's progress overwrites its own line (v285: forty "recognizing … N%" lines had pushed every step and the proposed frame out of H's diagnostics) */
+const readingStatus=(id,run)=>x=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=x; READ_AT[id]=Date.now();
+  { const N=logRec(id), last=N&&N.log[N.log.length-1]; /* v479: this photo's own last line — until now it was whatever was logged last by anyone, so two photos read close together overwrote each other's progress */
+    if(last&&/^recognizing … \d+%$/.test(last.text)&&/^recognizing … \d+%$/.test(x)){ last.text=x; saveReadLog(); } else logRead(id,x); } /* the reader's progress overwrites its own line (v285: forty "recognizing … N%" lines had pushed every step and the proposed frame out of H's diagnostics) */
   const b=$("#ocr-"+id); if(b) b.innerHTML=readingHTML(x,id);
   setTimeout(()=>{ if(READING[id]!==x) return; const b2=$("#ocr-"+id); if(b2) b2.innerHTML=readingHTML(x,id); },READ_STUCK+50); };
 /* a canvas with the bitmap drawn at a scale (opaque — the reader is handed JPEGs) */
@@ -4897,7 +4955,7 @@ async function frameOnText(id,orig,base,rect,angle,by,grow,sure){ /* sure (v333)
   else { if(!CROP||CROP.id!==id||CROP.rect!==cr) return null; /* the hand moved the frame meanwhile: the reading is stale anyway */
     CROP.rect=nr; CROP.proposed="text"; CROP.followed=true; delete CROP.hidden; }
   numAdd(id,"place",{by:by||"reader",rect:numBox(rect),copy:[W,Hh],base:numRect(base),ang:n4(angle),grow:grow?[n1(grow.top),n1(grow.bottom),n1(grow.left),n1(grow.right)]:null,keep:sure&&sure.box?numBox(sure.box):sure?1:0,refine,out:numRect(nr),upright,trimmed,sticks,took:true}); /* v399: every value frameGeom was given, and what it gave back */
-  const pc=v=>Math.round(v*100); logRead(`frame ${refine?"centred":"placed"} on the text${by?" by the "+by:""}: ${pc(nr.x/nr.lw)}–${pc((nr.x+nr.w)/nr.lw)} % across, ${pc(nr.y/nr.lh)}–${pc((nr.y+nr.h)/nr.lh)} % down${nr.a?`, turned by ${nr.a}°`:""}${trimmed?(sticks?" — trimmed to the text, the rest reaches past the photo's edge":" — trimmed to the photo"):""}${upright?` — upright, the frame turned by ${angle.toFixed(1)}° would leave the photo`:""}`);
+  const pc=v=>Math.round(v*100); logRead(id,`frame ${refine?"centred":"placed"} on the text${by?" by the "+by:""}: ${pc(nr.x/nr.lw)}–${pc((nr.x+nr.w)/nr.lw)} % across, ${pc(nr.y/nr.lh)}–${pc((nr.y+nr.h)/nr.lh)} % down${nr.a?`, turned by ${nr.a}°`:""}${trimmed?(sticks?" — trimmed to the text, the rest reaches past the photo's edge":" — trimmed to the photo"):""}${upright?` — upright, the frame turned by ${angle.toFixed(1)}° would leave the photo`:""}`);
   return cut.blob;
 }
 /* The AI's box, snapped to the characters (v297, H's 邪不压正 poster: Qwen's box cut 邪 at the left and reached into
@@ -5755,8 +5813,7 @@ async function cropSign(id,opts){
   const done=r=>{ if(r) r.done=true; if(!stale()) READ_RUN[id]++; }; /* the result is in: the run is over, so the traditional reader's chain still running in the background (v236) can write no progress into the box over the editor and stops at its next pass (v290 — the quick look let the chain outlive the reading, and the box showed "recognizing … 100 %" for good) */
   if(RECROP[id]) RECROP[id].stage="reading";
   const status=readingStatus(id,run);
-  { const pre=[]; while(READLOG.length&&READLOG[READLOG.length-1].pre) pre.unshift(READLOG.pop()); READLOG.length=0; READLOG.push(...pre); } /* the frame's own lines (proposed by the app, the old crop found) stay at the head of the new reading's log (v285 — until then the reading wiped them at once) */
-  LAST_READ.passes=null; const N=numsReset(id,true); status("cutting out the frame …"); /* v399: the numbers of this reading, keeping the proposal proposeFrame put down before it */
+  const N=numsReset(id,true); status("cutting out the frame …"); /* v479: the steps are this photo's own, and numsReset carries the frame's lines (proposed by the app, the old crop found) into the new record — the v285 rule, without the global wipe that erased another photo's reading */ /* v399: the numbers of this reading, keeping the proposal proposeFrame put down before it */
   let cardImg=null; /* the card's picture from this reading — kept on the reading, not in the one global slot, so a reading finishing in the background cannot hand its picture to another photo's card (v237) */
   try{
     READ_APP[id]=opts&&opts.app!==undefined?!!opts.app:!!(CROP&&CROP.id===id&&(CROP.hidden||CROP.proposed)); delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete EARLY[id]; delete PROV[id]; /* the app's own frame, not the hand's (v304: the placement may move it for a card saved with Save now) */
@@ -5788,7 +5845,7 @@ async function cropSign(id,opts){
         const ok=textLike(lines);
         const inkB=(N.prop&&N.prop.blocks)||0, readB=textBlocks(read), blocks=Math.max(inkB,readB), several=blocks>=MULTI_BLOCKS; /* the ink's own bands first (the reader misses a board's small plates entirely), the reader's blocks as the second route */ /* v457: several separated blocks of text — a board, a directory, a menu, a panel, a screen, or two signs a doorway apart. The model has to be asked even when the big text read cleanly, or H's "Multikarte" would depend on how badly the reader did. */
         N.qk={k:n4(k),like:ok,blocks,inkB,readB,several,lines:read.slice(0,8).map(l=>({t:(l.t||"").slice(0,40),cf:(l.cf||[]).slice(0,40),bx:(l.bx||[]).slice(0,40).map(b=>[Math.round(b.x0),Math.round(b.y0),Math.round(b.x1),Math.round(b.y1)])})),tall:lines.length,fine:fine.length}; /* v399: textLike wants three boxes at SURE_BOX averaging PLACE_CF, and tallLines the box heights against Hink — neither can be checked against a rounded mean, which is all the log has ever carried */
-        logRead(`quick look: ${read.length?read.map(l=>l.t).join(" | ")+` at ${Math.round(meanCf(read))} %`:"nothing"}${fine.length?` — fine print beside taller ink, left out: ${fine.map(l=>l.t).join(" | ")}`:""}${lines.length&&!ok?" — not text, no frame from it":read.length&&!lines.length?" — nothing left to frame":""}`); /* Diagnostics (v296) */
+        logRead(id,`quick look: ${read.length?read.map(l=>l.t).join(" | ")+` at ${Math.round(meanCf(read))} %`:"nothing"}${fine.length?` — fine print beside taller ink, left out: ${fine.map(l=>l.t).join(" | ")}`:""}${lines.length&&!ok?" — not text, no frame from it":read.length&&!lines.length?" — nothing left to frame":""}`); /* Diagnostics (v296) */
         if(ok) rect=rectOfLines(bmp,lines); /* garbage places no frame (v296) */
         /* the reading will almost certainly end weak: send the picture now instead of after the passes (v439). Only under
            SKEW_TRUST, because trustAngle needs every pass and below that angle picBase is the same either way — the bytes
@@ -5796,17 +5853,17 @@ async function cropSign(id,opts){
         if((!ok||several)&&!EARLY[id]&&Math.abs(dk.angle||0)<SKEW_TRUST&&pictureUp()){
           const eb={orig:r.blob,dk,base}, eg=[...new Set(read.map(l=>l.t).filter(Boolean))].slice(0,6);
           EARLY[id]={run,base:eb,guesses:eg,at:Date.now(),p:aiReadPicture(eb.dk.blob,eg,()=>{},N).then(x=>{picOk();return{pic:x};},e=>{picRefused(e);return{err:e&&e.message||String(e)};})};
-          logRead(`${ok?`the quick look read the text but found it in ${blocks} separated blocks — a board, not one sign`:"the quick look found no readable text"} — the AI gets the picture now, beside the reading (${eg.length} guesses)`);
+          logRead(id,`${ok?`the quick look read the text but found it in ${blocks} separated blocks — a board, not one sign`:"the quick look found no readable text"} — the AI gets the picture now, beside the reading (${eg.length} guesses)`);
           /* a good answer ends the reading at its next step (v442, H's "Go" on the measured lever): on the weak path every pass
              after the quick look is thrown away once the picture answer is in, and on a panel the reader works 20–33 s on H's
              phone against Qwen's 3–10 s. A flag, never a throw; only a good answer of this run (a bad one must never stop it —
              the reader may still end strong and right, v348/v438), only under SKEW_STOP; secondLook and the whole-frame
              fallback check r.stop between their awaited batches, so the pool is idle at every exit and readLabels never
              shares a worker with an abandoned job. The stop does not call done(r) — placeFromPicture honours this run. */
-          EARLY[id].p.then(e=>{ if(stale()||ok||r.done||r.stop||r.passesDone||!e||!e.pic||e.pic.bad||Math.abs(dk.angle||0)>=SKEW_STOP) return; r.stop=Date.now(); /* v457: never on the `several` trigger — there the quick look LIKED the reading, so cutting the passes short would lower effScore, turn a good reading weak and hand the card to the model. v442's stop is for a reading that was going to be garbage anyway. */ logRead("the AI has answered while the reader is still at work — the reading stops at its next step"); }); }
+          EARLY[id].p.then(e=>{ if(stale()||ok||r.done||r.stop||r.passesDone||!e||!e.pic||e.pic.bad||Math.abs(dk.angle||0)>=SKEW_STOP) return; r.stop=Date.now(); /* v457: never on the `several` trigger — there the quick look LIKED the reading, so cutting the passes short would lower effScore, turn a good reading weak and hand the card to the model. v442's stop is for a reading that was going to be garbage anyway. */ logRead(id,"the AI has answered while the reader is still at work — the reading stops at its next step"); }); }
         } finally{ bmp.close(); }
       if(rect){ await placeRect(rect); if(stale()) return;
-        if(CROP&&CROP.id===id&&CROP.hidden){ delete CROP.hidden; logRead("frame shown as proposed — the text fills it"); renderShots(); } } } /* nothing to move: the proposal is the frame, from now */
+        if(CROP&&CROP.id===id&&CROP.hidden){ delete CROP.hidden; logRead(id,"frame shown as proposed — the text fills it"); renderShots(); } } } /* nothing to move: the proposal is the frame, from now */
     status("reading the text …");
     const passes=[{lines:await readPass(w,dk.blob,status),img:dk.blob,angle:dk.angle,tightened:false}];
     if(stale()) return;
@@ -5819,7 +5876,7 @@ async function cropSign(id,opts){
     delete r.onTight; if(stale()) return;
     if(CROP&&CROP.id===id&&CROP.hidden){
       await place(cardRect); if(stale()) return;
-      if(CROP&&CROP.id===id&&CROP.hidden){ delete CROP.hidden; logRead("frame shown as proposed"); renderShots(); } /* nothing tighter found: the proposal itself */
+      if(CROP&&CROP.id===id&&CROP.hidden){ delete CROP.hidden; logRead(id,"frame shown as proposed"); renderShots(); } /* nothing tighter found: the proposal itself */
     }
     if(Math.max(0,...passes.map(p=>effScore(p.lines,Hink)))<WEAK_READ&&!r.stop){ /* weak or nothing: the whole frame as black-and-white and chromaticity copies, sizes from the ink — unless the picture answer is already in (v442) */
       status("trying a black-and-white copy …");
@@ -5847,11 +5904,11 @@ async function cropSign(id,opts){
     const score=p=>readingScore(p.lines,Hink)*Math.min(1.5,1+0.1*((agree.get(textOf(p))||1)-1))*sizeFit(p)*lineFit(p);
     passes.sort((a,b)=>score(b)-score(a));
     r.passes=passes.map(p=>({s:Math.round(score(p)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),h:Hink?+(hOfPass(p)/Hink).toFixed(2):null,tight:p.tightened,bw:!!p.bw,ch:!!p.chroma,tra:!!p.tra,...(lineFit(p)<1?{over:p.lines.length-maxLines}:{})}));
-    LAST_READ.passes=r.passes; saveReadLog();
+    N.passes=r.passes; saveReadLog(); /* v479: on the reading's own record, so the "passes:" line cannot belong to a different photo than the "numbers:" line under it */
     const best=passes[0], lines=best.lines;
     N.eff=n1(effScore(lines,Hink)); N.weak=N.eff<WEAK_READ; N.nPass=passes.length; /* v399: effScore >= WEAK_READ decides whether the AI is asked at all, and the log states neither it nor Hink */
     r.passesDone=true; /* v442: an answer landing from here on stops nothing — the passes are all read, and the weak block below simply takes it (without this the .then above logged "the reading stops" during the weak block's own await, on a reading that had finished) */
-    if(r.stop){ N.stop={at:r.stopAt||"the first pass",passes:passes.length,ms:Date.now()-r.stop}; logRead(`the reading stopped at ${r.stopAt||"the first pass"} for the picture answer — ${passes.length} passes read, the rest left out`); } /* v442, and v399's rule: N.weak and N.eff are the partial set's from here, so the record says so */
+    if(r.stop){ N.stop={at:r.stopAt||"the first pass",passes:passes.length,ms:Date.now()-r.stop}; logRead(id,`the reading stopped at ${r.stopAt||"the first pass"} for the picture answer — ${passes.length} passes read, the rest left out`); } /* v442, and v399's rule: N.weak and N.eff are the partial set's from here, so the record says so */
     N.best={t:lines.map(l=>(l.t||"").slice(0,40)).join("|").slice(0,160),tight:!!best.tightened,k:typeof best.scale==="string"?best.scale:n4(best.scale||1),bw:!!best.bw,ch:!!best.chroma,tra:!!best.tra,
       lines:lines.slice(0,6).map(l=>({cf:(l.cf||[]).slice(0,40),bx:(l.bx||[]).slice(0,40).map(b=>[Math.round(b.x0),Math.round(b.y0),Math.round(b.x1),Math.round(b.y1)])}))};
     /* the reading's winning pass places the frame when nothing else did (v321, H's Nongfu Spring bottle taken again at v320: the quick look read garbage, the close look's band sat on the mountain logo, and the text 农夫山泉 / 饮用天然水 was read by the whole-frame fallback at 98 % — a pass that could not place the frame, since only the close look's tight passes did —, so the card's picture kept the logo above the text: "das Bild über der Schrift gehört auch nicht rein"): a strong whole-frame pass whose lines pass the placement bar (textLike, the fine print left out) gives the frame the way the quick look does, while the frame is still the app's and untouched — Diagnostics "frame placed on the text by the reading: …" */
@@ -5886,9 +5943,9 @@ async function cropSign(id,opts){
             const [ax0,ay0,ax1,ay1]=pic.boxAlt, abox={x0:ax0*W,y0:ay0*Hh,x1:ax1*W,y1:ay1*Hh}; let s2=null; try{ s2=snapBox(b,abox,n,lens,pic.droppedBoxesAlt||pic.droppedBoxes); }catch(e){ s2=null; }
             N.snapAlt=s2?{box:numBox(s2),count:s2.count}:null; /* v399 */
             const pc=v=>Math.round(v*100), cg=snap?snap.count:0, cp=s2?s2.count:0; /* count: the character-shaped blobs each snap took, both passes together — a real line gives several, a blank box none */
-            if(cp>=3&&cg<3){ logRead(`the AI's box ${pc(bx0)}–${pc(bx1)} % across, ${pc(by0)}–${pc(by1)} % down passes the picture's edge on the 0–1000 grid and holds no characters there — read as pixels it holds ${cp} blobs of a character's size: ${pc(ax0)}–${pc(ax1)} % across, ${pc(ay0)}–${pc(ay1)} % down`); box=abox; snap=s2; altWon=true; N.altWon=true; pic.box=pic.boxAlt; if(r.pic) r.pic.box=pic.boxAlt; [fx0,fy0,fx1,fy1]=pic.boxAlt; }
-            else logRead(`the AI's box passes the picture's edge — read on the 0–1000 grid it holds ${cg} blobs of a character's size, read as pixels ${cp}; the grid stays`); } /* the box's edges from the pixels (v297): an edge that cuts through the text moves out to its end, a blank margin is trimmed */
-          if(snap){ const pc=v=>Math.round(v*100), mb={...box}; logRead(`the AI's box ${pc(fx0)}–${pc(fx1)} % across, ${pc(fy0)}–${pc(fy1)} % down, snapped to the ink: ${pc(snap.x0/W)}–${pc(snap.x1/W)} % across, ${pc(snap.y0/Hh)}–${pc(snap.y1/Hh)} % down`); box=snap;
+            if(cp>=3&&cg<3){ logRead(id,`the AI's box ${pc(bx0)}–${pc(bx1)} % across, ${pc(by0)}–${pc(by1)} % down passes the picture's edge on the 0–1000 grid and holds no characters there — read as pixels it holds ${cp} blobs of a character's size: ${pc(ax0)}–${pc(ax1)} % across, ${pc(ay0)}–${pc(ay1)} % down`); box=abox; snap=s2; altWon=true; N.altWon=true; pic.box=pic.boxAlt; if(r.pic) r.pic.box=pic.boxAlt; [fx0,fy0,fx1,fy1]=pic.boxAlt; }
+            else logRead(id,`the AI's box passes the picture's edge — read on the 0–1000 grid it holds ${cg} blobs of a character's size, read as pixels ${cp}; the grid stays`); } /* the box's edges from the pixels (v297): an edge that cuts through the text moves out to its end, a blank margin is trimmed */
+          if(snap){ const pc=v=>Math.round(v*100), mb={...box}; logRead(id,`the AI's box ${pc(fx0)}–${pc(fx1)} % across, ${pc(fy0)}–${pc(fy1)} % down, snapped to the ink: ${pc(snap.x0/W)}–${pc(snap.x1/W)} % across, ${pc(snap.y0/Hh)}–${pc(snap.y1/Hh)} % down`); box=snap;
             /* a line of the answer the box left out (v324, H's Nongfu Spring label: the AI's box for 饮用天然水 净含量380ml sat on NONGFU SPRING, so the snap ended at the Latin line and the card showed the Chinese line cut in half — "only translate what is also shown in the thumbnail and in the learning card"): every band of ink the snap found just beyond the text is read by the on-device reader, and it joins the box when the reader's line is one the AI read — at least three of its characters, half of them, in one of the answer's lines; the faces under a poster's title and a Latin line read as nothing of the kind, and stay out */
             for(const cand of snap.beyond||[]){ const bh=cand.y1-cand.y0, room=0.3*bh, into=cand.near<0.1*bh?0.6*bh:room, sx=Math.max(0,cand.x0-room), sy=Math.max(0,cand.y0-(cand.side>0?into:room)), sw=Math.min(W,cand.x1+room)-sx, sh=Math.min(Hh,cand.y1+(cand.side>0?room:into))-sy; if(sw<4||sh<4) continue; /* a band that touches the union is a line the box cut through: the cut reaches 0.6 band heights into the union, so the reader sees the whole characters (v326) */
               const sc=Math.min(3,Math.max(0.3,64/bh)), cv=document.createElement("canvas"); cv.width=Math.max(1,Math.round(sw*sc)); cv.height=Math.max(1,Math.round(sh*sc));
@@ -5896,8 +5953,8 @@ async function cropSign(id,opts){
               const jpg=await new Promise(res=>cv.toBlob(res,"image/jpeg",READ_JPEG)); if(!jpg) continue; const got=await readPass(w,jpg,()=>{}); if(stale()) return;
               const chars=tx=>[...tx].filter(c=>CJK.test(c)||/[0-9]/.test(c)), hit=got.find(l=>{ const rc=chars(l.t); if(rc.length<3) return false; return zh.some(al=>{ const ac=new Set(chars(al)); const shared=rc.filter(c=>ac.has(c)).length; return shared>=3&&shared>=0.5*rc.length; }); });
               const where=cand.y0>=box.y1-1?"below":"above";
-              if(hit){ box={x0:Math.min(box.x0,cand.x0),y0:Math.min(box.y0,cand.y0),x1:Math.max(box.x1,cand.x1),y1:Math.max(box.y1,cand.y1)}; logRead(`a line ${where} the AI's box, read as ${hit.t} — one of the answer's lines, the frame takes it: ${pc(box.x0/W)}–${pc(box.x1/W)} % across, ${pc(box.y0/Hh)}–${pc(box.y1/Hh)} % down`); }
-              else logRead(`a band ${where} the AI's box read as ${got.map(l=>l.t).join(" | ")||"nothing"} — not a line of the answer, left out`); }
+              if(hit){ box={x0:Math.min(box.x0,cand.x0),y0:Math.min(box.y0,cand.y0),x1:Math.max(box.x1,cand.x1),y1:Math.max(box.y1,cand.y1)}; logRead(id,`a line ${where} the AI's box, read as ${hit.t} — one of the answer's lines, the frame takes it: ${pc(box.x0/W)}–${pc(box.x1/W)} % across, ${pc(box.y0/Hh)}–${pc(box.y1/Hh)} % down`); }
+              else logRead(id,`a band ${where} the AI's box read as ${got.map(l=>l.t).join(" | ")||"nothing"} — not a line of the answer, left out`); }
             /* the snap does not overrule a box the model drew around exactly its own characters (v449, H's shopfront
                江苏淮扬菜代表品牌, 2026-09-13: "eine Karte ist in Crop Mode abgeschnitten worden" — Qwen boxed nine characters
                1440 × 160 px in the copy, nine squares, and the snap kept 608 × 82: four characters with their tops sliced,
@@ -5911,7 +5968,7 @@ async function cropSign(id,opts){
                a crop with room around the text, never one that cuts it (v380's rule). */
             const kb=lens.length===1?(lens[0]|0):0, mw=mb.x1-mb.x0, mh=mb.y1-mb.y0, kept=mh>0?(box.y1-box.y0)/mh:1;
             if(kb>=2&&mh>0&&Math.abs(mw/mh-kb)<=SNAP_SQUARE*kb&&kept<SNAP_KEEP){
-              N.snapKept=n4(kept); logRead(`the AI's box is ${kb} characters wide and one character tall, so it was measured, not guessed — the snap kept ${Math.round(kept*100)} % of its height: the AI's box stays`); box=mb; } }
+              N.snapKept=n4(kept); logRead(id,`the AI's box is ${kb} characters wide and one character tall, so it was measured, not guessed — the snap kept ${Math.round(kept*100)} % of its height: the AI's box stays`); box=mb; } }
           /* one card per element of a user interface (v358): the model called the picture an interface and listed its elements —
              each box is snapped on its own (n=1, its own character count for the width budget) and gets the same room the union
              frame gets; the auto-card path only, where no frame is ever drawn, so the placement above is untouched */
@@ -5921,7 +5978,7 @@ async function cropSign(id,opts){
              frame, so the tilt costs each label the little room its bounding box adds, not its card (until v373 a frame the reader
              straightened by more than 1.5° kept one card). A frame the hand turned still keeps one — that angle is the user's. */
           const noSplit=pic.labels&&(!PENDING[id]||RECROP[id]?"the card was not made by the app itself":!READ_APP[id]?"the frame is the hand's":altWon?"the AI's box was read as pixels, so the labels' boxes cannot be trusted":!seenBase?"there is no frame to map them onto":seenBase.a?"the frame was turned by hand":"");
-          if(noSplit){ N.noSplit=noSplit; logRead(`the AI calls these ${pic.labels.length} texts separate labels, but ${noSplit} — one card`); }
+          if(noSplit){ N.noSplit=noSplit; logRead(id,`the AI calls these ${pic.labels.length} texts separate labels, but ${noSplit} — one card`); }
           if(pic.labels&&!noSplit){
             const lab=pic.labels, bs=lab.map(l=>({x0:l.box[0]*W,y0:l.box[1]*Hh,x1:l.box[2]*W,y1:l.box[3]*Hh}));
             const scale=lab[0].scale, oneScale=lab.every(l=>l.scale===scale)&&(!pic.boxScale||pic.boxScale===scale); /* every box read the same way, or some of them land somewhere else entirely */
@@ -5932,9 +5989,9 @@ async function cropSign(id,opts){
                are destroyed by the whole percent the log prints, and v390's field regression was exactly this test not firing */
             const tW=pic.picW||W, tmpl=why?false:templateBoxes(lab,tW);
             N.tmpl={W:tW,why:why||"",scale,widths:lab.map(l=>n1((l.box[2]-l.box[0])*tW)),ns:lab.map(l=>[...l.zh].filter(c=>CJK.test(c)).length),round:why?null:roundGrid(lab,tW),uw:n1((Math.max(...lab.map(l=>l.box[2]))-Math.min(...lab.map(l=>l.box[0])))*tW),drawing:!!tmpl,tell:tmpl||""}; /* uw: the label boxes' own union across — a width equal to it is the v436 tautology */
-            if(why){ logRead(`the AI calls these ${lab.length} texts separate labels, but ${why} — one card`); }
+            if(why){ logRead(id,`the AI calls these ${lab.length} texts separate labels, but ${why} — one card`); }
             else if(tmpl){ /* the boxes are a drawing, not a measurement (v380): the model cannot say where anything is, so the reader looks (v386) */
-              logRead(`the AI's ${lab.length} label boxes are ${tmpl==="round"?"drawn on round pixels":"all the same size"} — a drawing of the grid, not a measurement: the reader looks for the labels in the picture itself`); /* v447: the sentence used to claim the width tell whichever one fired, and on H's dial (widths 180, 160, 160) it was the round pixels — a record that names the wrong reason is the v399 fault one level down */
+              logRead(id,`the AI's ${lab.length} label boxes are ${tmpl==="round"?"drawn on round pixels":"all the same size"} — a drawing of the grid, not a measurement: the reader looks for the labels in the picture itself`); /* v447: the sentence used to claim the width tell whichever one fired, and on H's dial (widths 180, 160, 160) it was the round pixels — a record that names the wrong reason is the v399 fault one level down */
               const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen;
               const sb=src===seen?b:await createImageBitmap(src); const gy=labelGrey(sb,pic.box);
               let found=null; try{ found=await readLabels(sb,gy,lab,pic.box,()=>{}); }catch(e){ found=null; logErr("split",e&&e.message||String(e)); }
@@ -5942,26 +5999,26 @@ async function cropSign(id,opts){
               if(found&&found.hit+found.filled+found.ordered>=SPLIT_MIN){
                 N.found={bands:found.bands,runs:found.runs,hit:found.hit,filled:found.filled,ordered:found.ordered,two:found.two||0,
                   rects:found.rects.map(q=>q?[n4(q.x0),n4(q.y0),n4(q.x1),n4(q.y1),String(q.read||"").slice(0,12)]:null)}; /* v399: the rectangle each label was placed on, in fractions of the picture, and the run's reading that named it — the log prints these as whole percent, one line a label, and on a 20-label panel those lines evict the proposal from the 40 steps */
-                logRead(`the picture's own characters stand in ${found.bands} ${found.bands===1?"row":"rows"}, ${found.runs} runs; the reader named ${found.hit} of the ${lab.length} labels`+(found.filled?`, and ${found.filled} more by half a reading and their row's order`:"")+(found.ordered?`, and ${found.ordered} more by their row's order alone`:""));
+                logRead(id,`the picture's own characters stand in ${found.bands} ${found.bands===1?"row":"rows"}, ${found.runs} runs; the reader named ${found.hit} of the ${lab.length} labels`+(found.filled?`, and ${found.filled} more by half a reading and their row's order`:"")+(found.ordered?`, and ${found.ordered} more by their row's order alone`:""));
                 const pcv=v=>Math.round(v*100);
                 labelWhole=true; /* a label the reader could not name keeps the frame's own picture, never a neighbour's */
                 labelRects=lab.map((l,k)=>{ const q=found.rects[k];
-                  logRead(q?(q.read?`${l.zh}: read as ${q.read} at ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`
+                  logRead(id,q?(q.read?`${l.zh}: read as ${q.read} at ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`
         :`${l.zh}: no reading, its row's order gives it ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`):`${l.zh}: no run of the picture reads as it — the whole picture`);
                   if(!q) return null; /* no FRAME_ROOM here: the run was already grown as far as its neighbours allow (v388) */
                   return {x0:Math.max(0,q.x0)*W,y0:Math.max(0,q.y0)*Hh,x1:Math.min(1,q.x1)*W,y1:Math.min(1,q.y1)*Hh}; }); }
               else { N.found={bands:found?found.bands:0,runs:found?found.runs:0,hit:found?found.hit:0,filled:found?found.filled:0,ordered:found?found.ordered:0,whole:true}; /* v399 */
-                logRead(`the reader found ${found?found.hit:0} of the ${lab.length} labels in the picture — every card gets the whole picture`); splitWhole=true; } }
+                logRead(id,`the reader found ${found?found.hit:0} of the ${lab.length} labels in the picture — every card gets the whole picture`); splitWhole=true; } }
             else { const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen; /* the frame at its own pixels when nothing was straightened: a panel's labels are small in the 800 px picture the AI saw */
               const sb=src===seen?b:await createImageBitmap(src); const gy=labelGrey(sb,pic.box); if(sb!==b) sb.close();
               const pcv=v=>Math.round(v*100);
               /* the rows and the runs first (v376): the model's boxes are a layout, its reading order a fact */
               let plan=null; try{ plan=labelPlan(gy,lab.map(l=>({box:l.box,n:[...l.zh].filter(c=>CJK.test(c)).length||1}))); }catch(e){ plan=null; logErr("split",e&&e.message||String(e)); }
               N.plan=plan?{rows:plan.rows,placed:plan.placed}:null; /* v399 */
-              logRead(plan?`the ${lab.length} labels stand in ${plan.rows} ${plan.rows===1?"row":"rows"}, and ${plan.placed} of them found their own place in the picture's own rows of characters`
+              logRead(id,plan?`the ${lab.length} labels stand in ${plan.rows} ${plan.rows===1?"row":"rows"}, and ${plan.placed} of them found their own place in the picture's own rows of characters`
                           :"the labels' rows do not line up with the picture's — each label is placed on its own");
               labelRects=lab.map((l,k)=>{ let sn=null; try{ sn=labelRect(gy,{x0:l.box[0],y0:l.box[1],x1:l.box[2],y1:l.box[3]},plan&&plan.pin[k]); }catch(e){ sn=null; logErr("split",e&&e.message||String(e)); }
-                logRead(sn?`${l.zh}: the AI's box ${pcv(l.box[0])}–${pcv(l.box[2])} % across, ${pcv(l.box[1])}–${pcv(l.box[3])} % down, its characters at ${pcv(sn.x0)}–${pcv(sn.x1)} %, ${pcv(sn.y0)}–${pcv(sn.y1)} %`:`${l.zh}: nothing of a character's shape near the AI's box — the box stays`);
+                logRead(id,sn?`${l.zh}: the AI's box ${pcv(l.box[0])}–${pcv(l.box[2])} % across, ${pcv(l.box[1])}–${pcv(l.box[3])} % down, its characters at ${pcv(sn.x0)}–${pcv(sn.x1)} %, ${pcv(sn.y0)}–${pcv(sn.y1)} %`:`${l.zh}: nothing of a character's shape near the AI's box — the box stays`);
                 const q=sn||{x0:l.box[0],y0:l.box[1],x1:l.box[2],y1:l.box[3]}, Hk=Math.max(1/Hh,q.y1-q.y0); /* the label's own characters (v359), not snapBox's poster machinery: its room reaches into the neighbours and its passes take the button */
                 return {x0:Math.max(0,q.x0-Hk*FRAME_ROOM)*W,y0:Math.max(0,q.y0-Hk*FRAME_ROOM)*Hh,x1:Math.min(1,q.x1+Hk*FRAME_ROOM)*W,y1:Math.min(1,q.y1+Hk*FRAME_ROOM)*Hh}; }); } }
           if(labelRects) N.lrects=labelRects.map(rc=>rc?numBox(rc):null); /* v399: in the picture's own pixels, the input photoFrameOf maps onto the photo */
@@ -5972,11 +6029,11 @@ async function cropSign(id,opts){
           rect={x0:Math.max(0,box.x0-Hb*FRAME_ROOM),y0:Math.max(0,box.y0-Hb*FRAME_ROOM),x1:Math.min(W,box.x1+Hb*FRAME_ROOM),y1:Math.min(Hh,box.y1+Hb*FRAME_ROOM)};
           N.rect=numBox(rect); N.Hb=n1(Hb); /* v399 */
           if(picSeen.base){ const bh=box.y1-box.y0, sb=seenBase, e={top:box.y0<=0.02*Hh&&sb.y>0.005*sb.lh,bottom:box.y1>=0.98*Hh&&sb.y+sb.h<0.995*sb.lh,left:box.x0<=0.02*W&&sb.x>0.005*sb.lw,right:box.x1>=0.98*W&&sb.x+sb.w<0.995*sb.lw}; /* an edge that is the photo's own has nothing beyond it (v315: on the whole-photo proposal of H's parking sign the line said the frame reaches beyond the right edge, where nothing was) */ /* the box on the edge of the app's proposal (v313, H's 北京现代 badge: the ink rows cut the chrome characters in half at the proposal's top, Qwen boxed the visible halves at y 0–55 of 496, the snap found nothing, and the card showed half characters — "Why is the crop so wrong here?"): the text may go on beyond the edge, so the frame reaches past it — 1.5 box heights above or below, two text heights sideways — into the photo; never for the hand's frame or the whole photo, where there is nothing beyond */
-            if(e.top||e.bottom||e.left||e.right){ grow={top:e.top?1.5*bh:0,bottom:e.bottom?1.5*bh:0,left:e.left?2*bh:0,right:e.right?2*bh:0}; logRead(`the AI's box touches the picture's ${["top","bottom","left","right"].filter(k=>e[k]).join(" and ")} edge — the frame reaches beyond it`); } } }catch(e){ box=null; logErr("snap",e&&e.message||String(e)); logRead("the AI's box could not be used: "+(e&&e.message||e)); }
+            if(e.top||e.bottom||e.left||e.right){ grow={top:e.top?1.5*bh:0,bottom:e.bottom?1.5*bh:0,left:e.left?2*bh:0,right:e.right?2*bh:0}; logRead(id,`the AI's box touches the picture's ${["top","bottom","left","right"].filter(k=>e[k]).join(" and ")} edge — the frame reaches beyond it`); } } }catch(e){ box=null; logErr("snap",e&&e.message||String(e)); logRead(id,"the AI's box could not be used: "+(e&&e.message||e)); }
         if(box){ const sure=sureAngle; const cut=await frameOnText(id,picSeen.orig,seenBase,rect,seenAngle,"AI",grow,sure&&{box}); if(stale()) return; if(cut) placedCut=cut;
           const placed=PLACED[id]||(CROP&&CROP.id===id&&CROP.followed?CROP.rect:null); /* only a frame this box actually moved (v410) */
           const gone=cut&&placed&&picSeen.base?outsideWindow(pic,placed,seenBase,W,Hh,seenAngle):null; /* picSeen.base is null on the regrow branch and only there: after a v314 cut, a v318 side, a v348 noText or a v393 tiny re-ask the app has just spent a second Qwen call to RECOVER a line, and the snap then trims its region off the union — measured, the rule deleted the very line the re-ask existed for (verify-aiframe cutline) */
-          if(gone) logRead(`a line outside the picture this card will carry, left off it: ${gone.join(" | ")}`); }
+          if(gone) logRead(id,`a line outside the picture this card will carry, left off it: ${gone.join(" | ")}`); }
         /* v443 had a rule here: a label the reader could not place whose box touched the picture's edge got no card,
            on the reading that the photo had cut it off. H's dial photo (2026-09-13) disproved it and it is gone — do not
            rebuild it. Measured on his own verbatim answer, driven through two serving roots: on a reading straightened
@@ -5999,7 +6056,7 @@ async function cropSign(id,opts){
           const one=PLACED[id]||seenBase;
           SPLIT[id]=pic.labels.map(()=>one);
           N.split=numFrames(SPLIT[id]); N.splitWhole=true; /* v399 */
-          logRead("the AI calls these "+pic.labels.length+" texts separate labels — one card each, all with the frame's own picture"); }
+          logRead(id,"the AI calls these "+pic.labels.length+" texts separate labels — one card each, all with the frame's own picture"); }
         if(labelRects&&W&&Hh&&seenBase){ /* one frame per label on the photo (v357), for finishPending to cut and save */
           const one=seenBase; /* the frame the AI read the text from, for a label the reader could not name (v398): PLACED[id] is the snapped frame, trimmed to the ink the search found, so it is guaranteed to omit exactly the labels the search missed */
           const fr=labelRects.map(rc=>rc?photoFrameOf(seenBase,W,Hh,rc,seenAngle):(labelWhole?one:null)), pc=v=>Math.round(v*100);
@@ -6007,33 +6064,33 @@ async function cropSign(id,opts){
           if(keep.length<fr.length){ /* a label too small to cut is left out and the others keep their cards (v360, H's washing machine, whose fine print stands 6 px tall in the picture) */
             const lost=[]; for(let k=0;k<fr.length;k++) if(!fr[k]) lost.push(pic.labels[k].zh);
             const rest=keep.length>=SPLIT_MIN?"the other labels keep their cards":"one card";
-            logRead("no frame for "+lost.join(", ")+" on the photo (copy "+W+"×"+Hh+") — "+rest); }
+            logRead(id,"no frame for "+lost.join(", ")+" on the photo (copy "+W+"×"+Hh+") — "+rest); }
           if(keep.length>=SPLIT_MIN){
             pic.labels=keep.map(k=>pic.labels[k]); SPLIT[id]=keep.map(k=>fr[k]);
             N.split=numFrames(SPLIT[id]); N.splitZh=pic.labels.map(l=>l.zh); /* v399: the frames as they go to the cards, and which label each belongs to */
             const where=SPLIT[id].map((f,k)=>pic.labels[k].zh+" "+pc(f.x/f.lw)+"–"+pc((f.x+f.w)/f.lw)+" %").join(", ");
-            logRead("the AI calls these "+pic.labels.length+" texts separate labels — one card each: "+where); } } }
+            logRead(id,"the AI calls these "+pic.labels.length+" texts separate labels — one card each: "+where); } } }
         return placedCut; };
     if(weak&&pictureProvider()&&aiAutoOn()&&navigator.onLine&&picDown()){ /* v472: the provider refused a moment ago — say so, and let the no-card gate see that the picture was never judged */
-      r.picErr=PIC_DOWN_TEXT(); N.picErr=String(r.picErr).slice(0,120); logRead(r.picErr); }
+      r.picErr=PIC_DOWN_TEXT(); N.picErr=String(r.picErr).slice(0,120); logRead(id,r.picErr); }
     else if(weak&&pictureUp()){ /* the one switch covers text and pictures (v193, H: the picture went out while the check was off — "counterintuitive") */
       const guesses=[...new Set(passes.map(textOf).filter(Boolean))].slice(0,6);
       /* the whole straightened frame — or the placed frame's cut (v301) —, never the second look's band (v175, H's two-line sticker 骑车勿盯 / 还车勿忘: the tight band held the lower line only, and the AI read that line alone) */
       /* always the frame the reading started from with its straightening, so the AI's box can move the frame anywhere in it (v319; v301–v318 sent the placed frame's cut when the frame stood on text the reader had read, and the AI could only centre the frame inside it — H's Nongfu Spring bottle: a garbage placement on the label's corner, and the AI saw 泉 alone twice; since v319 the reader places only from a sure reading, and a reading that still ends weak is fragile, so the AI decides from the whole proposal — the main text only, without fine print or a line the edge cuts, v312) */
       let picBase={orig:r.blob,dk:trustAngle?dk:null,base};
-      if(!trustAngle){ logRead(`the straightening of ${(dk.angle||0).toFixed(1)}° is not confirmed by the reading — the AI gets the frame as it is`); }
-      if(placedCut){ logRead("the AI gets the whole proposal, not the placed frame's cut"); }
+      if(!trustAngle){ logRead(id,`the straightening of ${(dk.angle||0).toFixed(1)}° is not confirmed by the reading — the AI gets the frame as it is`); }
+      if(placedCut){ logRead(id,"the AI gets the whole proposal, not the placed frame's cut"); }
       picSeen=picBase;
       const early=EARLY[id]&&EARLY[id].run===run&&trustAngle?EARLY[id]:null; /* the quick look already sent it (v439); trustAngle is true by the angle guard there, tested again so a later rule cannot silently change the bytes */
       if(early){ picSeen=picBase=early.base; const t0=Date.now(), e=await early.p; if(stale()) return;
         const wait=Date.now()-t0, ahead=t0-early.at; /* ahead: the overlap this won — the picture was already that long on its way when the reading arrived here */
         N.early={ahead,wait,guesses:early.guesses.length,ok:!!e.pic}; /* v399: the field's own numbers for the saving, which is min(ahead, the call's duration) */
-        logRead(`the AI got the picture at the quick look, ${(ahead/1000).toFixed(1)} s before this point — waited ${(wait/1000).toFixed(1)} s for the answer`);
+        logRead(id,`the AI got the picture at the quick look, ${(ahead/1000).toFixed(1)} s before this point — waited ${(wait/1000).toFixed(1)} s for the answer`);
         if(e.pic) pic=e.pic; else { r.picErr=e.err; logErr("picture",r.picErr); } }
       else try{ pic=await aiReadPicture(picBase.dk?picBase.dk.blob:picBase.orig,guesses,status,N); picOk(); }catch(err){ picRefused(err); r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
       if(stale()) return; r.pic=pic?{zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped}:null;
       N.pic=numPic(pic); if(r.picErr) N.picErr=String(r.picErr).slice(0,120); /* v399 */
-      if(pic&&pic.dropped&&pic.dropped.length){ logRead(`fine print left out of the AI's answer: ${pic.dropped.join(" | ")}`); } /* Diagnostics (v312) */
+      if(pic&&pic.dropped&&pic.dropped.length){ logRead(id,`fine print left out of the AI's answer: ${pic.dropped.join(" | ")}`); } /* Diagnostics (v312) */
       /* the app's own frame cut a line off (v314, H's 大闸蟹 / 我选蟹状元 poster: the close look placed the frame at 37–77 % down, through the middle of the first line, the AI got that cut and left the cut line out as the v312 rule says, and its box could only centre the frame inside the placed one — "Warum nur die zweite Zeile und nicht auch die erste???"): when the AI names an edge that cuts off a line and the frame is the app's — placed by the reader, or the proposal —, the frame reaches past that edge by 1.2 tallest line heights into the photo, and the AI reads the grown cut once more; never for the hand's frame, never for a turned one, never twice */
       /* the app's frame holds no Chinese text at all (v348, H's scooter badge 九号 Fz110: the ink rows framed the yellow plate beside the characters, Qwen answered "no Chinese characters" for that cut — correctly —, and the card was made from the reader's garbage 量词口还: "voll falsch!"): the frame reaches the whole photo and the AI reads once more, so the text beside the proposal gets its chance; never for the hand's frame, never for a turned one, never twice */
       const noText=!!(pic&&pic.bad);
@@ -6072,7 +6129,7 @@ async function cropSign(id,opts){
           if(nr.w>cur.w+1||nr.h>cur.h+1){ let cut=await cropBlob(id,nr); if(stale()) return;
             if(cut){ if(PENDING[id]&&!RECROP[id]) PLACED[id]=nr; else if(CROP&&CROP.id===id&&CROP.proposed){ CROP.rect=nr; CROP.proposed="text"; CROP.followed=true; delete CROP.hidden; } else cut=null; }
             if(cut){ placedCut=cut.blob; renderShots(); const pc=v=>Math.round(v*100);
-              logRead((noText?"the AI found no Chinese text in the picture — the frame reaches the whole photo":tiny?`the AI found the text in ${Math.round(parea*100)} % of the picture${parea<PIC_TINY?"":", against its edge"} — the frame reaches the whole photo`:`the AI says the picture's ${pic.cut} edge cuts off a line — the frame reaches beyond it`)+` (${pc(nr.x/nr.lw)}–${pc((nr.x+nr.w)/nr.lw)} % across, ${pc(nr.y/nr.lh)}–${pc((nr.y+nr.h)/nr.lh)} % down) and the AI reads again`);
+              logRead(id,(noText?"the AI found no Chinese text in the picture — the frame reaches the whole photo":tiny?`the AI found the text in ${Math.round(parea*100)} % of the picture${parea<PIC_TINY?"":", against its edge"} — the frame reaches the whole photo`:`the AI says the picture's ${pic.cut} edge cuts off a line — the frame reaches beyond it`)+` (${pc(nr.x/nr.lw)}–${pc((nr.x+nr.w)/nr.lw)} % across, ${pc(nr.y/nr.lh)}–${pc((nr.y+nr.h)/nr.lh)} % down) and the AI reads again`);
               picBase={orig:placedCut,dk:null,base:null}; picSeen=picBase;
               try{ pic=await aiReadPicture(placedCut,guesses,status,N); picOk(); }catch(err){ picRefused(err); r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); N.picErr2=String(r.picErr).slice(0,120); } /* v449: a second call that dies left no trace at all — N.picErr is written before the re-ask, and `pic` silently keeps the first answer */
               if(stale()) return; r.pic=pic?{zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped,cut:pic.cut}:null;
@@ -6126,7 +6183,7 @@ async function cropSign(id,opts){
        picBlob names, so picSeen must be built the same way or the box would map through another frame. */
     SIGN[id].placePic=async pic=>{ const at=READ_RUN[id]; const sg=SIGN[id];
       N.pic=numPic(pic); r.pic={zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped}; /* v399: the record was empty on this path until v406 */
-      if(pic.dropped&&pic.dropped.length) logRead(`fine print left out of the AI's answer: ${pic.dropped.join(" | ")}`);
+      if(pic.dropped&&pic.dropped.length) logRead(id,`fine print left out of the AI's answer: ${pic.dropped.join(" | ")}`);
       const cut=await placeFromPicture(pic,{orig:r.blob,dk:trustAngle?dk:null,base},at);
       if(READ_RUN[id]!==at||SIGN[id]!==sg) return; if(cut) sg.cardImg=cut; N.pic=numPic(pic); numsFile(id); }; /* the ring files by identity, so this takes no second slot (v405) */ /* the picture for a garbage verdict of the text check (v302): the straightened frame the reading started from — the same picture the weak path sends (v319; v302–v318 the placed frame's cut when the frame stood on read text) */
     if(pic&&pic.bad){ const sg=SIGN[id]; sg.noText=true; sg.ai={zh:bestT,zht:"",p:"",m:"",note:pic.note,ok:false,bad:true,pic:true}; sg.flag=true; sg.flagNote=t("the reading looks wrong"); } /* the AI saw the picture and found no readable text: the reading is marked wrong, no text check on it */
@@ -6136,7 +6193,7 @@ async function cropSign(id,opts){
       const low=lines.filter(l=>{ const cf=l.cf||[]; return !cf.length||cf.reduce((a,c)=>a+c,0)/cf.length<PLACE_CF; }).map(l=>`${l.t} ${l.cf&&l.cf.length?Math.round(l.cf.reduce((a,c)=>a+c,0)/l.cf.length):"–"}`);
       N.prov={held:low.length>0,low};
       if(sureLines(lines)) provisionalCard(id,SIGN[id]);
-      else logRead(`the reading is strong, but a line is read under ${PLACE_CF} % — no card before the AI has checked it (${low.join(" | ")})`); }
+      else logRead(id,`the reading is strong, but a line is read under ${PLACE_CF} % — no card before the AI has checked it (${low.join(" | ")})`); }
     if(PENDING[id]) finishPending(id);
     if(RECROP[id]) RECROP[id].onRead(SIGN[id]);
   }catch(err){ if(stale()) return; status("Reading failed: "+(err&&err.message||err)); done(); logErr("read",err&&(err.stack||err.message)||err); if(PENDING[id]) failPending(id,"the reading failed",String(err&&err.message||err)); }
@@ -6187,7 +6244,7 @@ async function provisionalCard(id,sg){
     if(SIGN[id]!==sg||!sg.aiBusy||PENDING[id]!==ph.id) return; /* the check answered meanwhile, or the reading was replaced — the finished card is on its way */
     const {id:_i,at:_a,img:_m,shot:_s,mt:_t,...fields}=built.card;
     PROV[id]={card:{...fields,id:ph.id,at:ph.at,shot:id,img},at:Date.now()};
-    logRead("the reading is strong — the row shows the card as read while the AI checks it");
+    logRead(id,"the reading is strong — the row shows the card as read while the AI checks it");
     renderShots();
   }catch(err){ logErr("provisional",err&&err.message||String(err)); }
 }
@@ -6218,7 +6275,7 @@ const resultHTML=(d,prov)=>`<div class="result" data-card="${esc(d.id)}"${prov?`
 async function splitCards(id,sg,ph){
   const lab=(sg.ai&&sg.ai.labels)||null, fr=SPLIT[id];
   if(!lab||!fr||fr.length!==lab.length||lab.length<SPLIT_MIN){
-    logRead(`the labels and their frames do not match (${lab?lab.length:0} labels, ${fr?fr.length:0} frames) — one card`); return null; }
+    logRead(id,`the labels and their frames do not match (${lab?lab.length:0} labels, ${fr?fr.length:0} frames) — one card`); return null; }
   const prev=SIGN[id], out=[];
   try{
     for(let k=0;k<lab.length;k++){
@@ -6232,7 +6289,7 @@ async function splitCards(id,sg,ph){
       out.push({card:b.card,img:cut&&cut.blob?await cardJpeg(cut.blob):null,frame:fr[k]});
     }
   } finally{ SIGN[id]=prev; }
-  if(out.length<SPLIT_MIN){ logRead(`only ${out.length} of ${lab.length} labels could be made into cards — one card`); return null; }
+  if(out.length<SPLIT_MIN){ logRead(id,`only ${out.length} of ${lab.length} labels could be made into cards — one card`); return null; }
   const taken=new Set(S.custom.map(d=>d.id)), at0=ph.at||Date.now();
   const freeId=(c,at)=>{ let cand=taken.has(c)?c+"#"+at:c, i=0; while(taken.has(cand)) cand=c+"#"+at+"-"+(++i); taken.add(cand); return cand; };
   const first=out[0], rest=out.slice(1), rows=[], more=[];
@@ -6262,9 +6319,9 @@ async function splitCards(id,sg,ph){
   numCards(id,rows.map(d=>d.id)); numsFile(id); /* v399 */
   try{ await idbPutMany("custom",rows); }catch(e){ logErr("split",e&&e.message||String(e)); return null; } /* all the labels together or none (v264's rule): half of them saved while the placeholder still carries its reading would be read again at the next start and doubled */
   for(let k=0;k<rest.length;k++){ bump("byPhoto"); S.custom.push(rows[k+1]); }
-  if(pg){ S.custom.push(pg); numSet(id,"page",{id:pg.id,title:pg.c,why:screen?(shotRec.shared?"shared":"screenshot"):kindApp?"kind App":"split",n}); logRead(`one page card for the ${screen?"screenshot":kindApp?"app screen":"picture"}: ${pg.c} — its ${n} texts are its dots`); }
+  if(pg){ S.custom.push(pg); numSet(id,"page",{id:pg.id,title:pg.c,why:screen?(shotRec.shared?"shared":"screenshot"):kindApp?"kind App":"split",n}); logRead(id,`one page card for the ${screen?"screenshot":kindApp?"app screen":"picture"}: ${pg.c} — its ${n} texts are its dots`); }
   QSMORE[id]=more; QSCARD[id]=ph.id;
-  logRead(`${n} cards from this photo: ${rows.slice(0,n).map(c=>c.c).join(", ")}`);
+  logRead(id,`${n} cards from this photo: ${rows.slice(0,n).map(c=>c.c).join(", ")}`);
   return n;
 }
 async function finishPending(id){
@@ -6273,7 +6330,7 @@ async function finishPending(id){
   try{
     if(sg&&sg.aiPromise) await sg.aiPromise;
     /* the AI looked at the picture and found no Chinese text in it (v348, H's scooter badge 九号 Fz110: the frame sat on the yellow plate, Qwen said "no Chinese characters" — correctly — and the card was made from the reader's garbage 量词口还 all the same: "voll falsch!"): a card the app makes by itself is not made then, the photo stays with Crop. A text check that calls the reading garbage is weaker evidence — it never saw the picture — and still makes a flagged card, as in v325. */
-    if(ph.reading.auto&&!ph.c&&sg&&SIGN[id]===sg&&sg.noText){ logRead("the AI found no Chinese text in the picture — no card"); return failPending(id,"the AI found no Chinese text in the picture"); }
+    if(ph.reading.auto&&!ph.c&&sg&&SIGN[id]===sg&&sg.noText){ logRead(id,"the AI found no Chinese text in the picture — no card"); return failPending(id,"the AI found no Chinese text in the picture"); }
     /* the AI never saw the picture and the reading is weak (v438, H's emergency signpost, 2026-09-12: the picture call died twice — "The AI could not be reached", 83 s — and the card was the reader's own garbage 人已国二本 / 二二二 / 区国名于 under the whole photo; H: "Diese Schilder hat er nicht geschafft zu trennen und ordentlich zu interpretieren", then "Go" on no card): a weak reading is exactly the case the picture exists for, so with no answer to it there is nothing to build a card from — unless the text check confirmed the reading (sg.ai.ok), which is the one evidence left. The photo stays with Crop and the row says why. Offline the picture is never asked (no picErr), so an offline reading still makes its flagged card as before — named in CLAUDE.md, not changed here. */
     /* v472 widens that gate by exactly one case, and H's own record is the reason. His screenshot of 2026-09-13 read
        自回回回还 | 还一一一 at effScore 183 — three points over WEAK_READ, so `weak` was false and this gate did not fire —
@@ -6287,12 +6344,12 @@ async function finishPending(id){
        text-only garbage verdict is weaker evidence than the picture's. */
     const noPic=sg&&SIGN[id]===sg&&sg.region&&sg.region.picErr&&!(sg.ai&&sg.ai.ok);
     const unsure=sg&&(sg.weak||(sg.ai&&sg.ai.bad&&!sg.sureLines));
-    if(ph.reading.auto&&!ph.c&&noPic&&unsure){ const why=sg.weak?"the AI could not check the photo and the reading is weak":"the AI could not check the photo and the text check called the reading garbage"; logRead(why+" — no card"); return failPending(id,why); }
+    if(ph.reading.auto&&!ph.c&&noPic&&unsure){ const why=sg.weak?"the AI could not check the photo and the reading is weak":"the AI could not check the photo and the text check called the reading garbage"; logRead(id,why+" — no card"); return failPending(id,why); }
     /* several labels on one photo, one card each (v357): the answer's lines, its per-line pinyin and meanings and the frames
        SPLIT[id] carries — the placeholder becomes the first label's card, the rest are saved beside it. Only when every line
        has its own pinyin and its own meaning; if the model joined them, nothing is split and the photo makes one card as before. */
     if(SPLIT[id]&&!(ph.reading.auto&&sg&&SIGN[id]===sg&&sg.ai&&sg.ai.ok&&!sg.ai.bad)) /* the last silent gate (v374): the frames were cut and the split still did not run */
-      logRead(`the labels have their frames, but ${!ph.reading.auto?"the card was not made by the app itself":!sg||SIGN[id]!==sg?"the reading was replaced meanwhile":!sg.ai||!sg.ai.ok?"the picture answer was not used as the reading":"the AI called the picture unreadable"} — one card`);
+      logRead(id,`the labels have their frames, but ${!ph.reading.auto?"the card was not made by the app itself":!sg||SIGN[id]!==sg?"the reading was replaced meanwhile":!sg.ai||!sg.ai.ok?"the picture answer was not used as the reading":"the AI called the picture unreadable"} — one card`);
     if(SPLIT[id]&&ph.reading.auto&&sg&&SIGN[id]===sg&&sg.ai&&sg.ai.ok&&!sg.ai.bad){
       const made=await splitCards(id,sg,ph);
       if(made){ delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; dropExtraShot(id); /* before the row is drawn, or it shows the reading again */
@@ -6313,7 +6370,7 @@ async function finishPending(id){
     const weak=!!(mt.suspect||sg.weak||(sg.ai&&sg.ai.bad));
     if(auto||edit){ if(mt.suspect||(sg.ai&&sg.ai.bad)||(sg.weak&&!(sg.ai&&sg.ai.ok))){ ph.flag=true; ph.flagNote=t("the reading looks unsure — check text, pinyin and meaning"); } }
     else { ph.flag=true; ph.flagNote=weak?t("saved before the reading was done, and the reading is weak — check text, pinyin and meaning"):t("saved before the reading was done — check text, pinyin and meaning"); } /* nobody saw the preview (v245, H: "flag cards that were saved before the final stage, with an appropriate comment") */
-    if(!ph.flag&&cropDisagrees(ph.frame,sg.region&&sg.region.pic,sg.ai&&sg.ai.labels,PICSEEN[id])){ ph.flag=true; ph.flagNote=t("the picture may not show this text — check the photo"); logRead("the card's frame lies outside everything the AI named — flagged"); } /* v400: the picture is not touched — v380's wide fallback measured 0 of 75 usable cards (6.1 CSS px a character) and H rejected exactly that picture in the field at v382 ("Die Bild crops sind noch falsch"), so this only says so */ /* the card made by itself (v325) and the card saved early from Crop again (v342, H's "Go" on the recommendation — the analysis counts): only a doubtful reading carries the flag */ /* the card made by itself (v325): the row shows it, so only a doubtful reading carries the flag — a weak reader score the AI check then confirmed is no doubt */
+    if(!ph.flag&&cropDisagrees(ph.frame,sg.region&&sg.region.pic,sg.ai&&sg.ai.labels,PICSEEN[id])){ ph.flag=true; ph.flagNote=t("the picture may not show this text — check the photo"); logRead(id,"the card's frame lies outside everything the AI named — flagged"); } /* v400: the picture is not touched — v380's wide fallback measured 0 of 75 usable cards (6.1 CSS px a character) and H rejected exactly that picture in the field at v382 ("Die Bild crops sind noch falsch"), so this only says so */ /* the card made by itself (v325) and the card saved early from Crop again (v342, H's "Go" on the recommendation — the analysis counts): only a doubtful reading carries the flag */ /* the card made by itself (v325): the row shows it, so only a doubtful reading carries the flag — a weak reader score the AI check then confirmed is no doubt */
     try{ await idbPut("custom",ph); }catch(e){}
     if(!auto) QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}.`+(mt.pending?" Translation pending.":"")+(ph.flag?" Flagged for review.":"");
   }catch(err){ logErr("savenow",err&&(err.stack||err.message)||err); return failPending(id,"the reading failed"); }
@@ -6898,10 +6955,10 @@ async function picOnBad(sg,guesses,status,id){
          one path further on — and here it also hid the failure from the numbers and from the no-card gate below. */
       if(!e||!e.pic){ const err=(e&&e.err)||"no answer"; noPicture(sg,id,err,`the text check called the reading garbage, and the picture the AI was asked for at the quick look never came: ${err}`); return null; }
       pic=e.pic;
-      logRead(`the text check called the reading garbage — the picture answer asked at the quick look ${((Date.now()-early.at)/1000).toFixed(1)} s ago is used`);
+      logRead(id,`the text check called the reading garbage — the picture answer asked at the quick look ${((Date.now()-early.at)/1000).toFixed(1)} s ago is used`);
     } else {
-      logRead("the text check called the reading garbage — the AI gets the picture");
-      pic=await aiReadPicture(sg.picBlob,[...new Set(guesses.filter(Boolean))].slice(0,6),status||(()=>{})); picOk();
+      logRead(id,"the text check called the reading garbage — the AI gets the picture");
+      pic=await aiReadPicture(sg.picBlob,[...new Set(guesses.filter(Boolean))].slice(0,6),status||(()=>{}),numsFor(id)); picOk(); /* v479: this call had no record, so aiReadPicture's own lines had no photo to file under */
     }
     if(!pic) return null; if(sg.region) sg.region.pic={zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped}; if(pic&&pic.bad) sg.noText=true; return pic&&!pic.bad?pic:null; }
   catch(err){ picRefused(err); noPicture(sg,id,err&&err.message||String(err),null); return null; }
@@ -6914,7 +6971,7 @@ function noPicture(sg,id,err,line,quiet){
   const msg=String(err||"no answer");
   if(sg&&sg.region&&!sg.region.picErr) sg.region.picErr=msg;
   if(id){ const N=numsFor(id); if(N){ if(!N.picErr) N.picErr=msg.slice(0,120); if(N.early) N.early.ok=false; } }
-  if(line) logRead(line);
+  if(line) logRead(id,line);
   if(!quiet) logErr("picture",msg); /* the stood-down path has nothing new to report — the refusal it stands on is already in the log */
 }
 /* The reading ended strong, so the weak path never used the early answer, and the text check did not call it garbage
@@ -6962,9 +7019,9 @@ async function picPanel(sg,id){
      without it. */
   const covers=panelCovers(pic,sg.lines||[]);
   if(id){ const N=numsFor(id); if(N) N.panel={labels:pic.labels.length,sure:!!sg.sureLines,covers,lines:(sg.lines||[]).length,used:!(sg.sureLines&&!covers)}; } /* v399: the record says which way the guard went, so the field settles PANEL_COVER rather than a guess */
-  if(sg.sureLines&&!covers){ logRead(`the reading is read surely and the AI's ${pic.labels.length} elements do not hold every line of it — the panel answer is not used`); return null; }
+  if(sg.sureLines&&!covers){ logRead(id,`the reading is read surely and the AI's ${pic.labels.length} elements do not hold every line of it — the panel answer is not used`); return null; }
   sg.picAsked=true;
-  logRead(`${sg.sureLines?`the reading is strong and read surely, but the AI calls this picture ${pic.labels.length} separate labels and its elements hold every line the reader was sure of — it is telling us about texts the reader never saw`:`the reading is strong but not read surely, and the AI calls this picture ${pic.labels.length} separate labels`} — the picture answer asked at the quick look ${((Date.now()-sg.picEarly.at)/1000).toFixed(1)} s ago is used`);
+  logRead(id,`${sg.sureLines?`the reading is strong and read surely, but the AI calls this picture ${pic.labels.length} separate labels and its elements hold every line the reader was sure of — it is telling us about texts the reader never saw`:`the reading is strong but not read surely, and the AI calls this picture ${pic.labels.length} separate labels`} — the picture answer asked at the quick look ${((Date.now()-sg.picEarly.at)/1000).toFixed(1)} s ago is used`);
   if(sg.region) sg.region.pic={zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped};
   return pic;
 }
@@ -6978,7 +7035,7 @@ async function signAskAI(id){
     let r=null, checkErr=null;
     try{ [r]=await aiAsk([{kind:"sign",c,p:res.map(x=>x.py).join(" / "),m:sg.mean||"",gloss:res.flatMap(x=>x.gloss),alts:sg.alts,trad:!!sg.trad,mt:{src:"gloss",verified:false,suspect:"read from a photo by OCR"}}]); }catch(err){ checkErr=err; }
     if(!SIGN[id]) return;
-    if(checkErr){ const N=numsFor(id); N.checkErr=String(checkErr&&checkErr.message||checkErr).slice(0,160); logRead(`the text check failed: ${N.checkErr}`); } /* v451, H's order screen from the album, 2026-09-13: the relay answered 500 "counter 401", the catch below set aiErr, and the parked Qwen answer — apart, App, four labels — was thrown away for a card of the reader's garbage. A check that never answered is no verdict on the picture answer already in hand, so picPanel runs on this path too, and the record names the failure (the v399 rule). */
+    if(checkErr){ const N=numsFor(id); N.checkErr=String(checkErr&&checkErr.message||checkErr).slice(0,160); logRead(id,`the text check failed: ${N.checkErr}`); } /* v451, H's order screen from the album, 2026-09-13: the relay answered 500 "counter 401", the catch below set aiErr, and the parked Qwen answer — apart, App, four labels — was thrown away for a card of the reader's garbage. A check that never answered is no verdict on the picture answer already in hand, so picPanel runs on this path too, and the record names the failure (the v399 rule). */
     const pic=checkErr?await picPanel(sg,id):r.bad?await picOnBad(sg,[c,...(sg.alts||[])],null,id):await picPanel(sg,id); if(!SIGN[id]) return; /* the text check calls the reading garbage: the picture goes to the AI that takes pictures (v302) — or it does not, and a panel answer is already in hand (v447) — or it never answered, and the panel answer in hand is used all the same (v451) */
     if(checkErr&&!pic) throw checkErr; /* nothing in hand: the failure stands as before v451 — the offline model, the gloss, pending */
     if(pic&&sg.placePic){ try{ await sg.placePic(pic); }catch(e){ logErr("snap",e&&e.message||String(e)); } if(!SIGN[id]) return; } /* v406: the same placement the weak path's answer gets — without it a panel that reaches the AI this way made one card */
@@ -7586,8 +7643,8 @@ async function resetAll(){
   for(const k of RESET_KEYS){ delete S.settings[k]; try{ await idbDel("settings",k); }catch(e){ kept.push(k); } }
   if(kept.length) logErr("reset","could not delete: "+kept.join(", "));
   S.progress={}; S.custom=[]; S.inbox=[];
-  ERRLOG.length=0; READLOG.length=0; AILOG.length=0; AUTOQ.length=0; /* the same three logs in memory, or they would be written back at the next step (v267/v384's own debounce) */
-  LAST_READ.passes=null; LAST_READ.nums=null; LAST_READ.ring=[];
+  ERRLOG.length=0; AILOG.length=0; AUTOQ.length=0; /* the same logs in memory, or they would be written back at the next step (v267/v384's own debounce) */
+  LAST_READ.ring.length=0; /* the ring holds the readings and their steps both (v479) */
   for(const k of Object.keys(NUMSOF)) delete NUMSOF[k];
   TRANSLATE=null; TAGALL=null; RECHECK=null;
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
