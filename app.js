@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=488; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=489; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2452,14 +2452,30 @@ function pageOf(d){
   const blob=fullPhoto(d); if(!blob) return null;
   return {shot:d.shot,rs,blob};
 }
+/* AND A FLASHCARD MADE FROM A MULTICARD SHOWS THAT MULTICARD'S PHOTO (v489, H on v487's text-only card: "Nimm doch bei
+   den aus Multicards generierten Flashcards noch das bild mit rein, wie im anhang. Aber bitte schoen polishen."). The
+   picture is the multicard's whole photo with THIS text framed and lit — v452's page front, which the card record itself
+   still knows nothing about: `from` names the multicard, the multicard names its photo and its texts, and the region is
+   the one belonging to the text with the same characters. Derived at render time, nothing stored, so the generated card
+   stays the text-only record H asked for (v487) and no second copy of the photo can drift from the first (v401).
+   The polish is the pill under the box: NOT v452's "3 of 11", which is the very thing H called total missverständlich,
+   but the multicard's own headline — "Better say, this is from the rice cooker multicard". */
+function srcView(d){
+  const pg=srcPage(d); if(!pg||!pg.shot||!d.c) return null;
+  const me=pageItems(pg).find(x=>x.c===d.c); if(!me) return null; /* the multicard's own text this card was made of */
+  const rs=photoRegions({id:pg.shot}); if(!rs.some(r=>r.card===me.id)) return null;
+  const blob=fullPhoto(pg); if(!blob) return null; /* the multicard's photo was deleted: the card keeps its text alone */
+  return {shot:pg.shot,rs,blob,me:me.id,src:true};
+}
+const frontPage=d=>pageOf(d)||srcView(d); /* one page view for both: a card that IS one of several on a photo (v452), and one MADE from a multicard's text (v489) */
 function pageHTML(d,pg){
   const u=urlOf(pg.blob);
-  return `<div class="picbox page" data-pic="1"><img class="picbg" src="${u}" alt="" aria-hidden="true"><div class="pagewrap"><img class="signimg" src="${u}" alt="photo">${regionsHTML({id:pg.shot},pg.rs,{learn:true,me:pg.me||d.id})}</div></div>`; /* the wrapper shrinks to the picture's rendered size, so the regions' percent coordinates land on it; the blurred fill shows beside a tall page */
+  return `<div class="picbox page"${pg.src?"":` data-pic="1"`}><img class="picbg" src="${u}" alt="" aria-hidden="true"><div class="pagewrap"><img class="signimg" src="${u}" alt="photo">${regionsHTML({id:pg.shot},pg.rs,{learn:true,me:pg.me||d.id})}</div></div>`; /* the wrapper shrinks to the picture's rendered size, so the regions' percent coordinates land on it; the blurred fill shows beside a tall page */
 }
 function frontPic(d,o){
   const pk=S.peek&&S.peek!==d.id?cardOf(S.peek):null; /* Learn: a linked card's photo, tapped in the "Also on another photo" row (v155) */
   const full=pk?fullPhoto(pk):fullPhoto(d);
-  const pg=o&&o.page&&!pk?pageOf(d):null; /* v452: the page with its dots by default, the card's own cut on a tap */
+  const pg=o&&o.page&&!pk?frontPage(d):null; /* v452: the page with its dots by default, the card's own cut on a tap — and v489, where the page is the multicard's photo and there is no own cut */
   if(pg&&!S.fullPic) return pageHTML(d,pg);
   const blob=pk?(pk.img||full):(S.fullPic&&full&&!pg?full:d.img); if(!blob) return "";
   /* the crop sits in a fixed 16:9 box at the card's width, fitted inside on the card's grey surface, so every card has the
@@ -2471,8 +2487,8 @@ function frontPic(d,o){
 /* a card saved before its reading is done (v237): the box shows the reading bar, or one plain line once the reading failed */
 const waitingHTML=d=>d.reading&&d.reading.failed?`<span class="wait failed">${t("Nothing could be read.")}</span>`:`<span class="wait">${busyHTML(t("Reading the text …"))}</span>`;
 function frontHTML(d,o){
-  const pg=o&&o.page&&!(S.peek&&S.peek!==d.id)?pageOf(d):null; /* v452 */
-  const scriptNote=(d.trad||pg)?`<div class="script">${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${pg?`<span class="pill page">${t("{0} of {1}",pg.rs.findIndex(r=>r.card===d.id)+1,pg.rs.length)}</span>`:""}</div>`:""; /* v452: "1 of 4" in reading order — the count says "one of several on this photo" in every language without a word to define ("Page" was measured to read as "side" in German and "face" in Thai) */ /* one pill under the box (v227, H's "Go" on the design review — until v226 two lines, "Traditional characters, as on the photo" and "Simplified 养乐多"); the simplified form sits on the back now (simpRefHTML), plain words, no 简/繁 shorthand (H, v106) */
+  const pg=o&&o.page&&!(S.peek&&S.peek!==d.id)?frontPage(d):null; /* v452, v489 */
+  const scriptNote=(d.trad||pg)?`<div class="script">${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${pg?(pg.src?srcPill(d,!!(o&&o.tap)):`<span class="pill page">${t("{0} of {1}",pg.rs.findIndex(r=>r.card===d.id)+1,pg.rs.length)}</span>`):""}</div>`:""; /* v452: "1 of 4" in reading order — the count says "one of several on this photo" in every language without a word to define ("Page" was measured to read as "side" in German and "face" in Thai) */ /* one pill under the box (v227, H's "Go" on the design review — until v226 two lines, "Traditional characters, as on the photo" and "Simplified 养乐多"); the simplified form sits on the back now (simpRefHTML), plain words, no 简/繁 shorthand (H, v106) */
   if(d.kind==="sign"){
     /* sign card: the picture is the exercise, text underneath wrapped only between words */
     const lines0=(d.trad||d.c).split("\n");
@@ -2582,14 +2598,14 @@ const HINT_REVIEWS=20;
 const showHints=()=>(usage().reviews||0)<HINT_REVIEWS;
 /* the simplified form of a traditional card, on the back above the pinyin (v227; on the front until v226, H v102) */
 const simpRefHTML=d=>d.trad?`<div class="script back"><span class="scriptref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span></div>`:"";
-function backHTML(d,o){ const tapSrc=!(o&&o.study); /* on the Learn back the reference is plain text: a tap that left a running session is exactly what H complained about at v155 ("I'm getting out of the learn mode. That should not happen") */
+function backHTML(d,o){ const tapSrc=!(o&&o.study), srcHere=!(o&&o.noSrc); /* on the Learn back the reference is plain text: a tap that left a running session is exactly what H complained about at v155 ("I'm getting out of the learn mode. That should not happen"); noSrc: the front of this same screen already carries the multicard's name under the picture (v489), and twice on one screen is noise */
   const glossBlock = d.kind==="sign" ? `
     ${d.mt&&!d.mt.verified?`<span class="flag">${t("meaning unverified")}${d.mt.pending?t(" (translation pending)"):""}${d.mt.suspect?t(" (reading uncertain: {0})",esc(d.mt.suspect)):""}</span>`:""}
 ` : "";
   /* the linked row is not part of the answer any more (v422, H: "Die 'also in another photo' Zeile nach unten schieben"): it
      stood between the parts row and the grades, so reference material sat in the middle of the answer-then-grade path. Each
      caller places it now, below its own actions. */
-  return `${simpRefHTML(d)}<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}${srcPill(d,tapSrc)}</div>${charsHTML(d)}
+  return `${simpRefHTML(d)}<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}${srcHere?srcPill(d,tapSrc):""}</div>${charsHTML(d)}
     ${glossBlock}`;
 }
 /* the other cards with the same text (v122, H: "if one character connects to various photos, then link them"): their
@@ -3040,12 +3056,12 @@ function renderCards(main){
 /* the card detail's own card, so the render and the swipe's neighbour copy cannot drift apart (v445 — the v417 lesson:
    Learn's hint had to become swipeHint for the same reason). sw: another card of the list stands beside this one. */
 function detailCardHTML(d,sw){
-  const p=S.progress[d.id];
+  const p=S.progress[d.id], pg=frontPage(d); /* v489: the multicard's own photo on a generated card's front, and its name as the pill — so the back drops the duplicate */
   const hint=k=>showHints()?`<div class="hint">${t(k)}${fullPhoto(d)?(pageOf(d)&&!S.fullPic&&!S.peek?t(", or the photo for the text alone"):t(", or the photo for the whole picture")):""}.${sw?" "+t("Swipe left or right to pick another card."):""}</div>`:"";
-  return `${tagsHTML(d,!p)}<div class="front tap" id="d-reveal">${frontHTML(d,{page:true})}</div>
+  return `${tagsHTML(d,!p)}<div class="front tap" id="d-reveal">${frontHTML(d,{page:true,tap:true})}</div>
       ${d.c&&d.reading&&!d.reading.failed?`<div class="hint">${t("The new frame is being read — the text follows when it is done.")}</div>`:""}${!d.c?`${d.reading&&d.reading.failed?"":`<div class="hint">${t("The text, pinyin and meaning follow when the reading is done.")}</div>`}${flagNoteHTML(d)}` /* a card still waiting for its reading has no back (v237) */
         :S.detailHide?hint("Tap the character to show the answer")
-        :`<div style="margin-top:22px">${backHTML(d)}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}${hint("Tap the character to hide the answer")}`}`;
+        :`<div style="margin-top:22px">${backHTML(d,{noSrc:!!(pg&&pg.src)})}</div>${flagNoteHTML(d)}${aiBoxHTML(d)}${hint("Tap the character to hide the answer")}`}`;
 }
 const fromPage=()=>typeof S.detailFrom==="string"&&S.detailFrom.startsWith("page:")?S.detailFrom.slice(5):null; /* v453: the item's detail was opened from its page */
 function backToPage(){ const pid=fromPage(); S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.detail=pid&&cardOf(pid)?pid:null; render(); window.scrollTo(0,0); }
@@ -3539,6 +3555,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  489:"A flashcard made from a multicard shows that multicard's photo again, with its own text framed on it and the multicard's name under the picture.",
   487:"A multicard is a reference now: tap any text on it and press Generate flashcard to make a text-only card that names where it came from.", /* v488 corrected this line rather than adding its own: 487 and 488 reach every phone in the same update, and the note a learner reads has to be true of what is on it */
   486:"A sign the reader read clearly keeps the picture the reader measured, instead of one the AI guessed at.",
   485:"A photo of a control panel makes one card per button again, even when the reader misread a character or two on the way.",

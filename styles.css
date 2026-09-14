@@ -319,6 +319,10 @@ button,.tab,.chip,.chipset,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg,.draw
 .lookup .lkmake{margin-top:10px} .lookup .lkmake .btn{width:100%}
 .pill.multi{background:var(--fill);color:var(--label2)}
 button.pill.multi{border:0;font:inherit;cursor:pointer} /* the reference is a way back to the multicard, not only a label */
+/* under the picture the reference carries a whole headline ("Meituan — order confirmation, 颐堤港店"), where .pill was
+   written for a word (v489): it may take the card's width and ends in an ellipsis rather than pushing past it — the
+   whole title stays in the title attribute, and in the detail the pill is the button that opens the multicard */
+.script .pill.multi{max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
 /* the card made by itself (v325, H: "no frame during the first scan, just the magic wobbling over the image, and then the result is the finished card"): a soft band of light sweeps the photo while the app reads — nothing on the photo but light, no frame; still under reduced motion (a faint veil) */
 .shotwrap .scan{position:absolute;inset:0;border-radius:10px;overflow:hidden;pointer-events:none}
 .shotwrap .scan::before{content:"";position:absolute;top:-30%;bottom:-30%;left:0;width:45%;transform:translateX(-150%) skewX(-14deg);will-change:transform;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.28) 35%,rgba(255,255,255,.55) 50%,rgba(255,255,255,.28) 65%,rgba(255,255,255,0));animation:scan 1.7s linear infinite} /* v332 (H: "the scanning effect stutters at the top left, it must run smoothly"): the band moves by transform alone, so the compositor drives it while the reader's copies keep the main thread busy (until v331 it animated left — a layout property, drawn by the main thread and frozen with it); linear, and it starts well outside the box, so the skewed band's top corner no longer pops in at the top left on every loop */
