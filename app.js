@@ -7,8 +7,14 @@
 
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
-const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=504; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const pySpaced=t=>{ const chars=[...t], arr=pinyinPro.pinyin(t,{type:"array",toneType:"symbol"}), oneEach=arr.length===chars.length; /* pinyin-pro answers one entry per character, Latin letters and spaces included; only then can a letter be told from a toneless syllable ("ma") by its source character (v505) */
+  const out=[]; let prevLatin=false;
+  arr.forEach((x,i)=>{ const prev=out[out.length-1], latin=oneEach&&/^[A-Za-z]$/.test(chars[i]);
+    if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))){ out[out.length-1]=prev+x; prevLatin=false; } /* a number with its unit stays one token (v323) */
+    else if(latin&&prevLatin) out[out.length-1]=prev+x; /* a Latin sequence stays one token — zhǎo EMS, not zhǎo E M S (v505, H: "Hier muss das EMS mit in die Übersetzung") */
+    else { out.push(x); prevLatin=latin; } });
+  return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
+const APP_V=505; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -975,6 +981,14 @@ function recutLines(text,origLines){
    unit as a word of its own (v338, H's 24小时营业: the front showed 小时营业 — the number was dropped here and in readingCard,
    while the pinyin and the parts row kept it) */
 const NUM_TOKEN=/^[0-9]+(?:\.[0-9]+)?[a-zA-Z%]{0,4}/, NUM_PART=new RegExp(NUM_TOKEN.source+"$"); /* a number with its Latin unit as written (24H, 380ml, 20%, 100kcal): NUM_TOKEN cuts one from a line (v338), NUM_PART tells a whole token (v323, v336) — one rule since the polish at v343 (three regexes until then, one of them capped at three letters and missing kcal) */
+const LATIN_TOKEN=/^[A-Za-z]+/, LATIN_PART=/^[A-Za-z]+$/; /* a sequence of Latin letters as written (EMS, WiFi, KTV) is one part of the text, never letter by letter (v505, H's 寄快递 / 找EMS card, whose row showed 寄 | 快递 | 找 and whose pinyin read "zhǎo E M S": "Hier muss das EMS mit in die Übersetzung"); a number's unit letters belong to NUM_TOKEN, not here */
+/* the token a Latin sequence at the head of s makes: a longer dictionary word that begins with it (T恤, AA制, 卡拉OK never gets here — it begins with a character) wins, else the letters themselves; null when s does not begin with a letter (v505) */
+function latinAt(s){
+  const lat=s.match(LATIN_TOKEN); if(!lat) return null;
+  const rest=s.split(SIGN_PUNCT)[0].split(/\s/)[0];
+  for(let len=Math.min(8,rest.length);len>lat[0].length;len--) if(DICT&&DICT.has(rest.slice(0,len))) return {w:rest.slice(0,len),word:true};
+  return {w:lat[0],word:false};
+}
 function segWithBreaks(lines){
   const out=[];
   lines.forEach((line,i)=>{
@@ -983,6 +997,8 @@ function segWithBreaks(lines){
     while(k<line.length){
       const num=line.slice(k).match(NUM_TOKEN);
       if(num){ flush(); out.push(num[0]); k+=num[0].length; continue; }
+      const lat=latinAt(line.slice(k));
+      if(lat){ flush(); out.push(lat.w); k+=lat.w.length; continue; } /* a Latin sequence, or the dictionary word it begins (T恤), is a word of its own between the characters (v505) */
       const ch=line[k]; if(CJK.test(ch)) run.push({ch}); k++;
     }
     flush();
@@ -1485,8 +1501,12 @@ async function saneP(p,zh){
   const lines=String(zh||"").split("\n").filter(l=>CJK.test(l)); if(!lines.length) return String(p||"").trim();
   const given=String(p||"").split("/").map(l=>l.trim().split(/\s+/).filter(Boolean));
   /* one vowel group per character (syllables may be joined into words, as some models write them), digits aside; a token without a vowel is a broken syllable */
-  const nuclei=toks=>toks.filter(x=>!NUM_PART.test(x)).reduce((a,x)=>a+(x.match(PY_VOWELS)||[]).length,0);
-  const ok=given.length===lines.length&&given.every((toks,k)=>toks.length>0&&nuclei(toks)===[...lines[k]].filter(c=>CJK.test(c)).length&&toks.every(x=>NUM_PART.test(x)||(x.match(PY_VOWELS)||[]).length>0));
+  /* a token that stands in the line as a Latin sequence (EMS in 找EMS, WiFi) is neither a syllable nor a broken one — the model
+     answers "zhǎo EMS" and that is right (v505, H: "Hier muss das EMS mit in die Übersetzung"); "l" for 里 still has no vowel and no
+     place in the line, so 志在千里 is still refused */
+  const aside=(x,k)=>NUM_PART.test(x)||(lines[k].match(/[A-Za-z]+/g)||[]).some(l=>l.toLowerCase()===x.toLowerCase());
+  const nuclei=(toks,k)=>toks.filter(x=>!aside(x,k)).reduce((a,x)=>a+(x.match(PY_VOWELS)||[]).length,0);
+  const ok=given.length===lines.length&&given.every((toks,k)=>toks.length>0&&nuclei(toks,k)===[...lines[k]].filter(c=>CJK.test(c)).length&&toks.every(x=>aside(x,k)||(x.match(PY_VOWELS)||[]).length>0));
   if(ok) return given.map(l=>l.join(" ")).join(" / ");
   try{ if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); return lines.map(pySpaced).join(" / "); }catch(e){ return String(p||"").trim(); }
 }
@@ -2583,12 +2603,28 @@ function latinUnitMeaning(w){
   const u=LATIN_UNITS[m[2].toLowerCase()]; if(!u) return "";
   return m[1]+" "+wordOf(+m[1],u[0],u[1]); /* the unit's form for this number, through the app's one plural rule (v401): 1 час, 2 часа, 24 часа, 5 часов */
 }
+/* what a Latin sequence on a sign means (v505, H's 寄快递 / 找EMS: "Hier muss das EMS mit in die Übersetzung"): a small table of the
+   ones a sign in China actually carries, else the letters themselves. Deliberately NO dictionary fallback — CC-CEDICT knows A, B,
+   P, Q and T as slang (A "to steal", T "butch"), which is not what A区 or T恤 says */
+const LATIN_WORDS={EMS:"EMS (China Post express mail)",ATM:"ATM (cash machine)",WIFI:"Wi-Fi",KTV:"KTV (karaoke)",VIP:"VIP",APP:"app",WC:"toilet (WC)",SPA:"spa",USB:"USB",LED:"LED",GPS:"GPS",SIM:"SIM card"};
+const latinMeaning=w=>LATIN_WORDS[String(w).toUpperCase()]||w;
+/* adjacent Latin parts of a stored gloss are one part (v505): a card from before v505 carries E, M, S as three parts with the
+   dictionary's slang or nothing as their meaning — merged at display time, as mergeUnits merges a number and its unit (v309),
+   so the stored card is not rewritten */
+function mergeLatin(parts){
+  const out=[];
+  for(const a of parts){ const prev=out[out.length-1];
+    if(!a.punct&&LATIN_PART.test(a.w)){ if(prev&&prev.latin){ prev.w+=a.w; prev.p=prev.w; prev.m=latinMeaning(prev.w); } else out.push({w:a.w,p:a.w,m:latinMeaning(a.w),latin:true}); }
+    else out.push(a); }
+  return out;
+}
+const mergeLatinWords=ws=>mergeLatin(ws.map(w=>({w}))).map(x=>x.w); /* the same over a line's plain words (segs, seg) */
 const CHARS_MAX=16; /* more buttons than this is no longer a row to tap through — a card with more parts shows none */
-const cardGloss=d=>mergeUnits(d.gloss||[]); /* the stored gloss with a number and its unit as one part (v309; cards from before carry them apart) */
+const cardGloss=d=>mergeUnits(mergeLatin(d.gloss||[])); /* the stored gloss with a number and its unit as one part (v309) and a Latin sequence as one part (v505; cards from before carry them apart) */
 function cardParts(d){
-  let words=d.gloss&&d.gloss.length?cardGloss(d).map(g=>g.w):(d.kind==="sign"?(d.segs||[]).flat():(d.seg||[]).filter(x=>x!=="\n"));
-  words=words.filter(w=>CJK.test(w)||NUM_PART.test(w)); /* a number with its unit is a part of the meaning and stays in the row (v336, H's 24H存包: "das 24H sollte auch in der Zeile bei den chinesischen Schriftzeichen dabei sein") */
-  if(words.length<2) words=[...d.c].filter(ch=>CJK.test(ch)); /* one word → its characters */
+  let words=d.gloss&&d.gloss.length?cardGloss(d).map(g=>g.w):(d.kind==="sign"?(d.segs||[]).flatMap(mergeLatinWords):mergeLatinWords((d.seg||[]).filter(x=>x!=="\n")));
+  words=words.filter(w=>CJK.test(w)||NUM_PART.test(w)||LATIN_PART.test(w)); /* a number with its unit is a part of the meaning and stays in the row (v336, H's 24H存包: "das 24H sollte auch in der Zeile bei den chinesischen Schriftzeichen dabei sein"), and so is a Latin sequence (v505, EMS) */
+  if(words.length<2) words=mergeLatinWords([...d.c].filter(ch=>CJK.test(ch)||/[A-Za-z]/.test(ch))); /* one word → its characters, a Latin sequence among them whole (v505: a card typed by hand as 找EMS carries no gloss, and its row is 找 | EMS, not 找 alone) */
   /* a part the text carries twice stays twice (v430, H on his 骑车勿盯 / 还车勿忘 card: "Da fehlt a das zweite Wu"): the row is
      the card's own parts in the text's order, so a dedup broke the mapping from a button back to the characters it stands for
      — measured on his card, 骑车 勿 盯 还 车 勿 忘 came out as six buttons with the second 勿 gone. It also hid the row of a one-word
@@ -2609,7 +2645,9 @@ function warmParts(){ if(!window.pinyinPro) loadScript("./vendor/pinyin-pro.js")
 async function charInfo(w,btn,d){
   const box=$("#chinfo"); if(!box) return;
   document.querySelectorAll(".chars .ch").forEach(b=>b.classList.toggle("on",b===btn));
-  box.hidden=false; if(!DICT||!window.pinyinPro) box.innerHTML=`<span class="badge">${t("Loading the dictionary …")}</span>`;
+  box.hidden=false;
+  if(LATIN_PART.test(w)){ const m=latinMeaning(w); box.innerHTML=`<div class="chline"><span class="hanzi">${esc(w)}</span>${m!==w?`<span>${esc(m)}</span>`:""}</div>`; return; } /* a Latin part shows itself and what it stands for — no pinyin, no characters under it, no dictionary (v505, H: "Hier muss das EMS mit in die Übersetzung") */
+  if(!DICT||!window.pinyinPro) box.innerHTML=`<span class="badge">${t("Loading the dictionary …")}</span>`;
   try{
     if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
     await loadDict().catch(()=>{});
@@ -4459,6 +4497,8 @@ function lineMeaning(line){
     const num=raw.slice(k).match(/^[0-9]+(?:\.[0-9]+)?[a-zA-Z%]{0,3}/); if(num){ /* a number with its Latin unit as one part (380ml, 20% — v323, H's bottle: "wenn du net content erwähnst, musst du die 380ml auch noch mitnehmen"); a CJK unit joins below */ parts.push({w:num[0],p:num[0],m:num[0],num:true}); k+=num[0].length; continue; } /* a number reads as itself — and takes the unit after it below (mergeUnits, v309) */
     const hit=(SIGNS||[]).find(e=>raw.startsWith(e.zh,k));
     if(hit){ parts.push({w:hit.zh,p:hit.py,m:hit.en,ph:true}); k+=hit.zh.length; continue; }
+    const lat=latinAt(raw.slice(k)); /* a Latin sequence is one part, EMS and not E · M · S (v505, H: "Hier muss das EMS mit in die Übersetzung") — unless a dictionary word begins with it (T恤, AA制), which is the word below */
+    if(lat&&!lat.word){ parts.push({w:lat.w,p:lat.w,m:latinMeaning(lat.w),latin:true}); k+=lat.w.length; continue; }
     const rest=raw.slice(k).split(SIGN_PUNCT)[0]; let len=Math.min(8,rest.length)||1;
     while(len>1 && !(DICT&&DICT.has(rest.slice(0,len)))) len--;
     const w=rest.slice(0,len)||ch;
@@ -4466,9 +4506,10 @@ function lineMeaning(line){
     k+=w.length;
   }
   const words=mergeUnits(parts).filter(x=>!x.punct);
-  const full=words.length>0 && words.every(x=>x.ph||x.num||x.unit);
-  /* fully phrasebook-matched line reads as English; a composed line shows word + gloss for every part */
-  const en=full?words.map(x=>x.m).join(" · "):words.map(x=>x.num?x.w:x.w+" "+(x.m||"?")).join(" · ");
+  const full=words.length>0 && words.every(x=>x.ph||x.num||x.unit||x.latin); /* a Latin sequence needs no dictionary to be read (v505) */
+  /* fully phrasebook-matched line reads as English; a composed line shows word + gloss for every part — a Latin part only itself
+     when that is all it means, and its meaning alone when the meaning already begins with it (EMS (China Post express mail)) */
+  const en=full?words.map(x=>x.m).join(" · "):words.map(x=>x.num||(x.latin&&x.m===x.w)?x.w:x.latin&&x.m.startsWith(x.w)?x.m:x.w+" "+(x.m||"?")).join(" · ");
   const py=pySpaced(words.map(x=>x.w).join(""));
   return {en,full,gloss:words,segs:mergeUnits(parts).map(x=>x.w),py};
 }
@@ -7267,8 +7308,9 @@ async function readingCard(id,sg){
   if(sg.ai&&sg.ai.bad) mt.suspect="the text looks misread";
   /* a short single line is a word card (reticle front); anything longer is a sign card */
   const word=keep.length===1 && glyphs(c)<=4;
+  const segKeep=x=>CJK.test(x)||NUM_PART.test(x)||LATIN_PART.test(x); /* a word card's lines keep their numbers (v338) and their Latin sequences (v505) */
   const card=word
-    ? { id:cardId(c), c, p:pin, m:mean, t:"Custom", at:Date.now(), v:APP_V, shot:id, lb:"photo", mt, ...(keep[0].r.segs.filter(x=>CJK.test(x)||NUM_PART.test(x)).length>1?{seg:keep[0].r.segs.filter(x=>CJK.test(x)||NUM_PART.test(x)), gloss:keep[0].r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))}:{}) }
+    ? { id:cardId(c), c, p:pin, m:mean, t:"Custom", at:Date.now(), v:APP_V, shot:id, lb:"photo", mt, ...(keep[0].r.segs.filter(segKeep).length>1?{seg:keep[0].r.segs.filter(segKeep), gloss:keep[0].r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))}:{}) }
     : { id:cardId(c), kind:"sign", c, p:pin, m:mean, t:"Sign", at:Date.now(), v:APP_V, shot:id,
         segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
   setMl(card,ml);
