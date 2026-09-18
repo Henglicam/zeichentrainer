@@ -60,6 +60,18 @@ offline and without any CDN):
   data were dropped. Section 2 b) asks that such modifications stay freely available under the
   same license to everyone — strokes.txt.gz is published at
   https://github.com/henglicam/zeichentrainer and must remain so.
+
+- outlines.txt.gz
+  The outline of every stroke of the same 9,534 characters, from the same graphics.txt of
+  Make Me a Hanzi, and so from the same Arphic PL KaitiM GB and Arphic PL UKai fonts.
+  ARPHIC PUBLIC LICENSE (1999) — ARPHICPL.TXT, beside this file, retained unaltered.
+  Modification, as its section 2 a) asks: on 18 September 2026, for this app, graphics.txt was
+  reduced to the character and its per-stroke outline paths, with the path coordinates divided
+  by four onto a 256 grid and rounded to whole units; the y axis is left as the source has it
+  and is flipped when the path is drawn. Section 2 b) asks that such modifications stay freely
+  available under the same license to everyone — outlines.txt.gz is published at
+  https://github.com/henglicam/zeichentrainer and must remain so.
+
   (Make Me a Hanzi's dictionary.txt is LGPL-licensed and is NOT used here.)
 
 Conditions that travel with these files, in short:
