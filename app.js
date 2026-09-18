@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=508; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=509; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -593,6 +593,9 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v509","close the app mid-read: photo back"],
+  ["photo","v509","unread photo stays under Camera"],
+  ["photo","v509","weak read, AI text check ok: card"],
   ["again","v508","小程序 again: grey panel stays grey"],
   ["update","v508","deck cut again: no black panels"],
   ["photo","v507","a broken pinyin (xio) is replaced"],
@@ -919,6 +922,7 @@ async function boot(){
     /* creation order (cards without a timestamp, from before v33, come first in key order) */
     S.custom = cust.sort((a,b)=>(a.at||0)-(b.at||0));
     S.inbox = inb.sort((a,b)=>b.ts-a.ts);
+    resumeShots(); /* v509: a photo the app was still working on when it was closed is back in the queue before the first render, so the Camera tab shows it waiting; a raw one waits for normalizeRaw below */
   }catch(e){ console.warn("IndexedDB unavailable, session only:", e); logErr("boot","IndexedDB unavailable, session only: "+(e&&e.message||e)); /* the app then runs with no cards and no settings; the phone must be able to say so (v403) */ }
   LANG=LANGS.some(([c])=>c===S.settings.lang)?S.settings.lang:langDefault(); applyLangStatic(); /* the app's language (v253): the setting, else the phone's */
   await syncMeanings(); /* every card shows the meaning it has in the app's language (v265); cards from before get their ms */
@@ -936,7 +940,7 @@ async function boot(){
   autoBreaks(); /* old cards get their photo lines estimated once */
   fixNumberSegs(); /* word cards from before v338 get their numbers back into their lines */
   dedupePhotos(); /* cards from before v214 drop the whole photo they hold twice */
-  setTimeout(()=>resumePending().then(autoNext,autoNext),1500); /* cards saved before their reading finished get it now (v237), then the batch goes on where it stopped (v411) */
+  setTimeout(()=>normalizeRaw().catch(()=>{}).then(resumeShots).then(resumePending).then(autoNext,autoNext),1500); /* a photo left as it came is downscaled and queued (v509), cards saved before their reading finished get it now (v237), then the batch goes on where it stopped (v411) */
   aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); resumeTagAll(); resumeRecheck(); });
   /* an interrupted Translate-all, Tag-all or Check-up run, and the deck's two one-off passes, go on by themselves (v262, v368, v370, v373, v398) */
   setTimeout(updateNote,1200); /* v408: after the restored screen is up, not during the first paint */
@@ -2359,7 +2363,7 @@ function renderMore(main){
     <div class="listhead">Updates without a VPN</div>
     <div class="mrow"><div style="flex:1;min-width:0"><div class="t">Mirror</div><div class="s" id="mirror-status">${esc(mirrorText())}</div><div class="inrow"><input id="mirror-url" class="mono" autocomplete="off" placeholder="Mirror address" title="Mirror address (a copy of the app reachable in China)" value="${esc(S.settings.mirror||MIRROR_DEFAULT)}"><button class="btn mini" id="mirror-check">Check now</button></div></div></div>
     <div class="listhead">Diagnostics</div>
-    <div class="mrow"><div style="flex:1"><div class="t">Diagnostics</div><div class="s" id="diag-status">${ERRLOG.length} error${ERRLOG.length===1?"":"s"} logged, last reading ${(lastRead()&&lastRead().log||[]).length} step${(lastRead()&&lastRead().log||[]).length===1?"":"s"}.</div><div class="fieldacts"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button><button class="btn mini" id="diag-copy">Copy</button></div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">Diagnostics</div><div class="s" id="diag-status">${LAST_READ.ring.length} photo${LAST_READ.ring.length===1?"":"s"} logged, ${AILOG.length} AI exchange${AILOG.length===1?"":"s"}, ${ERRLOG.length} error${ERRLOG.length===1?"":"s"}.</div><div class="fieldacts"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button><button class="btn mini" id="diag-copy">Copy</button></div></div></div>
     <pre class="diag" id="diag-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">Still to test</div><div class="s" id="field-status">${fieldNote()}</div><div class="fieldacts"><button class="btn mini" id="field-show">Show</button><button class="btn mini" id="field-copy">Copy</button></div></div></div>
     <pre class="diag" id="field-out" hidden></pre>
@@ -3577,7 +3581,7 @@ async function addManual(){
   else setMl(card,LANG); /* typed by hand: the app's language */
   const tags=parseTags($("#f-tags").value); if(tags.length) card.tags=tags;
   if($("#f-flag").checked){ card.flag=true; const note=$("#f-note").value.trim(); if(note) card.flagNote=note; }
-  if(S.pendingShot){ card.shot=S.pendingShot; S.pendingShot=null; }
+  if(S.pendingShot){ card.shot=S.pendingShot; todoDone(S.pendingShot); S.pendingShot=null; } /* v509: the photo has its card */
   const chosenImg=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
   if(chosenImg){ card.img=await cardJpeg(chosenImg); }
   S.pendingImg=null; S.pendingFull=null;
@@ -3706,6 +3710,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  509:"A photo the app was still reading when you closed it is read when you come back, and a photo that could not be read stays under Camera until you crop or delete it.",
   508:"A card picture with a light grey ground is no longer darkened to black, and the cards already made are cut again from their photos.",
   497:"Two buttons under a card instead of three: Not yet, and Got it.",
   494:"While learning a flashcard made from a multicard, tap its name under the meaning to look at the multicard — and come straight back to the card you were on.",
@@ -4120,7 +4125,7 @@ const shotRec=id=>S.inbox.find(s=>s.id===id)||SHOTS_EXTRA[id]||null;
    the queue for the session, so the foreground hook and the next start both call autoNext again. */
 const AUTOQ=[];
 const autoSave=()=>setSetting("autoQueue",AUTOQ.slice()).catch(()=>{});
-function autoQueueAdd(ids){ let n=0; for(const id of ids) if(!AUTOQ.includes(id)){ AUTOQ.push(id); n++; } if(n) autoSave(); }
+function autoQueueAdd(ids,front){ let n=0; const add=[]; for(const id of ids) if(!AUTOQ.includes(id)&&!add.includes(id)){ add.push(id); n++; } if(front) AUTOQ.unshift(...add); else AUTOQ.push(...add); if(n) autoSave(); } /* front (v509): a photo whose reading was cut short by a close goes before the batch it was ahead of */
 function autoDrop(id){ const i=AUTOQ.indexOf(id); if(i>=0){ AUTOQ.splice(i,1); autoSave(); } }
 function autoNext(){
   if(!S.autoCard) return;
@@ -6052,7 +6057,7 @@ async function cropSign(id,opts){
     if(!r){ delete READING[id]; renderShots(); if(PENDING[id]) failPending(id,"no frame"); return; } /* no frame yet — nothing to do */
     const rec=shotRec(id);
     cardImg=r.blob; if(!PENDING[id]&&!RECROP[id]){ S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null; }
-    delete SIGN[id]; if(!PENDING[id]) delete QSNOTE[id]; /* the frame stays visible while reading */
+    delete SIGN[id]; if(!PENDING[id]){ delete QSNOTE[id]; const sh=S.inbox.find(x=>x.id===id); if(sh&&sh.note){ delete sh.note; idbPut("inbox",sh).catch(()=>{}); } } /* the frame stays visible while reading; a failed reading's note goes when the hand reads the photo again (v509) */
     if(!(CROP&&CROP.id===id&&CROP.hidden)) renderShots(); /* the hidden proposal's box was drawn by proposeFrame — no re-render under a finger that may be framing by hand (v288) */
     const box=$("#ocr-"+id); if(!box&&!PENDING[id]) return; /* a photo not on screen is not read — unless a saved card waits for it */
     status("loading the reader …");
@@ -6500,7 +6505,7 @@ async function provisionalCard(id,sg){
 }
 /* the card made by itself (v325, H: "no frame is seen during the first scan at all, just the magic wobbling over the image, and then the result is the finished card … if I want to edit something, I get a frame which I can adjust"; saved by itself on my recommendation, "Go"): Cancel while it reads drops the placeholder, nothing readable drops it too (dropAuto), and the row shows the finished card with Edit and Delete (resultHTML) */
 async function dropAuto(id,cid){ delete AUTO[id]; delete QSCARD[id]; delete QSMORE[id]; delete PROV[id]; if(!cid) return; const d=cardOf(cid); if(!d||d.c) return; S.custom=S.custom.filter(x=>x.id!==cid); try{ await idbDel("custom",cid); }catch(e){} bump("byPhoto",-1); dropThumb(cid); setStats(); }
-async function cancelAuto(id){ const cid=PENDING[id]; abandonReading(id); delete PENDING[id]; autoDrop(id); await dropAuto(id,cid); renderShots(); autoNext(); } /* Cancel drops this photo from the batch, not the batch (v411) */
+async function cancelAuto(id){ const cid=PENDING[id]; abandonReading(id); delete PENDING[id]; autoDrop(id); shotTried(id); await dropAuto(id,cid); renderShots(); autoNext(); } /* Cancel drops this photo from the batch, not the batch (v411); the hand has it now — the photo stays on the tab across a restart and is not read again by itself (v509) */
 /* The frame right after the shutter (v437, H: "Ich moechte ein Foto direkt nach der Aufnahme bearbeiten koennen, inklusive
    Drehen, Schieben und Croppen"). Turning, moving and cropping have existed since v185 — they were simply two taps away, since
    v325 sends a fresh photo straight to a card with no frame: Cancel and then Crop, or the finished card's Edit. Crop beside
@@ -6592,7 +6597,8 @@ async function finishPending(id){
        reader unsure of its own lines, the text model rejecting them, and no picture answer at all. A reading whose every
        line IS read surely keeps its card even against a bad verdict — that is the v143 rule, and the v348 finding that a
        text-only garbage verdict is weaker evidence than the picture's. */
-    const noPic=sg&&SIGN[id]===sg&&sg.region&&sg.region.picErr&&!(sg.ai&&sg.ai.ok);
+    const vouched=!!(sg&&sg.ai&&!sg.ai.bad&&(sg.ai.ok||sg.ai.textOk)); /* v509, H's 数码快印 of 2026-09-18: four passes read it at 95–98 %, Qwen timed out, DeepSeek kept the text and answered a meaning — and "ok" was false, since by the prompt's own rule "ok" is true only when the MEANING was already right too, which a gloss never is. The gate asked for the text's confirmation and read the meaning's; the card was refused. The text kept is the confirmation. */
+    const noPic=sg&&SIGN[id]===sg&&sg.region&&sg.region.picErr&&!vouched;
     const unsure=sg&&(sg.weak||(sg.ai&&sg.ai.bad&&!sg.sureLines));
     if(ph.reading.auto&&!ph.c&&noPic&&unsure){ const why=sg.weak?"the AI could not check the photo and the reading is weak":"the AI could not check the photo and the text check called the reading garbage"; logRead(id,why+" — no card"); return failPending(id,why); }
     /* several labels on one photo, one card each (v357): the answer's lines, its per-line pinyin and meanings and the frames
@@ -6602,7 +6608,7 @@ async function finishPending(id){
       logRead(id,`the labels have their frames, but ${!ph.reading.auto?"the card was not made by the app itself":!sg||SIGN[id]!==sg?"the reading was replaced meanwhile":!sg.ai||!sg.ai.ok?"the picture answer was not used as the reading":"the AI called the picture unreadable"} — one card`);
     if(SPLIT[id]&&ph.reading.auto&&sg&&SIGN[id]===sg&&sg.ai&&sg.ai.ok&&!sg.ai.bad){
       const made=await splitCards(id,sg,ph);
-      if(made){ delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; dropExtraShot(id); /* before the row is drawn, or it shows the reading again */
+      if(made){ delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; dropExtraShot(id); todoDone(id); /* before the row is drawn, or it shows the reading again */
         S.queue=buildQueue(false); aiAutoSoon(); setStats();
         if(S.mode==="cards"&&!S.editing) render(); else renderShots();
         autoNext(); /* v454: the split leaves finishPending by its own return, so the batch's next photo has to be started here too — without it a batch from the album stopped dead at the first photo that made several cards (since v411, and every photo with several texts has been a split since v453) */
@@ -6618,10 +6624,11 @@ async function finishPending(id){
     if(sg.cardImg){ ph.img=await cardJpeg(sg.cardImg); dropThumb(ph.id); } /* the list's thumbnail was made from the crop saved first (v242, H: "the card with a photo before the re-crop remains") */
     { const win=fr?await windowCut(id,fr):null; if(win){ ph.img=await cardJpeg(win.blob); dropThumb(ph.id); } } /* the 16:9 window around the text (v329) — the tight cut only when the photo is gone */
     const weak=!!(mt.suspect||sg.weak||(sg.ai&&sg.ai.bad));
-    if(auto||edit){ if(mt.suspect||(sg.ai&&sg.ai.bad)||(sg.weak&&!(sg.ai&&sg.ai.ok))){ ph.flag=true; ph.flagNote=t("the reading looks unsure — check text, pinyin and meaning"); } }
+    if(auto||edit){ if(mt.suspect||(sg.ai&&sg.ai.bad)||(sg.weak&&!vouched)){ ph.flag=true; ph.flagNote=t("the reading looks unsure — check text, pinyin and meaning"); } }
     else { ph.flag=true; ph.flagNote=weak?t("saved before the reading was done, and the reading is weak — check text, pinyin and meaning"):t("saved before the reading was done — check text, pinyin and meaning"); } /* nobody saw the preview (v245, H: "flag cards that were saved before the final stage, with an appropriate comment") */
     if(!ph.flag&&cropDisagrees(ph.frame,sg.region&&sg.region.pic,sg.ai&&sg.ai.labels,PICSEEN[id])){ ph.flag=true; ph.flagNote=t("the picture may not show this text — check the photo"); logRead(id,"the card's frame lies outside everything the AI named — flagged"); } /* v400: the picture is not touched — v380's wide fallback measured 0 of 75 usable cards (6.1 CSS px a character) and H rejected exactly that picture in the field at v382 ("Die Bild crops sind noch falsch"), so this only says so */ /* the card made by itself (v325) and the card saved early from Crop again (v342, H's "Go" on the recommendation — the analysis counts): only a doubtful reading carries the flag */ /* the card made by itself (v325): the row shows it, so only a doubtful reading carries the flag — a weak reader score the AI check then confirmed is no doubt */
     try{ await idbPut("custom",ph); }catch(e){}
+    todoDone(id); /* v509: the card is written — the next start owes this photo nothing */
     if(!auto) QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}.`+(mt.pending?" Translation pending.":"")+(ph.flag?" Flagged for review.":"");
   }catch(err){ logErr("savenow",err&&(err.stack||err.message)||err); return failPending(id,"the reading failed"); }
   finally{ delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; dropExtraShot(id); }
@@ -6630,9 +6637,12 @@ async function finishPending(id){
   autoNext(); /* the next photo of the batch (v411) */
 }
 async function failPending(id,why,msg){
-  const ph=pendingCard(id); delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; if(!ph||!ph.reading) return;
+  const ph=pendingCard(id); delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; if(!ph) return; if(!ph.reading){ todoDone(id); return; } /* the card is there with a text of H's own: the photo has its card (v509) */
   dropExtraShot(id);
-  if(ph.reading.auto&&!ph.c){ await dropAuto(id,ph.id); delete READING[id]; QSNOTE[id]=/^the reader did not load/.test(msg||"")?failText("Reading failed: "+msg):/^the AI could not check the photo/.test(why||"")?t("The AI could not check this photo, and the reading alone was not good enough for a card. Tap Crop to read the photo again."):t("Nothing could be read. Tap Crop to frame the text by hand."); /* a reader that never loaded is not a photo without text (v335) */ if(S.mode==="cards"&&!S.editing) render(); else renderShots(); autoNext(); return; } /* a card made by itself with nothing to show is no card (v325): the photo stays with Crop */
+  if(ph.reading.auto&&!ph.c){ await dropAuto(id,ph.id); delete READING[id]; const note=/^the reader did not load/.test(msg||"")?failText("Reading failed: "+msg):/^the AI could not check the photo/.test(why||"")?"The AI could not check this photo, and the reading alone was not good enough for a card. Tap Crop to read the photo again.":"Nothing could be read. Tap Crop to frame the text by hand."; /* a reader that never loaded is not a photo without text (v335) */
+    QSNOTE[id]=t(note); shotTried(id,note); /* v509 (H: "Wenn eine Karte nicht gelesen werden kann: bitte unter Camera belassen und als solche benennen. Nicht einfach löschen."): the note is on the record, so the photo stays on the Camera tab with it across a restart, until it makes a card or is deleted */
+    if(S.mode==="cards"&&!S.editing) render(); else renderShots(); autoNext(); return; } /* a card made by itself with nothing to show is no card (v325): the photo stays with Crop */
+  todoDone(id); /* the card stays, flagged: the photo has its card */
   if(ph.c) delete ph.reading; else ph.reading.failed=why; /* a card framed again in the Edit form keeps its text and forgets the frame (v241, v243); an empty card keeps the failure for "Nothing read yet" */
   ph.flag=true; ph.flagNote=ph.c?t("the new frame could not be read — the old text stays"):t("the reading failed — edit the card or frame the photo again");
   try{ await idbPut("custom",ph); }catch(e){}
@@ -7305,7 +7315,7 @@ async function signAskAI(id){
     zh=recutLines(zh,lines); /* the model often drops the line breaks — the photo's lines win */
     const kept=zh!==c?aiSettled(sg,lines,zh):"";
     if(kept){ sg.ai={zh:c,proposed:zh,kept,zht:"",p:"",m:"",note:r.note,kind:r.kind,ok:false,bad:false}; }
-    else { sg.lines=zh.split("\n"); sg.ai={zh,zht:r.zht&&CJK.test(r.zht)?recutLines(r.zht.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"),lines):"",p:r.p,m:r.m,ml:r.ml,note:r.note,kind:r.kind,ok:r.ok,bad:!!r.bad};
+    else { sg.lines=zh.split("\n"); sg.ai={zh,zht:r.zht&&CJK.test(r.zht)?recutLines(r.zht.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"),lines):"",p:r.p,m:r.m,ml:r.ml,note:r.note,kind:r.kind,ok:r.ok,bad:!!r.bad,textOk:!r.bad&&zh===c}; /* textOk (v509): the check kept the text as read — its own "ok" is false whenever it also had to replace the gloss meaning, which is nearly always, so the text's confirmation needs its own field */
     if(r.bad&&!sg.flag){ sg.flag=true; sg.flagNote=sg.flagNote||t("the reading looks wrong"); } } } /* H's rule: when unsure, flag instead of inventing */
   }catch(err){ if(SIGN[id]) sg.aiErr=err&&err.message||String(err); } /* → signPreview falls back to the offline model */
   if(SIGN[id]){ delete sg.aiBusy; delete sg.aiPromise; }
@@ -7383,6 +7393,7 @@ async function saveSign(id){
   numSet(id,"cardFrame",card.frame||null); numSet(id,"win",CROP&&CROP.id===id&&CROP.rect?numRect(windowRect(CROP.rect)):null); numCards(id,[card.id]); numsFile(id); /* v399 */
   bump("byPhoto"); S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
+  todoDone(id); /* v509: the photo has its card */
   S.queue=buildQueue(false); QSCARD[id]=card.id;
   delete SIGN[id]; if(CROP&&CROP.id===id) CROP=null; /* saved — the frame has done its job */
   QSNOTE[id]=t("Card saved — {0}.",esc(c.replace(/\n/g," / ")))+(mt.pending?t(" Translation pending."):"")+(card.flag?t(" Flagged for review."):""); /* no word about sources or the AI (H, v105) */
@@ -7435,6 +7446,7 @@ let INBOX_SCROLL=0, LOOKUP=null, LOOK_BACK=null; /* INBOX_SCROLL: where the phot
    untouched and is reached from its card, and every photo — carded or not — is pruned in one place, More → Your data →
    Photos. The Camera tab is the camera. */
 function shotDone(s){
+  if(s.todo) return false; /* v509: a photo the app took in hand and that has no card yet — interrupted, failed, or taken back by hand — stays on the tab until it makes one or is deleted (H: "the image shouldn't be lost"; "bitte unter Camera belassen und als solche benennen") */
   if(CROP&&CROP.id===s.id) return false;
   if(PENDING[s.id]||READING[s.id]||SIGN[s.id]||AUTO[s.id]||PROV[s.id]||QSCARD[s.id]||QSNOTE[s.id]) return false;
   if(AUTOQ.includes(s.id)) return false; /* the only busy flag that survives a reload (setting autoQueue, v411) */
@@ -7661,7 +7673,7 @@ function renderShots(){
          batch is a tile too since v466 (H: "Und zwar jeweils zwei pro Reihe") — nothing is happening to it yet, which is why
          v454 gave it a plain line and no bar; the clock says which one it is and the batch line above says how many are to go. */
       const qd=AUTOQ.includes(s.id);
-      if(!cropping&&!PENDING[s.id]&&!results.length&&!prov&&!SIGN[s.id]&&!READING[s.id]&&!QSNOTE[s.id]&&S.openShot!==s.id){
+      if(!cropping&&!PENDING[s.id]&&!results.length&&!prov&&!SIGN[s.id]&&!READING[s.id]&&!shotNote(s)&&S.openShot!==s.id){ /* a failed reading's note keeps the photo full width, across a restart too (v509) */
         const n=(byShot.get(s.id)||[]).filter(d=>d.c&&!isPage(d)).length;
         return `<button class="tile${qd?" wait":""}" data-tile="${s.id}"${!busy&&S.inbox.length>1?` data-lp="${s.id}"`:""}>
           <span class="tw"><img src="${shotURL(s)}" alt="photo" loading="lazy" decoding="async">${n?`<span class="cnt">${n}</span>`:""}${qd?`<span class="wt" title="${esc(t("Waiting for its turn …"))}" aria-label="${esc(t("Waiting for its turn …"))}">${ICON_WAIT}</span>`:""}</span>
@@ -7684,7 +7696,7 @@ function renderShots(){
         <div class="ocr" id="ocr-${s.id}">${PENDING[s.id]?readingHTML(READING[s.id]||AI_BUSY_TEXT,s.id):SIGN[s.id]?signEditorHTML(s.id):READING[s.id]?readingHTML(READING[s.id],s.id):cropping
           ?CROP.auto?busyHTML(t("Finding the text …")):`<span class="badge">${t("Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.")}</span>`
           :AUTOQ.includes(s.id)?`<span class="badge">${t("Waiting for its turn …")}</span>` /* a photo of the batch still in the queue says so (v454, H: "sonst denkt man, dass sich die App verschluckt hat") — a plain line, no bar: nothing is happening to this photo yet, and the batch line above says the work goes on */
-          :QSNOTE[s.id]?`<div class="ok" style="margin:0">${QSNOTE[s.id]}</div>${qsAiBox(s.id)}`:""}</div>
+          :shotNote(s)?`<div class="ok" style="margin:0">${shotNote(s)}</div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
     }).join(""); /* no foot: v470 took the archive line away, v471 the head and the switch */
   box.querySelectorAll("[data-tile]").forEach(b=> b.onclick=()=>{ S.openShot=b.dataset.tile; renderShots(); const el=box.querySelector(`.shot[data-open]`); if(el) el.scrollIntoView({block:"nearest"}); }); /* a tap opens that photo full width, where it is the list view's own row */
@@ -7745,8 +7757,9 @@ async function importPhotos(files,opts){
   window.scrollTo({top:0});
   await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0))); /* let the placeholder paint first */
   /* several photos from the album: all land in the inbox, the first one opens in crop mode */
-  let first=null; const added=[];
-  for(const file of files){ const id=await addPhoto(file,opts.shared,opts.album); if(id) added.push(id); if(!first) first=id; }
+  let first=null; const added=[], recs=[];
+  for(const file of files){ const rec=await addRaw(file,opts.shared,opts.album); if(rec) recs.push(rec); } /* v509: every file is on the phone before the first is downscaled — a batch cut short by a close keeps all of its photos */
+  for(const rec of recs){ await normalizeShot(rec); S.inbox.unshift(rec); added.push(rec.id); if(!first) first=rec.id; }
   CROP=first?{id:first,rect:null,auto:true}:null; PENDING_SHOT=false; /* the frame is proposed by the app (v203) */
   if(S.autoCard&&added.length>1) autoQueueAdd(added.slice(1)); /* the rest follow one after the other (v411) — the first is already in hand */
   if(S.mode!=="inbox"){ S.mode="inbox"; render(); } else renderShots();
@@ -7782,11 +7795,38 @@ function exifCamera(b,off,end){ /* IFD0's Make (0x010F) and Model (0x0110), join
     return out||null;
   }catch(e){ return null; }
 }
-async function addPhoto(file,shared,album){
+/* A photo the app was still working on when the app was closed is not lost (v509, H: "if I close the app while a new image is
+   being processed, the image shouldn't be lost"). Measured on v508 by killing the page at each stage of a fresh photo: killed
+   while the shimmer reads it, the photo came back and became its card — the placeholder card carries its `reading` and
+   resumePending re-reads it (v237/v325); but killed during "Processing photo …" the file was gone entirely, since nothing
+   had been written yet, and killed between the inbox write and the placeholder's the photo sat in the inbox with no card,
+   no flag and no way back — hidden by v470's rule, which lists only what is being worked on, and never resumed. Two things
+   close both windows. (1) The file is written to the inbox AS IT CAME, before it is downscaled (addRaw, `raw:true`), and the
+   normalised copy replaces it a moment later (normalizeShot); a raw record left over at the next start is normalised then
+   (normalizeRaw), through the same function. On a batch every file is written before the first is downscaled, so a close
+   during the batch keeps all of them. (2) A photo that opens by itself carries `todo:true` on its record until the automatic
+   card is done with it — the card written (finishPending), the reading failed (failPending, so a photo that fails is tried
+   once and not for ever, v411), or the hand took it back (Cancel, Crop). At the next start every photo still marked, with no
+   card from it, joins the batch queue at its head (resumeShots), so it is read exactly as a fresh photo is (autoNext →
+   proposeFrame → the shimmer → the card), and the batch line says so. Only the mark decides — never the inbox at large, or
+   every card-less photo on the phone would be sent to the AI (the v411 rule). What it cannot do: bring back a photo the
+   system discarded while the camera app was in front — the file never reaches the page then (v316). What it costs: one
+   extra IndexedDB write of the raw file per photo (a few MB, tens of milliseconds) and one small write when the photo is done. */
+let _shotTs=0;
+const shotTs=()=>(_shotTs=Math.max(Date.now(),_shotTs+1)); /* v509: a batch writes several photos inside one millisecond, and both the inbox's own sort and the resume read the order off ts — without this the second photo of a pick could be read first after a restart */
+async function addRaw(file,shared,album){
+  const ts=shotTs();
+  const rec={ id:"shot_"+ts+"_"+Math.floor(Math.random()*1000), blob:file, ts, raw:true }; if(shared) rec.shared=true; /* v450: came through the share sheet (v163) — a screenshot, by the route's own design */
+  if(album&&!shared) rec.album=true; /* v453: only a photo from the album is probed for a screenshot, at the normalisation */
+  if(S.autoCard) rec.todo=true; /* v509: the app owes this photo a card until it is done with it */
+  try{ await idbPut("inbox",rec); }catch(err){}
+  return rec;
+}
+async function normalizeShot(rec){
   /* bake in EXIF rotation + downscale to max 1600px: keeps the inbox small
      and the OCR boxes aligned with the displayed image */
-  let blob=file, src=null;
-  if(album&&!shared){ try{ src=await photoSource(file); }catch(err){ src=null; } } /* v453: is this a screenshot? */
+  const file=rec.blob; let blob=file, src=null;
+  if(rec.album&&!rec.shared){ try{ src=await photoSource(file); }catch(err){ src=null; } } /* v453: is this a screenshot? (read off the file as it came — the downscaled copy carries no EXIF) */
   try{
     const bmp=await createImageBitmap(file);
     if(src){ src.w=bmp.width; src.h=bmp.height; src.dims=(bmp.width===src.sw&&bmp.height===src.sh)||(bmp.width===src.sh&&bmp.height===src.sw); if(src.dims) src.screenshot=true; } /* the screen's own size is the second tell */
@@ -7797,12 +7837,24 @@ async function addPhoto(file,shared,album){
     bmp.close();
     blob=(await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85)))||file;
   }catch(err){}
-  const rec={ id:"shot_"+Date.now()+"_"+Math.floor(Math.random()*1000), blob, ts:Date.now() }; if(shared) rec.shared=true; /* v450: came through the share sheet (v163) — a screenshot, by the route's own design */
+  rec.blob=blob; delete rec.raw; delete rec.album;
   if(src){ rec.src={png:src.png,cam:src.cam,w:src.w||0,h:src.h||0,sw:src.sw,sh:src.sh,dims:!!src.dims}; if(src.screenshot) rec.screenshot=true; } /* v453: a screenshot from the album, and what said so */
-  S.inbox.unshift(rec);
+  if(IMGURL[rec.id]){ URL.revokeObjectURL(IMGURL[rec.id]); delete IMGURL[rec.id]; } /* a picture drawn from the raw file is drawn again from the copy */
   try{ await idbPut("inbox",rec); }catch(err){}
-  return rec.id;
 }
+async function normalizeRaw(){ for(const rec of S.inbox.filter(s=>s.raw)) await normalizeShot(rec); } /* v509: a file written as it came and never downscaled — the app was closed during "Processing photo …" */
+function resumeShots(){ /* v509: the photos the app still owes a card, back into the batch queue at its head, in the order they were taken; a photo whose card exists only sheds its mark */
+  if(!S.autoCard) return;
+  const has=new Set(S.custom.filter(d=>d.shot&&d.c).map(d=>d.shot)), ids=[]; /* a card with a TEXT — the placeholder a running reading holds has none, and counting it cleared the mark of the very photo being read (found by the suite) */
+  for(const s of S.inbox.filter(s=>s.todo&&!s.raw).sort((a,b)=>a.ts-b.ts)){
+    if(has.has(s.id)){ todoDone(s.id); continue; }
+    if(PENDING[s.id]||READING[s.id]||(CROP&&CROP.id===s.id)) continue; /* in hand right now: this run owes it nothing */
+    if(!s.tried&&!AUTOQ.includes(s.id)) ids.push(s.id); } /* a photo tried and failed, or taken back by hand, stays listed and is not read again by itself */
+  if(ids.length) autoQueueAdd(ids,true);
+}
+function todoDone(id){ const s=S.inbox.find(x=>x.id===id); if(s&&(s.todo||s.tried||s.note)){ delete s.todo; delete s.tried; delete s.note; idbPut("inbox",s).catch(()=>{}); } } /* v509: the photo has made its card, or its record is going — nothing is owed any more */
+function shotTried(id,note){ const s=S.inbox.find(x=>x.id===id); if(!s) return; s.todo=true; s.tried=true; /* the mark is set here too, not only kept: a photo the automatic card failed on has to stay on the tab whatever cleared the mark before */ if(note) s.note=note; else delete s.note; idbPut("inbox",s).catch(()=>{}); } /* v509: the automatic card was tried and failed, or the hand took the photo back — the photo stays on the Camera tab, named by its note, until it makes a card or is deleted, and is not read again by itself (tried once, v411) */
+function shotNote(s){ return QSNOTE[s.id]||(s.note?t(s.note):""); } /* the note under a photo: this session's, else the one its record carries across a restart (v509) */
 async function delShot(id,undo){
   await keepPhoto(id); /* the cards made from it keep the whole photo (v214) */
   const idx=S.inbox.findIndex(s=>s.id===id), rec=idx>=0?S.inbox[idx]:null;
