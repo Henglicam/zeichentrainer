@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=511; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=512; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -115,12 +115,21 @@ const aheadCards=n=>{ const p=S.progress; return learnDeck().cards.filter(x=>p[x
 function buildQueue(includeAhead){
   const p=S.progress, t=today(); const {cards:d,star}=learnDeck();
   const order=learnOrder();
-  const due = orderCards(d.filter(x=>p[x.id] && p[x.id].due<=t),order,true).map(x=>x.id);
+  /* the order of the session (v512, H: "Karten mit Charaktern, die häufig vorkommen, werden öfters angezeigt. Schreiben dieser
+     Character stuft Anzeigehäufigkeit wieder herab."): inside the due group and the new group the cards are sorted by weight,
+     highest first — the mean over the card's characters of freq/(1+writes), freq the number of learnable cards carrying the
+     character and writes how often it was fully written (setting charWrites). A card of common, never-written characters
+     comes first; every full write of a character halves its pull. Oldest and Newest decide among equal weights; Random
+     ignores the weight altogether (Q7: a random session is random). */
+  const freq={}; for(const x of d) for(const ch of new Set([...String(x.c)].filter(ch=>CJK.test(ch)))) freq[ch]=(freq[ch]||0)+1;
+  const cw=charWrites(), weightOf=x=>{ const cs=[...String(x.c)].filter(ch=>CJK.test(ch)); if(!cs.length) return 0; return cs.reduce((a,ch)=>a+(freq[ch]||0)/(1+(cw[ch]||0)),0)/cs.length; };
+  const byWeight=list=>order==="random"?list:list.map((x,i)=>({x,i,w:weightOf(x)})).sort((a,b)=>b.w-a.w||a.i-b.i).map(o=>o.x);
+  const due = byWeight(orderCards(d.filter(x=>p[x.id] && p[x.id].due<=t),order,true)).map(x=>x.id);
   /* A star is a hand-picked short list, not a category, so a starred session holds every starred card (v429, H: "Go" on the
      recommendation): the due ones first, so the plan still leads, then the new ones — without the eight-card cap, which exists
      to stop a learner drowning in new cards and not to withhold the ones they picked themselves — then the rest by due date.
      The pill counts 11 and the session now holds 11. A tag stays as it was: a tag can be the whole deck. */
-  const all = orderCards(d.filter(x=>!p[x.id]),order,false).map(x=>x.id);
+  const all = byWeight(orderCards(d.filter(x=>!p[x.id]),order,false)).map(x=>x.id);
   const fresh = star?all:all.slice(0,NEW_PER_SESSION);
   let q=[...due,...fresh];
   if(star) q=[...q,...d.filter(x=>p[x.id]&&p[x.id].due>t).sort((a,b)=>p[a.id].due-p[b.id].due).map(x=>x.id)];
@@ -622,6 +631,10 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v512","Learn: the pad snaps on your strokes"],
+  ["app","v512","Learn: pad whole on 390 px, 1 line"],
+  ["app","v512","Learn: a card comes round 3 later"],
+  ["app","v512","Progress: Written today counts"],
   ["app","v511","Feedback with a screenshot arrives"],
   ["app","v510","Learn: no \"2 of 2\" under a card"],
   ["app","v509","close the app mid-read: photo back"],
@@ -965,7 +978,7 @@ async function boot(){
        open answer and the day's count — so a reload in Learn comes back on the same card instead of at the top of a queue
        built afresh, where a card already graded is no longer due and the next one takes its place. */
     if(S.mode==="study"&&Array.isArray(rv.queue)){ const q=rv.queue.filter(id=>{ const d=cardOf(id); return d&&d.c; });
-      if(q.length){ S.queue=q; S.idx=Math.max(0,Math.min(q.length,rv.idx|0)); S.revealed=!!rv.revealed&&S.idx<q.length; S.done=Math.max(0,rv.done|0); S.ahead=!!rv.ahead; } } }
+      if(q.length){ S.queue=q; S.idx=Math.max(0,Math.min(q.length,rv.idx|0)); S.ansOpen=!!rv.revealed&&S.idx<q.length; S.done=Math.max(0,rv.done|0); S.ahead=!!rv.ahead; } } }
   wireChrome(); render();
   if(rv&&rv.scroll&&(rv.own!==false||navReload())) requestAnimationFrame(()=>window.scrollTo(0,rv.scroll));
   autoBreaks(); /* old cards get their photo lines estimated once */
@@ -1754,7 +1767,9 @@ const monthKey=()=>new Date().toISOString().slice(0,7);
 function usage(){ const u=S.settings.usage||{}; if(!u.first) u.first=Date.now(); if(u.month!==monthKey()){ u.month=monthKey(); u.m={}; } if(!u.m) u.m={}; return u; }
 let _usageTimer=null, _dailyTimer=null;
 /* reviews per day (v274): setting daily = {day: count}, the last 60 days — the Progress row's 30-day strip shades busier days; the streak keeps its days list */
-function dailyBump(day){ const d=S.settings.daily||{}; d[day]=(d[day]||0)+1; const keys=Object.keys(d).sort(); while(keys.length>60) delete d[keys.shift()]; S.settings.daily=d; clearTimeout(_dailyTimer); _dailyTimer=setTimeout(()=>{ setSetting("daily",d).catch(()=>{}); },500); }
+/* v512: the day's entry is {r,w} — reviews and points written on the pad; a plain number from before reads as {r:n,w:0} */
+const dayOf=x=>typeof x==="number"?{r:x,w:0}:{r:(x&&x.r)||0,w:(x&&x.w)||0};
+function dailyBump(day,key,n){ const d=S.settings.daily||{}; const e=dayOf(d[day]); e[key||"r"]+=n||1; d[day]=e; const keys=Object.keys(d).sort(); while(keys.length>60) delete d[keys.shift()]; S.settings.daily=d; clearTimeout(_dailyTimer); _dailyTimer=setTimeout(()=>{ setSetting("daily",d).catch(()=>{}); },500); }
 function bump(key,n){ n=n||1; if(key==="byPhoto"||key==="byHand"||key==="deleted") REPORT_DIRTY=true; const u=usage(); u[key]=(u[key]||0)+n; u.m[key]=(u.m[key]||0)+n; S.settings.usage=u; clearTimeout(_usageTimer); _usageTimer=setTimeout(()=>{ setSetting("usage",u).catch(()=>{}); },500); }
 /* which analysis did the work (v179, H: "record all the models used — the reader, DeepSeek, Qwen"): usage.models and usage.m.models
    count the on-device reader ("reader", one per reading) and every AI model by name, all time and this month */
@@ -1779,13 +1794,13 @@ async function progressImage(){
   const max=Math.max(1,...p.dots.map(x=>x.n)), lvl=n=>!n?0:max<2?4:1+Math.round(3*(n-1)/(max-1)), alpha=[1,.3,.5,.75,1];
   const legend=[[t("New"),p.nw,"#AEAEB2"],[t("Still learning"),p.learning,"#C8372D"],[t("Known"),p.known,"#2FA36B"]];
   ctx.font=`34px ${sans}`; const legendW=legend.reduce((a,[l,n])=>a+32+ctx.measureText(`${l} ${n}`).width+40,0), legendRows=legendW>inner?3:1;
-  const H=PAD+92+424+44+48+68+56+(legendRows*48+22)+100+30+PAD; cv.width=W; cv.height=H;
+  const H=PAD+92+648+44+48+68+56+(legendRows*48+22)+100+30+PAD; cv.width=W; cv.height=H; /* three rows of tiles since v512 */
   ctx.fillStyle="#FFFFFF"; ctx.fillRect(0,0,W,H); ctx.textBaseline="alphabetic";
   let y=PAD; ctx.fillStyle="#000000"; ctx.font=`700 60px ${sans}`; ctx.fillText(t("Progress"),PAD,y+56); y+=92;
-  const gap=24, tw=(inner-gap)/2, th=200, tiles=[[p.streak,t("Day streak")],[p.learned,t("Cards learned")],[p.dueToday,t("Due today")],[p.week,t("Reviews this week")]];
-  tiles.forEach((tl,i)=>{ const x=PAD+(i%2)*(tw+gap), ty=y+Math.floor(i/2)*(th+gap); ctx.fillStyle="#F2F2F7"; rr(x,ty,tw,th,28); ctx.fill();
+  const gap=24, tw=(inner-gap)/2, th=200, tiles=[[p.streak,t("Day streak")],[p.learned,t("Cards learned")],[p.dueToday,t("Due today")],[p.week,t("Reviews this week")],[p.written,t("Written today")]];
+  tiles.forEach((tl,i)=>{ const x=PAD+(i%2)*(tw+gap), ty=y+Math.floor(i/2)*(th+gap), w=i===4?inner:tw; /* the fifth tile (v512) spans the row */ ctx.fillStyle="#F2F2F7"; rr(x,ty,w,th,28); ctx.fill();
     ctx.fillStyle="#000000"; ctx.font=`700 88px ${sans}`; ctx.fillText(String(tl[0]),x+32,ty+112); ctx.fillStyle="#6E6E73"; ctx.font=`32px ${sans}`; ctx.fillText(tl[1],x+32,ty+164); });
-  y+=2*th+gap+44;
+  y+=3*th+2*gap+44;
   ctx.fillStyle="#6E6E73"; ctx.font=`34px ${sans}`; ctx.fillText(t("Last 30 days"),PAD,y+30); y+=48;
   const bw=(inner-29*8)/30; p.dots.forEach((d,i)=>{ const l=lvl(d.n); ctx.globalAlpha=alpha[l]; ctx.fillStyle=l?"#C8372D":"#E9E9EE"; rr(PAD+i*(bw+8),y,bw,28,6); ctx.fill(); }); ctx.globalAlpha=1; y+=68;
   const tot=p.nw+p.learning+p.known; ctx.fillStyle="#E9E9EE"; rr(PAD,y,inner,28,14); ctx.fill();
@@ -2223,7 +2238,7 @@ function reportData(){
     byPhoto:n("byPhoto"), byHand:n("byHand"), deleted:n("deleted"),
     aiCalls:n("aiCalls"), aiIn:n("aiIn"), aiOut:n("aiOut"), aiCallsMonth:mn("aiCalls"), aiInMonth:mn("aiIn"), aiOutMonth:mn("aiOut"), pics:n("pics"), picsMonth:mn("pics"), models:u.models||{}, modelsMonth:m.models||{},
     ai:aiOn()?aiProvider()+" "+aiModel():null, inbox:S.inbox.length, tags:allTags().length, lang:navigator.language||null,
-    regionTaps:n("regionTaps"), regionGrades:n("regionGrades"), regionCards:n("regionCards"), /* the photo's sheet opened, a grade given in it on a marked photo (v448), and a multicard's text turned into a flashcard (v478) */
+    regionTaps:n("regionTaps"), regionGrades:n("regionGrades"), regionCards:n("regionCards"), written:n("written"), writtenMonth:mn("written"), /* the points written on the pad (v512) */ /* the photo's sheet opened, a grade given in it on a marked photo (v448), and a multicard's text turned into a flashcard (v478) */
     errors:reportErrors()};
 }
 /* the app's last errors ride in the daily row (v271, H: "Can the app send automatic error logs from other users?" → "Go"): the kind
@@ -2277,14 +2292,14 @@ function progressData(){
     if(p.due<endToday) dueToday++; else if(p.due<endTomorrow) dueTomorrow++;
     if(p.due>=endToday&&p.due<endWeek) dueWeek++; }
   const daysSet=new Set(S.settings.days||[]), daily=S.settings.daily||{}, dots=[];
-  for(let i=29;i>=0;i--){ const k=dayKey(t0-i*DAY); dots.push({k,n:daily[k]||(daysSet.has(k)?1:0)}); }
-  return {streak:st.streak,learned:st.total,week:st.week,dueToday,dueTomorrow,dueWeek,nw,learning,known,dots};
+  for(let i=29;i>=0;i--){ const k=dayKey(t0-i*DAY); dots.push({k,n:dayOf(daily[k]).r||(daysSet.has(k)?1:0)}); }
+  return {streak:st.streak,learned:st.total,week:st.week,dueToday,dueTomorrow,dueWeek,nw,learning,known,dots,written:dayOf(daily[dayKey(t0)]).w}; /* written: the points of today's writes on the pad (v512) */
 }
 function progressHTML(){
   const p=progressData(), max=Math.max(1,...p.dots.map(x=>x.n)), lvl=n=>!n?0:max<2?4:1+Math.round(3*(n-1)/(max-1)); /* four shades: the busiest day full tint, a single review the lightest */
   const tile=(n,l)=>`<div class="ptile"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   return `<div class="prog">
-    <div class="ptiles">${tile(p.streak,t("Day streak"))}${tile(p.learned,t("Cards learned"))}${tile(p.dueToday,t("Due today"))}${tile(p.week,t("Reviews this week"))}</div>
+    <div class="ptiles">${tile(p.streak,t("Day streak"))}${tile(p.learned,t("Cards learned"))}${tile(p.dueToday,t("Due today"))}${tile(p.week,t("Reviews this week"))}${tile(p.written,t("Written today"))}</div>
     <div class="pl">${t("Last 30 days")}</div>
     <div class="pdots">${p.dots.map(x=>`<i class="d${lvl(x.n)}" title="${x.k}${x.n?": "+nOf(x.n,"review"):""}"></i>`).join("")}</div>
     <div class="pbar"><i class="new" style="flex:${p.nw}"></i><i class="learn" style="flex:${p.learning}"></i><i class="known" style="flex:${p.known}"></i></div>
@@ -2479,9 +2494,9 @@ const GUIDE=()=>[
     t("From album takes several photos at once — they all become cards, one after the other, while the app is open.")]},
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
     t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.")]},
-  {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. Tap the character for pinyin and meaning, tap the photo for the whole picture, the speaker reads it out.")+" "+t("A card made from a multicard shows the multicard's whole picture with a frame around its own text, and names the multicard under the meaning; tap that name to look the multicard up, and ← Back brings you back to the card."),
-    t("Grade yourself: Not yet, or Got it. The card comes back sooner or later, that is the whole trick. Nothing due? Pull the next cards forward."),
-    t("Swipe the closed card left or right to pick another one — nothing is graded, and a card you skip stays due for next time.")]},
+  {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. The photo is the cue, the characters under it are the buttons, and the write pad is the answer: trace the lit stroke, and the pad moves on by itself — character by character, then to the next card. Four characters a line and two lines photograph best.")+" "+t("A card made from a multicard shows the multicard's whole picture with a frame around its own text, and names the multicard under the meaning; tap that name to look the multicard up, and ← Back brings you back to the card."),
+    t("Pinyin and meaning sit folded under the buttons; open them when you need them, or write the whole card and they open by themselves. Stuck on a stroke? Show me draws it, Skip fills it in for you. A card you wrote comes round once more a few cards later, with less of the template each time you know it. Nothing due? Pull the next cards forward."),
+    t("Swipe the card left or right, or tap the arrows beside the pad, to pick another one — nothing is graded, and a card you skip stays due for next time.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Once a photo has made a multicard, two tabs split them — Cards and Multicards. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included. Push an open card sideways for the next one in the list."),
     t("Tap a text on a multicard to look it up, and press Generate flashcard to make a card of it. Learn studies the flashcards, never the multicard itself."),
     t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together; old photos are cleared out under More → Your data → Photos. Tap the star on a card to mark it as one you care about — the filter then shows them alone, and Learn studies all of them, due or not.")]},
@@ -2498,9 +2513,8 @@ function renderGuide(main){
 function tagsHTML(d,isNew){
   /* a multicard's own text carries no learning state (v487/v488), so neither "New" nor "Review" is true of it — the row keeps
      the review flag alone, and is not drawn at all when there is none (v498, the same reason the schedule line left that screen) */
-  const st=inPage(d)?"":`<span class="${isNew?"n":"r"}">${isNew?t("New"):t("Review")}</span>`;
-  const fl=d.flag?`<span class="f">${t("⚑ Review")}</span>`:"";
-  return fl||st?`<div class="tags">${fl}${st}</div>`:""; /* no card type (H, v105) */
+  const fl=d.flag?`<span class="f">${t("⚑ Review")}</span>`:""; /* v512 (H: "No 'studied yet' info"): the New / Review pill is gone for every card, as it went for a multicard's text at v498 */
+  return fl?`<div class="tags">${fl}</div>`:""; /* no card type (H, v105) */
 }
 /* ---------- review flag ----------
    Any card can be flagged when the OCR text, pinyin or meaning looks odd and
@@ -2647,7 +2661,7 @@ function ttsVoice(){
   if(!("speechSynthesis" in window)) return null;
   if(TTS_VOICE) return TTS_VOICE;
   const vs=speechSynthesis.getVoices();
-  if(!vs.length) speechSynthesis.addEventListener("voiceschanged",()=>{ if(ttsVoice()&&S.revealed) render(); },{once:true});
+  if(!vs.length) speechSynthesis.addEventListener("voiceschanged",()=>{ if(ttsVoice()&&S.ansOpen) render(); },{once:true});
   TTS_VOICE=vs.find(v=>/^zh[-_]?CN/i.test(v.lang))||vs.find(v=>/^(zh|cmn)/i.test(v.lang))||null;
   return TTS_VOICE;
 }
@@ -2746,7 +2760,7 @@ function backHTML(d,o){ const srcHere=!(o&&o.noSrc); /* noSrc: the front of this
   /* the linked row is not part of the answer any more (v422, H: "Die 'also in another photo' Zeile nach unten schieben"): it
      stood between the parts row and the grades, so reference material sat in the middle of the answer-then-grade path. Each
      caller places it now, below its own actions. */
-  return `${simpRefHTML(d)}<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}${srcHere?srcPill(d,true):""}</div>${charsHTML(d)}
+  return `${simpRefHTML(d)}<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}${srcHere?srcPill(d,true):""}</div>${o&&o.noParts?"":charsHTML(d)}
     ${glossBlock}`;
 }
 /* the other cards with the same text (v122, H: "if one character connects to various photos, then link them"): their
@@ -2817,58 +2831,210 @@ function renderStudy(main){
     wireLearnChips();
     return;
   }
-  const c=S.queue[S.idx], d=cardOf(c), isNew=!S.progress[c];
-  let back="";
-  if(S.revealed){
-    /* three buttons in the traffic light's own colours, and no interval preview under them (v421, H: "die Auswahlknöpfe müssen
-       viel einfacher und weniger sein. Nur Easy, Medium, and Hard, in den Ampelfarben Rot, Grün und Gelb", then "Ich swipe die
-       Karten nach links und rechts, fang mir die Lösung an und sag, das war easy, das war mittel oder das war hart. Zack, zack,
-       ohne groß Nachdenken"): the four grades of SM-2 asked the learner to choose between "Again" and "Hard" — two words for
-       two kinds of not knowing — and the "<10 min / 3 d / 8 d" line under each label was the arithmetic that made the choice
-       feel like a decision. Hard is the old "again" (the card comes back later in the same session), Medium the old "good",
-       Easy unchanged; the old "hard" grade — I knew it, barely, come back tomorrow — is gone, so a card half known repeats
-       today instead. The schedule itself is untouched: every card keeps the interval and ease it has. */
-    /* Two buttons since v497 (H, on seeing the three tiles still there: "ich hab in den flash cards immer noch hart, medium,
-       easy, anstatt [got it] und not yet", then "Go fuer Grade-Buttons"): the vote v487 built for the multicard sheet and
-       v488 took away again — a red cross NOT YET and a green check GOT IT, the app's own two states (v461). Not yet is
-       "again" (the card comes back later in the same session), Got it is "good" (the normal interval); "easy" is no longer
-       reachable from this screen and stays in schedule() for the rows that carry it, as "hard" has since v421. The cost,
-       named to H before his Go: a card he finds trivial takes the normal interval, so the deck grows to long intervals more
-       slowly. The three grades stay on a MARKED PHOTO's sheet (v448), where the tap is a review of an ordinary card. */
-    const grds=[["again","Not yet",MARK_CROSS,"no"],["good","Got it",MARK_TICK,"yes"]].map(([g,l,ic,cl])=>
-      `<button class="vt ${cl}" data-g="${g}"><i aria-hidden="true">${ic}</i><span class="lbl">${t(l)}</span></button>`).join("");
-    /* Star, Flag, Edit — one word each (v431, H on the row wrapping to two lines: "Koennen wir hier nicht einfach schreiben
-       Star, Flag, Edit? Eine Zeile?"): the flag carried the detail's own phrases, "⚑ Flag for review" and "⚑ Clear flag",
-       which are right on a wide pill and too long between two one-word buttons. The label still carries the state, as the
-       star's does (v427) — the row is all tint, so a colour could not say it. The card detail keeps its phrases: its buttons
-       sit two to a row beside "Test this card" and "Delete card", where one word would read as the odd one out. */
-    back=`<div style="margin-top:26px">${backHTML(d)}${flagNoteHTML(d)}${aiBoxHTML(d)}<div class="vote">${grds}</div>
-      <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button><button class="del" id="edit-card">${t("✎ Edit")}</button></div>${linkedHTML(d)}</div>`;
-  } else {
-    back=swipeHint(d);
-  }
-  /* front: no tag row (theme / new / custom is noise while learning); tapping the photo or the character reveals */
-  main.innerHTML=wxNoteHTML()+learnChipsHTML()+`<div class="card">
+  const c=S.queue[S.idx], d=cardOf(c);
+  /* ---------- the write layout (v512, SPEC-flashcard-layout.md phase 1, H's "Go") ----------
+     A flashcard is no longer revealed and graded, it is WRITTEN: the photo is the cue, the characters under it are the
+     targets, the write pad is the answer — traced stroke by stroke as Duolingo does it — and the grade is whether you
+     could write it. Five zones top to bottom: the photo (with the review flag in its corner), the character buttons
+     grouped by word, the folded answer block, the square pad, and the line naming the word being written. The vote of
+     v497 and every grade button since v82 are gone with it: a full write is "good", a Skip is "again" (Q10), a swipe
+     writes nothing. The card stays in the session once written and comes round once more three cards later at the next
+     pad level (§ 8.1); the Done capsule counts it once. */
+  main.classList.remove("center"); /* the card takes the pane from the top; the pad measures what is left below it (fitPad) */
+  const tg=padTargets(d), st=padState(c), rep=isRepeat(), ansOpen=!!S.ansOpen;
+  if(st.i<0||st.i>=tg.length||!tg[st.i].w) st.i=tg.findIndex((x,i)=>x.w&&!st.done.has(i)); /* the first unwritten character is current when the card lands */
+  const cur=tg[st.i]||null;
+  const lines=(d.kind==="sign"?String(d.c).split("\n"):frontLines(d)).map(l=>[...l].length); /* characters per photo line, so zone 2 keeps the photo's rows (§ 5) */
+  const rows=[]; { let k=0, pos=0; for(const n of (lines.length?lines:[Infinity])){ const row=[]; while(k<tg.length&&(tg[k].pos<pos+n||n===Infinity)){ row.push(tg[k]); k++; } pos+=n; if(row.length) rows.push(row); } while(k<tg.length){ rows.push(tg.slice(k)); k=tg.length; } }
+  const btn=x=>{ const i=tg.indexOf(x), cls=["ch",st.done.has(i)?"done":"",cur===x?"cur":"",x.w?"":"num"].filter(Boolean).join(" ");
+    return `<button class="${cls}" data-i="${i}" ${x.w?"":`aria-disabled="true"`}>${esc(x.glyph)}${st.done.has(i)?`<i class="tick" aria-hidden="true">${MARK_TICK}</i>`:""}</button>`; };
+  const groupRow=row=>{ const out=[]; let g=null; for(const x of row){ if(!g||g.wi!==x.wi){ g={wi:x.wi,items:[]}; out.push(g); } g.items.push(x); } return out.map(g=>`<span class="chw">${g.items.map(btn).join("")}</span>`).join(""); };
+  const chrow=`<div class="chrow">${rows.map(r=>`<div class="chline">${groupRow(r)}</div>`).join("")}</div>`;
+  const pg=frontPage(d), picHTML=frontPic(d,{page:true});
+  const back=`${backHTML(d,{noParts:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}
+      <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button></div>`;
+  const noTmpl=cur&&STROKES&&!STROKE_OF.has(cur.glyph);
+  main.innerHTML=wxNoteHTML()+learnChipsHTML()+`<div class="card study${rep?" rep":""}">
     ${S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:""}
-    <div class="front tap" id="reveal">${frontHTML(d,{page:!S.revealed})}</div>
-    ${back}</div>`;
-  if(S.revealed) warmParts();
-  /* tap on the photo: crop ⇄ whole photo; tap on the character: back on and off */
-  const rv=$("#reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); return; } S.revealed=!S.revealed; render(); };
-  /* the closed card is swiped to pick another card of the session (v414/v417); the detail does the same down the
-     Cards list since v445, so wireSwipe is told which list it moves through rather than reading S.queue itself */
-  wireSwipe(main.querySelector(".card"), S.revealed||S.queue.length<2?null:{
-    n:S.queue.length, idx:S.idx, centred:true,
-    peer:i=>{ const nd=cardOf(S.queue[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ return `<div class="front">${frontHTML(nd,{page:true})}</div>${swipeHint(nd)}`; } finally{ S.fullPic=fp; } }, /* the neighbour arrives as its own closed front — with the live fullPic a page card toggled to its cut sent the neighbour in as a cut and it jumped to the page (v452) */
-    go:i=>{ S.idx=i; S.revealed=false; S.fullPic=false; S.peek=null; render(); window.scrollTo({top:0}); }});
-  const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
-  const st=$("#star-card"); if(st) st.onclick=async()=>{ await setStar(c,!d.star); render(); }; /* the learner's own mark, here too (v427) — the same field the Cards list writes */
+    <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}<button class="picflag${d.flag?" on":""}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}">⚑</button></div>
+    ${chrow}
+    <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Pinyin and meaning")}</span>${rep?`<span class="pill again">${t("Again")}</span>`:""}<i aria-hidden="true">⌄</i></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
+    <div class="padwrap"><button class="chev l" id="chev-l" aria-label="${t("Previous card")}"${S.idx>0&&!S.single?"":" hidden"}>‹</button><canvas class="wpad" id="wpad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas><button class="chev r" id="chev-r" aria-label="${t("Next card")}"${S.idx+1<S.queue.length&&!S.single?"":" hidden"}>›</button></div>
+    <div class="padline" id="padline"${ansOpen?"":" hidden"}></div>
+    <div class="padacts" id="padacts"><button class="del" id="pad-undo">${t("pad:Undo")}</button><button class="del" id="pad-show" hidden>${t("Show me")}</button><button class="del" id="pad-skip" hidden>${t("Skip")}</button><button class="del" id="pad-done" hidden>${t("Done")}</button><button class="del" id="pad-clear">${t("Clear")}</button></div>
+    ${noTmpl?`<div class="hint" id="pad-note">${t("not in the stroke set — draw it and tap Done")}</div>`:""}
+    ${swipeHint(d)}${linkedHTML(d)}</div>`;
+  if(ansOpen) warmParts();
+  const card=main.querySelector(".card.study");
+  /* the photo: a tap swaps the crop for the whole photo and back (v55); the flag in its corner is the review flag (§ 3.3) */
+  const rv=$("#reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("#picflag")) return; if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); } };
+  $("#picflag").onclick=async e=>{ e.stopPropagation(); await setFlag(c,!d.flag); render(); };
+  $("#fold").onclick=()=>{ S.ansOpen=!S.ansOpen; render(); };
+  const st2=$("#star-card"); if(st2) st2.onclick=async()=>{ await setStar(c,!d.star); render(); };
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
-  const ed=$("#edit-card"); if(ed) ed.onclick=()=>{ S.editFrom="study"; S.editing=c; render(); };
-  wireSay(); wireChars(d); wireLinks(); wireSrc(); wireLearnChips();
-  wireAi();
-  document.querySelectorAll(".grade,.vt").forEach(b=> b.onclick=()=>grade(b.dataset.g)); /* .vt: the two-button vote of v497 */
+  const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
+  const goTo=i=>{ if(i<0||i>=S.queue.length) return; S.idx=i; S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0}); };
+  const cl=$("#chev-l"); if(cl) cl.onclick=()=>goTo(S.idx-1); const cr=$("#chev-r"); if(cr) cr.onclick=()=>goTo(S.idx+1);
+  card.querySelectorAll(".chrow .ch").forEach(b=> b.onclick=e=>{ e.stopPropagation(); const i=+b.dataset.i, x=tg[i]; if(!x) return;
+    if(!x.w){ padLine(d,x); return; } /* a number with its unit is one button and not writable: its line shows, the pad stays on the last character (§ 5) */
+    st.i=i; st.k=0; st.miss=0; st.hint=false; st.free.length=0; render(); });
+  /* the closed card is swiped to pick another card of the session (v414/v417): the whole card is the surface but the pad,
+     which takes the finger for a stroke, and the buttons. The answer block being open no longer stands the swipe down —
+     there are no grades that own the screen any more. */
+  wireSwipe(card, S.queue.length<2||S.single?null:{
+    n:S.queue.length, idx:S.idx, centred:false,
+    peer:i=>{ const nd=cardOf(S.queue[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ return `<div class="zone1 front">${frontPic(nd,{page:true})}</div>${peerRowHTML(nd)}<div class="fold"><button class="foldbtn"><span>${t("Pinyin and meaning")}</span><i aria-hidden="true">⌄</i></button></div><div class="padwrap"><div class="wpad ghost"></div></div>`; } finally{ S.fullPic=fp; } },
+    go:goTo });
+  wireSay(); wireLinks(); wireSrc(); wireLearnChips(); wireAi();
+  mountPad(card,d,c,tg,st,cur);
+  if(pg&&!S.fullPic) fitPageCover(card,pg); /* D5: the multicard's picture cover-fitted around the card's own text */
+  if(ansOpen&&cur) padLine(d,cur);
 }
+/* the characters of the card as the pad's targets, grouped by word (§ 5, Q3): one entry per character of the text, in the
+   text's order and with its repeats (v430), each knowing its word (wi) so the buttons of one word sit in one group and the
+   line under the pad names the word; a number with its unit is one entry for the whole part and is not writable (w:false).
+   The glyph is the traditional character on a traditional card (v101's rule for the front), which is also the template. */
+function padTargets(d){
+  const text=[...String(d.c||"").replace(/\n/g,"")], trad=d.trad?[...d.trad.replace(/\n/g,"")]:null, tr=trad&&trad.length===text.length?trad:null;
+  let words=d.gloss&&d.gloss.length?cardGloss(d).map(g=>g.w):(d.kind==="sign"?(d.segs||[]).flat():(d.seg||[]).filter(x=>x!=="\n"));
+  words=words.filter(w=>CJK.test(w)||NUM_PART.test(w));
+  const out=[]; let pos=0, wi=0;
+  const pushChar=(p,wIdx,word,wstart)=>{ const ch=text[p]; if(CJK.test(ch)) out.push({ch,glyph:tr?tr[p]:ch,pos:p,wi:wIdx,word,wstart,w:true}); };
+  for(const w of words){ const chars=[...w]; let at=-1; for(let k=pos;k+chars.length<=text.length;k++){ if(text.slice(k,k+chars.length).join("")===w){ at=k; break; } }
+    if(at<0) break; /* a word the text does not carry from here on (a gloss out of step): the rest goes character by character */
+    for(let p=pos;p<at;p++) pushChar(p,wi++,text[p],p); /* characters no word claims are words of one */
+    if(NUM_PART.test(w)&&!CJK.test(w)){ out.push({ch:w,glyph:w,pos:at,wi,word:w,wstart:at,w:false}); } else for(let p=at;p<at+chars.length;p++) pushChar(p,wi,w,at);
+    wi++; pos=at+chars.length; }
+  for(let p=pos;p<text.length;p++) pushChar(p,wi++,text[p],p);
+  return out;
+}
+const isRepeat=()=>S.queue.slice(0,S.idx).includes(S.queue[S.idx]); /* the second pass of a card in this session (§ 8.1): the same id stands earlier in the queue */
+/* the pad's state for the card at this queue position — the current character, the next stroke, the misses, what is written */
+function padState(c){ const k=S.idx+":"+c; if(!S.pad||S.pad.key!==k) S.pad={key:k,i:-1,k:0,miss:0,hint:false,done:new Set(),helped:new Set(),maxMiss:0,free:[],lv:{}}; return S.pad; }
+/* the level a character starts at (§ 8.1): how often it was fully written, all time — 0–1 trace, 2–4 faint, 5+ recall */
+const charWrites=()=>S.settings.charWrites||{};
+function startLevel(ch){ const w=charWrites()[ch]||0; return w<=1?1:w<=4?2:3; }
+let _cwTimer=null;
+function bumpWrite(ch,n){ const m=charWrites(); m[ch]=Math.max(0,(m[ch]||0)+n); const keys=Object.keys(m); if(keys.length>WRITES_MAX){ keys.sort((a,b)=>m[a]-m[b]); while(keys.length>WRITES_MAX) delete m[keys.shift()]; } S.settings.charWrites=m; clearTimeout(_cwTimer); _cwTimer=setTimeout(()=>{ setSetting("charWrites",m).catch(()=>{}); },500); }
+function padLevel(c,x,st){ const key=c+":"+x.pos; if(st.lv[key]) return st.lv[key]; const w=S.wroteAt&&S.wroteAt[key]; return st.lv[key]=w?(w.helped?w.lv:Math.min(3,w.lv+1)):startLevel(x.glyph); } /* the repeat pass asks one level up, a helped character the same level again */
+/* the neighbour's character row for the carousel's peer: plain buttons, no state */
+function peerRowHTML(nd){ const tg=padTargets(nd); return `<div class="chrow"><div class="chline">${tg.map(x=>`<span class="chw"><button class="ch${x.w?"":" num"}">${esc(x.glyph)}</button></span>`).join("")}</div></div>`; }
+/* the line under the pad (zone 5): the WORD the current character belongs to, its pinyin and meaning as the parts row gives
+   them, the current character marked — only while the answer block is open (draft 2) */
+async function padLine(d,x){
+  const box=$("#padline"); if(!box) return; box.hidden=false;
+  const w=x.word||x.ch, mark=[...w].map((ch,i)=>x.w&&i===x.pos-x.wstart?`<b>${esc(ch)}</b>`:esc(ch)).join(""); /* the word with the current character marked */
+  if(!x.w){ box.innerHTML=`<span class="hanzi">${esc(w)}</span><span>${esc(latinUnitMeaning(w)||t("A number, read as it is."))}</span>`; return; }
+  box.innerHTML=`<span class="hanzi">${mark}</span><span class="badge">…</span>`;
+  try{
+    if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
+    await loadDict().catch(()=>{});
+    const known=d.gloss&&cardGloss(d).find(g=>g.w===w);
+    const py=known&&known.p?known.p:pinyinPro.pinyin(w,{toneType:"symbol"});
+    const m=cleanSense((known&&known.m)||bestSense(w)||((DICT&&DICT.get(w))||""));
+    if(!box.isConnected) return;
+    box.innerHTML=`<span class="hanzi">${mark}</span><span class="mono">${esc(py)}</span><span>${esc(m||t("not in the dictionary"))}</span>`;
+  }catch(e){ if(box.isConnected) box.innerHTML=`<span class="hanzi">${mark}</span>`; }
+}
+/* D5: the multicard's picture in the study card's box is cover-fitted around the card's own text — the pagewrap is sized to the
+   scaled picture and offset so the region's centre is centred, clamped to the picture; the regions keep their percent place */
+function fitPageCover(card,pg){
+  const box=card.querySelector(".zone1 .picbox.page"); if(!box) return; const wrap=box.querySelector(".pagewrap"), img=wrap&&wrap.querySelector(".signimg"); if(!img) return;
+  const me=box.querySelector(".region.me");
+  const place=()=>{ const nw=img.naturalWidth, nh=img.naturalHeight; if(!nw||!nh||!box.isConnected) return;
+    const bw=box.clientWidth, bh=box.clientHeight, sc=Math.max(bw/nw,bh/nh), sw=nw*sc, sh=nh*sc;
+    let cx=0.5, cy=0.5; if(me){ cx=(parseFloat(me.style.left)||0)/100+(parseFloat(me.style.width)||0)/200; cy=(parseFloat(me.style.top)||0)/100+(parseFloat(me.style.height)||0)/200; }
+    const left=Math.min(0,Math.max(bw-sw,bw/2-cx*sw)), top=Math.min(0,Math.max(bh-sh,bh/2-cy*sh));
+    wrap.style.width=sw+"px"; wrap.style.height=sh+"px"; wrap.style.left=left+"px"; wrap.style.top=top+"px"; img.style.width=sw+"px"; img.style.height=sh+"px"; };
+  if(img.complete) place(); else img.addEventListener("load",place,{once:true});
+}
+/* ---------- the write pad (v512): stroke by stroke over a template, as Duolingo does it ---------- */
+const PAD_MIN=200, TRACE_OK=0.18, NEXT_MS=900, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
+/* TRACE_OK: the mean distance, in pad sides, between the drawn stroke's eight points and the template stroke's — the spec's
+   0.28 was a starting number and its own suite refuses a stroke a quarter of the pad off, so the bar sits under that; the
+   field sets it (the pad logs every stroke's distance in DRAWLOG). PAD_FIT maps the 1024 em box of the medians onto 86 % of
+   the pad, which puts the glyph itself at about 70 % — room for a finger that overshoots. */
+let STROKE_OF=new Map(); /* ch → its medians as the file has them (1024 box, y down), filled by loadStrokes */
+const padPt=p=>[(p[0]/1024-0.5)*PAD_FIT+0.5,(p[1]/1024-0.5)*PAD_FIT+0.5]; /* a median point in pad units (0..1) */
+function resamplePts(pts,n){ if(pts.length===1) return Array(n).fill(pts[0]); const seg=[0]; for(let i=1;i<pts.length;i++) seg.push(seg[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1])); const L=seg[seg.length-1]||1e-6, out=[]; for(let k=0;k<n;k++){ const t=L*k/(n-1); let i=1; while(i<seg.length-1&&seg[i]<t) i++; const a=pts[i-1], b=pts[i], f=seg[i]===seg[i-1]?0:(t-seg[i-1])/(seg[i]-seg[i-1]); out.push([a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f]); } return out; }
+/* the forward distance alone (§ 6): a stroke drawn backwards is refused, which is what a tracing exercise is for — strokeDist
+   of v141 forgives the reverse for the reader and the pad must not */
+const strokeLen=s=>{ let L=0; for(let i=1;i<s.length;i++) L+=Math.hypot(s[i][0]-s[i-1][0],s[i][1]-s[i-1][1]); return L; };
+function traceDist(drawn,tmpl){ const a=resamplePts(drawn,STROKE_PTS), b=resamplePts(tmpl,STROKE_PTS); let f=0; for(let k=0;k<STROKE_PTS;k++) f+=Math.hypot(a[k][0]-b[k][0],a[k][1]-b[k][1]); return f/STROKE_PTS; }
+function mountPad(card,d,c,tg,st,cur){
+  const cv=card.querySelector("#wpad"); if(!cv) return; const N=DRAW_SIZE, ctx=cv.getContext("2d");
+  const reduced=matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+  /* the pad is square and takes what is left of the screen under it, never under PAD_MIN, then the card scrolls (§ 3.1) */
+  const fit=()=>{ if(!cv.isConnected) return; const wrap=cv.parentElement, inner=card.clientWidth-36; cv.style.width="0px"; cv.style.height="0px";
+    const nav=$("#tabs"), navH=nav?nav.getBoundingClientRect().height:56, top=wrap.getBoundingClientRect().top+window.scrollY;
+    let below=0; for(let el=wrap.nextElementSibling;el;el=el.nextElementSibling){ if(!el.hidden){ const cs=getComputedStyle(el); below+=el.getBoundingClientRect().height+(parseFloat(cs.marginTop)||0)+(parseFloat(cs.marginBottom)||0); } }
+    const ccs=getComputedStyle(card), floor=(nav?nav.getBoundingClientRect().top:window.innerHeight-navH)-16; /* the card ends 16 px above the tab bar */
+    const room=floor-(top-window.scrollY)-below-(parseFloat(ccs.paddingBottom)||18);
+    const side=Math.max(PAD_MIN,Math.min(inner,Math.floor(room)));
+    cv.style.width=side+"px"; cv.style.height=side+"px"; card._fit={navH,top,below,room,inner,side}; };
+  fit(); window.addEventListener("resize",fit,{once:true}); card._fitPad=fit;
+  const tmpl=cur&&STROKE_OF.get(cur.glyph); let free=!tmpl; const strokes=tmpl?tmpl.map(s=>s.map(padPt)):null; let drawing=null, anim=null, flash=0;
+  const lvl=cur?padLevel(c,cur,st):1;
+  const P=p=>[p[0]*N,p[1]*N];
+  const path=(s,scale)=>{ ctx.beginPath(); const p0=P(s[0]); ctx.moveTo(p0[0],p0[1]); const n=scale==null?s.length:Math.max(1,Math.round(s.length*scale)); for(let i=1;i<n;i++){ const p=P(s[i]); ctx.lineTo(p[0],p[1]); } if(n===1) ctx.lineTo(p0[0]+0.1,p0[1]); ctx.stroke(); };
+  const paint=()=>{
+    ctx.clearRect(0,0,N,N);
+    ctx.strokeStyle=cssVar("--sep")||"#ccc"; ctx.lineWidth=2; ctx.setLineDash([10,10]); ctx.beginPath(); ctx.moveTo(N/2,0); ctx.lineTo(N/2,N); ctx.moveTo(0,N/2); ctx.lineTo(N,N/2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.lineWidth=PAD_LW; ctx.lineCap="round"; ctx.lineJoin="round";
+    if(strokes){
+      const showT=lvl===1?0.3:lvl===2?0.12:st.hint?0.12:0; /* level 1 trace, level 2 faint, level 3 recall — a miss shows the faint template for that stroke (§ 8.1) */
+      if(showT&&!flash){ ctx.globalAlpha=showT; ctx.strokeStyle=cssVar("--label3")||"#aaa"; strokes.forEach(s=>path(s)); ctx.globalAlpha=1; }
+      ctx.strokeStyle=flash?(cssVar("--ok")||"#2fa36b"):(cssVar("--label")||"#000"); for(let i=0;i<Math.min(st.k,strokes.length);i++) path(strokes[i]);
+      const lit=st.k<strokes.length&&(lvl===1||st.hint)&&!flash;
+      if(lit){ ctx.globalAlpha=0.55; ctx.strokeStyle=cssVar("--tint")||"#c8372d"; path(strokes[st.k]); ctx.globalAlpha=1; const p0=P(strokes[st.k][0]); ctx.fillStyle=cssVar("--tint")||"#c8372d"; ctx.beginPath(); ctx.arc(p0[0],p0[1],10,0,Math.PI*2); ctx.fill(); }
+      if(anim){ const f=reduced?1:Math.min(1,(performance.now()-anim.t0)/500); ctx.strokeStyle=cssVar("--tint")||"#c8372d"; path(strokes[anim.k],f); }
+    } else if(cur){ ctx.globalAlpha=0.25; ctx.fillStyle=cssVar("--label3")||"#aaa"; ctx.font=`${Math.round(N*0.6)}px ${cssVar("--hanzi")||"serif"}`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(cur.glyph,N/2,N/2); ctx.globalAlpha=1; }
+    ctx.strokeStyle=cssVar("--label")||"#000"; for(const s of st.free.concat(drawing?[drawing]:[])) path(s);
+  };
+  const acts=()=>{ const sh=$("#pad-show"), sk=$("#pad-skip"), dn=$("#pad-done"), un=$("#pad-undo"); if(sh) sh.hidden=free||st.miss<2; if(sk) sk.hidden=free||st.miss<4; if(dn) dn.hidden=!free; if(un) un.hidden=free?!st.free.length:st.k===0; };
+  const showStroke=(k,slow)=>{ anim={k,t0:performance.now()-(slow?0:0)}; const dur=reduced?350:(slow?1000:500); const step=()=>{ if(!anim||!cv.isConnected) return; paint(); if(performance.now()-anim.t0<dur) requestAnimationFrame(step); else { anim=null; paint(); } }; requestAnimationFrame(step); };
+  const miss=()=>{ st.miss++; st.maxMiss=Math.max(st.maxMiss,st.miss); if(lvl>1) st.hint=true; cv.classList.remove("shake"); void cv.offsetWidth; cv.classList.add("shake"); showStroke(st.k,false); acts(); logPadStroke(cur,st.k,false); };
+  const pt=e=>{ const r=cv.getBoundingClientRect(); return [(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height]; };
+  cv.onpointerdown=e=>{ e.preventDefault(); e.stopPropagation(); try{ cv.setPointerCapture(e.pointerId); }catch(x){} if(flash) return; drawing=[pt(e)]; anim=null; paint(); };
+  cv.onpointermove=e=>{ if(!drawing) return; e.preventDefault(); e.stopPropagation(); drawing.push(pt(e)); paint(); };
+  cv.onpointerup=cv.onpointercancel=e=>{ if(!drawing) return; e.stopPropagation(); const s=drawing; drawing=null;
+    if(free){ st.free.push(s); paint(); acts(); return; }
+    if(!strokes||st.k>=strokes.length){ paint(); return; }
+    const tm=strokes[st.k], dist=traceDist(s,tm), back=traceDist(s,tm.slice().reverse()), len=strokeLen(tm), bar=Math.min(TRACE_OK,0.07+0.5*len); /* a short stroke gets a tighter bar — a dot could otherwise land anywhere within 18 % of the pad — and a stroke that fits the template better backwards than forwards is a stroke drawn backwards, whatever its distance */
+    if(dist<=bar&&dist<=back+0.01){ st.k++; st.miss=0; st.hint=false; anim=null; paint(); acts(); logPadStroke(cur,st.k-1,true,dist); if(st.k>=strokes.length) charDone(false); }
+    else miss(); };
+  const charDone=async helped=>{
+    const i=tg.indexOf(cur); if(helped) st.helped.add(i); st.done.add(i);
+    S.wroteAt=S.wroteAt||{}; S.wroteAt[c+":"+cur.pos]={lv:lvl,helped}; if(helped) bumpWrite(cur.glyph,-2); else bumpWrite(cur.glyph,1);
+    flash=1; paint(); try{ if(navigator.vibrate) navigator.vibrate(12); }catch(e){}
+    const b=card.querySelector(`.chrow .ch[data-i="${i}"]`); if(b){ b.classList.add("done"); b.classList.remove("cur"); b.insertAdjacentHTML("beforeend",`<i class="tick" aria-hidden="true">${MARK_TICK}</i>`); }
+    await new Promise(r=>setTimeout(r,reduced?150:300)); if(!cv.isConnected) return; flash=0;
+    const next=tg.findIndex((x,j)=>x.w&&!st.done.has(j));
+    if(next>=0){ await new Promise(r=>setTimeout(r,250)); if(!cv.isConnected||S.pad!==st) return; st.i=next; st.k=0; st.miss=0; st.hint=false; st.free.length=0; render(); return; }
+    cardDone();
+  };
+  const cardDone=async()=>{
+    const first=!isRepeat(), n=tg.filter(x=>x.w).length, clean=tg.filter((x,j)=>x.w&&!st.helped.has(j)).length;
+    const pts=clean+(clean===n&&st.maxMiss<=1?n:0); /* one point per written character, none for a helped one, the count again for a clean card (§ 6) */
+    if(pts){ bump("written",pts); dailyBump(dayKey(),"w",pts); }
+    if(first){ await recordGrade(c,st.helped.size?"again":"good"); S.done++; /* a Skip counts as again (Q10) — due today, fails +1, the leech flag as today */
+      const at=Math.min(S.queue.length,S.idx+1+REP_GAP); S.queue.splice(at,0,c); /* the repeat pass, three cards on (§ 8.1) */ }
+    S.ansOpen=true; const my=S.idx; render(); if(cur) padLine(d,cur);
+    setTimeout(()=>{ if(S.mode!=="study"||S.idx!==my||S.pad!==padState(c)) return; if(S.single){ nextSingle(c); return; } if(S.idx+1<S.queue.length){ S.idx++; S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0}); } else { S.idx++; render(); } },NEXT_MS);
+  };
+  $("#pad-undo").onclick=()=>{ if(free){ st.free.pop(); } else if(st.k>0){ st.k--; st.miss=0; } anim=null; paint(); acts(); };
+  $("#pad-clear").onclick=()=>{ if(free) st.free.length=0; else { st.k=0; st.miss=0; st.hint=false; } anim=null; paint(); acts(); };
+  $("#pad-show").onclick=()=>{ if(strokes&&st.k<strokes.length) showStroke(st.k,true); };
+  $("#pad-skip").onclick=()=>{ if(!strokes) return; st.k++; st.miss=0; st.hint=false; anim=null; paint(); acts(); const i=tg.indexOf(cur); st.helped.add(i); if(st.k>=strokes.length) charDone(true); };
+  $("#pad-done").onclick=async()=>{ if(!free||!st.free.length) return; const note=$("#pad-note"); if(note) note.textContent=t("reading …");
+    try{ const w=await ocrWorker(x=>{ if(note) note.textContent=x; }); const got=await recognizeStrokes(w,st.free.map(s=>s.map(p=>[p[0]*N,p[1]*N])),null);
+      if(got.slice(0,3).includes(cur.glyph)){ charDone(false); } else if(note) note.textContent=t("Not recognized — try cleaner, well-separated strokes."); }
+    catch(err){ if(note) note.textContent=t("Reading failed: {0}",err&&err.message||err); } };
+  paint(); acts();
+  if(!STROKES) loadStrokes().then(()=>{ if(cv.isConnected&&S.pad===st) render(); }).catch(err=>{ logErr("strokes",err&&err.message||err); }); /* the first card of a session loads the medians; the pad redraws with the template once they are in */
+  card._pad={st,strokes,paint,lvl,free:()=>free}; /* used by the tests */
+}
+function logPadStroke(x,k,ok,dist){ DRAWLOG.push({t:Date.now(),pad:x?x.glyph:"",k,ok,dist:dist==null?null:+dist.toFixed(3)}); while(DRAWLOG.length>12) DRAWLOG.shift(); } /* every traced stroke's distance, for the field to set TRACE_OK (§ 14) */
 
 /* Swipe the closed card sideways to pick another card of the session (v414, H: "koennen wir bitte im Lernmodus Swipes nach rechts und links
    erlauben, sodass man sich quasi die Karten aussuchen kann, die man testen moechte? I think that only makes sense In the closed card view,
@@ -2877,7 +3043,7 @@ function renderStudy(main){
    still due, so the next session's queue picks it up). Only while the back is closed; once it is open the grades own the screen. */
 const SW_SLOP=12, SW_MIN=60, SW_GAP=16, SW_MS=220;
 /* the closed card is pushed sideways and the next one slides in from the other side and snaps into place (v414, the carousel of v417 — H: "Ich moechte die Karten quasi nach links schieben und die naechste Karte kommt von rechts rein und rastet geschmeidig ein … Die muessen nicht so zur Seite wegkippen wie bei Tinder"). Nothing is graded: only S.idx moves; a card swiped past returns in the next session, not in this one (v417). */
-function swipeHint(d){ return showHints()?`<div class="hint">${t("Tap the character to reveal")}${fullPhoto(d)?(pageOf(d)&&!S.fullPic&&!S.peek&&!S.revealed?t(", or the photo for the text alone"):t(", or the photo for the whole picture")):""}.${S.queue.length>1?" "+t("Swipe left or right to pick another card."):""}</div>`:""; }
+function swipeHint(d){ return showHints()?`<div class="hint">${t("Trace the lit stroke; the pad moves on by itself.")}${S.queue.length>1?" "+t("Swipe left or right to pick another card."):""}</div>`:""; } /* v512: the reveal hint went with the reveal */
 function wireSwipe(card,o){
   /* o: {n, idx, peer(i) -> the neighbour's inner HTML or null, go(i), centred} — the caller owns the list and what a
      move means, so the same gesture serves Learn's session queue and the Cards list's own order (v445) */
@@ -2931,7 +3097,7 @@ function wireSwipe(card,o){
        page's own texts (v453) are CONTENT that happens to be a <button>, and on a page detail they cover the whole card.
        That is why H could not swipe a Multikarte at all (v460): every press landed on one. A tap still reaches them, since
        the gesture only takes over past SW_SLOP and only eats its own closing click. */
-    if(e.target.closest("button:not(.region):not(.crow),a,input,textarea,.chip")) return;
+    if(e.target.closest("button:not(.region):not(.crow):not(.chrow .ch),a,input,textarea,.chip,canvas.wpad")) return; /* v512: a character button is content like a dot; the pad takes its own strokes */
     x0=e.clientX; y0=e.clientY; dx=0; on=false; pid=e.pointerId;
   });
   card.addEventListener("pointermove",e=>{
@@ -2983,21 +3149,7 @@ async function recordGrade(c,g){
   dailyBump(day);
   return s;
 }
-async function grade(g){
-  const c=S.queue[S.idx];
-  await recordGrade(c,g);
-  if(S.single){ nextSingle(c); return; }
-  /* never the same card twice in a row with nothing in between (v428, H: "jetzt haengt der star filter bei dieser einen karte"):
-     "again" puts the card back at the end of the queue, and when the session holds nothing after it that end is now — the screen
-     came back byte-identical, neither counter moved, and the app looked frozen. Since v421 Hard *is* again, so a session of one
-     card — which a narrow filter makes ordinary — looped for ever. The next cards of the same filter are pulled forward first,
-     so the card returns behind them; with nothing to pull it is genuinely the only card there is and repeats as before. */
-  if(g==="again"){
-    if(S.idx+1>=S.queue.length){ const more=aheadCards(NEW_PER_SESSION); if(more.length){ S.queue.push(...more); S.ahead=true; } }
-    S.queue.push(c);
-  } else S.done++;
-  S.idx++; S.revealed=false; S.fullPic=false; S.peek=null; render(); window.scrollTo({top:0});
-}
+/* grade() went with the vote (v512): the pad's cardDone writes the review through recordGrade — a full write is "good", a card finished with a Skip is "again" (Q10), a swipe writes nothing */
 /* "Test this card" continues with the next card of the list (newest first); ← Cards stops */
 function nextSingle(c){
   /* only what Learn can study (v502): a multicard and its own texts are never tested, so the walk down the list skips them
@@ -3313,7 +3465,7 @@ function renderCardDetail(main,c){
   const d=cardOf(c); if(!d){ S.detail=null; return renderCards(main); }
   if(isPage(d)) return renderPageDetail(main,d); /* v453 */
   const p=S.progress[c];
-  const stat=p?t("Interval {0} d, ease {1}, {2}, next {3}.",p.interval,p.ease.toFixed(2),nOf(p.reps,"review"),new Date(p.due).toLocaleDateString(LANG_LOCALE[LANG])):t("Not studied yet.");
+  const stat=p?t("Interval {0} d, ease {1}, {2}, next {3}.",p.interval,p.ease.toFixed(2),nOf(p.reps,"review"),new Date(p.due).toLocaleDateString(LANG_LOCALE[LANG])):""; /* v512: no "Not studied yet." — the date is kept, the verdict is not */
   /* the open card is pushed sideways to the next card of the Cards list (v445, H: "Open cards swipe" on the two readings
      of "Bitte Cards auch swipebar machen"). The neighbours are the list's own order, so a search or a ticked filter
      decides who they are, exactly as the row tap did. */
@@ -3330,7 +3482,7 @@ function renderCardDetail(main,c){
       ${d.c&&!inPage(d)?`<button class="btn" id="d-share">${t("Share")}</button>`:""}
       <button class="btn danger" id="d-del"${d.c?' style="grid-column:1/-1"':""}>${t("Delete card")}</button>
     </div>
-    ${inPage(d)?"":`<div class="badge" style="margin-top:14px">${esc(stat)}</div>`}
+    ${inPage(d)||!stat?"":`<div class="badge" style="margin-top:14px">${esc(stat)}</div>`}
     <!-- a multicard's own text offers Edit, Flag and Delete and nothing else (v498, H: "In Multicard nur edit, flag for review und
          delete anbieten. alles andere raus."): Test would study a text that is never in Learn (v487), Share would send a row of
          the multicard as if it were a card, and the schedule line would say "Not studied yet." of a text nobody is asked to study —
@@ -3374,7 +3526,7 @@ function renderEdit(main,c){
   const leave=newC=>{ /* back to where the edit started: study back or card detail */
     endRecrop(); delete SIGN[eid]; if(cropURL) URL.revokeObjectURL(cropURL);
     const from=S.editFrom; S.editing=null; S.editFrom=null;
-    if(from==="study"){ S.mode="study"; S.revealed=true; } else if(from==="camera"){ S.mode="inbox"; S.fullPic=false; } else { S.mode="cards"; if(newC) S.detail=newC; } /* from the finished card in the Camera tab (v325): back to it */
+    if(from==="study"){ S.mode="study"; S.ansOpen=true; } /* v512: back to the card with its answer block open */ else if(from==="camera"){ S.mode="inbox"; S.fullPic=false; } else { S.mode="cards"; if(newC) S.detail=newC; } /* from the finished card in the Camera tab (v325): back to it */
     render();
   };
   main.innerHTML=`<div class="pane">
@@ -3750,6 +3902,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  512:"Learn is a write pad now: trace the characters of the card stroke by stroke, and it moves on by itself. No more grade buttons.",
   511:"A screenshot can go with a Feedback message.",
   509:"A photo the app was still reading when you closed it is read when you come back, and a photo that could not be read stays under Camera until you crop or delete it.",
   508:"A card picture with a light grey ground is no longer darkened to black, and the cards already made are cut again from their photos.",
@@ -6973,6 +7126,7 @@ function loadStrokes(){
     const text=(buf[0]===0x1f&&buf[1]===0x8b)?await new Response(new Response(buf).body.pipeThrough(new DecompressionStream("gzip"))).text():new TextDecoder().decode(buf);
     const byCount=new Map();
     for(const line of text.split("\n")){ const i=line.indexOf("\t"); if(i<1) continue; const ch=line.slice(0,i); let st; try{ st=JSON.parse(line.slice(i+1)); }catch(e){ continue; }
+      if(Array.isArray(st)&&st.length) STROKE_OF.set(ch,st); /* the pad's templates (v512): the medians as the file has them */
       const prep=prepStrokes(st); if(!prep) continue; const a=byCount.get(prep.length)||[]; a.push({ch,st:prep}); byCount.set(prep.length,a); }
     STROKES=byCount; return STROKES;
   })().catch(err=>{ _strokesLoading=null; throw err; });
@@ -7996,7 +8150,7 @@ async function importData(e){
    without a VPN; and `brightPass` / `recutPass` / `recutStat`, which hold no content and whose pass may be running at
    this moment and would write them straight back. */
 const RESET_KEYS=["ailog","readlog","errlog","lastRun","translateStage","tagStage","translateRun","tagRun","recheckRun",
-  "resumeView","autoQueue","days","daily","lastExport"];
+  "resumeView","autoQueue","days","daily","lastExport","charWrites"]; /* charWrites (v512): the characters H has written, keyed by the character itself */
 async function resetAll(){
   if(!await askSheet({title:t("Start over?"),text:t("All progress, cards and inbox photos on this phone will be deleted."),ok:t("Delete everything")})) return;
   /* until v457 these three were wrapped in one empty catch and the in-memory wipe below ran anyway, so a clear that was
@@ -8098,12 +8252,12 @@ let RELOADING=false, VIEW_KEY="";
    note stays small. What it still cannot restore: a single-card test from the Cards list (S.single/S.saved) — a reload there
    comes back in the ordinary session. */
 const viewNow=own=>({mode:S.mode,detail:S.detail,query:S.query,tab:S.cardsTab,scroll:window.scrollY,at:Date.now(),own:!!own,
-  ...(S.mode==="study"&&!S.single?{queue:S.queue,idx:S.idx,revealed:S.revealed,done:S.done,ahead:S.ahead}:{})});
+  ...(S.mode==="study"&&!S.single?{queue:S.queue,idx:S.idx,revealed:!!S.ansOpen,done:S.done,ahead:S.ahead}:{})}); /* revealed = the answer block open (v512) */
 const noteView=()=>{ if(!RELOADING&&S.ready){ VIEW_KEY=""; setSetting("resumeView",viewNow(false)).catch(()=>{}); } };
 /* the note has to be on disk BEFORE the gesture: a pull-to-refresh tears the document down at once, and an IndexedDB write
    started in pagehide is not guaranteed to commit (measured — it did not). So every change of screen writes it, which is one
    small put per navigation inside the app; the scroll is refreshed when the app goes to the background and by reloadNow. */
-function noteViewSoon(){ if(RELOADING||!S.ready) return; const k=S.mode+"|"+(S.detail||"")+"|"+(S.query||"")+"|"+S.cardsTab+(S.mode==="study"?"|"+S.idx+"|"+(S.revealed?1:0):""); if(k===VIEW_KEY) return; /* v423: inside Learn the card and whether its answer is open are part of the screen, so each one is noted as it comes up */ VIEW_KEY=k; setSetting("resumeView",viewNow(false)).catch(()=>{}); }
+function noteViewSoon(){ if(RELOADING||!S.ready) return; const k=S.mode+"|"+(S.detail||"")+"|"+(S.query||"")+"|"+S.cardsTab+(S.mode==="study"?"|"+S.idx+"|"+(S.ansOpen?1:0):""); if(k===VIEW_KEY) return; /* v423: inside Learn the card and whether its answer is open are part of the screen, so each one is noted as it comes up */ VIEW_KEY=k; setSetting("resumeView",viewNow(false)).catch(()=>{}); }
 document.addEventListener("visibilitychange",()=>{ if(document.hidden) noteView(); });
 window.addEventListener("pagehide",noteView);
 const navReload=()=>{ try{ const n=performance.getEntriesByType("navigation")[0]; return !!n&&n.type==="reload"; }catch(e){ return false; } };
