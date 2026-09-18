@@ -654,8 +654,11 @@ body.noscroll{overflow:hidden}
    only a text that does not fit at CH_MIN wraps onto a second row. */
 .chrow{margin-top:12px;display:flex;flex-direction:row;flex-wrap:nowrap;justify-content:safe center;gap:14px;
   max-width:100%;overflow:hidden;--chs:56px}
-.chrow.wrap,.chrow.wrap .chline{flex-wrap:wrap;row-gap:8px;justify-content:center}
 .chrow .chline{display:flex;flex-wrap:nowrap;flex:0 0 auto}
+/* wrapped, the photo's line groups dissolve and the word tiles flow — a photo line wider than the card would otherwise be
+   clipped at both edges (measured on the 美团 badge's two lines of 7 and 8 targets); the hairline between lines goes with them */
+.chrow.wrap{flex-wrap:wrap;row-gap:8px;justify-content:center}
+.chrow.wrap .chline{display:contents}
 .chrow .chline+.chline{border-left:1px solid var(--sep);padding-left:14px}
 .chline{display:flex;flex-wrap:wrap;justify-content:center;gap:10px} /* one row per photo line; a line wider than the card wraps here */
 .chw{display:inline-flex;gap:2px;padding:2px;border-radius:12px;box-shadow:inset 0 0 0 1px var(--sep);background:var(--card2)} /* the buttons of one word sit on one tile (Q3) */
