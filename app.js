@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=515; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=516; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -346,12 +346,11 @@ async function setFilter(scope,k){
   else if(k==="unv") S.filterUnv=!S.filterUnv;
   else { const v=k.slice(4); S.filterTags=S.filterTags.includes(v)?S.filterTags.filter(y=>y!==v):[...S.filterTags,v]; }
 }
-function learnChipsHTML(){ const st=learnPool().some(starred), nw=learnPool().some(unchecked); /* the pill shows for a starred deck too, even without a single tag (v425); the learnable pool's own since v500; and for a deck with a card not yet checked (v515) */
+function learnFilterHTML(){ const st=learnPool().some(starred), nw=learnPool().some(unchecked); /* the pill shows for a starred deck too, even without a single tag (v425); the learnable pool's own since v500; and for a deck with a card not yet checked (v515); in the top bar since v516 */
   if(!st&&S.settings.learnStar) setSetting("learnStar",false); /* the last star taken off leaves no row to switch the filter back off (the v308 rule) */
   if(!nw&&S.settings.learnNew) setSetting("learnNew",false); /* v515: the same for the last card checked */
   normaliseLearn();
-  if(!learnTagList().length&&!st&&!nw) return ""; return `<div class="chipset learnchips">${filterPillHTML("learn")}</div>`; }
-function wireLearnChips(){ wireFilterPill("learn",render); }
+  if(!learnTagList().length&&!st&&!nw) return ""; return filterPillHTML("learn"); } /* a sheet with nothing but All cards is a control over nothing (the v308 rule): then the bar's slot stays empty */
 /* the id of a new card: the text itself while it is free (readable in exports), else text plus a timestamp */
 const cardId = c => deck().some(d=>d.id===c) ? c+"#"+Date.now() : c;
 async function setSetting(k,v){ S.settings[k]=v; try{ await idbPut("settings",{k,v}); }catch(e){} }
@@ -639,6 +638,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v516","Learn: the filter pill in the top bar"],
   ["photo","v515","a new card: hollow ⚐, the New chip"],
   ["app","v515","Not yet checked: written -> gone"],
   ["app","v514","Learn: pinch into the picture, pan"],
@@ -1033,13 +1033,13 @@ function wireChrome(){
   $("#imp").onchange=importData;
 }
 function setStats(){
-  const remaining=walking()?S.walk.length:Math.max(0,S.queue.length-S.idx); /* a locked character's walk shows its own count (v513) */
-  const inStudy=S.mode==="study";
-  $("#stat-open").style.display=inStudy?"":"none";
-  $("#stat-done").style.display=inStudy?"":"none";
-  $("#stat-deck").style.display=inStudy?"none":""; /* three pills overflow a 390px top bar */
-  $("#stat-open .v").textContent=remaining;
-  $("#stat-done .j").textContent=S.done;
+  /* v516 (H: "Due und Done da oben sind quatsch. Mach die weg und platziere stattdessen die Filter dort."): the Due and Done
+     capsules are gone from the top bar, and on Learn the filter pill stands where they stood — the one control the screen
+     needs, above the card instead of between the header and it. The Deck capsule keeps the other tabs. S.done still counts
+     (the resume note carries it), it is simply not shown; the walk's count of v513 went with the capsule, the chevrons say it. */
+  const inStudy=S.mode==="study", f=$("#stat-filter");
+  f.innerHTML=inStudy?learnFilterHTML():""; f.style.display=inStudy&&f.innerHTML?"":"none"; if(inStudy) wireFilterPill("learn",render);
+  $("#stat-deck").style.display=inStudy?"none":"";
   $("#stat-deck .v").textContent=deckCount(); /* flashcards only (v504): a multicard and its texts are looked up, not counted */
   document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.mode===S.mode||(b.dataset.mode==="cards"&&S.mode==="add")||(b.dataset.mode==="more"&&S.mode==="guide")));
 }
@@ -1871,7 +1871,7 @@ function wxNoteHTML(){ return inWeChat()?`<div class="wxnote">${t(WX_NOTE)}</div
    strings live in lang.js with English as the key): More → Language switches at once and keeps the choice (setting "lang");
    the header's capsules and the tab labels sit in index.html and are set here, everything else asks t() while rendering */
 function applyLangStatic(){ document.documentElement.lang=LANG;
-  [["#stat-open b","Due"],["#stat-done b","capsule:Done"],["#stat-deck b","Deck"]].forEach(([q,k])=>{ const e=$(q); if(e) e.textContent=t(k); });
+  [["#stat-deck b","Deck"]].forEach(([q,k])=>{ const e=$(q); if(e) e.textContent=t(k); }); /* Due and Done left the bar at v516 */
   document.querySelectorAll("#tabs .tab").forEach(b=>{ const k={study:"Learn",cards:"Cards",inbox:"Camera",more:"More"}[b.dataset.mode]; const n=b.lastChild; if(k&&n&&n.nodeType===3) n.textContent=t(k); }); }
 async function setLang(code){ if(!LANGS.some(([c])=>c===code)) return; LANG=code; await setSetting("lang",code); await syncMeanings(); /* the meanings the cards already have in this language, at once (v265) */ if(TRANSLATE&&!TRANSLATE.running) TRANSLATE=null; /* a finished run's line belongs to the old language */ if(stageOf()&&stageOf().lang!==code) await clearStage(); /* a stage for another language is worthless (v264) */ if(S.settings.translateRun||(TRANSLATE&&TRANSLATE.running)){ await rememberTranslate(true); resumeTranslate(); } /* a run under way or waiting goes on in the new language (v263) */ applyLangStatic(); render(); }
 /* Translate all cards into the app's language (v256, H chose the button over an automatic run — it costs an AI call per batch of
@@ -2840,7 +2840,7 @@ function renderStudy(main){
   }
   const finished = !walking()&&S.idx>=S.queue.length; /* a walk never runs out: its last card stays (v513) */
   if(finished){
-    main.innerHTML=wxNoteHTML()+learnChipsHTML()+`<div class="done">
+    main.innerHTML=wxNoteHTML()+`<div class="done">
       <div class="mark">净</div>
       <h2>${t("All clear.")}</h2>
       <p>${S.ahead?t("Pulled-forward round finished."):t("Nothing due today. Come back tomorrow — or pull the next cards forward.")}</p>
@@ -2848,7 +2848,6 @@ function renderStudy(main){
       <button class="btn" id="ahead">${t("Pull the next cards forward")}</button>
     </div>`;
     const a=$("#ahead"); if(a) a.onclick=()=>{ const q=buildQueue(true); if(q.length){S.queue=q;S.idx=0;S.done=0;S.ahead=true;S.revealed=false;render();} };
-    wireLearnChips();
     return;
   }
   const list=curList(), li=curIdx(), c=list[li], d=cardOf(c);
@@ -2874,7 +2873,7 @@ function renderStudy(main){
   const back=`${backHTML(d,{noParts:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}
       <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button></div>`;
   const noTmpl=cur&&STROKES&&!STROKE_OF.has(cur.glyph);
-  main.innerHTML=wxNoteHTML()+learnChipsHTML()+`<div class="card study${rep?" rep":""}">
+  main.innerHTML=wxNoteHTML()+`<div class="card study${rep?" rep":""}">
     ${S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:""}
     <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}${d.flag||d.unchecked?`<button class="picflag${d.flag?" on":" new"}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}" title="${d.flag?"":esc(t("Not yet checked"))}">${d.flag?"⚑":"⚐"}</button>`:""}</div>
     ${chrow}
@@ -2910,7 +2909,7 @@ function renderStudy(main){
     n:list.length, idx:li, centred:false,
     peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ return `<div class="zone1 front">${frontPic(nd,{page:true})}</div>${peerRowHTML(nd)}<div class="fold"><button class="foldbtn"><span>${t("Pinyin and meaning")}</span><i aria-hidden="true">⌄</i></button></div><div class="padwrap"><div class="wpad ghost"></div></div>`; } finally{ S.fullPic=fp; } },
     go:goTo });
-  wireSay(); wireLinks(); wireSrc(); wireLearnChips(); wireAi();
+  wireSay(); wireLinks(); wireSrc(); wireAi();
   mountPad(card,d,c,tg,st,cur);
   if(pg&&!S.fullPic) fitPageCover(card,pg); /* D5: the multicard's picture cover-fitted around the card's own text */
   attachPicZoom(card.querySelector(".zone1 .picbox")); /* v514: pinch to zoom, one finger to pan (§ 4) */
@@ -3994,6 +3993,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  516:"The Due and Done counts have left the top bar. On Learn, the filter sits there instead.",
   515:"A new card from a photo counts as not yet checked until you write it in Learn or open it, and a filter shows those cards alone. The flag means what it did: something looks wrong.",
   514:"The picture on a card is wider now — as wide as the text is long — and you can pinch to zoom into it while learning. Your cards are cut again from their photos.",
   513:"Press and hold a character on a card to walk through every card that has it; tap it again to come back.",

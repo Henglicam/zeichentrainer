@@ -39,19 +39,19 @@ button,.tab,.chip,.chipset,.pill,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg
 .logo{font-family:var(--hanzi);font-size:30px;font-weight:700;letter-spacing:1px;line-height:1.1}
 .ver{display:none} /* the PWA vN label stays in the page for the shell check, the mirror and About, but is not shown in the header (v225, H's "Go" on the design review: a developer's line, not a user's) */
 .stats{display:flex;gap:6px;font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums;padding-bottom:3px}
-.stats span{display:inline-flex;align-items:baseline;gap:5px;padding:5px 11px;border-radius:999px;background:var(--fill)}
+.stats>span{display:inline-flex;align-items:baseline;gap:5px;padding:5px 11px;border-radius:999px;background:var(--fill)}
 .stats b{font-weight:600;font-size:11px;color:var(--label2)} /* no capitalize since v402 (H: "Ebenso Vietnamesisch, Thai, Indonesisch"): the rule title-cased every word of the label, which is right for no language that needs two of them — "Jatuh Tempo", "Đến Hạn", and French's "À Faire" since v255. The three labels are written in the case they should show. */
-.stats .v{color:var(--label);font-weight:600} .stats .j{color:var(--ok);font-weight:600}
+.stats .v{color:var(--label);font-weight:600}
+#stat-filter:empty{display:none} #stat-filter .chip.fpill{min-height:28px;padding:4px 11px;max-width:54vw} #stat-filter .fpill>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap} /* v516: Learn's filter pill in the top bar where Due and Done stood; a long name ends in an ellipsis instead of pushing the logo */
 
 /* main */
 #main{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;
   padding:16px 16px calc(var(--nav) + 28px + env(safe-area-inset-bottom));overflow-y:auto}
 #main.center{justify-content:center}
 /* Learn: the chip row stays at the top edge, the card is centred in the space below it (v158, H: "chips should always be on the upper edge, to avoid distraction from the cards") */
-#main.center>.learnchips{margin-bottom:auto} #main.center>.learnchips~.card,#main.center>.learnchips~.done{margin-bottom:auto}
 /* the line for a page inside WeChat's browser (v219): at the top edge like the chips, the card centred below */
 .wxnote{width:100%;max-width:440px;margin:0 0 14px;padding:10px 14px;border-radius:var(--r);background:var(--tint-soft);color:var(--tint);font-size:14px;line-height:1.4}
-#main.center>.wxnote{margin-bottom:auto} #main.center>.wxnote~.learnchips{margin-top:14px} #main.center>.wxnote~.card,#main.center>.wxnote~.done{margin-bottom:auto}
+#main.center>.wxnote{margin-bottom:auto} #main.center>.wxnote~.card,#main.center>.wxnote~.done{margin-bottom:auto}
 
 /* bottom tab bar */
 #tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;display:grid;grid-template-columns:repeat(4,1fr);gap:0;
@@ -190,13 +190,13 @@ button,.tab,.chip,.chipset,.pill,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg
 .field select{width:100%;background:var(--card);border:none;box-shadow:inset 0 0 0 1px var(--sep);border-radius:10px;color:var(--label);font-family:var(--sans);font-size:17px;padding:11px 14px;outline:none;-webkit-appearance:none;appearance:none}
 .chips{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px} .chips #cnt{white-space:nowrap;flex:none}
 /* the chip rows stay on one line and scroll sideways (v157, H: "tag list is now 2 lines, takes too much space") */
-.chips .chipset,.chipset.learnchips{flex-wrap:nowrap;overflow-x:auto;min-width:0;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px} .chips .chipset::-webkit-scrollbar,.chipset.learnchips::-webkit-scrollbar{display:none} .chips .chip,.learnchips .chip{flex:none;white-space:nowrap}
+.chips .chipset{flex-wrap:nowrap;overflow-x:auto;min-width:0;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px} .chips .chipset::-webkit-scrollbar{display:none} .chips .chip{flex:none;white-space:nowrap}
 .chipset{display:flex;gap:6px;flex-wrap:wrap} .orderchips{margin-top:8px}
 .btnrow{display:flex;gap:6px;flex:none}
 .chip{background:var(--fill);border:none;border-radius:999px;color:var(--label);font-size:13px;font-weight:500;padding:8px 13px;min-height:36px;cursor:pointer}
 .chip.on{background:var(--tint);color:#fff}
 .tagchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px} .tagchips .chip{min-height:32px;padding:6px 11px;font-size:13px}
-.pill.tag{background:var(--tint-soft);color:var(--tint)} .learnchips{justify-content:safe center;margin:0 0 14px;width:100%;max-width:440px}
+.pill.tag{background:var(--tint-soft);color:var(--tint)}
 .say{background:var(--fill);border:none;border-radius:999px;width:38px;height:38px;margin-left:10px;vertical-align:middle;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center}
 .say svg{width:20px;height:20px;fill:none;stroke:var(--tint);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round} .say:active{opacity:.6}
 .crow{display:grid;grid-template-columns:124px 1fr auto;gap:12px;align-items:center;width:100%;background:var(--card);border:none;

@@ -13,7 +13,7 @@ const LANG_NAME={en:"English",de:"German",fr:"French",es:"Spanish",ja:"Japanese"
 let LANG="en";
 function langDefault(){ let l=String(navigator.language||"").toLowerCase().slice(0,2); if(l==="in") l="id"; /* Android's locale layer still hands out the legacy code "in" for Indonesian and Chromium passes it through, so the phone would have opened in English (v402) */
   return LANGS.some(([c])=>c===l)?l:"en"; }
-function t(key,...args){ const d=L10N[LANG]; let s=d&&d[key]!=null?d[key]:null; if(s==null) s=L10N.en&&L10N.en[key]!=null?L10N.en[key]:key; /* a key with a prefix ("capsule:Done") has its English in the en column */ return args.length?s.replace(/\{(\d)\}/g,(m,i)=>args[+i]!=null?args[+i]:m):s; }
+function t(key,...args){ const d=L10N[LANG]; let s=d&&d[key]!=null?d[key]:null; if(s==null) s=L10N.en&&L10N.en[key]!=null?L10N.en[key]:key; /* a key with a prefix ("pad:Undo") has its English in the en column */ return args.length?s.replace(/\{(\d)\}/g,(m,i)=>args[+i]!=null?args[+i]:m):s; }
 /* how many forms a count word has (v401, H: "Ergaenze russisch als sprache"): English and the five languages of v253 get by
    with two — one and many —, Russian needs three: 1 карточка, 2–4 карточки, 5–20 карточек, chosen by the last digit with
    the teens as the exception (11 карточек, 21 карточка, 111 карточек, 121 карточка); an amount with a decimal point takes
@@ -32,7 +32,7 @@ function wordOf(n,w,pl){ const d=L10N[LANG], pk=pl||w+"s", f=pForm(n);
 /* a count with its word: nOf(3,"card") → "3 cards" / "3 Karten" / "カード3枚" / "3 карточки"; pl = an irregular plural key */
 function nOf(n,w,pl){ n=n||0; const tr=wordOf(n,w,pl); return tr.includes("{0}")?tr.replace("{0}",n):`${n} ${tr}`; }
 const L10N={
-en:{"bar:AI suggestion":"AI suggestion","bar:AI suggestions":"AI suggestions","card:⚑ Flagged":"⚑ Flagged","capsule:Done":"Done","tile:New":"New","pad:Undo":"Undo","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
+en:{"bar:AI suggestion":"AI suggestion","bar:AI suggestions":"AI suggestions","card:⚑ Flagged":"⚑ Flagged","tile:New":"New","pad:Undo":"Undo","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
 de:{
   "Not yet checked":"Noch nicht geprüft","tile:New":"Neu",
   "Press and hold a character to walk through every card that has it; tap it again to come back.":"Halte ein Zeichen gedrückt, um alle Karten damit durchzugehen; tipp es noch einmal an, um zurückzukommen.",
@@ -199,7 +199,7 @@ de:{
   "the reading failed — edit the card or frame the photo again":"das Lesen ist fehlgeschlagen – bearbeite die Karte oder rahme das Foto neu ein",
   "the reading looks wrong":"die Lesung scheint falsch",
   "time":"{0}-mal","times":"{0}-mal",
-  "Due":"Fällig","capsule:Done":"Fertig","Deck":"Karten","Learn":"Lernen","Cards":"Karten","Multicards":"Multicards","Camera":"Kamera","More":"Mehr",
+  "Deck":"Karten","Learn":"Lernen","Cards":"Karten","Multicards":"Multicards","Camera":"Kamera","More":"Mehr",
   "Generate flashcard":"Karte erstellen",
   "← Back to the flashcard":"← Zurück zur Karte",
   
@@ -485,7 +485,7 @@ fr:{
   "the reading failed — edit the card or frame the photo again":"la lecture a échoué – modifie la carte ou recadre la photo",
   "the reading looks wrong":"la lecture semble fausse",
   "time":"{0} fois","times":"{0} fois",
-  "Due":"À faire","capsule:Done":"Faites","Deck":"Cartes","Learn":"Apprendre","Cards":"Cartes","Multicards":"Multicartes","Camera":"Photo","More":"Plus",
+  "Deck":"Cartes","Learn":"Apprendre","Cards":"Cartes","Multicards":"Multicartes","Camera":"Photo","More":"Plus",
   "Generate flashcard":"Créer une carte",
   "← Back to the flashcard":"← Retour à la carte",
   
@@ -771,7 +771,7 @@ es:{
   "the reading failed — edit the card or frame the photo again":"la lectura falló: edita la tarjeta o encuadra la foto de nuevo",
   "the reading looks wrong":"la lectura parece incorrecta",
   "time":"{0} vez","times":"{0} veces",
-  "Due":"Pendientes","capsule:Done":"Hechas","Deck":"Tarjetas","Learn":"Aprender","Cards":"Tarjetas","Multicards":"Multitarjetas","Camera":"Cámara","More":"Más",
+  "Deck":"Tarjetas","Learn":"Aprender","Cards":"Tarjetas","Multicards":"Multitarjetas","Camera":"Cámara","More":"Más",
   "Generate flashcard":"Crear tarjeta",
   "← Back to the flashcard":"← Volver a la tarjeta",
   
@@ -1057,7 +1057,7 @@ ja:{
   "the reading failed — edit the card or frame the photo again":"読み取りに失敗 — カードを編集するか写真を囲み直してください",
   "the reading looks wrong":"読み取りが誤りのようです",
   "time":"{0}回","times":"{0}回",
-  "Due":"今日","capsule:Done":"済み","Deck":"カード","Learn":"学習","Cards":"カード","Multicards":"マルチカード","Camera":"カメラ","More":"その他",
+  "Deck":"カード","Learn":"学習","Cards":"カード","Multicards":"マルチカード","Camera":"カメラ","More":"その他",
   "Generate flashcard":"カードを作る",
   "← Back to the flashcard":"← カードに戻る",
   
@@ -1343,7 +1343,7 @@ ko:{
   "the reading failed — edit the card or frame the photo again":"읽기 실패 — 카드를 편집하거나 사진을 다시 감싸세요",
   "the reading looks wrong":"읽기가 틀린 것 같아요",
   "time":"{0}번","times":"{0}번",
-  "Due":"오늘","capsule:Done":"완료","Deck":"카드","Learn":"학습","Cards":"카드","Multicards":"멀티카드","Camera":"카메라","More":"더보기",
+  "Deck":"카드","Learn":"학습","Cards":"카드","Multicards":"멀티카드","Camera":"카메라","More":"더보기",
   "Generate flashcard":"카드 만들기",
   "← Back to the flashcard":"← 카드로 돌아가기",
   
@@ -1632,7 +1632,7 @@ ru:{
   "the reading failed — edit the card or frame the photo again":"прочитать не вышло — измени карточку или обведи фото заново",
   "the reading looks wrong":"текст прочитан неверно",
   "time":"{0} раз","times":"{0} раза","times#many":"{0} раз",
-  "Due":"Ждут","capsule:Done":"Сделано","Deck":"Колода","Learn":"Учить","Cards":"Карточки","Multicards":"Мультикарточки","Camera":"Камера","More":"Ещё",
+  "Deck":"Колода","Learn":"Учить","Cards":"Карточки","Multicards":"Мультикарточки","Camera":"Камера","More":"Ещё",
   "Generate flashcard":"Создать карточку",
   "← Back to the flashcard":"← К карточке",
   
@@ -1918,7 +1918,7 @@ vi:{
   "the reading failed — edit the card or frame the photo again":"đọc không được — sửa thẻ hoặc khoanh lại ảnh",
   "the reading looks wrong":"bản đọc có vẻ sai",
   "time":"{0} lần","times":"{0} lần",
-  "Due":"Đến hạn","capsule:Done":"Xong","Deck":"Thẻ","Learn":"Học","Cards":"Thẻ","Multicards":"Thẻ gộp","Camera":"Máy ảnh","More":"Thêm",
+  "Deck":"Thẻ","Learn":"Học","Cards":"Thẻ","Multicards":"Thẻ gộp","Camera":"Máy ảnh","More":"Thêm",
   "Generate flashcard":"Tạo thẻ",
   "← Back to the flashcard":"← Về thẻ",
   
@@ -2204,7 +2204,7 @@ th:{
   "the reading failed — edit the card or frame the photo again":"อ่านไม่สำเร็จ — แก้การ์ด หรือวาดกรอบในรูปใหม่",
   "the reading looks wrong":"การอ่านดูผิด",
   "time":"{0} ครั้ง","times":"{0} ครั้ง",
-  "Due":"ถึงกำหนด","capsule:Done":"เสร็จ","Deck":"ทั้งหมด","Learn":"เรียน","Cards":"การ์ด","Multicards":"การ์ดรวม","Camera":"กล้อง","More":"อื่นๆ",
+  "Deck":"ทั้งหมด","Learn":"เรียน","Cards":"การ์ด","Multicards":"การ์ดรวม","Camera":"กล้อง","More":"อื่นๆ",
   "Generate flashcard":"สร้างการ์ด",
   "← Back to the flashcard":"← กลับไปที่การ์ด",
   
@@ -2490,7 +2490,7 @@ id:{
   "the reading failed — edit the card or frame the photo again":"pembacaan gagal — edit kartunya atau bingkai ulang fotonya",
   "the reading looks wrong":"hasil bacanya kelihatan salah",
   "time":"{0} kali","times":"{0} kali",
-  "Due":"Perlu diulang","capsule:Done":"Selesai","Deck":"Kartu","Learn":"Belajar","Cards":"Kartu","Multicards":"Multikartu","Camera":"Kamera","More":"Lainnya",
+  "Deck":"Kartu","Learn":"Belajar","Cards":"Kartu","Multicards":"Multikartu","Camera":"Kamera","More":"Lainnya",
   "Generate flashcard":"Buat kartu",
   "← Back to the flashcard":"← Kembali ke kartu",
   
