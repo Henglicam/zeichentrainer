@@ -527,7 +527,10 @@ body.noscroll{overflow:hidden}
 .ctile .tw{position:relative;display:block;aspect-ratio:4/3;background:var(--card2);overflow:hidden}
 .ctile .tim{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .ctile .tbg{position:absolute;inset:-10%;width:120%;height:120%;object-fit:cover;filter:blur(10px) saturate(55%) brightness(85%);opacity:.55}
-.ctile .tglyph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:46px;color:var(--label3)}
+.ctile .tglyph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:46px;color:var(--label3);text-align:center;line-height:1.15;white-space:nowrap;padding:0 6px}
+/* the glyph tile carries the card's whole text (v506): .tw is a size container so the font can be fitted to the tile's
+   own width and height with cqw/cqh (the inline style on .tglyph), capped at the 46 px a single character always had */
+.ctile .tw.glyph{container-type:size}
 /* the tile of a flashcard generated from a multicard (v490): the multicard's whole photo with this card's own text
    framed and lit on it, the Learn front in miniature. .tw becomes a size container so the photo can be fitted with
    cqw/cqh — a percentage max-height would resolve against an auto height and collapse — and .tpw shrink-wraps the
