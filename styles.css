@@ -455,6 +455,15 @@ body.noscroll{overflow:hidden}
 /* a text box inside a More row (the Feedback row, v218): the form field's look on the row's secondary surface, full width, growing with its text */
 .mrow textarea{width:100%;background:var(--card2);border:none;border-radius:10px;color:var(--label);font-family:var(--sans);font-size:17px;padding:12px 14px;outline:none;box-shadow:none;margin-top:10px;resize:none;overflow:hidden;line-height:1.35;min-height:46px;display:block}
 .mrow textarea:focus{box-shadow:inset 0 0 0 2px var(--tint)} .mrow textarea::placeholder{color:var(--label3)}
+/* the screenshot staged under the Feedback box (v511): a thumbnail with its size and a × to take it off again */
+.fbthumb{position:relative;display:inline-block;margin-top:10px}
+.fbthumb img{max-width:140px;max-height:120px;border-radius:10px;display:block;box-shadow:inset 0 0 0 1px var(--sep)}
+.fbthumb .x{position:absolute;top:-8px;right:-8px;width:28px;height:28px;border-radius:999px;border:0;background:var(--fill);color:var(--label);font-size:17px;line-height:1;cursor:pointer}
+.fbthumb .sz{display:block;margin-top:4px;font-size:12px;color:var(--label2)}
+/* and the pictures under the owner's Feedback report */
+.fbpics{display:flex;flex-wrap:wrap;gap:10px;margin:10px 16px 0}
+.fbpics figure{margin:0;max-width:150px} .fbpics img{max-width:150px;border-radius:10px;display:block;cursor:pointer;box-shadow:inset 0 0 0 1px var(--sep)}
+.fbpics figcaption{font-size:11px;color:var(--label2);font-family:var(--mono);word-break:break-all}
 .mrow .inrow{display:flex;gap:8px;align-items:center;margin-top:10px;min-width:0}
 #mirror-status{overflow-wrap:anywhere} /* the mirror address is one unbreakable token, and its min-content pushed the owner's row 6 px past a 360 px screen (v472) */ /* an input with its button inside a More row, in the Feedback box's field look (v282) */
 .mrow .inrow input{flex:1;min-width:0;background:var(--card2);border:none;border-radius:10px;color:var(--label);font-family:var(--sans);font-size:17px;padding:10px 14px;outline:none;box-shadow:none}
