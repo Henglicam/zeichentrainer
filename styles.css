@@ -681,8 +681,14 @@ body.noscroll{overflow:hidden}
 .wpad.shake{animation:padshake .24s}
 @keyframes padshake{0%,100%{transform:none}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 @media(prefers-reduced-motion:reduce){.wpad.shake{animation:none}}
-.chev{position:absolute;top:50%;width:36px;height:56px;margin-top:-28px;border:none;background:none;color:var(--label3);font-size:30px;line-height:56px;padding:0;cursor:pointer} /* the previous / next card, in the card's own padding beside the pad (§ 3.2) */
-.chev.l{left:-18px} .chev.r{right:-18px}
+/* the chevrons of § 3.2 left at v520 (H's "A"): the swipe is the way, and the count in the helper row says where you are */
+.padacts .pos{font-size:13px;color:var(--label3);align-self:center;padding:0 6px;min-height:0;line-height:1.3}
+/* the locked character lit on the photo (v520): v461's shadow around the character's own rectangle, faded in and out */
+.spot{position:absolute;border-radius:5px;box-shadow:0 0 0 1.5px rgba(255,255,255,.92),0 0 0 9999px rgba(0,0,0,0);transition:box-shadow .32s ease;pointer-events:none;z-index:3}
+.spot.on{box-shadow:0 0 0 1.5px rgba(255,255,255,.92),0 0 0 9999px rgba(0,0,0,.42)}
+.spot.more,.spot.more.on{box-shadow:0 0 0 1.5px rgba(255,255,255,.92)}
+.card.study .zone1.spotting{overflow:hidden;border-radius:var(--rc)} /* the whole-photo view has no box to clip the shadow */
+@media(prefers-reduced-motion:reduce){.spot{transition:none}}
 /* ===== the praise after a finished word (v517): the counter in the bar, the star that flies into it, the ring =====
    Design tokens only, so both themes come out of the same set. */
 #stat-star{color:var(--tint);gap:5px;padding:4px 11px;min-height:28px;box-sizing:border-box;align-items:center}

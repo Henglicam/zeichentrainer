@@ -187,6 +187,8 @@ Gone from the columns when phase 1 lands: "Not yet", "Got it" (again — v488 re
 
 7. **One 3:2 window** — **built as v519** (H on the folded Mix Fold: "the photo doesn't get enough space … the proportions don't feel right", then "3:2 with the re-cut" on the measured composite): D1's ratio by line count (Q12) ends; every card's window and box are 3:2 and the deck is cut again (`RECUT_V` 5).
 
+8. **No chevrons, and the spotlight** — **built as v520** (H: "A, and Go"): § 3.2's ‹ › leave, a count "3 of 12" under the pad says where you are, and the locked character (§ 7) is lit on the photo with the rest softly darkened, the rectangle derived from the frame — the photo half of the phase-6 prompt.
+
 Every phase: the three version markers, `verify-english`, `verify-swipe` retargeted, `verify-vote` **superseded** (the honest record of a feature removed, as `verify-derived` was at v487), `verify-star` and `verify-starred` retargeted to the new back row, CLAUDE.md in the same PR, screenshots in light and German dark.
 
 ## 13. Decided — every question answered (drafts 2 to 4)
