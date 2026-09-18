@@ -652,7 +652,9 @@ body.noscroll{overflow:hidden}
    against a one-line card's 60, and the pad paid the difference. The rows are laid side by side now and the strip scrolls
    sideways when it is wider than the card, with the photo's own line breaks kept as a rule between them. */
 .chrow{margin-top:12px;display:flex;flex-direction:row;flex-wrap:nowrap;justify-content:safe center;gap:14px;
-  max-width:100%;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+  max-width:100%;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none}
+/* a row wider than the card scrolls sideways and owns the horizontal pan; one that fits is a swipe surface (v518) */
+.chrow.scrolls{overflow-x:auto;touch-action:pan-x pan-y}
 .chrow::-webkit-scrollbar{display:none}
 .chrow .chline{flex-wrap:nowrap;flex:0 0 auto}
 .chrow .chline+.chline{border-left:1px solid var(--sep);padding-left:14px}
@@ -705,7 +707,14 @@ body.noscroll{overflow:hidden}
 /* a locked character (v513, § 7): the tint ring on its button, on every card of its walk */
 .chrow .ch.lock{box-shadow:inset 0 0 0 2.5px var(--tint)}
 .chrow .ch.lock.cur{box-shadow:inset 0 0 0 2.5px var(--tint),inset 0 0 0 5px var(--card)}
+/* and the padlock in its corner (v518, H: "Locked on/off should be more obvious, maybe with a padlock icon?") */
+.chrow .ch .lockmark{position:absolute;right:2px;top:2px;width:17px;height:17px;border-radius:999px;background:var(--tint);color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.chrow .ch.cur .lockmark{background:#fff;color:var(--tint)}
+.chrow .ch .lockmark svg{width:11px;height:11px;fill:currentColor}
+/* the open card in the study card's layout (v518): the actions where the pad would stand */
+.card.study.detail .detailacts{margin-top:14px}
+.card.study.detail .padline{margin-top:12px}
 /* the study card's picture: one box shape whatever the text (v517) — v514's per-card ratio stays everywhere else, and the
    picture itself is fitted inside with the blurred fill of v232 behind it */
-.card.study .picbox.page{aspect-ratio:2}
+.card.study .picbox.page,.card.peer .picbox.page{aspect-ratio:2} /* and the carousel's neighbour (v518): a page front slid in at its own v514 ratio and jumped to 2:1 at the snap */
 .picbox.zoomed{touch-action:none} .picbox.zoomed .signimg,.picbox.zoomed .pagewrap{will-change:transform}
