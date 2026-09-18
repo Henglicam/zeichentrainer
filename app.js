@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=518; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=519; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -638,6 +638,9 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v519","every photo box 3:2; deck cut again (v5)"],
+  ["app","v519","long text: all characters on screen"],
+  ["app","v519","folded: photo/pad proportion feels right?"],
   ["app","v518","hold the locked char: released + buzz"],
   ["app","v518","padlock on the locked character"],
   ["app","v518","line under pad follows the pad"],
@@ -2118,10 +2121,10 @@ async function brightenPass(){
    by a quarter of its own width gives 0.28 to 0.59, a frame whose numbers are broken 0.00 to 0.08, and a cut of a
    different photo 0.55. So the bar sits in the gap between 0.59 and 0.92, and it is set on the safe side: a card left
    with the picture it has is a fine outcome, a card showing the wrong region is not. */
-const RC_BATCH=10, RC_PAUSE=60, RC_WAIT=2000, RC_TOLPX=2, RC_TOL=0.01, RC_CORR=0.8, RC_THUMB=32, RC_INSIDE=0.5;
+const RC_BATCH=10, RC_PAUSE=60, RC_WAIT=2000, RC_TOLPX=2, RC_TOL=0.01, RC_CORR=0.8, RC_THUMB=32, RC_INSIDE=0.5, RC_OLD=[16/9,2,4/3];
 const frameKey=f=>f?[f.x,f.y,f.w,f.h,f.a||0].join(","):""; /* the same rectangle, to the number */
 let RECUT=null;
-const RECUT_V=4; /* v514: the window follows the card's line count (D1), so every card with a 16:9 window is cut again at its own ratio; v418: the pictures the v398 curve made carry its white balance baked in, so the deck is walked once more; v508: the pictures the flat clause blackened are cut again the same way */
+const RECUT_V=5; /* v519: one 3:2 window on every card (H: "3:2 with the re-cut"), so every card with a 16:9, 2:1 or 4:3 window is cut again; v514: the window followed the card's line count (D1) and every 16:9 window was cut again at its own ratio; v418: the pictures the v398 curve made carry its white balance baked in, so the deck is walked once more; v508: the pictures the flat clause blackened are cut again the same way */
 async function recutPass(){
   if(RECUT||S.settings.recutPass>=RECUT_V) return;
   const ids=deck().filter(d=>d.img&&d.frame&&!d.reading&&fullPhoto(d)).map(d=>d.id); /* a card still waiting for its reading belongs to finishPending, which holds it across an await and writes it whole (v398) */
@@ -2212,15 +2215,17 @@ async function recutCard(d){
     if(!(ix>0&&iy>0)||ix*iy<RC_INSIDE*f.w*f.h) return null; }
   const rect={x:f.x*pw,y:f.y*ph,w:f.w*pw,h:f.h*ph,a:f.a||0,lw:pw,lh:ph}; /* the frame at the photo's own pixels — cropBlob then cuts one to one, and turns the frame back upright itself (v185) */
   if(rect.w<8||rect.h<8) return null;
-  const win16=windowRect(rect,16/9), winNew=windowRect(rect,ratioOf(d)); /* the 16:9 window every card carried until v513, and the window at the card's own ratio (v514, D1) */
+  const winNew=windowRect(rect,ratioOf(d)); /* the 3:2 window every card carries since v519 */
+  const olds=RC_OLD.map(R=>windowRect(rect,R)); /* the windows a card may still carry from before: 16:9 (v329–v513), and v514's 2:1 and 4:3 by line count (v514–v518; its two-line 3:2 is the new window already) */
   const off=r=>{ const w=Math.max(1,Math.round(r.w)), h=Math.max(1,Math.round(r.h)); /* what cropBlob will make of it */
     const near=(a,b)=>Math.abs(a-b)<=Math.max(RC_TOLPX,RC_TOL*b);
     return near(w,iw)&&near(h,ih)?Math.abs(w-iw)+Math.abs(h-ih):-1; };
-  const dw=off(win16), dn=off(winNew), df=off(rect);
-  /* which rectangle the stored picture is: the old window → cut again at the new ratio; already the new window → nothing to
+  const dn=off(winNew), df=off(rect), dolds=olds.map(off);
+  let oi=-1; dolds.forEach((v,i)=>{ if(v>=0&&(oi<0||v<dolds[oi])) oi=i; }); const dw=oi<0?-1:dolds[oi];
+  /* which rectangle the stored picture is: an old window → cut again at the new ratio; already the new window → nothing to
      do; the label's own frame (v362, a split panel's card, which never had a window) → byte-identical; none → left alone */
   if(dn>=0&&(dw<0||dn<=dw)) return null;
-  const from=dw>=0&&(df<0||dw<=df)?win16:null; if(!from) return null;
+  const from=dw>=0&&(df<0||dw<=df)?olds[oi]:null; if(!from) return null;
   const key="recut#"+d.id; /* the photo as a record of its own: an inbox photo and an open Crop again are untouched */
   SHOTS_EXTRA[key]={id:key,blob:full,ts:Date.now()};
   let same=null, cut=null;
@@ -2900,6 +2905,7 @@ function renderStudy(main){
     ${swipeHint(d)}</div>`; /* no linked-photos row on the study card (v518, H: "No 'also in other cards' in learn mode. Only on Cards mode.") — the detail keeps it */
   if(ansOpen) warmParts();
   const card=main.querySelector(".card.study");
+  chrowFit(card); /* v519: every character on screen — before the pad measures what is left under the row */
   /* the photo: a tap swaps the crop for the whole photo and back (v55); the flag in its corner is the review flag (§ 3.3) */
   const rv=$("#reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("#picflag")) return; if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); } };
   { const pf=$("#picflag"); if(pf) pf.onclick=async e=>{ e.stopPropagation(); await setFlag(c,!d.flag); render(); }; } /* v515: hollow ⚐ = not yet checked, a tap flags it; tint ⚑ = flagged, a tap clears; nothing once checked and clean — the answer block's Flag button stays */
@@ -2926,10 +2932,9 @@ function renderStudy(main){
   wireSwipe(card, list.length<2||S.single?null:{
     n:list.length, idx:li, centred:false,
     peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ return `<div class="zone1 front">${frontPic(nd,{page:true,fixed:true})}</div>${peerRowHTML(nd)}<div class="fold"><button class="foldbtn"><span>${t("Pinyin and meaning")}</span><i aria-hidden="true">⌄</i></button></div><div class="padwrap"><div class="wpad ghost"></div></div><div class="padline"></div>`; } finally{ S.fullPic=fp; } }, /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
-    go:goTo });
+    go:goTo, ready:chrowFit });
   wireSay(); wireLinks(); wireSrc(); wireAi();
   mountPad(card,d,c,tg,st,cur);
-  chrowScrolls(card); /* v518: the row scrolls sideways only when it has to; otherwise a stroke on it is the swipe */
   if(pg&&!S.fullPic) fitPageCover(card,pg); /* D5: the multicard's picture cover-fitted around the card's own text */
   attachPicZoom(card.querySelector(".zone1 .picbox")); /* v514: pinch to zoom, one finger to pan (§ 4) */
   if(cur) padLine(d,cur); /* the line under the pad, always, for the character the pad is on (v518) */
@@ -2942,9 +2947,21 @@ function chrowHTML(d,tg,btn,litWi){
   const groupRow=row=>{ const out=[]; let g=null; for(const x of row){ if(!g||g.wi!==x.wi){ g={wi:x.wi,items:[]}; out.push(g); } g.items.push(x); } return out.map(g=>`<span class="chw${g.wi===litWi?" on":""}" data-wi="${g.wi}">${g.items.map(btn).join("")}</span>`).join(""); };
   return `<div class="chrow">${rows.map(r=>`<div class="chline">${groupRow(r)}</div>`).join("")}</div>`;
 }
-/* the row scrolls sideways only when it is wider than the card (v518): a scrolling row owns the horizontal pan and a swipe
-   cannot start on it, so a row that fits — nearly every card — stays a swipe surface like the rest of the card */
-function chrowScrolls(root){ const cr=root&&root.querySelector(".chrow"); if(!cr) return; cr.classList.remove("scrolls"); if(cr.scrollWidth>cr.clientWidth+1) cr.classList.add("scrolls"); }
+/* EVERY CHARACTER ON SCREEN (v519, H: "you can't see all characters at once anymore. A tester just got confused because she
+   thought that characters are missing. Also when writing a long word, the characters written don't show in the character
+   line."): v517's one row scrolled sideways, so on a long text the last characters — and the written, green ones — stood
+   off-screen with nothing saying so. The row never scrolls now: its buttons shrink until the row fits the card, never under
+   CH_MIN, and only a text that does not fit even then wraps onto a second row — the one case where the pad gives a row's
+   height, which is the price of a tester never again reading a hidden character as a missing one. The buttons scale, the
+   tiles' padding and the gaps do not, so the size that fits is solved for and then stepped down until the row really fits. */
+const CH_MAX=56, CH_MIN=40;
+function chrowFit(root){ const cr=root&&root.querySelector(".chrow"); if(!cr) return;
+  cr.classList.remove("wrap"); cr.style.setProperty("--chs",CH_MAX+"px");
+  const avail=cr.clientWidth; if(!avail||cr.scrollWidth<=avail) return;
+  const n=cr.querySelectorAll(".ch:not(.num)").length, fixed=cr.scrollWidth-n*CH_MAX;
+  let s=Math.min(CH_MAX,Math.floor((avail-fixed)/Math.max(1,n)));
+  for(; s>=CH_MIN; s--){ cr.style.setProperty("--chs",s+"px"); if(cr.scrollWidth<=avail) return; }
+  cr.style.setProperty("--chs",CH_MIN+"px"); cr.classList.add("wrap"); }
 /* the characters of the card as the pad's targets, grouped by word (§ 5, Q3): one entry per character of the text, in the
    text's order and with its repeats (v430), each knowing its word (wi) so the buttons of one word sit in one group and the
    line under the pad names the word; a number with its unit is one entry for the whole part and is not writable (w:false).
@@ -3080,7 +3097,8 @@ const unchecked=d=>!!(d&&d.unchecked);
 async function checkCard(id){ const d=cardOf(id); if(!d||!d.unchecked) return; const upd={...d}; delete upd.unchecked; await putCard(upd,id); }
 /* ---------- the write pad (v512): stroke by stroke over a template, as Duolingo does it ---------- */
 const PAD_MIN=200, TRACE_OK=0.18, NEXT_MS=1500, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
-const PAD_BELOW=84, FRONT_RATIO=2, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_GRID/1024;
+const CARD_RATIO=1.5; /* the one window and box shape on every card, 3:2 (v519) — declared here, since FRONT_RATIO reads it at load time */
+const PAD_BELOW=84, FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_GRID/1024;
 /* NEXT_MS is 1500 since v517: the finished card holds while it is praised (§ 12), where it held 900 and nothing
    happened. FRONT_RATIO is the one shape the study card's picture box takes whatever the text is. PAD_BELOW is the
    room the pad leaves under itself for the helper row, counted whether or not the row has
@@ -3375,7 +3393,7 @@ function wireSwipe(card,o){
     peer.querySelectorAll("[id]").forEach(el=>el.removeAttribute("id")); /* a copy of the detail card carries its ids — the page must keep only one of each */
     peer.style.left=card.offsetLeft+"px"; peer.style.top=card.offsetTop+"px"; peer.style.width=card.offsetWidth+"px";
     peer.style.transform=`translateX(${s*shift}px)`;
-    par.appendChild(peer);
+    par.appendChild(peer); if(o.ready) o.ready(peer); /* v519: the neighbour's character row is fitted like the card's own */
     /* the neighbour is centred on the card, not hung from its top (v418, H: "Beim links, rechts swipen springen
        unterschiedlich hohe Karten in der Vertikalen. Bitte vermeiden."): Learn centres the card in what is left of the
        screen (measured, a two-line sign card sits 20 px lower than a one-character one and their middles are the same
@@ -3396,9 +3414,8 @@ function wireSwipe(card,o){
        the gesture only takes over past SW_SLOP and only eats its own closing click. */
     /* v518 (H: "Swiping shouldn't be only possible on the image, all other areas as well, except maybe the pad"): every
        button is a surface now — a tap still reaches it, since the gesture takes over only past SW_SLOP and eats only its
-       own closing click — and only the pad, the helper row under it, the chevrons, the fields and a character row that
-       scrolls sideways (which owns the horizontal pan) stand outside it */
-    if(e.target.closest("canvas.wpad,.padacts,.chev,a,input,textarea,.chip,.chrow.scrolls")) return;
+       own closing click — and only the pad, the helper row under it, the chevrons and the fields stand outside it */
+    if(e.target.closest("canvas.wpad,.padacts,.chev,a,input,textarea,.chip")) return; /* v519: the character row never scrolls, so it is a swipe surface on every card */
     x0=e.clientX; y0=e.clientY; dx=0; on=false; pid=e.pointerId;
   });
   card.addEventListener("pointermove",e=>{
@@ -3781,7 +3798,7 @@ function detailSwipe(list,li,main){
       /* the card you swipe to is not the one you came into: its back button would otherwise claim a way back that
          belongs to another card (v492) — true of the page flag of v453 as well, which survived a swipe until now */
       S.detail=nd.id; S.detailFrom=null; S.fullPic=false; render(); },
-    busy:on=>{ const pn=main.querySelector(".pane"); if(pn) pn.classList.toggle("swiping",on); }};
+    busy:on=>{ const pn=main.querySelector(".pane"); if(pn) pn.classList.toggle("swiping",on); }, ready:chrowFit};
 }
 function renderCardDetail(main,c){
   const d=cardOf(c); if(!d){ S.detail=null; return renderCards(main); }
@@ -3808,7 +3825,7 @@ function renderCardDetail(main,c){
     const dcard=main.querySelector(".card.study.detail"), tg=d.c?padTargets(d):[];
     dcard.querySelectorAll(".chrow .ch").forEach(b=>{ const i=+b.dataset.i, x=tg[i]; if(!x) return; b.onclick=e=>{ e.stopPropagation(); S.detailCh=detailCh(d)===i?null:{c:d.id,i}; render(); }; }); /* a tap lights the word and reads it under the answer; the same character again puts it out — there is no pad here to keep it */
     const li=detailCh(d); if(li!=null&&tg[li]) padLine(d,tg[li]);
-    chrowScrolls(dcard);
+    chrowFit(dcard);
     const pg=frontPage(d); if(pg&&!S.fullPic) fitPageCover(dcard,pg); /* D5, as on the study card */
     attachPicZoom(dcard.querySelector(".zone1 .picbox")); }
   const test=$("#d-test"); if(test) test.onclick=()=>{
@@ -4221,6 +4238,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  519:"The picture on every card is 3:2 now — taller than before, with more of the photo around a one-line sign — and your cards are cut again once to match. A long text shows every character at once, smaller if it must.",
   518:"Press and hold a locked character to release it, the line under the pad follows the pad and a finished card no longer jumps, an open card looks like the study card, and a swipe starts anywhere but the pad.",
   517:"The picture and the writing pad are the same size on every card now, the stroke template follows a real brush, tapping a word shows its pinyin and meaning, and a finished word sends a star up to a counter.",
   516:"The Due and Done counts have left the top bar. On Learn, the filter sits there instead.",
@@ -4588,13 +4606,15 @@ const PENDING={}; /* shot id → the id of a card saved before its reading finis
 const PLACED={}, READ_APP={}, PICSEEN={}; /* v304, for a card saved with Save now: PLACED = the frame the reader or the AI placed on the text while the card waited (the card takes it as its frame and its crop), READ_APP = the reading started from the app's own frame, not the hand's (only such a frame may be moved); PICSEEN (v400) = the picture the AI actually read and the frame it was cut from — the one thing a card needs in order to ask, at save time, whether its own frame is anywhere near what the model said it saw (H: "Du würdest eine falsch gecroppte Karte doch selber erkennen, wenn Du den Crop noch mal prüfen würdest. Also ich meine die App.") */
 const frameOf=r=>({x:+(r.x/r.lw).toFixed(4),y:+(r.y/r.lh).toFixed(4),w:+(r.w/r.lw).toFixed(4),h:+(r.h/r.lh).toFixed(4),a:+(r.a||0).toFixed(1)}); /* the frame a card was cut with, as fractions of the photo (card.frame, v244) — Crop again starts from it */
 /* The card's picture is a 16:9 window around the text (v329, H: "does the 16:9 format make sense?" — measured on 21 photos: one-line signs run 2.3–6.8:1, posters and plates 0.9–1.6:1, so the tight crop filled the photo box's height or width only half and the rest was the blurred fill; "Go" on the window): the same centre as the frame, the frame's own angle, widened to FRAME_RATIO in the direction it lacks, never smaller than the frame, shifted to stay inside the photo and clamped to the photo's size — the text keeps its size and place in the box, the surroundings fill the rest. The card's frame stays the text's frame (Crop again starts from it); only the picture is the window. */
-/* the window's shape follows the card's line count (v514, SPEC-flashcard-layout.md D1 — H: "Bei mehrzeilig aspect ratio höher als
-   2:1"): one photo line 2:1, two lines 3:2, three or more 4:3, never taller than 4:3. v329's 16:9 was the Cards tile's shape and
-   sat 22 px over the write pad's budget; a two-line sign is 0.9–1.6:1 by v329's own measurement, so a 2:1 window around it
-   showed the lines at two thirds of their size. The box on the card carries the same ratio inline (ratioOf), so a card's
-   box is the shape of its own picture — a deliberate step off v223's "one shape on every card". The ink-row PROPOSAL keeps
-   FRAME_RATIO (shapeBox, v207); this is the card's window only. */
-const frameRatio=n=>n<=1?2:n===2?1.5:4/3;
+/* ONE WINDOW SHAPE ON EVERY CARD, 3:2 (v519, H on the folded Mix Fold: "the photo doesn't get enough space … the proportions
+   don't feel right", then "3:2 with the re-cut" on the three ratios measured at his own geometry — photo 217 against a pad of
+   306 there, 215 against 235 at 390 × 844). From v514 to v518 the window followed the card's line count (D1: one line 2:1, two
+   3:2, three or more 4:3) while the study card's box was one constant shape since v517 — so a one-line sign sat in a 2:1 box at
+   2:1 and a three-line one at 4:3 inside the same box with fill at the sides. One ratio ends that, and a one-line sign gains
+   its surroundings above and below instead of a band of blur. v329's 16:9 was the Cards tile's shape and sat 22 px over the
+   write pad's budget; a two-line sign is 0.9–1.6:1 by v329's own measurement, which 3:2 fits exactly. The ink-row PROPOSAL keeps
+   FRAME_RATIO (shapeBox, v207); this is the card's window only. frameRatio keeps its line-count argument for the callers. */
+const frameRatio=n=>CARD_RATIO; /* CARD_RATIO is declared beside FRONT_RATIO */
 const cardLines=d=>!d?1:d.kind==="sign"?String(d.c||"").split("\n").filter(Boolean).length:frontLines(d).length;
 const ratioOf=d=>frameRatio(cardLines(d));
 function windowRect(r,ratio){ const {lw,lh}=r, a=r.a||0, R=ratio||frameRatio(1); let w=r.w, h=r.h;

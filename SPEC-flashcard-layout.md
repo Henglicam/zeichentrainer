@@ -185,6 +185,8 @@ Gone from the columns when phase 1 lands: "Not yet", "Got it" (again — v488 re
 
 6. **The first field round** — **built as v518** (H, 2026-09-18, eight items after one session on v517): a second hold releases the locked character (§ 7 said "tap it again"; H's own model is the hold, and a hold re-locked), a longer buzz, a padlock on the locked button, the line under the pad always there and following the pad (§ 5's "only while the answer is open" is reversed), the card detail in the study card's layout with the actions where the pad stands, no linked-photos row in Learn, the carousel's neighbour at the one box shape and the swipe from anywhere but the pad. The chevrons (§ 3.2) are answered with proposals and wait for his pick.
 
+7. **One 3:2 window** — **built as v519** (H on the folded Mix Fold: "the photo doesn't get enough space … the proportions don't feel right", then "3:2 with the re-cut" on the measured composite): D1's ratio by line count (Q12) ends; every card's window and box are 3:2 and the deck is cut again (`RECUT_V` 5).
+
 Every phase: the three version markers, `verify-english`, `verify-swipe` retargeted, `verify-vote` **superseded** (the honest record of a feature removed, as `verify-derived` was at v487), `verify-star` and `verify-starred` retargeted to the new back row, CLAUDE.md in the same PR, screenshots in light and German dark.
 
 ## 13. Decided — every question answered (drafts 2 to 4)
