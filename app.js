@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=509; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=510; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -593,6 +593,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v510","Learn: no \"2 of 2\" under a card"],
   ["app","v509","close the app mid-read: photo back"],
   ["photo","v509","unread photo stays under Camera"],
   ["photo","v509","weak read, AI text check ok: card"],
@@ -2583,7 +2584,7 @@ function frontPic(d,o){
 const waitingHTML=d=>d.reading&&d.reading.failed?`<span class="wait failed">${t("Nothing could be read.")}</span>`:`<span class="wait">${busyHTML(t("Reading the text …"))}</span>`;
 function frontHTML(d,o){
   const pg=o&&o.page&&!(S.peek&&S.peek!==d.id)?frontPage(d):null; /* v452, v489 */
-  const scriptNote=(d.trad||pg)?`<div class="script">${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${pg?(pg.src?srcPill(d,!!(o&&o.tap)):`<span class="pill page">${t("{0} of {1}",pg.rs.findIndex(r=>r.card===d.id)+1,pg.rs.length)}</span>`):""}</div>`:""; /* v452: "1 of 4" in reading order — the count says "one of several on this photo" in every language without a word to define ("Page" was measured to read as "side" in German and "face" in Thai) */ /* one pill under the box (v227, H's "Go" on the design review — until v226 two lines, "Traditional characters, as on the photo" and "Simplified 养乐多"); the simplified form sits on the back now (simpRefHTML), plain words, no 简/繁 shorthand (H, v106) */
+  const scriptNote=(d.trad||(pg&&pg.src))?`<div class="script">${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${pg&&pg.src?srcPill(d,!!(o&&o.tap)):""}</div>`:""; /* v510 (H, on a "2 of 2" over his vinegar bottle: "X von y karten bitte nicht mehr anzeigen"): v452's count pill is gone. It was the answer to "which of this photo's texts is this card?", and v487 answered that question properly — a generated flashcard names its multicard (srcPill) and frames its own text on the picture (v499), so the count had nothing left to say on the one screen it still appeared on: an ordinary card from a photo taken before v453. The reference pill stays. */ /* one pill under the box (v227, H's "Go" on the design review — until v226 two lines, "Traditional characters, as on the photo" and "Simplified 养乐多"); the simplified form sits on the back now (simpRefHTML), plain words, no 简/繁 shorthand (H, v106) */
   if(d.kind==="sign"){
     /* sign card: the picture is the exercise, text underneath wrapped only between words */
     const lines0=(d.trad||d.c).split("\n");
