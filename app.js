@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=513; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=514; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -631,6 +631,9 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v514","Learn: pinch into the picture, pan"],
+  ["app","v514","1-line card 2:1, 2-line 3:2 box"],
+  ["update","v514","Diagnostics: re-cut v4 done, count"],
   ["app","v513","Learn: hold a char, walk its cards"],
   ["app","v512","Learn: the pad snaps on your strokes"],
   ["app","v512","Learn: pad whole on 390 px, 1 line"],
@@ -1422,7 +1425,7 @@ function outsideWindow(pic,placed,base,W,Hh,angle){
   if(lines.length<2||!Array.isArray(boxes)||boxes.length!==lines.length||boxes.some(b=>!b)) return null;
   const pp=String(pic.p||"").split(/\s*\/\s*/), mp=String(pic.m||"").split(/\s*\/\s*/);
   if(pp.length!==lines.length||mp.length!==lines.length) return null; /* the pinyin and the meaning must be able to follow, or the card would keep the meaning of text that is gone */
-  const win=windowRect(placed), keep=boxes.map(b=>{
+  const win=windowRect(placed,frameRatio(lines.length)), keep=boxes.map(b=>{ /* the window this card will carry (v514) */
     const f=photoFrameOf(base,W,Hh,{x0:b[0]*W,y0:b[1]*Hh,x1:b[2]*W,y1:b[3]*Hh},angle); if(!f) return true;
     const a=f.w*f.h; if(!(a>0)) return true;
     return Math.max(0,Math.min(f.x+f.w,win.x+win.w)-Math.max(f.x,win.x))*Math.max(0,Math.min(f.y+f.h,win.y+win.h)-Math.max(f.y,win.y))/a>=LINE_OUT; });
@@ -2095,7 +2098,7 @@ async function brightenPass(){
 const RC_BATCH=10, RC_PAUSE=60, RC_WAIT=2000, RC_TOLPX=2, RC_TOL=0.01, RC_CORR=0.8, RC_THUMB=32, RC_INSIDE=0.5;
 const frameKey=f=>f?[f.x,f.y,f.w,f.h,f.a||0].join(","):""; /* the same rectangle, to the number */
 let RECUT=null;
-const RECUT_V=3; /* v418: the pictures the v398 curve made carry its white balance baked in, so the deck is walked once more; v508: the pictures the flat clause blackened are cut again the same way */
+const RECUT_V=4; /* v514: the window follows the card's line count (D1), so every card with a 16:9 window is cut again at its own ratio; v418: the pictures the v398 curve made carry its white balance baked in, so the deck is walked once more; v508: the pictures the flat clause blackened are cut again the same way */
 async function recutPass(){
   if(RECUT||S.settings.recutPass>=RECUT_V) return;
   const ids=deck().filter(d=>d.img&&d.frame&&!d.reading&&fullPhoto(d)).map(d=>d.id); /* a card still waiting for its reading belongs to finishPending, which holds it across an await and writes it whole (v398) */
@@ -2186,21 +2189,25 @@ async function recutCard(d){
     if(!(ix>0&&iy>0)||ix*iy<RC_INSIDE*f.w*f.h) return null; }
   const rect={x:f.x*pw,y:f.y*ph,w:f.w*pw,h:f.h*ph,a:f.a||0,lw:pw,lh:ph}; /* the frame at the photo's own pixels — cropBlob then cuts one to one, and turns the frame back upright itself (v185) */
   if(rect.w<8||rect.h<8) return null;
-  const win=windowRect(rect); /* the 16:9 window of an ordinary card (v329) */
+  const win16=windowRect(rect,16/9), winNew=windowRect(rect,ratioOf(d)); /* the 16:9 window every card carried until v513, and the window at the card's own ratio (v514, D1) */
   const off=r=>{ const w=Math.max(1,Math.round(r.w)), h=Math.max(1,Math.round(r.h)); /* what cropBlob will make of it */
     const near=(a,b)=>Math.abs(a-b)<=Math.max(RC_TOLPX,RC_TOL*b);
     return near(w,iw)&&near(h,ih)?Math.abs(w-iw)+Math.abs(h-ih):-1; };
-  const dw=off(win), df=off(rect);
-  const use=dw>=0&&(df<0||dw<=df)?win:df>=0?rect:null; /* the window and the label's own frame are the same rectangle where both fit */
-  if(!use) return null;
+  const dw=off(win16), dn=off(winNew), df=off(rect);
+  /* which rectangle the stored picture is: the old window → cut again at the new ratio; already the new window → nothing to
+     do; the label's own frame (v362, a split panel's card, which never had a window) → byte-identical; none → left alone */
+  if(dn>=0&&(dw<0||dn<=dw)) return null;
+  const from=dw>=0&&(df<0||dw<=df)?win16:null; if(!from) return null;
   const key="recut#"+d.id; /* the photo as a record of its own: an inbox photo and an open Crop again are untouched */
   SHOTS_EXTRA[key]={id:key,blob:full,ts:Date.now()};
-  let cut=null;
-  try{ cut=await cropBlob(key,use); }
+  let same=null, cut=null;
+  try{ same=await cropBlob(key,from); cut=await cropBlob(key,winNew); }
   finally{ delete SHOTS_EXTRA[key]; }
-  if(!cut||!cut.blob) return null;
+  if(!same||!same.blob||!cut||!cut.blob) return null;
+  /* the guard compares like with like: the fresh cut of the OLD window against the picture the card has says whether the frame
+     still describes it (v398's rule); only then is the new window written */
+  try{ if(corrOf(await greyThumb(d.img,RC_THUMB),await greyThumb(await cardJpeg(same.blob),RC_THUMB))<RC_CORR) return null; }catch(e){ return null; } /* the framing moved: keep what the card has */
   const out=await cardJpeg(cut.blob); if(!out) return null;
-  try{ if(corrOf(await greyThumb(d.img,RC_THUMB),await greyThumb(out,RC_THUMB))<RC_CORR) return null; }catch(e){ return null; } /* the framing moved: keep what the card has */
   return out;
 }
 function recheckRowHTML(){ const n=toRecheck().length, tr=RECHECK; if(!n||!aiOn()) return "";
@@ -2622,7 +2629,7 @@ function srcView(d){
 const frontPage=d=>pageOf(d)||srcView(d); /* one page view for both: a card that IS one of several on a photo (v452), and one MADE from a multicard's text (v489) */
 function pageHTML(d,pg){
   const u=urlOf(pg.blob);
-  return `<div class="picbox page"${pg.src?"":` data-pic="1"`}><img class="picbg" src="${u}" alt="" aria-hidden="true"><div class="pagewrap"><img class="signimg" src="${u}" alt="photo">${regionsHTML({id:pg.shot},pg.rs,{learn:true,me:pg.me||d.id,only:!!pg.src})}</div></div>`; /* v499: a generated card (src) frames its own text alone; a v452 page front still frames every text — the wrapper shrinks to the picture's rendered size, so the regions' percent coordinates land on it; the blurred fill shows beside a tall page */
+  return `<div class="picbox page"${pg.src?"":` data-pic="1"`} style="--ratio:${ratioOf(d)}"><img class="picbg" src="${u}" alt="" aria-hidden="true"><div class="pagewrap"><img class="signimg" src="${u}" alt="photo">${regionsHTML({id:pg.shot},pg.rs,{learn:true,me:pg.me||d.id,only:!!pg.src})}</div></div>`; /* v499: a generated card (src) frames its own text alone; a v452 page front still frames every text — the wrapper shrinks to the picture's rendered size, so the regions' percent coordinates land on it; the blurred fill shows beside a tall page */
 }
 function frontPic(d,o){
   const pk=S.peek&&S.peek!==d.id?cardOf(S.peek):null; /* Learn: a linked card's photo, tapped in the "Also on another photo" row (v155) */
@@ -2634,7 +2641,7 @@ function frontPic(d,o){
      same height whatever shape the frame had (v224, H's "Go" on the design review after "Bitte consistency!"); the whole
      photo, a deliberate tap, keeps its own shape */
   const img=`<img class="signimg${S.fullPic&&full&&!pg?" full":""}" data-pic="1" src="${urlOf(blob)}" alt="photo">`;
-  return S.fullPic&&full&&!pg?img:`<div class="picbox" data-pic="1"><img class="picbg" src="${urlOf(blob)}" alt="" aria-hidden="true">${img}</div>`; /* the blurred fill behind the fitted crop, in the photo's colours (v229/v230) */
+  return S.fullPic&&full&&!pg?img:`<div class="picbox" data-pic="1" style="aspect-ratio:${ratioOf(d)}"><img class="picbg" src="${urlOf(blob)}" alt="" aria-hidden="true">${img}</div>`; /* the box's shape is the card's own (v514, D1) */ /* the blurred fill behind the fitted crop, in the photo's colours (v229/v230) */
 }
 /* a card saved before its reading is done (v237): the box shows the reading bar, or one plain line once the reading failed */
 const waitingHTML=d=>d.reading&&d.reading.failed?`<span class="wait failed">${t("Nothing could be read.")}</span>`:`<span class="wait">${busyHTML(t("Reading the text …"))}</span>`;
@@ -2896,6 +2903,7 @@ function renderStudy(main){
   wireSay(); wireLinks(); wireSrc(); wireLearnChips(); wireAi();
   mountPad(card,d,c,tg,st,cur);
   if(pg&&!S.fullPic) fitPageCover(card,pg); /* D5: the multicard's picture cover-fitted around the card's own text */
+  attachPicZoom(card.querySelector(".zone1 .picbox")); /* v514: pinch to zoom, one finger to pan (§ 4) */
   if(ansOpen&&cur) padLine(d,cur);
 }
 /* the characters of the card as the pad's targets, grouped by word (§ 5, Q3): one entry per character of the text, in the
@@ -2975,6 +2983,36 @@ function fitPageCover(card,pg){
     const left=Math.min(0,Math.max(bw-sw,bw/2-cx*sw)), top=Math.min(0,Math.max(bh-sh,bh/2-cy*sh));
     wrap.style.width=sw+"px"; wrap.style.height=sh+"px"; wrap.style.left=left+"px"; wrap.style.top=top+"px"; img.style.width=sw+"px"; img.style.height=sh+"px"; };
   if(img.complete) place(); else img.addEventListener("load",place,{once:true});
+}
+/* pinch and pan on the study card's picture (v514, § 4 — H: "Reinzoomen und verschieben im Bild ermöglichen"): two pointers
+   pinch around their midpoint, one pointer pans once the picture is enlarged, the view clamped so no gap opens that was not
+   there at rest; a tap without movement still swaps the crop for the whole photo (v55), and the next card resets it, since
+   the DOM is rebuilt. While enlarged the box carries touch-action none and its pointer events stop at the box, so neither the
+   page's scroll nor the carousel (v417) takes the pan. On a page front (D5) the pagewrap moves as one, so the regions stay on
+   their texts. The v65 sheet's attachRefView does the same on a canvas; this is the element itself, transformed. */
+const ZOOM_MAX=5;
+function attachPicZoom(box){
+  const tg=box&&(box.querySelector(".pagewrap")||box.querySelector(".signimg")); if(!tg) return;
+  const v={s:1,tx:0,ty:0,r0:null}, pts=new Map(); let last=null, moved=false, eat=false;
+  tg.style.transformOrigin="0 0";
+  const rel=e=>{ const b=box.getBoundingClientRect(); return {x:e.clientX-b.left,y:e.clientY-b.top}; };
+  const measure=()=>{ if(v.s===1||!v.r0){ const b=box.getBoundingClientRect(), r=tg.getBoundingClientRect(); v.r0={x:r.left-b.left,y:r.top-b.top,w:r.width,h:r.height}; } };
+  const apply=()=>{ const r=v.r0, bw=box.clientWidth, bh=box.clientHeight, cw=r.w*v.s, ch=r.h*v.s;
+    v.tx=cw<=bw?(bw-cw)/2-r.x:Math.min(-r.x,Math.max(bw-cw-r.x,v.tx)); v.ty=ch<=bh?(bh-ch)/2-r.y:Math.min(-r.y,Math.max(bh-ch-r.y,v.ty));
+    tg.style.transform=v.s>1?`translate(${v.tx}px,${v.ty}px) scale(${v.s})`:""; box.style.touchAction=v.s>1?"none":""; box.classList.toggle("zoomed",v.s>1); };
+  const summary=()=>{ const a=[...pts.values()]; if(a.length>=2){ return {x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2,d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}; } return a.length?{x:a[0].x,y:a[0].y,d:0}:null; };
+  const zoomAt=(m,s2)=>{ s2=Math.min(ZOOM_MAX,Math.max(1,s2)); const r=v.r0, px=(m.x-r.x-v.tx)/v.s, py=(m.y-r.y-v.ty)/v.s; v.s=s2; v.tx=m.x-r.x-px*s2; v.ty=m.y-r.y-py*s2; apply(); };
+  box.addEventListener("pointerdown",e=>{ if(e.button) return; measure(); pts.set(e.pointerId,rel(e)); last=summary(); moved=false;
+    if(pts.size>=2||v.s>1){ e.stopPropagation(); e.preventDefault(); try{ box.setPointerCapture(e.pointerId); }catch(x){} } });
+  box.addEventListener("pointermove",e=>{ if(!pts.has(e.pointerId)) return; pts.set(e.pointerId,rel(e)); const cur=summary(); if(!last||!cur){ last=cur; return; }
+    if(pts.size>=2){ e.stopPropagation(); e.preventDefault(); moved=true; if(last.d>0&&cur.d>0) zoomAt(cur,v.s*cur.d/last.d); v.tx+=cur.x-last.x; v.ty+=cur.y-last.y; apply(); }
+    else if(v.s>1){ e.stopPropagation(); e.preventDefault(); if(Math.hypot(cur.x-last.x,cur.y-last.y)>0) moved=true; v.tx+=cur.x-last.x; v.ty+=cur.y-last.y; apply(); }
+    last=cur; });
+  const up=e=>{ if(!pts.has(e.pointerId)) return; pts.delete(e.pointerId); last=summary(); if(moved) eat=true; };
+  box.addEventListener("pointerup",up); box.addEventListener("pointercancel",up);
+  box.addEventListener("click",e=>{ if(eat){ eat=false; e.stopPropagation(); e.preventDefault(); } },true); /* a pan's closing click is not the tap that swaps the picture */
+  box.addEventListener("wheel",e=>{ e.preventDefault(); measure(); zoomAt(rel(e),v.s*Math.pow(1.1,-e.deltaY/100)); },{passive:false});
+  box._zoom=v; /* used by the tests */
 }
 /* ---------- the write pad (v512): stroke by stroke over a template, as Duolingo does it ---------- */
 const PAD_MIN=200, TRACE_OK=0.18, NEXT_MS=900, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
@@ -3733,8 +3771,8 @@ function renderEdit(main,c){
     let handoff=null;
     if(willHand){ const rect={...CROP.rect}; const r=await cropBlob(rid,rect); if(r) handoff={rect,blob:r.blob}; } /* a reading still due or running for this frame (v244: an untouched or already read frame saves without one) */
     if(removeImg){ delete upd.img; delete upd.imgFull; delete upd.shot; delete upd.frame; dropThumb(c); } /* shot too — without it the front would still show the inbox photo through fullPhoto (v214) */
-    else if(handoff){ const win=await windowCut(rid,handoff.rect); upd.img=await cardJpeg(win?win.blob:handoff.blob); upd.frame=photoFrame(handoff.rect); dropThumb(c); } /* the 16:9 window around the frame (v329) */
-    else if(recropImg){ const win=recropRect?await windowCut(rid,recropRect):null; upd.img=await cardJpeg(win?win.blob:recropImg); if(recropRect) upd.frame=photoFrame(recropRect); dropThumb(c); } /* the crop framed again in this form (v239) with its frame (v244), as fractions of the whole photo even when framed in the window (v247) */
+    else if(handoff){ const win=await windowCut(rid,handoff.rect,ratioOf(upd)); upd.img=await cardJpeg(win?win.blob:handoff.blob); upd.frame=photoFrame(handoff.rect); dropThumb(c); } /* the 16:9 window around the frame (v329) */
+    else if(recropImg){ const win=recropRect?await windowCut(rid,recropRect,ratioOf(upd)):null; upd.img=await cardJpeg(win?win.blob:recropImg); if(recropRect) upd.frame=photoFrame(recropRect); dropThumb(c); } /* the crop framed again in this form (v239) with its frame (v244), as fractions of the whole photo even when framed in the window (v247) */
     if(upd.mt){ upd.mt={...upd.mt, verified:true, pending:false}; delete upd.mt.suspect; } /* a human edited it */
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
     else if(aiLate){ upd.mt={...(upd.mt||{}), src:"dict", verified:false, pending:false}; delete upd.mt.suspect; } /* unverified until the running AI check answers (v341); its failure marks the card pending for the next auto run */
@@ -3852,7 +3890,7 @@ async function cardImage(d){
   const lineH=Math.round(fs*1.2), textH=lines.length*lineH;
   ctx.font=`600 56px ${sans}`; const pin=d.p?wrapText(ctx,d.p,inner):[];
   ctx.font=`52px ${sans}`; const mean=d.m?wrapText(ctx,d.m,inner):[];
-  const bmp=d.img?await createImageBitmap(d.img):null, picH=bmp?Math.round(inner*9/16):0;
+  const bmp=d.img?await createImageBitmap(d.img):null, picH=bmp?Math.round(inner/ratioOf(d)):0; /* the box's shape follows the card (v514) */
   const H=SHARE_PAD+(bmp?picH+56:0)+textH+(pin.length?24+pin.length*72:0)+(mean.length?16+mean.length*68:0)+56+40+SHARE_PAD;
   cv.width=SHARE_W; cv.height=H;
   ctx.fillStyle="#FFFFFF"; ctx.fillRect(0,0,SHARE_W,H);
@@ -3931,6 +3969,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  514:"The picture on a card is wider now — as wide as the text is long — and you can pinch to zoom into it while learning. Your cards are cut again from their photos.",
   513:"Press and hold a character on a card to walk through every card that has it; tap it again to come back.",
   512:"Learn is a write pad now: trace the characters of the card stroke by stroke, and it moves on by itself. No more grade buttons.",
   511:"A screenshot can go with a Feedback message.",
@@ -4290,14 +4329,23 @@ const PENDING={}; /* shot id → the id of a card saved before its reading finis
 const PLACED={}, READ_APP={}, PICSEEN={}; /* v304, for a card saved with Save now: PLACED = the frame the reader or the AI placed on the text while the card waited (the card takes it as its frame and its crop), READ_APP = the reading started from the app's own frame, not the hand's (only such a frame may be moved); PICSEEN (v400) = the picture the AI actually read and the frame it was cut from — the one thing a card needs in order to ask, at save time, whether its own frame is anywhere near what the model said it saw (H: "Du würdest eine falsch gecroppte Karte doch selber erkennen, wenn Du den Crop noch mal prüfen würdest. Also ich meine die App.") */
 const frameOf=r=>({x:+(r.x/r.lw).toFixed(4),y:+(r.y/r.lh).toFixed(4),w:+(r.w/r.lw).toFixed(4),h:+(r.h/r.lh).toFixed(4),a:+(r.a||0).toFixed(1)}); /* the frame a card was cut with, as fractions of the photo (card.frame, v244) — Crop again starts from it */
 /* The card's picture is a 16:9 window around the text (v329, H: "does the 16:9 format make sense?" — measured on 21 photos: one-line signs run 2.3–6.8:1, posters and plates 0.9–1.6:1, so the tight crop filled the photo box's height or width only half and the rest was the blurred fill; "Go" on the window): the same centre as the frame, the frame's own angle, widened to FRAME_RATIO in the direction it lacks, never smaller than the frame, shifted to stay inside the photo and clamped to the photo's size — the text keeps its size and place in the box, the surroundings fill the rest. The card's frame stays the text's frame (Crop again starts from it); only the picture is the window. */
-function windowRect(r){ const {lw,lh}=r, a=r.a||0; let w=r.w, h=r.h;
-  if(w/h<FRAME_RATIO) w=h*FRAME_RATIO; else h=w/FRAME_RATIO;
+/* the window's shape follows the card's line count (v514, SPEC-flashcard-layout.md D1 — H: "Bei mehrzeilig aspect ratio höher als
+   2:1"): one photo line 2:1, two lines 3:2, three or more 4:3, never taller than 4:3. v329's 16:9 was the Cards tile's shape and
+   sat 22 px over the write pad's budget; a two-line sign is 0.9–1.6:1 by v329's own measurement, so a 2:1 window around it
+   showed the lines at two thirds of their size. The box on the card carries the same ratio inline (ratioOf), so a card's
+   box is the shape of its own picture — a deliberate step off v223's "one shape on every card". The ink-row PROPOSAL keeps
+   FRAME_RATIO (shapeBox, v207); this is the card's window only. */
+const frameRatio=n=>n<=1?2:n===2?1.5:4/3;
+const cardLines=d=>!d?1:d.kind==="sign"?String(d.c||"").split("\n").filter(Boolean).length:frontLines(d).length;
+const ratioOf=d=>frameRatio(cardLines(d));
+function windowRect(r,ratio){ const {lw,lh}=r, a=r.a||0, R=ratio||frameRatio(1); let w=r.w, h=r.h;
+  if(w/h<R) w=h*R; else h=w/R;
   w=Math.max(r.w,Math.min(w,lw)); h=Math.max(r.h,Math.min(h,lh));
   let x=r.x+r.w/2-w/2, y=r.y+r.h/2-h/2;
   if(!a){ x=Math.min(Math.max(0,x),Math.max(0,lw-w)); y=Math.min(Math.max(0,y),Math.max(0,lh-h)); }
   else { const ft=fitTurned({x,y,w,h},a,lw,lh,{u0:-r.w/2,u1:r.w/2,v0:-r.h/2,v1:r.h/2}); if(ft){ ({x,y,w,h}=ft); } } /* a turned window keeps its centre and gives up the widening that would leave the photo, never the frame itself (v333; in v329–v332 what lay outside took the area's colour through cropBlob, v185 — a wedge of fill beside a poster at 18°); a frame that sticks out itself stays as it is */
   return {x,y,w,h,a,lw,lh}; }
-async function windowCut(id,rect){ if(!rect||!rect.lw||!shotRec(id)) return null; try{ return await cropBlob(id,windowRect(rect)); }catch(e){ return null; } } /* the window's cut, or null when the photo is gone */
+async function windowCut(id,rect,ratio){ if(!rect||!rect.lw||!shotRec(id)) return null; try{ return await cropBlob(id,windowRect(rect,ratio)); }catch(e){ return null; } } /* the window's cut, or null when the photo is gone */
 const rectKey=r=>r?[r.x,r.y,r.w,r.h,r.a||0].map(v=>Math.round(v)).join(","):""; /* the same frame, give or take a pixel */
 async function placeFrame(id,f,opts){ /* a stored frame onto the photo's layer, then the preview — without the automatic reading when asked (v244) */
   const layer=document.querySelector(`.croplayer[data-id="${id}"]`), img=layer&&layer.parentElement.querySelector("img"); if(!layer) return;
@@ -6718,7 +6766,7 @@ async function provisionalCard(id,sg){
   try{
     const built=await readingCard(id,sg); if(!built||!built.card.c) return;
     const fr=PLACED[id]||(ph.reading.rect&&ph.reading.rect.lw?ph.reading.rect:null);
-    const win=fr?await windowCut(id,fr):null;
+    const win=fr?await windowCut(id,fr,ratioOf(built.card)):null; /* the window at the card's own ratio (v514) */
     const img=win?await cardJpeg(win.blob):ph.img;
     if(SIGN[id]!==sg||!sg.aiBusy||PENDING[id]!==ph.id) return; /* the check answered meanwhile, or the reading was replaced — the finished card is on its way */
     const {id:_i,at:_a,img:_m,shot:_s,mt:_t,...fields}=built.card;
@@ -6842,11 +6890,11 @@ async function finishPending(id){
     const {card,c,mt}=built, auto=!!ph.reading.auto, edit=!!ph.reading.edit;
     if(PLACED[id]) ph.frame=frameOf(PLACED[id]); else if(ph.reading.rect&&ph.reading.rect.lw) ph.frame=frameOf(ph.reading.rect); /* the frame the reader or the AI placed on the text while the card waited (v304), else the one it was saved with */
     const fr=PLACED[id]||(ph.reading.rect&&ph.reading.rect.lw?ph.reading.rect:null); /* for the window below, read before the card's fields are replaced (v329) */
-    numSet(id,"placed",numRect(PLACED[id]||null)); numSet(id,"cardFrame",ph.frame||null); numSet(id,"win",fr?numRect(windowRect(fr)):null); numCards(id,[ph.id]); numsFile(id); /* v399: windowRect and windowCut are the last two steps of the chain and have never left a trace, so even a perfect reconstruction of the frame did not explain the picture on the card */
+    numSet(id,"placed",numRect(PLACED[id]||null)); numSet(id,"cardFrame",ph.frame||null); numSet(id,"win",fr?numRect(windowRect(fr,ratioOf(card))):null); numCards(id,[ph.id]); numsFile(id); /* v399: windowRect and windowCut are the last two steps of the chain and have never left a trace, so even a perfect reconstruction of the frame did not explain the picture on the card */
     for(const k of Object.keys(ph)) if(!["id","at","img","imgFull","shot","tags","frame"].includes(k)) delete ph[k];
     const {id:_i,at:_a,img:_m,shot:_s,...fields}=card; Object.assign(ph,fields);
     if(sg.cardImg){ ph.img=await cardJpeg(sg.cardImg); dropThumb(ph.id); } /* the list's thumbnail was made from the crop saved first (v242, H: "the card with a photo before the re-crop remains") */
-    { const win=fr?await windowCut(id,fr):null; if(win){ ph.img=await cardJpeg(win.blob); dropThumb(ph.id); } } /* the 16:9 window around the text (v329) — the tight cut only when the photo is gone */
+    { const win=fr?await windowCut(id,fr,ratioOf(card)):null; if(win){ ph.img=await cardJpeg(win.blob); dropThumb(ph.id); } } /* the window around the text at the card's own ratio (v329, v514) — the tight cut only when the photo is gone */
     const weak=!!(mt.suspect||sg.weak||(sg.ai&&sg.ai.bad));
     if(auto||edit){ if(mt.suspect||(sg.ai&&sg.ai.bad)||(sg.weak&&!vouched)){ ph.flag=true; ph.flagNote=t("the reading looks unsure — check text, pinyin and meaning"); } }
     else { ph.flag=true; ph.flagNote=weak?t("saved before the reading was done, and the reading is weak — check text, pinyin and meaning"):t("saved before the reading was done — check text, pinyin and meaning"); } /* nobody saw the preview (v245, H: "flag cards that were saved before the final stage, with an appropriate comment") */
@@ -7611,11 +7659,11 @@ async function saveSign(id){
   const {card,c,mt}=built;
   if(deck().some(d=>d.c===c&&d.shot===id)){ sg.aiErr=t("This text is already saved from this photo."); renderShots(); return; } /* the same text from another photo is a new card (H, v118) */
   const pic=sg.cardImg||S.pendingImg; if(pic) card.img=await cardJpeg(pic);
-  { const win=CROP&&CROP.id===id&&CROP.rect?await windowCut(id,CROP.rect):null; if(win) card.img=await cardJpeg(win.blob); } /* the 16:9 window around the text (v329) */
+  { const win=CROP&&CROP.id===id&&CROP.rect?await windowCut(id,CROP.rect,ratioOf(card)):null; if(win) card.img=await cardJpeg(win.blob); } /* the window around the text at the card's own ratio (v329, v514) */
   if(S.pendingFull&&!S.inbox.some(x=>x.id===id)) card.imgFull=S.pendingFull; /* the whole photo stays in the inbox, not twice (v214) */
   S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; /* used up — the Add form once showed the last photo's crop on a card made from scratch (v188) */
   if(CROP&&CROP.id===id&&CROP.rect) card.frame=frameOf(CROP.rect); /* the frame, for Crop again (v244) */
-  numSet(id,"cardFrame",card.frame||null); numSet(id,"win",CROP&&CROP.id===id&&CROP.rect?numRect(windowRect(CROP.rect)):null); numCards(id,[card.id]); numsFile(id); /* v399 */
+  numSet(id,"cardFrame",card.frame||null); numSet(id,"win",CROP&&CROP.id===id&&CROP.rect?numRect(windowRect(CROP.rect,ratioOf(card))):null); numCards(id,[card.id]); numsFile(id); /* v399 */
   bump("byPhoto"); S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
   todoDone(id); /* v509: the photo has its card */

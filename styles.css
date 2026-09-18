@@ -678,3 +678,6 @@ body.noscroll{overflow:hidden}
 /* a locked character (v513, § 7): the tint ring on its button, on every card of its walk */
 .chrow .ch.lock{box-shadow:inset 0 0 0 2.5px var(--tint)}
 .chrow .ch.lock.cur{box-shadow:inset 0 0 0 2.5px var(--tint),inset 0 0 0 5px var(--card)}
+/* the study card's picture: the box follows the card's own ratio (v514, D1 — inline on .picbox, --ratio on a page front) */
+.card.study .picbox.page{aspect-ratio:var(--ratio,2)}
+.picbox.zoomed{touch-action:none} .picbox.zoomed .signimg,.picbox.zoomed .pagewrap{will-change:transform}
