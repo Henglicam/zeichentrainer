@@ -89,13 +89,7 @@ button,.tab,.chip,.chipset,.pill,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg
 .grades{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:22px}
 /* the two-button vote on the Learn back (v497; the markup and these rules are v487's sheet vote, which v488 removed): a red
    cross Not yet and a green check Got it, the app's own two states (v461), in the two states' soft colours */
-.vote{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px}
-.vt{display:flex;align-items:center;justify-content:center;gap:7px;min-height:62px;border:0;border-radius:var(--r);font:600 17px/1.2 var(--ui);cursor:pointer}
-.vt i{display:inline-flex;width:18px;height:18px}
-.vt .lbl{color:inherit;margin:0} /* the page-wide .lbl rule sets --label2 and a right margin, and inheritance loses to any matching rule — the v421 lesson */
-.vt svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.vt.no{background:var(--tint-soft);color:var(--tint)}
-.vt.yes{background:var(--ok-soft);color:var(--ok)}
+/* .vote/.vt — the two-button vote of v497 — went with the write pad (v512) */
 .grade{display:flex;align-items:center;justify-content:center;min-height:62px;background:var(--card2);
   color:var(--label);cursor:pointer;border:none;border-radius:var(--r);padding:8px 4px}
 .grade[data-g="again"]{background:var(--tint-soft);color:var(--tint)}
@@ -642,3 +636,42 @@ body.noscroll{overflow:hidden}
 .crow .pdot svg{width:12px;height:12px;stroke:#fff;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
 /* the Multicard's row: the thumbnail is a stack of plates with the count on it, and a bar says how far through it you
    are. The three plates together are exactly the 124 x 70 the row's first column already reserves, so no row grows. */
+
+/* ---------- the write layout of Learn (v512, SPEC-flashcard-layout.md phase 1): the photo with the flag in its corner, the
+   character buttons grouped by word, the folded answer block, the square pad and the line under it ---------- */
+.card.study{padding-top:16px}
+.card.study .zone1{position:relative}
+.card.study .zone1 .picbox{margin-bottom:0}
+.picflag{position:absolute;right:8px;top:8px;width:36px;height:36px;border:none;border-radius:999px;background:rgba(255,255,255,.85);color:var(--label3);font-size:18px;line-height:36px;padding:0;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.25)} /* the review flag on the picture, as the star sits on a tile (v465) */
+.picflag.on{color:var(--tint)}
+.chrow{margin-top:12px;display:flex;flex-direction:column;gap:8px;align-items:center}
+.chline{display:flex;flex-wrap:wrap;justify-content:center;gap:10px} /* one row per photo line; a line wider than the card wraps here */
+.chw{display:inline-flex;gap:2px;padding:2px;border-radius:12px;box-shadow:inset 0 0 0 1px var(--sep);background:var(--card2)} /* the buttons of one word sit on one tile (Q3) */
+.chrow .ch{position:relative;font-family:var(--hanzi);font-size:30px;width:56px;height:56px;padding:0;border:none;border-radius:10px;background:var(--card);color:var(--label);box-shadow:inset 0 0 0 1px var(--sep);cursor:pointer;user-select:none}
+.chrow .ch.cur{background:var(--tint);color:#fff;box-shadow:none} /* the one in the pad */
+.chrow .ch.done{background:var(--ok-soft);color:var(--ok);box-shadow:none} /* written this session */
+.chrow .ch.done.cur{background:var(--tint);color:#fff}
+.chrow .ch.num{font-family:var(--sans);font-size:17px;font-weight:600;width:auto;padding:0 10px;color:var(--label2)} /* a number with its unit: one button, not writable */
+.chrow .ch .tick{position:absolute;right:3px;bottom:3px;width:14px;height:14px;display:inline-flex}
+.chrow .ch .tick svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.fold{margin-top:12px;text-align:left}
+.foldbtn{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;border:none;background:var(--card2);border-radius:var(--r);padding:0 12px;font:500 15px var(--ui);color:var(--label2);cursor:pointer;text-align:left}
+.foldbtn i{margin-left:auto;font-style:normal;font-size:18px;line-height:1;transition:transform .15s} .fold.open .foldbtn i{transform:rotate(180deg)}
+.fold .ans{padding-top:12px;text-align:center}
+.pill.again{margin-left:0;background:var(--tint-soft);color:var(--tint)} /* the repeat pass of a written card (§ 8.1) */
+.padwrap{position:relative;margin-top:12px;display:flex;justify-content:center}
+.wpad{display:block;border-radius:var(--rc);background:var(--card2);touch-action:none;box-shadow:inset 0 0 0 1px var(--sep)} /* the pad takes the finger: a stroke is never a swipe */
+.wpad.ghost{width:100%;aspect-ratio:1} /* the carousel's neighbour carries an empty square of the pad's shape */
+.wpad.shake{animation:padshake .24s}
+@keyframes padshake{0%,100%{transform:none}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+@media(prefers-reduced-motion:reduce){.wpad.shake{animation:none}}
+.chev{position:absolute;top:50%;width:36px;height:56px;margin-top:-28px;border:none;background:none;color:var(--label3);font-size:30px;line-height:56px;padding:0;cursor:pointer} /* the previous / next card, in the card's own padding beside the pad (§ 3.2) */
+.chev.l{left:-18px} .chev.r{right:-18px}
+.padline{margin-top:10px;font-size:15px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;justify-content:center;gap:10px;align-items:baseline}
+.padline .hanzi{font-family:var(--hanzi);font-size:20px;color:var(--label)} .padline .hanzi b{color:var(--tint);font-weight:400} .padline .mono{font-weight:600}
+.padacts{display:flex;justify-content:center;gap:2px 14px;flex-wrap:wrap;margin-top:6px} .padacts .del{font-size:15px;padding:8px 6px;min-height:40px}
+/* the multicard's picture on the study card (D5, v512): cover-fitted in the ordinary box around the card's own text; the
+   pagewrap is sized and offset by fitPageCover, so the regions' percent coordinates still land on the picture */
+.card.study .picbox.page{aspect-ratio:16/9;height:auto;max-height:none;display:block}
+.card.study .picbox.page .pagewrap{position:absolute;left:0;top:0;margin:0;max-width:none;max-height:none}
+.card.study .picbox.page .pagewrap .signimg{max-width:none;max-height:none}
