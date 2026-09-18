@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=507; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=508; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -593,6 +593,8 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["again","v508","小程序 again: grey panel stays grey"],
+  ["update","v508","deck cut again: no black panels"],
   ["photo","v507","a broken pinyin (xio) is replaced"],
   ["app","v506","Cards: a text-only tile shows the whole word"],
   ["app","v505","Diagnostics: 100 readings survive a batch"],
@@ -2040,7 +2042,7 @@ async function brightenPass(){
 const RC_BATCH=10, RC_PAUSE=60, RC_WAIT=2000, RC_TOLPX=2, RC_TOL=0.01, RC_CORR=0.8, RC_THUMB=32, RC_INSIDE=0.5;
 const frameKey=f=>f?[f.x,f.y,f.w,f.h,f.a||0].join(","):""; /* the same rectangle, to the number */
 let RECUT=null;
-const RECUT_V=2; /* v418: the pictures the v398 curve made carry its white balance baked in, so the deck is walked once more */
+const RECUT_V=3; /* v418: the pictures the v398 curve made carry its white balance baked in, so the deck is walked once more; v508: the pictures the flat clause blackened are cut again the same way */
 async function recutPass(){
   if(RECUT||S.settings.recutPass>=RECUT_V) return;
   const ids=deck().filter(d=>d.img&&d.frame&&!d.reading&&fullPhoto(d)).map(d=>d.id); /* a card still waiting for its reading belongs to finishPending, which holds it across an await and writes it whole (v398) */
@@ -3704,6 +3706,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  508:"A card picture with a light grey ground is no longer darkened to black, and the cards already made are cut again from their photos.",
   497:"Two buttons under a card instead of three: Not yet, and Got it.",
   494:"While learning a flashcard made from a multicard, tap its name under the meaning to look at the multicard — and come straight back to the card you were on.",
   492:"Open a multicard from a flashcard and the button at the top left takes you straight back to that card.",
@@ -4615,10 +4618,25 @@ async function jpegOf(blob,q){
    "Some Cards really look bad because their part of the image was in the shade"). The 1st and 99th percentile of the
    luminance are stretched to black and white — a straight stretch, no gamma: a poster on a dark wall is not
    underexposed, and lifting its midtones would wash it out. So the test is the highlight end, not the median: a
-   picture whose brightest pixels stay under BR_HI has no light in it, and one whose span is under BR_SPAN is flat.
-   Measured on the real photos of the harness: all seven rice-cooker labels come out readable, and 绿皮书, 流浪地球,
-   the scooter badge, the Nongfu bottle, the parking sign and the whole washing-machine panel are left as they are.
-   It is idempotent — a stretched picture measures "fine" the next time.
+   picture whose brightest pixels stay under BR_HI has no light in it. Until v507 a second clause called a picture
+   "flat" when its span was under BR_SPAN 120 even with light in it, and that clause was the fault behind H's 小程序
+   cards (v508, the crop analysis of 2026-09-18: a grey-green panel with white characters came back black, "Go for the
+   brightening fix too") and behind the saturated pink of his 福 card (v418, reported and left): a picture that has
+   light (hi ≥ 200) and a span under 120 has, by arithmetic, a black point above 80 — the flat clause could only ever
+   fire on a bright picture with nothing dark in it, and the curve then sent that mid-grey ground to zero. The same
+   thing happens under the first clause when the white characters are less than a hundredth of the crop, so that hi is
+   the panel's own brighter half: a panel at 105–150 has no light by the highlight test, and the stretch makes 105
+   black. Neither picture is in the shade — a picture whose DARKEST hundredth is already mid-grey is a bright surface
+   with a low-contrast subject, and stretching it invents shadow. So the second test is the black end: a picture whose
+   1st percentile is at BR_DARK or above is left alone whatever its highlight, and the span clause is gone (it was
+   dead by construction once the dark end is tested — hi ≥ 200 with span < 120 is lo > 80). Where BR_DARK comes from,
+   honestly: the v398 corpus of 26 crops is not in this scratchpad, so their black points could not be re-measured;
+   the 福 card's is recorded at 88 (v418) and must be refused, the ink of a label in shade reads at 10–50 in a camera
+   JPEG, and 64 sits between them. What it costs, named: a hazy, washed-out photo whose black point is mid-grey and
+   whose highlight is under 200 is no longer stretched and keeps its haze — no such card is on record.
+   Measured on the real photos of the harness at v372: all seven rice-cooker labels come out readable, and 绿皮书,
+   流浪地球, the scooter badge, the Nongfu bottle, the parking sign and the whole washing-machine panel are left as
+   they are. It is idempotent — a stretched picture measures "fine" the next time.
    The stretch is per channel, which is a white balance (v375, H: "kannst du beim brightening noch einen
    Weissabgleich machen, damit alle bilder aus einem batch gleich aussehen?"): the labels cut from one panel each
    carried their own share of the light's colour, so seven cards of one photo came out in seven different tints.
@@ -4635,7 +4653,7 @@ async function jpegOf(blob,q){
    under the one curve), so the card's blue is stronger than the photo's, not the photo's own blue. It reads better
    than the swamp green and it is not the photo's colour. The other 19 crops are not stretched at all and never reach
    this test — the panel photos among them carry their highlight in the white strokes and lit icons. */
-const BR_HI=200, BR_SPAN=120, BR_MIN=24, BR_GAIN=40, BR_CLIP=0.01, BR_SAMPLE=200000, BR_WB=1.5, BR_LO=30, BR_KNEE=246; /* the highlight shoulder (v396), the black-point spread (v418) */
+const BR_HI=200, BR_DARK=64, BR_MIN=24, BR_GAIN=40, BR_CLIP=0.01, BR_SAMPLE=200000, BR_WB=1.5, BR_LO=30, BR_KNEE=246; /* the highlight shoulder (v396), the black-point spread (v418), the dark end (v508) */
 function brightLut(px){ /* one curve per channel: red, green, blue */
   const h=[new Uint32Array(256),new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)]; let n=0; /* 0 luminance, 1-3 the channels */
   const step=4*Math.max(1,Math.ceil(px.length/4/BR_SAMPLE)); /* a big picture is measured on a sample, the curve then runs over every pixel */
@@ -4644,7 +4662,7 @@ function brightLut(px){ /* one curve per channel: red, green, blue */
   const at=(k,q)=>{ let c=0; const need=q*n; for(let v=0;v<256;v++){ c+=h[k][v]; if(c>=need) return v; } return 255; };
   const lo=at(0,BR_CLIP), hi=at(0,1-BR_CLIP);
   if(hi-lo<BR_MIN) return null; /* nothing but noise to stretch */
-  if(hi>=BR_HI&&hi-lo>=BR_SPAN) return null; /* light and lively: leave it alone */
+  if(hi>=BR_HI||lo>=BR_DARK) return null; /* it has light, or nothing dark to lift out of the shade: leave it alone (v508 — until v507 a picture with light and a span under 120 was stretched as "flat", and its mid-grey ground went black) */
   const ends=[1,2,3].map(k=>{ const a=at(k,BR_CLIP), b=at(k,1-BR_CLIP); return {lo:a,span:b-a}; });
   const wide=Math.max(...ends.map(e=>e.span)), narrow=Math.min(...ends.map(e=>e.span));
   const loSpread=Math.max(...ends.map(e=>e.lo))-Math.min(...ends.map(e=>e.lo));
