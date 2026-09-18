@@ -34,6 +34,7 @@ function nOf(n,w,pl){ n=n||0; const tr=wordOf(n,w,pl); return tr.includes("{0}")
 const L10N={
 en:{"bar:AI suggestion":"AI suggestion","bar:AI suggestions":"AI suggestions","card:⚑ Flagged":"⚑ Flagged","capsule:Done":"Done","pad:Undo":"Undo","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
 de:{
+  "Press and hold a character to walk through every card that has it; tap it again to come back.":"Halte ein Zeichen gedrückt, um alle Karten damit durchzugehen; tipp es noch einmal an, um zurückzukommen.",
   "Pinyin and meaning":"Pinyin und Bedeutung",
   "Show me":"Zeig mir",
   "Skip":"Überspringen",
@@ -318,6 +319,7 @@ de:{
   "Day streak":"Tage in Folge","Cards learned":"Karten gelernt","Due today":"Heute fällig","Reviews this week":"Wiederholungen diese Woche","Last 30 days":"Die letzten 30 Tage","Still learning":"Noch am Lernen","Known":"Sicher","Coming up: {0} due tomorrow, {1} this week.":"Demnächst: {0} morgen fällig, {1} diese Woche."
 },
 fr:{
+  "Press and hold a character to walk through every card that has it; tap it again to come back.":"Maintiens un caractère appuyé pour parcourir toutes les cartes qui le contiennent ; touche-le à nouveau pour revenir.",
   "Pinyin and meaning":"Pinyin et sens",
   "Show me":"Montre-moi",
   "Skip":"Passer",
@@ -602,6 +604,7 @@ fr:{
   "Day streak":"Jours d'affilée","Cards learned":"Cartes apprises","Due today":"À revoir aujourd'hui","Reviews this week":"Révisions cette semaine","Last 30 days":"Les 30 derniers jours","Still learning":"En cours","Known":"Acquises","Coming up: {0} due tomorrow, {1} this week.":"À venir : {0} demain, {1} cette semaine."
 },
 es:{
+  "Press and hold a character to walk through every card that has it; tap it again to come back.":"Mantén pulsado un carácter para recorrer todas las tarjetas que lo tienen; tócalo otra vez para volver.",
   "Pinyin and meaning":"Pinyin y significado",
   "Show me":"Muéstrame",
   "Skip":"Saltar",
@@ -886,6 +889,7 @@ es:{
   "Day streak":"Días seguidos","Cards learned":"Tarjetas aprendidas","Due today":"Para hoy","Reviews this week":"Repasos esta semana","Last 30 days":"Últimos 30 días","Still learning":"En curso","Known":"Dominadas","Coming up: {0} due tomorrow, {1} this week.":"Próximamente: {0} mañana, {1} esta semana."
 },
 ja:{
+  "Press and hold a character to walk through every card that has it; tap it again to come back.":"文字を長押しすると、その文字が入ったカードを順に見られます。もう一度タップすると戻ります。",
   "Pinyin and meaning":"ピンインと意味",
   "Show me":"見せて",
   "Skip":"スキップ",
@@ -1170,6 +1174,7 @@ ja:{
   "Day streak":"連続日数","Cards learned":"学んだカード","Due today":"今日の復習","Reviews this week":"今週の復習回数","Last 30 days":"過去30日","Still learning":"学習中","Known":"定着","Coming up: {0} due tomorrow, {1} this week.":"この先：明日{0}枚、今週{1}枚。"
 },
 ko:{
+  "Press and hold a character to walk through every card that has it; tap it again to come back.":"글자를 길게 누르면 그 글자가 든 카드를 차례로 볼 수 있어요. 다시 누르면 돌아와요.",
   "Pinyin and meaning":"병음과 뜻",
   "Show me":"보여줘",
   "Skip":"건너뛰기",
@@ -1457,6 +1462,7 @@ ko:{
    word, so every plural key carries a "#many" twin (5 карточек, 11 карточек, 111 карточек) that only PLURAL.ru ever looks
    up; "percent#few" is the one unit that also needs its own middle form, because English calls both of its forms "percent". */
 ru:{
+  "Press and hold a character to walk through every card that has it; tap it again to come back.":"Удерживай иероглиф, чтобы пройти по всем карточкам с ним; нажми его ещё раз, чтобы вернуться.",
   "Pinyin and meaning":"Пиньинь и значение",
   "Show me":"Покажи",
   "Skip":"Пропустить",
@@ -1741,6 +1747,7 @@ ru:{
   "Day streak":"Дней подряд","Cards learned":"Выучено карточек","Due today":"Сегодня к повтору","Reviews this week":"Повторов за неделю","Last 30 days":"Последние 30 дней","Still learning":"В процессе","Known":"Освоено","Coming up: {0} due tomorrow, {1} this week.":"Впереди: завтра {0}, на этой неделе {1}."
 },
 vi:{
+  "Press and hold a character to walk through every card that has it; tap it again to come back.":"Nhấn giữ một chữ để đi qua mọi thẻ có chữ đó; chạm lại để quay về.",
   "Pinyin and meaning":"Pinyin và nghĩa",
   "Show me":"Chỉ cho mình",
   "Skip":"Bỏ qua",
@@ -2025,6 +2032,7 @@ vi:{
   "Day streak":"Chuỗi ngày","Cards learned":"Thẻ đã học","Due today":"Đến hạn hôm nay","Reviews this week":"Lượt ôn tuần này","Last 30 days":"30 ngày qua","Still learning":"Đang học","Known":"Đã thuộc","Coming up: {0} due tomorrow, {1} this week.":"Sắp tới: {0} đến hạn ngày mai, {1} trong tuần."
 },
 th:{
+  "Press and hold a character to walk through every card that has it; tap it again to come back.":"กดค้างที่ตัวอักษรเพื่อไล่ดูทุกการ์ดที่มีตัวนั้น แตะอีกครั้งเพื่อกลับ",
   "Pinyin and meaning":"พินอินและความหมาย",
   "Show me":"ดูวิธี",
   "Skip":"ข้าม",
@@ -2309,6 +2317,7 @@ th:{
   "Day streak":"วันต่อเนื่อง","Cards learned":"การ์ดที่เรียนแล้ว","Due today":"ถึงกำหนดวันนี้","Reviews this week":"ทบทวนสัปดาห์นี้","Last 30 days":"30 วันล่าสุด","Still learning":"กำลังเรียน","Known":"จำได้แล้ว","Coming up: {0} due tomorrow, {1} this week.":"ที่กำลังจะมา: พรุ่งนี้ {0} ใบ · สัปดาห์นี้ {1} ใบ"
 },
 id:{
+  "Press and hold a character to walk through every card that has it; tap it again to come back.":"Tekan dan tahan sebuah karakter untuk menelusuri semua kartu yang memuatnya; ketuk lagi untuk kembali.",
   "Pinyin and meaning":"Pinyin dan arti",
   "Show me":"Tunjukkan",
   "Skip":"Lewati",
