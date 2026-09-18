@@ -13,7 +13,7 @@ const LANG_NAME={en:"English",de:"German",fr:"French",es:"Spanish",ja:"Japanese"
 let LANG="en";
 function langDefault(){ let l=String(navigator.language||"").toLowerCase().slice(0,2); if(l==="in") l="id"; /* Android's locale layer still hands out the legacy code "in" for Indonesian and Chromium passes it through, so the phone would have opened in English (v402) */
   return LANGS.some(([c])=>c===l)?l:"en"; }
-function t(key,...args){ const d=L10N[LANG]; let s=d&&d[key]!=null?d[key]:null; if(s==null) s=L10N.en&&L10N.en[key]!=null?L10N.en[key]:key; /* a key with a prefix ("capsule:Done") has its English in the en column */ return args.length?s.replace(/\{(\d)\}/g,(m,i)=>args[+i]!=null?args[+i]:m):s; }
+function t(key,...args){ const d=L10N[LANG]; let s=d&&d[key]!=null?d[key]:null; if(s==null) s=L10N.en&&L10N.en[key]!=null?L10N.en[key]:key; /* a key with a prefix ("pad:Undo") has its English in the en column */ return args.length?s.replace(/\{(\d)\}/g,(m,i)=>args[+i]!=null?args[+i]:m):s; }
 /* how many forms a count word has (v401, H: "Ergaenze russisch als sprache"): English and the five languages of v253 get by
    with two — one and many —, Russian needs three: 1 карточка, 2–4 карточки, 5–20 карточек, chosen by the last digit with
    the teens as the exception (11 карточек, 21 карточка, 111 карточек, 121 карточка); an amount with a decimal point takes
@@ -32,8 +32,9 @@ function wordOf(n,w,pl){ const d=L10N[LANG], pk=pl||w+"s", f=pForm(n);
 /* a count with its word: nOf(3,"card") → "3 cards" / "3 Karten" / "カード3枚" / "3 карточки"; pl = an irregular plural key */
 function nOf(n,w,pl){ n=n||0; const tr=wordOf(n,w,pl); return tr.includes("{0}")?tr.replace("{0}",n):`${n} ${tr}`; }
 const L10N={
-en:{"bar:AI suggestion":"AI suggestion","bar:AI suggestions":"AI suggestions","card:⚑ Flagged":"⚑ Flagged","capsule:Done":"Done","pad:Undo":"Undo","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
+en:{"bar:AI suggestion":"AI suggestion","bar:AI suggestions":"AI suggestions","card:⚑ Flagged":"⚑ Flagged","tile:New":"New","pad:Undo":"Undo","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
 de:{
+  "Not yet checked":"Noch nicht geprüft","tile:New":"Neu",
   "Press and hold a character to walk through every card that has it; tap it again to come back.":"Halte ein Zeichen gedrückt, um alle Karten damit durchzugehen; tipp es noch einmal an, um zurückzukommen.",
   "Pinyin and meaning":"Pinyin und Bedeutung",
   "Show me":"Zeig mir",
@@ -198,7 +199,7 @@ de:{
   "the reading failed — edit the card or frame the photo again":"das Lesen ist fehlgeschlagen – bearbeite die Karte oder rahme das Foto neu ein",
   "the reading looks wrong":"die Lesung scheint falsch",
   "time":"{0}-mal","times":"{0}-mal",
-  "Due":"Fällig","capsule:Done":"Fertig","Deck":"Karten","Learn":"Lernen","Cards":"Karten","Multicards":"Multicards","Camera":"Kamera","More":"Mehr",
+  "Deck":"Karten","Learn":"Lernen","Cards":"Karten","Multicards":"Multicards","Camera":"Kamera","More":"Mehr",
   "Generate flashcard":"Karte erstellen",
   "← Back to the flashcard":"← Zurück zur Karte",
   
@@ -295,7 +296,7 @@ de:{
   "Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in.":"Ausschnitt rahmt ein Foto von Hand ein, mit einer Vorschau, bevor die Karte gespeichert wird – tipp es an, während die App noch liest, dann stoppt die automatische Karte und du kannst den gefundenen Rahmen anpassen. Eilig? Jetzt speichern macht die Karte sofort, und das Lesen füllt sie nach.",
   "Fix the characters":"Zeichen korrigieren",
   "Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once.":"Unter dem Foto ist jedes Zeichen ein Knopf. Tipp eines an für andere Lesungen, oder zeichne es mit dem Finger, wenn das richtige fehlt. Tipp die Zeile unter der Leiste ein, um sie zu ersetzen. Auswählen entfernt mehrere Zeichen auf einmal.",
-  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.":"Pinyin und Bedeutung folgen den Zeichen. Ist die KI an, prüft sie beides vor dem Speichern. Markiere die Karte, wenn noch etwas falsch aussieht.",
+  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. A new card counts as not yet checked until you have written it in Learn or opened it, and the filter shows those alone; flag a card yourself when something looks wrong.":"Pinyin und Bedeutung folgen den Zeichen. Ist die KI an, prüft sie beides vor dem Speichern. Eine neue Karte gilt als noch nicht geprüft, bis du sie in Lernen geschrieben oder geöffnet hast – der Filter zeigt dir genau diese; markiere eine Karte selbst, wenn etwas falsch aussieht.",
   
   "Swipe left or right to pick another card.":"Wisch nach links oder rechts, um eine andere Karte zu wählen.",
 
@@ -319,6 +320,7 @@ de:{
   "Day streak":"Tage in Folge","Cards learned":"Karten gelernt","Due today":"Heute fällig","Reviews this week":"Wiederholungen diese Woche","Last 30 days":"Die letzten 30 Tage","Still learning":"Noch am Lernen","Known":"Sicher","Coming up: {0} due tomorrow, {1} this week.":"Demnächst: {0} morgen fällig, {1} diese Woche."
 },
 fr:{
+  "Not yet checked":"Pas encore vérifiées","tile:New":"Nouvelle",
   "Press and hold a character to walk through every card that has it; tap it again to come back.":"Maintiens un caractère appuyé pour parcourir toutes les cartes qui le contiennent ; touche-le à nouveau pour revenir.",
   "Pinyin and meaning":"Pinyin et sens",
   "Show me":"Montre-moi",
@@ -483,7 +485,7 @@ fr:{
   "the reading failed — edit the card or frame the photo again":"la lecture a échoué – modifie la carte ou recadre la photo",
   "the reading looks wrong":"la lecture semble fausse",
   "time":"{0} fois","times":"{0} fois",
-  "Due":"À faire","capsule:Done":"Faites","Deck":"Cartes","Learn":"Apprendre","Cards":"Cartes","Multicards":"Multicartes","Camera":"Photo","More":"Plus",
+  "Deck":"Cartes","Learn":"Apprendre","Cards":"Cartes","Multicards":"Multicartes","Camera":"Photo","More":"Plus",
   "Generate flashcard":"Créer une carte",
   "← Back to the flashcard":"← Retour à la carte",
   
@@ -580,7 +582,7 @@ fr:{
   "Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in.":"Cadrer encadre une photo à la main, avec un aperçu avant que la carte soit enregistrée – touche-le pendant que l'appli lit encore : la carte automatique s'arrête et tu peux ajuster le cadre trouvé. Pressé ? Enregistrer maintenant crée la carte tout de suite et la lecture la remplit.",
   "Fix the characters":"Corriger les caractères",
   "Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once.":"Sous la photo, chaque caractère est un bouton. Touche-en un pour d'autres lectures, ou dessine-le avec le doigt quand le bon manque. Saisis la ligne sous la bande pour la remplacer. Sélectionner retire plusieurs caractères d'un coup.",
-  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.":"Le pinyin et le sens suivent les caractères. Avec l'IA activée, elle les vérifie avant l'enregistrement. Signale la carte si quelque chose semble encore faux.",
+  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. A new card counts as not yet checked until you have written it in Learn or opened it, and the filter shows those alone; flag a card yourself when something looks wrong.":"Le pinyin et le sens suivent les caractères. Avec l'IA activée, elle les vérifie avant l'enregistrement. Une nouvelle carte compte comme pas encore vérifiée tant que tu ne l'as pas écrite dans Apprendre ou ouverte, et le filtre te montre celles-là seules ; signale toi-même une carte quand quelque chose semble faux.",
   
   "Swipe left or right to pick another card.":"Balaie vers la gauche ou la droite pour choisir une autre carte.",
 
@@ -604,6 +606,7 @@ fr:{
   "Day streak":"Jours d'affilée","Cards learned":"Cartes apprises","Due today":"À revoir aujourd'hui","Reviews this week":"Révisions cette semaine","Last 30 days":"Les 30 derniers jours","Still learning":"En cours","Known":"Acquises","Coming up: {0} due tomorrow, {1} this week.":"À venir : {0} demain, {1} cette semaine."
 },
 es:{
+  "Not yet checked":"Sin revisar todavía","tile:New":"Nueva",
   "Press and hold a character to walk through every card that has it; tap it again to come back.":"Mantén pulsado un carácter para recorrer todas las tarjetas que lo tienen; tócalo otra vez para volver.",
   "Pinyin and meaning":"Pinyin y significado",
   "Show me":"Muéstrame",
@@ -768,7 +771,7 @@ es:{
   "the reading failed — edit the card or frame the photo again":"la lectura falló: edita la tarjeta o encuadra la foto de nuevo",
   "the reading looks wrong":"la lectura parece incorrecta",
   "time":"{0} vez","times":"{0} veces",
-  "Due":"Pendientes","capsule:Done":"Hechas","Deck":"Tarjetas","Learn":"Aprender","Cards":"Tarjetas","Multicards":"Multitarjetas","Camera":"Cámara","More":"Más",
+  "Deck":"Tarjetas","Learn":"Aprender","Cards":"Tarjetas","Multicards":"Multitarjetas","Camera":"Cámara","More":"Más",
   "Generate flashcard":"Crear tarjeta",
   "← Back to the flashcard":"← Volver a la tarjeta",
   
@@ -865,7 +868,7 @@ es:{
   "Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in.":"Recortar encuadra una foto a mano, con una vista previa antes de guardar la tarjeta: tócalo mientras la app aún lee y la tarjeta automática se detiene, así puedes ajustar el marco que encontró. ¿Con prisa? Guardar ahora crea la tarjeta al momento y la lectura la rellena.",
   "Fix the characters":"Corregir los caracteres",
   "Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once.":"Bajo la foto cada carácter es un botón. Toca uno para otras lecturas, o dibújalo con el dedo cuando falte el correcto. Escribe la línea bajo la tira para reemplazarla. Seleccionar quita varios caracteres a la vez.",
-  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.":"El pinyin y el significado siguen a los caracteres. Con la IA activada, los revisa antes de guardar. Marca la tarjeta si algo sigue pareciendo mal.",
+  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. A new card counts as not yet checked until you have written it in Learn or opened it, and the filter shows those alone; flag a card yourself when something looks wrong.":"El pinyin y el significado siguen a los caracteres. Con la IA activada, los revisa antes de guardar. Una tarjeta nueva cuenta como sin revisar hasta que la escribas en Aprender o la abras, y el filtro te muestra solo esas; marca tú una tarjeta cuando algo parezca mal.",
   
   "Swipe left or right to pick another card.":"Desliza a izquierda o derecha para elegir otra tarjeta.",
 
@@ -889,6 +892,7 @@ es:{
   "Day streak":"Días seguidos","Cards learned":"Tarjetas aprendidas","Due today":"Para hoy","Reviews this week":"Repasos esta semana","Last 30 days":"Últimos 30 días","Still learning":"En curso","Known":"Dominadas","Coming up: {0} due tomorrow, {1} this week.":"Próximamente: {0} mañana, {1} esta semana."
 },
 ja:{
+  "Not yet checked":"まだ確認していない","tile:New":"新規",
   "Press and hold a character to walk through every card that has it; tap it again to come back.":"文字を長押しすると、その文字が入ったカードを順に見られます。もう一度タップすると戻ります。",
   "Pinyin and meaning":"ピンインと意味",
   "Show me":"見せて",
@@ -1053,7 +1057,7 @@ ja:{
   "the reading failed — edit the card or frame the photo again":"読み取りに失敗 — カードを編集するか写真を囲み直してください",
   "the reading looks wrong":"読み取りが誤りのようです",
   "time":"{0}回","times":"{0}回",
-  "Due":"今日","capsule:Done":"済み","Deck":"カード","Learn":"学習","Cards":"カード","Multicards":"マルチカード","Camera":"カメラ","More":"その他",
+  "Deck":"カード","Learn":"学習","Cards":"カード","Multicards":"マルチカード","Camera":"カメラ","More":"その他",
   "Generate flashcard":"カードを作る",
   "← Back to the flashcard":"← カードに戻る",
   
@@ -1150,7 +1154,7 @@ ja:{
   "Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in.":"切り抜きでは写真を手で枠に入れ、保存前にプレビューを見られます。読み取り中にタップすると自動のカードが止まり、見つかった枠を調整できます。 急ぎなら「今すぐ保存」でカードをすぐ作り、読み取りがあとから埋めます。",
   "Fix the characters":"文字を直す",
   "Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once.":"写真の下では文字がひとつずつボタンです。タップすると別の候補が出て、正しいものがなければ指で書けます。帯の下の行に入力すると置き換わります。「選択」で複数の文字をまとめて消せます。",
-  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.":"ピンインと意味は文字に合わせて変わります。AIがオンなら保存前に確認します。まだ変だと思ったらカードに印を付けてください。",
+  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. A new card counts as not yet checked until you have written it in Learn or opened it, and the filter shows those alone; flag a card yourself when something looks wrong.":"ピンインと意味は文字に合わせて変わります。AIがオンなら保存前に確認します。新しいカードは、学習で書くか開くまで「まだ確認していない」扱いで、フィルターでそれだけを表示できます。何かおかしいと思ったら自分で印をつけてください。",
   
   "Swipe left or right to pick another card.":"左右にスワイプすると別のカードを選べます。",
 
@@ -1174,6 +1178,7 @@ ja:{
   "Day streak":"連続日数","Cards learned":"学んだカード","Due today":"今日の復習","Reviews this week":"今週の復習回数","Last 30 days":"過去30日","Still learning":"学習中","Known":"定着","Coming up: {0} due tomorrow, {1} this week.":"この先：明日{0}枚、今週{1}枚。"
 },
 ko:{
+  "Not yet checked":"아직 확인 안 함","tile:New":"새 카드",
   "Press and hold a character to walk through every card that has it; tap it again to come back.":"글자를 길게 누르면 그 글자가 든 카드를 차례로 볼 수 있어요. 다시 누르면 돌아와요.",
   "Pinyin and meaning":"병음과 뜻",
   "Show me":"보여줘",
@@ -1338,7 +1343,7 @@ ko:{
   "the reading failed — edit the card or frame the photo again":"읽기 실패 — 카드를 편집하거나 사진을 다시 감싸세요",
   "the reading looks wrong":"읽기가 틀린 것 같아요",
   "time":"{0}번","times":"{0}번",
-  "Due":"오늘","capsule:Done":"완료","Deck":"카드","Learn":"학습","Cards":"카드","Multicards":"멀티카드","Camera":"카메라","More":"더보기",
+  "Deck":"카드","Learn":"학습","Cards":"카드","Multicards":"멀티카드","Camera":"카메라","More":"더보기",
   "Generate flashcard":"카드 만들기",
   "← Back to the flashcard":"← 카드로 돌아가기",
   
@@ -1435,7 +1440,7 @@ ko:{
   "Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in.":"자르기는 사진을 손으로 테두리에 넣고, 카드를 저장하기 전에 미리보기를 보여줘요. 읽는 중에 누르면 자동 카드가 멈춰서, 찾아낸 틀을 조정할 수 있어요. 급하면 지금 저장으로 카드를 바로 만들고, 읽기가 나중에 채워요.",
   "Fix the characters":"글자 고치기",
   "Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once.":"사진 아래에서는 글자 하나하나가 버튼이에요. 누르면 다른 후보가 나오고, 맞는 게 없으면 손가락으로 써요. 띠 아래 줄에 입력하면 바뀌어요. 선택으로 여러 글자를 한 번에 지울 수 있어요.",
-  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.":"병음과 뜻은 글자를 따라가요. AI가 켜져 있으면 저장 전에 확인해요. 그래도 이상하면 카드에 표시해 두세요.",
+  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. A new card counts as not yet checked until you have written it in Learn or opened it, and the filter shows those alone; flag a card yourself when something looks wrong.":"병음과 뜻은 글자를 따라가요. AI가 켜져 있으면 저장 전에 확인해요. 새 카드는 학습에서 써 보거나 열어 볼 때까지 아직 확인 안 한 카드로 남고, 필터로 그 카드만 볼 수 있어요. 뭔가 이상하면 직접 표시해 두세요.",
   
   "Swipe left or right to pick another card.":"좌우로 밀면 다른 카드를 고를 수 있어요.",
 
@@ -1462,6 +1467,7 @@ ko:{
    word, so every plural key carries a "#many" twin (5 карточек, 11 карточек, 111 карточек) that only PLURAL.ru ever looks
    up; "percent#few" is the one unit that also needs its own middle form, because English calls both of its forms "percent". */
 ru:{
+  "Not yet checked":"Ещё не проверены","tile:New":"Новая",
   "Press and hold a character to walk through every card that has it; tap it again to come back.":"Удерживай иероглиф, чтобы пройти по всем карточкам с ним; нажми его ещё раз, чтобы вернуться.",
   "Pinyin and meaning":"Пиньинь и значение",
   "Show me":"Покажи",
@@ -1626,7 +1632,7 @@ ru:{
   "the reading failed — edit the card or frame the photo again":"прочитать не вышло — измени карточку или обведи фото заново",
   "the reading looks wrong":"текст прочитан неверно",
   "time":"{0} раз","times":"{0} раза","times#many":"{0} раз",
-  "Due":"Ждут","capsule:Done":"Сделано","Deck":"Колода","Learn":"Учить","Cards":"Карточки","Multicards":"Мультикарточки","Camera":"Камера","More":"Ещё",
+  "Deck":"Колода","Learn":"Учить","Cards":"Карточки","Multicards":"Мультикарточки","Camera":"Камера","More":"Ещё",
   "Generate flashcard":"Создать карточку",
   "← Back to the flashcard":"← К карточке",
   
@@ -1723,7 +1729,7 @@ ru:{
   "Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in.":"«Обрезать» — рамка, которую ты рисуешь сам, с предпросмотром до того, как карточка сохранится. Нажми её, пока приложение ещё читает, — автоматическая карточка остановится, и ты подвинешь найденную рамку. Спешишь? «Сохранить сейчас» создаст карточку сразу, а чтение допишет её потом.",
   "Fix the characters":"Поправить иероглифы",
   "Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once.":"Под фото каждый иероглиф — кнопка. Нажми на любой, чтобы увидеть другие варианты, или нарисуй его пальцем, если нужного нет. Впиши строку под лентой, чтобы заменить её целиком. «Выбрать» убирает сразу несколько иероглифов.",
-  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.":"Пиньинь и значение идут следом за иероглифами. Если ИИ включён, он проверит их до сохранения. Отметь карточку, если что-то всё ещё выглядит не так.",
+  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. A new card counts as not yet checked until you have written it in Learn or opened it, and the filter shows those alone; flag a card yourself when something looks wrong.":"Пиньинь и значение идут следом за иероглифами. Если ИИ включён, он проверит их до сохранения. Новая карточка считается ещё не проверенной, пока ты не напишешь её в «Учить» или не откроешь, и фильтр показывает только такие; а если что-то выглядит неверно, поставь метку сам.",
   
   "Swipe left or right to pick another card.":"Проведи влево или вправо, чтобы выбрать другую карточку.",
 
@@ -1747,6 +1753,7 @@ ru:{
   "Day streak":"Дней подряд","Cards learned":"Выучено карточек","Due today":"Сегодня к повтору","Reviews this week":"Повторов за неделю","Last 30 days":"Последние 30 дней","Still learning":"В процессе","Known":"Освоено","Coming up: {0} due tomorrow, {1} this week.":"Впереди: завтра {0}, на этой неделе {1}."
 },
 vi:{
+  "Not yet checked":"Chưa kiểm tra","tile:New":"Mới",
   "Press and hold a character to walk through every card that has it; tap it again to come back.":"Nhấn giữ một chữ để đi qua mọi thẻ có chữ đó; chạm lại để quay về.",
   "Pinyin and meaning":"Pinyin và nghĩa",
   "Show me":"Chỉ cho mình",
@@ -1911,7 +1918,7 @@ vi:{
   "the reading failed — edit the card or frame the photo again":"đọc không được — sửa thẻ hoặc khoanh lại ảnh",
   "the reading looks wrong":"bản đọc có vẻ sai",
   "time":"{0} lần","times":"{0} lần",
-  "Due":"Đến hạn","capsule:Done":"Xong","Deck":"Thẻ","Learn":"Học","Cards":"Thẻ","Multicards":"Thẻ gộp","Camera":"Máy ảnh","More":"Thêm",
+  "Deck":"Thẻ","Learn":"Học","Cards":"Thẻ","Multicards":"Thẻ gộp","Camera":"Máy ảnh","More":"Thêm",
   "Generate flashcard":"Tạo thẻ",
   "← Back to the flashcard":"← Về thẻ",
   
@@ -2008,7 +2015,7 @@ vi:{
   "Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in.":"Cắt ảnh cho bạn tự khoanh khung, có xem trước rồi mới lưu thẻ — bấm khi ứng dụng còn đang đọc thì thẻ tự động sẽ dừng, và bạn chỉnh được khung nó tìm ra. Đang vội à? Lưu ngay tạo thẻ liền, phần đọc sẽ điền nốt sau.",
   "Fix the characters":"Sửa chữ",
   "Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once.":"Dưới tấm ảnh, mỗi chữ là một cái nút. Chạm vào một chữ để xem các cách đọc khác, hoặc vẽ chữ bằng ngón tay khi không có chữ đúng. Gõ vào dòng ngay dưới dãy chữ để thay cả dòng. Chọn giúp bỏ nhiều chữ cùng lúc.",
-  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.":"Pinyin và nghĩa chạy theo chữ. Bật AI thì nó kiểm tra cả hai trước khi bạn lưu. Còn thấy chỗ nào sai thì đánh dấu thẻ lại.",
+  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. A new card counts as not yet checked until you have written it in Learn or opened it, and the filter shows those alone; flag a card yourself when something looks wrong.":"Pinyin và nghĩa chạy theo chữ. Bật AI thì nó kiểm tra cả hai trước khi bạn lưu. Thẻ mới được tính là chưa kiểm tra cho đến khi bạn viết nó trong Học hoặc mở ra, và bộ lọc cho thấy riêng những thẻ đó; thấy gì sai thì tự đánh dấu thẻ nhé.",
   
   "Swipe left or right to pick another card.":"Vuốt sang trái hoặc phải để chọn thẻ khác.",
 
@@ -2032,6 +2039,7 @@ vi:{
   "Day streak":"Chuỗi ngày","Cards learned":"Thẻ đã học","Due today":"Đến hạn hôm nay","Reviews this week":"Lượt ôn tuần này","Last 30 days":"30 ngày qua","Still learning":"Đang học","Known":"Đã thuộc","Coming up: {0} due tomorrow, {1} this week.":"Sắp tới: {0} đến hạn ngày mai, {1} trong tuần."
 },
 th:{
+  "Not yet checked":"ยังไม่ได้ตรวจ","tile:New":"ใหม่",
   "Press and hold a character to walk through every card that has it; tap it again to come back.":"กดค้างที่ตัวอักษรเพื่อไล่ดูทุกการ์ดที่มีตัวนั้น แตะอีกครั้งเพื่อกลับ",
   "Pinyin and meaning":"พินอินและความหมาย",
   "Show me":"ดูวิธี",
@@ -2196,7 +2204,7 @@ th:{
   "the reading failed — edit the card or frame the photo again":"อ่านไม่สำเร็จ — แก้การ์ด หรือวาดกรอบในรูปใหม่",
   "the reading looks wrong":"การอ่านดูผิด",
   "time":"{0} ครั้ง","times":"{0} ครั้ง",
-  "Due":"ถึงกำหนด","capsule:Done":"เสร็จ","Deck":"ทั้งหมด","Learn":"เรียน","Cards":"การ์ด","Multicards":"การ์ดรวม","Camera":"กล้อง","More":"อื่นๆ",
+  "Deck":"ทั้งหมด","Learn":"เรียน","Cards":"การ์ด","Multicards":"การ์ดรวม","Camera":"กล้อง","More":"อื่นๆ",
   "Generate flashcard":"สร้างการ์ด",
   "← Back to the flashcard":"← กลับไปที่การ์ด",
   
@@ -2293,7 +2301,7 @@ th:{
   "Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in.":"ปุ่มครอบตัดใช้วาดกรอบเอง และดูตัวอย่างก่อนบันทึกการ์ด กดตอนแอปยังอ่านอยู่ การ์ดอัตโนมัติจะหยุด แล้วปรับกรอบที่หาเจอได้ รีบอยู่? กด บันทึกเลย แล้วแอปจะสร้างการ์ดให้ทันที ส่วนผลการอ่านจะตามมาเติมให้",
   "Fix the characters":"แก้ตัวอักษร",
   "Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once.":"ใต้รูป ตัวอักษรแต่ละตัวเป็นปุ่ม แตะเพื่อดูตัวเลือกอื่น หรือเขียนเองด้วยนิ้วถ้าไม่มีตัวที่ถูก พิมพ์ในช่องใต้แถบเพื่อแทนทั้งบรรทัด ปุ่มเลือกใช้ลบหลายตัวพร้อมกัน",
-  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.":"พินอินและความหมายจะเปลี่ยนตามตัวอักษร ถ้าเปิด AI ไว้ AI จะตรวจให้ก่อนบันทึก ถ้ายังรู้สึกว่าไม่ถูก ติดธงการ์ดไว้ได้",
+  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. A new card counts as not yet checked until you have written it in Learn or opened it, and the filter shows those alone; flag a card yourself when something looks wrong.":"พินอินและความหมายจะเปลี่ยนตามตัวอักษร ถ้าเปิด AI ไว้ AI จะตรวจให้ก่อนบันทึก การ์ดใหม่จะนับว่ายังไม่ได้ตรวจจนกว่าจะเขียนในหน้าเรียนหรือเปิดดู และตัวกรองจะแสดงเฉพาะการ์ดพวกนั้น ถ้าเห็นอะไรผิดก็ติดธงเอง",
   
   "Swipe left or right to pick another card.":"ปัดซ้ายหรือขวาเพื่อเลือกการ์ดใบอื่น",
 
@@ -2317,6 +2325,7 @@ th:{
   "Day streak":"วันต่อเนื่อง","Cards learned":"การ์ดที่เรียนแล้ว","Due today":"ถึงกำหนดวันนี้","Reviews this week":"ทบทวนสัปดาห์นี้","Last 30 days":"30 วันล่าสุด","Still learning":"กำลังเรียน","Known":"จำได้แล้ว","Coming up: {0} due tomorrow, {1} this week.":"ที่กำลังจะมา: พรุ่งนี้ {0} ใบ · สัปดาห์นี้ {1} ใบ"
 },
 id:{
+  "Not yet checked":"Belum diperiksa","tile:New":"Baru",
   "Press and hold a character to walk through every card that has it; tap it again to come back.":"Tekan dan tahan sebuah karakter untuk menelusuri semua kartu yang memuatnya; ketuk lagi untuk kembali.",
   "Pinyin and meaning":"Pinyin dan arti",
   "Show me":"Tunjukkan",
@@ -2481,7 +2490,7 @@ id:{
   "the reading failed — edit the card or frame the photo again":"pembacaan gagal — edit kartunya atau bingkai ulang fotonya",
   "the reading looks wrong":"hasil bacanya kelihatan salah",
   "time":"{0} kali","times":"{0} kali",
-  "Due":"Perlu diulang","capsule:Done":"Selesai","Deck":"Kartu","Learn":"Belajar","Cards":"Kartu","Multicards":"Multikartu","Camera":"Kamera","More":"Lainnya",
+  "Deck":"Kartu","Learn":"Belajar","Cards":"Kartu","Multicards":"Multikartu","Camera":"Kamera","More":"Lainnya",
   "Generate flashcard":"Buat kartu",
   "← Back to the flashcard":"← Kembali ke kartu",
   
@@ -2578,7 +2587,7 @@ id:{
   "Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in.":"Lewat Pangkas kamu membingkai foto sendiri, lengkap dengan pratinjau sebelum kartunya disimpan — pencet saat aplikasi masih membaca, kartu otomatisnya berhenti dan kamu bisa mengatur bingkai yang ditemukan. Lagi buru-buru? Tombol Simpan sekarang langsung membuat kartunya, dan hasil bacanya mengisinya belakangan.",
   "Fix the characters":"Perbaiki karakternya",
   "Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once.":"Di bawah foto, tiap karakter adalah tombol. Ketuk satu untuk melihat pilihan lain, atau gambar sendiri dengan jarimu kalau yang benar tidak ada. Ketik barisnya di bawah deretan itu untuk menggantinya. Tombol Pilih menghapus beberapa karakter sekaligus.",
-  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.":"Pinyin dan arti mengikuti karakternya. Kalau AI menyala, dia memeriksa keduanya sebelum kamu simpan. Tandai kartunya kalau masih ada yang terasa salah.",
+  "Pinyin and meaning follow the characters. With the AI on, it checks them before you save. A new card counts as not yet checked until you have written it in Learn or opened it, and the filter shows those alone; flag a card yourself when something looks wrong.":"Pinyin dan arti mengikuti karakternya. Kalau AI menyala, dia memeriksa keduanya sebelum kamu simpan. Kartu baru dihitung belum diperiksa sampai kamu menulisnya di Belajar atau membukanya, dan filter menunjukkan kartu-kartu itu saja; tandai sendiri kartunya kalau ada yang terlihat salah.",
   
   "Swipe left or right to pick another card.":"Geser ke kiri atau kanan untuk memilih kartu lain.",
 

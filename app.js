@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=513; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=516; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -79,7 +79,7 @@ const S = { mode:"study", progress:{}, custom:[], inbox:[],
   pendingImg:null, pendingFull:null, pendingUse:"crop", persist:null,
   peek:null, /* Learn: the id of a linked card whose photo is shown on the front instead (v155) */
   admin:false, /* the owner's rows in More unlocked for this session (v162) */
-  detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterStar:false, filterTags:[], settings:{}, single:null, saved:null, cardsTab:"cards",
+  detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterStar:false, filterNew:false, filterTags:[], settings:{}, single:null, saved:null, cardsTab:"cards",
   editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null,
   autoCard:window.AUTO_CARD!==false, editOpenFrame:false, openShot:null }; /* autoCard (v325): a photo that opens by itself becomes a card without a frame or a preview; the harness sets window.AUTO_CARD=false to keep the crop-mode flow its frame suites drive */
 
@@ -108,12 +108,14 @@ const learnPool=()=>deck().filter(learnable);
 function learnDeck(){
   const lt=learnTags(); const d=(lt.length?deck().filter(x=>lt.some(g=>hasTag(x,g))):deck()).filter(learnable); /* a page is studied through its items (v453), and since v478 only through the ones that earned a card of their own */
   const star=!!S.settings.learnStar&&d.some(x=>x.star); /* a filter that would empty the session stands down */
-  return {cards:star?d.filter(x=>x.star):d, star};
+  const nw=!!S.settings.learnNew&&d.some(unchecked); /* v515: Not yet checked, the same shape as the star — a hand-picked list, not a category */
+  let cards=star?d.filter(x=>x.star):d; if(nw) cards=cards.filter(unchecked);
+  return {cards, star, nw};
 }
 /* the next cards of the same filter by due date, the ones a pull-forward would reach, skipping what the session already holds (v428) */
 const aheadCards=n=>{ const p=S.progress; return learnDeck().cards.filter(x=>p[x.id]&&!S.queue.includes(x.id)).sort((a,b)=>p[a.id].due-p[b.id].due).slice(0,n).map(x=>x.id); };
 function buildQueue(includeAhead){
-  const p=S.progress, t=today(); const {cards:d,star}=learnDeck();
+  const p=S.progress, t=today(); const {cards:d,star,nw}=learnDeck();
   const order=learnOrder();
   /* the order of the session (v512, H: "Karten mit Charaktern, die häufig vorkommen, werden öfters angezeigt. Schreiben dieser
      Character stuft Anzeigehäufigkeit wieder herab."): inside the due group and the new group the cards are sorted by weight,
@@ -124,13 +126,14 @@ function buildQueue(includeAhead){
   const freq={}; for(const x of d) for(const ch of new Set([...String(x.c)].filter(ch=>CJK.test(ch)))) freq[ch]=(freq[ch]||0)+1;
   const cw=charWrites(), weightOf=x=>{ const cs=[...String(x.c)].filter(ch=>CJK.test(ch)); if(!cs.length) return 0; return cs.reduce((a,ch)=>a+(freq[ch]||0)/(1+(cw[ch]||0)),0)/cs.length; };
   const byWeight=list=>order==="random"?list:list.map((x,i)=>({x,i,w:weightOf(x)})).sort((a,b)=>b.w-a.w||a.i-b.i).map(o=>o.x);
-  const due = byWeight(orderCards(d.filter(x=>p[x.id] && p[x.id].due<=t),order,true)).map(x=>x.id);
+  const newFirst=list=>[...list.filter(unchecked),...list.filter(x=>!unchecked(x))]; /* v515: a card not yet checked comes first in its group, whatever the order — checking is what a new card is for */
+  const due = newFirst(byWeight(orderCards(d.filter(x=>p[x.id] && p[x.id].due<=t),order,true))).map(x=>x.id);
   /* A star is a hand-picked short list, not a category, so a starred session holds every starred card (v429, H: "Go" on the
      recommendation): the due ones first, so the plan still leads, then the new ones — without the eight-card cap, which exists
      to stop a learner drowning in new cards and not to withhold the ones they picked themselves — then the rest by due date.
      The pill counts 11 and the session now holds 11. A tag stays as it was: a tag can be the whole deck. */
-  const all = byWeight(orderCards(d.filter(x=>!p[x.id]),order,false)).map(x=>x.id);
-  const fresh = star?all:all.slice(0,NEW_PER_SESSION);
+  const all = newFirst(byWeight(orderCards(d.filter(x=>!p[x.id]),order,false))).map(x=>x.id);
+  const fresh = star||nw?all:all.slice(0,NEW_PER_SESSION); /* the Not yet checked session holds every unchecked card, as the starred one holds every star (v515) */
   let q=[...due,...fresh];
   if(star) q=[...q,...d.filter(x=>p[x.id]&&p[x.id].due>t).sort((a,b)=>p[a.id].due-p[b.id].due).map(x=>x.id)];
   if(includeAhead && q.length===0)
@@ -204,6 +207,7 @@ async function makeFlashcard(id){ const d=cardOf(id); if(!d||!d.page||!d.c) retu
      needs, and a waiting AI suggestion — until v502 the card was born clean of all four, so a text H had flagged as wrong
      made a flashcard that said nothing was wrong */
   if(d.flag){ rec.flag=true; if(d.flagNote) rec.flagNote=d.flagNote; }
+  if(d.unchecked) rec.unchecked=true; /* v515: the text's own "not yet checked" travels with the card, as its flag does */
   if(d.alts&&d.alts.length) rec.alts=d.alts.slice();
   if(d.ai) rec.ai={...d.ai};
   if(d.ml) rec.ml=d.ml; if(d.ms) rec.ms={...d.ms};
@@ -278,16 +282,17 @@ function filterGroups(scope){
     ...(tags.length&&un?[{k:"tag:"+UNTAGGED, label:t("Untagged"), n:un, on:tagOn(scope,UNTAGGED)}]:[])];
   /* Starred (v425): the learner's own mark, a row like any other — on Cards it joins the status rows, on Learn it stands on its
      own beside the tags, and it appears only once a card is starred, as the AI row does. */
-  const nStar=lp.filter(starred).length;
-  if(scope==="learn") return [...(nStar?[{head:t("Starred"), rows:[{k:"star", label:t("Starred"), n:nStar, on:!!S.settings.learnStar}]}]:[]),
-    {head:t("Tags"), rows:[{k:"", label:t("All cards"), n:lp.length, on:!learnTags().length&&!S.settings.learnStar},...tagRows]}];
+  const nStar=lp.filter(starred).length, nNewL=scope==="learn"?lp.filter(unchecked).length:0;
+  if(scope==="learn") return [...(nStar||nNewL?[{head:t("Status"), rows:[...(nNewL?[{k:"new", label:t("Not yet checked"), n:nNewL, on:!!S.settings.learnNew}]:[]),...(nStar?[{k:"star", label:t("Starred"), n:nStar, on:!!S.settings.learnStar}]:[])]}]:[]),
+    {head:t("Tags"), rows:[{k:"", label:t("All cards"), n:lp.length, on:!learnTags().length&&!S.settings.learnStar&&!S.settings.learnNew},...tagRows]}];
   /* on Cards the numbers are the OPEN TAB's own and follow the list's own page rule (v477): the sheet used to count raw
      records over the whole deck while the list counts a page once and lets it match through its texts, so the two never
      agreed — with two tabs that gap would read as broken ("⚑ Flagged (12)" over a list of one). */
   const pool=tabPool(), cnt=f=>pool.filter(d=>anyOf(d,f)).length;
-  const nAi=deck().filter(d=>d.ai).length; /* a row's VISIBILITY stays deck-wide — a row that vanished on one tab while its filter was on is the v308 trap; only the numbers follow the tab */
+  const nAi=deck().filter(d=>d.ai).length, nNew=deck().filter(unchecked).length; /* a row's VISIBILITY stays deck-wide — a row that vanished on one tab while its filter was on is the v308 trap; only the numbers follow the tab */
   const st=[...(nStar?[{k:"star", label:t("Starred"), n:pool.filter(starred).length, on:S.filterStar}]:[]),
     {k:"flag", label:t("⚑ Flagged"), n:cnt(d=>d.flag), on:S.filterFlag},
+    ...(nNew?[{k:"new", label:t("Not yet checked"), n:cnt(unchecked), on:S.filterNew}]:[]), /* v515: shown while a card is unchecked, as the AI row is */
     ...(nAi?[{k:"ai", label:t("AI"), n:cnt(d=>d.ai), on:S.filterAi}]:[]),
     {k:"unv", label:t("Unverified"), n:cnt(d=>d.mt&&!d.mt.verified), on:S.filterUnv}];
   const tabRows=tagRows.map(r=>r.k==="tag:"+UNTAGGED?{...r,n:pool.filter(d=>anyOf(d,x=>!(x.tags||[]).length)).length}:{...r,n:cnt(d=>hasTag(d,r.label))});
@@ -328,22 +333,24 @@ function openFilterSheet(scope,after){
 async function setFilter(scope,k){
   if(scope==="learn"){ let v=learnTags().slice();
     if(k==="star") await setSetting("learnStar",!S.settings.learnStar); /* an independent toggle beside the tags (v425) */
-    else if(!k.startsWith("tag:")){ v=[]; await setSetting("learnStar",false); }
+    else if(k==="new") await setSetting("learnNew",!S.settings.learnNew); /* v515 */
+    else if(!k.startsWith("tag:")){ v=[]; await setSetting("learnStar",false); await setSetting("learnNew",false); }
     else { const x=k.slice(4); v=v.includes(x)?v.filter(y=>y!==x):[...v,x]; }
     await setSetting("learnTag",v);
     S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false; S.single=null; S.saved=null; setStats(); return; }
-  if(!k){ S.filterStar=false; S.filterFlag=false; S.filterAi=false; S.filterUnv=false; S.filterTags=[]; return; }
+  if(!k){ S.filterStar=false; S.filterFlag=false; S.filterAi=false; S.filterUnv=false; S.filterNew=false; S.filterTags=[]; return; }
   if(k==="star") S.filterStar=!S.filterStar;
+  else if(k==="new") S.filterNew=!S.filterNew;
   else if(k==="flag") S.filterFlag=!S.filterFlag;
   else if(k==="ai") S.filterAi=!S.filterAi;
   else if(k==="unv") S.filterUnv=!S.filterUnv;
   else { const v=k.slice(4); S.filterTags=S.filterTags.includes(v)?S.filterTags.filter(y=>y!==v):[...S.filterTags,v]; }
 }
-function learnChipsHTML(){ const st=learnPool().some(starred); /* the pill shows for a starred deck too, even without a single tag (v425); the learnable pool's own since v500 */
+function learnFilterHTML(){ const st=learnPool().some(starred), nw=learnPool().some(unchecked); /* the pill shows for a starred deck too, even without a single tag (v425); the learnable pool's own since v500; and for a deck with a card not yet checked (v515); in the top bar since v516 */
   if(!st&&S.settings.learnStar) setSetting("learnStar",false); /* the last star taken off leaves no row to switch the filter back off (the v308 rule) */
+  if(!nw&&S.settings.learnNew) setSetting("learnNew",false); /* v515: the same for the last card checked */
   normaliseLearn();
-  if(!learnTagList().length&&!st) return ""; return `<div class="chipset learnchips">${filterPillHTML("learn")}</div>`; }
-function wireLearnChips(){ wireFilterPill("learn",render); }
+  if(!learnTagList().length&&!st&&!nw) return ""; return filterPillHTML("learn"); } /* a sheet with nothing but All cards is a control over nothing (the v308 rule): then the bar's slot stays empty */
 /* the id of a new card: the text itself while it is free (readable in exports), else text plus a timestamp */
 const cardId = c => deck().some(d=>d.id===c) ? c+"#"+Date.now() : c;
 async function setSetting(k,v){ S.settings[k]=v; try{ await idbPut("settings",{k,v}); }catch(e){} }
@@ -631,6 +638,12 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v516","Learn: the filter pill in the top bar"],
+  ["photo","v515","a new card: hollow ⚐, the New chip"],
+  ["app","v515","Not yet checked: written -> gone"],
+  ["app","v514","Learn: pinch into the picture, pan"],
+  ["app","v514","1-line card 2:1, 2-line 3:2 box"],
+  ["update","v514","Diagnostics: re-cut v4 done, count"],
   ["app","v513","Learn: hold a char, walk its cards"],
   ["app","v512","Learn: the pad snaps on your strokes"],
   ["app","v512","Learn: pad whole on 390 px, 1 line"],
@@ -1020,13 +1033,13 @@ function wireChrome(){
   $("#imp").onchange=importData;
 }
 function setStats(){
-  const remaining=walking()?S.walk.length:Math.max(0,S.queue.length-S.idx); /* a locked character's walk shows its own count (v513) */
-  const inStudy=S.mode==="study";
-  $("#stat-open").style.display=inStudy?"":"none";
-  $("#stat-done").style.display=inStudy?"":"none";
-  $("#stat-deck").style.display=inStudy?"none":""; /* three pills overflow a 390px top bar */
-  $("#stat-open .v").textContent=remaining;
-  $("#stat-done .j").textContent=S.done;
+  /* v516 (H: "Due und Done da oben sind quatsch. Mach die weg und platziere stattdessen die Filter dort."): the Due and Done
+     capsules are gone from the top bar, and on Learn the filter pill stands where they stood — the one control the screen
+     needs, above the card instead of between the header and it. The Deck capsule keeps the other tabs. S.done still counts
+     (the resume note carries it), it is simply not shown; the walk's count of v513 went with the capsule, the chevrons say it. */
+  const inStudy=S.mode==="study", f=$("#stat-filter");
+  f.innerHTML=inStudy?learnFilterHTML():""; f.style.display=inStudy&&f.innerHTML?"":"none"; if(inStudy) wireFilterPill("learn",render);
+  $("#stat-deck").style.display=inStudy?"none":"";
   $("#stat-deck .v").textContent=deckCount(); /* flashcards only (v504): a multicard and its texts are looked up, not counted */
   document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.mode===S.mode||(b.dataset.mode==="cards"&&S.mode==="add")||(b.dataset.mode==="more"&&S.mode==="guide")));
 }
@@ -1422,7 +1435,7 @@ function outsideWindow(pic,placed,base,W,Hh,angle){
   if(lines.length<2||!Array.isArray(boxes)||boxes.length!==lines.length||boxes.some(b=>!b)) return null;
   const pp=String(pic.p||"").split(/\s*\/\s*/), mp=String(pic.m||"").split(/\s*\/\s*/);
   if(pp.length!==lines.length||mp.length!==lines.length) return null; /* the pinyin and the meaning must be able to follow, or the card would keep the meaning of text that is gone */
-  const win=windowRect(placed), keep=boxes.map(b=>{
+  const win=windowRect(placed,frameRatio(lines.length)), keep=boxes.map(b=>{ /* the window this card will carry (v514) */
     const f=photoFrameOf(base,W,Hh,{x0:b[0]*W,y0:b[1]*Hh,x1:b[2]*W,y1:b[3]*Hh},angle); if(!f) return true;
     const a=f.w*f.h; if(!(a>0)) return true;
     return Math.max(0,Math.min(f.x+f.w,win.x+win.w)-Math.max(f.x,win.x))*Math.max(0,Math.min(f.y+f.h,win.y+win.h)-Math.max(f.y,win.y))/a>=LINE_OUT; });
@@ -1858,7 +1871,7 @@ function wxNoteHTML(){ return inWeChat()?`<div class="wxnote">${t(WX_NOTE)}</div
    strings live in lang.js with English as the key): More → Language switches at once and keeps the choice (setting "lang");
    the header's capsules and the tab labels sit in index.html and are set here, everything else asks t() while rendering */
 function applyLangStatic(){ document.documentElement.lang=LANG;
-  [["#stat-open b","Due"],["#stat-done b","capsule:Done"],["#stat-deck b","Deck"]].forEach(([q,k])=>{ const e=$(q); if(e) e.textContent=t(k); });
+  [["#stat-deck b","Deck"]].forEach(([q,k])=>{ const e=$(q); if(e) e.textContent=t(k); }); /* Due and Done left the bar at v516 */
   document.querySelectorAll("#tabs .tab").forEach(b=>{ const k={study:"Learn",cards:"Cards",inbox:"Camera",more:"More"}[b.dataset.mode]; const n=b.lastChild; if(k&&n&&n.nodeType===3) n.textContent=t(k); }); }
 async function setLang(code){ if(!LANGS.some(([c])=>c===code)) return; LANG=code; await setSetting("lang",code); await syncMeanings(); /* the meanings the cards already have in this language, at once (v265) */ if(TRANSLATE&&!TRANSLATE.running) TRANSLATE=null; /* a finished run's line belongs to the old language */ if(stageOf()&&stageOf().lang!==code) await clearStage(); /* a stage for another language is worthless (v264) */ if(S.settings.translateRun||(TRANSLATE&&TRANSLATE.running)){ await rememberTranslate(true); resumeTranslate(); } /* a run under way or waiting goes on in the new language (v263) */ applyLangStatic(); render(); }
 /* Translate all cards into the app's language (v256, H chose the button over an automatic run — it costs an AI call per batch of
@@ -2095,7 +2108,7 @@ async function brightenPass(){
 const RC_BATCH=10, RC_PAUSE=60, RC_WAIT=2000, RC_TOLPX=2, RC_TOL=0.01, RC_CORR=0.8, RC_THUMB=32, RC_INSIDE=0.5;
 const frameKey=f=>f?[f.x,f.y,f.w,f.h,f.a||0].join(","):""; /* the same rectangle, to the number */
 let RECUT=null;
-const RECUT_V=3; /* v418: the pictures the v398 curve made carry its white balance baked in, so the deck is walked once more; v508: the pictures the flat clause blackened are cut again the same way */
+const RECUT_V=4; /* v514: the window follows the card's line count (D1), so every card with a 16:9 window is cut again at its own ratio; v418: the pictures the v398 curve made carry its white balance baked in, so the deck is walked once more; v508: the pictures the flat clause blackened are cut again the same way */
 async function recutPass(){
   if(RECUT||S.settings.recutPass>=RECUT_V) return;
   const ids=deck().filter(d=>d.img&&d.frame&&!d.reading&&fullPhoto(d)).map(d=>d.id); /* a card still waiting for its reading belongs to finishPending, which holds it across an await and writes it whole (v398) */
@@ -2186,21 +2199,25 @@ async function recutCard(d){
     if(!(ix>0&&iy>0)||ix*iy<RC_INSIDE*f.w*f.h) return null; }
   const rect={x:f.x*pw,y:f.y*ph,w:f.w*pw,h:f.h*ph,a:f.a||0,lw:pw,lh:ph}; /* the frame at the photo's own pixels — cropBlob then cuts one to one, and turns the frame back upright itself (v185) */
   if(rect.w<8||rect.h<8) return null;
-  const win=windowRect(rect); /* the 16:9 window of an ordinary card (v329) */
+  const win16=windowRect(rect,16/9), winNew=windowRect(rect,ratioOf(d)); /* the 16:9 window every card carried until v513, and the window at the card's own ratio (v514, D1) */
   const off=r=>{ const w=Math.max(1,Math.round(r.w)), h=Math.max(1,Math.round(r.h)); /* what cropBlob will make of it */
     const near=(a,b)=>Math.abs(a-b)<=Math.max(RC_TOLPX,RC_TOL*b);
     return near(w,iw)&&near(h,ih)?Math.abs(w-iw)+Math.abs(h-ih):-1; };
-  const dw=off(win), df=off(rect);
-  const use=dw>=0&&(df<0||dw<=df)?win:df>=0?rect:null; /* the window and the label's own frame are the same rectangle where both fit */
-  if(!use) return null;
+  const dw=off(win16), dn=off(winNew), df=off(rect);
+  /* which rectangle the stored picture is: the old window → cut again at the new ratio; already the new window → nothing to
+     do; the label's own frame (v362, a split panel's card, which never had a window) → byte-identical; none → left alone */
+  if(dn>=0&&(dw<0||dn<=dw)) return null;
+  const from=dw>=0&&(df<0||dw<=df)?win16:null; if(!from) return null;
   const key="recut#"+d.id; /* the photo as a record of its own: an inbox photo and an open Crop again are untouched */
   SHOTS_EXTRA[key]={id:key,blob:full,ts:Date.now()};
-  let cut=null;
-  try{ cut=await cropBlob(key,use); }
+  let same=null, cut=null;
+  try{ same=await cropBlob(key,from); cut=await cropBlob(key,winNew); }
   finally{ delete SHOTS_EXTRA[key]; }
-  if(!cut||!cut.blob) return null;
+  if(!same||!same.blob||!cut||!cut.blob) return null;
+  /* the guard compares like with like: the fresh cut of the OLD window against the picture the card has says whether the frame
+     still describes it (v398's rule); only then is the new window written */
+  try{ if(corrOf(await greyThumb(d.img,RC_THUMB),await greyThumb(await cardJpeg(same.blob),RC_THUMB))<RC_CORR) return null; }catch(e){ return null; } /* the framing moved: keep what the card has */
   const out=await cardJpeg(cut.blob); if(!out) return null;
-  try{ if(corrOf(await greyThumb(d.img,RC_THUMB),await greyThumb(out,RC_THUMB))<RC_CORR) return null; }catch(e){ return null; } /* the framing moved: keep what the card has */
   return out;
 }
 function recheckRowHTML(){ const n=toRecheck().length, tr=RECHECK; if(!n||!aiOn()) return "";
@@ -2496,7 +2513,7 @@ const GUIDE=()=>[
     t("Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in."),
     t("From album takes several photos at once — they all become cards, one after the other, while the app is open.")]},
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
-    t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.")]},
+    t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. A new card counts as not yet checked until you have written it in Learn or opened it, and the filter shows those alone; flag a card yourself when something looks wrong.")]},
   {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. The photo is the cue, the characters under it are the buttons, and the write pad is the answer: trace the lit stroke, and the pad moves on by itself — character by character, then to the next card. Four characters a line and two lines photograph best.")+" "+t("A card made from a multicard shows the multicard's whole picture with a frame around its own text, and names the multicard under the meaning; tap that name to look the multicard up, and ← Back brings you back to the card."),
     t("Pinyin and meaning sit folded under the buttons; open them when you need them, or write the whole card and they open by themselves. Stuck on a stroke? Show me draws it, Skip fills it in for you. A card you wrote comes round once more a few cards later, with less of the template each time you know it. Nothing due? Pull the next cards forward."),
     t("Swipe the card left or right, or tap the arrows beside the pad, to pick another one — nothing is graded, and a card you skip stays due for next time.")+" "+t("Press and hold a character to walk through every card that has it; tap it again to come back.")]},
@@ -2526,7 +2543,7 @@ function tagsHTML(d,isNew){
 async function setFlag(id,on,note){
   const d=cardOf(id); if(!d) return;
   const upd={...d};
-  if(on){ upd.flag=true; if(note!==undefined){ if(note) upd.flagNote=note; else delete upd.flagNote; } }
+  if(on){ upd.flag=true; if(note!==undefined){ if(note) upd.flagNote=note; else delete upd.flagNote; } delete upd.unchecked; } /* v515: a flag set by hand is a verdict, so the card is checked */
   else { delete upd.flag; delete upd.flagNote; }
   await putCard(upd,id);
 }
@@ -2622,7 +2639,7 @@ function srcView(d){
 const frontPage=d=>pageOf(d)||srcView(d); /* one page view for both: a card that IS one of several on a photo (v452), and one MADE from a multicard's text (v489) */
 function pageHTML(d,pg){
   const u=urlOf(pg.blob);
-  return `<div class="picbox page"${pg.src?"":` data-pic="1"`}><img class="picbg" src="${u}" alt="" aria-hidden="true"><div class="pagewrap"><img class="signimg" src="${u}" alt="photo">${regionsHTML({id:pg.shot},pg.rs,{learn:true,me:pg.me||d.id,only:!!pg.src})}</div></div>`; /* v499: a generated card (src) frames its own text alone; a v452 page front still frames every text — the wrapper shrinks to the picture's rendered size, so the regions' percent coordinates land on it; the blurred fill shows beside a tall page */
+  return `<div class="picbox page"${pg.src?"":` data-pic="1"`} style="--ratio:${ratioOf(d)}"><img class="picbg" src="${u}" alt="" aria-hidden="true"><div class="pagewrap"><img class="signimg" src="${u}" alt="photo">${regionsHTML({id:pg.shot},pg.rs,{learn:true,me:pg.me||d.id,only:!!pg.src})}</div></div>`; /* v499: a generated card (src) frames its own text alone; a v452 page front still frames every text — the wrapper shrinks to the picture's rendered size, so the regions' percent coordinates land on it; the blurred fill shows beside a tall page */
 }
 function frontPic(d,o){
   const pk=S.peek&&S.peek!==d.id?cardOf(S.peek):null; /* Learn: a linked card's photo, tapped in the "Also on another photo" row (v155) */
@@ -2634,7 +2651,7 @@ function frontPic(d,o){
      same height whatever shape the frame had (v224, H's "Go" on the design review after "Bitte consistency!"); the whole
      photo, a deliberate tap, keeps its own shape */
   const img=`<img class="signimg${S.fullPic&&full&&!pg?" full":""}" data-pic="1" src="${urlOf(blob)}" alt="photo">`;
-  return S.fullPic&&full&&!pg?img:`<div class="picbox" data-pic="1"><img class="picbg" src="${urlOf(blob)}" alt="" aria-hidden="true">${img}</div>`; /* the blurred fill behind the fitted crop, in the photo's colours (v229/v230) */
+  return S.fullPic&&full&&!pg?img:`<div class="picbox" data-pic="1" style="aspect-ratio:${ratioOf(d)}"><img class="picbg" src="${urlOf(blob)}" alt="" aria-hidden="true">${img}</div>`; /* the box's shape is the card's own (v514, D1) */ /* the blurred fill behind the fitted crop, in the photo's colours (v229/v230) */
 }
 /* a card saved before its reading is done (v237): the box shows the reading bar, or one plain line once the reading failed */
 const waitingHTML=d=>d.reading&&d.reading.failed?`<span class="wait failed">${t("Nothing could be read.")}</span>`:`<span class="wait">${busyHTML(t("Reading the text …"))}</span>`;
@@ -2823,7 +2840,7 @@ function renderStudy(main){
   }
   const finished = !walking()&&S.idx>=S.queue.length; /* a walk never runs out: its last card stays (v513) */
   if(finished){
-    main.innerHTML=wxNoteHTML()+learnChipsHTML()+`<div class="done">
+    main.innerHTML=wxNoteHTML()+`<div class="done">
       <div class="mark">净</div>
       <h2>${t("All clear.")}</h2>
       <p>${S.ahead?t("Pulled-forward round finished."):t("Nothing due today. Come back tomorrow — or pull the next cards forward.")}</p>
@@ -2831,7 +2848,6 @@ function renderStudy(main){
       <button class="btn" id="ahead">${t("Pull the next cards forward")}</button>
     </div>`;
     const a=$("#ahead"); if(a) a.onclick=()=>{ const q=buildQueue(true); if(q.length){S.queue=q;S.idx=0;S.done=0;S.ahead=true;S.revealed=false;render();} };
-    wireLearnChips();
     return;
   }
   const list=curList(), li=curIdx(), c=list[li], d=cardOf(c);
@@ -2857,9 +2873,9 @@ function renderStudy(main){
   const back=`${backHTML(d,{noParts:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}
       <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button></div>`;
   const noTmpl=cur&&STROKES&&!STROKE_OF.has(cur.glyph);
-  main.innerHTML=wxNoteHTML()+learnChipsHTML()+`<div class="card study${rep?" rep":""}">
+  main.innerHTML=wxNoteHTML()+`<div class="card study${rep?" rep":""}">
     ${S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:""}
-    <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}<button class="picflag${d.flag?" on":""}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}">⚑</button></div>
+    <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}${d.flag||d.unchecked?`<button class="picflag${d.flag?" on":" new"}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}" title="${d.flag?"":esc(t("Not yet checked"))}">${d.flag?"⚑":"⚐"}</button>`:""}</div>
     ${chrow}
     <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Pinyin and meaning")}</span>${rep?`<span class="pill again">${t("Again")}</span>`:""}<i aria-hidden="true">⌄</i></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
     <div class="padwrap"><button class="chev l" id="chev-l" aria-label="${t("Previous card")}"${li>0&&!S.single?"":" hidden"}>‹</button><canvas class="wpad" id="wpad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas><button class="chev r" id="chev-r" aria-label="${t("Next card")}"${li+1<list.length&&!S.single?"":" hidden"}>›</button></div>
@@ -2871,7 +2887,7 @@ function renderStudy(main){
   const card=main.querySelector(".card.study");
   /* the photo: a tap swaps the crop for the whole photo and back (v55); the flag in its corner is the review flag (§ 3.3) */
   const rv=$("#reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("#picflag")) return; if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); } };
-  $("#picflag").onclick=async e=>{ e.stopPropagation(); await setFlag(c,!d.flag); render(); };
+  { const pf=$("#picflag"); if(pf) pf.onclick=async e=>{ e.stopPropagation(); await setFlag(c,!d.flag); render(); }; } /* v515: hollow ⚐ = not yet checked, a tap flags it; tint ⚑ = flagged, a tap clears; nothing once checked and clean — the answer block's Flag button stays */
   $("#fold").onclick=()=>{ S.ansOpen=!S.ansOpen; render(); };
   const st2=$("#star-card"); if(st2) st2.onclick=async()=>{ await setStar(c,!d.star); render(); };
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
@@ -2893,9 +2909,10 @@ function renderStudy(main){
     n:list.length, idx:li, centred:false,
     peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ return `<div class="zone1 front">${frontPic(nd,{page:true})}</div>${peerRowHTML(nd)}<div class="fold"><button class="foldbtn"><span>${t("Pinyin and meaning")}</span><i aria-hidden="true">⌄</i></button></div><div class="padwrap"><div class="wpad ghost"></div></div>`; } finally{ S.fullPic=fp; } },
     go:goTo });
-  wireSay(); wireLinks(); wireSrc(); wireLearnChips(); wireAi();
+  wireSay(); wireLinks(); wireSrc(); wireAi();
   mountPad(card,d,c,tg,st,cur);
   if(pg&&!S.fullPic) fitPageCover(card,pg); /* D5: the multicard's picture cover-fitted around the card's own text */
+  attachPicZoom(card.querySelector(".zone1 .picbox")); /* v514: pinch to zoom, one finger to pan (§ 4) */
   if(ansOpen&&cur) padLine(d,cur);
 }
 /* the characters of the card as the pad's targets, grouped by word (§ 5, Q3): one entry per character of the text, in the
@@ -2976,6 +2993,46 @@ function fitPageCover(card,pg){
     wrap.style.width=sw+"px"; wrap.style.height=sh+"px"; wrap.style.left=left+"px"; wrap.style.top=top+"px"; img.style.width=sw+"px"; img.style.height=sh+"px"; };
   if(img.complete) place(); else img.addEventListener("load",place,{once:true});
 }
+/* pinch and pan on the study card's picture (v514, § 4 — H: "Reinzoomen und verschieben im Bild ermöglichen"): two pointers
+   pinch around their midpoint, one pointer pans once the picture is enlarged, the view clamped so no gap opens that was not
+   there at rest; a tap without movement still swaps the crop for the whole photo (v55), and the next card resets it, since
+   the DOM is rebuilt. While enlarged the box carries touch-action none and its pointer events stop at the box, so neither the
+   page's scroll nor the carousel (v417) takes the pan. On a page front (D5) the pagewrap moves as one, so the regions stay on
+   their texts. The v65 sheet's attachRefView does the same on a canvas; this is the element itself, transformed. */
+const ZOOM_MAX=5;
+function attachPicZoom(box){
+  const tg=box&&(box.querySelector(".pagewrap")||box.querySelector(".signimg")); if(!tg) return;
+  const v={s:1,tx:0,ty:0,r0:null}, pts=new Map(); let last=null, moved=false, eat=false;
+  tg.style.transformOrigin="0 0";
+  const rel=e=>{ const b=box.getBoundingClientRect(); return {x:e.clientX-b.left,y:e.clientY-b.top}; };
+  const measure=()=>{ if(v.s===1||!v.r0){ const b=box.getBoundingClientRect(), r=tg.getBoundingClientRect(); v.r0={x:r.left-b.left,y:r.top-b.top,w:r.width,h:r.height}; } };
+  const apply=()=>{ const r=v.r0, bw=box.clientWidth, bh=box.clientHeight, cw=r.w*v.s, ch=r.h*v.s;
+    v.tx=cw<=bw?(bw-cw)/2-r.x:Math.min(-r.x,Math.max(bw-cw-r.x,v.tx)); v.ty=ch<=bh?(bh-ch)/2-r.y:Math.min(-r.y,Math.max(bh-ch-r.y,v.ty));
+    tg.style.transform=v.s>1?`translate(${v.tx}px,${v.ty}px) scale(${v.s})`:""; box.style.touchAction=v.s>1?"none":""; box.classList.toggle("zoomed",v.s>1); };
+  const summary=()=>{ const a=[...pts.values()]; if(a.length>=2){ return {x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2,d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}; } return a.length?{x:a[0].x,y:a[0].y,d:0}:null; };
+  const zoomAt=(m,s2)=>{ s2=Math.min(ZOOM_MAX,Math.max(1,s2)); const r=v.r0, px=(m.x-r.x-v.tx)/v.s, py=(m.y-r.y-v.ty)/v.s; v.s=s2; v.tx=m.x-r.x-px*s2; v.ty=m.y-r.y-py*s2; apply(); };
+  box.addEventListener("pointerdown",e=>{ if(e.button) return; measure(); pts.set(e.pointerId,rel(e)); last=summary(); moved=false;
+    if(pts.size>=2||v.s>1){ e.stopPropagation(); e.preventDefault(); try{ box.setPointerCapture(e.pointerId); }catch(x){} } });
+  box.addEventListener("pointermove",e=>{ if(!pts.has(e.pointerId)) return; pts.set(e.pointerId,rel(e)); const cur=summary(); if(!last||!cur){ last=cur; return; }
+    if(pts.size>=2){ e.stopPropagation(); e.preventDefault(); moved=true; if(last.d>0&&cur.d>0) zoomAt(cur,v.s*cur.d/last.d); v.tx+=cur.x-last.x; v.ty+=cur.y-last.y; apply(); }
+    else if(v.s>1){ e.stopPropagation(); e.preventDefault(); if(Math.hypot(cur.x-last.x,cur.y-last.y)>0) moved=true; v.tx+=cur.x-last.x; v.ty+=cur.y-last.y; apply(); }
+    last=cur; });
+  const up=e=>{ if(!pts.has(e.pointerId)) return; pts.delete(e.pointerId); last=summary(); if(moved) eat=true; };
+  box.addEventListener("pointerup",up); box.addEventListener("pointercancel",up);
+  box.addEventListener("click",e=>{ if(eat){ eat=false; e.stopPropagation(); e.preventDefault(); } },true); /* a pan's closing click is not the tap that swaps the picture */
+  box.addEventListener("wheel",e=>{ e.preventDefault(); measure(); zoomAt(rel(e),v.s*Math.pow(1.1,-e.deltaY/100)); },{passive:false});
+  box._zoom=v; /* used by the tests */
+}
+/* Not yet checked (v515, § 9 of SPEC-flashcard-layout.md — H: "All new Cards flagged for review, must manually unflag", then,
+   on the first cut that flagged every photo card: "Make better suggestion for flagging", "Go"): every card the app makes from a
+   photo is born `unchecked:true`, a state of its own beside the review flag, and it is cleared by the act of checking rather than
+   by a tap — the first full write in Learn (cardDone), the card detail opened, an edit saved (applyCardUpdate), an AI suggestion
+   accepted, or the flag set by hand. A swipe past does not count. The flag keeps its old meaning — the app's own doubt (a weak
+   reading, a bad verdict, a leech) or H's own tap — so the Flagged filter still says "wrong" and a second row, Not yet checked,
+   says "not looked at". A card typed in the Add form is the learner's own and is born checked; a flashcard generated from a
+   multicard text inherits the text's state (makeFlashcard). Absent = checked, so every card from before v515 is checked. */
+const unchecked=d=>!!(d&&d.unchecked);
+async function checkCard(id){ const d=cardOf(id); if(!d||!d.unchecked) return; const upd={...d}; delete upd.unchecked; await putCard(upd,id); }
 /* ---------- the write pad (v512): stroke by stroke over a template, as Duolingo does it ---------- */
 const PAD_MIN=200, TRACE_OK=0.18, NEXT_MS=900, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
 /* TRACE_OK: the mean distance, in pad sides, between the drawn stroke's eight points and the template stroke's — the spec's
@@ -3045,6 +3102,7 @@ function mountPad(card,d,c,tg,st,cur){
     const first=!isRepeat(), n=tg.filter(x=>x.w).length, clean=tg.filter((x,j)=>x.w&&!st.helped.has(j)).length;
     const pts=clean+(clean===n&&st.maxMiss<=1?n:0); /* one point per written character, none for a helped one, the count again for a clean card (§ 6) */
     if(pts){ bump("written",pts); dailyBump(dayKey(),"w",pts); }
+    await checkCard(c); /* v515: written to the end with the answer block opening — the card is checked */
     if(first){ await recordGrade(c,st.helped.size?"again":"good"); S.done++; /* a Skip counts as again (Q10) — due today, fails +1, the leech flag as today */
       const l=curList(), at=Math.min(l.length,curIdx()+1+REP_GAP); l.splice(at,0,c); /* the repeat pass, three cards on (§ 8.1) — in the walk while a character is locked */ }
     S.ansOpen=true; const my=curIdx(), wasWalk=walking(); render(); if(cur) padLine(d,cur);
@@ -3271,6 +3329,7 @@ function thumbBlob(d){ return d.img||fullPhoto(d); } /* the crop (H, v86); the w
 function thumbURL(d){ return THUMB[d.id]||(THUMB[d.id]=URL.createObjectURL(thumbBlob(d))); }
 function dropThumb(id){ if(THUMB[id]){ URL.revokeObjectURL(THUMB[id]); delete THUMB[id]; } }
 function cardStatus(d){
+  if(d.unchecked) return `<span class="st new">${t("tile:New")}</span>`; /* v515: a quiet chip where the due chip sits — a card born from a photo has no progress row yet, so the place is free */
   const p=S.progress[d.id]; if(!p) return "";
   const days=Math.round((p.due-today())/DAY);
   return `<span class="st${days<=0?" due":""}">${days<=0?t("due"):t("in {0} d",days)}</span>`;
@@ -3312,7 +3371,7 @@ function cardsList(){
   const any=anyOf;
   const fieldsOf=d=>isPage(d)?[d.c,...(d.tags||[]),...pageItems(d).flatMap(fieldsOf)]:[d.c,d.trad,d.p,d.m,...Object.values(d.ms||{}),d.flagNote,...(d.tags||[])];
   /* several rows may be ticked at once (v366): a card must match one of the ticked status rows and one of the ticked tags */
-  if(S.filterUnv||S.filterFlag||S.filterAi||S.filterStar) list=list.filter(d=>(S.filterUnv&&any(d,x=>x.mt&&!x.mt.verified))||(S.filterFlag&&any(d,x=>x.flag))||(S.filterAi&&any(d,x=>x.ai))||(S.filterStar&&starred(d)));
+  if(S.filterUnv||S.filterFlag||S.filterAi||S.filterStar||S.filterNew) list=list.filter(d=>(S.filterUnv&&any(d,x=>x.mt&&!x.mt.verified))||(S.filterFlag&&any(d,x=>x.flag))||(S.filterAi&&any(d,x=>x.ai))||(S.filterStar&&starred(d))||(S.filterNew&&any(d,unchecked)));
   if(S.filterTags.length) list=list.filter(d=>S.filterTags.some(g=>any(d,x=>hasTag(x,g))));
   if(q) list=list.filter(d=>fieldsOf(d).filter(Boolean).join(" ").toLowerCase().includes(q));
   return list;
@@ -3357,13 +3416,13 @@ function cardTileHTML(d,pk){
   const sv=pg?null:srcView(d), su=sv?urlOf(sv.blob):""; /* v490: the multicard's photo, derived rather than stored */
   const pic=pg?fullPhoto(d):d.img;
   const head=pg?esc(d.c):esc((d.trad||d.c||"").replace(/\n/g," "));
-  const flag=pg?its.some(x=>x.flag):d.flag, ai=pg?its.some(x=>x.ai):d.ai;
+  const flag=pg?its.some(x=>x.flag):d.flag, ai=pg?its.some(x=>x.ai):d.ai, nw=pg&&its.some(x=>x.unchecked); /* v515: a page whose text is not yet checked carries the mark at its foot; a plain card's chip sits in its status line */
   const glyph=!sv&&!pic; /* v506: a card without a picture shows its WHOLE text in the picture area, not its first character */
   return `<button class="ctile${pg?" page":""}${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}"${pk?"":` data-lp="${esc(d.id)}"`}>
       ${pg?`<span class="tstack">`:""}<span class="tw${sv?" src":glyph?" glyph":""}">${sv?`<img class="tbg" src="${su}" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="tpw"><img class="tpi" src="${su}" alt="" loading="lazy" decoding="async">${regionsHTML({id:sv.shot},sv.rs,{learn:true,me:sv.me,span:true,only:true})}</span>`:pic?`<img class="tbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:glyphTileHTML((pg?(its[0]&&its[0].c):(d.trad||d.c))||"")}
         ${pk?`<span class="tick" aria-hidden="true"></span>`:pg?"":starHTML(d)}
         ${pg?`<span class="cnt">${its.length}</span>`:""}
-        ${(flag||ai)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}</span>`:""}</span>
+        ${(flag||ai||nw)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}${nw?`<i class="tm new" title="${esc(t("Not yet checked"))}">${t("tile:New")}</i>`:""}</span>`:""}</span>
 ${pg?`</span><span class="prog" aria-hidden="true"><i style="width:${its.length?Math.round(made/its.length*100):0}%"></i></span>`:""}
       <span class="th${pg?" title":" hanzi"}">${head||`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>
       <span class="ts2">${pg?esc(t("{0} texts on this page, {1} as flashcards.",its.length,made)):cardStatus(d)}</span></button>`;
@@ -3389,6 +3448,7 @@ function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page d
 function normaliseFilters(){
   if(S.filterStar&&!deck().some(starred)) S.filterStar=false;
   if(S.filterAi&&!deck().some(d=>d.ai)) S.filterAi=false;
+  if(S.filterNew&&!deck().some(unchecked)) S.filterNew=false; /* v515: the last card checked leaves no row to switch the filter off */
   S.filterTags=S.filterTags.filter(g=>g===UNTAGGED?allTags().length&&untaggedCount():allTags().includes(g));
 }
 function renderCards(main){
@@ -3493,6 +3553,7 @@ function detailSwipe(list,li,main){
 function renderCardDetail(main,c){
   const d=cardOf(c); if(!d){ S.detail=null; return renderCards(main); }
   if(isPage(d)) return renderPageDetail(main,d); /* v453 */
+  if(d.unchecked){ checkCard(c); d.unchecked=false; } /* v515: opening the card is looking at it — the write lands behind the render (putCard keeps the record's identity, so the row below reads the same object) */
   const p=S.progress[c];
   const stat=p?t("Interval {0} d, ease {1}, {2}, next {3}.",p.interval,p.ease.toFixed(2),nOf(p.reps,"review"),new Date(p.due).toLocaleDateString(LANG_LOCALE[LANG])):""; /* v512: no "Not studied yet." — the date is kept, the verdict is not */
   /* the open card is pushed sideways to the next card of the Cards list (v445, H: "Open cards swipe" on the two readings
@@ -3733,8 +3794,8 @@ function renderEdit(main,c){
     let handoff=null;
     if(willHand){ const rect={...CROP.rect}; const r=await cropBlob(rid,rect); if(r) handoff={rect,blob:r.blob}; } /* a reading still due or running for this frame (v244: an untouched or already read frame saves without one) */
     if(removeImg){ delete upd.img; delete upd.imgFull; delete upd.shot; delete upd.frame; dropThumb(c); } /* shot too — without it the front would still show the inbox photo through fullPhoto (v214) */
-    else if(handoff){ const win=await windowCut(rid,handoff.rect); upd.img=await cardJpeg(win?win.blob:handoff.blob); upd.frame=photoFrame(handoff.rect); dropThumb(c); } /* the 16:9 window around the frame (v329) */
-    else if(recropImg){ const win=recropRect?await windowCut(rid,recropRect):null; upd.img=await cardJpeg(win?win.blob:recropImg); if(recropRect) upd.frame=photoFrame(recropRect); dropThumb(c); } /* the crop framed again in this form (v239) with its frame (v244), as fractions of the whole photo even when framed in the window (v247) */
+    else if(handoff){ const win=await windowCut(rid,handoff.rect,ratioOf(upd)); upd.img=await cardJpeg(win?win.blob:handoff.blob); upd.frame=photoFrame(handoff.rect); dropThumb(c); } /* the 16:9 window around the frame (v329) */
+    else if(recropImg){ const win=recropRect?await windowCut(rid,recropRect,ratioOf(upd)):null; upd.img=await cardJpeg(win?win.blob:recropImg); if(recropRect) upd.frame=photoFrame(recropRect); dropThumb(c); } /* the crop framed again in this form (v239) with its frame (v244), as fractions of the whole photo even when framed in the window (v247) */
     if(upd.mt){ upd.mt={...upd.mt, verified:true, pending:false}; delete upd.mt.suspect; } /* a human edited it */
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
     else if(aiLate){ upd.mt={...(upd.mt||{}), src:"dict", verified:false, pending:false}; delete upd.mt.suspect; } /* unverified until the running AI check answers (v341); its failure marks the card pending for the next auto run */
@@ -3765,6 +3826,7 @@ function renderEdit(main,c){
    pinyin/segmentation/gloss (unless pinyin was set by hand). The id stays, so
    progress, thumbnail and queue entries need no move (v118). */
 async function applyCardUpdate(id,upd,newC,pinByHand,lines){
+  delete upd.unchecked; /* v515: an edit saved, or an AI suggestion accepted, is a check */
   { const d0=cardOf(id); if(d0&&d0.reading&&newC&&newC.trim()&&newC.trim()!==(d0.c||"").trim()){ delete d0.reading; delete upd.reading; const k=Object.keys(PENDING).find(k=>PENDING[k]===id); if(k){ delete PENDING[k]; abandonReading(k); dropExtraShot(k); } } } /* H typed another text: the background reading is not needed (v237); an edit that keeps the text lets a re-crop's reading finish (v243) */
   const isSign=upd.kind==="sign", c=upd.c;
   if(newC && newC!==c){
@@ -3852,7 +3914,7 @@ async function cardImage(d){
   const lineH=Math.round(fs*1.2), textH=lines.length*lineH;
   ctx.font=`600 56px ${sans}`; const pin=d.p?wrapText(ctx,d.p,inner):[];
   ctx.font=`52px ${sans}`; const mean=d.m?wrapText(ctx,d.m,inner):[];
-  const bmp=d.img?await createImageBitmap(d.img):null, picH=bmp?Math.round(inner*9/16):0;
+  const bmp=d.img?await createImageBitmap(d.img):null, picH=bmp?Math.round(inner/ratioOf(d)):0; /* the box's shape follows the card (v514) */
   const H=SHARE_PAD+(bmp?picH+56:0)+textH+(pin.length?24+pin.length*72:0)+(mean.length?16+mean.length*68:0)+56+40+SHARE_PAD;
   cv.width=SHARE_W; cv.height=H;
   ctx.fillStyle="#FFFFFF"; ctx.fillRect(0,0,SHARE_W,H);
@@ -3931,6 +3993,9 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  516:"The Due and Done counts have left the top bar. On Learn, the filter sits there instead.",
+  515:"A new card from a photo counts as not yet checked until you write it in Learn or open it, and a filter shows those cards alone. The flag means what it did: something looks wrong.",
+  514:"The picture on a card is wider now — as wide as the text is long — and you can pinch to zoom into it while learning. Your cards are cut again from their photos.",
   513:"Press and hold a character on a card to walk through every card that has it; tap it again to come back.",
   512:"Learn is a write pad now: trace the characters of the card stroke by stroke, and it moves on by itself. No more grade buttons.",
   511:"A screenshot can go with a Feedback message.",
@@ -4290,14 +4355,23 @@ const PENDING={}; /* shot id → the id of a card saved before its reading finis
 const PLACED={}, READ_APP={}, PICSEEN={}; /* v304, for a card saved with Save now: PLACED = the frame the reader or the AI placed on the text while the card waited (the card takes it as its frame and its crop), READ_APP = the reading started from the app's own frame, not the hand's (only such a frame may be moved); PICSEEN (v400) = the picture the AI actually read and the frame it was cut from — the one thing a card needs in order to ask, at save time, whether its own frame is anywhere near what the model said it saw (H: "Du würdest eine falsch gecroppte Karte doch selber erkennen, wenn Du den Crop noch mal prüfen würdest. Also ich meine die App.") */
 const frameOf=r=>({x:+(r.x/r.lw).toFixed(4),y:+(r.y/r.lh).toFixed(4),w:+(r.w/r.lw).toFixed(4),h:+(r.h/r.lh).toFixed(4),a:+(r.a||0).toFixed(1)}); /* the frame a card was cut with, as fractions of the photo (card.frame, v244) — Crop again starts from it */
 /* The card's picture is a 16:9 window around the text (v329, H: "does the 16:9 format make sense?" — measured on 21 photos: one-line signs run 2.3–6.8:1, posters and plates 0.9–1.6:1, so the tight crop filled the photo box's height or width only half and the rest was the blurred fill; "Go" on the window): the same centre as the frame, the frame's own angle, widened to FRAME_RATIO in the direction it lacks, never smaller than the frame, shifted to stay inside the photo and clamped to the photo's size — the text keeps its size and place in the box, the surroundings fill the rest. The card's frame stays the text's frame (Crop again starts from it); only the picture is the window. */
-function windowRect(r){ const {lw,lh}=r, a=r.a||0; let w=r.w, h=r.h;
-  if(w/h<FRAME_RATIO) w=h*FRAME_RATIO; else h=w/FRAME_RATIO;
+/* the window's shape follows the card's line count (v514, SPEC-flashcard-layout.md D1 — H: "Bei mehrzeilig aspect ratio höher als
+   2:1"): one photo line 2:1, two lines 3:2, three or more 4:3, never taller than 4:3. v329's 16:9 was the Cards tile's shape and
+   sat 22 px over the write pad's budget; a two-line sign is 0.9–1.6:1 by v329's own measurement, so a 2:1 window around it
+   showed the lines at two thirds of their size. The box on the card carries the same ratio inline (ratioOf), so a card's
+   box is the shape of its own picture — a deliberate step off v223's "one shape on every card". The ink-row PROPOSAL keeps
+   FRAME_RATIO (shapeBox, v207); this is the card's window only. */
+const frameRatio=n=>n<=1?2:n===2?1.5:4/3;
+const cardLines=d=>!d?1:d.kind==="sign"?String(d.c||"").split("\n").filter(Boolean).length:frontLines(d).length;
+const ratioOf=d=>frameRatio(cardLines(d));
+function windowRect(r,ratio){ const {lw,lh}=r, a=r.a||0, R=ratio||frameRatio(1); let w=r.w, h=r.h;
+  if(w/h<R) w=h*R; else h=w/R;
   w=Math.max(r.w,Math.min(w,lw)); h=Math.max(r.h,Math.min(h,lh));
   let x=r.x+r.w/2-w/2, y=r.y+r.h/2-h/2;
   if(!a){ x=Math.min(Math.max(0,x),Math.max(0,lw-w)); y=Math.min(Math.max(0,y),Math.max(0,lh-h)); }
   else { const ft=fitTurned({x,y,w,h},a,lw,lh,{u0:-r.w/2,u1:r.w/2,v0:-r.h/2,v1:r.h/2}); if(ft){ ({x,y,w,h}=ft); } } /* a turned window keeps its centre and gives up the widening that would leave the photo, never the frame itself (v333; in v329–v332 what lay outside took the area's colour through cropBlob, v185 — a wedge of fill beside a poster at 18°); a frame that sticks out itself stays as it is */
   return {x,y,w,h,a,lw,lh}; }
-async function windowCut(id,rect){ if(!rect||!rect.lw||!shotRec(id)) return null; try{ return await cropBlob(id,windowRect(rect)); }catch(e){ return null; } } /* the window's cut, or null when the photo is gone */
+async function windowCut(id,rect,ratio){ if(!rect||!rect.lw||!shotRec(id)) return null; try{ return await cropBlob(id,windowRect(rect,ratio)); }catch(e){ return null; } } /* the window's cut, or null when the photo is gone */
 const rectKey=r=>r?[r.x,r.y,r.w,r.h,r.a||0].map(v=>Math.round(v)).join(","):""; /* the same frame, give or take a pixel */
 async function placeFrame(id,f,opts){ /* a stored frame onto the photo's layer, then the preview — without the automatic reading when asked (v244) */
   const layer=document.querySelector(`.croplayer[data-id="${id}"]`), img=layer&&layer.parentElement.querySelector("img"); if(!layer) return;
@@ -6718,7 +6792,7 @@ async function provisionalCard(id,sg){
   try{
     const built=await readingCard(id,sg); if(!built||!built.card.c) return;
     const fr=PLACED[id]||(ph.reading.rect&&ph.reading.rect.lw?ph.reading.rect:null);
-    const win=fr?await windowCut(id,fr):null;
+    const win=fr?await windowCut(id,fr,ratioOf(built.card)):null; /* the window at the card's own ratio (v514) */
     const img=win?await cardJpeg(win.blob):ph.img;
     if(SIGN[id]!==sg||!sg.aiBusy||PENDING[id]!==ph.id) return; /* the check answered meanwhile, or the reading was replaced — the finished card is on its way */
     const {id:_i,at:_a,img:_m,shot:_s,mt:_t,...fields}=built.card;
@@ -6842,11 +6916,11 @@ async function finishPending(id){
     const {card,c,mt}=built, auto=!!ph.reading.auto, edit=!!ph.reading.edit;
     if(PLACED[id]) ph.frame=frameOf(PLACED[id]); else if(ph.reading.rect&&ph.reading.rect.lw) ph.frame=frameOf(ph.reading.rect); /* the frame the reader or the AI placed on the text while the card waited (v304), else the one it was saved with */
     const fr=PLACED[id]||(ph.reading.rect&&ph.reading.rect.lw?ph.reading.rect:null); /* for the window below, read before the card's fields are replaced (v329) */
-    numSet(id,"placed",numRect(PLACED[id]||null)); numSet(id,"cardFrame",ph.frame||null); numSet(id,"win",fr?numRect(windowRect(fr)):null); numCards(id,[ph.id]); numsFile(id); /* v399: windowRect and windowCut are the last two steps of the chain and have never left a trace, so even a perfect reconstruction of the frame did not explain the picture on the card */
+    numSet(id,"placed",numRect(PLACED[id]||null)); numSet(id,"cardFrame",ph.frame||null); numSet(id,"win",fr?numRect(windowRect(fr,ratioOf(card))):null); numCards(id,[ph.id]); numsFile(id); /* v399: windowRect and windowCut are the last two steps of the chain and have never left a trace, so even a perfect reconstruction of the frame did not explain the picture on the card */
     for(const k of Object.keys(ph)) if(!["id","at","img","imgFull","shot","tags","frame"].includes(k)) delete ph[k];
     const {id:_i,at:_a,img:_m,shot:_s,...fields}=card; Object.assign(ph,fields);
     if(sg.cardImg){ ph.img=await cardJpeg(sg.cardImg); dropThumb(ph.id); } /* the list's thumbnail was made from the crop saved first (v242, H: "the card with a photo before the re-crop remains") */
-    { const win=fr?await windowCut(id,fr):null; if(win){ ph.img=await cardJpeg(win.blob); dropThumb(ph.id); } } /* the 16:9 window around the text (v329) — the tight cut only when the photo is gone */
+    { const win=fr?await windowCut(id,fr,ratioOf(card)):null; if(win){ ph.img=await cardJpeg(win.blob); dropThumb(ph.id); } } /* the window around the text at the card's own ratio (v329, v514) — the tight cut only when the photo is gone */
     const weak=!!(mt.suspect||sg.weak||(sg.ai&&sg.ai.bad));
     if(auto||edit){ if(mt.suspect||(sg.ai&&sg.ai.bad)||(sg.weak&&!vouched)){ ph.flag=true; ph.flagNote=t("the reading looks unsure — check text, pinyin and meaning"); } }
     else { ph.flag=true; ph.flagNote=weak?t("saved before the reading was done, and the reading is weak — check text, pinyin and meaning"):t("saved before the reading was done — check text, pinyin and meaning"); } /* nobody saw the preview (v245, H: "flag cards that were saved before the final stage, with an appropriate comment") */
@@ -7541,7 +7615,7 @@ async function signAskAI(id){
     const kept=zh!==c?aiSettled(sg,lines,zh):"";
     if(kept){ sg.ai={zh:c,proposed:zh,kept,zht:"",p:"",m:"",note:r.note,kind:r.kind,ok:false,bad:false}; }
     else { sg.lines=zh.split("\n"); sg.ai={zh,zht:r.zht&&CJK.test(r.zht)?recutLines(r.zht.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"),lines):"",p:r.p,m:r.m,ml:r.ml,note:r.note,kind:r.kind,ok:r.ok,bad:!!r.bad,textOk:!r.bad&&zh===c}; /* textOk (v509): the check kept the text as read — its own "ok" is false whenever it also had to replace the gloss meaning, which is nearly always, so the text's confirmation needs its own field */
-    if(r.bad&&!sg.flag){ sg.flag=true; sg.flagNote=sg.flagNote||t("the reading looks wrong"); } } } /* H's rule: when unsure, flag instead of inventing */
+    if(r.bad&&!sg.flag){ sg.flag=true; sg.flagNote=t("the reading looks wrong"); } } } /* H's rule: when unsure, flag instead of inventing */
   }catch(err){ if(SIGN[id]) sg.aiErr=err&&err.message||String(err); } /* → signPreview falls back to the offline model */
   if(SIGN[id]){ delete sg.aiBusy; delete sg.aiPromise; }
   renderShots(); })();
@@ -7597,6 +7671,7 @@ async function readingCard(id,sg){
         segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
   setMl(card,ml);
   if(sg.flag){ card.flag=true; const note=(sg.flagNote||"").trim(); if(note) card.flagNote=note; } /* H: flag a new card at once, without opening it again */
+  card.unchecked=true; /* v515: every card from a photo is born not yet checked — the automatic card, Save now, a split panel's labels and the preview's own Save card alike */
   if(sg.tags&&sg.tags.length) card.tags=sg.tags.slice();
   const kt=sg.ai&&!sg.ai.bad?kindTag(sg.ai.kind):""; /* the kind the AI named, as an ordinary tag beside H's own (v364) */
   if(kt&&!(card.tags||[]).includes(kt)) card.tags=[...(card.tags||[]),kt];
@@ -7611,11 +7686,11 @@ async function saveSign(id){
   const {card,c,mt}=built;
   if(deck().some(d=>d.c===c&&d.shot===id)){ sg.aiErr=t("This text is already saved from this photo."); renderShots(); return; } /* the same text from another photo is a new card (H, v118) */
   const pic=sg.cardImg||S.pendingImg; if(pic) card.img=await cardJpeg(pic);
-  { const win=CROP&&CROP.id===id&&CROP.rect?await windowCut(id,CROP.rect):null; if(win) card.img=await cardJpeg(win.blob); } /* the 16:9 window around the text (v329) */
+  { const win=CROP&&CROP.id===id&&CROP.rect?await windowCut(id,CROP.rect,ratioOf(card)):null; if(win) card.img=await cardJpeg(win.blob); } /* the window around the text at the card's own ratio (v329, v514) */
   if(S.pendingFull&&!S.inbox.some(x=>x.id===id)) card.imgFull=S.pendingFull; /* the whole photo stays in the inbox, not twice (v214) */
   S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; /* used up — the Add form once showed the last photo's crop on a card made from scratch (v188) */
   if(CROP&&CROP.id===id&&CROP.rect) card.frame=frameOf(CROP.rect); /* the frame, for Crop again (v244) */
-  numSet(id,"cardFrame",card.frame||null); numSet(id,"win",CROP&&CROP.id===id&&CROP.rect?numRect(windowRect(CROP.rect)):null); numCards(id,[card.id]); numsFile(id); /* v399 */
+  numSet(id,"cardFrame",card.frame||null); numSet(id,"win",CROP&&CROP.id===id&&CROP.rect?numRect(windowRect(CROP.rect,ratioOf(card))):null); numCards(id,[card.id]); numsFile(id); /* v399 */
   bump("byPhoto"); S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
   todoDone(id); /* v509: the photo has its card */
