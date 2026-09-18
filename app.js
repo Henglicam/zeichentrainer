@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=516; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=517; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -638,11 +638,14 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v517","Learn: one photo box, one pad size"],
+  ["app","v517","the stroke template as real Kai"],
+  ["app","v517","tap a word: its pinyin + the char"],
+  ["app","v517","a finished word: star -> counter"],
   ["app","v516","Learn: the filter pill in the top bar"],
   ["photo","v515","a new card: hollow ⚐, the New chip"],
   ["app","v515","Not yet checked: written -> gone"],
   ["app","v514","Learn: pinch into the picture, pan"],
-  ["app","v514","1-line card 2:1, 2-line 3:2 box"],
   ["update","v514","Diagnostics: re-cut v4 done, count"],
   ["app","v513","Learn: hold a char, walk its cards"],
   ["app","v512","Learn: the pad snaps on your strokes"],
@@ -1039,6 +1042,10 @@ function setStats(){
      (the resume note carries it), it is simply not shown; the walk's count of v513 went with the capsule, the chevrons say it. */
   const inStudy=S.mode==="study", f=$("#stat-filter");
   f.innerHTML=inStudy?learnFilterHTML():""; f.style.display=inStudy&&f.innerHTML?"":"none"; if(inStudy) wireFilterPill("learn",render);
+  /* the written-today counter the star flies into (v517): on Learn, for as long as the day has points in it */
+  { const ss=$("#stat-star"); if(ss){ const v=PRAISE_N?PRAISE_N.n:praiseDay(), on=!!(inStudy&&v>0);
+      ss.hidden=!on; ss.style.display=on?"":"none"; ss.classList.toggle("gold",!!(PRAISE_N&&PRAISE_N.gold));
+      if(on){ ss.setAttribute("aria-label",t("Written today")+": "+v); ss.innerHTML=`<i class="prs" aria-hidden="true">${MARK_STAR}</i><span class="v">${v}</span>`; } } }
   $("#stat-deck").style.display=inStudy?"none":"";
   $("#stat-deck .v").textContent=deckCount(); /* flashcards only (v504): a multicard and its texts are looked up, not counted */
   document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.mode===S.mode||(b.dataset.mode==="cards"&&S.mode==="add")||(b.dataset.mode==="more"&&S.mode==="guide")));
@@ -2651,7 +2658,11 @@ function frontPic(d,o){
      same height whatever shape the frame had (v224, H's "Go" on the design review after "Bitte consistency!"); the whole
      photo, a deliberate tap, keeps its own shape */
   const img=`<img class="signimg${S.fullPic&&full&&!pg?" full":""}" data-pic="1" src="${urlOf(blob)}" alt="photo">`;
-  return S.fullPic&&full&&!pg?img:`<div class="picbox" data-pic="1" style="aspect-ratio:${ratioOf(d)}"><img class="picbg" src="${urlOf(blob)}" alt="" aria-hidden="true">${img}</div>`; /* the box's shape is the card's own (v514, D1) */ /* the blurred fill behind the fitted crop, in the photo's colours (v229/v230) */
+  /* the box's shape is the card's own (v514, D1) — except on the study card, where it is one constant shape whatever the
+     text, because the pad's size is measured against it (v517, H: "Das müssen Konstanten sein"). The picture itself keeps
+     the shape v514 cut it in and is fitted inside, which is what the blurred fill behind it has been for since v232. */
+  const ratio=(o&&o.fixed)?FRONT_RATIO:ratioOf(d);
+  return S.fullPic&&full&&!pg?img:`<div class="picbox" data-pic="1" style="aspect-ratio:${ratio}"><img class="picbg" src="${urlOf(blob)}" alt="" aria-hidden="true">${img}</div>`; /* the blurred fill behind the fitted crop, in the photo's colours (v229/v230) */
 }
 /* a card saved before its reading is done (v237): the box shows the reading bar, or one plain line once the reading failed */
 const waitingHTML=d=>d.reading&&d.reading.failed?`<span class="wait failed">${t("Nothing could be read.")}</span>`:`<span class="wait">${busyHTML(t("Reading the text …"))}</span>`;
@@ -2867,9 +2878,10 @@ function renderStudy(main){
   const rows=[]; { let k=0, pos=0; for(const n of (lines.length?lines:[Infinity])){ const row=[]; while(k<tg.length&&(tg[k].pos<pos+n||n===Infinity)){ row.push(tg[k]); k++; } pos+=n; if(row.length) rows.push(row); } while(k<tg.length){ rows.push(tg.slice(k)); k=tg.length; } }
   const btn=x=>{ const i=tg.indexOf(x), cls=["ch",st.done.has(i)?"done":"",cur===x?"cur":"",x.w?"":"num",S.lockChar&&x.ch===S.lockChar?"lock":""].filter(Boolean).join(" "); /* lock: the long-pressed character, on every card of its walk (v513) */
     return `<button class="${cls}" data-i="${i}" ${x.w?"":`aria-disabled="true"`}>${esc(x.glyph)}${st.done.has(i)?`<i class="tick" aria-hidden="true">${MARK_TICK}</i>`:""}</button>`; };
-  const groupRow=row=>{ const out=[]; let g=null; for(const x of row){ if(!g||g.wi!==x.wi){ g={wi:x.wi,items:[]}; out.push(g); } g.items.push(x); } return out.map(g=>`<span class="chw">${g.items.map(btn).join("")}</span>`).join(""); };
+  const lit=wordOn(c), litWi=lit==null?null:(tg[lit]||{}).wi; /* v517: the word a tap lit up */
+  const groupRow=row=>{ const out=[]; let g=null; for(const x of row){ if(!g||g.wi!==x.wi){ g={wi:x.wi,items:[]}; out.push(g); } g.items.push(x); } return out.map(g=>`<span class="chw${g.wi===litWi?" on":""}" data-wi="${g.wi}">${g.items.map(btn).join("")}</span>`).join(""); };
   const chrow=`<div class="chrow">${rows.map(r=>`<div class="chline">${groupRow(r)}</div>`).join("")}</div>`;
-  const pg=frontPage(d), picHTML=frontPic(d,{page:true});
+  const pg=frontPage(d), picHTML=frontPic(d,{page:true,fixed:true}); /* v517: one box shape on the study card */
   const back=`${backHTML(d,{noParts:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}
       <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button></div>`;
   const noTmpl=cur&&STROKES&&!STROKE_OF.has(cur.glyph);
@@ -2879,8 +2891,8 @@ function renderStudy(main){
     ${chrow}
     <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Pinyin and meaning")}</span>${rep?`<span class="pill again">${t("Again")}</span>`:""}<i aria-hidden="true">⌄</i></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
     <div class="padwrap"><button class="chev l" id="chev-l" aria-label="${t("Previous card")}"${li>0&&!S.single?"":" hidden"}>‹</button><canvas class="wpad" id="wpad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas><button class="chev r" id="chev-r" aria-label="${t("Next card")}"${li+1<list.length&&!S.single?"":" hidden"}>›</button></div>
-    <div class="padline" id="padline"${ansOpen?"":" hidden"}></div>
-    <div class="padacts" id="padacts"><button class="del" id="pad-undo">${t("pad:Undo")}</button><button class="del" id="pad-show" hidden>${t("Show me")}</button><button class="del" id="pad-skip" hidden>${t("Skip")}</button><button class="del" id="pad-done" hidden>${t("Done")}</button><button class="del" id="pad-clear">${t("Clear")}</button></div>
+    <div class="padline" id="padline"${ansOpen||lit!=null?"":" hidden"}></div>
+    <div class="padacts" id="padacts">${noTmpl?`<button class="del" id="pad-undo">${t("pad:Undo")}</button>`:""}<button class="del" id="pad-show" hidden>${t("Show me")}</button><button class="del" id="pad-skip" hidden>${t("Skip")}</button><button class="del" id="pad-done" hidden>${t("Done")}</button>${noTmpl?`<button class="del" id="pad-clear">${t("Clear")}</button>`:""}</div>
     ${noTmpl?`<div class="hint" id="pad-note">${t("not in the stroke set — draw it and tap Done")}</div>`:""}
     ${swipeHint(d)}${linkedHTML(d)}</div>`;
   if(ansOpen) warmParts();
@@ -2898,7 +2910,11 @@ function renderStudy(main){
     b.onclick=e=>{ e.stopPropagation();
       if(S.lockChar&&x.ch===S.lockChar){ unlockChar(); return; } /* the tap on the locked character releases it (§ 7, H: "Tippen erneut auf highlit character exits it") */
       if(!x.w){ padLine(d,x); return; } /* a number with its unit is one button and not writable: its line shows, the pad stays on the last character (§ 5) */
-      st.i=i; st.k=0; st.miss=0; st.hint=false; st.free.length=0; render(); };
+      /* v517: a tap lights the whole word this character belongs to and shows its pinyin and meaning, and the single
+         character's own underneath when the word has more than one. The same character tapped again puts the word out.
+         It still picks the character to write, so nothing the pad could do before is lost. */
+      if(wordOn(c)===i){ S.wordCh=null; render(); return; }
+      S.wordCh={c,i}; st.i=i; st.k=0; st.miss=0; st.hint=false; st.free.length=0; render(); };
     /* press and hold locks the character and walks every card that has it (v513, § 7 — the v354 gesture, buzz included); a
        long press on another character moves the lock; not from a single-card test, whose walk is the list's own */
     if(x.w&&!S.single) longPress(b,()=>lockChar(x.ch,c)); });
@@ -2911,6 +2927,7 @@ function renderStudy(main){
     go:goTo });
   wireSay(); wireLinks(); wireSrc(); wireAi();
   mountPad(card,d,c,tg,st,cur);
+  if(lit!=null&&tg[lit]) padLine(d,tg[lit]); /* v517: the lit word's line, filled on the tap and on any redraw while it stands */
   if(pg&&!S.fullPic) fitPageCover(card,pg); /* D5: the multicard's picture cover-fitted around the card's own text */
   attachPicZoom(card.querySelector(".zone1 .picbox")); /* v514: pinch to zoom, one finger to pan (§ 4) */
   if(ansOpen&&cur) padLine(d,cur);
@@ -2937,6 +2954,12 @@ const isRepeat=()=>{ const l=curList(), i=curIdx(); return l.slice(0,i).includes
 /* the list Learn walks (v513, § 7): the session's queue, or — while a character is locked — the cards of the current filter that
    carry it, due or not (v429's argument: a locked character is a hand-picked list like the star), in the session's order, the
    rest of the deck after it. Nothing is written to disk; the note of v423 carries it across a reload. */
+/* the word a tap lit up (v517, H: "Wenn ich auf ein Wort tippe wird zunächst das ganze Wort gehighlighted und Pinyin und
+   Bedeutung für dieses eine Wort dargestellt. Auch wenn ein Wort aus mehreren Charakters besteht ist das der Fall. Ein
+   erneutes Tippen auf dieses Wort beendet den Modus wieder."). It is held with the card it was tapped on, so it cannot
+   survive onto the next card, and padTargets already answers which characters make up the word — the tile is there, it
+   only needs lighting. */
+const wordOn=c=>(S.wordCh&&S.wordCh.c===c)?S.wordCh.i:null;
 const walking=()=>!!(S.lockChar&&Array.isArray(S.walk)&&S.walk.length);
 const curList=()=>walking()?S.walk:S.queue;
 const curIdx=()=>walking()?S.walkIdx:S.idx;
@@ -2969,17 +2992,29 @@ function peerRowHTML(nd){ const tg=padTargets(nd); return `<div class="chrow"><d
 async function padLine(d,x){
   const box=$("#padline"); if(!box) return; box.hidden=false;
   const w=x.word||x.ch, mark=[...w].map((ch,i)=>x.w&&i===x.pos-x.wstart?`<b>${esc(ch)}</b>`:esc(ch)).join(""); /* the word with the current character marked */
-  if(!x.w){ box.innerHTML=`<span class="hanzi">${esc(w)}</span><span>${esc(latinUnitMeaning(w)||t("A number, read as it is."))}</span>`; return; }
-  box.innerHTML=`<span class="hanzi">${mark}</span><span class="badge">…</span>`;
+  const row=(h,py,m)=>`<div class="plrow"><span class="hanzi">${h}</span>${py?`<span class="mono">${esc(py)}</span>`:""}${m?`<span>${esc(m)}</span>`:""}</div>`;
+  if(!x.w){ box.innerHTML=row(esc(w),"",latinUnitMeaning(w)||t("A number, read as it is.")); return; }
+  box.innerHTML=row(mark,"","")+`<div class="plrow"><span class="badge">…</span></div>`;
   try{
     if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
     await loadDict().catch(()=>{});
     const known=d.gloss&&cardGloss(d).find(g=>g.w===w);
     const py=known&&known.p?known.p:pinyinPro.pinyin(w,{toneType:"symbol"});
     const m=cleanSense((known&&known.m)||bestSense(w)||((DICT&&DICT.get(w))||""));
+    /* v517 (H: "Pinyin und Bedeutung für einzelne Charaktere aus einem längeren Wort"): a word of several characters gets a
+       second line for the one character the pad is on. Its syllable is taken out of the word's own pinyin rather than
+       looked up on its own, so a character that reads differently inside this word keeps the word's reading. */
+    const chars=[...w].filter(ch=>CJK.test(ch)), one=x.ch;
+    let sub="";
+    if(chars.length>1&&CJK.test(one)){
+      const syl=String(py||"").trim().split(/\s+/), k=x.pos-x.wstart;
+      const cpy=syl.length===chars.length&&syl[k]?syl[k]:pinyinPro.pinyin(one,{toneType:"symbol"});
+      const cm=cleanSense(bestSense(one)||((DICT&&DICT.get(one))||""));
+      sub=row(`<b>${esc(one)}</b>`,cpy,cm||t("not in the dictionary"));
+    }
     if(!box.isConnected) return;
-    box.innerHTML=`<span class="hanzi">${mark}</span><span class="mono">${esc(py)}</span><span>${esc(m||t("not in the dictionary"))}</span>`;
-  }catch(e){ if(box.isConnected) box.innerHTML=`<span class="hanzi">${mark}</span>`; }
+    box.innerHTML=row(mark,py,m||t("not in the dictionary"))+sub;
+  }catch(e){ if(box.isConnected) box.innerHTML=row(mark,"",""); }
 }
 /* D5: the multicard's picture in the study card's box is cover-fitted around the card's own text — the pagewrap is sized to the
    scaled picture and offset so the region's centre is centred, clamped to the picture; the regions keep their percent place */
@@ -3034,7 +3069,13 @@ function attachPicZoom(box){
 const unchecked=d=>!!(d&&d.unchecked);
 async function checkCard(id){ const d=cardOf(id); if(!d||!d.unchecked) return; const upd={...d}; delete upd.unchecked; await putCard(upd,id); }
 /* ---------- the write pad (v512): stroke by stroke over a template, as Duolingo does it ---------- */
-const PAD_MIN=200, TRACE_OK=0.18, NEXT_MS=900, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
+const PAD_MIN=200, TRACE_OK=0.18, NEXT_MS=1500, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
+const PAD_BELOW=46, FRONT_RATIO=2, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_GRID/1024;
+/* NEXT_MS is 1500 since v517: the finished card holds while it is praised (§ 12), where it held 900 and nothing
+   happened. FRONT_RATIO is the one shape the study card's picture box takes whatever the text is. PAD_BELOW is the
+   room the pad leaves under itself for the helper row, counted whether or not the row has
+   anything in it, so the pad is the same size on every card (v517, H: "Das müssen Konstanten sein"). BRUSH_W is the
+   brush's widest point; OUT_GRID/OUT_Y0 map the stroke outlines, which are stored y-up on a 256 grid. */
 /* TRACE_OK: the mean distance, in pad sides, between the drawn stroke's eight points and the template stroke's — the spec's
    0.28 was a starting number and its own suite refuses a stroke a quarter of the pad off, so the bar sits under that; the
    field sets it (the pad logs every stroke's distance in DRAWLOG). PAD_FIT maps the 1024 em box of the medians onto 86 % of
@@ -3046,37 +3087,177 @@ function resamplePts(pts,n){ if(pts.length===1) return Array(n).fill(pts[0]); co
    of v141 forgives the reverse for the reader and the pad must not */
 const strokeLen=s=>{ let L=0; for(let i=1;i<s.length;i++) L+=Math.hypot(s[i][0]-s[i-1][0],s[i][1]-s[i-1][1]); return L; };
 function traceDist(drawn,tmpl){ const a=resamplePts(drawn,STROKE_PTS), b=resamplePts(tmpl,STROKE_PTS); let f=0; for(let k=0;k<STROKE_PTS;k++) f+=Math.hypot(a[k][0]-b[k][0],a[k][1]-b[k][1]); return f/STROKE_PTS; }
+/* ================= the template's look (v517, H: "Die Reihenfolge der Striche stimmt zwar, aber die Striche müssen einer
+   viel eleganteren Vorlage folgen.") =================
+   Until v516 a template stroke was a line of one thickness drawn straight through the raw sample points of the medians,
+   with round caps. Those points wobble — the first stroke of 我 runs through y 348, 350, 358, 370, 368, 378 — so every
+   sample showed as a kink, and a stroke of even thickness cannot read as writing whatever it follows: a 撇 tapers to a
+   point, a 捺 swells and flicks, a 横 presses down at the end. Two things replace it, and the second is the real answer:
+     A. brushPath — the samples smoothed and given a width that follows the stroke's own kind, inferred from its geometry.
+        Costs no download, so it draws from the first card and it draws every character the outlines lack.
+     B. OUTLINE_OF — the true Kai outline of every stroke, the same Arphic source the medians come from (vendor/outlines.
+        txt.gz, 7.3 MB, 9,534 characters). Fetched in the background after the medians, so nothing waits for it, and used
+        in place of the brush the moment it lands. */
+let OUTLINE_OF=new Map(), OUTLINES=null, _outLoading=null;
+function loadOutlines(){
+  if(OUTLINES) return Promise.resolve(OUTLINES);
+  if(!_outLoading) _outLoading=(async()=>{
+    const url=new URL("./vendor/outlines.txt.gz",location.href).href;
+    let r=await vendorFetch("outlines.txt.gz").catch(err=>{ if(!swControls()) throw err; return {ok:false,status:err.message}; });
+    if(!r.ok){ try{ const c=await caches.open("zt-ocr-v1"); await c.delete(url); }catch(e){} r=await fetch(url,{cache:"reload"}); if(!r.ok) throw new Error("outline data not available ("+r.status+")"); }
+    const buf=new Uint8Array(await r.arrayBuffer());
+    const text=(buf[0]===0x1f&&buf[1]===0x8b)?await new Response(new Response(buf).body.pipeThrough(new DecompressionStream("gzip"))).text():new TextDecoder().decode(buf);
+    for(const line of text.split("\n")){ const i=line.indexOf("\t"); if(i<1) continue; let st; try{ st=JSON.parse(line.slice(i+1)); }catch(e){ continue; }
+      if(Array.isArray(st)&&st.length) OUTLINE_OF.set(line.slice(0,i),st); }
+    OUTLINES=true; return OUTLINES;
+  })().catch(err=>{ _outLoading=null; throw err; });
+  return _outLoading;
+}
+/* the outlines of ch, only when they describe the same strokes as the medians the pad tests against */
+function outlinesFor(ch,nStrokes){ const o=OUTLINE_OF.get(ch); return o&&o.length===nStrokes?o:null; }
+function outlinePath(ctx,d2,N){ ctx.save(); const k=N*PAD_FIT/OUT_GRID, off=N*(0.5-PAD_FIT/2);
+  ctx.translate(off,off); ctx.scale(k,-k); ctx.translate(0,-OUT_Y0); ctx.fill(new Path2D(d2)); ctx.restore(); }
+
+/* Chaikin: the sampled medians are corners, and a curve through them is what the eye reads as a stroke */
+function chaikin(p,rounds){ for(let r=0;r<rounds;r++){ if(p.length<3) break; const o=[p[0]];
+    for(let i=0;i<p.length-1;i++){ const a=p[i],b=p[i+1];
+      o.push([a[0]*0.75+b[0]*0.25,a[1]*0.75+b[1]*0.25]); o.push([a[0]*0.25+b[0]*0.75,a[1]*0.25+b[1]*0.75]); }
+    o.push(p[p.length-1]); p=o; } return p; }
+/* the stroke's kind from its own geometry — the median file carries no type, so direction, length and the turn at the
+   tail stand in for one. A wrong guess costs a stroke that is drawn a little too evenly, never a wrong shape. */
+function strokeKind(s){
+  const a=s[0], b=s[s.length-1], dx=b[0]-a[0], dy=b[1]-a[1], L=strokeLen(s);
+  if(L<0.09) return "dot";
+  const m=s[Math.max(0,s.length-3)], t2=s[s.length-1];
+  const main=Math.atan2(dy,dx), tail=Math.atan2(t2[1]-m[1],t2[0]-m[0]);
+  const turn=Math.abs(((tail-main+Math.PI*3)%(Math.PI*2))-Math.PI);
+  const hook=turn<Math.PI*0.45&&Math.hypot(t2[0]-m[0],t2[1]-m[1])>0.04;
+  if(Math.abs(dy)<Math.abs(dx)*0.45) return hook?"heng-hook":"heng";
+  if(Math.abs(dx)<Math.abs(dy)*0.45) return hook?"shu-hook":"shu";
+  if(dx<0&&dy>0) return "pie";
+  if(dx>0&&dy>0) return "na";
+  return hook?"heng-hook":"heng";
+}
+const BRUSH={ heng:t=>0.78+0.34*t*t, "heng-hook":t=>t<0.86?0.78+0.30*t*t:Math.max(0.10,1.02*(1-(t-0.86)/0.14)),
+  shu:t=>0.92+0.16*t, "shu-hook":t=>t<0.84?0.92+0.14*t:Math.max(0.10,1.05*(1-(t-0.84)/0.16)),
+  pie:t=>Math.max(0.08,1.0-0.92*Math.pow(t,1.35)), na:t=>t<0.72?0.42+0.85*t:Math.max(0.18,1.04-2.4*(t-0.72)),
+  dot:t=>0.45+0.75*Math.sin(Math.min(1,t*1.15)*Math.PI*0.62) };
+/* the brush body: the smoothed centreline offset by half its width on each side, filled as one ring */
+function brushPath(s,w,kind){
+  const q=resamplePts(chaikin(resamplePts(s,Math.max(10,Math.min(40,s.length*5))),2),64), f=BRUSH[kind]||BRUSH.heng;
+  const L=[],R=[];
+  for(let i=0;i<64;i++){
+    const a=q[Math.max(0,i-1)], b=q[Math.min(63,i+1)];
+    let nx=-(b[1]-a[1]), ny=b[0]-a[0]; const m=Math.hypot(nx,ny)||1e-6; nx/=m; ny/=m;
+    const r=w*f(i/63)/2;
+    L.push([q[i][0]+nx*r,q[i][1]+ny*r]); R.push([q[i][0]-nx*r,q[i][1]-ny*r]);
+  }
+  const path=new Path2D(); path.moveTo(L[0][0],L[0][1]);
+  for(let i=1;i<64;i++) path.lineTo(L[i][0],L[i][1]);
+  for(let i=63;i>=0;i--) path.lineTo(R[i][0],R[i][1]);
+  path.closePath(); return path;
+}
+
+/* ================= the praise after a finished word (v517, H: "Nach Vollenden eines Wortes darf nicht direkt zur nächsten
+   Karte gesprungen werden. Es muss viel mehr ein Lob kommen, Stichwort Gamification. Ich könnte mir vorstellen, dass aus
+   dem Schreibfeld ein Stern in einen Zähler hochfliegt.") =================
+   A star lifts out of the pad and flies into a counter at the right of the top bar, which then STAYS for as long as the
+   day has points in it — a counter to watch grow, not a receipt that fades, so the bar does not jump on every card. The
+   praise is proportional: a card written clean sends a gold star with a ring spreading out of the pad, a card that needed
+   a Skip sends a plain one. NOTHING about the schedule, the grade, the points arithmetic or the repeat pass changes —
+   only the dwell before the next card and what is drawn during it. One clock drives every motion, so a test can hold the
+   whole moment at a given millisecond and photograph it (PRAISE_HOLD). */
+const MARK_STAR=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4l2.95 5.98 6.6.96-4.77 4.65 1.12 6.57L12 17.52 6.1 20.56l1.13-6.57L2.45 9.34l6.6-.96z"/></svg>`;
+let PRAISE_N=null;    /* the number the counter shows while a star is in flight; null = it shows the day's own total */
+let PRAISE_HOLD=null; /* tests only: hold the moment at this millisecond instead of running it */
+const praiseDay=()=>dayOf((S.settings.daily||{})[dayKey()]).w||0; /* the day's written points — More → Progress calls it "Written today" */
+const prEase=f=>f<0.5?2*f*f:1-Math.pow(-2*f+2,2)/2;
+const prClamp=(u,a,b)=>Math.max(0,Math.min(1,(u-a)/(b-a)));
+function praiseStart(clean){
+  const reduced=matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const card=document.querySelector(".card.study"), cv=card&&card.querySelector("#wpad");
+  const r=cv?cv.getBoundingClientRect():null;
+  if(!r||!r.width) return {finish:()=>{}};
+  const nodes=[]; let raf=0, landed=false, t0=performance.now();
+  const add=(cls,html,st2)=>{ const e=document.createElement("div"); e.className=cls; if(html!=null) e.innerHTML=html; if(st2) Object.assign(e.style,st2); document.body.appendChild(e); nodes.push(e); return e; };
+  const total=praiseDay(), before=Math.max(0,total-1);
+  /* the answer block opens above the pad as the card is finished, so the pad can be pushed below the fold — the star and
+     the ring start from the visible part of it, never off the screen where nobody would see them */
+  const cx=r.left+r.width/2, cy=Math.min(Math.max(r.top+r.height/2,90),window.innerHeight-90);
+  const FLY0=60, FLY1=620, POP1=980;
+  /* the counter goes up first, holding the number from before this card, so the star has something to fly into */
+  const land=()=>{ if(landed) return; landed=true; PRAISE_N=null; setStats(); };
+  PRAISE_N={n:before,gold:false}; setStats();
+  const ss0=$("#stat-star"), tr=ss0?ss0.getBoundingClientRect():null;
+  const star=add("prstar"+(clean?" gold":""),MARK_STAR);
+  let bx=cx, by=cy;
+  if(tr&&tr.width){ bx=tr.left+tr.width/2; by=tr.top+tr.height/2; }
+  const kx=(cx+bx)/2-Math.max(60,Math.abs(cx-bx)*0.3), ky=Math.min(cy,by)-110; /* out to the side and up, then down into the counter */
+  const ring=clean?add("prring",null,{width:Math.min(r.width,r.height)*0.92+"px",height:Math.min(r.width,r.height)*0.92+"px"}):null;
+  const frame=u=>{
+    const f=prClamp(u,FLY0,FLY1), e=prEase(f), pop=prClamp(u,0,FLY0);
+    if(reduced){ /* no flight: the star shows at the counter and fades — the pause and the number stay */
+      star.style.transform=`translate(${bx}px,${by}px) translate(-50%,-50%) scale(.75)`;
+      star.style.opacity=String(1-f);
+    } else if(u<FLY0){ star.style.transform=`translate(${cx}px,${cy}px) translate(-50%,-50%) scale(${0.6+1.0*pop})`; star.style.opacity=String(pop); }
+    else { const x=(1-e)*(1-e)*cx+2*(1-e)*e*kx+e*e*bx, y=(1-e)*(1-e)*cy+2*(1-e)*e*ky+e*e*by;
+      star.style.transform=`translate(${x}px,${y}px) translate(-50%,-50%) scale(${1.6-1.1*e}) rotate(${e*200}deg)`;
+      star.style.opacity=String(f<0.86?1:Math.max(0,(1-f)/0.14)); }
+    if(u>=FLY1){ star.style.opacity="0"; if(!landed){ landed=true; PRAISE_N={n:total,gold:clean}; setStats(); } }
+    if(ring){ const g=prClamp(u,0,FLY1+20); ring.style.transform=`translate(${cx}px,${cy}px) translate(-50%,-50%) scale(${0.35+1.35*prEase(g)})`; ring.style.opacity=String(reduced?0:0.9*(1-g*g)); }
+    const ss=$("#stat-star");
+    if(ss){ const q=prClamp(u,FLY1,POP1); ss.style.transform=(reduced||q<=0||q>=1)?"":`scale(${1+0.34*Math.sin(Math.PI*q)})`; }
+  };
+  const done=()=>{ const ss=$("#stat-star"); if(ss) ss.style.transform=""; PRAISE_N=null; setStats(); nodes.forEach(x=>x.remove()); nodes.length=0; };
+  const loop=()=>{ const held=typeof PRAISE_HOLD==="number", u=held?PRAISE_HOLD:performance.now()-t0;
+    frame(u); if(held||u<POP1) raf=requestAnimationFrame(loop); else { raf=0; done(); } };
+  frame(0); raf=requestAnimationFrame(loop);
+  return {finish:()=>{ if(raf) cancelAnimationFrame(raf); raf=0; done(); }};
+}
 function mountPad(card,d,c,tg,st,cur){
   const cv=card.querySelector("#wpad"); if(!cv) return; const N=DRAW_SIZE, ctx=cv.getContext("2d");
   const reduced=matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
   /* the pad is square and takes what is left of the screen under it, never under PAD_MIN, then the card scrolls (§ 3.1) */
+  /* THE PAD IS THE SAME SIZE ON EVERY CARD (v517, H: "Die Felder für Bild und Zeichenfläche dürfen sich nicht in der Größe
+     verändern. Das müssen Konstanten sein."). Until v516 the pad took whatever the card had left, so it shrank as the photo
+     and the button rows grew with the line count — 309 on a one-line card, its 200 px floor on any other — and then the card
+     ran off the screen. Three things make the measurement the same every time: the picture box has one shape (frontPic), the
+     characters are one row however many lines the photo had (.chrow), and what sits BELOW the pad is counted as the constant
+     PAD_BELOW instead of being measured. So the answer block opening, the helper buttons appearing, the swipe hint and the
+     linked-photos row all leave the pad where it is and let the card scroll, which is the thing that may move. */
   const fit=()=>{ if(!cv.isConnected) return; const wrap=cv.parentElement, inner=card.clientWidth-36; cv.style.width="0px"; cv.style.height="0px";
-    const nav=$("#tabs"), navH=nav?nav.getBoundingClientRect().height:56, top=wrap.getBoundingClientRect().top+window.scrollY;
-    let below=0; for(let el=wrap.nextElementSibling;el;el=el.nextElementSibling){ if(!el.hidden){ const cs=getComputedStyle(el); below+=el.getBoundingClientRect().height+(parseFloat(cs.marginTop)||0)+(parseFloat(cs.marginBottom)||0); } }
+    const nav=$("#tabs"), navH=nav?nav.getBoundingClientRect().height:56;
+    const ans=card.querySelector("#ans"), ansH=(ans&&!ans.hidden)?ans.getBoundingClientRect().height:0; /* measured as if the answer were folded */
+    const top=wrap.getBoundingClientRect().top+window.scrollY-ansH;
     const ccs=getComputedStyle(card), floor=(nav?nav.getBoundingClientRect().top:window.innerHeight-navH)-16; /* the card ends 16 px above the tab bar */
-    const room=floor-(top-window.scrollY)-below-(parseFloat(ccs.paddingBottom)||18);
+    const room=floor-(top-window.scrollY)-PAD_BELOW-(parseFloat(ccs.paddingBottom)||18);
     const side=Math.max(PAD_MIN,Math.min(inner,Math.floor(room)));
-    cv.style.width=side+"px"; cv.style.height=side+"px"; card._fit={navH,top,below,room,inner,side}; };
+    cv.style.width=side+"px"; cv.style.height=side+"px"; card._fit={navH,top,ansH,room,inner,side}; };
   fit(); window.addEventListener("resize",fit,{once:true}); card._fitPad=fit;
   const tmpl=cur&&STROKE_OF.get(cur.glyph); let free=!tmpl; const strokes=tmpl?tmpl.map(s=>s.map(padPt)):null; let drawing=null, anim=null, flash=0;
+  const outl=tmpl&&cur?outlinesFor(cur.glyph,tmpl.length):null; /* the real Kai outlines when they have arrived (v517) */
+  const kinds=strokes?strokes.map(strokeKind):null;
   const lvl=cur?padLevel(c,cur,st):1;
   const P=p=>[p[0]*N,p[1]*N];
   const path=(s,scale)=>{ ctx.beginPath(); const p0=P(s[0]); ctx.moveTo(p0[0],p0[1]); const n=scale==null?s.length:Math.max(1,Math.round(s.length*scale)); for(let i=1;i<n;i++){ const p=P(s[i]); ctx.lineTo(p[0],p[1]); } if(n===1) ctx.lineTo(p0[0]+0.1,p0[1]); ctx.stroke(); };
+  /* one template stroke, as the real outline where we have it and as the brush where we do not (v517) */
+  const glyph=k=>{ if(outl) outlinePath(ctx,outl[k],N); else ctx.fill(brushPath(strokes[k].map(P),BRUSH_W,kinds[k])); };
+  const inked=s=>{ const q=chaikin(s,2); ctx.beginPath(); const p0=P(q[0]); ctx.moveTo(p0[0],p0[1]); for(let i=1;i<q.length;i++){ const p=P(q[i]); ctx.lineTo(p[0],p[1]); } if(q.length===1) ctx.lineTo(p0[0]+0.1,p0[1]); ctx.stroke(); }; /* the finger's own stroke, smoothed */
   const paint=()=>{
     ctx.clearRect(0,0,N,N);
     ctx.strokeStyle=cssVar("--sep")||"#ccc"; ctx.lineWidth=2; ctx.setLineDash([10,10]); ctx.beginPath(); ctx.moveTo(N/2,0); ctx.lineTo(N/2,N); ctx.moveTo(0,N/2); ctx.lineTo(N,N/2); ctx.stroke(); ctx.setLineDash([]);
     ctx.lineWidth=PAD_LW; ctx.lineCap="round"; ctx.lineJoin="round";
     if(strokes){
       const showT=lvl===1?0.3:lvl===2?0.12:st.hint?0.12:0; /* level 1 trace, level 2 faint, level 3 recall — a miss shows the faint template for that stroke (§ 8.1) */
-      if(showT&&!flash){ ctx.globalAlpha=showT; ctx.strokeStyle=cssVar("--label3")||"#aaa"; strokes.forEach(s=>path(s)); ctx.globalAlpha=1; }
-      ctx.strokeStyle=flash?(cssVar("--ok")||"#2fa36b"):(cssVar("--label")||"#000"); for(let i=0;i<Math.min(st.k,strokes.length);i++) path(strokes[i]);
+      if(showT&&!flash){ ctx.globalAlpha=showT; ctx.fillStyle=cssVar("--label3")||"#aaa"; strokes.forEach((s,k)=>glyph(k)); ctx.globalAlpha=1; }
+      ctx.fillStyle=flash?(cssVar("--ok")||"#2fa36b"):(cssVar("--label")||"#000"); for(let i=0;i<Math.min(st.k,strokes.length);i++) glyph(i);
       const lit=st.k<strokes.length&&(lvl===1||st.hint)&&!flash;
-      if(lit){ ctx.globalAlpha=0.55; ctx.strokeStyle=cssVar("--tint")||"#c8372d"; path(strokes[st.k]); ctx.globalAlpha=1; const p0=P(strokes[st.k][0]); ctx.fillStyle=cssVar("--tint")||"#c8372d"; ctx.beginPath(); ctx.arc(p0[0],p0[1],10,0,Math.PI*2); ctx.fill(); }
-      if(anim){ const f=reduced?1:Math.min(1,(performance.now()-anim.t0)/500); ctx.strokeStyle=cssVar("--tint")||"#c8372d"; path(strokes[anim.k],f); }
+      if(lit){ ctx.globalAlpha=0.55; ctx.fillStyle=cssVar("--tint")||"#c8372d"; glyph(st.k); ctx.globalAlpha=1; const p0=P(strokes[st.k][0]); ctx.fillStyle=cssVar("--tint")||"#c8372d"; ctx.beginPath(); ctx.arc(p0[0],p0[1],10,0,Math.PI*2); ctx.fill(); }
+      if(anim){ const f=reduced?1:Math.min(1,(performance.now()-anim.t0)/500); ctx.strokeStyle=cssVar("--tint")||"#c8372d"; ctx.lineWidth=PAD_LW; path(strokes[anim.k],f); } /* "Show me" draws the stroke on, so it follows the centreline rather than the outline */
     } else if(cur){ ctx.globalAlpha=0.25; ctx.fillStyle=cssVar("--label3")||"#aaa"; ctx.font=`${Math.round(N*0.6)}px ${cssVar("--hanzi")||"serif"}`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(cur.glyph,N/2,N/2); ctx.globalAlpha=1; }
-    ctx.strokeStyle=cssVar("--label")||"#000"; for(const s of st.free.concat(drawing?[drawing]:[])) path(s);
+    ctx.strokeStyle=cssVar("--label")||"#000"; ctx.lineWidth=PAD_LW; for(const s of st.free.concat(drawing?[drawing]:[])) inked(s);
   };
-  const acts=()=>{ const sh=$("#pad-show"), sk=$("#pad-skip"), dn=$("#pad-done"), un=$("#pad-undo"); if(sh) sh.hidden=free||st.miss<2; if(sk) sk.hidden=free||st.miss<4; if(dn) dn.hidden=!free; if(un) un.hidden=free?!st.free.length:st.k===0; };
+  const acts=()=>{ const sh=$("#pad-show"), sk=$("#pad-skip"), dn=$("#pad-done"), un=$("#pad-undo"); if(sh) sh.hidden=free||st.miss<2; if(sk) sk.hidden=free||st.miss<4; if(dn) dn.hidden=!free; if(un) un.hidden=!free||!st.free.length; };
   const showStroke=(k,slow)=>{ anim={k,t0:performance.now()-(slow?0:0)}; const dur=reduced?350:(slow?1000:500); const step=()=>{ if(!anim||!cv.isConnected) return; paint(); if(performance.now()-anim.t0<dur) requestAnimationFrame(step); else { anim=null; paint(); } }; requestAnimationFrame(step); };
   const miss=()=>{ st.miss++; st.maxMiss=Math.max(st.maxMiss,st.miss); if(lvl>1) st.hint=true; cv.classList.remove("shake"); void cv.offsetWidth; cv.classList.add("shake"); showStroke(st.k,false); acts(); logPadStroke(cur,st.k,false); };
   const pt=e=>{ const r=cv.getBoundingClientRect(); return [(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height]; };
@@ -3105,12 +3286,23 @@ function mountPad(card,d,c,tg,st,cur){
     await checkCard(c); /* v515: written to the end with the answer block opening — the card is checked */
     if(first){ await recordGrade(c,st.helped.size?"again":"good"); S.done++; /* a Skip counts as again (Q10) — due today, fails +1, the leech flag as today */
       const l=curList(), at=Math.min(l.length,curIdx()+1+REP_GAP); l.splice(at,0,c); /* the repeat pass, three cards on (§ 8.1) — in the walk while a character is locked */ }
+    const cleanCard=(clean===n&&st.maxMiss<=1);
     S.ansOpen=true; const my=curIdx(), wasWalk=walking(); render(); if(cur) padLine(d,cur);
-    setTimeout(()=>{ if(S.mode!=="study"||walking()!==wasWalk||curIdx()!==my||S.pad!==padState(c)) return; if(S.single){ nextSingle(c); return; }
-      if(curIdx()+1<curList().length){ setCurIdx(curIdx()+1); S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0}); } else if(!walking()){ S.idx++; render(); } },NEXT_MS); /* a walk's last card stays */
+    const adv=()=>{ if(S.mode!=="study"||walking()!==wasWalk||curIdx()!==my||S.pad!==padState(c)) return; if(S.single){ nextSingle(c); return; }
+      if(curIdx()+1<curList().length){ setCurIdx(curIdx()+1); S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0}); } else if(!walking()){ S.idx++; render(); } }; /* a walk's last card stays */
+    /* the praise, and then the next card (v517, § 12): the dwell is NEXT_MS, and a tap anywhere on the card that is not a
+       control skips straight on — the finger is already on the pad */
+    const pr=praiseStart(cleanCard); let fired=false;
+    const go=()=>{ if(fired) return; fired=true; document.removeEventListener("pointerdown",onTap,true); pr.finish(); adv(); };
+    const onTap=e=>{ if(e.target.closest&&e.target.closest("button,a,input,textarea,.chip")) return; go(); };
+    document.addEventListener("pointerdown",onTap,true);
+    if(typeof PRAISE_HOLD==="number") return; /* held for a test: nothing advances */
+    setTimeout(go,NEXT_MS);
   };
-  $("#pad-undo").onclick=()=>{ if(free){ st.free.pop(); } else if(st.k>0){ st.k--; st.miss=0; } anim=null; paint(); acts(); };
-  $("#pad-clear").onclick=()=>{ if(free) st.free.length=0; else { st.k=0; st.miss=0; st.hint=false; } anim=null; paint(); acts(); };
+  /* Undo and Clear are drawn only for a character the app has no strokes for, where the learner really is drawing freehand
+     (v517, H: "You also don't need clear and undo at the bottom") */
+  { const un=$("#pad-undo"); if(un) un.onclick=()=>{ if(free){ st.free.pop(); } else if(st.k>0){ st.k--; st.miss=0; } anim=null; paint(); acts(); }; }
+  { const cl2=$("#pad-clear"); if(cl2) cl2.onclick=()=>{ if(free) st.free.length=0; else { st.k=0; st.miss=0; st.hint=false; } anim=null; paint(); acts(); }; }
   $("#pad-show").onclick=()=>{ if(strokes&&st.k<strokes.length) showStroke(st.k,true); };
   $("#pad-skip").onclick=()=>{ if(!strokes) return; st.k++; st.miss=0; st.hint=false; anim=null; paint(); acts(); const i=tg.indexOf(cur); st.helped.add(i); if(st.k>=strokes.length) charDone(true); };
   $("#pad-done").onclick=async()=>{ if(!free||!st.free.length) return; const note=$("#pad-note"); if(note) note.textContent=t("reading …");
@@ -3119,6 +3311,8 @@ function mountPad(card,d,c,tg,st,cur){
     catch(err){ if(note) note.textContent=t("Reading failed: {0}",err&&err.message||err); } };
   paint(); acts();
   if(!STROKES) loadStrokes().then(()=>{ if(cv.isConnected&&S.pad===st) render(); }).catch(err=>{ logErr("strokes",err&&err.message||err); }); /* the first card of a session loads the medians; the pad redraws with the template once they are in */
+  /* and then, behind it and without anything waiting for it, the real outlines — the brush draws until they land (v517) */
+  if(!OUTLINES) loadOutlines().then(()=>{ if(cv.isConnected&&S.pad===st) paint(); }).catch(err=>{ logErr("outlines",err&&err.message||err); });
   card._pad={st,strokes,paint,lvl,free:()=>free}; /* used by the tests */
 }
 function logPadStroke(x,k,ok,dist){ DRAWLOG.push({t:Date.now(),pad:x?x.glyph:"",k,ok,dist:dist==null?null:+dist.toFixed(3)}); while(DRAWLOG.length>12) DRAWLOG.shift(); } /* every traced stroke's distance, for the field to set TRACE_OK (§ 14) */
@@ -3993,6 +4187,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  517:"The picture and the writing pad are the same size on every card now, the stroke template follows a real brush, tapping a word shows its pinyin and meaning, and a finished word sends a star up to a counter.",
   516:"The Due and Done counts have left the top bar. On Learn, the filter sits there instead.",
   515:"A new card from a photo counts as not yet checked until you write it in Learn or open it, and a filter shows those cards alone. The flag means what it did: something looks wrong.",
   514:"The picture on a card is wider now — as wide as the text is long — and you can pinch to zoom into it while learning. Your cards are cut again from their photos.",
@@ -4823,7 +5018,7 @@ const SIGN_PUNCT=/[、，。：:,.!！?？;；·]/;
 /* first dictionary sense that is not a surname / bound-form / variant / abbreviation note (the abbreviation since v309: 日 opened with "abbr. for 日本, Japan" before "sun; day") */
 function bestSense(w){
   const senses=((DICT&&DICT.get(w))||"").split(";").map(x=>x.trim()).filter(Boolean);
-  return senses.find(x=>!/^(surname |\(bound form\)|old variant|variant of|\(archaic\)|abbr\. (for|of) )/i.test(x))||senses[0]||"";
+  return senses.find(x=>!/^(surname |\(bound form\)|old variant|variant of|\(archaic\)|abbr\. (for|of) |Taiwan pr\.)/i.test(x))||senses[0]||"";
 }
 /* meaning of one transcript line: longest phrasebook phrases first, dictionary
    words for the rest; punctuation kept as its own token for wrapping */
