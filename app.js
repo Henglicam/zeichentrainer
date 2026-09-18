@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=512; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=513; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -631,6 +631,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v513","Learn: hold a char, walk its cards"],
   ["app","v512","Learn: the pad snaps on your strokes"],
   ["app","v512","Learn: pad whole on 390 px, 1 line"],
   ["app","v512","Learn: a card comes round 3 later"],
@@ -978,7 +979,8 @@ async function boot(){
        open answer and the day's count — so a reload in Learn comes back on the same card instead of at the top of a queue
        built afresh, where a card already graded is no longer due and the next one takes its place. */
     if(S.mode==="study"&&Array.isArray(rv.queue)){ const q=rv.queue.filter(id=>{ const d=cardOf(id); return d&&d.c; });
-      if(q.length){ S.queue=q; S.idx=Math.max(0,Math.min(q.length,rv.idx|0)); S.ansOpen=!!rv.revealed&&S.idx<q.length; S.done=Math.max(0,rv.done|0); S.ahead=!!rv.ahead; } } }
+      if(q.length){ S.queue=q; S.idx=Math.max(0,Math.min(q.length,rv.idx|0)); S.ansOpen=!!rv.revealed&&S.idx<q.length; S.done=Math.max(0,rv.done|0); S.ahead=!!rv.ahead;
+        if(typeof rv.lock==="string"&&Array.isArray(rv.walk)){ const w=rv.walk.filter(id=>{ const d=cardOf(id); return d&&d.c; }); if(w.length){ S.lockChar=rv.lock; S.walk=w; S.walkIdx=Math.max(0,Math.min(w.length-1,rv.walkIdx|0)); } } /* v513: a reload comes back locked */ } } }
   wireChrome(); render();
   if(rv&&rv.scroll&&(rv.own!==false||navReload())) requestAnimationFrame(()=>window.scrollTo(0,rv.scroll));
   autoBreaks(); /* old cards get their photo lines estimated once */
@@ -1002,6 +1004,7 @@ function wireChrome(){
     b.onclick=()=>{ const m=b.dataset.mode;
       S.editing=null; S.editFrom=null; S.detailFrom=null; S.openShot=null; /* a tab tap always leaves the edit form, the way back to a photo (v448), the photo opened from the grid (v462) and the photos already done (v463) */
       if(m==="inbox") clearResults(); /* … and the finished results of the last capture, so the Camera tab opens on the camera (v471) */
+      if(S.lockChar){ S.lockChar=null; S.walk=null; S.walkIdx=0; S.pad=null; } /* … and a locked character's walk (v513, § 7) */
       endPick();                                            /* … and any marking (v351) */
       if(CROP&&RECROP[CROP.id]) RECROP[CROP.id].end();      /* … and its Crop again (v239) */
       if(m==="cards" && (S.mode==="cards"||S.mode==="add")) S.detail=null; /* Cards again → back to the list */
@@ -1017,7 +1020,7 @@ function wireChrome(){
   $("#imp").onchange=importData;
 }
 function setStats(){
-  const remaining=Math.max(0,S.queue.length-S.idx);
+  const remaining=walking()?S.walk.length:Math.max(0,S.queue.length-S.idx); /* a locked character's walk shows its own count (v513) */
   const inStudy=S.mode==="study";
   $("#stat-open").style.display=inStudy?"":"none";
   $("#stat-done").style.display=inStudy?"":"none";
@@ -2496,7 +2499,7 @@ const GUIDE=()=>[
     t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.")]},
   {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. The photo is the cue, the characters under it are the buttons, and the write pad is the answer: trace the lit stroke, and the pad moves on by itself — character by character, then to the next card. Four characters a line and two lines photograph best.")+" "+t("A card made from a multicard shows the multicard's whole picture with a frame around its own text, and names the multicard under the meaning; tap that name to look the multicard up, and ← Back brings you back to the card."),
     t("Pinyin and meaning sit folded under the buttons; open them when you need them, or write the whole card and they open by themselves. Stuck on a stroke? Show me draws it, Skip fills it in for you. A card you wrote comes round once more a few cards later, with less of the template each time you know it. Nothing due? Pull the next cards forward."),
-    t("Swipe the card left or right, or tap the arrows beside the pad, to pick another one — nothing is graded, and a card you skip stays due for next time.")]},
+    t("Swipe the card left or right, or tap the arrows beside the pad, to pick another one — nothing is graded, and a card you skip stays due for next time.")+" "+t("Press and hold a character to walk through every card that has it; tap it again to come back.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Once a photo has made a multicard, two tabs split them — Cards and Multicards. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included. Push an open card sideways for the next one in the list."),
     t("Tap a text on a multicard to look it up, and press Generate flashcard to make a card of it. Learn studies the flashcards, never the multicard itself."),
     t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together; old photos are cleared out under More → Your data → Photos. Tap the star on a card to mark it as one you care about — the filter then shows them alone, and Learn studies all of them, due or not.")]},
@@ -2818,7 +2821,7 @@ function renderStudy(main){
     $("#go-cam").onclick=()=>{ S.mode="inbox"; render(); }; $("#go-guide").onclick=()=>{ S.mode="guide"; render(); window.scrollTo({top:0}); }; /* the pointer to the guide (v266, idea 5) — a friend who installs the app never sees More → Help unless told */
     return;
   }
-  const finished = S.idx>=S.queue.length;
+  const finished = !walking()&&S.idx>=S.queue.length; /* a walk never runs out: its last card stays (v513) */
   if(finished){
     main.innerHTML=wxNoteHTML()+learnChipsHTML()+`<div class="done">
       <div class="mark">净</div>
@@ -2831,7 +2834,7 @@ function renderStudy(main){
     wireLearnChips();
     return;
   }
-  const c=S.queue[S.idx], d=cardOf(c);
+  const list=curList(), li=curIdx(), c=list[li], d=cardOf(c);
   /* ---------- the write layout (v512, SPEC-flashcard-layout.md phase 1, H's "Go") ----------
      A flashcard is no longer revealed and graded, it is WRITTEN: the photo is the cue, the characters under it are the
      targets, the write pad is the answer — traced stroke by stroke as Duolingo does it — and the grade is whether you
@@ -2846,7 +2849,7 @@ function renderStudy(main){
   const cur=tg[st.i]||null;
   const lines=(d.kind==="sign"?String(d.c).split("\n"):frontLines(d)).map(l=>[...l].length); /* characters per photo line, so zone 2 keeps the photo's rows (§ 5) */
   const rows=[]; { let k=0, pos=0; for(const n of (lines.length?lines:[Infinity])){ const row=[]; while(k<tg.length&&(tg[k].pos<pos+n||n===Infinity)){ row.push(tg[k]); k++; } pos+=n; if(row.length) rows.push(row); } while(k<tg.length){ rows.push(tg.slice(k)); k=tg.length; } }
-  const btn=x=>{ const i=tg.indexOf(x), cls=["ch",st.done.has(i)?"done":"",cur===x?"cur":"",x.w?"":"num"].filter(Boolean).join(" ");
+  const btn=x=>{ const i=tg.indexOf(x), cls=["ch",st.done.has(i)?"done":"",cur===x?"cur":"",x.w?"":"num",S.lockChar&&x.ch===S.lockChar?"lock":""].filter(Boolean).join(" "); /* lock: the long-pressed character, on every card of its walk (v513) */
     return `<button class="${cls}" data-i="${i}" ${x.w?"":`aria-disabled="true"`}>${esc(x.glyph)}${st.done.has(i)?`<i class="tick" aria-hidden="true">${MARK_TICK}</i>`:""}</button>`; };
   const groupRow=row=>{ const out=[]; let g=null; for(const x of row){ if(!g||g.wi!==x.wi){ g={wi:x.wi,items:[]}; out.push(g); } g.items.push(x); } return out.map(g=>`<span class="chw">${g.items.map(btn).join("")}</span>`).join(""); };
   const chrow=`<div class="chrow">${rows.map(r=>`<div class="chline">${groupRow(r)}</div>`).join("")}</div>`;
@@ -2859,7 +2862,7 @@ function renderStudy(main){
     <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}<button class="picflag${d.flag?" on":""}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}">⚑</button></div>
     ${chrow}
     <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Pinyin and meaning")}</span>${rep?`<span class="pill again">${t("Again")}</span>`:""}<i aria-hidden="true">⌄</i></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
-    <div class="padwrap"><button class="chev l" id="chev-l" aria-label="${t("Previous card")}"${S.idx>0&&!S.single?"":" hidden"}>‹</button><canvas class="wpad" id="wpad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas><button class="chev r" id="chev-r" aria-label="${t("Next card")}"${S.idx+1<S.queue.length&&!S.single?"":" hidden"}>›</button></div>
+    <div class="padwrap"><button class="chev l" id="chev-l" aria-label="${t("Previous card")}"${li>0&&!S.single?"":" hidden"}>‹</button><canvas class="wpad" id="wpad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas><button class="chev r" id="chev-r" aria-label="${t("Next card")}"${li+1<list.length&&!S.single?"":" hidden"}>›</button></div>
     <div class="padline" id="padline"${ansOpen?"":" hidden"}></div>
     <div class="padacts" id="padacts"><button class="del" id="pad-undo">${t("pad:Undo")}</button><button class="del" id="pad-show" hidden>${t("Show me")}</button><button class="del" id="pad-skip" hidden>${t("Skip")}</button><button class="del" id="pad-done" hidden>${t("Done")}</button><button class="del" id="pad-clear">${t("Clear")}</button></div>
     ${noTmpl?`<div class="hint" id="pad-note">${t("not in the stroke set — draw it and tap Done")}</div>`:""}
@@ -2873,17 +2876,22 @@ function renderStudy(main){
   const st2=$("#star-card"); if(st2) st2.onclick=async()=>{ await setStar(c,!d.star); render(); };
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
-  const goTo=i=>{ if(i<0||i>=S.queue.length) return; S.idx=i; S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0}); };
-  const cl=$("#chev-l"); if(cl) cl.onclick=()=>goTo(S.idx-1); const cr=$("#chev-r"); if(cr) cr.onclick=()=>goTo(S.idx+1);
-  card.querySelectorAll(".chrow .ch").forEach(b=> b.onclick=e=>{ e.stopPropagation(); const i=+b.dataset.i, x=tg[i]; if(!x) return;
-    if(!x.w){ padLine(d,x); return; } /* a number with its unit is one button and not writable: its line shows, the pad stays on the last character (§ 5) */
-    st.i=i; st.k=0; st.miss=0; st.hint=false; st.free.length=0; render(); });
+  const goTo=i=>{ if(i<0||i>=curList().length) return; setCurIdx(i); S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0}); };
+  const cl=$("#chev-l"); if(cl) cl.onclick=()=>goTo(li-1); const cr=$("#chev-r"); if(cr) cr.onclick=()=>goTo(li+1);
+  card.querySelectorAll(".chrow .ch").forEach(b=>{ const i=+b.dataset.i, x=tg[i]; if(!x) return;
+    b.onclick=e=>{ e.stopPropagation();
+      if(S.lockChar&&x.ch===S.lockChar){ unlockChar(); return; } /* the tap on the locked character releases it (§ 7, H: "Tippen erneut auf highlit character exits it") */
+      if(!x.w){ padLine(d,x); return; } /* a number with its unit is one button and not writable: its line shows, the pad stays on the last character (§ 5) */
+      st.i=i; st.k=0; st.miss=0; st.hint=false; st.free.length=0; render(); };
+    /* press and hold locks the character and walks every card that has it (v513, § 7 — the v354 gesture, buzz included); a
+       long press on another character moves the lock; not from a single-card test, whose walk is the list's own */
+    if(x.w&&!S.single) longPress(b,()=>lockChar(x.ch,c)); });
   /* the closed card is swiped to pick another card of the session (v414/v417): the whole card is the surface but the pad,
      which takes the finger for a stroke, and the buttons. The answer block being open no longer stands the swipe down —
      there are no grades that own the screen any more. */
-  wireSwipe(card, S.queue.length<2||S.single?null:{
-    n:S.queue.length, idx:S.idx, centred:false,
-    peer:i=>{ const nd=cardOf(S.queue[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ return `<div class="zone1 front">${frontPic(nd,{page:true})}</div>${peerRowHTML(nd)}<div class="fold"><button class="foldbtn"><span>${t("Pinyin and meaning")}</span><i aria-hidden="true">⌄</i></button></div><div class="padwrap"><div class="wpad ghost"></div></div>`; } finally{ S.fullPic=fp; } },
+  wireSwipe(card, list.length<2||S.single?null:{
+    n:list.length, idx:li, centred:false,
+    peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ return `<div class="zone1 front">${frontPic(nd,{page:true})}</div>${peerRowHTML(nd)}<div class="fold"><button class="foldbtn"><span>${t("Pinyin and meaning")}</span><i aria-hidden="true">⌄</i></button></div><div class="padwrap"><div class="wpad ghost"></div></div>`; } finally{ S.fullPic=fp; } },
     go:goTo });
   wireSay(); wireLinks(); wireSrc(); wireLearnChips(); wireAi();
   mountPad(card,d,c,tg,st,cur);
@@ -2908,9 +2916,29 @@ function padTargets(d){
   for(let p=pos;p<text.length;p++) pushChar(p,wi++,text[p],p);
   return out;
 }
-const isRepeat=()=>S.queue.slice(0,S.idx).includes(S.queue[S.idx]); /* the second pass of a card in this session (§ 8.1): the same id stands earlier in the queue */
-/* the pad's state for the card at this queue position — the current character, the next stroke, the misses, what is written */
-function padState(c){ const k=S.idx+":"+c; if(!S.pad||S.pad.key!==k) S.pad={key:k,i:-1,k:0,miss:0,hint:false,done:new Set(),helped:new Set(),maxMiss:0,free:[],lv:{}}; return S.pad; }
+const isRepeat=()=>{ const l=curList(), i=curIdx(); return l.slice(0,i).includes(l[i]); }; /* the second pass of a card in this session (§ 8.1): the same id stands earlier in the list */
+/* the list Learn walks (v513, § 7): the session's queue, or — while a character is locked — the cards of the current filter that
+   carry it, due or not (v429's argument: a locked character is a hand-picked list like the star), in the session's order, the
+   rest of the deck after it. Nothing is written to disk; the note of v423 carries it across a reload. */
+const walking=()=>!!(S.lockChar&&Array.isArray(S.walk)&&S.walk.length);
+const curList=()=>walking()?S.walk:S.queue;
+const curIdx=()=>walking()?S.walkIdx:S.idx;
+const setCurIdx=i=>{ if(walking()) S.walkIdx=i; else S.idx=i; };
+function walkOf(ch){ const has=d=>!!(d&&d.c&&[...String(d.c)].includes(ch)), seen=new Set(), out=[];
+  for(const id of S.queue){ const d=cardOf(id); if(has(d)){ seen.add(id); out.push(id); } } /* every occurrence: a second one is the card's repeat pass (§ 8.1) */
+  for(const d of learnDeck().cards){ if(has(d)&&!seen.has(d.id)){ seen.add(d.id); out.push(d.id); } }
+  return out; }
+function lockChar(ch,c){ S.lockChar=ch; S.walk=walkOf(ch); S.walkIdx=Math.max(0,S.walk.indexOf(c)); S.pad=null; S.ansOpen=false; S.fullPic=false; render(); window.scrollTo({top:0}); }
+/* the release: the walk is the session again at the card the learner is on — a card the session did not hold joins it there —
+   and the card shows the whole photo with the answer block open (H: "exits it and shows full image Translation of the current card") */
+function unlockChar(){ const w=curList(), wi=curIdx(), c=w[wi]; try{ navigator.vibrate&&navigator.vibrate(12); }catch(e){}
+  const reps=w.slice(wi+1).filter((id,i)=>w.slice(0,wi+1+i).includes(id)); /* the walk's repeat passes not yet reached (§ 8.1) ride over into the session, three cards on */
+  S.lockChar=null; S.walk=null; S.walkIdx=0;
+  if(c){ let i=S.queue.indexOf(c); if(i<0){ S.queue.splice(Math.min(S.idx,S.queue.length),0,c); i=Math.min(S.idx,S.queue.length-1); } S.idx=i; }
+  for(const id of reps) if(!S.queue.slice(S.idx+1).includes(id)) S.queue.splice(Math.min(S.queue.length,S.idx+1+REP_GAP),0,id);
+  S.fullPic=true; S.ansOpen=true; S.pad=null; render(); window.scrollTo({top:0}); }
+/* the pad's state for the card at this position of the list — the current character, the next stroke, the misses, what is written */
+function padState(c){ const k=(walking()?"w":"q")+curIdx()+":"+c; if(!S.pad||S.pad.key!==k) S.pad={key:k,i:-1,k:0,miss:0,hint:false,done:new Set(),helped:new Set(),maxMiss:0,free:[],lv:{}}; return S.pad; }
 /* the level a character starts at (§ 8.1): how often it was fully written, all time — 0–1 trace, 2–4 faint, 5+ recall */
 const charWrites=()=>S.settings.charWrites||{};
 function startLevel(ch){ const w=charWrites()[ch]||0; return w<=1?1:w<=4?2:3; }
@@ -3018,9 +3046,10 @@ function mountPad(card,d,c,tg,st,cur){
     const pts=clean+(clean===n&&st.maxMiss<=1?n:0); /* one point per written character, none for a helped one, the count again for a clean card (§ 6) */
     if(pts){ bump("written",pts); dailyBump(dayKey(),"w",pts); }
     if(first){ await recordGrade(c,st.helped.size?"again":"good"); S.done++; /* a Skip counts as again (Q10) — due today, fails +1, the leech flag as today */
-      const at=Math.min(S.queue.length,S.idx+1+REP_GAP); S.queue.splice(at,0,c); /* the repeat pass, three cards on (§ 8.1) */ }
-    S.ansOpen=true; const my=S.idx; render(); if(cur) padLine(d,cur);
-    setTimeout(()=>{ if(S.mode!=="study"||S.idx!==my||S.pad!==padState(c)) return; if(S.single){ nextSingle(c); return; } if(S.idx+1<S.queue.length){ S.idx++; S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0}); } else { S.idx++; render(); } },NEXT_MS);
+      const l=curList(), at=Math.min(l.length,curIdx()+1+REP_GAP); l.splice(at,0,c); /* the repeat pass, three cards on (§ 8.1) — in the walk while a character is locked */ }
+    S.ansOpen=true; const my=curIdx(), wasWalk=walking(); render(); if(cur) padLine(d,cur);
+    setTimeout(()=>{ if(S.mode!=="study"||walking()!==wasWalk||curIdx()!==my||S.pad!==padState(c)) return; if(S.single){ nextSingle(c); return; }
+      if(curIdx()+1<curList().length){ setCurIdx(curIdx()+1); S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0}); } else if(!walking()){ S.idx++; render(); } },NEXT_MS); /* a walk's last card stays */
   };
   $("#pad-undo").onclick=()=>{ if(free){ st.free.pop(); } else if(st.k>0){ st.k--; st.miss=0; } anim=null; paint(); acts(); };
   $("#pad-clear").onclick=()=>{ if(free) st.free.length=0; else { st.k=0; st.miss=0; st.hint=false; } anim=null; paint(); acts(); };
@@ -3043,7 +3072,7 @@ function logPadStroke(x,k,ok,dist){ DRAWLOG.push({t:Date.now(),pad:x?x.glyph:"",
    still due, so the next session's queue picks it up). Only while the back is closed; once it is open the grades own the screen. */
 const SW_SLOP=12, SW_MIN=60, SW_GAP=16, SW_MS=220;
 /* the closed card is pushed sideways and the next one slides in from the other side and snaps into place (v414, the carousel of v417 — H: "Ich moechte die Karten quasi nach links schieben und die naechste Karte kommt von rechts rein und rastet geschmeidig ein … Die muessen nicht so zur Seite wegkippen wie bei Tinder"). Nothing is graded: only S.idx moves; a card swiped past returns in the next session, not in this one (v417). */
-function swipeHint(d){ return showHints()?`<div class="hint">${t("Trace the lit stroke; the pad moves on by itself.")}${S.queue.length>1?" "+t("Swipe left or right to pick another card."):""}</div>`:""; } /* v512: the reveal hint went with the reveal */
+function swipeHint(d){ return showHints()?`<div class="hint">${t("Trace the lit stroke; the pad moves on by itself.")}${curList().length>1?" "+t("Swipe left or right to pick another card."):""} ${t("Press and hold a character to walk through every card that has it; tap it again to come back.")}</div>`:""; } /* v512: the reveal hint went with the reveal */
 function wireSwipe(card,o){
   /* o: {n, idx, peer(i) -> the neighbour's inner HTML or null, go(i), centred} — the caller owns the list and what a
      move means, so the same gesture serves Learn's session queue and the Cards list's own order (v445) */
@@ -3902,6 +3931,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  513:"Press and hold a character on a card to walk through every card that has it; tap it again to come back.",
   512:"Learn is a write pad now: trace the characters of the card stroke by stroke, and it moves on by itself. No more grade buttons.",
   511:"A screenshot can go with a Feedback message.",
   509:"A photo the app was still reading when you closed it is read when you come back, and a photo that could not be read stays under Camera until you crop or delete it.",
@@ -8252,12 +8282,12 @@ let RELOADING=false, VIEW_KEY="";
    note stays small. What it still cannot restore: a single-card test from the Cards list (S.single/S.saved) — a reload there
    comes back in the ordinary session. */
 const viewNow=own=>({mode:S.mode,detail:S.detail,query:S.query,tab:S.cardsTab,scroll:window.scrollY,at:Date.now(),own:!!own,
-  ...(S.mode==="study"&&!S.single?{queue:S.queue,idx:S.idx,revealed:!!S.ansOpen,done:S.done,ahead:S.ahead}:{})}); /* revealed = the answer block open (v512) */
+  ...(S.mode==="study"&&!S.single?{queue:S.queue,idx:S.idx,revealed:!!S.ansOpen,done:S.done,ahead:S.ahead,lock:S.lockChar||null,walk:walking()?S.walk:null,walkIdx:S.walkIdx|0}:{})}); /* revealed = the answer block open (v512); lock, walk and walkIdx the locked character's walk (v513) */
 const noteView=()=>{ if(!RELOADING&&S.ready){ VIEW_KEY=""; setSetting("resumeView",viewNow(false)).catch(()=>{}); } };
 /* the note has to be on disk BEFORE the gesture: a pull-to-refresh tears the document down at once, and an IndexedDB write
    started in pagehide is not guaranteed to commit (measured — it did not). So every change of screen writes it, which is one
    small put per navigation inside the app; the scroll is refreshed when the app goes to the background and by reloadNow. */
-function noteViewSoon(){ if(RELOADING||!S.ready) return; const k=S.mode+"|"+(S.detail||"")+"|"+(S.query||"")+"|"+S.cardsTab+(S.mode==="study"?"|"+S.idx+"|"+(S.ansOpen?1:0):""); if(k===VIEW_KEY) return; /* v423: inside Learn the card and whether its answer is open are part of the screen, so each one is noted as it comes up */ VIEW_KEY=k; setSetting("resumeView",viewNow(false)).catch(()=>{}); }
+function noteViewSoon(){ if(RELOADING||!S.ready) return; const k=S.mode+"|"+(S.detail||"")+"|"+(S.query||"")+"|"+S.cardsTab+(S.mode==="study"?"|"+S.idx+"|"+(S.ansOpen?1:0)+"|"+(S.lockChar||"")+"|"+(S.walkIdx|0):""); if(k===VIEW_KEY) return; /* v423: inside Learn the card and whether its answer is open are part of the screen, so each one is noted as it comes up */ VIEW_KEY=k; setSetting("resumeView",viewNow(false)).catch(()=>{}); }
 document.addEventListener("visibilitychange",()=>{ if(document.hidden) noteView(); });
 window.addEventListener("pagehide",noteView);
 const navReload=()=>{ try{ const n=performance.getEntriesByType("navigation")[0]; return !!n&&n.type==="reload"; }catch(e){ return false; } };

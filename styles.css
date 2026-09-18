@@ -675,3 +675,6 @@ body.noscroll{overflow:hidden}
 .card.study .picbox.page{aspect-ratio:16/9;height:auto;max-height:none;display:block}
 .card.study .picbox.page .pagewrap{position:absolute;left:0;top:0;margin:0;max-width:none;max-height:none}
 .card.study .picbox.page .pagewrap .signimg{max-width:none;max-height:none}
+/* a locked character (v513, § 7): the tint ring on its button, on every card of its walk */
+.chrow .ch.lock{box-shadow:inset 0 0 0 2.5px var(--tint)}
+.chrow .ch.lock.cur{box-shadow:inset 0 0 0 2.5px var(--tint),inset 0 0 0 5px var(--card)}
