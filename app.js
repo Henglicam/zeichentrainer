@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=506; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=507; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -593,6 +593,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v507","a broken pinyin (xio) is replaced"],
   ["app","v506","Cards: a text-only tile shows the whole word"],
   ["app","v505","Diagnostics: 100 readings survive a batch"],
   ["app","v488","Multicard: one button, and the line counts flashcards"],
@@ -1509,14 +1510,38 @@ function saneM(m,zh){
   return m;
 }
 /* the model's pinyin is taken only when it fits the characters (v187, H's 志在千里: Qwen answered "zhì zài qiān l" twice, the
-   ǐ lost, and the card showed it): one syllable per character, each with a vowel — else the app's own pinyin for the text */
-const PY_VOWELS=/[aeiouüāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]+/gi;
+   ǐ lost, and the card showed it): one syllable per character — else the app's own pinyin for the text.
+   Until v506 a "syllable" was any vowel group, so a token like "xio" (H's 小 card, 2026-09-18: xiǎo with the a lost) passed as
+   one syllable with one vowel. Every syllable is now looked up in the table of Mandarin syllables (PY_SYLLABLES, tones aside):
+   a token may join several (gōngyìngshāng), and it counts only when it splits into real syllables from end to end. */
+const PY_SYLLABLES=new Set(`a ai an ang ao e ei en eng er o ou yi ya yo ye yai yao you yan yin yang ying yong wu wa wo wai wei wan wen wang weng yu yue yuan yun
+ba bo bai bei bao ban ben bang beng bi bie biao bian bin bing bu pa po pai pei pao pou pan pen pang peng pi pie piao pian pin ping pu
+ma mo me mai mei mao mou man men mang meng mi mie miao miu mian min ming mu fa fo fei fou fan fen fang feng fu
+da de dai dei dao dou dan den dang deng dong di dia die diao diu dian ding du duo dui duan dun ta te tai tei tao tou tan tang teng tong ti tie tiao tian ting tu tuo tui tuan tun
+na ne nai nei nao nou nan nen nang neng nong ni nie niao niu nian nin niang ning nu nuo nuan nun nü nüe la lo le lai lei lao lou lan lang leng long li lia lie liao liu lian lin liang ling lu luo luan lun lü lüe
+ga ge gai gei gao gou gan gen gang geng gong gu gua guo guai gui guan gun guang ka ke kai kei kao kou kan ken kang keng kong ku kua kuo kuai kui kuan kun kuang
+ha he hai hei hao hou han hen hang heng hong hu hua huo huai hui huan hun huang ji jia jie jiao jiu jian jin jiang jing jiong ju jue juan jun
+qi qia qie qiao qiu qian qin qiang qing qiong qu que quan qun xi xia xie xiao xiu xian xin xiang xing xiong xu xue xuan xun
+zha zhe zhi zhai zhei zhao zhou zhan zhen zhang zheng zhong zhu zhua zhuo zhuai zhui zhuan zhun zhuang cha che chi chai chao chou chan chen chang cheng chong chu chua chuo chuai chui chuan chun chuang
+sha she shi shai shei shao shou shan shen shang sheng shu shua shuo shuai shui shuan shun shuang re ri rao rou ran ren rang reng rong ru rua ruo rui ruan run
+za ze zi zai zei zao zou zan zen zang zeng zong zu zuo zui zuan zun ca ce ci cai cao cou can cen cang ceng cong cu cuo cui cuan cun sa se si sai sao sou san sen sang seng song su suo sui suan sun
+m n ng hm hng biang`.split(/\s+/));
+/* the syllable counts a token can stand for: "xiao" 1, "xian" 1 or 2 (xi an), "gongyingshang" 3, a broken "xio" or a lone "l" none */
+function pySyllableCounts(tok){
+  const s=tok.toLowerCase().normalize("NFD").replace(/[̀-̇̉-ͯ]/g,"").normalize("NFC").replace(/u:|v/g,"ü").replace(/([a-zü])[1-5]/g,"$1").replace(/['’\-]/g,""); /* tones, tone numbers and apostrophes off, ü in one spelling */
+  const memo=new Map(); const walk=i=>{ if(i===s.length) return new Set([0]); if(memo.has(i)) return memo.get(i); const out=new Set();
+    for(let n=1;n<=6&&i+n<=s.length;n++) if(PY_SYLLABLES.has(s.slice(i,i+n))) for(const c of walk(i+n)) out.add(c+1);
+    memo.set(i,out); return out; };
+  return walk(0);
+}
 async function saneP(p,zh){
   const lines=String(zh||"").split("\n").filter(l=>CJK.test(l)); if(!lines.length) return String(p||"").trim();
   const given=String(p||"").split("/").map(l=>l.trim().split(/\s+/).filter(Boolean));
-  /* one vowel group per character (syllables may be joined into words, as some models write them), digits aside; a token without a vowel is a broken syllable */
-  const nuclei=toks=>toks.filter(x=>!NUM_PART.test(x)).reduce((a,x)=>a+(x.match(PY_VOWELS)||[]).length,0);
-  const ok=given.length===lines.length&&given.every((toks,k)=>toks.length>0&&nuclei(toks)===[...lines[k]].filter(c=>CJK.test(c)).length&&toks.every(x=>NUM_PART.test(x)||(x.match(PY_VOWELS)||[]).length>0));
+  /* a line fits when its tokens (a number with its unit aside, v323) can split into real syllables whose count is the line's character count */
+  const fits=(toks,k)=>{ const want=[...lines[k]].filter(c=>CJK.test(c)).length; let sums=new Set([0]);
+    for(const x of toks){ if(NUM_PART.test(x)) continue; const cs=pySyllableCounts(x); if(!cs.size) return false; const next=new Set(); for(const a of sums) for(const c of cs) next.add(a+c); sums=next; }
+    return sums.has(want); };
+  const ok=given.length===lines.length&&given.every((toks,k)=>toks.length>0&&fits(toks,k));
   if(ok) return given.map(l=>l.join(" ")).join(" / ");
   try{ if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); return lines.map(pySpaced).join(" / "); }catch(e){ return String(p||"").trim(); }
 }
