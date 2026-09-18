@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=514; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=515; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -79,7 +79,7 @@ const S = { mode:"study", progress:{}, custom:[], inbox:[],
   pendingImg:null, pendingFull:null, pendingUse:"crop", persist:null,
   peek:null, /* Learn: the id of a linked card whose photo is shown on the front instead (v155) */
   admin:false, /* the owner's rows in More unlocked for this session (v162) */
-  detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterStar:false, filterTags:[], settings:{}, single:null, saved:null, cardsTab:"cards",
+  detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterStar:false, filterNew:false, filterTags:[], settings:{}, single:null, saved:null, cardsTab:"cards",
   editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null,
   autoCard:window.AUTO_CARD!==false, editOpenFrame:false, openShot:null }; /* autoCard (v325): a photo that opens by itself becomes a card without a frame or a preview; the harness sets window.AUTO_CARD=false to keep the crop-mode flow its frame suites drive */
 
@@ -108,12 +108,14 @@ const learnPool=()=>deck().filter(learnable);
 function learnDeck(){
   const lt=learnTags(); const d=(lt.length?deck().filter(x=>lt.some(g=>hasTag(x,g))):deck()).filter(learnable); /* a page is studied through its items (v453), and since v478 only through the ones that earned a card of their own */
   const star=!!S.settings.learnStar&&d.some(x=>x.star); /* a filter that would empty the session stands down */
-  return {cards:star?d.filter(x=>x.star):d, star};
+  const nw=!!S.settings.learnNew&&d.some(unchecked); /* v515: Not yet checked, the same shape as the star — a hand-picked list, not a category */
+  let cards=star?d.filter(x=>x.star):d; if(nw) cards=cards.filter(unchecked);
+  return {cards, star, nw};
 }
 /* the next cards of the same filter by due date, the ones a pull-forward would reach, skipping what the session already holds (v428) */
 const aheadCards=n=>{ const p=S.progress; return learnDeck().cards.filter(x=>p[x.id]&&!S.queue.includes(x.id)).sort((a,b)=>p[a.id].due-p[b.id].due).slice(0,n).map(x=>x.id); };
 function buildQueue(includeAhead){
-  const p=S.progress, t=today(); const {cards:d,star}=learnDeck();
+  const p=S.progress, t=today(); const {cards:d,star,nw}=learnDeck();
   const order=learnOrder();
   /* the order of the session (v512, H: "Karten mit Charaktern, die häufig vorkommen, werden öfters angezeigt. Schreiben dieser
      Character stuft Anzeigehäufigkeit wieder herab."): inside the due group and the new group the cards are sorted by weight,
@@ -124,13 +126,14 @@ function buildQueue(includeAhead){
   const freq={}; for(const x of d) for(const ch of new Set([...String(x.c)].filter(ch=>CJK.test(ch)))) freq[ch]=(freq[ch]||0)+1;
   const cw=charWrites(), weightOf=x=>{ const cs=[...String(x.c)].filter(ch=>CJK.test(ch)); if(!cs.length) return 0; return cs.reduce((a,ch)=>a+(freq[ch]||0)/(1+(cw[ch]||0)),0)/cs.length; };
   const byWeight=list=>order==="random"?list:list.map((x,i)=>({x,i,w:weightOf(x)})).sort((a,b)=>b.w-a.w||a.i-b.i).map(o=>o.x);
-  const due = byWeight(orderCards(d.filter(x=>p[x.id] && p[x.id].due<=t),order,true)).map(x=>x.id);
+  const newFirst=list=>[...list.filter(unchecked),...list.filter(x=>!unchecked(x))]; /* v515: a card not yet checked comes first in its group, whatever the order — checking is what a new card is for */
+  const due = newFirst(byWeight(orderCards(d.filter(x=>p[x.id] && p[x.id].due<=t),order,true))).map(x=>x.id);
   /* A star is a hand-picked short list, not a category, so a starred session holds every starred card (v429, H: "Go" on the
      recommendation): the due ones first, so the plan still leads, then the new ones — without the eight-card cap, which exists
      to stop a learner drowning in new cards and not to withhold the ones they picked themselves — then the rest by due date.
      The pill counts 11 and the session now holds 11. A tag stays as it was: a tag can be the whole deck. */
-  const all = byWeight(orderCards(d.filter(x=>!p[x.id]),order,false)).map(x=>x.id);
-  const fresh = star?all:all.slice(0,NEW_PER_SESSION);
+  const all = newFirst(byWeight(orderCards(d.filter(x=>!p[x.id]),order,false))).map(x=>x.id);
+  const fresh = star||nw?all:all.slice(0,NEW_PER_SESSION); /* the Not yet checked session holds every unchecked card, as the starred one holds every star (v515) */
   let q=[...due,...fresh];
   if(star) q=[...q,...d.filter(x=>p[x.id]&&p[x.id].due>t).sort((a,b)=>p[a.id].due-p[b.id].due).map(x=>x.id)];
   if(includeAhead && q.length===0)
@@ -204,6 +207,7 @@ async function makeFlashcard(id){ const d=cardOf(id); if(!d||!d.page||!d.c) retu
      needs, and a waiting AI suggestion — until v502 the card was born clean of all four, so a text H had flagged as wrong
      made a flashcard that said nothing was wrong */
   if(d.flag){ rec.flag=true; if(d.flagNote) rec.flagNote=d.flagNote; }
+  if(d.unchecked) rec.unchecked=true; /* v515: the text's own "not yet checked" travels with the card, as its flag does */
   if(d.alts&&d.alts.length) rec.alts=d.alts.slice();
   if(d.ai) rec.ai={...d.ai};
   if(d.ml) rec.ml=d.ml; if(d.ms) rec.ms={...d.ms};
@@ -278,16 +282,17 @@ function filterGroups(scope){
     ...(tags.length&&un?[{k:"tag:"+UNTAGGED, label:t("Untagged"), n:un, on:tagOn(scope,UNTAGGED)}]:[])];
   /* Starred (v425): the learner's own mark, a row like any other — on Cards it joins the status rows, on Learn it stands on its
      own beside the tags, and it appears only once a card is starred, as the AI row does. */
-  const nStar=lp.filter(starred).length;
-  if(scope==="learn") return [...(nStar?[{head:t("Starred"), rows:[{k:"star", label:t("Starred"), n:nStar, on:!!S.settings.learnStar}]}]:[]),
-    {head:t("Tags"), rows:[{k:"", label:t("All cards"), n:lp.length, on:!learnTags().length&&!S.settings.learnStar},...tagRows]}];
+  const nStar=lp.filter(starred).length, nNewL=scope==="learn"?lp.filter(unchecked).length:0;
+  if(scope==="learn") return [...(nStar||nNewL?[{head:t("Status"), rows:[...(nNewL?[{k:"new", label:t("Not yet checked"), n:nNewL, on:!!S.settings.learnNew}]:[]),...(nStar?[{k:"star", label:t("Starred"), n:nStar, on:!!S.settings.learnStar}]:[])]}]:[]),
+    {head:t("Tags"), rows:[{k:"", label:t("All cards"), n:lp.length, on:!learnTags().length&&!S.settings.learnStar&&!S.settings.learnNew},...tagRows]}];
   /* on Cards the numbers are the OPEN TAB's own and follow the list's own page rule (v477): the sheet used to count raw
      records over the whole deck while the list counts a page once and lets it match through its texts, so the two never
      agreed — with two tabs that gap would read as broken ("⚑ Flagged (12)" over a list of one). */
   const pool=tabPool(), cnt=f=>pool.filter(d=>anyOf(d,f)).length;
-  const nAi=deck().filter(d=>d.ai).length; /* a row's VISIBILITY stays deck-wide — a row that vanished on one tab while its filter was on is the v308 trap; only the numbers follow the tab */
+  const nAi=deck().filter(d=>d.ai).length, nNew=deck().filter(unchecked).length; /* a row's VISIBILITY stays deck-wide — a row that vanished on one tab while its filter was on is the v308 trap; only the numbers follow the tab */
   const st=[...(nStar?[{k:"star", label:t("Starred"), n:pool.filter(starred).length, on:S.filterStar}]:[]),
     {k:"flag", label:t("⚑ Flagged"), n:cnt(d=>d.flag), on:S.filterFlag},
+    ...(nNew?[{k:"new", label:t("Not yet checked"), n:cnt(unchecked), on:S.filterNew}]:[]), /* v515: shown while a card is unchecked, as the AI row is */
     ...(nAi?[{k:"ai", label:t("AI"), n:cnt(d=>d.ai), on:S.filterAi}]:[]),
     {k:"unv", label:t("Unverified"), n:cnt(d=>d.mt&&!d.mt.verified), on:S.filterUnv}];
   const tabRows=tagRows.map(r=>r.k==="tag:"+UNTAGGED?{...r,n:pool.filter(d=>anyOf(d,x=>!(x.tags||[]).length)).length}:{...r,n:cnt(d=>hasTag(d,r.label))});
@@ -328,21 +333,24 @@ function openFilterSheet(scope,after){
 async function setFilter(scope,k){
   if(scope==="learn"){ let v=learnTags().slice();
     if(k==="star") await setSetting("learnStar",!S.settings.learnStar); /* an independent toggle beside the tags (v425) */
-    else if(!k.startsWith("tag:")){ v=[]; await setSetting("learnStar",false); }
+    else if(k==="new") await setSetting("learnNew",!S.settings.learnNew); /* v515 */
+    else if(!k.startsWith("tag:")){ v=[]; await setSetting("learnStar",false); await setSetting("learnNew",false); }
     else { const x=k.slice(4); v=v.includes(x)?v.filter(y=>y!==x):[...v,x]; }
     await setSetting("learnTag",v);
     S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false; S.single=null; S.saved=null; setStats(); return; }
-  if(!k){ S.filterStar=false; S.filterFlag=false; S.filterAi=false; S.filterUnv=false; S.filterTags=[]; return; }
+  if(!k){ S.filterStar=false; S.filterFlag=false; S.filterAi=false; S.filterUnv=false; S.filterNew=false; S.filterTags=[]; return; }
   if(k==="star") S.filterStar=!S.filterStar;
+  else if(k==="new") S.filterNew=!S.filterNew;
   else if(k==="flag") S.filterFlag=!S.filterFlag;
   else if(k==="ai") S.filterAi=!S.filterAi;
   else if(k==="unv") S.filterUnv=!S.filterUnv;
   else { const v=k.slice(4); S.filterTags=S.filterTags.includes(v)?S.filterTags.filter(y=>y!==v):[...S.filterTags,v]; }
 }
-function learnChipsHTML(){ const st=learnPool().some(starred); /* the pill shows for a starred deck too, even without a single tag (v425); the learnable pool's own since v500 */
+function learnChipsHTML(){ const st=learnPool().some(starred), nw=learnPool().some(unchecked); /* the pill shows for a starred deck too, even without a single tag (v425); the learnable pool's own since v500; and for a deck with a card not yet checked (v515) */
   if(!st&&S.settings.learnStar) setSetting("learnStar",false); /* the last star taken off leaves no row to switch the filter back off (the v308 rule) */
+  if(!nw&&S.settings.learnNew) setSetting("learnNew",false); /* v515: the same for the last card checked */
   normaliseLearn();
-  if(!learnTagList().length&&!st) return ""; return `<div class="chipset learnchips">${filterPillHTML("learn")}</div>`; }
+  if(!learnTagList().length&&!st&&!nw) return ""; return `<div class="chipset learnchips">${filterPillHTML("learn")}</div>`; }
 function wireLearnChips(){ wireFilterPill("learn",render); }
 /* the id of a new card: the text itself while it is free (readable in exports), else text plus a timestamp */
 const cardId = c => deck().some(d=>d.id===c) ? c+"#"+Date.now() : c;
@@ -631,6 +639,8 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v515","a new card: hollow ⚐, the New chip"],
+  ["app","v515","Not yet checked: written -> gone"],
   ["app","v514","Learn: pinch into the picture, pan"],
   ["app","v514","1-line card 2:1, 2-line 3:2 box"],
   ["update","v514","Diagnostics: re-cut v4 done, count"],
@@ -2503,7 +2513,7 @@ const GUIDE=()=>[
     t("Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in."),
     t("From album takes several photos at once — they all become cards, one after the other, while the app is open.")]},
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
-    t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. Flag the card when something still looks wrong.")]},
+    t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. A new card counts as not yet checked until you have written it in Learn or opened it, and the filter shows those alone; flag a card yourself when something looks wrong.")]},
   {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. The photo is the cue, the characters under it are the buttons, and the write pad is the answer: trace the lit stroke, and the pad moves on by itself — character by character, then to the next card. Four characters a line and two lines photograph best.")+" "+t("A card made from a multicard shows the multicard's whole picture with a frame around its own text, and names the multicard under the meaning; tap that name to look the multicard up, and ← Back brings you back to the card."),
     t("Pinyin and meaning sit folded under the buttons; open them when you need them, or write the whole card and they open by themselves. Stuck on a stroke? Show me draws it, Skip fills it in for you. A card you wrote comes round once more a few cards later, with less of the template each time you know it. Nothing due? Pull the next cards forward."),
     t("Swipe the card left or right, or tap the arrows beside the pad, to pick another one — nothing is graded, and a card you skip stays due for next time.")+" "+t("Press and hold a character to walk through every card that has it; tap it again to come back.")]},
@@ -2533,7 +2543,7 @@ function tagsHTML(d,isNew){
 async function setFlag(id,on,note){
   const d=cardOf(id); if(!d) return;
   const upd={...d};
-  if(on){ upd.flag=true; if(note!==undefined){ if(note) upd.flagNote=note; else delete upd.flagNote; } }
+  if(on){ upd.flag=true; if(note!==undefined){ if(note) upd.flagNote=note; else delete upd.flagNote; } delete upd.unchecked; } /* v515: a flag set by hand is a verdict, so the card is checked */
   else { delete upd.flag; delete upd.flagNote; }
   await putCard(upd,id);
 }
@@ -2866,7 +2876,7 @@ function renderStudy(main){
   const noTmpl=cur&&STROKES&&!STROKE_OF.has(cur.glyph);
   main.innerHTML=wxNoteHTML()+learnChipsHTML()+`<div class="card study${rep?" rep":""}">
     ${S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:""}
-    <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}<button class="picflag${d.flag?" on":""}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}">⚑</button></div>
+    <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}${d.flag||d.unchecked?`<button class="picflag${d.flag?" on":" new"}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}" title="${d.flag?"":esc(t("Not yet checked"))}">${d.flag?"⚑":"⚐"}</button>`:""}</div>
     ${chrow}
     <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Pinyin and meaning")}</span>${rep?`<span class="pill again">${t("Again")}</span>`:""}<i aria-hidden="true">⌄</i></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
     <div class="padwrap"><button class="chev l" id="chev-l" aria-label="${t("Previous card")}"${li>0&&!S.single?"":" hidden"}>‹</button><canvas class="wpad" id="wpad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas><button class="chev r" id="chev-r" aria-label="${t("Next card")}"${li+1<list.length&&!S.single?"":" hidden"}>›</button></div>
@@ -2878,7 +2888,7 @@ function renderStudy(main){
   const card=main.querySelector(".card.study");
   /* the photo: a tap swaps the crop for the whole photo and back (v55); the flag in its corner is the review flag (§ 3.3) */
   const rv=$("#reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("#picflag")) return; if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); } };
-  $("#picflag").onclick=async e=>{ e.stopPropagation(); await setFlag(c,!d.flag); render(); };
+  { const pf=$("#picflag"); if(pf) pf.onclick=async e=>{ e.stopPropagation(); await setFlag(c,!d.flag); render(); }; } /* v515: hollow ⚐ = not yet checked, a tap flags it; tint ⚑ = flagged, a tap clears; nothing once checked and clean — the answer block's Flag button stays */
   $("#fold").onclick=()=>{ S.ansOpen=!S.ansOpen; render(); };
   const st2=$("#star-card"); if(st2) st2.onclick=async()=>{ await setStar(c,!d.star); render(); };
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
@@ -3014,6 +3024,16 @@ function attachPicZoom(box){
   box.addEventListener("wheel",e=>{ e.preventDefault(); measure(); zoomAt(rel(e),v.s*Math.pow(1.1,-e.deltaY/100)); },{passive:false});
   box._zoom=v; /* used by the tests */
 }
+/* Not yet checked (v515, § 9 of SPEC-flashcard-layout.md — H: "All new Cards flagged for review, must manually unflag", then,
+   on the first cut that flagged every photo card: "Make better suggestion for flagging", "Go"): every card the app makes from a
+   photo is born `unchecked:true`, a state of its own beside the review flag, and it is cleared by the act of checking rather than
+   by a tap — the first full write in Learn (cardDone), the card detail opened, an edit saved (applyCardUpdate), an AI suggestion
+   accepted, or the flag set by hand. A swipe past does not count. The flag keeps its old meaning — the app's own doubt (a weak
+   reading, a bad verdict, a leech) or H's own tap — so the Flagged filter still says "wrong" and a second row, Not yet checked,
+   says "not looked at". A card typed in the Add form is the learner's own and is born checked; a flashcard generated from a
+   multicard text inherits the text's state (makeFlashcard). Absent = checked, so every card from before v515 is checked. */
+const unchecked=d=>!!(d&&d.unchecked);
+async function checkCard(id){ const d=cardOf(id); if(!d||!d.unchecked) return; const upd={...d}; delete upd.unchecked; await putCard(upd,id); }
 /* ---------- the write pad (v512): stroke by stroke over a template, as Duolingo does it ---------- */
 const PAD_MIN=200, TRACE_OK=0.18, NEXT_MS=900, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
 /* TRACE_OK: the mean distance, in pad sides, between the drawn stroke's eight points and the template stroke's — the spec's
@@ -3083,6 +3103,7 @@ function mountPad(card,d,c,tg,st,cur){
     const first=!isRepeat(), n=tg.filter(x=>x.w).length, clean=tg.filter((x,j)=>x.w&&!st.helped.has(j)).length;
     const pts=clean+(clean===n&&st.maxMiss<=1?n:0); /* one point per written character, none for a helped one, the count again for a clean card (§ 6) */
     if(pts){ bump("written",pts); dailyBump(dayKey(),"w",pts); }
+    await checkCard(c); /* v515: written to the end with the answer block opening — the card is checked */
     if(first){ await recordGrade(c,st.helped.size?"again":"good"); S.done++; /* a Skip counts as again (Q10) — due today, fails +1, the leech flag as today */
       const l=curList(), at=Math.min(l.length,curIdx()+1+REP_GAP); l.splice(at,0,c); /* the repeat pass, three cards on (§ 8.1) — in the walk while a character is locked */ }
     S.ansOpen=true; const my=curIdx(), wasWalk=walking(); render(); if(cur) padLine(d,cur);
@@ -3309,6 +3330,7 @@ function thumbBlob(d){ return d.img||fullPhoto(d); } /* the crop (H, v86); the w
 function thumbURL(d){ return THUMB[d.id]||(THUMB[d.id]=URL.createObjectURL(thumbBlob(d))); }
 function dropThumb(id){ if(THUMB[id]){ URL.revokeObjectURL(THUMB[id]); delete THUMB[id]; } }
 function cardStatus(d){
+  if(d.unchecked) return `<span class="st new">${t("tile:New")}</span>`; /* v515: a quiet chip where the due chip sits — a card born from a photo has no progress row yet, so the place is free */
   const p=S.progress[d.id]; if(!p) return "";
   const days=Math.round((p.due-today())/DAY);
   return `<span class="st${days<=0?" due":""}">${days<=0?t("due"):t("in {0} d",days)}</span>`;
@@ -3350,7 +3372,7 @@ function cardsList(){
   const any=anyOf;
   const fieldsOf=d=>isPage(d)?[d.c,...(d.tags||[]),...pageItems(d).flatMap(fieldsOf)]:[d.c,d.trad,d.p,d.m,...Object.values(d.ms||{}),d.flagNote,...(d.tags||[])];
   /* several rows may be ticked at once (v366): a card must match one of the ticked status rows and one of the ticked tags */
-  if(S.filterUnv||S.filterFlag||S.filterAi||S.filterStar) list=list.filter(d=>(S.filterUnv&&any(d,x=>x.mt&&!x.mt.verified))||(S.filterFlag&&any(d,x=>x.flag))||(S.filterAi&&any(d,x=>x.ai))||(S.filterStar&&starred(d)));
+  if(S.filterUnv||S.filterFlag||S.filterAi||S.filterStar||S.filterNew) list=list.filter(d=>(S.filterUnv&&any(d,x=>x.mt&&!x.mt.verified))||(S.filterFlag&&any(d,x=>x.flag))||(S.filterAi&&any(d,x=>x.ai))||(S.filterStar&&starred(d))||(S.filterNew&&any(d,unchecked)));
   if(S.filterTags.length) list=list.filter(d=>S.filterTags.some(g=>any(d,x=>hasTag(x,g))));
   if(q) list=list.filter(d=>fieldsOf(d).filter(Boolean).join(" ").toLowerCase().includes(q));
   return list;
@@ -3395,13 +3417,13 @@ function cardTileHTML(d,pk){
   const sv=pg?null:srcView(d), su=sv?urlOf(sv.blob):""; /* v490: the multicard's photo, derived rather than stored */
   const pic=pg?fullPhoto(d):d.img;
   const head=pg?esc(d.c):esc((d.trad||d.c||"").replace(/\n/g," "));
-  const flag=pg?its.some(x=>x.flag):d.flag, ai=pg?its.some(x=>x.ai):d.ai;
+  const flag=pg?its.some(x=>x.flag):d.flag, ai=pg?its.some(x=>x.ai):d.ai, nw=pg&&its.some(x=>x.unchecked); /* v515: a page whose text is not yet checked carries the mark at its foot; a plain card's chip sits in its status line */
   const glyph=!sv&&!pic; /* v506: a card without a picture shows its WHOLE text in the picture area, not its first character */
   return `<button class="ctile${pg?" page":""}${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}"${pk?"":` data-lp="${esc(d.id)}"`}>
       ${pg?`<span class="tstack">`:""}<span class="tw${sv?" src":glyph?" glyph":""}">${sv?`<img class="tbg" src="${su}" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="tpw"><img class="tpi" src="${su}" alt="" loading="lazy" decoding="async">${regionsHTML({id:sv.shot},sv.rs,{learn:true,me:sv.me,span:true,only:true})}</span>`:pic?`<img class="tbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:glyphTileHTML((pg?(its[0]&&its[0].c):(d.trad||d.c))||"")}
         ${pk?`<span class="tick" aria-hidden="true"></span>`:pg?"":starHTML(d)}
         ${pg?`<span class="cnt">${its.length}</span>`:""}
-        ${(flag||ai)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}</span>`:""}</span>
+        ${(flag||ai||nw)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}${nw?`<i class="tm new" title="${esc(t("Not yet checked"))}">${t("tile:New")}</i>`:""}</span>`:""}</span>
 ${pg?`</span><span class="prog" aria-hidden="true"><i style="width:${its.length?Math.round(made/its.length*100):0}%"></i></span>`:""}
       <span class="th${pg?" title":" hanzi"}">${head||`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>
       <span class="ts2">${pg?esc(t("{0} texts on this page, {1} as flashcards.",its.length,made)):cardStatus(d)}</span></button>`;
@@ -3427,6 +3449,7 @@ function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page d
 function normaliseFilters(){
   if(S.filterStar&&!deck().some(starred)) S.filterStar=false;
   if(S.filterAi&&!deck().some(d=>d.ai)) S.filterAi=false;
+  if(S.filterNew&&!deck().some(unchecked)) S.filterNew=false; /* v515: the last card checked leaves no row to switch the filter off */
   S.filterTags=S.filterTags.filter(g=>g===UNTAGGED?allTags().length&&untaggedCount():allTags().includes(g));
 }
 function renderCards(main){
@@ -3531,6 +3554,7 @@ function detailSwipe(list,li,main){
 function renderCardDetail(main,c){
   const d=cardOf(c); if(!d){ S.detail=null; return renderCards(main); }
   if(isPage(d)) return renderPageDetail(main,d); /* v453 */
+  if(d.unchecked){ checkCard(c); d.unchecked=false; } /* v515: opening the card is looking at it — the write lands behind the render (putCard keeps the record's identity, so the row below reads the same object) */
   const p=S.progress[c];
   const stat=p?t("Interval {0} d, ease {1}, {2}, next {3}.",p.interval,p.ease.toFixed(2),nOf(p.reps,"review"),new Date(p.due).toLocaleDateString(LANG_LOCALE[LANG])):""; /* v512: no "Not studied yet." — the date is kept, the verdict is not */
   /* the open card is pushed sideways to the next card of the Cards list (v445, H: "Open cards swipe" on the two readings
@@ -3803,6 +3827,7 @@ function renderEdit(main,c){
    pinyin/segmentation/gloss (unless pinyin was set by hand). The id stays, so
    progress, thumbnail and queue entries need no move (v118). */
 async function applyCardUpdate(id,upd,newC,pinByHand,lines){
+  delete upd.unchecked; /* v515: an edit saved, or an AI suggestion accepted, is a check */
   { const d0=cardOf(id); if(d0&&d0.reading&&newC&&newC.trim()&&newC.trim()!==(d0.c||"").trim()){ delete d0.reading; delete upd.reading; const k=Object.keys(PENDING).find(k=>PENDING[k]===id); if(k){ delete PENDING[k]; abandonReading(k); dropExtraShot(k); } } } /* H typed another text: the background reading is not needed (v237); an edit that keeps the text lets a re-crop's reading finish (v243) */
   const isSign=upd.kind==="sign", c=upd.c;
   if(newC && newC!==c){
@@ -3969,6 +3994,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  515:"A new card from a photo counts as not yet checked until you write it in Learn or open it, and a filter shows those cards alone. The flag means what it did: something looks wrong.",
   514:"The picture on a card is wider now — as wide as the text is long — and you can pinch to zoom into it while learning. Your cards are cut again from their photos.",
   513:"Press and hold a character on a card to walk through every card that has it; tap it again to come back.",
   512:"Learn is a write pad now: trace the characters of the card stroke by stroke, and it moves on by itself. No more grade buttons.",
@@ -7589,7 +7615,7 @@ async function signAskAI(id){
     const kept=zh!==c?aiSettled(sg,lines,zh):"";
     if(kept){ sg.ai={zh:c,proposed:zh,kept,zht:"",p:"",m:"",note:r.note,kind:r.kind,ok:false,bad:false}; }
     else { sg.lines=zh.split("\n"); sg.ai={zh,zht:r.zht&&CJK.test(r.zht)?recutLines(r.zht.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean).join("\n"),lines):"",p:r.p,m:r.m,ml:r.ml,note:r.note,kind:r.kind,ok:r.ok,bad:!!r.bad,textOk:!r.bad&&zh===c}; /* textOk (v509): the check kept the text as read — its own "ok" is false whenever it also had to replace the gloss meaning, which is nearly always, so the text's confirmation needs its own field */
-    if(r.bad&&!sg.flag){ sg.flag=true; sg.flagNote=sg.flagNote||t("the reading looks wrong"); } } } /* H's rule: when unsure, flag instead of inventing */
+    if(r.bad&&!sg.flag){ sg.flag=true; sg.flagNote=t("the reading looks wrong"); } } } /* H's rule: when unsure, flag instead of inventing */
   }catch(err){ if(SIGN[id]) sg.aiErr=err&&err.message||String(err); } /* → signPreview falls back to the offline model */
   if(SIGN[id]){ delete sg.aiBusy; delete sg.aiPromise; }
   renderShots(); })();
@@ -7645,6 +7671,7 @@ async function readingCard(id,sg){
         segs:keep.map(x=>x.r.segs), gloss:keep.flatMap(x=>x.r.gloss.map(g=>({w:g.w,p:g.p,m:g.m}))), mt };
   setMl(card,ml);
   if(sg.flag){ card.flag=true; const note=(sg.flagNote||"").trim(); if(note) card.flagNote=note; } /* H: flag a new card at once, without opening it again */
+  card.unchecked=true; /* v515: every card from a photo is born not yet checked — the automatic card, Save now, a split panel's labels and the preview's own Save card alike */
   if(sg.tags&&sg.tags.length) card.tags=sg.tags.slice();
   const kt=sg.ai&&!sg.ai.bad?kindTag(sg.ai.kind):""; /* the kind the AI named, as an ordinary tag beside H's own (v364) */
   if(kt&&!(card.tags||[]).includes(kt)) card.tags=[...(card.tags||[]),kt];

@@ -547,6 +547,7 @@ body.noscroll{overflow:hidden}
 .ctile .th .lbl{font-size:15px;font-weight:400;color:var(--label2)}
 .ctile .ts2{display:block;margin:3px 10px 0;font-size:12px;color:var(--label3);min-height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ctile .ts2 .st{font-size:12px} .ctile .ts2 .st.due{color:var(--tint);font-weight:600}
+.st.new{display:inline-block;padding:0 7px;border-radius:999px;background:var(--tint-soft);color:var(--tint);font-weight:600;line-height:17px} /* v515: the "New" chip of a card not yet checked, where the due chip sits */
 /* the star on a tile must RESET the row layout's negative margin (v469, H: "das Sternchen zu weit rechts an der
    Kante. Wird leicht angeschnitten"). The base .star carries margin:-6px -11px -6px 0, written to pull its 44 px
    touch target into a list row without widening it; the tile rule never undid it, so right:2px resolved to -9px and
@@ -558,6 +559,7 @@ body.noscroll{overflow:hidden}
 .ctile .tmarks{position:absolute;left:6px;bottom:6px;z-index:3;display:flex;gap:4px}
 .ctile .tm{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;font-family:var(--sans);font-size:10px;font-weight:700;font-style:normal;color:#fff}
 .ctile .tm.flag{background:var(--tint)} .ctile .tm.ai{background:var(--ok)}
+.ctile .tm.new{background:var(--tint-soft);color:var(--tint)} /* v515: a page whose text is not yet checked */
 /* the marking's tick, on a tile (v490, H: "Im markiermodus sind an der Sternposition nun kreise. Das scheint falsch."):
    the filled state has been scoped to .crow and .shot.pick since v355, so on a tile — the Cards list since v465 — a
    marked card's ring never filled and every tile carried a grey circle that could not change. It fills like the row's
@@ -644,6 +646,7 @@ body.noscroll{overflow:hidden}
 .card.study .zone1 .picbox{margin-bottom:0}
 .picflag{position:absolute;right:8px;top:8px;width:36px;height:36px;border:none;border-radius:999px;background:rgba(255,255,255,.85);color:var(--label3);font-size:18px;line-height:36px;padding:0;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.25)} /* the review flag on the picture, as the star sits on a tile (v465) */
 .picflag.on{color:var(--tint)}
+.picflag.new{color:var(--label2)} /* v515: hollow ⚐ — not yet checked; a tap flags it. Nothing is drawn once the card is checked and clean */
 .chrow{margin-top:12px;display:flex;flex-direction:column;gap:8px;align-items:center}
 .chline{display:flex;flex-wrap:wrap;justify-content:center;gap:10px} /* one row per photo line; a line wider than the card wraps here */
 .chw{display:inline-flex;gap:2px;padding:2px;border-radius:12px;box-shadow:inset 0 0 0 1px var(--sep);background:var(--card2)} /* the buttons of one word sit on one tile (Q3) */
