@@ -695,7 +695,8 @@ body.noscroll{overflow:hidden}
 .prstar svg{width:100%;height:100%;fill:currentColor;filter:drop-shadow(0 2px 7px rgba(0,0,0,.28))}
 .prring{position:fixed;left:0;top:0;pointer-events:none;z-index:39;border-radius:999px;box-shadow:0 0 0 3px var(--warn);will-change:transform,opacity}
 
-.padline{margin-top:10px;font-size:15px;color:var(--label2);display:flex;flex-direction:column;align-items:center;gap:3px}
+.padline{margin-top:10px;min-height:61px;font-size:15px;color:var(--label2);display:flex;flex-direction:column;align-items:center;gap:3px} /* two rows tall whatever the word (v518), so the pad above it is the same size on a one-character word */
+.padline[hidden]{display:none}
 .padline .plrow{display:flex;justify-content:center;gap:10px;align-items:baseline;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} /* the word, and under it the one character (v517) */
 .padline .hanzi{font-family:var(--hanzi);font-size:20px;color:var(--label)} .padline .hanzi b{color:var(--tint);font-weight:400} .padline .mono{font-weight:600}
 .padacts{display:flex;justify-content:center;gap:2px 14px;flex-wrap:wrap;margin-top:6px} .padacts .del{font-size:15px;padding:8px 6px;min-height:40px}

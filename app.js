@@ -3080,7 +3080,7 @@ const unchecked=d=>!!(d&&d.unchecked);
 async function checkCard(id){ const d=cardOf(id); if(!d||!d.unchecked) return; const upd={...d}; delete upd.unchecked; await putCard(upd,id); }
 /* ---------- the write pad (v512): stroke by stroke over a template, as Duolingo does it ---------- */
 const PAD_MIN=200, TRACE_OK=0.18, NEXT_MS=1500, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
-const PAD_BELOW=46, FRONT_RATIO=2, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_GRID/1024;
+const PAD_BELOW=84, FRONT_RATIO=2, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_GRID/1024;
 /* NEXT_MS is 1500 since v517: the finished card holds while it is praised (§ 12), where it held 900 and nothing
    happened. FRONT_RATIO is the one shape the study card's picture box takes whatever the text is. PAD_BELOW is the
    room the pad leaves under itself for the helper row, counted whether or not the row has
@@ -3233,8 +3233,10 @@ function mountPad(card,d,c,tg,st,cur){
      and the button rows grew with the line count — 309 on a one-line card, its 200 px floor on any other — and then the card
      ran off the screen. Three things make the measurement the same every time: the picture box has one shape (frontPic), the
      characters are one row however many lines the photo had (.chrow), and what sits BELOW the pad is counted as the constant
-     PAD_BELOW instead of being measured. So the answer block opening, the helper buttons appearing, the swipe hint and the
-     linked-photos row all leave the pad where it is and let the card scroll, which is the thing that may move. */
+     PAD_BELOW instead of being measured. So the answer block opening, the helper buttons appearing and the swipe hint all
+     leave the pad where it is and let the card scroll, which is the thing that may move. PAD_BELOW is the line under the
+     pad at its two-row height (.padline min-height, v518 — the line is always there since) and the helper row's margin;
+     a helper button appearing scrolls the card by its 40 px, as v517 accepted. */
   const fit=()=>{ if(!cv.isConnected) return; const wrap=cv.parentElement, inner=card.clientWidth-36; cv.style.width="0px"; cv.style.height="0px";
     const nav=$("#tabs"), navH=nav?nav.getBoundingClientRect().height:56;
     const ans=card.querySelector("#ans"), ansH=(ans&&!ans.hidden)?ans.getBoundingClientRect().height:0; /* measured as if the answer were folded */
