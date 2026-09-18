@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=504; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=505; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -354,8 +354,24 @@ const AI_LOG_RES=6000;
 /* and the request is the other half of what a harness has to be fitted to (v403's audit): 1500 characters is under half of a real
    batch, so the log stopped mid-object exactly the way v395 found the reply doing; 4000 covers the worst measured case (3901). */
 const AI_LOG_REQ=4000;
-function logAi(entry){ AILOG.push({t:Date.now(),...entry}); while(AILOG.length>3) AILOG.shift(); saveAiLog(); } /* entry.ms: how long the call took (v208, H: the check "takes way too long" — Diagnostics now shows it) */
-let _ailogT=null; const saveAiLog=()=>{ clearTimeout(_ailogT); _ailogT=setTimeout(()=>{ setSetting("ailog",AILOG.slice()).catch(()=>{}); },800); };
+/* A hundred of everything, and each one in its own row (v505, H, 2026-09-18: "Ich befürchte, dass die Diagnostics nach
+   jedem app Start neu geschrieben werden. Stimmt das? Bitte immer weiter und bei 100 die alten wegwerfen!!"). They were
+   not rewritten at a start — v267, v384 and v399 made them survive one — but the ring held THREE readings and THREE AI
+   exchanges, so every fourth photo pushed the first one out, and H's way of working is to take a batch of photos and send
+   the wrong cards afterwards: by then their readings were gone (v405's own finding, one size larger). A hundred readings
+   at up to NUMS_MAX and a hundred exchanges at AI_LOG_REQ+AI_LOG_RES are about two megabytes at the worst, and that is why
+   the store changed shape with the number: one row per reading (`read:<shot>`) and per exchange (`ailog:<key>`) instead
+   of one row holding them all, so a step of one reading writes that reading's few kilobytes and never the whole history
+   — with the old single row a 100-reading ring would have been rewritten, structured-clone and all, on every debounced
+   step. The rows are keyed by the record they hold, so a photo read twice keeps its one row (numsReset replaces the
+   record in place, v405), and the oldest row is deleted the moment the ring pushes its record out. Diagnostics prints all
+   of them as before — the newest reading whole, the older ones trimmed head and tail (v405/v479) — so the shared text
+   grows with the history; Copy and Share carry it whole, and a chat paste is H's to cut. */
+const NUMS_KEEP=100, AI_KEEP=100, ERR_KEEP=100;
+const putRow=(k,v)=>idbPut("settings",{k,v}).catch(()=>{}); /* a row that stays out of S.settings: the ring and AILOG are their own memory */
+const delRow=k=>idbDel("settings",k).catch(()=>{});
+let _aiSeq=0;
+function logAi(entry){ const e={t:Date.now(),...entry}; e.k="ailog:"+e.t+":"+(_aiSeq++); AILOG.push(e); while(AILOG.length>AI_KEEP){ const old=AILOG.shift(); if(old&&old.k) delRow(old.k); } putRow(e.k,e); } /* entry.ms: how long the call took (v208, H: the check "takes way too long" — Diagnostics now shows it) */
 /* the last reading's steps and passes survive a restart (v267 — H's first diagnostics after the v266 update said "Last reading (0 steps)":
    the update had reloaded the page and the log lived in memory only; the error log has been persisted since v93) */
 /* The reading's own numbers, beside its sentences (v399, H, 2026-09-10: "Ich werde dann in Zukunft einfach lauter Bilder
@@ -410,11 +426,11 @@ function logRec(id){ if(!id) return null;
    its first step, and never rejoins: NUMSOF keeps six records and the ring three, so without the flag a late line from a
    reading that had already been pushed out would put it back at the head of the ring as the newest — the misattribution
    this whole version is about, in its last hiding place. Its steps are still filed under it; they are simply not printed. */
-function ringAdd(N){ if(!N||N.ringed) return N; N.ringed=true; const r=LAST_READ.ring; r.push(N); while(r.length>NUMS_KEEP) r.shift(); return N; }
+function ringAdd(N){ if(!N||N.ringed) return N; N.ringed=true; const r=LAST_READ.ring; r.push(N); while(r.length>NUMS_KEEP){ const old=r.shift(); if(old&&old.shot) delRow("read:"+old.shot); } return N; } /* v505: the row goes with the record */
 const lastRead=()=>LAST_READ.ring[LAST_READ.ring.length-1]||null;
 function logRead(id,text,pre){ const N=logRec(id); if(!N) return;
   N.log.push(pre?{t:Date.now(),pre:true,text}:{t:Date.now(),text});
-  while(N.log.length>LOG_MAX) N.log.shift(); saveReadLog(); }
+  while(N.log.length>LOG_MAX) N.log.shift(); saveReadLog(N); }
 /* the one place a finished reading's record is handed on: Diagnostics prints it, and the ring keeps it */
 function numsFile(id){ const N=numsFor(id); if(!N) return null; if(!N.ms) N.ms=Date.now()-N.at;
   /* the ring, not one slot (v405, H's washing machine at v404): NUMSOF holds six records but only one ever reached the
@@ -425,7 +441,7 @@ function numsFile(id){ const N=numsFor(id); if(!N) return null; if(!N.ms) N.ms=D
      Filed by identity, since one reading files twice — at the end of cropSign and again once splitCards named its cards —
      and both times it is the same object, which the ring then updates in place. */
   ringAdd(N); /* v479: logRec put it there at the reading's first step, and it keeps its place */
-  saveReadLog(); return N; }
+  saveReadLog(N); return N; }
 const n4=v=>typeof v==="number"&&isFinite(v)?+v.toFixed(4):null; /* a fraction of an 800 px picture to a third of a pixel: roundGrid tests against 0.3 px and templateBoxes against a tenth of a box */
 const n1=v=>typeof v==="number"&&isFinite(v)?+v.toFixed(1):null; /* a copy's pixels, and degrees */
 const numRect=r=>r?[n1(r.x),n1(r.y),n1(r.w),n1(r.h),n1(r.a||0),n1(r.lw),n1(r.lh)]:null; /* a frame on the layer, with the layer it was measured on — a rectangle without its lw/lh cannot be mapped anywhere */
@@ -447,7 +463,7 @@ const numPic=p=>p?{pw:p.picW,ph:p.picH,box:numFrac(p.box),alt:numFrac(p.boxAlt),
   out:(p.outside||[]).map(x=>String(x).slice(0,24)),
   cut:p.cut||"",bad:!!p.bad,apart:!!p.apart,kind:p.kind||"",keptAll:p.keptAll||"",page:p.pageInfo||null,zh:String(p.zh||"").slice(0,200),
   labels:(p.labels||[]).map(l=>({zh:l.zh,box:numFrac(l.box),sc:l.scale}))}:null;
-const NUMS_KEEP=3; /* readings kept in the shared text (v405) — three covers a photo taken, looked at and taken again */
+/* NUMS_KEEP was 3 from v405 to v504 ("three covers a photo taken, looked at and taken again") and is 100 since v505, declared with AI_KEEP above */
 const LOG_MAX=40, LOG_PRE_KEEP=4, LOG_OLD_HEAD=5, LOG_OLD_TAIL=10; /* v479: steps kept per reading (the 40 the one global list used to hold), the frame's own lines carried into the reading that follows, and how much of an earlier reading is printed — head and tail, so the proposal and the quick look stand at one end and the outcome at the other */
 const NUMS_OLD=6000; /* the older two are trimmed harder than the newest: a 19-label panel measures 6.1 KB whole, so this
    keeps a panel intact and costs at most 12 KB of the diagnostics H pastes into a chat */
@@ -469,14 +485,17 @@ const strHash=s=>{ let h=5381; for(let i=0;i<s.length;i++) h=(h*33^s.charCodeAt(
 const STORAGE={};
 async function storageFacts(){ try{ if(navigator.storage&&navigator.storage.estimate){ const e=await navigator.storage.estimate(); STORAGE.quota=e.quota||0; STORAGE.usage=e.usage||0; }
     if(navigator.storage&&navigator.storage.persisted) STORAGE.persisted=await navigator.storage.persisted(); }catch(e){} }
-/* the ring as it is written down: the newest at its full cap, the older two trimmed harder (v405) */
-const numsRing=()=>LAST_READ.ring.map((N,i)=>numsTrim(N,i===LAST_READ.ring.length-1?NUMS_MAX:NUMS_OLD));
-/* the steps and the passes ride beside the trimmed ring, not inside it (v479): numsRing() spends a fixed character budget on
-   the numbers, and steps in that JSON would push the numbers out — which is the v395 fault (the answer cut mid-word) one
-   store along. Matched back to their reading by shot id at boot. */
-const readLogs=()=>{ const r=LAST_READ.ring.filter(Boolean); return r.map((N,i)=>({shot:N.shot,log:(N.log||[]).slice(),passes:i===r.length-1?(N.passes||null):null})); }; /* the passes of the newest only — the others are never printed, so storing them would only cost */
-let _readlogT=null; const saveReadLog=()=>{ clearTimeout(_readlogT); _readlogT=setTimeout(()=>{ setSetting("readlog",{ring:numsRing(),logs:readLogs()}).catch(()=>{}); },800); };
-function logErr(kind,msg){ ERRLOG.push({t:Date.now(),kind,msg:String(msg||"").slice(0,400)}); while(ERRLOG.length>20) ERRLOG.shift(); setSetting("errlog",ERRLOG.slice()).catch(()=>{}); }
+/* one reading, one row (v505): the record trimmed to NUMS_MAX, its steps and its passes beside it, not inside it (v479's
+   rule — numsTrim spends a fixed character budget on the numbers, and steps in that JSON would push the numbers out, the
+   v395 fault one store along). Debounced per record, so a reading's steps write its own few kilobytes 0.8 s after the
+   last one and never anybody else's. The passes ride along for every reading now; Diagnostics still prints the newest
+   reading's only. */
+let _rdSeq=0; const readRow=N=>{ if(!N.seq) N.seq=++_rdSeq; return {shot:N.shot,at:N.at||0,seq:N.seq,nums:numsTrim(N,NUMS_MAX),log:(N.log||[]).slice(-LOG_MAX),passes:N.passes||null}; }; /* seq breaks a tie on at — two records of one millisecond would otherwise fall back to the rows' key order, which is alphabetical */
+const _readlogT=new Map();
+const saveReadLog=N=>{ if(!N||!N.shot) return; clearTimeout(_readlogT.get(N.shot));
+  _readlogT.set(N.shot,setTimeout(()=>{ _readlogT.delete(N.shot); if(LAST_READ.ring.includes(N)||NUMSOF[N.shot]===N) putRow("read:"+N.shot,readRow(N)); },800)); }; /* a record the ring has already pushed out, or a reset has taken, writes nothing */
+const readRestore=row=>{ if(!row||!row.nums) return null; const N={...row.nums}; N.log=Array.isArray(row.log)?row.log.slice(-LOG_MAX):[]; if(row.passes) N.passes=row.passes; if(!N.at) N.at=row.at||0; N.seq=row.seq||0; N.ringed=true; return N; };
+function logErr(kind,msg){ ERRLOG.push({t:Date.now(),kind,msg:String(msg||"").slice(0,400)}); while(ERRLOG.length>ERR_KEEP) ERRLOG.shift(); setSetting("errlog",ERRLOG.slice()).catch(()=>{}); }
 window.addEventListener("error",e=>logErr("error",(e.message||"")+(e.filename?` @${String(e.filename).split("/").pop()}:${e.lineno}`:"")));
 window.addEventListener("unhandledrejection",e=>{ const r=e.reason; logErr("promise",r&&(r.stack||r.message)||r); });
 function diagText(){
@@ -574,6 +593,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v505","Diagnostics: 100 readings survive a batch"],
   ["app","v488","Multicard: one button, and the line counts flashcards"],
   ["app","v487","Learn holds no multicard text any more"],
   ["photo","v486","Maison Marais sign again: the sign in the picture"],
@@ -860,22 +880,31 @@ async function boot(){
     const [prog, cust, inb, sett] = await Promise.all([idbAll("progress"), idbAll("custom"), idbAll("inbox"), idbAll("settings").catch(()=>[])]);
     S.progress = {}; prog.forEach(r=>{ const {id,c,...s}=r; S.progress[id||c]=s; });
     sett.forEach(r=>{ S.settings[r.k]=r.v; });
-    if(Array.isArray(S.settings.errlog)) ERRLOG.unshift(...S.settings.errlog.slice(-20));
+    if(Array.isArray(S.settings.errlog)) ERRLOG.unshift(...S.settings.errlog.slice(-ERR_KEEP));
     if(Array.isArray(S.settings.autoQueue)) AUTOQ.push(...S.settings.autoQueue.filter(id=>typeof id==="string")); /* v411: the batch goes on where it stopped */
-    if(S.settings.readlog&&!LAST_READ.ring.length){ const rl=S.settings.readlog;
-      /* the ring since v405; a phone still holding a v404 setting has one record under nums */
-      LAST_READ.ring=(Array.isArray(rl.ring)?rl.ring:(rl.nums?[rl.nums]:[])).slice(-NUMS_KEEP);
-      /* v479: the steps ride beside the ring and are matched back by shot id */
-      const logs=Array.isArray(rl.logs)?rl.logs:null;
-      LAST_READ.ring.forEach(N=>{ if(!N) return; const e=logs&&logs.find(x=>x&&x.shot===N.shot);
-        N.log=e&&Array.isArray(e.log)?e.log.slice(-LOG_MAX):(Array.isArray(N.log)?N.log:[]);
-        if(e&&e.passes) N.passes=e.passes; });
-      /* a phone still holding a v478 setting: one global step list and one passes array, both the newest reading's */
-      if(!logs&&LAST_READ.ring.length){ const last=LAST_READ.ring[LAST_READ.ring.length-1];
-        if(Array.isArray(rl.steps)&&!last.log.length) last.log=rl.steps.slice(-LOG_MAX);
-        if(rl.passes&&!last.passes) last.passes=rl.passes; }
-      LAST_READ.ring.forEach(N=>{ if(N) N.ringed=true; }); } /* the reading's numbers survive the restart with its steps (v399/v267) */
-    if(Array.isArray(S.settings.ailog)&&!AILOG.length) AILOG.push(...S.settings.ailog.slice(-3)); /* the last AI exchanges before the restart (v384) */
+    /* the readings survive the restart with their steps (v399/v267), one row each since v505 — and the one-row ring a
+       phone still holds from v405–v504 is read once, written out as rows and then deleted, so nothing already recorded is
+       lost on the update. The rows leave S.settings at once: the ring is their memory, and a hundred records twice in
+       memory would be the v214 shape (a photo stored twice) one store along. */
+    if(!LAST_READ.ring.length){ const found=[];
+      if(S.settings.readlog){ const rl=S.settings.readlog, old=(Array.isArray(rl.ring)?rl.ring:(rl.nums?[rl.nums]:[])).filter(Boolean), logs=Array.isArray(rl.logs)?rl.logs:null;
+        old.forEach((N,i)=>{ const e=logs&&logs.find(x=>x&&x.shot===N.shot);
+          N.log=e&&Array.isArray(e.log)?e.log.slice(-LOG_MAX):(Array.isArray(N.log)?N.log:[]);
+          if(e&&e.passes) N.passes=e.passes;
+          if(!logs&&i===old.length-1){ if(Array.isArray(rl.steps)&&!N.log.length) N.log=rl.steps.slice(-LOG_MAX); if(rl.passes&&!N.passes) N.passes=rl.passes; } /* a v478 setting: one global step list, the newest reading's */
+          N.ringed=true; if(!N.at) N.at=0; N.seq=++_rdSeq; found.push(N); if(N.shot) putRow("read:"+N.shot,readRow(N)); });
+        delete S.settings.readlog; delRow("readlog"); }
+      for(const k of Object.keys(S.settings)){ if(!k.startsWith("read:")) continue; const N=readRestore(S.settings[k]); delete S.settings[k]; if(N&&N.shot) found.push(N); else delRow(k); }
+      found.sort((a,b)=>((a.at||0)-(b.at||0))||((a.seq||0)-(b.seq||0)));
+      found.forEach(N=>{ if(N.seq>_rdSeq) _rdSeq=N.seq; }); /* the next new record sorts after every restored one */
+      const seen=new Set(); for(let i=found.length-1;i>=0;i--){ if(seen.has(found[i].shot)) found.splice(i,1); else seen.add(found[i].shot); } /* one row per photo — the newest record wins where the migration and a row both name one */
+      while(found.length>NUMS_KEEP){ const old=found.shift(); delRow("read:"+old.shot); }
+      LAST_READ.ring=found; }
+    if(!AILOG.length){ const found=[];
+      if(Array.isArray(S.settings.ailog)){ S.settings.ailog.forEach(e=>{ if(!e||!e.t) return; e.k="ailog:"+e.t+":"+(_aiSeq++); found.push(e); putRow(e.k,e); }); delete S.settings.ailog; delRow("ailog"); } /* the v384 single row, read once and written out as rows */
+      for(const k of Object.keys(S.settings)){ if(!k.startsWith("ailog:")) continue; const e=S.settings[k]; delete S.settings[k]; if(e&&e.t){ e.k=k; found.push(e); } else delRow(k); }
+      const seqOf=e=>+String(e.k||"").split(":").pop()||0; found.sort((a,b)=>((a.t||0)-(b.t||0))||(seqOf(a)-seqOf(b))); found.forEach(e=>{ const q=seqOf(e); if(q>=_aiSeq) _aiSeq=q+1; }); while(found.length>AI_KEEP){ const old=found.shift(); delRow(old.k); }
+      AILOG.push(...found); }
     await migrateAi();
     storageFacts(); /* v399: the quota and the usage for Diagnostics, once at boot */
     bump("opens");
@@ -4748,7 +4777,7 @@ const readingHTML=(x,id)=>READ_FAIL.test(x)?`<span class="badge">${failText(x)}<
    (!!(id&&READ_AT[id]&&Date.now()-READ_AT[id]>=READ_STUCK));
 const readingStatus=(id,run)=>x=>{ if(run&&READ_RUN[id]!==run) return; READING[id]=x; READ_AT[id]=Date.now();
   { const N=logRec(id), last=N&&N.log[N.log.length-1]; /* v479: this photo's own last line — until now it was whatever was logged last by anyone, so two photos read close together overwrote each other's progress */
-    if(last&&/^recognizing … \d+%$/.test(last.text)&&/^recognizing … \d+%$/.test(x)){ last.text=x; saveReadLog(); } else logRead(id,x); } /* the reader's progress overwrites its own line (v285: forty "recognizing … N%" lines had pushed every step and the proposed frame out of H's diagnostics) */
+    if(last&&/^recognizing … \d+%$/.test(last.text)&&/^recognizing … \d+%$/.test(x)){ last.text=x; saveReadLog(N); } else logRead(id,x); } /* the reader's progress overwrites its own line (v285: forty "recognizing … N%" lines had pushed every step and the proposed frame out of H's diagnostics) */
   const b=$("#ocr-"+id); if(b) b.innerHTML=readingHTML(x,id);
   setTimeout(()=>{ if(READING[id]!==x) return; const b2=$("#ocr-"+id); if(b2) b2.innerHTML=readingHTML(x,id); },READ_STUCK+50); };
 /* a canvas with the bitmap drawn at a scale (opaque — the reader is handed JPEGs) */
@@ -6044,7 +6073,7 @@ async function cropSign(id,opts){
     const score=p=>readingScore(p.lines,Hink)*Math.min(1.5,1+0.1*((agree.get(textOf(p))||1)-1))*sizeFit(p)*lineFit(p);
     passes.sort((a,b)=>score(b)-score(a));
     r.passes=passes.map(p=>({s:Math.round(score(p)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),h:Hink?+(hOfPass(p)/Hink).toFixed(2):null,tight:p.tightened,bw:!!p.bw,ch:!!p.chroma,tra:!!p.tra,...(lineFit(p)<1?{over:p.lines.length-maxLines}:{})}));
-    N.passes=r.passes; saveReadLog(); /* v479: on the reading's own record, so the "passes:" line cannot belong to a different photo than the "numbers:" line under it */
+    N.passes=r.passes; saveReadLog(N); /* v479: on the reading's own record, so the "passes:" line cannot belong to a different photo than the "numbers:" line under it */
     const best=passes[0], lines=best.lines;
     N.eff=n1(effScore(lines,Hink)); N.weak=N.eff<WEAK_READ; N.nPass=passes.length; /* v399: effScore >= WEAK_READ decides whether the AI is asked at all, and the log states neither it nor Hink */
     r.passesDone=true; /* v442: an answer landing from here on stops nothing — the passes are all read, and the weak block below simply takes it (without this the .then above logged "the reading stops" during the weak block's own await, on a reading that had finished) */
@@ -7797,9 +7826,9 @@ async function importData(e){
 /* what "Start over" has to take with the three stores (v457's audit, measured on a seeded phone: after "Delete everything"
    SEVEN settings still held Chinese text read off the user's photos, and the Progress dashboard still showed a four-day
    streak and two busy days over an empty deck). Two groups, and the first is the one that matters:
-     — the app's own logs, which carry the photos' own characters: `ailog` (the last three AI exchanges, the request up to
-       AI_LOG_REQ and the raw reply up to AI_LOG_RES), `readlog` (the reading's steps and the numsRing, which keeps the
-       model's zh per reading) and `errlog` — the last one UNREDACTED, since noHan runs only on the way to the daily row;
+     — the app's own logs, which carry the photos' own characters: the AI exchanges (`ailog:*`, one row each since v505, the
+       request up to AI_LOG_REQ and the raw reply up to AI_LOG_RES), the readings (`read:*`, one row each, the steps and
+       the numbers with the model's zh per reading) and `errlog` — the last one UNREDACTED, since noHan runs only on the way to the daily row;
      — everything keyed by a card id, which since v118 IS the card's text while it is free: `lastRun` (the previous run's
        meanings and tags, card by card), `translateStage`, `tagStage`, `recheckRun.done`, `resumeView.card`;
      — and the learner's own progress the sheet has promised to delete since v82 and never did: `days` (the streak) and
@@ -7828,9 +7857,14 @@ async function resetAll(){
   /* the debounced writers hold the OLD object and fire up to 800 ms later, so a delete without this measured as usage
      surviving the reset with its 310 reviews intact — bump, bumpModel and dailyBump each close over the object they were
      going to write, and saveReadLog/saveAiLog would re-create their key as an empty husk */
-  clearTimeout(_usageTimer); clearTimeout(_dailyTimer); clearTimeout(_ailogT); clearTimeout(_readlogT);
+  clearTimeout(_usageTimer); clearTimeout(_dailyTimer); for(const tm of _readlogT.values()) clearTimeout(tm); _readlogT.clear();
   const kept=[];
   for(const k of RESET_KEYS){ delete S.settings[k]; try{ await idbDel("settings",k); }catch(e){ kept.push(k); } }
+  /* v505: the readings and the AI exchanges are one row each (`read:<shot>`, `ailog:<key>`) and never sit in S.settings, so
+     they are deleted through the objects that name them — every row in the store carries one of the two prefixes */
+  for(const N of LAST_READ.ring){ if(N&&N.shot) try{ await idbDel("settings","read:"+N.shot); }catch(e){ kept.push("read:"+N.shot); } }
+  for(const e of AILOG){ if(e&&e.k) try{ await idbDel("settings",e.k); }catch(e2){ kept.push(e.k); } }
+  try{ const rows=await idbAll("settings"); for(const r of rows){ if(r&&typeof r.k==="string"&&(r.k.startsWith("read:")||r.k.startsWith("ailog:"))) await idbDel("settings",r.k); } }catch(e){ kept.push("read:*"); } /* a row the ring no longer names (a record pushed out before its delete landed) */
   if(kept.length) logErr("reset","could not delete: "+kept.join(", "));
   S.progress={}; S.custom=[]; S.inbox=[];
   ERRLOG.length=0; AILOG.length=0; AUTOQ.length=0; /* the same logs in memory, or they would be written back at the next step (v267/v384's own debounce) */
