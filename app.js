@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=510; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=511; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -581,9 +581,38 @@ async function fetchReport(what){
    "Go"): a user's message goes as one row into the table `feedback` of H's project (insert only for the publishable key,
    with the installation id and the app version — no name, no cards, no photos); H reads them through the report function
    with what:"feedback" (supabase/feedback.sql, the function's second branch). */
-async function sendFeedback(text){
-  const r=await fetch(SHARE_URL+"/rest/v1/feedback",{method:"POST",headers:{"apikey":SHARE_KEY,"Authorization":"Bearer "+SHARE_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({install:installId(),version:APP_V,text})});
+/* A screenshot with the message (v511, H: "Unter Feedback bitte folgendes ermöglichen: Screenshot anhängen"): a picture says in one
+   look what a sentence takes a paragraph to describe, and H's own reports to me are screenshots. The picture is downscaled here and
+   travels as base64 in the row's own `shot` column, so nothing new is set up on the phone — the one thing the OWNER has to do once is
+   `supabase/feedback-shot.sql`, which adds that column, widens the insert policy and lets feedback_list hand it back. Until he has,
+   PostgREST answers 400 PGRST204 ("column shot ... does not exist"), and the message is then sent WITHOUT the picture rather than
+   lost: sendFeedback returns "noshot" and the row says so. FB_SHOT_MAX 1400 px and the quality ladder keep the base64 under
+   FB_SHOT_B64, which is what the policy allows — a phone screenshot at 1400 px is 150–400 KB of JPEG, so the ladder rarely steps. */
+const FB_SHOT_MAX=1400, FB_SHOT_B64=900000;
+let FB_SHOT=null; /* {b64,size,url}: the picture staged under the Feedback box, memory only — a message that is never sent leaves nothing behind */
+async function shrinkShot(file){
+  const bmp=await createImageBitmap(file);
+  const sc=Math.min(1,FB_SHOT_MAX/Math.max(bmp.width,bmp.height));
+  const cv=document.createElement("canvas"); cv.width=Math.max(1,Math.round(bmp.width*sc)); cv.height=Math.max(1,Math.round(bmp.height*sc));
+  cv.getContext("2d").drawImage(bmp,0,0,cv.width,cv.height); bmp.close();
+  for(const q of [0.75,0.6,0.45,0.3]){ /* the ladder: a busy screenshot at 1400 px can pass the policy's ceiling, and a smaller picture is better than no picture */
+    const blob=await new Promise(res=>cv.toBlob(res,"image/jpeg",q)); if(!blob) break;
+    const b64=await blobToB64(blob);
+    if(b64.d.length<=FB_SHOT_B64) return {b64:b64.d,size:blob.size,url:URL.createObjectURL(blob)};
+  }
+  throw new Error("the picture is too large");
+}
+const fbShotHTML=()=>FB_SHOT?`<div class="fbthumb"><img src="${FB_SHOT.url}" alt="${esc(t("Add screenshot"))}"><button class="x" id="fb-shot-x" aria-label="${esc(t("Remove image"))}">×</button><span class="sz">${Math.round(FB_SHOT.size/1024)} KB</span></div>`:"";
+function fbShotDrop(){ if(FB_SHOT&&FB_SHOT.url) URL.revokeObjectURL(FB_SHOT.url); FB_SHOT=null; }
+function fbShotDraw(){ const box=$("#fb-shot"); if(!box) return; box.innerHTML=fbShotHTML(); const x=$("#fb-shot-x"); if(x) x.onclick=()=>{ fbShotDrop(); fbShotDraw(); }; }
+async function sendFeedback(text,shot){
+  const post=body=>fetch(SHARE_URL+"/rest/v1/feedback",{method:"POST",headers:{"apikey":SHARE_KEY,"Authorization":"Bearer "+SHARE_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(body)});
+  const row={install:installId(),version:APP_V,text};
+  let r=await post(shot?{...row,shot}:row);
+  if(!r.ok&&shot){ const body=await r.text().catch(()=>""); if(r.status===400&&/shot/.test(body)){ logErr("feedback","the feedback table has no shot column yet: "+body.slice(0,160)); r=await post(row); if(r.ok) return "noshot"; } /* the owner has not run feedback-shot.sql: the message goes without the picture rather than not at all */
+    else { logErr("feedback",r.status+": "+body.slice(0,300)); throw new Error(r.status===404?"the feedback table is not set up":"error "+r.status); } }
   if(!r.ok){ const body=await r.text().catch(()=>""); logErr("feedback",r.status+": "+body.slice(0,300)); throw new Error(r.status===404?"the feedback table is not set up":"error "+r.status); }
+  return "";
 }
 /* Everything built and not yet confirmed on the phone (v434, H: "Bitte allgemeine \u201enoch zu testen\u201c Liste"),
    grouped by what H does rather than by version — CLAUDE.md's roadmap carries 136 pending entries, and a list of 136
@@ -593,6 +622,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v511","Feedback with a screenshot arrives"],
   ["app","v510","Learn: no \"2 of 2\" under a card"],
   ["app","v509","close the app mid-read: photo back"],
   ["photo","v509","unread photo stays under Camera"],
@@ -803,7 +833,7 @@ function fieldText(){
 }
 function feedbackText(rows){ /* laid out like the All users report since v251 (H: "Same for feedback"): a head with the count, one block per message with a blank line between, the sender's id under the time */
   const day=t=>String(t||"").replace("T"," ").slice(0,16);
-  const blocks=rows.map(r=>`${day(r.created_at)}, app version ${r.version||"?"}\n  from phone ${r.install||"?"}\n  ${String(r.text||"").replace(/\s*\n\s*/g,"\n  ")}`);
+  const blocks=rows.map(r=>`${day(r.created_at)}, app version ${r.version||"?"}\n  from phone ${r.install||"?"}${r.shot?"\n  [screenshot — see Show]":""}\n  ${String(r.text||"").replace(/\s*\n\s*/g,"\n  ")}`); /* v511: the text report names the picture, Show renders it */
   return [`识字 Zeichentrainer — feedback, ${day(new Date().toISOString()).slice(0,10)}`,`  messages ${String(rows.length).padStart(4)}  (newest first, up to 500)`,""].concat(blocks.length?blocks.join("\n\n"):"No messages yet.").join("\n")+"\n";
 }
 async function shareFeedback(){
@@ -2326,7 +2356,7 @@ function renderMore(main){
     ${undoRunHTML("dismiss")}
     <div class="listhead">${t("Share")}</div>
     <div class="mrow"><div><div class="t">${t("Share the app")}</div><div class="s" id="app-share-status">${t("Send the link to a friend. The app installs from any browser, no store.")}</div></div><button class="btn mini" id="app-share">${t("Share")}</button></div>
-    <div class="mrow"><div style="flex:1"><div class="t">${t("Feedback")}</div><div class="s" id="fb-status">${t("Tell the app's owner what works and what does not.")}</div><textarea class="grow" id="fb-text" rows="2" placeholder="${t("Your message")}"></textarea><div class="fieldacts"><button class="btn mini" id="fb-send">${t("Send")}</button></div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">${t("Feedback")}</div><div class="s" id="fb-status">${t("Tell the app's owner what works and what does not.")}</div><textarea class="grow" id="fb-text" rows="2" placeholder="${t("Your message")}"></textarea><div id="fb-shot">${fbShotHTML()}</div><input type="file" id="fb-pick" accept="image/*" hidden><div class="fieldacts"><button class="btn mini" id="fb-add">${t("Add screenshot")}</button><button class="btn mini" id="fb-send">${t("Send")}</button></div></div></div>
     <div class="listhead">${t("Help")}</div>
     <div class="mrow"><div><div class="t">${t("How to use the app")}</div><div class="s">${t("Six short sections: photo, characters, learning, cards, language, what stays on the phone.")}</div></div><button class="btn mini" id="guide-open">${t("Open")}</button></div>
     <div class="listhead">${t("Language")}</div>
@@ -2372,6 +2402,7 @@ function renderMore(main){
     <pre class="diag" id="users-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">Feedback</div><div class="s" id="fb-in-status">${FEEDBACK?`${nOf(FEEDBACK.rows.length,"message")}, fetched ${new Date(FEEDBACK.at).toLocaleTimeString()}.`:"The messages users sent from the app, newest first."}</div><div class="fieldacts"><button class="btn mini" id="fb-show">Show</button><button class="btn mini" id="fb-share">Share</button><button class="btn mini" id="fb-copy">Copy</button></div></div></div>
     <pre class="diag" id="fb-out" hidden></pre>
+    <div class="fbpics" id="fb-pics" hidden></div>
     <div class="listhead">Start over</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>`:""}
     <div class="listhead">${t("About")}</div>
@@ -2390,10 +2421,13 @@ function renderMore(main){
   $("#guide-open").onclick=()=>{ S.mode="guide"; render(); window.scrollTo({top:0}); };
   $("#lic-open").onclick=()=>{ window.open("./vendor/LICENSES.txt","_blank","noopener"); };
   wireGrow(main); /* the feedback box grows with its text like the forms' fields (v218, H: "looks a little bit old school") */
+  $("#fb-add").onclick=()=>$("#fb-pick").click(); /* the screenshot beside the message (v511) */
+  $("#fb-pick").onchange=async e=>{ const f=(e.target.files||[])[0]; e.target.value=""; if(!f||!f.type.startsWith("image/")) return;
+    const st=$("#fb-status"); try{ fbShotDrop(); FB_SHOT=await shrinkShot(f); }catch(err){ st.textContent=t("Could not send: {0}",err&&err.message||err); } fbShotDraw(); };
   $("#fb-send").onclick=async()=>{ const tx=$("#fb-text"), st=$("#fb-status"), b=$("#fb-send"), text=tx.value.trim(); if(!text){ st.textContent=t("Write a few words first."); return; }
     if(!navigator.onLine){ st.textContent=t("No connection. Try again when online."); return; }
     b.disabled=true; st.textContent=t("Sending …");
-    try{ await sendFeedback(text); tx.value=""; st.textContent=t("Thank you, sent."); }catch(err){ st.textContent=t("Could not send: {0}",err&&err.message||err); } b.disabled=false; };
+    try{ const r=await sendFeedback(text,FB_SHOT&&FB_SHOT.b64); tx.value=""; fbShotDrop(); fbShotDraw(); st.textContent=r==="noshot"?t("Sent, but the screenshot could not be attached."):t("Thank you, sent."); }catch(err){ st.textContent=t("Could not send: {0}",err&&err.message||err); } b.disabled=false; };
   $("#update-note").onchange=async e=>{ await setSetting("updateNote",!!e.target.checked); if(!e.target.checked) hideUpdated(); };
   $("#share-usage").onchange=async e=>{ await setSetting("shareUsage",!!e.target.checked); $("#share-status").textContent=shareNote(); sendReport(); };
   $("#import").onclick=()=>$("#imp").click();
@@ -2413,8 +2447,13 @@ function renderMore(main){
       st.textContent="Fetching …"; try{ const u=await fetchAllUsers(); o.textContent=allUsersText(u.rows); o.hidden=false; st.textContent=`${nOf(u.rows.length,"install")}, fetched ${new Date(u.at).toLocaleTimeString()}.`; }
       catch(err){ st.textContent="Could not fetch: "+(err&&err.message||err); } };
     $("#users-share").onclick=async()=>{ const st=$("#users-status"); try{ await shareUsers(); }catch(err){ st.textContent="Could not fetch: "+(err&&err.message||err); } };
-    $("#fb-show").onclick=async()=>{ const o=$("#fb-out"), st=$("#fb-in-status"); if(!o.hidden&&FEEDBACK){ o.hidden=true; return; }
-      st.textContent="Fetching …"; try{ const f=await fetchFeedback(); o.textContent=feedbackText(f.rows); o.hidden=false; st.textContent=`${nOf(f.rows.length,"message")}, fetched ${new Date(f.at).toLocaleTimeString()}.`; }
+    $("#fb-show").onclick=async()=>{ const o=$("#fb-out"), im=$("#fb-pics"), st=$("#fb-in-status"); if(!o.hidden&&FEEDBACK){ o.hidden=true; im.hidden=true; return; }
+      st.textContent="Fetching …"; try{ const f=await fetchFeedback(); o.textContent=feedbackText(f.rows); o.hidden=false;
+        const withShot=f.rows.filter(r=>r.shot); /* v511: the pictures under the text, newest first, each tappable for the full size */
+        im.innerHTML=withShot.map(r=>`<figure><img src="data:image/jpeg;base64,${r.shot}" alt="screenshot" loading="lazy"><figcaption>${esc(String(r.created_at||"").replace("T"," ").slice(0,16))} · ${esc(r.install||"?")}</figcaption></figure>`).join("");
+        im.hidden=!withShot.length;
+        im.querySelectorAll("img").forEach(g=> g.onclick=()=>{ const w=window.open(); if(w) w.document.write(`<img src="${g.src}" style="max-width:100%">`); });
+        st.textContent=`${nOf(f.rows.length,"message")}, fetched ${new Date(f.at).toLocaleTimeString()}.`; }
       catch(err){ st.textContent="Could not fetch: "+(err&&err.message||err); } };
     $("#fb-share").onclick=async()=>{ const st=$("#fb-in-status"); try{ await shareFeedback(); }catch(err){ st.textContent="Could not fetch: "+(err&&err.message||err); } };
     $("#mirror-url").onchange=async e=>{ await setSetting("mirror",e.target.value.trim()); tellMirror(); };
@@ -3711,6 +3750,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  511:"A screenshot can go with a Feedback message.",
   509:"A photo the app was still reading when you closed it is read when you come back, and a photo that could not be read stays under Camera until you crop or delete it.",
   508:"A card picture with a light grey ground is no longer darkened to black, and the cards already made are cut again from their photos.",
   497:"Two buttons under a card instead of three: Not yet, and Got it.",
@@ -8041,7 +8081,7 @@ const reloadBusy=()=>picking()||!!CROP; /* a photo on its way from the camera, o
    is up within seconds and the user finds the same screen. */
 const IDLE_MS=4000, RELOAD_POLL=2000, RESUME_MAX=180000; let LAST_TOUCH=Date.now();
 ["pointerdown","keydown","input","touchstart","wheel"].forEach(ev=>document.addEventListener(ev,()=>{ LAST_TOUCH=Date.now(); },{capture:true,passive:true}));
-const reloadIdle=()=>!reloadBusy()&&!document.hidden&&Date.now()-LAST_TOUCH>=IDLE_MS&&!S.editing&&S.mode!=="add"&&!Object.keys(PENDING).length&&!Object.keys(READING).length&&!(TRANSLATE&&TRANSLATE.running)&&!(TAGALL&&TAGALL.running)&&!(RECHECK&&RECHECK.running)&&!BRIGHT&&!RECUT&&!document.querySelector(".drawsheet,.ask")&&!(($("#fb-text")||{}).value||"").trim();
+const reloadIdle=()=>!reloadBusy()&&!document.hidden&&Date.now()-LAST_TOUCH>=IDLE_MS&&!S.editing&&S.mode!=="add"&&!Object.keys(PENDING).length&&!Object.keys(READING).length&&!(TRANSLATE&&TRANSLATE.running)&&!(TAGALL&&TAGALL.running)&&!(RECHECK&&RECHECK.running)&&!BRIGHT&&!RECUT&&!document.querySelector(".drawsheet,.ask")&&!(($("#fb-text")||{}).value||"").trim()&&!FB_SHOT; /* a staged screenshot holds the reload too (v511): it lives in memory and a reload would drop it */
 async function reloadNow(){ RELOAD_DUE=false; clearInterval(RELOAD_TIMER); RELOAD_TIMER=null; RELOADING=true; try{ await setSetting("resumeView",viewNow(true)); }catch(e){} location.reload(); }
 function reloadSoon(){ if(!reloadBusy()&&(Date.now()-LOAD_AT<RELOAD_GRACE||document.hidden)){ reloadNow(); return; } RELOAD_DUE=true; if(!RELOAD_TIMER) RELOAD_TIMER=setInterval(()=>{ if(RELOAD_DUE&&reloadIdle()) reloadNow(); },RELOAD_POLL); }
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&RELOAD_DUE&&!reloadBusy()) reloadNow(); });
