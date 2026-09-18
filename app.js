@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=505; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=506; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -593,6 +593,7 @@ async function sendFeedback(text){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v506","Cards: a text-only tile shows the whole word"],
   ["app","v505","Diagnostics: 100 readings survive a batch"],
   ["app","v488","Multicard: one button, and the line counts flashcards"],
   ["app","v487","Learn holds no multicard text any more"],
@@ -3083,6 +3084,21 @@ function cardsList(){
    stored (the v401 lesson): srcView(d) follows `from` to the multicard exactly as the front does, so deleting the
    multicard's photo simply gives the glyph tile back. A multicard's own tile keeps its stack of plates, its count chip
    and its bar, so the two can never be confused. */
+/* The glyph tile shows the card's whole text (v506, H's 普通话 card, whose tile showed 普 alone: "Bitte bei text-only-karten
+   das gesamte Wort im Bildbereich anzeigen"): the text's own lines, the font fitted to the longest line by container
+   query units — the tile's own width is not known here — capped at the old 46 px, so a word stays big and a sign's line
+   shrinks to fit rather than being cut. The colour stays the placeholder grey: the heading under the tile is the word. */
+function glyphTileHTML(tx){
+  let ls=String(tx||"").split("\n").map(s=>s.trim()).filter(Boolean); if(!ls.length) ls.push("?");
+  if(ls.length===1){ /* a long one-line text is cut into the number of lines that gives the biggest characters in a 4:3 tile
+    (a 16-character sign line at one line would be 9 px; at three lines it is 24) — the text's own line breaks stay as they are */
+    const chars=[...ls[0]], u0=lineUnits(ls[0]); let best=1, bestFs=0;
+    for(let n=1;n<=Math.min(4,chars.length);n++){ const fs=Math.min(84*n/u0,55.5/n); if(fs>bestFs+0.01){ bestFs=fs; best=n; } }
+    if(best>1){ const per=Math.ceil(chars.length/best); ls=[]; for(let i=0;i<chars.length;i+=per) ls.push(chars.slice(i,i+per).join("")); }
+  }
+  const u=Math.max(1,...ls.map(lineUnits));
+  return `<span class="tglyph hanzi" style="font-size:min(46px,${(84/u).toFixed(2)}cqw,${(74/ls.length).toFixed(2)}cqh)">${ls.map(esc).join("<br>")}</span>`;
+}
 function cardTileHTML(d,pk){
   const pg=isPage(d), its=pg?pageItems(d):null;
   const made=pg?its.filter(x=>madeFrom(x)).length:0; /* v488: how many of its texts you have turned into flashcards */
@@ -3090,8 +3106,9 @@ function cardTileHTML(d,pk){
   const pic=pg?fullPhoto(d):d.img;
   const head=pg?esc(d.c):esc((d.trad||d.c||"").replace(/\n/g," "));
   const flag=pg?its.some(x=>x.flag):d.flag, ai=pg?its.some(x=>x.ai):d.ai;
+  const glyph=!sv&&!pic; /* v506: a card without a picture shows its WHOLE text in the picture area, not its first character */
   return `<button class="ctile${pg?" page":""}${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}"${pk?"":` data-lp="${esc(d.id)}"`}>
-      ${pg?`<span class="tstack">`:""}<span class="tw${sv?" src":""}">${sv?`<img class="tbg" src="${su}" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="tpw"><img class="tpi" src="${su}" alt="" loading="lazy" decoding="async">${regionsHTML({id:sv.shot},sv.rs,{learn:true,me:sv.me,span:true,only:true})}</span>`:pic?`<img class="tbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:`<span class="tglyph hanzi">${esc([...((pg?(its[0]&&its[0].c):d.c)||"?")][0]||"?")}</span>`}
+      ${pg?`<span class="tstack">`:""}<span class="tw${sv?" src":glyph?" glyph":""}">${sv?`<img class="tbg" src="${su}" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="tpw"><img class="tpi" src="${su}" alt="" loading="lazy" decoding="async">${regionsHTML({id:sv.shot},sv.rs,{learn:true,me:sv.me,span:true,only:true})}</span>`:pic?`<img class="tbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:glyphTileHTML((pg?(its[0]&&its[0].c):(d.trad||d.c))||"")}
         ${pk?`<span class="tick" aria-hidden="true"></span>`:pg?"":starHTML(d)}
         ${pg?`<span class="cnt">${its.length}</span>`:""}
         ${(flag||ai)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}</span>`:""}</span>
