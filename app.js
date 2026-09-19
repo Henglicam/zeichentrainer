@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=546; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=547; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -84,6 +84,7 @@ const S = { mode:"study", progress:{}, custom:[], inbox:[],
   pendingImg:null, pendingFull:null, pendingUse:"crop", persist:null,
   peek:null, /* Learn: the id of a linked card whose photo is shown on the front instead (v155) */
   admin:false, /* the owner's rows in More unlocked for this session (v162) */
+  ownerOpen:false, /* v547: the owner's own block folded behind one row, so More is the same length unlocked as locked */
   detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterStar:false, filterNew:false, filterTags:[], settings:{}, single:null, saved:null, cardsTab:"cards",
   editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null,
   autoCard:window.AUTO_CARD!==false, editOpenFrame:false, openShot:null }; /* autoCard (v325): a photo that opens by itself becomes a card without a frame or a preview; the harness sets window.AUTO_CARD=false to keep the crop-mode flow its frame suites drive */
@@ -649,6 +650,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v547","More: four sections, and everything you used to find is still there"],
   ["app","v546","tap the star counter in Learn: the rule and the last seven days, and the day's own number above them"],
   ["app","v545","cross 50 points in a day: the counter bursts, once, and the card holds a second longer"],
   ["app","v544","the Camera tab: the line above the shutter says what to photograph"],
@@ -2475,7 +2477,7 @@ function renderMore(main){
   const ver=($(".ver")||{}).textContent||"";
   const st=S.persist===true?t("Persistent on this phone."):S.persist===false?t("Not persistent yet. Install the app so the system keeps the data."):t("Checking …");
   main.innerHTML=`<div class="pane more">
-    <div class="listhead">${t("Learning")}</div> <!-- first since v275 (H: the dashboard belongs "ganz nach oben, an erste Stelle") -->
+    <div class="listhead">${t("Learning")}</div> <!-- four sections since v547 (H: "Go for all five" on the described More); Learning stays first, the v275 decision -->
     <div class="mrow"><div style="flex:1"><div class="t">${t("Progress")}</div><div class="s">${progressHTML()}</div><div class="fieldacts"><button class="btn mini" id="usage-share">${t("Share report")}</button></div></div></div>
     <div class="mrow"><div><div class="t">${t("Card order")}</div><div class="s">${t("Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.",NEW_PER_SESSION)}</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${t(l)}</button>`).join("")}</div></div></div>
     ${tagRowHTML()}
@@ -2483,16 +2485,19 @@ function renderMore(main){
     ${recheckRowHTML()}
     ${undoRunHTML("accept")}
     ${undoRunHTML("dismiss")}
-    <div class="listhead">${t("Share")}</div>
+    <div class="listhead">${t("Your cards")}</div>
+    <div class="mrow"><div><div class="t">${t("Export")}</div><div class="s">${t("Progress and cards as one file, via the share sheet.")} ${backupNote()}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="export-photos"${exportPhotos()?" checked":""}> ${t("Include photos (adds about {0} MB)",(photoBytes()*1.37/1048576).toFixed(1))}</label></div><button class="btn mini" id="export">${t("Export")}</button></div>
+    <div class="mrow"><div><div class="t">${t("Import")}</div><div class="s">${t("A zeichentrainer-….json.txt file. Existing cards are overwritten.")}</div></div><button class="btn mini" id="import">${t("Import")}</button></div>
+    <div class="mrow"><div><div class="t">${t("Flagged cards")}</div><div class="s">${t("{0} flagged for review. Share the list as text, for a teacher.",deck().filter(d=>d.flag).length)}</div></div><span class="btnrow"><button class="btn mini" id="show-flag">${t("Show")}</button><button class="btn mini" id="share-flag">${t("Share")}</button></span></div>
+    <div class="mrow"><div><div class="t">${t("Photos")}</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">${t("Delete {0}",oldShots().length)}</button>`:""}</div>
+    <div class="mrow"><div><div class="t">${t("Storage")}</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
+    <div class="listhead">${t("The app")}</div>
     <div class="mrow"><div><div class="t">${t("Share the app")}</div><div class="s" id="app-share-status">${t("Send the link to a friend. The app installs from any browser, no store.")}</div></div><button class="btn mini" id="app-share">${t("Share")}</button></div>
     <div class="mrow"><div style="flex:1"><div class="t">${t("Feedback")}</div><div class="s" id="fb-status">${t("Tell the app's owner what works and what does not.")}</div><textarea class="grow" id="fb-text" rows="2" placeholder="${t("Your message")}"></textarea><div id="fb-shot">${fbShotHTML()}</div><input type="file" id="fb-pick" accept="image/*" hidden><div class="fieldacts"><button class="btn mini" id="fb-add">${t("Add screenshot")}</button><button class="btn mini" id="fb-send">${t("Send")}</button></div></div></div>
-    <div class="listhead">${t("Help")}</div>
     <div class="mrow"><div><div class="t">${t("How to use the app")}</div><div class="s">${t("Six short sections: photo, characters, learning, cards, language, what stays on the phone.")}</div></div><button class="btn mini" id="guide-open">${t("Open")}</button></div>
-    <div class="listhead">${t("Language")}</div>
     <div class="mrow"><div style="flex:1"><div class="t">${t("Language")}</div><div class="s">${t("The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.")}</div><div class="chipset" id="lang-chips" style="margin-top:8px">${LANGS.map(([c,n])=>`<button class="chip${LANG===c?" on":""}" data-lang="${c}">${n}</button>`).join("")}</div></div></div>
     ${translateRowHTML()}
     ${undoRunHTML("meanings")}
-    <div class="listhead">${t("Online AI review")}</div>
     <div class="mrow"><div><div class="t">${t("AI review")}</div><div class="s" id="ai-status"></div><div class="s" style="margin-top:6px">${t("What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up, Translate all or Tag all, and for one card when you tap Explain under its meaning. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.")}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> ${t("Check every new card with the AI automatically (when online)")}</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
     ${S.admin?`<div class="aiform" id="ai-form" hidden>
       <div class="field"><label>Provider</label><div class="chipset" id="ai-providers">${Object.entries(AI_PROVIDERS).map(([k,v])=>`<button class="chip" data-aipv="${k}">${esc(v.short)}</button>`).join("")}</div>
@@ -2506,18 +2511,15 @@ function renderMore(main){
       <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" id="ai-save">Save</button><button class="del" id="ai-remove">Remove key</button></div>
     </div>`:""}
     <div class="mrow"><div style="flex:1"><div class="t">${t("Review queue")}</div><div class="s" id="ai-runstatus"></div><div class="fieldacts"><button class="btn mini" id="ai-run" hidden></button></div></div></div>
-    <div class="listhead">${t("Your data")}</div>
-    <div class="mrow"><div><div class="t">${t("Export")}</div><div class="s">${t("Progress and cards as one file, via the share sheet.")} ${backupNote()}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="export-photos"${exportPhotos()?" checked":""}> ${t("Include photos (adds about {0} MB)",(photoBytes()*1.37/1048576).toFixed(1))}</label></div><button class="btn mini" id="export">${t("Export")}</button></div>
-    <div class="mrow"><div><div class="t">${t("Import")}</div><div class="s">${t("A zeichentrainer-….json.txt file. Existing cards are overwritten.")}</div></div><button class="btn mini" id="import">${t("Import")}</button></div>
-    <div class="mrow"><div><div class="t">${t("Flagged cards")}</div><div class="s">${t("{0} flagged for review. Share the list as text, for a teacher.",deck().filter(d=>d.flag).length)}</div></div><span class="btnrow"><button class="btn mini" id="show-flag">${t("Show")}</button><button class="btn mini" id="share-flag">${t("Share")}</button></span></div>
-    <div class="mrow"><div><div class="t">${t("Photos")}</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">${t("Delete {0}",oldShots().length)}</button>`:""}</div>
-    <div class="mrow"><div><div class="t">${t("Storage")}</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
-    <div class="listhead">${t("Privacy")}</div>
     <div class="mrow"><div><div class="t">${t("Usage sharing")}</div><div class="s">${t("Sends anonymous usage counts to the app's owner once a day, and again when you leave the app after making a card: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.")} <span id="share-status">${esc(shareNote())}</span> ${t("Your id: {0}.",`<span id="share-id">${esc(installId())}</span>`)}<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> ${t("Send once a day")}</label></div></div></div>
+    <div class="mrow"><div><label class="check" style="margin:0"><input type="checkbox" id="update-note"${updateNoteOn()?" checked":""}> ${t("Tell me what is new after an update.")}</label></div></div>
+    <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s" id="about-s">${esc(aboutText())}</div>${whatsNewHTML()}</div></div>
+    <div class="mrow"><div><div class="t">${t("Open source licenses")}</div><div class="s">${t("The software and data the app is built on, and who made them.")}</div></div><button class="btn mini" id="lic-open">${t("Open")}</button></div> <!-- the notices Apache-2.0, MPL-2.0 and CC BY-SA ask to be delivered with the work (v425); ./vendor/LICENSES.txt goes through the worker's vendor route, so it comes from the mirror behind the wall and is cached after the first look -->
     <div class="listhead">${t("Advanced settings")}</div>
-    ${S.admin?`<div class="mrow"><div><div class="t">Logged in as admin</div><div class="s">Reset, Diagnostics, All users, Mirror, the downloads and the AI setup are shown below until the app is closed.</div></div><button class="btn mini" id="admin-lock">Log out</button></div>`
+    ${S.admin?`<div class="mrow"><div><div class="t">Logged in as admin</div><div class="s">The AI setup and the owner tools below are open until the app is closed.</div></div><button class="btn mini" id="admin-lock">Log out</button></div>`
     :`<div class="mrow"><div style="flex:1"><div class="inrow admin"><span class="s quiet">${t("Admin log in")}</span><input id="admin-pw" type="password" placeholder="${t("Password")}" autocomplete="off"><button class="del" id="admin-unlock">${t("Log in")}</button></div><div class="err" id="admin-err" style="display:none">${t("Wrong password.")}</div></div></div>`} <!-- one quiet line (v283, H: "remove the description for the locked area, just call it admin log in … not very prominent"; v284 "polish": label, field and a plain Log in on one line) --> <!-- the field inside the row (v282, H: the box's bottom corners were square — a .field after the last row took its rounding, and the field stood outside the white surface); the Mirror address the same -->
-    ${S.admin?`<div class="listhead">Downloads</div>
+    ${S.admin?`<div class="mrow"><div><div class="t">Owner tools</div><div class="s">Downloads, Mirror, Diagnostics, Still to test, All users, Feedback and Reset — ${S.ownerOpen?"shown below":"hidden until you open them"}.</div></div><button class="btn mini" id="owner-toggle">${S.ownerOpen?"Hide":"Show"}</button></div>`:""}
+    ${S.admin&&S.ownerOpen?`<div class="listhead">Downloads</div>
     <div class="mrow"><div><div class="t">Offline translation</div><div class="s" id="nmt-status">Checking …</div></div><button class="btn mini" id="nmt-btn" hidden></button></div>
     <div class="mrow"><div><div class="t">Text recognition</div><div class="s" id="ocr-status">Checking …</div></div><button class="btn mini" id="ocr-btn" hidden></button></div>
     <div class="listhead">Updates without a VPN</div>
@@ -2534,10 +2536,6 @@ function renderMore(main){
     <div class="fbpics" id="fb-pics" hidden></div>
     <div class="listhead">Start over</div>
     <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>`:""}
-    <div class="listhead">${t("About")}</div>
-    <div class="mrow"><div><div class="t">${t("Update notes")}</div><div class="s"><label class="check" style="margin:0"><input type="checkbox" id="update-note"${updateNoteOn()?" checked":""}> ${t("Tell me what is new after an update.")}</label></div></div></div>
-    <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s" id="about-s">${esc(aboutText())}</div>${whatsNewHTML()}</div></div>
-    <div class="mrow"><div><div class="t">${t("Open source licenses")}</div><div class="s">${t("The software and data the app is built on, and who made them.")}</div></div><button class="btn mini" id="lic-open">${t("Open")}</button></div> <!-- the notices Apache-2.0, MPL-2.0 and CC BY-SA ask to be delivered with the work (v425); ./vendor/LICENSES.txt goes through the worker's vendor route, so it comes from the mirror behind the wall and is cached after the first look -->
   </div>`;
   $("#export").onclick=exportData;
   $("#export-photos").onchange=e=>setSetting("exportPhotos",!!e.target.checked);
@@ -2565,6 +2563,10 @@ function renderMore(main){
   const cs=$("#cleanshots"); if(cs) cs.onclick=cleanupShots;
   if(S.admin){
     storageFacts(); /* v399: fresh numbers for the head line while More is open */
+    $("#owner-toggle").onclick=()=>{ S.ownerOpen=!S.ownerOpen; render(); }; /* v547: one row instead of five sections of the owner's own */
+    $("#admin-lock").onclick=()=>{ S.admin=false; S.adminPw=null; S.ownerOpen=false; USERS=null; FEEDBACK=null; render(); };
+  }
+  if(S.admin&&S.ownerOpen){
     $("#diag-show").onclick=()=>{ const o=$("#diag-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=diagText(); };
     $("#diag-share").onclick=shareDiag;
     $("#field-show").onclick=()=>{ const o=$("#field-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=fieldText(); };
@@ -2589,8 +2591,8 @@ function renderMore(main){
     renderOcrRow();
     $("#mirror-check").onclick=()=>{ mirrorCheck(true); };
     $("#reset").onclick=resetAll;
-    $("#admin-lock").onclick=()=>{ S.admin=false; S.adminPw=null; USERS=null; FEEDBACK=null; render(); };
-  } else {
+  }
+  if(!S.admin){
     const pw=$("#admin-pw"), go=async()=>{ const h=await sha256(pw.value); if(h===ADMIN_HASH){ S.admin=true; S.adminPw=pw.value; render(); window.scrollTo({top:0}); relayWatch(); } else { $("#admin-err").style.display=""; pw.value=""; } };
     $("#admin-unlock").onclick=go; pw.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
   }
@@ -4686,6 +4688,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  547:"More is four sections instead of eleven — Learning, Your cards, The app, Advanced settings — and nothing has moved off the screen, only into a shorter list.",
   546:"Points are simpler and slower now: one point for every character you write without help, and no hidden bonus. Tap the star counter to see how they are counted and what your last seven days were.",
   545:"When a card takes your points past 50, 100, 250, 500 or 1000, or you keep your streak at a week, a month or a hundred days, the counter bursts.",
   543:"The star counter now counts up when the star lands on it, not at your last stroke — and it no longer dips by one on the way.",
