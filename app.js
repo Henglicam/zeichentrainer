@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=523; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=524; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -125,7 +125,12 @@ function buildQueue(includeAhead){
      ignores the weight altogether (Q7: a random session is random). */
   const freq={}; for(const x of d) for(const ch of new Set([...String(x.c)].filter(ch=>CJK.test(ch)))) freq[ch]=(freq[ch]||0)+1;
   const cw=charWrites(), weightOf=x=>{ const cs=[...String(x.c)].filter(ch=>CJK.test(ch)); if(!cs.length) return 0; return cs.reduce((a,ch)=>a+(freq[ch]||0)/(1+(cw[ch]||0)),0)/cs.length; };
-  const byWeight=list=>order==="random"?list:list.map((x,i)=>({x,i,w:weightOf(x)})).sort((a,b)=>b.w-a.w||a.i-b.i).map(o=>o.x);
+  /* v524 (H: "Bitte jede Lernsession mit kurzen Karten anfangen und dann im Laufe der Zeit immer längere Ausdrücke
+     zulassen", "Go A"): inside the due group and inside the new group the cards come by their character count, short
+     first — 供应 before 骑车勿盯还车勿忘 —, the weight above deciding among cards of one length and Oldest/Newest among
+     equal weights; the due cards still lead the new ones, so a session ramps up twice, and Random stays random. */
+  const lenOf=x=>[...String(x.c)].filter(ch=>CJK.test(ch)).length;
+  const byWeight=list=>order==="random"?list:list.map((x,i)=>({x,i,w:weightOf(x),n:lenOf(x)})).sort((a,b)=>a.n-b.n||b.w-a.w||a.i-b.i).map(o=>o.x);
   const newFirst=list=>[...list.filter(unchecked),...list.filter(x=>!unchecked(x))]; /* v515: a card not yet checked comes first in its group, whatever the order — checking is what a new card is for */
   const due = newFirst(byWeight(orderCards(d.filter(x=>p[x.id] && p[x.id].due<=t),order,true))).map(x=>x.id);
   /* A star is a hand-picked short list, not a category, so a starred session holds every starred card (v429, H: "Go" on the
@@ -639,6 +644,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v524","a session runs short → long in each group"],
   ["app","v523","after a write: the card large over the pad, 3 s"],
   ["app","v522","'6 of 66' in the fold row; big 2-row tiles"],
   ["app","v520","no chevrons; '3 of 12' under the pad"],
@@ -2406,7 +2412,7 @@ function renderMore(main){
   main.innerHTML=`<div class="pane more">
     <div class="listhead">${t("Learning")}</div> <!-- first since v275 (H: the dashboard belongs "ganz nach oben, an erste Stelle") -->
     <div class="mrow"><div style="flex:1"><div class="t">${t("Progress")}</div><div class="s">${progressHTML()}</div><div class="fieldacts"><button class="btn mini" id="usage-share">${t("Share report")}</button></div></div></div>
-    <div class="mrow"><div><div class="t">${t("Card order")}</div><div class="s">${t("Due cards come first, then up to {0} new ones. This sets the order inside each group.",NEW_PER_SESSION)}</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${t(l)}</button>`).join("")}</div></div></div>
+    <div class="mrow"><div><div class="t">${t("Card order")}</div><div class="s">${t("Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.",NEW_PER_SESSION)}</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${t(l)}</button>`).join("")}</div></div></div>
     ${tagRowHTML()}
     ${undoRunHTML("tags")}
     ${recheckRowHTML()}
@@ -4330,7 +4336,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
-  523:"After you finish writing a card, it shows once more, large — characters, pinyin and meaning — for a few seconds before the star flies; tap to move on sooner.",
+  524:"Every session starts with its short cards and works up to the long ones — inside the due cards and again inside the new ones.",  523:"After you finish writing a card, it shows once more, large — characters, pinyin and meaning — for a few seconds before the star flies; tap to move on sooner.",
   520:"The arrows beside the writing pad are gone — swipe from anywhere but the pad, and a count under it says where you are; a character you press and hold is lit on the photo.",
   519:"The picture on every card is 3:2 now — taller than before, with more of the photo around a one-line sign — and your cards are cut again once to match. A long text shows every character at once, smaller if it must.",
   518:"Press and hold a locked character to release it, the line under the pad follows the pad and a finished card no longer jumps, an open card looks like the study card, and a swipe starts anywhere but the pad.",
