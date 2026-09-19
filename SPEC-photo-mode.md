@@ -1,5 +1,13 @@
 # Photo mode — specification, draft 4 (2026-09-13)
 
+> **Status, 2026-09-19 (v539).** The design as it stood before the build. **What shipped:** phase 1 as v448 (the marked
+> photo with a dot on every text and the sheet that opened it), the share route's whole-image frame as v450, and **D7's
+> page card as v453**, with the split's own cards kept as the page's items. **What has changed since, so the spec's
+> "the grade is the decision" (§ 11.4, D5) is no longer true:** v487 made a multicard a **reference** — nothing on it
+> is studied, counted or scheduled —, v488 took the vote off it entirely, v496 took More off its sheet and v498 left a
+> multicard's own text with Edit, Flag and Delete alone. A text becomes a flashcard only through **Generate flashcard**
+> (v487), and that card is what Learn studies. **D8, the screenshot fast path, was never built** and still waits for H.
+
 H's idea, in his words: "Ich mach ein Foto von irgendwas, oder einen Screenshot von einer chinesischen App. Der Zeichentrainer analysiert das, segmentiert die verschiedenen Character-Strings. Und ich kann dann als Mensch auf irgendwas drauftippen, was ich nicht verstehe, und dafür öffnet sich eine Flashcard. Ich habe keine Flashcards mehr, durch die ich scrolle, sondern Fotos. Und wenn ich etwas nicht verstehe, tippe ich drauf, und es öffnet sich das, was wir für Flashcards gemacht haben."
 
 **In one sentence:** a photo of a user interface — an appliance panel, a screenshot of an app, a wall of labels — becomes the thing you browse, every text on it becomes a tap target, and the card opens on the text you tapped. **A photo of one text — a shop sign, a poster, a package — stays what it is today: photo in, finished card out.** Builds on PWA v450. Every constraint in CLAUDE.md applies unchanged. **Phase 1 is built (v448), and the share route’s whole-image frame with the flatness record is built (v450); nothing else here is.**

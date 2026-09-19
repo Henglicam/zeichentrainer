@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=538; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=539; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -68,14 +68,19 @@ function idbPutMany(store,rows){ return _os(store,"readwrite").then(os=>new Prom
 function idbClear(store){ return _os(store,"readwrite").then(os=>new Promise((res,rej)=>{const r=os.clear();r.onsuccess=()=>res();r.onerror=()=>rej(r.error);})); }
 
 /* a card into the deck and the store: replace by key or append; storage errors are swallowed like everywhere else */
+/* v539: the two writes that lose the learner's own work said nothing when they failed. A phone at its storage quota
+   keeps the card in memory, shows it as saved and has lost it by the next start, with an empty error log — the v404
+   class (a failure that only ever reached the console) one store along. They reach the error log now, so Diagnostics,
+   the daily row and All users carry it. Deliberately NOT setSetting: logErr writes a setting itself, so logging its
+   own failure would recurse; the v399 head line reports how full the storage is, which is that one's signal. */
 async function putCard(upd,key){
   const k=key||upd.id, i=S.custom.findIndex(x=>x.id===k);
   if(i>=0) S.custom[i]=upd; else S.custom.push(upd);
-  try{ await idbPut("custom",upd); }catch(e){}
+  try{ await idbPut("custom",upd); }catch(e){ logErr("save","card "+k+": "+e); }
 }
 /* ---------- State ---------- */
 const S = { mode:"study", progress:{}, custom:[], inbox:[],
-  queue:[], idx:0, revealed:false, done:0, ahead:false, ready:false,
+  queue:[], idx:0, done:0, ahead:false, ready:false, /* v539: `revealed` is gone — it was set to false in ten places and to true in none since v512 replaced tap-to-reveal with the write pad, so every one of those lines was a no-op standing in for `ansOpen`, which is the answer block's own flag */
   pendingImg:null, pendingFull:null, pendingUse:"crop", persist:null,
   peek:null, /* Learn: the id of a linked card whose photo is shown on the front instead (v155) */
   admin:false, /* the owner's rows in More unlocked for this session (v162) */
@@ -113,7 +118,6 @@ function learnDeck(){
   return {cards, star, nw};
 }
 /* the next cards of the same filter by due date, the ones a pull-forward would reach, skipping what the session already holds (v428) */
-const aheadCards=n=>{ const p=S.progress; return learnDeck().cards.filter(x=>p[x.id]&&!S.queue.includes(x.id)).sort((a,b)=>p[a.id].due-p[b.id].due).slice(0,n).map(x=>x.id); };
 function buildQueue(includeAhead){
   const p=S.progress, t=today(); const {cards:d,star,nw}=learnDeck();
   const order=learnOrder();
@@ -342,7 +346,7 @@ async function setFilter(scope,k){
     else if(!k.startsWith("tag:")){ v=[]; await setSetting("learnStar",false); await setSetting("learnNew",false); }
     else { const x=k.slice(4); v=v.includes(x)?v.filter(y=>y!==x):[...v,x]; }
     await setSetting("learnTag",v);
-    S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false; S.single=null; S.saved=null; setStats(); return; }
+    S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false; S.single=null; S.saved=null; setStats(); return; }
   if(!k){ S.filterStar=false; S.filterFlag=false; S.filterAi=false; S.filterUnv=false; S.filterNew=false; S.filterTags=[]; return; }
   if(k==="star") S.filterStar=!S.filterStar;
   else if(k==="new") S.filterNew=!S.filterNew;
@@ -647,6 +651,7 @@ async function sendFeedback(text,shot){
 const TO_TEST=[
   ["app","v537","a fresh install: the first card whole, hint and all"],
   ["app","v538","a German, French or Spanish phone: one card, one tag, one export"],
+  ["app","v539","change the Card order with a card open: the next card comes up closed"],
   ["app","v536","Review queue → Ask AI without logging in; a generated card naming its multicard"],
   ["app","v535","the recap alone; the pad finishes its word; a dismissed suggestion stays gone"],
   ["app","v533","the word being written marked on the photo, quietly"],
@@ -1027,7 +1032,7 @@ async function boot(){
   LANG=LANGS.some(([c])=>c===S.settings.lang)?S.settings.lang:langDefault(); applyLangStatic(); /* the app's language (v253): the setting, else the phone's */
   await syncMeanings(); /* every card shows the meaning it has in the app's language (v265); cards from before get their ms */
   S.ready=true;
-  S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
+  S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false;
   const rv=S.settings.resumeView; if(rv){ delete S.settings.resumeView; idbDel("settings","resumeView").catch(()=>{}); } /* the screen the update's reload left (v327): back to it, so the reload is not felt */
   if(rv&&Date.now()-(rv.at||0)<RESUME_MAX&&(rv.own!==false||navReload())){ if(["study","cards","inbox","more","guide"].includes(rv.mode)) S.mode=rv.mode; if(S.mode==="cards"&&rv.detail&&S.custom.some(d=>d.id===rv.detail)) S.detail=rv.detail; if(typeof rv.query==="string") S.query=rv.query; if(rv.tab==="pages"||rv.tab==="cards") S.cardsTab=rv.tab;
     /* the session as it stood (v423): the queue's ids, minus any card that is gone or has no text, with the place in it, the
@@ -1095,8 +1100,8 @@ const cssVar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).t
 function reticleSVG(single,W=260,H=260){
   const tick=14,cx=W/2,cy=H/2;
   const cross = single ? `
-    <line x1="${cx}" y1="0" x2="${cx}" y2="${H}" style="stroke:var(--tint)" stroke-width="1" stroke-dasharray="2 6" opacity="${S.revealed?0.5:0.16}"/>
-    <line x1="0" y1="${cy}" x2="${W}" y2="${cy}" style="stroke:var(--tint)" stroke-width="1" stroke-dasharray="2 6" opacity="${S.revealed?0.5:0.16}"/>` : "";
+    <line x1="${cx}" y1="0" x2="${cx}" y2="${H}" style="stroke:var(--tint)" stroke-width="1" stroke-dasharray="2 6" opacity="0.16"/>
+    <line x1="0" y1="${cy}" x2="${W}" y2="${cy}" style="stroke:var(--tint)" stroke-width="1" stroke-dasharray="2 6" opacity="0.16"/>` : "";
   const corners=[[0,0,1,1],[W,0,-1,1],[0,H,1,-1],[W,H,-1,-1]].map(([x,y,dx,dy])=>
     `<g style="stroke:var(--label3)" stroke-width="1.25" opacity="0.8"><line x1="${x}" y1="${y}" x2="${x+dx*tick}" y2="${y}"/><line x1="${x}" y1="${y}" x2="${x}" y2="${y+dy*tick}"/></g>`).join("");
   return `<svg width="${W}" height="${H}"><rect x="0.5" y="0.5" width="${W-1}" height="${H-1}" fill="none" style="stroke:var(--sep)"/>${cross}${corners}</svg>`;
@@ -2578,7 +2583,7 @@ function renderMore(main){
     const pw=$("#admin-pw"), go=async()=>{ const h=await sha256(pw.value); if(h===ADMIN_HASH){ S.admin=true; S.adminPw=pw.value; render(); window.scrollTo({top:0}); relayWatch(); } else { $("#admin-err").style.display=""; pw.value=""; } };
     $("#admin-unlock").onclick=go; pw.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
   }
-  main.querySelectorAll("[data-learnorder]").forEach(b=> b.onclick=async()=>{ await setSetting("learnOrder",b.dataset.learnorder); S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false; S.single=null; S.saved=null; setStats(); main.querySelectorAll("[data-learnorder]").forEach(x=>x.classList.toggle("on",x===b)); }); /* the Learn session follows at once (v153) */
+  main.querySelectorAll("[data-learnorder]").forEach(b=> b.onclick=async()=>{ await setSetting("learnOrder",b.dataset.learnorder); S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false; S.single=null; S.saved=null; setStats(); main.querySelectorAll("[data-learnorder]").forEach(x=>x.classList.toggle("on",x===b)); }); /* the Learn session follows at once (v153) */
   renderNmtRow(); renderAiRow();
 }
 
@@ -2860,7 +2865,7 @@ function backHTML(d,o){ const srcHere=!(o&&o.noSrc); /* noSrc: the front of this
    learner meets a generated card on there was no way back at all, and a finger on a plain span raises the phone's own text
    selection instead ("Stattdessen kann ich Text markieren und komische Google Pop ups erzeugen"). v155 is kept by bringing him
    back rather than by taking the tap away: the jump records "learn" and the multicard's back button returns to the session,
-   which is untouched — S.queue, S.idx and S.revealed are state, and a render into the Cards tab does not build a new one. */
+   which is untouched — S.queue, S.idx and S.ansOpen are state, and a render into the Cards tab does not build a new one. */
   const glossBlock = d.kind==="sign" ? `
     ${d.mt&&!d.mt.verified?`<span class="flag">${t("meaning unverified")}${d.mt.pending?t(" (translation pending)"):""}${d.mt.suspect?t(" (reading uncertain: {0})",esc(suspectText(d.mt.suspect))):""}</span>`:""}
 ` : "";
@@ -2922,8 +2927,7 @@ function wireLinks(root){ (root||document).querySelectorAll("[data-link]").forEa
 function endSingle(){
   /* leave single-card test mode and restore the session queue */
   const c=S.single; S.single=null;
-  if(S.saved){ Object.assign(S,S.saved); S.saved=null; }
-  S.revealed=false; S.mode="cards"; S.detail=c; render();
+  if(S.saved){ Object.assign(S,S.saved); S.saved=null; } S.ansOpen=false; S.mode="cards"; S.detail=c; render();
 }
 /* v530 (H, a screenshot of a freshly swiped card: "Bei einer neu geswipten Karte erscheint ein leeres großes Pad. Dadurch
    scheint das Bild unruhig zu springen."): the carousel's neighbour carries an empty pad in place of the canvas, and until
@@ -2964,7 +2968,7 @@ function renderStudy(main){
       <div class="badge" style="margin-bottom:18px">${statsLine()}</div>
       <button class="btn" id="ahead">${t("Pull the next cards forward")}</button>
     </div>`;
-    const a=$("#ahead"); if(a) a.onclick=()=>{ const q=buildQueue(true); if(q.length){S.queue=q;S.idx=0;S.done=0;S.ahead=true;S.revealed=false;render();} };
+    const a=$("#ahead"); if(a) a.onclick=()=>{ const q=buildQueue(true); if(q.length){S.queue=q;S.idx=0;S.done=0;S.ahead=true;S.ansOpen=false;render();} };
     return;
   }
   const list=curList(), li=curIdx(), c=list[li], d=cardOf(c);
@@ -3719,7 +3723,7 @@ async function recordGrade(c,g){
   bump("reviews");
   const s=schedule(S.progress[c]||null,g);
   S.progress[c]=s;
-  try{ await idbPut("progress",{id:c,...s}); }catch(e){}
+  try{ await idbPut("progress",{id:c,...s}); }catch(e){ logErr("save","review "+c+": "+e); }
   const d=cardOf(c);
   if(s.fails>=LEECH_FAILS && d && !d.flag) await setFlag(c,true,t("failed {0} times in a row — check text, meaning and photo",s.fails));
   const day=dayKey(), days=S.settings.days||[];
@@ -3735,7 +3739,7 @@ function nextSingle(c){
   const list=S.custom.filter(learnable).sort((a,b)=>(b.at||0)-(a.at||0)).map(d=>d.id);
   const next=list[list.indexOf(c)+1];
   if(!next){ endSingle(); return; }
-  S.single=next; S.queue=[next]; S.idx=0; S.revealed=false; S.fullPic=false; S.peek=null; render(); window.scrollTo({top:0});
+  S.single=next; S.queue=[next]; S.idx=0; S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0});
 }
 
 /* ---------- Add ---------- */
@@ -4113,7 +4117,7 @@ function renderCardDetail(main,c){
     attachPicZoom(dcard.querySelector(".zone1 .picbox")); }
   const test=$("#d-test"); if(test) test.onclick=()=>{
     S.saved={queue:S.queue,idx:S.idx,done:S.done,ahead:S.ahead};
-    S.single=c; S.queue=[c]; S.idx=0; S.revealed=false; S.mode="study"; render();
+    S.single=c; S.queue=[c]; S.idx=0; S.ansOpen=false; S.mode="study"; render();
   };
   $("#d-edit").onclick=()=>{ S.editing=c; render(); };
   if($("#d-star")) $("#d-star").onclick=async()=>{ await setStar(c,!d.star); render(); }; /* the learner's own mark (v425); a multicard's own text has no such button (v493) */
@@ -4124,7 +4128,7 @@ function renderCardDetail(main,c){
   const del=$("#d-del"); if(del) del.onclick=async()=>{ await delCustom(c); if(S.detailFrom==="inbox"){ backToPhoto(); return; } if(fromPage()){ backToPage(); return; } S.detail=null; render(); }; /* at once, with Undo (v268) */
   /* the swipe changes the card, and the two pieces of view state go opposite ways because they mean different things.
      S.detailHide is a way of READING — "I am testing myself" — and survives the swipe: the detail is not a test that
-     must come closed, which is why Learn resets S.revealed and this does not. S.fullPic is about THIS photo — "show me
+     must come closed, which is why Learn resets S.ansOpen and this does not. S.fullPic is about THIS photo — "show me
      the whole picture of this card" — so it is dropped at the commit, as every other path that changes the card drops
      it (the row tap, the linked hop, Learn's next card), and the peer is built with it already off, or the neighbour
      would slide in showing its whole photo and jump to the crop the moment it landed. */
@@ -4172,7 +4176,7 @@ function renderEdit(main,c){
   $("#e-del").onclick=async()=>{
     await delCustom(c); endRecrop(); delete SIGN[eid]; /* at once, with Undo (v268) */
     const from=S.editFrom; S.editing=null; S.editFrom=null;
-    if(from==="study"){ S.queue=S.queue.filter(x=>x!==c); if(S.single===c) S.single=null; S.revealed=false; S.fullPic=false; S.mode="study"; }
+    if(from==="study"){ S.queue=S.queue.filter(x=>x!==c); if(S.single===c) S.single=null; S.fullPic=false; S.ansOpen=false; S.mode="study"; }
     else if(from==="camera"){ S.mode="inbox"; S.fullPic=false; }
     else { S.mode="cards"; S.detail=null; }
     render();
@@ -4721,7 +4725,7 @@ async function undoDelete(){
       for(const x of it.items||[]){ if(S.custom.some(y=>y.id===x.d.id)) continue; S.custom.splice(Math.min(x.idx,S.custom.length),0,x.d); try{ await idbPut("custom",x.d); }catch(e){} if(x.prog){ S.progress[x.d.id]=x.prog; try{ await idbPut("progress",{id:x.d.id,...x.prog}); }catch(e){} } bump("deleted",-1); } /* the page's texts with it (v453) */
       if(d.page){ const pg=cardOf(d.page); if(pg&&pg.items&&!pg.items.includes(d.id)) await putCard({...pg,items:[...pg.items,d.id]},pg.id); } /* a text back into its page (v453) */
       if(it.shot&&!S.inbox.some(x=>x.id===it.shot.rec.id)){ S.inbox.splice(Math.min(it.shot.idx,S.inbox.length),0,it.shot.rec); try{ await idbPut("inbox",it.shot.rec); }catch(e){} } /* the photo that went with its last card (v464) */
-      if(S.mode==="study"&&!S.queue.includes(d.id)&&d.c&&!isPage(d)){ S.queue.splice(S.idx,0,d.id); S.revealed=false; S.fullPic=false; } /* deleted from the study back: the card comes next again */
+      if(S.mode==="study"&&!S.queue.includes(d.id)&&d.c&&!isPage(d)){ S.queue.splice(S.idx,0,d.id); S.fullPic=false; S.ansOpen=false; } /* deleted from the study back: the card comes next again */
     } else {
       const rec=it.rec; if(S.inbox.some(x=>x.id===rec.id)) continue;
       S.inbox.splice(Math.min(it.idx,S.inbox.length),0,rec); try{ await idbPut("inbox",rec); }catch(e){}
@@ -8785,7 +8789,7 @@ async function importData(e){
   }catch(err){ noteSheet(t("Import failed ({0})",err)); return; }
   prog.forEach(r=>{ const {id,...s}=r; S.progress[id]=s; });
   merged.forEach(r=>{ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; else S.custom.push(r); });
-  S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
+  S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false;
   S.mode="study"; render();
   /* what the import did, in one sentence (v167, H: an older app had dropped the photos without a word) */
   noteSheet(t("Import"),t("Imported {0} and {1}",nOf(cust.length,"card"),nOf(prog.length,"progress entry","progress entries"))+(nInFile?t(", {0} with photos",nPhotos)+(nPhotos<nInFile?" "+t("({0} could not be read)",nInFile-nPhotos):""):". "+t("The file carries no photos; the photos on this phone were kept"))+".");
@@ -8840,7 +8844,7 @@ async function resetAll(){
   LAST_READ.ring.length=0; /* the ring holds the readings and their steps both (v479) */
   for(const k of Object.keys(NUMSOF)) delete NUMSOF[k];
   TRANSLATE=null; TAGALL=null; RECHECK=null;
-  S.queue=buildQueue(false); S.idx=0; S.done=0; S.revealed=false; S.ahead=false;
+  S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false;
   render();
 }
 
