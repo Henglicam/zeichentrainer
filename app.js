@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=545; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=546; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -649,6 +649,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v546","tap the star counter in Learn: the rule and the last seven days, and the day's own number above them"],
   ["app","v545","cross 50 points in a day: the counter bursts, once, and the card holds a second longer"],
   ["app","v544","the Camera tab: the line above the shutter says what to photograph"],
   ["app","v543","finish a card: the counter holds its number until the star lands, then goes up by the whole card's points"],
@@ -1099,7 +1100,7 @@ function setStats(){
      counter was never 0 at this moment and the case could not arise. */
   { const ss=$("#stat-star"); if(ss){ const v=PRAISE_N?PRAISE_N.n:praiseDay(), on=!!(inStudy&&(v>0||PRAISE_N));
       ss.hidden=!on; ss.style.display=on?"":"none"; ss.classList.toggle("gold",!!(PRAISE_N&&PRAISE_N.gold));
-      if(on){ ss.setAttribute("aria-label",t("Written today")+": "+v); ss.innerHTML=`<i class="prs" aria-hidden="true">${MARK_STAR}</i><span class="v">${v}</span>`; } } }
+      if(on){ ss.setAttribute("aria-label",t("Written today")+": "+v); ss.innerHTML=`<i class="prs" aria-hidden="true">${MARK_STAR}</i><span class="v">${v}</span>`; ss.onclick=pointsSheet; } } } /* v546: the counter is the only place the points are shown, so it is where they are explained */
   $("#stat-deck").style.display=inStudy?"none":"";
   $("#stat-deck .v").textContent=deckCount(); /* flashcards only (v504): a multicard and its texts are looked up, not counted */
   document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.mode===S.mode||(b.dataset.mode==="cards"&&S.mode==="add")||(b.dataset.mode==="more"&&S.mode==="guide")));
@@ -1944,7 +1945,7 @@ function installId(){ let id=S.settings.installId; if(!id){ const b=crypto.getRa
    deletion, the filled tint for an import); Cancel, the backdrop or Escape answer no. askSheet({title,text,ok,danger}) → true/false. */
 function askSheet(o){ return new Promise(res=>{
   const el=document.createElement("div"); el.className="ask"; el.setAttribute("role","dialog"); el.setAttribute("aria-modal","true");
-  el.innerHTML=`<div class="sheet"><div class="t">${esc(o.title)}</div>${o.text?`<div class="s">${esc(o.text)}</div>`:""}<div class="row"><button class="btn plain" id="ask-cancel">${t("Cancel")}</button><button class="btn ${o.danger===false?"primary":"danger"}" id="ask-ok">${esc(o.ok)}</button></div></div>`;
+  el.innerHTML=`<div class="sheet"><div class="t">${esc(o.title)}</div>${o.html||(o.text?`<div class="s">${esc(o.text)}</div>`:"")}<div class="row"><button class="btn plain" id="ask-cancel">${t("Cancel")}</button><button class="btn ${o.danger===false?"primary":"danger"}" id="ask-ok">${esc(o.ok)}</button></div></div>`;
   const onKey=e=>{ if(e.key==="Escape") done(false); };
   const done=v=>{ el.remove(); document.removeEventListener("keydown",onKey); res(v); };
   el.onclick=e=>{ if(e.target===el) done(false); };
@@ -2608,7 +2609,7 @@ const GUIDE=()=>[
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
     t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. A new card counts as not yet checked until you have written it in Learn or opened it, and the filter shows those alone; flag a card yourself when something looks wrong.")]},
   {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. The photo is the cue, the characters under it are the buttons, and the write pad is the answer: trace the lit stroke, and the pad moves on by itself — character by character, then to the next card. Four characters a line and two lines photograph best.")+" "+t("A card made from a multicard shows the multicard's whole picture with a frame around its own text, and names the multicard under the meaning; tap that name to look the multicard up, and ← Back brings you back to the card."),
-    t("Above the pad, the word you are writing shows its pinyin and meaning; the whole card's characters, pinyin and meaning sit folded at the foot of the card — open them when you need them. Stuck on a stroke? Show me draws it, Skip fills it in for you. A card you wrote comes round once more a few cards later, with less of the template each time you know it. Nothing due? Pull the next cards forward.")+" "+t("Explain under the meaning asks the AI for a few sentences about the card — what the text says and where you meet it."),
+    t("Above the pad, the word you are writing shows its pinyin and meaning; the whole card's characters, pinyin and meaning sit folded at the foot of the card — open them when you need them. Stuck on a stroke? Show me draws it, Skip fills it in for you. A card you wrote comes round once more a few cards later, with less of the template each time you know it. Nothing due? Pull the next cards forward.")+" "+t("Explain under the meaning asks the AI for a few sentences about the card — what the text says and where you meet it.")+" "+t("Tap the star counter at the top to see how your points are counted."),
     t("Swipe the card left or right to pick another one — nothing is graded, and a card you skip stays due for next time.")+(lockOn()?" "+t("Press and hold a character to walk through every card that has it; press and hold it again to come back."):"")]}, /* v531: the lock's sentence only while the lock is on */
   {h:t("Cards"),p:[t("All your cards, newest first. Once a photo has made a multicard, two tabs split them — Cards and Multicards. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included. Push an open card sideways for the next one in the list."),
     t("Tap a text on a multicard to look it up, and press Generate flashcard to make a card of it. Learn studies the flashcards, never the multicard itself."),
@@ -3506,6 +3507,26 @@ function fireworkFor(before,total,streak){
   if(before===0&&total>0&&FW_DAYS.includes(streak)) return "streak"; /* the day's first scoring card, so once a day */
   return "";
 }
+/* the points, said in the app rather than in a file (v546, H: "Punktesystem transparent und einfach gestalten" and
+   "Irgendwie hab ich das Gefühl, dass es zu schnell zu viele Punkte gibt. Ich hab am ersten Tag schon über 600 Punkte!"):
+   a tap on the counter says how a point is earned and what the last seven days were. The counter is the only place the
+   points are ever shown, so it is the only place that has to explain them. */
+function pointsDays(n){ const daily=S.settings.daily||{}, out=[], now=new Date();
+  for(let i=n-1;i>=0;i--){ const x=new Date(); x.setDate(now.getDate()-i); const k=dayKey(x);
+    out.push({w:dayOf(daily[k]).w||0,lbl:x.toLocaleDateString(LANG_LOCALE[LANG]||LANG,{weekday:"short"})}); }
+  return out; }
+function pointsSheetHTML(){
+  const days=pointsDays(7), max=Math.max(1,...days.map(x=>x.w));
+  return `<div class="pts">
+    <div class="ptsnow"><span class="n">${praiseDay()}</span><span class="l">${esc(t("Written today"))}</span></div>
+    <ul class="ptsrule"><li>${esc(t("One point for every character you write without help."))}</li>`
+    +`<li>${esc(t("Every card comes round once more in the same session, so writing it twice counts twice."))}</li>`
+    +`<li>${esc(t("A card you write with no help at all sends a gold star."))}</li></ul>
+    <div class="ptshead">${esc(t("Last seven days"))}</div>
+    <div class="ptsdays">${days.map(x=>`<div class="pd"><span class="d">${esc(x.lbl)}</span><span class="b">${x.w?`<i style="width:${Math.max(4,Math.round(100*x.w/max))}%"></i>`:""}</span><span class="n">${x.w}</span></div>`).join("")}</div>
+  </div>`;
+}
+const pointsSheet=()=>askSheet({title:t("Points"),html:pointsSheetHTML(),ok:t("OK"),danger:false,cancel:false});
 const prEase=f=>f<0.5?2*f*f:1-Math.pow(-2*f+2,2)/2;
 const prClamp=(u,a,b)=>Math.max(0,Math.min(1,(u-a)/(b-a)));
 function praiseStart(clean){
@@ -3658,14 +3679,21 @@ function mountPad(card,d,c,tg,st,cur){
   };
   const cardDone=async()=>{
     const first=!isRepeat(), n=tg.filter(x=>x.w).length, clean=tg.filter((x,j)=>x.w&&!st.helped.has(j)).length;
-    const pts=clean+(clean===n&&st.maxMiss<=1?n:0); /* one point per written character, none for a helped one, the count again for a clean card (§ 6) */
+    /* ONE POINT PER CHARACTER WRITTEN WITHOUT HELP, and nothing else (v546, H: "Irgendwie hab ich das Gefühl, dass es zu
+       schnell zu viele Punkte gibt. Ich hab am ersten Tag schon über 600 Punkte!"). Until v545 a clean card scored its
+       characters AGAIN as a bonus, so a clean four-character card was 8 and, with the repeat pass of § 8.1, 16 — twice
+       what a learner counts, by a rule nothing in the app said out loud. The bonus is exactly what made the number feel
+       inflated, and it is the hardest clause to put in one sentence, so it goes and the gold star is what a clean card
+       earns now. A card that needed help scores exactly what it did before; a clean one scores half. */
+    const pts=clean;
     /* v543 (H: "Punkte erst hochzählen, wenn der Stern nach oben geflogen ist, nicht schon nach dem letzten Strich. Quasi
        dann. Wenn der Zähler gehighlighted wird." and "Warum wird kurz vorher nochmal ein Schritt zurück gezählt?"): the
        points are written to the day's row here, as they always were — the record is the truth and nothing about the
        arithmetic moves —, but the COUNTER keeps showing the number from before this card until the star lands on it.
        Until v542 it went up at the last stroke and praiseStart then set it back to total-1 for the flight, which is both
        a step backwards and a wrong number (a clean two-character card is worth 4, not 1). */
-    if(pts){ bump("written",pts); dailyBump(dayKey(),"w",pts); PRAISE_N={n:Math.max(0,praiseDay()-pts),gold:false}; }
+    if(pts){ bump("written",pts); dailyBump(dayKey(),"w",pts); }
+    PRAISE_N={n:Math.max(0,praiseDay()-pts),gold:false}; /* v546: set on every finished card, so a card that scores nothing holds the counter steady — until v545 it fell through to praiseStart's total-1 fallback and the counter took a phantom step up */
     await checkCard(c); /* v515: written to the end — the card is checked */
     if(first){ await recordGrade(c,st.helped.size?"again":"good"); S.done++; /* a Skip counts as again (Q10) — due today, fails +1, the leech flag as today */
       const l=curList(), at=Math.min(l.length,curIdx()+1+REP_GAP); l.splice(at,0,c); /* the repeat pass, three cards on (§ 8.1) — in the walk while a character is locked */ }
@@ -4658,6 +4686,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  546:"Points are simpler and slower now: one point for every character you write without help, and no hidden bonus. Tap the star counter to see how they are counted and what your last seven days were.",
   545:"When a card takes your points past 50, 100, 250, 500 or 1000, or you keep your streak at a week, a month or a hundred days, the counter bursts.",
   543:"The star counter now counts up when the star lands on it, not at your last stroke — and it no longer dips by one on the way.",
   542:"Every character you finish shows large with its reading for a moment, and on a card with two rows of characters the page no longer jumps back to the top between them.",
