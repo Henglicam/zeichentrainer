@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=529; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=530; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -644,7 +644,8 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["app","v529","Explain: a few sentences under the meaning"],
+  ["app","v530","swipe: the next card as tall as the one it replaces"],
+    ["app","v529","Explain: a few sentences under the meaning"],
   ["app","v528","locked character: a soft green chip"],
   ["app","v527","word line above the pad, whole card below"],
   ["app","v526","lock: the word first; hold releases"],
@@ -2885,6 +2886,15 @@ function endSingle(){
   if(S.saved){ Object.assign(S,S.saved); S.saved=null; }
   S.revealed=false; S.mode="cards"; S.detail=c; render();
 }
+/* v530 (H, a screenshot of a freshly swiped card: "Bei einer neu geswipten Karte erscheint ein leeres großes Pad. Dadurch
+   scheint das Bild unruhig zu springen."): the carousel's neighbour carries an empty pad in place of the canvas, and until
+   v529 that ghost was the card's full width (`width:100%;aspect-ratio:1`) while the real pad is what fit() leaves above the
+   tab bar — 246 px at 390 × 844 against a 322 px ghost, so the neighbour came in 76 px taller than the card, its fold row
+   under the bar, and everything below the photo hopped up at the snap. The ghost takes the standing pad's own rendered
+   side now, and the helper row its height (Show me / Skip mid-write, v517), so the neighbour is exactly as tall as the
+   card it replaces; the CSS square stays as the fallback for a card without a pad. */
+function ghostSize(card){ const cv=card&&card.querySelector("#wpad"); if(!cv) return ""; const w=Math.round(cv.getBoundingClientRect().width), h=Math.round(cv.getBoundingClientRect().height); return w&&h?` style="width:${w}px;height:${h}px"`:""; }
+function actsSize(card){ const pa=card&&card.querySelector("#padacts"); const h=pa?Math.round(pa.getBoundingClientRect().height):0; return h?` style="min-height:${h}px"`:""; }
 function renderStudy(main){
   if(!S.ready){ main.innerHTML=`<div class="badge">${t("Loading …")}</div>`; return; }
   /* a card deleted while the session stands leaves its id behind in the queue, and the screen then read a card that is
@@ -2987,7 +2997,7 @@ function renderStudy(main){
      there are no grades that own the screen any more. */
   wireSwipe(card, list.length<2||S.single?null:{
     n:list.length, idx:li, centred:false,
-    peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ return `<div class="zone1 front">${frontPic(nd,{page:true,fixed:true})}</div>${peerRowHTML(nd)}<div class="padline"></div><div class="padwrap"><div class="wpad ghost"></div></div><div class="padacts"></div><div class="fold"><button class="foldbtn"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button></div>`; } finally{ S.fullPic=fp; } }, /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
+    peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ return { cls:"study", html:`<div class="zone1 front">${frontPic(nd,{page:true,fixed:true})}</div>${peerRowHTML(nd)}<div class="padline"></div><div class="padwrap"><div class="wpad ghost"${ghostSize(card)}></div></div><div class="padacts"${actsSize(card)}></div><div class="fold"><button class="foldbtn"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button></div>${swipeHint(nd)}` }; } finally{ S.fullPic=fp; } }, /* v530: the neighbour carries the study card's own class, so it takes its 16 px top padding and every other rule of the study layout — a plain `.card` neighbour stood 6 px taller (22 px of padding) and hopped by that much at the snap */ /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
     go:goTo, ready:chrowFit });
   wireSay(); wireLinks(); wireSrc(); wireAi(); wireExplain();
   mountPad(card,d,c,tg,st,cur);
