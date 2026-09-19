@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=522; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=523; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -639,6 +639,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v523","after a write: the card large over the pad, 3 s"],
   ["app","v522","'6 of 66' in the fold row; big 2-row tiles"],
   ["app","v520","no chevrons; '3 of 12' under the pad"],
   ["app","v520","locked char lit on the photo, soft fade"],
@@ -3148,13 +3149,15 @@ function attachPicZoom(box){
 const unchecked=d=>!!(d&&d.unchecked);
 async function checkCard(id){ const d=cardOf(id); if(!d||!d.unchecked) return; const upd={...d}; delete upd.unchecked; await putCard(upd,id); }
 /* ---------- the write pad (v512): stroke by stroke over a template, as Duolingo does it ---------- */
-const PAD_MIN=200, TRACE_OK=0.18, NEXT_MS=1500, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
+const PAD_MIN=200, TRACE_OK=0.18, NEXT_MS=3000, PRAISE_AT=2000, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
 const CARD_RATIO=1.5; /* the one window and box shape on every card, 3:2 (v519) — declared here, since FRONT_RATIO reads it at load time */
 let LAST_FIT=null; /* v521: the study card's last pad measurement, printed by Diagnostics */
 window.addEventListener("resize",()=>{ const c=document.querySelector(".card.study"); if(c&&c._fitPad) c._fitPad(); }); /* v521: every resize re-fits the pad of the card on screen (a fold, the system bars) */
 const PAD_BELOW=78, FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_GRID/1024;
-/* NEXT_MS is 1500 since v517: the finished card holds while it is praised (§ 12), where it held 900 and nothing
-   happened. FRONT_RATIO is the one shape the study card's picture box takes whatever the text is. PAD_BELOW is the
+/* NEXT_MS is 3000 since v523: the finished card holds while its recap stands over the pad — the characters, pinyin and
+   meaning, large — and the star flies out of it at PRAISE_AT (v523, H: "sollte der Inhalt der Karte nochmal groß und
+   deutlich gut lesbar für wenige Sekunden gezeigt werden, um sich das nochmal einzuprägen"); 1500 from v517 to v522, when
+   the card held only for the star, and 900 before that, when nothing happened. FRONT_RATIO is the one shape the study card's picture box takes whatever the text is. PAD_BELOW is the
    room the pad leaves under itself for the helper row, counted whether or not the row has
    anything in it, so the pad is the same size on every card (v517, H: "Das müssen Konstanten sein"); 78 since v522 — the
    line at its two-row height (61) with its 10 px above and the helper row's 6 px, the count having moved into the fold
@@ -3395,13 +3398,17 @@ function mountPad(card,d,c,tg,st,cur){
     const my=curIdx(), wasWalk=walking(); render(); if(cur) padLine(d,cur);
     const adv=()=>{ if(S.mode!=="study"||walking()!==wasWalk||curIdx()!==my||S.pad!==padState(c)) return; if(S.single){ nextSingle(c); return; }
       if(curIdx()+1<curList().length){ setCurIdx(curIdx()+1); S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0}); } else if(!walking()){ S.idx++; render(); } }; /* a walk's last card stays */
-    /* the praise, and then the next card (v517, § 12): the dwell is NEXT_MS, and a tap anywhere on the card that is not a
-       control skips straight on — the finger is already on the pad */
-    const pr=praiseStart(cleanCard); let fired=false;
-    const go=()=>{ if(fired) return; fired=true; document.removeEventListener("pointerdown",onTap,true); pr.finish(); adv(); };
+    /* the recap (v523, § 12): the finished card stands large over the pad — characters, pinyin, meaning — for the whole
+       dwell; the praise (v517) lifts out of it at PRAISE_AT, and the next card follows at NEXT_MS. A tap anywhere on the
+       card that is not a control skips straight on — the finger is already on the pad. */
+    const pw=document.querySelector(".card.study .padwrap"); let rc=null;
+    if(pw){ pw.insertAdjacentHTML("beforeend",recapHTML(d)); rc=pw.lastElementChild; pw.classList.add("recapping"); requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); }); }
+    let pr=null, fired=false, tm=0;
+    const go=()=>{ if(fired) return; fired=true; clearTimeout(tm); document.removeEventListener("pointerdown",onTap,true); if(pr) pr.finish(); if(rc){ rc.remove(); pw.classList.remove("recapping"); } adv(); };
     const onTap=e=>{ if(e.target.closest&&e.target.closest("button,a,input,textarea,.chip")) return; go(); };
     document.addEventListener("pointerdown",onTap,true);
-    if(typeof PRAISE_HOLD==="number") return; /* held for a test: nothing advances */
+    if(typeof PRAISE_HOLD==="number"){ pr=praiseStart(cleanCard); return; } /* held for a test: the star at once, nothing advances */
+    tm=setTimeout(()=>{ if(!fired) pr=praiseStart(cleanCard); },PRAISE_AT);
     setTimeout(go,NEXT_MS);
   };
   /* Undo and Clear are drawn only for a character the app has no strokes for, where the learner really is drawing freehand
@@ -3701,16 +3708,30 @@ function cardsList(){
    das gesamte Wort im Bildbereich anzeigen"): the text's own lines, the font fitted to the longest line by container
    query units — the tile's own width is not known here — capped at the old 46 px, so a word stays big and a sign's line
    shrinks to fit rather than being cut. The colour stays the placeholder grey: the heading under the tile is the word. */
-function glyphTileHTML(tx){
+function textLines(tx,wq,hq){
   let ls=String(tx||"").split("\n").map(s=>s.trim()).filter(Boolean); if(!ls.length) ls.push("?");
-  if(ls.length===1){ /* a long one-line text is cut into the number of lines that gives the biggest characters in a 4:3 tile
-    (a 16-character sign line at one line would be 9 px; at three lines it is 24) — the text's own line breaks stay as they are */
+  if(ls.length===1){ /* a long one-line text is cut into the number of lines that gives the biggest characters in a box of
+    wq × hq container units (a 16-character sign line at one line would be 9 px in a 4:3 tile; at three lines it is 24) —
+    the text's own line breaks stay as they are. Shared by the Cards tile (v506) and the recap (v523). */
     const chars=[...ls[0]], u0=lineUnits(ls[0]); let best=1, bestFs=0;
-    for(let n=1;n<=Math.min(4,chars.length);n++){ const fs=Math.min(84*n/u0,55.5/n); if(fs>bestFs+0.01){ bestFs=fs; best=n; } }
+    for(let n=1;n<=Math.min(4,chars.length);n++){ const fs=Math.min(wq*n/u0,hq/n); if(fs>bestFs+0.01){ bestFs=fs; best=n; } }
     if(best>1){ const per=Math.ceil(chars.length/best); ls=[]; for(let i=0;i<chars.length;i+=per) ls.push(chars.slice(i,i+per).join("")); }
   }
-  const u=Math.max(1,...ls.map(lineUnits));
+  return ls;
+}
+function glyphTileHTML(tx){
+  const ls=textLines(tx,84,55.5), u=Math.max(1,...ls.map(lineUnits));
   return `<span class="tglyph hanzi" style="font-size:min(46px,${(84/u).toFixed(2)}cqw,${(74/ls.length).toFixed(2)}cqh)">${ls.map(esc).join("<br>")}</span>`;
+}
+/* v523: the finished card, large, over the pad — the characters in the Hanzi font fitted to the pad's square (the pad is a
+   size container, so the size is solved by CSS), the pinyin and the meaning under them. The same text the card carries;
+   no key in any column. */
+const RECAP_FS=96;
+function recapHTML(d){
+  const ls=textLines(d.trad||d.c||"",84,50), u=Math.max(1,...ls.map(lineUnits)), pn=Math.max(8,[...(d.p||"")].length);
+  /* the pinyin and the meaning follow the pad's width too, and a long pinyin is sized to fit two lines (240/n cqw — a
+     semibold syllable runs about 0.7 em a character) so no syllable is cut; the clamps under them are the safety net */
+  return `<div class="recap" aria-live="polite"><div class="rc hanzi" style="font-size:min(${RECAP_FS}px,${(84/u).toFixed(2)}cqw,${(50/ls.length).toFixed(2)}cqh)">${ls.map(esc).join("<br>")}</div><div class="rp" style="font-size:min(21px,8.6cqw,${(240/pn).toFixed(2)}cqw)">${esc(d.p||"")}</div><div class="rm" style="font-size:min(18px,7.4cqw)">${esc(d.m||"")}</div></div>`;
 }
 function cardTileHTML(d,pk){
   const pg=isPage(d), its=pg?pageItems(d):null;
@@ -4309,6 +4330,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  523:"After you finish writing a card, it shows once more, large — characters, pinyin and meaning — for a few seconds before the star flies; tap to move on sooner.",
   520:"The arrows beside the writing pad are gone — swipe from anywhere but the pad, and a count under it says where you are; a character you press and hold is lit on the photo.",
   519:"The picture on every card is 3:2 now — taller than before, with more of the photo around a one-line sign — and your cards are cut again once to match. A long text shows every character at once, smaller if it must.",
   518:"Press and hold a locked character to release it, the line under the pad follows the pad and a finished card no longer jumps, an open card looks like the study card, and a swipe starts anywhere but the pad.",
