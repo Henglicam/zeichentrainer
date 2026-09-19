@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=526; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=527; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -644,6 +644,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v527","word line above the pad, whole card below"],
   ["app","v526","lock: the word first; hold releases"],
   ["app","v525","word row: outline + divider only; lock green"],
   ["app","v524","a session runs short → long in each group"],
@@ -2546,7 +2547,7 @@ const GUIDE=()=>[
   {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
     t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. A new card counts as not yet checked until you have written it in Learn or opened it, and the filter shows those alone; flag a card yourself when something looks wrong.")]},
   {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. The photo is the cue, the characters under it are the buttons, and the write pad is the answer: trace the lit stroke, and the pad moves on by itself — character by character, then to the next card. Four characters a line and two lines photograph best.")+" "+t("A card made from a multicard shows the multicard's whole picture with a frame around its own text, and names the multicard under the meaning; tap that name to look the multicard up, and ← Back brings you back to the card."),
-    t("Pinyin and meaning sit folded under the buttons; open them when you need them, or write the whole card and they open by themselves. Stuck on a stroke? Show me draws it, Skip fills it in for you. A card you wrote comes round once more a few cards later, with less of the template each time you know it. Nothing due? Pull the next cards forward."),
+    t("Above the pad, the word you are writing shows its pinyin and meaning; the whole card's characters, pinyin and meaning sit folded at the foot of the card — open them when you need them. Stuck on a stroke? Show me draws it, Skip fills it in for you. A card you wrote comes round once more a few cards later, with less of the template each time you know it. Nothing due? Pull the next cards forward."),
     t("Swipe the card left or right to pick another one — nothing is graded, and a card you skip stays due for next time.")+" "+t("Press and hold a character to walk through every card that has it; press and hold it again to come back.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Once a photo has made a multicard, two tabs split them — Cards and Multicards. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included. Push an open card sideways for the next one in the list."),
     t("Tap a text on a multicard to look it up, and press Generate flashcard to make a card of it. Learn studies the flashcards, never the multicard itself."),
@@ -2890,7 +2891,8 @@ function renderStudy(main){
      A flashcard is no longer revealed and graded, it is WRITTEN: the photo is the cue, the characters under it are the
      targets, the write pad is the answer — traced stroke by stroke as Duolingo does it — and the grade is whether you
      could write it. Five zones top to bottom: the photo (with the review flag in its corner), the character buttons
-     grouped by word, the folded answer block, the square pad, and the line naming the word being written. The vote of
+     grouped by word, the line naming the word being written (above the pad since v527), the square pad, and the folded
+     answer block with the whole card at the card's foot (v527 — above the pad until v526). The vote of
      v497 and every grade button since v82 are gone with it: a full write is "good", a Skip is "again" (Q10), a swipe
      writes nothing. The card stays in the session once written and comes round once more three cards later at the next
      pad level (§ 8.1); the Done capsule counts it once. */
@@ -2904,18 +2906,23 @@ function renderStudy(main){
   const litWi=cur?cur.wi:null; /* v518: the lit word is the word of the character in the pad, so it follows the pad by itself */
   const chrow=chrowHTML(d,tg,btn,litWi,S.lockChar); /* v526: the word holding the locked character carries the green outline */
   const pg=frontPage(d), picHTML=frontPic(d,{page:true,fixed:true}); /* v517: one box shape on the study card */
-  const back=`${backHTML(d,{noParts:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}
+  /* v527 (H: "schieb meaning (komplett hanzi, Pinyin, Bedeutung) ganz nach unten. Für's aktuelle wort: pinyin and meaning
+     zwischen Bild und Pad."): the card's WHOLE text stands at the head of the answer block — the traditional form when it
+     has one, the photo's own lines — so the block at the foot of the card is the whole card in one look, while the line
+     above the pad is the word being written. Until v526 the block sat above the pad and the line under it, and the two
+     said the same thing twice about different words ("doppelt gekoppelt und unlogisch"). */
+  const back=`<div class="anshanzi hanzi">${(d.trad?d.trad.split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}
       <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button></div>`;
   const noTmpl=cur&&STROKES&&!STROKE_OF.has(cur.glyph);
   main.innerHTML=wxNoteHTML()+`<div class="card study${rep?" rep":""}">
     ${S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:""}
     <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}${d.flag||d.unchecked?`<button class="picflag${d.flag?" on":" new"}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}" title="${d.flag?"":esc(t("Not yet checked"))}">${d.flag?"⚑":"⚐"}</button>`:""}</div>
     ${chrow}
-    <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Pinyin and meaning")}</span>${rep?`<span class="pill again">${t("Again")}</span>`:""}<span class="tail">${!rep&&list.length>1&&!S.single?/* v522: the count in the fold row; on a repeat pass the Again pill takes the slot */`<span class="pos">${esc(t("{0} of {1}",li+1,list.length))}</span>`:""}<i aria-hidden="true">⌄</i></span></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
-    <div class="padwrap"><canvas class="wpad" id="wpad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas></div>
     <div class="padline" id="padline"></div>
+    <div class="padwrap"><canvas class="wpad" id="wpad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas></div>
     <div class="padacts" id="padacts">${noTmpl?`<button class="del" id="pad-undo">${t("pad:Undo")}</button>`:""}<button class="del" id="pad-show" hidden>${t("Show me")}</button><button class="del" id="pad-skip" hidden>${t("Skip")}</button><button class="del" id="pad-done" hidden>${t("Done")}</button>${noTmpl?`<button class="del" id="pad-clear">${t("Clear")}</button>`:""}</div>
     ${noTmpl?`<div class="hint" id="pad-note">${t("not in the stroke set — draw it and tap Done")}</div>`:""}
+    <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Whole card")}</span>${rep?`<span class="pill again">${t("Again")}</span>`:""}<span class="tail">${!rep&&list.length>1&&!S.single?/* v522: the count in the fold row; on a repeat pass the Again pill takes the slot */`<span class="pos">${esc(t("{0} of {1}",li+1,list.length))}</span>`:""}<i aria-hidden="true">⌄</i></span></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
     ${swipeHint(d)}</div>`; /* no linked-photos row on the study card (v518, H: "No 'also in other cards' in learn mode. Only on Cards mode.") — the detail keeps it */
   if(ansOpen) warmParts();
   const card=main.querySelector(".card.study");
@@ -2923,7 +2930,11 @@ function renderStudy(main){
   /* the photo: a tap swaps the crop for the whole photo and back (v55); the flag in its corner is the review flag (§ 3.3) */
   const rv=$("#reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("#picflag")) return; if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); } };
   { const pf=$("#picflag"); if(pf) pf.onclick=async e=>{ e.stopPropagation(); await setFlag(c,!d.flag); render(); }; } /* v515: hollow ⚐ = not yet checked, a tap flags it; tint ⚑ = flagged, a tap clears; nothing once checked and clean — the answer block's Flag button stays */
-  $("#fold").onclick=()=>{ S.ansOpen=!S.ansOpen; render(); };
+  $("#fold").onclick=()=>{ S.ansOpen=!S.ansOpen; render(); if(S.ansOpen) showAns(); };
+  /* v527: the block sits under the pad, so opening it scrolls the card until the block stands above the tab bar (or, when it is
+     taller than the room, until its head is under the top bar) instead of leaving it under the translucent bar */
+  function showAns(){ const a=$("#ans"), nav=$("#tabs"), hd=document.querySelector("header"); if(!a) return; const r=a.getBoundingClientRect(), navTop=nav?nav.getBoundingClientRect().top:innerHeight, top=hd?hd.getBoundingClientRect().bottom:0;
+    const d=Math.min(r.bottom+18-navTop, r.top-top-8); if(d>0) window.scrollBy({top:d,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"}); }
   const st2=$("#star-card"); if(st2) st2.onclick=async()=>{ await setStar(c,!d.star); render(); };
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
@@ -2944,7 +2955,7 @@ function renderStudy(main){
      there are no grades that own the screen any more. */
   wireSwipe(card, list.length<2||S.single?null:{
     n:list.length, idx:li, centred:false,
-    peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ return `<div class="zone1 front">${frontPic(nd,{page:true,fixed:true})}</div>${peerRowHTML(nd)}<div class="fold"><button class="foldbtn"><span>${t("Pinyin and meaning")}</span><i aria-hidden="true">⌄</i></button></div><div class="padwrap"><div class="wpad ghost"></div></div><div class="padline"></div>`; } finally{ S.fullPic=fp; } }, /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
+    peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ return `<div class="zone1 front">${frontPic(nd,{page:true,fixed:true})}</div>${peerRowHTML(nd)}<div class="padline"></div><div class="padwrap"><div class="wpad ghost"></div></div><div class="padacts"></div><div class="fold"><button class="foldbtn"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button></div>`; } finally{ S.fullPic=fp; } }, /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
     go:goTo, ready:chrowFit });
   wireSay(); wireLinks(); wireSrc(); wireAi();
   mountPad(card,d,c,tg,st,cur);
@@ -3163,7 +3174,7 @@ const PAD_MIN=200, TRACE_OK=0.18, NEXT_MS=3000, PRAISE_AT=2000, REP_GAP=3, WRITE
 const CARD_RATIO=1.5; /* the one window and box shape on every card, 3:2 (v519) — declared here, since FRONT_RATIO reads it at load time */
 let LAST_FIT=null; /* v521: the study card's last pad measurement, printed by Diagnostics */
 window.addEventListener("resize",()=>{ const c=document.querySelector(".card.study"); if(c&&c._fitPad) c._fitPad(); }); /* v521: every resize re-fits the pad of the card on screen (a fold, the system bars) */
-const PAD_BELOW=78, FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_GRID/1024;
+const PAD_BELOW=54, FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_GRID/1024;
 /* NEXT_MS is 3000 since v523: the finished card holds while its recap stands over the pad — the characters, pinyin and
    meaning, large — and the star flies out of it at PRAISE_AT (v523, H: "sollte der Inhalt der Karte nochmal groß und
    deutlich gut lesbar für wenige Sekunden gezeigt werden, um sich das nochmal einzuprägen"); 1500 from v517 to v522, when
@@ -3321,22 +3332,24 @@ function mountPad(card,d,c,tg,st,cur){
      ran off the screen. Three things make the measurement the same every time: the picture box has one shape (frontPic), the
      characters are one row however many lines the photo had (.chrow), and what sits BELOW the pad is counted as the constant
      PAD_BELOW instead of being measured. So the answer block opening, the helper buttons appearing and the swipe hint all
-     leave the pad where it is and let the card scroll, which is the thing that may move. PAD_BELOW is the line under the
-     pad at its two-row height (.padline min-height, v518 — the line is always there since) and the helper row's margin;
-     the count "3 of 12" sat in that row from v520 to v521 and lives in the fold row since v522, costing no height;
-     a helper button appearing scrolls the card by its 40 px, as v517 accepted. */
+     leave the pad where it is and let the card scroll, which is the thing that may move. PAD_BELOW is the helper row's
+     margin and the fold row with its margin (v527: the answer block moved under the pad and the word's line above it,
+     so the line counts in the pad's top now and the fold button in its tail — the block itself, open or folded, never:
+     opening it scrolls the card); until v526 it was the line under the pad at its two-row height and the helper row's
+     margin. The count "3 of 12" sat in the helper row from v520 to v521 and lives in the fold row since v522, costing no
+     height; a helper button appearing scrolls the card by its 40 px, as v517 accepted. */
   const fit=()=>{ if(!cv.isConnected) return; const wrap=cv.parentElement, inner=card.clientWidth-36; cv.style.width="0px"; cv.style.height="0px";
     const nav=$("#tabs"), navH=nav?nav.getBoundingClientRect().height:56;
-    const ans=card.querySelector("#ans"), ansH=(ans&&!ans.hidden)?ans.getBoundingClientRect().height:0; /* measured as if the answer were folded */
-    const top=wrap.getBoundingClientRect().top+window.scrollY-ansH;
+    const ans=card.querySelector("#ans"), ansH=(ans&&!ans.hidden)?ans.getBoundingClientRect().height:0; /* v527: the block is under the pad, so its height no longer moves the pad's top; kept in the record */
+    const top=wrap.getBoundingClientRect().top+window.scrollY;
     const ccs=getComputedStyle(card), floor=(nav?nav.getBoundingClientRect().top:window.innerHeight-navH)-16; /* the card ends 16 px above the tab bar */
     /* v521 (H, a screenshot of "6 of 66" half under the tab bar: "6 of 66 ist komisch abgeschnitten"): what sits under the
        pad is MEASURED too — the line at its own height and the helper row's margin — and the larger of the constant
        and the measurement is what the pad leaves free, so a tail taller than the budget shrinks the pad instead of pushing
        the count under the bar. The buttons of the helper row are deliberately not in the measurement: Show me and Skip
        appearing mid-write must never resize the canvas under the finger (v517's rule that they scroll the card instead). */
-    const pl=card.querySelector("#padline"), pa=card.querySelector("#padacts");
-    const tail=(pl?pl.offsetHeight+(parseFloat(getComputedStyle(pl).marginTop)||0):0)+(pa?(parseFloat(getComputedStyle(pa).marginTop)||0):0);
+    const fo=card.querySelector(".fold"), fb=card.querySelector("#fold"), pa=card.querySelector("#padacts");
+    const tail=(pa?(parseFloat(getComputedStyle(pa).marginTop)||0):0)+(fo?(parseFloat(getComputedStyle(fo).marginTop)||0):0)+(fb?fb.offsetHeight:0); /* v527: the fold ROW is in the tail, so it stays above the bar; the block under it is not — it scrolls */
     const below=Math.max(PAD_BELOW,Math.ceil(tail));
     const room=floor-(top-window.scrollY)-below-(parseFloat(ccs.paddingBottom)||18);
     const side=Math.max(PAD_MIN,Math.min(inner,Math.floor(room)));
@@ -4340,6 +4353,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  527:"In Learn the word you are writing shows its pinyin and meaning right above the pad, and the whole card — characters, pinyin and meaning — folds open at the foot of the card.",
   526:"A character you press and hold opens every card of its walk on that character inside its word — green on the button, on the word and in the line under the pad — and only another press and hold releases it.",
   524:"Every session starts with its short cards and works up to the long ones — inside the due cards and again inside the new ones.",  523:"After you finish writing a card, it shows once more, large — characters, pinyin and meaning — for a few seconds before the star flies; tap to move on sooner.",
   520:"The arrows beside the writing pad are gone — swipe from anywhere but the pad, and a count under it says where you are; a character you press and hold is lit on the photo.",

@@ -674,6 +674,7 @@ body.noscroll{overflow:hidden}
 .foldbtn{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;width:100%;min-height:36px;border:none;background:var(--card2);border-radius:var(--r);padding:0 12px;font:500 15px var(--ui);color:var(--label2);cursor:pointer;text-align:left}
 .foldbtn i{margin-left:auto;font-style:normal;font-size:18px;line-height:1;transition:transform .15s} .fold.open .foldbtn i{transform:rotate(180deg)}
 .fold .ans{padding-top:12px;text-align:center}
+.fold .ans .anshanzi{font-size:28px;line-height:1.3;color:var(--label);margin-bottom:6px} /* v527: the whole card at the head of the block at the card's foot (H: "komplett hanzi, Pinyin, Bedeutung ganz nach unten") */
 .pill.again{margin-left:0;background:var(--tint-soft);color:var(--tint)} /* the repeat pass of a written card (§ 8.1) */
 .padwrap{position:relative;margin-top:12px;display:flex;justify-content:center}
 .wpad{display:block;border-radius:var(--rc);background:var(--card2);touch-action:none;box-shadow:inset 0 0 0 1px var(--sep)} /* the pad takes the finger: a stroke is never a swipe */
