@@ -41,7 +41,7 @@ button,.tab,.chip,.chipset,.pill,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg
 .logo{font-family:var(--hanzi);font-size:30px;font-weight:700;letter-spacing:1px;line-height:1.1}
 .ver{display:none} /* the PWA vN label stays in the page for the shell check, the mirror and About, but is not shown in the header (v225, H's "Go" on the design review: a developer's line, not a user's) */
 .stats{display:flex;gap:6px;font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums;padding-bottom:3px}
-.stats>span{display:inline-flex;align-items:baseline;gap:5px;padding:5px 11px;border-radius:999px;background:var(--fill)}
+.stats>span,.stats>button{display:inline-flex;align-items:baseline;gap:5px;padding:5px 11px;border-radius:999px;background:var(--fill);border:0;font:inherit;color:inherit;cursor:pointer}
 .stats b{font-weight:600;font-size:11px;color:var(--label2)} /* no capitalize since v402 (H: "Ebenso Vietnamesisch, Thai, Indonesisch"): the rule title-cased every word of the label, which is right for no language that needs two of them — "Jatuh Tempo", "Đến Hạn", and French's "À Faire" since v255. The three labels are written in the case they should show. */
 .stats .v{color:var(--label);font-weight:600}
 #stat-filter:empty{display:none} #stat-filter .chip.fpill{min-height:28px;padding:4px 11px;max-width:54vw} #stat-filter .fpill>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap} /* v516: Learn's filter pill in the top bar where Due and Done stood; a long name ends in an ellipsis instead of pushing the logo */
@@ -734,6 +734,20 @@ body.noscroll{overflow:hidden}
 /* ===== the praise after a finished word (v517): the counter in the bar, the star that flies into it, the ring =====
    Design tokens only, so both themes come out of the same set. */
 #stat-star{color:var(--tint);gap:5px;padding:4px 11px;min-height:28px;box-sizing:border-box;align-items:center}
+/* the points sheet (v546): what a point is, and the last seven days — the counter is the only place the points are shown, so it is where they are explained */
+.pts{text-align:start}
+.pts .ptsnow{display:flex;align-items:baseline;gap:8px;margin:2px 0 12px}
+.pts .ptsnow .n{font-size:34px;font-weight:700;color:var(--tint);font-variant-numeric:tabular-nums}
+.pts .ptsnow .l{font-size:14px;color:var(--label2)}
+.pts .ptsrule{margin:0 0 14px;padding:0 0 0 18px;font-size:15px;line-height:1.45}
+.pts .ptsrule li{margin:0 0 5px}
+.pts .ptshead{font-size:13px;font-weight:600;color:var(--label2);margin:0 0 6px}
+.pts .ptsdays{display:flex;flex-direction:column;gap:5px}
+.pts .pd{display:flex;align-items:center;gap:8px;font-size:13px}
+.pts .pd .d{flex:none;width:44px;color:var(--label2)}
+.pts .pd .b{flex:1 1 auto;height:8px;border-radius:999px;background:var(--fill);overflow:hidden}
+.pts .pd .b i{display:block;height:100%;border-radius:999px;background:var(--tint);min-width:2px}
+.pts .pd .n{flex:none;width:34px;text-align:end;font-variant-numeric:tabular-nums;color:var(--label)}
 #stat-star .prs{display:inline-flex;width:15px;height:15px}
 #stat-star .prs svg{width:15px;height:15px;fill:currentColor}
 #stat-star .v{color:inherit;font-weight:700}
