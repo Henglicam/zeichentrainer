@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=537; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=538; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -646,6 +646,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["app","v537","a fresh install: the first card whole, hint and all"],
+  ["app","v538","a German, French or Spanish phone: one card, one tag, one export"],
   ["app","v536","Review queue → Ask AI without logging in; a generated card naming its multicard"],
   ["app","v535","the recap alone; the pad finishes its word; a dismissed suggestion stays gone"],
   ["app","v533","the word being written marked on the photo, quietly"],
@@ -1552,6 +1553,16 @@ function resumeNote(){ return aiAutoOn()?t("It goes on by itself when the AI can
 function aiLive(){ return aiAutoOn()&&navigator.onLine; }
 /* "obviously false" OCR: mean symbol confidence below the threshold, or words no dictionary knows */
 const OCR_DOUBT=70;
+/* v538: mt.suspect is stored in English (it is the `why` the AI payload carries, v97) and was shown raw
+   inside a translated wrapper — "Bedeutung ungeprüft (Lesung unsicher: reading confidence 78%)". The four
+   shapes ocrDoubt and the picture path produce are rendered through t() at display time, nowhere else. */
+function suspectText(s){
+  return String(s||"").split(", ").map(part=>{
+    let m=/^reading confidence (\d+)%$/.exec(part); if(m) return t("reading confidence {0}%",m[1]);
+    m=/^unknown (.+)$/.exec(part); if(m) return t("unknown {0}",m[1]);
+    return t(part);
+  }).join(", ");
+}
 function ocrDoubt(confs,meaning,unknown){
   const cf=(confs||[]).filter(x=>typeof x==="number");
   const mean=cf.length?cf.reduce((a,b)=>a+b,0)/cf.length:100;
@@ -1713,7 +1724,7 @@ async function aiReview(list,status){
 /* the AI called the text garbage: the card is flagged with the AI's note, the suggestion is done */
 async function aiFlag(id){
   const d=cardOf(id); if(!d||!d.ai) return;
-  const upd={...d, flag:true, flagNote:d.flagNote||d.ai.note||"the text looks misread"}; delete upd.ai;
+  const upd={...d, flag:true, flagNote:d.flagNote||d.ai.note||t("the text looks misread")}; delete upd.ai;
   await putCard(upd,id);
 }
 async function aiAccept(id){
@@ -1809,7 +1820,7 @@ function renderAiRow(){
      escape hatch and it had been disconnected since at least v465. */
   run.onclick=async()=>{
     run.disabled=true; const rs=$("#ai-runstatus");
-    try{ const n=await aiReview(null,x=>{ rs.textContent=x; }); rs.textContent=t("{0} ready. Accept or dismiss them under Cards.",nOf(n,"suggestion")); }
+    try{ const n=await aiReview(null,x=>{ rs.textContent=x; }); rs.textContent=t("{0} ready. Accept or dismiss under Cards.",nOf(n,"suggestion")); }
     catch(err){ rs.textContent=t("Failed: {0}",err&&err.message||err); run.disabled=false; }
   };
   if(!btn||!form) return;
@@ -2055,14 +2066,14 @@ function tagRowHTML(){
   const n=toTag().length, tr=TAGALL; if(!(n||tr)||!aiOn()) return "";
   const line=tr&&tr.running?busyHTML(t("Tagging {0} of {1} …",tr.at,tr.total)+" "+t("The cards change together when all are done."))
     :tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} tagged, {1} left.",tr.done,n)+sp(resumeNote())
-    :tr?t("Done — {0} tagged.",nOf(tr.done,"card")):t("{0} carry no tag yet.",nOf(n,"card"));
+    :tr?t("Done — {0} tagged.",nOf(tr.done,"card")):t("No tag yet on {0}.",nOf(n,"card"));
   return `<div class="mrow"><div style="flex:1"><div class="t">${t("Tags")}</div><div class="s" id="tagall-status">${line}</div>${n?`<div class="fieldacts"><button class="btn mini" id="tag-all"${tr&&tr.running?" disabled":""}>${t("Tag all cards")}</button></div>`:""}</div></div>`;
 }
 function tagRefresh(){ const st=$("#tagall-status"), b=$("#tag-all"), tr=TAGALL; if(!st) return;
   const n=toTag().length;
   if(tr&&tr.running) st.innerHTML=busyHTML(t("Tagging {0} of {1} …",tr.at,tr.total)+" "+t("The cards change together when all are done."));
   else st.textContent=tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} tagged, {1} left.",tr.done,n)+sp(resumeNote())
-    :tr?t("Done — {0} tagged.",nOf(tr.done,"card")):t("{0} carry no tag yet.",nOf(n,"card"));
+    :tr?t("Done — {0} tagged.",nOf(tr.done,"card")):t("No tag yet on {0}.",nOf(n,"card"));
   if(b){ b.disabled=!!(tr&&tr.running); if(!n&&!(tr&&tr.running)) b.remove(); } }
 async function tagAll(){
   if(TAGALL&&TAGALL.running){ tagRefresh(); return; }
@@ -2106,7 +2117,7 @@ function resumeRecheck(){ if(!S.settings.recheckRun||(RECHECK&&RECHECK.running))
 function recheckLine(){ const tr=RECHECK, left=recheckLeft().length;
   if(tr&&tr.running) return null; /* the moving bar, drawn by the callers */
   if(tr&&tr.failed) return t("The AI could not be reached")+". "+t("{0} checked, {1} left.",tr.done,left)+sp(resumeNote());
-  if(tr) return tr.found?t("Done — {0} could be better. See them on the Cards tab.",nOf(tr.found,"card")):t("Done — nothing to change. Your cards are in good shape.");
+  if(tr) return tr.found?t("Done — {0} could be better. Look under the Cards tab.",nOf(tr.found,"card")):t("Done — nothing to change. Your cards are in good shape.");
   return t("The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it."); }
 /* The pictures already on the phone: one quiet pass (v373, H: "Run the brightening over my deck now and remove the
    manual option completely" — the deck lives on the phone, so the app has to do it itself). At the first start after
@@ -2706,7 +2717,7 @@ function srcView(d){
 const frontPage=d=>pageOf(d)||srcView(d); /* one page view for both: a card that IS one of several on a photo (v452), and one MADE from a multicard's text (v489) */
 function pageHTML(d,pg){
   const u=urlOf(pg.blob);
-  return `<div class="picbox page"${pg.src?"":` data-pic="1"`} style="--ratio:${ratioOf(d)}"><img class="picbg" src="${u}" alt="" aria-hidden="true"><div class="pagewrap"><img class="signimg" src="${u}" alt="photo">${regionsHTML({id:pg.shot},pg.rs,{learn:true,me:pg.me||d.id,only:!!pg.src})}</div></div>`; /* v499: a generated card (src) frames its own text alone; a v452 page front still frames every text — the wrapper shrinks to the picture's rendered size, so the regions' percent coordinates land on it; the blurred fill shows beside a tall page */
+  return `<div class="picbox page"${pg.src?"":` data-pic="1"`} style="--ratio:${ratioOf(d)}"><img class="picbg" src="${u}" alt="" aria-hidden="true"><div class="pagewrap"><img class="signimg" src="${u}" alt="${t("alt:photo")}">${regionsHTML({id:pg.shot},pg.rs,{learn:true,me:pg.me||d.id,only:!!pg.src})}</div></div>`; /* v499: a generated card (src) frames its own text alone; a v452 page front still frames every text — the wrapper shrinks to the picture's rendered size, so the regions' percent coordinates land on it; the blurred fill shows beside a tall page */
 }
 function frontPic(d,o){
   const pk=S.peek&&S.peek!==d.id?cardOf(S.peek):null; /* Learn: a linked card's photo, tapped in the "Also on another photo" row (v155) */
@@ -2717,7 +2728,7 @@ function frontPic(d,o){
   /* the crop sits in a fixed 16:9 box at the card's width, fitted inside on the card's grey surface, so every card has the
      same height whatever shape the frame had (v224, H's "Go" on the design review after "Bitte consistency!"); the whole
      photo, a deliberate tap, keeps its own shape */
-  const img=`<img class="signimg${S.fullPic&&full&&!pg?" full":""}" data-pic="1" src="${urlOf(blob)}" alt="photo">`;
+  const img=`<img class="signimg${S.fullPic&&full&&!pg?" full":""}" data-pic="1" src="${urlOf(blob)}" alt="${t("alt:photo")}">`;
   /* the box's shape is the card's own (v514, D1) — except on the study card, where it is one constant shape whatever the
      text, because the pad's size is measured against it (v517, H: "Das müssen Konstanten sein"). The picture itself keeps
      the shape v514 cut it in and is fitted inside, which is what the blurred fill behind it has been for since v232. */
@@ -2851,7 +2862,7 @@ function backHTML(d,o){ const srcHere=!(o&&o.noSrc); /* noSrc: the front of this
    back rather than by taking the tap away: the jump records "learn" and the multicard's back button returns to the session,
    which is untouched — S.queue, S.idx and S.revealed are state, and a render into the Cards tab does not build a new one. */
   const glossBlock = d.kind==="sign" ? `
-    ${d.mt&&!d.mt.verified?`<span class="flag">${t("meaning unverified")}${d.mt.pending?t(" (translation pending)"):""}${d.mt.suspect?t(" (reading uncertain: {0})",esc(d.mt.suspect)):""}</span>`:""}
+    ${d.mt&&!d.mt.verified?`<span class="flag">${t("meaning unverified")}${d.mt.pending?t(" (translation pending)"):""}${d.mt.suspect?t(" (reading uncertain: {0})",esc(suspectText(d.mt.suspect))):""}</span>`:""}
 ` : "";
   /* the linked row is not part of the answer any more (v422, H: "Die 'also in another photo' Zeile nach unten schieben"): it
      stood between the parts row and the grades, so reference material sat in the middle of the answer-then-grade path. Each
@@ -3731,7 +3742,7 @@ function nextSingle(c){
 function renderAdd(main){
   const curImg=S.pendingUse==="full"&&S.pendingFull?S.pendingFull:S.pendingImg;
   const imgField=curImg?`<div class="field" id="f-imgfield"><label>${t("Image (stays on this phone)")}</label>
-      <div class="pimg"><img src="${urlOf(curImg)}" alt="card image">
+      <div class="pimg"><img src="${urlOf(curImg)}" alt="${t("card image")}">
       <span class="imgacts">${S.pendingFull&&S.pendingImg?`<button class="del${S.pendingUse!=="full"?" on":""}" id="f-usecrop">${t("Crop")}</button><button class="del${S.pendingUse==="full"?" on":""}" id="f-usefull">${t("Whole photo")}</button>`:""}<button class="del" id="f-noimg">${t("Remove image")}</button></span></div></div>`:"";
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button></div>
@@ -3919,7 +3930,7 @@ function cardTileHTML(d,pk){
         ${(flag||ai||nw)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}${nw?`<i class="tm new" title="${esc(t("Not yet checked"))}">${t("tile:New")}</i>`:""}</span>`:""}</span>
 ${pg?`</span><span class="prog" aria-hidden="true"><i style="width:${its.length?Math.round(made/its.length*100):0}%"></i></span>`:""}
       <span class="th${pg?" title":" hanzi"}">${head||`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>
-      <span class="ts2">${pg?esc(t("{0} texts on this page, {1} as flashcards.",its.length,made)):cardStatus(d)}</span></button>`;
+      <span class="ts2">${pg?esc(t("Texts on this page: {0}, as flashcards: {1}.",its.length,made)):cardStatus(d)}</span></button>`;
 }
 function cardsListHTML(){
   const list=cardsList();
@@ -4030,9 +4041,9 @@ function pageBodyHTML(d){
   const order=rs.map(r=>r.card), sorted=its.slice().sort((a,b)=>{ const ia=order.indexOf(a.id), ib=order.indexOf(b.id); return (ia<0?1e9:ia)-(ib<0?1e9:ib); });
   const made=its.filter(x=>madeFrom(x)).length;
   return `<div class="shot pagecard" data-page="${esc(d.id)}">
-      <div class="shotwrap">${full?`<img src="${urlOf(full)}" alt="photo">`:""}${rs.length?regionsHTML({id:d.shot},rs):""}</div>
+      <div class="shotwrap">${full?`<img src="${urlOf(full)}" alt="${t("alt:photo")}">`:""}${rs.length?regionsHTML({id:d.shot},rs):""}</div>
       <div class="ptitle">${esc(d.c)}</div>
-      <div class="regline">${esc(t("{0} texts on this page, {1} as flashcards.",its.length,made))}</div>
+      <div class="regline">${esc(t("Texts on this page: {0}, as flashcards: {1}.",its.length,made))}</div>
       <div class="taphint">${esc(t("Tap any text on the photo."))}</div>
     </div>
     <div class="clist" id="pitems">${sorted.map(x=>cardRowHTML(x,false,new Map(),true)).join("")}</div>`;
@@ -4218,7 +4229,7 @@ function renderEdit(main,c){
   const drawRecrop=()=>{ const box=$("#e-pimg"), rec=SHOTS_EXTRA[rid]; if(!box||!rec||!CROP||CROP.id!==rid) return;
     const zoomed=!!(CROP.rect&&CROP.zoom);
     box.innerHTML=`<div class="recrop"><div class="shotwrap">
-        ${zoomed?`<div class="shotzoom" style="${zoomStyle(rec)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(rec)}" alt="photo">`}
+        ${zoomed?`<div class="shotzoom" style="${zoomStyle(rec)}" role="img" aria-label="${t("the framed area")}"></div>`:`<img src="${shotURL(rec)}" alt="${t("alt:photo")}">`}
         <div class="croplayer${CROP.rect?" framed":""}${zoomed?" zoomed":""}" data-id="${rid}">${zoomed?"":`<div class="croprect${READING[rid]&&!READ_FAIL.test(READING[rid])?" working":""}"${cropRectStyle()}>${READING[rid]&&!READ_FAIL.test(READING[rid])?`<div class="work" aria-hidden="true"><svg><rect/></svg></div>`:""}<div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="${t("Turn the frame")}"></div></div>`}</div>
       </div>
       <div class="imgacts"><button class="del" id="e-cropcancel">${t("Cancel")}</button></div>
@@ -8355,7 +8366,7 @@ function regionsHTML(rec,rs,o){
     return `<${tag} class="region${learn&&o.me===r.card?" me":""}" ${learn?"data-rid":"data-region"}="${esc(r.rid)}" style="left:${pc(b.x)};top:${pc(b.y)};width:${pc(b.w)};height:${pc(b.h)}${b.a?`;transform:rotate(${b.a}deg)`:""}"${learn?' aria-hidden="true"':` aria-label="${esc(r.zh.replace(/\n/g," "))}"`}><i class="ff" aria-hidden="true"></i></${tag}>`; }).join("")}</${wrap}>`;
 }
 function regionLine(rs,pg){ const n=rs.filter(r=>r.card).length; /* pg (v453): the photo's cards are one page's texts — and since v488 what a multicard counts is its flashcards, the only number on it that can move */
-  return pg?t("{0} texts on this page, {1} as flashcards.",n,rs.filter(r=>{ const d=r.card&&cardOf(r.card); return !!(d&&d.page&&madeFrom(d)); }).length)
+  return pg?t("Texts on this page: {0}, as flashcards: {1}.",n,rs.filter(r=>{ const d=r.card&&cardOf(r.card); return !!(d&&d.page&&madeFrom(d)); }).length)
           :t("{0} cards from this photo, {1} learned.",n,rs.filter(r=>regionState(r)===2).length); }
 /* the photo gives nothing away until it is asked (v467, H: "Gerade chinesische Apps können ja extrem voll mit Text sein …
    Ich möchte, dass in der Default Ansicht nichts eingerahmt ist. Und wenn ich auf ein Textelement drauftippe, dann erscheint
@@ -8476,7 +8487,7 @@ function renderShots(){
   if(marking("shots")){ /* the photo picker (v351): the photos alone with a tick — no frame, no reading box, no result card */
     box.innerHTML=`<div class="listhead pickhead"><span class="badge" id="pick-n">${t("{0} selected",PICK.set.size)}</span><button class="del" id="pick-all"></button></div>`+
       pickList().map(s=>`<div class="shot pick${PICK.set.has(s.id)?" on":""}" data-pickshot="${s.id}">
-        <div class="shotwrap"><img src="${shotURL(s)}" alt="photo"></div>
+        <div class="shotwrap"><img src="${shotURL(s)}" alt="${t("alt:photo")}"></div>
         <div class="meta"><span class="ts">${new Date(s.ts).toLocaleString(LANG_LOCALE[LANG])}</span><span class="tick" aria-hidden="true"></span></div></div>`).join("");
     box.querySelectorAll("[data-pickshot]").forEach(el=> el.onclick=()=>{ pickToggle(el.dataset.pickshot); el.classList.toggle("on"); pickBar(()=>delPicked("shots")); });
     pickAllBtn(pickList().map(s=>s.id),renderShots); pickBar(()=>delPicked("shots"));
@@ -8521,7 +8532,7 @@ function renderShots(){
       if(!cropping&&!PENDING[s.id]&&!results.length&&!prov&&!SIGN[s.id]&&!READING[s.id]&&!shotNote(s)&&S.openShot!==s.id){ /* a failed reading's note keeps the photo full width, across a restart too (v509) */
         const n=(byShot.get(s.id)||[]).filter(d=>d.c&&!isPage(d)).length;
         return `<button class="tile${qd?" wait":""}" data-tile="${s.id}"${!busy&&S.inbox.length>1?` data-lp="${s.id}"`:""}>
-          <span class="tw"><img src="${shotURL(s)}" alt="photo" loading="lazy" decoding="async">${n?`<span class="cnt">${n}</span>`:""}${qd?`<span class="wt" title="${esc(t("Waiting for its turn …"))}" aria-label="${esc(t("Waiting for its turn …"))}">${ICON_WAIT}</span>`:""}</span>
+          <span class="tw"><img src="${shotURL(s)}" alt="${t("alt:photo")}" loading="lazy" decoding="async">${n?`<span class="cnt">${n}</span>`:""}${qd?`<span class="wt" title="${esc(t("Waiting for its turn …"))}" aria-label="${esc(t("Waiting for its turn …"))}">${ICON_WAIT}</span>`:""}</span>
           <span class="tmeta"><span class="ts">${esc(new Date(s.ts).toLocaleString(LANG_LOCALE[LANG],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}))}</span></span></button>`;
       }
       if(results.length&&!rs.length) return `<div class="shot">${results.length>1?`<div class="listhead reshead">${t("{0} cards from this photo",results.length)}</div>`:""}${results.map(d=>`${resultHTML(d)}
@@ -8530,7 +8541,7 @@ function renderShots(){
       </div>`;
       return `<div class="shot"${S.openShot===s.id?' data-open="1"':""}${!busy&&!AUTO[s.id]&&S.inbox.length>1?` data-lp="${s.id}"`:""}>
         <div class="shotwrap">
-          ${zoomed?`<div class="shotzoom" style="${zoomStyle(s)}" role="img" aria-label="the framed area"></div>`:`<img src="${shotURL(s)}" alt="photo">`}${working?`<div class="scan" aria-hidden="true"></div>`:""}${rs.length?regionsHTML(s,rs):""}
+          ${zoomed?`<div class="shotzoom" style="${zoomStyle(s)}" role="img" aria-label="${t("the framed area")}"></div>`:`<img src="${shotURL(s)}" alt="${t("alt:photo")}">`}${working?`<div class="scan" aria-hidden="true"></div>`:""}${rs.length?regionsHTML(s,rs):""}
           ${cropping?`<div class="croplayer${shown?" framed":""}${zoomed?" zoomed":""}" data-id="${s.id}">${zoomed?"":`<div class="croprect${READING[s.id]&&!READ_FAIL.test(READING[s.id])?" working":""}"${cropRectStyle()}>${READING[s.id]&&!READ_FAIL.test(READING[s.id])?`<div class="work" aria-hidden="true"><svg><rect/></svg></div>`:""}<div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="${t("Turn the frame")}"></div></div>`}</div>`:""}
         </div>
         ${rs.length?(pg=>`${pg?`<div class="ptitle">${esc(pg.c)}</div>`:""}<div class="regline">${esc(regionLine(rs,pg))}</div><div class="taphint">${esc(t("Tap any text on the photo."))}</div>`)(pageOfShot(s.id)):""}
