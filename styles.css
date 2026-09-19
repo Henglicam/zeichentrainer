@@ -749,7 +749,7 @@ body.noscroll{overflow:hidden}
 .chrow .ch .lockmark svg{width:10px;height:10px;fill:currentColor}
 /* the open card in the study card's layout (v518): the actions where the pad would stand */
 .card.study.detail .detailacts{margin-top:14px}
-.card.study.detail .padline{margin-top:12px}
+/* the detail's line sits under the row at the study card's own 10 px since v531 (it stood under the fold at 12 until v530) */
 /* the study card's picture: one box shape whatever the text (v517) — v514's per-card ratio stays everywhere else, and the
    picture itself is fitted inside with the blurred fill of v232 behind it */
 .card.study .picbox.page,.card.peer .picbox.page{aspect-ratio:1.5} /* 3:2 since v519; and the carousel's neighbour (v518): a page front slid in at its own v514 ratio and jumped to 2:1 at the snap */
