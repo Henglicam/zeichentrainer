@@ -1,5 +1,15 @@
 # Flashcard layout — specification, draft 4 (2026-09-18)
 
+> **Status, 2026-09-19 (v539).** This is the design as it stood before the build, kept as the record of every decision
+> and its reason. **What shipped:** phase 1 as v512 (the write pad, the five zones, the grade written by the writing),
+> phase 2 as v513 (the locked character's walk), phase 3 as v514 (the window by line count, pinch and pan) and phase 4
+> as v515 ("not yet checked"). **What has changed since, so read the spec against CLAUDE.md's Current state and not the
+> other way round:** § 7's **lock is switched off** (v531, H: "Deaktiviere die lock Funktion erstmal wieder, aber
+> verwirf sie nicht" — `LOCK_ON=false`, everything kept); § 4's **D1 ratio by line count ended at v519**, which made
+> **one 3:2 window on every card**; the answer block moved **to the foot of the card** as "Whole card" (v527) and the
+> word's line **above the pad** with it; the four grades of § 5 are two screens away — Learn has written the review
+> from the pad since v512, and the three grades of v421 survive only on a marked photo's sheet.
+
 H's brief, in his words (a sketch and a note, 2026-09-18):
 
 > Reihenfolge auf screen: 1. Photo · 2. Character buttons · 3. Pinyin + Sound · 4. Übersetzung · 5. Schreibfeld (1 character nach dem anderen. Voll ausschreiben gibt Punkte.)

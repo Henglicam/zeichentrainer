@@ -1,5 +1,11 @@
 # Sign Cards — specification, draft 1 (2026-09-02)
 
+> **Status, 2026-09-19 (v539).** The design as it stood at v39, kept as the record of the three translation tiers and
+> why each was chosen. It is **out of date on privacy and must not be quoted**: § "Constraints" says "Photos never
+> leave the device", and since **v173** the straightened framed area goes to a picture-capable provider when the
+> reading is hard — since **v348/v393** sometimes the whole photo, and since **v439** the call goes out at the quick
+> look. `privacy.html` and More → AI review are the authoritative statement (corrected at v403, v459, v473 and v534).
+
 Photograph a Chinese sign on the street; twenty seconds later it is a flashcard: the sign's picture, its full text, pinyin, and **what the whole sign says** (a complete meaning, not a word-by-word gloss). Builds on PWA v20. All constraints from CLAUDE.md apply unchanged.
 
 ## Flow (3 taps + 1 drag)
@@ -41,7 +47,7 @@ Assembly: T1 longest match per line → unmatched lines: T2 if present else T0 g
 ```
 
 ## Sign-specific rules
-- Photos never leave the device; T3 sends transcript text only (stated in the settings row).
+- ~~Photos never leave the device; T3 sends transcript text only (stated in the settings row).~~ **Reversed by v173** with H's own switch: when the reading is hard, a picture of the framed text — sometimes the whole photo — goes to a picture-capable provider. See the status note at the top.
 - Big downloads are explicit: size warning + progress, into the version-stable `zt-ocr` cache.
 
 ## M2 results — on-device translation spike (2026-09-02)
