@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=549; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=550; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -650,6 +650,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v550","Learn, a card of several words: the pad pauses once a word and shows the word's pinyin alone — is that the right rhythm?"],
   ["app","v549","More → Help → Open: the guide is six pictures and a few sentences — is anything you needed gone?"],
   ["app","v548","More → Learning → Handwriting on: write a character you know in your own order, and see whether Done accepts it"],
   ["app","v547","More: four sections, and everything you used to find is still there"],
@@ -3765,7 +3766,7 @@ function mountPad(card,d,c,tg,st,cur){
        did not. A character in no dictionary word (a number) has no word to finish and falls straight through. */
     let next=cur.wi!=null?tg.findIndex((x,j)=>x.w&&x.wi===cur.wi&&!st.done.has(j)):-1;
     if(next<0) next=tg.findIndex((x,j)=>x.w&&!st.done.has(j));
-    if(next>=0){ await charRecap(card,cur); if(!cv.isConnected||S.pad!==st) return; st.i=next; st.k=0; st.miss=0; st.hint=false; st.free.length=0; keepScroll(render); return; }
+    if(next>=0){ await wordRecap(card,cur,tg,st); if(!cv.isConnected||S.pad!==st) return; st.i=next; st.k=0; st.miss=0; st.hint=false; st.free.length=0; keepScroll(render); return; }
     cardDone();
   };
   const cardDone=async()=>{
@@ -4142,28 +4143,33 @@ function glyphTileHTML(tx){
 /* v523: the finished card, large, over the pad — the characters in the Hanzi font fitted to the pad's square (the pad is a
    size container, so the size is solved by CSS), the pinyin and the meaning under them. The same text the card carries;
    no key in any column. */
-const RECAP_FS=96, CHAR_MS=650;
-/* v542 (H: "Nach jeden geschriebenen character kurz pinyin anzeigen. Sowie am Ende, nur ohne Kreis und Stern"): the
-   character just written stands over the pad with its reading for a breath — the card's own recap (v523) for one
-   character, and without the star and its ring, which belong to the finished card. It REPLACES the 250 ms pause the pad
-   already took before moving on, so a character costs 400 ms more, not 650; a tap anywhere that is not a control skips it,
-   as it skips the card's recap. The pinyin is read out of the line under the pad, whose first row has been the character
-   being written since v540 — so it is the syllable that character has INSIDE its word, and it is already in the app's
-   own language, rather than being looked up a second time. */
-function charRecapHTML(ch,py){
-  return `<div class="recap one" aria-live="polite"><div class="rc hanzi" style="font-size:min(${RECAP_FS}px,84cqw,50cqh)">${esc(ch)}</div>${py?`<div class="rp" style="font-size:min(21px,8.6cqw)">${esc(py)}</div>`:""}</div>`;
+const RECAP_FS=96, WORD_MS=650, RECAP_PY=46;
+/* v550 (H: "Nach jedem geschriebenen Wort nur pinyin anzeigen"), which narrows his own v542 ask ("Nach jeden geschriebenen
+   character kurz pinyin anzeigen") in two ways at once: the breath comes at the WORD's end, not after every character, and
+   what stands over the pad is the word's READING ALONE — no glyph, no meaning, no star and no ring. So 鸡蛋供应 pauses once,
+   on "gōng yìng", where v542–v549 paused three times and showed 鸡, 蛋 and 供 back at the learner who had just drawn them.
+   The pinyin is the LAST row of the line under the pad — the word's row since v540, whose first row is the one character —
+   so it is the word's own reading in the app's own language and is never looked up a second time. It still REPLACES the
+   250 ms pause the pad already took, a tap that is not a control still skips it, and the card's last word has none, since
+   cardDone's own recap (v523) follows at once and the two must never stack. */
+function wordRecapHTML(py){
+  const n=Math.max(4,[...py].length); /* a semibold syllable runs about 0.7 em a character, so 143/n cqw is the one-line fit; the clamp under it is the safety net */
+  return `<div class="recap one py" aria-live="polite"><div class="rp" style="font-size:min(${RECAP_PY}px,84cqw,${(143/n).toFixed(2)}cqw)">${esc(py)}</div></div>`;
 }
-async function charRecap(card,cur){
-  const pw=card.querySelector(".padwrap"); if(!pw||!cur) return new Promise(r=>setTimeout(r,250));
+async function wordRecap(card,cur,tg,st){
+  const pause=()=>new Promise(r=>setTimeout(r,250));
+  const pw=card.querySelector(".padwrap"); if(!pw||!cur) return pause();
+  if(tg.some((x,j)=>x.w&&x.wi===cur.wi&&!st.done.has(j))) return pause(); /* the word is not written out yet — the pad simply moves on to its next character */
   const rows=[...document.querySelectorAll("#padline .plrow")];
-  const py=rows.length?((rows[0].querySelector(".mono")||{}).textContent||"").trim():"";
-  pw.insertAdjacentHTML("beforeend",charRecapHTML(cur.glyph||cur.ch||"",py));
+  const py=rows.length?((rows[rows.length-1].querySelector(".mono")||{}).textContent||"").trim():"";
+  if(!py) return pause(); /* a number, or a line whose dictionary has not landed: there is no reading to show, and an empty recap is worse than none */
+  pw.insertAdjacentHTML("beforeend",wordRecapHTML(py));
   const rc=pw.lastElementChild; pw.classList.add("recapping");
   requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); });
   await new Promise(res=>{ let done=false, tm=0;
     const end=()=>{ if(done) return; done=true; clearTimeout(tm); document.removeEventListener("pointerdown",tap,true); res(); };
     const tap=e=>{ if(e.target.closest&&e.target.closest("button,a,input,textarea,.chip")) return; end(); };
-    document.addEventListener("pointerdown",tap,true); tm=setTimeout(end,CHAR_MS); });
+    document.addEventListener("pointerdown",tap,true); tm=setTimeout(end,WORD_MS); });
   if(rc.isConnected) rc.remove(); pw.classList.remove("recapping");
 }
 /* v542 (H: "Bei zweizeiligen characters muss ich die Seite Hochschieben, um aufm Pad zeichnen zu können. Beim Folgecharakter
@@ -4788,6 +4794,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  550:"Writing a card pauses once a word, on the word's pinyin — not after every character.",
   549:"How to use the app, under More → Help, is six pictures and a few sentences now instead of a wall of text.",
   548:"New under More → Learning: Handwriting. With it on there is no template and no stroke order — write the whole character, tap Done, and the app checks it.",
   547:"More is four sections instead of eleven — Learning, Your cards, The app, Advanced settings — and nothing has moved off the screen, only into a shorter list.",
