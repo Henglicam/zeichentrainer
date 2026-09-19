@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=542; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=543; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -649,6 +649,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v543","finish a card: the counter holds its number until the star lands, then goes up by the whole card's points"],
   ["app","v542","a card with two rows of characters: scroll to the pad and write — the page stays where you put it"],
   ["app","v541","zoom into a photo and write: the mark stays on its word, and the picture follows the pad"],
   ["app","v541","a red sign: the mark around the word is visible on it"],
@@ -1091,7 +1092,10 @@ function setStats(){
   const inStudy=S.mode==="study", f=$("#stat-filter");
   f.innerHTML=inStudy?learnFilterHTML():""; f.style.display=inStudy&&f.innerHTML?"":"none"; if(inStudy) wireFilterPill("learn",render);
   /* the written-today counter the star flies into (v517): on Learn, for as long as the day has points in it */
-  { const ss=$("#stat-star"); if(ss){ const v=PRAISE_N?PRAISE_N.n:praiseDay(), on=!!(inStudy&&v>0);
+  /* v543: while a card is finished and its star has not landed yet the counter is shown even at 0 — that is the first
+     card of a day, and the star needs something to fly into; before v543 the number went up at the last stroke, so the
+     counter was never 0 at this moment and the case could not arise. */
+  { const ss=$("#stat-star"); if(ss){ const v=PRAISE_N?PRAISE_N.n:praiseDay(), on=!!(inStudy&&(v>0||PRAISE_N));
       ss.hidden=!on; ss.style.display=on?"":"none"; ss.classList.toggle("gold",!!(PRAISE_N&&PRAISE_N.gold));
       if(on){ ss.setAttribute("aria-label",t("Written today")+": "+v); ss.innerHTML=`<i class="prs" aria-hidden="true">${MARK_STAR}</i><span class="v">${v}</span>`; } } }
   $("#stat-deck").style.display=inStudy?"none":"";
@@ -3485,7 +3489,7 @@ function brushPath(s,w,kind){
    only the dwell before the next card and what is drawn during it. One clock drives every motion, so a test can hold the
    whole moment at a given millisecond and photograph it (PRAISE_HOLD). */
 const MARK_STAR=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4l2.95 5.98 6.6.96-4.77 4.65 1.12 6.57L12 17.52 6.1 20.56l1.13-6.57L2.45 9.34l6.6-.96z"/></svg>`;
-let PRAISE_N=null;    /* the number the counter shows while a star is in flight; null = it shows the day's own total */
+let PRAISE_N=null;    /* v543: the number the counter shows from the last stroke of a card until the star lands on it; null = it shows the day's own total */
 let PRAISE_HOLD=null; /* tests only: hold the moment at this millisecond instead of running it */
 const praiseDay=()=>dayOf((S.settings.daily||{})[dayKey()]).w||0; /* the day's written points — More → Progress calls it "Written today" */
 const prEase=f=>f<0.5?2*f*f:1-Math.pow(-2*f+2,2)/2;
@@ -3497,13 +3501,12 @@ function praiseStart(clean){
   if(!r||!r.width) return {finish:()=>{}};
   const nodes=[]; let raf=0, landed=false, t0=performance.now();
   const add=(cls,html,st2)=>{ const e=document.createElement("div"); e.className=cls; if(html!=null) e.innerHTML=html; if(st2) Object.assign(e.style,st2); document.body.appendChild(e); nodes.push(e); return e; };
-  const total=praiseDay(), before=Math.max(0,total-1);
+  const total=praiseDay(), before=PRAISE_N?PRAISE_N.n:Math.max(0,total-1); /* v543: the number cardDone held back; the fallback is for a praise started without one */
   /* the answer block opens above the pad as the card is finished, so the pad can be pushed below the fold — the star and
      the ring start from the visible part of it, never off the screen where nobody would see them */
   const cx=r.left+r.width/2, cy=Math.min(Math.max(r.top+r.height/2,90),window.innerHeight-90);
   const FLY0=60, FLY1=620, POP1=980;
   /* the counter goes up first, holding the number from before this card, so the star has something to fly into */
-  const land=()=>{ if(landed) return; landed=true; PRAISE_N=null; setStats(); };
   PRAISE_N={n:before,gold:false}; setStats();
   const ss0=$("#stat-star"), tr=ss0?ss0.getBoundingClientRect():null;
   const star=add("prstar"+(clean?" gold":""),MARK_STAR);
@@ -3631,7 +3634,13 @@ function mountPad(card,d,c,tg,st,cur){
   const cardDone=async()=>{
     const first=!isRepeat(), n=tg.filter(x=>x.w).length, clean=tg.filter((x,j)=>x.w&&!st.helped.has(j)).length;
     const pts=clean+(clean===n&&st.maxMiss<=1?n:0); /* one point per written character, none for a helped one, the count again for a clean card (§ 6) */
-    if(pts){ bump("written",pts); dailyBump(dayKey(),"w",pts); }
+    /* v543 (H: "Punkte erst hochzählen, wenn der Stern nach oben geflogen ist, nicht schon nach dem letzten Strich. Quasi
+       dann. Wenn der Zähler gehighlighted wird." and "Warum wird kurz vorher nochmal ein Schritt zurück gezählt?"): the
+       points are written to the day's row here, as they always were — the record is the truth and nothing about the
+       arithmetic moves —, but the COUNTER keeps showing the number from before this card until the star lands on it.
+       Until v542 it went up at the last stroke and praiseStart then set it back to total-1 for the flight, which is both
+       a step backwards and a wrong number (a clean two-character card is worth 4, not 1). */
+    if(pts){ bump("written",pts); dailyBump(dayKey(),"w",pts); PRAISE_N={n:Math.max(0,praiseDay()-pts),gold:false}; }
     await checkCard(c); /* v515: written to the end — the card is checked */
     if(first){ await recordGrade(c,st.helped.size?"again":"good"); S.done++; /* a Skip counts as again (Q10) — due today, fails +1, the leech flag as today */
       const l=curList(), at=Math.min(l.length,curIdx()+1+REP_GAP); l.splice(at,0,c); /* the repeat pass, three cards on (§ 8.1) — in the walk while a character is locked */ }
@@ -3649,7 +3658,9 @@ function mountPad(card,d,c,tg,st,cur){
     const pw=document.querySelector(".card.study .padwrap"); let rc=null;
     if(pw){ pw.insertAdjacentHTML("beforeend",recapHTML(d)); rc=pw.lastElementChild; pw.classList.add("recapping"); requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); }); }
     let pr=null, fired=false, tm=0;
-    const go=()=>{ if(fired) return; fired=true; clearTimeout(tm); document.removeEventListener("pointerdown",onTap,true); if(pr) pr.finish(); if(rc){ rc.remove(); pw.classList.remove("recapping"); } adv(); };
+    const go=()=>{ if(fired) return; fired=true; clearTimeout(tm); document.removeEventListener("pointerdown",onTap,true);
+      if(pr) pr.finish(); else if(PRAISE_N){ PRAISE_N=null; setStats(); } /* v543: skipped before the star flew — the counter goes straight to the day's own total rather than keeping the held number */
+      if(rc){ rc.remove(); pw.classList.remove("recapping"); } adv(); };
     const onTap=e=>{ if(e.target.closest&&e.target.closest("button,a,input,textarea,.chip")) return; go(); };
     document.addEventListener("pointerdown",onTap,true);
     if(typeof PRAISE_HOLD==="number"){ pr=praiseStart(cleanCard); return; } /* held for a test: the star at once, nothing advances */
@@ -4617,6 +4628,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  543:"The star counter now counts up when the star lands on it, not at your last stroke — and it no longer dips by one on the way.",
   542:"Every character you finish shows large with its reading for a moment, and on a card with two rows of characters the page no longer jumps back to the top between them.",
   541:"Zoom into a card's photo and it stays zoomed: the mark around the word travels with the picture, and the picture glides on to the next character as you write.",
   540:"The line under the writing pad now leads with the character you are writing, and shows the translation alone — the whole explanation is one fold away, under Whole card.",
