@@ -738,7 +738,8 @@ body.noscroll{overflow:hidden}
 
 .padline{margin-top:10px;min-height:61px;font-size:15px;color:var(--label2);display:flex;flex-direction:column;align-items:center;gap:3px} /* two rows tall whatever the word (v518), so the pad above it is the same size on a one-character word */
 .padline[hidden]{display:none}
-.padline .plrow{display:flex;justify-content:center;gap:10px;align-items:baseline;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} /* the word, and under it the one character (v517) */
+.padline .plrow{display:flex;justify-content:center;gap:10px;align-items:baseline;max-width:100%;white-space:nowrap;overflow:hidden} /* the character, and under it its word (v540; the other way round v517–v539) */
+.padline .plrow>*{flex:none;min-width:0} .padline .plrow .mn{flex:0 1 auto;overflow:hidden;text-overflow:ellipsis} /* v540: a centred flex row slices its overflow off BOTH ends, and text-overflow on the row itself does nothing — the meaning is the one part that may shrink, and it ends in an ellipsis */
 .padline .hanzi{font-family:var(--hanzi);font-size:20px;color:var(--label)} .padline .hanzi b{color:var(--tint);font-weight:400} .padline .mono{font-weight:600}
 .padline .hanzi b.lock{color:var(--lock)} .padline .plock{display:inline-block;vertical-align:-1px;margin-right:4px;color:var(--lock)} .padline .plock svg{width:13px;height:13px;fill:currentColor} /* v526: the locked character in the lock colour in the line, the padlock before its word (blue since v528) */
 .padacts{display:flex;justify-content:center;gap:2px 14px;flex-wrap:wrap;margin-top:6px} .padacts .del{font-size:15px;padding:8px 6px;min-height:40px}
