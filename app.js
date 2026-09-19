@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=532; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=533; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -645,6 +645,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v533","the word being written marked on the photo, quietly"],
   ["app","v532","fold/unfold at startup: no frozen screen; Diagnostics' main-thread line"],
   ["app","v531","open card: the word's line under the row, Whole card at the foot"],
   ["app","v531","a hold on a character does nothing (the lock is off)"],
@@ -3004,7 +3005,7 @@ function renderStudy(main){
   if(pg&&!S.fullPic) fitPageCover(card,pg); /* D5: the multicard's picture cover-fitted around the card's own text */
   attachPicZoom(card.querySelector(".zone1 .picbox")); /* v514: pinch to zoom, one finger to pan (§ 4) */
   if(cur) padLine(d,cur); /* the line under the pad, always, for the character the pad is on (v518) */
-  spotChar(card,d); /* v520: the locked character lit on the photo */
+  spotChar(card,d,cur); /* v520: the locked character lit on the photo; v533: the word being written marked on it */
 }
 /* v527: the block sits under the pad, so opening it scrolls the card until the block stands above the tab bar (or, when it is
    taller than the room, until its head is under the top bar) instead of leaving it under the translucent bar; the detail's
@@ -3024,29 +3025,68 @@ const spotRatios=()=>[CARD_RATIO,16/9,2,4/3], SPOT_MS=320; /* a function, not an
 function charSpans(d,ch){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):frontLines(d), n=lines.length||1, out=[];
   lines.forEach((ln,li)=>{ const U=Math.max(0.01,lineUnits(ln)); let u=0; for(const c of [...ln]){ const w=lineUnits(c); if(c===ch) out.push({x:u/U,y:li/n,w:w/U,h:1/n}); u+=w; } });
   return out; }
-async function spotChar(card,d){
-  card.querySelectorAll(".spot").forEach(e=>e.remove()); const z=card.querySelector(".zone1"); if(z) z.classList.remove("spotting");
-  const ch=S.lockChar; if(!ch||!z) return;
-  const box=z.querySelector(".picbox"), page=!!(box&&box.classList.contains("page")); /* a v452 page front: the whole photo with the card's own region lit by v461's shadow — the character gets a ring on it, never a second shadow */
-  if(S.peek&&S.peek!==d.id) return; const f=d.frame; if(!f||f.a||!(f.w>0&&f.h>0)) return;
-  const img=z.querySelector(".signimg"), full=fullPhoto(d); if(!img||!full) return;
+/* THE PICTURE'S OWN MARKS (v520 for the locked character, v533 for the word — H: "Bitte ausgewählte Worte dezent im Bild
+   highlighten"): the geometry is derived once here and both marks are drawn from it, so they cannot drift and one render
+   decodes the photo once. `spans` are fractions of the TEXT's rectangle (charSpans, wordSpan); `place` maps one onto the
+   picture as it is rendered. Nothing per character or per word is stored on the card: the frame is the text's rectangle on
+   the photo (v244), the picture the 3:2 window around it (v519) or a split label's own frame (v362), the photo's lines share
+   the frame's height evenly and a line's characters share its width by their lineUnits (v339) — the estimate charBox has
+   made since v62. So it is soft by construction: on a sign whose characters are unevenly spaced the mark sits a little off,
+   and a card the re-cut stood down on gets no mark rather than one in the wrong place. */
+const PICSIZE=new Map(); /* the photo's own pixel size per card — a decode per render would otherwise cost more than everything else on the screen */
+async function spotGeom(card,d){
+  const z=card.querySelector(".zone1"); if(!z) return null;
+  const box=z.querySelector(".picbox"), page=!!(box&&box.classList.contains("page"));
+  if(S.peek&&S.peek!==d.id) return null; const f=d.frame; if(!f||f.a||!(f.w>0&&f.h>0)) return null;
+  const img=z.querySelector(".signimg"), full=fullPhoto(d); if(!img||!full) return null;
   if(!img.complete||!img.naturalWidth) await new Promise(r=>{ img.addEventListener("load",r,{once:true}); img.addEventListener("error",r,{once:true}); });
-  let pw=0,ph=0; try{ const bm=await createImageBitmap(full); pw=bm.width; ph=bm.height; bm.close(); }catch(e){ return; }
-  if(!img.isConnected||S.lockChar!==ch||!pw||!ph) return;
-  const nw=img.naturalWidth, nh=img.naturalHeight; if(!nw||!nh) return;
+  const key=d.shot||d.id; let ps=PICSIZE.get(key);
+  if(!ps){ try{ const bm=await createImageBitmap(full); ps={w:bm.width,h:bm.height}; bm.close(); }catch(e){ return null; } if(ps.w&&ps.h){ PICSIZE.set(key,ps); if(PICSIZE.size>40) PICSIZE.delete(PICSIZE.keys().next().value); } }
+  const pw=ps&&ps.w, ph=ps&&ps.h; if(!img.isConnected||!pw||!ph) return null;
+  const nw=img.naturalWidth, nh=img.naturalHeight; if(!nw||!nh) return null;
   let tx=f.x, ty=f.y, tw=f.w, th=f.h; /* the text's rectangle as fractions of the picture — the frame itself when the whole photo is shown */
   if(box&&!page){ const rect={x:f.x*pw,y:f.y*ph,w:f.w*pw,h:f.h*ph,a:0,lw:pw,lh:ph}, r=nw/nh, R=spotRatios().find(v=>Math.abs(r-v)<0.03);
     if(R){ const win=windowRect(rect,R); tx=(rect.x-win.x)/win.w; ty=(rect.y-win.y)/win.h; tw=rect.w/win.w; th=rect.h/win.h; }
     else if(Math.abs(r-rect.w/rect.h)<0.05){ tx=0; ty=0; tw=1; th=1; } /* a split label's picture is its frame */
-    else return; }
+    else return null; }
   const host=box||z, hb=host.getBoundingClientRect(), ib=img.getBoundingClientRect();
   let ix=ib.left-hb.left, iy=ib.top-hb.top, iw=ib.width, ih=ib.height;
   if(box&&!page){ const s=Math.min(ib.width/nw,ib.height/nh), w=nw*s, h=nh*s; ix+=(ib.width-w)/2; iy+=(ib.height-h)/2; iw=w; ih=h; } /* the rendered picture inside its box (object-fit:contain); a page front's picture is the whole photo at the rendered size fitPageCover gave it */
-  const spans=charSpans(d,ch); if(!spans.length) return;
-  z.classList.add("spotting");
-  spans.forEach((sp,i)=>{ const e=document.createElement("div"); e.className="spot"+((i||page)?" more":""); /* the first occurrence dims the rest of the picture; a second one is ringed, or the two shadows would darken it twice — and on a page front every one is ringed, since v461's shadow already stands */
-    e.style.left=(ix+iw*(tx+tw*sp.x)).toFixed(1)+"px"; e.style.top=(iy+ih*(ty+th*sp.y)).toFixed(1)+"px"; e.style.width=(iw*tw*sp.w).toFixed(1)+"px"; e.style.height=(ih*th*sp.h).toFixed(1)+"px";
-    host.appendChild(e); requestAnimationFrame(()=>requestAnimationFrame(()=>e.classList.add("on"))); });
+  return { host, page, z, put:(e,sp)=>{ e.style.left=(ix+iw*(tx+tw*sp.x)).toFixed(1)+"px"; e.style.top=(iy+ih*(ty+th*sp.y)).toFixed(1)+"px"; e.style.width=(iw*tw*sp.w).toFixed(1)+"px"; e.style.height=(ih*th*sp.h).toFixed(1)+"px"; } };
+}
+/* the word being written, marked on the photo (v533): the app already lights it on its tile (.chw.on) and reads it in the
+   line under the pad — this says WHERE it stands on the sign. Deliberately quiet: a tint ring with a white flank so it holds
+   on any photo colour, and a breath of tint inside; never the 9999px shadow the locked character's spotlight draws (v520),
+   which dims the whole picture. One mark, the word's own run of characters, and none for a single-character word that is the
+   whole text — there is nothing to point at then. */
+async function spotWord(card,d,x,g){
+  card.querySelectorAll(".wspot").forEach(e=>e.remove());
+  if(!x||!x.w||!x.word) return; const sp=wordSpan(d,x); if(!sp) return;
+  const geom=g||await spotGeom(card,d); if(!geom||!card.isConnected) return;
+  const e=document.createElement("div"); e.className="wspot"; geom.put(e,sp); geom.host.appendChild(e);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>e.classList.add("on")));
+}
+/* the word's own rectangle on the text: its characters are contiguous, so the run from wstart is one box of its photo line */
+function wordSpan(d,x){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):frontLines(d), n=lines.length||1;
+  const w=[...String(x.word||"")], from=x.wstart, to=from+w.length; if(!w.length) return null;
+  let pos=0;
+  for(let li=0;li<lines.length;li++){ const ln=[...lines[li]], end=pos+ln.length;
+    if(from>=pos&&to<=end){ const U=Math.max(0.01,lineUnits(lines[li]));
+      if(w.length===ln.length&&lines.length===1) return null; /* the word IS the whole text: nothing to single out */
+      let a=0; for(let k=0;k<from-pos;k++) a+=lineUnits(ln[k]);
+      let b=0; for(let k=from-pos;k<to-pos;k++) b+=lineUnits(ln[k]);
+      return {x:a/U,y:li/n,w:b/U,h:1/n}; }
+    pos=end; }
+  return null; }
+async function spotChar(card,d,cur){
+  card.querySelectorAll(".spot").forEach(e=>e.remove()); const z=card.querySelector(".zone1"); if(z) z.classList.remove("spotting");
+  const ch=S.lockChar, geom=await spotGeom(card,d); if(!geom||!card.isConnected) return;
+  await spotWord(card,d,cur,geom); /* v533: the word being written, on the same geometry */
+  if(!ch) return;
+  const spans=charSpans(d,ch); if(!spans.length||S.lockChar!==ch) return;
+  geom.z.classList.add("spotting");
+  spans.forEach((sp,i)=>{ const e=document.createElement("div"); e.className="spot"+((i||geom.page)?" more":""); /* the first occurrence dims the rest of the picture; a second one is ringed, or the two shadows would darken it twice — and on a page front every one is ringed, since v461's shadow already stands */
+    geom.put(e,sp); geom.host.appendChild(e); requestAnimationFrame(()=>requestAnimationFrame(()=>e.classList.add("on"))); });
 }
 /* the character row of a card (v518, shared by the study card, its carousel neighbour and the card detail so the three cannot
    drift): one button per target, the buttons of one word on one tile, each photo line its own group inside the one row (v517) */
@@ -4021,6 +4061,7 @@ function renderCardDetail(main,c){
     const lx=detailLit(d,tg); if(lx) padLine(d,lx); /* v531: the first word's line when nothing is tapped */
     chrowFit(dcard);
     const pg=frontPage(d); if(pg&&!S.fullPic) fitPageCover(dcard,pg); /* D5, as on the study card */
+    spotWord(dcard,d,lx); /* v533: the word whose line is showing, marked on the photo as in Learn */
     attachPicZoom(dcard.querySelector(".zone1 .picbox")); }
   const test=$("#d-test"); if(test) test.onclick=()=>{
     S.saved={queue:S.queue,idx:S.idx,done:S.done,ahead:S.ahead};
@@ -4434,6 +4475,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  533:"The word you are writing is marked on the photo as well — a quiet ring around it on the sign, so you can see where it stands.",
   531:"The open card under Cards now reads like the Learn card: the word's pinyin and meaning under the characters, and the whole card folded open at its foot. Pressing and holding a character to walk through its cards is switched off for now.",
   529:"A card can carry a short description in your language — what the text says and where you meet it. New cards get it with the AI check; under the meaning of an older card, Explain asks for it.",
   527:"In Learn the word you are writing shows its pinyin and meaning right above the pad, and the whole card — characters, pinyin and meaning — folds open at the foot of the card.",

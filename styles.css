@@ -703,6 +703,13 @@ body.noscroll{overflow:hidden}
 .foldbtn .tail{margin-left:auto;display:inline-flex;align-items:center;gap:8px} .foldbtn .tail i{margin-left:0}
 .foldbtn .pos{font-size:13px;font-weight:400;color:var(--label3);white-space:nowrap}
 /* the locked character lit on the photo (v520): v461's shadow around the character's own rectangle, faded in and out */
+/* the word being written, marked on the photo (v533, H: "Bitte ausgewählte Worte dezent im Bild highlighten"): a tint ring
+   with a thin white flank outside it, so it holds on a white sign and on a black panel alike, and a breath of tint inside.
+   It only marks — the dimming of everything else belongs to the locked character's spotlight below, and H asked for dezent;
+   a first cut drew a 2 px ring with a dark flank as well and read as a label rather than a hint (seen on the screenshot). */
+.wspot{position:absolute;border-radius:6px;box-shadow:inset 0 0 0 1.5px var(--tint),0 0 0 1px rgba(255,255,255,.85);background:transparent;opacity:0;transition:opacity .28s ease;pointer-events:none;z-index:2}
+.wspot.on{opacity:1;background:var(--tint-soft)}
+@media(prefers-reduced-motion:reduce){.wspot{transition:none}}
 .spot{position:absolute;border-radius:5px;box-shadow:0 0 0 1.5px rgba(255,255,255,.92),0 0 0 9999px rgba(0,0,0,0);transition:box-shadow .32s ease;pointer-events:none;z-index:3}
 .spot.on{box-shadow:0 0 0 1.5px rgba(255,255,255,.92),0 0 0 9999px rgba(0,0,0,.42)}
 .spot.more,.spot.more.on{box-shadow:0 0 0 1.5px rgba(255,255,255,.92)}
