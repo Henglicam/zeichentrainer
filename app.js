@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=540; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=541; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -649,6 +649,8 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v541","zoom into a photo and write: the mark stays on its word, and the picture follows the pad"],
+  ["app","v541","a red sign: the mark around the word is visible on it"],
   ["app","v540","a card whose meaning has a note in brackets: the line reads the character, then its word, and the note is gone"],
   ["app","v537","a fresh install: the first card whole, hint and all"],
   ["app","v538","a German, French or Spanish phone: one card, one tag, one export"],
@@ -3097,10 +3099,23 @@ async function spotGeom(card,d){
     else if(Math.abs(r-rect.w/rect.h)<0.05){ tx=0; ty=0; tw=1; th=1; } /* a split label's picture is its frame */
     else return null; }
   const host=box||z, hb=host.getBoundingClientRect(), ib=img.getBoundingClientRect();
-  let ix=ib.left-hb.left, iy=ib.top-hb.top, iw=ib.width, ih=ib.height;
-  if(box&&!page){ const s=Math.min(ib.width/nw,ib.height/nh), w=nw*s, h=nh*s; ix+=(ib.width-w)/2; iy+=(ib.height-h)/2; iw=w; ih=h; } /* the rendered picture inside its box (object-fit:contain); a page front's picture is the whole photo at the rendered size fitPageCover gave it */
-  return { host, page, z, put:(e,sp)=>{ e.style.left=(ix+iw*(tx+tw*sp.x)).toFixed(1)+"px"; e.style.top=(iy+ih*(ty+th*sp.y)).toFixed(1)+"px"; e.style.width=(iw*tw*sp.w).toFixed(1)+"px"; e.style.height=(ih*th*sp.h).toFixed(1)+"px"; } };
+  /* v541 (H: "Bei zoomen/schieben muss der Highlight frame im Bild mitwandern"): the marks are drawn in the picture's own
+     UN-zoomed geometry and the layer they sit in carries the zoom's transform, so a zoomed picture never needs the marks
+     recomputed. While the picture is enlarged its rendered rect is the transformed one, so the zoom's own r0 — the rect it
+     measured before it began — is what the marks are placed against. */
+  const zm=box&&box._zoom, zoomed=!!(zm&&zm.s>1&&zm.r0);
+  let ix,iy,iw,ih;
+  if(zoomed){ ix=zm.r0.x; iy=zm.r0.y; iw=zm.r0.w; ih=zm.r0.h; }
+  else { ix=ib.left-hb.left; iy=ib.top-hb.top; iw=ib.width; ih=ib.height; }
+  if(box&&!page){ const s=Math.min(iw/nw,ih/nh), w=nw*s, h=nh*s; ix+=(iw-w)/2; iy+=(ih-h)/2; iw=w; ih=h; } /* the rendered picture inside its box (object-fit:contain); a page front's picture is the whole photo at the rendered size fitPageCover gave it */
+  const layer=spotLayer(host);
+  return { host:layer, box:host, page, z, zoom:zm||null,
+    put:(e,sp)=>{ const r={x:ix+iw*(tx+tw*sp.x),y:iy+ih*(ty+th*sp.y),w:iw*tw*sp.w,h:ih*th*sp.h};
+      e.style.left=r.x.toFixed(1)+"px"; e.style.top=r.y.toFixed(1)+"px"; e.style.width=r.w.toFixed(1)+"px"; e.style.height=r.h.toFixed(1)+"px"; return r; } };
 }
+/* one layer per picture box for everything drawn ON the photo (v541): it is the element the zoom transforms beside the
+   picture itself, so a mark placed in the picture's own coordinates travels with a pinch or a pan for free. */
+function spotLayer(host){ let l=host.querySelector(":scope > .spotlayer"); if(!l){ l=document.createElement("div"); l.className="spotlayer"; host.appendChild(l); } return l; }
 /* the word being written, marked on the photo (v533): the app already lights it on its tile (.chw.on) and reads it in the
    line under the pad — this says WHERE it stands on the sign. Deliberately quiet: a tint ring with a white flank so it holds
    on any photo colour, and a breath of tint inside; never the 9999px shadow the locked character's spotlight draws (v520),
@@ -3110,8 +3125,12 @@ async function spotWord(card,d,x,g){
   card.querySelectorAll(".wspot").forEach(e=>e.remove());
   if(!x||!x.w||!x.word) return; const sp=wordSpan(d,x); if(!sp) return;
   const geom=g||await spotGeom(card,d); if(!geom||!card.isConnected) return;
-  const e=document.createElement("div"); e.className="wspot"; geom.put(e,sp); geom.host.appendChild(e);
+  const e=document.createElement("div"); e.className="wspot"; const r=geom.put(e,sp); geom.host.appendChild(e);
   requestAnimationFrame(()=>requestAnimationFrame(()=>e.classList.add("on")));
+  /* v541 (H: "Wenn ins bild reingezoomt ist, muss das gezoomte Bild mit auf den nächsten character fahren (geschmeidiger
+     Move, nicht ruckartig springen)"): while the picture is enlarged it follows the pad onto the word being written, on a
+     transition rather than a jump. At rest (s === 1) nothing moves — the whole picture is already on screen. */
+  if(geom.zoom&&geom.zoom.follow) requestAnimationFrame(()=>{ if(e.isConnected) geom.zoom.follow(r.x+r.w/2,r.y+r.h/2); });
 }
 /* the word's own rectangle on the text: its characters are contiguous, so the run from wstart is one box of its photo line */
 function wordSpan(d,x){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):frontLines(d), n=lines.length||1;
@@ -3273,19 +3292,40 @@ function fitPageCover(card,pg){
    the DOM is rebuilt. While enlarged the box carries touch-action none and its pointer events stop at the box, so neither the
    page's scroll nor the carousel (v417) takes the pan. On a page front (D5) the pagewrap moves as one, so the regions stay on
    their texts. The v65 sheet's attachRefView does the same on a canvas; this is the element itself, transformed. */
-const ZOOM_MAX=5;
+const ZOOM_MAX=5, GLIDE_MS=380;
+/* THE ZOOM SURVIVES A RE-RENDER OF THE SAME PICTURE (v541). Until v540 it did not, and that is the defect under H's
+   "das gezoomte Bild muss mit auf den nächsten character fahren": charDone calls render() to move the pad to the next
+   character, which rebuilds the card, and a fresh attachPicZoom started at scale 1 — so zooming in and writing one
+   character threw the zoom away. It is kept per picture (the card, and separately its whole-photo view, which is a
+   different picture), in memory only, and is dropped the moment another picture is shown. */
+let PIC_ZOOM=null;
+const zoomKey=()=>{ const d=S.mode==="cards"?cardOf(S.detail):cardOf(curList()[curIdx()]); return d?d.id+(S.fullPic?":full":"")+(S.peek?":peek":""):null; };
 function attachPicZoom(box){
   const tg=box&&(box.querySelector(".pagewrap")||box.querySelector(".signimg")); if(!tg) return;
+  const key=zoomKey();
   const v={s:1,tx:0,ty:0,r0:null}, pts=new Map(); let last=null, moved=false, eat=false;
   tg.style.transformOrigin="0 0";
   const rel=e=>{ const b=box.getBoundingClientRect(); return {x:e.clientX-b.left,y:e.clientY-b.top}; };
   const measure=()=>{ if(v.s===1||!v.r0){ const b=box.getBoundingClientRect(), r=tg.getBoundingClientRect(); v.r0={x:r.left-b.left,y:r.top-b.top,w:r.width,h:r.height}; } };
   const apply=()=>{ const r=v.r0, bw=box.clientWidth, bh=box.clientHeight, cw=r.w*v.s, ch=r.h*v.s;
     v.tx=cw<=bw?(bw-cw)/2-r.x:Math.min(-r.x,Math.max(bw-cw-r.x,v.tx)); v.ty=ch<=bh?(bh-ch)/2-r.y:Math.min(-r.y,Math.max(bh-ch-r.y,v.ty));
-    tg.style.transform=v.s>1?`translate(${v.tx}px,${v.ty}px) scale(${v.s})`:""; box.style.touchAction=v.s>1?"none":""; box.classList.toggle("zoomed",v.s>1); };
+    tg.style.transform=v.s>1?`translate(${v.tx}px,${v.ty}px) scale(${v.s})`:""; box.style.touchAction=v.s>1?"none":""; box.classList.toggle("zoomed",v.s>1);
+    /* v541: the marks drawn on the photo ride the same move. The layer sits at the box's own origin while the picture sits
+       at r, so the translation that puts a picture point where the picture's own transform puts it is r*(1-s)+t — derived
+       once here rather than by re-placing every mark, which would need the geometry (and a photo decode) on every frame.
+       --wz counter-scales the ring widths, so a 1.5 px ring stays 1.5 px at 5x instead of becoming 7.5. */
+    const lay=box.querySelector(":scope > .spotlayer");
+    if(lay){ lay.style.transform=v.s>1?`translate(${(r.x*(1-v.s)+v.tx).toFixed(2)}px,${(r.y*(1-v.s)+v.ty).toFixed(2)}px) scale(${v.s})`:""; lay.style.setProperty("--wz",v.s>1?(1/v.s).toFixed(3):"1"); }
+    PIC_ZOOM=key&&v.s>1?{key,s:v.s,tx:v.tx,ty:v.ty}:null; };
+  /* pan so a point of the picture, given in the box's own un-zoomed coordinates, sits in the middle of the box — clamped by
+     apply() like any pan, so a word at the picture's edge comes as close as the edge allows and no gap opens */
+  let glideT=null;
+  const glide=on=>{ box.classList.toggle("zgl",!!on); if(glideT) clearTimeout(glideT); glideT=on?setTimeout(()=>{ box.classList.remove("zgl"); glideT=null; },GLIDE_MS+80):null; };
+  v.follow=(cx,cy)=>{ if(v.s<=1||!v.r0) return; const r=v.r0;
+    v.tx=box.clientWidth/2-r.x-(cx-r.x)*v.s; v.ty=box.clientHeight/2-r.y-(cy-r.y)*v.s; glide(true); apply(); };
   const summary=()=>{ const a=[...pts.values()]; if(a.length>=2){ return {x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2,d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}; } return a.length?{x:a[0].x,y:a[0].y,d:0}:null; };
   const zoomAt=(m,s2)=>{ s2=Math.min(ZOOM_MAX,Math.max(1,s2)); const r=v.r0, px=(m.x-r.x-v.tx)/v.s, py=(m.y-r.y-v.ty)/v.s; v.s=s2; v.tx=m.x-r.x-px*s2; v.ty=m.y-r.y-py*s2; apply(); };
-  box.addEventListener("pointerdown",e=>{ if(e.button) return; measure(); pts.set(e.pointerId,rel(e)); last=summary(); moved=false;
+  box.addEventListener("pointerdown",e=>{ if(e.button) return; glide(false); measure(); pts.set(e.pointerId,rel(e)); last=summary(); moved=false;
     if(pts.size>=2||v.s>1){ e.stopPropagation(); e.preventDefault(); try{ box.setPointerCapture(e.pointerId); }catch(x){} } });
   box.addEventListener("pointermove",e=>{ if(!pts.has(e.pointerId)) return; pts.set(e.pointerId,rel(e)); const cur=summary(); if(!last||!cur){ last=cur; return; }
     if(pts.size>=2){ e.stopPropagation(); e.preventDefault(); moved=true; if(last.d>0&&cur.d>0) zoomAt(cur,v.s*cur.d/last.d); v.tx+=cur.x-last.x; v.ty+=cur.y-last.y; apply(); }
@@ -3295,6 +3335,13 @@ function attachPicZoom(box){
   box.addEventListener("pointerup",up); box.addEventListener("pointercancel",up);
   box.addEventListener("click",e=>{ if(eat){ eat=false; e.stopPropagation(); e.preventDefault(); } },true); /* a pan's closing click is not the tap that swaps the picture */
   box.addEventListener("wheel",e=>{ e.preventDefault(); measure(); zoomAt(rel(e),v.s*Math.pow(1.1,-e.deltaY/100)); },{passive:false});
+  /* the stored zoom is put back once the picture really has its size — measure() is only allowed to take a fresh r0 while
+     the view is at rest, so the restore resets to rest first and then applies the remembered scale and offset */
+  if(PIC_ZOOM&&PIC_ZOOM.key!==key) PIC_ZOOM=null; /* the zoom belongs to the picture on screen, not to the app: another card, or the same card's whole-photo view, starts at rest */
+  const restore=()=>{ if(!PIC_ZOOM||PIC_ZOOM.key!==key||!box.isConnected||!box.clientWidth) return false;
+    const st=PIC_ZOOM; v.s=1; v.r0=null; measure(); if(!v.r0||!v.r0.w) return false;
+    v.s=Math.min(ZOOM_MAX,Math.max(1,st.s)); v.tx=st.tx; v.ty=st.ty; apply(); return true; };
+  if(!restore()){ const img=box.querySelector(".signimg"); if(img&&!img.complete) img.addEventListener("load",restore,{once:true}); else requestAnimationFrame(restore); }
   box._zoom=v; /* used by the tests */
 }
 /* Not yet checked (v515, § 9 of SPEC-flashcard-layout.md — H: "All new Cards flagged for review, must manually unflag", then,
@@ -4538,6 +4585,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  541:"Zoom into a card's photo and it stays zoomed: the mark around the word travels with the picture, and the picture glides on to the next character as you write.",
   540:"The line under the writing pad now leads with the character you are writing, and shows the translation alone — the whole explanation is one fold away, under Whole card.",
   537:"The hint under your first cards is no longer cut off by the tab bar, and the admin row, the empty deck and a few dictionary notes are tidied up.",
   536:"Ask AI under More → Review queue works again, so a card you flag can be checked; and a card made from a multicard names it again and takes you back to it.",

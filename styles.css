@@ -714,12 +714,21 @@ body.noscroll{overflow:hidden}
    with a thin white flank outside it, so it holds on a white sign and on a black panel alike, and a breath of tint inside.
    It only marks — the dimming of everything else belongs to the locked character's spotlight below, and H asked for dezent;
    a first cut drew a 2 px ring with a dark flank as well and read as a label rather than a hint (seen on the screenshot). */
-.wspot{position:absolute;border-radius:6px;box-shadow:inset 0 0 0 1.5px var(--tint),0 0 0 1px rgba(255,255,255,.85);background:transparent;opacity:0;transition:opacity .28s ease;pointer-events:none;z-index:2}
+/* everything drawn ON the photo lives in one layer the zoom transforms beside the picture (v541), so a mark travels with a
+   pinch or a pan. --wz is 1/scale, so a ring keeps its width instead of growing fivefold when the picture is enlarged. */
+.spotlayer{position:absolute;inset:0;pointer-events:none;transform-origin:0 0;z-index:2}
+.picbox.zgl>.spotlayer,.picbox.zgl .signimg,.picbox.zgl .pagewrap{transition:transform .38s cubic-bezier(.22,.61,.36,1)} /* v541: the picture follows the pad onto the next word on a glide, never a jump; the finger's own pan is never on a transition */
+@media(prefers-reduced-motion:reduce){.picbox.zgl>.spotlayer,.picbox.zgl .signimg,.picbox.zgl .pagewrap{transition:none}}
+/* v541 (H: "Highlight character auf rotem Hintergrund muss besser sichtbar sein"): the ring was a tint line, which a red
+   shop front swallows. It is a white core between two dark flanks now — v461's own finding, that the boundary is carried by
+   the EDGE between the runs and so survives a white sign, a black panel and a red one alike — with the tint kept as the wash
+   inside, where it still says whose mark this is on an ordinary photo. */
+.wspot{position:absolute;border-radius:calc(6px*var(--wz,1));box-shadow:inset 0 0 0 calc(1.6px*var(--wz,1)) rgba(255,255,255,.96),inset 0 0 0 calc(3.2px*var(--wz,1)) rgba(0,0,0,.42),0 0 0 calc(1.4px*var(--wz,1)) rgba(0,0,0,.42);background:transparent;opacity:0;transition:opacity .28s ease;pointer-events:none;z-index:2}
 .wspot.on{opacity:1;background:var(--tint-soft)}
 @media(prefers-reduced-motion:reduce){.wspot{transition:none}}
-.spot{position:absolute;border-radius:5px;box-shadow:0 0 0 1.5px rgba(255,255,255,.92),0 0 0 9999px rgba(0,0,0,0);transition:box-shadow .32s ease;pointer-events:none;z-index:3}
-.spot.on{box-shadow:0 0 0 1.5px rgba(255,255,255,.92),0 0 0 9999px rgba(0,0,0,.42)}
-.spot.more,.spot.more.on{box-shadow:0 0 0 1.5px rgba(255,255,255,.92)}
+.spot{position:absolute;border-radius:calc(5px*var(--wz,1));box-shadow:0 0 0 calc(1.5px*var(--wz,1)) rgba(255,255,255,.92),0 0 0 9999px rgba(0,0,0,0);transition:box-shadow .32s ease;pointer-events:none;z-index:3}
+.spot.on{box-shadow:0 0 0 calc(1.5px*var(--wz,1)) rgba(255,255,255,.92),0 0 0 9999px rgba(0,0,0,.42)}
+.spot.more,.spot.more.on{box-shadow:0 0 0 calc(1.5px*var(--wz,1)) rgba(255,255,255,.92)}
 .card.study .zone1.spotting{overflow:hidden;border-radius:var(--rc)} /* the whole-photo view has no box to clip the shadow */
 @media(prefers-reduced-motion:reduce){.spot{transition:none}}
 /* ===== the praise after a finished word (v517): the counter in the bar, the star that flies into it, the ring =====
