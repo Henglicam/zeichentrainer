@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=525; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=526; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -644,6 +644,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v526","lock: the word first; hold releases"],
   ["app","v525","word row: outline + divider only; lock green"],
   ["app","v524","a session runs short → long in each group"],
   ["app","v523","after a write: the card large over the pad, 3 s"],
@@ -2546,7 +2547,7 @@ const GUIDE=()=>[
     t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. A new card counts as not yet checked until you have written it in Learn or opened it, and the filter shows those alone; flag a card yourself when something looks wrong.")]},
   {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. The photo is the cue, the characters under it are the buttons, and the write pad is the answer: trace the lit stroke, and the pad moves on by itself — character by character, then to the next card. Four characters a line and two lines photograph best.")+" "+t("A card made from a multicard shows the multicard's whole picture with a frame around its own text, and names the multicard under the meaning; tap that name to look the multicard up, and ← Back brings you back to the card."),
     t("Pinyin and meaning sit folded under the buttons; open them when you need them, or write the whole card and they open by themselves. Stuck on a stroke? Show me draws it, Skip fills it in for you. A card you wrote comes round once more a few cards later, with less of the template each time you know it. Nothing due? Pull the next cards forward."),
-    t("Swipe the card left or right to pick another one — nothing is graded, and a card you skip stays due for next time.")+" "+t("Press and hold a character to walk through every card that has it; tap it, or press and hold again, to come back.")]},
+    t("Swipe the card left or right to pick another one — nothing is graded, and a card you skip stays due for next time.")+" "+t("Press and hold a character to walk through every card that has it; press and hold it again to come back.")]},
   {h:t("Cards"),p:[t("All your cards, newest first. Once a photo has made a multicard, two tabs split them — Cards and Multicards. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included. Push an open card sideways for the next one in the list."),
     t("Tap a text on a multicard to look it up, and press Generate flashcard to make a card of it. Learn studies the flashcards, never the multicard itself."),
     t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together; old photos are cleared out under More → Your data → Photos. Tap the star on a card to mark it as one you care about — the filter then shows them alone, and Learn studies all of them, due or not.")]},
@@ -2895,12 +2896,13 @@ function renderStudy(main){
      pad level (§ 8.1); the Done capsule counts it once. */
   main.classList.remove("center"); /* the card takes the pane from the top; the pad measures what is left below it (fitPad) */
   const tg=padTargets(d), st=padState(c), rep=isRepeat(), ansOpen=!!S.ansOpen;
-  if(st.i<0||st.i>=tg.length||!tg[st.i].w) st.i=tg.findIndex((x,i)=>x.w&&!st.done.has(i)); /* the first unwritten character is current when the card lands */
+  if(st.i<0||st.i>=tg.length||!tg[st.i].w){ /* when the card lands: the locked character first while a character is locked (v526, H: "soll zunächst immer das Wort mit dem character ausgewählt sein, auch wenn ich die Karten swipe"), else the first unwritten one */
+    st.i=walking()?tg.findIndex((x,i)=>x.w&&x.ch===S.lockChar&&!st.done.has(i)):-1; if(st.i<0) st.i=tg.findIndex((x,i)=>x.w&&!st.done.has(i)); }
   const cur=tg[st.i]||null;
   const btn=x=>{ const i=tg.indexOf(x), cls=["ch",st.done.has(i)?"done":"",cur===x?"cur":"",x.w?"":"num",S.lockChar&&x.ch===S.lockChar?"lock":""].filter(Boolean).join(" "); /* lock: the long-pressed character, on every card of its walk (v513) */
     return `<button class="${cls}" data-i="${i}" ${x.w?"":`aria-disabled="true"`}>${esc(x.glyph)}${S.lockChar&&x.ch===S.lockChar?`<i class="lockmark" aria-hidden="true">${MARK_LOCK}</i>`:""}</button>`; }; /* lockmark: the padlock (v518, H: "Locked on/off should be more obvious, maybe with a padlock icon?") */
   const litWi=cur?cur.wi:null; /* v518: the lit word is the word of the character in the pad, so it follows the pad by itself */
-  const chrow=chrowHTML(d,tg,btn,litWi);
+  const chrow=chrowHTML(d,tg,btn,litWi,S.lockChar); /* v526: the word holding the locked character carries the green outline */
   const pg=frontPage(d), picHTML=frontPic(d,{page:true,fixed:true}); /* v517: one box shape on the study card */
   const back=`${backHTML(d,{noParts:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}
       <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button></div>`;
@@ -2928,7 +2930,7 @@ function renderStudy(main){
   const goTo=stepCard; /* the chevrons ‹ › beside the pad are gone (v520, H's "A" on the three ways offered: "that design won't win an award … better ideas?") — the swipe is the way from card to card since v518 starts anywhere, and the count in the helper row says where you are */
   card.querySelectorAll(".chrow .ch").forEach(b=>{ const i=+b.dataset.i, x=tg[i]; if(!x) return;
     b.onclick=e=>{ e.stopPropagation();
-      if(S.lockChar&&x.ch===S.lockChar){ unlockChar(); return; } /* the tap on the locked character releases it (§ 7, H: "Tippen erneut auf highlit character exits it") */
+      /* v526: a tap on the locked character no longer releases it (H: "unlock durch einfaches tippen … Sollte jedoch longpress sein") — it only puts the character into the pad, as any tap does; the hold below is the release */
       if(!x.w){ padLine(d,x); return; } /* a number with its unit is one button and not writable: its line shows, the pad stays on the last character (§ 5) */
       /* a tap puts this character into the pad; its word lights and the line under the pad reads it (v517), and since v518
          the line is always there and follows the pad by itself (H: "when automatically jumping to next, pinyin and meaning
@@ -2936,7 +2938,7 @@ function renderStudy(main){
       st.i=i; st.k=0; st.miss=0; st.hint=false; st.free.length=0; render(); };
     /* press and hold locks the character and walks every card that has it (v513, § 7 — the v354 gesture, buzz included); a
        long press on another character moves the lock; not from a single-card test, whose walk is the list's own */
-    if(x.w&&!S.single) longPress(b,()=>S.lockChar&&x.ch===S.lockChar?unlockChar():lockChar(x.ch,c)); }); /* v518: pressing and holding the locked character releases it too (H: "I don't get out of the character locked mode anymore" — a second hold re-locked it) */
+    if(x.w&&!S.single) longPress(b,()=>S.lockChar&&x.ch===S.lockChar?unlockChar():lockChar(x.ch,c)); }); /* v518: pressing and holding the locked character releases it (H: "I don't get out of the character locked mode anymore" — a second hold re-locked it); since v526 the hold is the only release */
   /* the closed card is swiped to pick another card of the session (v414/v417): the whole card is the surface but the pad,
      which takes the finger for a stroke, and the buttons. The answer block being open no longer stands the swipe down —
      there are no grades that own the screen any more. */
@@ -2990,10 +2992,10 @@ async function spotChar(card,d){
 }
 /* the character row of a card (v518, shared by the study card, its carousel neighbour and the card detail so the three cannot
    drift): one button per target, the buttons of one word on one tile, each photo line its own group inside the one row (v517) */
-function chrowHTML(d,tg,btn,litWi){
+function chrowHTML(d,tg,btn,litWi,lockCh){ /* lockCh (v526): every word that holds the locked character carries .lockw — the green outline, one colour for "locked" on the tile, the word and the line */
   const lines=(d.kind==="sign"?String(d.c).split("\n"):frontLines(d)).map(l=>[...l].length); /* characters per photo line, so zone 2 keeps the photo's rows (§ 5) */
   const rows=[]; { let k=0, pos=0; for(const n of (lines.length?lines:[Infinity])){ const row=[]; while(k<tg.length&&(tg[k].pos<pos+n||n===Infinity)){ row.push(tg[k]); k++; } pos+=n; if(row.length) rows.push(row); } while(k<tg.length){ rows.push(tg.slice(k)); k=tg.length; } }
-  const groupRow=row=>{ const out=[]; let g=null; for(const x of row){ if(!g||g.wi!==x.wi){ g={wi:x.wi,items:[]}; out.push(g); } g.items.push(x); } return out.map(g=>`<span class="chw${g.wi===litWi?" on":""}" data-wi="${g.wi}">${g.items.map(btn).join("")}</span>`).join(""); };
+  const groupRow=row=>{ const out=[]; let g=null; for(const x of row){ if(!g||g.wi!==x.wi){ g={wi:x.wi,items:[]}; out.push(g); } g.items.push(x); } return out.map(g=>`<span class="chw${g.wi===litWi?" on":""}${lockCh&&g.items.some(x=>x.w&&x.ch===lockCh)?" lockw":""}" data-wi="${g.wi}">${g.items.map(btn).join("")}</span>`).join(""); };
   return `<div class="chrow">${rows.map(r=>`<div class="chline">${groupRow(r)}</div>`).join("")}</div>`;
 }
 /* EVERY CHARACTER ON SCREEN (v519, H: "you can't see all characters at once anymore. A tester just got confused because she
@@ -3073,12 +3075,13 @@ let _cwTimer=null;
 function bumpWrite(ch,n){ const m=charWrites(); m[ch]=Math.max(0,(m[ch]||0)+n); const keys=Object.keys(m); if(keys.length>WRITES_MAX){ keys.sort((a,b)=>m[a]-m[b]); while(keys.length>WRITES_MAX) delete m[keys.shift()]; } S.settings.charWrites=m; clearTimeout(_cwTimer); _cwTimer=setTimeout(()=>{ setSetting("charWrites",m).catch(()=>{}); },500); }
 function padLevel(c,x,st){ const key=c+":"+x.pos; if(st.lv[key]) return st.lv[key]; const w=S.wroteAt&&S.wroteAt[key]; return st.lv[key]=w?(w.helped?w.lv:Math.min(3,w.lv+1)):startLevel(x.glyph); } /* the repeat pass asks one level up, a helped character the same level again */
 /* the neighbour's character row for the carousel's peer: plain buttons, no state, the same groups (v518) */
-function peerRowHTML(nd){ const tg=padTargets(nd); return chrowHTML(nd,tg,x=>`<button class="ch${x.w?"":" num"}">${esc(x.glyph)}</button>`,null); }
+function peerRowHTML(nd){ const tg=padTargets(nd), lk=S.lockChar; return chrowHTML(nd,tg,x=>`<button class="ch${x.w?"":" num"}${lk&&x.ch===lk?" lock":""}">${esc(x.glyph)}${lk&&x.ch===lk?`<i class="lockmark" aria-hidden="true">${MARK_LOCK}</i>`:""}</button>`,null,lk); } /* v526: the neighbour shows the lock as the card will, so the swipe's snap changes nothing */
 /* the line under the pad (zone 5): the WORD the current character belongs to, its pinyin and meaning as the parts row gives
    them, the current character marked — always there since v518, and the single character's own reading under it (v517) */
 async function padLine(d,x){ const box=$("#padline"); if(!box) return; const c=box.closest(".card.study"); try{ await padLineFill(box,d,x); } finally{ if(c&&c._fitPad&&box.isConnected) c._fitPad(); } } /* v521: the pad is measured again once the line has its content */
 async function padLineFill(box,d,x){ box.hidden=false;
-  const w=x.word||x.ch, mark=[...w].map((ch,i)=>x.w&&i===x.pos-x.wstart?`<b>${esc(ch)}</b>`:esc(ch)).join(""); /* the word with the current character marked */
+  const lk=S.lockChar&&x.w?S.lockChar:null; /* v526: the locked character is green in the line as on its tile (H: "ah, das ist character xx, wie er auch im wort yy vorkommt") */
+  const w=x.word||x.ch, mark=(lk&&[...w].includes(lk)?`<i class="plock" aria-hidden="true">${MARK_LOCK}</i>`:"")+[...w].map((ch,i)=>ch===lk?`<b class="lock">${esc(ch)}</b>`:x.w&&i===x.pos-x.wstart?`<b>${esc(ch)}</b>`:esc(ch)).join(""); /* the word with the current character marked, the locked one green */
   const row=(h,py,m)=>`<div class="plrow"><span class="hanzi">${h}</span>${py?`<span class="mono">${esc(py)}</span>`:""}${m?`<span>${esc(m)}</span>`:""}</div>`;
   if(!x.w){ box.innerHTML=row(esc(w),"",latinUnitMeaning(w)||t("A number, read as it is.")); return; }
   box.innerHTML=row(mark,"","")+`<div class="plrow"><span class="badge">…</span></div>`;
@@ -3097,7 +3100,7 @@ async function padLineFill(box,d,x){ box.hidden=false;
       const syl=String(py||"").trim().split(/\s+/), k=x.pos-x.wstart;
       const cpy=syl.length===chars.length&&syl[k]?syl[k]:pinyinPro.pinyin(one,{toneType:"symbol"});
       const cm=cleanSense(bestSense(one)||((DICT&&DICT.get(one))||""));
-      sub=row(`<b>${esc(one)}</b>`,cpy,cm||t("not in the dictionary"));
+      sub=row(`<b${one===lk?' class="lock"':""}>${esc(one)}</b>`,cpy,cm||t("not in the dictionary"));
     }
     if(!box.isConnected) return;
     box.innerHTML=row(mark,py,m||t("not in the dictionary"))+sub;
@@ -3443,7 +3446,7 @@ function logPadStroke(x,k,ok,dist){ DRAWLOG.push({t:Date.now(),pad:x?x.glyph:"",
    still due, so the next session's queue picks it up). Only while the back is closed; once it is open the grades own the screen. */
 const SW_SLOP=12, SW_MIN=60, SW_GAP=16, SW_MS=220;
 /* the closed card is pushed sideways and the next one slides in from the other side and snaps into place (v414, the carousel of v417 — H: "Ich moechte die Karten quasi nach links schieben und die naechste Karte kommt von rechts rein und rastet geschmeidig ein … Die muessen nicht so zur Seite wegkippen wie bei Tinder"). Nothing is graded: only S.idx moves; a card swiped past returns in the next session, not in this one (v417). */
-function swipeHint(d){ return showHints()?`<div class="hint">${t("Trace the lit stroke; the pad moves on by itself.")}${curList().length>1?" "+t("Swipe left or right to pick another card."):""} ${t("Press and hold a character to walk through every card that has it; tap it, or press and hold again, to come back.")}</div>`:""; } /* v512: the reveal hint went with the reveal */
+function swipeHint(d){ return showHints()?`<div class="hint">${t("Trace the lit stroke; the pad moves on by itself.")}${curList().length>1?" "+t("Swipe left or right to pick another card."):""} ${t("Press and hold a character to walk through every card that has it; press and hold it again to come back.")}</div>`:""; } /* v512: the reveal hint went with the reveal */
 function wireSwipe(card,o){
   /* o: {n, idx, peer(i) -> the neighbour's inner HTML or null, go(i), centred} — the caller owns the list and what a
      move means, so the same gesture serves Learn's session queue and the Cards list's own order (v445) */
@@ -4337,6 +4340,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  526:"A character you press and hold opens every card of its walk on that character inside its word — green on the button, on the word and in the line under the pad — and only another press and hold releases it.",
   524:"Every session starts with its short cards and works up to the long ones — inside the due cards and again inside the new ones.",  523:"After you finish writing a card, it shows once more, large — characters, pinyin and meaning — for a few seconds before the star flies; tap to move on sooner.",
   520:"The arrows beside the writing pad are gone — swipe from anywhere but the pad, and a count under it says where you are; a character you press and hold is lit on the photo.",
   519:"The picture on every card is 3:2 now — taller than before, with more of the photo around a one-line sign — and your cards are cut again once to match. A long text shows every character at once, smaller if it must.",
