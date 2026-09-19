@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=521; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=522; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -639,7 +639,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["app","v521","count whole above the bar; Diag fit"],
+  ["app","v522","'6 of 66' in the fold row; big 2-row tiles"],
   ["app","v520","no chevrons; '3 of 12' under the pad"],
   ["app","v520","locked char lit on the photo, soft fade"],
   ["app","v519","every photo box 3:2; deck cut again (v5)"],
@@ -2901,10 +2901,10 @@ function renderStudy(main){
     ${S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:""}
     <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}${d.flag||d.unchecked?`<button class="picflag${d.flag?" on":" new"}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}" title="${d.flag?"":esc(t("Not yet checked"))}">${d.flag?"⚑":"⚐"}</button>`:""}</div>
     ${chrow}
-    <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Pinyin and meaning")}</span>${rep?`<span class="pill again">${t("Again")}</span>`:""}<i aria-hidden="true">⌄</i></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
+    <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Pinyin and meaning")}</span>${rep?`<span class="pill again">${t("Again")}</span>`:""}<span class="tail">${!rep&&list.length>1&&!S.single?/* v522: the count in the fold row; on a repeat pass the Again pill takes the slot */`<span class="pos">${esc(t("{0} of {1}",li+1,list.length))}</span>`:""}<i aria-hidden="true">⌄</i></span></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
     <div class="padwrap"><canvas class="wpad" id="wpad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas></div>
     <div class="padline" id="padline"></div>
-    <div class="padacts" id="padacts">${list.length>1&&!S.single?`<span class="pos">${esc(t("{0} of {1}",li+1,list.length))}</span>`:""}${noTmpl?`<button class="del" id="pad-undo">${t("pad:Undo")}</button>`:""}<button class="del" id="pad-show" hidden>${t("Show me")}</button><button class="del" id="pad-skip" hidden>${t("Skip")}</button><button class="del" id="pad-done" hidden>${t("Done")}</button>${noTmpl?`<button class="del" id="pad-clear">${t("Clear")}</button>`:""}</div>
+    <div class="padacts" id="padacts">${noTmpl?`<button class="del" id="pad-undo">${t("pad:Undo")}</button>`:""}<button class="del" id="pad-show" hidden>${t("Show me")}</button><button class="del" id="pad-skip" hidden>${t("Skip")}</button><button class="del" id="pad-done" hidden>${t("Done")}</button>${noTmpl?`<button class="del" id="pad-clear">${t("Clear")}</button>`:""}</div>
     ${noTmpl?`<div class="hint" id="pad-note">${t("not in the stroke set — draw it and tap Done")}</div>`:""}
     ${swipeHint(d)}</div>`; /* no linked-photos row on the study card (v518, H: "No 'also in other cards' in learn mode. Only on Cards mode.") — the detail keeps it */
   if(ansOpen) warmParts();
@@ -2992,17 +2992,25 @@ function chrowHTML(d,tg,btn,litWi){
    thought that characters are missing. Also when writing a long word, the characters written don't show in the character
    line."): v517's one row scrolled sideways, so on a long text the last characters — and the written, green ones — stood
    off-screen with nothing saying so. The row never scrolls now: its buttons shrink until the row fits the card, never under
-   CH_MIN, and only a text that does not fit even then wraps onto a second row — the one case where the pad gives a row's
-   height, which is the price of a tester never again reading a hidden character as a missing one. The buttons scale, the
-   tiles' padding and the gaps do not, so the size that fits is solved for and then stepped down until the row really fits. */
-const CH_MAX=56, CH_MIN=40;
+   CH_MIN, and only a text that does not fit even then wraps — the one case where the pad gives a row's height, which is
+   the price of a tester never again reading a hidden character as a missing one. The buttons scale, the tiles' padding and
+   the gaps do not, so the size that fits is solved for and then stepped down until the row really fits.
+   A WRAPPED ROW KEEPS ITS SIZE (v522, H: "Die zweizeiligen characters sind zu klein / Besser den Charakters mehr Platz
+   gönnen"): v519 wrapped at CH_MIN, so an eight-character text got 40 px tiles on two rows where its half would have had
+   56. The wrapped row is fitted the same way the single row is — the largest size from CH_MAX down at which the tiles flow
+   onto at most CH_ROWS rows and nothing runs past the card — and falls to CH_MIN only for a text that needs a third row
+   even then. The pad pays for it: a second row at 56 px is 16 px taller than at 40, and on the common phone size the pad
+   already stands on its 200 px floor there, so the card scrolls by that much more. H chose the characters. */
+const CH_MAX=56, CH_MIN=40, CH_ROWS=2;
 function chrowFit(root){ const cr=root&&root.querySelector(".chrow"); if(!cr) return;
   cr.classList.remove("wrap"); cr.style.setProperty("--chs",CH_MAX+"px");
   const avail=cr.clientWidth; if(!avail||cr.scrollWidth<=avail) return;
   const n=cr.querySelectorAll(".ch:not(.num)").length, fixed=cr.scrollWidth-n*CH_MAX;
   let s=Math.min(CH_MAX,Math.floor((avail-fixed)/Math.max(1,n)));
   for(; s>=CH_MIN; s--){ cr.style.setProperty("--chs",s+"px"); if(cr.scrollWidth<=avail) return; }
-  cr.style.setProperty("--chs",CH_MIN+"px"); cr.classList.add("wrap"); }
+  cr.classList.add("wrap"); const rows=()=>new Set([...cr.querySelectorAll(".chw")].map(w=>w.offsetTop)).size;
+  for(s=CH_MAX; s>=CH_MIN; s--){ cr.style.setProperty("--chs",s+"px"); if(cr.scrollWidth<=avail&&rows()<=CH_ROWS) return; }
+  cr.style.setProperty("--chs",CH_MIN+"px"); }
 /* the characters of the card as the pad's targets, grouped by word (§ 5, Q3): one entry per character of the text, in the
    text's order and with its repeats (v430), each knowing its word (wi) so the buttons of one word sit in one group and the
    line under the pad names the word; a number with its unit is one entry for the whole part and is not writable (w:false).
@@ -3144,11 +3152,13 @@ const PAD_MIN=200, TRACE_OK=0.18, NEXT_MS=1500, REP_GAP=3, WRITES_MAX=3000, PAD_
 const CARD_RATIO=1.5; /* the one window and box shape on every card, 3:2 (v519) — declared here, since FRONT_RATIO reads it at load time */
 let LAST_FIT=null; /* v521: the study card's last pad measurement, printed by Diagnostics */
 window.addEventListener("resize",()=>{ const c=document.querySelector(".card.study"); if(c&&c._fitPad) c._fitPad(); }); /* v521: every resize re-fits the pad of the card on screen (a fold, the system bars) */
-const PAD_BELOW=96, FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_GRID/1024;
+const PAD_BELOW=78, FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_GRID/1024;
 /* NEXT_MS is 1500 since v517: the finished card holds while it is praised (§ 12), where it held 900 and nothing
    happened. FRONT_RATIO is the one shape the study card's picture box takes whatever the text is. PAD_BELOW is the
    room the pad leaves under itself for the helper row, counted whether or not the row has
-   anything in it, so the pad is the same size on every card (v517, H: "Das müssen Konstanten sein"). BRUSH_W is the
+   anything in it, so the pad is the same size on every card (v517, H: "Das müssen Konstanten sein"); 78 since v522 — the
+   line at its two-row height (61) with its 10 px above and the helper row's 6 px, the count having moved into the fold
+   row (H: "So unwichtig und braucht so viel Platz"), where v520/v521 budgeted 96 for it. BRUSH_W is the
    brush's widest point; OUT_GRID/OUT_Y0 map the stroke outlines, which are stored y-up on a 256 grid. */
 /* TRACE_OK: the mean distance, in pad sides, between the drawn stroke's eight points and the template stroke's — the spec's
    0.28 was a starting number and its own suite refuses a stroke a quarter of the pad off, so the bar sits under that; the
@@ -3299,20 +3309,21 @@ function mountPad(card,d,c,tg,st,cur){
      characters are one row however many lines the photo had (.chrow), and what sits BELOW the pad is counted as the constant
      PAD_BELOW instead of being measured. So the answer block opening, the helper buttons appearing and the swipe hint all
      leave the pad where it is and let the card scroll, which is the thing that may move. PAD_BELOW is the line under the
-     pad at its two-row height (.padline min-height, v518 — the line is always there since) and the helper row with its
-     count "3 of 12" (v520); a helper button appearing scrolls the card by its 40 px, as v517 accepted. */
+     pad at its two-row height (.padline min-height, v518 — the line is always there since) and the helper row's margin;
+     the count "3 of 12" sat in that row from v520 to v521 and lives in the fold row since v522, costing no height;
+     a helper button appearing scrolls the card by its 40 px, as v517 accepted. */
   const fit=()=>{ if(!cv.isConnected) return; const wrap=cv.parentElement, inner=card.clientWidth-36; cv.style.width="0px"; cv.style.height="0px";
     const nav=$("#tabs"), navH=nav?nav.getBoundingClientRect().height:56;
     const ans=card.querySelector("#ans"), ansH=(ans&&!ans.hidden)?ans.getBoundingClientRect().height:0; /* measured as if the answer were folded */
     const top=wrap.getBoundingClientRect().top+window.scrollY-ansH;
     const ccs=getComputedStyle(card), floor=(nav?nav.getBoundingClientRect().top:window.innerHeight-navH)-16; /* the card ends 16 px above the tab bar */
     /* v521 (H, a screenshot of "6 of 66" half under the tab bar: "6 of 66 ist komisch abgeschnitten"): what sits under the
-       pad is MEASURED too — the line at its own height and the helper row with its count — and the larger of the constant
+       pad is MEASURED too — the line at its own height and the helper row's margin — and the larger of the constant
        and the measurement is what the pad leaves free, so a tail taller than the budget shrinks the pad instead of pushing
        the count under the bar. The buttons of the helper row are deliberately not in the measurement: Show me and Skip
        appearing mid-write must never resize the canvas under the finger (v517's rule that they scroll the card instead). */
-    const pl=card.querySelector("#padline"), pos=card.querySelector(".padacts .pos"), pa=card.querySelector("#padacts");
-    const tail=(pl?pl.offsetHeight+(parseFloat(getComputedStyle(pl).marginTop)||0):0)+(pa?(parseFloat(getComputedStyle(pa).marginTop)||0):0)+(pos?pos.offsetHeight:0);
+    const pl=card.querySelector("#padline"), pa=card.querySelector("#padacts");
+    const tail=(pl?pl.offsetHeight+(parseFloat(getComputedStyle(pl).marginTop)||0):0)+(pa?(parseFloat(getComputedStyle(pa).marginTop)||0):0);
     const below=Math.max(PAD_BELOW,Math.ceil(tail));
     const room=floor-(top-window.scrollY)-below-(parseFloat(ccs.paddingBottom)||18);
     const side=Math.max(PAD_MIN,Math.min(inner,Math.floor(room)));
