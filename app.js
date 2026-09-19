@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=539; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=540; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -649,6 +649,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v540","a card whose meaning has a note in brackets: the line reads the character, then its word, and the note is gone"],
   ["app","v537","a fresh install: the first card whole, hint and all"],
   ["app","v538","a German, French or Spanish phone: one card, one tag, one export"],
   ["app","v539","change the Card order with a card open: the next card comes up closed"],
@@ -2798,6 +2799,12 @@ function wireSay(root){ (root||document).querySelectorAll("[data-say]").forEach(
    many of them (CP值, K书, OK绷) the whole entry is Taiwan usage, so the marker is stripped rather than the SENSE skipped:
    skipping would only pick another sense of the same Taiwan entry, and on those it would leave nothing at all. */
 function cleanSense(m){ return String(m||"").replace(/\(Taiwan pr\.[^)]*\)/g,"").replace(/\(Tw\)\s*/g,"").replace(/\[[^\]]*\]/g,"").replace(/\s*CL:[^;,)]*/g,"").replace(/\(\s*\)/g,"").replace(/\s{2,}/g," ").trim(); }
+/* the line under the pad carries the translation alone (v540, H on a 电动车 card whose line read "electric vehicle (commonly
+   refers to e-bikes" with both ends sliced off: "Vielleicht hilft es, wirklich nur die Übersetzung dort anzuzeigen und
+   sämtliche Erläuterungen unter Whole Card > Explain"). A parenthetical is an explanation, not a translation, so it leaves
+   the line; the meaning itself is untouched on the card, in the fold and under Explain. Everything is stripped, never
+   truncated, so a meaning that IS a parenthetical ("(a surname)") keeps its own text rather than becoming empty. */
+function shortSense(m){ const s=String(m||"").replace(/\([^)]*\)/g," ").replace(/\s+([,;])/g,"$1").replace(/[\s,;]+$/,"").replace(/\s{2,}/g," ").trim(); return s||String(m||"").trim(); }
 /* the words of the card as buttons on the back — tap one for its pinyin and meaning; a word of
    several characters then offers its characters too. Replaces the old word/gloss tables (H: redundant). */
 /* what a number with a Latin unit means (v337, H on the 24H part: "24H is not only a number, it means 24 hours"): the unit's
@@ -3220,9 +3227,13 @@ async function padLine(d,x){ const box=$("#padline"); if(!box) return; const c=b
 async function padLineFill(box,d,x){ box.hidden=false;
   const lk=S.lockChar&&x.w?S.lockChar:null; /* v526: the locked character is green in the line as on its tile (H: "ah, das ist character xx, wie er auch im wort yy vorkommt") */
   const w=x.word||x.ch, mark=(lk&&[...w].includes(lk)?`<i class="plock" aria-hidden="true">${MARK_LOCK}</i>`:"")+[...w].map((ch,i)=>ch===lk?`<b class="lock">${esc(ch)}</b>`:x.w&&i===x.pos-x.wstart?`<b>${esc(ch)}</b>`:esc(ch)).join(""); /* the word with the current character marked, the locked one green */
-  const row=(h,py,m)=>`<div class="plrow"><span class="hanzi">${h}</span>${py?`<span class="mono">${esc(py)}</span>`:""}${m?`<span>${esc(m)}</span>`:""}</div>`;
+  const row=(h,py,m)=>`<div class="plrow"><span class="hanzi">${h}</span>${py?`<span class="mono">${esc(py)}</span>`:""}${m?`<span class="mn">${esc(shortSense(m))}</span>`:""}</div>`;
   if(!x.w){ box.innerHTML=row(esc(w),"",latinUnitMeaning(w)||t("A number, read as it is.")); return; }
-  box.innerHTML=row(mark,"","")+`<div class="plrow"><span class="badge">…</span></div>`;
+  /* v540 (H: "In meaning: Erste Zeile: ausgewählter character, Zweite Zeile: ganzes Wort") — the character being written
+     leads and its word stands under it, where v517–v539 had the word first. The pad is on the character, so the line
+     reads in the order the eye needs it; the placeholder keeps that order so nothing reorders when the answer lands. */
+  const many=[...w].filter(ch=>CJK.test(ch)).length>1&&CJK.test(x.ch);
+  box.innerHTML=(many?row(`<b${x.ch===lk?' class="lock"':""}>${esc(x.ch)}</b>`,"",""):"")+row(mark,"","")+(many?"":`<div class="plrow"><span class="badge">…</span></div>`);
   try{
     if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
     await loadDict().catch(()=>{});
@@ -3234,14 +3245,14 @@ async function padLineFill(box,d,x){ box.hidden=false;
        looked up on its own, so a character that reads differently inside this word keeps the word's reading. */
     const chars=[...w].filter(ch=>CJK.test(ch)), one=x.ch;
     let sub="";
-    if(chars.length>1&&CJK.test(one)){
+    if(many){
       const syl=String(py||"").trim().split(/\s+/), k=x.pos-x.wstart;
       const cpy=syl.length===chars.length&&syl[k]?syl[k]:pinyinPro.pinyin(one,{toneType:"symbol"});
       const cm=cleanSense(bestSense(one)||((DICT&&DICT.get(one))||""));
       sub=row(`<b${one===lk?' class="lock"':""}>${esc(one)}</b>`,cpy,cm||t("not in the dictionary"));
     }
     if(!box.isConnected) return;
-    box.innerHTML=row(mark,py,m||t("not in the dictionary"))+sub;
+    box.innerHTML=sub+row(mark,py,m||t("not in the dictionary"));
   }catch(e){ if(box.isConnected) box.innerHTML=row(mark,"",""); }
 }
 /* D5: the multicard's picture in the study card's box is cover-fitted around the card's own text — the pagewrap is sized to the
@@ -4527,6 +4538,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  540:"The line under the writing pad now leads with the character you are writing, and shows the translation alone — the whole explanation is one fold away, under Whole card.",
   537:"The hint under your first cards is no longer cut off by the tab bar, and the admin row, the empty deck and a few dictionary notes are tidied up.",
   536:"Ask AI under More → Review queue works again, so a card you flag can be checked; and a card made from a multicard names it again and takes you back to it.",
   535:"A finished card now shows on its own, with no writing pad behind it; the pad writes one word out before it moves to the next character; and a suggestion you dismiss stays dismissed.",
