@@ -170,6 +170,11 @@ button,.tab,.chip,.chipset,.pill,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg
 .row .field{flex:1} .row .field.row input{flex:1;min-width:0}
 .err{font-size:14px;color:var(--tint);margin-bottom:12px}
 .ok{font-size:14px;color:var(--ok);margin-top:12px}
+/* the note under a photo on the Camera tab (v535): no selection, or a long press on it raises the phone's selection
+   toolbar and a Google search over the app (H, with a screenshot of exactly that); and a note that says the reading
+   FAILED is not written in the success green - .bad is the same line in the ordinary label colour. */
+.shot .ok,.shot .ok.bad{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.shot .ok.bad{color:var(--label2)}
 .badge{font-size:14px;color:var(--label2);line-height:1.45}
 .listhead{font-size:13px;font-weight:500;color:var(--label2);margin:26px 0 8px 4px}
 .del{background:none;border:none;cursor:pointer;font-size:15px;font-weight:500;color:var(--tint);padding:10px 6px;min-height:40px;border-radius:8px}
@@ -687,8 +692,10 @@ body.noscroll{overflow:hidden}
 .wpad{display:block;border-radius:var(--rc);background:var(--card2);touch-action:none;box-shadow:inset 0 0 0 1px var(--sep)} /* the pad takes the finger: a stroke is never a swipe */
 .wpad.ghost{width:100%;aspect-ratio:1} /* the carousel's neighbour carries an empty pad; since v530 sized inline to the standing pad's own side (ghostSize), this square is the fallback for a card without one */
 .wpad.shake{animation:padshake .24s}
-/* v523: the recap over the pad after a finished card — the pad steps back, the card's own text stands in its square */
-.padwrap.recapping .wpad{opacity:.1;transition:opacity .28s}
+/* v523: the recap over the pad after a finished card — the card's own text stands in the pad's square.
+   v535 (H: "sollte das graue Pad nicht mehr sichtbar sein, da sonst zu unruhig"): the pad goes altogether rather than
+   stepping back to a tenth — the grey template behind the recap's characters was the restless part. */
+.padwrap.recapping .wpad{opacity:0;transition:opacity .28s}
 .recap{position:absolute;top:0;bottom:0;left:50%;translate:-50% 0;aspect-ratio:1;container-type:size;box-sizing:border-box;padding:8px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;overflow:hidden;pointer-events:none;opacity:0;scale:.94;transition:opacity .28s,scale .28s}
 .recap.in{opacity:1;scale:1}
 .recap .rc{font-family:var(--hanzi);line-height:1.05;color:var(--label)}
