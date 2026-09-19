@@ -35,7 +35,7 @@ const L10N={
 en:{"bar:AI suggestion":"AI suggestion","bar:AI suggestions":"AI suggestions","card:⚑ Flagged":"⚑ Flagged","tile:New":"New","pad:Undo":"Undo","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
 de:{
   "Not yet checked":"Noch nicht geprüft","tile:New":"Neu",
-  "Press and hold a character to walk through every card that has it; tap it, or press and hold again, to come back.":"Halte ein Zeichen gedrückt, um alle Karten damit durchzugehen; tipp es an oder halte es noch einmal gedrückt, um zurückzukommen.",
+  "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Halte ein Zeichen gedrückt, um alle Karten damit durchzugehen; halte es noch einmal gedrückt, um zurückzukommen.",
   "Pinyin and meaning":"Pinyin und Bedeutung",
   "Show me":"Zeig mir",
   "Skip":"Überspringen",
@@ -317,7 +317,7 @@ de:{
 },
 fr:{
   "Not yet checked":"Pas encore vérifiées","tile:New":"Nouvelle",
-  "Press and hold a character to walk through every card that has it; tap it, or press and hold again, to come back.":"Maintiens un caractère appuyé pour parcourir toutes les cartes qui le contiennent ; touche-le, ou maintiens-le appuyé de nouveau, pour revenir.",
+  "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Maintiens un caractère appuyé pour parcourir toutes les cartes qui le contiennent ; maintiens-le appuyé de nouveau pour revenir.",
   "Pinyin and meaning":"Pinyin et sens",
   "Show me":"Montre-moi",
   "Skip":"Passer",
@@ -599,7 +599,7 @@ fr:{
 },
 es:{
   "Not yet checked":"Sin revisar todavía","tile:New":"Nueva",
-  "Press and hold a character to walk through every card that has it; tap it, or press and hold again, to come back.":"Mantén pulsado un carácter para recorrer todas las tarjetas que lo tienen; tócalo, o mantenlo pulsado otra vez, para volver.",
+  "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Mantén pulsado un carácter para recorrer todas las tarjetas que lo tienen; mantenlo pulsado otra vez para volver.",
   "Pinyin and meaning":"Pinyin y significado",
   "Show me":"Muéstrame",
   "Skip":"Saltar",
@@ -881,7 +881,7 @@ es:{
 },
 ja:{
   "Not yet checked":"まだ確認していない","tile:New":"新規",
-  "Press and hold a character to walk through every card that has it; tap it, or press and hold again, to come back.":"文字を長押しすると、その文字が入ったカードを順に見られます。タップするか、もう一度長押しすると戻ります。",
+  "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"文字を長押しすると、その文字が入ったカードを順に見られます。もう一度長押しすると戻ります。",
   "Pinyin and meaning":"ピンインと意味",
   "Show me":"見せて",
   "Skip":"スキップ",
@@ -1163,7 +1163,7 @@ ja:{
 },
 ko:{
   "Not yet checked":"아직 확인 안 함","tile:New":"새 카드",
-  "Press and hold a character to walk through every card that has it; tap it, or press and hold again, to come back.":"글자를 길게 누르면 그 글자가 든 카드를 차례로 볼 수 있어요. 다시 누르거나 길게 누르면 돌아와요.",
+  "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"글자를 길게 누르면 그 글자가 든 카드를 차례로 볼 수 있어요. 다시 길게 누르면 돌아와요.",
   "Pinyin and meaning":"병음과 뜻",
   "Show me":"보여줘",
   "Skip":"건너뛰기",
@@ -1448,7 +1448,7 @@ ko:{
    up; "percent#few" is the one unit that also needs its own middle form, because English calls both of its forms "percent". */
 ru:{
   "Not yet checked":"Ещё не проверены","tile:New":"Новая",
-  "Press and hold a character to walk through every card that has it; tap it, or press and hold again, to come back.":"Удерживай иероглиф, чтобы пройти по всем карточкам с ним; нажми на него или удержи ещё раз, чтобы вернуться.",
+  "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Удерживай иероглиф, чтобы пройти по всем карточкам с ним; удержи его ещё раз, чтобы вернуться.",
   "Pinyin and meaning":"Пиньинь и значение",
   "Show me":"Покажи",
   "Skip":"Пропустить",
@@ -1730,7 +1730,7 @@ ru:{
 },
 vi:{
   "Not yet checked":"Chưa kiểm tra","tile:New":"Mới",
-  "Press and hold a character to walk through every card that has it; tap it, or press and hold again, to come back.":"Nhấn giữ một chữ để đi qua mọi thẻ có chữ đó; chạm vào nó, hoặc nhấn giữ lần nữa, để quay về.",
+  "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Nhấn giữ một chữ để đi qua mọi thẻ có chữ đó; nhấn giữ lần nữa để quay về.",
   "Pinyin and meaning":"Pinyin và nghĩa",
   "Show me":"Chỉ cho mình",
   "Skip":"Bỏ qua",
@@ -2012,7 +2012,7 @@ vi:{
 },
 th:{
   "Not yet checked":"ยังไม่ได้ตรวจ","tile:New":"ใหม่",
-  "Press and hold a character to walk through every card that has it; tap it, or press and hold again, to come back.":"กดค้างที่ตัวอักษรเพื่อไล่ดูทุกการ์ดที่มีตัวนั้น แตะหรือกดค้างอีกครั้งเพื่อกลับ",
+  "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"กดค้างที่ตัวอักษรเพื่อไล่ดูทุกการ์ดที่มีตัวนั้น กดค้างอีกครั้งเพื่อกลับ",
   "Pinyin and meaning":"พินอินและความหมาย",
   "Show me":"ดูวิธี",
   "Skip":"ข้าม",
@@ -2294,7 +2294,7 @@ th:{
 },
 id:{
   "Not yet checked":"Belum diperiksa","tile:New":"Baru",
-  "Press and hold a character to walk through every card that has it; tap it, or press and hold again, to come back.":"Tekan dan tahan sebuah karakter untuk menelusuri semua kartu yang memuatnya; ketuk, atau tekan dan tahan lagi, untuk kembali.",
+  "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Tekan dan tahan sebuah karakter untuk menelusuri semua kartu yang memuatnya; tekan dan tahan lagi untuk kembali.",
   "Pinyin and meaning":"Pinyin dan arti",
   "Show me":"Tunjukkan",
   "Skip":"Lewati",
