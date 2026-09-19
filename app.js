@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=544; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=545; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -649,6 +649,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v545","cross 50 points in a day: the counter bursts, once, and the card holds a second longer"],
   ["app","v544","the Camera tab: the line above the shutter says what to photograph"],
   ["app","v543","finish a card: the counter holds its number until the star lands, then goes up by the whole card's points"],
   ["app","v542","a card with two rows of characters: scroll to the pad and write — the page stays where you put it"],
@@ -3493,6 +3494,18 @@ const MARK_STAR=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4l2.
 let PRAISE_N=null;    /* v543: the number the counter shows from the last stroke of a card until the star lands on it; null = it shows the day's own total */
 let PRAISE_HOLD=null; /* tests only: hold the moment at this millisecond instead of running it */
 const praiseDay=()=>dayOf((S.settings.daily||{})[dayKey()]).w||0; /* the day's written points — More → Progress calls it "Written today" */
+/* the burst at a milestone (v545, H: "Go for all five" on the described fireworks). The card that takes the day's counter
+   past one of FW_PTS, or the day's FIRST scoring card while the streak stands at one of FW_DAYS, ends with the counter
+   bursting instead of the small pop: FW_N sparks out of it for FW_MS, once. Nothing about the points, the schedule or the
+   star's own flight moves — only what is drawn after the star has landed, and the dwell, which grows by FW_MS on exactly
+   those cards. The milestone is decided in cardDone (which knows the number before and after) and carried on PRAISE_N, so
+   the dwell and the drawing can never disagree about whether a burst is coming. */
+const FW_PTS=[50,100,250,500,1000], FW_DAYS=[7,30,100], FW_MS=1000, FW_N=18;
+function fireworkFor(before,total,streak){
+  if(FW_PTS.some(m=>before<m&&total>=m)) return "points"; /* the counter crossed it on this card — by construction once, since the day's total only grows */
+  if(before===0&&total>0&&FW_DAYS.includes(streak)) return "streak"; /* the day's first scoring card, so once a day */
+  return "";
+}
 const prEase=f=>f<0.5?2*f*f:1-Math.pow(-2*f+2,2)/2;
 const prClamp=(u,a,b)=>Math.max(0,Math.min(1,(u-a)/(b-a)));
 function praiseStart(clean){
@@ -3507,6 +3520,7 @@ function praiseStart(clean){
      the ring start from the visible part of it, never off the screen where nobody would see them */
   const cx=r.left+r.width/2, cy=Math.min(Math.max(r.top+r.height/2,90),window.innerHeight-90);
   const FLY0=60, FLY1=620, POP1=980;
+  const fw=(PRAISE_N&&PRAISE_N.fw)||""; /* set by cardDone; reduced motion never sets it, so the burst and the longer dwell stand or fall together */
   /* the counter goes up first, holding the number from before this card, so the star has something to fly into */
   PRAISE_N={n:before,gold:false}; setStats();
   const ss0=$("#stat-star"), tr=ss0?ss0.getBoundingClientRect():null;
@@ -3515,6 +3529,11 @@ function praiseStart(clean){
   if(tr&&tr.width){ bx=tr.left+tr.width/2; by=tr.top+tr.height/2; }
   const kx=(cx+bx)/2-Math.max(60,Math.abs(cx-bx)*0.3), ky=Math.min(cy,by)-110; /* out to the side and up, then down into the counter */
   const ring=clean?add("prring",null,{width:Math.min(r.width,r.height)*0.92+"px",height:Math.min(r.width,r.height)*0.92+"px"}):null;
+  /* the sparks are made once with fixed directions and speeds, so the whole burst is a pure function of the clock and a
+     test can hold it at a millisecond and photograph it (PRAISE_HOLD), as the star already was */
+  const sparks=[];
+  if(fw) for(let i=0;i<FW_N;i++){ const a=(i/FW_N)*Math.PI*2+(i%2?0.17:-0.11), sp=52+((i*37)%48);
+    sparks.push({e:add("prspark"+(i%3?"":" gold"),null),vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-24,d:0.6+((i*29)%40)/100}); }
   const frame=u=>{
     const f=prClamp(u,FLY0,FLY1), e=prEase(f), pop=prClamp(u,0,FLY0);
     if(reduced){ /* no flight: the star shows at the counter and fades — the pause and the number stay */
@@ -3528,10 +3547,15 @@ function praiseStart(clean){
     if(ring){ const g=prClamp(u,0,FLY1+20); ring.style.transform=`translate(${cx}px,${cy}px) translate(-50%,-50%) scale(${0.35+1.35*prEase(g)})`; ring.style.opacity=String(reduced?0:0.9*(1-g*g)); }
     const ss=$("#stat-star");
     if(ss){ const q=prClamp(u,FLY1,POP1); ss.style.transform=(reduced||q<=0||q>=1)?"":`scale(${1+0.34*Math.sin(Math.PI*q)})`; }
+    if(sparks.length){ const g=prClamp(u,FLY1,FLY1+FW_MS), off=u<FLY1; /* nothing of the burst is drawn while the star is still on its way */
+      sparks.forEach(sp2=>{ const k=Math.min(1,g/sp2.d);
+        sp2.e.style.transform=`translate(${bx+sp2.vx*k*1.6}px,${by+sp2.vy*k*1.6+300*k*k}px) translate(-50%,-50%) scale(${1-0.65*k})`;
+        sp2.e.style.opacity=String(off||k>=1?0:Math.max(0,1-k*k)); }); }
   };
   const done=()=>{ const ss=$("#stat-star"); if(ss) ss.style.transform=""; PRAISE_N=null; setStats(); nodes.forEach(x=>x.remove()); nodes.length=0; };
+  const END=fw?FLY1+FW_MS:POP1;
   const loop=()=>{ const held=typeof PRAISE_HOLD==="number", u=held?PRAISE_HOLD:performance.now()-t0;
-    frame(u); if(held||u<POP1) raf=requestAnimationFrame(loop); else { raf=0; done(); } };
+    frame(u); if(held||u<END) raf=requestAnimationFrame(loop); else { raf=0; done(); } };
   frame(0); raf=requestAnimationFrame(loop);
   return {finish:()=>{ if(raf) cancelAnimationFrame(raf); raf=0; done(); }};
 }
@@ -3645,6 +3669,11 @@ function mountPad(card,d,c,tg,st,cur){
     await checkCard(c); /* v515: written to the end — the card is checked */
     if(first){ await recordGrade(c,st.helped.size?"again":"good"); S.done++; /* a Skip counts as again (Q10) — due today, fails +1, the leech flag as today */
       const l=curList(), at=Math.min(l.length,curIdx()+1+REP_GAP); l.splice(at,0,c); /* the repeat pass, three cards on (§ 8.1) — in the walk while a character is locked */ }
+    /* v545: the milestone is decided here, where the number before and after this card and the streak (which recordGrade
+       has just pushed today onto) are all in hand; praiseStart only draws it. Reduced motion takes neither the burst nor
+       the extra second. */
+    const fw=(pts&&PRAISE_N&&!(matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches))?fireworkFor(PRAISE_N.n,praiseDay(),learnStats().streak):"";
+    if(fw) PRAISE_N.fw=fw;
     const cleanCard=(clean===n&&st.maxMiss<=1);
     /* the answer block stays folded (v518, H: "Pinyin and meaning open after completing writing a card. Makes card jump,
        shouldn't."): v512 opened it on the last stroke, and the block appearing above the pad pushed the pad down. The line
@@ -3666,7 +3695,7 @@ function mountPad(card,d,c,tg,st,cur){
     document.addEventListener("pointerdown",onTap,true);
     if(typeof PRAISE_HOLD==="number"){ pr=praiseStart(cleanCard); return; } /* held for a test: the star at once, nothing advances */
     tm=setTimeout(()=>{ if(!fired) pr=praiseStart(cleanCard); },PRAISE_AT);
-    setTimeout(go,NEXT_MS);
+    setTimeout(go,NEXT_MS+(fw?FW_MS:0)); /* a milestone card holds one second longer, for the burst */
   };
   /* Undo and Clear are drawn only for a character the app has no strokes for, where the learner really is drawing freehand
      (v517, H: "You also don't need clear and undo at the bottom") */
@@ -4629,6 +4658,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  545:"When a card takes your points past 50, 100, 250, 500 or 1000, or you keep your streak at a week, a month or a hundred days, the counter bursts.",
   543:"The star counter now counts up when the star lands on it, not at your last stroke — and it no longer dips by one on the way.",
   542:"Every character you finish shows large with its reading for a moment, and on a card with two rows of characters the page no longer jumps back to the top between them.",
   541:"Zoom into a card's photo and it stays zoomed: the mark around the word travels with the picture, and the picture glides on to the next character as you write.",

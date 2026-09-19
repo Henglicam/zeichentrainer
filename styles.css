@@ -744,6 +744,9 @@ body.noscroll{overflow:hidden}
 .prstar.gold{color:var(--warn)}
 .prstar svg{width:100%;height:100%;fill:currentColor;filter:drop-shadow(0 2px 7px rgba(0,0,0,.28))}
 .prring{position:fixed;left:0;top:0;pointer-events:none;z-index:39;border-radius:999px;box-shadow:0 0 0 3px var(--warn);will-change:transform,opacity}
+/* the milestone burst (v545): sparks out of the counter for a second, once */
+.prspark{position:fixed;left:0;top:0;width:8px;height:8px;border-radius:50%;background:var(--tint);pointer-events:none;z-index:41;opacity:0;will-change:transform,opacity}
+.prspark.gold{background:var(--warn)}
 
 .padline{margin-top:10px;min-height:61px;font-size:15px;color:var(--label2);display:flex;flex-direction:column;align-items:center;gap:3px} /* two rows tall whatever the word (v518), so the pad above it is the same size on a one-character word */
 .padline[hidden]{display:none}
