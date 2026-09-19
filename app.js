@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=520; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=521; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -525,6 +525,7 @@ function diagText(){
     /* the settings the same photo would be read differently under: the app's language goes into picSystem() through
        meaningLangName(), so a German phone gets another answer for the same picture */
     `settings · lang ${LANG} · picture to the AI ${S.settings.aiPicture===false?"off":"on"} · relay ${S.settings.aiRelay===false?"off":"on"} · auto check ${S.settings.aiAuto===false?"off":"on"} · offline model ${S.settings.nmt?"on":"off"} · mirror ${S.settings.mirror===undefined?"default":(S.settings.mirror||"off")} · brightening ${S.settings.brightPass?"done":"not yet"} · re-cut ${recutLine()}`,
+    `learn fit · ${LAST_FIT?Object.entries(LAST_FIT).filter(([k])=>k!=="at").map(([k,v])=>k+" "+v).join(", ")+" ("+ago(LAST_FIT.at)+")":"no study card measured yet"}`, /* v521: the pad's last measurement — where the card ends against the tab bar, and what was counted under the pad */
     navigator.userAgent, `voices (${voiceList().length}): ${voiceList().join("; ")||"none reported"}`, ""];
   /* v479: every block is one photo's own. The steps used to be a single global list that the next reading wiped, so an album
      batch mixed two photos' lines into one block and the two earlier readings had no steps at all — only their numbers. */
@@ -638,6 +639,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v521","count whole above the bar; Diag fit"],
   ["app","v520","no chevrons; '3 of 12' under the pad"],
   ["app","v520","locked char lit on the photo, soft fade"],
   ["app","v519","every photo box 3:2; deck cut again (v5)"],
@@ -3058,8 +3060,8 @@ function padLevel(c,x,st){ const key=c+":"+x.pos; if(st.lv[key]) return st.lv[ke
 function peerRowHTML(nd){ const tg=padTargets(nd); return chrowHTML(nd,tg,x=>`<button class="ch${x.w?"":" num"}">${esc(x.glyph)}</button>`,null); }
 /* the line under the pad (zone 5): the WORD the current character belongs to, its pinyin and meaning as the parts row gives
    them, the current character marked — always there since v518, and the single character's own reading under it (v517) */
-async function padLine(d,x){
-  const box=$("#padline"); if(!box) return; box.hidden=false;
+async function padLine(d,x){ const box=$("#padline"); if(!box) return; const c=box.closest(".card.study"); try{ await padLineFill(box,d,x); } finally{ if(c&&c._fitPad&&box.isConnected) c._fitPad(); } } /* v521: the pad is measured again once the line has its content */
+async function padLineFill(box,d,x){ box.hidden=false;
   const w=x.word||x.ch, mark=[...w].map((ch,i)=>x.w&&i===x.pos-x.wstart?`<b>${esc(ch)}</b>`:esc(ch)).join(""); /* the word with the current character marked */
   const row=(h,py,m)=>`<div class="plrow"><span class="hanzi">${h}</span>${py?`<span class="mono">${esc(py)}</span>`:""}${m?`<span>${esc(m)}</span>`:""}</div>`;
   if(!x.w){ box.innerHTML=row(esc(w),"",latinUnitMeaning(w)||t("A number, read as it is.")); return; }
@@ -3140,6 +3142,8 @@ async function checkCard(id){ const d=cardOf(id); if(!d||!d.unchecked) return; c
 /* ---------- the write pad (v512): stroke by stroke over a template, as Duolingo does it ---------- */
 const PAD_MIN=200, TRACE_OK=0.18, NEXT_MS=1500, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
 const CARD_RATIO=1.5; /* the one window and box shape on every card, 3:2 (v519) — declared here, since FRONT_RATIO reads it at load time */
+let LAST_FIT=null; /* v521: the study card's last pad measurement, printed by Diagnostics */
+window.addEventListener("resize",()=>{ const c=document.querySelector(".card.study"); if(c&&c._fitPad) c._fitPad(); }); /* v521: every resize re-fits the pad of the card on screen (a fold, the system bars) */
 const PAD_BELOW=96, FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_GRID/1024;
 /* NEXT_MS is 1500 since v517: the finished card holds while it is praised (§ 12), where it held 900 and nothing
    happened. FRONT_RATIO is the one shape the study card's picture box takes whatever the text is. PAD_BELOW is the
@@ -3302,10 +3306,24 @@ function mountPad(card,d,c,tg,st,cur){
     const ans=card.querySelector("#ans"), ansH=(ans&&!ans.hidden)?ans.getBoundingClientRect().height:0; /* measured as if the answer were folded */
     const top=wrap.getBoundingClientRect().top+window.scrollY-ansH;
     const ccs=getComputedStyle(card), floor=(nav?nav.getBoundingClientRect().top:window.innerHeight-navH)-16; /* the card ends 16 px above the tab bar */
-    const room=floor-(top-window.scrollY)-PAD_BELOW-(parseFloat(ccs.paddingBottom)||18);
+    /* v521 (H, a screenshot of "6 of 66" half under the tab bar: "6 of 66 ist komisch abgeschnitten"): what sits under the
+       pad is MEASURED too — the line at its own height and the helper row with its count — and the larger of the constant
+       and the measurement is what the pad leaves free, so a tail taller than the budget shrinks the pad instead of pushing
+       the count under the bar. The buttons of the helper row are deliberately not in the measurement: Show me and Skip
+       appearing mid-write must never resize the canvas under the finger (v517's rule that they scroll the card instead). */
+    const pl=card.querySelector("#padline"), pos=card.querySelector(".padacts .pos"), pa=card.querySelector("#padacts");
+    const tail=(pl?pl.offsetHeight+(parseFloat(getComputedStyle(pl).marginTop)||0):0)+(pa?(parseFloat(getComputedStyle(pa).marginTop)||0):0)+(pos?pos.offsetHeight:0);
+    const below=Math.max(PAD_BELOW,Math.ceil(tail));
+    const room=floor-(top-window.scrollY)-below-(parseFloat(ccs.paddingBottom)||18);
     const side=Math.max(PAD_MIN,Math.min(inner,Math.floor(room)));
-    cv.style.width=side+"px"; cv.style.height=side+"px"; card._fit={navH,top,ansH,room,inner,side}; };
-  fit(); window.addEventListener("resize",fit,{once:true}); card._fitPad=fit;
+    cv.style.width=side+"px"; cv.style.height=side+"px";
+    const end=card.getBoundingClientRect().bottom, navTop=nav?nav.getBoundingClientRect().top:window.innerHeight;
+    card._fit=LAST_FIT={at:Date.now(),vw:window.innerWidth,vh:window.innerHeight,navH,top:+top.toFixed(1),ansH,floor:+floor.toFixed(1),room:+room.toFixed(1),inner,side,tail:+tail.toFixed(1),below,end:+end.toFixed(1),navTop:+navTop.toFixed(1),scrollY:window.scrollY,fits:card._fit?card._fit.fits+1:1}; };
+  fit(); card._fitPad=fit;
+  /* v521: the measurement is repeated once the layout has settled — the next frame, the picture's load and the line's fill
+     (padLine calls it) — and on every resize through the one listener below, where v517–v520 fitted once and took the first
+     resize only. On a card where nothing moved the repeat measures the same numbers and the pad stays exactly as it was. */
+  requestAnimationFrame(()=>fit()); const pic=card.querySelector(".zone1 img.signimg"); if(pic&&!pic.complete) pic.addEventListener("load",()=>fit(),{once:true});
   const tmpl=cur&&STROKE_OF.get(cur.glyph); let free=!tmpl; const strokes=tmpl?tmpl.map(s=>s.map(padPt)):null; let drawing=null, anim=null, flash=0;
   const outl=tmpl&&cur?outlinesFor(cur.glyph,tmpl.length):null; /* the real Kai outlines when they have arrived (v517) */
   const kinds=strokes?strokes.map(strokeKind):null;
