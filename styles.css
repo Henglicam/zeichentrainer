@@ -4,6 +4,7 @@
   --bg:#F2F2F7; --card:#FFFFFF; --card2:#F2F2F7; --fill:#E9E9EE;
   --label:#000000; --label2:#6E6E73; --label3:#AEAEB2; --sep:rgba(60,60,67,.24);
   --tint:#C8372D; --tint-soft:rgba(200,55,45,.12); --ok:#2FA36B; --ok-soft:rgba(47,163,107,.12); --warn:#B5730B; --warn-soft:rgba(214,148,30,.14);
+  --lock:#2F6BD6; --lock-soft:rgba(47,107,214,.12); /* v528: a locked character (§ 7) — its own colour, so red = in the pad, blue = locked, green = written never share a word */
   --bar:rgba(249,249,249,.86); --shadow:0 1px 2px rgba(0,0,0,.05), 0 6px 20px rgba(0,0,0,.05);
   --hanzi:'Songti SC','STSong','Noto Serif CJK SC','Source Han Serif SC','SimSun',serif;
   --sans:-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC','Helvetica Neue',Roboto,system-ui,'Noto Sans SC',sans-serif;
@@ -15,6 +16,7 @@
   :root{ --bg:#000000; --card:#1C1C1E; --card2:#2C2C2E; --fill:#3A3A3C;
     --label:#FFFFFF; --label2:#A1A1A6; --label3:#6E6E73; --sep:rgba(84,84,88,.6);
     --tint:#E0483E; --tint-soft:rgba(224,72,62,.18); --ok:#3DBE7A; --ok-soft:rgba(61,190,122,.16); --warn:#E8A93C; --warn-soft:rgba(232,169,60,.18);
+    --lock:#6B9BF0; --lock-soft:rgba(107,155,240,.18);
     --bar:rgba(22,22,24,.82); --shadow:none; }
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -663,7 +665,7 @@ body.noscroll{overflow:hidden}
 .chline{display:flex;flex-wrap:wrap;justify-content:center;gap:10px} /* one row per photo line; a line wider than the card wraps here */
 .chw{display:inline-flex;gap:0;padding:0;border-radius:12px;box-shadow:inset 0 0 0 1px var(--sep);background:none;overflow:hidden} /* v525: one hairline outline around the word, nothing filled (H: "nur Außenlinie und Trennlinie zwischen den Characters") */
 .chw.on{box-shadow:inset 0 0 0 2px var(--tint)} /* the word a tap lit up (v517): the outline in the tint, no fill since v525 */
-.chw.lockw{box-shadow:inset 0 0 0 2px var(--ok)} /* v526: the word that holds the locked character — green, like the tile; where it is also the pad's word the green wins, and the tile's tint ring says the pad is here */
+.chw.lockw{box-shadow:inset 0 0 0 1.5px var(--lock)} /* v526: the word that holds the locked character — in the lock colour, like the chip; where it is also the pad's word the lock colour wins, and the chip's tint glyph says the pad is here. 1.5 px and blue since v528 (H: "Das Grün knallt zu sehr raus", "Muss nicht grün sein") */
 .chrow .ch{position:relative;font-family:var(--hanzi);font-size:calc(var(--chs,56px) * 0.54);width:var(--chs,56px);height:var(--chs,56px);padding:0;border:none;border-radius:0;background:none;color:var(--label);box-shadow:none;cursor:pointer;user-select:none}
 .chw .ch+.ch{border-left:1px solid var(--sep)} /* the divider between the characters of one word (v525); border-box, so the tile keeps its width */
 .chrow .ch.cur{color:var(--tint)} /* the one in the pad: the glyph in the tint, no fill (v525) */
@@ -719,19 +721,27 @@ body.noscroll{overflow:hidden}
 .padline[hidden]{display:none}
 .padline .plrow{display:flex;justify-content:center;gap:10px;align-items:baseline;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} /* the word, and under it the one character (v517) */
 .padline .hanzi{font-family:var(--hanzi);font-size:20px;color:var(--label)} .padline .hanzi b{color:var(--tint);font-weight:400} .padline .mono{font-weight:600}
-.padline .hanzi b.lock{color:var(--ok)} .padline .plock{display:inline-block;vertical-align:-1px;margin-right:4px;color:var(--ok)} .padline .plock svg{width:13px;height:13px;fill:currentColor} /* v526: the locked character green in the line, the padlock before its word */
+.padline .hanzi b.lock{color:var(--lock)} .padline .plock{display:inline-block;vertical-align:-1px;margin-right:4px;color:var(--lock)} .padline .plock svg{width:13px;height:13px;fill:currentColor} /* v526: the locked character in the lock colour in the line, the padlock before its word (blue since v528) */
 .padacts{display:flex;justify-content:center;gap:2px 14px;flex-wrap:wrap;margin-top:6px} .padacts .del{font-size:15px;padding:8px 6px;min-height:40px}
 /* the multicard's picture on the study card (D5, v512): cover-fitted in the ordinary box around the card's own text; the
    pagewrap is sized and offset by fitPageCover, so the regions' percent coordinates still land on the picture */
 .card.study .picbox.page{aspect-ratio:16/9;height:auto;max-height:none;display:block}
 .card.study .picbox.page .pagewrap{position:absolute;left:0;top:0;margin:0;max-width:none;max-height:none}
 .card.study .picbox.page .pagewrap .signimg{max-width:none;max-height:none}
-/* a locked character (v513, § 7) on every card of its walk: since v525 a green fill with the glyph in white (H: "Gelockte character bitte andere Farbe, zum Beispiel grün ausgefüllt"), where v513–v524 had a tint ring; the one also in the pad gets a thin tint ring inside the fill */
-.chrow .ch.lock{background:var(--ok);color:#fff}
-.chrow .ch.lock.cur{box-shadow:inset 0 0 0 2.5px var(--tint)}
-/* and the padlock in its corner (v518, H: "Locked on/off should be more obvious, maybe with a padlock icon?") */
-.chrow .ch .lockmark{position:absolute;right:2px;top:2px;width:17px;height:17px;border-radius:999px;background:#fff;color:var(--ok);display:inline-flex;align-items:center;justify-content:center} /* a white disc on the green fill (v525) */
-.chrow .ch .lockmark svg{width:11px;height:11px;fill:currentColor}
+/* a locked character (v513, § 7) on every card of its walk: since v528 a SOFT chip in the lock's own blue inside its own
+   cell, with the glyph in that blue — a colour of its own, so red says "in the pad", blue "locked" and green "written" and
+   no two of them share a tile (v525 had a locked and a written character both green) — where v525–v527 filled the whole cell
+   in saturated green with a white glyph (H: "Das Grün knallt zu sehr raus und das grüne Feld ist auch quadratisch, obwohl die
+   Ecken abgerundet sind"): a cell is a rectangle, so its fill met the word's rounded outline square at the divider. The chip is
+   a ::before inset 3 px with its own radius, so the cell's geometry (--chs, the dividers, chrowFit) is untouched and the chip
+   reads as one rounded thing inside the outline. The one also in the pad keeps the tint glyph every current character has —
+   a soft fill and a tint glyph can both be seen, so the v525 ring is gone. */
+.chrow .ch.lock{color:var(--lock);isolation:isolate}
+.chrow .ch.lock::before{content:"";position:absolute;inset:3px;border-radius:9px;background:var(--lock-soft);z-index:-1} /* isolation:isolate keeps the -1 inside the button (the v461 lesson: a negative z-index paints under the card) */
+.chrow .ch.lock.cur{color:var(--tint)}
+/* and the padlock in its corner (v518, H: "Locked on/off should be more obvious, maybe with a padlock icon?") — a small glyph in the lock colour in the chip's corner since v528, no disc */
+.chrow .ch .lockmark{position:absolute;right:6px;top:5px;width:10px;height:10px;color:var(--lock);display:inline-flex;align-items:center;justify-content:center;pointer-events:none}
+.chrow .ch .lockmark svg{width:10px;height:10px;fill:currentColor}
 /* the open card in the study card's layout (v518): the actions where the pad would stand */
 .card.study.detail .detailacts{margin-top:14px}
 .card.study.detail .padline{margin-top:12px}
