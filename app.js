@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=524; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=525; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -644,6 +644,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v525","word row: outline + divider only; lock green"],
   ["app","v524","a session runs short → long in each group"],
   ["app","v523","after a write: the card large over the pad, 3 s"],
   ["app","v522","'6 of 66' in the fold row; big 2-row tiles"],
@@ -2897,7 +2898,7 @@ function renderStudy(main){
   if(st.i<0||st.i>=tg.length||!tg[st.i].w) st.i=tg.findIndex((x,i)=>x.w&&!st.done.has(i)); /* the first unwritten character is current when the card lands */
   const cur=tg[st.i]||null;
   const btn=x=>{ const i=tg.indexOf(x), cls=["ch",st.done.has(i)?"done":"",cur===x?"cur":"",x.w?"":"num",S.lockChar&&x.ch===S.lockChar?"lock":""].filter(Boolean).join(" "); /* lock: the long-pressed character, on every card of its walk (v513) */
-    return `<button class="${cls}" data-i="${i}" ${x.w?"":`aria-disabled="true"`}>${esc(x.glyph)}${st.done.has(i)?`<i class="tick" aria-hidden="true">${MARK_TICK}</i>`:""}${S.lockChar&&x.ch===S.lockChar?`<i class="lockmark" aria-hidden="true">${MARK_LOCK}</i>`:""}</button>`; }; /* lockmark: the padlock (v518, H: "Locked on/off should be more obvious, maybe with a padlock icon?") */
+    return `<button class="${cls}" data-i="${i}" ${x.w?"":`aria-disabled="true"`}>${esc(x.glyph)}${S.lockChar&&x.ch===S.lockChar?`<i class="lockmark" aria-hidden="true">${MARK_LOCK}</i>`:""}</button>`; }; /* lockmark: the padlock (v518, H: "Locked on/off should be more obvious, maybe with a padlock icon?") */
   const litWi=cur?cur.wi:null; /* v518: the lit word is the word of the character in the pad, so it follows the pad by itself */
   const chrow=chrowHTML(d,tg,btn,litWi);
   const pg=frontPage(d), picHTML=frontPic(d,{page:true,fixed:true}); /* v517: one box shape on the study card */
@@ -3383,7 +3384,7 @@ function mountPad(card,d,c,tg,st,cur){
     const i=tg.indexOf(cur); if(helped) st.helped.add(i); st.done.add(i);
     S.wroteAt=S.wroteAt||{}; S.wroteAt[c+":"+cur.pos]={lv:lvl,helped}; if(helped) bumpWrite(cur.glyph,-2); else bumpWrite(cur.glyph,1);
     flash=1; paint(); buzz(20);
-    const b=card.querySelector(`.chrow .ch[data-i="${i}"]`); if(b){ b.classList.add("done"); b.classList.remove("cur"); b.insertAdjacentHTML("beforeend",`<i class="tick" aria-hidden="true">${MARK_TICK}</i>`); }
+    const b=card.querySelector(`.chrow .ch[data-i="${i}"]`); if(b){ b.classList.add("done"); b.classList.remove("cur"); } /* v525: the written character is the green glyph alone, no badge */
     await new Promise(r=>setTimeout(r,reduced?150:300)); if(!cv.isConnected) return; flash=0;
     const next=tg.findIndex((x,j)=>x.w&&!st.done.has(j));
     if(next>=0){ await new Promise(r=>setTimeout(r,250)); if(!cv.isConnected||S.pad!==st) return; st.i=next; st.k=0; st.miss=0; st.hint=false; st.free.length=0; render(); return; }
