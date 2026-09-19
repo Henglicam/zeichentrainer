@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=531; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=532; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -530,6 +530,7 @@ function diagText(){
     /* the settings the same photo would be read differently under: the app's language goes into picSystem() through
        meaningLangName(), so a German phone gets another answer for the same picture */
     `settings · lang ${LANG} · picture to the AI ${S.settings.aiPicture===false?"off":"on"} · relay ${S.settings.aiRelay===false?"off":"on"} · auto check ${S.settings.aiAuto===false?"off":"on"} · offline model ${S.settings.nmt?"on":"off"} · mirror ${S.settings.mirror===undefined?"default":(S.settings.mirror||"off")} · brightening ${S.settings.brightPass?"done":"not yet"} · re-cut ${recutLine()}`,
+    `main thread · long tasks ${LONG.n}${LONG.n?` (${Math.round(LONG.total)} ms in all, longest ${Math.round(LONG.max)} ms, last ${ago(LONG.at)})`:""} · parse strokes ${PARSE_MS.strokes==null?"not yet":PARSE_MS.strokes+" ms"}, outlines ${PARSE_MS.outlines==null?"not yet":PARSE_MS.outlines+" ms"} · resizes ${RESIZES.length?RESIZES.map(r=>r.bfcache?"back from the cache "+ago(r.t):`${r.from.join("×")}→${r.to.join("×")} ${ago(r.t)}`).join("; "):"none"}`, /* v532: what a fold did to the page, for H's next dump */
     `learn fit · ${LAST_FIT?Object.entries(LAST_FIT).filter(([k])=>k!=="at").map(([k,v])=>k+" "+v).join(", ")+" ("+ago(LAST_FIT.at)+")":"no study card measured yet"}`, /* v521: the pad's last measurement — where the card ends against the tab bar, and what was counted under the pad */
     navigator.userAgent, `voices (${voiceList().length}): ${voiceList().join("; ")||"none reported"}`, ""];
   /* v479: every block is one photo's own. The steps used to be a single global list that the next reading wiped, so an album
@@ -644,6 +645,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v532","fold/unfold at startup: no frozen screen; Diagnostics' main-thread line"],
   ["app","v531","open card: the word's line under the row, Whole card at the foot"],
   ["app","v531","a hold on a character does nothing (the lock is off)"],
   ["app","v530","swipe: the next card as tall as the one it replaces"],
@@ -3218,7 +3220,30 @@ async function checkCard(id){ const d=cardOf(id); if(!d||!d.unchecked) return; c
 const PAD_MIN=200, TRACE_OK=0.18, NEXT_MS=3000, PRAISE_AT=2000, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
 const CARD_RATIO=1.5; /* the one window and box shape on every card, 3:2 (v519) — declared here, since FRONT_RATIO reads it at load time */
 let LAST_FIT=null; /* v521: the study card's last pad measurement, printed by Diagnostics */
-window.addEventListener("resize",()=>{ const c=document.querySelector(".card.study"); if(c&&c._fitPad) c._fitPad(); }); /* v521: every resize re-fits the pad of the card on screen (a fold, the system bars) */
+/* THE MAIN THREAD AT STARTUP, AND WHAT A FOLD DOES TO IT (v532, H: "open/close foldable phone sometimes freezes the startup
+   screen from the app"). Not reproduced here — the harness has no fold —, so three things that are measurable rather than a
+   guess: (1) the two stroke tables (2.4 MB and 7.3 MB gzipped, 9,534 lines each) were parsed in one synchronous loop each at
+   the first card of a session — measured as one 260 ms task unthrottled and 959 ms at 4× CPU throttle, which on a phone in
+   the middle of a fold is a screen that does not move; they are decoded and parsed in the stream's own chunks with the thread freed
+   between them (eachLineOf, yieldNow), so no task at startup is longer than a chunk. (2) A fold's burst of resize events is coalesced
+   into one frame, and the character row is fitted again beside the pad — until v531 only the pad followed a resize and the
+   row kept the folded screen's size after an unfold. (3) Diagnostics carries the numbers the next report needs: the long
+   tasks since the page loaded (count, total, longest, and when), the parse times, the last resizes with their sizes, and
+   whether the page came back from the back/forward cache (a fold can hand Chrome a page it had frozen). */
+const FEED_CHUNK=131072, PARSE_MS={}, LONG={n:0,total:0,max:0,at:0}, RESIZES=[];
+/* a vendor text file, gzipped or not, read line by line as it streams in: the bytes are inflated and decoded in the network's
+   own chunks (about 64 KB), each chunk's lines handed to fn, and the thread freed before the next — measured, the one
+   `Response.text()` that built the 19 MB outline string was a 766 ms task at 4× on its own, and text.split("\n") on it
+   another 200; neither exists now, and the file is never whole in memory */
+async function eachLineOf(res,fn){ const buf=new Uint8Array(await res.arrayBuffer()); let p=0; const body=new ReadableStream({pull(c){ if(p>=buf.length){ c.close(); return; } c.enqueue(buf.subarray(p,p+FEED_CHUNK)); p+=FEED_CHUNK; }}); /* fed in slices: handed the whole 7 MB at once the inflater did all of it in one 229 ms task (4×) before the first line came out */
+  const stream=(buf[0]===0x1f&&buf[1]===0x8b)?body.pipeThrough(new DecompressionStream("gzip")):body;
+  const rd=stream.getReader(), dec=new TextDecoder(); let rest=""; for(;;){ const {value,done}=await rd.read(); const chunk=rest+dec.decode(value||new Uint8Array(),{stream:!done}); const lines=chunk.split("\n"); rest=done?"":lines.pop(); for(const l of lines) fn(l); if(done){ if(rest) fn(rest); return; } await yieldNow(); } }
+const yieldNow=()=>new Promise(r=>{ if(window.scheduler&&scheduler.yield) scheduler.yield().then(r,()=>setTimeout(r,0)); else setTimeout(r,0); });
+try{ new PerformanceObserver(l=>{ for(const e of l.getEntries()){ LONG.n++; LONG.total+=e.duration; LONG.max=Math.max(LONG.max,e.duration); LONG.at=Date.now(); } }).observe({entryTypes:["longtask"]}); }catch(e){} /* not every browser reports long tasks; Diagnostics then says so */
+let _rsz=0, _rszFrom=[window.innerWidth,window.innerHeight];
+window.addEventListener("resize",()=>{ if(_rsz) return; _rsz=requestAnimationFrame(()=>{ _rsz=0; const to=[window.innerWidth,window.innerHeight]; if(to[0]!==_rszFrom[0]||to[1]!==_rszFrom[1]){ RESIZES.push({t:Date.now(),from:_rszFrom,to}); _rszFrom=to; while(RESIZES.length>6) RESIZES.shift(); }
+  const c=document.querySelector(".card.study"); if(!c) return; chrowFit(c); if(c._fitPad) c._fitPad(); }); }); /* v521: every resize re-fits the pad of the card on screen (a fold, the system bars); v532: once per frame, and the row with it */
+window.addEventListener("pageshow",e=>{ if(e.persisted){ RESIZES.push({t:Date.now(),bfcache:true}); while(RESIZES.length>6) RESIZES.shift(); const c=document.querySelector(".card.study"); if(c){ chrowFit(c); if(c._fitPad) c._fitPad(); } } }); /* a page Chrome froze and brought back is measured again */
 const PAD_BELOW=54, FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_GRID/1024;
 /* NEXT_MS is 3000 since v523: the finished card holds while its recap stands over the pad — the characters, pinyin and
    meaning, large — and the star flies out of it at PRAISE_AT (v523, H: "sollte der Inhalt der Karte nochmal groß und
@@ -3258,11 +3283,11 @@ function loadOutlines(){
     const url=new URL("./vendor/outlines.txt.gz",location.href).href;
     let r=await vendorFetch("outlines.txt.gz").catch(err=>{ if(!swControls()) throw err; return {ok:false,status:err.message}; });
     if(!r.ok){ try{ const c=await caches.open("zt-ocr-v1"); await c.delete(url); }catch(e){} r=await fetch(url,{cache:"reload"}); if(!r.ok) throw new Error("outline data not available ("+r.status+")"); }
-    const buf=new Uint8Array(await r.arrayBuffer());
-    const text=(buf[0]===0x1f&&buf[1]===0x8b)?await new Response(new Response(buf).body.pipeThrough(new DecompressionStream("gzip"))).text():new TextDecoder().decode(buf);
-    for(const line of text.split("\n")){ const i=line.indexOf("\t"); if(i<1) continue; let st; try{ st=JSON.parse(line.slice(i+1)); }catch(e){ continue; }
-      if(Array.isArray(st)&&st.length) OUTLINE_OF.set(line.slice(0,i),st); }
-    OUTLINES=true; return OUTLINES;
+    const t0=performance.now();
+    await eachLineOf(r,line=>{ /* v532: decoded and parsed chunk by chunk, the main thread free between chunks */
+      const i=line.indexOf("\t"); if(i<1) return; let st; try{ st=JSON.parse(line.slice(i+1)); }catch(e){ return; }
+      if(Array.isArray(st)&&st.length) OUTLINE_OF.set(line.slice(0,i),st); });
+    PARSE_MS.outlines=Math.round(performance.now()-t0); OUTLINES=true; return OUTLINES;
   })().catch(err=>{ _outLoading=null; throw err; });
   return _outLoading;
 }
@@ -7664,13 +7689,12 @@ function loadStrokes(){
     const url=new URL("./vendor/strokes.txt.gz",location.href).href;
     let r=await vendorFetch("strokes.txt.gz").catch(err=>{ if(!swControls()) throw err; return {ok:false,status:err.message}; });
     if(!r.ok){ try{ const c=await caches.open("zt-ocr-v1"); await c.delete(url); }catch(e){} r=await fetch(url,{cache:"reload"}); if(!r.ok) throw new Error("stroke data not available ("+r.status+")"); }
-    const buf=new Uint8Array(await r.arrayBuffer());
-    const text=(buf[0]===0x1f&&buf[1]===0x8b)?await new Response(new Response(buf).body.pipeThrough(new DecompressionStream("gzip"))).text():new TextDecoder().decode(buf);
-    const byCount=new Map();
-    for(const line of text.split("\n")){ const i=line.indexOf("\t"); if(i<1) continue; const ch=line.slice(0,i); let st; try{ st=JSON.parse(line.slice(i+1)); }catch(e){ continue; }
+    const byCount=new Map(), t0=performance.now();
+    await eachLineOf(r,line=>{ /* v532: decoded and parsed chunk by chunk, the main thread free between chunks */
+      const i=line.indexOf("\t"); if(i<1) return; const ch=line.slice(0,i); let st; try{ st=JSON.parse(line.slice(i+1)); }catch(e){ return; }
       if(Array.isArray(st)&&st.length) STROKE_OF.set(ch,st); /* the pad's templates (v512): the medians as the file has them */
-      const prep=prepStrokes(st); if(!prep) continue; const a=byCount.get(prep.length)||[]; a.push({ch,st:prep}); byCount.set(prep.length,a); }
-    STROKES=byCount; return STROKES;
+      const prep=prepStrokes(st); if(!prep) return; const a=byCount.get(prep.length)||[]; a.push({ch,st:prep}); byCount.set(prep.length,a); });
+    PARSE_MS.strokes=Math.round(performance.now()-t0); STROKES=byCount; return STROKES;
   })().catch(err=>{ _strokesLoading=null; throw err; });
   return _strokesLoading;
 }
