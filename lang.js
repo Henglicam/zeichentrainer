@@ -32,11 +32,12 @@ function wordOf(n,w,pl){ const d=L10N[LANG], pk=pl||w+"s", f=pForm(n);
 /* a count with its word: nOf(3,"card") → "3 cards" / "3 Karten" / "カード3枚" / "3 карточки"; pl = an irregular plural key */
 function nOf(n,w,pl){ n=n||0; const tr=wordOf(n,w,pl); return tr.includes("{0}")?tr.replace("{0}",n):`${n} ${tr}`; }
 const L10N={
-en:{"bar:AI suggestion":"AI suggestion","bar:AI suggestions":"AI suggestions","card:⚑ Flagged":"⚑ Flagged","tile:New":"New","pad:Undo":"Undo","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
+en:{"alt:photo":"photo","bar:AI suggestion":"AI suggestion","bar:AI suggestions":"AI suggestions","card:⚑ Flagged":"⚑ Flagged","tile:New":"New","pad:Undo":"Undo","kind:Menu":"Menu","kind:Street sign":"Street sign","kind:Shop":"Shop","kind:Product":"Product","kind:Appliance":"Appliance","kind:Transport":"Transport","kind:Office":"Office","kind:Notice":"Notice","kind:App":"App"}, /* only the keys whose English differs from the key itself: one English word, two translations */
 de:{
+  "reading confidence {0}%":"Lesesicherheit {0} %","unknown {0}":"unbekannt: {0}","no dictionary meaning":"keine Wörterbuchbedeutung","the text looks misread":"der Text sieht falsch gelesen aus","the framed area":"der eingerahmte Bereich","card image":"Kartenbild","alt:photo":"Foto",
   "Not yet checked":"Noch nicht geprüft","tile:New":"Neu",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Halte ein Zeichen gedrückt, um alle Karten damit durchzugehen; halte es noch einmal gedrückt, um zurückzukommen.",
-  "Pinyin and meaning":"Pinyin und Bedeutung",
+  
   "Whole card":"Ganze Karte",
   "Explain":"Erklären",
   "Explaining …":"Wird erklärt …",
@@ -62,7 +63,7 @@ de:{
   "Check all cards again":"Alle Karten neu prüfen",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"Die KI wird ständig besser. Lass sie noch mal über dein ganzes Deck schauen – du siehst jede Änderung, bevor du sie übernimmst.",
   "Checking {0} of {1} …":"Prüfe {0} von {1} …",
-  "Done — {0} could be better. See them on the Cards tab.":"Fertig – {0} könnten besser sein. Schau sie dir im Tab Karten an.",
+  "Done — {0} could be better. Look under the Cards tab.":"Fertig – es gibt {0} zu verbessern. Schau im Tab Karten nach.",
   "Done — nothing to change. Your cards are in good shape.":"Fertig – nichts zu ändern. Deine Karten sind gut in Form.",
   "{0} checked, {1} left.":"{0} geprüft, {1} übrig.",
   "Accepted the AI's changes on {0} at {1}.":"Änderungen der KI an {0} um {1} übernommen.",
@@ -76,7 +77,7 @@ de:{
   "Tagging {0} of {1} …":"Tagge {0} von {1} …",
   "{0} tagged, {1} left.":"{0} getaggt, {1} übrig.",
   "Done — {0} tagged.":"Fertig – {0} getaggt.",
-  "{0} carry no tag yet.":"{0} haben noch kein Tag.",
+  "No tag yet on {0}.":"Noch kein Tag auf {0}.",
   "Filter":"Filter",
   "Status":"Status",
   "Filters ({0})":"Filter ({0})",
@@ -94,7 +95,7 @@ de:{
   "From album":"Aus dem Album",
   "Processing photo …":"Foto wird verarbeitet …",
   
-  "Inbox ({0})":"Eingang ({0})",
+  
   
   
   "Crop":"Ausschnitt",
@@ -193,7 +194,7 @@ de:{
   "the reading looks unsure — check text, pinyin and meaning":"das Lesen wirkt unsicher – Text, Pinyin und Bedeutung prüfen",
   "the picture may not show this text — check the photo":"das Bild zeigt vielleicht nicht diesen Text – schau dir das Foto an",
   "{0} cards from this photo":"{0} Karten von diesem Foto",
-  "{0} cards from this photo, {1} learned.":"{0} Karten von diesem Foto, {1} sicher.","{0} texts on this page, {1} as flashcards.":"{0} Texte auf dieser Seite, {1} als Karte.",
+  "{0} cards from this photo, {1} learned.":"{0} Karten von diesem Foto, {1} sicher.","Texts on this page: {0}, as flashcards: {1}.":"Texte auf dieser Seite: {0}, als Karten: {1}.",
   "A photo that made several cards keeps every one of them in its place — tap a text on it for its characters, pinyin and meaning.":"Ein Foto, aus dem mehrere Karten wurden, behält jede davon an ihrem Platz — tipp einen Text an für Zeichen, Pinyin und Bedeutung.",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard for the whole picture: one tile under Multicards, tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"Ein Foto mit mehreren Texten – ein App-Bildschirm, ein Bedienfeld, eine Speisekarte – wird zu einer Multicard für das ganze Bild: eine Kachel unter Multicards, tipp einen Text an, um ihn nachzuschlagen, und „Karte erstellen“ macht aus den Texten, die du lernen willst, je eine Karte.","Tap any text on the photo.":"Tippe auf einen Text im Foto.",
   "Nothing could be read. Tap Crop to frame the text by hand.":"Nichts zu lesen. Tipp auf Ausschnitt, um den Text von Hand einzurahmen.",
@@ -215,7 +216,7 @@ de:{
   "Take a photo":"Foto aufnehmen","All clear.":"Alles erledigt.","Pulled-forward round finished.":"Vorgezogene Runde beendet.",
   "Nothing due today. Come back tomorrow — or pull the next cards forward.":"Heute ist nichts fällig. Komm morgen wieder – oder zieh die nächsten Karten vor.",
   "Pull the next cards forward":"Nächste Karten vorziehen","Hard":"Schwer","Medium":"Mittel","Easy":"Leicht",
-  "⚑ Clear flag":"⚑ Markierung entfernen","⚑ Flag for review":"⚑ Zur Prüfung markieren","✎ Edit":"✎ Bearbeiten",
+  "⚑ Clear flag":"⚑ Markierung entfernen","⚑ Flag for review":"⚑ Zur Prüfung markieren",
   "← Cards":"← Karten","Testing from the list":"Test aus der Liste",
   "{0} learned, {1} reviewed this week, streak {2}":"{0} gelernt, {1} diese Woche wiederholt, Serie {2}",
   "card":"{0} Karte","cards":"{0} Karten","day":"{0} Tag","days":"{0} Tage","review":"{0} Wiederholung","reviews":"{0} Wiederholungen","photo":"{0} Foto","photos":"{0} Fotos",
@@ -246,11 +247,11 @@ de:{
   "When the reading is hard, a picture of the text — sometimes the whole photo — goes to {0}.":"Wenn der Text schwer zu lesen ist, geht ein Bild davon – manchmal das ganze Foto – an {0}.",
   "Off. The app's owner sets it up under Advanced settings.":"Aus. Der Besitzer der App richtet es unter Erweiterte Einstellungen ein.","Off. {0} and {1} are set up{2} — tick the box to check new cards.":"Aus. {0} und {1} sind eingerichtet{2} — Häkchen setzen, um neue Karten prüfen zu lassen.",
   " through the app owner's relay":" über das Relais des App-Besitzers","Off. {0} is set up{1} — tick the box to check new cards.":"Aus. {0} ist eingerichtet{1} — Häkchen setzen, um neue Karten prüfen zu lassen.","On{0}: {1} checks the text, {2} reads a picture of it when the reading is hard.":"An{0}: {1} prüft den Text, {2} liest ein Bild davon, wenn die Erkennung schwer ist.",
-  ", through the app owner's relay":", über das Relais des App-Besitzers","On{0}: {1} checks the text. Photos never leave the phone.":"An{0}: {1} prüft den Text. Fotos verlassen das Telefon nie.","Nothing to review":"Nichts zu prüfen","{0} waiting: {1} flagged, {2} uncertain, {3} pending translation.":"{0} warten: {1} markiert, {2} unsicher, {3} ohne Übersetzung.",
+  ", through the app owner's relay":", über das Relais des App-Besitzers","On{0}: {1} checks the text. Photos never leave the phone.":"An{0}: {1} prüft den Text. Fotos verlassen das Telefon nie.","Nothing to review":"Nichts zu prüfen","{0} waiting: {1} flagged, {2} uncertain, {3} pending translation.":"{0} in der Warteschlange: {1} markiert, {2} unsicher, {3} ohne Übersetzung.",
   "Nothing waiting. Flag a card, or save a reading that looks uncertain.":"Nichts wartet. Markiere eine Karte oder speichere eine unsichere Erkennung.",
-  "{0} ready. Accept or dismiss them under Cards.":"{0} bereit. Unter Karten annehmen oder verwerfen.","Failed: {0}":"Fehlgeschlagen: {0}","Link copied.":"Link kopiert.","The link: {0}":"Der Link: {0}",
+  "{0} ready. Accept or dismiss under Cards.":"{0} bereit. Unter Karten annehmen oder verwerfen.","Failed: {0}":"Fehlgeschlagen: {0}","Link copied.":"Link kopiert.","The link: {0}":"Der Link: {0}",
   "Off. Nothing is sent.":"Aus. Es wird nichts gesendet.","Last sent today.":"Zuletzt heute gesendet.","Last sent {0}.":"Zuletzt gesendet am {0}.","Not sent yet.":"Noch nicht gesendet.",
-  "Last export: today.":"Letzter Export: heute.","Last export: {0} ago.":"Letzter Export: vor {0}.","Never exported.":"Nie exportiert.","Export now — the cards exist only on this phone.":"Jetzt exportieren — die Karten gibt es nur auf diesem Telefon.",
+  "Last export: today.":"Letzter Export: heute.","Last export: {0} ago.":"Letzter Export: {0} her.","Never exported.":"Nie exportiert.","Export now — the cards exist only on this phone.":"Jetzt exportieren — die Karten gibt es nur auf diesem Telefon.",
   "{0} in the inbox":"{0} im Eingang",", {0} older than {1} days":", {0} davon älter als {1} Tage","Delete {0} old photos?":"{0} alte Fotos löschen?","Delete one old photo?":"Ein altes Foto löschen?",
   "Cards made from them keep their own picture. A photo that never made a card is gone.":"Karten, die daraus entstanden sind, behalten ihr eigenes Bild. Ein Foto ohne Karte ist danach weg.","Persistent on this phone.":"Dauerhaft auf diesem Telefon gespeichert.","Not persistent yet. Install the app so the system keeps the data.":"Noch nicht dauerhaft. Installiere die App, damit das System die Daten behält.",
   "Checking …":"Prüfe …","Share":"Teilen","Share the app":"App teilen","Send the link to a friend. The app installs from any browser, no store.":"Schick den Link einem Freund. Die App installiert sich aus jedem Browser, ohne Store.",
@@ -273,7 +274,7 @@ de:{
   "Pinyin and meaning were filled in automatically and are unverified — check the tones and the meaning.":"Pinyin und Bedeutung wurden automatisch ausgefüllt und sind ungeprüft — prüfe die Töne und die Bedeutung.",
   "Add card":"Karte anlegen","← Back":"← Zurück","Characters (traditional, as on the photo)":"Zeichen (traditionell, wie auf dem Foto)",
   "Ask AI to check text, pinyin and meaning":"KI Text, Pinyin und Bedeutung prüfen lassen","Save changes":"Änderungen speichern",". Tap the button to try again.":". Tippe auf den Knopf, um es noch einmal zu versuchen.",
-  "Crop again":"Neu zuschneiden","Pinyin and meaning are required.":"Pinyin und Bedeutung sind nötig.","Please enter Chinese text.":"Bitte chinesischen Text eingeben.","Please enter a Chinese word.":"Bitte ein chinesisches Wort eingeben.",
+  "Crop again":"Neu zuschneiden","Pinyin and meaning are required.":"Pinyin und Bedeutung sind nötig.","Please enter Chinese text.":"Gib den chinesischen Text ein.","Please enter a Chinese word.":"Gib ein chinesisches Wort ein.",
   "“{0}” is already in the deck.":"„{0}“ ist schon im Stapel.","“{0}” added.":"„{0}“ angelegt.","Export failed: {0}":"Export fehlgeschlagen: {0}","Not a Zeichentrainer export (JSON).":"Kein Zeichentrainer-Export (JSON).",
   "Export is empty — nothing to import.":"Der Export ist leer — nichts zu importieren.","Import {0} and {1}?":"{0} und {1} importieren?","Existing entries of the same cards will be overwritten.":"Vorhandene Einträge derselben Karten werden überschrieben.","Import failed ({0})":"Import fehlgeschlagen ({0})",
   "Imported {0} and {1}":"{0} und {1} importiert",", {0} with photos":", {0} mit Fotos","({0} could not be read)":"({0} konnten nicht gelesen werden)","The file carries no photos; the photos on this phone were kept":"Die Datei enthält keine Fotos; die Fotos auf diesem Telefon wurden behalten",
@@ -321,9 +322,10 @@ de:{
   "Day streak":"Tage in Folge","Cards learned":"Karten gelernt","Due today":"Heute fällig","Reviews this week":"Wiederholungen diese Woche","Last 30 days":"Die letzten 30 Tage","Still learning":"Noch am Lernen","Known":"Sicher","Coming up: {0} due tomorrow, {1} this week.":"Demnächst: {0} morgen fällig, {1} diese Woche."
 },
 fr:{
+  "reading confidence {0}%":"confiance de lecture {0} %","unknown {0}":"inconnus : {0}","no dictionary meaning":"aucun sens au dictionnaire","the text looks misread":"le texte semble mal lu","the framed area":"la zone encadrée","card image":"image de la carte","alt:photo":"photo",
   "Not yet checked":"Pas encore vérifiées","tile:New":"Nouvelle",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Maintiens un caractère appuyé pour parcourir toutes les cartes qui le contiennent ; maintiens-le appuyé de nouveau pour revenir.",
-  "Pinyin and meaning":"Pinyin et sens",
+  
   "Whole card":"Toute la carte",
   "Explain":"Expliquer",
   "Explaining …":"Explication en cours …",
@@ -349,21 +351,21 @@ fr:{
   "Check all cards again":"Revérifier toutes les cartes",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"L'IA s'améliore sans cesse. Laisse-la relire tout ton paquet – tu vois chaque changement avant de l'accepter.",
   "Checking {0} of {1} …":"Vérification {0} sur {1} …",
-  "Done — {0} could be better. See them on the Cards tab.":"Terminé – {0} pourraient être meilleures. Regarde-les dans l'onglet Cartes.",
+  "Done — {0} could be better. Look under the Cards tab.":"Terminé – il y a {0} à améliorer. Regarde dans l'onglet Cartes.",
   "Done — nothing to change. Your cards are in good shape.":"Terminé – rien à changer. Tes cartes sont en pleine forme.",
   "{0} checked, {1} left.":"{0} vérifiées, {1} restantes.",
   "Accepted the AI's changes on {0} at {1}.":"Changements de l'IA sur {0} acceptés à {1}.",
   "Dismissed the AI's suggestions on {0} at {1}.":"Suggestions de l'IA sur {0} ignorées à {1}.",
   "Check-up":"Bilan",
   "Undo last run":"Annuler la dernière passe",
-  "Tagged {0} at {1}.":"{0} taguées à {1}.",
-  "Translated {0} at {1}.":"{0} traduites à {1}.",
-  "Undone — {0} put back.":"Annulé – {0} restaurées.",
+  "Tagged {0} at {1}.":"Tags ajoutés à {0} à {1}.",
+  "Translated {0} at {1}.":"Traduction de {0} à {1}.",
+  "Undone — {0} put back.":"Annulé – {0} de retour.",
   "Tag all cards":"Taguer toutes les cartes",
   "Tagging {0} of {1} …":"Tag {0} sur {1} …",
   "{0} tagged, {1} left.":"{0} taguées, {1} restantes.",
-  "Done — {0} tagged.":"Terminé – {0} taguées.",
-  "{0} carry no tag yet.":"{0} n'ont pas encore de tag.",
+  "Done — {0} tagged.":"Terminé – tags ajoutés à {0}.",
+  "No tag yet on {0}.":"Pas encore de tag sur {0}.",
   "Filter":"Filtre",
   "Status":"Statut",
   "Filters ({0})":"Filtres ({0})",
@@ -381,7 +383,7 @@ fr:{
   "From album":"Depuis l'album",
   "Processing photo …":"Traitement de la photo …",
   
-  "Inbox ({0})":"Reçues ({0})",
+  
   
   
   "Crop":"Cadrer",
@@ -480,7 +482,7 @@ fr:{
   "the reading looks unsure — check text, pinyin and meaning":"la lecture semble incertaine – vérifie le texte, le pinyin et le sens",
   "the picture may not show this text — check the photo":"l'image ne montre peut-être pas ce texte – regarde la photo",
   "{0} cards from this photo":"{0} cartes sur cette photo",
-  "{0} cards from this photo, {1} learned.":"{0} cartes sur cette photo, {1} acquises.","{0} texts on this page, {1} as flashcards.":"{0} textes sur cette page, {1} en cartes.",
+  "{0} cards from this photo, {1} learned.":"Cartes de cette photo : {0}, acquises : {1}.","Texts on this page: {0}, as flashcards: {1}.":"Textes sur cette page : {0}, en cartes : {1}.",
   "A photo that made several cards keeps every one of them in its place — tap a text on it for its characters, pinyin and meaning.":"Une photo qui a donné plusieurs cartes garde chacune à sa place — touche un texte pour ses caractères, son pinyin et son sens.",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard for the whole picture: one tile under Multicards, tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"Une photo avec plusieurs textes — un écran d'appli, un panneau de commande, un menu — devient une multicarte pour toute l'image : une vignette sous Multicartes, touche un texte pour le consulter, et « Créer une carte » fait une carte de ceux que tu veux apprendre.","Tap any text on the photo.":"Touche un texte sur la photo.",
   "Nothing could be read. Tap Crop to frame the text by hand.":"Rien n'a pu être lu. Touche Cadrer pour encadrer le texte à la main.",
@@ -501,9 +503,9 @@ fr:{
   "Photograph a sign, a poster or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.":"Photographie un panneau, une affiche ou un emballage sous <b>Photo</b> – ou ajoute un mot à la main sous <b>Cartes → + Nouvelle</b>.","All clear.":"Tout est fait.","Pulled-forward round finished.":"Tour anticipé terminé.",
   "Nothing due today. Come back tomorrow — or pull the next cards forward.":"Rien à réviser aujourd'hui. Reviens demain – ou avance les prochaines cartes.",
   "Pull the next cards forward":"Avancer les prochaines cartes","Hard":"Difficile","Medium":"Moyen","Easy":"Facile",
-  "⚑ Clear flag":"⚑ Retirer le signalement","⚑ Flag for review":"⚑ Signaler à vérifier","✎ Edit":"✎ Modifier",
+  "⚑ Clear flag":"⚑ Retirer le signalement","⚑ Flag for review":"⚑ Signaler à vérifier",
   "← Cards":"← Cartes","Testing from the list":"Test depuis la liste",
-  "{0} learned, {1} reviewed this week, streak {2}":"{0} apprises, {1} révisées cette semaine, série de {2}",
+  "{0} learned, {1} reviewed this week, streak {2}":"Appris : {0} · révisions cette semaine : {1} · série : {2}",
   "card":"{0} carte","cards":"{0} cartes","day":"{0} jour","days":"{0} jours","review":"{0} révision","reviews":"{0} révisions","photo":"{0} photo","photos":"{0} photos",
   "bar:AI suggestion":"{0} suggestion de l'IA","bar:AI suggestions":"{0} suggestions de l'IA",
   
@@ -532,9 +534,9 @@ fr:{
   "When the reading is hard, a picture of the text — sometimes the whole photo — goes to {0}.":"Quand la lecture est difficile, une image du texte — parfois la photo entière — est envoyée à {0}.",
   "Off. The app's owner sets it up under Advanced settings.":"Désactivé. Le propriétaire de l'appli le configure sous Réglages avancés.","Off. {0} and {1} are set up{2} — tick the box to check new cards.":"Désactivé. {0} et {1} sont configurés{2} — coche la case pour vérifier les nouvelles cartes.",
   " through the app owner's relay":" via le relais du propriétaire de l'appli","Off. {0} is set up{1} — tick the box to check new cards.":"Désactivé. {0} est configuré{1} — coche la case pour vérifier les nouvelles cartes.","On{0}: {1} checks the text, {2} reads a picture of it when the reading is hard.":"Activé{0} : {1} vérifie le texte, {2} en lit une image quand la lecture est difficile.",
-  ", through the app owner's relay":", via le relais du propriétaire de l'appli","On{0}: {1} checks the text. Photos never leave the phone.":"Activé{0} : {1} vérifie le texte. Les photos ne quittent jamais le téléphone.","Nothing to review":"Rien à vérifier","{0} waiting: {1} flagged, {2} uncertain, {3} pending translation.":"{0} en attente : {1} signalées, {2} incertaines, {3} sans traduction.",
+  ", through the app owner's relay":", via le relais du propriétaire de l'appli","On{0}: {1} checks the text. Photos never leave the phone.":"Activé{0} : {1} vérifie le texte. Les photos ne quittent jamais le téléphone.","Nothing to review":"Rien à vérifier","{0} waiting: {1} flagged, {2} uncertain, {3} pending translation.":"{0} en attente — signalées : {1}, incertaines : {2}, sans traduction : {3}.",
   "Nothing waiting. Flag a card, or save a reading that looks uncertain.":"Rien en attente. Signale une carte, ou enregistre une lecture qui semble incertaine.",
-  "{0} ready. Accept or dismiss them under Cards.":"{0} prêtes. Accepte-les ou rejette-les sous Cartes.","Failed: {0}":"Échec : {0}","Link copied.":"Lien copié.","The link: {0}":"Le lien : {0}",
+  "{0} ready. Accept or dismiss under Cards.":"{0} à examiner. Accepte ou rejette sous Cartes.","Failed: {0}":"Échec : {0}","Link copied.":"Lien copié.","The link: {0}":"Le lien : {0}",
   "Off. Nothing is sent.":"Désactivé. Rien n'est envoyé.","Last sent today.":"Dernier envoi aujourd'hui.","Last sent {0}.":"Dernier envoi le {0}.","Not sent yet.":"Pas encore envoyé.",
   "Last export: today.":"Dernier export : aujourd'hui.","Last export: {0} ago.":"Dernier export : il y a {0}.","Never exported.":"Jamais exporté.","Export now — the cards exist only on this phone.":"Exporte maintenant — les cartes n'existent que sur ce téléphone.",
   "{0} in the inbox":"{0} dans la boîte",", {0} older than {1} days":", dont {0} de plus de {1} jours","Delete {0} old photos?":"Supprimer {0} anciennes photos ?","Delete one old photo?":"Supprimer une ancienne photo ?",
@@ -567,7 +569,7 @@ fr:{
   "Delete everything":"Tout supprimer","Oldest first":"Plus anciennes d'abord","Newest first":"Plus récentes d'abord","Random":"Aléatoire",
   "suggestion":"{0} suggestion","suggestions":"{0} suggestions","progress entry":"{0} entrée de progression","progress entries":"{0} entrées de progression",
   /* the meaning in the app's language and the Translate-all row (v256) */
-  "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Les textes de l'appli et le sens des nouvelles cartes. Les cartes gardent le chinois et le pinyin.","Meanings":"Sens","card has its meaning in another language.":"carte a son sens dans une autre langue.","cards have their meaning in another language.":"cartes ont leur sens dans une autre langue.","Translate all cards into {0}":"Traduire toutes les cartes en {0}","Translating {0} of {1} …":"Traduction {0} sur {1} …","{0} translated, {1} left.":"{0} traduites, {1} restantes.","Done — {0} translated.":"Terminé – {0} traduites.",
+  "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Les textes de l'appli et le sens des nouvelles cartes. Les cartes gardent le chinois et le pinyin.","Meanings":"Sens","card has its meaning in another language.":"carte a son sens dans une autre langue.","cards have their meaning in another language.":"cartes ont leur sens dans une autre langue.","Translate all cards into {0}":"Traduire toutes les cartes en {0}","Translating {0} of {1} …":"Traduction {0} sur {1} …","{0} translated, {1} left.":"{0} traduites, {1} restantes.","Done — {0} translated.":"Terminé – traduction de {0}.",
   /* the More screen in the learner's order (v257) */
   "Privacy":"Confidentialité",
   /* the pill for a meaning in another language (v258) */
@@ -608,9 +610,10 @@ fr:{
   "Day streak":"Jours d'affilée","Cards learned":"Cartes apprises","Due today":"À revoir aujourd'hui","Reviews this week":"Révisions cette semaine","Last 30 days":"Les 30 derniers jours","Still learning":"En cours","Known":"Acquises","Coming up: {0} due tomorrow, {1} this week.":"À venir : {0} demain, {1} cette semaine."
 },
 es:{
+  "reading confidence {0}%":"confianza de lectura {0} %","unknown {0}":"desconocidos: {0}","no dictionary meaning":"sin significado en el diccionario","the text looks misread":"el texto parece mal leído","the framed area":"el área enmarcada","card image":"imagen de la tarjeta","alt:photo":"foto",
   "Not yet checked":"Sin revisar todavía","tile:New":"Nueva",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Mantén pulsado un carácter para recorrer todas las tarjetas que lo tienen; mantenlo pulsado otra vez para volver.",
-  "Pinyin and meaning":"Pinyin y significado",
+  
   "Whole card":"Toda la tarjeta",
   "Explain":"Explicar",
   "Explaining …":"Explicando …",
@@ -636,21 +639,21 @@ es:{
   "Check all cards again":"Revisar todas las tarjetas",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"La IA mejora sin parar. Deja que repase todo tu mazo: ves cada cambio antes de aceptarlo.",
   "Checking {0} of {1} …":"Revisando {0} de {1} …",
-  "Done — {0} could be better. See them on the Cards tab.":"Listo: {0} podrían mejorar. Míralas en la pestaña Tarjetas.",
+  "Done — {0} could be better. Look under the Cards tab.":"Listo: hay {0} que mejorar. Mira la pestaña Tarjetas.",
   "Done — nothing to change. Your cards are in good shape.":"Listo: nada que cambiar. Tus tarjetas están en forma.",
   "{0} checked, {1} left.":"{0} revisadas, {1} restantes.",
   "Accepted the AI's changes on {0} at {1}.":"Cambios de la IA en {0} aceptados a las {1}.",
   "Dismissed the AI's suggestions on {0} at {1}.":"Sugerencias de la IA en {0} descartadas a las {1}.",
   "Check-up":"Revisión",
   "Undo last run":"Deshacer la última pasada",
-  "Tagged {0} at {1}.":"{0} etiquetadas a las {1}.",
-  "Translated {0} at {1}.":"{0} traducidas a las {1}.",
-  "Undone — {0} put back.":"Deshecho: {0} restauradas.",
+  "Tagged {0} at {1}.":"Etiquetas añadidas a {0} a las {1}.",
+  "Translated {0} at {1}.":"Traducción de {0} a las {1}.",
+  "Undone — {0} put back.":"Deshecho: {0} de vuelta.",
   "Tag all cards":"Etiquetar todas las tarjetas",
   "Tagging {0} of {1} …":"Etiquetando {0} de {1} …",
   "{0} tagged, {1} left.":"{0} etiquetadas, {1} restantes.",
-  "Done — {0} tagged.":"Listo: {0} etiquetadas.",
-  "{0} carry no tag yet.":"{0} aún no tienen etiqueta.",
+  "Done — {0} tagged.":"Listo: etiquetas añadidas a {0}.",
+  "No tag yet on {0}.":"Aún sin etiqueta en {0}.",
   "Filter":"Filtro",
   "Status":"Estado",
   "Filters ({0})":"Filtros ({0})",
@@ -668,7 +671,7 @@ es:{
   "From album":"Del álbum",
   "Processing photo …":"Procesando la foto …",
   
-  "Inbox ({0})":"Bandeja ({0})",
+  
   
   
   "Crop":"Recortar",
@@ -767,7 +770,7 @@ es:{
   "the reading looks unsure — check text, pinyin and meaning":"la lectura parece insegura: revisa el texto, el pinyin y el significado",
   "the picture may not show this text — check the photo":"puede que la imagen no muestre este texto: mira la foto",
   "{0} cards from this photo":"{0} tarjetas de esta foto",
-  "{0} cards from this photo, {1} learned.":"{0} tarjetas de esta foto, {1} dominadas.","{0} texts on this page, {1} as flashcards.":"{0} textos en esta página, {1} como tarjetas.",
+  "{0} cards from this photo, {1} learned.":"Tarjetas de esta foto: {0}, dominadas: {1}.","Texts on this page: {0}, as flashcards: {1}.":"Textos en esta página: {0}, como tarjetas: {1}.",
   "A photo that made several cards keeps every one of them in its place — tap a text on it for its characters, pinyin and meaning.":"Una foto de la que salieron varias tarjetas guarda cada una en su sitio — toca un texto para ver sus caracteres, pinyin y significado.",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard for the whole picture: one tile under Multicards, tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"Una foto con varios textos — una pantalla de app, un panel de mandos, una carta de menú — se convierte en una multitarjeta para toda la imagen: una miniatura en Multitarjetas, toca un texto para consultarlo, y «Crear tarjeta» hace una tarjeta de los que quieras aprender.","Tap any text on the photo.":"Toca cualquier texto de la foto.",
   "Nothing could be read. Tap Crop to frame the text by hand.":"No se pudo leer nada. Toca Recortar para encuadrar el texto a mano.",
@@ -788,9 +791,9 @@ es:{
   "Photograph a sign, a poster or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.":"Fotografía un letrero, un cartel o un envase en <b>Cámara</b>, o añade una palabra a mano en <b>Tarjetas → + Nueva</b>.","All clear.":"Todo hecho.","Pulled-forward round finished.":"Ronda adelantada terminada.",
   "Nothing due today. Come back tomorrow — or pull the next cards forward.":"Nada pendiente hoy. Vuelve mañana, o adelanta las siguientes tarjetas.",
   "Pull the next cards forward":"Adelantar las siguientes tarjetas","Hard":"Difícil","Medium":"Medio","Easy":"Fácil",
-  "⚑ Clear flag":"⚑ Quitar la marca","⚑ Flag for review":"⚑ Marcar para revisar","✎ Edit":"✎ Editar",
+  "⚑ Clear flag":"⚑ Quitar la marca","⚑ Flag for review":"⚑ Marcar para revisar",
   "← Cards":"← Tarjetas","Testing from the list":"Prueba desde la lista",
-  "{0} learned, {1} reviewed this week, streak {2}":"{0} aprendidas, {1} repasadas esta semana, racha de {2}",
+  "{0} learned, {1} reviewed this week, streak {2}":"Aprendido: {0} · repasos esta semana: {1} · racha: {2}",
   "card":"{0} tarjeta","cards":"{0} tarjetas","day":"{0} día","days":"{0} días","review":"{0} repaso","reviews":"{0} repasos","photo":"{0} foto","photos":"{0} fotos",
   "bar:AI suggestion":"{0} sugerencia de la IA","bar:AI suggestions":"{0} sugerencias de la IA",
   
@@ -819,9 +822,9 @@ es:{
   "When the reading is hard, a picture of the text — sometimes the whole photo — goes to {0}.":"Cuando la lectura es difícil, una imagen del texto — a veces la foto entera — se envía a {0}.",
   "Off. The app's owner sets it up under Advanced settings.":"Desactivado. El propietario de la app lo configura en Ajustes avanzados.","Off. {0} and {1} are set up{2} — tick the box to check new cards.":"Desactivado. {0} y {1} están configurados{2} — marca la casilla para revisar las tarjetas nuevas.",
   " through the app owner's relay":" a través del relé del propietario de la app","Off. {0} is set up{1} — tick the box to check new cards.":"Desactivado. {0} está configurado{1} — marca la casilla para revisar las tarjetas nuevas.","On{0}: {1} checks the text, {2} reads a picture of it when the reading is hard.":"Activado{0}: {1} revisa el texto, {2} lee una imagen de él cuando la lectura es difícil.",
-  ", through the app owner's relay":", a través del relé del propietario de la app","On{0}: {1} checks the text. Photos never leave the phone.":"Activado{0}: {1} revisa el texto. Las fotos nunca salen del teléfono.","Nothing to review":"Nada que revisar","{0} waiting: {1} flagged, {2} uncertain, {3} pending translation.":"{0} en espera: {1} marcadas, {2} inciertas, {3} sin traducción.",
+  ", through the app owner's relay":", a través del relé del propietario de la app","On{0}: {1} checks the text. Photos never leave the phone.":"Activado{0}: {1} revisa el texto. Las fotos nunca salen del teléfono.","Nothing to review":"Nada que revisar","{0} waiting: {1} flagged, {2} uncertain, {3} pending translation.":"{0} en espera — marcadas: {1}, inciertas: {2}, sin traducción: {3}.",
   "Nothing waiting. Flag a card, or save a reading that looks uncertain.":"Nada en espera. Marca una tarjeta o guarda una lectura que parezca incierta.",
-  "{0} ready. Accept or dismiss them under Cards.":"{0} listas. Acéptalas o descártalas en Tarjetas.","Failed: {0}":"Error: {0}","Link copied.":"Enlace copiado.","The link: {0}":"El enlace: {0}",
+  "{0} ready. Accept or dismiss under Cards.":"{0} para revisar. Acepta o descarta en Tarjetas.","Failed: {0}":"Error: {0}","Link copied.":"Enlace copiado.","The link: {0}":"El enlace: {0}",
   "Off. Nothing is sent.":"Desactivado. No se envía nada.","Last sent today.":"Último envío hoy.","Last sent {0}.":"Último envío el {0}.","Not sent yet.":"Aún no enviado.",
   "Last export: today.":"Última exportación: hoy.","Last export: {0} ago.":"Última exportación: hace {0}.","Never exported.":"Nunca exportado.","Export now — the cards exist only on this phone.":"Exporta ahora — las tarjetas solo existen en este teléfono.",
   "{0} in the inbox":"{0} en la bandeja",", {0} older than {1} days":", {0} de más de {1} días","Delete {0} old photos?":"¿Eliminar {0} fotos antiguas?","Delete one old photo?":"¿Eliminar una foto antigua?",
@@ -854,7 +857,7 @@ es:{
   "Delete everything":"Eliminar todo","Oldest first":"Más antiguas primero","Newest first":"Más recientes primero","Random":"Aleatorio",
   "suggestion":"{0} sugerencia","suggestions":"{0} sugerencias","progress entry":"{0} entrada de progreso","progress entries":"{0} entradas de progreso",
   /* the meaning in the app's language and the Translate-all row (v256) */
-  "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Los textos de la app y el significado de las tarjetas nuevas. Las tarjetas conservan el chino y el pinyin.","Meanings":"Significados","card has its meaning in another language.":"tarjeta tiene su significado en otro idioma.","cards have their meaning in another language.":"tarjetas tienen su significado en otro idioma.","Translate all cards into {0}":"Traducir todas las tarjetas al {0}","Translating {0} of {1} …":"Traduciendo {0} de {1} …","{0} translated, {1} left.":"{0} traducidas, {1} pendientes.","Done — {0} translated.":"Listo — {0} traducidas.",
+  "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Los textos de la app y el significado de las tarjetas nuevas. Las tarjetas conservan el chino y el pinyin.","Meanings":"Significados","card has its meaning in another language.":"tarjeta tiene su significado en otro idioma.","cards have their meaning in another language.":"tarjetas tienen su significado en otro idioma.","Translate all cards into {0}":"Traducir todas las tarjetas al {0}","Translating {0} of {1} …":"Traduciendo {0} de {1} …","{0} translated, {1} left.":"{0} traducidas, {1} pendientes.","Done — {0} translated.":"Listo: traducción de {0}.",
   /* the More screen in the learner's order (v257) */
   "Privacy":"Privacidad",
   /* the pill for a meaning in another language (v258) */
@@ -895,9 +898,10 @@ es:{
   "Day streak":"Días seguidos","Cards learned":"Tarjetas aprendidas","Due today":"Para hoy","Reviews this week":"Repasos esta semana","Last 30 days":"Últimos 30 días","Still learning":"En curso","Known":"Dominadas","Coming up: {0} due tomorrow, {1} this week.":"Próximamente: {0} mañana, {1} esta semana."
 },
 ja:{
+  "reading confidence {0}%":"読み取りの確からしさ {0}%","unknown {0}":"不明な文字：{0}","no dictionary meaning":"辞書に意味がありません","the text looks misread":"テキストの読み取りが誤っているようです","the framed area":"枠で囲んだ範囲","card image":"カードの画像","alt:photo":"写真",
   "Not yet checked":"まだ確認していない","tile:New":"新規",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"文字を長押しすると、その文字が入ったカードを順に見られます。もう一度長押しすると戻ります。",
-  "Pinyin and meaning":"ピンインと意味",
+  
   "Whole card":"カード全体",
   "Explain":"解説",
   "Explaining …":"解説を作成中 …",
@@ -923,7 +927,7 @@ ja:{
   "Check all cards again":"すべてのカードを再チェック",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"AIは日々よくなっています。カード全部をもう一度見てもらいましょう。変更は取り込む前に確認できます。",
   "Checking {0} of {1} …":"{0} / {1} をチェック中 …",
-  "Done — {0} could be better. See them on the Cards tab.":"完了 — {0}はもっとよくなりそうです。カードタブで見てみましょう。",
+  "Done — {0} could be better. Look under the Cards tab.":"完了 — {0}はもっとよくなりそうです。カードタブで見てみましょう。",
   "Done — nothing to change. Your cards are in good shape.":"完了 — 変更はありません。カードはいい状態です。",
   "{0} checked, {1} left.":"{0}をチェック、残り{1}。",
   "Accepted the AI's changes on {0} at {1}.":"{1}に{0}へのAIの変更を採用しました。",
@@ -937,7 +941,7 @@ ja:{
   "Tagging {0} of {1} …":"{0} / {1} にタグ付け中 …",
   "{0} tagged, {1} left.":"{0}にタグ付け、残り{1}。",
   "Done — {0} tagged.":"完了 — {0}にタグを付けました。",
-  "{0} carry no tag yet.":"{0}にまだタグがありません。",
+  "No tag yet on {0}.":"{0}にまだタグがありません。",
   "Filter":"フィルター",
   "Status":"状態",
   "Filters ({0})":"フィルター{0}件",
@@ -955,7 +959,7 @@ ja:{
   "From album":"アルバムから",
   "Processing photo …":"写真を処理中 …",
   
-  "Inbox ({0})":"受信 ({0})",
+  
   
   
   "Crop":"切り抜き",
@@ -1054,7 +1058,7 @@ ja:{
   "the reading looks unsure — check text, pinyin and meaning":"読み取りが不確かです — 文字・ピンイン・意味を確認してください",
   "the picture may not show this text — check the photo":"写真がこの文字を写していないかもしれません — 写真を確認してね",
   "{0} cards from this photo":"この写真からカード{0}枚",
-  "{0} cards from this photo, {1} learned.":"この写真からカード{0}枚、うち{1}枚は習得済み。","{0} texts on this page, {1} as flashcards.":"このページに{0}、うち{1}がカードになっています。",
+  "{0} cards from this photo, {1} learned.":"この写真からカード{0}枚、うち{1}枚は習得済み。","Texts on this page: {0}, as flashcards: {1}.":"このページのテキスト：{0}、カードになったもの：{1}。",
   "A photo that made several cards keeps every one of them in its place — tap a text on it for its characters, pinyin and meaning.":"複数のカードになった写真は、それぞれの場所をそのまま覚えています。テキストをタップすると漢字・ピンイン・意味が出ます。",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard for the whole picture: one tile under Multicards, tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"テキストが複数ある写真 — アプリの画面、操作パネル、メニュー — は、画像全体で1枚のマルチカードになります。マルチカード一覧では1つのタイル、テキストをタップすれば調べられて、覚えたいものは「カードを作る」でカードにできます。","Tap any text on the photo.":"写真の文字をタップしてみましょう。",
   "Nothing could be read. Tap Crop to frame the text by hand.":"何も読み取れませんでした。切り抜きをタップして、文字を手で枠に入れてください。",
@@ -1075,7 +1079,7 @@ ja:{
   "Photograph a sign, a poster or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.":"<b>カメラ</b>で看板・ポスター・パッケージを撮影するか、<b>カード → + 新規</b>で単語を手入力してください。","All clear.":"今日の分は終わりました。","Pulled-forward round finished.":"前倒しの復習が終わりました。",
   "Nothing due today. Come back tomorrow — or pull the next cards forward.":"今日の復習はありません。明日また来るか、次のカードを前倒しできます。",
   "Pull the next cards forward":"次のカードを前倒しする","Hard":"難しい","Medium":"普通","Easy":"簡単",
-  "⚑ Clear flag":"⚑ 印を外す","⚑ Flag for review":"⚑ 要確認の印","✎ Edit":"✎ 編集",
+  "⚑ Clear flag":"⚑ 印を外す","⚑ Flag for review":"⚑ 要確認の印",
   "← Cards":"← カード","Testing from the list":"一覧からテスト中",
   "{0} learned, {1} reviewed this week, streak {2}":"習得 {0}、今週の復習 {1}、連続 {2}",
   "card":"カード{0}枚","cards":"カード{0}枚","day":"{0}日","days":"{0}日","review":"{0}回","reviews":"{0}回","photo":"写真{0}枚","photos":"写真{0}枚",
@@ -1108,7 +1112,7 @@ ja:{
   " through the app owner's relay":"（アプリ所有者の中継経由）","Off. {0} is set up{1} — tick the box to check new cards.":"オフ。{0}は設定済みです{1}。新しいカードを確認するにはチェックを入れてください。","On{0}: {1} checks the text, {2} reads a picture of it when the reading is hard.":"オン{0}：{1}がテキストを確認し、読み取りが難しいときは{2}がその画像を読みます。",
   ", through the app owner's relay":"（アプリ所有者の中継経由）","On{0}: {1} checks the text. Photos never leave the phone.":"オン{0}：{1}がテキストを確認します。写真は端末の外に出ません。","Nothing to review":"確認するものはありません","{0} waiting: {1} flagged, {2} uncertain, {3} pending translation.":"{0}が待機中：要確認{1}、不確か{2}、翻訳待ち{3}。",
   "Nothing waiting. Flag a card, or save a reading that looks uncertain.":"待機中のものはありません。カードに印を付けるか、不確かな読み取りを保存してください。",
-  "{0} ready. Accept or dismiss them under Cards.":"{0}ができました。カードで採用または却下してください。","Failed: {0}":"失敗：{0}","Link copied.":"リンクをコピーしました。","The link: {0}":"リンク：{0}",
+  "{0} ready. Accept or dismiss under Cards.":"{0}ができました。カードで採用または却下してください。","Failed: {0}":"失敗：{0}","Link copied.":"リンクをコピーしました。","The link: {0}":"リンク：{0}",
   "Off. Nothing is sent.":"オフ。何も送信されません。","Last sent today.":"最終送信：今日","Last sent {0}.":"最終送信：{0}","Not sent yet.":"まだ送信していません。",
   "Last export: today.":"最終エクスポート：今日","Last export: {0} ago.":"最終エクスポート：{0}前","Never exported.":"エクスポートしたことがありません。","Export now — the cards exist only on this phone.":"今すぐエクスポートしてください。カードはこの端末にしかありません。",
   "{0} in the inbox":"受信箱に{0}",", {0} older than {1} days":"、うち{0}枚は{1}日より古いもの","Delete {0} old photos?":"古い写真{0}枚を削除しますか？","Delete one old photo?":"古い写真1枚を削除しますか？",
@@ -1182,9 +1186,10 @@ ja:{
   "Day streak":"連続日数","Cards learned":"学んだカード","Due today":"今日の復習","Reviews this week":"今週の復習回数","Last 30 days":"過去30日","Still learning":"学習中","Known":"定着","Coming up: {0} due tomorrow, {1} this week.":"この先：明日{0}枚、今週{1}枚。"
 },
 ko:{
+  "reading confidence {0}%":"읽기 신뢰도 {0}%","unknown {0}":"모르는 글자: {0}","no dictionary meaning":"사전에 뜻이 없어요","the text looks misread":"글자를 잘못 읽은 것 같아요","the framed area":"틀로 감싼 부분","card image":"카드 이미지","alt:photo":"사진",
   "Not yet checked":"아직 확인 안 함","tile:New":"새 카드",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"글자를 길게 누르면 그 글자가 든 카드를 차례로 볼 수 있어요. 다시 길게 누르면 돌아와요.",
-  "Pinyin and meaning":"병음과 뜻",
+  
   "Whole card":"카드 전체",
   "Explain":"설명",
   "Explaining …":"설명 만드는 중 …",
@@ -1210,7 +1215,7 @@ ko:{
   "Check all cards again":"모든 카드 다시 확인",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"AI는 계속 좋아져요. 카드 전체를 다시 한번 보게 해요 — 반영하기 전에 모든 변경 내용을 볼 수 있어요.",
   "Checking {0} of {1} …":"{0} / {1} 확인 중 …",
-  "Done — {0} could be better. See them on the Cards tab.":"완료 — {0}을 더 좋게 만들 수 있어요. 카드 탭에서 확인해요.",
+  "Done — {0} could be better. Look under the Cards tab.":"완료 — {0}을 더 좋게 만들 수 있어요. 카드 탭에서 확인해요.",
   "Done — nothing to change. Your cards are in good shape.":"완료 — 바꿀 게 없어요. 카드 상태가 좋아요.",
   "{0} checked, {1} left.":"{0} 확인, {1} 남음.",
   "Accepted the AI's changes on {0} at {1}.":"{1}에 {0}에 대한 AI의 변경을 적용했어요.",
@@ -1224,7 +1229,7 @@ ko:{
   "Tagging {0} of {1} …":"{0} / {1} 태그 다는 중 …",
   "{0} tagged, {1} left.":"{0} 태그 완료, {1} 남음.",
   "Done — {0} tagged.":"완료 — {0} 태그했어요.",
-  "{0} carry no tag yet.":"{0}에 아직 태그가 없어요.",
+  "No tag yet on {0}.":"{0}에 아직 태그가 없어요.",
   "Filter":"필터",
   "Status":"상태",
   "Filters ({0})":"필터 {0}개",
@@ -1242,7 +1247,7 @@ ko:{
   "From album":"앨범에서",
   "Processing photo …":"사진 처리 중 …",
   
-  "Inbox ({0})":"받은 사진 ({0})",
+  
   
   
   "Crop":"자르기",
@@ -1341,7 +1346,7 @@ ko:{
   "the reading looks unsure — check text, pinyin and meaning":"읽기가 불확실해요 — 글자, 병음, 뜻을 확인하세요",
   "the picture may not show this text — check the photo":"사진에 이 글자가 없을 수도 있어요 — 사진을 확인해요",
   "{0} cards from this photo":"이 사진에서 카드 {0}장",
-  "{0} cards from this photo, {1} learned.":"이 사진에서 카드 {0}장, 그중 {1}장은 익힘.","{0} texts on this page, {1} as flashcards.":"이 페이지에 {0}, 그중 {1}이 카드예요.",
+  "{0} cards from this photo, {1} learned.":"이 사진에서 카드 {0}장, 그중 {1}장은 익힘.","Texts on this page: {0}, as flashcards: {1}.":"이 페이지의 텍스트: {0}, 카드가 된 것: {1}.",
   "A photo that made several cards keeps every one of them in its place — tap a text on it for its characters, pinyin and meaning.":"카드가 여러 장 만들어진 사진은 각 카드의 자리를 그대로 기억해요. 텍스트를 탭하면 한자, 병음, 뜻이 나와요.",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard for the whole picture: one tile under Multicards, tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"텍스트가 여러 개인 사진 — 앱 화면, 조작판, 메뉴판 — 은 사진 전체가 멀티카드 한 장이 돼요. 멀티카드 목록에는 타일 하나로 들어가고, 텍스트를 탭하면 찾아볼 수 있고, 외우고 싶은 텍스트는 「카드 만들기」로 카드가 돼요.","Tap any text on the photo.":"사진 속 글자를 눌러 봐요.",
   "Nothing could be read. Tap Crop to frame the text by hand.":"아무것도 읽지 못했어요. 자르기를 눌러 글자를 손으로 테두리에 넣어 주세요.",
@@ -1362,7 +1367,7 @@ ko:{
   "Photograph a sign, a poster or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.":"<b>카메라</b>에서 간판, 포스터, 포장을 찍거나 <b>카드 → + 새로 만들기</b>에서 단어를 직접 입력하세요.","All clear.":"오늘 분량을 마쳤어요.","Pulled-forward round finished.":"앞당긴 복습을 마쳤어요.",
   "Nothing due today. Come back tomorrow — or pull the next cards forward.":"오늘 복습할 카드가 없어요. 내일 다시 오거나 다음 카드를 앞당길 수 있어요.",
   "Pull the next cards forward":"다음 카드 앞당기기","Hard":"어려움","Medium":"보통","Easy":"쉬움",
-  "⚑ Clear flag":"⚑ 표시 지우기","⚑ Flag for review":"⚑ 검토 표시","✎ Edit":"✎ 편집",
+  "⚑ Clear flag":"⚑ 표시 지우기","⚑ Flag for review":"⚑ 검토 표시",
   "← Cards":"← 카드","Testing from the list":"목록에서 테스트 중",
   "{0} learned, {1} reviewed this week, streak {2}":"학습 {0}, 이번 주 복습 {1}, 연속 {2}",
   "card":"카드 {0}장","cards":"카드 {0}장","day":"{0}일","days":"{0}일","review":"{0}회","reviews":"{0}회","photo":"사진 {0}장","photos":"사진 {0}장",
@@ -1395,7 +1400,7 @@ ko:{
   " through the app owner's relay":" (앱 소유자의 중계 경유)","Off. {0} is set up{1} — tick the box to check new cards.":"꺼짐. {0}이(가) 설정되어 있어요{1}. 새 카드를 확인하려면 체크하세요.","On{0}: {1} checks the text, {2} reads a picture of it when the reading is hard.":"켜짐{0}: {1}이(가) 텍스트를 확인하고, 읽기가 어려울 때는 {2}이(가) 그 사진을 읽어요.",
   ", through the app owner's relay":" (앱 소유자의 중계 경유)","On{0}: {1} checks the text. Photos never leave the phone.":"켜짐{0}: {1}이(가) 텍스트를 확인해요. 사진은 휴대폰을 떠나지 않아요.","Nothing to review":"확인할 항목 없음","{0} waiting: {1} flagged, {2} uncertain, {3} pending translation.":"{0} 대기 중: 표시됨 {1}, 불확실 {2}, 번역 대기 {3}.",
   "Nothing waiting. Flag a card, or save a reading that looks uncertain.":"대기 중인 항목이 없어요. 카드를 표시하거나 불확실한 읽기를 저장하세요.",
-  "{0} ready. Accept or dismiss them under Cards.":"{0} 준비됨. 카드에서 수락하거나 무시하세요.","Failed: {0}":"실패: {0}","Link copied.":"링크를 복사했어요.","The link: {0}":"링크: {0}",
+  "{0} ready. Accept or dismiss under Cards.":"{0} 준비됨. 카드에서 수락하거나 무시하세요.","Failed: {0}":"실패: {0}","Link copied.":"링크를 복사했어요.","The link: {0}":"링크: {0}",
   "Off. Nothing is sent.":"꺼짐. 아무것도 전송되지 않아요.","Last sent today.":"마지막 전송: 오늘.","Last sent {0}.":"마지막 전송: {0}.","Not sent yet.":"아직 전송되지 않았어요.",
   "Last export: today.":"마지막 내보내기: 오늘.","Last export: {0} ago.":"마지막 내보내기: {0} 전.","Never exported.":"내보낸 적이 없어요.","Export now — the cards exist only on this phone.":"지금 내보내세요. 카드는 이 휴대폰에만 있어요.",
   "{0} in the inbox":"받은 사진함에 {0}",", {0} older than {1} days":", 그중 {0}장은 {1}일이 지났어요","Delete {0} old photos?":"오래된 사진 {0}장을 삭제할까요?","Delete one old photo?":"오래된 사진 1장을 삭제할까요?",
@@ -1472,9 +1477,10 @@ ko:{
    word, so every plural key carries a "#many" twin (5 карточек, 11 карточек, 111 карточек) that only PLURAL.ru ever looks
    up; "percent#few" is the one unit that also needs its own middle form, because English calls both of its forms "percent". */
 ru:{
+  "reading confidence {0}%":"уверенность распознавания {0} %","unknown {0}":"неизвестные знаки: {0}","no dictionary meaning":"нет значения в словаре","the text looks misread":"текст, похоже, прочитан неверно","the framed area":"область в рамке","card image":"картинка карточки","alt:photo":"фото",
   "Not yet checked":"Ещё не проверены","tile:New":"Новая",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Удерживай иероглиф, чтобы пройти по всем карточкам с ним; удержи его ещё раз, чтобы вернуться.",
-  "Pinyin and meaning":"Пиньинь и значение",
+  
   "Whole card":"Вся карточка",
   "Explain":"Объяснить",
   "Explaining …":"Объясняю …",
@@ -1500,7 +1506,7 @@ ru:{
   "Check all cards again":"Проверить все карточки",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"ИИ становится всё лучше. Дай ему ещё раз взглянуть на всю колоду — каждое изменение ты увидишь до того, как примешь его.",
   "Checking {0} of {1} …":"Проверяю {0} из {1} …",
-  "Done — {0} could be better. See them on the Cards tab.":"Готово — можно улучшить: {0}. Они во вкладке «Карточки».",
+  "Done — {0} could be better. Look under the Cards tab.":"Готово — можно улучшить: {0}. Ищи во вкладке «Карточки».",
   "Done — nothing to change. Your cards are in good shape.":"Готово — менять нечего. С твоими карточками всё в порядке.",
   "{0} checked, {1} left.":"Проверено {0}, осталось {1}.",
   "Accepted the AI's changes on {0} at {1}.":"{0} — изменения ИИ приняты: {1}.",
@@ -1514,7 +1520,7 @@ ru:{
   "Tagging {0} of {1} …":"Проставляю теги: {0} из {1} …",
   "{0} tagged, {1} left.":"Проставлено {0}, осталось {1}.",
   "Done — {0} tagged.":"Готово — теги проставлены: {0}.",
-  "{0} carry no tag yet.":"{0} пока без тегов.",
+  "No tag yet on {0}.":"{0} пока без тегов.",
   "Filter":"Фильтр",
   "Status":"Статус",
   "Filters ({0})":"Фильтры ({0})",
@@ -1532,7 +1538,7 @@ ru:{
   "From album":"Из галереи",
   "Processing photo …":"Обрабатываю фото …",
   
-  "Inbox ({0})":"Входящие ({0})",
+  
   
   
   "Crop":"Обрезать",
@@ -1631,7 +1637,7 @@ ru:{
   "the reading looks unsure — check text, pinyin and meaning":"чтение неуверенное — проверь текст, пиньинь и значение",
   "the picture may not show this text — check the photo":"возможно, на картинке не этот текст — посмотри фото",
   "{0} cards from this photo":"Карточек с этого фото: {0}",
-  "{0} cards from this photo, {1} learned.":"Карточек с этого фото: {0}, освоено: {1}.","{0} texts on this page, {1} as flashcards.":"Текстов на этой странице: {0}, из них карточек: {1}.",
+  "{0} cards from this photo, {1} learned.":"Карточек с этого фото: {0}, освоено: {1}.","Texts on this page: {0}, as flashcards: {1}.":"Текстов на этой странице: {0}, из них карточек: {1}.",
   "A photo that made several cards keeps every one of them in its place — tap a text on it for its characters, pinyin and meaning.":"Фото, из которого вышло несколько карточек, помнит место каждой — нажми на текст, чтобы увидеть иероглифы, пиньинь и значение.",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard for the whole picture: one tile under Multicards, tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"Фото с несколькими текстами — экран приложения, панель управления, меню — становится одной мультикарточкой на всё изображение: одна плитка в Мультикарточках, нажми на любой текст, чтобы посмотреть его, а «Создать карточку» делает карточку из тех, что ты хочешь выучить.","Tap any text on the photo.":"Нажми на любой текст на фото.",
   "Nothing could be read. Tap Crop to frame the text by hand.":"Прочитать не вышло. Нажми «Обрезать» и обведи текст сам.",
@@ -1653,7 +1659,7 @@ ru:{
   "Take a photo":"Сделать фото","All clear.":"Всё сделано.","Pulled-forward round finished.":"Досрочный круг пройден.",
   "Nothing due today. Come back tomorrow — or pull the next cards forward.":"Сегодня повторять нечего. Заходи завтра — или возьми следующие карточки прямо сейчас.",
   "Pull the next cards forward":"Взять следующие карточки","Hard":"Трудно","Medium":"Средне","Easy":"Легко",
-  "⚑ Clear flag":"⚑ Снять метку","⚑ Flag for review":"⚑ Поставить метку","✎ Edit":"✎ Изменить",
+  "⚑ Clear flag":"⚑ Снять метку","⚑ Flag for review":"⚑ Поставить метку",
   "← Cards":"← Карточки","Testing from the list":"Проверка из списка",
   "{0} learned, {1} reviewed this week, streak {2}":"Выучено: {0}, повторов за неделю {1}, серия {2}",
   "card":"{0} карточка","cards":"{0} карточки","cards#many":"{0} карточек","day":"{0} день","days":"{0} дня","days#many":"{0} дней","review":"{0} повтор","reviews":"{0} повтора","reviews#many":"{0} повторов","photo":"{0} фото","photos":"{0} фото","photos#many":"{0} фото",
@@ -1686,7 +1692,7 @@ ru:{
   " through the app owner's relay":" через сервер владельца приложения","Off. {0} is set up{1} — tick the box to check new cards.":"Выключено. {0} готов{1} — поставь галочку, чтобы проверять новые карточки.","On{0}: {1} checks the text, {2} reads a picture of it when the reading is hard.":"Включено{0}: {1} проверяет текст, {2} читает его снимок, когда чтение даётся трудно.",
   ", through the app owner's relay":", через сервер владельца приложения","On{0}: {1} checks the text. Photos never leave the phone.":"Включено{0}: {1} проверяет текст. Фото никогда не покидают телефон.","Nothing to review":"Проверять нечего","{0} waiting: {1} flagged, {2} uncertain, {3} pending translation.":"В очереди {0}: {1} с меткой, {2} под вопросом, {3} без перевода.",
   "Nothing waiting. Flag a card, or save a reading that looks uncertain.":"Очередь пуста. Отметь карточку или сохрани неточное чтение.",
-  "{0} ready. Accept or dismiss them under Cards.":"Готово: {0}. Прими или отклони во вкладке «Карточки».","Failed: {0}":"Не получилось: {0}","Link copied.":"Ссылка скопирована.","The link: {0}":"Ссылка: {0}",
+  "{0} ready. Accept or dismiss under Cards.":"Готово: {0}. Прими или отклони во вкладке «Карточки».","Failed: {0}":"Не получилось: {0}","Link copied.":"Ссылка скопирована.","The link: {0}":"Ссылка: {0}",
   "Off. Nothing is sent.":"Выключено. Ничего не отправляется.","Last sent today.":"Последняя отправка сегодня.","Last sent {0}.":"Последняя отправка: {0}.","Not sent yet.":"Пока не отправлялось.",
   "Last export: today.":"Последний экспорт: сегодня.","Last export: {0} ago.":"Последний экспорт: {0} назад.","Never exported.":"Экспорта ещё не было.","Export now — the cards exist only on this phone.":"Сделай экспорт — карточки есть только на этом телефоне.",
   "{0} in the inbox":"Во входящих {0}",", {0} older than {1} days":", из них {0} старше {1} дней","Delete {0} old photos?":"Удалить {0} старых фото?","Delete one old photo?":"Удалить одно старое фото?",
@@ -1759,9 +1765,10 @@ ru:{
   "Day streak":"Дней подряд","Cards learned":"Выучено карточек","Due today":"Сегодня к повтору","Reviews this week":"Повторов за неделю","Last 30 days":"Последние 30 дней","Still learning":"В процессе","Known":"Освоено","Coming up: {0} due tomorrow, {1} this week.":"Впереди: завтра {0}, на этой неделе {1}."
 },
 vi:{
+  "reading confidence {0}%":"độ chắc chắn khi đọc {0}%","unknown {0}":"không nhận ra: {0}","no dictionary meaning":"không có nghĩa trong từ điển","the text looks misread":"văn bản có vẻ bị đọc sai","the framed area":"vùng trong khung","card image":"ảnh của thẻ","alt:photo":"ảnh",
   "Not yet checked":"Chưa kiểm tra","tile:New":"Mới",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Nhấn giữ một chữ để đi qua mọi thẻ có chữ đó; nhấn giữ lần nữa để quay về.",
-  "Pinyin and meaning":"Pinyin và nghĩa",
+  
   "Whole card":"Cả thẻ",
   "Explain":"Giải thích",
   "Explaining …":"Đang giải thích …",
@@ -1787,7 +1794,7 @@ vi:{
   "Check all cards again":"Kiểm tra lại mọi thẻ",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"AI ngày càng giỏi. Cho nó xem lại cả bộ thẻ của bạn đi — bạn thấy từng thay đổi trước khi áp dụng.",
   "Checking {0} of {1} …":"Đang kiểm tra {0}/{1} …",
-  "Done — {0} could be better. See them on the Cards tab.":"Xong — {0} có thể tốt hơn. Xem ở tab Thẻ.",
+  "Done — {0} could be better. Look under the Cards tab.":"Xong — {0} có thể tốt hơn. Xem ở tab Thẻ.",
   "Done — nothing to change. Your cards are in good shape.":"Xong — không có gì phải sửa. Thẻ của bạn ổn cả.",
   "{0} checked, {1} left.":"Đã kiểm tra {0} thẻ, còn {1}.",
   "Accepted the AI's changes on {0} at {1}.":"Đã áp dụng thay đổi của AI cho {0} lúc {1}.",
@@ -1801,7 +1808,7 @@ vi:{
   "Tagging {0} of {1} …":"Đang gắn nhãn {0}/{1} …",
   "{0} tagged, {1} left.":"Đã gắn nhãn {0}, còn {1}.",
   "Done — {0} tagged.":"Xong — đã gắn nhãn {0}.",
-  "{0} carry no tag yet.":"{0} chưa có nhãn.",
+  "No tag yet on {0}.":"{0} chưa có nhãn.",
   "Filter":"Bộ lọc",
   "Status":"Trạng thái",
   "Filters ({0})":"Bộ lọc ({0})",
@@ -1819,7 +1826,7 @@ vi:{
   "From album":"Từ thư viện",
   "Processing photo …":"Đang xử lý ảnh …",
   
-  "Inbox ({0})":"Ảnh chờ ({0})",
+  
   
   
   "Crop":"Cắt ảnh",
@@ -1918,7 +1925,7 @@ vi:{
   "the reading looks unsure — check text, pinyin and meaning":"bản đọc chưa chắc chắn — xem lại chữ, pinyin và nghĩa",
   "the picture may not show this text — check the photo":"ảnh có thể không phải chữ này — xem lại ảnh nhé",
   "{0} cards from this photo":"{0} thẻ từ ảnh này",
-  "{0} cards from this photo, {1} learned.":"{0} thẻ từ ảnh này, {1} đã thuộc.","{0} texts on this page, {1} as flashcards.":"{0} trên trang này, {1} đã thành thẻ.",
+  "{0} cards from this photo, {1} learned.":"{0} thẻ từ ảnh này, {1} đã thuộc.","Texts on this page: {0}, as flashcards: {1}.":"Văn bản trên trang này: {0}, đã thành thẻ: {1}.",
   "A photo that made several cards keeps every one of them in its place — tap a text on it for its characters, pinyin and meaning.":"Ảnh nào tạo ra nhiều thẻ vẫn giữ nguyên chỗ của từng thẻ — chạm vào một đoạn chữ để xem chữ, pinyin và nghĩa.",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard for the whole picture: one tile under Multicards, tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"Ảnh có nhiều đoạn chữ — màn hình ứng dụng, bảng điều khiển, thực đơn — thành một thẻ gộp cho cả ảnh: một ô trong Thẻ gộp, chạm vào đoạn chữ bất kỳ để tra, và Tạo thẻ làm thành thẻ những đoạn chữ bạn muốn học.","Tap any text on the photo.":"Chạm vào chữ bất kỳ trên ảnh.",
   "Nothing could be read. Tap Crop to frame the text by hand.":"Không đọc được gì. Chạm Cắt ảnh để tự khoanh lấy chữ.",
@@ -1940,7 +1947,7 @@ vi:{
   "Take a photo":"Chụp một tấm ảnh","All clear.":"Xong hết rồi.","Pulled-forward round finished.":"Xong vòng học trước rồi.",
   "Nothing due today. Come back tomorrow — or pull the next cards forward.":"Hôm nay không có thẻ nào đến hạn. Mai quay lại — hoặc kéo các thẻ tiếp theo lên học trước.",
   "Pull the next cards forward":"Kéo các thẻ tiếp theo lên","Hard":"Khó","Medium":"Vừa","Easy":"Dễ",
-  "⚑ Clear flag":"⚑ Bỏ đánh dấu","⚑ Flag for review":"⚑ Đánh dấu xem lại","✎ Edit":"✎ Sửa",
+  "⚑ Clear flag":"⚑ Bỏ đánh dấu","⚑ Flag for review":"⚑ Đánh dấu xem lại",
   "← Cards":"← Thẻ","Testing from the list":"Kiểm tra từ danh sách",
   "{0} learned, {1} reviewed this week, streak {2}":"Đã học {0}, tuần này ôn {1}, chuỗi {2}",
   "card":"{0} thẻ","cards":"{0} thẻ","day":"{0} ngày","days":"{0} ngày","review":"{0} lượt ôn","reviews":"{0} lượt ôn","photo":"{0} ảnh","photos":"{0} ảnh",
@@ -1973,7 +1980,7 @@ vi:{
   " through the app owner's relay":" qua trạm chuyển của chủ app","Off. {0} is set up{1} — tick the box to check new cards.":"Tắt. {0} đã sẵn sàng{1} — tích vào ô để kiểm tra thẻ mới.","On{0}: {1} checks the text, {2} reads a picture of it when the reading is hard.":"Bật{0}: {1} kiểm tra chữ, {2} đọc ảnh của chữ khi đọc khó.",
   ", through the app owner's relay":", qua trạm chuyển của chủ app","On{0}: {1} checks the text. Photos never leave the phone.":"Bật{0}: {1} kiểm tra chữ. Ảnh không bao giờ rời khỏi máy.","Nothing to review":"Không có gì để kiểm tra","{0} waiting: {1} flagged, {2} uncertain, {3} pending translation.":"{0} đang chờ: {1} đã đánh dấu, {2} chưa chắc, {3} chờ dịch.",
   "Nothing waiting. Flag a card, or save a reading that looks uncertain.":"Không có gì đang chờ. Đánh dấu một thẻ, hoặc lưu một bản đọc chưa chắc chắn.",
-  "{0} ready. Accept or dismiss them under Cards.":"{0} đã sẵn sàng. Áp dụng hoặc bỏ qua ở tab Thẻ.","Failed: {0}":"Không được: {0}","Link copied.":"Đã sao chép liên kết.","The link: {0}":"Liên kết: {0}",
+  "{0} ready. Accept or dismiss under Cards.":"{0} đã sẵn sàng. Áp dụng hoặc bỏ qua ở tab Thẻ.","Failed: {0}":"Không được: {0}","Link copied.":"Đã sao chép liên kết.","The link: {0}":"Liên kết: {0}",
   "Off. Nothing is sent.":"Tắt. Không gửi gì cả.","Last sent today.":"Gửi lần cuối hôm nay.","Last sent {0}.":"Gửi lần cuối {0}.","Not sent yet.":"Chưa gửi lần nào.",
   "Last export: today.":"Xuất lần cuối: hôm nay.","Last export: {0} ago.":"Xuất lần cuối: {0} trước.","Never exported.":"Chưa xuất bao giờ.","Export now — the cards exist only on this phone.":"Xuất ngay đi — thẻ chỉ có trên máy này thôi.",
   "{0} in the inbox":"{0} đang chờ",", {0} older than {1} days":", {0} tấm cũ hơn {1} ngày","Delete {0} old photos?":"Xóa {0} ảnh cũ?","Delete one old photo?":"Xóa một ảnh cũ?",
@@ -2046,9 +2053,10 @@ vi:{
   "Day streak":"Chuỗi ngày","Cards learned":"Thẻ đã học","Due today":"Đến hạn hôm nay","Reviews this week":"Lượt ôn tuần này","Last 30 days":"30 ngày qua","Still learning":"Đang học","Known":"Đã thuộc","Coming up: {0} due tomorrow, {1} this week.":"Sắp tới: {0} đến hạn ngày mai, {1} trong tuần."
 },
 th:{
+  "reading confidence {0}%":"ความมั่นใจในการอ่าน {0}%","unknown {0}":"ไม่รู้จัก: {0}","no dictionary meaning":"ไม่มีความหมายในพจนานุกรม","the text looks misread":"ข้อความน่าจะอ่านผิด","the framed area":"บริเวณในกรอบ","card image":"รูปของการ์ด","alt:photo":"รูป",
   "Not yet checked":"ยังไม่ได้ตรวจ","tile:New":"ใหม่",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"กดค้างที่ตัวอักษรเพื่อไล่ดูทุกการ์ดที่มีตัวนั้น กดค้างอีกครั้งเพื่อกลับ",
-  "Pinyin and meaning":"พินอินและความหมาย",
+  
   "Whole card":"ทั้งการ์ด",
   "Explain":"อธิบาย",
   "Explaining …":"กำลังอธิบาย …",
@@ -2074,7 +2082,7 @@ th:{
   "Check all cards again":"ตรวจการ์ดทั้งหมดอีกครั้ง",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"AI เก่งขึ้นเรื่อยๆ ลองให้ AI ดูการ์ดทั้งหมดอีกรอบ — ทุกอย่างที่จะเปลี่ยน คุณได้ดูก่อนกดรับไว้เสมอ",
   "Checking {0} of {1} …":"กำลังตรวจ {0} จาก {1} …",
-  "Done — {0} could be better. See them on the Cards tab.":"เสร็จแล้ว — {0} น่าจะดีขึ้นได้ ดูได้ที่แท็บการ์ด",
+  "Done — {0} could be better. Look under the Cards tab.":"เสร็จแล้ว — {0} น่าจะดีขึ้นได้ ดูได้ที่แท็บการ์ด",
   "Done — nothing to change. Your cards are in good shape.":"เสร็จแล้ว — ไม่มีอะไรต้องแก้ การ์ดของคุณอยู่ในสภาพดี",
   "{0} checked, {1} left.":"ตรวจแล้ว {0} เหลือ {1}",
   "Accepted the AI's changes on {0} at {1}.":"รับการแก้ของ AI ใน{0} เมื่อ {1}",
@@ -2088,7 +2096,7 @@ th:{
   "Tagging {0} of {1} …":"กำลังติดแท็ก {0} จาก {1} …",
   "{0} tagged, {1} left.":"ติดแท็กแล้ว {0} เหลือ {1}",
   "Done — {0} tagged.":"เสร็จแล้ว — ติดแท็ก{0}",
-  "{0} carry no tag yet.":"{0} ยังไม่มีแท็ก",
+  "No tag yet on {0}.":"{0} ยังไม่มีแท็ก",
   "Filter":"ตัวกรอง",
   "Status":"สถานะ",
   "Filters ({0})":"ตัวกรอง {0} อย่าง",
@@ -2106,7 +2114,7 @@ th:{
   "From album":"จากอัลบั้ม",
   "Processing photo …":"กำลังเตรียมรูป …",
   
-  "Inbox ({0})":"รูปที่รอ ({0})",
+  
   
   
   "Crop":"ครอบตัด",
@@ -2205,7 +2213,7 @@ th:{
   "the reading looks unsure — check text, pinyin and meaning":"การอ่านดูไม่แน่ — ตรวจตัวอักษร พินอิน และความหมาย",
   "the picture may not show this text — check the photo":"รูปอาจไม่ได้ถ่ายติดข้อความนี้ — ลองดูรูปอีกที",
   "{0} cards from this photo":"การ์ด {0} ใบ จากรูปนี้",
-  "{0} cards from this photo, {1} learned.":"การ์ด {0} ใบ จากรูปนี้ จำได้แล้ว {1} ใบ","{0} texts on this page, {1} as flashcards.":"หน้านี้มี{0} ทำเป็นการ์ดแล้ว {1}",
+  "{0} cards from this photo, {1} learned.":"การ์ด {0} ใบ จากรูปนี้ จำได้แล้ว {1} ใบ","Texts on this page: {0}, as flashcards: {1}.":"ข้อความในหน้านี้: {0} ทำเป็นการ์ดแล้ว: {1}",
   "A photo that made several cards keeps every one of them in its place — tap a text on it for its characters, pinyin and meaning.":"รูปที่ทำการ์ดได้หลายใบยังจำตำแหน่งของแต่ละใบไว้ แตะที่ข้อความเพื่อดูตัวอักษร พินอิน และความหมาย",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard for the whole picture: one tile under Multicards, tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"รูปที่มีข้อความหลายจุด — หน้าจอแอป แผงควบคุม เมนู — จะกลายเป็นการ์ดรวมใบเดียวสำหรับทั้งรูป เป็นหนึ่งช่องในการ์ดรวม แตะข้อความจุดไหนก็ดูได้ และกดสร้างการ์ดเพื่อทำข้อความที่อยากเรียนเป็นการ์ด","Tap any text on the photo.":"แตะข้อความบนรูปได้เลย",
   "Nothing could be read. Tap Crop to frame the text by hand.":"อ่านอะไรไม่ได้เลย แตะ ครอบตัด เพื่อวาดกรอบเอง",
@@ -2227,7 +2235,7 @@ th:{
   "Take a photo":"ถ่ายรูป","All clear.":"เคลียร์หมดแล้ว","Pulled-forward round finished.":"รอบที่ดึงมาก่อนกำหนดจบแล้ว",
   "Nothing due today. Come back tomorrow — or pull the next cards forward.":"วันนี้ไม่มีการ์ดถึงกำหนด พรุ่งนี้ค่อยมาใหม่ — หรือจะดึงการ์ดถัดไปมาก่อนก็ได้",
   "Pull the next cards forward":"ดึงการ์ดถัดไปมาก่อน","Hard":"ยาก","Medium":"ปานกลาง","Easy":"ง่าย",
-  "⚑ Clear flag":"⚑ เอาธงออก","⚑ Flag for review":"⚑ ติดธงไว้ตรวจ","✎ Edit":"✎ แก้ไข",
+  "⚑ Clear flag":"⚑ เอาธงออก","⚑ Flag for review":"⚑ ติดธงไว้ตรวจ",
   "← Cards":"← การ์ด","Testing from the list":"ทดสอบจากรายการ",
   "{0} learned, {1} reviewed this week, streak {2}":"เรียนแล้ว {0} · ทบทวนสัปดาห์นี้ {1} · ต่อเนื่อง {2}",
   "card":"การ์ด {0} ใบ","cards":"การ์ด {0} ใบ","day":"{0} วัน","days":"{0} วัน","review":"{0} ครั้ง","reviews":"{0} ครั้ง","photo":"รูป {0} ใบ","photos":"รูป {0} ใบ",
@@ -2260,7 +2268,7 @@ th:{
   " through the app owner's relay":" ผ่านรีเลย์ของเจ้าของแอป","Off. {0} is set up{1} — tick the box to check new cards.":"ปิดอยู่ ตั้งค่า {0} ไว้แล้ว{1} — ติ๊กช่องเพื่อให้ตรวจการ์ดใหม่","On{0}: {1} checks the text, {2} reads a picture of it when the reading is hard.":"เปิดอยู่{0}: {1} ตรวจข้อความ ส่วน {2} อ่านรูปของข้อความเมื่ออ่านยาก",
   ", through the app owner's relay":" ผ่านรีเลย์ของเจ้าของแอป","On{0}: {1} checks the text. Photos never leave the phone.":"เปิดอยู่{0}: {1} ตรวจข้อความ รูปไม่ออกจากเครื่องนี้","Nothing to review":"ไม่มีอะไรต้องตรวจ","{0} waiting: {1} flagged, {2} uncertain, {3} pending translation.":"มี{0}รออยู่: ติดธง {1} · ไม่แน่ {2} · รอคำแปล {3}",
   "Nothing waiting. Flag a card, or save a reading that looks uncertain.":"ไม่มีอะไรรออยู่ ลองติดธงการ์ด หรือบันทึกการอ่านที่ดูไม่แน่",
-  "{0} ready. Accept or dismiss them under Cards.":"{0} พร้อมแล้ว รับไว้หรือไม่รับได้ที่แท็บการ์ด","Failed: {0}":"ไม่สำเร็จ: {0}","Link copied.":"คัดลอกลิงก์แล้ว","The link: {0}":"ลิงก์: {0}",
+  "{0} ready. Accept or dismiss under Cards.":"{0} พร้อมแล้ว รับไว้หรือไม่รับได้ที่แท็บการ์ด","Failed: {0}":"ไม่สำเร็จ: {0}","Link copied.":"คัดลอกลิงก์แล้ว","The link: {0}":"ลิงก์: {0}",
   "Off. Nothing is sent.":"ปิดอยู่ ไม่ส่งอะไรเลย","Last sent today.":"ส่งล่าสุดวันนี้","Last sent {0}.":"ส่งล่าสุด {0}","Not sent yet.":"ยังไม่เคยส่ง",
   "Last export: today.":"ส่งออกล่าสุด: วันนี้","Last export: {0} ago.":"ส่งออกล่าสุด: {0}ที่แล้ว","Never exported.":"ยังไม่เคยส่งออก","Export now — the cards exist only on this phone.":"ส่งออกเลย — การ์ดมีอยู่แค่ในเครื่องนี้",
   "{0} in the inbox":"{0} รออยู่",", {0} older than {1} days":" ในจำนวนนี้ {0} ใบเก่ากว่า {1} วัน","Delete {0} old photos?":"ลบรูปเก่า {0} ใบไหม","Delete one old photo?":"ลบรูปเก่า 1 ใบไหม",
@@ -2333,9 +2341,10 @@ th:{
   "Day streak":"วันต่อเนื่อง","Cards learned":"การ์ดที่เรียนแล้ว","Due today":"ถึงกำหนดวันนี้","Reviews this week":"ทบทวนสัปดาห์นี้","Last 30 days":"30 วันล่าสุด","Still learning":"กำลังเรียน","Known":"จำได้แล้ว","Coming up: {0} due tomorrow, {1} this week.":"ที่กำลังจะมา: พรุ่งนี้ {0} ใบ · สัปดาห์นี้ {1} ใบ"
 },
 id:{
+  "reading confidence {0}%":"keyakinan pembacaan {0}%","unknown {0}":"tidak dikenal: {0}","no dictionary meaning":"tidak ada arti di kamus","the text looks misread":"teks sepertinya salah dibaca","the framed area":"area dalam bingkai","card image":"gambar kartu","alt:photo":"foto",
   "Not yet checked":"Belum diperiksa","tile:New":"Baru",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Tekan dan tahan sebuah karakter untuk menelusuri semua kartu yang memuatnya; tekan dan tahan lagi untuk kembali.",
-  "Pinyin and meaning":"Pinyin dan arti",
+  
   "Whole card":"Seluruh kartu",
   "Explain":"Jelaskan",
   "Explaining …":"Menjelaskan …",
@@ -2361,7 +2370,7 @@ id:{
   "Check all cards again":"Periksa ulang semua kartu",
   "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"AI terus jadi lebih pintar. Minta dia memeriksa lagi semua kartumu — setiap perubahan kamu lihat dulu sebelum diterima.",
   "Checking {0} of {1} …":"Memeriksa {0} dari {1} …",
-  "Done — {0} could be better. See them on the Cards tab.":"Selesai — {0} bisa lebih baik. Lihat di tab Kartu.",
+  "Done — {0} could be better. Look under the Cards tab.":"Selesai — {0} bisa lebih baik. Lihat di tab Kartu.",
   "Done — nothing to change. Your cards are in good shape.":"Selesai — tidak ada yang perlu diubah. Kartumu sudah bagus.",
   "{0} checked, {1} left.":"{0} kartu sudah diperiksa, {1} lagi.",
   "Accepted the AI's changes on {0} at {1}.":"Perubahan AI pada {0} diterima {1}.",
@@ -2375,7 +2384,7 @@ id:{
   "Tagging {0} of {1} …":"Memberi tag {0} dari {1} …",
   "{0} tagged, {1} left.":"{0} kartu diberi tag, {1} lagi.",
   "Done — {0} tagged.":"Selesai — {0} diberi tag.",
-  "{0} carry no tag yet.":"{0} belum punya tag.",
+  "No tag yet on {0}.":"{0} belum punya tag.",
   "Filter":"Filter",
   "Status":"Status",
   "Filters ({0})":"Filter ({0})",
@@ -2393,7 +2402,7 @@ id:{
   "From album":"Dari album",
   "Processing photo …":"Memproses foto …",
   
-  "Inbox ({0})":"Kotak masuk ({0})",
+  
   
   
   "Crop":"Pangkas",
@@ -2492,7 +2501,7 @@ id:{
   "the reading looks unsure — check text, pinyin and meaning":"hasil bacanya meragukan — periksa teks, pinyin dan arti",
   "the picture may not show this text — check the photo":"gambarnya mungkin tidak menampilkan teks ini — periksa fotonya",
   "{0} cards from this photo":"{0} kartu dari foto ini",
-  "{0} cards from this photo, {1} learned.":"{0} kartu dari foto ini, {1} sudah dikuasai.","{0} texts on this page, {1} as flashcards.":"{0} di halaman ini, {1} jadi kartu.",
+  "{0} cards from this photo, {1} learned.":"{0} kartu dari foto ini, {1} sudah dikuasai.","Texts on this page: {0}, as flashcards: {1}.":"Teks di halaman ini: {0}, jadi kartu: {1}.",
   "A photo that made several cards keeps every one of them in its place — tap a text on it for its characters, pinyin and meaning.":"Foto yang menghasilkan beberapa kartu menyimpan tempat masing-masing — ketuk sebuah teks untuk melihat karakter, pinyin, dan artinya.",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard for the whole picture: one tile under Multicards, tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"Foto dengan beberapa teks — layar aplikasi, panel kontrol, daftar menu — menjadi satu multikartu untuk seluruh gambar: satu petak di Multikartu, ketuk teks mana pun untuk melihatnya, dan Buat kartu menjadikan teks yang ingin kamu pelajari sebagai kartu.","Tap any text on the photo.":"Ketuk teks mana pun di foto.",
   "Nothing could be read. Tap Crop to frame the text by hand.":"Tidak ada yang bisa dibaca. Ketuk Pangkas untuk membingkai teksnya sendiri.",
@@ -2514,7 +2523,7 @@ id:{
   "Take a photo":"Ambil foto","All clear.":"Semua beres.","Pulled-forward round finished.":"Putaran yang dimajukan selesai.",
   "Nothing due today. Come back tomorrow — or pull the next cards forward.":"Hari ini tidak ada yang perlu diulang. Datang lagi besok — atau majukan kartu berikutnya.",
   "Pull the next cards forward":"Majukan kartu berikutnya","Hard":"Sulit","Medium":"Sedang","Easy":"Mudah",
-  "⚑ Clear flag":"⚑ Hapus tanda","⚑ Flag for review":"⚑ Tandai untuk diperiksa","✎ Edit":"✎ Edit",
+  "⚑ Clear flag":"⚑ Hapus tanda","⚑ Flag for review":"⚑ Tandai untuk diperiksa",
   "← Cards":"← Kartu","Testing from the list":"Tes dari daftar",
   "{0} learned, {1} reviewed this week, streak {2}":"{0} dipelajari, {1} ulangan minggu ini, {2} beruntun",
   "card":"{0} kartu","cards":"{0} kartu","day":"{0} hari","days":"{0} hari","review":"{0} ulangan","reviews":"{0} ulangan","photo":"{0} foto","photos":"{0} foto",
@@ -2547,7 +2556,7 @@ id:{
   " through the app owner's relay":" lewat relay pemilik aplikasi","Off. {0} is set up{1} — tick the box to check new cards.":"Mati. {0} sudah siap{1} — centang kotaknya untuk memeriksa kartu baru.","On{0}: {1} checks the text, {2} reads a picture of it when the reading is hard.":"Nyala{0}: {1} memeriksa teksnya, {2} membaca gambar teksnya kalau bacanya sulit.",
   ", through the app owner's relay":", lewat relay pemilik aplikasi","On{0}: {1} checks the text. Photos never leave the phone.":"Nyala{0}: {1} memeriksa teksnya. Foto tidak pernah keluar dari ponsel.","Nothing to review":"Tidak ada yang perlu diperiksa","{0} waiting: {1} flagged, {2} uncertain, {3} pending translation.":"{0} menunggu: {1} ditandai, {2} meragukan, {3} belum diterjemahkan.",
   "Nothing waiting. Flag a card, or save a reading that looks uncertain.":"Tidak ada yang menunggu. Tandai kartu, atau simpan hasil baca yang meragukan.",
-  "{0} ready. Accept or dismiss them under Cards.":"{0} siap. Terima atau abaikan di Kartu.","Failed: {0}":"Gagal: {0}","Link copied.":"Tautan disalin.","The link: {0}":"Tautannya: {0}",
+  "{0} ready. Accept or dismiss under Cards.":"{0} siap. Terima atau abaikan di Kartu.","Failed: {0}":"Gagal: {0}","Link copied.":"Tautan disalin.","The link: {0}":"Tautannya: {0}",
   "Off. Nothing is sent.":"Mati. Tidak ada yang dikirim.","Last sent today.":"Terakhir dikirim hari ini.","Last sent {0}.":"Terakhir dikirim {0}.","Not sent yet.":"Belum pernah dikirim.",
   "Last export: today.":"Ekspor terakhir: hari ini.","Last export: {0} ago.":"Ekspor terakhir: {0} lalu.","Never exported.":"Belum pernah diekspor.","Export now — the cards exist only on this phone.":"Ekspor sekarang — kartunya cuma ada di ponsel ini.",
   "{0} in the inbox":"{0} di kotak masuk",", {0} older than {1} days":", {0} di antaranya lebih dari {1} hari","Delete {0} old photos?":"Hapus {0} foto lama?","Delete one old photo?":"Hapus satu foto lama?",
