@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=536; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=537; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -645,6 +645,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v537","a fresh install: the first card whole, hint and all"],
   ["app","v536","Review queue → Ask AI without logging in; a generated card naming its multicard"],
   ["app","v535","the recap alone; the pad finishes its word; a dismissed suggestion stays gone"],
   ["app","v533","the word being written marked on the photo, quietly"],
@@ -1797,7 +1798,7 @@ function renderAiRow(){
     :S.settings.aiAuto===false?(pic?t("Off. {0} and {1} are set up{2} — tick the box to check new cards.",who,pic,relayed?t(" through the app owner's relay"):""):t("Off. {0} is set up{1} — tick the box to check new cards.",who,relayed?t(" through the app owner's relay"):"")) /* the line follows the switch (v196, H: "it cannot say On when I've unticked the checkbox") */
     :(pic?t("On{0}: {1} checks the text, {2} reads a picture of it when the reading is hard.",relayed?t(", through the app owner's relay"):"",who,pic):t("On{0}: {1} checks the text. Photos never leave the phone.",relayed?t(", through the app owner's relay"):"",who));
   if(btn) btn.textContent=aiOn()?"Settings":"Set up";
-  run.hidden=!aiOn(); run.disabled=!q;
+  run.hidden=!aiOn()||!q; run.disabled=!q; /* v537: no button over an empty queue - the line right above already says "Nothing waiting. Flag a card, …", and a disabled control over nothing is what the v308 rule exists to prevent */
   run.textContent=q?t("Ask AI"):t("Nothing to review");
   const rs=$("#ai-runstatus"); if(rs) rs.textContent=q?t("{0} waiting: {1} flagged, {2} uncertain, {3} pending translation.",nOf(q,"card"),fl,sp,pd):t("Nothing waiting. Flag a card, or save a reading that looks uncertain.");
   const auto=$("#ai-auto"); if(auto) auto.onchange=async e=>{ await setSetting("aiAuto",!!e.target.checked); renderAiRow(); }; /* the one AI setting everyone sees (v190); the setup form is the owner's */
@@ -2776,7 +2777,11 @@ function sayBtn(d){ return ("speechSynthesis" in window)?`<button class="say" da
 const sayHint=()=>`<div class="badge" id="say-hint" hidden>${t("No Chinese voice on this phone — add one under Settings, Text-to-speech output.")}</div>`;
 function wireSay(root){ (root||document).querySelectorAll("[data-say]").forEach(b=> b.onclick=e=>{ e.stopPropagation(); say(b.dataset.say); }); }
 /* dictionary meanings without CC-CEDICT clutter: "[Tian1 jin1 shi4]" pinyin, "CL:…" classifiers */
-function cleanSense(m){ return String(m||"").replace(/\(Taiwan pr\.[^)]*\)/g,"").replace(/\[[^\]]*\]/g,"").replace(/\s*CL:[^;,)]*/g,"").replace(/\(\s*\)/g,"").replace(/\s{2,}/g," ").trim(); }
+/* v537: "(Tw)" leaves the same way "(Taiwan pr. …)", "[pinyin]" and "CL:" do — CC-CEDICT opens 骑 with "(Tw) saddle
+   horse", and the card, the recap and the parts row were all printing the notation. 1,146 entries carry the marker, and on
+   many of them (CP值, K书, OK绷) the whole entry is Taiwan usage, so the marker is stripped rather than the SENSE skipped:
+   skipping would only pick another sense of the same Taiwan entry, and on those it would leave nothing at all. */
+function cleanSense(m){ return String(m||"").replace(/\(Taiwan pr\.[^)]*\)/g,"").replace(/\(Tw\)\s*/g,"").replace(/\[[^\]]*\]/g,"").replace(/\s*CL:[^;,)]*/g,"").replace(/\(\s*\)/g,"").replace(/\s{2,}/g," ").trim(); }
 /* the words of the card as buttons on the back — tap one for its pinyin and meaning; a word of
    several characters then offers its characters too. Replaces the old word/gloss tables (H: redundant). */
 /* what a number with a Latin unit means (v337, H on the 24H part: "24H is not only a number, it means 24 hours"): the unit's
@@ -2932,7 +2937,7 @@ function renderStudy(main){
       <div class="mark">始</div>
       <h2>${t("No cards yet.")}</h2>
       <p>${t("Photograph a sign, a poster or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.")}</p>
-      <button class="btn" id="go-cam">${t("Take a photo")}</button>
+      <button class="btn primary" id="go-cam">${t("Take a photo")}</button> <!-- v537: the empty deck's one call to action is filled like every other primary action in the app (+ New, Add card, Save changes, Test this card); as .btn it was tint-soft, and in dark a muddy maroon block that reads as disabled -->
       <p class="hint">${t("New here? The guide explains the app in six short sections.")}</p>
       <button class="del" id="go-guide">${t("How to use the app")}</button>
     </div>`;
@@ -3479,7 +3484,15 @@ function mountPad(card,d,c,tg,st,cur){
        the count under the bar. The buttons of the helper row are deliberately not in the measurement: Show me and Skip
        appearing mid-write must never resize the canvas under the finger (v517's rule that they scroll the card instead). */
     const fo=card.querySelector(".fold"), fb=card.querySelector("#fold"), pa=card.querySelector("#padacts");
-    const tail=(pa?(parseFloat(getComputedStyle(pa).marginTop)||0):0)+(fo?(parseFloat(getComputedStyle(fo).marginTop)||0):0)+(fb?fb.offsetHeight:0); /* v527: the fold ROW is in the tail, so it stays above the bar; the block under it is not — it scrolls */
+    /* v537: the swipe hint of the first twenty reviews is in the tail too. v518 left it out on v517's rule, and the rule
+       is about a control that APPEARS MID-WRITE (Show me, Skip) and must not resize the canvas under a finger - the hint
+       is there from the card's first paint and goes only after 20 reviews. Measured at 393 x 917 it ran 20.8 px past the
+       tab bar in English (2 lines) and 58.5 in German (4), with the fold row clipped as well, so the very first cards a
+       new learner sees ended in a sentence with its bottom sawn off. It costs the pad while it is there, and on a narrow
+       phone in a wide language the pad hits its 200 px floor and the card scrolls - the v517 trade, for twenty cards. */
+    const hn=card.querySelector(".hint"), hcs=hn?getComputedStyle(hn):null;
+    const tail=(pa?(parseFloat(getComputedStyle(pa).marginTop)||0):0)+(fo?(parseFloat(getComputedStyle(fo).marginTop)||0):0)+(fb?fb.offsetHeight:0)
+      +(hn?hn.offsetHeight+(parseFloat(hcs.marginTop)||0):0); /* v527: the fold ROW is in the tail, so it stays above the bar; the block under it is not — it scrolls */
     const below=Math.max(PAD_BELOW,Math.ceil(tail));
     const room=floor-(top-window.scrollY)-below-(parseFloat(ccs.paddingBottom)||18);
     const side=Math.max(PAD_MIN,Math.min(inner,Math.floor(room)));
@@ -4499,6 +4512,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  537:"The hint under your first cards is no longer cut off by the tab bar, and the admin row, the empty deck and a few dictionary notes are tidied up.",
   536:"Ask AI under More → Review queue works again, so a card you flag can be checked; and a card made from a multicard names it again and takes you back to it.",
   535:"A finished card now shows on its own, with no writing pad behind it; the pad writes one word out before it moves to the next character; and a suggestion you dismiss stays dismissed.",
   533:"The word you are writing is marked on the photo as well — a quiet ring around it on the sign, so you can see where it stands.",
