@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=535; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=536; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -645,6 +645,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v536","Review queue → Ask AI without logging in; a generated card naming its multicard"],
   ["app","v535","the recap alone; the pad finishes its word; a dismissed suggestion stays gone"],
   ["app","v533","the word being written marked on the photo, quietly"],
   ["app","v532","fold/unfold at startup: no frozen screen; Diagnostics' main-thread line"],
@@ -1800,6 +1801,16 @@ function renderAiRow(){
   run.textContent=q?t("Ask AI"):t("Nothing to review");
   const rs=$("#ai-runstatus"); if(rs) rs.textContent=q?t("{0} waiting: {1} flagged, {2} uncertain, {3} pending translation.",nOf(q,"card"),fl,sp,pd):t("Nothing waiting. Flag a card, or save a reading that looks uncertain.");
   const auto=$("#ai-auto"); if(auto) auto.onchange=async e=>{ await setSetting("aiAuto",!!e.target.checked); renderAiRow(); }; /* the one AI setting everyone sees (v190); the setup form is the owner's */
+  /* the Review queue's own button is EVERYONE's (v536): until v535 it was wired below the owner's guard, so on a locked
+     phone - which every learner and H himself are in until the password - #ai-btn and #ai-form are null, renderAiRow
+     returned first, and the button stood there visible and enabled with no handler at all. aiAuto only ever takes a card
+     with mt.pending or mt.suspect, so a card the learner FLAGS has no other route to the AI: this was the one manual
+     escape hatch and it had been disconnected since at least v465. */
+  run.onclick=async()=>{
+    run.disabled=true; const rs=$("#ai-runstatus");
+    try{ const n=await aiReview(null,x=>{ rs.textContent=x; }); rs.textContent=t("{0} ready. Accept or dismiss them under Cards.",nOf(n,"suggestion")); }
+    catch(err){ rs.textContent=t("Failed: {0}",err&&err.message||err); run.disabled=false; }
+  };
   if(!btn||!form) return;
   btn.onclick=()=>{ form.hidden=!form.hidden; if(!form.hidden&&!aiKey(form.dataset.pv)) $("#ai-key").focus(); };
   /* the form shows one provider at a time (form.dataset.pv, the active one at first); its chip is lit, its key, model
@@ -1825,11 +1836,6 @@ function renderAiRow(){
   $("#ai-remove").onclick=async()=>{ const pv=form.dataset.pv; await setAiAccount(pv,null);
     if(pv===aiProvider()){ delete S.settings.aiKey; idbDel("settings","aiKey").catch(()=>{}); const next=Object.keys(AI_PROVIDERS).find(k=>aiKey(k)); if(next) await setSetting("aiProvider",next); else if(!aiOn()) await setSetting("aiAuto",false); } /* the automatic check goes off only when no AI is left — with the relay it stays (v192: H's phone lost its checks after Remove key while the relay still read pictures) */
     form.hidden=true; renderAiRow(); };
-  run.onclick=async()=>{
-    run.disabled=true; const rs=$("#ai-runstatus");
-    try{ const n=await aiReview(null,x=>{ rs.textContent=x; }); rs.textContent=t("{0} ready. Accept or dismiss them under Cards.",nOf(n,"suggestion")); }
-    catch(err){ rs.textContent=t("Failed: {0}",err&&err.message||err); run.disabled=false; }
-  };
 }
 /* ---------- progress: cards learned, this week, streak of days ---------- */
 function dayKey(t){ const d=new Date(t||Date.now()); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
@@ -2832,6 +2838,7 @@ const showHints=()=>(usage().reviews||0)<HINT_REVIEWS;
 /* the simplified form of a traditional card, on the back above the pinyin (v227; on the front until v226, H v102) */
 const simpRefHTML=d=>d.trad?`<div class="script back"><span class="scriptref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span></div>`:"";
 function backHTML(d,o){ const srcHere=!(o&&o.noSrc); /* noSrc: the front of this same screen already carries the multicard's name under the picture (v489), and twice on one screen is noise.
+   v536: the OPEN CARD stopped passing it. Its front is frontPic since v518, not frontHTML, so nothing there draws scriptNote - and with noSrc the name was on neither side: a generated flashcard opened from the Cards tab said nowhere where it came from and had no way back into its multicard, which is the one screen v492/v494 built that round trip for.
    The reference is a BUTTON here, on the Learn back as in the detail (v494, H: "Als einer von Multicard erzeugten Flashcard komme ich momentan nicht zurueck in die Multicard"). v487 made it plain text on this
    screen for the v155 rule — a tap must not throw you out of a running session — and the price was that from the one screen a
    learner meets a generated card on there was no way back at all, and a finger on a plain span raises the phone's own text
@@ -2982,7 +2989,9 @@ function renderStudy(main){
     ${noTmpl?`<div class="hint" id="pad-note">${t("not in the stroke set — draw it and tap Done")}</div>`:""}
     <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Whole card")}</span>${rep?`<span class="pill again">${t("Again")}</span>`:""}<span class="tail">${!rep&&list.length>1&&!S.single?/* v522: the count in the fold row; on a repeat pass the Again pill takes the slot */`<span class="pos">${esc(t("{0} of {1}",li+1,list.length))}</span>`:""}<i aria-hidden="true">⌄</i></span></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
     ${swipeHint(d)}</div>`; /* no linked-photos row on the study card (v518, H: "No 'also in other cards' in learn mode. Only on Cards mode.") — the detail keeps it */
-  if(ansOpen) warmParts();
+  /* v536: no warmParts here. The block has carried backHTML(...{noParts:true}) since v512 ("backHTML without the parts
+     row"), so opening it parsed cedict.tsv.gz - 2.5 MB - for a row this screen does not draw. The row lives on the camera's
+     finished card, and renderShots warms it there. */
   const card=main.querySelector(".card.study");
   chrowFit(card); /* v519: every character on screen — before the pad measures what is left under the row */
   /* the photo: a tap swaps the crop for the whole photo and back (v55); the flag in its corner is the review flag (§ 3.3) */
@@ -3965,7 +3974,7 @@ function detailActsHTML(d){ return `<div class="detailacts">
       ${d.c&&!inPage(d)?`<button class="btn primary" id="d-test">${t("Test this card")}</button>`:""}
       <button class="btn" id="d-edit">${t("Edit")}</button>
       ${inPage(d)?"":`<button class="btn${d.star?" on":""}" id="d-star">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}
-      <button class="btn${d.flag?" on":""}" id="d-flag">${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}</button>
+      <button class="btn${d.flag?" on":""}" id="d-flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button> <!-- v536: the Learn back's own two words (v431). Measured at 393 and 360 px, "⚑ Flag for review" broke across two lines in en, de, es, fr, id, ru and vi - three in id at 360 - and a grid row is as tall as its tallest cell, so two of the six buttons stood at 61.5 px against 50 and the block read ragged. v431 kept the phrase here because "one word would read as the odd one out"; the row already holds Edit, Star and Share, so it does not. -->
       ${d.c&&!inPage(d)?`<button class="btn" id="d-share">${t("Share")}</button>`:""}
       <button class="btn danger" id="d-del"${d.c?' style="grid-column:1/-1"':""}>${t("Delete card")}</button>
     </div>`; } /* a multicard's own text offers Edit, Flag and Delete and nothing else (v498): Test would study a text that is never in Learn (v487), Share would send a row of the multicard as if it were a card, and the star left this screen at v493 */
@@ -3980,7 +3989,7 @@ function detailCardHTML(d,sw){
      line showed only for a tapped character. The block stays open by default here — this is the screen for looking a card up. */
   const tg=padTargets(d), li=detailCh(d), lit=detailLit(d,tg), open=!S.detailHide;
   const btn=x=>`<button class="ch${x.w?"":" num"}${lit===x?" cur":""}" data-i="${tg.indexOf(x)}">${esc(x.glyph)}</button>`;
-  const back=`<div class="anshanzi hanzi">${(d.trad?d.trad.split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,noSrc:!!(pg&&pg.src),explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}`;
+  const back=`<div class="anshanzi hanzi">${(d.trad?d.trad.split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}`;
   return `${tagsHTML(d,!p)}<div class="zone1 front${d.flag?" flagged":""}" id="d-reveal">${frontPic(d,{page:true,fixed:true})}</div>
       ${chrowHTML(d,tg,btn,lit?lit.wi:null)}
       <div class="padline" id="padline"${lit?"":" hidden"}></div>
@@ -4069,7 +4078,6 @@ function renderCardDetail(main,c){
   </div>`; /* the actions sit inside the card where the pad would stand (v518); the schedule line and the linked-photos row stay under it, on the pane */
   $("#back").onclick=S.detailFrom==="inbox"?backToPhoto:fromPage()?backToPage:backToList; /* opened from a photo's sheet (v448): ← goes back to the photo; from a page's row or sheet (v453): back to the page */
   /* the preview behaves like the test: tap the photo for the whole picture, tap the character to hide and show the answer (H) */
-  if(!S.detailHide&&d.c) warmParts();
   const rv=$("#d-reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); } }; /* v518: the answer folds by its own button now, not by a tap on the picture */
   { const fo=$("#d-fold"); if(fo) fo.onclick=()=>{ S.detailHide=!S.detailHide; render(); if(!S.detailHide) revealBlock("#d-ans"); }; /* v531: the block at the foot scrolls into view when opened, as in Learn */
     const dcard=main.querySelector(".card.study.detail"), tg=d.c?padTargets(d):[];
@@ -4087,7 +4095,7 @@ function renderCardDetail(main,c){
   if($("#d-star")) $("#d-star").onclick=async()=>{ await setStar(c,!d.star); render(); }; /* the learner's own mark (v425); a multicard's own text has no such button (v493) */
   $("#d-flag").onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   const sh=$("#d-share"); if(sh) sh.onclick=()=>shareCard(c); /* one image through the share sheet (v269) */
-  wireSay(); wireChars(d); wireLinks(); wireSrc(); wireExplain();
+  wireSay(); wireLinks(); wireSrc(); wireExplain(); /* v536: no wireChars - the open card passes noParts, so there is no .chars row on it to wire */
   wireAi();
   const del=$("#d-del"); if(del) del.onclick=async()=>{ await delCustom(c); if(S.detailFrom==="inbox"){ backToPhoto(); return; } if(fromPage()){ backToPage(); return; } S.detail=null; render(); }; /* at once, with Undo (v268) */
   /* the swipe changes the card, and the two pieces of view state go opposite ways because they mean different things.
@@ -4491,6 +4499,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  536:"Ask AI under More → Review queue works again, so a card you flag can be checked; and a card made from a multicard names it again and takes you back to it.",
   535:"A finished card now shows on its own, with no writing pad behind it; the pad writes one word out before it moves to the next character; and a suggestion you dismiss stays dismissed.",
   533:"The word you are writing is marked on the photo as well — a quiet ring around it on the sign, so you can see where it stands.",
   531:"The open card under Cards now reads like the Learn card: the word's pinyin and meaning under the characters, and the whole card folded open at its foot. Pressing and holding a character to walk through its cards is switched off for now.",
@@ -8521,6 +8530,7 @@ function renderShots(){
           :shotNote(s)?`<div class="ok${QSBAD[s.id]||s.note?" bad":""}" style="margin:0">${shotNote(s)}</div>${qsAiBox(s.id)}`:""}</div>
       </div>`;
     }).join(""); /* no foot: v470 took the archive line away, v471 the head and the switch */
+  if(box.querySelector(".result .chars")) warmParts(); /* v536: the parts row is drawn HERE and nowhere else on a learner's screen - the camera's finished card - so this is where the dictionary is warmed (v235's rule, moved to the row it exists for) */
   box.querySelectorAll("[data-tile]").forEach(b=> b.onclick=()=>{ S.openShot=b.dataset.tile; renderShots(); const el=box.querySelector(`.shot[data-open]`); if(el) el.scrollIntoView({block:"nearest"}); }); /* a tap opens that photo full width, where it is the list view's own row */
   box.querySelectorAll("[data-lp]").forEach(el=> longPress(el,()=>{ PICK={kind:"shots",set:new Set([el.dataset.lp])}; renderShots(); })); /* press and hold a photo to start marking (v354) */
   wireRegions(box); /* the dots on a marked photo (v448) */
