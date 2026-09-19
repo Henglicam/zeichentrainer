@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=548; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=549; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -650,6 +650,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v549","More → Help → Open: the guide is six pictures and a few sentences — is anything you needed gone?"],
   ["app","v548","More → Learning → Handwriting on: write a character you know in your own order, and see whether Done accepts it"],
   ["app","v547","More: four sections, and everything you used to find is still there"],
   ["app","v546","tap the star counter in Learn: the rule and the last seven days, and the day's own number above them"],
@@ -2603,29 +2604,106 @@ function renderMore(main){
   renderNmtRow(); renderAiRow();
 }
 
+/* ---------- the guide's pictures (v549, H: "weniger Text und mehr Bilder") ----------
+   Each section is led by a figure the app DRAWS, not by a screenshot. Measured before the choice was made: a real 393x917
+   screen scaled to the guide's own content width (329 px) is 768 px tall, so six of them are 4600 px against the 3560 px of
+   prose they would replace — the guide would get LONGER, which is the opposite of the ask. A crop of one part of a screen
+   fits, and a crop of one part of a screen is a figure. Beside that: a screenshot is in ONE of the ten languages (a German
+   learner would read German sentences under an English picture — the v538 fault in a new place) and in one of the two
+   themes, so an honest set is 6 x 10 x 2 = 120 images; at 110 KB a full screen that is megabytes against a 520 KB shell;
+   and every one of them goes stale at the next layout change, which is why v259 banned them in the first place.
+   So the figures are inline SVG on the app's own tokens: they follow the language because they carry NO UI prose (only
+   Chinese characters and the fixed language endonyms, neither of which a translation can lengthen — the v427 rule), they
+   follow light and dark because every colour is a token, they cost no bytes beyond markup and no build step, and the one
+   thing each section is about is marked in the tint. `aria-hidden` because the sentences under them say the same thing. */
+const gfig=(h,body)=>`<svg class="gf" viewBox="0 0 320 ${h}" width="100%" height="${h}" aria-hidden="true" focusable="false">${body}</svg>`;
+const GF_SEP=`var(--sep)`, GF_CARD=`var(--card)`, GF_FILL=`var(--fill)`, GF_TINT=`var(--tint)`, GF_LAB=`var(--label)`, GF_L3=`var(--label3)`;
+const gfHan=(x,y,s,txt,fill)=>`<text class="gfh" x="${x}" y="${y}" font-size="${s}" fill="${fill}" text-anchor="middle">${txt}</text>`;
+const gfBar=(x,y,w,fill,o)=>`<rect x="${x}" y="${y}" width="${w}" height="6" rx="3" fill="${fill}" opacity="${o}"/>`;
+const gfBox=(x,y,w,h,r,fill,stroke)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${fill}"${stroke?` stroke="${stroke}"`:""}/>`;
+const gfArrow=(x1,y,x2)=>`<path d="M${x1} ${y} H${x2-7}" stroke="${GF_L3}" stroke-width="2" fill="none"/><path d="M${x2-9} ${y-5} L${x2} ${y} L${x2-9} ${y+5}" fill="${GF_L3}"/>`;
+const GFIG={
+  /* the photo, the frame the app puts on its text, and the card that comes out */
+  photo:()=>gfig(150,
+    gfBox(8,18,138,114,10,GF_CARD,GF_SEP)+gfBox(26,52,102,44,5,GF_FILL)+gfHan(77,84,24,"面包",GF_LAB)
+    +`<rect x="22" y="48" width="110" height="52" rx="7" fill="none" stroke="${GF_TINT}" stroke-width="2"/>`
+    +gfArrow(156,75,186)
+    +gfBox(196,18,116,114,10,GF_CARD,GF_SEP)+gfBox(206,28,96,42,5,GF_FILL)+gfHan(254,96,22,"面包",GF_LAB)
+    +gfBar(222,106,64,GF_TINT,.55)+gfBar(212,118,84,GF_L3,.5)),
+  /* the character row: every character is a button, and one of them is tapped */
+  chars:()=>gfig(140,
+    gfBox(30,34,112,56,12,GF_CARD,GF_SEP)+`<path d="M86 34 V90" stroke="${GF_SEP}"/>`+gfHan(58,72,26,"面",GF_LAB)+gfHan(114,72,26,"包",GF_LAB)
+    +gfBox(154,34,112,56,12,GF_CARD,GF_SEP)+`<path d="M210 34 V90" stroke="${GF_SEP}"/>`+gfHan(182,72,26,"店",GF_LAB)
+    +`<rect x="213" y="37" width="50" height="50" rx="9" fill="var(--tint-soft)" stroke="${GF_TINT}" stroke-width="2"/>`+gfHan(238,72,26,"铺",GF_TINT)
+    +`<path d="M238 118 V102" stroke="${GF_TINT}" stroke-width="2"/><path d="M233 106 L238 99 L243 106" fill="${GF_TINT}"/>`),
+  /* the write pad on 工: the stroke already written stands in ink, the next one is lit with a dot at its start,
+     and what is left is the template. Three straight strokes, because a nine-stroke character is a smudge at this size. */
+  learn:()=>gfig(172,
+    gfBox(112,10,44,28,7,GF_CARD,GF_SEP)+gfHan(134,31,18,"工",GF_TINT)+gfBox(164,10,44,28,7,GF_CARD,GF_SEP)+gfHan(186,31,18,"厂",GF_L3)
+    +gfBox(101,48,118,118,10,GF_CARD,GF_SEP)
+    +`<path d="M160 48 V166 M101 107 H219" stroke="${GF_TINT}" stroke-dasharray="5 5" opacity=".28"/>`
+    +`<path d="M124 142 H196" stroke="${GF_L3}" stroke-width="7" stroke-linecap="round" fill="none" opacity=".35"/>`
+    +`<path d="M128 74 H192" stroke="${GF_LAB}" stroke-width="7" stroke-linecap="round" fill="none"/>`
+    +`<path d="M160 74 V142" stroke="${GF_TINT}" stroke-width="7" stroke-linecap="round" fill="none"/><circle cx="160" cy="92" r="6.5" fill="${GF_TINT}" stroke="${GF_CARD}" stroke-width="2"/>`),
+  /* the Cards grid, and the star that marks the ones you care about */
+  cards:()=>gfig(150,
+    gfBox(16,14,138,122,12,GF_CARD,GF_SEP)+gfBox(24,22,122,72,8,GF_FILL)+gfHan(85,120,20,"面包",GF_LAB)
+    +`<path d="M129 27 l2.6 5.4 5.9.9 -4.3 4.1 1 5.9 -5.2 -2.8 -5.3 2.8 1 -5.9 -4.2 -4.1 5.9 -.9z" fill="none" stroke="${GF_L3}" stroke-width="1.5"/>`
+    +gfBox(166,14,138,122,12,GF_CARD,GF_SEP)+gfBox(174,22,122,72,8,GF_FILL)+gfHan(235,120,20,"鸡蛋",GF_LAB)
+    +`<path d="M279 27 l2.6 5.4 5.9.9 -4.3 4.1 1 5.9 -5.2 -2.8 -5.3 2.8 1 -5.9 -4.2 -4.1 5.9 -.9z" fill="${GF_TINT}"/>`
+    +`<circle cx="281.5" cy="37" r="15" fill="none" stroke="${GF_TINT}" stroke-width="2" opacity=".7"/>`),
+  /* the language you pick decides the app's texts and the meaning on a new card */
+  lang:()=>gfig(150,
+    gfBox(14,24,84,34,17,GF_CARD,GF_SEP)+`<text class="gft" x="56" y="46" font-size="14" fill="var(--label2)" text-anchor="middle">English</text>`
+    +`<rect x="106" y="24" width="88" height="34" rx="17" fill="${GF_TINT}"/><text class="gft" x="150" y="46" font-size="14" fill="#fff" text-anchor="middle">Deutsch</text>`
+    +gfBox(202,24,88,34,17,GF_CARD,GF_SEP)+`<text class="gft" x="246" y="46" font-size="14" fill="var(--label2)" text-anchor="middle">日本語</text>`
+    +`<path d="M150 62 V84" stroke="${GF_TINT}" stroke-width="2" stroke-dasharray="3 4" opacity=".6"/><path d="M145 80 L150 88 L155 80" fill="${GF_TINT}" opacity=".6"/>`
+    +gfHan(78,124,24,"鸡蛋",GF_LAB)+gfBar(104,108,58,GF_L3,.5)+gfBar(104,122,110,GF_TINT,.55)),
+  /* everything stays here; the card's text is what leaves, and a picture of it when the reading is hard */
+  privacy:()=>gfig(160,
+    gfBox(86,16,116,132,14,GF_CARD,GF_SEP)+`<path d="M124 29 H164" stroke="${GF_SEP}" stroke-width="3" stroke-linecap="round"/>`
+    +gfBox(98,46,92,26,6,GF_FILL)+gfBox(98,80,92,26,6,GF_FILL)+gfBox(98,114,92,26,6,GF_FILL)
+    +gfHan(113,66,16,"面",GF_LAB)+gfHan(113,100,16,"鸡",GF_LAB)+gfHan(113,134,16,"店",GF_LAB)
+    +`<path d="M206 58 C242 58 250 44 260 38" stroke="${GF_TINT}" stroke-width="2" fill="none"/><path d="M254 33 L264 36 L257 44" fill="${GF_TINT}"/>`
+    +`<rect x="252" y="10" width="58" height="28" rx="9" fill="var(--tint-soft)" stroke="${GF_TINT}"/>`+gfHan(270,31,16,"文",GF_TINT)
+    +`<rect x="285" y="17" width="16" height="13" rx="2.5" fill="none" stroke="${GF_TINT}" stroke-width="1.5"/><path d="M287 28 l4.5 -5.5 3 3.2 2.5 -2.4 4 4.7z" fill="${GF_TINT}"/>`)
+};
+
 /* ---------- How to use the app (v259, H's to-do "a user guide (Gebrauchsanleitung)" for his friends — described first as a page inside
-   the app, "Go"): one scrolling page in the app's language, six short sections, text only, offline; it describes what the app does today,
-   nothing planned, and changes in the same PR as the screen it describes. More → Help → Open; ← Back returns to More. ---------- */
+   the app, "Go"): one scrolling page in the app's language, six short sections, offline; it describes what the app does today,
+   nothing planned, and changes in the same PR as the screen it describes. More → Help → Open; ← Back returns to More.
+   v549 (H's "Go for all five" — a guide with less text and more pictures): each section is led by a figure and says its point in two or three
+   sentences — 4783 characters of English across 28 keys became 1600 across 16, and the page 3560 px (3.9 screens) shorter.
+   What it gives up, named: the guide is an INTRODUCTION now, not a reference — Save now, Select, the line input, Pull forward,
+   Tag all cards, Explain, the points sheet, Handwriting and the lock's walk are no longer spelled out here; each of them is a
+   control the learner meets on its own screen, and the sentences that survive are the ones a learner cannot discover by
+   tapping. The privacy sentence is NOT shortened past what v403/v459/v534 made true (the picture, sometimes the whole photo). */
 const GUIDE=()=>[
-  {h:t("Take a photo"),p:[t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card by itself — you see the finished card with Edit and Delete under it. Edit shows the photo with the frame the app used: drag a corner or the inside to fit it, the round handle turns it, let go and the reading starts again.")+" "+t("When the reading is clear, the card shows at once, and the AI's check refines it a moment later.")+" "+t("A photo that made several cards keeps every one of them in its place — tap a text on it for its characters, pinyin and meaning."),
-    t("A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard for the whole picture: one tile under Multicards, tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn."),
-    t("Crop frames a photo by hand, with a preview before the card is saved — tap it while the app is still reading and the automatic card stops, so you can adjust the frame it found. In a hurry there? Save now makes the card at once and the reading fills it in."),
-    t("From album takes several photos at once — they all become cards, one after the other, while the app is open.")]},
-  {h:t("Fix the characters"),p:[t("Under the photo every character is a button. Tap one for other readings, or draw it with your finger when the right one is missing. Type the line below the strip to replace it. Select removes several characters at once."),
-    t("Pinyin and meaning follow the characters. With the AI on, it checks them before you save. A new card counts as not yet checked until you have written it in Learn or opened it, and the filter shows those alone; flag a card yourself when something looks wrong.")]},
-  {h:t("Learn"),p:[t("Learn shows the cards that are due, then up to eight new ones. The photo is the cue, the characters under it are the buttons, and the write pad is the answer: trace the lit stroke, and the pad moves on by itself — character by character, then to the next card. Four characters a line and two lines photograph best.")+" "+t("A card made from a multicard shows the multicard's whole picture with a frame around its own text, and names the multicard under the meaning; tap that name to look the multicard up, and ← Back brings you back to the card."),
-    t("Above the pad, the word you are writing shows its pinyin and meaning; the whole card's characters, pinyin and meaning sit folded at the foot of the card — open them when you need them. Stuck on a stroke? Show me draws it, Skip fills it in for you. A card you wrote comes round once more a few cards later, with less of the template each time you know it. Nothing due? Pull the next cards forward.")+" "+t("Explain under the meaning asks the AI for a few sentences about the card — what the text says and where you meet it.")+" "+t("Tap the star counter at the top to see how your points are counted.")+" "+t("Handwriting under More → Learning takes the template away: write the whole character in your own stroke order and tap Done."),
-    t("Swipe the card left or right to pick another one — nothing is graded, and a card you skip stays due for next time.")+(lockOn()?" "+t("Press and hold a character to walk through every card that has it; press and hold it again to come back."):"")]}, /* v531: the lock's sentence only while the lock is on */
-  {h:t("Cards"),p:[t("All your cards, newest first. Once a photo has made a multicard, two tabs split them — Cards and Multicards. Search them, filter by flag or tag, tap one for its detail with Test, Edit and Delete. + New makes a card by hand, drawn character included. Push an open card sideways for the next one in the list."),
-    t("Tap a text on a multicard to look it up, and press Generate flashcard to make a card of it. Learn studies the flashcards, never the multicard itself."),
-    t("Tags group cards for a class or a level, and a card from a photo gets one for what it is — Menu, Shop, Product, Appliance and so on; More → Learning → Tag all cards gives the older cards one too. Learn shows the tags you pick. Press and hold a card to mark several and delete them together; old photos are cleared out under More → Your data → Photos. Tap the star on a card to mark it as one you care about — the filter then shows them alone, and Learn studies all of them, due or not.")]},
-  {h:t("Language and meanings"),p:[t("More → Language switches the app's texts. With the AI on, new cards get their meaning in that language, and Translate all cards does it for the ones you already have. A small pill names a meaning that is still in another language.")]},
-  {h:t("What stays on the phone"),p:[t("Cards and photos stay on this phone and nowhere else — export them under More → Your data now and then. The AI check sends a card's Chinese text, pinyin and meaning, and, when the reading is hard, a picture of the text — sometimes the whole photo."),
+  {h:t("Take a photo"),fig:GFIG.photo(),p:[
+    t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card for you; Crop frames it by hand when the app gets it wrong."),
+    t("A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.")]},
+  {h:t("Fix the characters"),fig:GFIG.chars(),p:[
+    t("Every character under the photo is a button: tap one for other readings, or draw it with your finger. Pinyin and meaning follow by themselves and the AI checks them — flag a card when something still looks wrong.")]},
+  {h:t("Learn"),fig:GFIG.learn(),p:[
+    t("Due cards first, then up to eight new ones. The photo is the question and the pad is the answer: trace the lit stroke and it moves on by itself, character by character."),
+    t("Stuck? Show me draws the stroke and Skip fills the character in. The whole card sits folded at its foot. Swipe sideways to pick another card — nothing is graded by swiping.")
+      +" "+t("Tap the star counter at the top to see how your points are counted.")] /* the counter is a tap target with no other affordance (v546), so this one sentence survives the cut */
+    .concat(lockOn()?[t("Press and hold a character to walk through every card that has it; press and hold it again to come back.")]:[])}, /* v531: only while the lock is on */
+  {h:t("Cards"),fig:GFIG.cards(),p:[
+    t("All your cards, newest first, with a tab of their own for multicards. Search them, filter them, and tap one to test, edit or delete it."),
+    t("Tap a card's star for the ones that matter to you, and Learn can study those alone. Tags group the rest, and a card from a photo gets one for what it is.")]},
+  {h:t("Language and meanings"),fig:GFIG.lang(),p:[
+    t("More → Language switches the app's own texts, and new cards get their meaning in that language. Translate all cards does it for the ones you already have.")]},
+  {h:t("What stays on the phone"),fig:GFIG.privacy(),p:[
+    t("Your cards and photos stay on this phone and nowhere else — export them under More → Your data now and then."),
+    t("The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard."),
+    /* v534's own correction, kept word for word: the usage row goes out once a day AND again on the way out after a card
+       changed (sendReport(true), the REPORT_DIRTY path of v219), and the guide is not the place to round that off. */
     t("Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under Privacy. Questions or ideas? More → Feedback.")]}];
 function renderGuide(main){
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back-more">${t("← Back")}</button><span class="badge">${t("How to use the app")}</span></div>
-    <div class="guide">${GUIDE().map(sec=>`<section><h2>${esc(sec.h)}</h2>${sec.p.map(x=>`<p>${esc(x)}</p>`).join("")}</section>`).join("")}</div>
+    <div class="guide">${GUIDE().map(sec=>`<section><h2>${esc(sec.h)}</h2><figure class="gfig">${sec.fig}</figure>${sec.p.map(x=>`<p>${esc(x)}</p>`).join("")}</section>`).join("")}</div>
   </div>`;
   $("#back-more").onclick=()=>{ S.mode="more"; render(); };
 }
@@ -4710,6 +4788,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  549:"How to use the app, under More → Help, is six pictures and a few sentences now instead of a wall of text.",
   548:"New under More → Learning: Handwriting. With it on there is no template and no stroke order — write the whole character, tap Done, and the app checks it.",
   547:"More is four sections instead of eleven — Learning, Your cards, The app, Advanced settings — and nothing has moved off the screen, only into a shorter list.",
   546:"Points are simpler and slower now: one point for every character you write without help, and no hidden bonus. Tap the star counter to see how they are counted and what your last seven days were.",
