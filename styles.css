@@ -871,6 +871,11 @@ body.noscroll{overflow:hidden}
 .cue .zone1 .picbox:not(.page):not(.sized) .signimg{opacity:0} /* v565: the picture shows only once splitFit knows its shape — fitted or clipped — so a picture that decodes late never appears in the wrong one and jumps (the carousel's neighbour did) */
 .cue .txt{min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:stretch;overflow:hidden;cursor:pointer} /* the text half: the tiles' rows over the word line, centred in the half */
 .cue .zone1{min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:var(--rc)}
+/* v577: a card with no photo of its own draws its word in the picture half instead of leaving it empty — the Cards tile's
+   own treatment (v506), so the two screens say the same thing about such a card. The box is a size container, as the tile's
+   is, and the glyph is sized against it by cqw/cqh. */
+.cue .zone1 .cglyphbox{container-type:size;width:100%;height:100%;position:relative}
+.cue .zone1 .cglyphbox .tglyph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--label3);text-align:center;line-height:1.15;white-space:nowrap;padding:0 8px}
 .cue .zone1 .picbox:not(.page){aspect-ratio:auto;height:100%;flex:1;display:flex;align-items:center;justify-content:center;margin:0}
 .cue .zone1 .picbox:not(.page) .signimg:not(.full){flex:none;width:100%;height:100%;object-fit:contain;margin:0}
 .cue .zone1 .picbox.clip .signimg:not(.full){height:auto} /* a picture near the row's own shape keeps its size and is clipped, centred on its text (v329 centres the window on the frame) */

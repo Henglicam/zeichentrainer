@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=577; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=578; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v578","card with no photo: word on top"],
   ["app","v577","finished card: reading + meaning"],
   ["app","v575","Photo open/close: the mark sticks"],
   ["app","v574","Test this card: photo at the top"],
@@ -3185,7 +3186,7 @@ function renderStudy(main){
     return `<button class="${cls}" data-i="${i}" ${x.w?"":`aria-disabled="true"`}>${esc(x.glyph)}${S.lockChar&&x.ch===S.lockChar?`<i class="lockmark" aria-hidden="true">${MARK_LOCK}</i>`:""}</button>`; }; /* lockmark: the padlock (v518, H: "Locked on/off should be more obvious, maybe with a padlock icon?") */
   const litWi=cur?cur.wi:null; /* v518: the lit word is the word of the character in the pad, so it follows the pad by itself */
   const chrow=chrowHTML(d,tg,btn,litWi,S.lockChar); /* v526: the word holding the locked character carries the green outline */ /* v564: every row of tiles shows in the text half — v560's one-row strip, v561's unfold and v562's pill are gone */
-  const pg=frontPage(d), picHTML=frontPic(d,{page:true,fixed:true}); /* v517: one box shape on the study card */
+  const pg=frontPage(d), realPic=frontPic(d,{page:true,fixed:true}), picHTML=realPic||cueGlyphHTML(d); /* v517: one box shape on the study card; v577: a card with no photo shows its own word there rather than an empty half */
   /* v527 (H: "schieb meaning (komplett hanzi, Pinyin, Bedeutung) ganz nach unten. Für's aktuelle wort: pinyin and meaning
      zwischen Bild und Pad."): the card's WHOLE text stands at the head of the answer block — the traditional form when it
      has one, the photo's own lines — so the block at the foot of the card is the whole card in one look, while the line
@@ -3200,7 +3201,7 @@ function renderStudy(main){
      above their own card. Inside the card it was the first child of the study card's GRID, whose first row is the cue's own
      fixed --cueh (v560), so the row took that whole row — 279 px of white with the two words centred in it — and pushed the
      cue, the pad and the fold down by it, ending the card 279 px under the tab bar. */
-  main.innerHTML=wxNoteHTML()+(S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:"")+`<div class="card study${rep?" rep":""}${cueBigCls(!!picHTML)}">
+  main.innerHTML=wxNoteHTML()+(S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:"")+`<div class="card study${rep?" rep":""}${cueBigCls(!!realPic)}">
     <div class="cue">
     <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}${d.flag||d.unchecked?`<button class="picflag${d.flag?" on":" new"}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}" title="${d.flag?"":esc(t("Not yet checked"))}">${d.flag?"⚑":"⚐"}</button>`:""}</div>
     <div class="txt" id="cuetxt">${chrow}<div class="padline" id="padline"></div></div></div>
@@ -3238,7 +3239,7 @@ function renderStudy(main){
      there are no grades that own the screen any more. */
   wireSwipe(card, list.length<2||S.single?null:{
     n:list.length, idx:li, centred:false,
-    peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ const np=frontPic(nd,{page:true,fixed:true}); return { cls:"study"+cueBigCls(!!np), html:`<div class="cue"><div class="zone1 front">${np}</div><div class="txt">${peerRowHTML(nd)}<div class="padline"></div></div></div><div class="padwrap"><div class="wpad ghost"${ghostSize(card)}></div></div><div class="fold"><button class="foldbtn"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button></div>${swipeHint(nd)}` }; } finally{ S.fullPic=fp; } }, /* v530: the neighbour carries the study card's own class, so it takes its 16 px top padding and every other rule of the study layout — a plain `.card` neighbour stood 6 px taller (22 px of padding) and hopped by that much at the snap */ /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
+    peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ const np=frontPic(nd,{page:true,fixed:true}); return { cls:"study"+cueBigCls(!!np), html:`<div class="cue"><div class="zone1 front">${np||cueGlyphHTML(nd)}</div><div class="txt">${peerRowHTML(nd)}<div class="padline"></div></div></div><div class="padwrap"><div class="wpad ghost"${ghostSize(card)}></div></div><div class="fold"><button class="foldbtn"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button></div>${swipeHint(nd)}` }; } finally{ S.fullPic=fp; } }, /* v530: the neighbour carries the study card's own class, so it takes its 16 px top padding and every other rule of the study layout — a plain `.card` neighbour stood 6 px taller (22 px of padding) and hopped by that much at the snap */ /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
     go:goTo, ready:p=>{ p.style.setProperty("--cueh",(card._fit?card._fit.cueH+"px":card.style.getPropertyValue("--cueh"))); splitFit(p); } }); /* v560/v561: the neighbour takes the card's own cue height, so its frame is the card's; v564: and splits it into its own two halves */
   wireSay(); wireLinks(); wireSrc(); wireAi(); wireExplain();
   mountPad(card,d,c,tg,st,cur);
@@ -4413,10 +4414,19 @@ function textLines(tx,wq,hq){
   }
   return ls;
 }
-function glyphTileHTML(tx){
+function glyphTileHTML(tx,cap){
   const ls=textLines(tx,84,55.5), u=Math.max(1,...ls.map(lineUnits));
-  return `<span class="tglyph hanzi" style="font-size:min(46px,${(84/u).toFixed(2)}cqw,${(74/ls.length).toFixed(2)}cqh)">${ls.map(esc).join("<br>")}</span>`;
+  return `<span class="tglyph hanzi" style="font-size:min(${cap||46}px,${(84/u).toFixed(2)}cqw,${(74/ls.length).toFixed(2)}cqh)">${ls.map(esc).join("<br>")}</span>`;
 }
+/* v577 (H: "Go für C" — the third of three ways offered for the empty picture half of a card with no photo of its own, a
+   flashcard generated from a multicard among them): the half reserved 325 x 158 px of nothing and pushed the characters
+   183 px down. A is centring the text in the cue and B is shortening the card — both only move white around. C fills the
+   half with what the card IS: its word, large, in the Hanzi font, exactly as the Cards tile has drawn a picture-less card
+   since v506, so no room is wasted and the card still has the frame every other card has (v560's rule: the frame never
+   moves for the content). The tile's own fit is reused with a bigger cap; it stays the placeholder grey, since it stands
+   in for a photo that is not there rather than competing with the tiles below. */
+const CUE_GLYPH=96;
+function cueGlyphHTML(d){ const tx=(d&&(d.trad||d.c))||""; return tx?`<div class="cglyphbox">${glyphTileHTML(tx,CUE_GLYPH)}</div>`:""; }
 /* v523: the finished card, large, over the pad — the characters in the Hanzi font fitted to the pad's square (the pad is a
    size container, so the size is solved by CSS), the pinyin and the meaning under them. The same text the card carries;
    no key in any column. */
@@ -4631,7 +4641,7 @@ function detailCardHTML(d,sw){
   const tg=padTargets(d), li=detailCh(d), lit=detailLit(d,tg), open=!S.detailHide;
   const btn=x=>`<button class="ch${x.w?"":" num"}${lit===x?" cur":""}" data-i="${tg.indexOf(x)}">${esc(x.glyph)}</button>`;
   const back=`<div class="anshanzi hanzi">${(d.trad?d.trad.split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}`;
-  return `${tagsHTML(d,!p)}<div class="zone1 front${d.flag?" flagged":""}" id="d-reveal">${frontPic(d,{page:true,fixed:true})}</div>
+  return `${tagsHTML(d,!p)}<div class="zone1 front${d.flag?" flagged":""}" id="d-reveal">${frontPic(d,{page:true,fixed:true})||cueGlyphHTML(d)}</div>
       ${chrowHTML(d,tg,btn,lit?lit.wi:null)}
       <div class="padline" id="padline"${lit?"":" hidden"}></div>
       ${d.reading&&!d.reading.failed?`<div class="hint">${t("The new frame is being read — the text follows when it is done.")}</div>`:""}
