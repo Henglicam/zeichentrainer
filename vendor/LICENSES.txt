@@ -34,6 +34,12 @@ offline and without any CDN):
   via the cedict-json npm package — CC BY-SA 4.0
   https://www.mdbg.net/chinese/dictionary?page=cc-cedict
   This derived file is likewise licensed under CC BY-SA 4.0.
+  Modifications: one line per simplified word, the English senses of an entry
+  joined with "; " and cut to 120 characters; the traditional forms and the
+  classifiers dropped. On 20 September 2026 the 1,210 words that have more
+  than one reading were given their readings back — one group per reading,
+  separated by U+001F, each opening with its tone-marked pinyin in brackets.
+  The script that does it is tools/cedict-readings.py in this repository.
 
 - nmt/bergamot-translator-worker.js, nmt/bergamot-translator-worker.wasm,
   nmt/translator-worker.js

@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=572; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=573; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v573","a card with 合, 雀, 行 or 供 on it: the meaning under the reading is that reading's — 合 hé \"to close\", not \"100 ml\" — on the pad, in the line under it and in the parts row"],
   ["app","v572","open Learn: the card starts with the photo big; one tap shows the characters under it, another makes it big again, and the state holds for the session"],
   ["app","v569","fold the phone mid-card, or leave the app and come back: the same character, the strokes already in it, and the half you tapped big"],
   ["app","v569","a card of eight characters tapped big: three rows of large tiles, the half filled — not two rows with the half half empty"],
@@ -2998,14 +2999,15 @@ async function charInfo(w,btn,d){
     await loadDict().catch(()=>{});
     const known=d&&d.gloss&&cardGloss(d).find(g=>g.w===w);
     const py=known&&known.p?known.p:pinyinPro.pinyin(w,{toneType:"symbol"});
-    const m=cleanSense((known&&known.m)||bestSense(w)||((DICT&&DICT.get(w))||""));
+    const m=cleanSense((known&&known.m)||bestSense(w,py)); /* v573: the word's own reading picks the group; the raw value is never printed, since bestSense returns "" only when the entry has no sense at all */
     const chars=[...w].filter(ch=>CJK.test(ch));
     const sub=chars.length>1||(known&&known.unit)?`<div class="chars sub">${chars.map(ch=>`<button class="ch" data-sub="${ch}">${ch}</button>`).join("")}</div>`:"";
     box.innerHTML=NUM_PART.test(w)?`<div class="chline"><span class="hanzi">${esc(w)}</span><span>${esc(latinUnitMeaning(w)||t("A number, read as it is."))}</span></div>`
       :`<div class="chline"><span class="hanzi">${esc(w)}</span><span class="mono">${esc(py)}</span><span>${esc(m||t("not in the dictionary"))}</span></div>${sub}`; /* a number part shows itself once, not as its own pinyin and meaning (v336) */
     box.querySelectorAll("[data-sub]").forEach(b=> b.onclick=async e=>{ e.stopPropagation(); const ch=b.dataset.sub;
       box.querySelectorAll(".sub .ch").forEach(x=>x.classList.toggle("on",x===b));
-      const line=box.querySelector(".chline"); line.innerHTML=`<span class="hanzi">${esc(ch)}</span><span class="mono">${esc(pinyinPro.pinyin(ch,{toneType:"symbol"}))}</span><span>${esc(cleanSense(bestSense(ch)||((DICT&&DICT.get(ch))||""))||t("not in the dictionary"))}</span>`; });
+      const cpy=pinyinPro.pinyin(ch,{toneType:"symbol"});
+      const line=box.querySelector(".chline"); line.innerHTML=`<span class="hanzi">${esc(ch)}</span><span class="mono">${esc(cpy)}</span><span>${esc(cleanSense(bestSense(ch,cpy))||t("not in the dictionary"))}</span>`; });
   }catch(e){ box.innerHTML=`<span class="badge">${t("Dictionary not available.")}</span>`; }
 }
 function wireChars(d){ document.querySelectorAll(".chars:not(.sub) .ch").forEach(b=> b.onclick=e=>{ e.stopPropagation(); charInfo(b.dataset.ch,b,d); }); }
@@ -3526,7 +3528,7 @@ async function padLineFill(box,d,x){ box.hidden=false;
     await loadDict().catch(()=>{});
     const known=d.gloss&&cardGloss(d).find(g=>g.w===w);
     const py=known&&known.p?known.p:pinyinPro.pinyin(w,{toneType:"symbol"});
-    const m=cleanSense((known&&known.m)||bestSense(w)||((DICT&&DICT.get(w))||""));
+    const m=cleanSense((known&&known.m)||bestSense(w,py));
     /* v517 (H: "Pinyin und Bedeutung für einzelne Charaktere aus einem längeren Wort"): a word of several characters gets a
        second line for the one character the pad is on. Its syllable is taken out of the word's own pinyin rather than
        looked up on its own, so a character that reads differently inside this word keeps the word's reading. */
@@ -3535,7 +3537,7 @@ async function padLineFill(box,d,x){ box.hidden=false;
     if(many){
       const syl=String(py||"").trim().split(/\s+/), k=x.pos-x.wstart;
       const cpy=syl.length===chars.length&&syl[k]?syl[k]:pinyinPro.pinyin(one,{toneType:"symbol"});
-      const cm=cleanSense(bestSense(one)||((DICT&&DICT.get(one))||""));
+      const cm=cleanSense(bestSense(one,cpy)); /* v573: cpy is the syllable this character has INSIDE this word, so 合 in 合同 reads hé and means "to close", not gě's "100 ml" */
       sub=row(`<b${one===lk?' class="lock"':""}>${esc(one)}</b>`,cpy,cm||t("not in the dictionary"));
     }
     if(!box.isConnected) return;
@@ -5065,6 +5067,7 @@ async function delCustom(id){
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
   569:"Fold the phone or leave the app: the card comes back exactly as you left it, with the strokes you had already written. And the characters tapped big now break onto more rows, so they come out as large as they fit.",
+  573:"The dictionary knows which reading a character has: 合 read hé now means “to close”, not gě’s “100 ml”.",
   572:"A card now opens with the photo big — tap it to show the characters under it, and again to make it big.",
   568:"Tap the photo, or the space beside the characters, to make either one big — and it stays big while you write the whole card. One more tap folds it back.",
   564:"The top of the card is two halves now: the picture, and under it the whole text with its pinyin. Tap the picture to make it big, tap the text to make the text big.",
@@ -5351,6 +5354,12 @@ async function loadScript(src){
   });
 }
 /* CC-CEDICT (simplified -> English gloss), lazily loaded from ./vendor */
+const DICT_HEAD="#cedict v2"; /* the file's own first line, and the only way to tell a cached v571 copy from this one */
+/* gzip magic bytes — if a server or proxy already decompressed, treat the body as plain text */
+async function dictText(res){ const buf=new Uint8Array(await res.arrayBuffer());
+  return (buf[0]===0x1f&&buf[1]===0x8b)
+    ? await new Response(new Response(buf).body.pipeThrough(new DecompressionStream("gzip"))).text()
+    : new TextDecoder().decode(buf); }
 let DICT=null, _dictLoading=null;
 function loadDict(){
   if(DICT) return Promise.resolve(DICT);
@@ -5364,11 +5373,19 @@ function loadDict(){
         r=await fetch(url,{cache:"reload"});
         if(!r.ok) throw new Error("dictionary not available ("+r.status+")");
       }
-      const buf=new Uint8Array(await r.arrayBuffer());
-      /* gzip magic bytes — if a server/proxy already decompressed, treat as plain text */
-      const text=(buf[0]===0x1f&&buf[1]===0x8b)
-        ? await new Response(new Response(buf).body.pipeThrough(new DecompressionStream("gzip"))).text()
-        : new TextDecoder().decode(buf);
+      let text=await dictText(r);
+      /* v573: the file gained a reading per sense and kept its name, so a phone whose vendor cache still holds the old
+         one would be served it for ever — and renaming the cache (zt-ocr-v1) would cost every phone the reader's whole
+         15 MB instead of this one file's 2.5 MB. The header line says which file this is; without it the entry is
+         dropped and fetched once more past the HTTP cache. Once only, and what comes back is used either way, so a
+         mirror that is still serving the old file costs one extra fetch a session and never a loop. */
+      if(text.slice(0,DICT_HEAD.length)!==DICT_HEAD){
+        try{ const c=await caches.open("zt-ocr-v1"); await c.delete(url); }catch(e){}
+        try{ const r2=await fetch(url,{cache:"reload"});
+          if(r2.ok){ const keep=swControls()?null:r2.clone(), t2=await dictText(r2); /* the worker caches what it fetched; without one the page has to (v335) */
+            if(t2.slice(0,DICT_HEAD.length)===DICT_HEAD){ text=t2;
+              if(keep){ try{ const c=await caches.open("zt-ocr-v1"); await c.put(new Request(url),keep); }catch(e){} } } } }catch(e){}
+      }
       DICT=new Map();
       for(const line of text.split("\n")){
         const i=line.indexOf("\t");
@@ -5939,9 +5956,29 @@ function loadSigns(){
   return _signsLoading;
 }
 const SIGN_PUNCT=/[、，。：:,.!！?？;；·]/;
-/* first dictionary sense that is not a surname / bound-form / variant / abbreviation note (the abbreviation since v309: 日 opened with "abbr. for 日本, Japan" before "sun; day") */
-function bestSense(w){
-  const senses=((DICT&&DICT.get(w))||"").split(";").map(x=>x.trim()).filter(Boolean);
+/* the reading groups of a dictionary value (v573): a word with more than one reading carries one group per reading,
+   separated by US (0x1f), each opening with its own tone-marked pinyin in brackets —
+   "[hé] to close; to join; to fit\x1f[gě] 100 ml; one-tenth of a peck". A value with no 0x1f is the plain old form, so
+   115,311 - 1,210 of the file's lines are byte for byte what they were. The brackets are what cleanSense() strips. */
+const DICT_GRP="\x1f";
+function senseGroups(v){ return String(v||"").split(DICT_GRP).map(g=>{ const m=/^\s*\[([^\]]*)\]\s*/.exec(g); return m?{r:m[1],s:g.slice(m[0].length)}:{r:"",s:g}; }); }
+const pyKey=x=>String(x||"").toLowerCase().normalize("NFC").replace(/\s+/g," ").trim();
+const pyBare=x=>pyKey(x).normalize("NFD").replace(/[\u0300-\u036f]/g,""); /* tones off: ǖ and ü both come out "u" */
+/* first dictionary sense that is not a surname / bound-form / variant / abbreviation note (the abbreviation since v309: 日 opened with "abbr. for 日本, Japan" before "sun; day")
+   v573 (H: "Fix das Wörterbuch, 100 ml ist falsch"): py is the reading the screen is showing — the character's own syllable
+   inside its word (v517), the word's pinyin, or pinyin-pro's. Where the word has several readings the sense comes from
+   that one's group: 合 read hé means "to close", not gě's "100 ml". An exact match first, then the same syllable at
+   another tone (乐 Le4 and le4 both romanise to "lè"), and with no match at all the groups are flattened, which is
+   exactly what the file did before this version. */
+function bestSense(w,py){
+  const v=(DICT&&DICT.get(w))||"";
+  let body=v;
+  if(v.indexOf(DICT_GRP)>=0){
+    const gs=senseGroups(v), want=pyKey(py);
+    const g=want&&(gs.find(x=>pyKey(x.r)===want)||gs.find(x=>pyBare(x.r)===pyBare(want)));
+    body=g?g.s:gs.map(x=>x.s).join("; ");
+  }
+  const senses=body.split(";").map(x=>x.trim()).filter(Boolean);
   return senses.find(x=>!/^(surname |\(bound form\)|old variant|variant of|\(archaic\)|abbr\. (for|of) |Taiwan pr\.)/i.test(x))||senses[0]||"";
 }
 /* meaning of one transcript line: longest phrasebook phrases first, dictionary
@@ -5958,7 +5995,8 @@ function lineMeaning(line){
     const rest=raw.slice(k).split(SIGN_PUNCT)[0]; let len=Math.min(8,rest.length)||1;
     while(len>1 && !(DICT&&DICT.has(rest.slice(0,len)))) len--;
     const w=rest.slice(0,len)||ch;
-    parts.push({w,p:pySpaced(w),m:cleanSense(bestSense(w)),ph:false}); /* no dictionary clutter in the composed meaning (v134) */
+    const wp=pySpaced(w);
+    parts.push({w,p:wp,m:cleanSense(bestSense(w,wp)),ph:false}); /* no dictionary clutter in the composed meaning (v134); the word's own reading picks the sense group (v573) */
     k+=w.length;
   }
   const words=mergeUnits(parts).filter(x=>!x.punct);
