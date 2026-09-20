@@ -842,31 +842,33 @@ body.noscroll{overflow:hidden}
 .picbox.zoomed{touch-action:none} .picbox.zoomed .signimg,.picbox.zoomed .pagewrap{will-change:transform}
 
 
-/* THE FRAME (v560, H: "immer gleich, immer symmetrisch, die Proportionen immer gleich"): the study card is a grid of fixed
-   rows — the photo takes --photoh, computed once per device in mountPad; the strip is one row; the word line two rows; the
-   pad is as wide as the card; the fold row closes it. The neighbour of the carousel is the same grid with the same --photoh.
-   Show me, Skip, Undo, Clear and Done live inside the pad's square, in its lower corners, so a button appearing never moves
-   the frame (v517's rule, now by construction). The hint of the first twenty reviews is one more row, out of the photo. */
-.card.study:not(.detail){display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:var(--photoh,1fr) 56px 61px auto auto;grid-auto-rows:auto;row-gap:8px;box-sizing:border-box}
+/* THE FRAME (v560, H: "immer gleich, immer symmetrisch, die Proportionen immer gleich"; v561, H: "drei verschiedene Abschnitte
+   ... symmetrisch gleiche Größe das Schreibfeld und darunter dann halt nochmal ganz schmal die Details"): three panels. The CUE
+   — the photo edge to edge at its top, the character strip and the word line under it on the pad's own grey with the pad's
+   hairline and corners — as tall as the PAD, which is as wide as the card; the fold row closes the card. --cueh is computed
+   once per device in mountPad, and the photo inside the cue takes what the strip and the line leave. The neighbour of the
+   carousel is the same grid with the same --cueh. Show me, Skip, Undo, Clear and Done live inside the pad's square, so a
+   button appearing never moves the frame. The hint of the first twenty reviews is one more row, out of the two panels. */
+.card.study:not(.detail){display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:var(--cueh,auto) auto auto;grid-auto-rows:auto;row-gap:8px;box-sizing:border-box}
 .card.study:not(.detail)>*{margin-top:0}
-.card.study:not(.detail) .zone1{min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:var(--rc)}
-.card.study:not(.detail) .zone1 .picbox:not(.page){aspect-ratio:auto;height:100%;flex:1;display:flex;align-items:center;justify-content:center;margin:0}
-.card.study:not(.detail) .zone1 .picbox:not(.page) .signimg:not(.full){flex:none;width:100%;height:100%;object-fit:contain;margin:0}
-.card.study:not(.detail) .zone1 .picbox.clip .signimg:not(.full){height:auto} /* a picture near the box's own shape keeps its size and is clipped by the box, centred on its text (v329 centres the window on the frame) */
-.card.study:not(.detail) .zone1 .signimg.full{width:100%;height:100%;object-fit:contain;margin:0;border-radius:var(--rc)} /* the whole photo, a deliberate tap, fitted into the same row */
-.card.study:not(.detail) .chrow{height:56px;overflow:hidden}
-.card.study:not(.detail) .chrow.multi .chin{padding-right:34px} /* room for the chevron, so no tile stands under it */
-.chmore{position:absolute;right:0;top:0;width:34px;height:56px;border:none;background:linear-gradient(to right,transparent,var(--card) 10px);color:var(--label2);font-size:18px;line-height:1;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cue{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) 56px 61px;row-gap:8px;min-height:0;background:var(--card2);border-radius:var(--rc);box-shadow:inset 0 0 0 1px var(--sep);overflow:hidden;padding-bottom:8px;box-sizing:border-box}
+.card.study.unfold .cue{grid-template-rows:minmax(0,1fr) auto 61px} /* v561: unfolded, the strip shows every row and the photo gives the room */
+.card.study.unfold .chrow{height:auto}
+.cue .zone1{min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.cue .zone1 .picbox:not(.page){aspect-ratio:auto;height:100%;flex:1;display:flex;align-items:center;justify-content:center;margin:0;border-radius:0;box-shadow:none} /* the photo is the panel's top: the panel's own corners and hairline frame it */
+.cue .zone1 .picbox:not(.page) .signimg:not(.full){flex:none;width:100%;height:100%;object-fit:contain;margin:0}
+.cue .zone1 .picbox.clip .signimg:not(.full){height:auto} /* a picture near the row's own shape keeps its size and is clipped, centred on its text (v329 centres the window on the frame) */
+.cue .zone1 .signimg.full{width:100%;height:100%;object-fit:contain;margin:0;border-radius:0} /* the whole photo, a deliberate tap, fitted into the same row */
+.cue .chrow{height:56px;overflow:hidden;margin:0 8px;max-width:none}
+.cue .chrow.multi .chin{padding-right:34px} /* room for the chevron, so no tile stands under it */
+.cue .chw{background:var(--card)} /* white tiles on the panel's grey — the v549 lesson, an object in --card2 on --card2 vanishes */
+.cue .chw:not(.on):not(.lockw){box-shadow:none}
+.chmore{position:absolute;right:0;top:0;width:34px;height:56px;border:none;background:linear-gradient(to right,transparent,var(--card2) 10px);color:var(--label2);font-size:18px;line-height:1;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .chmore[hidden]{display:none}
 .chmore[aria-expanded="true"] i{display:inline-block;transform:rotate(180deg)}
-.chall{position:absolute;inset:0;z-index:6;background:var(--card);border-radius:var(--rc);box-shadow:inset 0 0 0 1px var(--sep);overflow-y:auto;display:flex;align-items:center;justify-content:center;padding:10px;box-sizing:border-box;opacity:0;transition:opacity .16s}
-.chall.in{opacity:1}
-.chall .challin{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;row-gap:8px;max-height:100%;margin:auto}
-.chall .chline{display:contents}
-.chall .ch{position:relative;font-family:var(--hanzi);font-size:calc(var(--chs,56px) * 0.54);width:var(--chs,56px);height:var(--chs,56px);padding:0;border:none;border-radius:0;background:none;color:var(--label);box-shadow:none;cursor:pointer;user-select:none}
-.chall .chw .ch+.ch{border-left:1px solid var(--sep)} .chall .ch.cur{color:var(--tint)} .chall .ch.done{color:var(--ok)} .chall .ch.done.cur{color:var(--tint)} .chall .ch.num{font-family:var(--sans);font-size:17px;font-weight:600;width:auto;padding:0 10px;color:var(--label2)}
-@media(prefers-reduced-motion:reduce){.chrow .chin{transition:none} .chall{transition:none}}
-.card.study:not(.detail) .padline{height:61px;min-height:61px;overflow:hidden}
+.card.study.unfold .chmore{background:none;align-self:flex-start}
+@media(prefers-reduced-motion:reduce){.chrow .chin{transition:none}}
+.cue .padline{height:61px;min-height:61px;overflow:hidden;padding:0 8px}
 .padwrap .padacts{position:absolute;left:0;right:0;bottom:8px;margin:0;display:flex;justify-content:space-between;padding:0 10px;pointer-events:none} .padwrap .padacts>*{pointer-events:auto}
 .padwrap .padacts:not(:has(:not([hidden]))){display:none} /* an empty row takes no taps */
 .padwrap .hint#pad-note{position:absolute;left:12px;right:12px;top:8px;margin:0;text-align:center;pointer-events:none}

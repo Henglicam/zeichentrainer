@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=560; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=561; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -670,8 +670,10 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v561","the three panels: the photo, characters and pinyin on one grey panel, the pad the same height under it, the fold row below — the same on every card"],
+  ["app","v561","a card of eight characters or more: the arrow unfolds the rows in place, the photo giving the room, nothing shown twice; a tap on a character folds it back into the pad"],
   ["app","v560","cards of two, eight and sixteen characters one after the other: photo, strip, line and pad the same size on every one, the pad as wide as the photo"],
-  ["app","v560","a card of eight characters or more: the strip shows the row you are writing, slides to the next row by itself, and the small arrow unfolds every row over the photo"],
+  ["app","v560","a card of eight characters or more: the strip shows the row you are writing and slides to the next row by itself"],
   ["app","v560","Show me and Skip inside the pad's lower corners after two and four misses; Undo, Done and Clear on a character with no template"],
   ["app","v559","a card of eight characters or more, folded: the pad bigger than before and the photo box shorter, the sign whole in it; and the fold row above the tab bar"],
   ["app","v557","write a card of two characters or more: the LAST character's reading stands over the pad on its own, and only then the whole card"],
@@ -3139,9 +3141,10 @@ function renderStudy(main){
   const freePad=noTmpl||(cur&&handWrite()&&STROKE_OF.has(cur.glyph)); /* v548: handwriting draws freehand too, so it needs Undo, Clear and the note the free pad has always had */
   main.innerHTML=wxNoteHTML()+`<div class="card study${rep?" rep":""}">
     ${S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:""}
+    <div class="cue">
     <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}${d.flag||d.unchecked?`<button class="picflag${d.flag?" on":" new"}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}" title="${d.flag?"":esc(t("Not yet checked"))}">${d.flag?"⚑":"⚐"}</button>`:""}</div>
     ${chrow}
-    <div class="padline" id="padline"></div>
+    <div class="padline" id="padline"></div></div>
     <div class="padwrap"><canvas class="wpad" id="wpad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas><div class="padacts" id="padacts">${freePad?`<button class="del" id="pad-undo">${t("pad:Undo")}</button>`:""}<button class="del" id="pad-show" hidden>${t("Show me")}</button><button class="del" id="pad-skip" hidden>${t("Skip")}</button><button class="del" id="pad-done" hidden>${t("Done")}</button>${freePad?`<button class="del" id="pad-clear">${t("Clear")}</button>`:""}</div>${freePad?`<div class="hint" id="pad-note">${noTmpl?t("not in the stroke set — draw it and tap Done"):""}</div>`:""}</div>
     <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Whole card")}</span>${rep?`<span class="pill again">${t("Again")}</span>`:""}<span class="tail">${!rep&&list.length>1&&!S.single?/* v522: the count in the fold row; on a repeat pass the Again pill takes the slot */`<span class="pos">${esc(t("{0} of {1}",li+1,list.length))}</span>`:""}<i aria-hidden="true">⌄</i></span></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
     ${swipeHint(d)}</div>`; /* no linked-photos row on the study card (v518, H: "No 'also in other cards' in learn mode. Only on Cards mode.") — the detail keeps it */
@@ -3165,8 +3168,8 @@ function renderStudy(main){
          the line is always there and follows the pad by itself (H: "when automatically jumping to next, pinyin and meaning
          under the pad don't follow. And they should Always be visible"), so there is no second tap that puts it out */
       st.i=i; st.k=0; st.miss=0; st.hint=false; st.free.length=0; render(); };
-  { const more=$("#chmore"); if(more) more.onclick=e=>{ e.stopPropagation(); if(card.querySelector(".chall")) stripClose(card); else stripOpen(card,pick); }; /* v560: unfold every row over the photo */
-    const cr=card.querySelector(".chrow"); if(cr) cr.onclick=e=>{ if(e.target.closest(".ch")||cr.dataset.rows<2) return; e.stopPropagation(); stripOpen(card,pick); }; } /* the strip's empty room opens it too */
+  { const more=$("#chmore"); if(more) more.onclick=e=>{ e.stopPropagation(); stripUnfold(card,!card.classList.contains("unfold")); }; /* v561: the strip unfolds IN PLACE, the photo giving the room */
+    const cr=card.querySelector(".chrow"); if(cr) cr.onclick=e=>{ if(e.target.closest(".ch")||cr.dataset.rows<2||card.classList.contains("unfold")) return; e.stopPropagation(); stripUnfold(card,true); }; } /* the strip's empty room unfolds it too */
   card.querySelectorAll(".chrow .ch").forEach(b=>{ const i=+b.dataset.i, x=tg[i]; if(!x) return;
     b.onclick=e=>{ e.stopPropagation(); pick(i); };
     /* press and hold locks the character and walks every card that has it (v513, § 7 — the v354 gesture, buzz included); a
@@ -3177,8 +3180,8 @@ function renderStudy(main){
      there are no grades that own the screen any more. */
   wireSwipe(card, list.length<2||S.single?null:{
     n:list.length, idx:li, centred:false,
-    peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ return { cls:"study", html:`<div class="zone1 front">${frontPic(nd,{page:true,fixed:true})}</div>${peerRowHTML(nd)}<div class="padline"></div><div class="padwrap"><div class="wpad ghost"${ghostSize(card)}></div></div><div class="fold"><button class="foldbtn"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button></div>${swipeHint(nd)}` }; } finally{ S.fullPic=fp; } }, /* v530: the neighbour carries the study card's own class, so it takes its 16 px top padding and every other rule of the study layout — a plain `.card` neighbour stood 6 px taller (22 px of padding) and hopped by that much at the snap */ /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
-    go:goTo, ready:p=>{ p.style.setProperty("--photoh",card.style.getPropertyValue("--photoh")); chrowFit(p); } }); /* v560: the neighbour takes the card's own photo height, so its frame is the card's */
+    peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ return { cls:"study", html:`<div class="cue"><div class="zone1 front">${frontPic(nd,{page:true,fixed:true})}</div>${peerRowHTML(nd)}<div class="padline"></div></div><div class="padwrap"><div class="wpad ghost"${ghostSize(card)}></div></div><div class="fold"><button class="foldbtn"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button></div>${swipeHint(nd)}` }; } finally{ S.fullPic=fp; } }, /* v530: the neighbour carries the study card's own class, so it takes its 16 px top padding and every other rule of the study layout — a plain `.card` neighbour stood 6 px taller (22 px of padding) and hopped by that much at the snap */ /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
+    go:goTo, ready:p=>{ p.style.setProperty("--cueh",card.style.getPropertyValue("--cueh")); chrowFit(p); } }); /* v560/v561: the neighbour takes the card's own cue height, so its frame is the card's */
   wireSay(); wireLinks(); wireSrc(); wireAi(); wireExplain();
   mountPad(card,d,c,tg,st,cur);
   if(pg&&!S.fullPic) fitPageCover(card,pg); /* D5: the multicard's picture cover-fitted around the card's own text */
@@ -3339,7 +3342,7 @@ const CH_MAX=56, CH_MIN=40, CH_ROWS=2, STRIP_GAP=8; /* STRIP_GAP: the row gap of
    tiles stay at CH_MAX, a text that needs more than one row is laid out in rows of what fits, and the strip — a viewport one
    row tall — shows THE ROW THE PAD IS ON, sliding to the next row when the pad moves there. Nothing scrolls sideways, so the
    swipe keeps the whole card (a strip that pans owns the horizontal gesture — v518's rule, which this ends). A chevron at the
-   strip's right end says there is more, and a tap on it unfolds every row over the photo (stripOpen). The open card under
+   strip's right end says there is more, and a tap on it unfolds every row in place, the photo giving the room (stripUnfold, v561). The open card under
    Cards has no pad and keeps the v519/v522 fit: shrink, then wrap onto rows that all show. */
 const STRIP_ROW={c:null,row:0}; /* the row the study card's strip last showed, so a re-render slides from it instead of jumping */
 function chrowFit(root,c){ const cr=root&&root.querySelector(".chrow"); if(!cr) return; const ci=cr.querySelector(".chin")||cr;
@@ -3352,7 +3355,7 @@ function chrowFit(root,c){ const cr=root&&root.querySelector(".chrow"); if(!cr) 
   cr.classList.add("wrap"); const rows=()=>new Set([...cr.querySelectorAll(".chw")].map(w=>w.offsetTop)).size;
   for(s=CH_MAX; s>=CH_MIN; s--){ cr.style.setProperty("--chs",s+"px"); if(ci.scrollWidth<=avail&&rows()<=CH_ROWS) return; }
   cr.style.setProperty("--chs",CH_MIN+"px"); }
-function stripFit(root,cr,ci,c){
+function stripFit(root,cr,ci,c){ if(root.classList&&root.classList.contains("unfold")) return; /* v561: unfolded, every row shows and nothing slides */
   cr.style.setProperty("--chs",CH_MAX+"px"); cr.classList.remove("wrap","multi"); ci.style.transition="none"; ci.style.transform="";
   const avail=cr.clientWidth; if(!avail) return;
   const rowOf=el=>Math.round(el.offsetTop/(el.offsetHeight+STRIP_GAP)); /* the row a tile stands in: its offset inside the flow, in row heights */
@@ -3366,18 +3369,21 @@ function stripFit(root,cr,ci,c){
   if(from!==row){ ci.style.transform=`translateY(${-from*step}px)`; void ci.offsetHeight; ci.style.transition=""; } /* slide from the row the pad left to the one it is on */
   ci.style.transform=row?`translateY(${-row*step}px)`:""; if(from===row) requestAnimationFrame(()=>{ ci.style.transition=""; });
   if(c) STRIP_ROW.c=c, STRIP_ROW.row=row; }
-/* every row, unfolded over the photo (v560): a copy of the strip's own flow — the same tiles with the same states — laid out
-   in rows inside the photo zone; a tap on a tile puts it into the pad (which re-renders and so closes it), a tap anywhere
-   else or Escape closes it. Built on the tap, never in the card's markup, so nothing on the card is doubled. */
-function stripOpen(card,pick){ const z=card.querySelector(".zone1"), cr=card.querySelector(".chrow"), ci=cr&&cr.querySelector(".chin"); if(!z||!ci||z.querySelector(".chall")) return;
-  const ov=document.createElement("div"); ov.className="chall"; ov.innerHTML=`<div class="challin chin wrap">${ci.innerHTML}</div>`; ov.style.setProperty("--chs",CH_MAX+"px");
-  ov.querySelectorAll("[id]").forEach(el=>el.removeAttribute("id")); ov.querySelectorAll(".ch").forEach(b=>{ b.onclick=e=>{ e.stopPropagation(); stripClose(card); pick(+b.dataset.i); }; });
-  const more=cr.querySelector(".chmore"); if(more) more.setAttribute("aria-expanded","true");
-  ov.onclick=e=>{ e.stopPropagation(); stripClose(card); }; z.appendChild(ov); requestAnimationFrame(()=>ov.classList.add("in"));
-  card._stripKey=e=>{ if(e.key==="Escape") stripClose(card); }; document.addEventListener("keydown",card._stripKey);
-  card._stripOut=e=>{ if(!e.target.closest(".chall,.chmore")) stripClose(card); }; setTimeout(()=>document.addEventListener("click",card._stripOut,true)); } /* a tap anywhere else closes it — armed after the opening tap's own click */
-function stripClose(card){ const ov=card.querySelector(".chall"); if(ov) ov.remove(); const more=card.querySelector(".chmore"); if(more) more.setAttribute("aria-expanded","false");
-  if(card._stripKey){ document.removeEventListener("keydown",card._stripKey); card._stripKey=null; } if(card._stripOut){ document.removeEventListener("click",card._stripOut,true); card._stripOut=null; } }
+/* EVERY ROW, UNFOLDED IN PLACE (v561, H on v560's overlay: "dass das Bild dann weg ist und der Text dann nochmal doppelt
+   gemoppelt dort ist, wo das Bild war, ist doch Quatsch ... das Bild schiebt sich nach oben und man hat dann den ganzen
+   Text, aber bitte nicht doppelt moppeln"): the strip's own rows show — the same tiles, once — and the photo above gives
+   the room, shrinking to PHOTO_OPEN at the least; a text whose rows need more than that grows the cue panel and the pad
+   moves down for as long as it is open. A tap on a tile picks it (and re-renders, folded), the chevron again or a tap
+   anywhere else folds it back. Nothing is copied, nothing lies over anything. */
+function stripUnfold(card,on){ const cr=card.querySelector(".chrow"), ci=cr&&cr.querySelector(".chin"), more=cr&&cr.querySelector(".chmore"); if(!cr||!ci) return;
+  card.classList.toggle("unfold",on); if(more) more.setAttribute("aria-expanded",on?"true":"false");
+  if(on){ const rows=+cr.dataset.rows||1, all=rows*(CH_MAX+STRIP_GAP)-STRIP_GAP, side=card._fit?card._fit.side:0;
+    const cue=card.querySelector(".cue"), cuePad=cue?(parseFloat(getComputedStyle(cue).paddingBottom)||0):0;
+    ci.style.transform=""; card.style.setProperty("--cueh",Math.max(side,PHOTO_OPEN+all+LINE_H+2*STRIP_GAP+cuePad)+"px"); /* the cue keeps its height while the photo can give the room, else it grows */
+    card._stripOut=e=>{ if(!e.target.closest(".chrow")) stripUnfold(card,false); }; setTimeout(()=>document.addEventListener("click",card._stripOut,true));
+    card._stripKey=e=>{ if(e.key==="Escape") stripUnfold(card,false); }; document.addEventListener("keydown",card._stripKey); }
+  else { if(card._stripOut){ document.removeEventListener("click",card._stripOut,true); card._stripOut=null; } if(card._stripKey){ document.removeEventListener("keydown",card._stripKey); card._stripKey=null; }
+    if(card._fit) card.style.setProperty("--cueh",card._fit.side+"px"); stripFit(card,cr,ci); } }
 /* the characters of the card as the pad's targets, grouped by word (§ 5, Q3): one entry per character of the text, in the
    text's order and with its repeats (v430), each knowing its word (wi) so the buttons of one word sit in one group and the
    line under the pad names the word; a number with its unit is one entry for the whole part and is not writable (w:false).
@@ -3555,7 +3561,7 @@ async function checkCard(id){ const d=cardOf(id); if(!d||!d.unchecked) return; c
    default — see § the entry for why the automatic trigger at level 3 was measured and not built. */
 const handWrite=()=>S.settings.handWrite===true;
 const HAND_TOP=3; /* the target must be among the matcher's three best — the drawing sheet's own rule since v141 */
-const PAD_FLOOR=160, PHOTO_MIN=120, STRIP_H=56, LINE_H=61, CLIP_RATIO=0.8, TRACE_OK=0.18, NEXT_MS=3000, PRAISE_AT=2000, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
+const PAD_FLOOR=160, PHOTO_MIN=120, PHOTO_OPEN=80, STRIP_H=56, LINE_H=61, CLIP_RATIO=0.8, TRACE_OK=0.18, NEXT_MS=3000, PRAISE_AT=2000, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
 const CARD_RATIO=1.5; /* the one window and box shape on every card, 3:2 (v519) — declared here, since FRONT_RATIO reads it at load time */
 let LAST_FIT=null; /* v521: the study card's last pad measurement, printed by Diagnostics */
 /* THE MAIN THREAD AT STARTUP, AND WHAT A FOLD DOES TO IT (v532, H: "open/close foldable phone sometimes freezes the startup
@@ -3586,7 +3592,7 @@ const FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_G
 /* NEXT_MS is 3000 since v523: the finished card holds while its recap stands over the pad — the characters, pinyin and
    meaning, large — and the star flies out of it at PRAISE_AT (v523, H: "sollte der Inhalt der Karte nochmal groß und
    deutlich gut lesbar für wenige Sekunden gezeigt werden, um sich das nochmal einzuprägen"); 1500 from v517 to v522, when
-   the card held only for the star, and 900 before that, when nothing happened. FRONT_RATIO is the shape the study card's picture is cut in (3:2, v519); the box it shows in is the frame's photo row since v560. PAD_FLOOR, PHOTO_MIN, STRIP_H and LINE_H are the frame's constants (mountPad), CLIP_RATIO the share of the box's own shape a picture must reach to be clipped rather than fitted. BRUSH_W is the
+   the card held only for the star, and 900 before that, when nothing happened. FRONT_RATIO is the shape the study card's picture is cut in (3:2, v519); the box it shows in is the frame's photo row since v560. PAD_FLOOR, PHOTO_MIN, STRIP_H and LINE_H are the frame's constants (mountPad), PHOTO_OPEN the least the photo keeps while the strip is unfolded (stripUnfold), CLIP_RATIO the share of the box's own shape a picture must reach to be clipped rather than fitted. BRUSH_W is the
    brush's widest point; OUT_GRID/OUT_Y0 map the stroke outlines, which are stored y-up on a 256 grid. */
 /* TRACE_OK: the mean distance, in pad sides, between the drawn stroke's eight points and the template stroke's — the spec's
    0.28 was a starting number and its own suite refuses a stroke a quarter of the pad off, so the bar sits under that; the
@@ -3776,26 +3782,31 @@ function mountPad(card,d,c,tg,st,cur){
      constant tail under the pad; the wrapped row (v519/v522) and the hint (v537) broke it again card by card. v560 makes the
      whole card the constant instead — see THE FRAME below; the pad's own history is in CLAUDE.md. */
   /* THE FRAME (v560, H: "Das wäre doch viel schöner, wenn es immer gleich ist, immer symmetrisch ist, die Proportionen immer
-     gleich sind"): the card is a grid of fixed rows — the photo, the strip (56), the word line (61), the pad, the fold row —
-     and the pad is the ANCHOR: as wide as the card's inner width, so as wide as the photo above it, the same on every card.
-     What is left of the screen after the fixed rows goes to the photo (--photoh), computed once per device and not per
-     card; only on a screen too short for both does the pad give way, down to PAD_FLOOR, so the photo keeps PHOTO_MIN.
-     Nothing is measured off the card's content any more — v517's floor, v521's tail budget and v559's wrapped box are gone —
-     and the helper buttons sit inside the pad's own square, so they never resize anything (v517's rule, kept by construction).
-     The swipe hint of the first twenty reviews is one more row and comes out of the photo for those cards. */
-  const fit=()=>{ if(!cv.isConnected) return; const inner=card.clientWidth-36; cv.style.width="0px"; cv.style.height="0px";
+     gleich sind"; v561, H: "drei verschiedene Abschnitte ... darunter symmetrisch gleiche Größe das Schreibfeld"): the card is
+     three panels — the CUE (the photo, the strip, the word line, on the pad's own grey), the PAD, and the fold row — and the
+     first two are THE SAME HEIGHT: the pad is as wide as the card, the cue as tall as the pad, and the photo inside the cue
+     takes whatever the strip (56) and the line (61) leave. Computed once per device, never per card: the room from the
+     card's top to 16 px above the tab bar, less the fold row, the padding, the gaps and the hint of the first twenty
+     reviews, halved. Only a screen too short for two such panels breaks the symmetry — the cue keeps PHOTO_MIN of photo and
+     the pad takes the rest, down to PAD_FLOOR. Nothing is measured off the card's content — v517's floor, v521's tail
+     budget and v559's wrapped box are gone — and the helper buttons sit inside the pad's own square, so they never resize
+     anything (v517's rule, kept by construction). */
+  const fit=()=>{ if(!cv.isConnected||card.classList.contains("unfold")) return; const inner=card.clientWidth-36; cv.style.width="0px"; cv.style.height="0px";
     const nav=$("#tabs"), navTop=nav?nav.getBoundingClientRect().top:window.innerHeight, navH=nav?nav.getBoundingClientRect().height:56;
     const ccs=getComputedStyle(card), rect=card.getBoundingClientRect(), top=rect.top+window.scrollY;
     const cardH=Math.floor(navTop-16-top); /* the card's whole room with the page at rest: from its top to 16 px above the tab bar */
     const gap=parseFloat(ccs.rowGap)||8, hn=card.querySelector(".hint:not(#pad-note)"), fb=card.querySelector("#fold");
-    const fixed=(parseFloat(ccs.paddingTop)||12)+(parseFloat(ccs.paddingBottom)||14)+STRIP_H+LINE_H+(fb?fb.offsetHeight:36)+gap*4+(hn?hn.offsetHeight+gap:0);
-    const side=Math.max(PAD_FLOOR,Math.min(inner,Math.floor(cardH-fixed-PHOTO_MIN)));
-    const photoH=Math.max(PHOTO_MIN,cardH-fixed-side);
-    cv.style.width=side+"px"; cv.style.height=side+"px"; card.style.setProperty("--photoh",photoH+"px");
-    const pic=card.querySelector(".zone1 .picbox:not(.page)"), im=pic&&pic.querySelector(".signimg"); /* the picture keeps its own height and the box clips it when it is close to the box's shape; a picture much taller than the box (a portrait label) is fitted inside instead */
+    const avail=cardH-(parseFloat(ccs.paddingTop)||12)-(parseFloat(ccs.paddingBottom)||14)-(fb?fb.offsetHeight:36)-gap*2-(hn?hn.offsetHeight+gap:0); /* for the two panels */
+    const cue=card.querySelector(".cue"), cuePad=cue?(parseFloat(getComputedStyle(cue).paddingBottom)||0):0, cueFixed=STRIP_H+LINE_H+2*STRIP_GAP+cuePad; /* what the cue holds beside the photo: the strip, the line, their gaps and the panel's own bottom padding */
+    const cueMin=PHOTO_MIN+cueFixed; /* the least cue: the photo at its floor over the strip and the line */
+    let side=Math.min(inner,Math.floor(avail/2)), cueH=side;
+    if(side<cueMin){ cueH=cueMin; side=Math.max(PAD_FLOOR,Math.min(inner,avail-cueH)); } /* too short for two equal panels: the photo keeps its floor, the pad gives way */
+    const photoH=cueH-cueFixed;
+    cv.style.width=side+"px"; cv.style.height=side+"px"; card.style.setProperty("--cueh",cueH+"px");
+    const pic=card.querySelector(".zone1 .picbox:not(.page)"), im=pic&&pic.querySelector(".signimg"); /* the picture keeps its own height and the cue clips it when it is close to the row's shape; a picture much taller than the row (a portrait label) is fitted inside instead */
     if(pic&&im&&im.naturalWidth) pic.classList.toggle("clip",im.naturalWidth/im.naturalHeight>=CLIP_RATIO*(inner/photoH));
     const end=card.getBoundingClientRect().bottom;
-    card._fit=LAST_FIT={at:Date.now(),vw:window.innerWidth,vh:window.innerHeight,navH,top:+top.toFixed(1),cardH,fixed:+fixed.toFixed(1),inner,side,photoH,end:+end.toFixed(1),navTop:+navTop.toFixed(1),scrollY:window.scrollY,fits:card._fit?card._fit.fits+1:1}; };
+    card._fit=LAST_FIT={at:Date.now(),vw:window.innerWidth,vh:window.innerHeight,navH,top:+top.toFixed(1),cardH,avail,inner,side,cueH,photoH,end:+end.toFixed(1),navTop:+navTop.toFixed(1),scrollY:window.scrollY,fits:card._fit?card._fit.fits+1:1}; };
   fit(); card._fitPad=fit;
   /* v521: the measurement is repeated once the layout has settled — the next frame, the picture's load and the line's fill
      (padLine calls it) — and on every resize through the one listener below, where v517–v520 fitted once and took the first
@@ -4936,6 +4947,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  561:"The card is three panels now: the photo with its characters and pinyin, a writing pad of the same size, and the details below. A long text unfolds its rows in place with the small arrow.",
   560:"Every card now has the same shape: the photo, one row of characters, and a writing pad as wide as the photo. A long text folds its rows behind the small arrow beside the characters.",
   557:"The last character of a card now shows its own pinyin too, before the whole card comes up.",
   553:"Every character you write now shows its own pinyin for a moment before the pad moves on — inside a word too, and a little longer than before.",
