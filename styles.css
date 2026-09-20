@@ -718,6 +718,14 @@ body.noscroll{overflow:hidden}
    font is the UI font semibold as every pinyin in the app is; the tracking is opened a little, since at this size the
    tone marks want the room. It comes up and settles on the app's own curve and it leaves by lifting away while the pad
    fades back under it, where until v552 it was removed in a single frame. */
+/* v554 (H, two screenshots: "Pinyin wird abgeschnitten"): a -webkit-box with overflow:hidden clips at its PADDING edge,
+   and a line box of 1.12 em is shorter than the font's own content area — measured 65.0 px against 68.0 — so the ink that
+   legitimately sticks out of the line was sliced off: the descender of g (H's gōng, flat-bottomed on his phone), the left
+   hook of j, the acute of í, the umlaut of ü. The room is given as PADDING and taken straight back as a negative MARGIN,
+   so the clip box grows while the margin box — and with it the flex layout, the centring and the 143/n cqw fit — is exactly
+   what it was; a line-height alone would not do, since the shortfall is the font's and a phone runs Roboto (descender
+   .271 em) where this box measures DejaVu. */
+.recap .rp,.recap .rm{padding:.22em .14em;margin:-.22em -.14em}
 .recap.py .rp{line-height:1.12;letter-spacing:.6px;color:var(--ok);-webkit-line-clamp:2}
 .recap.py{translate:-50% 8px;scale:.96;transition:opacity .22s cubic-bezier(.22,.61,.36,1),translate .26s cubic-bezier(.22,.61,.36,1),scale .26s cubic-bezier(.22,.61,.36,1)}
 .recap.py.in{translate:-50% 0;scale:1}

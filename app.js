@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=553; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=554; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -665,6 +665,7 @@ async function sendFeedback(text,shot){
 const TO_TEST=[
   ["app","v553","write a card of two-character words: the reading of EVERY character stands over the pad for a moment, 应 in 供应 reading yìng"],
   ["app","v553","the reading itself: green, large, coming up and lifting away rather than popping — and a tap still skips it"],
+  ["app","v554","the reading over the pad with nothing sliced off it: the tail of g, the hook of j, the dots over ü"],
   ["photo","v552","a card of ONE word, and one of a single character: the word is marked on the photo while you write it"],
   ["photo","v552","a card from a sign you photographed at an angle, and one from a tall sign on a portrait photo: both marked too"],
   ["app","v552","More → Diagnostics → the 'marks on the photo' line: how many cards it still cannot mark, and why"],
