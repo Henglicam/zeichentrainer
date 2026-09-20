@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=552; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=553; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -663,6 +663,8 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v553","write a card of two-character words: the reading of EVERY character stands over the pad for a moment, 应 in 供应 reading yìng"],
+  ["app","v553","the reading itself: green, large, coming up and lifting away rather than popping — and a tap still skips it"],
   ["photo","v552","a card of ONE word, and one of a single character: the word is marked on the photo while you write it"],
   ["photo","v552","a card from a sign you photographed at an angle, and one from a tall sign on a portrait photo: both marked too"],
   ["app","v552","More → Diagnostics → the 'marks on the photo' line: how many cards it still cannot mark, and why"],
@@ -3813,7 +3815,7 @@ function mountPad(card,d,c,tg,st,cur){
        did not. A character in no dictionary word (a number) has no word to finish and falls straight through. */
     let next=cur.wi!=null?tg.findIndex((x,j)=>x.w&&x.wi===cur.wi&&!st.done.has(j)):-1;
     if(next<0) next=tg.findIndex((x,j)=>x.w&&!st.done.has(j));
-    if(next>=0){ await wordRecap(card,cur,tg,st); if(!cv.isConnected||S.pad!==st) return; st.i=next; st.k=0; st.miss=0; st.hint=false; st.free.length=0; keepScroll(render); return; }
+    if(next>=0){ await charRecap(card,cur,tg,st); if(!cv.isConnected||S.pad!==st) return; st.i=next; st.k=0; st.miss=0; st.hint=false; st.free.length=0; keepScroll(render); return; }
     cardDone();
   };
   const cardDone=async()=>{
@@ -4190,34 +4192,45 @@ function glyphTileHTML(tx){
 /* v523: the finished card, large, over the pad — the characters in the Hanzi font fitted to the pad's square (the pad is a
    size container, so the size is solved by CSS), the pinyin and the meaning under them. The same text the card carries;
    no key in any column. */
-const RECAP_FS=96, WORD_MS=650, RECAP_PY=46;
-/* v550 (H: "Nach jedem geschriebenen Wort nur pinyin anzeigen"), which narrows his own v542 ask ("Nach jeden geschriebenen
-   character kurz pinyin anzeigen") in two ways at once: the breath comes at the WORD's end, not after every character, and
-   what stands over the pad is the word's READING ALONE — no glyph, no meaning, no star and no ring. So 鸡蛋供应 pauses once,
-   on "gōng yìng", where v542–v549 paused three times and showed 鸡, 蛋 and 供 back at the learner who had just drawn them.
-   The pinyin is the LAST row of the line under the pad — the word's row since v540, whose first row is the one character —
-   so it is the word's own reading in the app's own language and is never looked up a second time. It still REPLACES the
-   250 ms pause the pad already took, a tap that is not a control still skips it, and the card's last word has none, since
-   cardDone's own recap (v523) follows at once and the two must never stack. */
-function wordRecapHTML(py){
+const RECAP_FS=96, CHAR_MS=900, RECAP_OUT=200, RECAP_PY=58;
+/* v553 (H: "Pinyin nach geschriebenem character vielleicht bissl länger stehenlassen zum einprägen. Und wirklich nach
+   jedem Charakter, auch in Mehr-Charakter-worten."): the breath comes back to EVERY character, which reverses v550's own
+   narrowing on H's word — 鸡蛋供应 pauses three times again, after 鸡, 蛋 and 供, where v550 paused once at 鸡蛋's end.
+   What stands there is the character's OWN reading and not the word's: the FIRST row of the line under the pad, which
+   since v540 is the character's row and whose syllable was taken out of the word's own pinyin (v517), so 应 in 供应 reads
+   yìng and not its isolated yīng — and it is never looked up a second time. Still the READING ALONE, which is the half
+   of v550 H kept: no glyph, no meaning, no star and no ring. A row with no .mono gives no recap at all (a number, or a
+   line whose dictionary has not landed yet), since an empty recap is worse than none; the card's LAST character has none
+   either, because cardDone's own recap (v523) follows at once and the two must never stack. */
+function charRecapHTML(py){
   const n=Math.max(4,[...py].length); /* a semibold syllable runs about 0.7 em a character, so 143/n cqw is the one-line fit; the clamp under it is the safety net */
   return `<div class="recap one py" aria-live="polite"><div class="rp" style="font-size:min(${RECAP_PY}px,84cqw,${(143/n).toFixed(2)}cqw)">${esc(py)}</div></div>`;
 }
-async function wordRecap(card,cur,tg,st){
+async function charRecap(card,cur,tg,st){
   const pause=()=>new Promise(r=>setTimeout(r,250));
   const pw=card.querySelector(".padwrap"); if(!pw||!cur) return pause();
-  if(tg.some((x,j)=>x.w&&x.wi===cur.wi&&!st.done.has(j))) return pause(); /* the word is not written out yet — the pad simply moves on to its next character */
   const rows=[...document.querySelectorAll("#padline .plrow")];
-  const py=rows.length?((rows[rows.length-1].querySelector(".mono")||{}).textContent||"").trim():"";
-  if(!py) return pause(); /* a number, or a line whose dictionary has not landed: there is no reading to show, and an empty recap is worse than none */
-  pw.insertAdjacentHTML("beforeend",wordRecapHTML(py));
+  const py=rows.length?((rows[0].querySelector(".mono")||{}).textContent||"").trim():""; /* the character's row, not the word's (v553) */
+  if(!py) return pause();
+  pw.insertAdjacentHTML("beforeend",charRecapHTML(py));
   const rc=pw.lastElementChild; pw.classList.add("recapping");
   requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); });
-  await new Promise(res=>{ let done=false, tm=0;
-    const end=()=>{ if(done) return; done=true; clearTimeout(tm); document.removeEventListener("pointerdown",tap,true); res(); };
-    const tap=e=>{ if(e.target.closest&&e.target.closest("button,a,input,textarea,.chip")) return; end(); };
-    document.addEventListener("pointerdown",tap,true); tm=setTimeout(end,WORD_MS); });
-  if(rc.isConnected) rc.remove(); pw.classList.remove("recapping");
+  const skipped=await new Promise(res=>{ let done=false, tm=0;
+    const end=by=>{ if(done) return; done=true; clearTimeout(tm); document.removeEventListener("pointerdown",tap,true); res(by); };
+    const tap=e=>{ if(e.target.closest&&e.target.closest("button,a,input,textarea,.chip")) return; end(true); };
+    document.addEventListener("pointerdown",tap,true); tm=setTimeout(()=>end(false),CHAR_MS); });
+  /* v553 (H: "Die pinyin Darstellung polieren: In/Out"): the way out is a real one. Until v552 the element was simply
+     removed, so the reading vanished in one frame while the pad faded back in behind nothing. `recapping` goes at the
+     same moment the reading starts to lift, so the pad's own .28 s fade-in runs AGAINST the fade-out and the two cross.
+     A TAP takes it away at once instead: the learner is saying "move on", so an unhurried exit would be the opposite of
+     the answer — and waiting out the fade would also let that tap's own click re-render the card underneath, which
+     disconnects the canvas charDone tests and would leave the pad standing on the character just written. */
+  if(!rc.isConnected){ pw.classList.remove("recapping"); return; }
+  const reduced=matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(skipped||reduced){ rc.remove(); pw.classList.remove("recapping"); return; }
+  rc.classList.remove("in"); rc.classList.add("out"); pw.classList.remove("recapping");
+  await new Promise(r=>setTimeout(r,RECAP_OUT));
+  if(rc.isConnected) rc.remove();
 }
 /* v542 (H: "Bei zweizeiligen characters muss ich die Seite Hochschieben, um aufm Pad zeichnen zu können. Beim Folgecharakter
    bitte oben bleiben und nicht wieder zurück springen."): render() rewrites #main, and while the card is being laid out
@@ -4843,6 +4856,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  553:"Every character you write now shows its own pinyin for a moment before the pad moves on — inside a word too, and a little longer than before.",
   552:"Far more cards now show the word you are writing marked on the photo: a single word, a single character and a sign photographed at an angle are all marked, where before only a card of several words was.",
   550:"Writing a card pauses once a word, on the word's pinyin — not after every character.",
   549:"How to use the app, under More → Help, is six pictures and a few sentences now instead of a wall of text.",
