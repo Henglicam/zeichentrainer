@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=554; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=555; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -665,6 +665,8 @@ async function sendFeedback(text,shot){
 const TO_TEST=[
   ["app","v553","write a card of two-character words: the reading of EVERY character stands over the pad for a moment, 应 in 供应 reading yìng"],
   ["app","v553","the reading itself: green, large, coming up and lifting away rather than popping — and a tap still skips it"],
+  ["app","v555","the reading leaving over a dark pad, and the next character fading up once it is gone"],
+  ["app","v555","the finished card's reading in green, bigger, breaking between words, and lifting away before the next card"],
   ["app","v554","the reading over the pad with nothing sliced off it: the tail of g, the hook of j, the dots over ü"],
   ["photo","v552","a card of ONE word, and one of a single character: the word is marked on the photo while you write it"],
   ["photo","v552","a card from a sign you photographed at an angle, and one from a tall sign on a portrait photo: both marked too"],
@@ -3816,7 +3818,7 @@ function mountPad(card,d,c,tg,st,cur){
        did not. A character in no dictionary word (a number) has no word to finish and falls straight through. */
     let next=cur.wi!=null?tg.findIndex((x,j)=>x.w&&x.wi===cur.wi&&!st.done.has(j)):-1;
     if(next<0) next=tg.findIndex((x,j)=>x.w&&!st.done.has(j));
-    if(next>=0){ await charRecap(card,cur,tg,st); if(!cv.isConnected||S.pad!==st) return; st.i=next; st.k=0; st.miss=0; st.hint=false; st.free.length=0; keepScroll(render); return; }
+    if(next>=0){ const fade=await charRecap(card,cur,tg,st); if(!cv.isConnected||S.pad!==st) return; st.i=next; st.k=0; st.miss=0; st.hint=false; st.free.length=0; keepScroll(render); if(fade) padFadeIn(); return; } /* v555: the reading is gone before the next character is drawn, and the pad fades up with it */
     cardDone();
   };
   const cardDone=async()=>{
@@ -3865,7 +3867,9 @@ function mountPad(card,d,c,tg,st,cur){
     document.addEventListener("pointerdown",onTap,true);
     if(typeof PRAISE_HOLD==="number"){ pr=praiseStart(cleanCard); return; } /* held for a test: the star at once, nothing advances */
     tm=setTimeout(()=>{ if(!fired) pr=praiseStart(cleanCard); },PRAISE_AT);
-    setTimeout(go,NEXT_MS+(fw?FW_MS:0)); /* a milestone card holds one second longer, for the burst */
+    const dwell=NEXT_MS+(fw?FW_MS:0);
+    if(rc) setTimeout(()=>{ if(!fired&&rc.isConnected){ rc.classList.remove("in"); rc.classList.add("out"); } },Math.max(0,dwell-RECAP_OUT)); /* v555: the final translation lifts away in the dwell's last 200 ms, so the next card does not arrive on top of it; the card still advances at NEXT_MS, and a tap still takes it at once */
+    setTimeout(go,dwell); /* a milestone card holds one second longer, for the burst */
   };
   /* Undo and Clear are drawn only for a character the app has no strokes for, where the learner really is drawing freehand
      (v517, H: "You also don't need clear and undo at the bottom") */
@@ -4193,7 +4197,7 @@ function glyphTileHTML(tx){
 /* v523: the finished card, large, over the pad — the characters in the Hanzi font fitted to the pad's square (the pad is a
    size container, so the size is solved by CSS), the pinyin and the meaning under them. The same text the card carries;
    no key in any column. */
-const RECAP_FS=96, CHAR_MS=900, RECAP_OUT=200, RECAP_PY=58;
+const RECAP_FS=96, CHAR_MS=900, RECAP_OUT=200, RECAP_SLACK=120, RECAP_PY=58, RECAP_CP=28;
 /* v553 (H: "Pinyin nach geschriebenem character vielleicht bissl länger stehenlassen zum einprägen. Und wirklich nach
    jedem Charakter, auch in Mehr-Charakter-worten."): the breath comes back to EVERY character, which reverses v550's own
    narrowing on H's word — 鸡蛋供应 pauses three times again, after 鸡, 蛋 and 供, where v550 paused once at 鸡蛋's end.
@@ -4226,12 +4230,34 @@ async function charRecap(card,cur,tg,st){
      A TAP takes it away at once instead: the learner is saying "move on", so an unhurried exit would be the opposite of
      the answer — and waiting out the fade would also let that tap's own click re-render the card underneath, which
      disconnects the canvas charDone tests and would leave the pad standing on the character just written. */
-  if(!rc.isConnected){ pw.classList.remove("recapping"); return; }
+  if(!rc.isConnected){ pw.classList.remove("recapping"); return false; }
   const reduced=matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if(skipped||reduced){ rc.remove(); pw.classList.remove("recapping"); return; }
-  rc.classList.remove("in"); rc.classList.add("out"); pw.classList.remove("recapping");
-  await new Promise(r=>setTimeout(r,RECAP_OUT));
-  if(rc.isConnected) rc.remove();
+  if(skipped||reduced){ rc.remove(); pw.classList.remove("recapping"); return false; }
+  rc.classList.remove("in"); rc.classList.add("out");
+  await gone(rc);
+  rc.remove();
+  return true;
+}
+/* v555: wait for the fade itself, not for a number that has to beat it. RECAP_OUT and the transition are both 200 ms,
+   but a transition starts one frame AFTER the class lands, so the timer always won by a frame and the reading was cut
+   away at about a seventh of its opacity — measured 0.135 in the very frame the next character appeared, and more than
+   that on a phone whose style flush is later. That is H's overlap. */
+function gone(el){
+  const dur=v=>String(v||"").split(",").map(x=>{ x=x.trim(); const n=parseFloat(x)||0; return /ms$/.test(x)?n:n*1000; });
+  const cs=getComputedStyle(el), d=dur(cs.transitionDuration), dl=dur(cs.transitionDelay);
+  const span=Math.max(RECAP_OUT,...d.map((x,i)=>x+(dl[i]||0))); /* the fade's own length, read off the element — a second copy of the CSS number in JS would drift at the first change to either (the v401 lesson) */
+  return new Promise(res=>{ let done=false;
+    const fin=()=>{ if(done) return; done=true; el.removeEventListener("transitionend",on); res(); };
+    const on=e=>{ if(e.target===el&&e.propertyName==="opacity") fin(); };
+    el.addEventListener("transitionend",on); setTimeout(fin,span+RECAP_SLACK); });
+}
+/* v555: the next character comes up out of a dark pad rather than popping onto a bright one. The padwrap is brand new
+   (render() has just rewritten #main), so the pad is put to 0 with the transition off, the reflow commits that, and
+   giving both back makes the canvas fade up over .28 s with the new character already drawn on it. */
+function padFadeIn(){
+  const cv=document.querySelector(".card.study .padwrap .wpad"); if(!cv) return;
+  cv.style.transition="none"; cv.style.opacity="0"; void cv.offsetWidth; /* the 0 has to be COMMITTED WITHOUT a transition first — with one, getComputedStyle already reports the animated value and adding then removing the class is simply a fade out and straight back in, i.e. nothing (measured) */
+  cv.style.transition=""; cv.style.opacity="";
 }
 /* v542 (H: "Bei zweizeiligen characters muss ich die Seite Hochschieben, um aufm Pad zeichnen zu können. Beim Folgecharakter
    bitte oben bleiben und nicht wieder zurück springen."): render() rewrites #main, and while the card is being laid out
@@ -4243,9 +4269,13 @@ function keepScroll(fn){ const y=window.scrollY; fn(); if(!y) return;
   put(); requestAnimationFrame(()=>{ put(); requestAnimationFrame(put); }); setTimeout(put,90); }
 function recapHTML(d){
   const ls=textLines(d.trad||d.c||"",84,50), u=Math.max(1,...ls.map(lineUnits)), pn=Math.max(8,[...(d.p||"")].length);
+  /* v555: the reading breaks between WORDS, never inside one — set large it wraps to two lines, and "jī dàn gōng / yìng"
+     cuts 供应 in half. The card's own gloss already holds each word's syllables, so each one is a nowrap span and the
+     break can only fall between them; a card without a gloss keeps the plain string. */
+  const py=Array.isArray(d.gloss)&&d.gloss.length&&d.gloss.every(g=>g&&g.p)?d.gloss.map(g=>`<span class="w">${esc(g.p)}</span>`).join(" "):esc(d.p||"");
   /* the pinyin and the meaning follow the pad's width too, and a long pinyin is sized to fit two lines (240/n cqw — a
      semibold syllable runs about 0.7 em a character) so no syllable is cut; the clamps under them are the safety net */
-  return `<div class="recap" aria-live="polite"><div class="rc hanzi" style="font-size:min(${RECAP_FS}px,${(84/u).toFixed(2)}cqw,${(50/ls.length).toFixed(2)}cqh)">${ls.map(esc).join("<br>")}</div><div class="rp" style="font-size:min(21px,8.6cqw,${(240/pn).toFixed(2)}cqw)">${esc(d.p||"")}</div><div class="rm" style="font-size:min(18px,7.4cqw)">${esc(d.m||"")}</div></div>`;
+  return `<div class="recap" aria-live="polite"><div class="rc hanzi" style="font-size:min(${RECAP_FS}px,${(84/u).toFixed(2)}cqw,${(50/ls.length).toFixed(2)}cqh)">${ls.map(esc).join("<br>")}</div><div class="rp" style="font-size:min(${RECAP_CP}px,11cqw,${(240/pn).toFixed(2)}cqw)">${py}</div><div class="rm" style="font-size:min(18px,7.4cqw)">${esc(d.m||"")}</div></div>`;
 }
 function cardTileHTML(d,pk){
   const pg=isPage(d), its=pg?pageItems(d):null;
