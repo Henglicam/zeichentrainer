@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=576; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=577; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,7 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["app","v576","finished card: long enough now?"],
+  ["app","v577","finished card: reading + meaning"],
   ["app","v575","Photo open/close: the mark sticks"],
   ["app","v574","Test this card: photo at the top"],
   ["app","v573","a card with 合, 雀, 行 or 供 on it: the meaning under the reading is that reading's — 合 hé \"to close\", not \"100 ml\" — on the pad, in the line under it and in the parts row"],
@@ -3674,7 +3674,7 @@ async function checkCard(id){ const d=cardOf(id); if(!d||!d.unchecked) return; c
    default — see § the entry for why the automatic trigger at level 3 was measured and not built. */
 const handWrite=()=>S.settings.handWrite===true;
 const HAND_TOP=3, HAND_AT=2; /* the target must be among the matcher's three best — the drawing sheet's own rule since v141 — and the pad starts judging the whole character after two strokes in a row that did not fit (v570) */
-const PAD_FLOOR=160, PHOTO_MIN=120, LINE_H=61, CLIP_RATIO=0.65, TRACE_OK=0.18, NEXT_MS=3800, RECAP_SYL=250, RECAP_MAX=6000, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
+const PAD_FLOOR=160, PHOTO_MIN=120, LINE_H=61, CLIP_RATIO=0.65, TRACE_OK=0.18, NEXT_MS=3500, RECAP_SYL=230, RECAP_MAX=5600, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
 const CARD_RATIO=1.5; /* the one window and box shape on every card, 3:2 (v519) — declared here, since FRONT_RATIO reads it at load time */
 let LAST_FIT=null; /* v521: the study card's last pad measurement, printed by Diagnostics */
 /* THE MAIN THREAD AT STARTUP, AND WHAT A FOLD DOES TO IT (v532, H: "open/close foldable phone sometimes freezes the startup
@@ -3702,8 +3702,10 @@ window.addEventListener("resize",()=>{ if(_rsz) return; _rsz=requestAnimationFra
   const c=document.querySelector(".card.study"); if(!c) return; chrowFit(c); if(c._fitPad) c._fitPad(); }); }); /* v521: every resize re-fits the pad of the card on screen (a fold, the system bars); v532: once per frame, and the row with it */
 window.addEventListener("pageshow",e=>{ if(e.persisted){ RESIZES.push({t:Date.now(),bfcache:true}); while(RESIZES.length>6) RESIZES.shift(); const c=document.querySelector(".card.study"); if(c){ chrowFit(c); if(c._fitPad) c._fitPad(); } } }); /* a page Chrome froze and brought back is measured again */
 const FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_GRID/1024;
-/* NEXT_MS is the SHORTEST dwell of the finished card's recap (v576): it stands over the pad — the characters, pinyin and
-   meaning, large — for recapMs(d), which is NEXT_MS plus RECAP_SYL per syllable past the second, capped at RECAP_MAX
+/* NEXT_MS is the SHORTEST dwell of the finished card's recap (v576): it stands over the pad — the reading and the
+   meaning, large, and since v577 no characters — for recapMs(d), which is NEXT_MS plus RECAP_SYL per syllable past the
+   second, capped at RECAP_MAX. All three are 8 % shorter since v577 (H: "ein kleines kleines bisschen kürzer"), since
+   with the glyph gone there is less standing there to read
    (v523, H: "sollte der Inhalt der Karte nochmal groß und deutlich gut lesbar für wenige Sekunden gezeigt werden, um sich
    das nochmal einzuprägen"; v576, H: "soll die gesamte Übersetzung bissl länger stehen bleiben, genug zum lesen/einprägen"
    — a one-word card and a nine-syllable sign cannot want the same number, the v413 lesson). 3000 flat from v523 to v575,
@@ -4071,7 +4073,8 @@ function mountPad(card,d,c,tg,st,cur){
     const my=curIdx(), wasWalk=walking(); render(); if(cur) padLine(d,cur);
     const adv=()=>{ if(S.mode!=="study"||walking()!==wasWalk||curIdx()!==my||S.pad!==padState(c)) return; if(S.single){ nextSingle(c); return; }
       if(curIdx()+1<curList().length){ setCurIdx(curIdx()+1); S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0}); } else if(!walking()){ S.idx++; render(); } }; /* a walk's last card stays */
-    /* the recap (v523, § 12): the finished card stands large over the pad — characters, pinyin, meaning — for the whole
+    /* the recap (v523, § 12): the finished card stands large over the pad — its reading and its meaning, and since v577
+       no characters, which the tiles two rows above already carry in green — for the whole
        dwell — recapMs(d), longer the more syllables the card has (v576) — and the praise (v517) lifts out of it so that
        its own POP1 ends with the dwell. A tap anywhere on the card that is not a control skips straight on — the finger
        is already on the pad. */
@@ -4417,7 +4420,7 @@ function glyphTileHTML(tx){
 /* v523: the finished card, large, over the pad — the characters in the Hanzi font fitted to the pad's square (the pad is a
    size container, so the size is solved by CSS), the pinyin and the meaning under them. The same text the card carries;
    no key in any column. */
-const RECAP_FS=96, CHAR_MS=900, RECAP_OUT=200, RECAP_SLACK=120, RECAP_PY=58, RECAP_CP=28;
+const CHAR_MS=900, RECAP_OUT=200, RECAP_SLACK=120, RECAP_PY=58, RECAP_CP=44;
 /* v553 (H: "Pinyin nach geschriebenem character vielleicht bissl länger stehenlassen zum einprägen. Und wirklich nach
    jedem Charakter, auch in Mehr-Charakter-worten."): the breath comes back to EVERY character, which reverses v550's own
    narrowing on H's word — 鸡蛋供应 pauses three times again, after 鸡, 蛋 and 供, where v550 paused once at 鸡蛋's end.
@@ -4506,15 +4509,26 @@ function recapMs(d){
   const syl=((d&&d.p)||"").match(/\S+/g);
   return Math.min(RECAP_MAX,NEXT_MS+Math.max(0,(syl?syl.length:0)-2)*RECAP_SYL);
 }
+/* v577 (H: "Bei der finalen Übersetzung nur pinyin und meaning zeigen, nicht nochmal characters"): the reading and the
+   meaning, no glyph — the characters stand on the card's own tiles, all green, two rows above, and the learner has just
+   drawn them stroke by stroke; showing them back is the half v553 took out of the one-character recap for the same
+   reason. So both recaps say one thing now: what you wrote means this and is read like this. */
 function recapHTML(d){
-  const ls=textLines(d.trad||d.c||"",84,50), u=Math.max(1,...ls.map(lineUnits)), pn=Math.max(8,[...(d.p||"")].length);
+  const pn=Math.max(8,[...(d.p||"")].length);
+  /* the widest WORD of the reading, in characters: the words are nowrap spans (v555), so the reading can never be
+     narrower than its longest one and a per-character estimate alone overflows — measured at v577, 蜜雪冰城's one word
+     "mì xuě bīng chéng" came out 456 px wide in a 299 px box at the cap. A semibold syllable runs about 0.63 em a
+     character (measured: "gōng yìng" is 5.7 em), so 140/mw cqw is the one-line fit for the widest word and 330/pn the
+     three-line fit for the whole reading; the clamp under them is the safety net. */
   /* v555: the reading breaks between WORDS, never inside one — set large it wraps to two lines, and "jī dàn gōng / yìng"
      cuts 供应 in half. The card's own gloss already holds each word's syllables, so each one is a nowrap span and the
      break can only fall between them; a card without a gloss keeps the plain string. */
-  const py=Array.isArray(d.gloss)&&d.gloss.length&&d.gloss.every(g=>g&&g.p)?d.gloss.map(g=>`<span class="w">${esc(g.p)}</span>`).join(" "):esc(d.p||"");
+  const gl=Array.isArray(d.gloss)&&d.gloss.length&&d.gloss.every(g=>g&&g.p);
+  const py=gl?d.gloss.map(g=>`<span class="w">${esc(g.p)}</span>`).join(" "):esc(d.p||"");
+  const mw=Math.max(3,...(gl?d.gloss.map(g=>[...g.p].length):((d.p||"").match(/\S+/g)||[""]).map(w=>[...w].length)));
   /* the pinyin and the meaning follow the pad's width too, and a long pinyin is sized to fit two lines (240/n cqw — a
      semibold syllable runs about 0.7 em a character) so no syllable is cut; the clamps under them are the safety net */
-  return `<div class="recap" aria-live="polite"><div class="rc hanzi" style="font-size:min(${RECAP_FS}px,${(84/u).toFixed(2)}cqw,${(50/ls.length).toFixed(2)}cqh)">${ls.map(esc).join("<br>")}</div><div class="rp" style="font-size:min(${RECAP_CP}px,11cqw,${(240/pn).toFixed(2)}cqw)">${py}</div><div class="rm" style="font-size:min(18px,7.4cqw)">${esc(d.m||"")}</div></div>`;
+  return `<div class="recap" aria-live="polite"><div class="rp" style="font-size:min(${RECAP_CP}px,${(140/mw).toFixed(2)}cqw,${(330/pn).toFixed(2)}cqw)">${py}</div><div class="rm" style="font-size:min(20px,8.2cqw)">${esc(d.m||"")}</div></div>`;
 }
 function cardTileHTML(d,pk){
   const pg=isPage(d), its=pg?pageItems(d):null;
