@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=565; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=566; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,8 +671,8 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["app","v565","swipe to the next card: the picture of the card that rides in is the picture the card then shows — nothing jumps at the snap"],
-  ["app","v564","the top of the card in two halves: the picture over the whole text with its word line, every character in view; a tap on the picture makes it big, a tap on the text makes the text big, a tap again brings the halves back"],
-  ["app","v564","a card of eight characters: its tiles smaller in the half (40 px), full size when the text is tapped big; a card of sixteen: the picture at its 120 px floor and the pad a little smaller"],
+  ["app","v566","the top of the card in two halves: the picture over one row of up to four characters with the word line; a tap on the picture makes it big, a tap again brings the halves back"],
+  ["app","v566","a card of eight characters: four tiles at full size and the \"+4\" pill beside them; the pill unfolds every row at the same size and the pad moves down; a tap on a tile folds it back on that character's row"],
   ["app","v563","the app comes to rest: About says v563, no reload by itself more often than every ten minutes"],
   ["app","v560","cards of two, eight and sixteen characters one after the other: the picture, the text and the pad the same size on every one, the pad as wide as the picture"],
   ["app","v560","Show me and Skip inside the pad's lower corners after two and four misses; Undo, Done and Clear on a character with no template"],
@@ -3129,7 +3129,7 @@ function renderStudy(main){
   const btn=x=>{ const i=tg.indexOf(x), cls=["ch",st.done.has(i)?"done":"",cur===x?"cur":"",x.w?"":"num",S.lockChar&&x.ch===S.lockChar?"lock":""].filter(Boolean).join(" "); /* lock: the long-pressed character, on every card of its walk (v513) */
     return `<button class="${cls}" data-i="${i}" ${x.w?"":`aria-disabled="true"`}>${esc(x.glyph)}${S.lockChar&&x.ch===S.lockChar?`<i class="lockmark" aria-hidden="true">${MARK_LOCK}</i>`:""}</button>`; }; /* lockmark: the padlock (v518, H: "Locked on/off should be more obvious, maybe with a padlock icon?") */
   const litWi=cur?cur.wi:null; /* v518: the lit word is the word of the character in the pad, so it follows the pad by itself */
-  const chrow=chrowHTML(d,tg,btn,litWi,S.lockChar); /* v526: the word holding the locked character carries the green outline */ /* v564: every row of tiles shows in the text half — v560's one-row strip, v561's unfold and v562's pill are gone */
+  const chrow=chrowHTML(d,tg,btn,litWi,S.lockChar).replace(/<\/div>$/,`<button class="chmore" id="chmore" hidden aria-expanded="false" aria-label="${esc(t("Characters"))}"><span class="n"></span><i aria-hidden="true">⌄</i></button></div>`); /* v526: the word holding the locked character carries the green outline */ /* v566: the "+4" pill beside the fourth tile, shown only when the text holds more than one row of four */
   const pg=frontPage(d), picHTML=frontPic(d,{page:true,fixed:true}); /* v517: one box shape on the study card */
   /* v527 (H: "schieb meaning (komplett hanzi, Pinyin, Bedeutung) ganz nach unten. Für's aktuelle wort: pinyin and meaning
      zwischen Bild und Pad."): the card's WHOLE text stands at the head of the answer block — the traditional form when it
@@ -3152,7 +3152,7 @@ function renderStudy(main){
      row"), so opening it parsed cedict.tsv.gz - 2.5 MB - for a row this screen does not draw. The row lives on the camera's
      finished card, and renderShots warms it there. */
   const card=main.querySelector(".card.study");
-  splitFit(card); /* v564: the two halves of the cue — the picture and the whole text */
+  splitFit(card,c); /* v564: the two halves of the cue — the picture and the text; v566: one row of four with the pill, sliding to the row the pad is on */
   /* the photo: a tap swaps the crop for the whole photo and back (v55); the flag in its corner is the review flag (§ 3.3) */
   const rv=$("#reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("#picflag")) return; if(e.target.closest("[data-pic]")) cueBig(card,"pic"); }; /* v564: the tap gives the picture the whole top of the card and takes it back; the whole photo is the open card's (v55's swap is not on the study card any more) */
   { const pf=$("#picflag"); if(pf) pf.onclick=async e=>{ e.stopPropagation(); await setFlag(c,!d.flag); render(); }; } /* v515: hollow ⚐ = not yet checked, a tap flags it; tint ⚑ = flagged, a tap clears; nothing once checked and clean — the answer block's Flag button stays */
@@ -3168,7 +3168,8 @@ function renderStudy(main){
          the line is always there and follows the pad by itself (H: "when automatically jumping to next, pinyin and meaning
          under the pad don't follow. And they should Always be visible"), so there is no second tap that puts it out */
       st.i=i; st.k=0; st.miss=0; st.hint=false; st.free.length=0; render(); };
-  { const tx=$("#cuetxt"); if(tx) tx.onclick=e=>{ if(e.target.closest(".ch")) return; e.stopPropagation(); cueBig(card,"txt"); }; } /* v564: a tap on the text half's own room gives the whole text the top of the card; a tile still picks */
+  { const more=$("#chmore"); if(more) more.onclick=e=>{ e.stopPropagation(); stripUnfold(card,!card.classList.contains("unfold")); }; /* v566: the pill unfolds every row at full size and the pad moves down (H: "dabei verschiebt sich dann der Pinyin-Schreibkasten nach unten") */
+    const cr=card.querySelector(".chrow"); if(cr) cr.onclick=e=>{ if(e.target.closest(".ch")||cr.dataset.rows<2||card.classList.contains("unfold")) return; e.stopPropagation(); stripUnfold(card,true); }; } /* the strip's empty room unfolds it too */
   card.querySelectorAll(".chrow .ch").forEach(b=>{ const i=+b.dataset.i, x=tg[i]; if(!x) return;
     b.onclick=e=>{ e.stopPropagation(); pick(i); };
     /* press and hold locks the character and walks every card that has it (v513, § 7 — the v354 gesture, buzz included); a
@@ -3335,18 +3336,20 @@ function chrowHTML(d,tg,btn,litWi,lockCh){ /* lockCh (v526): every word that hol
    onto at most CH_ROWS rows and nothing runs past the card — and falls to CH_MIN only for a text that needs a third row
    even then. The pad pays for it: a second row at 56 px is 16 px taller than at 40, and on the common phone size the pad
    already stands on its 200 px floor there, so the card scrolls by that much more. H chose the characters. */
-const CH_MAX=56, CH_MIN=40, CH_BIG=96, CH_ROWS=2, STRIP_GAP=8; /* STRIP_GAP: the row gap of the study card's strip (styles.css .chrow.wrap .chin), read here to slide by whole rows */
+const CH_MAX=56, CH_MIN=40, CH_ROWS=2, STRIP_GAP=8, ROW_MAX=4; /* STRIP_GAP: the row gap of the study card's strip (styles.css .chrow.wrap .chin), read here to slide by whole rows */
 /* THE TOP OF THE CARD IS TWO HALVES (v564, H: "dass man den oberen Teil nochmal in zwei Hälften trennt. Also eine Hälfte ist das
-   Bild, was sich vergrößern lässt, wenn man drauf tippt. Die zweite Hälfte ist der ganze Text, der sich vergrößern lässt, wenn
-   man drauf tippt. Die untere Kartenhälfte ist das Schreibfeld." — the halves divided horizontally, his correction): the cue,
-   as tall as the pad since v561, is the picture over the WHOLE text — every tile on its rows and the word line under them,
-   nothing folded and nothing sliding, so v560's one-row strip, v561's unfold in place and v562's "+4" pill are gone. The tiles
-   take the largest size from CH_MAX down at which every row and the line fit the half, preferring the photo's own row count;
-   a text that does not fit even at CH_MIN takes the room from the picture, down to PHOTO_MIN, and past that the cue grows and
-   the pad moves down (v561's rule for the unfolded strip). A tap on the picture gives it the whole cue and closes the text
-   half; a tap on the text half's own room gives the text the whole cue, its tiles up to CH_BIG; the same tap again, or the
-   next render — a tile picked, a character written — brings the halves back. The open card under Cards has no pad and keeps
-   the v519/v522 fit below: shrink, then wrap onto rows that all show. */
+   Bild, was sich vergrößern lässt, wenn man drauf tippt. Die zweite Hälfte ist der ganze Text ... Die untere Kartenhälfte ist
+   das Schreibfeld." — the halves divided horizontally, his correction): the cue, as tall as the pad since v561, is the picture
+   over the text — ONE ROW OF UP TO ROW_MAX TILES AT FULL SIZE with the word line under it (v566, H: "die Characters in einer
+   Zeile bis maximal vier Stück ... rechts neben dem vierten irgendwas wie More oder Pünktchen ... zum Aufklappen ... öffnet
+   sich die zweite Zeile ... mit allen Characters, aber in der großen Größe ... Und dabei verschiebt sich dann der
+   Pinyin-Schreibkasten nach unten"). The strip shows the row the pad's character is on and slides to the next row when the pad
+   moves there (v560); a text of more than one row carries the "+4" pill at the row's right end (v562), and a tap on it — or on
+   the strip's own room — unfolds every row at the same size: the text half grows, the cue with it, and the pad moves down for
+   as long as it is open; a tap on a tile picks it and folds, a tap anywhere else or Escape folds. The tiles shrink only for a
+   word longer than ROW_MAX, so that word still fits beside the pill. A tap on the picture gives it the whole cue and closes the
+   text half; the same tap brings the halves back, and so does the next render. v564's tap that made the text big is the pill
+   now. The open card under Cards has no pad and keeps the v519/v522 fit below: shrink, then wrap onto rows that all show. */
 function chrowFit(root,c){ const cr=root&&root.querySelector(".chrow"); if(!cr) return; const ci=cr.querySelector(".chin")||cr;
   if(root.classList&&root.classList.contains("study")&&!root.classList.contains("detail")) return splitFit(root); /* v564: the study card's halves */
   cr.classList.remove("wrap"); cr.style.setProperty("--chs",CH_MAX+"px");
@@ -3357,22 +3360,34 @@ function chrowFit(root,c){ const cr=root&&root.querySelector(".chrow"); if(!cr) 
   cr.classList.add("wrap"); const rows=()=>new Set([...cr.querySelectorAll(".chw")].map(w=>w.offsetTop)).size;
   for(s=CH_MAX; s>=CH_MIN; s--){ cr.style.setProperty("--chs",s+"px"); if(ci.scrollWidth<=avail&&rows()<=CH_ROWS) return; }
   cr.style.setProperty("--chs",CH_MIN+"px"); }
-function textFit(cr,ci,room,cap,lines){ /* the largest tile size whose rows fit the width and `room`; returns the flow's height */
-  const avail=cr.clientWidth; cr.classList.add("wrap"); const rows=()=>new Set([...cr.querySelectorAll(".chw")].map(w=>w.offsetTop)).size;
-  const fits=s=>{ cr.style.setProperty("--chs",s+"px"); return ci.scrollWidth<=avail+1&&ci.offsetHeight<=room; };
-  let best=null;
-  for(let s=cap; s>=CH_MIN; s--){ if(fits(s)&&rows()===lines){ best=s; break; } } /* the photo's own rows first: 盒马鲜生 over 超市入口 at 72 rather than three rows at 80 */
-  if(best==null) for(let s=cap; s>=CH_MIN; s--){ if(fits(s)){ best=s; break; } }
-  if(best==null) best=CH_MIN; cr.style.setProperty("--chs",best+"px"); return ci.offsetHeight; }
-function splitFit(root){ const cue=root&&root.querySelector(".cue"), cr=cue&&cue.querySelector(".chrow"), ci=cr&&cr.querySelector(".chin"); if(!cue||!cr||!ci) return;
+const STRIP_ROW={c:null,row:0}; /* the row the study card's strip last showed, so a re-render slides from it instead of jumping (v560) */
+function stripLayout(cr,ci,unf,c){ /* the strip's rows: at most ROW_MAX tiles a row at CH_MAX, the flow's width set so the flex wrap cuts them there */
+  const avail=cr.clientWidth, gap=8, PILL=74; ci.style.transition="none"; ci.style.transform=""; cr.classList.add("wrap");
+  const groups=[...cr.querySelectorAll(".chw")], tiles=[...cr.querySelectorAll(".ch")], longest=Math.max(1,...groups.map(g=>g.querySelectorAll(".ch:not(.num)").length));
+  const rowOf=el=>Math.round(el.offsetTop/(el.offsetHeight+gap));
+  const lay=multi=>{ /* the flow's width: four tiles and their gaps, less the pill's room when the text holds more than one row; the tiles shrink so four still fit beside the pill on a narrow screen, or a word longer than a row still fits */
+    const room=avail-(multi?PILL:0), s=Math.max(CH_MIN,Math.min(CH_MAX,Math.floor((room-(ROW_MAX-1)*gap)/ROW_MAX),Math.floor(room/longest)));
+    const fw=Math.max(ROW_MAX*s+(ROW_MAX-1)*gap,longest*s); cr.style.setProperty("--chs",s+"px"); cr.classList.toggle("multi",multi); ci.style.maxWidth=(fw+(multi?PILL:0))+"px"; /* border-box: the padding that keeps the flow clear of the pill is inside the max-width */
+    return {s,rows:new Set(tiles.map(rowOf)).size}; };
+  let L2=lay(false); if(L2.rows>1) L2=lay(true); /* laid out once without the pill's room; a text of more than one row is laid out again beside it */
+  const s=L2.s, rows=L2.rows, cur=cr.querySelector(".ch.cur")||tiles[0], row=cur?rowOf(cur):0;
+  const n=cr.querySelector(".chmore .n"); if(n) n.textContent="+"+tiles.filter(t=>rowOf(t)!==row).length;
+  cr.dataset.rows=rows; cr.dataset.row=row; const more=cr.querySelector(".chmore"); if(more){ more.hidden=rows<2; more.setAttribute("aria-expanded",unf?"true":"false"); }
+  cr.style.setProperty("--strip",s+"px");
+  if(unf){ ci.style.transform=""; requestAnimationFrame(()=>{ ci.style.transition=""; }); }
+  else { const step=s+gap, from=(c&&STRIP_ROW.c===c&&STRIP_ROW.row!==row)?STRIP_ROW.row:row;
+    if(from!==row){ ci.style.transform=`translateY(${-from*step}px)`; void ci.offsetHeight; ci.style.transition=""; } /* slide from the row the pad left to the one it is on */
+    ci.style.transform=row?`translateY(${-row*step}px)`:""; if(from===row) requestAnimationFrame(()=>{ ci.style.transition=""; }); }
+  if(c) STRIP_ROW.c=c, STRIP_ROW.row=row;
+  return {s,rows,row,all:rows*(s+gap)-gap}; }
+function splitFit(root,c){ const cue=root&&root.querySelector(".cue"), cr=cue&&cue.querySelector(".chrow"), ci=cr&&cr.querySelector(".chin"); if(!cue||!cr||!ci) return;
   const base=root._fit?root._fit.cueH:parseFloat(root.style.getPropertyValue("--cueh"))||0; if(!base) return;
-  const gap=STRIP_GAP, lines=cr.querySelectorAll(".chline").length||1, lineH=LINE_H+6; /* the word line and its margin */
-  const big=root.classList.contains("bigpic")?"pic":root.classList.contains("bigtxt")?"txt":null;
+  const gap=STRIP_GAP, lineH=LINE_H+6, unf=root.classList.contains("unfold"), big=root.classList.contains("bigpic")?"pic":null;
+  const L=stripLayout(cr,ci,unf,c);
   let ph, th, cueH=base, cg=gap;
   if(big==="pic"){ ph=base; th=0; cg=0; }
-  else if(big==="txt"){ ph=0; cg=0; th=Math.max(base,textFit(cr,ci,base-lineH,CH_BIG,lines)+lineH); cueH=th; }
-  else { const half=Math.floor((base-gap)/2), need=textFit(cr,ci,half-lineH,CH_MAX,lines)+lineH;
-    if(need<=half){ th=half; ph=base-gap-half; } else { th=need; ph=Math.max(PHOTO_MIN,base-gap-need); cueH=ph+gap+th; } } /* the picture gives the room first, then the cue grows */
+  else { const half=Math.floor((base-gap)/2); th=Math.max(half,L.s+lineH); ph=Math.max(PHOTO_MIN,base-gap-th); cueH=ph+gap+th; /* the folded half holds one row and the line; a screen too short for that gives the picture nothing under its floor */
+    if(unf){ th=Math.max(th,L.all+lineH); cueH=ph+gap+th; } } /* unfolded: the text half takes every row, the cue grows and the pad moves down */
   root.style.setProperty("--ph",ph+"px"); root.style.setProperty("--th",th+"px"); root.style.setProperty("--cg",cg+"px"); root.style.setProperty("--cueh",cueH+"px");
   const pic=cue.querySelector(".zone1 .picbox:not(.page)"), im=pic&&pic.querySelector(".signimg"), inner=root.clientWidth-36; /* the picture keeps its own height and the half clips it when it is close to the half's shape; a picture much taller (a label's own frame) is fitted inside instead */
   /* v565 (H: "das Foto springt irgendwie, wenn man auf eine neue Karte switcht"): the decision needs the picture's own size, and the
@@ -3381,10 +3396,19 @@ function splitFit(root){ const cue=root&&root.querySelector(".cue"), cr=cue&&cue
      taken again on its load; a card whose picture is already decoded (the one the neighbour just showed) is sized at once. */
   if(pic&&im&&ph){ if(im.naturalWidth){ pic.classList.toggle("clip",im.naturalWidth/im.naturalHeight>=CLIP_RATIO*(inner/ph)); pic.classList.add("sized"); }
     else if(!pic._sizing){ pic._sizing=true; im.addEventListener("load",()=>splitFit(root),{once:true}); } }
-  root._split={ph,th,cueH,chs:parseFloat(cr.style.getPropertyValue("--chs")),big}; }
-function cueBig(card,which){ const was=card.classList.contains("bigpic")?"pic":card.classList.contains("bigtxt")?"txt":null, to=was===which?null:which;
+  root._split={ph,th,cueH,chs:L.s,rows:L.rows,row:L.row,big,unf}; }
+function cueBig(card,which){ const was=card.classList.contains("bigpic")?"pic":null, to=was===which?null:which;
   const cue=card.querySelector(".cue"); if(cue){ cue.classList.add("gl"); clearTimeout(card._glT); card._glT=setTimeout(()=>cue.classList.remove("gl"),320); } /* v565: the slide runs on a tap only — a render must never animate the halves into place */
-  card.classList.toggle("bigpic",to==="pic"); card.classList.toggle("bigtxt",to==="txt"); splitFit(card); }
+  if(to&&card.classList.contains("unfold")) stripUnfold(card,false);
+  card.classList.toggle("bigpic",to==="pic"); splitFit(card); }
+/* EVERY ROW, UNFOLDED (v561's mechanism, v566's rule): the strip's own rows show — the same tiles, once — and the text half grows
+   by them, the cue with it, the pad moving down for as long as it is open. A tap on a tile picks it (and re-renders, folded),
+   the pill again, a tap anywhere else or Escape folds it back. */
+function stripUnfold(card,on){ if(!card.querySelector(".chrow")) return;
+  card.classList.toggle("unfold",on); splitFit(card);
+  if(on){ card._stripOut=e=>{ if(!e.target.closest(".chrow")) stripUnfold(card,false); }; setTimeout(()=>document.addEventListener("click",card._stripOut,true));
+    card._stripKey=e=>{ if(e.key==="Escape") stripUnfold(card,false); }; document.addEventListener("keydown",card._stripKey); }
+  else { if(card._stripOut){ document.removeEventListener("click",card._stripOut,true); card._stripOut=null; } if(card._stripKey){ document.removeEventListener("keydown",card._stripKey); card._stripKey=null; } } }
 /* the characters of the card as the pad's targets, grouped by word (§ 5, Q3): one entry per character of the text, in the
    text's order and with its repeats (v430), each knowing its word (wi) so the buttons of one word sit in one group and the
    line under the pad names the word; a number with its unit is one entry for the whole part and is not writable (w:false).
@@ -3439,7 +3463,7 @@ let _cwTimer=null;
 function bumpWrite(ch,n){ const m=charWrites(); m[ch]=Math.max(0,(m[ch]||0)+n); const keys=Object.keys(m); if(keys.length>WRITES_MAX){ keys.sort((a,b)=>m[a]-m[b]); while(keys.length>WRITES_MAX) delete m[keys.shift()]; } S.settings.charWrites=m; clearTimeout(_cwTimer); _cwTimer=setTimeout(()=>{ setSetting("charWrites",m).catch(()=>{}); },500); }
 function padLevel(c,x,st){ const key=c+":"+x.pos; if(st.lv[key]) return st.lv[key]; const w=S.wroteAt&&S.wroteAt[key]; return st.lv[key]=w?(w.helped?w.lv:Math.min(3,w.lv+1)):startLevel(x.glyph); } /* the repeat pass asks one level up, a helped character the same level again */
 /* the neighbour's character row for the carousel's peer: plain buttons, no state, the same groups (v518) */
-function peerRowHTML(nd){ const tg=padTargets(nd), lk=S.lockChar; return chrowHTML(nd,tg,x=>`<button class="ch${x.w?"":" num"}${lk&&x.ch===lk?" lock":""}">${esc(x.glyph)}${lk&&x.ch===lk?`<i class="lockmark" aria-hidden="true">${MARK_LOCK}</i>`:""}</button>`,null,lk); } /* v526: the neighbour shows the lock as the card will, so the swipe's snap changes nothing */
+function peerRowHTML(nd){ const tg=padTargets(nd), lk=S.lockChar; return chrowHTML(nd,tg,x=>`<button class="ch${x.w?"":" num"}${lk&&x.ch===lk?" lock":""}">${esc(x.glyph)}${lk&&x.ch===lk?`<i class="lockmark" aria-hidden="true">${MARK_LOCK}</i>`:""}</button>`,null,lk).replace(/<\/div>$/,`<button class="chmore" hidden aria-expanded="false" tabindex="-1"><span class="n"></span><i aria-hidden="true">⌄</i></button></div>`); } /* v566: the neighbour carries the pill too, so the snap changes nothing */ /* v526: the neighbour shows the lock as the card will, so the swipe's snap changes nothing */
 /* the line under the pad (zone 5): the WORD the current character belongs to, its pinyin and meaning as the parts row gives
    them, the current character marked — always there since v518, and the single character's own reading under it (v517) */
 async function padLine(d,x){ const box=$("#padline"); if(!box) return; const c=box.closest(".card.study"); try{ await padLineFill(box,d,x); } finally{ if(c&&c._fitPad&&box.isConnected) c._fitPad(); } } /* v521: the pad is measured again once the line has its content */
@@ -3593,7 +3617,7 @@ const FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_G
 /* NEXT_MS is 3000 since v523: the finished card holds while its recap stands over the pad — the characters, pinyin and
    meaning, large — and the star flies out of it at PRAISE_AT (v523, H: "sollte der Inhalt der Karte nochmal groß und
    deutlich gut lesbar für wenige Sekunden gezeigt werden, um sich das nochmal einzuprägen"); 1500 from v517 to v522, when
-   the card held only for the star, and 900 before that, when nothing happened. FRONT_RATIO is the shape the study card's picture is cut in (3:2, v519); the box it shows in is the frame's photo row since v560. PAD_FLOOR, PHOTO_MIN and LINE_H are the frame's constants (mountPad, splitFit), CH_BIG the tile size the enlarged text half may reach (v564), CLIP_RATIO the share of the box's own shape a picture must reach to be clipped rather than fitted. BRUSH_W is the
+   the card held only for the star, and 900 before that, when nothing happened. FRONT_RATIO is the shape the study card's picture is cut in (3:2, v519); the box it shows in is the frame's photo row since v560. PAD_FLOOR, PHOTO_MIN and LINE_H are the frame's constants (mountPad, splitFit), ROW_MAX the tiles a row of the strip holds (v566), CLIP_RATIO the share of the box's own shape a picture must reach to be clipped rather than fitted. BRUSH_W is the
    brush's widest point; OUT_GRID/OUT_Y0 map the stroke outlines, which are stored y-up on a 256 grid. */
 /* TRACE_OK: the mean distance, in pad sides, between the drawn stroke's eight points and the template stroke's — the spec's
    0.28 was a starting number and its own suite refuses a stroke a quarter of the pad off, so the bar sits under that; the
@@ -3792,13 +3816,13 @@ function mountPad(card,d,c,tg,st,cur){
      the pad takes the rest, down to PAD_FLOOR. Nothing is measured off the card's content — v517's floor, v521's tail
      budget and v559's wrapped box are gone — and the helper buttons sit inside the pad's own square, so they never resize
      anything (v517's rule, kept by construction). */
-  const fit=()=>{ if(!cv.isConnected) return; const inner=card.clientWidth-36; cv.style.width="0px"; cv.style.height="0px";
+  const fit=()=>{ if(!cv.isConnected||card.classList.contains("unfold")) return; const inner=card.clientWidth-36; /* v566: while the strip is unfolded the cue has grown and the pad has moved down — nothing is measured until it folds */ cv.style.width="0px"; cv.style.height="0px";
     const nav=$("#tabs"), navTop=nav?nav.getBoundingClientRect().top:window.innerHeight, navH=nav?nav.getBoundingClientRect().height:56;
     const ccs=getComputedStyle(card), rect=card.getBoundingClientRect(), top=rect.top+window.scrollY;
     const cardH=Math.floor(navTop-16-top); /* the card's whole room with the page at rest: from its top to 16 px above the tab bar */
     const gap=parseFloat(ccs.rowGap)||8, hn=card.querySelector(".hint:not(#pad-note)"), fb=card.querySelector("#fold");
     const avail=cardH-(parseFloat(ccs.paddingTop)||12)-(parseFloat(ccs.paddingBottom)||14)-(fb?fb.offsetHeight:36)-gap*2-(hn?hn.offsetHeight+gap:0); /* for the two panels */
-    const cueFixed=STRIP_GAP+CH_MAX+6+LINE_H; /* v564: the least the cue holds beside the picture — the gap between the halves and a text half of one row of tiles over the word line */
+    const cueFixed=STRIP_GAP+CH_MAX+6+LINE_H; /* v564/v566: the least the cue holds beside the picture — the gap between the halves and a text half of one row of tiles over the word line */
     const cueMin=PHOTO_MIN+cueFixed; /* the least cue: the picture at its floor over that text half */
     let side=Math.min(inner,Math.floor(avail/2)), cueH=side;
     if(side<cueMin){ cueH=cueMin; side=Math.max(PAD_FLOOR,Math.min(inner,avail-cueH)); } /* too short for two equal panels: the photo keeps its floor, the pad gives way */
@@ -4949,7 +4973,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
-  564:"The top of the card is two halves now: the picture, and under it the whole text with its pinyin. Tap the picture to make it big, tap the text to make the text big.",
+  564:"The top of the card is two halves now: the picture, and under it the characters with their pinyin — four to a row, the rest behind a \"+4\" you can unfold. Tap the picture to make it big.",
   561:"The card is three panels now: the photo with its characters and pinyin, a writing pad of the same size, and the details below.",
   560:"Every card now has the same shape: the photo, one row of characters, and a writing pad as wide as the photo. A long text folds its rows behind the small arrow beside the characters.",
   557:"The last character of a card now shows its own pinyin too, before the whole card comes up.",
