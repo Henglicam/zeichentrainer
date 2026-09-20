@@ -299,8 +299,10 @@ de:{
   "Fix the characters":"Zeichen korrigieren",
   
   "Swipe left or right to pick another card.":"Wisch nach links oder rechts, um eine andere Karte zu wählen.",
+  "Tap it — it stays big.": "Tippen – bleibt groß.",
+  "Tap here — characters big.": "Hier tippen – Zeichen groß.",
+  "Trace the lit stroke.": "Leuchtenden Strich nachziehen.",
   "Tap the photo, or the space beside the characters, to make either one big.": "Tippe auf das Foto oder neben die Zeichen, dann wird eines groß.",
-  "The photo sits on top of the card, the characters under it.": "Oben auf der Karte sitzt das Foto, darunter die Zeichen.",
   "Tap the photo, or the space beside the characters, to make either one big — it stays big until you tap again.": "Tippe auf das Foto oder neben die Zeichen, dann wird eines groß – und bleibt groß, bis du wieder tippst.",
 
 
@@ -598,8 +600,10 @@ fr:{
   "Fix the characters":"Corriger les caractères",
   
   "Swipe left or right to pick another card.":"Balaie vers la gauche ou la droite pour choisir une autre carte.",
+  "Tap it — it stays big.": "Touche – ça reste grand.",
+  "Tap here — characters big.": "Touche ici – tout en grand.",
+  "Trace the lit stroke.": "Suis le trait allumé.",
   "Tap the photo, or the space beside the characters, to make either one big.": "Touche la photo, ou l'espace à côté des caractères, pour agrandir l'un des deux.",
-  "The photo sits on top of the card, the characters under it.": "La photo occupe le haut de la carte, les caractères sont en dessous.",
   "Tap the photo, or the space beside the characters, to make either one big — it stays big until you tap again.": "Touche la photo, ou l'espace à côté des caractères, pour agrandir l'un des deux – il reste grand jusqu'à ce que tu retouches.",
 
 
@@ -897,8 +901,10 @@ es:{
   "Fix the characters":"Corregir los caracteres",
   
   "Swipe left or right to pick another card.":"Desliza a izquierda o derecha para elegir otra tarjeta.",
+  "Tap it — it stays big.": "Tócala – se queda grande.",
+  "Tap here — characters big.": "Toca aquí – todo en grande.",
+  "Trace the lit stroke.": "Sigue el trazo encendido.",
   "Tap the photo, or the space beside the characters, to make either one big.": "Toca la foto, o el espacio junto a los caracteres, para agrandar uno de los dos.",
-  "The photo sits on top of the card, the characters under it.": "La foto va arriba en la tarjeta y los caracteres debajo.",
   "Tap the photo, or the space beside the characters, to make either one big — it stays big until you tap again.": "Toca la foto, o el espacio junto a los caracteres, para agrandar uno de los dos: se queda grande hasta que vuelvas a tocar.",
 
 
@@ -1196,8 +1202,10 @@ ja:{
   "Fix the characters":"文字を直す",
   
   "Swipe left or right to pick another card.":"左右にスワイプすると別のカードを選べます。",
+  "Tap it — it stays big.": "タップで拡大、そのまま",
+  "Tap here — characters big.": "ここをタップ：文字が大きく",
+  "Trace the lit stroke.": "光った線をなぞる",
   "Tap the photo, or the space beside the characters, to make either one big.": "写真か、文字のとなりの余白をタップすると、どちらかが大きくなります。",
-  "The photo sits on top of the card, the characters under it.": "カードの上が写真、その下が文字です。",
   "Tap the photo, or the space beside the characters, to make either one big — it stays big until you tap again.": "写真か、文字のとなりの余白をタップすると、どちらかが大きくなります。もう一度タップするまで大きいままです。",
 
 
@@ -1495,8 +1503,10 @@ ko:{
   "Fix the characters":"글자 고치기",
   
   "Swipe left or right to pick another card.":"좌우로 밀면 다른 카드를 고를 수 있어요.",
+  "Tap it — it stays big.": "누르면 커진 채로",
+  "Tap here — characters big.": "여기 누르면 글자가 크게",
+  "Trace the lit stroke.": "켜진 획을 따라 긋기",
   "Tap the photo, or the space beside the characters, to make either one big.": "사진이나 글자 옆 빈 곳을 누르면 둘 중 하나가 커져요.",
-  "The photo sits on top of the card, the characters under it.": "카드 위쪽이 사진, 그 아래가 글자예요.",
   "Tap the photo, or the space beside the characters, to make either one big — it stays big until you tap again.": "사진이나 글자 옆 빈 곳을 누르면 둘 중 하나가 커져요. 다시 누를 때까지 그대로 커져 있어요.",
 
 
@@ -1797,8 +1807,10 @@ ru:{
   "Fix the characters":"Поправить иероглифы",
   
   "Swipe left or right to pick another card.":"Проведи влево или вправо, чтобы выбрать другую карточку.",
+  "Tap it — it stays big.": "Нажми — останется большим.",
+  "Tap here — characters big.": "Нажми — иероглифы крупно.",
+  "Trace the lit stroke.": "Обведи подсвеченную черту.",
   "Tap the photo, or the space beside the characters, to make either one big.": "Нажми на фото или на пустое место рядом с иероглифами — одно из двух станет большим.",
-  "The photo sits on top of the card, the characters under it.": "Сверху на карточке фото, под ним иероглифы.",
   "Tap the photo, or the space beside the characters, to make either one big — it stays big until you tap again.": "Нажми на фото или на пустое место рядом с иероглифами — одно из двух станет большим и таким и останется, пока не нажмёшь снова.",
 
 
@@ -2096,8 +2108,10 @@ vi:{
   "Fix the characters":"Sửa chữ",
   
   "Swipe left or right to pick another card.":"Vuốt sang trái hoặc phải để chọn thẻ khác.",
+  "Tap it — it stays big.": "Chạm – vẫn to.",
+  "Tap here — characters big.": "Chạm đây – chữ to.",
+  "Trace the lit stroke.": "Tô theo nét sáng.",
   "Tap the photo, or the space beside the characters, to make either one big.": "Chạm vào ảnh, hoặc vào khoảng trống cạnh các chữ, để phóng to một trong hai.",
-  "The photo sits on top of the card, the characters under it.": "Ảnh nằm ở trên thẻ, các chữ nằm bên dưới.",
   "Tap the photo, or the space beside the characters, to make either one big — it stays big until you tap again.": "Chạm vào ảnh, hoặc vào khoảng trống cạnh các chữ, để phóng to một trong hai — nó giữ nguyên cho tới khi bạn chạm lần nữa.",
 
 
@@ -2395,8 +2409,10 @@ th:{
   "Fix the characters":"แก้ตัวอักษร",
   
   "Swipe left or right to pick another card.":"ปัดซ้ายหรือขวาเพื่อเลือกการ์ดใบอื่น",
+  "Tap it — it stays big.": "แตะ – ใหญ่ค้างไว้",
+  "Tap here — characters big.": "แตะตรงนี้ – ตัวอักษรใหญ่",
+  "Trace the lit stroke.": "ลากตามเส้นที่สว่าง",
   "Tap the photo, or the space beside the characters, to make either one big.": "แตะที่รูป หรือที่ว่างข้างตัวอักษร เพื่อขยายอย่างใดอย่างหนึ่ง",
-  "The photo sits on top of the card, the characters under it.": "รูปอยู่ด้านบนของการ์ด ตัวอักษรอยู่ด้านล่าง",
   "Tap the photo, or the space beside the characters, to make either one big — it stays big until you tap again.": "แตะที่รูป หรือที่ว่างข้างตัวอักษร เพื่อขยายอย่างใดอย่างหนึ่ง แล้วมันจะใหญ่อยู่อย่างนั้นจนกว่าจะแตะอีกครั้ง",
 
 
@@ -2694,8 +2710,10 @@ id:{
   "Fix the characters":"Perbaiki karakternya",
   
   "Swipe left or right to pick another card.":"Geser ke kiri atau kanan untuk memilih kartu lain.",
+  "Tap it — it stays big.": "Ketuk – tetap besar.",
+  "Tap here — characters big.": "Ketuk di sini – aksara besar.",
+  "Trace the lit stroke.": "Ikuti garis yang menyala.",
   "Tap the photo, or the space beside the characters, to make either one big.": "Ketuk fotonya, atau ruang di samping karakternya, untuk memperbesar salah satunya.",
-  "The photo sits on top of the card, the characters under it.": "Foto ada di bagian atas kartu, karakternya di bawahnya.",
   "Tap the photo, or the space beside the characters, to make either one big — it stays big until you tap again.": "Ketuk fotonya, atau ruang di samping karakternya, untuk memperbesar salah satunya — dan tetap besar sampai kamu ketuk lagi.",
 
 

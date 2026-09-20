@@ -493,10 +493,15 @@ body.noscroll{overflow:hidden}
 .guide .gf .gft{font-family:inherit;font-weight:500}
 
 .done .hint{margin:18px 0 6px} /* the pointer to the guide under Take a photo (v266) */
-/* v568 (H: "Muss aber dann natürlich auch ordentlich erklärt werden, sonst checkt das ja keiner. Vielleicht auch ganz am Anfang, bevor das erste Foto da ist, so ein How-To-Anfangs-Screen"): what a card does, in three lines, on the one screen a learner meets before their first photo — the empty deck. Numbered in the tint, left-aligned inside the centred card, since a sentence of three lines centred is hard to read. */
-.done .howto{list-style:none;counter-reset:ht;margin:22px 0 0;padding:0;text-align:start}
-.done .howto li{counter-increment:ht;position:relative;padding:0 0 0 30px;margin:0 0 10px;color:var(--label2);font-size:14px;line-height:1.5}
-.done .howto li::before{content:counter(ht);position:absolute;left:0;top:1px;width:20px;height:20px;border-radius:999px;background:var(--tint-soft);color:var(--tint);font:600 12px var(--ui);display:flex;align-items:center;justify-content:center}
+/* v569 (H: "ich möchte eigentlich quasi eine Beispielkarte haben und dann mit Pfeilen kurz erklärt, handschriftlich am besten auch noch ... Wie als ob da eine Karte wäre und jemand da was hinkritzelt"): the drawn card on the left, three notes beside it, each with its own hand-drawn arrow pointing back into the card. v568's numbered list is gone. The notes are spread over the card's own height (space-around), so each sits at about the height of the part it points at — a scribble points approximately, which is the whole look. */
+.done .intro{display:grid;grid-template-columns:38% 1fr;gap:8px;align-items:stretch;margin:24px 0 4px;text-align:start}
+.done .intro .mock{width:100%;height:auto;align-self:start}
+.done .intro .notes{display:flex;flex-direction:column;justify-content:space-around;gap:10px;padding:6px 0}
+.done .intro .note{display:flex;align-items:flex-start;gap:4px}
+.done .intro .note .ar{width:34px;min-width:34px;height:19px;margin-top:3px}
+.done .intro .note span{font-family:'Bradley Hand','Segoe Script','Noteworthy','Comic Sans MS',var(--ui);font-size:14px;line-height:1.35;color:var(--tint);display:block} /* whatever handwriting face the phone has; with none it falls back to the UI font and the arrows carry the look */
+.done .intro .n1{transform:rotate(-1.5deg)} .done .intro .n2{transform:rotate(.8deg)} .done .intro .n3{transform:rotate(-1deg)}
+@media(prefers-reduced-motion:reduce){.done .intro .note{transform:none}}
 
 /* the Undo line after a deletion (v268): above the tab bar, the card's surface with the hairline and a shadow, the text and a tint Undo */
 .undo{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav) + 14px + env(safe-area-inset-bottom));z-index:20;display:flex;align-items:center;gap:12px;width:calc(100% - 32px);max-width:408px;padding:6px 6px 6px 16px;border-radius:var(--r);background:var(--card);color:var(--label);font-size:15px;line-height:1.35;box-shadow:0 0 0 1px var(--sep),0 8px 24px rgba(0,0,0,.18);animation:undoup .18s ease-out}
