@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=566; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=567; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -83,6 +83,7 @@ const S = { mode:"study", progress:{}, custom:[], inbox:[],
   queue:[], idx:0, done:0, ahead:false, ready:false, /* v539: `revealed` is gone — it was set to false in ten places and to true in none since v512 replaced tap-to-reveal with the write pad, so every one of those lines was a no-op standing in for `ansOpen`, which is the answer block's own flag */
   pendingImg:null, pendingFull:null, pendingUse:"crop", persist:null,
   peek:null, /* Learn: the id of a linked card whose photo is shown on the front instead (v155) */
+  cueBig:null, /* v567: "pic" while the picture has the whole cue. A tap sets it (cueBig) and only a tap clears it: H writes a whole card off the enlarged photo, so a render must not fold it back. Memory only, so a reload starts on the halves. */
   admin:false, /* the owner's rows in More unlocked for this session (v162) */
   ownerOpen:false, /* v547: the owner's own block folded behind one row, so More is the same length unlocked as locked */
   detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterStar:false, filterNew:false, filterTags:[], settings:{}, single:null, saved:null, cardsTab:"cards",
@@ -670,6 +671,8 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v567","tap the photo big and write the card: the photo stays open at every new character, and only a tap on it folds it back"],
+  ["app","v567","with the photo big, swipe to the next card: it comes in with its photo big too, and nothing jumps at the snap"],
   ["app","v565","swipe to the next card: the picture of the card that rides in is the picture the card then shows — nothing jumps at the snap"],
   ["app","v566","the top of the card in two halves: the picture over one row of up to four characters with the word line; a tap on the picture makes it big, a tap again brings the halves back"],
   ["app","v566","a card of eight characters: four tiles at full size and the \"+4\" pill beside them; the pill unfolds every row at the same size and the pad moves down; a tap on a tile folds it back on that character's row"],
@@ -3140,7 +3143,7 @@ function renderStudy(main){
       <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button></div>`;
   const noTmpl=cur&&STROKES&&!STROKE_OF.has(cur.glyph);
   const freePad=noTmpl||(cur&&handWrite()&&STROKE_OF.has(cur.glyph)); /* v548: handwriting draws freehand too, so it needs Undo, Clear and the note the free pad has always had */
-  main.innerHTML=wxNoteHTML()+`<div class="card study${rep?" rep":""}">
+  main.innerHTML=wxNoteHTML()+`<div class="card study${rep?" rep":""}${cueBigCls(!!picHTML)}">
     ${S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:""}
     <div class="cue">
     <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}${d.flag||d.unchecked?`<button class="picflag${d.flag?" on":" new"}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}" title="${d.flag?"":esc(t("Not yet checked"))}">${d.flag?"⚑":"⚐"}</button>`:""}</div>
@@ -3180,7 +3183,7 @@ function renderStudy(main){
      there are no grades that own the screen any more. */
   wireSwipe(card, list.length<2||S.single?null:{
     n:list.length, idx:li, centred:false,
-    peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ return { cls:"study", html:`<div class="cue"><div class="zone1 front">${frontPic(nd,{page:true,fixed:true})}</div><div class="txt">${peerRowHTML(nd)}<div class="padline"></div></div></div><div class="padwrap"><div class="wpad ghost"${ghostSize(card)}></div></div><div class="fold"><button class="foldbtn"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button></div>${swipeHint(nd)}` }; } finally{ S.fullPic=fp; } }, /* v530: the neighbour carries the study card's own class, so it takes its 16 px top padding and every other rule of the study layout — a plain `.card` neighbour stood 6 px taller (22 px of padding) and hopped by that much at the snap */ /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
+    peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ const np=frontPic(nd,{page:true,fixed:true}); return { cls:"study"+cueBigCls(!!np), html:`<div class="cue"><div class="zone1 front">${np}</div><div class="txt">${peerRowHTML(nd)}<div class="padline"></div></div></div><div class="padwrap"><div class="wpad ghost"${ghostSize(card)}></div></div><div class="fold"><button class="foldbtn"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button></div>${swipeHint(nd)}` }; } finally{ S.fullPic=fp; } }, /* v530: the neighbour carries the study card's own class, so it takes its 16 px top padding and every other rule of the study layout — a plain `.card` neighbour stood 6 px taller (22 px of padding) and hopped by that much at the snap */ /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
     go:goTo, ready:p=>{ p.style.setProperty("--cueh",(card._fit?card._fit.cueH+"px":card.style.getPropertyValue("--cueh"))); splitFit(p); } }); /* v560/v561: the neighbour takes the card's own cue height, so its frame is the card's; v564: and splits it into its own two halves */
   wireSay(); wireLinks(); wireSrc(); wireAi(); wireExplain();
   mountPad(card,d,c,tg,st,cur);
@@ -3348,8 +3351,9 @@ const CH_MAX=56, CH_MIN=40, CH_ROWS=2, STRIP_GAP=8, ROW_MAX=4; /* STRIP_GAP: the
    the strip's own room — unfolds every row at the same size: the text half grows, the cue with it, and the pad moves down for
    as long as it is open; a tap on a tile picks it and folds, a tap anywhere else or Escape folds. The tiles shrink only for a
    word longer than ROW_MAX, so that word still fits beside the pill. A tap on the picture gives it the whole cue and closes the
-   text half; the same tap brings the halves back, and so does the next render. v564's tap that made the text big is the pill
-   now. The open card under Cards has no pad and keeps the v519/v522 fit below: shrink, then wrap onto rows that all show. */
+   text half; ONLY the same tap brings the halves back (v567, H: "immer wenn ein neuer Charakter kommt, den ich schreibe,
+   bleibt das Foto offen") — the state is S.cueBig, so it survives every render of the session and the carousel's neighbour
+   comes in in it too. v564's tap that made the text big is the pill now. The open card under Cards has no pad and keeps the v519/v522 fit below: shrink, then wrap onto rows that all show. */
 function chrowFit(root,c){ const cr=root&&root.querySelector(".chrow"); if(!cr) return; const ci=cr.querySelector(".chin")||cr;
   if(root.classList&&root.classList.contains("study")&&!root.classList.contains("detail")) return splitFit(root); /* v564: the study card's halves */
   cr.classList.remove("wrap"); cr.style.setProperty("--chs",CH_MAX+"px");
@@ -3397,7 +3401,14 @@ function splitFit(root,c){ const cue=root&&root.querySelector(".cue"), cr=cue&&c
   if(pic&&im&&ph){ if(im.naturalWidth){ pic.classList.toggle("clip",im.naturalWidth/im.naturalHeight>=CLIP_RATIO*(inner/ph)); pic.classList.add("sized"); }
     else if(!pic._sizing){ pic._sizing=true; im.addEventListener("load",()=>splitFit(root),{once:true}); } }
   root._split={ph,th,cueH,chs:L.s,rows:L.rows,row:L.row,big,unf}; }
-function cueBig(card,which){ const was=card.classList.contains("bigpic")?"pic":null, to=was===which?null:which;
+/* v567 (H: "immer wenn ein neuer Charakter kommt, den ich schreibe, bleibt das Foto offen ... Erst wenn ich drauf tippe, dann
+   klappt es wieder zu"): the enlarged picture is S.cueBig, not a class on the card element that render() rebuilds — so it
+   survives every character written, every tile picked and every swipe, and only the tap folds it back. A card with no picture
+   of its own (one generated from a multicard, v487) would show an empty half over no tiles and no way back, since the tap that
+   folds it is the picture's and the text half is 0 px tall: there the halves stand and the state waits for the next card that
+   has one. */
+function cueBigCls(hasPic){ return S.cueBig==="pic"&&hasPic?" bigpic":""; }
+function cueBig(card,which){ const to=S.cueBig===which?null:which; S.cueBig=to;
   const cue=card.querySelector(".cue"); if(cue){ cue.classList.add("gl"); clearTimeout(card._glT); card._glT=setTimeout(()=>cue.classList.remove("gl"),320); } /* v565: the slide runs on a tap only — a render must never animate the halves into place */
   if(to&&card.classList.contains("unfold")) stripUnfold(card,false);
   card.classList.toggle("bigpic",to==="pic"); splitFit(card); }
@@ -4973,6 +4984,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  567:"The photo you tapped big now stays big while you write the whole card, character after character — one more tap folds it back.",
   564:"The top of the card is two halves now: the picture, and under it the characters with their pinyin — four to a row, the rest behind a \"+4\" you can unfold. Tap the picture to make it big.",
   561:"The card is three panels now: the photo with its characters and pinyin, a writing pad of the same size, and the details below.",
   560:"Every card now has the same shape: the photo, one row of characters, and a writing pad as wide as the photo. A long text folds its rows behind the small arrow beside the characters.",
