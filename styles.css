@@ -190,6 +190,9 @@ button,.tab,.chip,.chipset,.pill,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg
 
 /* cards library */
 .topline{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+/* v574: the study screen is the one place a topline is not inside a .pane — as a flex child of the centred #main it would
+   shrink to its own content, so it takes the card's own width and sits squarely above it */
+#main>.topline{width:100%;max-width:440px}
 .topline .del{padding-left:0}
 .cardsbar{display:flex;gap:8px;margin-bottom:10px}
 .cardsbar input{flex:1;min-width:0;background:var(--fill);border:none;border-radius:10px;color:var(--label);

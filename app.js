@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=573; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=574; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v574","Test this card: photo at the top"],
   ["app","v573","a card with 合, 雀, 行 or 供 on it: the meaning under the reading is that reading's — 合 hé \"to close\", not \"100 ml\" — on the pad, in the line under it and in the parts row"],
   ["app","v572","open Learn: the card starts with the photo big; one tap shows the characters under it, another makes it big again, and the state holds for the session"],
   ["app","v569","fold the phone mid-card, or leave the app and come back: the same character, the strokes already in it, and the half you tapped big"],
@@ -3192,8 +3193,12 @@ function renderStudy(main){
       <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button></div>`;
   const noTmpl=cur&&STROKES&&!STROKE_OF.has(cur.glyph);
   const freePad=noTmpl||(cur&&handWrite()&&STROKE_OF.has(cur.glyph)); /* v548: handwriting draws freehand too, so it needs Undo, Clear and the note the free pad has always had */
-  main.innerHTML=wxNoteHTML()+`<div class="card study${rep?" rep":""}${cueBigCls(!!picHTML)}">
-    ${S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:""}
+  /* v574 (H with a screenshot of a single-card test: "Warum ist oben so viel Platz??"): the ← Cards row is a SIBLING of the
+     card, above it, as it is on every other screen — the card detail, the guide and the two forms all put their topline
+     above their own card. Inside the card it was the first child of the study card's GRID, whose first row is the cue's own
+     fixed --cueh (v560), so the row took that whole row — 279 px of white with the two words centred in it — and pushed the
+     cue, the pad and the fold down by it, ending the card 279 px under the tab bar. */
+  main.innerHTML=wxNoteHTML()+(S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:"")+`<div class="card study${rep?" rep":""}${cueBigCls(!!picHTML)}">
     <div class="cue">
     <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}${d.flag||d.unchecked?`<button class="picflag${d.flag?" on":" new"}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}" title="${d.flag?"":esc(t("Not yet checked"))}">${d.flag?"⚑":"⚐"}</button>`:""}</div>
     <div class="txt" id="cuetxt">${chrow}<div class="padline" id="padline"></div></div></div>
