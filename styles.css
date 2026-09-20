@@ -493,6 +493,10 @@ body.noscroll{overflow:hidden}
 .guide .gf .gft{font-family:inherit;font-weight:500}
 
 .done .hint{margin:18px 0 6px} /* the pointer to the guide under Take a photo (v266) */
+/* v568 (H: "Muss aber dann natürlich auch ordentlich erklärt werden, sonst checkt das ja keiner. Vielleicht auch ganz am Anfang, bevor das erste Foto da ist, so ein How-To-Anfangs-Screen"): what a card does, in three lines, on the one screen a learner meets before their first photo — the empty deck. Numbered in the tint, left-aligned inside the centred card, since a sentence of three lines centred is hard to read. */
+.done .howto{list-style:none;counter-reset:ht;margin:22px 0 0;padding:0;text-align:start}
+.done .howto li{counter-increment:ht;position:relative;padding:0 0 0 30px;margin:0 0 10px;color:var(--label2);font-size:14px;line-height:1.5}
+.done .howto li::before{content:counter(ht);position:absolute;left:0;top:1px;width:20px;height:20px;border-radius:999px;background:var(--tint-soft);color:var(--tint);font:600 12px var(--ui);display:flex;align-items:center;justify-content:center}
 
 /* the Undo line after a deletion (v268): above the tab bar, the card's surface with the hairline and a shadow, the text and a tint Undo */
 .undo{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav) + 14px + env(safe-area-inset-bottom));z-index:20;display:flex;align-items:center;gap:12px;width:calc(100% - 32px);max-width:408px;padding:6px 6px 6px 16px;border-radius:var(--r);background:var(--card);color:var(--label);font-size:15px;line-height:1.35;box-shadow:0 0 0 1px var(--sep),0 8px 24px rgba(0,0,0,.18);animation:undoup .18s ease-out}
@@ -855,22 +859,14 @@ body.noscroll{overflow:hidden}
 .cue{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:var(--ph,minmax(0,1fr)) var(--th,auto);row-gap:var(--cg,8px);min-height:0;box-sizing:border-box}
 .cue.gl{transition:grid-template-rows .22s cubic-bezier(.22,.61,.36,1),row-gap .22s cubic-bezier(.22,.61,.36,1)} /* v565: the slide only on a tap (cueBig sets .gl for its duration) — a render never animates the halves into place */
 .cue .zone1 .picbox:not(.page):not(.sized) .signimg{opacity:0} /* v565: the picture shows only once splitFit knows its shape — fitted or clipped — so a picture that decodes late never appears in the wrong one and jumps (the carousel's neighbour did) */
-.cue .txt{min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:stretch;overflow:hidden} /* the text half: the strip's row over the word line, centred in the half; unfolded, every row */
+.cue .txt{min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:stretch;overflow:hidden;cursor:pointer} /* the text half: the tiles' rows over the word line, centred in the half */
 .cue .zone1{min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:var(--rc)}
 .cue .zone1 .picbox:not(.page){aspect-ratio:auto;height:100%;flex:1;display:flex;align-items:center;justify-content:center;margin:0}
 .cue .zone1 .picbox:not(.page) .signimg:not(.full){flex:none;width:100%;height:100%;object-fit:contain;margin:0}
 .cue .zone1 .picbox.clip .signimg:not(.full){height:auto} /* a picture near the row's own shape keeps its size and is clipped, centred on its text (v329 centres the window on the frame) */
 .cue .zone1 .signimg.full{width:100%;height:100%;object-fit:contain;margin:0;border-radius:var(--rc)} /* the whole photo, a deliberate tap, fitted into the same row */
-.cue .chrow{height:var(--strip,56px);overflow:hidden;margin:0;max-width:none;flex:none} /* v566: one row tall, the row the pad is on (stripLayout slides the flow); unfolded, every row */
-.card.study.unfold .cue .chrow{height:auto}
-.cue .chin{gap:8px;margin:0 auto} /* v566: the word gap 8 inside the half, so four single characters, their gaps and the pill share the row; the flow's max-width cuts the rows at four (stripLayout) */
-.cue .chrow.multi .chin{padding-right:74px} /* room for the pill ("+14" is 70 px, 4 px from the edge), so no tile stands under it — stripLayout counts the same 74, which leaves 56 px tiles at a 322 px card */
-/* v562 (H on the chevron: "Nicht nur so ein kleiner Pfeil, da muss auch der letzte Idiot verstehen, dass da noch mehr kommt"): the way in is a pill in the tint that says how many characters are folded — "+4" — with the chevron beside it; unfolded it is the chevron alone, turned (v566: back beside the fourth tile) */
-.chmore{position:absolute;right:4px;top:calc((var(--strip,56px) - 40px) / 2);height:40px;min-width:44px;border:none;border-radius:999px;background:var(--tint-soft);color:var(--tint);font:600 15px var(--ui);line-height:1;padding:0 8px 0 10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:2px}
-.chmore i{font-style:normal;font-size:17px}
-.chmore[hidden]{display:none}
-.chmore[aria-expanded="true"] i{display:inline-block;transform:rotate(180deg)}
-.card.study.unfold .chmore{padding:0 10px} .card.study.unfold .chmore .n{display:none}
+.cue .chrow{height:auto;overflow:hidden;margin:0;max-width:none;flex:none} /* v564: every row shows; the tiles' size is the half's to give (splitFit) */
+.cue .chin{gap:10px} /* v562: the word gap 14 → 10 inside the panel, so four single characters share a row */
 @media(prefers-reduced-motion:reduce){.chrow .chin{transition:none} .cue{transition:none}}
 .cue .padline{height:61px;min-height:61px;overflow:hidden;flex:none;margin-top:6px}
 .padwrap .padacts{position:absolute;left:0;right:0;bottom:8px;margin:0;display:flex;justify-content:space-between;padding:0 10px;pointer-events:none} .padwrap .padacts>*{pointer-events:auto}
