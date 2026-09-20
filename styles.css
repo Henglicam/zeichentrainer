@@ -851,19 +851,17 @@ body.noscroll{overflow:hidden}
    button appearing never moves the frame. The hint of the first twenty reviews is one more row, out of the two panels. */
 .card.study:not(.detail){display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:var(--cueh,auto) auto auto;grid-auto-rows:auto;row-gap:8px;box-sizing:border-box}
 .card.study:not(.detail)>*{margin-top:0}
-.cue{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) 56px 61px;row-gap:8px;min-height:0;background:var(--card2);border-radius:var(--rc);box-shadow:inset 0 0 0 1px var(--sep);overflow:hidden;padding-bottom:8px;box-sizing:border-box}
+.cue{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) 56px 61px;row-gap:8px;min-height:0;box-sizing:border-box} /* v563 (H: "der Rahmen oben sieht Käse aus"): the cue keeps its geometry — as tall as the pad — and loses the grey panel and its hairline; the photo carries its own box again */
 .card.study.unfold .cue{grid-template-rows:minmax(0,1fr) auto 61px} /* v561: unfolded, the strip shows every row and the photo gives the room */
 .card.study.unfold .chrow{height:auto}
-.cue .zone1{min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.cue .zone1 .picbox:not(.page){aspect-ratio:auto;height:100%;flex:1;display:flex;align-items:center;justify-content:center;margin:0;border-radius:0;box-shadow:none} /* the photo is the panel's top: the panel's own corners and hairline frame it */
+.cue .zone1{min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:var(--rc)}
+.cue .zone1 .picbox:not(.page){aspect-ratio:auto;height:100%;flex:1;display:flex;align-items:center;justify-content:center;margin:0}
 .cue .zone1 .picbox:not(.page) .signimg:not(.full){flex:none;width:100%;height:100%;object-fit:contain;margin:0}
 .cue .zone1 .picbox.clip .signimg:not(.full){height:auto} /* a picture near the row's own shape keeps its size and is clipped, centred on its text (v329 centres the window on the frame) */
-.cue .zone1 .signimg.full{width:100%;height:100%;object-fit:contain;margin:0;border-radius:0} /* the whole photo, a deliberate tap, fitted into the same row */
+.cue .zone1 .signimg.full{width:100%;height:100%;object-fit:contain;margin:0;border-radius:var(--rc)} /* the whole photo, a deliberate tap, fitted into the same row */
 .cue .chrow{height:56px;overflow:hidden;margin:0;max-width:none} /* v562: no side margin — four single characters, their three gaps and the pill's room are 318 of the 325 px */
 .cue .chin{gap:10px} /* v562: the word gap 14 → 10 inside the panel, so four single characters and the pill still share a row */
 .cue .chrow.multi .chin{padding-right:64px} /* room for the pill, so no tile stands under it */
-.cue .chw{background:var(--card)} /* white tiles on the panel's grey — the v549 lesson, an object in --card2 on --card2 vanishes */
-.cue .chw:not(.on):not(.lockw){box-shadow:none}
 /* v562 (H on the chevron: "Nicht nur so ein kleiner Pfeil, da muss auch der letzte Idiot verstehen, dass da noch mehr kommt"): the way in is a pill in the tint that says how many characters are folded — "+4" — with the chevron beside it; unfolded it is the chevron alone, turned */
 .chmore{position:absolute;right:4px;top:8px;height:40px;min-width:44px;border:none;border-radius:999px;background:var(--tint-soft);color:var(--tint);font:600 15px var(--ui);line-height:1;padding:0 8px 0 10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:2px}
 .chmore i{font-style:normal;font-size:17px}
@@ -871,7 +869,7 @@ body.noscroll{overflow:hidden}
 .chmore[aria-expanded="true"] i{display:inline-block;transform:rotate(180deg)}
 .card.study.unfold .chmore{padding:0 10px} .card.study.unfold .chmore .n{display:none}
 @media(prefers-reduced-motion:reduce){.chrow .chin{transition:none}}
-.cue .padline{height:61px;min-height:61px;overflow:hidden;padding:0 8px}
+.cue .padline{height:61px;min-height:61px;overflow:hidden}
 .padwrap .padacts{position:absolute;left:0;right:0;bottom:8px;margin:0;display:flex;justify-content:space-between;padding:0 10px;pointer-events:none} .padwrap .padacts>*{pointer-events:auto}
 .padwrap .padacts:not(:has(:not([hidden]))){display:none} /* an empty row takes no taps */
 .padwrap .hint#pad-note{position:absolute;left:12px;right:12px;top:8px;margin:0;text-align:center;pointer-events:none}

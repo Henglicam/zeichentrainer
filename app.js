@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=562; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=563; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -670,8 +670,8 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v563","the app comes to rest: About says v563, no reload by itself more often than every ten minutes"],
   ["app","v562","a card of eight characters or more: the tint pill \"+4\" at the strip's right end — is it now obvious that there is more?"],
-  ["app","v561","the three panels: the photo, characters and pinyin on one grey panel, the pad the same height under it, the fold row below — the same on every card"],
   ["app","v561","a card of eight characters or more: the arrow unfolds the rows in place, the photo giving the room, nothing shown twice; a tap on a character folds it back into the pad"],
   ["app","v560","cards of two, eight and sixteen characters one after the other: photo, strip, line and pad the same size on every one, the pad as wide as the photo"],
   ["app","v560","a card of eight characters or more: the strip shows the row you are writing and slides to the next row by itself"],
@@ -9310,7 +9310,7 @@ if("serviceWorker" in navigator){
       if(d.type!=="mirror-update") return;
       MIRROR.busy=false; MIRROR.last=d; const forced=MIRROR.forced; MIRROR.forced=false;
       const st=$("#mirror-status"); if(st) st.textContent=mirrorText();
-      if(d.status==="updated") setTimeout(()=>forced?reloadNow():reloadSoon(),600); /* Check now was a tap — reload at once; the check by itself waits for a pause (v279, v327) */
+      if(d.status==="updated") setTimeout(()=>forced?reloadNow(true):reloadSoon(),600); /* Check now was a tap — reload at once; the check by itself waits for a pause (v279, v327) */
     });
     /* new version activated (skipWaiting+claim) → reload once automatically.
        First install (no controller before) does not trigger a reload. */
@@ -9342,7 +9342,16 @@ const reloadBusy=()=>picking()||!!CROP; /* a photo on its way from the camera, o
 const IDLE_MS=4000, RELOAD_POLL=2000, RESUME_MAX=180000; let LAST_TOUCH=Date.now();
 ["pointerdown","keydown","input","touchstart","wheel"].forEach(ev=>document.addEventListener(ev,()=>{ LAST_TOUCH=Date.now(); },{capture:true,passive:true}));
 const reloadIdle=()=>!reloadBusy()&&!document.hidden&&Date.now()-LAST_TOUCH>=IDLE_MS&&!S.editing&&S.mode!=="add"&&!Object.keys(PENDING).length&&!Object.keys(READING).length&&!(TRANSLATE&&TRANSLATE.running)&&!(TAGALL&&TAGALL.running)&&!(RECHECK&&RECHECK.running)&&!BRIGHT&&!RECUT&&!document.querySelector(".drawsheet,.ask")&&!(($("#fb-text")||{}).value||"").trim()&&!FB_SHOT; /* a staged screenshot holds the reload too (v511): it lives in memory and a reload would drop it */
-async function reloadNow(){ RELOAD_DUE=false; clearInterval(RELOAD_TIMER); RELOAD_TIMER=null; RELOADING=true; try{ await setSetting("resumeView",viewNow(true)); }catch(e){} location.reload(); }
+/* THE APP RELOADS ITSELF AT MOST ONCE EVERY TEN MINUTES (v563, H after three versions deployed within one Pages cache window:
+   "die App refresht die ganze Zeit und kommt gar nicht mehr zur Ruhe"): github.io caches for ten minutes and the mirror is
+   purged on every push, so during that window the two can disagree — the origin still handing out the version before, the
+   mirror the newest — and every reload found a "newer" version somewhere: the mirror's update reloaded into the newest, the
+   worker's own update then refilled its cache from the stale origin and reloaded back, and the mirror was asked again at the
+   next boot. RELOAD_COOL is the cool-down between the app's own reloads, on disk (lastReload), so a reload storm of this kind
+   is at most one reload per window; a reload the user asked for (the mirror row's Check now) is never held. */
+const RELOAD_COOL=600000;
+async function reloadNow(user){ if(!user&&Date.now()-(+S.settings.lastReload||0)<RELOAD_COOL){ RELOAD_DUE=true; if(!RELOAD_TIMER) RELOAD_TIMER=setInterval(()=>{ if(RELOAD_DUE&&reloadIdle()) reloadNow(); },RELOAD_POLL); return; } /* cooling: wait it out, then the poll reloads at the next pause */
+  RELOAD_DUE=false; clearInterval(RELOAD_TIMER); RELOAD_TIMER=null; RELOADING=true; try{ await setSetting("lastReload",Date.now()); await setSetting("resumeView",viewNow(true)); }catch(e){} location.reload(); }
 function reloadSoon(){ if(!reloadBusy()&&(Date.now()-LOAD_AT<RELOAD_GRACE||document.hidden)){ reloadNow(); return; } RELOAD_DUE=true; if(!RELOAD_TIMER) RELOAD_TIMER=setInterval(()=>{ if(RELOAD_DUE&&reloadIdle()) reloadNow(); },RELOAD_POLL); }
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&RELOAD_DUE&&!reloadBusy()) reloadNow(); });
 /* the screen is noted whenever the page goes away, so a reload the app did not ask for comes back to it too (v415, H: "nach unten
