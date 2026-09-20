@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=557; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=558; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3835,10 +3835,19 @@ function mountPad(card,d,c,tg,st,cur){
        "jī" followed by 鸡 / jī / chicken would be the very stack v553 avoided. A tap takes the reading at once as it does
        everywhere, and cardDone then puts its own listener on, so a second tap takes the whole card's recap. The guard is
        the sibling branch's: a card swiped or left during that second is not finished here. */
-    if(tg.filter(x=>x.w).length>1){ await charRecap(card,cur,tg,st); if(!cv.isConnected||S.pad!==st) return; }
+    if(tg.filter(x=>x.w).length>1){ await charRecap(card,cur,tg,st); if(!cv.isConnected||S.pad!==st) return;
+      const pw0=card.querySelector(".padwrap"); if(pw0) pw0.classList.add("recapping"); /* v558: the pad stays dark through cardDone's own writes — after a tap the reading's exit had let it start fading back up */
+      cardDone(true); return; }
     cardDone();
   };
-  const cardDone=async()=>{
+  /* dark (v558, H on v557: "Da ist noch ein Glitch drin"): the card's last character has had its own reading since v557, so
+     the pad has been DARK for a second when cardDone renders the card again — and the fresh pad came up at full
+     brightness, with the character's strokes in ink, and only then took `recapping` and faded to 0 over .2 s under the
+     whole card's recap. Measured on composited frames (the v555 rule): three frames of the pad at full brightness 1.9 s
+     after the last stroke, where v556 had the same fade but read it as the crossfade, since there the pad had never been
+     dark. mountPad's own fit() reads the layout during render, so the pad's first style is computed at opacity 1 before
+     the class lands; the 0 has to be committed with the transition OFF (the padFadeIn trap of v555, the other way round). */
+  const cardDone=async dark=>{
     const first=!isRepeat(), n=tg.filter(x=>x.w).length, clean=tg.filter((x,j)=>x.w&&!st.helped.has(j)).length;
     /* ONE POINT PER CHARACTER WRITTEN WITHOUT HELP, and nothing else (v546, H: "Irgendwie hab ich das Gefühl, dass es zu
        schnell zu viele Punkte gibt. Ich hab am ersten Tag schon über 600 Punkte!"). Until v545 a clean card scored its
@@ -3875,7 +3884,8 @@ function mountPad(card,d,c,tg,st,cur){
        dwell; the praise (v517) lifts out of it at PRAISE_AT, and the next card follows at NEXT_MS. A tap anywhere on the
        card that is not a control skips straight on — the finger is already on the pad. */
     const pw=document.querySelector(".card.study .padwrap"); let rc=null;
-    if(pw){ pw.insertAdjacentHTML("beforeend",recapHTML(d)); rc=pw.lastElementChild; pw.classList.add("recapping"); requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); }); }
+    if(pw){ if(dark){ const cvn=pw.querySelector(".wpad"); if(cvn){ cvn.style.transition="none"; pw.classList.add("recapping"); void cvn.offsetWidth; cvn.style.transition=""; } } /* v558: dark from its first frame */
+      pw.insertAdjacentHTML("beforeend",recapHTML(d)); rc=pw.lastElementChild; pw.classList.add("recapping"); requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); }); }
     let pr=null, fired=false, tm=0;
     const go=()=>{ if(fired) return; fired=true; clearTimeout(tm); document.removeEventListener("pointerdown",onTap,true);
       if(pr) pr.finish(); else if(PRAISE_N){ PRAISE_N=null; setStats(); } /* v543: skipped before the star flew — the counter goes straight to the day's own total rather than keeping the held number */
