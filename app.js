@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=558; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=559; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -670,6 +670,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v559","a card of eight characters or more, folded: the pad bigger than before and the photo box shorter, the sign whole in it; and the fold row above the tab bar"],
   ["app","v557","write a card of two characters or more: the LAST character's reading stands over the pad on its own, and only then the whole card"],
   ["app","v556","Diagnostics after writing a card"],
   ["app","v553","write a card of two-character words: the reading of EVERY character stands over the pad for a moment, 应 in 供应 reading yìng"],
@@ -2866,7 +2867,7 @@ function frontPic(d,o){
      text, because the pad's size is measured against it (v517, H: "Das müssen Konstanten sein"). The picture itself keeps
      the shape v514 cut it in and is fitted inside, which is what the blurred fill behind it has been for since v232. */
   const ratio=(o&&o.fixed)?FRONT_RATIO:ratioOf(d);
-  return S.fullPic&&full&&!pg?img:`<div class="picbox" data-pic="1" style="aspect-ratio:${ratio}"><img class="picbg" src="${urlOf(blob)}" alt="" aria-hidden="true">${img}</div>`; /* the blurred fill behind the fitted crop, in the photo's colours (v229/v230) */
+  return S.fullPic&&full&&!pg?img:`<div class="picbox" data-pic="1" style="--pr:${ratio}"><img class="picbg" src="${urlOf(blob)}" alt="" aria-hidden="true">${img}</div>`; /* the blurred fill behind the fitted crop, in the photo's colours (v229/v230) */
 }
 /* a card saved before its reading is done (v237): the box shows the reading bar, or one plain line once the reading failed */
 const waitingHTML=d=>d.reading&&d.reading.failed?`<span class="wait failed">${t("Nothing could be read.")}</span>`:`<span class="wait">${busyHTML(t("Reading the text …"))}</span>`;
@@ -3331,14 +3332,15 @@ function chrowHTML(d,tg,btn,litWi,lockCh){ /* lockCh (v526): every word that hol
    already stands on its 200 px floor there, so the card scrolls by that much more. H chose the characters. */
 const CH_MAX=56, CH_MIN=40, CH_ROWS=2;
 function chrowFit(root){ const cr=root&&root.querySelector(".chrow"); if(!cr) return;
+  const done=()=>{ if(root.classList&&root.classList.contains("card")) root.classList.toggle("wrapped",cr.classList.contains("wrap")); }; /* v559: a wrapped row makes the photo box above it 16:9 (styles.css) — set here, so the study card, its carousel neighbour and every re-fit agree */
   cr.classList.remove("wrap"); cr.style.setProperty("--chs",CH_MAX+"px");
-  const avail=cr.clientWidth; if(!avail||cr.scrollWidth<=avail) return;
+  const avail=cr.clientWidth; if(!avail||cr.scrollWidth<=avail){ done(); return; }
   const n=cr.querySelectorAll(".ch:not(.num)").length, fixed=cr.scrollWidth-n*CH_MAX;
   let s=Math.min(CH_MAX,Math.floor((avail-fixed)/Math.max(1,n)));
-  for(; s>=CH_MIN; s--){ cr.style.setProperty("--chs",s+"px"); if(cr.scrollWidth<=avail) return; }
+  for(; s>=CH_MIN; s--){ cr.style.setProperty("--chs",s+"px"); if(cr.scrollWidth<=avail){ done(); return; } }
   cr.classList.add("wrap"); const rows=()=>new Set([...cr.querySelectorAll(".chw")].map(w=>w.offsetTop)).size;
-  for(s=CH_MAX; s>=CH_MIN; s--){ cr.style.setProperty("--chs",s+"px"); if(cr.scrollWidth<=avail&&rows()<=CH_ROWS) return; }
-  cr.style.setProperty("--chs",CH_MIN+"px"); }
+  for(s=CH_MAX; s>=CH_MIN; s--){ cr.style.setProperty("--chs",s+"px"); if(cr.scrollWidth<=avail&&rows()<=CH_ROWS){ done(); return; } }
+  cr.style.setProperty("--chs",CH_MIN+"px"); done(); }
 /* the characters of the card as the pad's targets, grouped by word (§ 5, Q3): one entry per character of the text, in the
    text's order and with its repeats (v430), each knowing its word (wi) so the buttons of one word sit in one group and the
    line under the pad names the word; a number with its unit is one entry for the whole part and is not writable (w:false).
@@ -3543,7 +3545,7 @@ let _rsz=0, _rszFrom=[window.innerWidth,window.innerHeight];
 window.addEventListener("resize",()=>{ if(_rsz) return; _rsz=requestAnimationFrame(()=>{ _rsz=0; const to=[window.innerWidth,window.innerHeight]; if(to[0]!==_rszFrom[0]||to[1]!==_rszFrom[1]){ RESIZES.push({t:Date.now(),from:_rszFrom,to}); _rszFrom=to; while(RESIZES.length>6) RESIZES.shift(); }
   const c=document.querySelector(".card.study"); if(!c) return; chrowFit(c); if(c._fitPad) c._fitPad(); }); }); /* v521: every resize re-fits the pad of the card on screen (a fold, the system bars); v532: once per frame, and the row with it */
 window.addEventListener("pageshow",e=>{ if(e.persisted){ RESIZES.push({t:Date.now(),bfcache:true}); while(RESIZES.length>6) RESIZES.shift(); const c=document.querySelector(".card.study"); if(c){ chrowFit(c); if(c._fitPad) c._fitPad(); } } }); /* a page Chrome froze and brought back is measured again */
-const PAD_BELOW=54, FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_GRID/1024;
+const PAD_BELOW=50, FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_GRID/1024;
 /* NEXT_MS is 3000 since v523: the finished card holds while its recap stands over the pad — the characters, pinyin and
    meaning, large — and the star flies out of it at PRAISE_AT (v523, H: "sollte der Inhalt der Karte nochmal groß und
    deutlich gut lesbar für wenige Sekunden gezeigt werden, um sich das nochmal einzuprägen"); 1500 from v517 to v522, when
@@ -3551,7 +3553,7 @@ const PAD_BELOW=54, FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OU
    room the pad leaves under itself for the helper row, counted whether or not the row has
    anything in it, so the pad is the same size on every card (v517, H: "Das müssen Konstanten sein"); 78 since v522 — the
    line at its two-row height (61) with its 10 px above and the helper row's 6 px, the count having moved into the fold
-   row (H: "So unwichtig und braucht so viel Platz"), where v520/v521 budgeted 96 for it. BRUSH_W is the
+   row (H: "So unwichtig und braucht so viel Platz"), where v520/v521 budgeted 96 for it; 54 from v527 (the fold row in the tail) and 50 since v559, the fold's margin 12 → 8. BRUSH_W is the
    brush's widest point; OUT_GRID/OUT_Y0 map the stroke outlines, which are stored y-up on a 256 grid. */
 /* TRACE_OK: the mean distance, in pad sides, between the drawn stroke's eight points and the template stroke's — the spec's
    0.28 was a starting number and its own suite refuses a stroke a quarter of the pad off, so the bar sits under that; the
