@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=568; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=569; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,9 +671,11 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v569","fold the phone mid-card, or leave the app and come back: the same character, the strokes already in it, and the half you tapped big"],
+  ["app","v569","a card of eight characters tapped big: three rows of large tiles, the half filled — not two rows with the half half empty"],
+  ["app","v569","a fresh install with no cards: the drawn card with three scribbled notes, and whether a friend reads it without being told"],
   ["app","v568","tap the photo big and write the card: it stays open at every new character, and only a tap on it folds it back; the same with the text tapped big"],
   ["app","v568","with the photo big, swipe to the next card: it comes in with its photo big too, and nothing jumps at the snap"],
-  ["app","v568","a fresh install with no cards: the three lines under Take a photo say what the card does"],
   ["app","v565","swipe to the next card: the picture of the card that rides in is the picture the card then shows — nothing jumps at the snap"],
   ["app","v564","the top of the card in two halves: the picture over the whole text with its word line, every character in view; a tap on the picture makes it big, a tap on the text makes the text big, a tap again brings the halves back"],
   ["app","v564","a card of eight characters: its tiles smaller in the half (40 px), full size when the text is tapped big; a card of sixteen: the picture at its 120 px floor and the pad a little smaller"],
@@ -1091,13 +1093,15 @@ async function boot(){
   S.ready=true;
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false;
   const rv=S.settings.resumeView; if(rv){ delete S.settings.resumeView; idbDel("settings","resumeView").catch(()=>{}); } /* the screen the update's reload left (v327): back to it, so the reload is not felt */
-  if(rv&&Date.now()-(rv.at||0)<RESUME_MAX&&(rv.own!==false||navReload())){ if(["study","cards","inbox","more","guide"].includes(rv.mode)) S.mode=rv.mode; if(S.mode==="cards"&&rv.detail&&S.custom.some(d=>d.id===rv.detail)) S.detail=rv.detail; if(typeof rv.query==="string") S.query=rv.query; if(rv.tab==="pages"||rv.tab==="cards") S.cardsTab=rv.tab;
+  if(rv&&Date.now()-(rv.at||0)<RESUME_MAX&&(rv.own!==false||navReload())){ if(["study","cards","inbox","more","guide"].includes(rv.mode)) S.mode=rv.mode;
+    if(rv.big==="pic"||rv.big==="txt") S.cueBig=rv.big; /* v569: the half the tap made big survives the reload a fold can cause */ if(S.mode==="cards"&&rv.detail&&S.custom.some(d=>d.id===rv.detail)) S.detail=rv.detail; if(typeof rv.query==="string") S.query=rv.query; if(rv.tab==="pages"||rv.tab==="cards") S.cardsTab=rv.tab;
     /* the session as it stood (v423): the queue's ids, minus any card that is gone or has no text, with the place in it, the
        open answer and the day's count — so a reload in Learn comes back on the same card instead of at the top of a queue
        built afresh, where a card already graded is no longer due and the next one takes its place. */
     if(S.mode==="study"&&Array.isArray(rv.queue)){ const q=rv.queue.filter(id=>{ const d=cardOf(id); return d&&d.c; });
       if(q.length){ S.queue=q; S.idx=Math.max(0,Math.min(q.length,rv.idx|0)); S.ansOpen=!!rv.revealed&&S.idx<q.length; S.done=Math.max(0,rv.done|0); S.ahead=!!rv.ahead;
-        if(lockOn()&&typeof rv.lock==="string"&&Array.isArray(rv.walk)){ const w=rv.walk.filter(id=>{ const d=cardOf(id); return d&&d.c; }); if(w.length){ S.lockChar=rv.lock; S.walk=w; S.walkIdx=Math.max(0,Math.min(w.length-1,rv.walkIdx|0)); } } /* v513: a reload comes back locked */ } } }
+        if(lockOn()&&typeof rv.lock==="string"&&Array.isArray(rv.walk)){ const w=rv.walk.filter(id=>{ const d=cardOf(id); return d&&d.c; }); if(w.length){ S.lockChar=rv.lock; S.walk=w; S.walkIdx=Math.max(0,Math.min(w.length-1,rv.walkIdx|0)); } } /* v513: a reload comes back locked */
+        const pn=rv.pad; if(pn&&pn.key) S.pad={key:pn.key,i:pn.i|0,k:pn.k|0,miss:pn.miss|0,hint:!!pn.hint,maxMiss:pn.maxMiss|0,done:new Set(pn.done||[]),helped:new Set(pn.helped||[]),free:[],lv:pn.lv||{}}; /* v569: the characters already written on this card, and the strokes already in. padState makes a fresh state whenever the key does not match the card it is asked for, so a stale note cannot land on the wrong card. */ } } }
   wireChrome(); render();
   if(rv&&rv.scroll&&(rv.own!==false||navReload())) requestAnimationFrame(()=>window.scrollTo(0,rv.scroll));
   autoBreaks(); /* old cards get their photo lines estimated once */
@@ -2731,7 +2735,7 @@ const GUIDE=()=>[
     t("Every character under the photo is a button: tap one for other readings, or draw it with your finger. Pinyin and meaning follow by themselves and the AI checks them — flag a card when something still looks wrong.")]},
   {h:t("Learn"),fig:GFIG.learn(),p:[
     t("Due cards first, then up to eight new ones. The photo is the question and the pad is the answer: trace the lit stroke and it moves on by itself, character by character.")
-      +" "+t("Tap the photo, or the space beside the characters, to make either one big — it stays big until you tap again."), /* v568: the one thing a learner cannot find by tapping, so the guide says it (the v259 rule); the same key carries the how-to's second line on the empty deck */
+      +" "+t("Tap the photo, or the space beside the characters, to make either one big — it stays big until you tap again."), /* v568: the one thing a learner cannot find by tapping, so the guide says it (the v259 rule); the empty deck says it in its own short words beside the drawn card since v569, so this key is the guide's alone */
     t("Stuck? Show me draws the stroke and Skip fills the character in. The whole card sits folded at its foot. Swipe sideways to pick another card — nothing is graded by swiping.")
       +" "+t("Tap the star counter at the top to see how your points are counted.")] /* the counter is a tap target with no other affordance (v546), so this one sentence survives the cut */
     .concat(lockOn()?[t("Press and hold a character to walk through every card that has it; press and hold it again to come back.")]:[])}, /* v531: only while the lock is on */
@@ -3083,6 +3087,39 @@ function endSingle(){
    side now, and the helper row its height (Show me / Skip mid-write, v517), so the neighbour is exactly as tall as the
    card it replaces; the CSS square stays as the fallback for a card without a pad. */
 function ghostSize(card){ const cv=card&&card.querySelector("#wpad"); if(!cv) return ""; const w=Math.round(cv.getBoundingClientRect().width), h=Math.round(cv.getBoundingClientRect().height); return w&&h?` style="width:${w}px;height:${h}px"`:""; }
+/* WHAT A CARD DOES, SCRIBBLED ON AN EXAMPLE (v569, H: "ich möchte eigentlich quasi eine Beispielkarte haben und dann mit
+   Pfeilen kurz erklärt, handschriftlich am besten auch noch ... Wie als ob da eine Karte wäre und jemand da was hinkritzelt
+   und erklärt, wie es funktioniert."): the one screen a learner meets before their first photo carries a drawn card — the
+   photo box, the characters, the pad with one stroke lit — and three notes pointing into it. v568's numbered list is gone.
+   The card is inline SVG on the app's own tokens (the v549 rule: never a screenshot, which goes stale, is in one of the ten
+   languages and costs megabytes) and carries NO translatable string, so it is identical in every language and cannot
+   overflow; the notes are real HTML text beside it, so they wrap as text does and were measured in all ten. The arrows are
+   drawn with a wobble and the notes are set in whatever handwriting face the phone has, tilted a degree or two — on a phone
+   with no such face they fall back to the UI font and the arrows carry the look on their own. */
+function introHTML(){
+  const c=n=>`var(--${n})`;
+  const arrow=d=>`<svg class="ar" viewBox="0 0 54 30" aria-hidden="true"><path d="${d}" fill="none" stroke="${c("tint")}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const mock=`<svg class="mock" viewBox="0 0 168 306" aria-hidden="true">
+    <rect x="3" y="3" width="162" height="300" rx="15" fill="${c("card")}" stroke="${c("sep")}" stroke-width="1.5"/>
+    <rect x="14" y="16" width="140" height="96" rx="10" fill="${c("card2")}" stroke="${c("sep")}"/>
+    <path d="M14 90 l34-30 26 22 22-18 44 34 v6 a10 10 0 0 1 -10 10 H24 a10 10 0 0 1 -10 -10z" fill="${c("tint-soft")}"/>
+    <circle cx="48" cy="40" r="9" fill="${c("tint-soft")}"/>
+    <g font-family="${c("hanzi")}" font-size="26" text-anchor="middle">
+      <rect x="24" y="126" width="34" height="34" rx="7" fill="none" stroke="${c("tint")}" stroke-width="2"/><text x="41" y="152" fill="${c("tint")}">面</text>
+      <rect x="62" y="126" width="34" height="34" rx="7" fill="none" stroke="${c("sep")}"/><text x="79" y="152" fill="${c("label")}">包</text>
+      <rect x="100" y="126" width="34" height="34" rx="7" fill="none" stroke="${c("sep")}"/><text x="117" y="152" fill="${c("label")}">店</text>
+    </g>
+    <rect x="14" y="176" width="140" height="114" rx="10" fill="${c("card2")}" stroke="${c("sep")}"/>
+    <path d="M84 176 V290 M14 233 H154" stroke="${c("sep")}" stroke-dasharray="6 6"/>
+    <path d="M52 202 H116" stroke="${c("label")}" stroke-width="9" stroke-linecap="round"/>
+    <path d="M84 202 V262" stroke="${c("tint")}" stroke-width="9" stroke-linecap="round"/>
+    <circle cx="84" cy="202" r="6" fill="${c("tint")}"/>
+  </svg>`;
+  return `<div class="intro">${mock}<div class="notes">
+    <div class="note n1">${arrow("M52 22 C36 24 16 18 5 7 M5 7 l11 1 M5 7 l3 10")}<span>${esc(t("Tap it — it stays big."))}</span></div>
+    <div class="note n2">${arrow("M52 15 C38 13 20 14 5 15 M5 15 l10 -5 M5 15 l10 6")}<span>${esc(t("Tap here — characters big."))}</span></div>
+    <div class="note n3">${arrow("M52 6 C38 10 17 17 5 26 M5 26 l3 -11 M5 26 l11 -2")}<span>${esc(t("Trace the lit stroke."))}</span></div>
+  </div></div>`; }
 function renderStudy(main){
   if(!S.ready){ main.innerHTML=`<div class="badge">${t("Loading …")}</div>`; return; }
   /* a card deleted while the session stands leaves its id behind in the queue, and the screen then read a card that is
@@ -3098,12 +3135,7 @@ function renderStudy(main){
       <h2>${t("No cards yet.")}</h2>
       <p>${t("Photograph a sign, a poster or a package under <b>Camera</b> — or add a word by hand under <b>Cards → + New</b>.")}</p>
       <button class="btn primary" id="go-cam">${t("Take a photo")}</button> <!-- v537: the empty deck's one call to action is filled like every other primary action in the app (+ New, Add card, Save changes, Test this card); as .btn it was tint-soft, and in dark a muddy maroon block that reads as disabled -->
-      <!-- v568 (H: "Muss aber dann natürlich auch ordentlich erklärt werden ... Vielleicht auch ganz am Anfang, bevor das erste Foto da ist, so ein How-To-Anfangs-Screen"): what a card does, on the one screen a learner meets before their first photo. The third line is the card's own hint word for word, so the sentence is recognised again on the first card. -->
-      <ol class="howto">
-        <li>${t("The photo sits on top of the card, the characters under it.")}</li>
-        <li>${t("Tap the photo, or the space beside the characters, to make either one big — it stays big until you tap again.")}</li>
-        <li>${t("Trace the lit stroke; the pad moves on by itself.")}</li>
-      </ol>
+      ${introHTML()}
       <p class="hint">${t("New here? The guide explains the app in six short sections.")}</p>
       <button class="del" id="go-guide">${t("How to use the app")}</button>
     </div>`;
@@ -3374,7 +3406,13 @@ function textFit(cr,ci,room,cap,lines){ /* the largest tile size whose rows fit 
   const avail=cr.clientWidth; cr.classList.add("wrap"); const rows=()=>new Set([...cr.querySelectorAll(".chw")].map(w=>w.offsetTop)).size;
   const fits=s=>{ cr.style.setProperty("--chs",s+"px"); return ci.scrollWidth<=avail+1&&ci.offsetHeight<=room; };
   let best=null;
-  for(let s=cap; s>=CH_MIN; s--){ if(fits(s)&&rows()===lines){ best=s; break; } } /* the photo's own rows first: 盒马鲜生 over 超市入口 at 72 rather than three rows at 80 */
+  /* v569 (H, with a screenshot of an eight-character card tapped big: "Hier sollte dann bei den Characters aber schon ein
+     Zeilenumbruch kommen, damit die auch schön groß dargestellt werden können. Aufgeklappt."): the photo's own row count is
+     preferred only in the FOLDED half, where it keeps 盒马鲜生 over 超市入口 on the photo's two rows rather than three of
+     bigger tiles. Tapped big the room is the whole cue and the point is size, so one row of eight — whose tiles the WIDTH
+     then holds to 34 px, with the half two thirds empty — must give way to two rows of four at 73. `lines` null asks for
+     the largest size that fits, whatever the rows. */
+  if(lines) for(let s=cap; s>=CH_MIN; s--){ if(fits(s)&&rows()===lines){ best=s; break; } }
   if(best==null) for(let s=cap; s>=CH_MIN; s--){ if(fits(s)){ best=s; break; } }
   if(best==null) best=CH_MIN; cr.style.setProperty("--chs",best+"px"); return ci.offsetHeight; }
 function splitFit(root){ const cue=root&&root.querySelector(".cue"), cr=cue&&cue.querySelector(".chrow"), ci=cr&&cr.querySelector(".chin"); if(!cue||!cr||!ci) return;
@@ -3383,7 +3421,7 @@ function splitFit(root){ const cue=root&&root.querySelector(".cue"), cr=cue&&cue
   const big=root.classList.contains("bigpic")?"pic":root.classList.contains("bigtxt")?"txt":null;
   let ph, th, cueH=base, cg=gap;
   if(big==="pic"){ ph=base; th=0; cg=0; }
-  else if(big==="txt"){ ph=0; cg=0; th=Math.max(base,textFit(cr,ci,base-lineH,CH_BIG,lines)+lineH); cueH=th; }
+  else if(big==="txt"){ ph=0; cg=0; th=Math.max(base,textFit(cr,ci,base-lineH,CH_BIG,null)+lineH); cueH=th; } /* v569: big means big — the rows are whatever gives the largest tiles */
   else { const half=Math.floor((base-gap)/2), need=textFit(cr,ci,half-lineH,CH_MAX,lines)+lineH;
     if(need<=half){ th=half; ph=base-gap-half; } else { th=need; ph=Math.max(PHOTO_MIN,base-gap-need); cueH=ph+gap+th; } } /* the picture gives the room first, then the cue grows */
   root.style.setProperty("--ph",ph+"px"); root.style.setProperty("--th",th+"px"); root.style.setProperty("--cg",cg+"px"); root.style.setProperty("--cueh",cueH+"px");
@@ -3867,7 +3905,7 @@ function mountPad(card,d,c,tg,st,cur){
     if(free){ st.free.push(s); paint(); acts(); return; }
     if(!strokes||st.k>=strokes.length){ paint(); return; }
     const tm=strokes[st.k], dist=traceDist(s,tm), back=traceDist(s,tm.slice().reverse()), len=strokeLen(tm), bar=Math.min(TRACE_OK,0.07+0.5*len); /* a short stroke gets a tighter bar — a dot could otherwise land anywhere within 18 % of the pad — and a stroke that fits the template better backwards than forwards is a stroke drawn backwards, whatever its distance */
-    if(dist<=bar&&dist<=back+0.01){ st.k++; st.miss=0; st.hint=false; anim=null; paint(); acts(); logPadStroke(cur,st.k-1,true,dist); if(st.k>=strokes.length) charDone(false); }
+    if(dist<=bar&&dist<=back+0.01){ st.k++; st.miss=0; st.hint=false; anim=null; paint(); acts(); logPadStroke(cur,st.k-1,true,dist); notePadSoon(); if(st.k>=strokes.length) charDone(false); }
     else miss(); };
   const charDone=async helped=>{
     const i=tg.indexOf(cur); if(helped) st.helped.add(i); st.done.add(i);
@@ -4969,6 +5007,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  569:"Fold the phone or leave the app: the card comes back exactly as you left it, with the strokes you had already written. And the characters tapped big now break onto more rows, so they come out as large as they fit.",
   568:"Tap the photo, or the space beside the characters, to make either one big — and it stays big while you write the whole card. One more tap folds it back.",
   564:"The top of the card is two halves now: the picture, and under it the whole text with its pinyin. Tap the picture to make it big, tap the text to make the text big.",
   561:"The card is three panels now: the photo with its characters and pinyin, a writing pad of the same size, and the details below.",
@@ -9388,13 +9427,25 @@ let RELOADING=false, VIEW_KEY="";
    one and the app looks as if it jumped by itself; the Done capsule went back to 0 with it. The queue is card ids, so the
    note stays small. What it still cannot restore: a single-card test from the Cards list (S.single/S.saved) — a reload there
    comes back in the ordinary session. */
-const viewNow=own=>({mode:S.mode,detail:S.detail,query:S.query,tab:S.cardsTab,scroll:window.scrollY,at:Date.now(),own:!!own,
-  ...(S.mode==="study"&&!S.single?{queue:S.queue,idx:S.idx,revealed:!!S.ansOpen,done:S.done,ahead:S.ahead,lock:S.lockChar||null,walk:walking()?S.walk:null,walkIdx:S.walkIdx|0}:{})}); /* revealed = the answer block open (v512); lock, walk and walkIdx the locked character's walk (v513) */
+/* v569 (H: "Handy auf und zu klappen darf auch nichts verändern"): a fold by itself changes nothing — the resize path of
+   v532 re-fits and every value holds, measured — but a fold that makes Chrome recreate the page is a RELOAD, and a reload
+   threw two things away that the learner had done by hand: the half the tap made big (v568) and the pad's own progress —
+   which characters of this card are already written, which needed help, how many strokes of the current one are in. So the
+   note carries both. `free`, the freehand strokes of a character with no template, is left out: it can be long and a
+   drawing in progress is genuinely transient. */
+const padNote=()=>{ const p=S.pad; return p&&p.key?{key:p.key,i:p.i,k:p.k,miss:p.miss|0,hint:!!p.hint,maxMiss:p.maxMiss|0,done:[...p.done],helped:[...p.helped],lv:p.lv}:null; };
+const viewNow=own=>({mode:S.mode,detail:S.detail,query:S.query,tab:S.cardsTab,scroll:window.scrollY,at:Date.now(),own:!!own,big:S.cueBig,
+  ...(S.mode==="study"&&!S.single?{queue:S.queue,idx:S.idx,revealed:!!S.ansOpen,done:S.done,ahead:S.ahead,lock:S.lockChar||null,walk:walking()?S.walk:null,walkIdx:S.walkIdx|0,pad:padNote()}:{})}); /* revealed = the answer block open (v512); lock, walk and walkIdx the locked character's walk (v513) */
 const noteView=()=>{ if(!RELOADING&&S.ready){ VIEW_KEY=""; setSetting("resumeView",viewNow(false)).catch(()=>{}); } };
+/* v569: a stroke that snapped is part of the screen too, but one settings write per stroke is eight to fifteen a character
+   — so the strokes already in are noted on a debounce, which coalesces a burst into one write about half a second after the
+   finger stops. The characters already written are noted at once, by noteViewSoon's own key. */
+let _padNoteT=null;
+function notePadSoon(){ if(RELOADING||!S.ready) return; clearTimeout(_padNoteT); _padNoteT=setTimeout(()=>{ if(!RELOADING&&S.ready&&S.mode==="study"){ VIEW_KEY=""; setSetting("resumeView",viewNow(false)).catch(()=>{}); } },600); }
 /* the note has to be on disk BEFORE the gesture: a pull-to-refresh tears the document down at once, and an IndexedDB write
    started in pagehide is not guaranteed to commit (measured — it did not). So every change of screen writes it, which is one
    small put per navigation inside the app; the scroll is refreshed when the app goes to the background and by reloadNow. */
-function noteViewSoon(){ if(RELOADING||!S.ready) return; const k=S.mode+"|"+(S.detail||"")+"|"+(S.query||"")+"|"+S.cardsTab+(S.mode==="study"?"|"+S.idx+"|"+(S.ansOpen?1:0)+"|"+(S.lockChar||"")+"|"+(S.walkIdx|0):""); if(k===VIEW_KEY) return; /* v423: inside Learn the card and whether its answer is open are part of the screen, so each one is noted as it comes up */ VIEW_KEY=k; setSetting("resumeView",viewNow(false)).catch(()=>{}); }
+function noteViewSoon(){ if(RELOADING||!S.ready) return; const k=S.mode+"|"+(S.detail||"")+"|"+(S.query||"")+"|"+S.cardsTab+"|"+(S.cueBig||"")+(S.mode==="study"?"|"+S.idx+"|"+(S.ansOpen?1:0)+"|"+(S.lockChar||"")+"|"+(S.walkIdx|0)+"|"+(S.pad?S.pad.i+":"+S.pad.done.size+":"+S.pad.helped.size:""):""); /* v569: the enlarged half and the pad's own progress are part of the screen, so each character written notes it */ if(k===VIEW_KEY) return; /* v423: inside Learn the card and whether its answer is open are part of the screen, so each one is noted as it comes up */ VIEW_KEY=k; setSetting("resumeView",viewNow(false)).catch(()=>{}); }
 document.addEventListener("visibilitychange",()=>{ if(document.hidden) noteView(); });
 window.addEventListener("pagehide",noteView);
 const navReload=()=>{ try{ const n=performance.getEntriesByType("navigation")[0]; return !!n&&n.type==="reload"; }catch(e){ return false; } };
