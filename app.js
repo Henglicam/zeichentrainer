@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=578; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=579; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v579","pad: freehand taken at speed?"],
   ["app","v578","card with no photo: word on top"],
   ["app","v577","finished card: reading + meaning"],
   ["app","v575","Photo open/close: the mark sticks"],
@@ -709,7 +710,6 @@ const TO_TEST=[
   ["learn","v571","write a character: its meaning stands small under the pinyin over the pad, and it is the character's own"],
   ["learn","v570","write a character you know freehand on the pad, in your own stroke order: it is taken without Show me or Skip"],
   ["learn","v570","trace as usual: one stroke that misses still shakes, and it disappears again when the next one fits"],
-  ["app","v548","More → Learning → Handwriting on: write a character you know in your own order, and see whether Done accepts it"],
   ["app","v547","More: four sections, and everything you used to find is still there"],
   ["app","v546","tap the star counter in Learn: the rule and the last seven days, and the day's own number above them"],
   ["app","v545","cross 50 points in a day: the counter bursts, once, and the card holds a second longer"],
@@ -2542,7 +2542,6 @@ function renderMore(main){
     <div class="listhead">${t("Learning")}</div> <!-- four sections since v547 (H: "Go for all five" on the described More); Learning stays first, the v275 decision -->
     <div class="mrow"><div style="flex:1"><div class="t">${t("Progress")}</div><div class="s">${progressHTML()}</div><div class="fieldacts"><button class="btn mini" id="usage-share">${t("Share report")}</button></div></div></div>
     <div class="mrow"><div><div class="t">${t("Card order")}</div><div class="s">${t("Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.",NEW_PER_SESSION)}</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${t(l)}</button>`).join("")}</div></div></div>
-    <div class="mrow"><div><div class="t">${t("Handwriting")}</div><div class="s">${t("No template and no stroke order: write the whole character, then tap Done and the app checks it. For characters you already know.")}<label class="check" style="margin:8px 0 0"><input type="checkbox" id="hand-write"${handWrite()?" checked":""}> ${t("Write freehand")}</label></div></div></div>
     ${tagRowHTML()}
     ${undoRunHTML("tags")}
     ${recheckRowHTML()}
@@ -2618,7 +2617,6 @@ function renderMore(main){
     if(!navigator.onLine){ st.textContent=t("No connection. Try again when online."); return; }
     b.disabled=true; st.textContent=t("Sending …");
     try{ const r=await sendFeedback(text,FB_SHOT&&FB_SHOT.b64); tx.value=""; fbShotDrop(); fbShotDraw(); st.textContent=r==="noshot"?t("Sent, but the screenshot could not be attached."):t("Thank you, sent."); }catch(err){ st.textContent=t("Could not send: {0}",err&&err.message||err); } b.disabled=false; };
-  $("#hand-write").onchange=async e=>{ await setSetting("handWrite",!!e.target.checked); S.pad=null; }; /* v548: the next card builds its pad the new way */
   $("#update-note").onchange=async e=>{ await setSetting("updateNote",!!e.target.checked); if(!e.target.checked) hideUpdated(); };
   $("#share-usage").onchange=async e=>{ await setSetting("shareUsage",!!e.target.checked); $("#share-status").textContent=shareNote(); sendReport(); };
   $("#import").onclick=()=>$("#imp").click();
@@ -3195,7 +3193,7 @@ function renderStudy(main){
   const back=`<div class="anshanzi hanzi">${(d.trad?d.trad.split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}
       <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button></div>`;
   const noTmpl=cur&&STROKES&&!STROKE_OF.has(cur.glyph);
-  const freePad=noTmpl||(cur&&handWrite()&&STROKE_OF.has(cur.glyph)); /* v548: handwriting draws freehand too, so it needs Undo, Clear and the note the free pad has always had */
+  const freePad=noTmpl; /* a character the stroke set lacks: the pad draws freehand and needs Undo, Clear and the note. Every OTHER character gets the same buttons the moment the pad starts judging the whole character (v570), which is why the v548 switch had nothing left to turn on (v579). */
   /* v574 (H with a screenshot of a single-card test: "Warum ist oben so viel Platz??"): the ← Cards row is a SIBLING of the
      card, above it, as it is on every other screen — the card detail, the guide and the two forms all put their topline
      above their own card. Inside the card it was the first child of the study card's GRID, whose first row is the cue's own
@@ -3673,7 +3671,6 @@ async function checkCard(id){ const d=cardOf(id); if(!d||!d.unchecked) return; c
    learner's own stroke order, and the stroke matcher of v141 judges the whole character at Done. The matcher is
    order-free by construction (a Hungarian assignment over the strokes), so the order really is the learner's. Off by
    default — see § the entry for why the automatic trigger at level 3 was measured and not built. */
-const handWrite=()=>S.settings.handWrite===true;
 const HAND_TOP=3, HAND_AT=2; /* the target must be among the matcher's three best — the drawing sheet's own rule since v141 — and the pad starts judging the whole character after two strokes in a row that did not fit (v570) */
 const PAD_FLOOR=160, PHOTO_MIN=120, LINE_H=61, CLIP_RATIO=0.65, TRACE_OK=0.18, NEXT_MS=3500, RECAP_SYL=230, RECAP_MAX=5600, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
 const CARD_RATIO=1.5; /* the one window and box shape on every card, 3:2 (v519) — declared here, since FRONT_RATIO reads it at load time */
@@ -3938,7 +3935,7 @@ function mountPad(card,d,c,tg,st,cur){
      (padLine calls it) — and on every resize through the one listener below, where v517–v520 fitted once and took the first
      resize only. On a card where nothing moved the repeat measures the same numbers and the pad stays exactly as it was. */
   requestAnimationFrame(()=>fit()); const pic=card.querySelector(".zone1 img.signimg"); if(pic&&!pic.complete) pic.addEventListener("load",()=>fit(),{once:true});
-  const tmpl=cur&&STROKE_OF.get(cur.glyph); const hand=!!tmpl&&handWrite(); let free=!tmpl||hand; const strokes=tmpl?tmpl.map(s=>s.map(padPt)):null; let drawing=null, anim=null, flash=0;
+  const tmpl=cur&&STROKE_OF.get(cur.glyph); let free=!tmpl; const strokes=tmpl?tmpl.map(s=>s.map(padPt)):null; let drawing=null, anim=null, flash=0;
   const outl=tmpl&&cur?outlinesFor(cur.glyph,tmpl.length):null; /* the real Kai outlines when they have arrived (v517) */
   const kinds=strokes?strokes.map(strokeKind):null;
   const lvl=cur?padLevel(c,cur,st):1;
@@ -3952,17 +3949,17 @@ function mountPad(card,d,c,tg,st,cur){
     ctx.strokeStyle=cssVar("--sep")||"#ccc"; ctx.lineWidth=2; ctx.setLineDash([10,10]); ctx.beginPath(); ctx.moveTo(N/2,0); ctx.lineTo(N/2,N); ctx.moveTo(0,N/2); ctx.lineTo(N,N/2); ctx.stroke(); ctx.setLineDash([]);
     ctx.lineWidth=PAD_LW; ctx.lineCap="round"; ctx.lineJoin="round";
     if(strokes){
-      const showT=hand?(st.hint?0.12:0):(lvl===1?0.3:lvl===2?0.12:st.hint?0.12:0); /* level 1 trace, level 2 faint, level 3 recall — a miss shows the faint template for that stroke (§ 8.1); handwriting shows nothing until Show me asks for it */
+      const showT=lvl===1?0.3:lvl===2?0.12:st.hint?0.12:0; /* level 1 trace, level 2 faint, level 3 recall — a miss shows the faint template for that stroke (§ 8.1) */
       if(showT&&!flash){ ctx.globalAlpha=showT; ctx.fillStyle=cssVar("--label3")||"#aaa"; strokes.forEach((s,k)=>glyph(k)); ctx.globalAlpha=1; }
       ctx.fillStyle=flash?(cssVar("--ok")||"#2fa36b"):(cssVar("--label")||"#000"); for(let i=0;i<Math.min(st.k,strokes.length);i++) glyph(i);
-      const lit=!hand&&st.k<strokes.length&&(lvl===1||st.hint)&&!flash; /* handwriting has no current stroke to light */
+      const lit=st.k<strokes.length&&(lvl===1||st.hint)&&!flash;
       if(lit){ ctx.globalAlpha=0.55; ctx.fillStyle=cssVar("--tint")||"#c8372d"; glyph(st.k); ctx.globalAlpha=1; const p0=P(strokes[st.k][0]); ctx.fillStyle=cssVar("--tint")||"#c8372d"; ctx.beginPath(); ctx.arc(p0[0],p0[1],10,0,Math.PI*2); ctx.fill(); }
       if(anim){ const f=reduced?1:Math.min(1,(performance.now()-anim.t0)/500); ctx.strokeStyle=cssVar("--tint")||"#c8372d"; ctx.lineWidth=PAD_LW; path(strokes[anim.k],f); } /* "Show me" draws the stroke on, so it follows the centreline rather than the outline */
     } else if(cur){ ctx.globalAlpha=0.25; ctx.fillStyle=cssVar("--label3")||"#aaa"; ctx.font=`${Math.round(N*0.6)}px ${cssVar("--hanzi")||"serif"}`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(cur.glyph,N/2,N/2); ctx.globalAlpha=1; }
     ctx.strokeStyle=cssVar("--label")||"#000"; ctx.lineWidth=PAD_LW; for(const s of st.free.concat(drawing?[drawing]:[])) inked(s);
   };
   const acts=()=>{ const sh=$("#pad-show"), sk=$("#pad-skip"), dn=$("#pad-done"), un=$("#pad-undo"), cl=$("#pad-clear"); const loose=free||st.hw; /* v570: a pad judging the whole character has loose ink on it, so it gets Undo and Clear too */
-    if(sh) sh.hidden=(free&&!hand)||st.miss<2; if(sk) sk.hidden=(free&&!hand)||st.miss<4; if(dn) dn.hidden=!free; if(un) un.hidden=!loose||!st.free.length; if(cl) cl.hidden=!loose; }; /* v548: handwriting keeps the two ways out — Show me after two tries, Skip after four */
+    if(sh) sh.hidden=free||st.miss<2; if(sk) sk.hidden=free||st.miss<4; if(dn) dn.hidden=!free; if(un) un.hidden=!loose||!st.free.length; if(cl) cl.hidden=!loose; }; /* v548: handwriting keeps the two ways out — Show me after two tries, Skip after four */
   const showStroke=(k,slow)=>{ anim={k,t0:performance.now()-(slow?0:0)}; const dur=reduced?350:(slow?1000:500); const step=()=>{ if(!anim||!cv.isConnected) return; paint(); if(performance.now()-anim.t0<dur) requestAnimationFrame(step); else { anim=null; paint(); } }; requestAnimationFrame(step); };
   /* v570: once the pad has decided to judge the WHOLE character (two strokes in a row that did not fit), a single stroke
      is not a failure any more — it is part of what is being written —, so the shake and the expected stroke's animation
@@ -4101,17 +4098,10 @@ function mountPad(card,d,c,tg,st,cur){
   { const un=$("#pad-undo"); if(un) un.onclick=()=>{ if(free||st.hw){ st.free.pop(); } else if(st.k>0){ st.k--; st.miss=0; } anim=null; paint(); acts(); }; }
   { const cl2=$("#pad-clear"); if(cl2) cl2.onclick=()=>{ if(free) st.free.length=0; else if(st.hw){ st.free.length=0; st.hw=false; } /* v570: clearing what was scribbled puts the pad back to tracing, with Show me and Skip still where the misses left them */
     else { st.k=0; st.miss=0; st.hint=false; } anim=null; paint(); acts(); }; }
-  $("#pad-show").onclick=()=>{ if(hand){ st.hint=true; paint(); acts(); return; } /* v548: the whole character, faint — there is no one stroke to animate */
+  $("#pad-show").onclick=()=>{
     if(strokes&&st.k<strokes.length) showStroke(st.k,true); };
-  $("#pad-skip").onclick=()=>{ if(!strokes) return; if(hand){ const i=tg.indexOf(cur); st.helped.add(i); charDone(true); return; } /* v548 */ st.k++; st.miss=0; st.hint=false; anim=null; paint(); acts(); const i=tg.indexOf(cur); st.helped.add(i); if(st.k>=strokes.length) charDone(true); };
+  $("#pad-skip").onclick=()=>{ if(!strokes) return; st.k++; st.miss=0; st.hint=false; anim=null; paint(); acts(); const i=tg.indexOf(cur); st.helped.add(i); if(st.k>=strokes.length) charDone(true); };
   $("#pad-done").onclick=async()=>{ if(!free||!st.free.length) return; const note=$("#pad-note");
-    if(hand){ /* v548: the stroke matcher judges the whole character, in the learner's own order, with no reader worker and nothing on the network */
-      if(note) note.textContent=t("Checking …");
-      try{ const got=await strokeMatch(st.free.map(s=>s.map(p=>[p[0]*N,p[1]*N])));
-        if(got.slice(0,HAND_TOP).some(x=>x.ch===cur.glyph)){ if(note) note.textContent=""; st.k=strokes.length; charDone(false); } /* st.k so the finished character flashes green as a traced one does */
-        else handMiss(); }
-      catch(err){ if(note) note.textContent=t("Reading failed: {0}",err&&err.message||err); }
-      return; }
     if(note) note.textContent=t("reading …");
     try{ const w=await ocrWorker(x=>{ if(note) note.textContent=x; }); const got=await recognizeStrokes(w,st.free.map(s=>s.map(p=>[p[0]*N,p[1]*N])),null);
       if(got.slice(0,3).includes(cur.glyph)){ charDone(false); } else if(note) note.textContent=t("Not recognized — try cleaner, well-separated strokes."); }
@@ -5163,7 +5153,6 @@ const WHATS_NEW={
   550:"Writing a card pauses once a word, on the word's pinyin — not after every character.",
   549:"How to use the app, under More → Help, is six pictures and a few sentences now instead of a wall of text.",
   570:"Know a character already? Write it on the pad your own way — after two strokes that do not fit, the pad judges the whole character instead of each stroke, and takes it when it matches.",
-  548:"New under More → Learning: Handwriting. With it on there is no template and no stroke order — write the whole character, tap Done, and the app checks it.",
   547:"More is four sections instead of eleven — Learning, Your cards, The app, Advanced settings — and nothing has moved off the screen, only into a shorter list.",
   546:"Points are simpler and slower now: one point for every character you write without help, and no hidden bonus. Tap the star counter to see how they are counted and what your last seven days were.",
   545:"When a card takes your points past 50, 100, 250, 500 or 1000, or you keep your streak at a week, a month or a hundred days, the counter bursts.",
