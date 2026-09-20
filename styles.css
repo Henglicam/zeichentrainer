@@ -852,7 +852,9 @@ body.noscroll{overflow:hidden}
 .card.study:not(.detail){display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:var(--cueh,auto) auto auto;grid-auto-rows:auto;row-gap:8px;box-sizing:border-box}
 .card.study:not(.detail)>*{margin-top:0}
 /* v564 (H: "den oberen Teil nochmal in zwei Hälften trennt ... eine Hälfte ist das Bild ... Die zweite Hälfte ist der ganze Text"): the cue — as tall as the pad, on no panel of its own since v563 — is two halves, the picture over the whole text; --ph, --th and --cg are written by splitFit (app.js), and a tap on either half gives it the whole cue while the other closes to 0, on a slide */
-.cue{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:var(--ph,minmax(0,1fr)) var(--th,auto);row-gap:var(--cg,8px);min-height:0;box-sizing:border-box;transition:grid-template-rows .22s cubic-bezier(.22,.61,.36,1),row-gap .22s cubic-bezier(.22,.61,.36,1)}
+.cue{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:var(--ph,minmax(0,1fr)) var(--th,auto);row-gap:var(--cg,8px);min-height:0;box-sizing:border-box}
+.cue.gl{transition:grid-template-rows .22s cubic-bezier(.22,.61,.36,1),row-gap .22s cubic-bezier(.22,.61,.36,1)} /* v565: the slide only on a tap (cueBig sets .gl for its duration) — a render never animates the halves into place */
+.cue .zone1 .picbox:not(.page):not(.sized) .signimg{opacity:0} /* v565: the picture shows only once splitFit knows its shape — fitted or clipped — so a picture that decodes late never appears in the wrong one and jumps (the carousel's neighbour did) */
 .cue .txt{min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:stretch;overflow:hidden;cursor:pointer} /* the text half: the tiles' rows over the word line, centred in the half */
 .cue .zone1{min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:var(--rc)}
 .cue .zone1 .picbox:not(.page){aspect-ratio:auto;height:100%;flex:1;display:flex;align-items:center;justify-content:center;margin:0}
