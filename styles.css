@@ -432,7 +432,7 @@ body.noscroll{overflow:hidden}
 /* sign card front */
 .signfront{width:100%;max-width:440px;margin:0 auto}
 /* the crop in a fixed 16:9 box inside the card (v224; the edge-to-edge box of v228 went in v229 — H: "Bild in der Box gefiel mir besser"), with the text box's hairline edge, and a blurred copy of the crop filling the box behind it (v229); the copy carries the photo's own colours (v230, H: "match the soft blurred fill with the color of the photo"; v229 had it at 45 % over the grey, which washed a red crop to pink), darkened the way photo apps letterbox a picture — the blurred image at full opacity, brightness 65 %, slightly enlarged so the blur's edges never show (v231, H: "Dimming would be OK. Please do it how it's usually done.") */
-.picbox{position:relative;width:100%;aspect-ratio:16/9;background:var(--card2);border-radius:var(--rc);margin:0 auto 10px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--sep)}
+.picbox{position:relative;width:100%;aspect-ratio:var(--pr,16/9);background:var(--card2);border-radius:var(--rc);margin:0 auto 10px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--sep)}
 .picbox .picbg{position:absolute;left:-10%;top:-10%;width:120%;height:120%;object-fit:cover;filter:blur(24px) saturate(.55) brightness(.85);opacity:.55;pointer-events:none} /* subdued: the photo's colour only hints through the card's grey (v234, H: "die Hintergründe bitte dezenter" — v231 had it at full opacity, brightness 65 %) */
 .picbox .signimg{position:relative;width:100%;height:100%;object-fit:contain;margin:0;max-height:none;border-radius:0}
 .signimg{max-width:100%;max-height:220px;display:block;margin:0 auto 10px;border-radius:10px} /* outside the box only the whole-photo view (.full) is left, in the photo's own shape */
@@ -659,7 +659,7 @@ body.noscroll{overflow:hidden}
 
 /* ---------- the write layout of Learn (v512, SPEC-flashcard-layout.md phase 1): the photo with the flag in its corner, the
    character buttons grouped by word, the folded answer block, the square pad and the line under it ---------- */
-.card.study{padding-top:16px}
+.card.study{padding-top:12px;padding-bottom:14px} /* v559: 16/18 until then — the two smallest of the six gaps the pad pays for on a wrapped card */
 .card.study .zone1{position:relative}
 .card.study .zone1 .picbox{margin-bottom:0}
 .picflag{position:absolute;right:8px;top:8px;width:36px;height:36px;border:none;border-radius:999px;background:rgba(255,255,255,.85);color:var(--label3);font-size:18px;line-height:36px;padding:0;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.25)} /* the review flag on the picture, as the star sits on a tile (v465) */
@@ -670,12 +670,12 @@ body.noscroll{overflow:hidden}
    against a one-line card's 60, and the pad paid the difference. The rows are laid side by side now with the photo's own
    line breaks kept as a rule between them. The row never scrolls (v519): its buttons shrink to fit (--chs, chrowFit) and
    only a text that does not fit at CH_MIN wraps onto a second row. */
-.chrow{margin-top:12px;display:flex;flex-direction:row;flex-wrap:nowrap;justify-content:safe center;gap:14px;
+.chrow{margin-top:8px;display:flex;flex-direction:row;flex-wrap:nowrap;justify-content:safe center;gap:14px;
   max-width:100%;overflow:hidden;--chs:56px}
 .chrow .chline{display:flex;flex-wrap:nowrap;flex:0 0 auto}
 /* wrapped, the photo's line groups dissolve and the word tiles flow — a photo line wider than the card would otherwise be
    clipped at both edges (measured on the 美团 badge's two lines of 7 and 8 targets); the hairline between lines goes with them */
-.chrow.wrap{flex-wrap:wrap;row-gap:8px;justify-content:center}
+.chrow.wrap{flex-wrap:wrap;row-gap:6px;justify-content:center}
 .chrow.wrap .chline{display:contents}
 .chrow .chline+.chline{border-left:1px solid var(--sep);padding-left:14px}
 .chline{display:flex;flex-wrap:wrap;justify-content:center;gap:10px} /* one row per photo line; a line wider than the card wraps here */
@@ -688,7 +688,7 @@ body.noscroll{overflow:hidden}
 .chrow .ch.done{color:var(--ok)} /* written this session: the glyph in green, no fill and no badge (v525) */
 .chrow .ch.done.cur{color:var(--tint)}
 .chrow .ch.num{font-family:var(--sans);font-size:17px;font-weight:600;width:auto;padding:0 10px;color:var(--label2)} /* not scaled: its width is its text's */ /* a number with its unit: one button, not writable */
-.fold{margin-top:12px;text-align:left}
+.fold{margin-top:8px;text-align:left}
 .foldbtn{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;width:100%;min-height:36px;border:none;background:var(--card2);border-radius:var(--r);padding:0 12px;font:500 15px var(--ui);color:var(--label2);cursor:pointer;text-align:left}
 .foldbtn i{margin-left:auto;font-style:normal;font-size:18px;line-height:1;transition:transform .15s} .fold.open .foldbtn i{transform:rotate(180deg)}
 .fold .ans{padding-top:12px;text-align:center}
@@ -699,7 +699,7 @@ body.noscroll{overflow:hidden}
 .desc{margin:10px auto 0;max-width:34em;font-size:15px;line-height:1.45;color:var(--label2);text-align:left}
 .desc.want{text-align:center} .desc.want .del{font-size:15px;padding:6px 10px;min-height:36px} .desc.want .hint{margin-top:2px} .desc.want .reading{justify-content:center}
 .pill.again{margin-left:0;background:var(--tint-soft);color:var(--tint)} /* the repeat pass of a written card (§ 8.1) */
-.padwrap{position:relative;margin-top:12px;display:flex;justify-content:center}
+.padwrap{position:relative;margin-top:8px;display:flex;justify-content:center}
 .wpad{display:block;border-radius:var(--rc);background:var(--card2);touch-action:none;box-shadow:inset 0 0 0 1px var(--sep)} /* the pad takes the finger: a stroke is never a swipe */
 .wpad.ghost{width:100%;aspect-ratio:1} /* the carousel's neighbour carries an empty pad; since v530 sized inline to the standing pad's own side (ghostSize), this square is the fallback for a card without one */
 .wpad.shake{animation:padshake .24s}
@@ -807,7 +807,7 @@ body.noscroll{overflow:hidden}
 .prspark{position:fixed;left:0;top:0;width:8px;height:8px;border-radius:50%;background:var(--tint);pointer-events:none;z-index:41;opacity:0;will-change:transform,opacity}
 .prspark.gold{background:var(--warn)}
 
-.padline{margin-top:10px;min-height:61px;font-size:15px;color:var(--label2);display:flex;flex-direction:column;align-items:center;gap:3px} /* two rows tall whatever the word (v518), so the pad above it is the same size on a one-character word */
+.padline{margin-top:6px;min-height:61px;font-size:15px;color:var(--label2);display:flex;flex-direction:column;align-items:center;gap:3px} /* two rows tall whatever the word (v518), so the pad above it is the same size on a one-character word */
 .padline[hidden]{display:none}
 .padline .plrow{display:flex;justify-content:center;gap:10px;align-items:baseline;max-width:100%;white-space:nowrap;overflow:hidden} /* the character, and under it its word (v540; the other way round v517–v539) */
 .padline .plrow>*{flex:none;min-width:0} .padline .plrow .mn{flex:0 1 auto;overflow:hidden;text-overflow:ellipsis} /* v540: a centred flex row slices its overflow off BOTH ends, and text-overflow on the row itself does nothing — the meaning is the one part that may shrink, and it ends in an ellipsis */
@@ -840,3 +840,18 @@ body.noscroll{overflow:hidden}
    picture itself is fitted inside with the blurred fill of v232 behind it */
 .card.study .picbox.page,.card.peer .picbox.page{aspect-ratio:1.5} /* 3:2 since v519; and the carousel's neighbour (v518): a page front slid in at its own v514 ratio and jumped to 2:1 at the snap */
 .picbox.zoomed{touch-action:none} .picbox.zoomed .signimg,.picbox.zoomed .pagewrap{will-change:transform}
+
+/* v559 (H on a card of two character rows, its pad on the 200 px floor and the fold row under the tab bar: "gehen die
+   Proportionen vielleicht noch ein bisschen besser?" — of four ways measured at his 393 × 869, "C"): on a WRAPPED card the
+   photo box is 16:9 instead of 3:2, and the 3:2 window keeps its own size inside it — clipped by 8 % at the top and at the
+   bottom rather than fitted narrower, since the window is centred on the text (v329), so the text stays whole and only the
+   surroundings above and below it go. The picture element keeps its natural shape (height auto with its own ratio) and the
+   box clips it, so spotGeom's reading of the rendered rect and the zoom's r0 are still the picture's own and the mark on
+   the photo stays where it is; the centring is a margin, not a transform, because attachPicZoom writes the transform.
+   The pad gets the 34 px: 200 → 265 on that card at 393 × 869 (with the gaps above, +22 more on every card). A one-row
+   card keeps its 3:2 box untouched, and so does the open card under Cards, which has no pad to make room for. A page
+   front is not a picbox of this kind. A portrait picture — a hand-drawn frame from before v519 — on a wrapped card is
+   clipped the same 8 %, named as the cost: every window since v519 is 3:2 and a wrapped card is a sign of eight
+   characters or more, so the case is an old card's. */
+.card.study.wrapped:not(.detail) .zone1 .picbox:not(.page){aspect-ratio:16/9}
+.card.study.wrapped:not(.detail) .zone1 .picbox:not(.page) .signimg:not(.full){height:auto;aspect-ratio:1.5;margin-top:calc((100% * 9 / 16 - 100% / 1.5) / 2)}
