@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=564; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=565; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -670,6 +670,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v565","swipe to the next card: the picture of the card that rides in is the picture the card then shows — nothing jumps at the snap"],
   ["app","v564","the top of the card in two halves: the picture over the whole text with its word line, every character in view; a tap on the picture makes it big, a tap on the text makes the text big, a tap again brings the halves back"],
   ["app","v564","a card of eight characters: its tiles smaller in the half (40 px), full size when the text is tapped big; a card of sixteen: the picture at its 120 px floor and the pad a little smaller"],
   ["app","v563","the app comes to rest: About says v563, no reload by itself more often than every ten minutes"],
@@ -3374,9 +3375,15 @@ function splitFit(root){ const cue=root&&root.querySelector(".cue"), cr=cue&&cue
     if(need<=half){ th=half; ph=base-gap-half; } else { th=need; ph=Math.max(PHOTO_MIN,base-gap-need); cueH=ph+gap+th; } } /* the picture gives the room first, then the cue grows */
   root.style.setProperty("--ph",ph+"px"); root.style.setProperty("--th",th+"px"); root.style.setProperty("--cg",cg+"px"); root.style.setProperty("--cueh",cueH+"px");
   const pic=cue.querySelector(".zone1 .picbox:not(.page)"), im=pic&&pic.querySelector(".signimg"), inner=root.clientWidth-36; /* the picture keeps its own height and the half clips it when it is close to the half's shape; a picture much taller (a label's own frame) is fitted inside instead */
-  if(pic&&im&&im.naturalWidth&&ph) pic.classList.toggle("clip",im.naturalWidth/im.naturalHeight>=CLIP_RATIO*(inner/ph));
+  /* v565 (H: "das Foto springt irgendwie, wenn man auf eine neue Karte switcht"): the decision needs the picture's own size, and the
+     carousel's neighbour is split before its picture has decoded — so it rode in fitted small and the card then showed it clipped
+     to the full width at the snap. Until the size is known the picture stays invisible (.sized, styles.css) and the decision is
+     taken again on its load; a card whose picture is already decoded (the one the neighbour just showed) is sized at once. */
+  if(pic&&im&&ph){ if(im.naturalWidth){ pic.classList.toggle("clip",im.naturalWidth/im.naturalHeight>=CLIP_RATIO*(inner/ph)); pic.classList.add("sized"); }
+    else if(!pic._sizing){ pic._sizing=true; im.addEventListener("load",()=>splitFit(root),{once:true}); } }
   root._split={ph,th,cueH,chs:parseFloat(cr.style.getPropertyValue("--chs")),big}; }
 function cueBig(card,which){ const was=card.classList.contains("bigpic")?"pic":card.classList.contains("bigtxt")?"txt":null, to=was===which?null:which;
+  const cue=card.querySelector(".cue"); if(cue){ cue.classList.add("gl"); clearTimeout(card._glT); card._glT=setTimeout(()=>cue.classList.remove("gl"),320); } /* v565: the slide runs on a tap only — a render must never animate the halves into place */
   card.classList.toggle("bigpic",to==="pic"); card.classList.toggle("bigtxt",to==="txt"); splitFit(card); }
 /* the characters of the card as the pad's targets, grouped by word (§ 5, Q3): one entry per character of the text, in the
    text's order and with its repeats (v430), each knowing its word (wi) so the buttons of one word sit in one group and the
