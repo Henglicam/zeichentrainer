@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=551; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=552; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -547,6 +547,7 @@ function diagText(){
     /* the settings the same photo would be read differently under: the app's language goes into picSystem() through
        meaningLangName(), so a German phone gets another answer for the same picture */
     `settings · lang ${LANG} · picture to the AI ${S.settings.aiPicture===false?"off":"on"} · relay ${S.settings.aiRelay===false?"off":"on"} · auto check ${S.settings.aiAuto===false?"off":"on"} · offline model ${S.settings.nmt?"on":"off"} · mirror ${S.settings.mirror===undefined?"default":(S.settings.mirror||"off")} · brightening ${S.settings.brightPass?"done":"not yet"} · re-cut ${recutLine()}`,
+    `marks on the photo · ${markLine()}`,
     `main thread · long tasks ${LONG.n}${LONG.n?` (${Math.round(LONG.total)} ms in all, longest ${Math.round(LONG.max)} ms, last ${ago(LONG.at)})`:""} · parse strokes ${PARSE_MS.strokes==null?"not yet":PARSE_MS.strokes+" ms"}, outlines ${PARSE_MS.outlines==null?"not yet":PARSE_MS.outlines+" ms"} · resizes ${RESIZES.length?RESIZES.map(r=>r.bfcache?"back from the cache "+ago(r.t):`${r.from.join("×")}→${r.to.join("×")} ${ago(r.t)}`).join("; "):"none"}`, /* v532: what a fold did to the page, for H's next dump */
     `learn fit · ${LAST_FIT?Object.entries(LAST_FIT).filter(([k])=>k!=="at").map(([k,v])=>k+" "+v).join(", ")+" ("+ago(LAST_FIT.at)+")":"no study card measured yet"}`, /* v521: the pad's last measurement — where the card ends against the tab bar, and what was counted under the pad */
     navigator.userAgent, `voices (${voiceList().length}): ${voiceList().join("; ")||"none reported"}`, ""];
@@ -662,6 +663,9 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v552","a card of ONE word, and one of a single character: the word is marked on the photo while you write it"],
+  ["photo","v552","a card from a sign you photographed at an angle, and one from a tall sign on a portrait photo: both marked too"],
+  ["app","v552","More → Diagnostics → the 'marks on the photo' line: how many cards it still cannot mark, and why"],
   ["app","v551","More → Progress: the five tiles with no hole, the deck bar grey → amber → green, and the section heads level with the rows under them"],
   ["app","v551","a card under Cards: Delete card is the only one of the six with a ring around it"],
   ["app","v551","the filter pill on Cards: nothing in the sheet reads 0 any more"],
@@ -3191,21 +3195,44 @@ function charSpans(d,ch){ const lines=d.kind==="sign"?String(d.c||"").split("\n"
    made since v62. So it is soft by construction: on a sign whose characters are unevenly spaced the mark sits a little off,
    and a card the re-cut stood down on gets no mark rather than one in the wrong place. */
 const PICSIZE=new Map(); /* the photo's own pixel size per card — a decode per render would otherwise cost more than everything else on the screen */
+/* WHY a card carries no mark (v552, H: "There still many cards not updated to highlit characters in the image"). Recorded
+   as it happens rather than counted from the deck: the verdict needs the photo's and the picture's own pixel sizes, so a
+   tally over a whole deck would be two decodes a card, and a record of what really happened is the one this project
+   trusts (the v399 rule). Owner's, English, Diagnostics only — nothing a learner sees, and no key in any column. */
+const MARKW=new Map(); const markWhy=(d,w)=>{ if(d&&d.id) MARKW.set(d.id,w); };
+function markLine(){
+  if(!MARKW.size) return "no card seen yet";
+  const n={}; for(const w of MARKW.values()) n[w]=(n[w]||0)+1;
+  const say=[["ok","marked"],["whole","whose text is the whole picture"],["noframe","without a frame"],["nophoto","whose photo is gone"],["nowindow","whose picture is neither the window nor its frame"],["turned","a turned frame on the whole photo"]];
+  return `${MARKW.size} cards seen · `+say.filter(([k])=>n[k]).map(([k,t])=>`${n[k]} ${t}`).join(", ");
+}
 async function spotGeom(card,d){
   const z=card.querySelector(".zone1"); if(!z) return null;
   const box=z.querySelector(".picbox"), page=!!(box&&box.classList.contains("page"));
-  if(S.peek&&S.peek!==d.id) return null; const f=d.frame; if(!f||f.a||!(f.w>0&&f.h>0)) return null;
-  const img=z.querySelector(".signimg"), full=fullPhoto(d); if(!img||!full) return null;
+  if(S.peek&&S.peek!==d.id) return null; const f=d.frame; if(!f||!(f.w>0&&f.h>0)){ markWhy(d,"noframe"); return null; }
+  const img=z.querySelector(".signimg"), full=fullPhoto(d); if(!img||!full){ if(!full) markWhy(d,"nophoto"); return null; }
   if(!img.complete||!img.naturalWidth) await new Promise(r=>{ img.addEventListener("load",r,{once:true}); img.addEventListener("error",r,{once:true}); });
   const key=d.shot||d.id; let ps=PICSIZE.get(key);
   if(!ps){ try{ const bm=await createImageBitmap(full); ps={w:bm.width,h:bm.height}; bm.close(); }catch(e){ return null; } if(ps.w&&ps.h){ PICSIZE.set(key,ps); if(PICSIZE.size>40) PICSIZE.delete(PICSIZE.keys().next().value); } }
   const pw=ps&&ps.w, ph=ps&&ps.h; if(!img.isConnected||!pw||!ph) return null;
   const nw=img.naturalWidth, nh=img.naturalHeight; if(!nw||!nh) return null;
   let tx=f.x, ty=f.y, tw=f.w, th=f.h; /* the text's rectangle as fractions of the picture — the frame itself when the whole photo is shown */
-  if(box&&!page){ const rect={x:f.x*pw,y:f.y*ph,w:f.w*pw,h:f.h*ph,a:0,lw:pw,lh:ph}, r=nw/nh, R=spotRatios().find(v=>Math.abs(r-v)<0.03);
-    if(R){ const win=windowRect(rect,R); tx=(rect.x-win.x)/win.w; ty=(rect.y-win.y)/win.h; tw=rect.w/win.w; th=rect.h/win.h; }
-    else if(Math.abs(r-rect.w/rect.h)<0.05){ tx=0; ty=0; tw=1; th=1; } /* a split label's picture is its frame */
-    else return null; }
+  if(page||!box){ if(f.a){ markWhy(d,"turned"); return null; } } /* the whole photo, upright: a turned frame's mark would have to be turned with it, and a page front's own region already lights the text (v461) */
+  else { const rect={x:f.x*pw,y:f.y*ph,w:f.w*pw,h:f.h*ph,a:f.a||0,lw:pw,lh:ph}, r=nw/nh;
+    /* WHICH cut of the photo is this picture? v552: each candidate window is rebuilt from the frame and ITS OWN shape
+       compared with the picture's — where v533 compared the picture's shape with the ratio it was cut at. windowRect
+       clamps a window to the photo (a tall sign on a portrait photo) and trims a turned one to it (v333), so the cut
+       very often does not carry the ratio it was made at, and the bare ratio test then gave up on a picture whose
+       window is perfectly derivable. Rebuilding reproduces the clamp and the trim, so those cards are marked too. */
+    let win=null; for(const R of spotRatios()){ const w=windowRect(rect,R); if(Math.abs(w.w/w.h-r)<=0.02*r){ win=w; break; } }
+    if(win){ /* the text inside the window, in the window's own coordinates. cropBlob draws the photo turned BACK around
+        the window's centre (v185), so a turned frame's picture is upright and the text stands upright in it — the same
+        arithmetic covers both, and at a=0 it is v533's own formula. */
+      const A=(win.a||0)*Math.PI/180, dx=(rect.x+rect.w/2)-(win.x+win.w/2), dy=(rect.y+rect.h/2)-(win.y+win.h/2);
+      const u=dx*Math.cos(A)+dy*Math.sin(A), v=-dx*Math.sin(A)+dy*Math.cos(A);
+      tw=rect.w/win.w; th=rect.h/win.h; tx=0.5+u/win.w-tw/2; ty=0.5+v/win.h-th/2; }
+    else if(Math.abs(r-rect.w/rect.h)<=0.05*r){ tx=0; ty=0; tw=1; th=1; } /* a split label's picture is its frame */
+    else { markWhy(d,"nowindow"); return null; } }
   const host=box||z, hb=host.getBoundingClientRect(), ib=img.getBoundingClientRect();
   /* v541 (H: "Bei zoomen/schieben muss der Highlight frame im Bild mitwandern"): the marks are drawn in the picture's own
      UN-zoomed geometry and the layer they sit in carries the zoom's transform, so a zoomed picture never needs the marks
@@ -3216,8 +3243,8 @@ async function spotGeom(card,d){
   if(zoomed){ ix=zm.r0.x; iy=zm.r0.y; iw=zm.r0.w; ih=zm.r0.h; }
   else { ix=ib.left-hb.left; iy=ib.top-hb.top; iw=ib.width; ih=ib.height; }
   if(box&&!page){ const s=Math.min(iw/nw,ih/nh), w=nw*s, h=nh*s; ix+=(iw-w)/2; iy+=(ih-h)/2; iw=w; ih=h; } /* the rendered picture inside its box (object-fit:contain); a page front's picture is the whole photo at the rendered size fitPageCover gave it */
-  const layer=spotLayer(host);
-  return { host:layer, box:host, page, z, zoom:zm||null,
+  const layer=spotLayer(host); markWhy(d,"ok");
+  return { host:layer, box:host, page, z, zoom:zm||null, tw, th,
     put:(e,sp)=>{ const r={x:ix+iw*(tx+tw*sp.x),y:iy+ih*(ty+th*sp.y),w:iw*tw*sp.w,h:ih*th*sp.h};
       e.style.left=r.x.toFixed(1)+"px"; e.style.top=r.y.toFixed(1)+"px"; e.style.width=r.w.toFixed(1)+"px"; e.style.height=r.h.toFixed(1)+"px"; return r; } };
 }
@@ -3233,6 +3260,12 @@ async function spotWord(card,d,x,g){
   card.querySelectorAll(".wspot").forEach(e=>e.remove());
   if(!x||!x.w||!x.word) return; const sp=wordSpan(d,x); if(!sp) return;
   const geom=g||await spotGeom(card,d); if(!geom||!card.isConnected) return;
+  /* v552: "nothing to single out" is a question about the PICTURE, not about the text. v533 skipped the mark whenever the
+     word was the whole text, and since v329/v519 the picture is a 3:2 WINDOW with the sign around the text — so on the
+     commonest card of all, one dictionary word photographed from a sign, the text is a band inside its own surroundings
+     and pointing at it is exactly the point. The mark is left out only when it would trace the picture's own edge, which
+     is the one case v533 was really about: a split label, whose picture IS its frame. */
+  if(geom.tw*sp.w>=0.98&&geom.th*sp.h>=0.98){ markWhy(d,"whole"); return; }
   const e=document.createElement("div"); e.className="wspot"; const r=geom.put(e,sp); geom.host.appendChild(e);
   requestAnimationFrame(()=>requestAnimationFrame(()=>e.classList.add("on")));
   /* v541 (H: "Wenn ins bild reingezoomt ist, muss das gezoomte Bild mit auf den nächsten character fahren (geschmeidiger
@@ -3246,7 +3279,6 @@ function wordSpan(d,x){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):
   let pos=0;
   for(let li=0;li<lines.length;li++){ const ln=[...lines[li]], end=pos+ln.length;
     if(from>=pos&&to<=end){ const U=Math.max(0.01,lineUnits(lines[li]));
-      if(w.length===ln.length&&lines.length===1) return null; /* the word IS the whole text: nothing to single out */
       let a=0; for(let k=0;k<from-pos;k++) a+=lineUnits(ln[k]);
       let b=0; for(let k=from-pos;k<to-pos;k++) b+=lineUnits(ln[k]);
       return {x:a/U,y:li/n,w:b/U,h:1/n}; }
@@ -4811,6 +4843,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  552:"Far more cards now show the word you are writing marked on the photo: a single word, a single character and a sign photographed at an angle are all marked, where before only a card of several words was.",
   550:"Writing a card pauses once a word, on the word's pinyin — not after every character.",
   549:"How to use the app, under More → Help, is six pictures and a few sentences now instead of a wall of text.",
   548:"New under More → Learning: Handwriting. With it on there is no template and no stroke order — write the whole character, tap Done, and the app checks it.",
