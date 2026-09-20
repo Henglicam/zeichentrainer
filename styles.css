@@ -753,6 +753,7 @@ body.noscroll{overflow:hidden}
    (measured 87 px of reading against 69). It is v540's rule on the line under the pad, one screen along. */
 .recap .rc,.recap .rp{flex:none}
 .recap .rm{flex:0 1 auto;min-height:0}
+.recap.one .rm{-webkit-line-clamp:2} /* v571: the character's own meaning under its reading — a 900 ms breath, so two lines, where the whole card's recap allows three */
 .recap.py .rp{line-height:1.12;letter-spacing:.6px} /* v555: the entrance, the exit and the green are the base rules now — one language for both recaps */
 .recap .rm{font-size:18px;line-height:1.25;color:var(--label2);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 @media(prefers-reduced-motion:reduce){.recap,.recap.out{transition:none;scale:1;translate:-50% 0} .padwrap .wpad{transition:none}}
