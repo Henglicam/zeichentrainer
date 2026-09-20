@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=555; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=556; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -570,8 +570,15 @@ function diagText(){
     older.forEach(N=>{ out.push(`  ${ago(N.at)}  ${N.shot||"?"}${Array.isArray(N.cards)?` \u00b7 ${N.cards.length} card${N.cards.length===1?"":"s"}`:""}`);
       if(N.log&&N.log.length){ out.push(`    steps (${N.log.length}):`); out.push(...stepLines(N,"      ",LOG_OLD_HEAD,LOG_OLD_TAIL)); }
       out.push("    numbers: "+JSON.stringify(numsTrim(N,NUMS_OLD))); }); }
-  out.push("", `Drawings (${DRAWLOG.length}, newest last):`);
-  DRAWLOG.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.strokes.length} stroke${x.strokes.length===1?"":"s"} → ${x.alts.join(" ")||"nothing"}${x.strokes_best?` · strokes ${x.strokes_best.join(" ")} · print ${(x.ocr||[]).join(" ")||"nothing"}`:""}`); out.push("    strokes: "+JSON.stringify(x.strokes)); });
+  /* DRAWLOG holds two shapes since v512: the drawing sheet's {strokes,alts,…} (v140) and the write pad's {pad,k,ok,dist} — one
+     line per traced stroke (logPadStroke). Until v556 this read x.strokes.length off every entry, so the first stroke traced in
+     Learn broke Diagnostics for the rest of the session (six "Cannot read properties of undefined" in H's own error log, one per
+     tap on Show) and a reload, which empties the memory-only list, made it work again. */
+  const drawn=DRAWLOG.filter(x=>Array.isArray(x.strokes)), traced=DRAWLOG.filter(x=>!Array.isArray(x.strokes));
+  out.push("", `Drawings (${drawn.length}, newest last):`);
+  drawn.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.strokes.length} stroke${x.strokes.length===1?"":"s"} → ${(x.alts||[]).join(" ")||"nothing"}${x.strokes_best?` · strokes ${x.strokes_best.join(" ")} · print ${(x.ocr||[]).join(" ")||"nothing"}`:""}`); out.push("    strokes: "+JSON.stringify(x.strokes)); });
+  out.push(`Traced strokes on the pad (${traced.length}, newest last):`);
+  traced.forEach(x=>out.push(`  ${ago(x.t)}  ${x.pad||"?"} stroke ${(x.k|0)+1} ${x.ok?"snapped":"missed"}${x.dist==null?"":" at "+x.dist}`)); /* the distance is against TRACE_OK 0.18 of the pad (§ 14) */
   out.push("", `AI exchanges (${AILOG.length}, newest last):`);
   AILOG.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.model||""} → ${x.status||""}${x.ms?` in ${(x.ms/1000).toFixed(1)} s`:""}`); out.push("    request: "+x.req); out.push("    reply: "+(x.res||x.err||"")); });
   out.push("", `Errors (${ERRLOG.length}):`);
@@ -663,6 +670,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v556","Diagnostics after writing a card"],
   ["app","v553","write a card of two-character words: the reading of EVERY character stands over the pad for a moment, 应 in 供应 reading yìng"],
   ["app","v553","the reading itself: green, large, coming up and lifting away rather than popping — and a tap still skips it"],
   ["app","v555","the reading leaving over a dark pad, and the next character fading up once it is gone"],
