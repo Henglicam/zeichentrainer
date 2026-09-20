@@ -711,10 +711,19 @@ body.noscroll{overflow:hidden}
 .recap.in{opacity:1;scale:1}
 .recap .rc{font-family:var(--hanzi);line-height:1.05;color:var(--label)}
 .recap .rp{font-size:21px;font-weight:600;color:var(--tint);letter-spacing:.3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-/* v550: with the glyph gone the reading is the one thing on the pad, so it is set large and given its own line height */
-.recap.py .rp{line-height:1.15;-webkit-line-clamp:2}
+/* v550: with the glyph gone the reading is the one thing on the pad, so it is set large and given its own line height.
+   v553 (H: "Die pinyin Darstellung polieren: In/Out, Größe, Font, Farbe, etc."): it is GREEN, not the tint. The app's
+   own scheme since v528 is red = in the pad, blue = locked, green = written — and this reading stands there at the very
+   moment its character's tile turns green, so the tint would be the colour of the thing it has just stopped being. The
+   font is the UI font semibold as every pinyin in the app is; the tracking is opened a little, since at this size the
+   tone marks want the room. It comes up and settles on the app's own curve and it leaves by lifting away while the pad
+   fades back under it, where until v552 it was removed in a single frame. */
+.recap.py .rp{line-height:1.12;letter-spacing:.6px;color:var(--ok);-webkit-line-clamp:2}
+.recap.py{translate:-50% 8px;scale:.96;transition:opacity .22s cubic-bezier(.22,.61,.36,1),translate .26s cubic-bezier(.22,.61,.36,1),scale .26s cubic-bezier(.22,.61,.36,1)}
+.recap.py.in{translate:-50% 0;scale:1}
+.recap.py.out{opacity:0;translate:-50% -6px;scale:1;transition:opacity .2s ease-in,translate .2s ease-in,scale .2s ease-in}
 .recap .rm{font-size:18px;line-height:1.25;color:var(--label2);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-@media(prefers-reduced-motion:reduce){.recap{transition:none;scale:1} .padwrap.recapping .wpad{transition:none}}
+@media(prefers-reduced-motion:reduce){.recap,.recap.py,.recap.py.out{transition:none;scale:1;translate:-50% 0} .padwrap.recapping .wpad{transition:none}}
 @keyframes padshake{0%,100%{transform:none}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 @media(prefers-reduced-motion:reduce){.wpad.shake{animation:none}}
 /* the chevrons of § 3.2 left at v520 (H's "A"): the swipe is the way, and the count says where you are — in the fold row
