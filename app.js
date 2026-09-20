@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=574; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=575; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v575","Photo open/close: the mark sticks"],
   ["app","v574","Test this card: photo at the top"],
   ["app","v573","a card with 合, 雀, 行 or 供 on it: the meaning under the reading is that reading's — 合 hé \"to close\", not \"100 ml\" — on the pad, in the line under it and in the parts row"],
   ["app","v572","open Learn: the card starts with the photo big; one tap shows the characters under it, another makes it big again, and the state holds for the session"],
@@ -3310,24 +3311,42 @@ async function spotGeom(card,d){
       tw=rect.w/win.w; th=rect.h/win.h; tx=0.5+u/win.w-tw/2; ty=0.5+v/win.h-th/2; }
     else if(Math.abs(r-rect.w/rect.h)<=0.05*r){ tx=0; ty=0; tw=1; th=1; } /* a split label's picture is its frame */
     else { markWhy(d,"nowindow"); return null; } }
-  const host=box||z, hb=host.getBoundingClientRect(), ib=img.getBoundingClientRect();
+  const host=box||z;
   /* v541 (H: "Bei zoomen/schieben muss der Highlight frame im Bild mitwandern"): the marks are drawn in the picture's own
      UN-zoomed geometry and the layer they sit in carries the zoom's transform, so a zoomed picture never needs the marks
      recomputed. While the picture is enlarged its rendered rect is the transformed one, so the zoom's own r0 — the rect it
      measured before it began — is what the marks are placed against. */
-  const zm=box&&box._zoom, zoomed=!!(zm&&zm.s>1&&zm.r0);
+  const zm=box&&box._zoom;
   let ix,iy,iw,ih;
-  if(zoomed){ ix=zm.r0.x; iy=zm.r0.y; iw=zm.r0.w; ih=zm.r0.h; }
-  else { ix=ib.left-hb.left; iy=ib.top-hb.top; iw=ib.width; ih=ib.height; }
-  if(box&&!page){ const s=Math.min(iw/nw,ih/nh), w=nw*s, h=nh*s; ix+=(iw-w)/2; iy+=(ih-h)/2; iw=w; ih=h; } /* the rendered picture inside its box (object-fit:contain); a page front's picture is the whole photo at the rendered size fitPageCover gave it */
+  /* v575 (H: "Wenn Foto geöffnet und geschlossen wird, muss der Highlight Bereich mitgezogen werden"): the picture's place
+     inside its box is not a constant — the tap of v564 changes the half's height, and the clip then slides the picture
+     under the box by up to 82 px, while every mark keeps the pixels it was placed at. So the measurement is a closure the
+     caller can take AGAIN after a layout change, and put() reads whatever it last wrote. */
+  const measure=()=>{ if(!img.isConnected) return false;
+    const hb=host.getBoundingClientRect(), ib=img.getBoundingClientRect();
+    if(zm&&zm.s>1&&zm.r0){ ix=zm.r0.x; iy=zm.r0.y; iw=zm.r0.w; ih=zm.r0.h; }
+    else { ix=ib.left-hb.left; iy=ib.top-hb.top; iw=ib.width; ih=ib.height; }
+    if(box&&!page){ const s=Math.min(iw/nw,ih/nh), w=nw*s, h=nh*s; ix+=(iw-w)/2; iy+=(ih-h)/2; iw=w; ih=h; } /* the rendered picture inside its box (object-fit:contain); a page front's picture is the whole photo at the rendered size fitPageCover gave it */
+    return true; };
+  if(!measure()) return null;
   const layer=spotLayer(host); markWhy(d,"ok");
-  return { host:layer, box:host, page, z, zoom:zm||null, tw, th,
+  return { host:layer, box:host, page, z, zoom:zm||null, tw, th, again:measure,
     put:(e,sp)=>{ const r={x:ix+iw*(tx+tw*sp.x),y:iy+ih*(ty+th*sp.y),w:iw*tw*sp.w,h:ih*th*sp.h};
       e.style.left=r.x.toFixed(1)+"px"; e.style.top=r.y.toFixed(1)+"px"; e.style.width=r.w.toFixed(1)+"px"; e.style.height=r.h.toFixed(1)+"px"; return r; } };
 }
 /* one layer per picture box for everything drawn ON the photo (v541): it is the element the zoom transforms beside the
    picture itself, so a mark placed in the picture's own coordinates travels with a pinch or a pan for free. */
 function spotLayer(host){ let l=host.querySelector(":scope > .spotlayer"); if(!l){ l=document.createElement("div"); l.className="spotlayer"; host.appendChild(l); } return l; }
+/* v575: every mark remembers the span it stands for, so a layout change re-places it instead of leaving it on the pixels
+   the last render gave it. A mark the DOM no longer holds is pruned here rather than tracked — render() rebuilds the card
+   and the list dies with the element it hangs on. */
+function spotKeep(card,geom,el,sp){ const s=card._spot&&card._spot.geom===geom?card._spot:(card._spot={geom,marks:[]});
+  s.marks=s.marks.filter(m=>m.el.isConnected); s.marks.push({el,sp}); }
+function spotAgain(card){ const s=card&&card._spot; if(!s||!s.geom||!s.geom.again) return;
+  s.marks=s.marks.filter(m=>m.el.isConnected); if(!s.marks.length) return;
+  if(s.geom.zoom&&s.geom.zoom.relayout) s.geom.zoom.relayout(); /* v575: a zoomed picture's base rect moved with the half, and the marks are placed against it */
+  if(!s.geom.again()) return;
+  for(const m of s.marks) s.geom.put(m.el,m.sp); }
 /* the word being written, marked on the photo (v533): the app already lights it on its tile (.chw.on) and reads it in the
    line under the pad — this says WHERE it stands on the sign. Deliberately quiet: a tint ring with a white flank so it holds
    on any photo colour, and a breath of tint inside; never the 9999px shadow the locked character's spotlight draws (v520),
@@ -3343,7 +3362,7 @@ async function spotWord(card,d,x,g){
      and pointing at it is exactly the point. The mark is left out only when it would trace the picture's own edge, which
      is the one case v533 was really about: a split label, whose picture IS its frame. */
   if(geom.tw*sp.w>=0.98&&geom.th*sp.h>=0.98){ markWhy(d,"whole"); return; }
-  const e=document.createElement("div"); e.className="wspot"; const r=geom.put(e,sp); geom.host.appendChild(e);
+  const e=document.createElement("div"); e.className="wspot"; const r=geom.put(e,sp); geom.host.appendChild(e); spotKeep(card,geom,e,sp);
   requestAnimationFrame(()=>requestAnimationFrame(()=>e.classList.add("on")));
   /* v541 (H: "Wenn ins bild reingezoomt ist, muss das gezoomte Bild mit auf den nächsten character fahren (geschmeidiger
      Move, nicht ruckartig springen)"): while the picture is enlarged it follows the pad onto the word being written, on a
@@ -3369,7 +3388,7 @@ async function spotChar(card,d,cur){
   const spans=charSpans(d,ch); if(!spans.length||S.lockChar!==ch) return;
   geom.z.classList.add("spotting");
   spans.forEach((sp,i)=>{ const e=document.createElement("div"); e.className="spot"+((i||geom.page)?" more":""); /* the first occurrence dims the rest of the picture; a second one is ringed, or the two shadows would darken it twice — and on a page front every one is ringed, since v461's shadow already stands */
-    geom.put(e,sp); geom.host.appendChild(e); requestAnimationFrame(()=>requestAnimationFrame(()=>e.classList.add("on"))); });
+    geom.put(e,sp); geom.host.appendChild(e); spotKeep(card,geom,e,sp); requestAnimationFrame(()=>requestAnimationFrame(()=>e.classList.add("on"))); });
 }
 /* the character row of a card (v518, shared by the study card, its carousel neighbour and the card detail so the three cannot
    drift): one button per target, the buttons of one word on one tile, each photo line its own group inside the one row (v517) */
@@ -3439,6 +3458,7 @@ function splitFit(root){ const cue=root&&root.querySelector(".cue"), cr=cue&&cue
   else { const half=Math.floor((base-gap)/2), need=textFit(cr,ci,half-lineH,CH_MAX,lines)+lineH;
     if(need<=half){ th=half; ph=base-gap-half; } else { th=need; ph=Math.max(PHOTO_MIN,base-gap-need); cueH=ph+gap+th; } } /* the picture gives the room first, then the cue grows */
   root.style.setProperty("--ph",ph+"px"); root.style.setProperty("--th",th+"px"); root.style.setProperty("--cg",cg+"px"); root.style.setProperty("--cueh",cueH+"px");
+  spotAgain(root); /* v575: the halves just moved the picture inside its box — the marks on it move with it */
   const pic=cue.querySelector(".zone1 .picbox:not(.page)"), im=pic&&pic.querySelector(".signimg"), inner=root.clientWidth-36; /* the picture keeps its own height and the half clips it when it is close to the half's shape; a picture much taller (a label's own frame) is fitted inside instead */
   /* v565 (H: "das Foto springt irgendwie, wenn man auf eine neue Karte switcht"): the decision needs the picture's own size, and the
      carousel's neighbour is split before its picture has decoded — so it rode in fitted small and the card then showed it clipped
@@ -3452,11 +3472,19 @@ function splitFit(root){ const cue=root&&root.querySelector(".cue"), cr=cue&&cue
    character written, every tile picked and every swipe, and only the tap folds it back. A card with no picture of its own (one
    generated from a multicard, v487) keeps its halves while the state says "pic": it would otherwise show an empty half over no
    tiles and no way back, since the tap that folds it is the picture's and the text half is then 0 px tall. */
+const SLIDE_MS=340; /* v575: the .22 s slide of the cue's rows plus a frame or two of settling — the window the marks are dragged across */
 function cueBigCls(hasPic){ return S.cueBig==="pic"?(hasPic?" bigpic":""):S.cueBig==="txt"?" bigtxt":""; }
 function cueBig(card,which){ const to=S.cueBig===which?null:which; S.cueBig=to;
   if(!S.settings.bigTapped){ S.settings.bigTapped=1; setSetting("bigTapped",1).catch(()=>{}); } /* v568: the hint that names this tap costs the pad 18 px while it stands (measured 300 -> 282 at 393 x 869), so it goes the moment the tap has been used once; showHints() takes it away after twenty reviews either way */
   const cue=card.querySelector(".cue"); if(cue){ cue.classList.add("gl"); clearTimeout(card._glT); card._glT=setTimeout(()=>cue.classList.remove("gl"),320); } /* v565: the slide runs on a tap only — a render must never animate the halves into place */
-  card.classList.toggle("bigpic",to==="pic"); card.classList.toggle("bigtxt",to==="txt"); splitFit(card); noteViewSoon(); }
+  card.classList.toggle("bigpic",to==="pic"); card.classList.toggle("bigtxt",to==="txt"); splitFit(card); noteViewSoon();
+  /* v575 (H: "Wenn Foto geöffnet und geschlossen wird, muss der Highlight Bereich mitgezogen werden"): the cue's rows
+     animate for .22 s and the picture travels 82 px inside its box on the way (measured at 393 px), so one placement at
+     the start would leave the mark off for the whole slide. It is taken again on every frame of it. */
+  const t0=card._spotDrag=performance.now();
+  const drag=()=>{ if(!card.isConnected||card._spotDrag!==t0) return; /* a second tap owns the drag and this one stands down */
+    spotAgain(card); if(performance.now()-t0<SLIDE_MS) requestAnimationFrame(drag); };
+  requestAnimationFrame(drag); }
 /* v572: the tap toggles the classes itself and never renders, so until now nothing noted it — the half a tap made big
    survived a reload only if some later render happened to note it (v569's own gap). With the photo big by default the
    state a reload can lose is the FOLDED one, which is the learner's own decision, so the tap notes it at once. */
@@ -3582,6 +3610,14 @@ function attachPicZoom(box){
   tg.style.transformOrigin="0 0";
   const rel=e=>{ const b=box.getBoundingClientRect(); return {x:e.clientX-b.left,y:e.clientY-b.top}; };
   const measure=()=>{ if(v.s===1||!v.r0){ const b=box.getBoundingClientRect(), r=tg.getBoundingClientRect(); v.r0={x:r.left-b.left,y:r.top-b.top,w:r.width,h:r.height}; } };
+  /* v575: r0 is the picture's place in the box BEFORE the zoom, so measure() refuses to take it again while zoomed — the
+     rendered rect is the transformed one. When the box itself changes height (the tap of v564 folds the half), r0 is stale
+     all the same, and the marks placed against it land off the word. transform-origin is 0 0, so the picture's own
+     top-left maps to r0 + t and nothing else: the offset comes back by SUBTRACTING t (not by dividing by s, which is only
+     the size's inverse), and at rest the formula returns exactly what measure() would. apply() then re-clamps the pan to
+     the box's new size. */
+  v.relayout=()=>{ if(v.s<=1||!v.r0) return; const b=box.getBoundingClientRect(), r=tg.getBoundingClientRect();
+    v.r0={x:r.left-b.left-v.tx, y:r.top-b.top-v.ty, w:r.width/v.s, h:r.height/v.s}; apply(); };
   const apply=()=>{ const r=v.r0, bw=box.clientWidth, bh=box.clientHeight, cw=r.w*v.s, ch=r.h*v.s;
     v.tx=cw<=bw?(bw-cw)/2-r.x:Math.min(-r.x,Math.max(bw-cw-r.x,v.tx)); v.ty=ch<=bh?(bh-ch)/2-r.y:Math.min(-r.y,Math.max(bh-ch-r.y,v.ty));
     tg.style.transform=v.s>1?`translate(${v.tx}px,${v.ty}px) scale(${v.s})`:""; box.style.touchAction=v.s>1?"none":""; box.classList.toggle("zoomed",v.s>1);
