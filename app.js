@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=550; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=551; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -300,17 +300,29 @@ function filterGroups(scope){
      agreed — with two tabs that gap would read as broken ("⚑ Flagged (12)" over a list of one). */
   const pool=tabPool(), cnt=f=>pool.filter(d=>anyOf(d,f)).length;
   const nAi=deck().filter(d=>d.ai).length, nNew=deck().filter(unchecked).length; /* a row's VISIBILITY stays deck-wide — a row that vanished on one tab while its filter was on is the v308 trap; only the numbers follow the tab */
+  /* v551: ⚑ Flagged and Unverified follow the rule their three siblings already followed. Of the five Status rows, Starred (v425),
+     Not yet checked (v515) and AI (v82) appear only while the deck holds such a card, and these two appeared always — so a clean
+     deck offered "⚑ Flagged 0" and "Unverified 0", two controls over nothing (the v308 rule) beside three that knew better. The
+     test is deck-wide, like the other three, so a tab change can never make a lit row vanish; the count stays the open tab's. A
+     row whose filter is ON stays whatever the count says, or the last card unflagged from inside the sheet would take the lit
+     row away under the finger — normaliseFilters clears it at the next render instead. */
+  const nFlag=deck().filter(d=>d.flag).length, nUnv=deck().filter(d=>d.mt&&!d.mt.verified).length;
   const st=[...(nStar?[{k:"star", label:t("Starred"), n:pool.filter(starred).length, on:S.filterStar}]:[]),
-    {k:"flag", label:t("⚑ Flagged"), n:cnt(d=>d.flag), on:S.filterFlag},
+    ...(nFlag||S.filterFlag?[{k:"flag", label:t("⚑ Flagged"), n:cnt(d=>d.flag), on:S.filterFlag}]:[]),
     ...(nNew?[{k:"new", label:t("Not yet checked"), n:cnt(unchecked), on:S.filterNew}]:[]), /* v515: shown while a card is unchecked, as the AI row is */
     ...(nAi?[{k:"ai", label:t("AI"), n:cnt(d=>d.ai), on:S.filterAi}]:[]),
-    {k:"unv", label:t("Unverified"), n:cnt(d=>d.mt&&!d.mt.verified), on:S.filterUnv}];
+    ...(nUnv||S.filterUnv?[{k:"unv", label:t("Unverified"), n:cnt(d=>d.mt&&!d.mt.verified), on:S.filterUnv}]:[])];
   const tabRows=tagRows.map(r=>r.k==="tag:"+UNTAGGED?{...r,n:pool.filter(d=>anyOf(d,x=>!(x.tags||[]).length)).length}:{...r,n:cnt(d=>hasTag(d,r.label))});
-  return [{head:t("Status"), rows:st},...(tabRows.length?[{head:t("Tags"), rows:tabRows}]:[])];
+  return [...(st.length?[{head:t("Status"), rows:st}]:[]),...(tabRows.length?[{head:t("Tags"), rows:tabRows}]:[])]; /* v551: a head over no rows is the same empty control one level up */
 }
 const filterOn=scope=>filterGroups(scope).flatMap(g=>g.rows).filter(r=>r.on&&r.k);
 /* the pill: the filter's own name while one is set, "All cards" while none is */
 function filterPillHTML(scope){
+  /* v551: no row that actually filters anything, no pill — the v308 rule, in the one place both tabs pass through. Learn has
+     applied it since v425 through a predicate of its own (no tag, no star, no unchecked card); with the Status rows of the Cards
+     tab conditional too, a clean deck can reach the same state there, and two copies of one test would have drifted (the v401
+     lesson). "All cards" carries no key, so a sheet of nothing but that row is exactly what this refuses. */
+  if(!filterGroups(scope).some(g=>g.rows.some(r=>r.k))) return "";
   const on=filterOn(scope), lit=on.length>0;
   const label=!lit?t("All cards"):on.length===1?(on[0].n!=null?t("{0} ({1})",on[0].label,on[0].n):on[0].label):t("Filters ({0})",on.length);
   return `<button class="chip fpill${lit?" on":""}" data-filter="${scope}">${filterIcon}<span>${esc(label)}</span></button>`;
@@ -360,7 +372,7 @@ function learnFilterHTML(){ const st=learnPool().some(starred), nw=learnPool().s
   if(!st&&S.settings.learnStar) setSetting("learnStar",false); /* the last star taken off leaves no row to switch the filter back off (the v308 rule) */
   if(!nw&&S.settings.learnNew) setSetting("learnNew",false); /* v515: the same for the last card checked */
   normaliseLearn();
-  if(!learnTagList().length&&!st&&!nw) return ""; return filterPillHTML("learn"); } /* a sheet with nothing but All cards is a control over nothing (the v308 rule): then the bar's slot stays empty */
+  return filterPillHTML("learn"); } /* a sheet with nothing but All cards is a control over nothing (the v308 rule): the pill itself refuses since v551, so the bar's slot stays empty without a second copy of that test here */
 /* the id of a new card: the text itself while it is free (readable in exports), else text plus a timestamp */
 const cardId = c => deck().some(d=>d.id===c) ? c+"#"+Date.now() : c;
 async function setSetting(k,v){ S.settings[k]=v; try{ await idbPut("settings",{k,v}); }catch(e){} }
@@ -650,6 +662,9 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v551","More → Progress: the five tiles with no hole, the deck bar grey → amber → green, and the section heads level with the rows under them"],
+  ["app","v551","a card under Cards: Delete card is the only one of the six with a ring around it"],
+  ["app","v551","the filter pill on Cards: nothing in the sheet reads 0 any more"],
   ["app","v550","Learn, a card of several words: the pad pauses once a word and shows the word's pinyin alone — is that the right rhythm?"],
   ["app","v549","More → Help → Open: the guide is six pictures and a few sentences — is anything you needed gone?"],
   ["app","v548","More → Learning → Handwriting on: write a character you know in your own order, and see whether Done accepts it"],
@@ -4225,6 +4240,8 @@ function normaliseFilters(){
   if(S.filterStar&&!deck().some(starred)) S.filterStar=false;
   if(S.filterAi&&!deck().some(d=>d.ai)) S.filterAi=false;
   if(S.filterNew&&!deck().some(unchecked)) S.filterNew=false; /* v515: the last card checked leaves no row to switch the filter off */
+  if(S.filterFlag&&!deck().some(d=>d.flag)) S.filterFlag=false; /* v551: these two rows are conditional now, so the same rule has to reach them */
+  if(S.filterUnv&&!deck().some(d=>d.mt&&!d.mt.verified)) S.filterUnv=false;
   S.filterTags=S.filterTags.filter(g=>g===UNTAGGED?allTags().length&&untaggedCount():allTags().includes(g));
 }
 function renderCards(main){
@@ -4888,8 +4905,11 @@ const WHATS_NEW={
 const updateNoteOn=()=>S.settings.updateNote!==false;
 const newsList=()=>Object.keys(WHATS_NEW).map(Number).sort((a,b)=>b-a);
 const newsSince=v=>newsList().filter(n=>n>v&&n<=APP_V).map(n=>({v:n,s:WHATS_NEW[n]})); /* what this phone has not been shown yet, newest first */
+/* v551: the notes no longer carry their build number. v225 took the version label off the header as "a developer's line,
+   not a user's" and About then printed five of them under it — "v550 — ...", "v549 — ...": five numbers a learner cannot
+   act on, above a sentence they can. The build is still named once, at the head of this same row (aboutText's "PWA vN."). */
 function whatsNewHTML(){ const ns=newsList().slice(0,5); if(!ns.length) return "";
-  return `<div class="s" style="margin-top:8px">${esc(t("What is new"))}</div>`+ns.map(n=>`<div class="s">v${n} — ${esc(t(WHATS_NEW[n]))}</div>`).join(""); }
+  return `<div class="s" style="margin-top:8px">${esc(t("What is new"))}</div>`+ns.map(n=>`<div class="s">${esc(t(WHATS_NEW[n]))}</div>`).join(""); }
 function hideUpdated(){ const e=$("#updated"); if(e) e.remove(); }
 /* the line above the tab bar: the update note's own element and place (v413/v416), shared with the owner's
    near-cap warning (v484) so the two cannot stack or drift apart in look */

@@ -134,7 +134,7 @@ button,.tab,.chip,.chipset,.pill,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg
 .snaprow{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
 #shots:not(:empty){margin-top:24px} /* the Inbox head used to carry this gap (v471) */
 .btn.primary{background:var(--tint);color:#fff}
-.btn.danger{background:var(--tint-soft);color:var(--tint)}
+.btn.danger{background:var(--tint-soft);color:var(--tint);box-shadow:inset 0 0 0 1.5px var(--tint)} /* v551: the declarations were byte-identical to .btn, so the class said "destructive" and drew nothing — on the open card Delete card was the fifth of five identical tinted pills. The accent IS the red here, so the difference cannot be the colour (a filled red would out-shout .btn.primary, the thing the screen wants you to do): it is the ring. */
 .btn.mini{min-height:44px;padding:10px 14px;font-size:15px;white-space:nowrap}
 /* a .btn.mini on its own line under a field may wrap: the nowrap above was written for a two-word action
    ("Not here? Draw it"), and Meanings puts a whole sentence there — "Traduire toutes les cartes en Français"
@@ -177,6 +177,7 @@ button,.tab,.chip,.chipset,.pill,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg
 .shot .ok.bad{color:var(--label2)}
 .badge{font-size:14px;color:var(--label2);line-height:1.45}
 .listhead{font-size:13px;font-weight:500;color:var(--label2);margin:26px 0 8px 4px}
+.more .listhead{margin-left:16px} /* v551: the head sat at x=20 over rows whose titles sit at 32 — the one text on More that lined up with nothing. Scoped to More, since the Camera tab's marking head stands over photo tiles at 16, not over a card's inner padding. */
 .del{background:none;border:none;cursor:pointer;font-size:15px;font-weight:500;color:var(--tint);padding:10px 6px;min-height:40px;border-radius:8px}
 .del:active{opacity:.6}
 .more .mrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--sep)}
@@ -600,6 +601,7 @@ body.noscroll{overflow:hidden}
 /* the Progress dashboard (v274): four tiles on the row's grey surface, the 30-day strip in the tint, the deck bar in grey, tint and green */
 .prog{margin-top:8px}
 .ptiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ptiles>.ptile:last-child:nth-child(odd){grid-column:1/-1} /* v551: five tiles in two columns left a 160 px hole beside the fifth. A rule about odd counts, not about five, so a sixth tile changes nothing and a seventh fills its row the same way. */
 .ptile{background:var(--card2);border-radius:var(--r);padding:10px 12px}
 .ptile .n{font-size:28px;font-weight:700;color:var(--label);line-height:1.1;letter-spacing:-.02em}
 .ptile .l{font-size:12px;color:var(--label2);margin-top:2px;line-height:1.25}
@@ -609,7 +611,10 @@ body.noscroll{overflow:hidden}
 .pdots i.d1{background:var(--tint);opacity:.3} .pdots i.d2{background:var(--tint);opacity:.5} .pdots i.d3{background:var(--tint);opacity:.75} .pdots i.d4{background:var(--tint)}
 .pbar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--fill);margin-top:14px;gap:2px}
 .pbar i{display:block;min-width:0}
-.pbar i.new,.plegend i.new{background:var(--label3)} .pbar i.learn,.plegend i.learn{background:var(--tint)} .pbar i.known,.plegend i.known{background:var(--ok)}
+/* v551: the deck bar is a progression — grey, amber, green — and it read grey, ALERT RED, green, because "Still learning"
+   was painted in the tint. The app's own three states are the traffic light of v421 (hard red, medium amber, easy green), so the
+   middle of three now takes the middle colour; the 30-day strip above keeps the tint, since activity is not a state. */
+.pbar i.new,.plegend i.new{background:var(--label3)} .pbar i.learn,.plegend i.learn{background:var(--warn)} .pbar i.known,.plegend i.known{background:var(--ok)}
 .plegend{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:13px;color:var(--label2)}
 .plegend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
 
