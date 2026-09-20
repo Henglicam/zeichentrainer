@@ -670,12 +670,12 @@ body.noscroll{overflow:hidden}
    against a one-line card's 60, and the pad paid the difference. The rows are laid side by side now with the photo's own
    line breaks kept as a rule between them. The row never scrolls (v519): its buttons shrink to fit (--chs, chrowFit) and
    only a text that does not fit at CH_MIN wraps onto a second row. */
-.chrow{margin-top:8px;display:flex;flex-direction:row;flex-wrap:nowrap;justify-content:safe center;gap:14px;
-  max-width:100%;overflow:hidden;--chs:56px}
+.chrow{margin-top:8px;position:relative;max-width:100%;overflow:hidden;--chs:56px} /* v560: the viewport; the flow is .chin */
+.chrow .chin{position:relative;display:flex;flex-direction:row;flex-wrap:nowrap;justify-content:safe center;gap:14px;transition:transform .22s cubic-bezier(.22,.61,.36,1)}
 .chrow .chline{display:flex;flex-wrap:nowrap;flex:0 0 auto}
 /* wrapped, the photo's line groups dissolve and the word tiles flow — a photo line wider than the card would otherwise be
    clipped at both edges (measured on the 美团 badge's two lines of 7 and 8 targets); the hairline between lines goes with them */
-.chrow.wrap{flex-wrap:wrap;row-gap:6px;justify-content:center}
+.chrow.wrap .chin{flex-wrap:wrap;row-gap:8px;justify-content:center} /* the row gap is STRIP_GAP in app.js: the strip slides by whole rows */
 .chrow.wrap .chline{display:contents}
 .chrow .chline+.chline{border-left:1px solid var(--sep);padding-left:14px}
 .chline{display:flex;flex-wrap:wrap;justify-content:center;gap:10px} /* one row per photo line; a line wider than the card wraps here */
@@ -841,17 +841,32 @@ body.noscroll{overflow:hidden}
 .card.study .picbox.page,.card.peer .picbox.page{aspect-ratio:1.5} /* 3:2 since v519; and the carousel's neighbour (v518): a page front slid in at its own v514 ratio and jumped to 2:1 at the snap */
 .picbox.zoomed{touch-action:none} .picbox.zoomed .signimg,.picbox.zoomed .pagewrap{will-change:transform}
 
-/* v559 (H on a card of two character rows, its pad on the 200 px floor and the fold row under the tab bar: "gehen die
-   Proportionen vielleicht noch ein bisschen besser?" — of four ways measured at his 393 × 869, "C"): on a WRAPPED card the
-   photo box is 16:9 instead of 3:2, and the 3:2 window keeps its own size inside it — clipped by 8 % at the top and at the
-   bottom rather than fitted narrower, since the window is centred on the text (v329), so the text stays whole and only the
-   surroundings above and below it go. The picture element keeps its natural shape (height auto with its own ratio) and the
-   box clips it, so spotGeom's reading of the rendered rect and the zoom's r0 are still the picture's own and the mark on
-   the photo stays where it is; the centring is a margin, not a transform, because attachPicZoom writes the transform.
-   The pad gets the 34 px: 200 → 265 on that card at 393 × 869 (with the gaps above, +22 more on every card). A one-row
-   card keeps its 3:2 box untouched, and so does the open card under Cards, which has no pad to make room for. A page
-   front is not a picbox of this kind. A portrait picture — a hand-drawn frame from before v519 — on a wrapped card is
-   clipped the same 8 %, named as the cost: every window since v519 is 3:2 and a wrapped card is a sign of eight
-   characters or more, so the case is an old card's. */
-.card.study.wrapped:not(.detail) .zone1 .picbox:not(.page){aspect-ratio:16/9}
-.card.study.wrapped:not(.detail) .zone1 .picbox:not(.page) .signimg:not(.full){height:auto;aspect-ratio:1.5;margin-top:calc((100% * 9 / 16 - 100% / 1.5) / 2)}
+
+/* THE FRAME (v560, H: "immer gleich, immer symmetrisch, die Proportionen immer gleich"): the study card is a grid of fixed
+   rows — the photo takes --photoh, computed once per device in mountPad; the strip is one row; the word line two rows; the
+   pad is as wide as the card; the fold row closes it. The neighbour of the carousel is the same grid with the same --photoh.
+   Show me, Skip, Undo, Clear and Done live inside the pad's square, in its lower corners, so a button appearing never moves
+   the frame (v517's rule, now by construction). The hint of the first twenty reviews is one more row, out of the photo. */
+.card.study:not(.detail){display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:var(--photoh,1fr) 56px 61px auto auto;grid-auto-rows:auto;row-gap:8px;box-sizing:border-box}
+.card.study:not(.detail)>*{margin-top:0}
+.card.study:not(.detail) .zone1{min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:var(--rc)}
+.card.study:not(.detail) .zone1 .picbox:not(.page){aspect-ratio:auto;height:100%;flex:1;display:flex;align-items:center;justify-content:center;margin:0}
+.card.study:not(.detail) .zone1 .picbox:not(.page) .signimg:not(.full){flex:none;width:100%;height:100%;object-fit:contain;margin:0}
+.card.study:not(.detail) .zone1 .picbox.clip .signimg:not(.full){height:auto} /* a picture near the box's own shape keeps its size and is clipped by the box, centred on its text (v329 centres the window on the frame) */
+.card.study:not(.detail) .zone1 .signimg.full{width:100%;height:100%;object-fit:contain;margin:0;border-radius:var(--rc)} /* the whole photo, a deliberate tap, fitted into the same row */
+.card.study:not(.detail) .chrow{height:56px;overflow:hidden}
+.card.study:not(.detail) .chrow.multi .chin{padding-right:34px} /* room for the chevron, so no tile stands under it */
+.chmore{position:absolute;right:0;top:0;width:34px;height:56px;border:none;background:linear-gradient(to right,transparent,var(--card) 10px);color:var(--label2);font-size:18px;line-height:1;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.chmore[hidden]{display:none}
+.chmore[aria-expanded="true"] i{display:inline-block;transform:rotate(180deg)}
+.chall{position:absolute;inset:0;z-index:6;background:var(--card);border-radius:var(--rc);box-shadow:inset 0 0 0 1px var(--sep);overflow-y:auto;display:flex;align-items:center;justify-content:center;padding:10px;box-sizing:border-box;opacity:0;transition:opacity .16s}
+.chall.in{opacity:1}
+.chall .challin{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;row-gap:8px;max-height:100%;margin:auto}
+.chall .chline{display:contents}
+.chall .ch{position:relative;font-family:var(--hanzi);font-size:calc(var(--chs,56px) * 0.54);width:var(--chs,56px);height:var(--chs,56px);padding:0;border:none;border-radius:0;background:none;color:var(--label);box-shadow:none;cursor:pointer;user-select:none}
+.chall .chw .ch+.ch{border-left:1px solid var(--sep)} .chall .ch.cur{color:var(--tint)} .chall .ch.done{color:var(--ok)} .chall .ch.done.cur{color:var(--tint)} .chall .ch.num{font-family:var(--sans);font-size:17px;font-weight:600;width:auto;padding:0 10px;color:var(--label2)}
+@media(prefers-reduced-motion:reduce){.chrow .chin{transition:none} .chall{transition:none}}
+.card.study:not(.detail) .padline{height:61px;min-height:61px;overflow:hidden}
+.padwrap .padacts{position:absolute;left:0;right:0;bottom:8px;margin:0;display:flex;justify-content:space-between;padding:0 10px;pointer-events:none} .padwrap .padacts>*{pointer-events:auto}
+.padwrap .padacts:not(:has(:not([hidden]))){display:none} /* an empty row takes no taps */
+.padwrap .hint#pad-note{position:absolute;left:12px;right:12px;top:8px;margin:0;text-align:center;pointer-events:none}
