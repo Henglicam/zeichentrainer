@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=570; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=571; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -700,6 +700,7 @@ const TO_TEST=[
   ["app","v551","the filter pill on Cards: nothing in the sheet reads 0 any more"],
   ["app","v550","Learn, a card of several words: the pad pauses once a word and shows the word's pinyin alone — is that the right rhythm?"],
   ["app","v549","More → Help → Open: the guide is six pictures and a few sentences — is anything you needed gone?"],
+  ["learn","v571","write a character: its meaning stands small under the pinyin over the pad, and it is the character's own"],
   ["learn","v570","write a character you know freehand on the pad, in your own stroke order: it is taken without Show me or Skip"],
   ["learn","v570","trace as usual: one stroke that misses still shakes, and it disappears again when the next one fits"],
   ["app","v548","More → Learning → Handwriting on: write a character you know in your own order, and see whether Done accepts it"],
@@ -4369,9 +4370,17 @@ const RECAP_FS=96, CHAR_MS=900, RECAP_OUT=200, RECAP_SLACK=120, RECAP_PY=58, REC
    line whose dictionary has not landed yet), since an empty recap is worse than none. The card's LAST character had none
    from v553 to v556, because cardDone's own recap (v523) followed at once and the two must never stack — since v557 it has
    one too, and the whole card's recap waits for it (charDone). */
-function charRecapHTML(py){
+/* v571 (H: "Bitte bei der pinyin Anzeige nach dem Schreiben auch noch kleine Übersetzungen darunter anzeigen."): the
+   reading gets the character's own MEANING under it, small, in the whole card's recap's own `.rm` look (18 px, --label2,
+   the v554 room against clipped ink) so the two recaps speak one language. It is the same source as the reading — the
+   FIRST row of the line under the pad, the character's row since v540, already shortened by shortSense — so nothing is
+   looked up a second time (v553's rule), and a row whose meaning is "not in the dictionary" shows the reading alone,
+   since an empty phrase there is worse than none. It is the CHARACTER's meaning and not the word's: the reading above it
+   is the character's, so the two say one thing, and the word is on the line under the pad throughout. Clamped to two
+   lines, where the card's recap allows three — this one is a 900 ms breath, not a card. */
+function charRecapHTML(py,mn){
   const n=Math.max(4,[...py].length); /* a semibold syllable runs about 0.7 em a character, so 143/n cqw is the one-line fit; the clamp under it is the safety net */
-  return `<div class="recap one py" aria-live="polite"><div class="rp" style="font-size:min(${RECAP_PY}px,84cqw,${(143/n).toFixed(2)}cqw)">${esc(py)}</div></div>`;
+  return `<div class="recap one py" aria-live="polite"><div class="rp" style="font-size:min(${RECAP_PY}px,84cqw,${(143/n).toFixed(2)}cqw)">${esc(py)}</div>${mn?`<div class="rm" style="font-size:min(20px,8.2cqw)">${esc(mn)}</div>`:""}</div>`;
 }
 async function charRecap(card,cur,tg,st){
   const pause=()=>new Promise(r=>setTimeout(r,250));
@@ -4379,7 +4388,9 @@ async function charRecap(card,cur,tg,st){
   const rows=[...document.querySelectorAll("#padline .plrow")];
   const py=rows.length?((rows[0].querySelector(".mono")||{}).textContent||"").trim():""; /* the character's row, not the word's (v553) */
   if(!py) return pause();
-  pw.insertAdjacentHTML("beforeend",charRecapHTML(py));
+  let mn=rows.length?((rows[0].querySelector(".mn")||{}).textContent||"").trim():""; /* v571: the same row's meaning */
+  if(mn===t("not in the dictionary")) mn="";
+  pw.insertAdjacentHTML("beforeend",charRecapHTML(py,mn));
   const rc=pw.lastElementChild; pw.classList.add("recapping");
   requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); });
   const skipped=await new Promise(res=>{ let done=false, tm=0;
