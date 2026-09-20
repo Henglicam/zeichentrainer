@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=556; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=557; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -670,6 +670,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v557","write a card of two characters or more: the LAST character's reading stands over the pad on its own, and only then the whole card"],
   ["app","v556","Diagnostics after writing a card"],
   ["app","v553","write a card of two-character words: the reading of EVERY character stands over the pad for a moment, 应 in 供应 reading yìng"],
   ["app","v553","the reading itself: green, large, coming up and lifting away rather than popping — and a tap still skips it"],
@@ -3827,6 +3828,14 @@ function mountPad(card,d,c,tg,st,cur){
     let next=cur.wi!=null?tg.findIndex((x,j)=>x.w&&x.wi===cur.wi&&!st.done.has(j)):-1;
     if(next<0) next=tg.findIndex((x,j)=>x.w&&!st.done.has(j));
     if(next>=0){ const fade=await charRecap(card,cur,tg,st); if(!cv.isConnected||S.pad!==st) return; st.i=next; st.k=0; st.miss=0; st.hint=false; st.free.length=0; keepScroll(render); if(fade) padFadeIn(); return; } /* v555: the reading is gone before the next character is drawn, and the pad fades up with it */
+    /* v557 (H: "Irgendwie ist es unlogisch, dass ich das Pinyin des letzten geschriebenen Characters nicht nochmal einzeln
+       angezeigt kriege"): the LAST character gets its own reading like every other one, and the whole card's recap
+       (cardDone, v523) follows only once it is gone — one after the other, never on top of each other, which was v553's
+       reason for leaving it out. A one-character card skips it: there the whole card's pinyin IS that one syllable, and
+       "jī" followed by 鸡 / jī / chicken would be the very stack v553 avoided. A tap takes the reading at once as it does
+       everywhere, and cardDone then puts its own listener on, so a second tap takes the whole card's recap. The guard is
+       the sibling branch's: a card swiped or left during that second is not finished here. */
+    if(tg.filter(x=>x.w).length>1){ await charRecap(card,cur,tg,st); if(!cv.isConnected||S.pad!==st) return; }
     cardDone();
   };
   const cardDone=async()=>{
@@ -4213,8 +4222,9 @@ const RECAP_FS=96, CHAR_MS=900, RECAP_OUT=200, RECAP_SLACK=120, RECAP_PY=58, REC
    since v540 is the character's row and whose syllable was taken out of the word's own pinyin (v517), so 应 in 供应 reads
    yìng and not its isolated yīng — and it is never looked up a second time. Still the READING ALONE, which is the half
    of v550 H kept: no glyph, no meaning, no star and no ring. A row with no .mono gives no recap at all (a number, or a
-   line whose dictionary has not landed yet), since an empty recap is worse than none; the card's LAST character has none
-   either, because cardDone's own recap (v523) follows at once and the two must never stack. */
+   line whose dictionary has not landed yet), since an empty recap is worse than none. The card's LAST character had none
+   from v553 to v556, because cardDone's own recap (v523) followed at once and the two must never stack — since v557 it has
+   one too, and the whole card's recap waits for it (charDone). */
 function charRecapHTML(py){
   const n=Math.max(4,[...py].length); /* a semibold syllable runs about 0.7 em a character, so 143/n cqw is the one-line fit; the clamp under it is the safety net */
   return `<div class="recap one py" aria-live="polite"><div class="rp" style="font-size:min(${RECAP_PY}px,84cqw,${(143/n).toFixed(2)}cqw)">${esc(py)}</div></div>`;
@@ -4895,6 +4905,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  557:"The last character of a card now shows its own pinyin too, before the whole card comes up.",
   553:"Every character you write now shows its own pinyin for a moment before the pad moves on — inside a word too, and a little longer than before.",
   552:"Far more cards now show the word you are writing marked on the photo: a single word, a single character and a sign photographed at an angle are all marked, where before only a card of several words was.",
   550:"Writing a card pauses once a word, on the word's pinyin — not after every character.",
