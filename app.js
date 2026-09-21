@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=589; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=590; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -678,6 +678,7 @@ const TO_TEST=[
   ["app","v589","card detail: ← Cards on one line"],
   ["app","v589","More at 360 px: buttons inside"],
   ["app","v589","long press held 2 s deletes nothing"],
+  ["app","v590","no stray ink left on the pad"],
   ["app","v588","Check-up adds description and tag"],
   ["app","v586","Whole card: the text is already there"],
   ["app","v582","Learn: no Undo/Clear mid-write on the pad"],
@@ -3994,7 +3995,16 @@ function mountPad(card,d,c,tg,st,cur){
     if(free){ st.free.push(s); paint(); acts(); return; }
     if(!strokes||st.k>=strokes.length){ paint(); return; }
     const tm=strokes[st.k], dist=traceDist(s,tm), back=traceDist(s,tm.slice().reverse()), len=strokeLen(tm), bar=Math.min(TRACE_OK,0.07+0.5*len); /* a short stroke gets a tighter bar — a dot could otherwise land anywhere within 18 % of the pad — and a stroke that fits the template better backwards than forwards is a stroke drawn backwards, whatever its distance */
-    if(dist<=bar&&dist<=back+0.01){ if(!st.hw) st.free.length=0; /* a slip corrected by the next stroke disappears; once the pad is judging the whole character every stroke stays, snapped or not */
+    if(dist<=bar&&dist<=back+0.01){ if(!st.hw||st.k) st.free.length=0;
+      /* v590 (H, with a screenshot of 蜜 half traced under three stray scribbles: "So freestyle Striche duerfen nicht
+         stehen bleiben."): a slip corrected by the next stroke disappears, as at v570 — and it disappears once the pad is
+         judging the whole character TOO, as long as a template stroke has already been traced. His own log is the case:
+         stroke 6 missed, stroke 6 missed, stroke 6 snapped — two failed attempts at a stroke he then wrote correctly, and
+         v570's blanket `if(!st.hw)` left them standing for the rest of the character with no Undo to rub them out (v582).
+         A stroke that FITS the lit template stroke is evidence that the learner is tracing, so whatever loose ink stands
+         is a failed attempt and not part of a freehand character. The one case it must not touch is the freehand write
+         itself (v570): there nothing of the template has been traced (st.k is 0 — the reverse-order write snaps its very
+         last stroke onto template stroke 0), and the ink must stay or the matcher has nothing to judge. */
       st.k++; st.miss=0; st.hint=false; anim=null; paint(); acts(); logPadStroke(cur,st.k-1,true,dist); notePadSoon();
       if(st.k>=strokes.length) charDone(false); else if(st.hw) tryHand(); }
     else { st.free.push(s); const quiet=st.hw; if(st.miss+1>=HAND_AT) st.hw=true; miss(quiet); notePadSoon(); tryHand(); } };
