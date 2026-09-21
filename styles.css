@@ -71,7 +71,6 @@ button,.tab,.chip,.chipset,.pill,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg
 .card.bare{background:none;padding:0;box-shadow:none;border-radius:0;text-align:start;max-width:none}
 .tags{display:flex;justify-content:center;gap:8px;margin-bottom:16px;font-size:13px;font-weight:500}
 .tags span{padding:3px 10px;border-radius:999px;background:var(--card2);color:var(--label2)}
-.tags .n{color:var(--tint);background:var(--tint-soft)} .tags .r{color:var(--ok);background:var(--ok-soft)}
 .tags .f{color:var(--tint);background:var(--tint-soft)}
 .reticle{position:relative;width:100%;height:150px;max-width:100%;margin:0 auto;background:var(--card2);border-radius:var(--rc);overflow:hidden} /* the size comes inline from frontBox (the wide box, FRONT_H per photo line); the 260 px square default of v82–v222 went in v233 */
 .reticle svg{position:absolute;inset:0}
@@ -180,10 +179,22 @@ button,.tab,.chip,.chipset,.pill,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg
 .more .listhead{margin-left:16px} /* v551: the head sat at x=20 over rows whose titles sit at 32 — the one text on More that lined up with nothing. Scoped to More, since the Camera tab's marking head stands over photo tiles at 16, not over a card's inner padding. */
 .del{background:none;border:none;cursor:pointer;font-size:15px;font-weight:500;color:var(--tint);padding:10px 6px;min-height:40px;border-radius:8px}
 .del:active{opacity:.6}
-.more .mrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--sep)}
+.more .mrow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--sep)} /* v589 flex-wrap: at 360 px the German Import button hung 8.6 px out of its own card and the Russian Flagged-cards row
+   ran 11.6 px past it, "Поделиться" sliced by the screen edge — the text div cannot shrink below its longest word and pushed
+   the .btnrow (flex:none) out. Wrapping drops the buttons onto their own line only when both cannot fit, so a row that
+   fits is untouched; v432 measured and rejected min-width:0 here, which reflowed the Mirror row at 390 px instead. */
 .more .mrow:first-of-type{border-top-left-radius:var(--r);border-top-right-radius:var(--r)}
 .more .mrow:last-of-type,.more .mrow:has(+.listhead){border-bottom:none;border-bottom-left-radius:var(--r);border-bottom-right-radius:var(--r)} /* the last row of every group, not only the page's last (v282, H: "warum sind die Ecken der weißen Boxen unten nicht rund?" — the heads are divs too, so :last-of-type matched only About's row) */
 .more .listhead+.mrow{border-top-left-radius:var(--r);border-top-right-radius:var(--r)}
+/* v589: at 360 px the German Import button hung 8.6 px out of its own card and the Russian Flagged-cards row ran 11.6 px
+   past it with "Поделиться" sliced by the screen edge — the text column could not shrink below its longest word and pushed the
+   .btnrow (flex:none) out. A plain flex-wrap wraps on MAX-content, so it would have moved every row's button under its text in
+   every language (+200…300 px of More in en, ja, ko, th); a flex-basis of min-content wraps only when the two really cannot
+   share a line, so no row changes shape where it fitted. The wrapped button is right-aligned like .fieldacts (v257).
+   v432 measured and rejected min-width:0 here (it reflowed the Mirror row at 390 px) and overflow-wrap (it broke seven
+   ordinary Russian words mid-letter, measured at v589). */
+.more .mrow>div:first-child{flex:1 1 min-content}
+.more .mrow>.btnrow,.more .mrow>button{margin-left:auto}
 .more .mrow .t{font-size:17px}
 .more .mrow .s{font-size:14px;color:var(--label2);margin-top:2px;line-height:1.4}
 .more .warn{color:var(--tint)}
@@ -193,7 +204,10 @@ button,.tab,.chip,.chipset,.pill,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg
 /* v574: the study screen is the one place a topline is not inside a .pane — as a flex child of the centred #main it would
    shrink to its own content, so it takes the card's own width and sits squarely above it */
 #main>.topline{width:100%;max-width:440px}
-.topline .del{padding-left:0}
+.topline .del{padding-left:0;flex:none;white-space:nowrap} /* v589: neither child was nowrap, so a long status badge
+   (ru «Не проверено, перевод ещё не готов», id "Belum diperiksa, menunggu terjemahan") shrank the BACK BUTTON below its
+   own content and ← stacked over "Карточки" — the way out of a card rendering as a mistake, 41.8 → 63.5 px tall. The badge
+   is prose and wraps; the button does not. */
 .cardsbar{display:flex;gap:8px;margin-bottom:10px}
 .cardsbar input{flex:1;min-width:0;background:var(--fill);border:none;border-radius:10px;color:var(--label);
   font-family:var(--sans);font-size:17px;padding:10px 14px;outline:none;-webkit-appearance:none}
@@ -475,7 +489,10 @@ body.noscroll{overflow:hidden}
 .mrow .inrow input.mono{font-family:var(--mono);font-size:14px} .mrow .inrow input:focus{box-shadow:inset 0 0 0 2px var(--tint)} .mrow .inrow input::placeholder{color:var(--label3)}
 .mrow .err{margin:8px 0 0}
 .mrow .inrow.admin{margin-top:0;gap:10px;flex-wrap:wrap} .mrow .inrow.admin .s.quiet{flex:0 1 auto;min-width:0;margin:0;font-size:13px} /* v537: the label may shrink and the row may wrap. With flex:none on the label the German row ran to x=428 on a 393 px screen and 42 % of "Anmelden" was off the right edge - the button, not just the row, and scrolling to it shifted the whole page sideways and cut every section head. CLAUDE.md recorded the row overflow as structural and accepted; a clipped BUTTON is not. */ .mrow .inrow.admin input{padding:8px 12px;font-size:15px;min-height:36px} .mrow .inrow.admin .del{flex:none;padding:6px 4px;min-height:36px} /* the admin log-in row: label, field and a plain Log in on one line, nothing prominent (v283–v284) */
-.field label.check,.mrow label.check{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--label);margin-bottom:8px;min-height:44px}
+.field label.check,.mrow label.check{display:flex;align-items:flex-start;gap:10px;font-size:15px;color:var(--label);margin-bottom:8px;min-height:44px;padding-top:11px} /* v589: the box sits level with the FIRST line of its label, not in the middle of the block. With align-items:center a
+    four-line label (de@360 "Fotos einschließlen (etwa 0.0 MB mehr)") put the tick box 31.5 px down, level with line 3 of 4,
+    so the control a learner must tap was a third of the way down the sentence. The 11 px keeps a one-line label's box
+    centred in its own 44 px touch target, which is what align-items:center bought. */
 .field label.check input,.mrow label.check input{width:22px;height:22px;accent-color:var(--tint);margin:0;flex:none;box-shadow:none}
 
 /* card image (crop) */
@@ -502,7 +519,7 @@ body.noscroll{overflow:hidden}
 .done .intro .notes{display:flex;flex-direction:column;justify-content:space-around;gap:10px;padding:6px 0}
 .done .intro .note{display:flex;align-items:flex-start;gap:4px}
 .done .intro .note .ar{width:34px;min-width:34px;height:19px;margin-top:3px}
-.done .intro .note span{font-family:'Bradley Hand','Segoe Script','Noteworthy','Comic Sans MS',var(--ui);font-size:14px;line-height:1.35;color:var(--tint);display:block} /* whatever handwriting face the phone has; with none it falls back to the UI font and the arrows carry the look */
+.done .intro .note span{font-family:'Bradley Hand','Segoe Script','Noteworthy','Comic Sans MS',var(--sans);font-size:14px;line-height:1.35;color:var(--tint);display:block} /* whatever handwriting face the phone has; with none it falls back to the UI font and the arrows carry the look */
 .done .intro .n1{transform:rotate(-1.5deg)} .done .intro .n2{transform:rotate(.8deg)} .done .intro .n3{transform:rotate(-1deg)}
 @media(prefers-reduced-motion:reduce){.done .intro .note{transform:none}}
 
@@ -701,7 +718,7 @@ body.noscroll{overflow:hidden}
 .chrow .ch.done.cur{color:var(--tint)}
 .chrow .ch.num{font-family:var(--sans);font-size:17px;font-weight:600;width:auto;padding:0 10px;color:var(--label2)} /* not scaled: its width is its text's */ /* a number with its unit: one button, not writable */
 .fold{margin-top:8px;text-align:left}
-.foldbtn{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;width:100%;min-height:36px;border:none;background:var(--card2);border-radius:var(--r);padding:0 12px;font:500 15px var(--ui);color:var(--label2);cursor:pointer;text-align:left}
+.foldbtn{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;width:100%;min-height:36px;border:none;background:var(--card2);border-radius:var(--r);padding:0 12px;font:500 15px var(--sans);color:var(--label2);cursor:pointer;text-align:left} /* v589: var(--ui) was never defined in this repo, and an undefined var kills the WHOLE font shorthand — measured, the label computed 17px/400, the card's inherited body text, instead of 15px/500 on every study card and open card */
 .foldbtn i{margin-left:auto;font-style:normal;font-size:18px;line-height:1;transition:transform .15s} .fold.open .foldbtn i{transform:rotate(180deg)}
 .fold .ans{padding-top:12px;text-align:center}
 .fold .ans .anshanzi{font-size:28px;line-height:1.3;color:var(--label);margin-bottom:6px} /* v527: the whole card at the head of the block at the card's foot (H: "komplett hanzi, Pinyin, Bedeutung ganz nach unten") */
@@ -866,7 +883,7 @@ body.noscroll{overflow:hidden}
    button appearing never moves the frame. The hint of the first twenty reviews is one more row, out of the two panels. */
 .card.study:not(.detail){display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:var(--cueh,auto) auto auto;grid-auto-rows:auto;row-gap:8px;box-sizing:border-box}
 .card.study:not(.detail)>*{margin-top:0}
-/* v564 (H: "den oberen Teil nochmal in zwei Hälften trennt ... eine Hälfte ist das Bild ... Die zweite Hälfte ist der ganze Text"): the cue — as tall as the pad, on no panel of its own since v563 — is two halves, the picture over the whole text; --ph, --th and --cg are written by splitFit (app.js), and a tap on either half gives it the whole cue while the other closes to 0, on a slide */
+/* v564 (H: "den oberen Teil nochmal in zwei Hälften trennt ... eine Hälfte ist das Bild ... Die zweite Hälfte ist der ganze Text"): the cue — as tall as the pad, on no panel of its own since v563 — is two halves, the picture over the whole text; --ph, --th and --cg are written by splitFit (app.js), and a tap anywhere in the upper zone swaps the two, on a slide. v580 left only these two states — the halves, where both stood on screen at once, are gone, so there is no "other half" to close */
 .cue{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:var(--ph,minmax(0,1fr)) var(--th,auto);row-gap:var(--cg,8px);min-height:0;box-sizing:border-box}
 .cue.gl{transition:grid-template-rows .22s cubic-bezier(.22,.61,.36,1),row-gap .22s cubic-bezier(.22,.61,.36,1)} /* v565: the slide only on a tap (cueBig sets .gl for its duration) — a render never animates the halves into place */
 .cue .zone1 .picbox:not(.page):not(.sized) .signimg{opacity:0} /* v565: the picture shows only once splitFit knows its shape — fitted or clipped — so a picture that decodes late never appears in the wrong one and jumps (the carousel's neighbour did) */
@@ -884,7 +901,12 @@ body.noscroll{overflow:hidden}
 .cue .chrow{height:auto;overflow:hidden;margin:0;max-width:none;flex:none} /* v564: every row shows; the tiles' size is the half's to give (splitFit) */
 .cue .chin{gap:10px} /* v562: the word gap 14 → 10 inside the panel, so four single characters share a row */
 @media(prefers-reduced-motion:reduce){.chrow .chin{transition:none} .cue{transition:none}}
-.cue .padline{height:61px;min-height:61px;overflow:hidden;flex:none;margin-top:6px}
+.cue .padline{height:auto;min-height:61px;overflow:hidden;flex:none;margin-top:6px;justify-content:center}
+/* v589: in the uncovered state the answer takes the room the tiles leave — splitFit writes --plz, and the line is never
+   scaled past what its widest row can take, so nothing is cut (the rows are nowrap with an ellipsis on the meaning) */
+.card.study.bigtxt .cue .padline{gap:calc(3px*var(--plz,1))}
+.card.study.bigtxt .cue .padline .plrow{font-size:calc(15px*var(--plz,1));gap:calc(10px*var(--plz,1))}
+.card.study.bigtxt .cue .padline .hanzi{font-size:calc(20px*var(--plz,1))}
 .padwrap .padacts{position:absolute;left:0;right:0;bottom:8px;margin:0;display:flex;justify-content:space-between;padding:0 10px;pointer-events:none} .padwrap .padacts>*{pointer-events:auto}
 .padwrap .padacts:not(:has(:not([hidden]))){display:none} /* an empty row takes no taps */
 .padwrap .hint#pad-note{position:absolute;left:12px;right:12px;top:8px;margin:0;text-align:center;pointer-events:none}
