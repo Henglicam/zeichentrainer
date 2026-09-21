@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=595; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=596; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,6 +671,9 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v596","card from a multicard: square pic"],
+  ["app","v596","swipe to one: no jump at the snap"],
+  ["app","v596","guide + empty deck: square figures"],
   ["photo","v595","a new photo: square picture"],
   ["app","v595","card page: square picture box"],
   ["again","v595","an old card: mark on its photo"],
@@ -1557,7 +1560,7 @@ function mainLines(lines,p,m,boxes,box,keepAll){
    path while the frame follows the box on only one, so four skeptics broke it in four ways, all reproduced end to end: a
    hand-drawn frame, a frame H merely nudged (CROP.proposed is deleted on the first pointerdown — "most photos"), and the Edit
    form's Ask AI all place nothing at all, so the card showed both lines and taught one; and on the intended path the card's
-   picture is the 16:9 WINDOW of v329, not the text frame, and the window still showed the line the text had lost. So the test
+   picture is the WINDOW of v329 (16:9 then), not the text frame, and the window still showed the line the text had lost. So the test
    sits here, after frameOnText has actually moved the frame, and it asks the only question H's rule asks: is this line inside
    the picture this card will carry? A frame the box did not place is never filtered — the picture then shows everything.
    The comparison is the model against itself, mapped through the app's own geometry, and never against the pixels: snapBox
@@ -2229,7 +2232,7 @@ async function brightenPass(){
    would write the same card.
    A card qualifies only when it carries a picture, a stored frame and a photo still on the phone (fullPhoto: the inbox
    photo, or the copy that was made onto the card when the inbox photo went). Everything else is left exactly as it is.
-   Which rectangle the picture is, is decided by measurement, not by a field: an ordinary card's picture is the 16:9
+   Which rectangle the picture is, is decided by measurement, not by a field: an ordinary card's picture is the
    window around the text frame (v329), a label cut from a split panel is the label's own frame at the photo's pixels
    (v362), and nothing on the card says which. So both cuts are computed and the one whose size matches the stored
    picture is taken; a picture the frame does not describe at all — a crop cut in the Edit form's window (v247) that the
@@ -2337,7 +2340,7 @@ async function recutCard(d){
     if(!(ix>0&&iy>0)||ix*iy<RC_INSIDE*f.w*f.h) return null; }
   const rect={x:f.x*pw,y:f.y*ph,w:f.w*pw,h:f.h*ph,a:f.a||0,lw:pw,lh:ph}; /* the frame at the photo's own pixels — cropBlob then cuts one to one, and turns the frame back upright itself (v185) */
   if(rect.w<8||rect.h<8) return null;
-  const winNew=windowRect(rect,ratioOf(d)); /* the 3:2 window every card carries since v519 */
+  const winNew=windowRect(rect,ratioOf(d)); /* the window every card carries at CARD_RATIO — 3:2 from v519, the square since v595 */
   const olds=RC_OLD.map(R=>windowRect(rect,R)); /* the windows a card may still carry from before: 16:9 (v329–v513), and v514's 2:1 and 4:3 by line count (v514–v518; its two-line 3:2 is the new window already) */
   const off=r=>{ const w=Math.max(1,Math.round(r.w)), h=Math.max(1,Math.round(r.h)); /* what cropBlob will make of it */
     const near=(a,b)=>Math.abs(a-b)<=Math.max(RC_TOLPX,RC_TOL*b);
@@ -2665,6 +2668,10 @@ const GF_SEP=`var(--sep)`, GF_CARD=`var(--card)`, GF_FILL=`var(--fill)`, GF_TINT
 const gfHan=(x,y,s,txt,fill)=>`<text class="gfh" x="${x}" y="${y}" font-size="${s}" fill="${fill}" text-anchor="middle">${txt}</text>`;
 const gfBar=(x,y,w,fill,o)=>`<rect x="${x}" y="${y}" width="${w}" height="6" rx="3" fill="${fill}" opacity="${o}"/>`;
 const gfBox=(x,y,w,h,r,fill,stroke)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${fill}"${stroke?` stroke="${stroke}"`:""}/>`;
+/* v596: a photo drawn inside a figure box — the same mountain and sun the empty deck's card uses (introHTML), so the guide
+   and that first screen say "a photo" the same way. The mountain's foot follows the box's own rounded corners. */
+const gfPhoto=(x,y,w,h,r)=>`<circle cx="${(x+w*0.27).toFixed(1)}" cy="${(y+h*0.3).toFixed(1)}" r="${(w*0.075).toFixed(1)}" fill="${GF_TINT}" opacity=".4"/>`
+  +`<path d="M${x} ${(y+h*0.74).toFixed(1)} l${(w*0.25).toFixed(1)} ${(-h*0.26).toFixed(1)} ${(w*0.19).toFixed(1)} ${(h*0.16).toFixed(1)} ${(w*0.16).toFixed(1)} ${(-h*0.13).toFixed(1)} ${(w*0.4).toFixed(1)} ${(h*0.25).toFixed(1)} V${(y+h-r).toFixed(1)} a${r} ${r} 0 0 1 ${-r} ${r} H${x+r} a${r} ${r} 0 0 1 ${-r} ${-r} z" fill="${GF_TINT}" opacity=".4"/>`;
 const gfArrow=(x1,y,x2)=>`<path d="M${x1} ${y} H${x2-7}" stroke="${GF_L3}" stroke-width="2" fill="none"/><path d="M${x2-9} ${y-5} L${x2} ${y} L${x2-9} ${y+5}" fill="${GF_L3}"/>`;
 const GFIG={
   /* the photo, the frame the app puts on its text, and the card that comes out */
@@ -2672,30 +2679,40 @@ const GFIG={
     gfBox(8,18,138,114,10,GF_CARD,GF_SEP)+gfBox(26,52,102,44,5,GF_FILL)+gfHan(77,84,24,"面包",GF_LAB)
     +`<rect x="22" y="48" width="110" height="52" rx="7" fill="none" stroke="${GF_TINT}" stroke-width="2"/>`
     +gfArrow(156,75,186)
-    +gfBox(196,18,116,114,10,GF_CARD,GF_SEP)+gfBox(206,28,96,42,5,GF_FILL)+gfHan(254,96,22,"面包",GF_LAB)
-    +gfBar(222,106,64,GF_TINT,.55)+gfBar(212,118,84,GF_L3,.5)),
+    /* v596: the card that comes out carries the app's own SQUARE picture (v595), where this drew a 96x42 strip — the
+       guide must not draw a shape the app does not make. The card grew to hold it, so the two bars under the characters
+       went: what the figure says is photo in, card out, and the section's sentences say the rest. */
+    +gfBox(196,8,116,134,10,GF_CARD,GF_SEP)+gfBox(206,18,96,96,5,GF_FILL)+gfPhoto(206,18,96,96,5)+gfHan(254,134,22,"面包",GF_LAB)),
   /* the character row: every character is a button, and one of them is tapped */
   chars:()=>gfig(140,
     gfBox(30,34,112,56,12,GF_CARD,GF_SEP)+`<path d="M86 34 V90" stroke="${GF_SEP}"/>`+gfHan(58,72,26,"面",GF_LAB)+gfHan(114,72,26,"包",GF_LAB)
     +gfBox(154,34,112,56,12,GF_CARD,GF_SEP)+`<path d="M210 34 V90" stroke="${GF_SEP}"/>`+gfHan(182,72,26,"店",GF_LAB)
     +`<rect x="213" y="37" width="50" height="50" rx="9" fill="var(--tint-soft)" stroke="${GF_TINT}" stroke-width="2"/>`+gfHan(238,72,26,"铺",GF_TINT)
     +`<path d="M238 118 V102" stroke="${GF_TINT}" stroke-width="2"/><path d="M233 106 L238 99 L243 106" fill="${GF_TINT}"/>`),
-  /* the write pad on 工: the stroke already written stands in ink, the next one is lit with a dot at its start,
-     and what is left is the template. Three straight strokes, because a nine-stroke character is a smudge at this size. */
+  /* the write pad on 上: the stroke already written stands in ink, the next one is lit with a dot at its start,
+     and what is left is the template. Three straight strokes, because a nine-stroke character is a smudge at this size.
+     v596 (H, with a screenshot of this figure: "How a real Chinese character here and not that T"): it drew 工, and 工 at
+     this size IS a Latin T — the third stroke sat at .35 opacity and simply was not there, and rendered solid it reads as
+     a T with an underline all the same (measured: four weights, all four read T). 上 has the same three straight strokes
+     and cannot be read as a Latin letter. The template stroke is a real grey now, not a ghost. */
   learn:()=>gfig(172,
-    gfBox(112,10,44,28,7,GF_CARD,GF_SEP)+gfHan(134,31,18,"工",GF_TINT)+gfBox(164,10,44,28,7,GF_CARD,GF_SEP)+gfHan(186,31,18,"厂",GF_L3)
+    gfBox(112,10,44,28,7,GF_CARD,GF_SEP)+gfHan(134,31,18,"上",GF_TINT)+gfBox(164,10,44,28,7,GF_CARD,GF_SEP)+gfHan(186,31,18,"车",GF_L3)
     +gfBox(101,48,118,118,10,GF_CARD,GF_SEP)
     +`<path d="M160 48 V166 M101 107 H219" stroke="${GF_TINT}" stroke-dasharray="5 5" opacity=".28"/>`
-    +`<path d="M124 142 H196" stroke="${GF_L3}" stroke-width="7" stroke-linecap="round" fill="none" opacity=".35"/>`
-    +`<path d="M128 74 H192" stroke="${GF_LAB}" stroke-width="7" stroke-linecap="round" fill="none"/>`
-    +`<path d="M160 74 V142" stroke="${GF_TINT}" stroke-width="7" stroke-linecap="round" fill="none"/><circle cx="160" cy="92" r="6.5" fill="${GF_TINT}" stroke="${GF_CARD}" stroke-width="2"/>`),
-  /* the Cards grid, and the star that marks the ones you care about */
-  cards:()=>gfig(150,
-    gfBox(16,14,138,122,12,GF_CARD,GF_SEP)+gfBox(24,22,122,72,8,GF_FILL)+gfHan(85,120,20,"面包",GF_LAB)
-    +`<path d="M129 27 l2.6 5.4 5.9.9 -4.3 4.1 1 5.9 -5.2 -2.8 -5.3 2.8 1 -5.9 -4.2 -4.1 5.9 -.9z" fill="none" stroke="${GF_L3}" stroke-width="1.5"/>`
-    +gfBox(166,14,138,122,12,GF_CARD,GF_SEP)+gfBox(174,22,122,72,8,GF_FILL)+gfHan(235,120,20,"鸡蛋",GF_LAB)
-    +`<path d="M279 27 l2.6 5.4 5.9.9 -4.3 4.1 1 5.9 -5.2 -2.8 -5.3 2.8 1 -5.9 -4.2 -4.1 5.9 -.9z" fill="${GF_TINT}"/>`
-    +`<circle cx="281.5" cy="37" r="15" fill="none" stroke="${GF_TINT}" stroke-width="2" opacity=".7"/>`),
+    +`<path d="M124 146 H198" stroke="${GF_L3}" stroke-width="7" stroke-linecap="round" fill="none" opacity=".6"/>`
+    +`<path d="M142 64 V146" stroke="${GF_LAB}" stroke-width="7" stroke-linecap="round" fill="none"/>`
+    +`<path d="M142 108 H188" stroke="${GF_TINT}" stroke-width="7" stroke-linecap="round" fill="none"/><circle cx="142" cy="108" r="6.5" fill="${GF_TINT}" stroke="${GF_CARD}" stroke-width="2"/>`),
+  /* the Cards grid, and the star that marks the ones you care about.
+     v596: a tile IS its square picture with nothing written under it (v593) and the star stands ON the picture (v425/v469),
+     where this drew a 122x72 picture with the characters in a strip below — a card the list has not shown for three versions. */
+  cards:()=>gfig(160,
+    gfBox(16,8,138,138,12,GF_FILL,GF_SEP)+gfPhoto(16,8,138,138,12)
+    +`<path d="M129 21 l2.6 5.4 5.9.9 -4.3 4.1 1 5.9 -5.2 -2.8 -5.3 2.8 1 -5.9 -4.2 -4.1 5.9 -.9z" fill="none" stroke="${GF_CARD}" stroke-width="2.6"/>`
+    +`<path d="M129 21 l2.6 5.4 5.9.9 -4.3 4.1 1 5.9 -5.2 -2.8 -5.3 2.8 1 -5.9 -4.2 -4.1 5.9 -.9z" fill="none" stroke="${GF_L3}" stroke-width="1.5"/>`
+    +gfBox(166,8,138,138,12,GF_FILL,GF_SEP)+gfPhoto(166,8,138,138,12)
+    +`<path d="M279 21 l2.6 5.4 5.9.9 -4.3 4.1 1 5.9 -5.2 -2.8 -5.3 2.8 1 -5.9 -4.2 -4.1 5.9 -.9z" fill="${GF_TINT}" stroke="${GF_CARD}" stroke-width="2.6"/>`
+    +`<path d="M279 21 l2.6 5.4 5.9.9 -4.3 4.1 1 5.9 -5.2 -2.8 -5.3 2.8 1 -5.9 -4.2 -4.1 5.9 -.9z" fill="${GF_TINT}"/>`
+    +`<circle cx="281.5" cy="31" r="15" fill="none" stroke="${GF_TINT}" stroke-width="2" opacity=".7"/>`),
   /* the language you pick decides the app's texts and the meaning on a new card */
   lang:()=>gfig(150,
     gfBox(14,24,84,34,17,GF_CARD,GF_SEP)+`<text class="gft" x="56" y="46" font-size="14" fill="var(--label2)" text-anchor="middle">English</text>`
@@ -3125,20 +3142,25 @@ function introHTML(){
      app has not had since v580 (measured: in the front state --th is 0 and the tiles are clipped away entirely). So the
      very first screen a new learner met was a picture of a card the app never shows, and one of its three notes pointed at
      tiles that are not on it. */
-  const mock=`<svg class="mock" viewBox="0 0 168 306" aria-hidden="true">
-    <rect x="3" y="3" width="162" height="300" rx="15" fill="${c("card")}" stroke="${c("sep")}" stroke-width="1.5"/>
-    <rect x="14" y="14" width="140" height="118" rx="10" fill="${c("card2")}" stroke="${c("sep")}"/>
-    <path d="M14 106 l34-30 26 22 22-18 44 34 v6 a10 10 0 0 1 -10 10 H24 a10 10 0 0 1 -10 -10z" fill="${c("tint-soft")}"/>
-    <circle cx="48" cy="44" r="9" fill="${c("tint-soft")}"/>
-    <rect x="14" y="140" width="140" height="118" rx="10" fill="${c("card2")}" stroke="${c("sep")}"/>
-    <path d="M84 140 V258 M14 199 H154" stroke="${c("sep")}" stroke-dasharray="6 6"/>
-    <path d="M46 222 H122" stroke="${c("sep")}" stroke-width="9" stroke-linecap="round"/>
-    <path d="M54 172 H114" stroke="${c("label")}" stroke-width="9" stroke-linecap="round"/>
-    <path d="M84 172 V222" stroke="${c("tint")}" stroke-width="9" stroke-linecap="round"/>
-    <circle cx="84" cy="172" r="6" fill="${c("tint")}"/>
-    <rect x="14" y="266" width="140" height="18" rx="6" fill="${c("card2")}" stroke="${c("sep")}"/>
-    <rect x="22" y="272" width="46" height="6" rx="3" fill="${c("sep")}"/>
-    <path d="M138 273 l4 4 4 -4" stroke="${c("label3")}" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  /* v596: the photo and the pad are two equal SQUARES, as they are on the real card — the cue has been exactly as tall as
+     the pad since v561 and the app's one photo-box shape is the square (v591/v595), while this mock drew both at 140x118.
+     A first screen that draws a shape the app does not make is the same fault v589 corrected here for the card's STATE.
+     And the pad writes 上, not 工 (H: "How a real Chinese character here and not that T") — the third stroke stood in
+     --sep, a hairline separator colour, so what a learner met on the app's very first screen was a Latin T. */
+  const mock=`<svg class="mock" viewBox="0 0 168 350" aria-hidden="true">
+    <rect x="3" y="3" width="162" height="344" rx="15" fill="${c("card")}" stroke="${c("sep")}" stroke-width="1.5"/>
+    <rect x="14" y="14" width="140" height="140" rx="10" fill="${c("card2")}" stroke="${c("sep")}"/>
+    <path d="M14 128 l34-30 26 22 22-18 44 34 v6 a10 10 0 0 1 -10 10 H24 a10 10 0 0 1 -10 -10z" fill="${c("tint-soft")}"/>
+    <circle cx="48" cy="50" r="9" fill="${c("tint-soft")}"/>
+    <rect x="14" y="162" width="140" height="140" rx="10" fill="${c("card2")}" stroke="${c("sep")}"/>
+    <path d="M84 162 V302 M14 232 H154" stroke="${c("sep")}" stroke-dasharray="6 6"/>
+    <path d="M44 280 H128" stroke="${c("label3")}" stroke-width="9" stroke-linecap="round"/>
+    <path d="M68 186 V280" stroke="${c("label")}" stroke-width="9" stroke-linecap="round"/>
+    <path d="M68 238 H112" stroke="${c("tint")}" stroke-width="9" stroke-linecap="round"/>
+    <circle cx="68" cy="238" r="6" fill="${c("tint")}"/>
+    <rect x="14" y="310" width="140" height="18" rx="6" fill="${c("card2")}" stroke="${c("sep")}"/>
+    <rect x="22" y="316" width="46" height="6" rx="3" fill="${c("sep")}"/>
+    <path d="M138 317 l4 4 4 -4" stroke="${c("label3")}" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
   return `<div class="intro">${mock}<div class="notes">
     <div class="note n1">${arrow("M52 22 C36 24 16 18 5 7 M5 7 l11 1 M5 7 l3 10")}<span>${esc(t("Tap it — what it means."))}</span></div>
@@ -3255,11 +3277,17 @@ function renderStudy(main){
   wireSwipe(card, list.length<2||S.single?null:{
     n:list.length, idx:li, centred:false,
     peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ const np=frontPic(nd,{page:true,fixed:true}); return { cls:"study"+cueBigCls(), html:`<div class="cue"><div class="zone1 front">${np||cueGlyphHTML(nd)}</div><div class="txt">${peerRowHTML(nd)}<div class="padline"></div></div></div><div class="padwrap"><div class="wpad ghost"${ghostSize(card)}></div></div><div class="fold"><button class="foldbtn"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button></div>${swipeHint(nd)}` }; } finally{ S.fullPic=fp; } }, /* v530: the neighbour carries the study card's own class, so it takes its 16 px top padding and every other rule of the study layout — a plain `.card` neighbour stood 6 px taller (22 px of padding) and hopped by that much at the snap */ /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
-    go:goTo, ready:p=>{ p.style.setProperty("--cueh",(card._fit?card._fit.cueH+"px":card.style.getPropertyValue("--cueh"))); splitFit(p); } }); /* v560/v561: the neighbour takes the card's own cue height, so its frame is the card's; v564/v580: and rides in in the state the card is in */
+    go:goTo, ready:p=>{ p.style.setProperty("--cueh",(card._fit?card._fit.cueH+"px":card.style.getPropertyValue("--cueh"))); splitFit(p); fitPageCover(p); } });
+    /* v596: fitPageCover on the neighbour too. renderStudy has cover-fitted the CARD's page front since v478 and nothing
+       ever fitted the peer's, while v530 gives the peer the study card's own class — so .card.study .picbox.page .pagewrap
+       {position:absolute} applied with nothing sizing it, and the multicard's photo rendered at its NATURAL size anchored
+       top-left inside the box: measured on v595, a 1200x800 photo in a 322x214.7 box, i.e. a 27 % crop of its top-left
+       corner sliding in and jumping to the cover fit centred on the card's own button at the snap. The v418/v565 class of
+       defect on the one card kind nobody re-measured. */ /* v560/v561: the neighbour takes the card's own cue height, so its frame is the card's; v564/v580: and rides in in the state the card is in */
   wireSay(); wireLinks(); wireSrc(); wireAi(); wireExplain();
   if(ansOpen) explainAuto(d); else explainSoon(d); /* v585: the block is open, so what the card is about is fetched now; v586: and folded, a moment after the card comes up, so it is there by the time the fold is tapped */
   mountPad(card,d,c,tg,st,cur);
-  if(pg&&!S.fullPic) fitPageCover(card,pg); /* D5: the multicard's picture cover-fitted around the card's own text */
+  if(pg&&!S.fullPic) fitPageCover(card); /* D5: the multicard's picture cover-fitted around the card's own text */
   attachPicZoom(card.querySelector(".zone1 .picbox")); /* v514: pinch to zoom, one finger to pan (§ 4) */
   if(cur) padLine(d,cur); /* the line under the pad, always, for the character the pad is on (v518) */
   spotChar(card,d,cur); /* v520: the locked character lit on the photo; v533: the word being written marked on it */
@@ -3272,7 +3300,7 @@ function revealBlock(sel){ const a=$(sel), nav=$("#tabs"), hd=document.querySele
 /* THE LOCKED CHARACTER IS LIT ON THE PHOTO (v520, H's phase-6 prompt, "Go": "Wenn ein einzelner Charakter gehighlightet wird,
    sollte dieser auch im Bild gehighlightet werden. Das heißt, alle anderen Bildbereiche werden leicht abgedunkelt. Der Übergang
    ist weich."). Nothing per character is stored, so the place is derived: the card's frame is the text's rectangle on the photo
-   (v244), the picture is the 3:2 window around it (v519; an older window at 16:9, 2:1 or 4:3 where the re-cut stood down) or a
+   (v244), the picture is the square window around it (v595; 3:2 from v519, and an older 16:9, 2:1 or 4:3 where the re-cut stood down) or a
    split label's own frame (v362), the photo's lines share the frame's height evenly and a line's characters share its width by
    their widths (lineUnits, v339 — the estimate charBox has made since v62: signs are monospaced). A soft estimate for a soft
    spotlight: v461's own shadow, faded in, and faded out again at the release; on a v452 page front, whose own region v461's
@@ -3286,7 +3314,7 @@ function charSpans(d,ch){ const lines=d.kind==="sign"?String(d.c||"").split("\n"
    highlighten"): the geometry is derived once here and both marks are drawn from it, so they cannot drift and one render
    decodes the photo once. `spans` are fractions of the TEXT's rectangle (charSpans, wordSpan); `place` maps one onto the
    picture as it is rendered. Nothing per character or per word is stored on the card: the frame is the text's rectangle on
-   the photo (v244), the picture the 3:2 window around it (v519) or a split label's own frame (v362), the photo's lines share
+   the photo (v244), the picture the window around it at CARD_RATIO (v595; 3:2 from v519) or a split label's own frame (v362), the photo's lines share
    the frame's height evenly and a line's characters share its width by their lineUnits (v339) — the estimate charBox has
    made since v62. So it is soft by construction: on a sign whose characters are unevenly spaced the mark sits a little off,
    and a card the re-cut stood down on gets no mark rather than one in the wrong place. */
@@ -3375,7 +3403,7 @@ async function spotWord(card,d,x,g){
   if(!x||!x.w||!x.word) return; const sp=wordSpan(d,x); if(!sp) return;
   const geom=g||await spotGeom(card,d); if(!geom||!card.isConnected) return;
   /* v552: "nothing to single out" is a question about the PICTURE, not about the text. v533 skipped the mark whenever the
-     word was the whole text, and since v329/v519 the picture is a 3:2 WINDOW with the sign around the text — so on the
+     word was the whole text, and since v329 the picture is a WINDOW with the sign around the text (square since v595) — so on the
      commonest card of all, one dictionary word photographed from a sign, the text is a band inside its own surroundings
      and pointing at it is exactly the point. The mark is left out only when it would trace the picture's own edge, which
      is the one case v533 was really about: a split label, whose picture IS its frame. */
@@ -3605,7 +3633,7 @@ async function padLineFill(box,d,x){ box.hidden=false;
 }
 /* D5: the multicard's picture in the study card's box is cover-fitted around the card's own text — the pagewrap is sized to the
    scaled picture and offset so the region's centre is centred, clamped to the picture; the regions keep their percent place */
-function fitPageCover(card,pg){
+function fitPageCover(card){ /* v596: the page argument went — it was never read, and dropping it lets the carousel's two ready hooks, which have the element and not the card, call this at all */
   const box=card.querySelector(".zone1 .picbox.page"); if(!box) return; const wrap=box.querySelector(".pagewrap"), img=wrap&&wrap.querySelector(".signimg"); if(!img) return;
   const me=box.querySelector(".region.me");
   const place=()=>{ const nw=img.naturalWidth, nh=img.naturalHeight; if(!nw||!nh||!box.isConnected) return;
@@ -3736,7 +3764,7 @@ const FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_G
    no longer timed by a constant of its own: it lifts out of the recap POP1 before the reading is over, so v523's own
    order — the reading first, the reward second, the flight ending with the card — holds at every length by construction
    instead of by two numbers that have to be kept in step (the v401 lesson), and a milestone card's extra FW_MS (v545)
-   buys the burst its room without costing the reading anything. FRONT_RATIO is the shape the study card's picture is cut in (3:2, v519); the box it shows in is the frame's photo row since v560. PAD_FLOOR, PHOTO_MIN and LINE_H are the frame's constants (mountPad, splitFit), CH_BIG the tile size the enlarged text half may reach (v564), CLIP_RATIO the share of the box's own shape a picture must reach to be clipped rather than fitted. BRUSH_W is the
+   buys the burst its room without costing the reading anything. FRONT_RATIO is the shape the study card's picture is cut in (CARD_RATIO — the square since v595, 3:2 from v519); the box it shows in is the frame's photo row since v560. PAD_FLOOR, PHOTO_MIN and LINE_H are the frame's constants (mountPad, splitFit), CH_BIG the tile size the enlarged text half may reach (v564), CLIP_RATIO the share of the box's own shape a picture must reach to be clipped rather than fitted. BRUSH_W is the
    brush's widest point; OUT_GRID/OUT_Y0 map the stroke outlines, which are stored y-up on a 256 grid. */
 /* TRACE_OK: the mean distance, in pad sides, between the drawn stroke's eight points and the template stroke's — the spec's
    0.28 was a starting number and its own suite refuses a stroke a quarter of the pad off, so the bar sits under that; the
@@ -4729,7 +4757,8 @@ function detailSwipe(list,li,main){
       /* the card you swipe to is not the one you came into: its back button would otherwise claim a way back that
          belongs to another card (v492) — true of the page flag of v453 as well, which survived a swipe until now */
       S.detail=nd.id; S.detailFrom=null; S.fullPic=false; render(); },
-    busy:on=>{ const pn=main.querySelector(".pane"); if(pn) pn.classList.toggle("swiping",on); }, ready:chrowFit};
+    busy:on=>{ const pn=main.querySelector(".pane"); if(pn) pn.classList.toggle("swiping",on); },
+    ready:p=>{ chrowFit(p); fitPageCover(p); } }; /* v596: the same fit as the card's, or a generated flashcard's neighbour slides its page in CONTAINED with a 16 px margin (the .picbox.page fallback) against the card's cover fit */
 }
 function renderCardDetail(main,c){
   const d=cardOf(c); if(!d){ S.detail=null; return renderCards(main); }
@@ -4756,7 +4785,7 @@ function renderCardDetail(main,c){
     dcard.querySelectorAll(".chrow .ch").forEach(b=>{ const i=+b.dataset.i, x=tg[i]; if(!x) return; b.onclick=e=>{ e.stopPropagation(); S.detailCh=detailCh(d)===i?null:{c:d.id,i}; render(); }; }); /* a tap lights the word and reads it under the answer; the same character again puts it out — there is no pad here to keep it */
     const lx=detailLit(d,tg); if(lx) padLine(d,lx); /* v531: the first word's line when nothing is tapped */
     chrowFit(dcard);
-    const pg=frontPage(d); if(pg&&!S.fullPic) fitPageCover(dcard,pg); /* D5, as on the study card */
+    const pg=frontPage(d); if(pg&&!S.fullPic) fitPageCover(dcard); /* D5, as on the study card */
     spotWord(dcard,d,lx); /* v533: the word whose line is showing, marked on the photo as in Learn */
     attachPicZoom(dcard.querySelector(".zone1 .picbox")); }
   const test=$("#d-test"); if(test) test.onclick=()=>{
@@ -4971,7 +5000,7 @@ function renderEdit(main,c){
     let handoff=null;
     if(willHand){ const rect={...CROP.rect}; const r=await cropBlob(rid,rect); if(r) handoff={rect,blob:r.blob}; } /* a reading still due or running for this frame (v244: an untouched or already read frame saves without one) */
     if(removeImg){ delete upd.img; delete upd.imgFull; delete upd.shot; delete upd.frame; dropThumb(c); } /* shot too — without it the front would still show the inbox photo through fullPhoto (v214) */
-    else if(handoff){ const win=await windowCut(rid,handoff.rect,ratioOf(upd)); upd.img=await cardJpeg(win?win.blob:handoff.blob); upd.frame=photoFrame(handoff.rect); dropThumb(c); } /* the 16:9 window around the frame (v329) */
+    else if(handoff){ const win=await windowCut(rid,handoff.rect,ratioOf(upd)); upd.img=await cardJpeg(win?win.blob:handoff.blob); upd.frame=photoFrame(handoff.rect); dropThumb(c); } /* the window around the frame (v329, at CARD_RATIO) */
     else if(recropImg){ const win=recropRect?await windowCut(rid,recropRect,ratioOf(upd)):null; upd.img=await cardJpeg(win?win.blob:recropImg); if(recropRect) upd.frame=photoFrame(recropRect); dropThumb(c); } /* the crop framed again in this form (v239) with its frame (v244), as fractions of the whole photo even when framed in the window (v247) */
     if(upd.mt){ upd.mt={...upd.mt, verified:true, pending:false}; delete upd.mt.suspect; } /* a human edited it */
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
@@ -5543,7 +5572,7 @@ async function readPassTra(blob,status){
 const PENDING={}; /* shot id → the id of a card saved before its reading finished (v237, "Save now"): the reading fills it in when done */
 const PLACED={}, READ_APP={}, PICSEEN={}; /* v304, for a card saved with Save now: PLACED = the frame the reader or the AI placed on the text while the card waited (the card takes it as its frame and its crop), READ_APP = the reading started from the app's own frame, not the hand's (only such a frame may be moved); PICSEEN (v400) = the picture the AI actually read and the frame it was cut from — the one thing a card needs in order to ask, at save time, whether its own frame is anywhere near what the model said it saw (H: "Du würdest eine falsch gecroppte Karte doch selber erkennen, wenn Du den Crop noch mal prüfen würdest. Also ich meine die App.") */
 const frameOf=r=>({x:+(r.x/r.lw).toFixed(4),y:+(r.y/r.lh).toFixed(4),w:+(r.w/r.lw).toFixed(4),h:+(r.h/r.lh).toFixed(4),a:+(r.a||0).toFixed(1)}); /* the frame a card was cut with, as fractions of the photo (card.frame, v244) — Crop again starts from it */
-/* The card's picture is a 16:9 window around the text (v329, H: "does the 16:9 format make sense?" — measured on 21 photos: one-line signs run 2.3–6.8:1, posters and plates 0.9–1.6:1, so the tight crop filled the photo box's height or width only half and the rest was the blurred fill; "Go" on the window): the same centre as the frame, the frame's own angle, widened to FRAME_RATIO in the direction it lacks, never smaller than the frame, shifted to stay inside the photo and clamped to the photo's size — the text keeps its size and place in the box, the surroundings fill the rest. The card's frame stays the text's frame (Crop again starts from it); only the picture is the window. */
+/* The card's picture is a window around the text at CARD_RATIO (16:9 at v329, 3:2 at v519, the square since v595; v329, H: "does the 16:9 format make sense?" — measured on 21 photos: one-line signs run 2.3–6.8:1, posters and plates 0.9–1.6:1, so the tight crop filled the photo box's height or width only half and the rest was the blurred fill; "Go" on the window): the same centre as the frame, the frame's own angle, widened to FRAME_RATIO in the direction it lacks, never smaller than the frame, shifted to stay inside the photo and clamped to the photo's size — the text keeps its size and place in the box, the surroundings fill the rest. The card's frame stays the text's frame (Crop again starts from it); only the picture is the window. */
 /* ONE WINDOW SHAPE ON EVERY CARD, 3:2 (v519, H on the folded Mix Fold: "the photo doesn't get enough space … the proportions
    don't feel right", then "3:2 with the re-cut" on the three ratios measured at his own geometry — photo 217 against a pad of
    306 there, 215 against 235 at 390 × 844). From v514 to v518 the window followed the card's line count (D1: one line 2:1, two
@@ -8474,7 +8503,6 @@ function assignCost(C){
   let total=0; for(let j=1;j<=n;j++) total+=C[p[j]-1][j-1]; return total;
 }
 /* the characters whose strokes the drawing fits best: [{ch,cost}], cheapest first */
-const matchTol=(n,m)=>Math.abs(n-m)<=(n>=8?2:1); /* the candidate stroke counts strokeMatch looks at for a drawing of n strokes (v570; the write pad stopped asking it at v592, the drawing sheet still does) */
 async function strokeMatch(strokes){
   const db=await loadStrokes(); const U=prepStrokes(strokes); if(!U) return [];
   const n=U.length, tol=n>=8?2:1, out=[];
