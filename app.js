@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=584; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=585; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,8 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["app","v584","Learn: Explain above the tab bar"],
-  ["app","v583","the description at the card's foot"],
+  ["app","v585","Whole card shows the description too"],
   ["app","v582","Learn: no Undo/Clear mid-write on the pad"],
   ["app","v580","Learn: one tap swaps photo and text"],
   ["app","v579","pad: freehand taken at speed?"],
@@ -2563,7 +2562,7 @@ function renderMore(main){
     <div class="mrow"><div style="flex:1"><div class="t">${t("Language")}</div><div class="s">${t("The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.")}</div><div class="chipset" id="lang-chips" style="margin-top:8px">${LANGS.map(([c,n])=>`<button class="chip${LANG===c?" on":""}" data-lang="${c}">${n}</button>`).join("")}</div></div></div>
     ${translateRowHTML()}
     ${undoRunHTML("meanings")}
-    <div class="mrow"><div><div class="t">${t("AI review")}</div><div class="s" id="ai-status"></div><div class="s" style="margin-top:6px">${t("What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up, Translate all or Tag all, and for one card when you tap Explain under its meaning. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.")}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> ${t("Check every new card with the AI automatically (when online)")}</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
+    <div class="mrow"><div><div class="t">${t("AI review")}</div><div class="s" id="ai-status"></div><div class="s" style="margin-top:6px">${t("What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up, Translate all or Tag all, and for one card when you open Whole card and the card has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.")}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> ${t("Check every new card with the AI automatically (when online)")}</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
     ${S.admin?`<div class="aiform" id="ai-form" hidden>
       <div class="field"><label>Provider</label><div class="chipset" id="ai-providers">${Object.entries(AI_PROVIDERS).map(([k,v])=>`<button class="chip" data-aipv="${k}">${esc(v.short)}</button>`).join("")}</div>
         <div class="badge" id="ai-acct" style="margin-top:8px"></div>
@@ -3036,20 +3035,29 @@ function backHTML(d,o){ const srcHere=!(o&&o.noSrc); /* noSrc: the front of this
   /* the linked row is not part of the answer any more (v422, H: "Die 'also in another photo' Zeile nach unten schieben"): it
      stood between the parts row and the grades, so reference material sat in the middle of the answer-then-grade path. Each
      caller places it now, below its own actions. */
-  return `${simpRefHTML(d)}<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}${srcHere?srcPill(d,true):""}</div>${o&&o.noDesc?"":descHTML(d,o)}${o&&o.noParts?"":charsHTML(d)}
+  return `${simpRefHTML(d)}<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}${srcHere?srcPill(d,true):""}</div>${descHTML(d,o)}${o&&o.noParts?"":charsHTML(d)}
     ${glossBlock}`;
 }
-/* the card's own description (v529): in the app's language when it has one; else, where the caller allows it (explain:
-   the study card and the open card — never the camera's finished card, whose check is still on its way), the Explain button,
-   which asks the AI once for this card alone. v583 (H: "Explain per default anzeigen, nicht zu klappbar"): on those two
-   screens it stands at the FOOT of the card, outside the fold, so it is there without a tap and no tap can put it away —
-   the callers pass noDesc to backHTML and draw it themselves; the camera's finished card still carries it inside its back. EXPLAIN holds the button's state by card id (busy, or a failure's sentence) so a re-render
-   draws it right; the answer is put into the DOM in place (refreshDesc), never through render(), which would rebuild the pad under a finger. */
+/* the card's own description (v529): in the app's language when it has one. v585 (H: "Ich moechte, dass wenn ich auf Whole
+   Card tippe, sich Whole Card aufklappt, da der ganze Inhalt von der Karte zu sehen ist, plus der Inhalt von Explain. Ich
+   moechte nicht, dass Explain ein extra Link ist, wo ich extra nochmal auftippen muss. Der Inhalt muss einfach da sein, von
+   Anfang an."): it is INSIDE the "Whole card" block again, under the meaning, on the study card and on the open card alike,
+   so one tap on the fold gives the whole card AND what it is about, with no second thing to tap. v583's row at the foot and
+   v584's pad reserve for its button are both reversed with it. A card that has none yet asks for one BY ITSELF while the
+   block is open (explainAuto, gated on the AI-review switch), so the content is simply there rather than a tap away; only a
+   failure leaves a sentence with a way to try again. EXPLAIN holds that state by card id so a re-render draws it right, and
+   the answer is put into the DOM in place (refreshDesc), never through render(), which would rebuild the pad under a finger. */
 const EXPLAIN={};
 function descHTML(d,o){ const s=descOf(d); if(s) return `<p class="desc" data-desc="${esc(d.id)}">${esc(s)}</p>`;
   if(!(o&&o.explain)||!d.c||!aiOn()) return "";
   const st=EXPLAIN[d.id]; if(st==="busy") return `<div class="desc want" data-desc="${esc(d.id)}">${busyHTML(t("Explaining …"))}</div>`;
-  return `<div class="desc want" data-desc="${esc(d.id)}"><button class="del" data-explain="${esc(d.id)}">${t("Explain")}</button>${st?`<div class="hint">${esc(st)}</div>`:""}</div>`; }
+  if(st) return `<div class="desc want" data-desc="${esc(d.id)}"><div class="hint">${esc(st)}</div><button class="del" data-explain="${esc(d.id)}">${t("Explain")}</button></div>`; /* only a failure gets a button: the way back from a dead network, never a thing to tap for the content */
+  return `<div class="desc want" data-desc="${esc(d.id)}"></div>`; /* the place the answer lands in - refreshDesc needs an element to replace */ }
+/* the block is open and the card has no description: ask for one without being asked to. Gated on aiAutoOn(), the switch
+   that says the app may call the AI on its own (v193), so a phone with the AI review unticked shows nothing there and costs
+   nothing. Once per card: a stored answer, a running call and a failure all stand it down, so a dead network is not tried
+   again on every render - the button in the failure state is the way to try again. */
+function explainAuto(d){ if(!d||!d.c||descOf(d)||EXPLAIN[d.id]||!aiAutoOn()||!navigator.onLine) return; explainCard(d.id); }
 function refreshDesc(id){ const d=cardOf(id); if(!d) return; document.querySelectorAll(`[data-desc="${CSS.escape(id)}"]`).forEach(el=>{ const tmp=document.createElement("div"); tmp.innerHTML=descHTML(d,{explain:true}); const n=tmp.firstElementChild; if(n){ el.replaceWith(n); wireExplain(n.parentElement||document); if(n.tagName==="P") revealEl(n); } else el.remove(); }); }
 function revealEl(el){ const nav=$("#tabs"), r=el.getBoundingClientRect(), navTop=nav?nav.getBoundingClientRect().top:innerHeight, d=r.bottom+18-navTop; if(d>0) window.scrollBy({top:d,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"}); } /* the paragraph that just landed is read whole above the tab bar (the v527 rule), never scrolled past its head */
 function wireExplain(root){ (root||document).querySelectorAll("[data-explain]").forEach(b=> b.onclick=e=>{ e.stopPropagation(); explainCard(b.dataset.explain); }); }
@@ -3195,7 +3203,7 @@ function renderStudy(main){
      has one, the photo's own lines — so the block at the foot of the card is the whole card in one look, while the line
      above the pad is the word being written. Until v526 the block sat above the pad and the line under it, and the two
      said the same thing twice about different words ("doppelt gekoppelt und unlogisch"). */
-  const back=`<div class="anshanzi hanzi">${(d.trad?d.trad.split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,noDesc:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}
+  const back=`<div class="anshanzi hanzi">${(d.trad?d.trad.split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}
       <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button></div>`;
   const noTmpl=cur&&STROKES&&!STROKE_OF.has(cur.glyph);
   const freePad=noTmpl; /* a character the stroke set lacks: the pad draws freehand and needs Undo, Clear and the note. A character WITH a template never shows them — v570 gave them to it mid-write and v582 took them back, so the freehand judging leaves no mark on the screen. */
@@ -3204,17 +3212,15 @@ function renderStudy(main){
      above their own card. Inside the card it was the first child of the study card's GRID, whose first row is the cue's own
      fixed --cueh (v560), so the row took that whole row — 279 px of white with the two words centred in it — and pushed the
      cue, the pad and the fold down by it, ending the card 279 px under the tab bar. */
-  /* v583 (H: "Explain per default anzeigen, nicht zu klappbar"): the card's own description stands at the FOOT, under the
-     fold row and outside it — there without a tap, and no tap puts it away. It is deliberately NOT in fit()'s budget:
-     DESC_MAX is 700 characters, so on a long one the pad would collapse, and the frame above it (cue, pad, fold row) is
-     what v560 keeps constant; the card runs past the tab bar by the paragraph's own height instead, and the page scrolls. */
+  /* v585 (H: "Der Inhalt von explain soll in Whole Card immer sichtbar sein"): the description is inside the block again,
+     under the meaning, so the fold's one tap gives the whole card and what it is about at once. v583's row at the foot and
+     v584's DESC_ROW reserve go with it, and the pad has the 30 px back. */
   main.innerHTML=wxNoteHTML()+(S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:"")+`<div class="card study${rep?" rep":""}${cueBigCls()}">
     <div class="cue">
     <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}${d.flag||d.unchecked?`<button class="picflag${d.flag?" on":" new"}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}" title="${d.flag?"":esc(t("Not yet checked"))}">${d.flag?"⚑":"⚐"}</button>`:""}</div>
     <div class="txt" id="cuetxt">${chrow}<div class="padline" id="padline"></div></div></div>
     <div class="padwrap"><canvas class="wpad" id="wpad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas><div class="padacts" id="padacts"><button class="del" id="pad-undo" hidden>${t("pad:Undo")}</button><button class="del" id="pad-show" hidden>${t("Show me")}</button><button class="del" id="pad-skip" hidden>${t("Skip")}</button><button class="del" id="pad-done" hidden>${t("Done")}</button><button class="del" id="pad-clear" hidden>${t("Clear")}</button></div>${freePad?`<div class="hint" id="pad-note">${noTmpl?t("not in the stroke set — draw it and tap Done"):""}</div>`:""}</div>
     <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Whole card")}</span>${rep?`<span class="pill again">${t("Again")}</span>`:""}<span class="tail">${!rep&&list.length>1&&!S.single?/* v522: the count in the fold row; on a repeat pass the Again pill takes the slot */`<span class="pos">${esc(t("{0} of {1}",li+1,list.length))}</span>`:""}<i aria-hidden="true">⌄</i></span></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
-    ${descHTML(d,{explain:true})}
     ${swipeHint(d)}</div>`; /* no linked-photos row on the study card (v518, H: "No 'also in other cards' in learn mode. Only on Cards mode.") — the detail keeps it */
   /* v536: no warmParts here. The block has carried backHTML(...{noParts:true}) since v512 ("backHTML without the parts
      row"), so opening it parsed cedict.tsv.gz - 2.5 MB - for a row this screen does not draw. The row lives on the camera's
@@ -3250,6 +3256,7 @@ function renderStudy(main){
     peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ const np=frontPic(nd,{page:true,fixed:true}); return { cls:"study"+cueBigCls(), html:`<div class="cue"><div class="zone1 front">${np||cueGlyphHTML(nd)}</div><div class="txt">${peerRowHTML(nd)}<div class="padline"></div></div></div><div class="padwrap"><div class="wpad ghost"${ghostSize(card)}></div></div><div class="fold"><button class="foldbtn"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button></div>${swipeHint(nd)}` }; } finally{ S.fullPic=fp; } }, /* v530: the neighbour carries the study card's own class, so it takes its 16 px top padding and every other rule of the study layout — a plain `.card` neighbour stood 6 px taller (22 px of padding) and hopped by that much at the snap */ /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
     go:goTo, ready:p=>{ p.style.setProperty("--cueh",(card._fit?card._fit.cueH+"px":card.style.getPropertyValue("--cueh"))); splitFit(p); } }); /* v560/v561: the neighbour takes the card's own cue height, so its frame is the card's; v564/v580: and rides in in the state the card is in */
   wireSay(); wireLinks(); wireSrc(); wireAi(); wireExplain();
+  if(ansOpen) explainAuto(d); /* v585: the block is open, so what the card is about is fetched now rather than waiting for a tap */
   mountPad(card,d,c,tg,st,cur);
   if(pg&&!S.fullPic) fitPageCover(card,pg); /* D5: the multicard's picture cover-fitted around the card's own text */
   attachPicZoom(card.querySelector(".zone1 .picbox")); /* v514: pinch to zoom, one finger to pan (§ 4) */
@@ -3676,7 +3683,7 @@ async function checkCard(id){ const d=cardOf(id); if(!d||!d.unchecked) return; c
    order-free by construction (a Hungarian assignment over the strokes), so the order really is the learner's. Off by
    default — see § the entry for why the automatic trigger at level 3 was measured and not built. */
 const HAND_TOP=3, HAND_AT=2; /* the target must be among the matcher's three best — the drawing sheet's own rule since v141 — and the pad starts judging the whole character after two strokes in a row that did not fit (v570) */
-const PAD_FLOOR=160, PHOTO_MIN=120, LINE_H=61, DESC_ROW=52, CLIP_RATIO=0.65, TRACE_OK=0.18, NEXT_MS=3500, RECAP_SYL=230, RECAP_MAX=5600, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
+const PAD_FLOOR=160, PHOTO_MIN=120, LINE_H=61, CLIP_RATIO=0.65, TRACE_OK=0.18, NEXT_MS=3500, RECAP_SYL=230, RECAP_MAX=5600, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
 const CARD_RATIO=1.5; /* the one window and box shape on every card, 3:2 (v519) — declared here, since FRONT_RATIO reads it at load time */
 let LAST_FIT=null; /* v521: the study card's last pad measurement, printed by Diagnostics */
 /* THE MAIN THREAD AT STARTUP, AND WHAT A FOLD DOES TO IT (v532, H: "open/close foldable phone sometimes freezes the startup
@@ -3715,7 +3722,7 @@ const FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_G
    no longer timed by a constant of its own: it lifts out of the recap POP1 before the reading is over, so v523's own
    order — the reading first, the reward second, the flight ending with the card — holds at every length by construction
    instead of by two numbers that have to be kept in step (the v401 lesson), and a milestone card's extra FW_MS (v545)
-   buys the burst its room without costing the reading anything. FRONT_RATIO is the shape the study card's picture is cut in (3:2, v519); the box it shows in is the frame's photo row since v560. PAD_FLOOR, PHOTO_MIN, LINE_H and DESC_ROW are the frame's constants (mountPad, splitFit) — DESC_ROW is the room the pad's budget keeps below the fold row for the card's description, the Explain button's own box and nothing more (v584), CH_BIG the tile size the enlarged text half may reach (v564), CLIP_RATIO the share of the box's own shape a picture must reach to be clipped rather than fitted. BRUSH_W is the
+   buys the burst its room without costing the reading anything. FRONT_RATIO is the shape the study card's picture is cut in (3:2, v519); the box it shows in is the frame's photo row since v560. PAD_FLOOR, PHOTO_MIN and LINE_H are the frame's constants (mountPad, splitFit), CH_BIG the tile size the enlarged text half may reach (v564), CLIP_RATIO the share of the box's own shape a picture must reach to be clipped rather than fitted. BRUSH_W is the
    brush's widest point; OUT_GRID/OUT_Y0 map the stroke outlines, which are stored y-up on a 256 grid. */
 /* TRACE_OK: the mean distance, in pad sides, between the drawn stroke's eight points and the template stroke's — the spec's
    0.28 was a starting number and its own suite refuses a stroke a quarter of the pad off, so the bar sits under that; the
@@ -3921,9 +3928,10 @@ function mountPad(card,d,c,tg,st,cur){
     const nav=$("#tabs"), navTop=nav?nav.getBoundingClientRect().top:window.innerHeight, navH=nav?nav.getBoundingClientRect().height:56;
     const ccs=getComputedStyle(card), rect=card.getBoundingClientRect(), top=rect.top+window.scrollY;
     const cardH=Math.floor(navTop-16-top); /* the card's whole room with the page at rest: from its top to 16 px above the tab bar */
-    const gap=parseFloat(ccs.rowGap)||8, hn=card.querySelector(":scope>.hint:not(#pad-note)") /* v583: the swipe hint only — a direct child; the description at the foot may carry a .hint of its own (a failed Explain) and is NOT in the pad's budget */, fb=card.querySelector("#fold");
-    const ds=card.querySelector(":scope>.desc"); /* v584 (H: "Explain soll in Whole Card immer sichtbar sein"): the description row at the card's foot — v583 left it out of the budget, so the Explain button stood half under the tab bar on every folded card (measured 25 of its 49 px hidden). DESC_ROW is a CONSTANT, never the row's own height: a per-card term is exactly what v560 was built to end, and DESC_MAX 700 is some 360 px, which no budget can hold. */
-    const avail=cardH-(parseFloat(ccs.paddingTop)||12)-(parseFloat(ccs.paddingBottom)||14)-(fb?fb.offsetHeight:36)-gap*2-(hn?hn.offsetHeight+gap:0)-(ds?DESC_ROW+gap:0); /* for the two panels */
+    const gap=parseFloat(ccs.rowGap)||8, hn=card.querySelector(":scope>.hint:not(#pad-note)") /* the swipe hint of the first twenty reviews - a direct child of the card (v537) */, fb=card.querySelector("#fold");
+    /* v585: no term for the description. It is inside the fold block again, which fit() has never counted, open or folded
+       (v527), so v584's DESC_ROW reserve is gone and the pad has its 30 px back on every card. */
+    const avail=cardH-(parseFloat(ccs.paddingTop)||12)-(parseFloat(ccs.paddingBottom)||14)-(fb?fb.offsetHeight:36)-gap*2-(hn?hn.offsetHeight+gap:0); /* for the two panels */
     const cueMin=Math.max(PHOTO_MIN,CH_MAX+6+LINE_H); /* v580: the cue holds ONE of the two — the picture at its floor, or one row of tiles over the word line — where v564 needed room for both at once (PHOTO_MIN plus a whole text half), so a short screen breaks the symmetry later and the pad keeps more of it */
     let side=Math.min(inner,Math.floor(avail/2)), cueH=side;
     if(side<cueMin){ cueH=cueMin; side=Math.max(PAD_FLOOR,Math.min(inner,avail-cueH)); } /* too short for two equal panels: the photo keeps its floor, the pad gives way */
@@ -4644,14 +4652,13 @@ function detailCardHTML(d,sw){
      line showed only for a tapped character. The block stays open by default here — this is the screen for looking a card up. */
   const tg=padTargets(d), li=detailCh(d), lit=detailLit(d,tg), open=!S.detailHide;
   const btn=x=>`<button class="ch${x.w?"":" num"}${lit===x?" cur":""}" data-i="${tg.indexOf(x)}">${esc(x.glyph)}</button>`;
-  const back=`<div class="anshanzi hanzi">${(d.trad?d.trad.split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,noDesc:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}`;
+  const back=`<div class="anshanzi hanzi">${(d.trad?d.trad.split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}`;
   return `${tagsHTML(d,!p)}<div class="zone1 front${d.flag?" flagged":""}" id="d-reveal">${frontPic(d,{page:true,fixed:true})||cueGlyphHTML(d)}</div>
       ${chrowHTML(d,tg,btn,lit?lit.wi:null)}
       <div class="padline" id="padline"${lit?"":" hidden"}></div>
       ${d.reading&&!d.reading.failed?`<div class="hint">${t("The new frame is being read — the text follows when it is done.")}</div>`:""}
       ${detailActsHTML(d)}
       <div class="fold${open?" open":""}"><button class="foldbtn" id="d-fold" aria-expanded="${open?"true":"false"}"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button><div class="ans" id="d-ans"${open?"":" hidden"}>${back}</div></div>
-      ${descHTML(d,{explain:true})}
       ${sw&&showHints()?`<div class="hint">${t("Swipe left or right to pick another card.")}</div>`:""}`;
 }
 /* the character the detail's line reads: the tapped one, else the first writable one — so the line is always there, as in Learn (v531) */
@@ -4751,7 +4758,7 @@ function renderCardDetail(main,c){
   if($("#d-star")) $("#d-star").onclick=async()=>{ await setStar(c,!d.star); render(); }; /* the learner's own mark (v425); a multicard's own text has no such button (v493) */
   $("#d-flag").onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   const sh=$("#d-share"); if(sh) sh.onclick=()=>shareCard(c); /* one image through the share sheet (v269) */
-  wireSay(); wireLinks(); wireSrc(); wireExplain(); /* v536: no wireChars - the open card passes noParts, so there is no .chars row on it to wire */
+  wireSay(); wireLinks(); wireSrc(); wireExplain(); if(!S.detailHide) explainAuto(d); /* v585: the same on the open card, whose block stands open by default */ /* v536: no wireChars - the open card passes noParts, so there is no .chars row on it to wire */
   wireAi();
   const del=$("#d-del"); if(del) del.onclick=async()=>{ await delCustom(c); if(S.detailFrom==="inbox"){ backToPhoto(); return; } if(fromPage()){ backToPage(); return; } S.detail=null; render(); }; /* at once, with Undo (v268) */
   /* the swipe changes the card, and the two pieces of view state go opposite ways because they mean different things.
@@ -5155,7 +5162,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
-  583:"What a card is about now stands at the foot of the card, without a tap and with no row to fold it away.",
+  585:"Whole card now shows what the card is about as well — no second tap, and the app fetches it for an older card by itself.",
   580:"The top of a card is the photo or the whole text — one tap swaps the two, and it stays that way while you write the card.",
   569:"Fold the phone or leave the app: the card comes back exactly as you left it, with the strokes you had already written. And the characters tapped big now break onto more rows, so they come out as large as they fit.",
   573:"The dictionary knows which reading a character has: 合 read hé now means “to close”, not gě’s “100 ml”.",

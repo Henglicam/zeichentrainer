@@ -710,9 +710,7 @@ body.noscroll{overflow:hidden}
    word and laid an invisible sheet over the whole card, which took every tap (the v421 class-collision lesson). */
 .desc{margin:10px auto 0;max-width:34em;font-size:15px;line-height:1.45;color:var(--label2);text-align:left}
 .desc.want{text-align:center} .desc.want .del{font-size:15px;padding:6px 10px;min-height:36px} .desc.want .hint{margin-top:2px} .desc.want .reading{justify-content:center}
-/* v583 (H: "Explain per default anzeigen, nicht zu klappbar"): on the study card and the open card the description is the card's
-   last row, under the fold and outside it — a hairline above it so it reads as its own thing and not as the fold's content. */
-.card.study>.desc{margin-inline:0;justify-self:stretch;padding-top:12px;border-top:1px solid var(--sep)} /* the auto margins of .desc shrink-to-fit a grid item, so the Explain button's box — and its hairline — came out 75 px wide */
+.desc.want:empty{display:none} /* v585: a card with no description yet renders the empty landing place for refreshDesc and nothing else */
 .pill.again{margin-left:0;background:var(--tint-soft);color:var(--tint)} /* the repeat pass of a written card (§ 8.1) */
 .padwrap{position:relative;margin-top:8px;display:flex;justify-content:center}
 .wpad{display:block;border-radius:var(--rc);background:var(--card2);touch-action:none;box-shadow:inset 0 0 0 1px var(--sep)} /* the pad takes the finger: a stroke is never a swipe */
