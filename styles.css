@@ -870,7 +870,7 @@ body.noscroll{overflow:hidden}
 .cue.gl{transition:grid-template-rows .22s cubic-bezier(.22,.61,.36,1),row-gap .22s cubic-bezier(.22,.61,.36,1)} /* v565: the slide only on a tap (cueBig sets .gl for its duration) — a render never animates the halves into place */
 .cue .zone1 .picbox:not(.page):not(.sized) .signimg{opacity:0} /* v565: the picture shows only once splitFit knows its shape — fitted or clipped — so a picture that decodes late never appears in the wrong one and jumps (the carousel's neighbour did) */
 .cue .txt{min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:stretch;overflow:hidden;cursor:pointer} /* the text half: the tiles' rows over the word line, centred in the half */
-.cue .zone1{min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:var(--rc)}
+.cue .zone1{min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:var(--rc);cursor:pointer} /* v580: the whole upper zone takes the tap that swaps the two states, as the text half already did */
 /* v577: a card with no photo of its own draws its word in the picture half instead of leaving it empty — the Cards tile's
    own treatment (v506), so the two screens say the same thing about such a card. The box is a size container, as the tile's
    is, and the glyph is sized against it by cqw/cqh. */
