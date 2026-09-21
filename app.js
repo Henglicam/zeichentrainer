@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=598; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=599; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,6 +671,8 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v599","empty deck: the example card real"],
+  ["app","v599","guide: the privacy card is real"],
   ["app","v598","guide: five figures are real crops"],
   ["app","v597","Multicards tab: square tiles"],
   ["app","v597","after writing: 300 ms shorter"],
@@ -2674,7 +2676,7 @@ function renderMore(main){
    English on — true of a fresh install and of the screen they came from, and the only alternative was 20 files for
    that one figure. */
 const gfig=(h,body)=>`<svg class="gf" viewBox="0 0 320 ${h}" width="100%" height="${h}" aria-hidden="true" focusable="false">${body}</svg>`;
-const GF_SEP=`var(--sep)`, GF_CARD=`var(--card)`, GF_FILL=`var(--fill)`, GF_TINT=`var(--tint)`, GF_LAB=`var(--label)`;
+const GF_SEP=`var(--sep)`, GF_CARD=`var(--card)`, GF_TINT=`var(--tint)`; /* GF_FILL and GF_LAB left with the drawn rows of the privacy card (v599) */
 const gfHan=(x,y,s,txt,fill)=>`<text class="gfh" x="${x}" y="${y}" font-size="${s}" fill="${fill}" text-anchor="middle">${txt}</text>`;
 const gfBox=(x,y,w,h,r,fill,stroke)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${fill}"${stroke?` stroke="${stroke}"`:""}/>`;
 /* a real crop of the app (v598): the light file is the src and the dark one a <picture> source, and the width is
@@ -2686,11 +2688,28 @@ const gfBox=(x,y,w,h,r,fill,stroke)=>`<rect x="${x}" y="${y}" width="${w}" heigh
    are width-bound and their own aspect ratios decide. The first cut used margin:10px auto on the image and the guide
    came out TALLER (5 figures x 20 px of margin against the 78 px the shorter figures saved) — the margin is 5px auto,
    symmetric, and five heights were trimmed. */
-const GF_SHOT={photo:[1.954,144],chars:[3.276,96],learn:[1,140],cards:[1.958,150],lang:[2.574,130]};
+const GF_SHOT={photo:[1.954,144],chars:[3.276,96],learn:[1,140],cards:[1.958,150],lang:[2.574,130],
+  /* the two sample cards (v599). These two are not figures of their own: they are placed INSIDE a drawn figure
+     by gfimg, so the second number is unused and only the aspect ratio is read — from here, so the generator's
+     printed ratio and the layout have one source. */
+  front:[0.494,0],pcard:[0.834,0]};
 const gfshot=name=>{ const [ar,h]=GF_SHOT[name];
   return `<picture class="gfp"><source srcset="./guide/${name}-dark.webp" media="(prefers-color-scheme:dark)">`
     +`<img class="gf gfs" src="./guide/${name}-light.webp" alt="" aria-hidden="true" decoding="async"`
     +` style="width:min(100%,${Math.round(h*ar)}px);aspect-ratio:${ar}"></picture>`; };
+/* A REAL CROP INSIDE A DRAWN FIGURE (v599, H: "Real screenshots ... I meant the sample cards in the instructions").
+   Two places in the app draw a card the app never took a picture of: the guide's privacy figure and the empty deck's
+   example card. Both need the card to be real and the rest of the figure — the arrow, the chip, the fold bar — to stay
+   drawn, because those parts have no screen behind them. SVG <image> does that in one element, so the surrounding
+   figure keeps its viewBox, its geometry and its handwritten notes exactly where they were.
+   Light and dark are two <image>s swapped by a media query in styles.css (.gfd-l / .gfd-d) — <picture> is not available
+   inside SVG, and the app has no theme switch to hook JS onto. The box is FITTED, never stretched: the crop's own ratio
+   comes from GF_SHOT, so a regenerated crop of a different shape re-centres itself instead of squashing. */
+const gfimg=(name,x,y,w,h)=>{ const ar=GF_SHOT[name][0]; const r=v=>Math.round(v*10)/10;
+  let iw=h*ar, ih=h; if(iw>w){ iw=w; ih=w/ar; }
+  const ix=r(x+(w-iw)/2), iy=r(y+(h-ih)/2); iw=r(iw); ih=r(ih);
+  const one=v=>`<image class="gfd-${v[0]}" href="./guide/${name}-${v}.webp" x="${ix}" y="${iy}" width="${iw}" height="${ih}"/>`;
+  return one("light")+one("dark"); };
 const GFIG={
   /* the five real crops (v598). Each is what its section is about and nothing else:
      photo  - the app's own frame standing on a photographed sign, in the Crop view
@@ -2701,11 +2720,13 @@ const GFIG={
   photo:()=>gfshot("photo"), chars:()=>gfshot("chars"), learn:()=>gfshot("learn"),
   cards:()=>gfshot("cards"), lang:()=>gfshot("lang"),
   /* everything stays here; the card's text is what leaves, and a picture of it when the reading is hard.
-     The one figure with no screen behind it, so the one that is still drawn. */
+     The card is a REAL one since v599 — the open card, its photo with its own characters under it — inside a drawn
+     frame, with the arrow and the chip still drawn: what leaves the phone is not a screen anywhere in the app, so
+     that half has nothing to photograph. The crop stops above the reading line, which carries the meaning and would
+     have put one language into a file that serves ten. The frame keeps the old card's height and centre to the pixel,
+     so the figure is the same 160 tall and the arrow starts where it always did. */
   privacy:()=>gfig(160,
-    gfBox(86,16,116,132,14,GF_CARD,GF_SEP)+`<path d="M124 29 H164" stroke="${GF_SEP}" stroke-width="3" stroke-linecap="round"/>`
-    +gfBox(98,46,92,26,6,GF_FILL)+gfBox(98,80,92,26,6,GF_FILL)+gfBox(98,114,92,26,6,GF_FILL)
-    +gfHan(113,66,16,"面",GF_LAB)+gfHan(113,100,16,"鸡",GF_LAB)+gfHan(113,134,16,"店",GF_LAB)
+    gfBox(88.3,16,111.4,132,14,GF_CARD,GF_SEP)+gfimg("pcard",92.3,20,103.4,124)
     +`<path d="M206 58 C242 58 250 44 260 38" stroke="${GF_TINT}" stroke-width="2" fill="none"/><path d="M254 33 L264 36 L257 44" fill="${GF_TINT}"/>`
     +`<rect x="252" y="10" width="58" height="28" rx="9" fill="var(--tint-soft)" stroke="${GF_TINT}"/>`+gfHan(270,31,16,"文",GF_TINT)
     +`<rect x="285" y="17" width="16" height="13" rx="2.5" fill="none" stroke="${GF_TINT}" stroke-width="1.5"/><path d="M287 28 l4.5 -5.5 3 3.2 2.5 -2.4 4 4.7z" fill="${GF_TINT}"/>`)
@@ -3123,25 +3144,25 @@ function introHTML(){
      app has not had since v580 (measured: in the front state --th is 0 and the tiles are clipped away entirely). So the
      very first screen a new learner met was a picture of a card the app never shows, and one of its three notes pointed at
      tiles that are not on it. */
-  /* v596: the photo and the pad are two equal SQUARES, as they are on the real card — the cue has been exactly as tall as
-     the pad since v561 and the app's one photo-box shape is the square (v591/v595), while this mock drew both at 140x118.
-     A first screen that draws a shape the app does not make is the same fault v589 corrected here for the card's STATE.
-     And the pad writes 上, not 工 (H: "How a real Chinese character here and not that T") — the third stroke stood in
-     --sep, a hairline separator colour, so what a learner met on the app's very first screen was a Latin T. */
-  const mock=`<svg class="mock" viewBox="0 0 168 350" aria-hidden="true">
-    <rect x="3" y="3" width="162" height="344" rx="15" fill="${c("card")}" stroke="${c("sep")}" stroke-width="1.5"/>
-    <rect x="14" y="14" width="140" height="140" rx="10" fill="${c("card2")}" stroke="${c("sep")}"/>
-    <path d="M14 128 l34-30 26 22 22-18 44 34 v6 a10 10 0 0 1 -10 10 H24 a10 10 0 0 1 -10 -10z" fill="${c("tint-soft")}"/>
-    <circle cx="48" cy="50" r="9" fill="${c("tint-soft")}"/>
-    <rect x="14" y="162" width="140" height="140" rx="10" fill="${c("card2")}" stroke="${c("sep")}"/>
-    <path d="M84 162 V302 M14 232 H154" stroke="${c("sep")}" stroke-dasharray="6 6"/>
-    <path d="M44 280 H128" stroke="${c("label3")}" stroke-width="9" stroke-linecap="round"/>
-    <path d="M68 186 V280" stroke="${c("label")}" stroke-width="9" stroke-linecap="round"/>
-    <path d="M68 238 H112" stroke="${c("tint")}" stroke-width="9" stroke-linecap="round"/>
-    <circle cx="68" cy="238" r="6" fill="${c("tint")}"/>
-    <rect x="14" y="310" width="140" height="18" rx="6" fill="${c("card2")}" stroke="${c("sep")}"/>
-    <rect x="22" y="316" width="46" height="6" rx="3" fill="${c("sep")}"/>
-    <path d="M138 317 l4 4 4 -4" stroke="${c("label3")}" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  /* v596 made the two boxes equal SQUARES here and gave the drawn pad a real character (H: "How a real Chinese
+     character here and not that T" — 工 at that size renders as a Latin T). Both questions died with the drawing at
+     v599: the picture is the app's own card, so its shapes and its character are the app's by construction. */
+  /* v599 (H: "Real screenshots ... I meant the sample cards in the instructions"): the photo and the pad are no longer
+     drawn — they are one real crop of the study card's own front, the photographed sign over the pad with three strokes
+     in ink and the next lit. What stays drawn is the card's frame and the fold bar at its foot, and for one reason: the
+     fold row's real label reads "Whole card", and a crop with a UI sentence in it serves one language out of ten (the
+     v427 rule). Note n3 points at that bar, so the bar has to be there — v589's lesson, a note pointing at something the
+     picture does not show, is the one fault this figure must not repeat.
+     Every number below the image is DERIVED from the crop's own aspect ratio, so a regenerated crop of another shape
+     moves the bar and the frame with it instead of letterboxing (the v401 rule: one number, one reader). */
+  const IW=140, IH=Math.round(IW/GF_SHOT.front[0]*10)/10;  /* the crop at the mock's own inner width */
+  const BAR=IH+22, CH=BAR+34, VB=CH+6;                     /* fold bar top (image bottom + 8), card height, viewBox */
+  const mock=`<svg class="mock" viewBox="0 0 168 ${VB}" aria-hidden="true">
+    <rect x="3" y="3" width="162" height="${CH}" rx="15" fill="${c("card")}" stroke="${c("sep")}" stroke-width="1.5"/>
+    ${gfimg("front",14,14,IW,IH)}
+    <rect x="14" y="${BAR}" width="140" height="18" rx="6" fill="${c("card2")}" stroke="${c("sep")}"/>
+    <rect x="22" y="${BAR+6}" width="46" height="6" rx="3" fill="${c("sep")}"/>
+    <path d="M138 ${BAR+7} l4 4 4 -4" stroke="${c("label3")}" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
   return `<div class="intro">${mock}<div class="notes">
     <div class="note n1">${arrow("M52 22 C36 24 16 18 5 7 M5 7 l11 1 M5 7 l3 10")}<span>${esc(t("Tap it — what it means."))}</span></div>

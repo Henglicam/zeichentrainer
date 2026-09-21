@@ -17,7 +17,8 @@ jobs:
           for f in index.html app.js styles.css lang.js sw.js manifest.webmanifest signs.json nmt-model.json privacy.html \
                    guide/photo-light.webp guide/photo-dark.webp guide/chars-light.webp guide/chars-dark.webp \
                    guide/learn-light.webp guide/learn-dark.webp guide/cards-light.webp guide/cards-dark.webp \
-                   guide/lang-light.webp guide/lang-dark.webp; do
+                   guide/lang-light.webp guide/lang-dark.webp \
+                   guide/front-light.webp guide/front-dark.webp guide/pcard-light.webp guide/pcard-dark.webp; do
             echo "== $f"
             curl -sS --max-time 30 "https://purge.jsdelivr.net/gh/henglicam/zeichentrainer@main/$f" || echo "purge failed for $f"
             echo

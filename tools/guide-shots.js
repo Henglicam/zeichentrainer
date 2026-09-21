@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Regenerates the guide's five figures (v598) — guide/{photo,chars,learn,cards,lang}-{light,dark}.webp.
+/* Regenerates the guide's figures and the two sample cards — guide/{photo,chars,learn,front,cards,lang,pcard}-{light,dark}.webp.
  *
  * WHY THIS FILE EXISTS. v549 banned screenshots in the guide for four reasons, and three of them are answered
  * by the crops themselves (one part of one screen instead of a whole screen; no UI prose, so one file serves all
@@ -109,6 +109,13 @@ const SHOTS=[
   {name:"learn", trace:3, setup:()=>{ S.mode="study"; S.editing=null; S.detail=null; render(); },
    pick:()=>{ const p=document.querySelector("#wpad"); p.scrollIntoView({block:"center"});
      const r=p.getBoundingClientRect(); return {x:r.left,y:r.top,w:r.width,h:r.height}; }},
+  /* the study card's own front, photo and pad together, for the empty deck's example card (v599). It follows
+     `learn` with no setup on purpose: the three strokes that shot traced are still standing, so the example
+     card shows ink and the next stroke lit, which is what the drawn one drew. */
+  {name:"front", max:320, setup:()=>{ window.scrollTo(0,0); },
+   pick:()=>{ const c=document.querySelector(".cue")||document.querySelector(".picbox"), p=document.querySelector("#wpad");
+     const a=c.getBoundingClientRect(), b=p.getBoundingClientRect();
+     return {x:a.left,y:a.top,w:a.width,h:b.bottom-a.top}; }},
   {name:"cards", setup:()=>{ S.mode="cards"; S.detail=null; S.cardsTab="cards"; render(); },
    pick:()=>{ const t=[...document.querySelectorAll("#clist .ctile")]; t[0].scrollIntoView({block:"center"});
      const a=t[0].getBoundingClientRect(), b=t[1].getBoundingClientRect();
@@ -116,6 +123,13 @@ const SHOTS=[
   {name:"lang", setup:()=>{ S.mode="more"; render(); },
    pick:()=>{ const c=document.querySelector("#lang-chips"); c.scrollIntoView({block:"center"});
      const r=c.getBoundingClientRect(); return {x:r.left-12,y:r.top-8,w:r.width+24,h:r.height+16}; }},
+  /* the open card: the photo with the card's own characters under it (v599) — the "your cards" half of the
+     privacy figure. It stops at the character row on purpose: the reading line under it carries the MEANING,
+     which is in the app's language, and a crop with a translatable word in it serves one language only. */
+  {name:"pcard", max:320, setup:()=>{ S.mode="cards"; S.editing=null; S.detail="nuts"; render(); window.scrollTo(0,0); },
+   pick:()=>{ const c=document.querySelector(".picbox"), r=document.querySelector(".chrow");
+     const a=c.getBoundingClientRect(), b=r.getBoundingClientRect();
+     return {x:a.left,y:a.top,w:a.width,h:b.bottom-a.top}; }},
 ];
 
 /* one traced stroke, following the app's own medians exactly as mountPad maps them */
@@ -159,17 +173,20 @@ async function seed(page){
   },CARDS);
 }
 
-/* WebP is encoded in the page, so the script needs no image library */
-async function toWebp(page,png){
-  const b64=await page.evaluate(async ({b,q})=>{
+/* WebP is encoded in the page, so the script needs no image library. `max` caps the file's width in device
+   pixels: a crop shown 100 px wide in the guide does not need a 644 px file, and the two sample cards (v599)
+   are the largest crops of the set shown at the smallest size. */
+async function toWebp(page,png,max){
+  const b64=await page.evaluate(async ({b,q,max})=>{
     const im=new Image(); im.src="data:image/png;base64,"+b; await im.decode();
-    const c=document.createElement("canvas"); c.width=im.naturalWidth; c.height=im.naturalHeight;
-    c.getContext("2d").drawImage(im,0,0);
+    const sc=max&&im.naturalWidth>max?max/im.naturalWidth:1;
+    const c=document.createElement("canvas"); c.width=Math.round(im.naturalWidth*sc); c.height=Math.round(im.naturalHeight*sc);
+    const g=c.getContext("2d"); g.imageSmoothingQuality="high"; g.drawImage(im,0,0,c.width,c.height);
     const blob=await new Promise(r=>c.toBlob(r,"image/webp",q));
     const u=new Uint8Array(await blob.arrayBuffer()); let s="";
     for(let i=0;i<u.length;i++) s+=String.fromCharCode(u[i]);
     return btoa(s);
-  },{b:png.toString("base64"),q:Q});
+  },{b:png.toString("base64"),q:Q,max});
   return Buffer.from(b64,"base64");
 }
 
@@ -205,7 +222,7 @@ async function toWebp(page,png){
       const c=await page.evaluate(sh.pick); const vp=page.viewportSize();
       const x=Math.max(0,Math.round(c.x)), y=Math.max(0,Math.round(c.y));
       const clip={x,y,width:Math.min(Math.round(c.w),vp.width-x),height:Math.min(Math.round(c.h),vp.height-y)};
-      const buf=await toWebp(page,await page.screenshot({clip}));
+      const buf=await toWebp(page,await page.screenshot({clip}),sh.max);
       const f=path.join(OUT,`${sh.name}-${dark?"dark":"light"}.webp`);
       fs.writeFileSync(f,buf);
       made.push({file:path.basename(f),w:clip.width,h:clip.height,ar:+(clip.width/clip.height).toFixed(3),bytes:buf.length});
