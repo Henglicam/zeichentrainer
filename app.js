@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=587; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=588; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,7 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["app","v587","More: Describe all cards, then Undo"],
+  ["app","v588","Check-up adds description and tag"],
   ["app","v586","Whole card: the text is already there"],
   ["app","v582","Learn: no Undo/Clear mid-write on the pad"],
   ["app","v580","Learn: one tap swaps photo and text"],
@@ -880,7 +880,6 @@ const TO_TEST=[
   ["app","v373","one start — shade cards fixed"],
   ["app","v370","Check-up — worth the calls?"],
   ["app","v369","Undo last run"],
-  ["app","v368","Tag all cards over the untagged"],
   ["app","v351","mark and delete many at once"],
   ["app","v350","the list's thumbnails at 124×70"],
   ["app","v341","Crop again saved before the AI"],
@@ -1122,11 +1121,11 @@ async function boot(){
   fixNumberSegs(); /* word cards from before v338 get their numbers back into their lines */
   dedupePhotos(); /* cards from before v214 drop the whole photo they hold twice */
   setTimeout(()=>normalizeRaw().catch(()=>{}).then(resumeShots).then(resumePending).then(autoNext,autoNext),1500); /* a photo left as it came is downscaled and queued (v509), cards saved before their reading finished get it now (v237), then the batch goes on where it stopped (v411) */
-  aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); resumeTagAll(); resumeRecheck(); resumeDescAll(); });
+  aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); resumeRecheck(); });
   /* an interrupted Translate-all, Tag-all or Check-up run, and the deck's two one-off passes, go on by themselves (v262, v368, v370, v373, v398) */
   setTimeout(updateNote,1200); /* v408: after the restored screen is up, not during the first paint */
   setTimeout(()=>{ migrateDerived().then(n=>{ if(n){ S.queue=buildQueue(false); S.idx=0; render(); } }).catch(()=>{}); },2200); /* v487: v478's promoted cards become ordinary flashcards with their progress, once */
-  setTimeout(()=>{ resumeTranslate(); resumeTagAll(); resumeRecheck(); resumeDescAll(); brightenPass().catch(()=>{}).then(()=>recutPass().catch(()=>{})); },2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ resumeTranslate(); resumeTagAll(); resumeRecheck(); resumeDescAll(); autoNext(); } }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262); a batch of photos held up by a reading that never ended goes on too (v411) */
+  setTimeout(()=>{ resumeTranslate(); resumeRecheck(); brightenPass().catch(()=>{}).then(()=>recutPass().catch(()=>{})); },2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ resumeTranslate(); resumeRecheck(); autoNext(); } }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262); a batch of photos held up by a reading that never ended goes on too (v411) */
   sendReport(); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) sendReport(); else if(REPORT_DIRTY) sendReport(true); }); /* the day's first row on foreground, a second one on background when cards changed (v219) */
 }
 
@@ -1659,7 +1658,7 @@ function ocrDoubt(confs,meaning,unknown){
 let _aiSoon=null;
 function aiAutoSoon(){ if(!aiAutoOn()) return; clearTimeout(_aiSoon); _aiSoon=setTimeout(()=>{ _aiAutoRan=false; aiAuto(); },1500); }
 function aiCardPayload(d){
-  return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:d.explain?"write \"desc\" for this card and nothing else; keep zh, p and m exactly as given":d.tagOnly?"name \"kind\" for this card and nothing else; keep zh, p and m exactly as given":d.translate?"translate the meaning into "+meaningLangName()+" (it is in "+(LANG_NAME[d.ml||"en"]||"another language")+" now); keep zh and p unless clearly wrong":[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"the reading looks uncertain ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
+  return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:d.explain?"write \"desc\" for this card and nothing else; keep zh, p and m exactly as given":d.translate?"translate the meaning into "+meaningLangName()+" (it is in "+(LANG_NAME[d.ml||"en"]||"another language")+" now); keep zh and p unless clearly wrong":[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"the reading looks uncertain ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
     gloss:d.kind==="sign"?(d.gloss||[]).map(g=>g.w+" "+(g.m||"?")).join(" · "):undefined,
     alt:d.alts&&d.alts.length?d.alts:undefined, script:d.trad?"traditional":undefined };
 }
@@ -1791,6 +1790,24 @@ async function aiAsk(cards,status){
     out.push({zh,zht,p:x.bad?String(x.p||"").trim():await saneP(x.p,zh),m,desc:x.bad?"":saneDesc(x.desc,zh),ml:LANG,note:String(x.note||"").trim(),kind:String(x.kind||"").trim(),ok:!!x.ok,bad:!!x.bad,at:Date.now(),model}); }
   return out;
 }
+/* What an AI answer adds to a card by itself (v588, H in three messages: "Wenn alle Karten oder auch eine Karte mit AI
+   nochmal gecheckt werden, dann gehoert der Explain-Text zu dem Update natuerlich mit dazu.", "Descriptions brauchen keinen
+   separaten Punkt unter More. Das sollte alles direkt ueber Check AI abgefruehstueckt werden.", "Das gleiche gilt fuer Tags."):
+   the description it wrote (v529) and the kind tag it named (v364). The full text check has asked for both in every answer
+   since those versions, so they cost no call and no token here — they were simply thrown away wherever the answer did not
+   become a suggestion. Neither waits for Accept: the v143 reason a re-check never writes — on a saved card the reader's
+   per-character confidences are gone, so an applied answer would silently rewrite correct characters — is about the TEXT,
+   and a description or a tag overwrites no reading. The tag keeps v368's own rule and is only ever given to a card that
+   carries none, so a tag of H's own is never touched. */
+function aiExtras(upd,a){
+  if(!a||a.bad) return false;
+  let got=false;
+  const sd=saneDesc(a.desc,upd.c); /* aiAsk has run it already; a second pass costs nothing and guards a hand-built answer */
+  if(sd&&sd!==descOf(upd)){ setDesc(upd,sd,a.ml||LANG); got=true; } /* descOf is the app's language, as the answer's ml is */
+  const tg=kindTag(a.kind);
+  if(tg&&!(upd.tags&&upd.tags.length)){ upd.tags=[tg]; got=true; }
+  return got;
+}
 /* run the review over the whole queue (or the given cards) and store suggestions on the cards */
 async function aiReview(list,status){
   list=list||aiQueue(); if(!list.length) return 0;
@@ -1800,6 +1817,7 @@ async function aiReview(list,status){
     const d=list[i], sg=sugg[i]; if(!d||!sg) continue;
     const upd={...d, ai:{...sg, c:d.c}};
     if(!sg.zh) upd.ai.zh=d.c;
+    aiExtras(upd,sg); /* v588: one card checked from the Review queue or by the automatic run gets its description and tag too */
     await putCard(upd); n++;
   }
   return n;
@@ -1813,7 +1831,7 @@ async function aiFlag(id){
 async function aiAccept(id){
   const d=cardOf(id); if(!d||!d.ai) return;
   if(d.ai.bad) return aiFlag(id); /* never applies an empty meaning */
-  const a=d.ai, upd={...d, p:a.p||d.p, m:a.m||d.m}; if(a.m) setMl(upd,a.ml); if(a.desc) setDesc(upd,a.desc,a.ml); /* the meaning's language comes with the suggestion (v256), the description with it (v529) */
+  const a=d.ai, upd={...d, p:a.p||d.p, m:a.m||d.m}; if(a.m) setMl(upd,a.ml); aiExtras(upd,a); /* the meaning's language comes with the suggestion (v256), the description and the kind tag with it (v529/v588) */
   delete upd.ai; delete upd.flag; delete upd.flagNote;
   upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false}; delete upd.mt.suspect;
   const newC=a.zh&&CJK.test(a.zh)?a.zh.replace(/\r/g,""):d.c;
@@ -2061,8 +2079,8 @@ async function saveLastRun(kind,keys,before,n){ const run={kind,keys,n,at:Date.n
 async function clearLastRun(){ if(S.settings.lastRun){ delete S.settings.lastRun; await idbDel("settings","lastRun").catch(()=>{}); } }
 const runWhen=at=>{ const d=new Date(at), loc=LANG_LOCALE[LANG];
   return new Date(at).toDateString()===new Date().toDateString()?d.toLocaleTimeString(loc,{hour:"2-digit",minute:"2-digit"}):d.toLocaleString(loc); };
-function undoRunHTML(kind){ const r=S.settings.lastRun; if(!r||r.kind!==kind||(TRANSLATE&&TRANSLATE.running)||(TAGALL&&TAGALL.running)||(DESCALL&&DESCALL.running)) return "";
-  const line=kind==="desc"?t("Described {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):kind==="tags"?t("Tagged {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):kind==="accept"?t("Accepted the AI's changes on {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):kind==="dismiss"?t("Dismissed the AI's suggestions on {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):t("Translated {0} at {1}.",nOf(r.n,"card"),runWhen(r.at));
+function undoRunHTML(kind){ const r=S.settings.lastRun; if(!r||r.kind!==kind||(TRANSLATE&&TRANSLATE.running)||(RECHECK&&RECHECK.running)) return "";
+  const line=kind==="check"?t("Checked {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):kind==="accept"?t("Accepted the AI's changes on {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):kind==="dismiss"?t("Dismissed the AI's suggestions on {0} at {1}.",nOf(r.n,"card"),runWhen(r.at)):t("Translated {0} at {1}.",nOf(r.n,"card"),runWhen(r.at));
   return `<div class="mrow"><div style="flex:1"><div class="t">${t("Undo last run")}</div><div class="s" id="undorun-status">${line}</div><div class="fieldacts"><button class="btn mini" id="undo-run">${t("Undo")}</button></div></div></div>`; }
 async function undoLastRun(){ const r=S.settings.lastRun; if(!r) return;
   const rows=[]; for(const id of Object.keys(r.m)){ const d=cardOf(id); if(!d) continue; const b=r.m[id];
@@ -2071,7 +2089,7 @@ async function undoLastRun(){ const r=S.settings.lastRun; if(!r) return;
     rows.push(u); }
   if(rows.length){ try{ await idbPutMany("custom",rows); }catch(e){ logErr("undorun",e&&e.message||String(e)); return; }
     for(const x of rows){ const i=S.custom.findIndex(y=>y.id===x.id); if(i>=0) S.custom[i]=x; } }
-  await clearLastRun(); TRANSLATE=null; TAGALL=null; DESCALL=null; /* the finished lines belong to a run that is undone */
+  await clearLastRun(); TRANSLATE=null; RECHECK=null; /* the finished lines belong to a run that is undone */
   const st=$("#undorun-status"); if(st) st.textContent=t("Undone — {0} put back.",nOf(rows.length,"card"));
   render(); }
 const stageOf=()=>S.settings.translateStage;
@@ -2119,128 +2137,6 @@ async function translateAll(){
   TRANSLATE.running=false; translateRefresh(); /* running stays set until the cards and the settings are written — whoever waits for the end sees the finished state (v264) */
   if(S.mode==="study"||S.mode==="cards"||S.mode==="more") render(); /* the meanings on screen follow, and More gets the Undo row (v369) */
 }
-/* Tag all cards (v368, H's "1 now, 3 straight after it" on the labelling question of v364, then "Tag all cards"): the kind tag of
-   v364 rides on every new card's own AI answer, so the deck H already has stays untagged. This row asks the AI for the kind of
-   the cards that carry no tag at all — it never touches a card that carries a tag of H's own — and works exactly like Translate
-   all: the run's state lives in TAGALL and not in the row, a batch of TAG_BATCH cards per call, every answer staged in setting
-   tagStage {m:{id:kind}} and every card written together at the end (idbPutMany), the run remembered in setting tagRun until no
-   card is left, resumed at boot, on reconnect and on foreground. The payload asks for the kind alone (tagOnly), so a run cannot
-   change a text, a pinyin or a meaning. */
-const TAG_BATCH=10; /* the answer is one word per card, so ten fit where the translation takes five */
-const toTag=()=>deck().filter(d=>d.c&&!isPage(d)&&!(d.tags&&d.tags.length));
-let TAGALL=null; /* {running, done, at, total, failed} */
-const tagStageOf=()=>S.settings.tagStage;
-async function saveTagStage(st){ S.settings.tagStage=st; await setSetting("tagStage",st); }
-async function clearTagStage(){ if(S.settings.tagStage){ delete S.settings.tagStage; await idbDel("settings","tagStage").catch(()=>{}); } }
-const inTagStage=(st,d)=>!!(st&&st.m&&st.m[d.id]);
-async function applyTagStage(st,list){ const rows=[];
-  const before={};
-  for(const x of list){ const d=cardOf(x.id), k=d&&st.m[d.id]; if(!d||!k||k==="skip"||(d.tags&&d.tags.length)) continue;
-    const tg=kindTag(k); if(tg){ before[d.id]={tags:d.tags}; rows.push({...d,tags:[tg]}); } }
-  if(rows.length){ try{ await idbPutMany("custom",rows); }catch(e){ logErr("tagall","apply: "+(e&&e.message||e)); return 0; }
-    for(const r of rows){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; } await saveLastRun("tags",["tags"],before,rows.length); }
-  return rows.length; }
-async function rememberTagRun(on){ if(on){ S.settings.tagRun={at:Date.now()}; await setSetting("tagRun",S.settings.tagRun); }
-  else if(S.settings.tagRun){ delete S.settings.tagRun; await idbDel("settings","tagRun").catch(()=>{}); } }
-function resumeTagAll(){ if(!S.settings.tagRun||(TAGALL&&TAGALL.running)) return;
-  if(!toTag().length){ rememberTagRun(false); return; }
-  if(!aiAutoOn()||!navigator.onLine) return; tagAll(); } /* v476, as resumeTranslate */
-function tagRowHTML(){
-  const n=toTag().length, tr=TAGALL; if(!(n||tr)||!aiOn()) return "";
-  const line=tr&&tr.running?busyHTML(t("Tagging {0} of {1} …",tr.at,tr.total)+" "+t("The cards change together when all are done."))
-    :tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} tagged, {1} left.",tr.done,n)+sp(resumeNote())
-    :tr?t("Done — {0} tagged.",nOf(tr.done,"card")):t("No tag yet on {0}.",nOf(n,"card"));
-  return `<div class="mrow"><div style="flex:1"><div class="t">${t("Tags")}</div><div class="s" id="tagall-status">${line}</div>${n?`<div class="fieldacts"><button class="btn mini" id="tag-all"${tr&&tr.running?" disabled":""}>${t("Tag all cards")}</button></div>`:""}</div></div>`;
-}
-function tagRefresh(){ const st=$("#tagall-status"), b=$("#tag-all"), tr=TAGALL; if(!st) return;
-  const n=toTag().length;
-  if(tr&&tr.running) st.innerHTML=busyHTML(t("Tagging {0} of {1} …",tr.at,tr.total)+" "+t("The cards change together when all are done."));
-  else st.textContent=tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} tagged, {1} left.",tr.done,n)+sp(resumeNote())
-    :tr?t("Done — {0} tagged.",nOf(tr.done,"card")):t("No tag yet on {0}.",nOf(n,"card"));
-  if(b){ b.disabled=!!(tr&&tr.running); if(!n&&!(tr&&tr.running)) b.remove(); } }
-async function tagAll(){
-  if(TAGALL&&TAGALL.running){ tagRefresh(); return; }
-  if(!navigator.onLine){ const st=$("#tagall-status"); if(st) st.textContent=t("No connection. Try again when online."); return; }
-  const list=toTag(); if(!list.length) return;
-  let stage=tagStageOf(); if(!stage||!stage.m) stage={m:{}};
-  const todo=list.filter(d=>!inTagStage(stage,d));
-  TAGALL={running:true,done:list.length-todo.length,at:list.length-todo.length,total:list.length,failed:false}; tagRefresh();
-  await rememberTagRun(true); await saveTagStage(stage);
-  try{
-    for(let i=0;i<todo.length;i+=TAG_BATCH){
-      const batch=todo.slice(i,i+TAG_BATCH); TAGALL.at=Math.min(TAGALL.done+batch.length,list.length); tagRefresh();
-      const ans=await aiAsk(batch.map(d=>({...d,tagOnly:true})));
-      for(let k=0;k<batch.length;k++){ const d=cardOf(batch[k].id), a=ans[k]; if(!d) continue;
-        stage.m[d.id]=a&&!a.bad&&kindTag(a.kind)?a.kind:"skip"; TAGALL.done++; } /* staged, not written: the cards change together at the end */
-      await saveTagStage(stage);
-    }
-  }catch(err){ TAGALL.failed=true; logErr("tagall",err&&err.message||String(err)); }
-  if(!TAGALL.failed&&list.every(d=>{ const c=cardOf(d.id); return !c||inTagStage(stage,c)||(c.tags&&c.tags.length); })){
-    TAGALL.done=await applyTagStage(stage,list); await clearTagStage(); }
-  if(!toTag().length||!TAGALL.failed&&!tagStageOf()) await rememberTagRun(false);
-  TAGALL.running=false; tagRefresh();
-  if(S.mode==="study"||S.mode==="cards"||S.mode==="more") render(); /* More gets the Undo row of v369 without leaving the page */
-}
-/* Descriptions for the whole deck (v587, H: "Bitte explain direkt beim erstellen der Karte laden und speichern. Bzw fuer alle
-   Karten nachladen, wenn moeglich."): the first half has been true since v529 — readingCard takes the description out of the
-   text check's or the picture's own answer, and so do the Add form, the Edit form's Ask AI, an accepted suggestion and
-   Translate all, so a card the AI checks is born with one and no version was needed for that. What is left over is what this
-   row is for: every card made before v529, every card the check called bad or answered offline, and a panel's labels, whose
-   description splitCards blanks on purpose (the model gives one description for the whole picture, and "this is a washing
-   machine panel" on the 羊毛 card would be false — the run asks per label text instead, which is right).
-   Built like Tag all (v368) — the run's state in DESCALL and not in the row, the run remembered in setting descRun until no
-   card is left, resumed at boot, on reconnect and on foreground while the AI switch is ticked (v476) — WITH ONE DELIBERATE
-   DIFFERENCE: the cards are written batch by batch, not staged to the end. Translate all and Tag all stage because a half
-   done deck would be inconsistent (H's own v264 ask: no deck of mixed languages); a deck where some cards carry a
-   description and some do not is the normal state and has been since v529, so an interrupted run keeps what it got, which
-   on a deck of a few hundred over a flaky connection is the whole point. The undo store is accumulated across the run and
-   written after every batch, so a run stopped half way is undoable too. The payload asks for the description alone
-   (explain, v529), so a run cannot change a text, a pinyin or a meaning. */
-const DESC_BATCH=5; /* two or three sentences a card is the longest answer of the three runs — Translate all's five, not Tag all's ten */
-const toDescribe=()=>deck().filter(d=>d.c&&!isPage(d)&&!descOf(d)); /* descOf is the app's language: a card described in English counts as undescribed on a German phone, exactly as Translate all counts its meanings */
-let DESCALL=null; /* {running, done, at, total, failed} */
-async function rememberDescRun(on){ if(on){ S.settings.descRun={at:Date.now()}; await setSetting("descRun",S.settings.descRun); }
-  else if(S.settings.descRun){ delete S.settings.descRun; await idbDel("settings","descRun").catch(()=>{}); } }
-function resumeDescAll(){ if(!S.settings.descRun||(DESCALL&&DESCALL.running)) return;
-  if(!toDescribe().length){ rememberDescRun(false); return; }
-  if(!aiAutoOn()||!navigator.onLine) return; describeAll(); } /* v476, as resumeTranslate */
-const descLine=()=>{ const n=toDescribe().length, tr=DESCALL;
-  return tr&&tr.running?busyHTML(t("Describing {0} of {1} …",tr.at,tr.total))
-    :tr&&tr.failed?t("The AI could not be reached")+". "+t("{0} described, {1} left.",tr.done,n)+sp(resumeNote())
-    :tr?t("Done — {0} described.",nOf(tr.done,"card")):t("No description yet on {0}.",nOf(n,"card")); };
-function descRowHTML(){
-  const n=toDescribe().length, tr=DESCALL; if(!(n||tr)||!aiOn()) return "";
-  return `<div class="mrow"><div style="flex:1"><div class="t">${t("Descriptions")}</div><div class="s">${t("A few sentences about what a card's text says and where you meet it. New cards get them with the AI check.")}</div><div class="s" id="descall-status" style="margin-top:6px">${descLine()}</div>${n?`<div class="fieldacts"><button class="btn mini" id="desc-all"${tr&&tr.running?" disabled":""}>${t("Describe all cards")}</button></div>`:""}</div></div>`;
-}
-function descRefresh(){ const st=$("#descall-status"), b=$("#desc-all"), tr=DESCALL; if(!st) return;
-  const n=toDescribe().length;
-  if(tr&&tr.running) st.innerHTML=descLine(); else st.textContent=descLine();
-  if(b){ b.disabled=!!(tr&&tr.running); if(!n&&!(tr&&tr.running)) b.remove(); } }
-async function describeAll(){
-  if(DESCALL&&DESCALL.running){ descRefresh(); return; }
-  if(!navigator.onLine){ const st=$("#descall-status"); if(st) st.textContent=t("No connection. Try again when online."); return; }
-  const list=toDescribe(); if(!list.length) return;
-  DESCALL={running:true,done:0,at:0,total:list.length,failed:false}; descRefresh();
-  await rememberDescRun(true);
-  const before={}; let written=0;
-  try{
-    for(let i=0;i<list.length;i+=DESC_BATCH){
-      const batch=list.slice(i,i+DESC_BATCH); DESCALL.at=Math.min(i+batch.length,list.length); descRefresh();
-      const ans=await aiAsk(batch.map(d=>({...d,explain:true})));
-      const rows=[];
-      for(let k=0;k<batch.length;k++){ const d=cardOf(batch[k].id), a=ans[k]; if(!d) continue;
-        const sdesc=a&&!a.bad?saneDesc(a.desc,d.c):""; /* an answer with no usable description simply leaves the card alone — the next run asks again */
-        if(sdesc&&!descOf(d)){ if(!(d.id in before)) before[d.id]={ds:d.ds}; rows.push(setDesc({...d},sdesc,a.ml||LANG)); } }
-      if(rows.length){ await idbPutMany("custom",rows);
-        for(const r of rows){ const j=S.custom.findIndex(x=>x.id===r.id); if(j>=0) S.custom[j]=r; }
-        written+=rows.length; await saveLastRun("desc",["ds"],before,written); } /* written after every batch, so an interrupted run is undoable too */
-      DESCALL.done=written;
-    }
-  }catch(err){ DESCALL.failed=true; logErr("descall",err&&err.message||String(err)); }
-  if(!toDescribe().length||!DESCALL.failed) await rememberDescRun(false); /* a finished walk stops the resume even when some cards got no answer */
-  DESCALL.running=false; descRefresh();
-  if(S.mode==="study"||S.mode==="cards"||S.mode==="more") render(); /* the descriptions on screen follow, and More gets the Undo row (v369) */
-}
 /* Check all cards again (v370, H: "maybe Tag all cards should be a general AI re-run on all Cards? Because ai models get better
    over time?" — three ways offered, my recommendation the one that never writes: on a saved card the v143 guard is gone (the
    reader's per-character confidences are not kept), so a run that applied its answers would silently rewrite correct cards.
@@ -2260,8 +2156,10 @@ function resumeRecheck(){ if(!S.settings.recheckRun||(RECHECK&&RECHECK.running))
 function recheckLine(){ const tr=RECHECK, left=recheckLeft().length;
   if(tr&&tr.running) return null; /* the moving bar, drawn by the callers */
   if(tr&&tr.failed) return t("The AI could not be reached")+". "+t("{0} checked, {1} left.",tr.done,left)+sp(resumeNote());
-  if(tr) return tr.found?t("Done — {0} could be better. Look under the Cards tab.",nOf(tr.found,"card")):t("Done — nothing to change. Your cards are in good shape.");
-  return t("The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it."); }
+  if(tr) return tr.filled&&tr.found?t("Done — {0} filled in, {1} could be better. Look under the Cards tab.",nOf(tr.filled,"card"),nOf(tr.found,"card"))
+    :tr.filled?t("Done — {0} filled in.",nOf(tr.filled,"card"))
+    :tr.found?t("Done — {0} could be better. Look under the Cards tab.",nOf(tr.found,"card")):t("Done — nothing to change. Your cards are in good shape.");
+  return t("The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it."); }
 /* The pictures already on the phone: one quiet pass (v373, H: "Run the brightening over my deck now and remove the
    manual option completely" — the deck lives on the phone, so the app has to do it itself). At the first start after
    the update it walks the deck once, measures every card picture and writes back the ones that were dark or flat.
@@ -2453,15 +2351,21 @@ async function recheckAll(){
   const all=toRecheck(); if(!all.length) return;
   if(!S.settings.recheckRun) await rememberRecheck(true);
   const todo=recheckLeft();
-  RECHECK={running:true,done:all.length-todo.length,at:all.length-todo.length,total:all.length,failed:false,found:0}; recheckRefresh();
+  RECHECK={running:true,done:all.length-todo.length,at:all.length-todo.length,total:all.length,failed:false,found:0,filled:0}; recheckRefresh();
+  const before={}; /* what the run overwrote, accumulated and written after every batch, so a run stopped half way is undoable too (the v587 rule) */
   try{
     for(let i=0;i<todo.length;i+=RECHECK_BATCH){
       const batch=todo.slice(i,i+RECHECK_BATCH); RECHECK.at=Math.min(RECHECK.done+batch.length,all.length); recheckRefresh();
       const ans=await aiAsk(batch);
       for(let k=0;k<batch.length;k++){ const d=cardOf(batch[k].id), a=ans[k]; RECHECK.done++; if(!d||!a) continue;
         const zh=a.zh&&CJK.test(a.zh)?a.zh.replace(/\r/g,""):d.c;
-        if(a.bad||(zh===d.c&&(!a.p||a.p===d.p)&&(!a.m||a.m===d.m))) continue; /* nothing to show: the card already says it */
-        await putCard({...d, ai:{...a, zh, c:d.c}}); RECHECK.found++; }
+        const upd={...d}, extra=aiExtras(upd,a); /* v588: the description and the kind tag land at once, text change or not */
+        const sugg=!a.bad&&!(zh===d.c&&(!a.p||a.p===d.p)&&(!a.m||a.m===d.m));
+        if(sugg){ upd.ai={...a, zh, c:d.c}; RECHECK.found++; }
+        if(!sugg&&!extra) continue; /* nothing to show and nothing to fill in: the card already says everything the answer says */
+        if(extra){ if(!(d.id in before)) before[d.id]={ds:d.ds,tags:d.tags}; RECHECK.filled++; }
+        await putCard(upd); }
+      if(RECHECK.filled) await saveLastRun("check",["ds","tags"],before,RECHECK.filled);
       await rememberRecheck(true,[...((S.settings.recheckRun||{}).done||[]),...batch.map(d=>d.id)]); /* these are answered, whatever the answer was */
       recheckRefresh();
     }
@@ -2605,11 +2509,8 @@ function renderMore(main){
     <div class="listhead">${t("Learning")}</div> <!-- four sections since v547 (H: "Go for all five" on the described More); Learning stays first, the v275 decision -->
     <div class="mrow"><div style="flex:1"><div class="t">${t("Progress")}</div><div class="s">${progressHTML()}</div><div class="fieldacts"><button class="btn mini" id="usage-share">${t("Share report")}</button></div></div></div>
     <div class="mrow"><div><div class="t">${t("Card order")}</div><div class="s">${t("Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.",NEW_PER_SESSION)}</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${t(l)}</button>`).join("")}</div></div></div>
-    ${tagRowHTML()}
-    ${undoRunHTML("tags")}
-    ${descRowHTML()}
-    ${undoRunHTML("desc")}
     ${recheckRowHTML()}
+    ${undoRunHTML("check")}
     ${undoRunHTML("accept")}
     ${undoRunHTML("dismiss")}
     <div class="listhead">${t("Your cards")}</div>
@@ -2625,7 +2526,7 @@ function renderMore(main){
     <div class="mrow"><div style="flex:1"><div class="t">${t("Language")}</div><div class="s">${t("The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.")}</div><div class="chipset" id="lang-chips" style="margin-top:8px">${LANGS.map(([c,n])=>`<button class="chip${LANG===c?" on":""}" data-lang="${c}">${n}</button>`).join("")}</div></div></div>
     ${translateRowHTML()}
     ${undoRunHTML("meanings")}
-    <div class="mrow"><div><div class="t">${t("AI review")}</div><div class="s" id="ai-status"></div><div class="s" style="margin-top:6px">${t("What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up, Translate all, Tag all or Describe all cards, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.")}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> ${t("Check every new card with the AI automatically (when online)")}</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
+    <div class="mrow"><div><div class="t">${t("AI review")}</div><div class="s" id="ai-status"></div><div class="s" style="margin-top:6px">${t("What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.")}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> ${t("Check every new card with the AI automatically (when online)")}</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
     ${S.admin?`<div class="aiform" id="ai-form" hidden>
       <div class="field"><label>Provider</label><div class="chipset" id="ai-providers">${Object.entries(AI_PROVIDERS).map(([k,v])=>`<button class="chip" data-aipv="${k}">${esc(v.short)}</button>`).join("")}</div>
         <div class="badge" id="ai-acct" style="margin-top:8px"></div>
@@ -2669,8 +2570,6 @@ function renderMore(main){
   $("#usage-share").onclick=shareProgress; $("#app-share").onclick=shareApp;
   document.querySelectorAll("[data-lang]").forEach(b=> b.onclick=()=>setLang(b.dataset.lang));
   const tr=$("#translate-all"); if(tr) tr.onclick=translateAll;
-  const tg=$("#tag-all"); if(tg) tg.onclick=tagAll; /* Tag all cards (v368) */
-  const da=$("#desc-all"); if(da) da.onclick=describeAll; /* Describe all cards (v587) */
   const ur=$("#undo-run"); if(ur) ur.onclick=undoLastRun; /* Undo last run (v369) */
   const rc=$("#recheck-all"); if(rc) rc.onclick=recheckAll; /* Check all cards again (v370) */
   $("#guide-open").onclick=()=>{ S.mode="guide"; render(); window.scrollTo({top:0}); };
@@ -5240,7 +5139,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
-  587:"More → Learning has Describe all cards: the AI writes a few sentences about every card that has none yet — what its text says and where you meet it. New cards get them with the AI check anyway.",
+  588:"More → Learning → Check-up now fills in what a card is missing while it checks it: the description of what its text says, and the tag for what it stands on. The separate Tags and Descriptions rows are gone — one run does all of it.",
   585:"Whole card now shows what the card is about as well — no second tap, and the app fetches it for an older card by itself.",
   580:"The top of a card is the photo or the whole text — one tap swaps the two, and it stays that way while you write the card.",
   569:"Fold the phone or leave the app: the card comes back exactly as you left it, with the strokes you had already written. And the characters tapped big now break onto more rows, so they come out as large as they fit.",
@@ -9574,7 +9473,7 @@ async function importData(e){
        request up to AI_LOG_REQ and the raw reply up to AI_LOG_RES), the readings (`read:*`, one row each, the steps and
        the numbers with the model's zh per reading) and `errlog` — the last one UNREDACTED, since noHan runs only on the way to the daily row;
      — everything keyed by a card id, which since v118 IS the card's text while it is free: `lastRun` (the previous run's
-       meanings and tags, card by card), `translateStage`, `tagStage`, `recheckRun.done`, `resumeView.card`;
+       meanings, card by card), `translateStage`, `recheckRun.done`, `resumeView.card`;
      — and the learner's own progress the sheet has promised to delete since v82 and never did: `days` (the streak) and
        `daily` (the 30-day strip), which are what More → Progress actually reads.
    What SURVIVES, deliberately, and each for its own reason: the API keys and the provider choice (wiping them would be
@@ -9586,7 +9485,7 @@ async function importData(e){
    live in a cache this does not touch, so deleting the flag would make the row lie; `mirror`, the only update path
    without a VPN; and `brightPass` / `recutPass` / `recutStat`, which hold no content and whose pass may be running at
    this moment and would write them straight back. */
-const RESET_KEYS=["ailog","readlog","errlog","lastRun","translateStage","tagStage","translateRun","tagRun","recheckRun","descRun",
+const RESET_KEYS=["ailog","readlog","errlog","lastRun","translateStage","translateRun","recheckRun",
   "resumeView","autoQueue","days","daily","lastExport","charWrites","bigTapped"]; /* charWrites (v512): the characters H has written, keyed by the character itself; bigTapped (v568): the learner has used the tap that makes a half big, so the hint naming it is gone — a phone starting over gets it back */
 async function resetAll(){
   if(!await askSheet({title:t("Start over?"),text:t("All progress, cards and inbox photos on this phone will be deleted."),ok:t("Delete everything")})) return;
@@ -9614,7 +9513,7 @@ async function resetAll(){
   ERRLOG.length=0; AILOG.length=0; AUTOQ.length=0; /* the same logs in memory, or they would be written back at the next step (v267/v384's own debounce) */
   LAST_READ.ring.length=0; /* the ring holds the readings and their steps both (v479) */
   for(const k of Object.keys(NUMSOF)) delete NUMSOF[k];
-  TRANSLATE=null; TAGALL=null; RECHECK=null; DESCALL=null;
+  TRANSLATE=null; RECHECK=null;
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false;
   render();
 }
@@ -9672,7 +9571,7 @@ const reloadBusy=()=>picking()||!!CROP; /* a photo on its way from the camera, o
    is up within seconds and the user finds the same screen. */
 const IDLE_MS=4000, RELOAD_POLL=2000, RESUME_MAX=180000; let LAST_TOUCH=Date.now();
 ["pointerdown","keydown","input","touchstart","wheel"].forEach(ev=>document.addEventListener(ev,()=>{ LAST_TOUCH=Date.now(); },{capture:true,passive:true}));
-const reloadIdle=()=>!reloadBusy()&&!document.hidden&&Date.now()-LAST_TOUCH>=IDLE_MS&&!S.editing&&S.mode!=="add"&&!Object.keys(PENDING).length&&!Object.keys(READING).length&&!(TRANSLATE&&TRANSLATE.running)&&!(TAGALL&&TAGALL.running)&&!(RECHECK&&RECHECK.running)&&!(DESCALL&&DESCALL.running)&&!BRIGHT&&!RECUT&&!document.querySelector(".drawsheet,.ask")&&!(($("#fb-text")||{}).value||"").trim()&&!FB_SHOT; /* a staged screenshot holds the reload too (v511): it lives in memory and a reload would drop it */
+const reloadIdle=()=>!reloadBusy()&&!document.hidden&&Date.now()-LAST_TOUCH>=IDLE_MS&&!S.editing&&S.mode!=="add"&&!Object.keys(PENDING).length&&!Object.keys(READING).length&&!(TRANSLATE&&TRANSLATE.running)&&!(RECHECK&&RECHECK.running)&&!BRIGHT&&!RECUT&&!document.querySelector(".drawsheet,.ask")&&!(($("#fb-text")||{}).value||"").trim()&&!FB_SHOT; /* a staged screenshot holds the reload too (v511): it lives in memory and a reload would drop it */
 /* THE APP RELOADS ITSELF AT MOST ONCE EVERY TEN MINUTES (v563, H after three versions deployed within one Pages cache window:
    "die App refresht die ganze Zeit und kommt gar nicht mehr zur Ruhe"): github.io caches for ten minutes and the mirror is
    purged on every push, so during that window the two can disagree — the origin still handing out the version before, the

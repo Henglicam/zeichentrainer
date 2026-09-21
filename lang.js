@@ -63,7 +63,7 @@ de:{
   "{0} to go, while the app is open.":"Noch {0}, solange die App offen ist.",
   "Waiting for its turn …":"Wartet, bis es dran ist …",
   "Check all cards again":"Alle Karten neu prüfen",
-  "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"Die KI wird ständig besser. Lass sie noch mal über dein ganzes Deck schauen – du siehst jede Änderung, bevor du sie übernimmst.",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"Die KI wird ständig besser. Lass sie noch mal über dein ganzes Deck schauen – fehlende Beschreibungen und Tags trägt sie gleich nach, und jede Änderung am Text siehst du, bevor du sie übernimmst.",
   "Checking {0} of {1} …":"Prüfe {0} von {1} …",
   "Done — {0} could be better. Look under the Cards tab.":"Fertig – es gibt {0} zu verbessern. Schau im Tab Karten nach.",
   "Done — nothing to change. Your cards are in good shape.":"Fertig – nichts zu ändern. Deine Karten sind gut in Form.",
@@ -72,22 +72,22 @@ de:{
   "Dismissed the AI's suggestions on {0} at {1}.":"KI-Vorschläge für {0} um {1} verworfen.",
   "Check-up":"Check-up",
   "Undo last run":"Letzten Durchlauf rückgängig",
-  "Tagged {0} at {1}.":"{0} um {1} getaggt.",
-  "Descriptions":"Beschreibungen",
-  "A few sentences about what a card's text says and where you meet it. New cards get them with the AI check.":"Ein paar Sätze dazu, was der Text einer Karte sagt und wo er dir begegnet. Neue Karten bekommen sie mit der KI-Prüfung.",
-  "Describing {0} of {1} …":"Beschreibe {0} von {1} …",
-  "{0} described, {1} left.":"{0} beschrieben, {1} übrig.",
-  "Done — {0} described.":"Fertig – {0} beschrieben.",
-  "No description yet on {0}.":"Noch keine Beschreibung auf {0}.",
-  "Describe all cards":"Alle Karten beschreiben",
-  "Described {0} at {1}.":"{0} um {1} beschrieben.",
-  "Translated {0} at {1}.":"{0} um {1} übersetzt.",
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  "Translated {0} at {1}.":"{0} um {1} übersetzt.","Checked {0} at {1}.":"{0} um {1} geprüft.","Done — {0} filled in.":"Fertig – {0} ergänzt.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Fertig – {0} ergänzt, es gibt {1} zu verbessern. Schau im Tab Karten nach.",
   "Undone — {0} put back.":"Rückgängig – {0} wiederhergestellt.",
-  "Tag all cards":"Alle Karten taggen",
-  "Tagging {0} of {1} …":"Tagge {0} von {1} …",
-  "{0} tagged, {1} left.":"{0} getaggt, {1} übrig.",
-  "Done — {0} tagged.":"Fertig – {0} getaggt.",
-  "No tag yet on {0}.":"Noch kein Tag auf {0}.",
+  
+  
+  
+  
+  
   "Filter":"Filter",
   "Status":"Status",
   "Filters ({0})":"Filter ({0})",
@@ -266,7 +266,7 @@ de:{
   "Your data":"Deine Daten","Export":"Exportieren","Progress and cards as one file, via the share sheet.":"Fortschritt und Karten als eine Datei, über das Teilen-Menü.","Include photos (adds about {0} MB)":"Fotos einschließen (etwa {0} MB mehr)",
   "Import":"Importieren","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"Eine Datei zeichentrainer-….json.txt. Vorhandene Karten werden überschrieben.",
   "Flagged cards":"Markierte Karten","{0} flagged for review. Share the list as text, for a teacher.":"{0} zur Prüfung markiert. Teile die Liste als Text, etwa für einen Lehrer.",
-  "Show":"Anzeigen","Online AI review":"KI-Prüfung online","AI review":"KI-Prüfung","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up, Translate all, Tag all or Describe all cards, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Was gesendet wird: der chinesische Text einer Karte, Pinyin, Bedeutung, deine Notiz und die anderen Lesungen der App – bei jeder neuen Karte und bei jeder Karte, wenn du „Check-up“, „Alle Karten übersetzen“, „Alle Karten taggen“ oder „Alle Karten beschreiben“ antippst, und bei einer Karte, sobald du zu ihr kommst und sie noch keine Beschreibung hat. Wenn der Text schwer zu lesen ist, geht ein Bild davon an einen Anbieter, der Bilder annimmt – manchmal das ganze Foto. Ohne eigenen Schlüssel sendet dieses Telefon über das Relais des App-Besitzers, das an den Anbieter weiterleitet und nur eine Zahl behält.",
+  "Show":"Anzeigen","Online AI review":"KI-Prüfung online","AI review":"KI-Prüfung","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Was gesendet wird: der chinesische Text einer Karte, Pinyin, Bedeutung, deine Notiz und die anderen Lesungen der App – bei jeder neuen Karte und bei jeder Karte, wenn du „Check-up“ oder „Alle Karten übersetzen“ antippst, und bei einer Karte, sobald du zu ihr kommst und sie noch keine Beschreibung hat. Wenn der Text schwer zu lesen ist, geht ein Bild davon an einen Anbieter, der Bilder annimmt – manchmal das ganze Foto. Ohne eigenen Schlüssel sendet dieses Telefon über das Relais des App-Besitzers, das an den Anbieter weiterleitet und nur eine Zahl behält.",
   "Check every new card with the AI automatically (when online)":"Jede neue Karte automatisch mit der KI prüfen (wenn online)","Review queue":"Warteschlange","Storage":"Speicher","Learning":"Lernen",
   "Card order":"Reihenfolge der Karten","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"Fällige Karten kommen zuerst, dann bis zu {0} neue, jede Gruppe von kurz nach lang. Das hier legt die Reihenfolge unter gleich langen Karten fest.",
   "Progress":"Fortschritt",
@@ -370,7 +370,7 @@ fr:{
   "{0} to go, while the app is open.":"Encore {0}, tant que l’appli est ouverte.",
   "Waiting for its turn …":"En attente de son tour …",
   "Check all cards again":"Revérifier toutes les cartes",
-  "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"L'IA s'améliore sans cesse. Laisse-la relire tout ton paquet – tu vois chaque changement avant de l'accepter.",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"L'IA s'améliore sans cesse. Laisse-la relire tout ton paquet – elle complète les descriptions et les tags qui manquent, et tu vois chaque changement de texte avant de l'accepter.",
   "Checking {0} of {1} …":"Vérification {0} sur {1} …",
   "Done — {0} could be better. Look under the Cards tab.":"Terminé – il y a {0} à améliorer. Regarde dans l'onglet Cartes.",
   "Done — nothing to change. Your cards are in good shape.":"Terminé – rien à changer. Tes cartes sont en pleine forme.",
@@ -379,22 +379,22 @@ fr:{
   "Dismissed the AI's suggestions on {0} at {1}.":"Suggestions de l'IA sur {0} ignorées à {1}.",
   "Check-up":"Bilan",
   "Undo last run":"Annuler la dernière passe",
-  "Tagged {0} at {1}.":"Tags ajoutés à {0} à {1}.",
-  "Descriptions":"Descriptions",
-  "A few sentences about what a card's text says and where you meet it. New cards get them with the AI check.":"Quelques phrases sur ce que dit le texte d’une carte et où tu le croises. Les nouvelles cartes les reçoivent avec le contrôle de l’IA.",
-  "Describing {0} of {1} …":"Description {0} sur {1} …",
-  "{0} described, {1} left.":"Descriptions : {0}, il reste {1}.",
-  "Done — {0} described.":"Terminé – descriptions ajoutées à {0}.",
-  "No description yet on {0}.":"Pas encore de description sur {0}.",
-  "Describe all cards":"Décrire toutes les cartes",
-  "Described {0} at {1}.":"Descriptions ajoutées à {0} à {1}.",
-  "Translated {0} at {1}.":"Traduction de {0} à {1}.",
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  "Translated {0} at {1}.":"Traduction de {0} à {1}.","Checked {0} at {1}.":"Vérification de {0} à {1}.","Done — {0} filled in.":"Terminé – complété : {0}.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Terminé – complété : {0} ; il y a {1} à améliorer. Regarde dans l'onglet Cartes.",
   "Undone — {0} put back.":"Annulé – {0} de retour.",
-  "Tag all cards":"Taguer toutes les cartes",
-  "Tagging {0} of {1} …":"Tag {0} sur {1} …",
-  "{0} tagged, {1} left.":"{0} taguées, {1} restantes.",
-  "Done — {0} tagged.":"Terminé – tags ajoutés à {0}.",
-  "No tag yet on {0}.":"Pas encore de tag sur {0}.",
+  
+  
+  
+  
+  
   "Filter":"Filtre",
   "Status":"Statut",
   "Filters ({0})":"Filtres ({0})",
@@ -572,7 +572,7 @@ fr:{
   "Your data":"Tes données","Export":"Exporter","Progress and cards as one file, via the share sheet.":"Progression et cartes en un seul fichier, via le menu de partage.","Include photos (adds about {0} MB)":"Inclure les photos (environ {0} Mo de plus)",
   "Import":"Importer","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"Un fichier zeichentrainer-….json.txt. Les cartes existantes sont remplacées.",
   "Flagged cards":"Cartes signalées","{0} flagged for review. Share the list as text, for a teacher.":"{0} signalées pour vérification. Partage la liste en texte, pour un prof.",
-  "Show":"Afficher","Online AI review":"Vérification par l'IA en ligne","AI review":"Vérification par l'IA","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up, Translate all, Tag all or Describe all cards, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Ce qui est envoyé : le texte chinois d'une carte, le pinyin, le sens, ta note et les autres lectures de l'appli — pour chaque nouvelle carte et pour chaque carte quand tu touches « Bilan », « Traduire toutes les cartes », « Taguer toutes les cartes » ou « Décrire toutes les cartes », et pour une carte dès que tu arrives dessus et qu’elle n’a pas encore de description. Quand la lecture est difficile, une image du texte est envoyée à un fournisseur qui accepte les images — parfois la photo entière. Sans clé propre, ce téléphone envoie via le relais du propriétaire de l'appli, qui transmet au fournisseur et ne garde qu'un compteur.",
+  "Show":"Afficher","Online AI review":"Vérification par l'IA en ligne","AI review":"Vérification par l'IA","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Ce qui est envoyé : le texte chinois d'une carte, le pinyin, le sens, ta note et les autres lectures de l'appli — pour chaque nouvelle carte et pour chaque carte quand tu touches « Bilan » ou « Traduire toutes les cartes », et pour une carte dès que tu arrives dessus et qu’elle n’a pas encore de description. Quand la lecture est difficile, une image du texte est envoyée à un fournisseur qui accepte les images — parfois la photo entière. Sans clé propre, ce téléphone envoie via le relais du propriétaire de l'appli, qui transmet au fournisseur et ne garde qu'un compteur.",
   "Check every new card with the AI automatically (when online)":"Vérifier chaque nouvelle carte automatiquement avec l'IA (en ligne)","Review queue":"File de vérification","Storage":"Stockage","Learning":"Apprentissage",
   "Card order":"Ordre des cartes","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"Les cartes à revoir viennent d'abord, puis jusqu'à {0} nouvelles, chaque groupe des courtes aux longues. Ceci règle l'ordre entre cartes de même longueur.",
   "Progress":"Progression",
@@ -677,7 +677,7 @@ es:{
   "{0} to go, while the app is open.":"{0} más, mientras la app está abierta.",
   "Waiting for its turn …":"Esperando su turno …",
   "Check all cards again":"Revisar todas las tarjetas",
-  "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"La IA mejora sin parar. Deja que repase todo tu mazo: ves cada cambio antes de aceptarlo.",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"La IA mejora sin parar. Deja que repase todo tu mazo: completa las descripciones y las etiquetas que faltan, y ves cada cambio de texto antes de aceptarlo.",
   "Checking {0} of {1} …":"Revisando {0} de {1} …",
   "Done — {0} could be better. Look under the Cards tab.":"Listo: hay {0} que mejorar. Mira la pestaña Tarjetas.",
   "Done — nothing to change. Your cards are in good shape.":"Listo: nada que cambiar. Tus tarjetas están en forma.",
@@ -686,22 +686,22 @@ es:{
   "Dismissed the AI's suggestions on {0} at {1}.":"Sugerencias de la IA en {0} descartadas a las {1}.",
   "Check-up":"Revisión",
   "Undo last run":"Deshacer la última pasada",
-  "Tagged {0} at {1}.":"Etiquetas añadidas a {0} a las {1}.",
-  "Descriptions":"Descripciones",
-  "A few sentences about what a card's text says and where you meet it. New cards get them with the AI check.":"Unas frases sobre lo que dice el texto de una tarjeta y dónde te lo encuentras. Las tarjetas nuevas las reciben con la revisión de la IA.",
-  "Describing {0} of {1} …":"Describiendo {0} de {1} …",
-  "{0} described, {1} left.":"Descripciones: {0}, restantes: {1}.",
-  "Done — {0} described.":"Listo: descripciones añadidas a {0}.",
-  "No description yet on {0}.":"Aún sin descripción en {0}.",
-  "Describe all cards":"Describir todas las tarjetas",
-  "Described {0} at {1}.":"Descripciones añadidas a {0} a las {1}.",
-  "Translated {0} at {1}.":"Traducción de {0} a las {1}.",
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  "Translated {0} at {1}.":"Traducción de {0} a las {1}.","Checked {0} at {1}.":"Revisión de {0} a las {1}.","Done — {0} filled in.":"Listo: completado en {0}.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Listo: completado en {0}; hay {1} que mejorar. Mira la pestaña Tarjetas.",
   "Undone — {0} put back.":"Deshecho: {0} de vuelta.",
-  "Tag all cards":"Etiquetar todas las tarjetas",
-  "Tagging {0} of {1} …":"Etiquetando {0} de {1} …",
-  "{0} tagged, {1} left.":"{0} etiquetadas, {1} restantes.",
-  "Done — {0} tagged.":"Listo: etiquetas añadidas a {0}.",
-  "No tag yet on {0}.":"Aún sin etiqueta en {0}.",
+  
+  
+  
+  
+  
   "Filter":"Filtro",
   "Status":"Estado",
   "Filters ({0})":"Filtros ({0})",
@@ -879,7 +879,7 @@ es:{
   "Your data":"Tus datos","Export":"Exportar","Progress and cards as one file, via the share sheet.":"Progreso y tarjetas en un solo archivo, mediante el menú de compartir.","Include photos (adds about {0} MB)":"Incluir fotos (añade unos {0} MB)",
   "Import":"Importar","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"Un archivo zeichentrainer-….json.txt. Las tarjetas existentes se sobrescriben.",
   "Flagged cards":"Tarjetas marcadas","{0} flagged for review. Share the list as text, for a teacher.":"{0} marcadas para revisar. Comparte la lista como texto, para un profesor.",
-  "Show":"Mostrar","Online AI review":"Revisión con IA en línea","AI review":"Revisión con IA","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up, Translate all, Tag all or Describe all cards, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Qué se envía: el texto chino de una tarjeta, el pinyin, el significado, tu nota y las otras lecturas de la app — con cada tarjeta nueva y con cada tarjeta cuando tocas «Revisión», «Traducir todas las tarjetas», «Etiquetar todas las tarjetas» o «Describir todas las tarjetas», y con una tarjeta en cuanto llegas a ella y todavía no tiene descripción. Cuando la lectura es difícil, una imagen del texto se envía a un proveedor que acepta imágenes — a veces la foto entera. Sin clave propia, este teléfono envía a través del relé del propietario de la app, que reenvía al proveedor y solo guarda un recuento.",
+  "Show":"Mostrar","Online AI review":"Revisión con IA en línea","AI review":"Revisión con IA","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Qué se envía: el texto chino de una tarjeta, el pinyin, el significado, tu nota y las otras lecturas de la app — con cada tarjeta nueva y con cada tarjeta cuando tocas «Revisión» o «Traducir todas las tarjetas», y con una tarjeta en cuanto llegas a ella y todavía no tiene descripción. Cuando la lectura es difícil, una imagen del texto se envía a un proveedor que acepta imágenes — a veces la foto entera. Sin clave propia, este teléfono envía a través del relé del propietario de la app, que reenvía al proveedor y solo guarda un recuento.",
   "Check every new card with the AI automatically (when online)":"Revisar cada tarjeta nueva automáticamente con la IA (con conexión)","Review queue":"Cola de revisión","Storage":"Almacenamiento","Learning":"Aprendizaje",
   "Card order":"Orden de las tarjetas","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"Primero las tarjetas pendientes, luego hasta {0} nuevas, cada grupo de corta a larga. Esto fija el orden entre tarjetas de la misma longitud.",
   "Progress":"Progreso",
@@ -984,7 +984,7 @@ ja:{
   "{0} to go, while the app is open.":"アプリを開いている間に、あと{0}。",
   "Waiting for its turn …":"順番待ち …",
   "Check all cards again":"すべてのカードを再チェック",
-  "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"AIは日々よくなっています。カード全部をもう一度見てもらいましょう。変更は取り込む前に確認できます。",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"AIは日々よくなっています。カード全部をもう一度見てもらいましょう。足りない解説とタグはその場で補われ、本文の変更は取り込む前に確認できます。",
   "Checking {0} of {1} …":"{0} / {1} をチェック中 …",
   "Done — {0} could be better. Look under the Cards tab.":"完了 — {0}はもっとよくなりそうです。カードタブで見てみましょう。",
   "Done — nothing to change. Your cards are in good shape.":"完了 — 変更はありません。カードはいい状態です。",
@@ -993,22 +993,22 @@ ja:{
   "Dismissed the AI's suggestions on {0} at {1}.":"{1}に{0}へのAIの提案を閉じました。",
   "Check-up":"見直し",
   "Undo last run":"前回の実行を取り消す",
-  "Tagged {0} at {1}.":"{1}に{0}にタグを付けました。",
-  "Descriptions":"カードの解説",
-  "A few sentences about what a card's text says and where you meet it. New cards get them with the AI check.":"そのカードの文が何を言っていて、どこで見かけるかを数文で。新しいカードはAIチェックのときに受け取ります。",
-  "Describing {0} of {1} …":"{0} / {1} の解説を作成中 …",
-  "{0} described, {1} left.":"{0}件に解説、残り{1}件。",
-  "Done — {0} described.":"完了 — {0}に解説を付けました。",
-  "No description yet on {0}.":"{0}にまだ解説がありません。",
-  "Describe all cards":"すべてのカードに解説を付ける",
-  "Described {0} at {1}.":"{1}に{0}に解説を付けました。",
-  "Translated {0} at {1}.":"{1}に{0}を翻訳しました。",
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  "Translated {0} at {1}.":"{1}に{0}を翻訳しました。","Checked {0} at {1}.":"{1}に{0}を確認しました。","Done — {0} filled in.":"完了 — {0}を補いました。","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"完了 — {0}を補いました。{1}はもっとよくなりそうです。カードタブで見てみましょう。",
   "Undone — {0} put back.":"取り消しました — {0}を元に戻しました。",
-  "Tag all cards":"すべてのカードにタグを付ける",
-  "Tagging {0} of {1} …":"{0} / {1} にタグ付け中 …",
-  "{0} tagged, {1} left.":"{0}にタグ付け、残り{1}。",
-  "Done — {0} tagged.":"完了 — {0}にタグを付けました。",
-  "No tag yet on {0}.":"{0}にまだタグがありません。",
+  
+  
+  
+  
+  
   "Filter":"フィルター",
   "Status":"状態",
   "Filters ({0})":"フィルター{0}件",
@@ -1186,7 +1186,7 @@ ja:{
   "Your data":"データ","Export":"エクスポート","Progress and cards as one file, via the share sheet.":"学習記録とカードを1つのファイルにして、共有メニューから送ります。","Include photos (adds about {0} MB)":"写真を含める（約{0} MB増）",
   "Import":"インポート","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"zeichentrainer-….json.txt ファイル。既存のカードは上書きされます。",
   "Flagged cards":"印を付けたカード","{0} flagged for review. Share the list as text, for a teacher.":"{0}枚が要確認です。先生に見せるために、一覧をテキストで共有できます。",
-  "Show":"表示","Online AI review":"オンラインAI確認","AI review":"AI確認","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up, Translate all, Tag all or Describe all cards, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"送信されるもの：カードの中国語テキスト、ピンイン、意味、メモ、読み取りの別の候補。新しいカードすべてと、「見直し」「すべてのカードを翻訳」「すべてのカードにタグを付ける」「すべてのカードに解説を付ける」をタップしたときはすべてのカードが対象です。カードが表示されたときに、そのカードにまだ解説がなければ、そのカードだけが送られます。読み取りが難しいときは、文字の画像 — ときには写真全体 — が画像を受け付ける提供元に送られます。自分のキーがない端末はアプリ所有者の中継を通して送り、中継は提供元に転送して回数だけを記録します。",
+  "Show":"表示","Online AI review":"オンラインAI確認","AI review":"AI確認","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"送信されるもの：カードの中国語テキスト、ピンイン、意味、メモ、読み取りの別の候補。新しいカードすべてと、「見直し」「すべてのカードを翻訳」をタップしたときはすべてのカードが対象です。カードが表示されたときに、そのカードにまだ解説がなければ、そのカードだけが送られます。読み取りが難しいときは、文字の画像 — ときには写真全体 — が画像を受け付ける提供元に送られます。自分のキーがない端末はアプリ所有者の中継を通して送り、中継は提供元に転送して回数だけを記録します。",
   "Check every new card with the AI automatically (when online)":"新しいカードを自動でAIに確認させる（オンライン時）","Review queue":"確認待ち","Storage":"ストレージ","Learning":"学習",
   "Card order":"カードの順序","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"復習カードが先、その後に新しいカードが最大{0}枚。どちらも短いものから長いものへ。ここでは同じ長さのカード同士の順序を決めます。",
   "Progress":"進み具合",
@@ -1291,7 +1291,7 @@ ko:{
   "{0} to go, while the app is open.":"{0} 남았어요. 앱이 열려 있는 동안 진행돼요.",
   "Waiting for its turn …":"차례를 기다리는 중 …",
   "Check all cards again":"모든 카드 다시 확인",
-  "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"AI는 계속 좋아져요. 카드 전체를 다시 한번 보게 해요 — 반영하기 전에 모든 변경 내용을 볼 수 있어요.",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"AI는 계속 좋아져요. 카드 전체를 다시 한번 보게 해요 — 빠진 설명과 태그는 바로 채워지고, 본문 변경은 반영하기 전에 볼 수 있어요.",
   "Checking {0} of {1} …":"{0} / {1} 확인 중 …",
   "Done — {0} could be better. Look under the Cards tab.":"완료 — {0}을 더 좋게 만들 수 있어요. 카드 탭에서 확인해요.",
   "Done — nothing to change. Your cards are in good shape.":"완료 — 바꿀 게 없어요. 카드 상태가 좋아요.",
@@ -1300,22 +1300,22 @@ ko:{
   "Dismissed the AI's suggestions on {0} at {1}.":"{1}에 {0}에 대한 AI 제안을 닫았어요.",
   "Check-up":"점검",
   "Undo last run":"지난 실행 되돌리기",
-  "Tagged {0} at {1}.":"{1}에 {0} 태그했어요.",
-  "Descriptions":"카드 설명",
-  "A few sentences about what a card's text says and where you meet it. New cards get them with the AI check.":"카드의 글이 무슨 뜻이고 어디서 만나는지 몇 문장으로. 새 카드는 AI 점검 때 같이 받아요.",
-  "Describing {0} of {1} …":"{0} / {1} 설명 만드는 중 …",
-  "{0} described, {1} left.":"{0}개 완료, {1}개 남음.",
-  "Done — {0} described.":"완료 — {0}에 설명을 달았어요.",
-  "No description yet on {0}.":"{0}에 아직 설명이 없어요.",
-  "Describe all cards":"모든 카드에 설명 달기",
-  "Described {0} at {1}.":"{1}에 {0}에 설명을 달았어요.",
-  "Translated {0} at {1}.":"{1}에 {0} 번역했어요.",
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  "Translated {0} at {1}.":"{1}에 {0} 번역했어요.","Checked {0} at {1}.":"{1}에 {0} 점검했어요.","Done — {0} filled in.":"완료 — {0} 채웠어요.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"완료 — {0} 채웠어요. {1}을 더 좋게 만들 수 있어요. 카드 탭에서 확인해요.",
   "Undone — {0} put back.":"되돌렸어요 — {0} 복구했어요.",
-  "Tag all cards":"모든 카드에 태그 달기",
-  "Tagging {0} of {1} …":"{0} / {1} 태그 다는 중 …",
-  "{0} tagged, {1} left.":"{0} 태그 완료, {1} 남음.",
-  "Done — {0} tagged.":"완료 — {0} 태그했어요.",
-  "No tag yet on {0}.":"{0}에 아직 태그가 없어요.",
+  
+  
+  
+  
+  
   "Filter":"필터",
   "Status":"상태",
   "Filters ({0})":"필터 {0}개",
@@ -1493,7 +1493,7 @@ ko:{
   "Your data":"내 데이터","Export":"내보내기","Progress and cards as one file, via the share sheet.":"진행 상황과 카드를 한 파일로, 공유 메뉴를 통해 내보내요.","Include photos (adds about {0} MB)":"사진 포함 (약 {0} MB 추가)",
   "Import":"가져오기","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"zeichentrainer-….json.txt 파일. 기존 카드는 덮어써요.",
   "Flagged cards":"표시한 카드","{0} flagged for review. Share the list as text, for a teacher.":"{0}장이 확인 대상이에요. 선생님께 보내도록 목록을 텍스트로 공유하세요.",
-  "Show":"보기","Online AI review":"온라인 AI 확인","AI review":"AI 확인","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up, Translate all, Tag all or Describe all cards, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"전송되는 것: 카드의 중국어 텍스트, 병음, 뜻, 메모, 읽기가 찾아낸 다른 후보. 새 카드를 만들 때마다 전송되고, ‘점검’, ‘모든 카드를 번역’, ‘모든 카드에 태그 달기’, ‘모든 카드에 설명 달기’를 누르면 모든 카드가, 카드를 보게 됐을 때 그 카드에 아직 설명이 없으면 그 카드 하나가 전송돼요. 읽기가 어려울 때는 글자가 담긴 사진이, 때로는 사진 전체가 이미지를 받는 제공자에게 전송돼요. 자체 키가 없는 휴대폰은 앱 소유자의 중계를 통해 보내며, 중계는 제공자에게 전달하고 횟수만 기록해요.",
+  "Show":"보기","Online AI review":"온라인 AI 확인","AI review":"AI 확인","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"전송되는 것: 카드의 중국어 텍스트, 병음, 뜻, 메모, 읽기가 찾아낸 다른 후보. 새 카드를 만들 때마다 전송되고, ‘점검’, ‘모든 카드를 번역’를 누르면 모든 카드가, 카드를 보게 됐을 때 그 카드에 아직 설명이 없으면 그 카드 하나가 전송돼요. 읽기가 어려울 때는 글자가 담긴 사진이, 때로는 사진 전체가 이미지를 받는 제공자에게 전송돼요. 자체 키가 없는 휴대폰은 앱 소유자의 중계를 통해 보내며, 중계는 제공자에게 전달하고 횟수만 기록해요.",
   "Check every new card with the AI automatically (when online)":"새 카드를 자동으로 AI로 확인 (온라인일 때)","Review queue":"확인 대기열","Storage":"저장 공간","Learning":"학습",
   "Card order":"카드 순서","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"복습할 카드가 먼저, 그다음 새 카드 최대 {0}장. 각 그룹은 짧은 것부터 긴 것 순이에요. 여기서는 길이가 같은 카드끼리의 순서를 정해요.",
   "Progress":"진행 상황",
@@ -1601,7 +1601,7 @@ ru:{
   "{0} to go, while the app is open.":"Осталось {0}, пока приложение открыто.",
   "Waiting for its turn …":"Ждёт своей очереди …",
   "Check all cards again":"Проверить все карточки",
-  "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"ИИ становится всё лучше. Дай ему ещё раз взглянуть на всю колоду — каждое изменение ты увидишь до того, как примешь его.",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"ИИ становится всё лучше. Дай ему ещё раз взглянуть на всю колоду — недостающие описания и теги он добавит сразу, а каждое изменение текста ты увидишь до того, как примешь его.",
   "Checking {0} of {1} …":"Проверяю {0} из {1} …",
   "Done — {0} could be better. Look under the Cards tab.":"Готово — можно улучшить: {0}. Ищи во вкладке «Карточки».",
   "Done — nothing to change. Your cards are in good shape.":"Готово — менять нечего. С твоими карточками всё в порядке.",
@@ -1610,22 +1610,22 @@ ru:{
   "Dismissed the AI's suggestions on {0} at {1}.":"{0} — предложения ИИ отклонены: {1}.",
   "Check-up":"Проверка карточек",
   "Undo last run":"Отменить последние изменения",
-  "Tagged {0} at {1}.":"{0} — теги проставлены: {1}.",
-  "Descriptions":"Описания",
-  "A few sentences about what a card's text says and where you meet it. New cards get them with the AI check.":"Несколько предложений о том, что говорит текст карточки и где он встречается. Новые карточки получают их при проверке ИИ.",
-  "Describing {0} of {1} …":"Делаю описания: {0} из {1} …",
-  "{0} described, {1} left.":"Готово: {0}, осталось {1}.",
-  "Done — {0} described.":"Готово — описания добавлены: {0}.",
-  "No description yet on {0}.":"Пока без описания: {0}.",
-  "Describe all cards":"Описания для всех карточек",
-  "Described {0} at {1}.":"Описания добавлены: {0}, в {1}.",
-  "Translated {0} at {1}.":"{0} — перевод сделан: {1}.",
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  "Translated {0} at {1}.":"{0} — перевод сделан: {1}.","Checked {0} at {1}.":"{0} — проверка сделана: {1}.","Done — {0} filled in.":"Готово — дополнено: {0}.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Готово — дополнено: {0}; можно улучшить: {1}. Ищи во вкладке «Карточки».",
   "Undone — {0} put back.":"Отменено: {0} на месте.",
-  "Tag all cards":"Теги для всех карточек",
-  "Tagging {0} of {1} …":"Проставляю теги: {0} из {1} …",
-  "{0} tagged, {1} left.":"Проставлено {0}, осталось {1}.",
-  "Done — {0} tagged.":"Готово — теги проставлены: {0}.",
-  "No tag yet on {0}.":"{0} пока без тегов.",
+  
+  
+  
+  
+  
   "Filter":"Фильтр",
   "Status":"Статус",
   "Filters ({0})":"Фильтры ({0})",
@@ -1804,7 +1804,7 @@ ru:{
   "Your data":"Твои данные","Export":"Экспорт","Progress and cards as one file, via the share sheet.":"Прогресс и карточки одним файлом, через меню «Поделиться».","Include photos (adds about {0} MB)":"Вместе с фото (примерно +{0} МБ)",
   "Import":"Импорт","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"Файл zeichentrainer-….json.txt. Существующие карточки перезапишутся.",
   "Flagged cards":"Карточки с меткой","{0} flagged for review. Share the list as text, for a teacher.":"С меткой: {0}. Отправь список текстом — например, учителю.",
-  "Show":"Список","Online AI review":"Проверка через ИИ","AI review":"Проверка ИИ","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up, Translate all, Tag all or Describe all cards, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Что уходит: китайский текст карточки, пиньинь, значение, твоя заметка и другие варианты чтения — с каждой новой карточки, а со всех карточек сразу, когда нажмёшь «Проверка карточек», «Перевести карточки», «Теги для всех карточек» или «Описания для всех карточек», а одна карточка — как только ты до неё дойдёшь, если описания у неё ещё нет. Когда чтение даётся с трудом, картинка с текстом — а иногда и всё фото — уходит к провайдеру, который принимает картинки. Без своего ключа телефон отправляет через сервер владельца приложения: тот передаёт запрос провайдеру и хранит только счётчик.",
+  "Show":"Список","Online AI review":"Проверка через ИИ","AI review":"Проверка ИИ","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Что уходит: китайский текст карточки, пиньинь, значение, твоя заметка и другие варианты чтения — с каждой новой карточки, а со всех карточек сразу, когда нажмёшь «Проверка карточек» или «Перевести карточки», а одна карточка — как только ты до неё дойдёшь, если описания у неё ещё нет. Когда чтение даётся с трудом, картинка с текстом — а иногда и всё фото — уходит к провайдеру, который принимает картинки. Без своего ключа телефон отправляет через сервер владельца приложения: тот передаёт запрос провайдеру и хранит только счётчик.",
   "Check every new card with the AI automatically (when online)":"Проверять каждую новую карточку через ИИ автоматически (когда есть сеть)","Review queue":"Очередь на проверку","Storage":"Хранилище","Learning":"Учёба",
   "Card order":"Порядок карточек","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"Сначала идут карточки, которым пора, потом до {0} новых, в каждой группе от коротких к длинным. Здесь ты задаёшь порядок среди карточек одной длины.",
   "Progress":"Прогресс",
@@ -1908,7 +1908,7 @@ vi:{
   "{0} to go, while the app is open.":"Còn {0}, khi ứng dụng đang mở.",
   "Waiting for its turn …":"Đang chờ đến lượt …",
   "Check all cards again":"Kiểm tra lại mọi thẻ",
-  "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"AI ngày càng giỏi. Cho nó xem lại cả bộ thẻ của bạn đi — bạn thấy từng thay đổi trước khi áp dụng.",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"AI ngày càng giỏi. Cho nó xem lại cả bộ thẻ của bạn đi — mô tả và nhãn còn thiếu nó bổ sung luôn, còn mọi thay đổi chữ thì bạn thấy trước khi áp dụng.",
   "Checking {0} of {1} …":"Đang kiểm tra {0}/{1} …",
   "Done — {0} could be better. Look under the Cards tab.":"Xong — {0} có thể tốt hơn. Xem ở tab Thẻ.",
   "Done — nothing to change. Your cards are in good shape.":"Xong — không có gì phải sửa. Thẻ của bạn ổn cả.",
@@ -1917,22 +1917,22 @@ vi:{
   "Dismissed the AI's suggestions on {0} at {1}.":"Đã bỏ qua gợi ý của AI cho {0} lúc {1}.",
   "Check-up":"Rà soát",
   "Undo last run":"Hoàn tác lần chạy trước",
-  "Tagged {0} at {1}.":"Đã gắn nhãn {0} lúc {1}.",
-  "Descriptions":"Mô tả",
-  "A few sentences about what a card's text says and where you meet it. New cards get them with the AI check.":"Vài câu về nội dung của thẻ và nơi bạn gặp nó. Thẻ mới nhận được khi AI kiểm tra.",
-  "Describing {0} of {1} …":"Đang mô tả {0}/{1} …",
-  "{0} described, {1} left.":"Đã mô tả {0}, còn {1}.",
-  "Done — {0} described.":"Xong — đã mô tả {0}.",
-  "No description yet on {0}.":"{0} chưa có mô tả.",
-  "Describe all cards":"Mô tả mọi thẻ",
-  "Described {0} at {1}.":"Đã mô tả {0} lúc {1}.",
-  "Translated {0} at {1}.":"Đã dịch {0} lúc {1}.",
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  "Translated {0} at {1}.":"Đã dịch {0} lúc {1}.","Checked {0} at {1}.":"Đã kiểm tra {0} lúc {1}.","Done — {0} filled in.":"Xong — đã bổ sung {0}.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Xong — đã bổ sung {0}, {1} có thể tốt hơn. Xem ở tab Thẻ.",
   "Undone — {0} put back.":"Đã hoàn tác — {0} trở lại như cũ.",
-  "Tag all cards":"Gắn nhãn mọi thẻ",
-  "Tagging {0} of {1} …":"Đang gắn nhãn {0}/{1} …",
-  "{0} tagged, {1} left.":"Đã gắn nhãn {0}, còn {1}.",
-  "Done — {0} tagged.":"Xong — đã gắn nhãn {0}.",
-  "No tag yet on {0}.":"{0} chưa có nhãn.",
+  
+  
+  
+  
+  
   "Filter":"Bộ lọc",
   "Status":"Trạng thái",
   "Filters ({0})":"Bộ lọc ({0})",
@@ -2111,7 +2111,7 @@ vi:{
   "Your data":"Dữ liệu của bạn","Export":"Xuất","Progress and cards as one file, via the share sheet.":"Tiến độ và thẻ gộp thành một tệp, gửi qua menu chia sẻ.","Include photos (adds about {0} MB)":"Kèm cả ảnh (thêm khoảng {0} MB)",
   "Import":"Nhập","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"Một tệp zeichentrainer-….json.txt. Thẻ đang có sẽ bị ghi đè.",
   "Flagged cards":"Thẻ đã đánh dấu","{0} flagged for review. Share the list as text, for a teacher.":"{0} đã đánh dấu để xem lại. Chia sẻ danh sách dạng chữ, ví dụ cho thầy cô.",
-  "Show":"Xem","Online AI review":"Kiểm tra bằng AI","AI review":"Kiểm tra bằng AI","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up, Translate all, Tag all or Describe all cards, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Những gì được gửi đi: chữ Hán, pinyin, nghĩa trên thẻ, ghi chú của bạn và những cách đọc khác mà app đoán ra — với mọi thẻ mới, và với cả bộ thẻ khi bạn chạm Rà soát, Dịch mọi thẻ, Gắn nhãn mọi thẻ hay Mô tả mọi thẻ, và với một thẻ ngay khi bạn tới thẻ đó mà nó chưa có phần mô tả. Khi chữ khó đọc, ảnh phần chữ được gửi tới một nhà cung cấp nhận ảnh — đôi khi là cả tấm ảnh. Không có khóa riêng thì máy này gửi qua trạm chuyển của chủ app, trạm đó chuyển tiếp tới nhà cung cấp và chỉ giữ lại một con số đếm.",
+  "Show":"Xem","Online AI review":"Kiểm tra bằng AI","AI review":"Kiểm tra bằng AI","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Những gì được gửi đi: chữ Hán, pinyin, nghĩa trên thẻ, ghi chú của bạn và những cách đọc khác mà app đoán ra — với mọi thẻ mới, và với cả bộ thẻ khi bạn chạm Rà soát hay Dịch mọi thẻ, và với một thẻ ngay khi bạn tới thẻ đó mà nó chưa có phần mô tả. Khi chữ khó đọc, ảnh phần chữ được gửi tới một nhà cung cấp nhận ảnh — đôi khi là cả tấm ảnh. Không có khóa riêng thì máy này gửi qua trạm chuyển của chủ app, trạm đó chuyển tiếp tới nhà cung cấp và chỉ giữ lại một con số đếm.",
   "Check every new card with the AI automatically (when online)":"Tự động kiểm tra mọi thẻ mới bằng AI (khi có mạng)","Review queue":"Hàng chờ kiểm tra","Storage":"Bộ nhớ","Learning":"Học tập",
   "Card order":"Thứ tự thẻ","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"Thẻ đến hạn lên trước, rồi tới tối đa {0} thẻ mới, mỗi nhóm từ ngắn đến dài. Mục này quyết định thứ tự giữa các thẻ cùng độ dài.",
   "Progress":"Tiến độ",
@@ -2215,7 +2215,7 @@ th:{
   "{0} to go, while the app is open.":"เหลือ{0} จะทำต่อตอนเปิดแอปอยู่",
   "Waiting for its turn …":"รอถึงคิว …",
   "Check all cards again":"ตรวจการ์ดทั้งหมดอีกครั้ง",
-  "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"AI เก่งขึ้นเรื่อยๆ ลองให้ AI ดูการ์ดทั้งหมดอีกรอบ — ทุกอย่างที่จะเปลี่ยน คุณได้ดูก่อนกดรับไว้เสมอ",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"AI เก่งขึ้นเรื่อยๆ ลองให้ AI ดูการ์ดทั้งหมดอีกรอบ — คำอธิบายกับแท็กที่ขาดจะถูกเติมให้เลย ส่วนการแก้ตัวอักษร คุณได้ดูก่อนกดรับไว้เสมอ",
   "Checking {0} of {1} …":"กำลังตรวจ {0} จาก {1} …",
   "Done — {0} could be better. Look under the Cards tab.":"เสร็จแล้ว — {0} น่าจะดีขึ้นได้ ดูได้ที่แท็บการ์ด",
   "Done — nothing to change. Your cards are in good shape.":"เสร็จแล้ว — ไม่มีอะไรต้องแก้ การ์ดของคุณอยู่ในสภาพดี",
@@ -2224,22 +2224,22 @@ th:{
   "Dismissed the AI's suggestions on {0} at {1}.":"ไม่รับข้อเสนอของ AI ใน{0} เมื่อ {1}",
   "Check-up":"ตรวจเช็ก",
   "Undo last run":"เลิกทำรอบล่าสุด",
-  "Tagged {0} at {1}.":"ติดแท็ก{0} เมื่อ {1}",
-  "Descriptions":"คำอธิบาย",
-  "A few sentences about what a card's text says and where you meet it. New cards get them with the AI check.":"สองสามประโยคว่าข้อความบนการ์ดหมายถึงอะไร และเจอที่ไหน การ์ดใหม่ได้มาพร้อมการตรวจของ AI",
-  "Describing {0} of {1} …":"กำลังเขียนคำอธิบาย {0} จาก {1} …",
-  "{0} described, {1} left.":"เขียนแล้ว {0} เหลือ {1}",
-  "Done — {0} described.":"เสร็จแล้ว — เขียนคำอธิบาย{0}",
-  "No description yet on {0}.":"{0} ยังไม่มีคำอธิบาย",
-  "Describe all cards":"เขียนคำอธิบายการ์ดทั้งหมด",
-  "Described {0} at {1}.":"เขียนคำอธิบาย{0} เมื่อ {1}",
-  "Translated {0} at {1}.":"แปล{0} เมื่อ {1}",
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  "Translated {0} at {1}.":"แปล{0} เมื่อ {1}","Checked {0} at {1}.":"ตรวจ{0} เมื่อ {1}","Done — {0} filled in.":"เสร็จแล้ว — เติมให้{0}","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"เสร็จแล้ว — เติมให้{0} และ{1} น่าจะดีขึ้นได้ ดูได้ที่แท็บการ์ด",
   "Undone — {0} put back.":"เลิกทำแล้ว — คืน{0}กลับมา",
-  "Tag all cards":"ติดแท็กการ์ดทั้งหมด",
-  "Tagging {0} of {1} …":"กำลังติดแท็ก {0} จาก {1} …",
-  "{0} tagged, {1} left.":"ติดแท็กแล้ว {0} เหลือ {1}",
-  "Done — {0} tagged.":"เสร็จแล้ว — ติดแท็ก{0}",
-  "No tag yet on {0}.":"{0} ยังไม่มีแท็ก",
+  
+  
+  
+  
+  
   "Filter":"ตัวกรอง",
   "Status":"สถานะ",
   "Filters ({0})":"ตัวกรอง {0} อย่าง",
@@ -2418,7 +2418,7 @@ th:{
   "Your data":"ข้อมูลของคุณ","Export":"ส่งออก","Progress and cards as one file, via the share sheet.":"ความคืบหน้าและการ์ดรวมเป็นไฟล์เดียว ผ่านเมนูแชร์","Include photos (adds about {0} MB)":"รวมรูปด้วย (เพิ่มราว {0} MB)",
   "Import":"นำเข้า","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"ไฟล์ zeichentrainer-….json.txt การ์ดที่มีอยู่จะถูกเขียนทับ",
   "Flagged cards":"การ์ดที่ติดธง","{0} flagged for review. Share the list as text, for a teacher.":"มีการ์ดติดธงไว้ตรวจ {0} ใบ แชร์รายการเป็นข้อความให้ครูดูได้",
-  "Show":"ดู","Online AI review":"ให้ AI ตรวจออนไลน์","AI review":"AI ตรวจให้","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up, Translate all, Tag all or Describe all cards, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"สิ่งที่ส่งไป: ภาษาจีน พินอิน ความหมายของการ์ด บันทึกของคุณ และคำอ่านแบบอื่นที่แอปเดาไว้ — ส่งทุกครั้งที่สร้างการ์ดใหม่ และส่งจากการ์ดทุกใบเมื่อคุณแตะ ตรวจเช็ก แปลการ์ดทั้งหมด ติดแท็กการ์ดทั้งหมด หรือ เขียนคำอธิบายการ์ดทั้งหมด และส่งจากการ์ดใบเดียวเมื่อคุณมาถึงการ์ดใบนั้นแล้วยังไม่มีคำอธิบาย ตอนที่อ่านได้ไม่ดี รูปของข้อความจะถูกส่งไปยังผู้ให้บริการที่รับรูปได้ — บางครั้งก็เป็นรูปทั้งใบ เครื่องที่ไม่มีคีย์ของตัวเองจะส่งผ่านรีเลย์ของเจ้าของแอป ซึ่งส่งต่อให้ผู้ให้บริการและเก็บไว้แค่จำนวนครั้ง",
+  "Show":"ดู","Online AI review":"ให้ AI ตรวจออนไลน์","AI review":"AI ตรวจให้","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"สิ่งที่ส่งไป: ภาษาจีน พินอิน ความหมายของการ์ด บันทึกของคุณ และคำอ่านแบบอื่นที่แอปเดาไว้ — ส่งทุกครั้งที่สร้างการ์ดใหม่ และส่งจากการ์ดทุกใบเมื่อคุณแตะ ตรวจเช็ก หรือ แปลการ์ดทั้งหมด และส่งจากการ์ดใบเดียวเมื่อคุณมาถึงการ์ดใบนั้นแล้วยังไม่มีคำอธิบาย ตอนที่อ่านได้ไม่ดี รูปของข้อความจะถูกส่งไปยังผู้ให้บริการที่รับรูปได้ — บางครั้งก็เป็นรูปทั้งใบ เครื่องที่ไม่มีคีย์ของตัวเองจะส่งผ่านรีเลย์ของเจ้าของแอป ซึ่งส่งต่อให้ผู้ให้บริการและเก็บไว้แค่จำนวนครั้ง",
   "Check every new card with the AI automatically (when online)":"ให้ AI ตรวจการ์ดใหม่อัตโนมัติ (เมื่อออนไลน์)","Review queue":"คิวรอตรวจ","Storage":"พื้นที่เก็บข้อมูล","Learning":"การเรียน",
   "Card order":"ลำดับการ์ด","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"การ์ดที่ถึงกำหนดมาก่อน แล้วตามด้วยการ์ดใหม่ไม่เกิน {0} ใบ แต่ละกลุ่มเรียงจากสั้นไปยาว ตรงนี้กำหนดลำดับของการ์ดที่ยาวเท่ากัน",
   "Progress":"ความคืบหน้า",
@@ -2522,7 +2522,7 @@ id:{
   "{0} to go, while the app is open.":"Sisa {0}, selama aplikasi terbuka.",
   "Waiting for its turn …":"Menunggu giliran …",
   "Check all cards again":"Periksa ulang semua kartu",
-  "The AI keeps getting better. Let it look at your whole deck again — you see every change before you accept it.":"AI terus jadi lebih pintar. Minta dia memeriksa lagi semua kartumu — setiap perubahan kamu lihat dulu sebelum diterima.",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"AI terus jadi lebih pintar. Minta dia memeriksa lagi semua kartumu — deskripsi dan tag yang belum ada langsung dilengkapi, dan setiap perubahan teks kamu lihat dulu sebelum diterima.",
   "Checking {0} of {1} …":"Memeriksa {0} dari {1} …",
   "Done — {0} could be better. Look under the Cards tab.":"Selesai — {0} bisa lebih baik. Lihat di tab Kartu.",
   "Done — nothing to change. Your cards are in good shape.":"Selesai — tidak ada yang perlu diubah. Kartumu sudah bagus.",
@@ -2531,22 +2531,22 @@ id:{
   "Dismissed the AI's suggestions on {0} at {1}.":"Saran AI pada {0} diabaikan {1}.",
   "Check-up":"Cek berkala",
   "Undo last run":"Urungkan proses terakhir",
-  "Tagged {0} at {1}.":"{0} diberi tag pada {1}.",
-  "Descriptions":"Penjelasan",
-  "A few sentences about what a card's text says and where you meet it. New cards get them with the AI check.":"Beberapa kalimat tentang arti teks kartu dan di mana kamu menemuinya. Kartu baru mendapatnya lewat pemeriksaan AI.",
-  "Describing {0} of {1} …":"Menulis penjelasan {0} dari {1} …",
-  "{0} described, {1} left.":"{0} selesai, {1} lagi.",
-  "Done — {0} described.":"Selesai — {0} diberi penjelasan.",
-  "No description yet on {0}.":"{0} belum punya penjelasan.",
-  "Describe all cards":"Beri penjelasan semua kartu",
-  "Described {0} at {1}.":"{0} diberi penjelasan pada {1}.",
-  "Translated {0} at {1}.":"{0} diterjemahkan pada {1}.",
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  "Translated {0} at {1}.":"{0} diterjemahkan pada {1}.","Checked {0} at {1}.":"{0} dicek pada {1}.","Done — {0} filled in.":"Selesai — {0} dilengkapi.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Selesai — {0} dilengkapi, {1} bisa lebih baik. Lihat di tab Kartu.",
   "Undone — {0} put back.":"Diurungkan — {0} dikembalikan.",
-  "Tag all cards":"Beri tag semua kartu",
-  "Tagging {0} of {1} …":"Memberi tag {0} dari {1} …",
-  "{0} tagged, {1} left.":"{0} kartu diberi tag, {1} lagi.",
-  "Done — {0} tagged.":"Selesai — {0} diberi tag.",
-  "No tag yet on {0}.":"{0} belum punya tag.",
+  
+  
+  
+  
+  
   "Filter":"Filter",
   "Status":"Status",
   "Filters ({0})":"Filter ({0})",
@@ -2725,7 +2725,7 @@ id:{
   "Your data":"Datamu","Export":"Ekspor","Progress and cards as one file, via the share sheet.":"Kemajuan dan kartu jadi satu berkas, lewat menu bagikan.","Include photos (adds about {0} MB)":"Sertakan foto (menambah sekitar {0} MB)",
   "Import":"Impor","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"Berkas zeichentrainer-….json.txt. Kartu yang sudah ada akan ditimpa.",
   "Flagged cards":"Kartu yang ditandai","{0} flagged for review. Share the list as text, for a teacher.":"{0} kartu ditandai untuk diperiksa. Bagikan daftarnya sebagai teks, misalnya untuk guru.",
-  "Show":"Lihat","Online AI review":"Pemeriksaan AI online","AI review":"Pemeriksaan AI","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up, Translate all, Tag all or Describe all cards, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Yang dikirim: teks Mandarin, pinyin, arti sebuah kartu, catatanmu dan tebakan lain dari pembacaan aplikasi — untuk setiap kartu baru, dan untuk semua kartumu kalau kamu ketuk Cek berkala, Terjemahkan, Beri tag semua kartu atau Beri penjelasan semua kartu, dan untuk satu kartu begitu kamu sampai di kartu itu dan kartu itu belum punya deskripsi. Kalau teksnya susah dibaca, gambarnya dikirim ke penyedia yang menerima gambar — kadang seluruh fotonya. Tanpa kunci sendiri, ponsel ini mengirim lewat relay pemilik aplikasi, yang meneruskannya ke penyedia dan hanya menyimpan hitungannya.",
+  "Show":"Lihat","Online AI review":"Pemeriksaan AI online","AI review":"Pemeriksaan AI","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Yang dikirim: teks Mandarin, pinyin, arti sebuah kartu, catatanmu dan tebakan lain dari pembacaan aplikasi — untuk setiap kartu baru, dan untuk semua kartumu kalau kamu ketuk Cek berkala atau Terjemahkan, dan untuk satu kartu begitu kamu sampai di kartu itu dan kartu itu belum punya deskripsi. Kalau teksnya susah dibaca, gambarnya dikirim ke penyedia yang menerima gambar — kadang seluruh fotonya. Tanpa kunci sendiri, ponsel ini mengirim lewat relay pemilik aplikasi, yang meneruskannya ke penyedia dan hanya menyimpan hitungannya.",
   "Check every new card with the AI automatically (when online)":"Periksa setiap kartu baru dengan AI secara otomatis (kalau online)","Review queue":"Antrean pemeriksaan","Storage":"Penyimpanan","Learning":"Belajar",
   "Card order":"Urutan kartu","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"Kartu yang harus diulang lebih dulu, lalu maksimal {0} kartu baru, tiap kelompok dari yang pendek ke yang panjang. Ini mengatur urutan di antara kartu yang sama panjangnya.",
   "Progress":"Kemajuan",
