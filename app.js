@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=594; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=595; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,6 +671,9 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v595","a new photo: square picture"],
+  ["app","v595","card page: square picture box"],
+  ["again","v595","an old card: mark on its photo"],
   ["app","v594","delete a card: sheet first"],
   ["app","v594","Delete N marked: sheet first"],
   ["app","v594","open card: Flag beside Delete"],
@@ -2240,7 +2243,7 @@ async function brightenPass(){
    by a quarter of its own width gives 0.28 to 0.59, a frame whose numbers are broken 0.00 to 0.08, and a cut of a
    different photo 0.55. So the bar sits in the gap between 0.59 and 0.92, and it is set on the safe side: a card left
    with the picture it has is a fine outcome, a card showing the wrong region is not. */
-const RC_BATCH=10, RC_PAUSE=60, RC_WAIT=2000, RC_TOLPX=2, RC_TOL=0.01, RC_CORR=0.8, RC_THUMB=32, RC_INSIDE=0.5, RC_OLD=[16/9,2,4/3];
+const RC_BATCH=10, RC_PAUSE=60, RC_WAIT=2000, RC_TOLPX=2, RC_TOL=0.01, RC_CORR=0.8, RC_THUMB=32, RC_INSIDE=0.5, RC_OLD=[16/9,2,4/3,1.5]; /* v595: 3:2 joins the list of windows a card may still carry, since the new one is the square — the deck is NOT cut again at v595 (H: "in Zukunft"), so this only makes a later pass able to recognise a v519 picture */
 const frameKey=f=>f?[f.x,f.y,f.w,f.h,f.a||0].join(","):""; /* the same rectangle, to the number */
 let RECUT=null;
 const RECUT_V=5; /* v519: one 3:2 window on every card (H: "3:2 with the re-cut"), so every card with a 16:9, 2:1 or 4:3 window is cut again; v514: the window followed the card's line count (D1) and every 16:9 window was cut again at its own ratio; v418: the pictures the v398 curve made carry its white balance baked in, so the deck is walked once more; v508: the pictures the flat clause blackened are cut again the same way */
@@ -3275,7 +3278,7 @@ function revealBlock(sel){ const a=$(sel), nav=$("#tabs"), hd=document.querySele
    spotlight: v461's own shadow, faded in, and faded out again at the release; on a v452 page front, whose own region v461's
    shadow already lights, the character gets a white ring inside it. None on a turned frame, on a linked photo peeked at, on a
    generated card (no frame of its own), or on a picture that is neither the window nor the frame. */
-const spotRatios=()=>[CARD_RATIO,16/9,2,4/3], SPOT_MS=320; /* a function, not an array: CARD_RATIO is declared 150 lines further down, and a top-level array literal would read it before its declaration (the v519 lesson) */
+const spotRatios=()=>[CARD_RATIO,1.5,16/9,2,4/3], SPOT_MS=320; /* v595: 1.5 joins the list by name, or every card cut before v595 would lose the mark on its photo (v533/v552) the moment CARD_RATIO stopped being 3:2. A function, not an array: CARD_RATIO is declared 150 lines further down, and a top-level array literal would read it before its declaration (the v519 lesson) */
 function charSpans(d,ch){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):frontLines(d), n=lines.length||1, out=[];
   lines.forEach((ln,li)=>{ const U=Math.max(0.01,lineUnits(ln)); let u=0; for(const c of [...ln]){ const w=lineUnits(c); if(c===ch) out.push({x:u/U,y:li/n,w:w/U,h:1/n}); u+=w; } });
   return out; }
@@ -3695,7 +3698,7 @@ async function checkCard(id){ const d=cardOf(id); if(!d||!d.unchecked) return; c
    order-free by construction (a Hungarian assignment over the strokes), so the order really is the learner's. Off by
    default — see § the entry for why the automatic trigger at level 3 was measured and not built. */
 const PAD_FLOOR=160, PHOTO_MIN=120, LINE_H=61, CLIP_RATIO=0.65, TRACE_OK=0.18, NEXT_MS=3500, RECAP_SYL=230, RECAP_MAX=5600, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
-const CARD_RATIO=1.5; /* the one window and box shape on every card, 3:2 (v519) — the CUT, which is unchanged. The BOX a photo is shown small in is square since v591 (styles.css --photo-ar), so a 3:2 picture sits in it fitted with the blurred fill above and below, exactly as it does in the learning card's own square cue — declared here, since FRONT_RATIO reads it at load time */
+const CARD_RATIO=1; /* v595 (H: "Fotos sollten in Zukunft generell quadratisch gespeichert werden. Deshalb soll die Detailseite unter Cards auch quadratisch sein, genauso wie die Lernkarten."): the one window and box shape on every card is the SQUARE now — the cut as well as the box, where v591 made only the box square (styles.css --photo-ar) and left the cut at v519's 3:2, so every picture sat in its square box between two bands of blur. A square cut fills them with the photo itself. Measured: on a frame wider than tall the square window is exactly as WIDE as the 3:2 one and only taller, so the text is the same size on screen and the bands become real surroundings; on a frame taller than wide the square is narrower, so the text comes out BIGGER (a vertical sign 0.36 → 0.53 of the box's width). Declared here, since FRONT_RATIO reads it at load time */
 let LAST_FIT=null; /* v521: the study card's last pad measurement, printed by Diagnostics */
 /* THE MAIN THREAD AT STARTUP, AND WHAT A FOLD DOES TO IT (v532, H: "open/close foldable phone sometimes freezes the startup
    screen from the app"). Not reproduced here — the harness has no fold —, so three things that are measurable rather than a
@@ -5101,6 +5104,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  595:"New photos are cut square from now on, and a card's own page under Cards shows its picture in a square too — the same shape the learning card has. The cards you already have keep the picture they were cut with.",
   594:"Deleting a card asks first now, wherever you do it — and one tap on Undo still brings it back. On the open card, Flag and Delete sit side by side.",
   593:"The Cards list is square photos now, with nothing written under them — a card is found by its picture, and the search still finds it by its characters, pinyin and meaning. A multicard keeps its name over two lines. Sharing one card as a picture is gone.",
   589:"Skip now fills the whole character in instead of one stroke at a time, a character the app has no strokes for can be skipped too, and a long press that is held a moment longer no longer deletes the card it just marked.",
