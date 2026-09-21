@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=579; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=580; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -83,7 +83,7 @@ const S = { mode:"study", progress:{}, custom:[], inbox:[],
   queue:[], idx:0, done:0, ahead:false, ready:false, /* v539: `revealed` is gone — it was set to false in ten places and to true in none since v512 replaced tap-to-reveal with the write pad, so every one of those lines was a no-op standing in for `ansOpen`, which is the answer block's own flag */
   pendingImg:null, pendingFull:null, pendingUse:"crop", persist:null,
   peek:null, /* Learn: the id of a linked card whose photo is shown on the front instead (v155) */
-  cueBig:"pic", /* which half of the cue is big — "pic", "txt" or neither. A tap sets it (cueBig) and only a tap clears it: H writes a whole card off the enlarged half, so a render must not fold it back (v568). v572 (H: "Start with the open image by default."): the card STARTS with the photo big, so the halves are what a tap gets you rather than what you start on; a fresh start is the photo big again, whatever the last session ended on — that is what "by default" means. A reload restores the session's own state (v569). */
+  cueBig:"pic", /* which half of the cue is big — "pic" or "txt", NEVER neither: v580 (H: "nur 2 Stati: Karte komplett offen / Übersetzung komplett offen. Tippen toggelt zwischen beiden") took the halves away, so a tap swaps the two states rather than folding one back. A render must not change it — H writes a whole card off the enlarged half (v568). A fresh start is the photo (v572, H: "Start with the open image by default."), a reload the session's own state (v569). */
   admin:false, /* the owner's rows in More unlocked for this session (v162) */
   ownerOpen:false, /* v547: the owner's own block folded behind one row, so More is the same length unlocked as locked */
   detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterStar:false, filterNew:false, filterTags:[], settings:{}, single:null, saved:null, cardsTab:"cards",
@@ -673,13 +673,13 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v580","Learn: one tap swaps photo and text"],
   ["app","v579","pad: freehand taken at speed?"],
   ["app","v578","card with no photo: word on top"],
   ["app","v577","finished card: reading + meaning"],
   ["app","v575","Photo open/close: the mark sticks"],
   ["app","v574","Test this card: photo at the top"],
   ["app","v573","a card with 合, 雀, 行 or 供 on it: the meaning under the reading is that reading's — 合 hé \"to close\", not \"100 ml\" — on the pad, in the line under it and in the parts row"],
-  ["app","v572","open Learn: the card starts with the photo big; one tap shows the characters under it, another makes it big again, and the state holds for the session"],
   ["app","v569","fold the phone mid-card, or leave the app and come back: the same character, the strokes already in it, and the half you tapped big"],
   ["app","v569","a card of eight characters tapped big: three rows of large tiles, the half filled — not two rows with the half half empty"],
   ["app","v569","a fresh install with no cards: the drawn card with three scribbled notes, and whether a friend reads it without being told"],
@@ -1105,7 +1105,7 @@ async function boot(){
   S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false;
   const rv=S.settings.resumeView; if(rv){ delete S.settings.resumeView; idbDel("settings","resumeView").catch(()=>{}); } /* the screen the update's reload left (v327): back to it, so the reload is not felt */
   if(rv&&Date.now()-(rv.at||0)<RESUME_MAX&&(rv.own!==false||navReload())){ if(["study","cards","inbox","more","guide"].includes(rv.mode)) S.mode=rv.mode;
-    if("big" in rv) S.cueBig=(rv.big==="pic"||rv.big==="txt")?rv.big:null; /* v569: the half the tap made big survives the reload a fold can cause — and since v572 starts on the photo, a note that says the halves has to be honoured too, or a fold would not survive it */ if(S.mode==="cards"&&rv.detail&&S.custom.some(d=>d.id===rv.detail)) S.detail=rv.detail; if(typeof rv.query==="string") S.query=rv.query; if(rv.tab==="pages"||rv.tab==="cards") S.cardsTab=rv.tab;
+    if("big" in rv) S.cueBig=rv.big==="txt"?"txt":"pic"; /* v569: the half the tap made big survives the reload a fold can cause. v580: there are two states, so a note from before it — or one that says the halves — comes back as the photo */ if(S.mode==="cards"&&rv.detail&&S.custom.some(d=>d.id===rv.detail)) S.detail=rv.detail; if(typeof rv.query==="string") S.query=rv.query; if(rv.tab==="pages"||rv.tab==="cards") S.cardsTab=rv.tab;
     /* the session as it stood (v423): the queue's ids, minus any card that is gone or has no text, with the place in it, the
        open answer and the day's count — so a reload in Learn comes back on the same card instead of at the top of a queue
        built afresh, where a card already graded is no longer due and the next one takes its place. */
@@ -2745,7 +2745,7 @@ const GUIDE=()=>[
   {h:t("Learn"),fig:GFIG.learn(),p:[
     t("Due cards first, then up to eight new ones. The photo is the question and the pad is the answer: trace the lit stroke and it moves on by itself, character by character.")
       +" "+t("Know the character? Write it your own way, in your own stroke order — the pad takes it once what you wrote matches.") /* v570: a learner will not find the freehand acceptance by tapping, so the guide says it (the v259 rule) */
-      +" "+t("A card starts with the photo big — tap it to show the characters under it, and tap either half to make that one big; it stays big until you tap again."), /* v568: the one thing a learner cannot find by tapping, so the guide says it (the v259 rule); the empty deck says it in its own short words beside the drawn card since v569, so this key is the guide's alone. v572: rewritten for the photo-big start — the sentence has to name the state the card opens in before it names the tap. */
+      +" "+t("A card starts with the photo big — a tap gives the whole text the top of the card, and the next tap the photo again."), /* v568: the one thing a learner cannot find by tapping, so the guide says it (the v259 rule); the empty deck says it in its own short words beside the drawn card since v569, so this key is the guide's alone. v572: rewritten for the photo-big start — the sentence has to name the state the card opens in before it names the tap. */
     t("Stuck? Show me draws the stroke and Skip fills the character in. The whole card sits folded at its foot. Swipe sideways to pick another card — nothing is graded by swiping.")
       +" "+t("Tap the star counter at the top to see how your points are counted.")] /* the counter is a tap target with no other affordance (v546), so this one sentence survives the cut */
     .concat(lockOn()?[t("Press and hold a character to walk through every card that has it; press and hold it again to come back.")]:[])}, /* v531: only while the lock is on */
@@ -3127,7 +3127,7 @@ function introHTML(){
     <circle cx="84" cy="202" r="6" fill="${c("tint")}"/>
   </svg>`;
   return `<div class="intro">${mock}<div class="notes">
-    <div class="note n1">${arrow("M52 22 C36 24 16 18 5 7 M5 7 l11 1 M5 7 l3 10")}<span>${esc(t("Tap it — big or small."))}</span></div>
+    <div class="note n1">${arrow("M52 22 C36 24 16 18 5 7 M5 7 l11 1 M5 7 l3 10")}<span>${esc(t("Tap it — the text instead."))}</span></div>
     <div class="note n2">${arrow("M52 15 C38 13 20 14 5 15 M5 15 l10 -5 M5 15 l10 6")}<span>${esc(t("Tap here — characters big."))}</span></div>
     <div class="note n3">${arrow("M52 6 C38 10 17 17 5 26 M5 26 l3 -11 M5 26 l11 -2")}<span>${esc(t("Trace the lit stroke."))}</span></div>
   </div></div>`; }
@@ -3199,7 +3199,7 @@ function renderStudy(main){
      above their own card. Inside the card it was the first child of the study card's GRID, whose first row is the cue's own
      fixed --cueh (v560), so the row took that whole row — 279 px of white with the two words centred in it — and pushed the
      cue, the pad and the fold down by it, ending the card 279 px under the tab bar. */
-  main.innerHTML=wxNoteHTML()+(S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:"")+`<div class="card study${rep?" rep":""}${cueBigCls(!!realPic)}">
+  main.innerHTML=wxNoteHTML()+(S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:"")+`<div class="card study${rep?" rep":""}${cueBigCls()}">
     <div class="cue">
     <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}${d.flag||d.unchecked?`<button class="picflag${d.flag?" on":" new"}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}" title="${d.flag?"":esc(t("Not yet checked"))}">${d.flag?"⚑":"⚐"}</button>`:""}</div>
     <div class="txt" id="cuetxt">${chrow}<div class="padline" id="padline"></div></div></div>
@@ -3210,9 +3210,9 @@ function renderStudy(main){
      row"), so opening it parsed cedict.tsv.gz - 2.5 MB - for a row this screen does not draw. The row lives on the camera's
      finished card, and renderShots warms it there. */
   const card=main.querySelector(".card.study");
-  splitFit(card); /* v564: the two halves of the cue — the picture and the whole text */
+  splitFit(card); /* v564/v580: the cue holds the picture or the whole text */
   /* the photo: a tap swaps the crop for the whole photo and back (v55); the flag in its corner is the review flag (§ 3.3) */
-  const rv=$("#reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("#picflag")) return; if(e.target.closest("[data-pic]")) cueBig(card,"pic"); }; /* v564: the tap gives the picture the whole top of the card and takes it back; the whole photo is the open card's (v55's swap is not on the study card any more) */
+  const rv=$("#reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("#picflag")) return; cueBig(card); }; /* v564: the tap swaps the two halves of the cue; the whole photo is the open card's (v55's swap is not on the study card any more). v580: the WHOLE upper zone takes it, not only a real picture — a card with no photo of its own draws its word there (v578) and must be able to swap back too */
   { const pf=$("#picflag"); if(pf) pf.onclick=async e=>{ e.stopPropagation(); await setFlag(c,!d.flag); render(); }; } /* v515: hollow ⚐ = not yet checked, a tap flags it; tint ⚑ = flagged, a tap clears; nothing once checked and clean — the answer block's Flag button stays */
   $("#fold").onclick=()=>{ S.ansOpen=!S.ansOpen; render(); if(S.ansOpen) revealBlock("#ans"); };
   const st2=$("#star-card"); if(st2) st2.onclick=async()=>{ await setStar(c,!d.star); render(); };
@@ -3226,7 +3226,7 @@ function renderStudy(main){
          the line is always there and follows the pad by itself (H: "when automatically jumping to next, pinyin and meaning
          under the pad don't follow. And they should Always be visible"), so there is no second tap that puts it out */
       st.i=i; st.k=0; st.miss=0; st.hint=false; st.free.length=0; st.hw=false; st.mm0=st.maxMiss; render(); };
-  { const tx=$("#cuetxt"); if(tx) tx.onclick=e=>{ if(e.target.closest(".ch")) return; e.stopPropagation(); cueBig(card,"txt"); }; } /* v564: a tap on the text half's own room gives the whole text the top of the card; a tile still picks */
+  { const tx=$("#cuetxt"); if(tx) tx.onclick=e=>{ if(e.target.closest(".ch")) return; e.stopPropagation(); cueBig(card); }; } /* v564: a tap on the text half's own room swaps the two; a tile still picks */
   card.querySelectorAll(".chrow .ch").forEach(b=>{ const i=+b.dataset.i, x=tg[i]; if(!x) return;
     b.onclick=e=>{ e.stopPropagation(); pick(i); };
     /* press and hold locks the character and walks every card that has it (v513, § 7 — the v354 gesture, buzz included); a
@@ -3237,8 +3237,8 @@ function renderStudy(main){
      there are no grades that own the screen any more. */
   wireSwipe(card, list.length<2||S.single?null:{
     n:list.length, idx:li, centred:false,
-    peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ const np=frontPic(nd,{page:true,fixed:true}); return { cls:"study"+cueBigCls(!!np), html:`<div class="cue"><div class="zone1 front">${np||cueGlyphHTML(nd)}</div><div class="txt">${peerRowHTML(nd)}<div class="padline"></div></div></div><div class="padwrap"><div class="wpad ghost"${ghostSize(card)}></div></div><div class="fold"><button class="foldbtn"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button></div>${swipeHint(nd)}` }; } finally{ S.fullPic=fp; } }, /* v530: the neighbour carries the study card's own class, so it takes its 16 px top padding and every other rule of the study layout — a plain `.card` neighbour stood 6 px taller (22 px of padding) and hopped by that much at the snap */ /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
-    go:goTo, ready:p=>{ p.style.setProperty("--cueh",(card._fit?card._fit.cueH+"px":card.style.getPropertyValue("--cueh"))); splitFit(p); } }); /* v560/v561: the neighbour takes the card's own cue height, so its frame is the card's; v564: and splits it into its own two halves */
+    peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ const np=frontPic(nd,{page:true,fixed:true}); return { cls:"study"+cueBigCls(), html:`<div class="cue"><div class="zone1 front">${np||cueGlyphHTML(nd)}</div><div class="txt">${peerRowHTML(nd)}<div class="padline"></div></div></div><div class="padwrap"><div class="wpad ghost"${ghostSize(card)}></div></div><div class="fold"><button class="foldbtn"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button></div>${swipeHint(nd)}` }; } finally{ S.fullPic=fp; } }, /* v530: the neighbour carries the study card's own class, so it takes its 16 px top padding and every other rule of the study layout — a plain `.card` neighbour stood 6 px taller (22 px of padding) and hopped by that much at the snap */ /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
+    go:goTo, ready:p=>{ p.style.setProperty("--cueh",(card._fit?card._fit.cueH+"px":card.style.getPropertyValue("--cueh"))); splitFit(p); } }); /* v560/v561: the neighbour takes the card's own cue height, so its frame is the card's; v564/v580: and rides in in the state the card is in */
   wireSay(); wireLinks(); wireSrc(); wireAi(); wireExplain();
   mountPad(card,d,c,tg,st,cur);
   if(pg&&!S.fullPic) fitPageCover(card,pg); /* D5: the multicard's picture cover-fitted around the card's own text */
@@ -3411,20 +3411,17 @@ function chrowHTML(d,tg,btn,litWi,lockCh){ /* lockCh (v526): every word that hol
    onto at most CH_ROWS rows and nothing runs past the card — and falls to CH_MIN only for a text that needs a third row
    even then. The pad pays for it: a second row at 56 px is 16 px taller than at 40, and on the common phone size the pad
    already stands on its 200 px floor there, so the card scrolls by that much more. H chose the characters. */
-const CH_MAX=56, CH_MIN=40, CH_BIG=96, CH_ROWS=2, STRIP_GAP=8; /* STRIP_GAP: the row gap of the study card's strip (styles.css .chrow.wrap .chin), read here to slide by whole rows */
-/* THE TOP OF THE CARD IS TWO HALVES (v564, H: "dass man den oberen Teil nochmal in zwei Hälften trennt. Also eine Hälfte ist das
-   Bild, was sich vergrößern lässt, wenn man drauf tippt. Die zweite Hälfte ist der ganze Text, der sich vergrößern lässt, wenn
-   man drauf tippt. Die untere Kartenhälfte ist das Schreibfeld." — the halves divided horizontally, his correction): the cue,
-   as tall as the pad since v561, is the picture over the WHOLE text — every tile on its rows and the word line under them,
-   nothing folded and nothing sliding, so v560's one-row strip, v561's unfold in place and v562's "+4" pill are gone. The tiles
-   take the largest size from CH_MAX down at which every row and the line fit the half, preferring the photo's own row count;
-   a text that does not fit even at CH_MIN takes the room from the picture, down to PHOTO_MIN, and past that the cue grows and
-   the pad moves down (v561's rule for the unfolded strip). A tap on the picture gives it the whole cue and closes the text
-   half; a tap on the text half's own room gives the text the whole cue, its tiles up to CH_BIG; ONLY the same tap again
-   brings the halves back (v568, H: "wenn ich irgendwas groß gemacht habe, dann bleibt es immer so lange groß, bis ich es
-   manuell durch Tippen wieder klein mache") — the state is S.cueBig, so it survives every render of the session and the
-   carousel's neighbour comes in in it too. The open card under Cards has no pad and keeps
-   the v519/v522 fit below: shrink, then wrap onto rows that all show. */
+const CH_MAX=56, CH_MIN=40, CH_BIG=96, CH_ROWS=2; /* v580: STRIP_GAP went with the halves — it was the gap between them, and nothing reads it now (the wrapped row's own gap is the stylesheet's) */
+/* THE TOP OF THE CARD IS ONE OF TWO THINGS (v580, H with the two screenshots of his 千问办公 card: "nur 2 Stati: Karte
+   komplett offen / Übersetzung komplett offen. Tippen toggelt zwischen beiden"): the cue, as tall as the pad since v561,
+   holds EITHER the picture or the whole text — every tile on its rows and the word line under them — and a tap anywhere in
+   it swaps the two. v564 had three states, and the halves, where both were small, are the one H does not keep; his two
+   screenshots are the two that stay. The tiles take the largest size from CH_BIG down at which every row and the line fit
+   the cue, whatever the rows; a text that needs more grows the cue and the pad moves down (v561's rule for the unfolded
+   strip). The state is S.cueBig, so it survives every render of the session and the carousel's neighbour comes in in it too
+   (v568, H: "wenn ich irgendwas groß gemacht habe, dann bleibt es immer so lange groß, bis ich es manuell durch Tippen
+   wieder klein mache"). The open card under Cards has no pad and keeps the v519/v522 fit below: shrink, then wrap onto rows
+   that all show. */
 function chrowFit(root,c){ const cr=root&&root.querySelector(".chrow"); if(!cr) return; const ci=cr.querySelector(".chin")||cr;
   if(root.classList&&root.classList.contains("study")&&!root.classList.contains("detail")) return splitFit(root); /* v564: the study card's halves */
   cr.classList.remove("wrap"); cr.style.setProperty("--chs",CH_MAX+"px");
@@ -3435,29 +3432,26 @@ function chrowFit(root,c){ const cr=root&&root.querySelector(".chrow"); if(!cr) 
   cr.classList.add("wrap"); const rows=()=>new Set([...cr.querySelectorAll(".chw")].map(w=>w.offsetTop)).size;
   for(s=CH_MAX; s>=CH_MIN; s--){ cr.style.setProperty("--chs",s+"px"); if(ci.scrollWidth<=avail&&rows()<=CH_ROWS) return; }
   cr.style.setProperty("--chs",CH_MIN+"px"); }
-function textFit(cr,ci,room,cap,lines){ /* the largest tile size whose rows fit the width and `room`; returns the flow's height */
-  const avail=cr.clientWidth; cr.classList.add("wrap"); const rows=()=>new Set([...cr.querySelectorAll(".chw")].map(w=>w.offsetTop)).size;
+function textFit(cr,ci,room,cap){ /* the largest tile size whose rows fit the width and `room`; returns the flow's height */
+  const avail=cr.clientWidth; cr.classList.add("wrap");
   const fits=s=>{ cr.style.setProperty("--chs",s+"px"); return ci.scrollWidth<=avail+1&&ci.offsetHeight<=room; };
   let best=null;
   /* v569 (H, with a screenshot of an eight-character card tapped big: "Hier sollte dann bei den Characters aber schon ein
-     Zeilenumbruch kommen, damit die auch schön groß dargestellt werden können. Aufgeklappt."): the photo's own row count is
-     preferred only in the FOLDED half, where it keeps 盒马鲜生 over 超市入口 on the photo's two rows rather than three of
-     bigger tiles. Tapped big the room is the whole cue and the point is size, so one row of eight — whose tiles the WIDTH
-     then holds to 34 px, with the half two thirds empty — must give way to two rows of four at 73. `lines` null asks for
-     the largest size that fits, whatever the rows. */
-  if(lines) for(let s=cap; s>=CH_MIN; s--){ if(fits(s)&&rows()===lines){ best=s; break; } }
-  if(best==null) for(let s=cap; s>=CH_MIN; s--){ if(fits(s)){ best=s; break; } }
+     Zeilenumbruch kommen, damit die auch schön groß dargestellt werden können. Aufgeklappt."): the rows are whatever gives
+     the largest tiles — one row of eight, whose tiles the WIDTH then holds to 34 px with the cue two thirds empty, must give
+     way to two rows of four at 73. v569 preferred the photo's own row count in the FOLDED half, to keep 盒马鲜生 over
+     超市入口 on two rows rather than three of bigger tiles; v580 removed that half, so there is nothing left to prefer it
+     for and the `lines` argument went with it. */
+  for(let s=cap; s>=CH_MIN; s--){ if(fits(s)){ best=s; break; } }
   if(best==null) best=CH_MIN; cr.style.setProperty("--chs",best+"px"); return ci.offsetHeight; }
 function splitFit(root){ const cue=root&&root.querySelector(".cue"), cr=cue&&cue.querySelector(".chrow"), ci=cr&&cr.querySelector(".chin"); if(!cue||!cr||!ci) return;
   const base=root._fit?root._fit.cueH:parseFloat(root.style.getPropertyValue("--cueh"))||0; if(!base) return;
-  const gap=STRIP_GAP, lines=cr.querySelectorAll(".chline").length||1, lineH=LINE_H+6; /* the word line and its margin */
-  const big=root.classList.contains("bigpic")?"pic":root.classList.contains("bigtxt")?"txt":null;
-  let ph, th, cueH=base, cg=gap;
-  if(big==="pic"){ ph=base; th=0; cg=0; }
-  else if(big==="txt"){ ph=0; cg=0; th=Math.max(base,textFit(cr,ci,base-lineH,CH_BIG,null)+lineH); cueH=th; } /* v569: big means big — the rows are whatever gives the largest tiles */
-  else { const half=Math.floor((base-gap)/2), need=textFit(cr,ci,half-lineH,CH_MAX,lines)+lineH;
-    if(need<=half){ th=half; ph=base-gap-half; } else { th=need; ph=Math.max(PHOTO_MIN,base-gap-need); cueH=ph+gap+th; } } /* the picture gives the room first, then the cue grows */
-  root.style.setProperty("--ph",ph+"px"); root.style.setProperty("--th",th+"px"); root.style.setProperty("--cg",cg+"px"); root.style.setProperty("--cueh",cueH+"px");
+  const lineH=LINE_H+6; /* the word line and its margin */
+  const big=root.classList.contains("bigtxt")?"txt":"pic"; /* v580: two states, and the picture is the one a card without the class is in */
+  let ph, th, cueH=base;
+  if(big==="pic"){ ph=base; th=0; }
+  else { ph=0; th=Math.max(base,textFit(cr,ci,base-lineH,CH_BIG)+lineH); cueH=th; } /* v569: big means big — the rows are whatever gives the largest tiles */
+  root.style.setProperty("--ph",ph+"px"); root.style.setProperty("--th",th+"px"); root.style.setProperty("--cg","0px"); root.style.setProperty("--cueh",cueH+"px");
   spotAgain(root); /* v575: the halves just moved the picture inside its box — the marks on it move with it */
   const pic=cue.querySelector(".zone1 .picbox:not(.page)"), im=pic&&pic.querySelector(".signimg"), inner=root.clientWidth-36; /* the picture keeps its own height and the half clips it when it is close to the half's shape; a picture much taller (a label's own frame) is fitted inside instead */
   /* v565 (H: "das Foto springt irgendwie, wenn man auf eine neue Karte switcht"): the decision needs the picture's own size, and the
@@ -3468,13 +3462,13 @@ function splitFit(root){ const cue=root&&root.querySelector(".cue"), cr=cue&&cue
     else if(!pic._sizing){ pic._sizing=true; im.addEventListener("load",()=>splitFit(root),{once:true}); } }
   root._split={ph,th,cueH,chs:parseFloat(cr.style.getPropertyValue("--chs")),big}; }
 /* v568 (H: "wenn ich irgendwas groß gemacht habe, dann bleibt es immer so lange groß, bis ich es manuell durch Tippen wieder
-   klein mache"): the enlarged half is S.cueBig, not a class on the card element that render() rebuilds — so it survives every
-   character written, every tile picked and every swipe, and only the tap folds it back. A card with no picture of its own (one
-   generated from a multicard, v487) keeps its halves while the state says "pic": it would otherwise show an empty half over no
-   tiles and no way back, since the tap that folds it is the picture's and the text half is then 0 px tall. */
+   klein mache"): the state is S.cueBig, not a class on the card element that render() rebuilds — so it survives every
+   character written, every tile picked and every swipe, and only a tap changes it. v568's hasPic guard is gone with the
+   halves: a card with no picture of its own (one generated from a multicard, v487) draws its own word where the photo would
+   be (v578), and the tap that swaps is the whole zone's, so such a card can never stand on a half with no way back. */
 const SLIDE_MS=340; /* v575: the .22 s slide of the cue's rows plus a frame or two of settling — the window the marks are dragged across */
-function cueBigCls(hasPic){ return S.cueBig==="pic"?(hasPic?" bigpic":""):S.cueBig==="txt"?" bigtxt":""; }
-function cueBig(card,which){ const to=S.cueBig===which?null:which; S.cueBig=to;
+function cueBigCls(){ return S.cueBig==="txt"?" bigtxt":" bigpic"; }
+function cueBig(card){ const to=S.cueBig==="txt"?"pic":"txt"; S.cueBig=to; /* v580: the tap swaps the two states — there is no third to fold back to */
   if(!S.settings.bigTapped){ S.settings.bigTapped=1; setSetting("bigTapped",1).catch(()=>{}); } /* v568: the hint that names this tap costs the pad 18 px while it stands (measured 300 -> 282 at 393 x 869), so it goes the moment the tap has been used once; showHints() takes it away after twenty reviews either way */
   const cue=card.querySelector(".cue"); if(cue){ cue.classList.add("gl"); clearTimeout(card._glT); card._glT=setTimeout(()=>cue.classList.remove("gl"),320); } /* v565: the slide runs on a tap only — a render must never animate the halves into place */
   card.classList.toggle("bigpic",to==="pic"); card.classList.toggle("bigtxt",to==="txt"); splitFit(card); noteViewSoon();
@@ -3919,15 +3913,13 @@ function mountPad(card,d,c,tg,st,cur){
     const cardH=Math.floor(navTop-16-top); /* the card's whole room with the page at rest: from its top to 16 px above the tab bar */
     const gap=parseFloat(ccs.rowGap)||8, hn=card.querySelector(".hint:not(#pad-note)"), fb=card.querySelector("#fold");
     const avail=cardH-(parseFloat(ccs.paddingTop)||12)-(parseFloat(ccs.paddingBottom)||14)-(fb?fb.offsetHeight:36)-gap*2-(hn?hn.offsetHeight+gap:0); /* for the two panels */
-    const cueFixed=STRIP_GAP+CH_MAX+6+LINE_H; /* v564: the least the cue holds beside the picture — the gap between the halves and a text half of one row of tiles over the word line */
-    const cueMin=PHOTO_MIN+cueFixed; /* the least cue: the picture at its floor over that text half */
+    const cueMin=Math.max(PHOTO_MIN,CH_MAX+6+LINE_H); /* v580: the cue holds ONE of the two — the picture at its floor, or one row of tiles over the word line — where v564 needed room for both at once (PHOTO_MIN plus a whole text half), so a short screen breaks the symmetry later and the pad keeps more of it */
     let side=Math.min(inner,Math.floor(avail/2)), cueH=side;
     if(side<cueMin){ cueH=cueMin; side=Math.max(PAD_FLOOR,Math.min(inner,avail-cueH)); } /* too short for two equal panels: the photo keeps its floor, the pad gives way */
-    const photoH=Math.floor((cueH-STRIP_GAP)/2); /* the picture's half; splitFit gives the text half its size and takes from the picture only when the text needs more */
     cv.style.width=side+"px"; cv.style.height=side+"px"; card.style.setProperty("--cueh",cueH+"px");
-    card._fit=LAST_FIT={at:Date.now(),vw:window.innerWidth,vh:window.innerHeight,navH,top:+top.toFixed(1),cardH,avail,inner,side,cueH,photoH,end:0,navTop:+navTop.toFixed(1),scrollY:window.scrollY,fits:card._fit?card._fit.fits+1:1};
-    splitFit(card); /* v564: the two halves, and the clip test on the picture's own half */
-    const grow=card._split?card._split.cueH-cueH:0; /* a text that needs more than its half grew the cue (splitFit): the pad moves down while the card still ends 16 px above the bar, and gives way — never under PAD_FLOOR — when it would not */
+    card._fit=LAST_FIT={at:Date.now(),vw:window.innerWidth,vh:window.innerHeight,navH,top:+top.toFixed(1),cardH,avail,inner,side,cueH,end:0,navTop:+navTop.toFixed(1),scrollY:window.scrollY,fits:card._fit?card._fit.fits+1:1};
+    splitFit(card); /* v564: which of the two the cue holds, and the clip test on the picture */
+    const grow=card._split?card._split.cueH-cueH:0; /* a text that needs more than the cue grew it (splitFit): the pad moves down while the card still ends 16 px above the bar, and gives way — never under PAD_FLOOR — when it would not */
     if(grow>0){ const slack=avail-side-cueH; if(grow>slack){ side=Math.max(PAD_FLOOR,Math.min(inner,side-(grow-slack))); cv.style.width=side+"px"; cv.style.height=side+"px"; card._fit.side=side; } card._fit.cueH=card._split.cueH; card._fit.grow=grow; }
     card._fit.end=+card.getBoundingClientRect().bottom.toFixed(1); };
   fit(); card._fitPad=fit;
@@ -4121,7 +4113,7 @@ function logPadStroke(x,k,ok,dist,hand){ DRAWLOG.push({t:Date.now(),pad:x?x.glyp
    still due, so the next session's queue picks it up). Only while the back is closed; once it is open the grades own the screen. */
 const SW_SLOP=12, SW_MIN=60, SW_GAP=16, SW_MS=220;
 /* the closed card is pushed sideways and the next one slides in from the other side and snaps into place (v414, the carousel of v417 — H: "Ich moechte die Karten quasi nach links schieben und die naechste Karte kommt von rechts rein und rastet geschmeidig ein … Die muessen nicht so zur Seite wegkippen wie bei Tinder"). Nothing is graded: only S.idx moves; a card swiped past returns in the next session, not in this one (v417). */
-function swipeHint(d){ return showHints()?`<div class="hint">${t("Trace the lit stroke; the pad moves on by itself.")}${S.settings.bigTapped?"":" "+t("Tap the photo to show the characters under it, and again to make it big.")}${curList().length>1?" "+t("Swipe left or right to pick another card."):""}${lockOn()?" "+t("Press and hold a character to walk through every card that has it; press and hold it again to come back."):""}</div>`:""; } /* v512: the reveal hint went with the reveal */
+function swipeHint(d){ return showHints()?`<div class="hint">${t("Trace the lit stroke; the pad moves on by itself.")}${S.settings.bigTapped?"":" "+t("Tap the photo for the whole text, and tap again for the photo.")}${curList().length>1?" "+t("Swipe left or right to pick another card."):""}${lockOn()?" "+t("Press and hold a character to walk through every card that has it; press and hold it again to come back."):""}</div>`:""; } /* v512: the reveal hint went with the reveal */
 function wireSwipe(card,o){
   /* o: {n, idx, peer(i) -> the neighbour's inner HTML or null, go(i), centred} — the caller owns the list and what a
      move means, so the same gesture serves Learn's session queue and the Cards list's own order (v445) */
@@ -5140,13 +5132,10 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  580:"The top of a card is the photo or the whole text — one tap swaps the two, and it stays that way while you write the card.",
   569:"Fold the phone or leave the app: the card comes back exactly as you left it, with the strokes you had already written. And the characters tapped big now break onto more rows, so they come out as large as they fit.",
   573:"The dictionary knows which reading a character has: 合 read hé now means “to close”, not gě’s “100 ml”.",
-  572:"A card now opens with the photo big — tap it to show the characters under it, and again to make it big.",
-  568:"Tap the photo, or the space beside the characters, to make either one big — and it stays big while you write the whole card. One more tap folds it back.",
-  564:"The top of the card is two halves now: the picture, and under it the whole text with its pinyin. Tap the picture to make it big, tap the text to make the text big.",
   561:"The card is three panels now: the photo with its characters and pinyin, a writing pad of the same size, and the details below.",
-  560:"Every card now has the same shape: the photo, one row of characters, and a writing pad as wide as the photo. A long text folds its rows behind the small arrow beside the characters.",
   557:"The last character of a card now shows its own pinyin too, before the whole card comes up.",
   553:"Every character you write now shows its own pinyin for a moment before the pad moves on — inside a word too, and a little longer than before.",
   552:"Far more cards now show the word you are writing marked on the photo: a single word, a single character and a sign photographed at an angle are all marked, where before only a card of several words was.",
