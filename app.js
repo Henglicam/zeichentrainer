@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=581; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=582; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v582","Learn: no Undo/Clear mid-write on the pad"],
   ["app","v581","Learn: Whole card open by default"],
   ["app","v580","Learn: one tap swaps photo and text"],
   ["app","v579","pad: freehand taken at speed?"],
@@ -3194,7 +3195,7 @@ function renderStudy(main){
   const back=`<div class="anshanzi hanzi">${(d.trad?d.trad.split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}
       <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button></div>`;
   const noTmpl=cur&&STROKES&&!STROKE_OF.has(cur.glyph);
-  const freePad=noTmpl; /* a character the stroke set lacks: the pad draws freehand and needs Undo, Clear and the note. Every OTHER character gets the same buttons the moment the pad starts judging the whole character (v570), which is why the v548 switch had nothing left to turn on (v579). */
+  const freePad=noTmpl; /* a character the stroke set lacks: the pad draws freehand and needs Undo, Clear and the note. A character WITH a template never shows them — v570 gave them to it mid-write and v582 took them back, so the freehand judging leaves no mark on the screen. */
   /* v574 (H with a screenshot of a single-card test: "Warum ist oben so viel Platz??"): the ← Cards row is a SIBLING of the
      card, above it, as it is on every other screen — the card detail, the guide and the two forms all put their topline
      above their own card. Inside the card it was the first child of the study card's GRID, whose first row is the cue's own
@@ -3951,8 +3952,12 @@ function mountPad(card,d,c,tg,st,cur){
     } else if(cur){ ctx.globalAlpha=0.25; ctx.fillStyle=cssVar("--label3")||"#aaa"; ctx.font=`${Math.round(N*0.6)}px ${cssVar("--hanzi")||"serif"}`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(cur.glyph,N/2,N/2); ctx.globalAlpha=1; }
     ctx.strokeStyle=cssVar("--label")||"#000"; ctx.lineWidth=PAD_LW; for(const s of st.free.concat(drawing?[drawing]:[])) inked(s);
   };
-  const acts=()=>{ const sh=$("#pad-show"), sk=$("#pad-skip"), dn=$("#pad-done"), un=$("#pad-undo"), cl=$("#pad-clear"); const loose=free||st.hw; /* v570: a pad judging the whole character has loose ink on it, so it gets Undo and Clear too */
-    if(sh) sh.hidden=free||st.miss<2; if(sk) sk.hidden=free||st.miss<4; if(dn) dn.hidden=!free; if(un) un.hidden=!loose||!st.free.length; if(cl) cl.hidden=!loose; }; /* v548: handwriting keeps the two ways out — Show me after two tries, Skip after four */
+  const acts=()=>{ const sh=$("#pad-show"), sk=$("#pad-skip"), dn=$("#pad-done"), un=$("#pad-undo"), cl=$("#pad-clear");
+    /* v582 (H: "Der freehand write mode darf nicht sichtbar sein."): Undo and Clear belong to a pad that has NO template
+       at all — there they are part of the screen from its first stroke. v570 gave them to every pad the moment it started
+       judging the whole character, so two buttons appeared mid-write and announced a mode the learner never chose; the way
+       back is tryHand's own quiet drop now. The pad's helpers are Show me at two tries and Skip at four, as at v512. */
+    if(sh) sh.hidden=free||st.miss<2; if(sk) sk.hidden=free||st.miss<4; if(dn) dn.hidden=!free; if(un) un.hidden=!free||!st.free.length; if(cl) cl.hidden=!free; };
   const showStroke=(k,slow)=>{ anim={k,t0:performance.now()-(slow?0:0)}; const dur=reduced?350:(slow?1000:500); const step=()=>{ if(!anim||!cv.isConnected) return; paint(); if(performance.now()-anim.t0<dur) requestAnimationFrame(step); else { anim=null; paint(); } }; requestAnimationFrame(step); };
   /* v570: once the pad has decided to judge the WHOLE character (two strokes in a row that did not fit), a single stroke
      is not a failure any more — it is part of what is being written —, so the shake and the expected stroke's animation
@@ -3989,7 +3994,14 @@ function mountPad(card,d,c,tg,st,cur){
   let hwBusy=false;
   const tryHand=async()=>{
     if(!strokes||hwBusy||flash||!st.hw) return;
-    const n=st.k+st.free.length, m=strokes.length; if(n<m||!matchTol(n,m)) return;
+    const n=st.k+st.free.length, m=strokes.length;
+    /* v582: the way back, without a button. strokeMatch only looks at candidates within matchTol of the drawing's own
+       stroke count, so a drawing that has grown PAST that window can never be judged again — v570 measured it (with two
+       leftover strokes only 16 of 34 are inside the window at all, with three none can be). At that point Clear was the
+       only sensible action, so the pad takes it by itself: the loose ink goes and the next stroke starts a fresh attempt,
+       with st.hw kept so nothing shakes and the misses kept so Show me and Skip stay where they were. */
+    if(n>m&&!matchTol(n,m)){ st.free.length=0; paint(); acts(); return; }
+    if(n<m) return;
     hwBusy=true;
     const drawn=strokes.slice(0,st.k).concat(st.free).map(x=>x.map(p=>[p[0]*N,p[1]*N]));
     try{ const got=await strokeMatch(drawn); if(!cv.isConnected||S.pad!==st||st.done.has(tg.indexOf(cur))) return;
@@ -4088,8 +4100,8 @@ function mountPad(card,d,c,tg,st,cur){
      (v517, H: "You also don't need clear and undo at the bottom") */
   const handMiss=()=>{ st.miss++; st.maxMiss=Math.max(st.maxMiss,st.miss); cv.classList.remove("shake"); void cv.offsetWidth; cv.classList.add("shake"); acts();
     const note=$("#pad-note"); if(note) note.textContent=t("Not recognized — try cleaner, well-separated strokes."); };
-  { const un=$("#pad-undo"); if(un) un.onclick=()=>{ if(free||st.hw){ st.free.pop(); } else if(st.k>0){ st.k--; st.miss=0; } anim=null; paint(); acts(); }; }
-  { const cl2=$("#pad-clear"); if(cl2) cl2.onclick=()=>{ if(free) st.free.length=0; else if(st.hw){ st.free.length=0; st.hw=false; } /* v570: clearing what was scribbled puts the pad back to tracing, with Show me and Skip still where the misses left them */
+  { const un=$("#pad-undo"); if(un) un.onclick=()=>{ if(free){ st.free.pop(); } else if(st.k>0){ st.k--; st.miss=0; } anim=null; paint(); acts(); }; }
+  { const cl2=$("#pad-clear"); if(cl2) cl2.onclick=()=>{ if(free) st.free.length=0; /* v582: the st.hw branch went with the buttons that reached it — a pad with a template never shows these two now */
     else { st.k=0; st.miss=0; st.hint=false; } anim=null; paint(); acts(); }; }
   $("#pad-show").onclick=()=>{
     if(strokes&&st.k<strokes.length) showStroke(st.k,true); };
