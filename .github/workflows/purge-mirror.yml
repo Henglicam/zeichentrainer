@@ -5,7 +5,7 @@ name: Purge the mirror
 on:
   push:
     branches: [main]
-    paths: [index.html, app.js, styles.css, lang.js, sw.js, manifest.webmanifest, signs.json, nmt-model.json, privacy.html]
+    paths: [index.html, app.js, styles.css, lang.js, sw.js, manifest.webmanifest, signs.json, nmt-model.json, privacy.html, 'guide/*.webp']
 permissions: {}
 jobs:
   purge:
@@ -14,7 +14,10 @@ jobs:
       - name: Purge the shell files on jsDelivr
         run: |
           set -u
-          for f in index.html app.js styles.css lang.js sw.js manifest.webmanifest signs.json nmt-model.json privacy.html; do
+          for f in index.html app.js styles.css lang.js sw.js manifest.webmanifest signs.json nmt-model.json privacy.html \
+                   guide/photo-light.webp guide/photo-dark.webp guide/chars-light.webp guide/chars-dark.webp \
+                   guide/learn-light.webp guide/learn-dark.webp guide/cards-light.webp guide/cards-dark.webp \
+                   guide/lang-light.webp guide/lang-dark.webp; do
             echo "== $f"
             curl -sS --max-time 30 "https://purge.jsdelivr.net/gh/henglicam/zeichentrainer@main/$f" || echo "purge failed for $f"
             echo

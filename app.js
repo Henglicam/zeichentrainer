@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=597; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=598; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,6 +671,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v598","guide: five figures are real crops"],
   ["app","v597","Multicards tab: square tiles"],
   ["app","v597","after writing: 300 ms shorter"],
   ["app","v596","card from a multicard: square pic"],
@@ -2657,72 +2658,50 @@ function renderMore(main){
    Each section is led by a figure the app DRAWS, not by a screenshot. Measured before the choice was made: a real 393x917
    screen scaled to the guide's own content width (329 px) is 768 px tall, so six of them are 4600 px against the 3560 px of
    prose they would replace — the guide would get LONGER, which is the opposite of the ask. A crop of one part of a screen
-   fits, and a crop of one part of a screen is a figure. Beside that: a screenshot is in ONE of the ten languages (a German
-   learner would read German sentences under an English picture — the v538 fault in a new place) and in one of the two
-   themes, so an honest set is 6 x 10 x 2 = 120 images; at 110 KB a full screen that is megabytes against a 520 KB shell;
-   and every one of them goes stale at the next layout change, which is why v259 banned them in the first place.
-   So the figures are inline SVG on the app's own tokens: they follow the language because they carry NO UI prose (only
-   Chinese characters and the fixed language endonyms, neither of which a translation can lengthen — the v427 rule), they
-   follow light and dark because every colour is a token, they cost no bytes beyond markup and no build step, and the one
-   thing each section is about is marked in the tint. `aria-hidden` because the sentences under them say the same thing. */
+   fits, and a crop of one part of a screen is a figure. v598 takes that escape hatch on H's word ("Nimm doch echte
+   Screenshots anstatt solche Fantasiesachen"): five of the six figures are REAL CROPS of the app, and only the sixth
+   (privacy — what leaves the phone, which is no screen) is still drawn. v549's three objections are each answered by
+   measurement rather than waved away: a full screen scaled into the guide's 329 px is 768 px tall and six of those are
+   4600 px, so what is shown is one part of one screen (173-322 px tall at its own scale); a crop that carries NO UI
+   prose is the same in all ten languages, which is why every one of the five is pictures, Chinese characters and the
+   fixed endonyms and nothing else (the v427 rule, kept by construction); and at WebP quality .86 the ten files are
+   84 KB against the shell's 520 KB gzipped, one download. The fourth objection — that a screenshot goes stale at the
+   next layout change — is answered by `tools/guide-shots.js`, which regenerates all ten from the app itself in one
+   command, so a stale figure is a command away rather than a redraw away.
+   Light and dark are two files chosen by <picture> on prefers-color-scheme, with no JS: the app has no theme switch,
+   it follows the phone (index.html's color-scheme). `aria-hidden` because the sentences under them say the same thing.
+   WHAT IT COSTS, named: the language chips are photographed with ENGLISH lit, so a German reader sees the row with
+   English on — true of a fresh install and of the screen they came from, and the only alternative was 20 files for
+   that one figure. */
 const gfig=(h,body)=>`<svg class="gf" viewBox="0 0 320 ${h}" width="100%" height="${h}" aria-hidden="true" focusable="false">${body}</svg>`;
-const GF_SEP=`var(--sep)`, GF_CARD=`var(--card)`, GF_FILL=`var(--fill)`, GF_TINT=`var(--tint)`, GF_LAB=`var(--label)`, GF_L3=`var(--label3)`;
+const GF_SEP=`var(--sep)`, GF_CARD=`var(--card)`, GF_FILL=`var(--fill)`, GF_TINT=`var(--tint)`, GF_LAB=`var(--label)`;
 const gfHan=(x,y,s,txt,fill)=>`<text class="gfh" x="${x}" y="${y}" font-size="${s}" fill="${fill}" text-anchor="middle">${txt}</text>`;
-const gfBar=(x,y,w,fill,o)=>`<rect x="${x}" y="${y}" width="${w}" height="6" rx="3" fill="${fill}" opacity="${o}"/>`;
 const gfBox=(x,y,w,h,r,fill,stroke)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${fill}"${stroke?` stroke="${stroke}"`:""}/>`;
-/* v596: a photo drawn inside a figure box — the same mountain and sun the empty deck's card uses (introHTML), so the guide
-   and that first screen say "a photo" the same way. The mountain's foot follows the box's own rounded corners. */
-const gfPhoto=(x,y,w,h,r)=>`<circle cx="${(x+w*0.27).toFixed(1)}" cy="${(y+h*0.3).toFixed(1)}" r="${(w*0.075).toFixed(1)}" fill="${GF_TINT}" opacity=".4"/>`
-  +`<path d="M${x} ${(y+h*0.74).toFixed(1)} l${(w*0.25).toFixed(1)} ${(-h*0.26).toFixed(1)} ${(w*0.19).toFixed(1)} ${(h*0.16).toFixed(1)} ${(w*0.16).toFixed(1)} ${(-h*0.13).toFixed(1)} ${(w*0.4).toFixed(1)} ${(h*0.25).toFixed(1)} V${(y+h-r).toFixed(1)} a${r} ${r} 0 0 1 ${-r} ${r} H${x+r} a${r} ${r} 0 0 1 ${-r} ${-r} z" fill="${GF_TINT}" opacity=".4"/>`;
-const gfArrow=(x1,y,x2)=>`<path d="M${x1} ${y} H${x2-7}" stroke="${GF_L3}" stroke-width="2" fill="none"/><path d="M${x2-9} ${y-5} L${x2} ${y} L${x2-9} ${y+5}" fill="${GF_L3}"/>`;
+/* a real crop of the app (v598): the light file is the src and the dark one a <picture> source, and the width is
+   min(100%, h x ar) with the aspect ratio inline — so a wide crop fills the column and comes out SHORTER than h,
+   while the square write pad sits centred at h x h. No object-fit, so nothing is ever squashed, and the aspect-ratio
+   holds the row's height before the file has decoded. h is the height of the drawn figure each one replaces, so the
+   guide gets no taller, which is the one thing a figure change must not cost: measured over 10 languages x 390
+   and 360 px, the whole page is 80-81 px SHORTER than v597's at 390 px and 24-25 px shorter at 360, where the crops
+   are width-bound and their own aspect ratios decide. The first cut used margin:10px auto on the image and the guide
+   came out TALLER (5 figures x 20 px of margin against the 78 px the shorter figures saved) — the margin is 5px auto,
+   symmetric, and five heights were trimmed. */
+const GF_SHOT={photo:[1.954,144],chars:[3.276,96],learn:[1,140],cards:[1.958,150],lang:[2.574,130]};
+const gfshot=name=>{ const [ar,h]=GF_SHOT[name];
+  return `<picture class="gfp"><source srcset="./guide/${name}-dark.webp" media="(prefers-color-scheme:dark)">`
+    +`<img class="gf gfs" src="./guide/${name}-light.webp" alt="" aria-hidden="true" decoding="async"`
+    +` style="width:min(100%,${Math.round(h*ar)}px);aspect-ratio:${ar}"></picture>`; };
 const GFIG={
-  /* the photo, the frame the app puts on its text, and the card that comes out */
-  photo:()=>gfig(150,
-    gfBox(8,18,138,114,10,GF_CARD,GF_SEP)+gfBox(26,52,102,44,5,GF_FILL)+gfHan(77,84,24,"面包",GF_LAB)
-    +`<rect x="22" y="48" width="110" height="52" rx="7" fill="none" stroke="${GF_TINT}" stroke-width="2"/>`
-    +gfArrow(156,75,186)
-    /* v596: the card that comes out carries the app's own SQUARE picture (v595), where this drew a 96x42 strip — the
-       guide must not draw a shape the app does not make. The card grew to hold it, so the two bars under the characters
-       went: what the figure says is photo in, card out, and the section's sentences say the rest. */
-    +gfBox(196,8,116,134,10,GF_CARD,GF_SEP)+gfBox(206,18,96,96,5,GF_FILL)+gfPhoto(206,18,96,96,5)+gfHan(254,134,22,"面包",GF_LAB)),
-  /* the character row: every character is a button, and one of them is tapped */
-  chars:()=>gfig(140,
-    gfBox(30,34,112,56,12,GF_CARD,GF_SEP)+`<path d="M86 34 V90" stroke="${GF_SEP}"/>`+gfHan(58,72,26,"面",GF_LAB)+gfHan(114,72,26,"包",GF_LAB)
-    +gfBox(154,34,112,56,12,GF_CARD,GF_SEP)+`<path d="M210 34 V90" stroke="${GF_SEP}"/>`+gfHan(182,72,26,"店",GF_LAB)
-    +`<rect x="213" y="37" width="50" height="50" rx="9" fill="var(--tint-soft)" stroke="${GF_TINT}" stroke-width="2"/>`+gfHan(238,72,26,"铺",GF_TINT)
-    +`<path d="M238 118 V102" stroke="${GF_TINT}" stroke-width="2"/><path d="M233 106 L238 99 L243 106" fill="${GF_TINT}"/>`),
-  /* the write pad on 上: the stroke already written stands in ink, the next one is lit with a dot at its start,
-     and what is left is the template. Three straight strokes, because a nine-stroke character is a smudge at this size.
-     v596 (H, with a screenshot of this figure: "How a real Chinese character here and not that T"): it drew 工, and 工 at
-     this size IS a Latin T — the third stroke sat at .35 opacity and simply was not there, and rendered solid it reads as
-     a T with an underline all the same (measured: four weights, all four read T). 上 has the same three straight strokes
-     and cannot be read as a Latin letter. The template stroke is a real grey now, not a ghost. */
-  learn:()=>gfig(172,
-    gfBox(112,10,44,28,7,GF_CARD,GF_SEP)+gfHan(134,31,18,"上",GF_TINT)+gfBox(164,10,44,28,7,GF_CARD,GF_SEP)+gfHan(186,31,18,"车",GF_L3)
-    +gfBox(101,48,118,118,10,GF_CARD,GF_SEP)
-    +`<path d="M160 48 V166 M101 107 H219" stroke="${GF_TINT}" stroke-dasharray="5 5" opacity=".28"/>`
-    +`<path d="M124 146 H198" stroke="${GF_L3}" stroke-width="7" stroke-linecap="round" fill="none" opacity=".6"/>`
-    +`<path d="M142 64 V146" stroke="${GF_LAB}" stroke-width="7" stroke-linecap="round" fill="none"/>`
-    +`<path d="M142 108 H188" stroke="${GF_TINT}" stroke-width="7" stroke-linecap="round" fill="none"/><circle cx="142" cy="108" r="6.5" fill="${GF_TINT}" stroke="${GF_CARD}" stroke-width="2"/>`),
-  /* the Cards grid, and the star that marks the ones you care about.
-     v596: a tile IS its square picture with nothing written under it (v593) and the star stands ON the picture (v425/v469),
-     where this drew a 122x72 picture with the characters in a strip below — a card the list has not shown for three versions. */
-  cards:()=>gfig(160,
-    gfBox(16,8,138,138,12,GF_FILL,GF_SEP)+gfPhoto(16,8,138,138,12)
-    +`<path d="M129 21 l2.6 5.4 5.9.9 -4.3 4.1 1 5.9 -5.2 -2.8 -5.3 2.8 1 -5.9 -4.2 -4.1 5.9 -.9z" fill="none" stroke="${GF_CARD}" stroke-width="2.6"/>`
-    +`<path d="M129 21 l2.6 5.4 5.9.9 -4.3 4.1 1 5.9 -5.2 -2.8 -5.3 2.8 1 -5.9 -4.2 -4.1 5.9 -.9z" fill="none" stroke="${GF_L3}" stroke-width="1.5"/>`
-    +gfBox(166,8,138,138,12,GF_FILL,GF_SEP)+gfPhoto(166,8,138,138,12)
-    +`<path d="M279 21 l2.6 5.4 5.9.9 -4.3 4.1 1 5.9 -5.2 -2.8 -5.3 2.8 1 -5.9 -4.2 -4.1 5.9 -.9z" fill="${GF_TINT}" stroke="${GF_CARD}" stroke-width="2.6"/>`
-    +`<path d="M279 21 l2.6 5.4 5.9.9 -4.3 4.1 1 5.9 -5.2 -2.8 -5.3 2.8 1 -5.9 -4.2 -4.1 5.9 -.9z" fill="${GF_TINT}"/>`
-    +`<circle cx="281.5" cy="31" r="15" fill="none" stroke="${GF_TINT}" stroke-width="2" opacity=".7"/>`),
-  /* the language you pick decides the app's texts and the meaning on a new card */
-  lang:()=>gfig(150,
-    gfBox(14,24,84,34,17,GF_CARD,GF_SEP)+`<text class="gft" x="56" y="46" font-size="14" fill="var(--label2)" text-anchor="middle">English</text>`
-    +`<rect x="106" y="24" width="88" height="34" rx="17" fill="${GF_TINT}"/><text class="gft" x="150" y="46" font-size="14" fill="#fff" text-anchor="middle">Deutsch</text>`
-    +gfBox(202,24,88,34,17,GF_CARD,GF_SEP)+`<text class="gft" x="246" y="46" font-size="14" fill="var(--label2)" text-anchor="middle">日本語</text>`
-    +`<path d="M150 62 V84" stroke="${GF_TINT}" stroke-width="2" stroke-dasharray="3 4" opacity=".6"/><path d="M145 80 L150 88 L155 80" fill="${GF_TINT}" opacity=".6"/>`
-    +gfHan(78,124,24,"鸡蛋",GF_LAB)+gfBar(104,108,58,GF_L3,.5)+gfBar(104,122,110,GF_TINT,.55)),
-  /* everything stays here; the card's text is what leaves, and a picture of it when the reading is hard */
+  /* the five real crops (v598). Each is what its section is about and nothing else:
+     photo  - the app's own frame standing on a photographed sign, in the Crop view
+     chars  - the line's characters as buttons with one of them picked
+     learn  - the write pad: the strokes traced in ink, the next lit with its dot, the rest template
+     cards  - two square picture tiles, one star hollow and one filled
+     lang   - the language chips, the ten endonyms, with the app's own language lit */
+  photo:()=>gfshot("photo"), chars:()=>gfshot("chars"), learn:()=>gfshot("learn"),
+  cards:()=>gfshot("cards"), lang:()=>gfshot("lang"),
+  /* everything stays here; the card's text is what leaves, and a picture of it when the reading is hard.
+     The one figure with no screen behind it, so the one that is still drawn. */
   privacy:()=>gfig(160,
     gfBox(86,16,116,132,14,GF_CARD,GF_SEP)+`<path d="M124 29 H164" stroke="${GF_SEP}" stroke-width="3" stroke-linecap="round"/>`
     +gfBox(98,46,92,26,6,GF_FILL)+gfBox(98,80,92,26,6,GF_FILL)+gfBox(98,114,92,26,6,GF_FILL)
