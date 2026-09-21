@@ -37,7 +37,6 @@ de:{
   "reading confidence {0}%":"Lesesicherheit {0} %","unknown {0}":"unbekannt: {0}","no dictionary meaning":"keine Wörterbuchbedeutung","the text looks misread":"der Text sieht falsch gelesen aus","the framed area":"der eingerahmte Bereich","card image":"Kartenbild","alt:photo":"Foto",
   "Not yet checked":"Noch nicht geprüft","tile:New":"Neu",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Halte ein Zeichen gedrückt, um alle Karten damit durchzugehen; halte es noch einmal gedrückt, um zurückzukommen.",
-  
   "Whole card":"Ganze Karte",
   "Explain":"Erklären",
   "Explaining …":"Wird erklärt …",
@@ -57,13 +56,12 @@ de:{
   "not in the stroke set — draw it and tap Done":"nicht im Strichsatz – zeichne es und tippe auf Fertig",
 "⚑ Flag":"⚑ Markieren",
 "card:⚑ Flagged":"⚑ Markiert",
-  "Update notes":"Update-Hinweise",
 "Tell me what is new after an update.":"Sag mir nach einem Update, was neu ist.",
 "Updated.":"Aktualisiert.",
   "{0} to go, while the app is open.":"Noch {0}, solange die App offen ist.",
   "Waiting for its turn …":"Wartet, bis es dran ist …",
   "Check all cards again":"Alle Karten neu prüfen",
-  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"Die KI wird ständig besser. Lass sie noch mal über dein ganzes Deck schauen – fehlende Beschreibungen und Tags trägt sie gleich nach, und jede Änderung am Text siehst du, bevor du sie übernimmst.",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the missing tags and the few sentences that say what a card is about, and you see every change to a text before you accept it.":"Die KI wird ständig besser. Lass sie noch mal über dein ganzes Deck schauen – fehlende Tags und die paar Sätze dazu, worum es auf einer Karte geht, trägt sie gleich nach, und jede Änderung am Text siehst du, bevor du sie übernimmst.",
   "Checking {0} of {1} …":"Prüfe {0} von {1} …",
   "Done — {0} could be better. Look under the Cards tab.":"Fertig – es gibt {0} zu verbessern. Schau im Tab Karten nach.",
   "Done — nothing to change. Your cards are in good shape.":"Fertig – nichts zu ändern. Deine Karten sind gut in Form.",
@@ -76,16 +74,8 @@ de:{
   
   
   
-  
-  
-  
-  
-  
   "Translated {0} at {1}.":"{0} um {1} übersetzt.","Checked {0} at {1}.":"{0} um {1} geprüft.","Done — {0} filled in.":"Fertig – {0} ergänzt.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Fertig – {0} ergänzt, es gibt {1} zu verbessern. Schau im Tab Karten nach.",
   "Undone — {0} put back.":"Rückgängig – {0} wiederhergestellt.",
-  
-  
-  
   
   
   "Filter":"Filter",
@@ -104,8 +94,6 @@ de:{
   "Take photo":"Foto aufnehmen",
   "From album":"Aus dem Album",
   "Processing photo …":"Foto wird verarbeitet …",
-  
-  
   
   
   "Crop":"Ausschnitt",
@@ -214,7 +202,6 @@ de:{
   "Deck":"Karten","Learn":"Lernen","Cards":"Karten","Multicards":"Multicards","Camera":"Kamera","More":"Mehr",
   "Generate flashcard":"Karte erstellen",
   "← Back to the flashcard":"← Zurück zur Karte",
-  
   "Open the flashcard":"Karte öffnen",
   "From {0}":"Aus {0}",
   "Language":"Sprache",
@@ -228,7 +215,6 @@ de:{
   "{0} learned, {1} reviewed this week, streak {2}":"{0} gelernt, {1} diese Woche wiederholt, Serie {2}",
   "card":"{0} Karte","cards":"{0} Karten","day":"{0} Tag","days":"{0} Tage","review":"{0} Wiederholung","reviews":"{0} Wiederholungen","photo":"{0} Foto","photos":"{0} Fotos",
   "bar:AI suggestion":"{0} KI-Vorschlag","bar:AI suggestions":"{0} KI-Vorschläge",
-  
   "Traditional":"Langzeichen","Simplified":"Kurzzeichen","Nothing could be read.":"Es konnte nichts gelesen werden.","Reading the text …":"Text wird gelesen …",
   "meaning unverified":"Bedeutung ungeprüft"," (translation pending)":" (Übersetzung ausstehend)"," (reading uncertain: {0})":" (Lesung unsicher: {0})",
   "Also on another photo":"Auch auf einem anderen Foto","Also on {0} other photos":"Auch auf {0} anderen Fotos","Show this photo":"Dieses Foto zeigen","Open this card":"Diese Karte öffnen",
@@ -242,7 +228,7 @@ de:{
   "No cards yet — take a photo under Camera, or tap + New.":"Noch keine Karten – nimm ein Foto auf unter Kamera, oder tippe auf + Neu.",
   "Search":"Suchen","+ New":"+ Neu","⚑ Flagged":"⚑ Markiert","Star":"Stern","Starred":"Mit Stern","Unverified":"Ungeprüft","{0} of {1}":"{0} von {1}",
   "due":"fällig","in {0} d":"in {0} T",
-  "Interval {0} d, ease {1}, {2}, next {3}.":"Intervall {0} T, Leichtigkeit {1}, {2}, nächste {3}.",
+  "{0} so far, next on {1}.":"Bisher {0}, das nächste Mal am {1}.",
   "Nothing read yet":"Noch nichts gelesen","unverified":"ungeprüft","translation pending":"Übersetzung ausstehend","reading uncertain":"Lesung unsicher",
   "The new frame is being read — the text follows when it is done.":"Der neue Ausschnitt wird gelesen – der Text folgt, sobald es fertig ist.",
   "The text, pinyin and meaning follow when the reading is done.":"Text, Pinyin und Bedeutung folgen, sobald das Lesen fertig ist.",
@@ -263,10 +249,10 @@ de:{
   "Cards made from them keep their own picture. A photo that never made a card is gone.":"Karten, die daraus entstanden sind, behalten ihr eigenes Bild. Ein Foto ohne Karte ist danach weg.","Persistent on this phone.":"Dauerhaft auf diesem Telefon gespeichert.","Not persistent yet. Install the app so the system keeps the data.":"Noch nicht dauerhaft. Installiere die App, damit das System die Daten behält.",
   "Checking …":"Prüfe …","Share":"Teilen","Share the app":"App teilen","Send the link to a friend. The app installs from any browser, no store.":"Schick den Link einem Freund. Die App installiert sich aus jedem Browser, ohne Store.",
   "Add screenshot":"Screenshot anhängen","Sent, but the screenshot could not be attached.":"Gesendet, aber der Screenshot konnte nicht mitgeschickt werden.","Feedback":"Feedback","Tell the app's owner what works and what does not.":"Sag dem Besitzer der App, was funktioniert und was nicht.","Your message":"Deine Nachricht","Send":"Senden",
-  "Your data":"Deine Daten","Export":"Exportieren","Progress and cards as one file, via the share sheet.":"Fortschritt und Karten als eine Datei, über das Teilen-Menü.","Include photos (adds about {0} MB)":"Fotos einschließen (etwa {0} MB mehr)",
+  "Export":"Exportieren","Progress and cards as one file, via the share sheet.":"Fortschritt und Karten als eine Datei, über das Teilen-Menü.","Include photos (adds about {0} MB)":"Fotos einschließen (etwa {0} MB mehr)",
   "Import":"Importieren","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"Eine Datei zeichentrainer-….json.txt. Vorhandene Karten werden überschrieben.",
   "Flagged cards":"Markierte Karten","{0} flagged for review. Share the list as text, for a teacher.":"{0} zur Prüfung markiert. Teile die Liste als Text, etwa für einen Lehrer.",
-  "Show":"Anzeigen","Online AI review":"KI-Prüfung online","AI review":"KI-Prüfung","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Was gesendet wird: der chinesische Text einer Karte, Pinyin, Bedeutung, deine Notiz und die anderen Lesungen der App – bei jeder neuen Karte und bei jeder Karte, wenn du „Check-up“ oder „Alle Karten übersetzen“ antippst, und bei einer Karte, sobald du zu ihr kommst und sie noch keine Beschreibung hat. Wenn der Text schwer zu lesen ist, geht ein Bild davon an einen Anbieter, der Bilder annimmt – manchmal das ganze Foto. Ohne eigenen Schlüssel sendet dieses Telefon über das Relais des App-Besitzers, das an den Anbieter weiterleitet und nur eine Zahl behält.",
+  "Show":"Anzeigen","AI review":"KI-Prüfung","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Was gesendet wird: der chinesische Text einer Karte, Pinyin, Bedeutung, deine Notiz und die anderen Lesungen der App – bei jeder neuen Karte und bei jeder Karte, wenn du „Check-up“ oder „Alle Karten übersetzen“ antippst, und bei einer Karte, sobald du zu ihr kommst und sie noch keine Beschreibung hat. Wenn der Text schwer zu lesen ist, geht ein Bild davon an einen Anbieter, der Bilder annimmt – manchmal das ganze Foto. Ohne eigenen Schlüssel sendet dieses Telefon über das Relais des App-Besitzers, das an den Anbieter weiterleitet und nur eine Zahl behält.",
   "Check every new card with the AI automatically (when online)":"Jede neue Karte automatisch mit der KI prüfen (wenn online)","Review queue":"Warteschlange","Storage":"Speicher","Learning":"Lernen",
   "Card order":"Reihenfolge der Karten","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"Fällige Karten kommen zuerst, dann bis zu {0} neue, jede Gruppe von kurz nach lang. Das hier legt die Reihenfolge unter gleich langen Karten fest.",
   "Progress":"Fortschritt",
@@ -274,7 +260,7 @@ de:{
   "Sends anonymous usage counts to the app's owner once a day, and again when you leave the app after making a card: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"Sendet einmal am Tag anonyme Nutzungszahlen an den Besitzer der App, und noch einmal, wenn du die App nach einer neuen Karte verlässt: genutzte Tage, erstellte und wiederholte Karten, KI-Prüfungen und die Fehlermeldungen der App. Kein Kartentext, keine Fotos.",
   "Your id: {0}.":"Deine Kennung: {0}.","Send once a day":"Einmal am Tag senden","Photos":"Fotos","Delete {0}":"{0} löschen",
   "Advanced settings":"Erweiterte Einstellungen","Admin log in":"Admin-Anmeldung",
-  "Password":"Passwort","Log in":"Anmelden","Wrong password.":"Falsches Passwort.","About":"Über",
+  "Password":"Passwort","Log in":"Anmelden","Wrong password.":"Falsches Passwort.",
   "Write a few words first.":"Schreib erst ein paar Worte.","No connection. Try again when online.":"Keine Verbindung. Versuch es online noch einmal.","Sending …":"Sende …","Thank you, sent.":"Danke, gesendet.",
   "Could not send: {0}":"Senden fehlgeschlagen: {0}","No flagged cards.":"Keine markierten Karten.","Image (stays on this phone)":"Bild (bleibt auf diesem Telefon)","Whole photo":"Ganzes Foto",
   "Remove image":"Bild entfernen","Add a card by hand.":"Eine Karte von Hand anlegen.","Draw a character":"Zeichen zeichnen","hello":"hallo",
@@ -284,31 +270,28 @@ de:{
   "Crop again":"Neu zuschneiden","Pinyin and meaning are required.":"Pinyin und Bedeutung sind nötig.","Please enter Chinese text.":"Gib den chinesischen Text ein.","Please enter a Chinese word.":"Gib ein chinesisches Wort ein.",
   "“{0}” is already in the deck.":"„{0}“ ist schon im Stapel.","“{0}” added.":"„{0}“ angelegt.","Export failed: {0}":"Export fehlgeschlagen: {0}","Not a Zeichentrainer export (JSON).":"Kein Zeichentrainer-Export (JSON).",
   "Export is empty — nothing to import.":"Der Export ist leer — nichts zu importieren.","Import {0} and {1}?":"{0} und {1} importieren?","Existing entries of the same cards will be overwritten.":"Vorhandene Einträge derselben Karten werden überschrieben.","Import failed ({0})":"Import fehlgeschlagen ({0})",
-  "Imported {0} and {1}":"{0} und {1} importiert",", {0} with photos":", {0} mit Fotos","({0} could not be read)":"({0} konnten nicht gelesen werden)","The file carries no photos; the photos on this phone were kept":"Die Datei enthält keine Fotos; die Fotos auf diesem Telefon wurden behalten",
+  "Imported {0} and {1}":"{0} und {1} importiert",", {0} with photos":", {0} mit Fotos","({0} could not be read)":"(nicht lesbar: {0})","The file carries no photos; the photos on this phone were kept":"Die Datei enthält keine Fotos; die Fotos auf diesem Telefon wurden behalten",
   "Start over?":"Von vorn anfangen?","All progress, cards and inbox photos on this phone will be deleted.":"Aller Fortschritt, alle Karten und Fotos im Eingang auf diesem Telefon werden gelöscht.",
   "Delete everything":"Alles löschen","Oldest first":"Älteste zuerst","Newest first":"Neueste zuerst","Random":"Zufällig",
   "suggestion":"{0} Vorschlag","suggestions":"{0} Vorschläge","progress entry":"{0} Lerneintrag","progress entries":"{0} Lerneinträge",
   /* the meaning in the app's language and the Translate-all row (v256) */
   "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Die Texte der App und die Bedeutung neuer Karten. Karten behalten Chinesisch und Pinyin.","Meanings":"Bedeutungen","card has its meaning in another language.":"Karte hat ihre Bedeutung in einer anderen Sprache.","cards have their meaning in another language.":"Karten haben ihre Bedeutung in einer anderen Sprache.","Translate all cards into {0}":"Alle Karten auf {0} übersetzen","Translating {0} of {1} …":"Übersetze {0} von {1} …","{0} translated, {1} left.":"{0} übersetzt, {1} übrig.","Done — {0} translated.":"Fertig — {0} übersetzt.",
   /* the More screen in the learner's order (v257) */
-  "Privacy":"Privatsphäre",
   /* the pill for a meaning in another language (v258) */
   "The meaning is in another language than the app.":"Die Bedeutung ist in einer anderen Sprache als die App.",
   /* How to use the app (v259) */
-  "Help":"Hilfe",
   "How to use the app":"So funktioniert die App",
   "Six short sections: photo, characters, learning, cards, language, what stays on the phone.":"Sechs kurze Abschnitte: Foto, Zeichen, Lernen, Karten, Sprache, was auf dem Telefon bleibt.",
   "Open":"Öffnen",
   "Open source licenses":"Open-Source-Lizenzen",
   "The software and data the app is built on, and who made them.":"Die Software und die Daten, auf denen die App aufbaut — und wer sie gemacht hat.",
   "Fix the characters":"Zeichen korrigieren",
-  
   "Swipe left or right to pick another card.":"Wisch nach links oder rechts, um eine andere Karte zu wählen.",
-  "Tap it — the text instead.": "Tippen – dafür der Text.",
-  "Tap here — characters big.": "Hier tippen – Zeichen groß.",
+  "Tap it — what it means.": "Tippen – was es heißt.",
+  "Open it — the whole card.": "Aufklappen – die ganze Karte.",
   "Trace the lit stroke.": "Leuchtenden Strich nachziehen.",
-  "Tap the photo for the whole text, and tap again for the photo.": "Tippe auf das Foto, und der ganze Text steht oben; noch einmal tippen, und das Foto ist wieder da.",
-  "A card starts with the photo big — a tap gives the whole text the top of the card, and the next tap the photo again.": "Eine Karte startet mit dem großen Foto – ein Tipp gibt den ganzen Text nach oben, der nächste wieder das Foto.",
+  "Tap the photo for the pinyin and the meaning, and again for the photo.": "Tipp aufs Foto für Pinyin und Bedeutung, noch einmal fürs Foto.",
+  "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "Eine Karte startet mit dem Foto – das ist die Frage. Ein Tipp deckt den Text mit Pinyin und Bedeutung auf, der nächste bringt das Foto zurück.",
 
 
   "Language and meanings":"Sprache und Bedeutungen",
@@ -328,23 +311,21 @@ de:{
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"Ein Foto mit mehreren Texten — ein App-Bildschirm, ein Bedienfeld, eine Speisekarte — wird stattdessen eine Multicard. Tippe einen Text darauf an, um ihn nachzuschlagen, und „Karte erstellen“ macht eine Karte aus denen, die du lernen willst.",
   "Every character under the photo is a button: tap one for other readings, or draw it with your finger. Pinyin and meaning follow by themselves and the AI checks them — flag a card when something still looks wrong.":"Jedes Zeichen unter dem Foto ist ein Knopf: Tippe eines an für andere Lesungen, oder mal es mit dem Finger. Pinyin und Bedeutung kommen von selbst, und die KI prüft sie — markiere eine Karte, wenn trotzdem etwas nicht stimmt.",
   "Due cards first, then up to eight new ones. The photo is the question and the pad is the answer: trace the lit stroke and it moves on by itself, character by character.":"Zuerst die fälligen Karten, dann bis zu acht neue. Das Foto ist die Frage, das Pad die Antwort: Fahr den hellen Strich nach, und es geht von selbst weiter, Zeichen für Zeichen.",
-  "Know the character? Write it your own way, in your own stroke order — the pad takes it once what you wrote matches.":"Du kennst das Zeichen schon? Schreib es einfach in deiner eigenen Strichfolge — das Pad nimmt es, sobald es passt.",
-  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card sits folded at its foot, and what the card is about stands under it. Swipe sideways to pick another card — nothing is graded by swiping.":"Hängst du fest? „Zeig mir“ malt den Strich, „Überspringen“ setzt das Zeichen ein. Die ganze Karte liegt zusammengeklappt an ihrem Fuß, und darunter steht, worum es auf der Karte geht. Wisch zur Seite für eine andere Karte — durchs Wischen wird nichts bewertet.",
+  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card — pinyin, meaning and what the text is about — is one tap away at its foot. Swipe sideways to pick another card — nothing is graded by swiping.":"Hängst du fest? „Zeig mir“ malt den Strich, „Überspringen“ setzt das Zeichen ein. Die ganze Karte – Pinyin, Bedeutung und worum es geht – ist unten einen Tipp entfernt. Wisch zur Seite für eine andere Karte — durchs Wischen wird nichts bewertet.",
   "All your cards, newest first, with a tab of their own for multicards. Search them, filter them, and tap one to test, edit or delete it.":"Alle deine Karten, die neuesten zuerst, mit einem eigenen Reiter für Multicards. Durchsuche und filtere sie, und tippe eine an, um sie zu testen, zu bearbeiten oder zu löschen.",
   "Tap a card's star for the ones that matter to you, and Learn can study those alone. Tags group the rest, and a card from a photo gets one for what it is.":"Tippe den Stern einer Karte an für die, auf die es dir ankommt — Lernen übt dann nur die. Tags gruppieren den Rest, und eine Karte vom Foto bekommt eines dafür, was sie ist.",
   "More → Language switches the app's own texts, and new cards get their meaning in that language. Translate all cards does it for the ones you already have.":"Unter Mehr → Sprache stellst du die Texte der App um, und neue Karten bekommen ihre Bedeutung in dieser Sprache. „Alle Karten übersetzen“ macht das für die, die du schon hast.",
-  "Your cards and photos stay on this phone and nowhere else — export them under More → Your data now and then.":"Deine Karten und Fotos bleiben auf diesem Handy und sonst nirgends — exportiere sie ab und zu unter Mehr → Deine Daten.",
-  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard.":"Die KI-Prüfung schickt Text, Pinyin und Bedeutung einer Karte, und wenn die Lesung schwer ist ein Bild des Textes — manchmal das ganze Foto.",
+  "Your cards and photos stay on this phone and nowhere else — export them under More → Your cards now and then.":"Deine Karten und Fotos bleiben auf diesem Handy und sonst nirgends — exportiere sie ab und zu unter Mehr → Deine Karten.",
+  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"Die KI-Prüfung schickt Text, Pinyin und Bedeutung einer Karte, und wenn die Lesung schwer ist ein Bild des Textes — manchmal das ganze Foto. Sie fragt auch von allein nach den paar Sätzen zu einer Karte, sobald du zu einer kommst, die noch keine hat.",
 
   "Tap the star counter at the top to see how your points are counted.":"Tipp oben auf den Sternzähler, um zu sehen, wie deine Punkte zustande kommen.",
-  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under Privacy. Questions or ideas? More → Feedback.":"Einmal am Tag – und noch einmal, wenn du die App nach einer neuen Karte verlässt – gehen anonyme Nutzungszahlen und die Fehlermeldungen der App an den Besitzer der App; unter Privatsphäre kannst du das abschalten. Fragen oder Ideen? Mehr → Feedback.",
+  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Einmal am Tag – und noch einmal, wenn du die App nach einer neuen Karte verlässt – gehen anonyme Nutzungszahlen und die Fehlermeldungen der App an den Besitzer der App; unter Mehr → Nutzungsdaten kannst du das abschalten. Fragen oder Ideen? Mehr → Feedback.",
 
 },
 fr:{
   "reading confidence {0}%":"confiance de lecture {0} %","unknown {0}":"inconnus : {0}","no dictionary meaning":"aucun sens au dictionnaire","the text looks misread":"le texte semble mal lu","the framed area":"la zone encadrée","card image":"image de la carte","alt:photo":"photo",
   "Not yet checked":"Pas encore vérifiées","tile:New":"Nouvelle",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Maintiens un caractère appuyé pour parcourir toutes les cartes qui le contiennent ; maintiens-le appuyé de nouveau pour revenir.",
-  
   "Whole card":"Toute la carte",
   "Explain":"Expliquer",
   "Explaining …":"Explication en cours …",
@@ -364,17 +345,16 @@ fr:{
   "not in the stroke set — draw it and tap Done":"pas dans la base des traits — dessine-le et touche Terminé",
 "⚑ Flag":"⚑ Signaler",
 "card:⚑ Flagged":"⚑ Signalée",
-  "Update notes":"Nouveautés",
 "Tell me what is new after an update.":"Dis-moi ce qui est nouveau après une mise à jour.",
 "Updated.":"Mis à jour.",
   "{0} to go, while the app is open.":"Encore {0}, tant que l’appli est ouverte.",
   "Waiting for its turn …":"En attente de son tour …",
   "Check all cards again":"Revérifier toutes les cartes",
-  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"L'IA s'améliore sans cesse. Laisse-la relire tout ton paquet – elle complète les descriptions et les tags qui manquent, et tu vois chaque changement de texte avant de l'accepter.",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the missing tags and the few sentences that say what a card is about, and you see every change to a text before you accept it.":"L'IA s'améliore sans cesse. Laisse-la relire tout ton paquet – elle complète les tags qui manquent et les quelques phrases qui disent de quoi parle une carte, et tu vois chaque changement de texte avant de l'accepter.",
   "Checking {0} of {1} …":"Vérification {0} sur {1} …",
   "Done — {0} could be better. Look under the Cards tab.":"Terminé – il y a {0} à améliorer. Regarde dans l'onglet Cartes.",
   "Done — nothing to change. Your cards are in good shape.":"Terminé – rien à changer. Tes cartes sont en pleine forme.",
-  "{0} checked, {1} left.":"{0} vérifiées, {1} restantes.",
+  "{0} checked, {1} left.":"Vérifiées : {0} ; il en reste {1}.",
   "Accepted the AI's changes on {0} at {1}.":"Changements de l'IA sur {0} acceptés à {1}.",
   "Dismissed the AI's suggestions on {0} at {1}.":"Suggestions de l'IA sur {0} ignorées à {1}.",
   "Check-up":"Bilan",
@@ -383,16 +363,8 @@ fr:{
   
   
   
-  
-  
-  
-  
-  
   "Translated {0} at {1}.":"Traduction de {0} à {1}.","Checked {0} at {1}.":"Vérification de {0} à {1}.","Done — {0} filled in.":"Terminé – complété : {0}.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Terminé – complété : {0} ; il y a {1} à améliorer. Regarde dans l'onglet Cartes.",
   "Undone — {0} put back.":"Annulé – {0} de retour.",
-  
-  
-  
   
   
   "Filter":"Filtre",
@@ -411,8 +383,6 @@ fr:{
   "Take photo":"Prendre une photo",
   "From album":"Depuis l'album",
   "Processing photo …":"Traitement de la photo …",
-  
-  
   
   
   "Crop":"Cadrer",
@@ -476,7 +446,7 @@ fr:{
   "Tap the characters to remove, then Remove.":"Touche les caractères à retirer, puis Retirer.",
   "All":"Tout",
   "None":"Aucun",
-  "{0} selected":"{0} sélectionnées",
+  "{0} selected":"Sélection : {0}",
   "Select":"Sélectionner",
   "Remove":"Retirer",
   "Remove {0}":"Retirer {0}",
@@ -521,7 +491,6 @@ fr:{
   "Deck":"Cartes","Learn":"Apprendre","Cards":"Cartes","Multicards":"Multicartes","Camera":"Photo","More":"Plus",
   "Generate flashcard":"Créer une carte",
   "← Back to the flashcard":"← Retour à la carte",
-  
   "Open the flashcard":"Ouvrir la carte",
   "From {0}":"De {0}",
   "Language":"Langue",
@@ -534,7 +503,6 @@ fr:{
   "{0} learned, {1} reviewed this week, streak {2}":"Appris : {0} · révisions cette semaine : {1} · série : {2}",
   "card":"{0} carte","cards":"{0} cartes","day":"{0} jour","days":"{0} jours","review":"{0} révision","reviews":"{0} révisions","photo":"{0} photo","photos":"{0} photos",
   "bar:AI suggestion":"{0} suggestion de l'IA","bar:AI suggestions":"{0} suggestions de l'IA",
-  
   "Traditional":"Traditionnel","Simplified":"Simplifié","Nothing could be read.":"Rien n'a pu être lu.","Reading the text …":"Lecture du texte …",
   "meaning unverified":"sens non vérifié"," (translation pending)":" (traduction en attente)"," (reading uncertain: {0})":" (lecture incertaine : {0})",
   "Also on another photo":"Aussi sur une autre photo","Also on {0} other photos":"Aussi sur {0} autres photos","Show this photo":"Afficher cette photo","Open this card":"Ouvrir cette carte",
@@ -548,7 +516,7 @@ fr:{
   "No cards yet — take a photo under Camera, or tap + New.":"Pas encore de cartes – prends une photo sous Photo, ou touche + Nouvelle.",
   "Search":"Rechercher","+ New":"+ Nouvelle","⚑ Flagged":"⚑ Signalées","Star":"Étoile","Starred":"Avec étoile","Unverified":"Non vérifiées","{0} of {1}":"{0} sur {1}",
   "due":"à faire","in {0} d":"dans {0} j",
-  "Interval {0} d, ease {1}, {2}, next {3}.":"Intervalle {0} j, facilité {1}, {2}, prochaine {3}.",
+  "{0} so far, next on {1}.":"{0} jusqu'ici, la prochaine le {1}.",
   "Nothing read yet":"Rien de lu encore","unverified":"non vérifié","translation pending":"traduction en attente","reading uncertain":"lecture incertaine",
   "The new frame is being read — the text follows when it is done.":"Le nouveau cadre est en cours de lecture – le texte suivra.",
   "The text, pinyin and meaning follow when the reading is done.":"Le texte, le pinyin et le sens suivront une fois la lecture terminée.",
@@ -569,10 +537,10 @@ fr:{
   "Cards made from them keep their own picture. A photo that never made a card is gone.":"Les cartes qui en sont issues gardent leur propre image. Une photo qui n'a jamais donné de carte est perdue.","Persistent on this phone.":"Conservé durablement sur ce téléphone.","Not persistent yet. Install the app so the system keeps the data.":"Pas encore durable. Installe l'appli pour que le système garde les données.",
   "Checking …":"Vérification …","Share":"Partager","Share the app":"Partager l'appli","Send the link to a friend. The app installs from any browser, no store.":"Envoie le lien à un ami. L'appli s'installe depuis n'importe quel navigateur, sans store.",
   "Add screenshot":"Ajouter une capture","Sent, but the screenshot could not be attached.":"Envoyé, mais la capture n'a pas pu être jointe.","Feedback":"Commentaires","Tell the app's owner what works and what does not.":"Dites au propriétaire de l'appli ce qui marche et ce qui ne marche pas.","Your message":"Ton message","Send":"Envoyer",
-  "Your data":"Tes données","Export":"Exporter","Progress and cards as one file, via the share sheet.":"Progression et cartes en un seul fichier, via le menu de partage.","Include photos (adds about {0} MB)":"Inclure les photos (environ {0} Mo de plus)",
+  "Export":"Exporter","Progress and cards as one file, via the share sheet.":"Progression et cartes en un seul fichier, via le menu de partage.","Include photos (adds about {0} MB)":"Inclure les photos (environ {0} Mo de plus)",
   "Import":"Importer","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"Un fichier zeichentrainer-….json.txt. Les cartes existantes sont remplacées.",
-  "Flagged cards":"Cartes signalées","{0} flagged for review. Share the list as text, for a teacher.":"{0} signalées pour vérification. Partage la liste en texte, pour un prof.",
-  "Show":"Afficher","Online AI review":"Vérification par l'IA en ligne","AI review":"Vérification par l'IA","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Ce qui est envoyé : le texte chinois d'une carte, le pinyin, le sens, ta note et les autres lectures de l'appli — pour chaque nouvelle carte et pour chaque carte quand tu touches « Bilan » ou « Traduire toutes les cartes », et pour une carte dès que tu arrives dessus et qu’elle n’a pas encore de description. Quand la lecture est difficile, une image du texte est envoyée à un fournisseur qui accepte les images — parfois la photo entière. Sans clé propre, ce téléphone envoie via le relais du propriétaire de l'appli, qui transmet au fournisseur et ne garde qu'un compteur.",
+  "Flagged cards":"Cartes signalées","{0} flagged for review. Share the list as text, for a teacher.":"Signalées pour vérification : {0}. Partage la liste en texte, pour un prof.",
+  "Show":"Afficher","AI review":"Vérification par l'IA","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Ce qui est envoyé : le texte chinois d'une carte, le pinyin, le sens, ta note et les autres lectures de l'appli — pour chaque nouvelle carte et pour chaque carte quand tu touches « Bilan » ou « Traduire toutes les cartes », et pour une carte dès que tu arrives dessus et qu’elle n’a pas encore de description. Quand la lecture est difficile, une image du texte est envoyée à un fournisseur qui accepte les images — parfois la photo entière. Sans clé propre, ce téléphone envoie via le relais du propriétaire de l'appli, qui transmet au fournisseur et ne garde qu'un compteur.",
   "Check every new card with the AI automatically (when online)":"Vérifier chaque nouvelle carte automatiquement avec l'IA (en ligne)","Review queue":"File de vérification","Storage":"Stockage","Learning":"Apprentissage",
   "Card order":"Ordre des cartes","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"Les cartes à revoir viennent d'abord, puis jusqu'à {0} nouvelles, chaque groupe des courtes aux longues. Ceci règle l'ordre entre cartes de même longueur.",
   "Progress":"Progression",
@@ -580,7 +548,7 @@ fr:{
   "Sends anonymous usage counts to the app's owner once a day, and again when you leave the app after making a card: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"Envoie une fois par jour des comptages anonymes au propriétaire de l'appli, et une fois de plus quand tu quittes l'appli après avoir fait une carte : jours d'utilisation, cartes créées et revues, vérifications par l'IA et messages d'erreur de l'appli. Pas de texte des cartes, pas de photos.",
   "Your id: {0}.":"Ton identifiant : {0}.","Send once a day":"Envoyer une fois par jour","Photos":"Photos","Delete {0}":"Supprimer {0}",
   "Advanced settings":"Réglages avancés","Admin log in":"Connexion admin",
-  "Password":"Mot de passe","Log in":"Se connecter","Wrong password.":"Mot de passe incorrect.","About":"À propos",
+  "Password":"Mot de passe","Log in":"Se connecter","Wrong password.":"Mot de passe incorrect.",
   "Write a few words first.":"Écris d'abord quelques mots.","No connection. Try again when online.":"Pas de connexion. Réessaie en ligne.","Sending …":"Envoi …","Thank you, sent.":"Merci, envoyé.",
   "Could not send: {0}":"Envoi impossible : {0}","No flagged cards.":"Aucune carte signalée.","Image (stays on this phone)":"Image (reste sur ce téléphone)","Whole photo":"Photo entière",
   "Remove image":"Retirer l'image","Add a card by hand.":"Ajouter une carte à la main.","Draw a character":"Dessiner un caractère","hello":"bonjour",
@@ -590,32 +558,29 @@ fr:{
   "Crop again":"Recadrer","Pinyin and meaning are required.":"Le pinyin et le sens sont obligatoires.","Please enter Chinese text.":"Saisis un texte chinois.","Please enter a Chinese word.":"Saisis un mot chinois.",
   "“{0}” is already in the deck.":"« {0} » est déjà dans le paquet.","“{0}” added.":"« {0} » ajouté.","Export failed: {0}":"Échec de l'export : {0}","Not a Zeichentrainer export (JSON).":"Ce n'est pas un export Zeichentrainer (JSON).",
   "Export is empty — nothing to import.":"L'export est vide — rien à importer.","Import {0} and {1}?":"Importer {0} et {1} ?","Existing entries of the same cards will be overwritten.":"Les entrées existantes des mêmes cartes seront remplacées.","Import failed ({0})":"Échec de l'import ({0})",
-  "Imported {0} and {1}":"{0} et {1} importées",", {0} with photos":", {0} avec photos","({0} could not be read)":"({0} illisibles)","The file carries no photos; the photos on this phone were kept":"Le fichier ne contient pas de photos ; les photos de ce téléphone ont été conservées",
+  "Imported {0} and {1}":"{0} et {1} importées",", {0} with photos":", {0} avec photos","({0} could not be read)":"(illisibles : {0})","The file carries no photos; the photos on this phone were kept":"Le fichier ne contient pas de photos ; les photos de ce téléphone ont été conservées",
   "Start over?":"Tout recommencer ?","All progress, cards and inbox photos on this phone will be deleted.":"Toute la progression, les cartes et les photos de la boîte sur ce téléphone seront supprimées.",
   "Delete everything":"Tout supprimer","Oldest first":"Plus anciennes d'abord","Newest first":"Plus récentes d'abord","Random":"Aléatoire",
   "suggestion":"{0} suggestion","suggestions":"{0} suggestions","progress entry":"{0} entrée de progression","progress entries":"{0} entrées de progression",
   /* the meaning in the app's language and the Translate-all row (v256) */
-  "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Les textes de l'appli et le sens des nouvelles cartes. Les cartes gardent le chinois et le pinyin.","Meanings":"Sens","card has its meaning in another language.":"carte a son sens dans une autre langue.","cards have their meaning in another language.":"cartes ont leur sens dans une autre langue.","Translate all cards into {0}":"Traduire toutes les cartes en {0}","Translating {0} of {1} …":"Traduction {0} sur {1} …","{0} translated, {1} left.":"{0} traduites, {1} restantes.","Done — {0} translated.":"Terminé – traduction de {0}.",
+  "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Les textes de l'appli et le sens des nouvelles cartes. Les cartes gardent le chinois et le pinyin.","Meanings":"Sens","card has its meaning in another language.":"carte a son sens dans une autre langue.","cards have their meaning in another language.":"cartes ont leur sens dans une autre langue.","Translate all cards into {0}":"Traduire toutes les cartes en {0}","Translating {0} of {1} …":"Traduction {0} sur {1} …","{0} translated, {1} left.":"Traduites : {0} ; il en reste {1}.","Done — {0} translated.":"Terminé – traduction de {0}.",
   /* the More screen in the learner's order (v257) */
-  "Privacy":"Confidentialité",
   /* the pill for a meaning in another language (v258) */
   "The meaning is in another language than the app.":"Le sens est dans une autre langue que l'appli.",
   /* How to use the app (v259) */
   "Take a photo":"Prendre une photo",
-  "Help":"Aide",
   "How to use the app":"Comment utiliser l'appli",
   "Six short sections: photo, characters, learning, cards, language, what stays on the phone.":"Six courtes sections : photo, caractères, apprentissage, cartes, langue, ce qui reste sur le téléphone.",
   "Open":"Ouvrir",
   "Open source licenses":"Licences open source",
   "The software and data the app is built on, and who made them.":"Les logiciels et les données sur lesquels l'appli est construite, et qui les a faits.",
   "Fix the characters":"Corriger les caractères",
-  
   "Swipe left or right to pick another card.":"Balaie vers la gauche ou la droite pour choisir une autre carte.",
-  "Tap it — the text instead.": "Touche – le texte à la place.",
-  "Tap here — characters big.": "Touche ici – tout en grand.",
+  "Tap it — what it means.": "Touche – ce que ça veut dire.",
+  "Open it — the whole card.": "Ouvre – toute la carte.",
   "Trace the lit stroke.": "Suis le trait allumé.",
-  "Tap the photo for the whole text, and tap again for the photo.": "Touche la photo et tout le texte prend le haut de la carte ; touche encore et la photo revient.",
-  "A card starts with the photo big — a tap gives the whole text the top of the card, and the next tap the photo again.": "Une carte s'ouvre avec la photo en grand – une touche donne tout le texte en haut, la suivante ramène la photo.",
+  "Tap the photo for the pinyin and the meaning, and again for the photo.": "Touche la photo pour le pinyin et le sens, encore une fois pour la photo.",
+  "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "Une carte s'ouvre sur la photo : c'est la question. Une touche découvre le texte avec son pinyin et son sens, la suivante ramène la photo.",
 
 
   "Language and meanings":"Langue et sens",
@@ -635,23 +600,21 @@ fr:{
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"Une photo avec plusieurs textes — un écran d'appli, un panneau de commande, un menu — devient une multicarte. Touche un texte dessus pour le consulter, et « Créer une carte » en fait une carte de ceux que tu veux apprendre.",
   "Every character under the photo is a button: tap one for other readings, or draw it with your finger. Pinyin and meaning follow by themselves and the AI checks them — flag a card when something still looks wrong.":"Chaque caractère sous la photo est un bouton : touche-le pour d'autres lectures, ou dessine-le au doigt. Le pinyin et le sens suivent tout seuls et l'IA les vérifie — signale une carte s'il reste quelque chose de bizarre.",
   "Due cards first, then up to eight new ones. The photo is the question and the pad is the answer: trace the lit stroke and it moves on by itself, character by character.":"D'abord les cartes à réviser, puis jusqu'à huit nouvelles. La photo est la question, le pavé la réponse : suis le trait allumé et ça avance tout seul, caractère après caractère.",
-  "Know the character? Write it your own way, in your own stroke order — the pad takes it once what you wrote matches.":"Tu connais déjà le caractère ? Écris-le à ta façon, dans ton propre ordre de traits — le pavé l'accepte dès que ça correspond.",
-  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card sits folded at its foot, and what the card is about stands under it. Swipe sideways to pick another card — nothing is graded by swiping.":"Bloqué ? « Montre-moi » trace le trait et « Passer » remplit le caractère. Toute la carte est repliée en bas, et ce dont elle parle est écrit en dessous. Balaie sur le côté pour choisir une autre carte — balayer ne note rien.",
+  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card — pinyin, meaning and what the text is about — is one tap away at its foot. Swipe sideways to pick another card — nothing is graded by swiping.":"Bloqué ? « Montre-moi » trace le trait et « Passer » remplit le caractère. Toute la carte – pinyin, sens et ce dont elle parle – est à une touche, tout en bas. Balaie sur le côté pour choisir une autre carte — balayer ne note rien.",
   "All your cards, newest first, with a tab of their own for multicards. Search them, filter them, and tap one to test, edit or delete it.":"Toutes tes cartes, les plus récentes d'abord, avec un onglet à part pour les multicartes. Cherche, filtre, et touche une carte pour la tester, la modifier ou la supprimer.",
   "Tap a card's star for the ones that matter to you, and Learn can study those alone. Tags group the rest, and a card from a photo gets one for what it is.":"Touche l'étoile d'une carte pour celles qui comptent pour toi, et Apprendre peut ne réviser que celles-là. Les étiquettes regroupent le reste, et une carte issue d'une photo en reçoit une selon ce qu'elle est.",
   "More → Language switches the app's own texts, and new cards get their meaning in that language. Translate all cards does it for the ones you already have.":"Plus → Langue change les textes de l'app, et les nouvelles cartes reçoivent leur sens dans cette langue. « Traduire toutes les cartes » le fait pour celles que tu as déjà.",
-  "Your cards and photos stay on this phone and nowhere else — export them under More → Your data now and then.":"Tes cartes et tes photos restent sur ce téléphone et nulle part ailleurs — exporte-les de temps en temps sous Plus → Tes données.",
-  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard.":"La vérification par l'IA envoie le texte, le pinyin et le sens d'une carte, et une image du texte — parfois la photo entière — quand la lecture est difficile.",
+  "Your cards and photos stay on this phone and nowhere else — export them under More → Your cards now and then.":"Tes cartes et tes photos restent sur ce téléphone et nulle part ailleurs — exporte-les de temps en temps sous Plus → Tes cartes.",
+  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"La vérification par l'IA envoie le texte, le pinyin et le sens d'une carte, et une image du texte — parfois la photo entière — quand la lecture est difficile. Elle demande aussi d'elle-même les quelques phrases d'une carte, dès que tu arrives sur une carte qui n'en a pas encore.",
 
   "Tap the star counter at the top to see how your points are counted.":"Touche le compteur d'étoiles en haut pour voir comment tes points sont comptés.",
-  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under Privacy. Questions or ideas? More → Feedback.":"Une fois par jour, et une fois de plus quand tu quittes l'appli après avoir fait une carte, des comptages anonymes et les messages d'erreur de l'appli vont au propriétaire de l'appli ; désactive-les sous Confidentialité. Des questions ou des idées ? Plus → Commentaires.",
+  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Une fois par jour, et une fois de plus quand tu quittes l'appli après avoir fait une carte, des comptages anonymes et les messages d'erreur de l'appli vont au propriétaire de l'appli ; désactive-les sous Plus → Partage d'utilisation. Des questions ou des idées ? Plus → Commentaires.",
 
 },
 es:{
   "reading confidence {0}%":"confianza de lectura {0} %","unknown {0}":"desconocidos: {0}","no dictionary meaning":"sin significado en el diccionario","the text looks misread":"el texto parece mal leído","the framed area":"el área enmarcada","card image":"imagen de la tarjeta","alt:photo":"foto",
   "Not yet checked":"Sin revisar todavía","tile:New":"Nueva",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Mantén pulsado un carácter para recorrer todas las tarjetas que lo tienen; mantenlo pulsado otra vez para volver.",
-  
   "Whole card":"Toda la tarjeta",
   "Explain":"Explicar",
   "Explaining …":"Explicando …",
@@ -671,17 +634,16 @@ es:{
   "not in the stroke set — draw it and tap Done":"no está en la base de trazos — dibújalo y toca Listo",
 "⚑ Flag":"⚑ Marcar",
 "card:⚑ Flagged":"⚑ Marcada",
-  "Update notes":"Novedades",
 "Tell me what is new after an update.":"Cuéntame qué hay de nuevo tras una actualización.",
 "Updated.":"Actualizado.",
   "{0} to go, while the app is open.":"{0} más, mientras la app está abierta.",
   "Waiting for its turn …":"Esperando su turno …",
   "Check all cards again":"Revisar todas las tarjetas",
-  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"La IA mejora sin parar. Deja que repase todo tu mazo: completa las descripciones y las etiquetas que faltan, y ves cada cambio de texto antes de aceptarlo.",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the missing tags and the few sentences that say what a card is about, and you see every change to a text before you accept it.":"La IA mejora sin parar. Deja que repase todo tu mazo: completa las etiquetas que faltan y las pocas frases que dicen de qué trata una tarjeta, y ves cada cambio de texto antes de aceptarlo.",
   "Checking {0} of {1} …":"Revisando {0} de {1} …",
   "Done — {0} could be better. Look under the Cards tab.":"Listo: hay {0} que mejorar. Mira la pestaña Tarjetas.",
   "Done — nothing to change. Your cards are in good shape.":"Listo: nada que cambiar. Tus tarjetas están en forma.",
-  "{0} checked, {1} left.":"{0} revisadas, {1} restantes.",
+  "{0} checked, {1} left.":"Revisadas: {0}; quedan {1}.",
   "Accepted the AI's changes on {0} at {1}.":"Cambios de la IA en {0} aceptados a las {1}.",
   "Dismissed the AI's suggestions on {0} at {1}.":"Sugerencias de la IA en {0} descartadas a las {1}.",
   "Check-up":"Revisión",
@@ -690,16 +652,8 @@ es:{
   
   
   
-  
-  
-  
-  
-  
   "Translated {0} at {1}.":"Traducción de {0} a las {1}.","Checked {0} at {1}.":"Revisión de {0} a las {1}.","Done — {0} filled in.":"Listo: completado en {0}.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Listo: completado en {0}; hay {1} que mejorar. Mira la pestaña Tarjetas.",
   "Undone — {0} put back.":"Deshecho: {0} de vuelta.",
-  
-  
-  
   
   
   "Filter":"Filtro",
@@ -718,8 +672,6 @@ es:{
   "Take photo":"Hacer foto",
   "From album":"Del álbum",
   "Processing photo …":"Procesando la foto …",
-  
-  
   
   
   "Crop":"Recortar",
@@ -783,7 +735,7 @@ es:{
   "Tap the characters to remove, then Remove.":"Toca los caracteres que quieras quitar y luego Quitar.",
   "All":"Todo",
   "None":"Ninguno",
-  "{0} selected":"{0} seleccionadas",
+  "{0} selected":"Seleccionadas: {0}",
   "Select":"Seleccionar",
   "Remove":"Quitar",
   "Remove {0}":"Quitar {0}",
@@ -828,7 +780,6 @@ es:{
   "Deck":"Tarjetas","Learn":"Aprender","Cards":"Tarjetas","Multicards":"Multitarjetas","Camera":"Cámara","More":"Más",
   "Generate flashcard":"Crear tarjeta",
   "← Back to the flashcard":"← Volver a la tarjeta",
-  
   "Open the flashcard":"Abrir la tarjeta",
   "From {0}":"De {0}",
   "Language":"Idioma",
@@ -841,7 +792,6 @@ es:{
   "{0} learned, {1} reviewed this week, streak {2}":"Aprendido: {0} · repasos esta semana: {1} · racha: {2}",
   "card":"{0} tarjeta","cards":"{0} tarjetas","day":"{0} día","days":"{0} días","review":"{0} repaso","reviews":"{0} repasos","photo":"{0} foto","photos":"{0} fotos",
   "bar:AI suggestion":"{0} sugerencia de la IA","bar:AI suggestions":"{0} sugerencias de la IA",
-  
   "Traditional":"Tradicional","Simplified":"Simplificado","Nothing could be read.":"No se pudo leer nada.","Reading the text …":"Leyendo el texto …",
   "meaning unverified":"significado sin verificar"," (translation pending)":" (traducción pendiente)"," (reading uncertain: {0})":" (lectura dudosa: {0})",
   "Also on another photo":"También en otra foto","Also on {0} other photos":"También en otras {0} fotos","Show this photo":"Mostrar esta foto","Open this card":"Abrir esta tarjeta",
@@ -855,7 +805,7 @@ es:{
   "No cards yet — take a photo under Camera, or tap + New.":"Aún no hay tarjetas: haz una foto en Cámara o toca + Nueva.",
   "Search":"Buscar","+ New":"+ Nueva","⚑ Flagged":"⚑ Marcadas","Star":"Estrella","Starred":"Con estrella","Unverified":"Sin verificar","{0} of {1}":"{0} de {1}",
   "due":"pendiente","in {0} d":"en {0} d",
-  "Interval {0} d, ease {1}, {2}, next {3}.":"Intervalo {0} d, facilidad {1}, {2}, próximo {3}.",
+  "{0} so far, next on {1}.":"{0} hasta ahora, la próxima el {1}.",
   "Nothing read yet":"Aún nada leído","unverified":"sin verificar","translation pending":"traducción pendiente","reading uncertain":"lectura dudosa",
   "The new frame is being read — the text follows when it is done.":"Se está leyendo el nuevo recorte: el texto llegará cuando termine.",
   "The text, pinyin and meaning follow when the reading is done.":"El texto, el pinyin y el significado llegarán cuando termine la lectura.",
@@ -876,10 +826,10 @@ es:{
   "Cards made from them keep their own picture. A photo that never made a card is gone.":"Las tarjetas hechas con ellas conservan su propia imagen. Una foto que nunca dio una tarjeta se pierde.","Persistent on this phone.":"Guardado de forma permanente en este teléfono.","Not persistent yet. Install the app so the system keeps the data.":"Aún no es permanente. Instala la app para que el sistema conserve los datos.",
   "Checking …":"Comprobando …","Share":"Compartir","Share the app":"Compartir la app","Send the link to a friend. The app installs from any browser, no store.":"Envía el enlace a un amigo. La app se instala desde cualquier navegador, sin tienda.",
   "Add screenshot":"Añadir captura","Sent, but the screenshot could not be attached.":"Enviado, pero la captura no se pudo adjuntar.","Feedback":"Comentarios","Tell the app's owner what works and what does not.":"Cuéntale al propietario de la app qué funciona y qué no.","Your message":"Tu mensaje","Send":"Enviar",
-  "Your data":"Tus datos","Export":"Exportar","Progress and cards as one file, via the share sheet.":"Progreso y tarjetas en un solo archivo, mediante el menú de compartir.","Include photos (adds about {0} MB)":"Incluir fotos (añade unos {0} MB)",
+  "Export":"Exportar","Progress and cards as one file, via the share sheet.":"Progreso y tarjetas en un solo archivo, mediante el menú de compartir.","Include photos (adds about {0} MB)":"Incluir fotos (añade unos {0} MB)",
   "Import":"Importar","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"Un archivo zeichentrainer-….json.txt. Las tarjetas existentes se sobrescriben.",
-  "Flagged cards":"Tarjetas marcadas","{0} flagged for review. Share the list as text, for a teacher.":"{0} marcadas para revisar. Comparte la lista como texto, para un profesor.",
-  "Show":"Mostrar","Online AI review":"Revisión con IA en línea","AI review":"Revisión con IA","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Qué se envía: el texto chino de una tarjeta, el pinyin, el significado, tu nota y las otras lecturas de la app — con cada tarjeta nueva y con cada tarjeta cuando tocas «Revisión» o «Traducir todas las tarjetas», y con una tarjeta en cuanto llegas a ella y todavía no tiene descripción. Cuando la lectura es difícil, una imagen del texto se envía a un proveedor que acepta imágenes — a veces la foto entera. Sin clave propia, este teléfono envía a través del relé del propietario de la app, que reenvía al proveedor y solo guarda un recuento.",
+  "Flagged cards":"Tarjetas marcadas","{0} flagged for review. Share the list as text, for a teacher.":"Marcadas para revisar: {0}. Comparte la lista como texto, para un profe.",
+  "Show":"Mostrar","AI review":"Revisión con IA","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Qué se envía: el texto chino de una tarjeta, el pinyin, el significado, tu nota y las otras lecturas de la app — con cada tarjeta nueva y con cada tarjeta cuando tocas «Revisión» o «Traducir todas las tarjetas», y con una tarjeta en cuanto llegas a ella y todavía no tiene descripción. Cuando la lectura es difícil, una imagen del texto se envía a un proveedor que acepta imágenes — a veces la foto entera. Sin clave propia, este teléfono envía a través del relé del propietario de la app, que reenvía al proveedor y solo guarda un recuento.",
   "Check every new card with the AI automatically (when online)":"Revisar cada tarjeta nueva automáticamente con la IA (con conexión)","Review queue":"Cola de revisión","Storage":"Almacenamiento","Learning":"Aprendizaje",
   "Card order":"Orden de las tarjetas","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"Primero las tarjetas pendientes, luego hasta {0} nuevas, cada grupo de corta a larga. Esto fija el orden entre tarjetas de la misma longitud.",
   "Progress":"Progreso",
@@ -887,7 +837,7 @@ es:{
   "Sends anonymous usage counts to the app's owner once a day, and again when you leave the app after making a card: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"Envía una vez al día recuentos de uso anónimos al propietario de la app, y otra vez cuando sales de la app tras crear una tarjeta: días de uso, tarjetas creadas y repasadas, revisiones con IA y los mensajes de error de la app. Sin texto de las tarjetas, sin fotos.",
   "Your id: {0}.":"Tu identificador: {0}.","Send once a day":"Enviar una vez al día","Photos":"Fotos","Delete {0}":"Eliminar {0}",
   "Advanced settings":"Ajustes avanzados","Admin log in":"Inicio de sesión admin",
-  "Password":"Contraseña","Log in":"Iniciar sesión","Wrong password.":"Contraseña incorrecta.","About":"Acerca de",
+  "Password":"Contraseña","Log in":"Iniciar sesión","Wrong password.":"Contraseña incorrecta.",
   "Write a few words first.":"Escribe primero unas palabras.","No connection. Try again when online.":"Sin conexión. Inténtalo de nuevo con conexión.","Sending …":"Enviando …","Thank you, sent.":"Gracias, enviado.",
   "Could not send: {0}":"No se pudo enviar: {0}","No flagged cards.":"No hay tarjetas marcadas.","Image (stays on this phone)":"Imagen (se queda en este teléfono)","Whole photo":"Foto completa",
   "Remove image":"Quitar imagen","Add a card by hand.":"Añadir una tarjeta a mano.","Draw a character":"Dibujar un carácter","hello":"hola",
@@ -897,32 +847,29 @@ es:{
   "Crop again":"Recortar de nuevo","Pinyin and meaning are required.":"El pinyin y el significado son obligatorios.","Please enter Chinese text.":"Introduce un texto en chino.","Please enter a Chinese word.":"Introduce una palabra en chino.",
   "“{0}” is already in the deck.":"«{0}» ya está en el mazo.","“{0}” added.":"«{0}» añadida.","Export failed: {0}":"Error al exportar: {0}","Not a Zeichentrainer export (JSON).":"No es una exportación de Zeichentrainer (JSON).",
   "Export is empty — nothing to import.":"La exportación está vacía — nada que importar.","Import {0} and {1}?":"¿Importar {0} y {1}?","Existing entries of the same cards will be overwritten.":"Las entradas existentes de las mismas tarjetas se sobrescribirán.","Import failed ({0})":"Error al importar ({0})",
-  "Imported {0} and {1}":"{0} y {1} importadas",", {0} with photos":", {0} con fotos","({0} could not be read)":"({0} no se pudieron leer)","The file carries no photos; the photos on this phone were kept":"El archivo no contiene fotos; se conservaron las fotos de este teléfono",
+  "Imported {0} and {1}":"{0} y {1} importadas",", {0} with photos":", {0} con fotos","({0} could not be read)":"(no legibles: {0})","The file carries no photos; the photos on this phone were kept":"El archivo no contiene fotos; se conservaron las fotos de este teléfono",
   "Start over?":"¿Empezar de cero?","All progress, cards and inbox photos on this phone will be deleted.":"Se eliminarán todo el progreso, las tarjetas y las fotos de la bandeja en este teléfono.",
   "Delete everything":"Eliminar todo","Oldest first":"Más antiguas primero","Newest first":"Más recientes primero","Random":"Aleatorio",
   "suggestion":"{0} sugerencia","suggestions":"{0} sugerencias","progress entry":"{0} entrada de progreso","progress entries":"{0} entradas de progreso",
   /* the meaning in the app's language and the Translate-all row (v256) */
-  "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Los textos de la app y el significado de las tarjetas nuevas. Las tarjetas conservan el chino y el pinyin.","Meanings":"Significados","card has its meaning in another language.":"tarjeta tiene su significado en otro idioma.","cards have their meaning in another language.":"tarjetas tienen su significado en otro idioma.","Translate all cards into {0}":"Traducir todas las tarjetas al {0}","Translating {0} of {1} …":"Traduciendo {0} de {1} …","{0} translated, {1} left.":"{0} traducidas, {1} pendientes.","Done — {0} translated.":"Listo: traducción de {0}.",
+  "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Los textos de la app y el significado de las tarjetas nuevas. Las tarjetas conservan el chino y el pinyin.","Meanings":"Significados","card has its meaning in another language.":"tarjeta tiene su significado en otro idioma.","cards have their meaning in another language.":"tarjetas tienen su significado en otro idioma.","Translate all cards into {0}":"Traducir todas las tarjetas al {0}","Translating {0} of {1} …":"Traduciendo {0} de {1} …","{0} translated, {1} left.":"Traducidas: {0}; quedan {1}.","Done — {0} translated.":"Listo: traducción de {0}.",
   /* the More screen in the learner's order (v257) */
-  "Privacy":"Privacidad",
   /* the pill for a meaning in another language (v258) */
   "The meaning is in another language than the app.":"El significado está en otro idioma que la app.",
   /* How to use the app (v259) */
   "Take a photo":"Hacer una foto",
-  "Help":"Ayuda",
   "How to use the app":"Cómo usar la app",
   "Six short sections: photo, characters, learning, cards, language, what stays on the phone.":"Seis secciones cortas: foto, caracteres, aprender, tarjetas, idioma, qué se queda en el teléfono.",
   "Open":"Abrir",
   "Open source licenses":"Licencias de código abierto",
   "The software and data the app is built on, and who made them.":"El software y los datos en los que se basa la app, y quién los hizo.",
   "Fix the characters":"Corregir los caracteres",
-  
   "Swipe left or right to pick another card.":"Desliza a izquierda o derecha para elegir otra tarjeta.",
-  "Tap it — the text instead.": "Tócala – y aparece el texto.",
-  "Tap here — characters big.": "Toca aquí – todo en grande.",
+  "Tap it — what it means.": "Tócala – qué significa.",
+  "Open it — the whole card.": "Ábrela – toda la tarjeta.",
   "Trace the lit stroke.": "Sigue el trazo encendido.",
-  "Tap the photo for the whole text, and tap again for the photo.": "Toca la foto y todo el texto ocupa la parte de arriba; tócala otra vez y vuelve la foto.",
-  "A card starts with the photo big — a tap gives the whole text the top of the card, and the next tap the photo again.": "Una tarjeta empieza con la foto grande: un toque pone todo el texto arriba, y el siguiente devuelve la foto.",
+  "Tap the photo for the pinyin and the meaning, and again for the photo.": "Toca la foto para el pinyin y el significado, otra vez para la foto.",
+  "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "Una tarjeta empieza con la foto: esa es la pregunta. Un toque descubre el texto con su pinyin y su significado, y el siguiente devuelve la foto.",
 
 
   "Language and meanings":"Idioma y significados",
@@ -942,23 +889,21 @@ es:{
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"Una foto con varios textos — una pantalla de app, un panel de mandos, una carta — se convierte en una multitarjeta. Toca cualquier texto para consultarlo, y «Crear tarjeta» hace una tarjeta de los que quieras aprender.",
   "Every character under the photo is a button: tap one for other readings, or draw it with your finger. Pinyin and meaning follow by themselves and the AI checks them — flag a card when something still looks wrong.":"Cada carácter bajo la foto es un botón: tócalo para ver otras lecturas, o dibújalo con el dedo. El pinyin y el significado salen solos y la IA los revisa — marca la tarjeta si algo sigue raro.",
   "Due cards first, then up to eight new ones. The photo is the question and the pad is the answer: trace the lit stroke and it moves on by itself, character by character.":"Primero las tarjetas que tocan, luego hasta ocho nuevas. La foto es la pregunta y el panel la respuesta: repasa el trazo encendido y sigue solo, carácter a carácter.",
-  "Know the character? Write it your own way, in your own stroke order — the pad takes it once what you wrote matches.":"¿Ya te sabes el carácter? Escríbelo a tu manera, en tu propio orden de trazos: el panel lo acepta en cuanto coincide.",
-  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card sits folded at its foot, and what the card is about stands under it. Swipe sideways to pick another card — nothing is graded by swiping.":"¿Atascado? «Muéstrame» dibuja el trazo y «Saltar» completa el carácter. La tarjeta entera está plegada al pie, y debajo está de qué trata. Desliza a los lados para elegir otra tarjeta — deslizar no puntúa nada.",
+  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card — pinyin, meaning and what the text is about — is one tap away at its foot. Swipe sideways to pick another card — nothing is graded by swiping.":"¿Atascado? «Muéstrame» dibuja el trazo y «Saltar» completa el carácter. La tarjeta entera —pinyin, significado y de qué trata— está a un toque, abajo del todo. Desliza a los lados para elegir otra tarjeta — deslizar no puntúa nada.",
   "All your cards, newest first, with a tab of their own for multicards. Search them, filter them, and tap one to test, edit or delete it.":"Todas tus tarjetas, las más nuevas primero, con una pestaña aparte para las multitarjetas. Búscalas, fíltralas y toca una para probarla, editarla o borrarla.",
   "Tap a card's star for the ones that matter to you, and Learn can study those alone. Tags group the rest, and a card from a photo gets one for what it is.":"Toca la estrella de una tarjeta para las que te importan, y Aprender puede estudiar solo esas. Las etiquetas agrupan el resto, y una tarjeta de una foto recibe una según lo que es.",
   "More → Language switches the app's own texts, and new cards get their meaning in that language. Translate all cards does it for the ones you already have.":"Más → Idioma cambia los textos de la app, y las tarjetas nuevas reciben su significado en ese idioma. «Traducir todas las tarjetas» lo hace con las que ya tienes.",
-  "Your cards and photos stay on this phone and nowhere else — export them under More → Your data now and then.":"Tus tarjetas y fotos se quedan en este teléfono y en ningún otro sitio — expórtalas de vez en cuando en Más → Tus datos.",
-  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard.":"La revisión con IA envía el texto, el pinyin y el significado de una tarjeta, y una imagen del texto — a veces la foto entera — cuando la lectura es difícil.",
+  "Your cards and photos stay on this phone and nowhere else — export them under More → Your cards now and then.":"Tus tarjetas y fotos se quedan en este teléfono y en ningún otro sitio — expórtalas de vez en cuando en Más → Tus tarjetas.",
+  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"La revisión con IA envía el texto, el pinyin y el significado de una tarjeta, y una imagen del texto — a veces la foto entera — cuando la lectura es difícil. También pide por su cuenta las pocas frases de una tarjeta, en cuanto llegas a una que todavía no las tiene.",
 
   "Tap the star counter at the top to see how your points are counted.":"Toca el contador de estrellas de arriba para ver cómo se cuentan tus puntos.",
-  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under Privacy. Questions or ideas? More → Feedback.":"Una vez al día, y otra vez cuando sales de la app tras crear una tarjeta, van recuentos de uso anónimos y los mensajes de error de la app al propietario de la app; desactívalo en Privacidad. ¿Preguntas o ideas? Más → Comentarios.",
+  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Una vez al día, y otra vez cuando sales de la app tras crear una tarjeta, van recuentos de uso anónimos y los mensajes de error de la app al propietario de la app; desactívalo en Más → Datos de uso. ¿Preguntas o ideas? Más → Comentarios.",
 
 },
 ja:{
   "reading confidence {0}%":"読み取りの確からしさ {0}%","unknown {0}":"不明な文字：{0}","no dictionary meaning":"辞書に意味がありません","the text looks misread":"テキストの読み取りが誤っているようです","the framed area":"枠で囲んだ範囲","card image":"カードの画像","alt:photo":"写真",
   "Not yet checked":"まだ確認していない","tile:New":"新規",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"文字を長押しすると、その文字が入ったカードを順に見られます。もう一度長押しすると戻ります。",
-  
   "Whole card":"カード全体",
   "Explain":"解説",
   "Explaining …":"解説を作成中 …",
@@ -978,13 +923,12 @@ ja:{
   "not in the stroke set — draw it and tap Done":"画数データにない字です。書いてから「完了」をタップしてください",
 "⚑ Flag":"⚑ 印をつける",
 "card:⚑ Flagged":"⚑ 印あり",
-  "Update notes":"アップデートのお知らせ",
 "Tell me what is new after an update.":"アップデート後に新しくなったことを知らせる。",
 "Updated.":"アップデートしました。",
   "{0} to go, while the app is open.":"アプリを開いている間に、あと{0}。",
   "Waiting for its turn …":"順番待ち …",
   "Check all cards again":"すべてのカードを再チェック",
-  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"AIは日々よくなっています。カード全部をもう一度見てもらいましょう。足りない解説とタグはその場で補われ、本文の変更は取り込む前に確認できます。",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the missing tags and the few sentences that say what a card is about, and you see every change to a text before you accept it.":"AIは日々よくなっています。カード全部をもう一度見てもらいましょう。足りないタグと、そのカードが何についてかを説明する数行はその場で補われ、本文の変更は取り込む前に確認できます。",
   "Checking {0} of {1} …":"{0} / {1} をチェック中 …",
   "Done — {0} could be better. Look under the Cards tab.":"完了 — {0}はもっとよくなりそうです。カードタブで見てみましょう。",
   "Done — nothing to change. Your cards are in good shape.":"完了 — 変更はありません。カードはいい状態です。",
@@ -997,16 +941,8 @@ ja:{
   
   
   
-  
-  
-  
-  
-  
   "Translated {0} at {1}.":"{1}に{0}を翻訳しました。","Checked {0} at {1}.":"{1}に{0}を確認しました。","Done — {0} filled in.":"完了 — {0}を補いました。","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"完了 — {0}を補いました。{1}はもっとよくなりそうです。カードタブで見てみましょう。",
   "Undone — {0} put back.":"取り消しました — {0}を元に戻しました。",
-  
-  
-  
   
   
   "Filter":"フィルター",
@@ -1025,8 +961,6 @@ ja:{
   "Take photo":"写真を撮る",
   "From album":"アルバムから",
   "Processing photo …":"写真を処理中 …",
-  
-  
   
   
   "Crop":"切り抜き",
@@ -1135,7 +1069,6 @@ ja:{
   "Deck":"カード","Learn":"学習","Cards":"カード","Multicards":"マルチカード","Camera":"カメラ","More":"その他",
   "Generate flashcard":"カードを作る",
   "← Back to the flashcard":"← カードに戻る",
-  
   "Open the flashcard":"カードを開く",
   "From {0}":"{0} から",
   "Language":"言語",
@@ -1148,7 +1081,6 @@ ja:{
   "{0} learned, {1} reviewed this week, streak {2}":"習得 {0}、今週の復習 {1}、連続 {2}",
   "card":"カード{0}枚","cards":"カード{0}枚","day":"{0}日","days":"{0}日","review":"{0}回","reviews":"{0}回","photo":"写真{0}枚","photos":"写真{0}枚",
   "bar:AI suggestion":"AIの提案 {0} 件","bar:AI suggestions":"AIの提案 {0} 件",
-  
   "Traditional":"繁体字","Simplified":"簡体字","Nothing could be read.":"何も読み取れませんでした。","Reading the text …":"文字を読み取り中 …",
   "meaning unverified":"意味は未確認"," (translation pending)":"（翻訳待ち）"," (reading uncertain: {0})":"（読み取りが不確か: {0}）",
   "Also on another photo":"別の写真にもあります","Also on {0} other photos":"他の {0} 枚の写真にもあります","Show this photo":"この写真を表示","Open this card":"このカードを開く",
@@ -1162,7 +1094,7 @@ ja:{
   "No cards yet — take a photo under Camera, or tap + New.":"カードはまだありません。カメラで撮影するか、+ 新規をタップしてください。",
   "Search":"検索","+ New":"+ 新規","⚑ Flagged":"⚑ 要確認","Star":"スター","Starred":"スター付き","Unverified":"未確認","{0} of {1}":"{0} / {1}",
   "due":"今日","in {0} d":"{0}日後",
-  "Interval {0} d, ease {1}, {2}, next {3}.":"間隔 {0} 日、易しさ {1}、{2}、次回 {3}。",
+  "{0} so far, next on {1}.":"これまで{0}、次は{1}。",
   "Nothing read yet":"まだ読み取れていません","unverified":"未確認","translation pending":"翻訳待ち","reading uncertain":"読み取りが不確か",
   "The new frame is being read — the text follows when it is done.":"新しい範囲を読み取り中です。終わると文字が入ります。",
   "The text, pinyin and meaning follow when the reading is done.":"読み取りが終わると文字・ピンイン・意味が入ります。",
@@ -1183,10 +1115,10 @@ ja:{
   "Cards made from them keep their own picture. A photo that never made a card is gone.":"そこから作ったカードの画像はそのまま残ります。カードにならなかった写真はなくなります。","Persistent on this phone.":"この端末に永続的に保存されています。","Not persistent yet. Install the app so the system keeps the data.":"まだ永続的ではありません。データを保持するにはアプリをインストールしてください。",
   "Checking …":"確認中…","Share":"共有","Share the app":"アプリを共有","Send the link to a friend. The app installs from any browser, no store.":"友だちにリンクを送ってください。アプリはどのブラウザからでもインストールできます。ストアは不要です。",
   "Add screenshot":"スクリーンショットを追加","Sent, but the screenshot could not be attached.":"送信しましたが、スクリーンショットは添付できませんでした。","Feedback":"フィードバック","Tell the app's owner what works and what does not.":"アプリの所有者に、うまくいくこと・いかないことを伝えてください。","Your message":"メッセージ","Send":"送信",
-  "Your data":"データ","Export":"エクスポート","Progress and cards as one file, via the share sheet.":"学習記録とカードを1つのファイルにして、共有メニューから送ります。","Include photos (adds about {0} MB)":"写真を含める（約{0} MB増）",
+  "Export":"エクスポート","Progress and cards as one file, via the share sheet.":"学習記録とカードを1つのファイルにして、共有メニューから送ります。","Include photos (adds about {0} MB)":"写真を含める（約{0} MB増）",
   "Import":"インポート","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"zeichentrainer-….json.txt ファイル。既存のカードは上書きされます。",
   "Flagged cards":"印を付けたカード","{0} flagged for review. Share the list as text, for a teacher.":"{0}枚が要確認です。先生に見せるために、一覧をテキストで共有できます。",
-  "Show":"表示","Online AI review":"オンラインAI確認","AI review":"AI確認","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"送信されるもの：カードの中国語テキスト、ピンイン、意味、メモ、読み取りの別の候補。新しいカードすべてと、「見直し」「すべてのカードを翻訳」をタップしたときはすべてのカードが対象です。カードが表示されたときに、そのカードにまだ解説がなければ、そのカードだけが送られます。読み取りが難しいときは、文字の画像 — ときには写真全体 — が画像を受け付ける提供元に送られます。自分のキーがない端末はアプリ所有者の中継を通して送り、中継は提供元に転送して回数だけを記録します。",
+  "Show":"表示","AI review":"AI確認","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"送信されるもの：カードの中国語テキスト、ピンイン、意味、メモ、読み取りの別の候補。新しいカードすべてと、「見直し」「すべてのカードを翻訳」をタップしたときはすべてのカードが対象です。カードが表示されたときに、そのカードにまだ解説がなければ、そのカードだけが送られます。読み取りが難しいときは、文字の画像 — ときには写真全体 — が画像を受け付ける提供元に送られます。自分のキーがない端末はアプリ所有者の中継を通して送り、中継は提供元に転送して回数だけを記録します。",
   "Check every new card with the AI automatically (when online)":"新しいカードを自動でAIに確認させる（オンライン時）","Review queue":"確認待ち","Storage":"ストレージ","Learning":"学習",
   "Card order":"カードの順序","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"復習カードが先、その後に新しいカードが最大{0}枚。どちらも短いものから長いものへ。ここでは同じ長さのカード同士の順序を決めます。",
   "Progress":"進み具合",
@@ -1194,7 +1126,7 @@ ja:{
   "Sends anonymous usage counts to the app's owner once a day, and again when you leave the app after making a card: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"1日1回、そしてカードを作ってアプリを離れるときにもう一度、匿名の利用回数をアプリの所有者に送ります：使用日数、作成・復習したカード、AI確認、アプリのエラーメッセージ。カードの内容や写真は送りません。",
   "Your id: {0}.":"あなたのID：{0}","Send once a day":"1日1回送信","Photos":"写真","Delete {0}":"{0}枚を削除",
   "Advanced settings":"詳細設定","Admin log in":"管理者ログイン",
-  "Password":"パスワード","Log in":"ログイン","Wrong password.":"パスワードが違います。","About":"このアプリについて",
+  "Password":"パスワード","Log in":"ログイン","Wrong password.":"パスワードが違います。",
   "Write a few words first.":"先に何か書いてください。","No connection. Try again when online.":"接続がありません。オンラインでもう一度お試しください。","Sending …":"送信中…","Thank you, sent.":"送信しました。ありがとうございます。",
   "Could not send: {0}":"送信できませんでした：{0}","No flagged cards.":"印を付けたカードはありません。","Image (stays on this phone)":"画像（この端末に残ります）","Whole photo":"写真全体",
   "Remove image":"画像を削除","Add a card by hand.":"カードを手入力で追加します。","Draw a character":"文字を手書き","hello":"こんにちは",
@@ -1211,25 +1143,22 @@ ja:{
   /* the meaning in the app's language and the Translate-all row (v256) */
   "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"アプリの表示と新しいカードの意味。カードの中国語とピンインはそのままです。","Meanings":"意味","card has its meaning in another language.":"カード{0}枚の意味が別の言語になっています。","cards have their meaning in another language.":"カード{0}枚の意味が別の言語になっています。","Translate all cards into {0}":"すべてのカードを{0}に翻訳","Translating {0} of {1} …":"翻訳中 {0} / {1}…","{0} translated, {1} left.":"{0}枚を翻訳、残り{1}枚。","Done — {0} translated.":"完了。{0}を翻訳しました。",
   /* the More screen in the learner's order (v257) */
-  "Privacy":"プライバシー",
   /* the pill for a meaning in another language (v258) */
   "The meaning is in another language than the app.":"意味がアプリと別の言語になっています。",
   /* How to use the app (v259) */
   "Take a photo":"写真を撮る",
-  "Help":"ヘルプ",
   "How to use the app":"アプリの使い方",
   "Six short sections: photo, characters, learning, cards, language, what stays on the phone.":"短い6つの項目：写真、文字、学習、カード、言語、端末に残るもの。",
   "Open":"開く",
   "Open source licenses":"オープンソースライセンス",
   "The software and data the app is built on, and who made them.":"このアプリが使っているソフトウェアとデータ、そしてその作者。",
   "Fix the characters":"文字を直す",
-  
   "Swipe left or right to pick another card.":"左右にスワイプすると別のカードを選べます。",
-  "Tap it — the text instead.": "タップで文字に切り替え",
-  "Tap here — characters big.": "ここをタップ：文字が大きく",
+  "Tap it — what it means.": "タップ – 意味が出る。",
+  "Open it — the whole card.": "開く – カード全体。",
   "Trace the lit stroke.": "光った線をなぞる",
-  "Tap the photo for the whole text, and tap again for the photo.": "写真をタップすると文字全体が上に出ます。もう一度タップすると写真に戻ります。",
-  "A card starts with the photo big — a tap gives the whole text the top of the card, and the next tap the photo again.": "カードは写真が大きい状態で始まります。タップすると文字全体が上に出て、もう一度タップすると写真に戻ります。",
+  "Tap the photo for the pinyin and the meaning, and again for the photo.": "写真をタップするとピンインと意味、もう一度タップすると写真に戻ります。",
+  "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "カードは写真から始まります。それが問いです。タップすると文字がピンインと意味つきで現れ、もう一度タップすると写真に戻ります。",
 
 
   "Language and meanings":"言語と意味",
@@ -1249,23 +1178,21 @@ ja:{
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"文字がいくつもある写真 — アプリの画面、操作パネル、メニュー表 — は「マルチカード」になります。写真の文字をタップすれば意味が出て、「カードを作る」で覚えたいものだけカードにできます。",
   "Every character under the photo is a button: tap one for other readings, or draw it with your finger. Pinyin and meaning follow by themselves and the AI checks them — flag a card when something still looks wrong.":"写真の下の文字はどれもボタンです。タップすると別の読み方が出ますし、指で書くこともできます。ピンインと意味は自動で入り、AIが確認します。それでもおかしいときはカードに印をつけましょう。",
   "Due cards first, then up to eight new ones. The photo is the question and the pad is the answer: trace the lit stroke and it moves on by itself, character by character.":"まず今日の復習カード、それから新しいカードが最大8枚。写真が問題で、パッドが答えです。光っている画をなぞると、一文字ずつ自動で進みます。",
-  "Know the character? Write it your own way, in your own stroke order — the pad takes it once what you wrote matches.":"知っている字なら、自分の書き順でそのまま書いてください。合っていればパッドがそのまま受け取ります。",
-  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card sits folded at its foot, and what the card is about stands under it. Swipe sideways to pick another card — nothing is graded by swiping.":"手が止まったら、「見せて」が画を描き、「スキップ」が文字を埋めます。カード全体はいちばん下にたたんであり、その下にこのカードが何についてかが出ています。横にスワイプすれば別のカードを選べます。スワイプでは何も採点されません。",
+  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card — pinyin, meaning and what the text is about — is one tap away at its foot. Swipe sideways to pick another card — nothing is graded by swiping.":"手が止まったら、「見せて」が画を描き、「スキップ」が文字を埋めます。カード全体（ピンイン・意味・何についてか）は、いちばん下をタップすればすぐ出ます。横にスワイプすれば別のカードを選べます。スワイプでは何も採点されません。",
   "All your cards, newest first, with a tab of their own for multicards. Search them, filter them, and tap one to test, edit or delete it.":"カードが新しい順に並びます。マルチカードは別のタブです。検索や絞り込みができ、タップすればテスト・編集・削除ができます。",
   "Tap a card's star for the ones that matter to you, and Learn can study those alone. Tags group the rest, and a card from a photo gets one for what it is.":"気になるカードは星を押しておくと、学習でそれだけを練習できます。残りはタグでまとまり、写真から作ったカードには何の写真かのタグが付きます。",
   "More → Language switches the app's own texts, and new cards get their meaning in that language. Translate all cards does it for the ones you already have.":"「その他 → 言語」でアプリの文章を切り替えると、新しいカードの意味もその言語で入ります。すでにあるカードは「すべてのカードを翻訳」でまとめて変えられます。",
-  "Your cards and photos stay on this phone and nowhere else — export them under More → Your data now and then.":"カードも写真もこの端末だけに残ります。ときどき「その他 → データ」から書き出しておきましょう。",
-  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard.":"AI確認はカードの文字・ピンイン・意味を送ります。読み取りが難しいときは、文字の画像 — ときには写真全体 — も送ります。",
+  "Your cards and photos stay on this phone and nowhere else — export them under More → Your cards now and then.":"カードも写真もこの端末だけに残ります。ときどき「その他 → カード」から書き出しておきましょう。",
+  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"AI確認はカードの文字・ピンイン・意味を送ります。読み取りが難しいときは、文字の画像 — ときには写真全体 — も送ります。まだ解説のないカードに進むと、そのカードの解説も自分から問い合わせます。",
 
   "Tap the star counter at the top to see how your points are counted.":"上の星のカウンターをタップすると、ポイントの数え方がわかります。",
-  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under Privacy. Questions or ideas? More → Feedback.":"1日1回、そしてカードを作ってアプリを離れるときにもう一度、匿名の利用回数とアプリのエラーメッセージがアプリの所有者に送られます。プライバシーでオフにできます。質問やアイデアは「その他 → フィードバック」へ。",
+  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"1日1回、そしてカードを作ってアプリを離れるときにもう一度、匿名の利用回数とアプリのエラーメッセージがアプリの所有者に送られます。「その他 → 利用状況の送信」でオフにできます。質問やアイデアは「その他 → フィードバック」へ。",
 
 },
 ko:{
   "reading confidence {0}%":"읽기 신뢰도 {0}%","unknown {0}":"모르는 글자: {0}","no dictionary meaning":"사전에 뜻이 없어요","the text looks misread":"글자를 잘못 읽은 것 같아요","the framed area":"틀로 감싼 부분","card image":"카드 이미지","alt:photo":"사진",
   "Not yet checked":"아직 확인 안 함","tile:New":"새 카드",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"글자를 길게 누르면 그 글자가 든 카드를 차례로 볼 수 있어요. 다시 길게 누르면 돌아와요.",
-  
   "Whole card":"카드 전체",
   "Explain":"설명",
   "Explaining …":"설명 만드는 중 …",
@@ -1285,13 +1212,12 @@ ko:{
   "not in the stroke set — draw it and tap Done":"획 데이터에 없는 글자예요. 그린 다음 완료를 누르세요",
 "⚑ Flag":"⚑ 표시",
 "card:⚑ Flagged":"⚑ 표시됨",
-  "Update notes":"업데이트 소식",
 "Tell me what is new after an update.":"업데이트한 뒤에 뭐가 새로워졌는지 알려줘요.",
 "Updated.":"업데이트했어요.",
   "{0} to go, while the app is open.":"{0} 남았어요. 앱이 열려 있는 동안 진행돼요.",
   "Waiting for its turn …":"차례를 기다리는 중 …",
   "Check all cards again":"모든 카드 다시 확인",
-  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"AI는 계속 좋아져요. 카드 전체를 다시 한번 보게 해요 — 빠진 설명과 태그는 바로 채워지고, 본문 변경은 반영하기 전에 볼 수 있어요.",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the missing tags and the few sentences that say what a card is about, and you see every change to a text before you accept it.":"AI는 계속 좋아져요. 카드 전체를 다시 한번 보게 해요 — 빠진 태그와 그 카드가 무엇에 대한 것인지 말해 주는 몇 문장은 바로 채워지고, 본문 변경은 반영하기 전에 볼 수 있어요.",
   "Checking {0} of {1} …":"{0} / {1} 확인 중 …",
   "Done — {0} could be better. Look under the Cards tab.":"완료 — {0}을 더 좋게 만들 수 있어요. 카드 탭에서 확인해요.",
   "Done — nothing to change. Your cards are in good shape.":"완료 — 바꿀 게 없어요. 카드 상태가 좋아요.",
@@ -1304,16 +1230,8 @@ ko:{
   
   
   
-  
-  
-  
-  
-  
   "Translated {0} at {1}.":"{1}에 {0} 번역했어요.","Checked {0} at {1}.":"{1}에 {0} 점검했어요.","Done — {0} filled in.":"완료 — {0} 채웠어요.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"완료 — {0} 채웠어요. {1}을 더 좋게 만들 수 있어요. 카드 탭에서 확인해요.",
   "Undone — {0} put back.":"되돌렸어요 — {0} 복구했어요.",
-  
-  
-  
   
   
   "Filter":"필터",
@@ -1332,8 +1250,6 @@ ko:{
   "Take photo":"사진 찍기",
   "From album":"앨범에서",
   "Processing photo …":"사진 처리 중 …",
-  
-  
   
   
   "Crop":"자르기",
@@ -1442,7 +1358,6 @@ ko:{
   "Deck":"카드","Learn":"학습","Cards":"카드","Multicards":"멀티카드","Camera":"카메라","More":"더보기",
   "Generate flashcard":"카드 만들기",
   "← Back to the flashcard":"← 카드로 돌아가기",
-  
   "Open the flashcard":"카드 열기",
   "From {0}":"{0}에서",
   "Language":"언어",
@@ -1455,7 +1370,6 @@ ko:{
   "{0} learned, {1} reviewed this week, streak {2}":"학습 {0}, 이번 주 복습 {1}, 연속 {2}",
   "card":"카드 {0}장","cards":"카드 {0}장","day":"{0}일","days":"{0}일","review":"{0}회","reviews":"{0}회","photo":"사진 {0}장","photos":"사진 {0}장",
   "bar:AI suggestion":"AI 제안 {0}개","bar:AI suggestions":"AI 제안 {0}개",
-  
   "Traditional":"번체자","Simplified":"간체자","Nothing could be read.":"아무것도 읽지 못했어요.","Reading the text …":"글자를 읽는 중 …",
   "meaning unverified":"뜻 미확인"," (translation pending)":" (번역 대기)"," (reading uncertain: {0})":" (읽기 불확실: {0})",
   "Also on another photo":"다른 사진에도 있음","Also on {0} other photos":"다른 사진 {0}장에도 있음","Show this photo":"이 사진 보기","Open this card":"이 카드 열기",
@@ -1469,7 +1383,7 @@ ko:{
   "No cards yet — take a photo under Camera, or tap + New.":"아직 카드가 없어요. 카메라에서 사진을 찍거나 + 새로 만들기를 누르세요.",
   "Search":"검색","+ New":"+ 새로 만들기","⚑ Flagged":"⚑ 표시됨","Star":"별표","Starred":"별표 있음","Unverified":"미확인","{0} of {1}":"{0} / {1}",
   "due":"오늘","in {0} d":"{0}일 후",
-  "Interval {0} d, ease {1}, {2}, next {3}.":"간격 {0}일, 난이도 계수 {1}, {2}, 다음 {3}.",
+  "{0} so far, next on {1}.":"지금까지 {0}, 다음은 {1}.",
   "Nothing read yet":"아직 읽지 못함","unverified":"미확인","translation pending":"번역 대기","reading uncertain":"읽기 불확실",
   "The new frame is being read — the text follows when it is done.":"새 영역을 읽는 중이에요. 끝나면 글자가 채워져요.",
   "The text, pinyin and meaning follow when the reading is done.":"읽기가 끝나면 글자, 병음, 뜻이 채워져요.",
@@ -1490,10 +1404,10 @@ ko:{
   "Cards made from them keep their own picture. A photo that never made a card is gone.":"거기서 만든 카드의 사진은 그대로 남아요. 카드가 되지 않은 사진은 사라져요.","Persistent on this phone.":"이 휴대폰에 영구 저장돼요.","Not persistent yet. Install the app so the system keeps the data.":"아직 영구 저장이 아니에요. 데이터를 유지하려면 앱을 설치하세요.",
   "Checking …":"확인 중…","Share":"공유","Share the app":"앱 공유","Send the link to a friend. The app installs from any browser, no store.":"친구에게 링크를 보내세요. 앱은 어떤 브라우저에서든 스토어 없이 설치돼요.",
   "Add screenshot":"스크린샷 첨부","Sent, but the screenshot could not be attached.":"보냈어요. 다만 스크린샷은 첨부하지 못했어요.","Feedback":"피드백","Tell the app's owner what works and what does not.":"앱 소유자에게 잘 되는 점과 안 되는 점을 알려주세요.","Your message":"메시지","Send":"보내기",
-  "Your data":"내 데이터","Export":"내보내기","Progress and cards as one file, via the share sheet.":"진행 상황과 카드를 한 파일로, 공유 메뉴를 통해 내보내요.","Include photos (adds about {0} MB)":"사진 포함 (약 {0} MB 추가)",
+  "Export":"내보내기","Progress and cards as one file, via the share sheet.":"진행 상황과 카드를 한 파일로, 공유 메뉴를 통해 내보내요.","Include photos (adds about {0} MB)":"사진 포함 (약 {0} MB 추가)",
   "Import":"가져오기","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"zeichentrainer-….json.txt 파일. 기존 카드는 덮어써요.",
   "Flagged cards":"표시한 카드","{0} flagged for review. Share the list as text, for a teacher.":"{0}장이 확인 대상이에요. 선생님께 보내도록 목록을 텍스트로 공유하세요.",
-  "Show":"보기","Online AI review":"온라인 AI 확인","AI review":"AI 확인","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"전송되는 것: 카드의 중국어 텍스트, 병음, 뜻, 메모, 읽기가 찾아낸 다른 후보. 새 카드를 만들 때마다 전송되고, ‘점검’, ‘모든 카드를 번역’를 누르면 모든 카드가, 카드를 보게 됐을 때 그 카드에 아직 설명이 없으면 그 카드 하나가 전송돼요. 읽기가 어려울 때는 글자가 담긴 사진이, 때로는 사진 전체가 이미지를 받는 제공자에게 전송돼요. 자체 키가 없는 휴대폰은 앱 소유자의 중계를 통해 보내며, 중계는 제공자에게 전달하고 횟수만 기록해요.",
+  "Show":"보기","AI review":"AI 확인","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"전송되는 것: 카드의 중국어 텍스트, 병음, 뜻, 메모, 읽기가 찾아낸 다른 후보. 새 카드를 만들 때마다 전송되고, ‘점검’, ‘모든 카드를 번역’를 누르면 모든 카드가, 카드를 보게 됐을 때 그 카드에 아직 설명이 없으면 그 카드 하나가 전송돼요. 읽기가 어려울 때는 글자가 담긴 사진이, 때로는 사진 전체가 이미지를 받는 제공자에게 전송돼요. 자체 키가 없는 휴대폰은 앱 소유자의 중계를 통해 보내며, 중계는 제공자에게 전달하고 횟수만 기록해요.",
   "Check every new card with the AI automatically (when online)":"새 카드를 자동으로 AI로 확인 (온라인일 때)","Review queue":"확인 대기열","Storage":"저장 공간","Learning":"학습",
   "Card order":"카드 순서","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"복습할 카드가 먼저, 그다음 새 카드 최대 {0}장. 각 그룹은 짧은 것부터 긴 것 순이에요. 여기서는 길이가 같은 카드끼리의 순서를 정해요.",
   "Progress":"진행 상황",
@@ -1501,7 +1415,7 @@ ko:{
   "Sends anonymous usage counts to the app's owner once a day, and again when you leave the app after making a card: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"하루 한 번, 그리고 카드를 만든 뒤 앱을 나갈 때 한 번 더 익명의 사용 횟수를 앱 소유자에게 보내요: 사용 일수, 만들고 복습한 카드, AI 확인, 앱의 오류 메시지. 카드 내용과 사진은 보내지 않아요.",
   "Your id: {0}.":"내 ID: {0}.","Send once a day":"하루 한 번 보내기","Photos":"사진","Delete {0}":"{0}장 삭제",
   "Advanced settings":"고급 설정","Admin log in":"관리자 로그인",
-  "Password":"비밀번호","Log in":"로그인","Wrong password.":"비밀번호가 틀렸어요.","About":"정보",
+  "Password":"비밀번호","Log in":"로그인","Wrong password.":"비밀번호가 틀렸어요.",
   "Write a few words first.":"먼저 몇 마디 적어주세요.","No connection. Try again when online.":"연결이 없어요. 온라인일 때 다시 시도하세요.","Sending …":"보내는 중…","Thank you, sent.":"보냈어요. 고마워요.",
   "Could not send: {0}":"보낼 수 없어요: {0}","No flagged cards.":"표시한 카드가 없어요.","Image (stays on this phone)":"이미지 (이 휴대폰에 남음)","Whole photo":"전체 사진",
   "Remove image":"이미지 제거","Add a card by hand.":"카드를 직접 추가해요.","Draw a character":"글자 쓰기","hello":"안녕하세요",
@@ -1518,25 +1432,22 @@ ko:{
   /* the meaning in the app's language and the Translate-all row (v256) */
   "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"앱의 표시 언어와 새 카드의 뜻. 카드의 중국어와 병음은 그대로예요.","Meanings":"뜻","card has its meaning in another language.":"카드 {0}장의 뜻이 다른 언어로 되어 있어요.","cards have their meaning in another language.":"카드 {0}장의 뜻이 다른 언어로 되어 있어요.","Translate all cards into {0}":"모든 카드를 {0}(으)로 번역","Translating {0} of {1} …":"번역 중 {0} / {1}…","{0} translated, {1} left.":"{0}장 번역됨, {1}장 남음.","Done — {0} translated.":"완료. {0}을(를) 번역했어요.",
   /* the More screen in the learner's order (v257) */
-  "Privacy":"개인정보",
   /* the pill for a meaning in another language (v258) */
   "The meaning is in another language than the app.":"뜻이 앱과 다른 언어로 되어 있어요.",
   /* How to use the app (v259) */
   "Take a photo":"사진 찍기",
-  "Help":"도움말",
   "How to use the app":"앱 사용법",
   "Six short sections: photo, characters, learning, cards, language, what stays on the phone.":"짧은 여섯 항목: 사진, 글자, 학습, 카드, 언어, 휴대폰에 남는 것.",
   "Open":"열기",
   "Open source licenses":"오픈소스 라이선스",
   "The software and data the app is built on, and who made them.":"앱이 사용하는 소프트웨어와 데이터, 그리고 만든 사람들이에요.",
   "Fix the characters":"글자 고치기",
-  
   "Swipe left or right to pick another card.":"좌우로 밀면 다른 카드를 고를 수 있어요.",
-  "Tap it — the text instead.": "탭하면 글자로",
-  "Tap here — characters big.": "여기 누르면 글자가 크게",
+  "Tap it — what it means.": "누르면 – 무슨 뜻인지.",
+  "Open it — the whole card.": "열면 – 카드 전체.",
   "Trace the lit stroke.": "켜진 획을 따라 긋기",
-  "Tap the photo for the whole text, and tap again for the photo.": "사진을 탭하면 글자 전체가 위에 나와요. 다시 탭하면 사진으로 돌아가요.",
-  "A card starts with the photo big — a tap gives the whole text the top of the card, and the next tap the photo again.": "카드는 사진이 크게 열려요. 탭하면 글자 전체가 위에 나오고, 다시 탭하면 사진으로 돌아가요.",
+  "Tap the photo for the pinyin and the meaning, and again for the photo.": "사진을 누르면 병음과 뜻, 한 번 더 누르면 사진으로 돌아가요.",
+  "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "카드는 사진으로 시작해요. 그게 문제예요. 한 번 누르면 병음과 뜻이 있는 글자가 나오고, 다시 누르면 사진으로 돌아가요.",
 
 
   "Language and meanings":"언어와 뜻",
@@ -1556,16 +1467,15 @@ ko:{
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"글자가 여러 개인 사진 — 앱 화면, 조작 패널, 메뉴판 — 은 멀티카드가 돼요. 사진 위의 글자를 누르면 뜻이 나오고, 카드 만들기로 배우고 싶은 것만 카드로 만들 수 있어요.",
   "Every character under the photo is a button: tap one for other readings, or draw it with your finger. Pinyin and meaning follow by themselves and the AI checks them — flag a card when something still looks wrong.":"사진 아래 글자는 모두 버튼이에요. 누르면 다른 후보가 나오고, 손가락으로 그려도 돼요. 병음과 뜻은 알아서 채워지고 AI가 확인해요. 그래도 이상하면 카드에 표시해 두세요.",
   "Due cards first, then up to eight new ones. The photo is the question and the pad is the answer: trace the lit stroke and it moves on by itself, character by character.":"오늘 볼 카드가 먼저, 그다음 새 카드가 최대 여덟 장이에요. 사진이 문제이고 쓰기판이 답이에요. 밝게 켜진 획을 따라 그으면 한 글자씩 저절로 넘어가요.",
-  "Know the character? Write it your own way, in your own stroke order — the pad takes it once what you wrote matches.":"아는 글자라면 원하는 획순으로 그냥 써 보세요. 맞으면 쓰기판이 그대로 받아 줘요.",
-  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card sits folded at its foot, and what the card is about stands under it. Swipe sideways to pick another card — nothing is graded by swiping.":"막혔나요? 보여줘가 획을 그려 주고, 건너뛰기가 글자를 채워 줘요. 카드 전체는 맨 아래에 접혀 있고, 그 아래에 이 카드가 무엇에 대한 것인지가 나와요. 옆으로 밀면 다른 카드를 고를 수 있고, 미는 것으로는 아무것도 채점되지 않아요.",
+  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card — pinyin, meaning and what the text is about — is one tap away at its foot. Swipe sideways to pick another card — nothing is graded by swiping.":"막혔나요? 보여줘가 획을 그려 주고, 건너뛰기가 글자를 채워 줘요. 카드 전체 — 병음, 뜻, 무엇에 대한 것인지 — 는 맨 아래를 한 번 누르면 나와요. 옆으로 밀면 다른 카드를 고를 수 있고, 미는 것으로는 아무것도 채점되지 않아요.",
   "All your cards, newest first, with a tab of their own for multicards. Search them, filter them, and tap one to test, edit or delete it.":"카드가 최신순으로 모두 모여 있고, 멀티카드는 따로 탭이 있어요. 검색하고 걸러 볼 수 있고, 하나를 누르면 테스트·편집·삭제할 수 있어요.",
   "Tap a card's star for the ones that matter to you, and Learn can study those alone. Tags group the rest, and a card from a photo gets one for what it is.":"마음이 가는 카드는 별표를 눌러 두면 학습에서 그것만 볼 수 있어요. 나머지는 태그로 묶이고, 사진에서 만든 카드에는 무엇을 찍은 것인지 태그가 붙어요.",
   "More → Language switches the app's own texts, and new cards get their meaning in that language. Translate all cards does it for the ones you already have.":"더보기 → 언어에서 앱의 문구를 바꾸면, 새 카드의 뜻도 그 언어로 들어와요. 이미 있는 카드는 모든 카드 번역으로 한 번에 바꿀 수 있어요.",
-  "Your cards and photos stay on this phone and nowhere else — export them under More → Your data now and then.":"카드와 사진은 이 휴대폰에만 남아요. 가끔 더보기 → 내 데이터에서 내보내 두세요.",
-  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard.":"AI 확인은 카드의 글자와 병음, 뜻을 보내요. 읽기가 어려울 때는 글자 사진 — 때로는 사진 전체 — 도 함께 보내요.",
+  "Your cards and photos stay on this phone and nowhere else — export them under More → Your cards now and then.":"카드와 사진은 이 휴대폰에만 남아요. 가끔 더보기 → 내 카드에서 내보내 두세요.",
+  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"AI 확인은 카드의 글자와 병음, 뜻을 보내요. 읽기가 어려울 때는 글자 사진 — 때로는 사진 전체 — 도 함께 보내요. 설명이 아직 없는 카드를 보게 되면 그 카드의 설명도 알아서 물어봐요.",
 
   "Tap the star counter at the top to see how your points are counted.":"위쪽 별 카운터를 누르면 포인트가 어떻게 쌓이는지 볼 수 있어요.",
-  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under Privacy. Questions or ideas? More → Feedback.":"하루 한 번, 그리고 카드를 만든 뒤 앱을 나갈 때 한 번 더 익명의 사용 횟수와 앱의 오류 메시지가 앱 소유자에게 가요. 개인정보에서 끌 수 있어요. 질문이나 아이디어가 있으면 더보기 → 피드백.",
+  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"하루 한 번, 그리고 카드를 만든 뒤 앱을 나갈 때 한 번 더 익명의 사용 횟수와 앱의 오류 메시지가 앱 소유자에게 가요. 더보기 → 사용 정보 공유에서 끌 수 있어요. 질문이나 아이디어가 있으면 더보기 → 피드백.",
 
 },
 /* Russian (v401, H: "Ergaenze russisch als sprache") — "ты" throughout, as every column since v255. Three forms per count
@@ -1575,7 +1485,6 @@ ru:{
   "reading confidence {0}%":"уверенность распознавания {0} %","unknown {0}":"неизвестные знаки: {0}","no dictionary meaning":"нет значения в словаре","the text looks misread":"текст, похоже, прочитан неверно","the framed area":"область в рамке","card image":"картинка карточки","alt:photo":"фото",
   "Not yet checked":"Ещё не проверены","tile:New":"Новая",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Удерживай иероглиф, чтобы пройти по всем карточкам с ним; удержи его ещё раз, чтобы вернуться.",
-  
   "Whole card":"Вся карточка",
   "Explain":"Объяснить",
   "Explaining …":"Объясняю …",
@@ -1595,13 +1504,12 @@ ru:{
   "not in the stroke set — draw it and tap Done":"нет в базе черт — нарисуй и нажми «Готово»",
 "⚑ Flag":"⚑ Метка",
 "card:⚑ Flagged":"⚑ С меткой",
-  "Update notes":"Что нового",
 "Tell me what is new after an update.":"Показывать, что нового после обновления.",
 "Updated.":"Обновлено.",
   "{0} to go, while the app is open.":"Осталось {0}, пока приложение открыто.",
   "Waiting for its turn …":"Ждёт своей очереди …",
   "Check all cards again":"Проверить все карточки",
-  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"ИИ становится всё лучше. Дай ему ещё раз взглянуть на всю колоду — недостающие описания и теги он добавит сразу, а каждое изменение текста ты увидишь до того, как примешь его.",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the missing tags and the few sentences that say what a card is about, and you see every change to a text before you accept it.":"ИИ становится всё лучше. Дай ему ещё раз взглянуть на всю колоду — недостающие теги и те несколько фраз о том, про что карточка, он добавит сразу, а каждое изменение текста ты увидишь до того, как примешь его.",
   "Checking {0} of {1} …":"Проверяю {0} из {1} …",
   "Done — {0} could be better. Look under the Cards tab.":"Готово — можно улучшить: {0}. Ищи во вкладке «Карточки».",
   "Done — nothing to change. Your cards are in good shape.":"Готово — менять нечего. С твоими карточками всё в порядке.",
@@ -1614,16 +1522,8 @@ ru:{
   
   
   
-  
-  
-  
-  
-  
   "Translated {0} at {1}.":"{0} — перевод сделан: {1}.","Checked {0} at {1}.":"{0} — проверка сделана: {1}.","Done — {0} filled in.":"Готово — дополнено: {0}.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Готово — дополнено: {0}; можно улучшить: {1}. Ищи во вкладке «Карточки».",
   "Undone — {0} put back.":"Отменено: {0} на месте.",
-  
-  
-  
   
   
   "Filter":"Фильтр",
@@ -1642,8 +1542,6 @@ ru:{
   "Take photo":"Сделать фото",
   "From album":"Из галереи",
   "Processing photo …":"Обрабатываю фото …",
-  
-  
   
   
   "Crop":"Обрезать",
@@ -1752,7 +1650,6 @@ ru:{
   "Deck":"Колода","Learn":"Учить","Cards":"Карточки","Multicards":"Мультикарточки","Camera":"Камера","More":"Ещё",
   "Generate flashcard":"Создать карточку",
   "← Back to the flashcard":"← К карточке",
-  
   "Open the flashcard":"Открыть карточку",
   "From {0}":"Из {0}",
   "Language":"Язык",
@@ -1766,7 +1663,6 @@ ru:{
   "{0} learned, {1} reviewed this week, streak {2}":"Выучено: {0}, повторов за неделю {1}, серия {2}",
   "card":"{0} карточка","cards":"{0} карточки","cards#many":"{0} карточек","day":"{0} день","days":"{0} дня","days#many":"{0} дней","review":"{0} повтор","reviews":"{0} повтора","reviews#many":"{0} повторов","photo":"{0} фото","photos":"{0} фото","photos#many":"{0} фото",
   "bar:AI suggestion":"{0} предложение ИИ","bar:AI suggestions":"{0} предложения ИИ","bar:AI suggestions#many":"{0} предложений ИИ",
-  
   "Traditional":"Традиционные","Simplified":"Упрощённые","Nothing could be read.":"Прочитать ничего не вышло.","Reading the text …":"Читаю текст …",
   "meaning unverified":"значение не проверено"," (translation pending)":" (перевод ещё не готов)"," (reading uncertain: {0})":" (чтение неточное: {0})",
   "Also on another photo":"Есть и на другом фото","Also on {0} other photos":"Есть ещё на {0} фото","Show this photo":"Показать это фото","Open this card":"Открыть эту карточку",
@@ -1780,7 +1676,7 @@ ru:{
   "No cards yet — take a photo under Camera, or tap + New.":"Карточек пока нет — сделай фото во вкладке «Камера» или нажми + Новая.",
   "Search":"Поиск","+ New":"+ Новая","⚑ Flagged":"⚑ С меткой","Star":"Звезда","Starred":"Со звездой","Unverified":"Не проверено","{0} of {1}":"{0} из {1}",
   "due":"пора","in {0} d":"через {0} д",
-  "Interval {0} d, ease {1}, {2}, next {3}.":"Интервал {0} д, лёгкость {1}, {2}, дальше {3}.",
+  "{0} so far, next on {1}.":"Пока {0}, следующее {1}.",
   "Nothing read yet":"Пока ничего не прочитано","unverified":"не проверено","translation pending":"перевод ещё не готов","reading uncertain":"чтение неточное",
   "The new frame is being read — the text follows when it is done.":"Читаю новую рамку — текст появится, когда закончу.",
   "The text, pinyin and meaning follow when the reading is done.":"Текст, пиньинь и значение появятся, когда чтение закончится.",
@@ -1797,14 +1693,14 @@ ru:{
   "{0} ready. Accept or dismiss under Cards.":"Готово: {0}. Прими или отклони во вкладке «Карточки».","Failed: {0}":"Не получилось: {0}","Link copied.":"Ссылка скопирована.","The link: {0}":"Ссылка: {0}",
   "Off. Nothing is sent.":"Выключено. Ничего не отправляется.","Last sent today.":"Последняя отправка сегодня.","Last sent {0}.":"Последняя отправка: {0}.","Not sent yet.":"Пока не отправлялось.",
   "Last export: today.":"Последний экспорт: сегодня.","Last export: {0} ago.":"Последний экспорт: {0} назад.","Never exported.":"Экспорта ещё не было.","Export now — the cards exist only on this phone.":"Сделай экспорт — карточки есть только на этом телефоне.",
-  "{0} in the inbox":"Во входящих {0}",", {0} older than {1} days":", из них {0} старше {1} дней","Delete {0} old photos?":"Удалить {0} старых фото?","Delete one old photo?":"Удалить одно старое фото?",
+  "{0} in the inbox":"Во входящих {0}",", {0} older than {1} days":", из них {0} старше {1} дней","Delete {0} old photos?":"Удалить старые фото: {0}?","Delete one old photo?":"Удалить одно старое фото?",
   "Cards made from them keep their own picture. A photo that never made a card is gone.":"У карточек, сделанных из них, остаётся своя картинка. Фото, из которого карточки не вышло, пропадёт.","Persistent on this phone.":"Хранится надёжно на этом телефоне.","Not persistent yet. Install the app so the system keeps the data.":"Пока ненадёжно. Установи приложение, чтобы система не удаляла данные.",
   "Checking …":"Проверяю …","Share":"Поделиться","Share the app":"Поделиться приложением","Send the link to a friend. The app installs from any browser, no store.":"Отправь ссылку другу. Приложение ставится из любого браузера, без магазина.",
   "Add screenshot":"Добавить скриншот","Sent, but the screenshot could not be attached.":"Отправлено, но скриншот приложить не удалось.","Feedback":"Отзыв","Tell the app's owner what works and what does not.":"Расскажи владельцу приложения, что работает, а что нет.","Your message":"Твоё сообщение","Send":"Отправить",
-  "Your data":"Твои данные","Export":"Экспорт","Progress and cards as one file, via the share sheet.":"Прогресс и карточки одним файлом, через меню «Поделиться».","Include photos (adds about {0} MB)":"Вместе с фото (примерно +{0} МБ)",
+  "Export":"Экспорт","Progress and cards as one file, via the share sheet.":"Прогресс и карточки одним файлом, через меню «Поделиться».","Include photos (adds about {0} MB)":"Вместе с фото (примерно +{0} МБ)",
   "Import":"Импорт","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"Файл zeichentrainer-….json.txt. Существующие карточки перезапишутся.",
   "Flagged cards":"Карточки с меткой","{0} flagged for review. Share the list as text, for a teacher.":"С меткой: {0}. Отправь список текстом — например, учителю.",
-  "Show":"Список","Online AI review":"Проверка через ИИ","AI review":"Проверка ИИ","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Что уходит: китайский текст карточки, пиньинь, значение, твоя заметка и другие варианты чтения — с каждой новой карточки, а со всех карточек сразу, когда нажмёшь «Проверка карточек» или «Перевести карточки», а одна карточка — как только ты до неё дойдёшь, если описания у неё ещё нет. Когда чтение даётся с трудом, картинка с текстом — а иногда и всё фото — уходит к провайдеру, который принимает картинки. Без своего ключа телефон отправляет через сервер владельца приложения: тот передаёт запрос провайдеру и хранит только счётчик.",
+  "Show":"Список","AI review":"Проверка ИИ","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Что уходит: китайский текст карточки, пиньинь, значение, твоя заметка и другие варианты чтения — с каждой новой карточки, а со всех карточек сразу, когда нажмёшь «Проверка карточек» или «Перевести карточки», а одна карточка — как только ты до неё дойдёшь, если описания у неё ещё нет. Когда чтение даётся с трудом, картинка с текстом — а иногда и всё фото — уходит к провайдеру, который принимает картинки. Без своего ключа телефон отправляет через сервер владельца приложения: тот передаёт запрос провайдеру и хранит только счётчик.",
   "Check every new card with the AI automatically (when online)":"Проверять каждую новую карточку через ИИ автоматически (когда есть сеть)","Review queue":"Очередь на проверку","Storage":"Хранилище","Learning":"Учёба",
   "Card order":"Порядок карточек","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"Сначала идут карточки, которым пора, потом до {0} новых, в каждой группе от коротких к длинным. Здесь ты задаёшь порядок среди карточек одной длины.",
   "Progress":"Прогресс",
@@ -1812,7 +1708,7 @@ ru:{
   "Sends anonymous usage counts to the app's owner once a day, and again when you leave the app after making a card: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"Раз в день — и ещё раз, когда ты выходишь из приложения после новой карточки, — отправляет владельцу приложения обезличенные счётчики: сколько дней ты занимался, сколько карточек создал и повторил, сколько было проверок ИИ, и сообщения об ошибках приложения. Ни текста карточек, ни фото.",
   "Your id: {0}.":"Твой ID: {0}.","Send once a day":"Отправлять раз в день","Photos":"Фото","Delete {0}":"Удалить {0}",
   "Advanced settings":"Расширенные настройки","Admin log in":"Админ",
-  "Password":"Пароль","Log in":"Войти","Wrong password.":"Неверный пароль.","About":"О приложении",
+  "Password":"Пароль","Log in":"Войти","Wrong password.":"Неверный пароль.",
   "Write a few words first.":"Сначала напиши пару слов.","No connection. Try again when online.":"Нет сети. Попробуй, когда она появится.","Sending …":"Отправляю …","Thank you, sent.":"Спасибо, отправлено.",
   "Could not send: {0}":"Не удалось отправить: {0}","No flagged cards.":"Карточек с меткой нет.","Image (stays on this phone)":"Картинка (остаётся на этом телефоне)","Whole photo":"Всё фото",
   "Remove image":"Убрать картинку","Add a card by hand.":"Добавь карточку сам.","Draw a character":"Нарисовать иероглиф","hello":"привет",
@@ -1829,24 +1725,21 @@ ru:{
   /* the meaning in the app's language and the Translate-all row (v256) */
   "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Тексты самого приложения и значение новых карточек. Китайский и пиньинь на карточках не меняются.","Meanings":"Значения","card has its meaning in another language.":"{0} карточка — значение на другом языке.","cards have their meaning in another language.":"{0} карточки — значения на другом языке.","cards have their meaning in another language.#many":"{0} карточек — значения на другом языке.","Translate all cards into {0}":"Перевести карточки на {0}","Translating {0} of {1} …":"Перевожу {0} из {1} …","{0} translated, {1} left.":"Переведено {0}, осталось {1}.","Done — {0} translated.":"Готово — переведено: {0}.",
   /* the More screen in the learner's order (v257) */
-  "Privacy":"Приватность",
   /* the pill for a meaning in another language (v258) */
   "The meaning is in another language than the app.":"Значение написано не на языке приложения.",
   /* How to use the app (v259) */
-  "Help":"Помощь",
   "How to use the app":"Как пользоваться приложением",
   "Six short sections: photo, characters, learning, cards, language, what stays on the phone.":"Шесть коротких разделов: фото, иероглифы, учёба, карточки, язык, что остаётся на телефоне.",
   "Open":"Открыть",
   "Open source licenses":"Лицензии открытого кода",
   "The software and data the app is built on, and who made them.":"Программы и данные, на которых построено приложение, и кто их сделал.",
   "Fix the characters":"Поправить иероглифы",
-  
   "Swipe left or right to pick another card.":"Проведи влево или вправо, чтобы выбрать другую карточку.",
-  "Tap it — the text instead.": "Нажми — и будет текст.",
-  "Tap here — characters big.": "Нажми — иероглифы крупно.",
+  "Tap it — what it means.": "Нажми – что это значит.",
+  "Open it — the whole card.": "Открой – вся карточка.",
   "Trace the lit stroke.": "Обведи подсвеченную черту.",
-  "Tap the photo for the whole text, and tap again for the photo.": "Нажми на фото — сверху встанет весь текст; нажми ещё раз — вернётся фото.",
-  "A card starts with the photo big — a tap gives the whole text the top of the card, and the next tap the photo again.": "Карточка открывается с большим фото: одно нажатие — сверху весь текст, следующее — снова фото.",
+  "Tap the photo for the pinyin and the meaning, and again for the photo.": "Нажми на фото — пиньинь и значение, ещё раз — снова фото.",
+  "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "Карточка начинается с фотографии — это вопрос. Одно касание открывает текст с пиньинем и значением, следующее возвращает фото.",
 
 
   "Language and meanings":"Язык и значения",
@@ -1866,23 +1759,21 @@ ru:{
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"Фото с несколькими надписями — экран приложения, панель управления, меню — становится мультикарточкой. Нажми любую надпись на нём, чтобы посмотреть её, а «Создать карточку» сделает карточку из тех, что хочешь выучить.",
   "Every character under the photo is a button: tap one for other readings, or draw it with your finger. Pinyin and meaning follow by themselves and the AI checks them — flag a card when something still looks wrong.":"Каждый иероглиф под фото — кнопка: нажми, чтобы увидеть другие варианты, или нарисуй его пальцем. Пиньинь и значение подставляются сами, а ИИ их проверяет — поставь метку, если всё равно что-то не так.",
   "Due cards first, then up to eight new ones. The photo is the question and the pad is the answer: trace the lit stroke and it moves on by itself, character by character.":"Сначала карточки на сегодня, потом до восьми новых. Фото — это вопрос, а поле — ответ: обведи подсвеченную черту, и всё идёт дальше само, иероглиф за иероглифом.",
-  "Know the character? Write it your own way, in your own stroke order — the pad takes it once what you wrote matches.":"Знаешь иероглиф? Пиши его как привык, в своём порядке черт — поле примет, как только написанное совпадёт.",
-  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card sits folded at its foot, and what the card is about stands under it. Swipe sideways to pick another card — nothing is graded by swiping.":"Застрял? «Покажи» нарисует черту, «Пропустить» впишет иероглиф. Вся карточка свёрнута внизу, а под ней написано, о чём она. Смахни вбок, чтобы выбрать другую карточку — смахивание ничего не оценивает.",
+  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card — pinyin, meaning and what the text is about — is one tap away at its foot. Swipe sideways to pick another card — nothing is graded by swiping.":"Застрял? «Покажи» нарисует черту, «Пропустить» впишет иероглиф. Вся карточка — пиньинь, значение и о чём она — в одном касании внизу. Смахни вбок, чтобы выбрать другую карточку — смахивание ничего не оценивает.",
   "All your cards, newest first, with a tab of their own for multicards. Search them, filter them, and tap one to test, edit or delete it.":"Все твои карточки, новые сверху, а мультикарточки — на отдельной вкладке. Ищи, фильтруй и нажимай на карточку, чтобы проверить, изменить или удалить её.",
   "Tap a card's star for the ones that matter to you, and Learn can study those alone. Tags group the rest, and a card from a photo gets one for what it is.":"Нажми звезду на карточке, если она для тебя важна, — тогда «Учить» может заниматься только ими. Остальное группируют теги, а карточка с фото получает тег по тому, что на нём.",
   "More → Language switches the app's own texts, and new cards get their meaning in that language. Translate all cards does it for the ones you already have.":"«Ещё → Язык» переключает тексты приложения, и у новых карточек значение появляется на этом языке. Для тех, что уже есть, это сделает «Перевести карточки».",
-  "Your cards and photos stay on this phone and nowhere else — export them under More → Your data now and then.":"Твои карточки и фотографии остаются только на этом телефоне — время от времени выгружай их в «Ещё → Твои данные».",
-  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard.":"Проверка ИИ отправляет текст карточки, пиньинь и значение, а когда чтение даётся трудно — ещё и снимок текста, иногда всё фото целиком.",
+  "Your cards and photos stay on this phone and nowhere else — export them under More → Your cards now and then.":"Твои карточки и фотографии остаются только на этом телефоне — время от времени выгружай их в «Ещё → Твои карточки».",
+  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"Проверка ИИ отправляет текст карточки, пиньинь и значение, а когда чтение даётся трудно — ещё и снимок текста, иногда всё фото целиком. Ещё она сама спрашивает пару фраз о карточке, как только ты дойдёшь до той, у которой их ещё нет.",
 
   "Tap the star counter at the top to see how your points are counted.":"Нажми на счётчик со звездой наверху, чтобы увидеть, как считаются очки.",
-  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under Privacy. Questions or ideas? More → Feedback.":"Раз в день — и ещё раз, когда ты выходишь из приложения после новой карточки, — владельцу приложения уходят обезличенные счётчики и сообщения об ошибках приложения; в разделе «Приватность» это можно выключить. Вопросы или идеи? «Ещё» → «Отзыв».",
+  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Раз в день — и ещё раз, когда ты выходишь из приложения после новой карточки, — владельцу приложения уходят обезличенные счётчики и сообщения об ошибках приложения; в «Ещё → Статистика использования» это можно выключить. Вопросы или идеи? «Ещё» → «Отзыв».",
 
 },
 vi:{
   "reading confidence {0}%":"độ chắc chắn khi đọc {0}%","unknown {0}":"không nhận ra: {0}","no dictionary meaning":"không có nghĩa trong từ điển","the text looks misread":"văn bản có vẻ bị đọc sai","the framed area":"vùng trong khung","card image":"ảnh của thẻ","alt:photo":"ảnh",
   "Not yet checked":"Chưa kiểm tra","tile:New":"Mới",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Nhấn giữ một chữ để đi qua mọi thẻ có chữ đó; nhấn giữ lần nữa để quay về.",
-  
   "Whole card":"Cả thẻ",
   "Explain":"Giải thích",
   "Explaining …":"Đang giải thích …",
@@ -1902,13 +1793,12 @@ vi:{
   "not in the stroke set — draw it and tap Done":"không có trong bộ nét — vẽ rồi chạm Xong",
 "⚑ Flag":"⚑ Đánh dấu",
 "card:⚑ Flagged":"⚑ Đã đánh dấu",
-  "Update notes":"Thông báo cập nhật",
 "Tell me what is new after an update.":"Cho mình biết có gì mới sau khi cập nhật.",
 "Updated.":"Đã cập nhật.",
   "{0} to go, while the app is open.":"Còn {0}, khi ứng dụng đang mở.",
   "Waiting for its turn …":"Đang chờ đến lượt …",
   "Check all cards again":"Kiểm tra lại mọi thẻ",
-  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"AI ngày càng giỏi. Cho nó xem lại cả bộ thẻ của bạn đi — mô tả và nhãn còn thiếu nó bổ sung luôn, còn mọi thay đổi chữ thì bạn thấy trước khi áp dụng.",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the missing tags and the few sentences that say what a card is about, and you see every change to a text before you accept it.":"AI ngày càng giỏi. Cho nó xem lại cả bộ thẻ của bạn đi — nhãn còn thiếu và mấy câu nói xem thẻ nói về cái gì nó bổ sung luôn, còn mọi thay đổi chữ thì bạn thấy trước khi áp dụng.",
   "Checking {0} of {1} …":"Đang kiểm tra {0}/{1} …",
   "Done — {0} could be better. Look under the Cards tab.":"Xong — {0} có thể tốt hơn. Xem ở tab Thẻ.",
   "Done — nothing to change. Your cards are in good shape.":"Xong — không có gì phải sửa. Thẻ của bạn ổn cả.",
@@ -1921,16 +1811,8 @@ vi:{
   
   
   
-  
-  
-  
-  
-  
   "Translated {0} at {1}.":"Đã dịch {0} lúc {1}.","Checked {0} at {1}.":"Đã kiểm tra {0} lúc {1}.","Done — {0} filled in.":"Xong — đã bổ sung {0}.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Xong — đã bổ sung {0}, {1} có thể tốt hơn. Xem ở tab Thẻ.",
   "Undone — {0} put back.":"Đã hoàn tác — {0} trở lại như cũ.",
-  
-  
-  
   
   
   "Filter":"Bộ lọc",
@@ -1949,8 +1831,6 @@ vi:{
   "Take photo":"Chụp ảnh",
   "From album":"Từ thư viện",
   "Processing photo …":"Đang xử lý ảnh …",
-  
-  
   
   
   "Crop":"Cắt ảnh",
@@ -2059,7 +1939,6 @@ vi:{
   "Deck":"Thẻ","Learn":"Học","Cards":"Thẻ","Multicards":"Thẻ gộp","Camera":"Máy ảnh","More":"Thêm",
   "Generate flashcard":"Tạo thẻ",
   "← Back to the flashcard":"← Về thẻ",
-  
   "Open the flashcard":"Mở thẻ",
   "From {0}":"Từ {0}",
   "Language":"Ngôn ngữ",
@@ -2073,7 +1952,6 @@ vi:{
   "{0} learned, {1} reviewed this week, streak {2}":"Đã học {0}, tuần này ôn {1}, chuỗi {2}",
   "card":"{0} thẻ","cards":"{0} thẻ","day":"{0} ngày","days":"{0} ngày","review":"{0} lượt ôn","reviews":"{0} lượt ôn","photo":"{0} ảnh","photos":"{0} ảnh",
   "bar:AI suggestion":"{0} gợi ý AI","bar:AI suggestions":"{0} gợi ý AI",
-  
   "Traditional":"Phồn thể","Simplified":"Giản thể","Nothing could be read.":"Không đọc được gì.","Reading the text …":"Đang đọc chữ …",
   "meaning unverified":"nghĩa chưa kiểm tra"," (translation pending)":" (đang chờ dịch)"," (reading uncertain: {0})":" (bản đọc chưa chắc: {0})",
   "Also on another photo":"Cũng có trên một ảnh khác","Also on {0} other photos":"Cũng có trên {0} ảnh khác","Show this photo":"Xem ảnh này","Open this card":"Mở thẻ này",
@@ -2087,7 +1965,7 @@ vi:{
   "No cards yet — take a photo under Camera, or tap + New.":"Chưa có thẻ nào — chụp một tấm ảnh ở tab Máy ảnh, hoặc chạm + Mới.",
   "Search":"Tìm","+ New":"+ Mới","⚑ Flagged":"⚑ Đã đánh dấu","Star":"Sao","Starred":"Có sao","Unverified":"Chưa kiểm tra","{0} of {1}":"{0}/{1}",
   "due":"đến hạn","in {0} d":"sau {0} ngày",
-  "Interval {0} d, ease {1}, {2}, next {3}.":"Khoảng cách {0} ngày, độ dễ {1}, {2}, lần tới {3}.",
+  "{0} so far, next on {1}.":"Đến giờ {0}, lần tới {1}.",
   "Nothing read yet":"Chưa đọc được gì","unverified":"chưa kiểm tra","translation pending":"đang chờ dịch","reading uncertain":"bản đọc chưa chắc",
   "The new frame is being read — the text follows when it is done.":"Đang đọc khung mới — chữ sẽ có khi xong.",
   "The text, pinyin and meaning follow when the reading is done.":"Chữ, pinyin và nghĩa sẽ có khi đọc xong.",
@@ -2108,10 +1986,10 @@ vi:{
   "Cards made from them keep their own picture. A photo that never made a card is gone.":"Những thẻ làm từ chúng vẫn giữ ảnh riêng. Ảnh chưa từng thành thẻ thì mất luôn.","Persistent on this phone.":"Đã lưu chắc chắn trên máy này.","Not persistent yet. Install the app so the system keeps the data.":"Chưa lưu chắc chắn. Cài app để hệ thống giữ lại dữ liệu.",
   "Checking …":"Đang kiểm tra …","Share":"Chia sẻ","Share the app":"Chia sẻ app","Send the link to a friend. The app installs from any browser, no store.":"Gửi liên kết cho bạn bè. App cài được từ mọi trình duyệt, không cần cửa hàng.",
   "Add screenshot":"Thêm ảnh chụp màn hình","Sent, but the screenshot could not be attached.":"Đã gửi, nhưng không đính kèm được ảnh chụp màn hình.","Feedback":"Góp ý","Tell the app's owner what works and what does not.":"Nói cho chủ app biết cái gì chạy tốt, cái gì chưa.","Your message":"Lời nhắn của bạn","Send":"Gửi",
-  "Your data":"Dữ liệu của bạn","Export":"Xuất","Progress and cards as one file, via the share sheet.":"Tiến độ và thẻ gộp thành một tệp, gửi qua menu chia sẻ.","Include photos (adds about {0} MB)":"Kèm cả ảnh (thêm khoảng {0} MB)",
+  "Export":"Xuất","Progress and cards as one file, via the share sheet.":"Tiến độ và thẻ gộp thành một tệp, gửi qua menu chia sẻ.","Include photos (adds about {0} MB)":"Kèm cả ảnh (thêm khoảng {0} MB)",
   "Import":"Nhập","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"Một tệp zeichentrainer-….json.txt. Thẻ đang có sẽ bị ghi đè.",
   "Flagged cards":"Thẻ đã đánh dấu","{0} flagged for review. Share the list as text, for a teacher.":"{0} đã đánh dấu để xem lại. Chia sẻ danh sách dạng chữ, ví dụ cho thầy cô.",
-  "Show":"Xem","Online AI review":"Kiểm tra bằng AI","AI review":"Kiểm tra bằng AI","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Những gì được gửi đi: chữ Hán, pinyin, nghĩa trên thẻ, ghi chú của bạn và những cách đọc khác mà app đoán ra — với mọi thẻ mới, và với cả bộ thẻ khi bạn chạm Rà soát hay Dịch mọi thẻ, và với một thẻ ngay khi bạn tới thẻ đó mà nó chưa có phần mô tả. Khi chữ khó đọc, ảnh phần chữ được gửi tới một nhà cung cấp nhận ảnh — đôi khi là cả tấm ảnh. Không có khóa riêng thì máy này gửi qua trạm chuyển của chủ app, trạm đó chuyển tiếp tới nhà cung cấp và chỉ giữ lại một con số đếm.",
+  "Show":"Xem","AI review":"Kiểm tra bằng AI","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Những gì được gửi đi: chữ Hán, pinyin, nghĩa trên thẻ, ghi chú của bạn và những cách đọc khác mà app đoán ra — với mọi thẻ mới, và với cả bộ thẻ khi bạn chạm Rà soát hay Dịch mọi thẻ, và với một thẻ ngay khi bạn tới thẻ đó mà nó chưa có phần mô tả. Khi chữ khó đọc, ảnh phần chữ được gửi tới một nhà cung cấp nhận ảnh — đôi khi là cả tấm ảnh. Không có khóa riêng thì máy này gửi qua trạm chuyển của chủ app, trạm đó chuyển tiếp tới nhà cung cấp và chỉ giữ lại một con số đếm.",
   "Check every new card with the AI automatically (when online)":"Tự động kiểm tra mọi thẻ mới bằng AI (khi có mạng)","Review queue":"Hàng chờ kiểm tra","Storage":"Bộ nhớ","Learning":"Học tập",
   "Card order":"Thứ tự thẻ","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"Thẻ đến hạn lên trước, rồi tới tối đa {0} thẻ mới, mỗi nhóm từ ngắn đến dài. Mục này quyết định thứ tự giữa các thẻ cùng độ dài.",
   "Progress":"Tiến độ",
@@ -2119,7 +1997,7 @@ vi:{
   "Sends anonymous usage counts to the app's owner once a day, and again when you leave the app after making a card: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"Mỗi ngày một lần, và thêm một lần khi bạn rời app sau khi tạo thẻ, gửi cho chủ app vài con số ẩn danh: số ngày đã dùng, số thẻ đã tạo và đã ôn, số lượt kiểm tra AI, và các thông báo lỗi của app. Không có chữ trên thẻ, không có ảnh.",
   "Your id: {0}.":"Mã của bạn: {0}.","Send once a day":"Mỗi ngày gửi một lần","Photos":"Ảnh","Delete {0}":"Xóa {0}",
   "Advanced settings":"Cài đặt nâng cao","Admin log in":"Đăng nhập admin",
-  "Password":"Mật khẩu","Log in":"Đăng nhập","Wrong password.":"Sai mật khẩu.","About":"Giới thiệu",
+  "Password":"Mật khẩu","Log in":"Đăng nhập","Wrong password.":"Sai mật khẩu.",
   "Write a few words first.":"Viết vài lời đã nhé.","No connection. Try again when online.":"Không có mạng. Có mạng rồi thử lại nhé.","Sending …":"Đang gửi …","Thank you, sent.":"Cảm ơn bạn, đã gửi.",
   "Could not send: {0}":"Không gửi được: {0}","No flagged cards.":"Không có thẻ nào được đánh dấu.","Image (stays on this phone)":"Ảnh (chỉ nằm trên máy này)","Whole photo":"Cả tấm ảnh",
   "Remove image":"Bỏ ảnh","Add a card by hand.":"Tự thêm một thẻ.","Draw a character":"Vẽ một chữ","hello":"xin chào",
@@ -2136,24 +2014,21 @@ vi:{
   /* the meaning in the app's language and the Translate-all row (v256) */
   "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Các câu chữ của app và nghĩa của thẻ mới. Thẻ vẫn giữ tiếng Trung và pinyin.","Meanings":"Nghĩa","card has its meaning in another language.":"{0} thẻ có nghĩa bằng ngôn ngữ khác.","cards have their meaning in another language.":"{0} thẻ có nghĩa bằng ngôn ngữ khác.","Translate all cards into {0}":"Dịch mọi thẻ sang {0}","Translating {0} of {1} …":"Đang dịch {0}/{1} …","{0} translated, {1} left.":"Đã dịch {0}, còn {1}.","Done — {0} translated.":"Xong — đã dịch {0}.",
   /* the More screen in the learner's order (v257) */
-  "Privacy":"Riêng tư",
   /* the pill for a meaning in another language (v258) */
   "The meaning is in another language than the app.":"Nghĩa đang ở ngôn ngữ khác với app.",
   /* How to use the app (v259) */
-  "Help":"Trợ giúp",
   "How to use the app":"Dùng app thế nào",
   "Six short sections: photo, characters, learning, cards, language, what stays on the phone.":"Sáu mục ngắn: ảnh, chữ, học, thẻ, ngôn ngữ, những gì ở lại trên máy.",
   "Open":"Mở",
   "Open source licenses":"Giấy phép nguồn mở",
   "The software and data the app is built on, and who made them.":"Phần mềm và dữ liệu mà ứng dụng dựa vào, và ai đã làm ra chúng.",
   "Fix the characters":"Sửa chữ",
-  
   "Swipe left or right to pick another card.":"Vuốt sang trái hoặc phải để chọn thẻ khác.",
-  "Tap it — the text instead.": "Chạm – hiện chữ.",
-  "Tap here — characters big.": "Chạm đây – chữ to.",
+  "Tap it — what it means.": "Chạm – nghĩa là gì.",
+  "Open it — the whole card.": "Mở ra – cả thẻ.",
   "Trace the lit stroke.": "Tô theo nét sáng.",
-  "Tap the photo for the whole text, and tap again for the photo.": "Chạm vào ảnh, cả phần chữ sẽ chiếm phía trên; chạm lần nữa thì ảnh trở lại.",
-  "A card starts with the photo big — a tap gives the whole text the top of the card, and the next tap the photo again.": "Thẻ mở ra với ảnh lớn – một lần chạm đưa toàn bộ chữ lên trên, lần chạm tiếp theo đưa ảnh trở lại.",
+  "Tap the photo for the pinyin and the meaning, and again for the photo.": "Chạm vào ảnh để xem pinyin và nghĩa, chạm nữa để quay lại ảnh.",
+  "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "Thẻ bắt đầu bằng ảnh — đó là câu hỏi. Một lần chạm mở ra chữ kèm pinyin và nghĩa, lần tiếp theo đưa ảnh trở lại.",
 
 
   "Language and meanings":"Ngôn ngữ và nghĩa",
@@ -2173,23 +2048,21 @@ vi:{
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"Ảnh có nhiều đoạn chữ — màn hình ứng dụng, bảng điều khiển, thực đơn — sẽ thành một thẻ gộp. Chạm vào chữ nào trên ảnh để tra, rồi Tạo thẻ sẽ làm thẻ cho những chữ bạn muốn học.",
   "Every character under the photo is a button: tap one for other readings, or draw it with your finger. Pinyin and meaning follow by themselves and the AI checks them — flag a card when something still looks wrong.":"Mỗi chữ dưới ảnh là một nút: chạm vào để xem cách đọc khác, hoặc viết bằng ngón tay. Phiên âm và nghĩa tự điền, AI kiểm lại — đánh dấu thẻ nếu vẫn thấy sai.",
   "Due cards first, then up to eight new ones. The photo is the question and the pad is the answer: trace the lit stroke and it moves on by itself, character by character.":"Thẻ đến hạn trước, rồi tối đa tám thẻ mới. Ảnh là câu hỏi còn bảng viết là câu trả lời: tô theo nét đang sáng, nó tự chạy tiếp từng chữ một.",
-  "Know the character? Write it your own way, in your own stroke order — the pad takes it once what you wrote matches.":"Bạn đã biết chữ này? Cứ viết theo cách của bạn, theo thứ tự nét của bạn — bảng viết nhận ngay khi khớp.",
-  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card sits folded at its foot, and what the card is about stands under it. Swipe sideways to pick another card — nothing is graded by swiping.":"Bí à? Chỉ cho mình sẽ vẽ nét, Bỏ qua sẽ điền chữ. Cả thẻ nằm gấp ở dưới cùng, và bên dưới là thẻ này nói về cái gì. Vuốt sang ngang để chọn thẻ khác — vuốt không chấm điểm gì cả.",
+  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card — pinyin, meaning and what the text is about — is one tap away at its foot. Swipe sideways to pick another card — nothing is graded by swiping.":"Bí à? Chỉ cho mình sẽ vẽ nét, Bỏ qua sẽ điền chữ. Cả thẻ — pinyin, nghĩa và thẻ nói về cái gì — chỉ cách một lần chạm ở dưới cùng. Vuốt sang ngang để chọn thẻ khác — vuốt không chấm điểm gì cả.",
   "All your cards, newest first, with a tab of their own for multicards. Search them, filter them, and tap one to test, edit or delete it.":"Tất cả thẻ của bạn, mới nhất trước, thẻ gộp có tab riêng. Tìm, lọc, và chạm vào một thẻ để kiểm tra, sửa hay xóa.",
   "Tap a card's star for the ones that matter to you, and Learn can study those alone. Tags group the rest, and a card from a photo gets one for what it is.":"Chạm ngôi sao trên thẻ nào bạn thấy quan trọng, rồi Học có thể chỉ ôn những thẻ đó. Nhãn gom phần còn lại, và thẻ tạo từ ảnh được gắn nhãn theo thứ có trong ảnh.",
   "More → Language switches the app's own texts, and new cards get their meaning in that language. Translate all cards does it for the ones you already have.":"Thêm → Ngôn ngữ đổi chữ của ứng dụng, và thẻ mới sẽ có nghĩa bằng ngôn ngữ đó. Với thẻ đã có, dùng Dịch mọi thẻ.",
-  "Your cards and photos stay on this phone and nowhere else — export them under More → Your data now and then.":"Thẻ và ảnh của bạn chỉ nằm trên điện thoại này — thỉnh thoảng hãy xuất chúng ở Thêm → Dữ liệu của bạn.",
-  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard.":"Kiểm tra bằng AI gửi đi chữ, phiên âm và nghĩa của thẻ, và khi đọc khó thì gửi thêm ảnh của đoạn chữ — đôi khi là cả tấm ảnh.",
+  "Your cards and photos stay on this phone and nowhere else — export them under More → Your cards now and then.":"Thẻ và ảnh của bạn chỉ nằm trên điện thoại này — thỉnh thoảng hãy xuất chúng ở Thêm → Thẻ của bạn.",
+  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"Kiểm tra bằng AI gửi đi chữ, phiên âm và nghĩa của thẻ, và khi đọc khó thì gửi thêm ảnh của đoạn chữ — đôi khi là cả tấm ảnh. Nó cũng tự hỏi vài câu mô tả cho một thẻ, ngay khi bạn tới một thẻ chưa có.",
 
   "Tap the star counter at the top to see how your points are counted.":"Chạm vào bộ đếm sao ở trên để xem điểm được tính thế nào.",
-  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under Privacy. Questions or ideas? More → Feedback.":"Mỗi ngày một lần, và thêm một lần khi bạn rời app sau khi tạo thẻ, vài số liệu sử dụng ẩn danh và các thông báo lỗi của app được gửi cho chủ app; bạn tắt chuyện đó ở mục Riêng tư. Có thắc mắc hay ý tưởng gì không? Thêm → Góp ý.",
+  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Mỗi ngày một lần, và thêm một lần khi bạn rời app sau khi tạo thẻ, vài số liệu sử dụng ẩn danh và các thông báo lỗi của app được gửi cho chủ app; bạn tắt chuyện đó ở Thêm → Chia sẻ số liệu sử dụng. Có thắc mắc hay ý tưởng gì không? Thêm → Góp ý.",
 
 },
 th:{
   "reading confidence {0}%":"ความมั่นใจในการอ่าน {0}%","unknown {0}":"ไม่รู้จัก: {0}","no dictionary meaning":"ไม่มีความหมายในพจนานุกรม","the text looks misread":"ข้อความน่าจะอ่านผิด","the framed area":"บริเวณในกรอบ","card image":"รูปของการ์ด","alt:photo":"รูป",
   "Not yet checked":"ยังไม่ได้ตรวจ","tile:New":"ใหม่",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"กดค้างที่ตัวอักษรเพื่อไล่ดูทุกการ์ดที่มีตัวนั้น กดค้างอีกครั้งเพื่อกลับ",
-  
   "Whole card":"ทั้งการ์ด",
   "Explain":"อธิบาย",
   "Explaining …":"กำลังอธิบาย …",
@@ -2209,13 +2082,12 @@ th:{
   "not in the stroke set — draw it and tap Done":"ไม่มีในชุดเส้น — เขียนแล้วแตะ เสร็จ",
 "⚑ Flag":"⚑ ติดธง",
 "card:⚑ Flagged":"⚑ ติดธงแล้ว",
-  "Update notes":"ข่าวอัปเดต",
 "Tell me what is new after an update.":"บอกด้วยว่ามีอะไรใหม่หลังอัปเดต",
 "Updated.":"อัปเดตแล้ว",
   "{0} to go, while the app is open.":"เหลือ{0} จะทำต่อตอนเปิดแอปอยู่",
   "Waiting for its turn …":"รอถึงคิว …",
   "Check all cards again":"ตรวจการ์ดทั้งหมดอีกครั้ง",
-  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"AI เก่งขึ้นเรื่อยๆ ลองให้ AI ดูการ์ดทั้งหมดอีกรอบ — คำอธิบายกับแท็กที่ขาดจะถูกเติมให้เลย ส่วนการแก้ตัวอักษร คุณได้ดูก่อนกดรับไว้เสมอ",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the missing tags and the few sentences that say what a card is about, and you see every change to a text before you accept it.":"AI เก่งขึ้นเรื่อยๆ ลองให้ AI ดูการ์ดทั้งหมดอีกรอบ — แท็กที่ขาดกับสองสามประโยคที่บอกว่าการ์ดนี้พูดถึงอะไรจะถูกเติมให้เลย ส่วนการแก้ตัวอักษร คุณได้ดูก่อนกดรับไว้เสมอ",
   "Checking {0} of {1} …":"กำลังตรวจ {0} จาก {1} …",
   "Done — {0} could be better. Look under the Cards tab.":"เสร็จแล้ว — {0} น่าจะดีขึ้นได้ ดูได้ที่แท็บการ์ด",
   "Done — nothing to change. Your cards are in good shape.":"เสร็จแล้ว — ไม่มีอะไรต้องแก้ การ์ดของคุณอยู่ในสภาพดี",
@@ -2228,16 +2100,8 @@ th:{
   
   
   
-  
-  
-  
-  
-  
   "Translated {0} at {1}.":"แปล{0} เมื่อ {1}","Checked {0} at {1}.":"ตรวจ{0} เมื่อ {1}","Done — {0} filled in.":"เสร็จแล้ว — เติมให้{0}","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"เสร็จแล้ว — เติมให้{0} และ{1} น่าจะดีขึ้นได้ ดูได้ที่แท็บการ์ด",
   "Undone — {0} put back.":"เลิกทำแล้ว — คืน{0}กลับมา",
-  
-  
-  
   
   
   "Filter":"ตัวกรอง",
@@ -2256,8 +2120,6 @@ th:{
   "Take photo":"ถ่ายรูป",
   "From album":"จากอัลบั้ม",
   "Processing photo …":"กำลังเตรียมรูป …",
-  
-  
   
   
   "Crop":"ครอบตัด",
@@ -2366,7 +2228,6 @@ th:{
   "Deck":"ทั้งหมด","Learn":"เรียน","Cards":"การ์ด","Multicards":"การ์ดรวม","Camera":"กล้อง","More":"อื่นๆ",
   "Generate flashcard":"สร้างการ์ด",
   "← Back to the flashcard":"← กลับไปที่การ์ด",
-  
   "Open the flashcard":"เปิดการ์ด",
   "From {0}":"จาก {0}",
   "Language":"ภาษา",
@@ -2380,7 +2241,6 @@ th:{
   "{0} learned, {1} reviewed this week, streak {2}":"เรียนแล้ว {0} · ทบทวนสัปดาห์นี้ {1} · ต่อเนื่อง {2}",
   "card":"การ์ด {0} ใบ","cards":"การ์ด {0} ใบ","day":"{0} วัน","days":"{0} วัน","review":"{0} ครั้ง","reviews":"{0} ครั้ง","photo":"รูป {0} ใบ","photos":"รูป {0} ใบ",
   "bar:AI suggestion":"AI เสนอมา {0} รายการ","bar:AI suggestions":"AI เสนอมา {0} รายการ",
-  
   "Traditional":"ตัวเต็ม","Simplified":"ตัวย่อ","Nothing could be read.":"อ่านอะไรไม่ได้เลย","Reading the text …":"กำลังอ่านตัวอักษร …",
   "meaning unverified":"ความหมายยังไม่ได้ตรวจสอบ"," (translation pending)":" (รอคำแปล)"," (reading uncertain: {0})":" (การอ่านไม่แน่: {0})",
   "Also on another photo":"อยู่ในอีกรูปหนึ่งด้วย","Also on {0} other photos":"อยู่ในอีก {0} รูปด้วย","Show this photo":"ดูรูปนี้","Open this card":"เปิดการ์ดนี้",
@@ -2394,7 +2254,7 @@ th:{
   "No cards yet — take a photo under Camera, or tap + New.":"ยังไม่มีการ์ด — ถ่ายรูปที่แท็บกล้อง หรือแตะ + ใหม่",
   "Search":"ค้นหา","+ New":"+ ใหม่","⚑ Flagged":"⚑ ติดธง","Star":"ดาว","Starred":"ติดดาว","Unverified":"ยังไม่ได้ตรวจ","{0} of {1}":"{0} จาก {1}",
   "due":"ถึงกำหนด","in {0} d":"อีก {0} วัน",
-  "Interval {0} d, ease {1}, {2}, next {3}.":"ระยะห่าง {0} วัน · ค่าความง่าย {1} · ทบทวนแล้ว {2} · ครั้งถัดไป {3}",
+  "{0} so far, next on {1}.":"จนถึงตอนนี้ {0} ครั้งถัดไป {1}",
   "Nothing read yet":"ยังอ่านไม่ได้","unverified":"ยังไม่ได้ตรวจสอบ","translation pending":"รอคำแปล","reading uncertain":"การอ่านไม่แน่",
   "The new frame is being read — the text follows when it is done.":"กำลังอ่านกรอบใหม่ ตัวอักษรจะตามมาเมื่อเสร็จ",
   "The text, pinyin and meaning follow when the reading is done.":"ตัวอักษร พินอิน และความหมายจะตามมาเมื่ออ่านเสร็จ",
@@ -2415,10 +2275,10 @@ th:{
   "Cards made from them keep their own picture. A photo that never made a card is gone.":"การ์ดที่ทำจากรูปเหล่านี้ยังเก็บรูปของตัวเองไว้ ส่วนรูปที่ไม่เคยกลายเป็นการ์ดจะหายไป","Persistent on this phone.":"เก็บถาวรในเครื่องนี้แล้ว","Not persistent yet. Install the app so the system keeps the data.":"ยังไม่ถาวร ติดตั้งแอปเพื่อให้ระบบเก็บข้อมูลไว้",
   "Checking …":"กำลังตรวจ …","Share":"แชร์","Share the app":"แชร์แอปนี้","Send the link to a friend. The app installs from any browser, no store.":"ส่งลิงก์ให้เพื่อน ติดตั้งได้จากเบราว์เซอร์ไหนก็ได้ ไม่ต้องผ่านสโตร์",
   "Add screenshot":"แนบภาพหน้าจอ","Sent, but the screenshot could not be attached.":"ส่งแล้ว แต่แนบภาพหน้าจอไม่ได้","Feedback":"ส่งความเห็น","Tell the app's owner what works and what does not.":"บอกเจ้าของแอปว่าอะไรใช้ดี อะไรยังไม่ดี","Your message":"ข้อความของคุณ","Send":"ส่ง",
-  "Your data":"ข้อมูลของคุณ","Export":"ส่งออก","Progress and cards as one file, via the share sheet.":"ความคืบหน้าและการ์ดรวมเป็นไฟล์เดียว ผ่านเมนูแชร์","Include photos (adds about {0} MB)":"รวมรูปด้วย (เพิ่มราว {0} MB)",
+  "Export":"ส่งออก","Progress and cards as one file, via the share sheet.":"ความคืบหน้าและการ์ดรวมเป็นไฟล์เดียว ผ่านเมนูแชร์","Include photos (adds about {0} MB)":"รวมรูปด้วย (เพิ่มราว {0} MB)",
   "Import":"นำเข้า","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"ไฟล์ zeichentrainer-….json.txt การ์ดที่มีอยู่จะถูกเขียนทับ",
   "Flagged cards":"การ์ดที่ติดธง","{0} flagged for review. Share the list as text, for a teacher.":"มีการ์ดติดธงไว้ตรวจ {0} ใบ แชร์รายการเป็นข้อความให้ครูดูได้",
-  "Show":"ดู","Online AI review":"ให้ AI ตรวจออนไลน์","AI review":"AI ตรวจให้","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"สิ่งที่ส่งไป: ภาษาจีน พินอิน ความหมายของการ์ด บันทึกของคุณ และคำอ่านแบบอื่นที่แอปเดาไว้ — ส่งทุกครั้งที่สร้างการ์ดใหม่ และส่งจากการ์ดทุกใบเมื่อคุณแตะ ตรวจเช็ก หรือ แปลการ์ดทั้งหมด และส่งจากการ์ดใบเดียวเมื่อคุณมาถึงการ์ดใบนั้นแล้วยังไม่มีคำอธิบาย ตอนที่อ่านได้ไม่ดี รูปของข้อความจะถูกส่งไปยังผู้ให้บริการที่รับรูปได้ — บางครั้งก็เป็นรูปทั้งใบ เครื่องที่ไม่มีคีย์ของตัวเองจะส่งผ่านรีเลย์ของเจ้าของแอป ซึ่งส่งต่อให้ผู้ให้บริการและเก็บไว้แค่จำนวนครั้ง",
+  "Show":"ดู","AI review":"AI ตรวจให้","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"สิ่งที่ส่งไป: ภาษาจีน พินอิน ความหมายของการ์ด บันทึกของคุณ และคำอ่านแบบอื่นที่แอปเดาไว้ — ส่งทุกครั้งที่สร้างการ์ดใหม่ และส่งจากการ์ดทุกใบเมื่อคุณแตะ ตรวจเช็ก หรือ แปลการ์ดทั้งหมด และส่งจากการ์ดใบเดียวเมื่อคุณมาถึงการ์ดใบนั้นแล้วยังไม่มีคำอธิบาย ตอนที่อ่านได้ไม่ดี รูปของข้อความจะถูกส่งไปยังผู้ให้บริการที่รับรูปได้ — บางครั้งก็เป็นรูปทั้งใบ เครื่องที่ไม่มีคีย์ของตัวเองจะส่งผ่านรีเลย์ของเจ้าของแอป ซึ่งส่งต่อให้ผู้ให้บริการและเก็บไว้แค่จำนวนครั้ง",
   "Check every new card with the AI automatically (when online)":"ให้ AI ตรวจการ์ดใหม่อัตโนมัติ (เมื่อออนไลน์)","Review queue":"คิวรอตรวจ","Storage":"พื้นที่เก็บข้อมูล","Learning":"การเรียน",
   "Card order":"ลำดับการ์ด","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"การ์ดที่ถึงกำหนดมาก่อน แล้วตามด้วยการ์ดใหม่ไม่เกิน {0} ใบ แต่ละกลุ่มเรียงจากสั้นไปยาว ตรงนี้กำหนดลำดับของการ์ดที่ยาวเท่ากัน",
   "Progress":"ความคืบหน้า",
@@ -2426,7 +2286,7 @@ th:{
   "Sends anonymous usage counts to the app's owner once a day, and again when you leave the app after making a card: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"ส่งสถิติการใช้งานแบบไม่ระบุตัวตนให้เจ้าของแอปวันละครั้ง และอีกครั้งตอนออกจากแอปหลังสร้างการ์ด: จำนวนวันที่ใช้ การ์ดที่สร้างและทบทวน จำนวนครั้งที่ AI ตรวจ และข้อความแจ้งข้อผิดพลาด ไม่ส่งข้อความในการ์ดและไม่ส่งรูป",
   "Your id: {0}.":"ไอดีของคุณ: {0}","Send once a day":"ส่งวันละครั้ง","Photos":"รูปภาพ","Delete {0}":"ลบ {0} รายการ",
   "Advanced settings":"การตั้งค่าขั้นสูง","Admin log in":"เข้าสู่ระบบผู้ดูแล",
-  "Password":"รหัสผ่าน","Log in":"เข้าสู่ระบบ","Wrong password.":"รหัสผ่านไม่ถูกต้อง","About":"เกี่ยวกับ",
+  "Password":"รหัสผ่าน","Log in":"เข้าสู่ระบบ","Wrong password.":"รหัสผ่านไม่ถูกต้อง",
   "Write a few words first.":"เขียนอะไรสักหน่อยก่อน","No connection. Try again when online.":"ไม่มีการเชื่อมต่อ ลองใหม่ตอนออนไลน์","Sending …":"กำลังส่ง …","Thank you, sent.":"ส่งแล้ว ขอบคุณ",
   "Could not send: {0}":"ส่งไม่สำเร็จ: {0}","No flagged cards.":"ไม่มีการ์ดที่ติดธง","Image (stays on this phone)":"รูป (อยู่ในเครื่องนี้)","Whole photo":"รูปทั้งใบ",
   "Remove image":"เอารูปออก","Add a card by hand.":"เพิ่มการ์ดเอง","Draw a character":"เขียนตัวอักษร","hello":"สวัสดี",
@@ -2443,24 +2303,21 @@ th:{
   /* the meaning in the app's language and the Translate-all row (v256) */
   "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"ข้อความในแอปและความหมายของการ์ดใหม่ ส่วนภาษาจีนกับพินอินของการ์ดยังคงเดิม","Meanings":"ความหมาย","card has its meaning in another language.":"การ์ด {0} ใบ มีความหมายเป็นภาษาอื่น","cards have their meaning in another language.":"การ์ด {0} ใบ มีความหมายเป็นภาษาอื่น","Translate all cards into {0}":"แปลการ์ดทั้งหมดเป็น{0}","Translating {0} of {1} …":"กำลังแปล {0} จาก {1} …","{0} translated, {1} left.":"แปลแล้ว {0} เหลือ {1}","Done — {0} translated.":"เสร็จแล้ว — แปล{0}",
   /* the More screen in the learner's order (v257) */
-  "Privacy":"ความเป็นส่วนตัว",
   /* the pill for a meaning in another language (v258) */
   "The meaning is in another language than the app.":"ความหมายเป็นคนละภาษากับแอป",
   /* How to use the app (v259) */
-  "Help":"ช่วยเหลือ",
   "How to use the app":"วิธีใช้แอป",
   "Six short sections: photo, characters, learning, cards, language, what stays on the phone.":"หกหัวข้อสั้นๆ: รูป ตัวอักษร การเรียน การ์ด ภาษา และอะไรที่อยู่ในเครื่อง",
   "Open":"เปิด",
   "Open source licenses":"ไลเซนส์โอเพนซอร์ส",
   "The software and data the app is built on, and who made them.":"ซอฟต์แวร์และข้อมูลที่แอปนี้ใช้ และคนที่สร้างมันขึ้นมา",
   "Fix the characters":"แก้ตัวอักษร",
-  
   "Swipe left or right to pick another card.":"ปัดซ้ายหรือขวาเพื่อเลือกการ์ดใบอื่น",
-  "Tap it — the text instead.": "แตะ – เปลี่ยนเป็นตัวอักษร",
-  "Tap here — characters big.": "แตะตรงนี้ – ตัวอักษรใหญ่",
+  "Tap it — what it means.": "แตะ – แปลว่าอะไร",
+  "Open it — the whole card.": "กดเปิด – ทั้งการ์ด",
   "Trace the lit stroke.": "ลากตามเส้นที่สว่าง",
-  "Tap the photo for the whole text, and tap again for the photo.": "แตะรูปแล้วตัวอักษรทั้งหมดจะขึ้นมาด้านบน แตะอีกครั้งรูปก็กลับมา",
-  "A card starts with the photo big — a tap gives the whole text the top of the card, and the next tap the photo again.": "การ์ดเริ่มต้นด้วยรูปขนาดใหญ่ แตะหนึ่งครั้งตัวอักษรทั้งหมดจะขึ้นมาด้านบน แตะอีกครั้งรูปก็กลับมา",
+  "Tap the photo for the pinyin and the meaning, and again for the photo.": "แตะรูปเพื่อดูพินอินกับความหมาย แตะอีกทีเพื่อกลับไปที่รูป",
+  "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "การ์ดเริ่มด้วยรูป นั่นคือคำถาม แตะหนึ่งครั้งจะเปิดตัวอักษรพร้อมพินอินและความหมาย แตะอีกครั้งรูปก็กลับมา",
 
 
   "Language and meanings":"ภาษาและความหมาย",
@@ -2480,23 +2337,21 @@ th:{
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"รูปที่มีข้อความหลายชุด — หน้าจอแอป แผงปุ่ม ป้ายเมนู — จะกลายเป็นการ์ดรวมแทน แตะข้อความไหนบนรูปก็ดูความหมายได้ แล้วกดสร้างการ์ดเพื่อทำเป็นการ์ดเฉพาะอันที่อยากจำ",
   "Every character under the photo is a button: tap one for other readings, or draw it with your finger. Pinyin and meaning follow by themselves and the AI checks them — flag a card when something still looks wrong.":"ตัวอักษรทุกตัวใต้รูปเป็นปุ่ม แตะเพื่อดูคำอ่านอื่น หรือเขียนด้วยนิ้วก็ได้ พินอินกับความหมายจะขึ้นเอง และ AI ช่วยตรวจ ถ้ายังดูผิดอยู่ก็ติดธงไว้",
   "Due cards first, then up to eight new ones. The photo is the question and the pad is the answer: trace the lit stroke and it moves on by itself, character by character.":"การ์ดที่ถึงกำหนดมาก่อน แล้วตามด้วยการ์ดใหม่ไม่เกินแปดใบ รูปคือคำถาม กระดานคือคำตอบ ลากตามเส้นที่สว่างอยู่ แล้วมันจะเดินหน้าเองทีละตัว",
-  "Know the character? Write it your own way, in your own stroke order — the pad takes it once what you wrote matches.":"ถ้ารู้จักตัวนี้อยู่แล้ว เขียนตามลำดับเส้นของตัวเองได้เลย กระดานจะรับทันทีที่ตรงกัน",
-  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card sits folded at its foot, and what the card is about stands under it. Swipe sideways to pick another card — nothing is graded by swiping.":"ติดตรงไหน กดดูวิธีให้วาดเส้นให้ หรือกดข้ามให้เติมตัวนั้นให้ ทั้งการ์ดพับอยู่ด้านล่าง และใต้ลงไปคือเรื่องที่การ์ดนี้พูดถึง ปัดซ้ายขวาเพื่อเลือกการ์ดอื่น การปัดไม่นับคะแนนอะไร",
+  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card — pinyin, meaning and what the text is about — is one tap away at its foot. Swipe sideways to pick another card — nothing is graded by swiping.":"ติดตรงไหน กดดูวิธีให้วาดเส้นให้ หรือกดข้ามให้เติมตัวนั้นให้ ทั้งการ์ด ทั้งพินอิน ความหมาย และเรื่องที่การ์ดพูดถึง อยู่ห่างแค่แตะเดียวที่ด้านล่างสุด ปัดซ้ายขวาเพื่อเลือกการ์ดอื่น การปัดไม่นับคะแนนอะไร",
   "All your cards, newest first, with a tab of their own for multicards. Search them, filter them, and tap one to test, edit or delete it.":"การ์ดทั้งหมดของคุณ ใหม่สุดขึ้นก่อน ส่วนการ์ดรวมอยู่อีกแท็บหนึ่ง ค้นหาและกรองได้ แตะการ์ดหนึ่งเพื่อทดสอบ แก้ไข หรือลบ",
   "Tap a card's star for the ones that matter to you, and Learn can study those alone. Tags group the rest, and a card from a photo gets one for what it is.":"แตะดาวบนการ์ดที่คุณสนใจ แล้วโหมดเรียนจะฝึกเฉพาะการ์ดพวกนั้นได้ ที่เหลือจัดกลุ่มด้วยแท็ก และการ์ดที่มาจากรูปจะได้แท็กตามว่ามันคืออะไร",
   "More → Language switches the app's own texts, and new cards get their meaning in that language. Translate all cards does it for the ones you already have.":"อื่นๆ → ภาษา ใช้เปลี่ยนข้อความของแอป และการ์ดใหม่จะได้ความหมายเป็นภาษานั้น ส่วนการ์ดที่มีอยู่แล้ว ใช้แปลการ์ดทั้งหมด",
-  "Your cards and photos stay on this phone and nowhere else — export them under More → Your data now and then.":"การ์ดและรูปของคุณอยู่แค่ในเครื่องนี้เท่านั้น ควรส่งออกเก็บไว้บ้างที่ อื่นๆ → ข้อมูลของคุณ",
-  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard.":"AI ตรวจให้จะส่งตัวอักษร พินอิน และความหมายของการ์ด และถ้าอ่านยากก็ส่งภาพของข้อความไปด้วย — บางครั้งก็ทั้งรูป",
+  "Your cards and photos stay on this phone and nowhere else — export them under More → Your cards now and then.":"การ์ดและรูปของคุณอยู่แค่ในเครื่องนี้เท่านั้น ควรส่งออกเก็บไว้บ้างที่ อื่นๆ → การ์ดของคุณ",
+  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"AI ตรวจให้จะส่งตัวอักษร พินอิน และความหมายของการ์ด และถ้าอ่านยากก็ส่งภาพของข้อความไปด้วย — บางครั้งก็ทั้งรูป และยังขอคำอธิบายสั้นๆ ของการ์ดใบหนึ่งเอง ตอนที่คุณมาถึงการ์ดที่ยังไม่มี",
 
   "Tap the star counter at the top to see how your points are counted.":"แตะที่ตัวนับดาวด้านบนเพื่อดูว่าคะแนนนับอย่างไร",
-  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under Privacy. Questions or ideas? More → Feedback.":"วันละครั้ง และอีกครั้งตอนออกจากแอปหลังสร้างการ์ด สถิติการใช้งานแบบไม่ระบุตัวตนและข้อความแจ้งข้อผิดพลาดจะถูกส่งให้เจ้าของแอป ปิดได้ที่ ความเป็นส่วนตัว มีคำถามหรือไอเดีย? อื่นๆ → ส่งความเห็น",
+  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"วันละครั้ง และอีกครั้งตอนออกจากแอปหลังสร้างการ์ด สถิติการใช้งานแบบไม่ระบุตัวตนและข้อความแจ้งข้อผิดพลาดจะถูกส่งให้เจ้าของแอป ปิดได้ที่ อื่นๆ → ส่งสถิติการใช้งาน มีคำถามหรือไอเดีย? อื่นๆ → ส่งความเห็น",
 
 },
 id:{
   "reading confidence {0}%":"keyakinan pembacaan {0}%","unknown {0}":"tidak dikenal: {0}","no dictionary meaning":"tidak ada arti di kamus","the text looks misread":"teks sepertinya salah dibaca","the framed area":"area dalam bingkai","card image":"gambar kartu","alt:photo":"foto",
   "Not yet checked":"Belum diperiksa","tile:New":"Baru",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Tekan dan tahan sebuah karakter untuk menelusuri semua kartu yang memuatnya; tekan dan tahan lagi untuk kembali.",
-  
   "Whole card":"Seluruh kartu",
   "Explain":"Jelaskan",
   "Explaining …":"Menjelaskan …",
@@ -2516,13 +2371,12 @@ id:{
   "not in the stroke set — draw it and tap Done":"tidak ada di kumpulan goresan — gambar lalu ketuk Selesai",
 "⚑ Flag":"⚑ Tandai",
 "card:⚑ Flagged":"⚑ Ditandai",
-  "Update notes":"Info pembaruan",
 "Tell me what is new after an update.":"Kasih tahu apa yang baru setelah pembaruan.",
 "Updated.":"Diperbarui.",
   "{0} to go, while the app is open.":"Sisa {0}, selama aplikasi terbuka.",
   "Waiting for its turn …":"Menunggu giliran …",
   "Check all cards again":"Periksa ulang semua kartu",
-  "The AI keeps getting better. Let it look at your whole deck again — it fills in the descriptions and tags that are missing, and you see every change to a text before you accept it.":"AI terus jadi lebih pintar. Minta dia memeriksa lagi semua kartumu — deskripsi dan tag yang belum ada langsung dilengkapi, dan setiap perubahan teks kamu lihat dulu sebelum diterima.",
+  "The AI keeps getting better. Let it look at your whole deck again — it fills in the missing tags and the few sentences that say what a card is about, and you see every change to a text before you accept it.":"AI terus jadi lebih pintar. Minta dia memeriksa lagi semua kartumu — tag yang belum ada dan beberapa kalimat yang menjelaskan kartu ini tentang apa langsung dilengkapi, dan setiap perubahan teks kamu lihat dulu sebelum diterima.",
   "Checking {0} of {1} …":"Memeriksa {0} dari {1} …",
   "Done — {0} could be better. Look under the Cards tab.":"Selesai — {0} bisa lebih baik. Lihat di tab Kartu.",
   "Done — nothing to change. Your cards are in good shape.":"Selesai — tidak ada yang perlu diubah. Kartumu sudah bagus.",
@@ -2535,16 +2389,8 @@ id:{
   
   
   
-  
-  
-  
-  
-  
   "Translated {0} at {1}.":"{0} diterjemahkan pada {1}.","Checked {0} at {1}.":"{0} dicek pada {1}.","Done — {0} filled in.":"Selesai — {0} dilengkapi.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Selesai — {0} dilengkapi, {1} bisa lebih baik. Lihat di tab Kartu.",
   "Undone — {0} put back.":"Diurungkan — {0} dikembalikan.",
-  
-  
-  
   
   
   "Filter":"Filter",
@@ -2563,8 +2409,6 @@ id:{
   "Take photo":"Ambil foto",
   "From album":"Dari album",
   "Processing photo …":"Memproses foto …",
-  
-  
   
   
   "Crop":"Pangkas",
@@ -2673,7 +2517,6 @@ id:{
   "Deck":"Kartu","Learn":"Belajar","Cards":"Kartu","Multicards":"Multikartu","Camera":"Kamera","More":"Lainnya",
   "Generate flashcard":"Buat kartu",
   "← Back to the flashcard":"← Kembali ke kartu",
-  
   "Open the flashcard":"Buka kartu",
   "From {0}":"Dari {0}",
   "Language":"Bahasa",
@@ -2687,7 +2530,6 @@ id:{
   "{0} learned, {1} reviewed this week, streak {2}":"{0} dipelajari, {1} ulangan minggu ini, {2} beruntun",
   "card":"{0} kartu","cards":"{0} kartu","day":"{0} hari","days":"{0} hari","review":"{0} ulangan","reviews":"{0} ulangan","photo":"{0} foto","photos":"{0} foto",
   "bar:AI suggestion":"{0} saran AI","bar:AI suggestions":"{0} saran AI",
-  
   "Traditional":"Tradisional","Simplified":"Sederhana","Nothing could be read.":"Tidak ada yang bisa dibaca.","Reading the text …":"Membaca teks …",
   "meaning unverified":"arti belum diperiksa"," (translation pending)":" (menunggu terjemahan)"," (reading uncertain: {0})":" (hasil baca meragukan: {0})",
   "Also on another photo":"Ada juga di foto lain","Also on {0} other photos":"Ada juga di {0} foto lain","Show this photo":"Tampilkan foto ini","Open this card":"Buka kartu ini",
@@ -2701,7 +2543,7 @@ id:{
   "No cards yet — take a photo under Camera, or tap + New.":"Belum ada kartu — ambil foto lewat Kamera, atau ketuk + Baru.",
   "Search":"Cari","+ New":"+ Baru","⚑ Flagged":"⚑ Ditandai","Star":"Bintang","Starred":"Berbintang","Unverified":"Belum diperiksa","{0} of {1}":"{0} dari {1}",
   "due":"sekarang","in {0} d":"{0} hari",
-  "Interval {0} d, ease {1}, {2}, next {3}.":"Interval {0} hari, kemudahan {1}, {2}, berikutnya {3}.",
+  "{0} so far, next on {1}.":"Sejauh ini {0}, berikutnya {1}.",
   "Nothing read yet":"Belum ada yang terbaca","unverified":"belum diperiksa","translation pending":"menunggu terjemahan","reading uncertain":"hasil baca meragukan",
   "The new frame is being read — the text follows when it is done.":"Bingkai baru sedang dibaca — teksnya menyusul setelah selesai.",
   "The text, pinyin and meaning follow when the reading is done.":"Teks, pinyin dan arti menyusul setelah pembacaan selesai.",
@@ -2722,10 +2564,10 @@ id:{
   "Cards made from them keep their own picture. A photo that never made a card is gone.":"Kartu yang dibuat dari foto itu tetap punya gambarnya sendiri. Foto yang belum pernah jadi kartu akan hilang.","Persistent on this phone.":"Tersimpan permanen di ponsel ini.","Not persistent yet. Install the app so the system keeps the data.":"Belum permanen. Pasang aplikasinya supaya sistem menyimpan datanya.",
   "Checking …":"Memeriksa …","Share":"Bagikan","Share the app":"Bagikan aplikasinya","Send the link to a friend. The app installs from any browser, no store.":"Kirim tautannya ke teman. Aplikasinya bisa dipasang dari browser apa saja, tanpa toko aplikasi.",
   "Add screenshot":"Tambah tangkapan layar","Sent, but the screenshot could not be attached.":"Terkirim, tapi tangkapan layar tidak bisa dilampirkan.","Feedback":"Masukan","Tell the app's owner what works and what does not.":"Beri tahu pemilik aplikasi apa yang jalan dan apa yang tidak.","Your message":"Pesanmu","Send":"Kirim",
-  "Your data":"Datamu","Export":"Ekspor","Progress and cards as one file, via the share sheet.":"Kemajuan dan kartu jadi satu berkas, lewat menu bagikan.","Include photos (adds about {0} MB)":"Sertakan foto (menambah sekitar {0} MB)",
+  "Export":"Ekspor","Progress and cards as one file, via the share sheet.":"Kemajuan dan kartu jadi satu berkas, lewat menu bagikan.","Include photos (adds about {0} MB)":"Sertakan foto (menambah sekitar {0} MB)",
   "Import":"Impor","A zeichentrainer-….json.txt file. Existing cards are overwritten.":"Berkas zeichentrainer-….json.txt. Kartu yang sudah ada akan ditimpa.",
   "Flagged cards":"Kartu yang ditandai","{0} flagged for review. Share the list as text, for a teacher.":"{0} kartu ditandai untuk diperiksa. Bagikan daftarnya sebagai teks, misalnya untuk guru.",
-  "Show":"Lihat","Online AI review":"Pemeriksaan AI online","AI review":"Pemeriksaan AI","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Yang dikirim: teks Mandarin, pinyin, arti sebuah kartu, catatanmu dan tebakan lain dari pembacaan aplikasi — untuk setiap kartu baru, dan untuk semua kartumu kalau kamu ketuk Cek berkala atau Terjemahkan, dan untuk satu kartu begitu kamu sampai di kartu itu dan kartu itu belum punya deskripsi. Kalau teksnya susah dibaca, gambarnya dikirim ke penyedia yang menerima gambar — kadang seluruh fotonya. Tanpa kunci sendiri, ponsel ini mengirim lewat relay pemilik aplikasi, yang meneruskannya ke penyedia dan hanya menyimpan hitungannya.",
+  "Show":"Lihat","AI review":"Pemeriksaan AI","What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.":"Yang dikirim: teks Mandarin, pinyin, arti sebuah kartu, catatanmu dan tebakan lain dari pembacaan aplikasi — untuk setiap kartu baru, dan untuk semua kartumu kalau kamu ketuk Cek berkala atau Terjemahkan, dan untuk satu kartu begitu kamu sampai di kartu itu dan kartu itu belum punya deskripsi. Kalau teksnya susah dibaca, gambarnya dikirim ke penyedia yang menerima gambar — kadang seluruh fotonya. Tanpa kunci sendiri, ponsel ini mengirim lewat relay pemilik aplikasi, yang meneruskannya ke penyedia dan hanya menyimpan hitungannya.",
   "Check every new card with the AI automatically (when online)":"Periksa setiap kartu baru dengan AI secara otomatis (kalau online)","Review queue":"Antrean pemeriksaan","Storage":"Penyimpanan","Learning":"Belajar",
   "Card order":"Urutan kartu","Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.":"Kartu yang harus diulang lebih dulu, lalu maksimal {0} kartu baru, tiap kelompok dari yang pendek ke yang panjang. Ini mengatur urutan di antara kartu yang sama panjangnya.",
   "Progress":"Kemajuan",
@@ -2733,7 +2575,7 @@ id:{
   "Sends anonymous usage counts to the app's owner once a day, and again when you leave the app after making a card: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.":"Mengirim hitungan pemakaian yang anonim ke pemilik aplikasi sekali sehari, dan sekali lagi saat kamu keluar dari aplikasi setelah membuat kartu: hari pemakaian, kartu yang dibuat dan diulang, pemeriksaan AI, dan pesan error aplikasi. Tidak ada teks kartu, tidak ada foto.",
   "Your id: {0}.":"ID kamu: {0}.","Send once a day":"Kirim sekali sehari","Photos":"Foto","Delete {0}":"Hapus {0}",
   "Advanced settings":"Pengaturan lanjutan","Admin log in":"Masuk admin",
-  "Password":"Kata sandi","Log in":"Masuk","Wrong password.":"Kata sandi salah.","About":"Tentang",
+  "Password":"Kata sandi","Log in":"Masuk","Wrong password.":"Kata sandi salah.",
   "Write a few words first.":"Tulis beberapa kata dulu.","No connection. Try again when online.":"Tidak ada koneksi. Coba lagi kalau sudah online.","Sending …":"Mengirim …","Thank you, sent.":"Terkirim, terima kasih.",
   "Could not send: {0}":"Tidak bisa mengirim: {0}","No flagged cards.":"Tidak ada kartu yang ditandai.","Image (stays on this phone)":"Gambar (tetap di ponsel ini)","Whole photo":"Seluruh foto",
   "Remove image":"Hapus gambar","Add a card by hand.":"Buat kartu sendiri.","Draw a character":"Gambar karakter","hello":"halo",
@@ -2750,24 +2592,21 @@ id:{
   /* the meaning in the app's language and the Translate-all row (v256) */
   "The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.":"Teks aplikasinya sendiri dan arti kartu baru. Kartu tetap punya bahasa Mandarin dan pinyinnya.","Meanings":"Arti","card has its meaning in another language.":"{0} kartu punya arti dalam bahasa lain.","cards have their meaning in another language.":"{0} kartu punya arti dalam bahasa lain.","Translate all cards into {0}":"Terjemahkan ke {0}","Translating {0} of {1} …":"Menerjemahkan {0} dari {1} …","{0} translated, {1} left.":"{0} kartu diterjemahkan, {1} lagi.","Done — {0} translated.":"Selesai — {0} diterjemahkan.",
   /* the More screen in the learner's order (v257) */
-  "Privacy":"Privasi",
   /* the pill for a meaning in another language (v258) */
   "The meaning is in another language than the app.":"Artinya dalam bahasa yang berbeda dari aplikasi.",
   /* How to use the app (v259) */
-  "Help":"Bantuan",
   "How to use the app":"Cara memakai aplikasi",
   "Six short sections: photo, characters, learning, cards, language, what stays on the phone.":"Enam bagian singkat: foto, karakter, belajar, kartu, bahasa, apa yang tetap di ponsel.",
   "Open":"Buka",
   "Open source licenses":"Lisensi open source",
   "The software and data the app is built on, and who made them.":"Software dan data yang dipakai aplikasi ini, dan siapa yang membuatnya.",
   "Fix the characters":"Perbaiki karakternya",
-  
   "Swipe left or right to pick another card.":"Geser ke kiri atau kanan untuk memilih kartu lain.",
-  "Tap it — the text instead.": "Ketuk – ganti ke teks.",
-  "Tap here — characters big.": "Ketuk di sini – aksara besar.",
+  "Tap it — what it means.": "Ketuk – artinya apa.",
+  "Open it — the whole card.": "Buka – seluruh kartu.",
   "Trace the lit stroke.": "Ikuti garis yang menyala.",
-  "Tap the photo for the whole text, and tap again for the photo.": "Ketuk fotonya, seluruh teks naik ke atas; ketuk lagi dan fotonya kembali.",
-  "A card starts with the photo big — a tap gives the whole text the top of the card, and the next tap the photo again.": "Kartu dibuka dengan foto besar – sekali ketuk seluruh teks naik ke atas, ketukan berikutnya mengembalikan fotonya.",
+  "Tap the photo for the pinyin and the meaning, and again for the photo.": "Ketuk fotonya untuk pinyin dan artinya, ketuk lagi untuk kembali ke foto.",
+  "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "Kartu dimulai dengan foto — itu pertanyaannya. Satu ketukan membuka teksnya lengkap dengan pinyin dan arti, ketukan berikutnya mengembalikan fotonya.",
 
 
   "Language and meanings":"Bahasa dan arti",
@@ -2787,15 +2626,14 @@ id:{
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.":"Foto dengan beberapa teks — layar aplikasi, panel tombol, papan menu — jadi satu multikartu. Ketuk teks mana pun di situ untuk melihat artinya, lalu Buat kartu membuatkan kartu dari yang ingin kamu pelajari.",
   "Every character under the photo is a button: tap one for other readings, or draw it with your finger. Pinyin and meaning follow by themselves and the AI checks them — flag a card when something still looks wrong.":"Setiap karakter di bawah foto adalah tombol: ketuk untuk melihat bacaan lain, atau gambar pakai jari. Pinyin dan artinya terisi sendiri dan AI memeriksanya — tandai kartunya kalau masih ada yang janggal.",
   "Due cards first, then up to eight new ones. The photo is the question and the pad is the answer: trace the lit stroke and it moves on by itself, character by character.":"Kartu yang jatuh tempo dulu, lalu paling banyak delapan kartu baru. Fotonya pertanyaan, papannya jawaban: ikuti garis yang menyala, lalu jalan sendiri karakter demi karakter.",
-  "Know the character? Write it your own way, in your own stroke order — the pad takes it once what you wrote matches.":"Sudah tahu karakternya? Tulis saja dengan caramu sendiri, urutan goresanmu sendiri — papannya menerima begitu cocok.",
-  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card sits folded at its foot, and what the card is about stands under it. Swipe sideways to pick another card — nothing is graded by swiping.":"Buntu? Tunjukkan menggambar garisnya dan Lewati mengisi karakternya. Seluruh kartu terlipat di bagian bawah, dan di bawahnya ada tentang apa kartu ini. Geser ke samping untuk memilih kartu lain — menggeser tidak menilai apa pun.",
+  "Stuck? Show me draws the stroke and Skip fills the character in. The whole card — pinyin, meaning and what the text is about — is one tap away at its foot. Swipe sideways to pick another card — nothing is graded by swiping.":"Buntu? Tunjukkan menggambar garisnya dan Lewati mengisi karakternya. Seluruh kartu — pinyin, arti, dan tentang apa kartu ini — tinggal satu ketukan di bagian paling bawah. Geser ke samping untuk memilih kartu lain — menggeser tidak menilai apa pun.",
   "All your cards, newest first, with a tab of their own for multicards. Search them, filter them, and tap one to test, edit or delete it.":"Semua kartumu, terbaru dulu, dengan tab tersendiri untuk multikartu. Cari, saring, dan ketuk satu kartu untuk mengetes, mengedit, atau menghapusnya.",
   "Tap a card's star for the ones that matter to you, and Learn can study those alone. Tags group the rest, and a card from a photo gets one for what it is.":"Ketuk bintang pada kartu yang penting buatmu, lalu Belajar bisa melatih kartu itu saja. Sisanya dikelompokkan lewat tag, dan kartu dari foto dapat tag sesuai isinya.",
   "More → Language switches the app's own texts, and new cards get their meaning in that language. Translate all cards does it for the ones you already have.":"Lainnya → Bahasa mengganti teks aplikasinya, dan kartu baru mendapat artinya dalam bahasa itu. Untuk kartu yang sudah ada, pakai Terjemahkan semua kartu.",
-  "Your cards and photos stay on this phone and nowhere else — export them under More → Your data now and then.":"Kartu dan fotomu tinggal di ponsel ini saja — sesekali ekspor lewat Lainnya → Datamu.",
-  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard.":"Pemeriksaan AI mengirim teks, pinyin, dan arti sebuah kartu, dan saat pembacaannya sulit juga gambar teksnya — kadang seluruh fotonya.",
+  "Your cards and photos stay on this phone and nowhere else — export them under More → Your cards now and then.":"Kartu dan fotomu tinggal di ponsel ini saja — sesekali ekspor lewat Lainnya → Kartumu.",
+  "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"Pemeriksaan AI mengirim teks, pinyin, dan arti sebuah kartu, dan saat pembacaannya sulit juga gambar teksnya — kadang seluruh fotonya. Ia juga meminta sendiri beberapa kalimat untuk satu kartu, begitu kamu sampai di kartu yang belum punya.",
 
   "Tap the star counter at the top to see how your points are counted.":"Ketuk penghitung bintang di atas untuk melihat cara poin dihitung.",
-  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under Privacy. Questions or ideas? More → Feedback.":"Sekali sehari, dan sekali lagi saat kamu keluar dari aplikasi setelah membuat kartu, hitungan pemakaian yang anonim dan pesan error aplikasi dikirim ke pemilik aplikasi; matikan itu di Privasi. Ada pertanyaan atau ide? Lainnya → Masukan.",
+  "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Sekali sehari, dan sekali lagi saat kamu keluar dari aplikasi setelah membuat kartu, hitungan pemakaian yang anonim dan pesan error aplikasi dikirim ke pemilik aplikasi; matikan itu di Lainnya → Berbagi data pemakaian. Ada pertanyaan atau ide? Lainnya → Masukan.",
 }
 };

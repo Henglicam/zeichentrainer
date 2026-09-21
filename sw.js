@@ -1,5 +1,5 @@
-const CACHE = "zt-v588";
-/* OCR assets (./vendor/, ~15 MB) live in their own cache that survives shell
+const CACHE = "zt-v592";
+/* OCR assets (./vendor/, ~23 MB: the reader's eleven files at ~15 MB plus the 7.3 MB stroke outlines of v517, which are fetched through the same path but deliberately kept out of OCR_FILES) live in their own cache that survives shell
    updates — otherwise every cache version bump would re-download all of
    Tesseract. Only bump this when vendor files change. */
 const OCR_CACHE = "zt-ocr-v1";

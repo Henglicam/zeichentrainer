@@ -9,6 +9,12 @@
 > **one 3:2 window on every card**; the answer block moved **to the foot of the card** as "Whole card" (v527) and the
 > word's line **above the pad** with it; the four grades of § 5 are two screens away — Learn has written the review
 > from the pad since v512, and the three grades of v421 survive only on a marked photo's sheet.
+>
+> **And the frame itself has been rebuilt twice since (added at v589):** **v560–v561** made the study card a grid of
+> fixed rows whose cue is exactly as tall as the pad — "the frame never moves for the content" — so § 3's per-card
+> arithmetic is gone; **v580** reduced the cue to **two states**, the photo or the whole text, with one tap between
+> them and no halves; and **v585** put the card's description inside the "Whole card" fold. Read § 3 and § 4 as the
+> reasoning that led there, never as the layout.
 
 H's brief, in his words (a sketch and a note, 2026-09-18):
 
