@@ -628,14 +628,28 @@ body.noscroll{overflow:hidden}
 /* a Multicard tile carries v461's two tells: the picture on a stack of plates with the count, and a bar for how far
    through it you are (v465, H: "Man muss sofort sehen, dass das eine Multicard ist"). The ghosts are inside the tile's
    own margin, so no tile grows and the grid's rhythm does not move; no negative z-index, or they paint behind the tile. */
-.ctile.page{padding-bottom:9px} /* v593: only a multicard has anything under its picture */
+/* the deck is ONE grid of squares (v597, H: "Make the deck square"): the multicard's tile was the only tile that was
+   not — 174x239 against every other tile's 174x174 — because its progress bar and its two-line title stood UNDER the
+   picture, which is the very thing v593 took off an ordinary tile ("quadratische Foto Tiles ohne text"). Both move ON
+   to it: the bar is the picture's own bottom edge, the title sits over a gradient scrim, still clamped to two lines
+   with its ellipsis (v593, H: "Two lines are okay for Multicards"). The arithmetic then falls out with nothing to
+   tune — the stack's 9 px of top margin plus the square picture ARE the tile's 174 — so padding-bottom goes to 0.
+   What it costs, named: the title's text column is 145 px instead of 154, about one character a line, so a long
+   multicard name is cut a little sooner; and the scrim covers the lower quarter of the picture. The count chip and
+   the marks move to the picture's top corners, out of the band's way; while the marking runs the tick owns the
+   top-right, so the count stands down rather than sitting under it. */
+.ctile.page{padding-bottom:0}
 .ctile.page .tstack{position:relative;display:block;margin:9px 9px 0 0;isolation:isolate}
 .ctile.page .tstack::before,.ctile.page .tstack::after{content:"";position:absolute;inset:0;border-radius:8px;background:var(--card2);box-shadow:inset 0 0 0 1px var(--sep)}
 .ctile.page .tstack::before{transform:translate(4px,-4px);z-index:1}
 .ctile.page .tstack::after{transform:translate(9px,-9px);z-index:0}
 .ctile.page .tw{position:relative;z-index:2;border-radius:8px}
-.ctile.page .prog{display:block;height:4px;border-radius:2px;background:var(--fill);margin:8px 10px 0;overflow:hidden}
-.ctile.page .prog i{display:block;height:100%;border-radius:2px;background:var(--ok)}
+.ctile.page .cnt{top:6px;bottom:auto} .ctile.page.pick .cnt{display:none}
+.ctile.page .tmarks{top:6px;bottom:auto}
+.ctile.page .tcap{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:24px 10px 9px;background:linear-gradient(to bottom,rgba(0,0,0,0) 0%,rgba(0,0,0,.5) 45%,rgba(0,0,0,.76) 100%);pointer-events:none}
+.ctile.page .tcap .th{margin:0;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.55)}
+.ctile.page .prog{position:absolute;left:0;right:0;bottom:0;z-index:4;display:block;height:3px;border-radius:0;background:rgba(255,255,255,.3);margin:0;overflow:hidden}
+.ctile.page .prog i{display:block;height:100%;border-radius:0;background:var(--ok)}
 .ctile:active{background:var(--card2)}
 .listhead.pickhead{display:flex;align-items:center;justify-content:space-between;gap:8px} .listhead.pickhead .del{padding:2px 2px;min-height:0;font-size:14px}
 .undo button{background:none;border:none;font-family:var(--sans);font-size:16px;font-weight:600;color:var(--tint);padding:0 10px;min-height:44px;cursor:pointer;flex:none}

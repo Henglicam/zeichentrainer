@@ -5,7 +5,7 @@ Working language: **English.** Reply to H in English. Short, direct, no excessiv
 ## Where the history is — read it before you change a rule
 
 This file is the **consolidated current state and the binding rules**. The full record of how
-we got here — every version from v1 to v596, with the measurements, the rejected alternatives
+we got here — every version from v1 to v597, with the measurements, the rejected alternatives
 and H's own words — is in **`docs/HISTORY.md`** (1.5 MB, not loaded automatically).
 
 It was `CLAUDE.md` until 2026-09-21, when it had grown to ~400k tokens and was loaded into
@@ -58,20 +58,32 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v596, 2026-09-21)
-The square photo box reaches the last box in the app. `.picbox.page` — the page front of a card
-made from a multicard and of a v452 page card — was the one box still at 3:2 and is now the
-ordinary card's own box to the pixel (`var(--photo-ar)`, and `height:100%;aspect-ratio:auto`
-inside the Learn cue), so a generated flashcard's picture measures 322 × 322 on the open card and
-322 × 311 on Learn, byte-identical to an ordinary card's. The carousel's neighbour of such a card
-was showing the multicard's photo at its natural size — `fitPageCover` now joins both `ready`
-hooks, so there is no jump at the snap. The guide's own drawn figures draw the app as it is
-(square photo tiles, the star on the picture), the empty deck's mock card is two equal squares,
-and the write pad in both draws **上** — 工 at that size renders as a Latin T, which H saw on his
-own screenshot. `matchTol` is gone (dead since v592). Suite `verify-onepage` 33/33; square 19/19,
-delask 44/44, phototile 39/39, memory 38/38, onephoto 30/30, nofree 15/15. Not yet field-checked.
+## Current state (PWA v597, 2026-09-21)
+The finished card's recap stands a **flat 300 ms less at every length** (H: "Vielleicht 300
+Millisekunden kürzer oder so."): `NEXT_MS` 3500 → **3200** and `RECAP_MAX` 5600 → **5300** while
+`RECAP_SYL` stays 230, so the floor and the cap move together and the per-syllable growth does
+not — scaling all three, as v577 did, would take 300 ms off a short card and 450 off a long one.
+Measured inside the page with a rAF loop: **3206 ms against v596's 3502**. The star is derived
+(`recapMs − POP1`) and needed no change. And **the deck is one grid of squares** (H: "Make the
+deck square"): the multicard's tile was the last one that was not — 174 × 239 against every
+other tile's 174 × 174 — because its bar and its two-line title stood *under* the picture, which
+is what v593 took off an ordinary tile. Both move **on** to it: the bar is the picture's bottom
+edge, the title sits over a gradient scrim, still clamped to two lines with its ellipsis (v593's
+own number, kept). The arithmetic falls out with nothing to tune — the stack's 9 px of top margin
+plus the square picture *are* the 174 — so `padding-bottom` goes to 0. The count chip and the
+marks move to the picture's top corners; in the marking the tick owns the top right and the count
+stands down. What it costs: the title's text column is 145 px instead of 154, about a character a
+line. Suite `verify-deckpace` 34/34 (15 of 34 fail on a v596 root, all flips); onepage 33/33,
+square 19/19, delask 44/44, phototile 39/39, memory 38/38, onephoto 30/30, nofree 15/15; overflow
+scan 5 screens × 10 languages × 2 widths, 0 differences against v596. Not yet field-checked.
 
 **Recent state worth carrying in the head** (each has its full entry in the archive):
+- **v596** — the square photo box reaches the last box: `.picbox.page` (the page front of a card
+  made from a multicard, and of a v452 page card) is the ordinary card's own box to the pixel,
+  and `fitPageCover` joins both carousel `ready` hooks so the neighbour no longer shows the
+  multicard's photo at natural size and jumps at the snap. The guide's figures and the empty
+  deck's mock draw the app as it is, and the pad in both writes **上** — 工 at that size renders
+  as a Latin T, which H saw on his own screenshot.
 - **v595** — one cut shape for every photo: `CARD_RATIO` is **1**, so `windowRect`, `windowCut`
   and `frontPic` are one square. `RECUT_V` stays **5**: cards already on the phone keep their 3:2
   picture, fitted in the square box between two bands of blur. A re-cut is one constant away and
@@ -176,7 +188,8 @@ after the layout settles (v521/v532).
 - **After each character** its own reading stands over the pad for `CHAR_MS` 900 ms with the
   character's meaning under it (v553/v571); the **last** character gets one too, then the whole
   card's recap — the reading and the meaning, no characters (v577) — for `recapMs(d)`
-  (`NEXT_MS` 3500 + `RECAP_SYL` 230 a syllable past the second, capped `RECAP_MAX` 5600). A tap
+  (`NEXT_MS` 3200 + `RECAP_SYL` 230 a syllable past the second, capped `RECAP_MAX` 5300 — v597
+  took a flat 300 ms off the floor and the cap, so every length is 300 shorter). A tap
   skips. The star flies out of the recap into the counter at `recapMs − POP1`; a milestone
   (50/100/250/500/1000 points, or a 7/30/100-day streak) bursts (v545).
 - **The line under the pad** is always there and follows the pad: the character being written
@@ -194,7 +207,9 @@ Square photo tiles, two a row, the card's picture with the blurred fill behind i
 written under them** (v593); a text-only card draws its whole text in the picture area (v506).
 On the picture: the star (v425, one tap while scrolling, never a re-render), the flag and AI
 marks, and — on a multicard — the stack of plates, the count chip and the progress bar (v461/v465),
-which is what makes a multicard unmistakable. **Two tabs, Cards and Multicards** (v477); the
+which is what makes a multicard unmistakable. **A multicard's tile is square too since v597**: its
+bar is the picture's own bottom edge and its title sits on the picture over a gradient scrim, still
+clamped to two lines with an ellipsis, so the whole deck is one grid of squares. **Two tabs, Cards and Multicards** (v477); the
 filter is **one pill and a sheet** with several rows at once (v365/v366). A long press starts the
 marking (v354); the list keeps its place when a card is opened and closed (v352/v445).
 
@@ -475,9 +490,22 @@ own licences even after the app is sold** (Arphic §2b and CC BY-SA ShareAlike).
 fine; taking those two files private is not.
 
 ## Open / not yet field-checked
-v596 and the versions around it are not field-checked — H's next card made from a multicard is the
-check (a square picture centred on its own button, on Learn and under Cards), and the guide's Learn
-figure, which should now write 上 and not a T.
+v597 and the versions around it are not field-checked — H's next finished card is the check for the
+shorter recap (is 3.2 s still enough to read?), his next look at the Multicards tab for the square
+tiles (is the name still readable on the picture?), his next card made from a multicard for v596's
+square page front, and the guide's Learn figure, which should now write 上 and not a T.
+
+**Asked for and not yet built:** H's third request of the same message — "Nimm doch echte
+Screenshots anstatt solche Fantasiesachen" — replaces the guide's six drawn figures (and the empty
+deck's mock card) with real screenshots. v549 measured and rejected the literal version: a screen
+scaled into the guide's 329 px content width is 329 × 768, six of those are 4600 px against the
+3560 px of prose they replace, each is in **one of the ten languages** and in **one theme**, and
+nothing in this project regenerates them (no build step, H is phone-only) — so an honest set is
+roughly 5 crops × 2 themes as PNGs in the shell, with the sixth figure ("what stays on the phone")
+having no screen to shoot at all. v549's own escape hatch is the one to build: **a crop of one part
+of one screen is a figure**, and five of the six carry no UI prose (the tiles, the pad, the
+character strip, the language chips with their fixed endonyms), so they are language-independent.
+Its own PR.
 
 **Named and waiting for H's word** (each changes how he handles the app, so each waits for a "Go"):
 re-cutting the deck square (`RECUT_V` 6, ~95 ms a card, no undo); after one tap the card is dealt
