@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=590; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=591; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -679,6 +679,7 @@ const TO_TEST=[
   ["app","v589","More at 360 px: buttons inside"],
   ["app","v589","long press held 2 s deletes nothing"],
   ["app","v590","no stray ink left on the pad"],
+  ["app","v591","Cards and Camera: square photos"],
   ["app","v588","Check-up adds description and tag"],
   ["app","v586","Whole card: the text is already there"],
   ["app","v582","Learn: no Undo/Clear mid-write on the pad"],
@@ -3685,7 +3686,7 @@ async function checkCard(id){ const d=cardOf(id); if(!d||!d.unchecked) return; c
    default — see § the entry for why the automatic trigger at level 3 was measured and not built. */
 const HAND_TOP=3, HAND_AT=2; /* the target must be among the matcher's three best — the drawing sheet's own rule since v141 — and the pad starts judging the whole character after two strokes in a row that did not fit (v570) */
 const PAD_FLOOR=160, PHOTO_MIN=120, LINE_H=61, CLIP_RATIO=0.65, TRACE_OK=0.18, NEXT_MS=3500, RECAP_SYL=230, RECAP_MAX=5600, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
-const CARD_RATIO=1.5; /* the one window and box shape on every card, 3:2 (v519) — declared here, since FRONT_RATIO reads it at load time */
+const CARD_RATIO=1.5; /* the one window and box shape on every card, 3:2 (v519) — the CUT, which is unchanged. The BOX a photo is shown small in is square since v591 (styles.css --photo-ar), so a 3:2 picture sits in it fitted with the blurred fill above and below, exactly as it does in the learning card's own square cue — declared here, since FRONT_RATIO reads it at load time */
 let LAST_FIT=null; /* v521: the study card's last pad measurement, printed by Diagnostics */
 /* THE MAIN THREAD AT STARTUP, AND WHAT A FOLD DOES TO IT (v532, H: "open/close foldable phone sometimes freezes the startup
    screen from the app"). Not reproduced here — the harness has no fold —, so three things that are measurable rather than a
@@ -9262,12 +9263,14 @@ function renderShots(){
       </div>`;
       /* a tile when nothing is happening to this photo and it is not the one opened from the grid. A photo still WAITING in the
          batch is a tile too since v466 (H: "Und zwar jeweils zwei pro Reihe") — nothing is happening to it yet, which is why
-         v454 gave it a plain line and no bar; the clock says which one it is and the batch line above says how many are to go. */
+         v454 gave it a plain line and no bar; the clock says which one it is and the batch line above says how many are to go.
+         v591: the photo is FITTED in the square box with the blurred copy behind it, as on the learning card and the Cards tile —
+         until v590 it was cover in a 4:3 box, so more than half of a wide sign was cut away and could not be got at. */
       const qd=AUTOQ.includes(s.id);
       if(!cropping&&!PENDING[s.id]&&!results.length&&!prov&&!SIGN[s.id]&&!READING[s.id]&&!shotNote(s)&&S.openShot!==s.id){ /* a failed reading's note keeps the photo full width, across a restart too (v509) */
         const n=(byShot.get(s.id)||[]).filter(d=>d.c&&!isPage(d)).length;
         return `<button class="tile${qd?" wait":""}" data-tile="${s.id}"${!busy&&S.inbox.length>1?` data-lp="${s.id}"`:""}>
-          <span class="tw"><img src="${shotURL(s)}" alt="${t("alt:photo")}" loading="lazy" decoding="async">${n?`<span class="cnt">${n}</span>`:""}${qd?`<span class="wt" title="${esc(t("Waiting for its turn …"))}" aria-label="${esc(t("Waiting for its turn …"))}">${ICON_WAIT}</span>`:""}</span>
+          <span class="tw"><img class="tbg" src="${shotURL(s)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${shotURL(s)}" alt="${t("alt:photo")}" loading="lazy" decoding="async">${n?`<span class="cnt">${n}</span>`:""}${qd?`<span class="wt" title="${esc(t("Waiting for its turn …"))}" aria-label="${esc(t("Waiting for its turn …"))}">${ICON_WAIT}</span>`:""}</span>
           <span class="tmeta"><span class="ts">${esc(new Date(s.ts).toLocaleString(LANG_LOCALE[LANG],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}))}</span></span></button>`;
       }
       if(results.length&&!rs.length) return `<div class="shot">${results.length>1?`<div class="listhead reshead">${t("{0} cards from this photo",results.length)}</div>`:""}${results.map(d=>`${resultHTML(d)}
