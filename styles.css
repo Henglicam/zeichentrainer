@@ -516,6 +516,11 @@ body.noscroll{overflow:hidden}
    Chinese characters and the fixed endonyms) and light/dark, and cannot go stale the way a screenshot does. */
 .guide .gfig{margin:0 0 12px;padding:0;background:var(--card2);border-radius:12px;box-shadow:inset 0 0 0 1px var(--sep);overflow:hidden}
 .guide .gf{display:block;width:100%;height:auto}
+/* a figure that is a real crop of the app (v598): the <picture> is the block, the img carries its own width and
+   aspect ratio inline (min(100%, h x ar)), so a wide crop fills the column and the square write pad sits centred.
+   The radius follows the app's own small-box radius, so a crop reads as a piece of the app rather than a poster. */
+.guide .gfp{display:block}
+.guide .gfs{width:auto;height:auto;margin:5px auto;border-radius:10px}
 .guide .gf .gfh{font-family:var(--hanzi)}
 .guide .gf .gft{font-family:inherit;font-weight:500}
 
