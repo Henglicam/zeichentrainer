@@ -4,8 +4,10 @@
   /* v591 (H: "Bitte Cards und Camera dem Fotoformat der Lernkarten anpassen", then "In der cards Vorschau nur
      quadratische Foto thumbnails anzeigen"): ONE shape for every box that shows a photo small — the square the
      learning card's own photo area already is (the cue is as tall as the pad, v561/v580), with the picture FITTED
-     inside it and the subdued blurred copy behind it (v232/v234). The card's own picture keeps its 3:2 cut
-     (CARD_RATIO, v519): this token is the shape of the BOX a photo is shown in, never of the cut. */
+     inside it and the subdued blurred copy behind it (v232/v234). v595 brought the CUT to the same square
+     (CARD_RATIO), so the two bands of blur beside a picture became the photo itself; v596 gave the last box that
+     was still 3:2 — the page front of a card made from a multicard — this token as well, so every box that shows
+     a photo small in this app reads --photo-ar and nothing else. */
   --photo-ar:1;
   --bg:#F2F2F7; --card:#FFFFFF; --card2:#F2F2F7; --fill:#E9E9EE;
   --label:#000000; --label2:#6E6E73; --label3:#AEAEB2; --sep:rgba(60,60,67,.24);
@@ -269,7 +271,7 @@ button,.tab,.chip,.chipset,.pill,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg
 .linked{margin-top:16px} .linked .lbl{font-size:13px;color:var(--label2);margin-bottom:6px}
 /* one line that scrolls sideways, as the tag chips since v157 — four photos used to wrap 3 + 1 (v345); the tile is 74x44 so four fit the card at 390 px and the touch target keeps its 44 px */
 .linked .thumbs{display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;min-width:0;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px} .linked .thumbs::-webkit-scrollbar{display:none} .card .linked .thumbs{justify-content:safe center}
-.linked .lnk{position:relative;flex:none;width:72px;height:72px;padding:0;border:1px solid var(--sep);border-radius:10px;background:var(--card2);overflow:hidden;display:flex;align-items:center;justify-content:center} .linked .lnk.on{border:2px solid var(--tint)} /* 96x54 since v422 (74x44 from v345, H: "Vielleicht sind sie einfach zu klein"): three fit the card at 390 px with a peek of the fourth, and the shape is the Cards list's own 16:9 */
+.linked .lnk{position:relative;flex:none;width:72px;height:72px;padding:0;border:1px solid var(--sep);border-radius:10px;background:var(--card2);overflow:hidden;display:flex;align-items:center;justify-content:center} .linked .lnk.on{border:2px solid var(--tint)} /* 72x72 since v591 (96x54 from v422, 74x44 from v345, H: "Vielleicht sind sie einfach zu klein"): the app's one photo-box shape, and exactly the 5184 px2 of v422's 96x54, so four fit the card's width on one line where three and a peek did */
 /* the Cards list's box look (v345): the crop fitted, a subdued blurred copy behind it as on the front (v232/v234) */
 .linked .lnk .thumb{position:relative;width:100%;height:100%;object-fit:contain} .linked .lnk .thumbbg{position:absolute;left:-10%;top:-10%;width:120%;height:120%;object-fit:cover;filter:blur(10px) saturate(.55) brightness(.85);opacity:.55;pointer-events:none} .linked .glyph{font-size:26px;color:var(--label)}
 .scriptline{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:8px}
@@ -453,7 +455,7 @@ body.noscroll{overflow:hidden}
 
 /* sign card front */
 .signfront{width:100%;max-width:440px;margin:0 auto}
-/* the crop in a fixed 16:9 box inside the card (v224; the edge-to-edge box of v228 went in v229 — H: "Bild in der Box gefiel mir besser"), with the text box's hairline edge, and a blurred copy of the crop filling the box behind it (v229); the copy carries the photo's own colours (v230, H: "match the soft blurred fill with the color of the photo"; v229 had it at 45 % over the grey, which washed a red crop to pink), darkened the way photo apps letterbox a picture — the blurred image at full opacity, brightness 65 %, slightly enlarged so the blur's edges never show (v231, H: "Dimming would be OK. Please do it how it's usually done.") */
+/* the crop in a fixed box inside the card at --pr, which every caller sets to CARD_RATIO (v224, 16:9 then, 3:2 at v519 and the square since v595; the edge-to-edge box of v228 went in v229 — H: "Bild in der Box gefiel mir besser"), with the text box's hairline edge, and a blurred copy of the crop filling the box behind it (v229); the copy carries the photo's own colours (v230, H: "match the soft blurred fill with the color of the photo"; v229 had it at 45 % over the grey, which washed a red crop to pink), darkened the way photo apps letterbox a picture — the blurred image at full opacity, brightness 65 %, slightly enlarged so the blur's edges never show (v231, H: "Dimming would be OK. Please do it how it's usually done.") */
 .picbox{position:relative;width:100%;aspect-ratio:var(--pr,1);background:var(--card2);border-radius:var(--rc);margin:0 auto 10px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--sep)}
 .picbox .picbg{position:absolute;left:-10%;top:-10%;width:120%;height:120%;object-fit:cover;filter:blur(24px) saturate(.55) brightness(.85);opacity:.55;pointer-events:none} /* subdued: the photo's colour only hints through the card's grey (v234, H: "die Hintergründe bitte dezenter" — v231 had it at full opacity, brightness 65 %) */
 .picbox .signimg{position:relative;width:100%;height:100%;object-fit:contain;margin:0;max-height:none;border-radius:0}
@@ -858,11 +860,19 @@ body.noscroll{overflow:hidden}
 .padline .hanzi{font-family:var(--hanzi);font-size:20px;color:var(--label)} .padline .hanzi b{color:var(--tint);font-weight:400} .padline .mono{font-weight:600}
 .padline .hanzi b.lock{color:var(--lock)} .padline .plock{display:inline-block;vertical-align:-1px;margin-right:4px;color:var(--lock)} .padline .plock svg{width:13px;height:13px;fill:currentColor} /* v526: the locked character in the lock colour in the line, the padlock before its word (blue since v528) */
 .padacts{display:flex;justify-content:center;gap:2px 14px;flex-wrap:wrap;margin-top:6px} .padacts .del{font-size:15px;padding:8px 6px;min-height:40px}
-/* the multicard's picture on the study card (D5, v512): cover-fitted in the ordinary box around the card's own text; the
-   pagewrap is sized and offset by fitPageCover, so the regions' percent coordinates still land on the picture */
-.card.study .picbox.page{aspect-ratio:1.5;height:auto;max-height:none;display:block}
-.card.study .picbox.page .pagewrap{position:absolute;left:0;top:0;margin:0;max-width:none;max-height:none}
-.card.study .picbox.page .pagewrap .signimg{max-width:none;max-height:none}
+/* the multicard's picture on the study card and on the open card (D5, v512): cover-fitted in the ordinary box around the
+   card's own text; the pagewrap is sized and offset by fitPageCover, so the regions' percent coordinates still land on the
+   picture. v596: the carousel's neighbour is on the same three rules — the Learn peer carried .study and so took them by
+   accident, while the Cards peer (v445) did not and slid its page in CONTAINED with a 16 px margin against the card's cover
+   fit; naming .card.peer here is what makes the peer and the card one shape, which is v530's rule for every other row.
+   THE SHAPE IS --photo-ar, the app's one photo-box token (v591/v595): a page front is a photo shown small in a box, like
+   every other, and it was the last one left at 3:2. In the cue the photo ROW decides instead, exactly as it does for an
+   ordinary card's box, so the two are the same rect to the pixel (322 x 311 at 390 px; 292 x 209 on a short screen, where
+   neither is square and the frame is what decides — v560). */
+.card.study .picbox.page,.card.peer .picbox.page{aspect-ratio:var(--photo-ar);height:auto;max-height:none;display:block}
+.cue .zone1 .picbox.page{height:100%;aspect-ratio:auto} /* the cue's own photo row, as for .picbox:not(.page) */
+.card.study .picbox.page .pagewrap,.card.peer .picbox.page .pagewrap{position:absolute;left:0;top:0;margin:0;max-width:none;max-height:none}
+.card.study .picbox.page .pagewrap .signimg,.card.peer .picbox.page .pagewrap .signimg{max-width:none;max-height:none}
 /* a locked character (v513, § 7) on every card of its walk: since v528 a SOFT chip in the lock's own blue inside its own
    cell, with the glyph in that blue — a colour of its own, so red says "in the pad", blue "locked" and green "written" and
    no two of them share a tile (v525 had a locked and a written character both green) — where v525–v527 filled the whole cell
@@ -880,9 +890,9 @@ body.noscroll{overflow:hidden}
 /* the open card in the study card's layout (v518): the actions where the pad would stand */
 .card.study.detail .detailacts{margin-top:14px}
 /* the detail's line sits under the row at the study card's own 10 px since v531 (it stood under the fold at 12 until v530) */
-/* the study card's picture: one box shape whatever the text (v517) — v514's per-card ratio stays everywhere else, and the
-   picture itself is fitted inside with the blurred fill of v232 behind it */
-.card.study .picbox.page,.card.peer .picbox.page{aspect-ratio:1.5} /* 3:2 since v519; and the carousel's neighbour (v518): a page front slid in at its own v514 ratio and jumped to 2:1 at the snap */
+/* v596: the second copy of the page front's aspect-ratio stood here — the same selector list set to the same 1.5 as the
+   rule above it (v518 added it for the carousel's neighbour, which the rule above already covered). One number written
+   twice is the v401 trap in CSS: the next hand changes one of them. It is one rule now, above. */
 .picbox.zoomed{touch-action:none} .picbox.zoomed .signimg,.picbox.zoomed .pagewrap{will-change:transform}
 
 
