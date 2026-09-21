@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=582; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=583; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -80,7 +80,7 @@ async function putCard(upd,key){
 }
 /* ---------- State ---------- */
 const S = { mode:"study", progress:{}, custom:[], inbox:[],
-  queue:[], idx:0, done:0, ahead:false, ready:false, ansOpen:true, /* v581 (H: "Details direkt in Whole Card zeigen"): the block at the card's foot is OPEN, and only the fold row's own tap closes it — for the session, as S.cueBig holds the state a tap chose (v568). Until v580 it came up folded on every card, which is what the ten lines v539 corrected were for; the intent they carried is reversed here on H's word, so they are gone rather than flipped. */ /* v539: `revealed` is gone — it was set to false in ten places and to true in none since v512 replaced tap-to-reveal with the write pad, so every one of those lines was a no-op standing in for `ansOpen`, which is the answer block's own flag */
+  queue:[], idx:0, done:0, ahead:false, ready:false, /* v583 (H: "Whole Card per Default immer noch zugeklappt"): the block at the card's foot comes up FOLDED again and each of the fourteen S.ansOpen=false lines is back — v581 had read "Details direkt in Whole Card zeigen" as "the block stands open" and removed them; what he meant was the card's own description, which stands at the foot outside the fold since. */ /* v539: `revealed` is gone — it was set to false in ten places and to true in none since v512 replaced tap-to-reveal with the write pad, so every one of those lines was a no-op standing in for `ansOpen`, which is the answer block's own flag */
   pendingImg:null, pendingFull:null, pendingUse:"crop", persist:null,
   peek:null, /* Learn: the id of a linked card whose photo is shown on the front instead (v155) */
   cueBig:"pic", /* which half of the cue is big — "pic" or "txt", NEVER neither: v580 (H: "nur 2 Stati: Karte komplett offen / Übersetzung komplett offen. Tippen toggelt zwischen beiden") took the halves away, so a tap swaps the two states rather than folding one back. A render must not change it — H writes a whole card off the enlarged half (v568). A fresh start is the photo (v572, H: "Start with the open image by default."), a reload the session's own state (v569). */
@@ -360,7 +360,7 @@ async function setFilter(scope,k){
     else if(!k.startsWith("tag:")){ v=[]; await setSetting("learnStar",false); await setSetting("learnNew",false); }
     else { const x=k.slice(4); v=v.includes(x)?v.filter(y=>y!==x):[...v,x]; }
     await setSetting("learnTag",v);
-    S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.single=null; S.saved=null; setStats(); return; }
+    S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false; S.single=null; S.saved=null; setStats(); return; }
   if(!k){ S.filterStar=false; S.filterFlag=false; S.filterAi=false; S.filterUnv=false; S.filterNew=false; S.filterTags=[]; return; }
   if(k==="star") S.filterStar=!S.filterStar;
   else if(k==="new") S.filterNew=!S.filterNew;
@@ -673,8 +673,8 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v583","Learn + Cards: the description at the card's foot"],
   ["app","v582","Learn: no Undo/Clear mid-write on the pad"],
-  ["app","v581","Learn: Whole card open by default"],
   ["app","v580","Learn: one tap swaps photo and text"],
   ["app","v579","pad: freehand taken at speed?"],
   ["app","v578","card with no photo: word on top"],
@@ -1104,7 +1104,7 @@ async function boot(){
   LANG=LANGS.some(([c])=>c===S.settings.lang)?S.settings.lang:langDefault(); applyLangStatic(); /* the app's language (v253): the setting, else the phone's */
   await syncMeanings(); /* every card shows the meaning it has in the app's language (v265); cards from before get their ms */
   S.ready=true;
-  S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false;
+  S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false;
   const rv=S.settings.resumeView; if(rv){ delete S.settings.resumeView; idbDel("settings","resumeView").catch(()=>{}); } /* the screen the update's reload left (v327): back to it, so the reload is not felt */
   if(rv&&Date.now()-(rv.at||0)<RESUME_MAX&&(rv.own!==false||navReload())){ if(["study","cards","inbox","more","guide"].includes(rv.mode)) S.mode=rv.mode;
     if("big" in rv) S.cueBig=rv.big==="txt"?"txt":"pic"; /* v569: the half the tap made big survives the reload a fold can cause. v580: there are two states, so a note from before it — or one that says the halves — comes back as the photo */ if(S.mode==="cards"&&rv.detail&&S.custom.some(d=>d.id===rv.detail)) S.detail=rv.detail; if(typeof rv.query==="string") S.query=rv.query; if(rv.tab==="pages"||rv.tab==="cards") S.cardsTab=rv.tab;
@@ -2660,7 +2660,7 @@ function renderMore(main){
     const pw=$("#admin-pw"), go=async()=>{ const h=await sha256(pw.value); if(h===ADMIN_HASH){ S.admin=true; S.adminPw=pw.value; render(); window.scrollTo({top:0}); relayWatch(); } else { $("#admin-err").style.display=""; pw.value=""; } };
     $("#admin-unlock").onclick=go; pw.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
   }
-  main.querySelectorAll("[data-learnorder]").forEach(b=> b.onclick=async()=>{ await setSetting("learnOrder",b.dataset.learnorder); S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.single=null; S.saved=null; setStats(); main.querySelectorAll("[data-learnorder]").forEach(x=>x.classList.toggle("on",x===b)); }); /* the Learn session follows at once (v153) */
+  main.querySelectorAll("[data-learnorder]").forEach(b=> b.onclick=async()=>{ await setSetting("learnOrder",b.dataset.learnorder); S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false; S.single=null; S.saved=null; setStats(); main.querySelectorAll("[data-learnorder]").forEach(x=>x.classList.toggle("on",x===b)); }); /* the Learn session follows at once (v153) */
   renderNmtRow(); renderAiRow();
 }
 
@@ -2748,7 +2748,7 @@ const GUIDE=()=>[
     t("Due cards first, then up to eight new ones. The photo is the question and the pad is the answer: trace the lit stroke and it moves on by itself, character by character.")
       +" "+t("Know the character? Write it your own way, in your own stroke order — the pad takes it once what you wrote matches.") /* v570: a learner will not find the freehand acceptance by tapping, so the guide says it (the v259 rule) */
       +" "+t("A card starts with the photo big — a tap gives the whole text the top of the card, and the next tap the photo again."), /* v568: the one thing a learner cannot find by tapping, so the guide says it (the v259 rule); the empty deck says it in its own short words beside the drawn card since v569, so this key is the guide's alone. v572: rewritten for the photo-big start — the sentence has to name the state the card opens in before it names the tap. */
-    t("Stuck? Show me draws the stroke and Skip fills the character in. The whole card stands open at its foot — tap that row to fold it away. Swipe sideways to pick another card — nothing is graded by swiping.")
+    t("Stuck? Show me draws the stroke and Skip fills the character in. The whole card sits folded at its foot, and what the card is about stands under it. Swipe sideways to pick another card — nothing is graded by swiping.")
       +" "+t("Tap the star counter at the top to see how your points are counted.")] /* the counter is a tap target with no other affordance (v546), so this one sentence survives the cut */
     .concat(lockOn()?[t("Press and hold a character to walk through every card that has it; press and hold it again to come back.")]:[])}, /* v531: only while the lock is on */
   {h:t("Cards"),fig:GFIG.cards(),p:[
@@ -3035,12 +3035,14 @@ function backHTML(d,o){ const srcHere=!(o&&o.noSrc); /* noSrc: the front of this
   /* the linked row is not part of the answer any more (v422, H: "Die 'also in another photo' Zeile nach unten schieben"): it
      stood between the parts row and the grades, so reference material sat in the middle of the answer-then-grade path. Each
      caller places it now, below its own actions. */
-  return `${simpRefHTML(d)}<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}${srcHere?srcPill(d,true):""}</div>${descHTML(d,o)}${o&&o.noParts?"":charsHTML(d)}
+  return `${simpRefHTML(d)}<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}${srcHere?srcPill(d,true):""}</div>${o&&o.noDesc?"":descHTML(d,o)}${o&&o.noParts?"":charsHTML(d)}
     ${glossBlock}`;
 }
-/* the description under the meaning (v529): the card's own in the app's language when it has one; else, where the caller allows it
-   (explain: the Learn block and the detail — never the camera's finished card, whose check is still on its way), the Explain button,
-   which asks the AI once for this card alone. EXPLAIN holds the button's state by card id (busy, or a failure's sentence) so a re-render
+/* the card's own description (v529): in the app's language when it has one; else, where the caller allows it (explain:
+   the study card and the open card — never the camera's finished card, whose check is still on its way), the Explain button,
+   which asks the AI once for this card alone. v583 (H: "Explain per default anzeigen, nicht zu klappbar"): on those two
+   screens it stands at the FOOT of the card, outside the fold, so it is there without a tap and no tap can put it away —
+   the callers pass noDesc to backHTML and draw it themselves; the camera's finished card still carries it inside its back. EXPLAIN holds the button's state by card id (busy, or a failure's sentence) so a re-render
    draws it right; the answer is put into the DOM in place (refreshDesc), never through render(), which would rebuild the pad under a finger. */
 const EXPLAIN={};
 function descHTML(d,o){ const s=descOf(d); if(s) return `<p class="desc" data-desc="${esc(d.id)}">${esc(s)}</p>`;
@@ -3090,7 +3092,7 @@ function wireLinks(root){ (root||document).querySelectorAll("[data-link]").forEa
 function endSingle(){
   /* leave single-card test mode and restore the session queue */
   const c=S.single; S.single=null;
-  if(S.saved){ Object.assign(S,S.saved); S.saved=null; } S.mode="cards"; S.detail=c; render();
+  if(S.saved){ Object.assign(S,S.saved); S.saved=null; } S.ansOpen=false; S.mode="cards"; S.detail=c; render();
 }
 /* v530 (H, a screenshot of a freshly swiped card: "Bei einer neu geswipten Karte erscheint ein leeres großes Pad. Dadurch
    scheint das Bild unruhig zu springen."): the carousel's neighbour carries an empty pad in place of the canvas, and until
@@ -3164,7 +3166,7 @@ function renderStudy(main){
       <div class="badge" style="margin-bottom:18px">${statsLine()}</div>
       <button class="btn" id="ahead">${t("Pull the next cards forward")}</button>
     </div>`;
-    const a=$("#ahead"); if(a) a.onclick=()=>{ const q=buildQueue(true); if(q.length){S.queue=q;S.idx=0;S.done=0;S.ahead=true;render();} };
+    const a=$("#ahead"); if(a) a.onclick=()=>{ const q=buildQueue(true); if(q.length){S.queue=q;S.idx=0;S.done=0;S.ahead=true;S.ansOpen=false;render();} };
     return;
   }
   const list=curList(), li=curIdx(), c=list[li], d=cardOf(c);
@@ -3192,7 +3194,7 @@ function renderStudy(main){
      has one, the photo's own lines — so the block at the foot of the card is the whole card in one look, while the line
      above the pad is the word being written. Until v526 the block sat above the pad and the line under it, and the two
      said the same thing twice about different words ("doppelt gekoppelt und unlogisch"). */
-  const back=`<div class="anshanzi hanzi">${(d.trad?d.trad.split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}
+  const back=`<div class="anshanzi hanzi">${(d.trad?d.trad.split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,noDesc:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}
       <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button></div>`;
   const noTmpl=cur&&STROKES&&!STROKE_OF.has(cur.glyph);
   const freePad=noTmpl; /* a character the stroke set lacks: the pad draws freehand and needs Undo, Clear and the note. A character WITH a template never shows them — v570 gave them to it mid-write and v582 took them back, so the freehand judging leaves no mark on the screen. */
@@ -3201,12 +3203,17 @@ function renderStudy(main){
      above their own card. Inside the card it was the first child of the study card's GRID, whose first row is the cue's own
      fixed --cueh (v560), so the row took that whole row — 279 px of white with the two words centred in it — and pushed the
      cue, the pad and the fold down by it, ending the card 279 px under the tab bar. */
+  /* v583 (H: "Explain per default anzeigen, nicht zu klappbar"): the card's own description stands at the FOOT, under the
+     fold row and outside it — there without a tap, and no tap puts it away. It is deliberately NOT in fit()'s budget:
+     DESC_MAX is 700 characters, so on a long one the pad would collapse, and the frame above it (cue, pad, fold row) is
+     what v560 keeps constant; the card runs past the tab bar by the paragraph's own height instead, and the page scrolls. */
   main.innerHTML=wxNoteHTML()+(S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:"")+`<div class="card study${rep?" rep":""}${cueBigCls()}">
     <div class="cue">
     <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}${d.flag||d.unchecked?`<button class="picflag${d.flag?" on":" new"}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}" title="${d.flag?"":esc(t("Not yet checked"))}">${d.flag?"⚑":"⚐"}</button>`:""}</div>
     <div class="txt" id="cuetxt">${chrow}<div class="padline" id="padline"></div></div></div>
     <div class="padwrap"><canvas class="wpad" id="wpad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas><div class="padacts" id="padacts"><button class="del" id="pad-undo" hidden>${t("pad:Undo")}</button><button class="del" id="pad-show" hidden>${t("Show me")}</button><button class="del" id="pad-skip" hidden>${t("Skip")}</button><button class="del" id="pad-done" hidden>${t("Done")}</button><button class="del" id="pad-clear" hidden>${t("Clear")}</button></div>${freePad?`<div class="hint" id="pad-note">${noTmpl?t("not in the stroke set — draw it and tap Done"):""}</div>`:""}</div>
     <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Whole card")}</span>${rep?`<span class="pill again">${t("Again")}</span>`:""}<span class="tail">${!rep&&list.length>1&&!S.single?/* v522: the count in the fold row; on a repeat pass the Again pill takes the slot */`<span class="pos">${esc(t("{0} of {1}",li+1,list.length))}</span>`:""}<i aria-hidden="true">⌄</i></span></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
+    ${descHTML(d,{explain:true})}
     ${swipeHint(d)}</div>`; /* no linked-photos row on the study card (v518, H: "No 'also in other cards' in learn mode. Only on Cards mode.") — the detail keeps it */
   /* v536: no warmParts here. The block has carried backHTML(...{noParts:true}) since v512 ("backHTML without the parts
      row"), so opening it parsed cedict.tsv.gz - 2.5 MB - for a row this screen does not draw. The row lives on the camera's
@@ -3514,12 +3521,12 @@ const curList=()=>walking()?S.walk:S.queue;
 const curIdx=()=>walking()?S.walkIdx:S.idx;
 const setCurIdx=i=>{ if(walking()) S.walkIdx=i; else S.idx=i; };
 /* to another card of the list, grading nothing (v414's rule): the swipe's commit, and the harness's way now that the chevrons are gone (v520) */
-function stepCard(i){ if(i<0||i>=curList().length) return; setCurIdx(i); S.fullPic=false; S.peek=null; render(); window.scrollTo({top:0}); }
+function stepCard(i){ if(i<0||i>=curList().length) return; setCurIdx(i); S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0}); }
 function walkOf(ch){ const has=d=>!!(d&&d.c&&[...String(d.c)].includes(ch)), seen=new Set(), out=[];
   for(const id of S.queue){ const d=cardOf(id); if(has(d)){ seen.add(id); out.push(id); } } /* every occurrence: a second one is the card's repeat pass (§ 8.1) */
   for(const d of learnDeck().cards){ if(has(d)&&!seen.has(d.id)){ seen.add(d.id); out.push(d.id); } }
   return out; }
-function lockChar(ch,c){ S.lockChar=ch; S.walk=walkOf(ch); S.walkIdx=Math.max(0,S.walk.indexOf(c)); S.pad=null; S.fullPic=false; render(); window.scrollTo({top:0}); }
+function lockChar(ch,c){ S.lockChar=ch; S.walk=walkOf(ch); S.walkIdx=Math.max(0,S.walk.indexOf(c)); S.pad=null; S.ansOpen=false; S.fullPic=false; render(); window.scrollTo({top:0}); }
 /* the release: the walk is the session again at the card the learner is on — a card the session did not hold joins it there —
    and the card shows the whole photo with the answer block open (H: "exits it and shows full image Translation of the current card") */
 function unlockChar(){ const w=curList(), wi=curIdx(), c=w[wi]; buzz([30,60,30]); /* two pulses for the release, one for the lock (v518) */
@@ -3913,7 +3920,7 @@ function mountPad(card,d,c,tg,st,cur){
     const nav=$("#tabs"), navTop=nav?nav.getBoundingClientRect().top:window.innerHeight, navH=nav?nav.getBoundingClientRect().height:56;
     const ccs=getComputedStyle(card), rect=card.getBoundingClientRect(), top=rect.top+window.scrollY;
     const cardH=Math.floor(navTop-16-top); /* the card's whole room with the page at rest: from its top to 16 px above the tab bar */
-    const gap=parseFloat(ccs.rowGap)||8, hn=card.querySelector(".hint:not(#pad-note)"), fb=card.querySelector("#fold");
+    const gap=parseFloat(ccs.rowGap)||8, hn=card.querySelector(":scope>.hint:not(#pad-note)") /* v583: the swipe hint only — a direct child; the description at the foot may carry a .hint of its own (a failed Explain) and is NOT in the pad's budget */, fb=card.querySelector("#fold");
     const avail=cardH-(parseFloat(ccs.paddingTop)||12)-(parseFloat(ccs.paddingBottom)||14)-(fb?fb.offsetHeight:36)-gap*2-(hn?hn.offsetHeight+gap:0); /* for the two panels */
     const cueMin=Math.max(PHOTO_MIN,CH_MAX+6+LINE_H); /* v580: the cue holds ONE of the two — the picture at its floor, or one row of tiles over the word line — where v564 needed room for both at once (PHOTO_MIN plus a whole text half), so a short screen breaks the symmetry later and the pad keeps more of it */
     let side=Math.min(inner,Math.floor(avail/2)), cueH=side;
@@ -4075,7 +4082,7 @@ function mountPad(card,d,c,tg,st,cur){
        here; the fold button opens it when it is wanted. */
     const my=curIdx(), wasWalk=walking(); render(); if(cur) padLine(d,cur);
     const adv=()=>{ if(S.mode!=="study"||walking()!==wasWalk||curIdx()!==my||S.pad!==padState(c)) return; if(S.single){ nextSingle(c); return; }
-      if(curIdx()+1<curList().length){ setCurIdx(curIdx()+1); S.fullPic=false; S.peek=null; render(); window.scrollTo({top:0}); } else if(!walking()){ S.idx++; render(); } }; /* a walk's last card stays */
+      if(curIdx()+1<curList().length){ setCurIdx(curIdx()+1); S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0}); } else if(!walking()){ S.idx++; render(); } }; /* a walk's last card stays */
     /* the recap (v523, § 12): the finished card stands large over the pad — its reading and its meaning, and since v577
        no characters, which the tiles two rows above already carry in green — for the whole
        dwell — recapMs(d), longer the more syllables the card has (v576) — and the praise (v517) lifts out of it so that
@@ -4243,7 +4250,7 @@ function nextSingle(c){
   const list=S.custom.filter(learnable).sort((a,b)=>(b.at||0)-(a.at||0)).map(d=>d.id);
   const next=list[list.indexOf(c)+1];
   if(!next){ endSingle(); return; }
-  S.single=next; S.queue=[next]; S.idx=0; S.fullPic=false; S.peek=null; render(); window.scrollTo({top:0});
+  S.single=next; S.queue=[next]; S.idx=0; S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0});
 }
 
 /* ---------- Add ---------- */
@@ -4635,13 +4642,14 @@ function detailCardHTML(d,sw){
      line showed only for a tapped character. The block stays open by default here — this is the screen for looking a card up. */
   const tg=padTargets(d), li=detailCh(d), lit=detailLit(d,tg), open=!S.detailHide;
   const btn=x=>`<button class="ch${x.w?"":" num"}${lit===x?" cur":""}" data-i="${tg.indexOf(x)}">${esc(x.glyph)}</button>`;
-  const back=`<div class="anshanzi hanzi">${(d.trad?d.trad.split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}`;
+  const back=`<div class="anshanzi hanzi">${(d.trad?d.trad.split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,noDesc:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}`;
   return `${tagsHTML(d,!p)}<div class="zone1 front${d.flag?" flagged":""}" id="d-reveal">${frontPic(d,{page:true,fixed:true})||cueGlyphHTML(d)}</div>
       ${chrowHTML(d,tg,btn,lit?lit.wi:null)}
       <div class="padline" id="padline"${lit?"":" hidden"}></div>
       ${d.reading&&!d.reading.failed?`<div class="hint">${t("The new frame is being read — the text follows when it is done.")}</div>`:""}
       ${detailActsHTML(d)}
       <div class="fold${open?" open":""}"><button class="foldbtn" id="d-fold" aria-expanded="${open?"true":"false"}"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button><div class="ans" id="d-ans"${open?"":" hidden"}>${back}</div></div>
+      ${descHTML(d,{explain:true})}
       ${sw&&showHints()?`<div class="hint">${t("Swipe left or right to pick another card.")}</div>`:""}`;
 }
 /* the character the detail's line reads: the tapped one, else the first writable one — so the line is always there, as in Learn (v531) */
@@ -4735,7 +4743,7 @@ function renderCardDetail(main,c){
     attachPicZoom(dcard.querySelector(".zone1 .picbox")); }
   const test=$("#d-test"); if(test) test.onclick=()=>{
     S.saved={queue:S.queue,idx:S.idx,done:S.done,ahead:S.ahead};
-    S.single=c; S.queue=[c]; S.idx=0; S.mode="study"; render();
+    S.single=c; S.queue=[c]; S.idx=0; S.ansOpen=false; S.mode="study"; render();
   };
   $("#d-edit").onclick=()=>{ S.editing=c; render(); };
   if($("#d-star")) $("#d-star").onclick=async()=>{ await setStar(c,!d.star); render(); }; /* the learner's own mark (v425); a multicard's own text has no such button (v493) */
@@ -4746,7 +4754,7 @@ function renderCardDetail(main,c){
   const del=$("#d-del"); if(del) del.onclick=async()=>{ await delCustom(c); if(S.detailFrom==="inbox"){ backToPhoto(); return; } if(fromPage()){ backToPage(); return; } S.detail=null; render(); }; /* at once, with Undo (v268) */
   /* the swipe changes the card, and the two pieces of view state go opposite ways because they mean different things.
      S.detailHide is a way of READING — "I am testing myself" — and survives the swipe: the detail is not a test that
-     came closed until v580, which is why Learn reset S.ansOpen; since v581 the block is open by default on both screens and neither resets it. S.fullPic is about THIS photo — "show me
+     must come closed, which is why Learn resets S.ansOpen and this does not. S.fullPic is about THIS photo — "show me
      the whole picture of this card" — so it is dropped at the commit, as every other path that changes the card drops
      it (the row tap, the linked hop, Learn's next card), and the peer is built with it already off, or the neighbour
      would slide in showing its whole photo and jump to the crop the moment it landed. */
@@ -4794,7 +4802,7 @@ function renderEdit(main,c){
   $("#e-del").onclick=async()=>{
     await delCustom(c); endRecrop(); delete SIGN[eid]; /* at once, with Undo (v268) */
     const from=S.editFrom; S.editing=null; S.editFrom=null;
-    if(from==="study"){ S.queue=S.queue.filter(x=>x!==c); if(S.single===c) S.single=null; S.fullPic=false; S.mode="study"; }
+    if(from==="study"){ S.queue=S.queue.filter(x=>x!==c); if(S.single===c) S.single=null; S.fullPic=false; S.ansOpen=false; S.mode="study"; }
     else if(from==="camera"){ S.mode="inbox"; S.fullPic=false; }
     else { S.mode="cards"; S.detail=null; }
     render();
@@ -5145,7 +5153,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
-  581:"The whole card now stands open at the foot of the card: pinyin, meaning and the rest are there without a tap. Tap that row to fold it away.",
+  583:"What a card is about now stands at the foot of the card, without a tap and with no row to fold it away.",
   580:"The top of a card is the photo or the whole text — one tap swaps the two, and it stays that way while you write the card.",
   569:"Fold the phone or leave the app: the card comes back exactly as you left it, with the strokes you had already written. And the characters tapped big now break onto more rows, so they come out as large as they fit.",
   573:"The dictionary knows which reading a character has: 合 read hé now means “to close”, not gě’s “100 ml”.",
@@ -5364,7 +5372,7 @@ async function undoDelete(){
       for(const x of it.items||[]){ if(S.custom.some(y=>y.id===x.d.id)) continue; S.custom.splice(Math.min(x.idx,S.custom.length),0,x.d); try{ await idbPut("custom",x.d); }catch(e){} if(x.prog){ S.progress[x.d.id]=x.prog; try{ await idbPut("progress",{id:x.d.id,...x.prog}); }catch(e){} } bump("deleted",-1); } /* the page's texts with it (v453) */
       if(d.page){ const pg=cardOf(d.page); if(pg&&pg.items&&!pg.items.includes(d.id)) await putCard({...pg,items:[...pg.items,d.id]},pg.id); } /* a text back into its page (v453) */
       if(it.shot&&!S.inbox.some(x=>x.id===it.shot.rec.id)){ S.inbox.splice(Math.min(it.shot.idx,S.inbox.length),0,it.shot.rec); try{ await idbPut("inbox",it.shot.rec); }catch(e){} } /* the photo that went with its last card (v464) */
-      if(S.mode==="study"&&!S.queue.includes(d.id)&&d.c&&!isPage(d)){ S.queue.splice(S.idx,0,d.id); S.fullPic=false; } /* deleted from the study back: the card comes next again */
+      if(S.mode==="study"&&!S.queue.includes(d.id)&&d.c&&!isPage(d)){ S.queue.splice(S.idx,0,d.id); S.fullPic=false; S.ansOpen=false; } /* deleted from the study back: the card comes next again */
     } else {
       const rec=it.rec; if(S.inbox.some(x=>x.id===rec.id)) continue;
       S.inbox.splice(Math.min(it.idx,S.inbox.length),0,rec); try{ await idbPut("inbox",rec); }catch(e){}
@@ -9464,7 +9472,7 @@ async function importData(e){
   }catch(err){ noteSheet(t("Import failed ({0})",err)); return; }
   prog.forEach(r=>{ const {id,...s}=r; S.progress[id]=s; });
   merged.forEach(r=>{ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; else S.custom.push(r); });
-  S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false;
+  S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false;
   S.mode="study"; render();
   /* what the import did, in one sentence (v167, H: an older app had dropped the photos without a word) */
   noteSheet(t("Import"),t("Imported {0} and {1}",nOf(cust.length,"card"),nOf(prog.length,"progress entry","progress entries"))+(nInFile?t(", {0} with photos",nPhotos)+(nPhotos<nInFile?" "+t("({0} could not be read)",nInFile-nPhotos):""):". "+t("The file carries no photos; the photos on this phone were kept"))+".");
@@ -9519,7 +9527,7 @@ async function resetAll(){
   LAST_READ.ring.length=0; /* the ring holds the readings and their steps both (v479) */
   for(const k of Object.keys(NUMSOF)) delete NUMSOF[k];
   TRANSLATE=null; TAGALL=null; RECHECK=null;
-  S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false;
+  S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false;
   render();
 }
 
