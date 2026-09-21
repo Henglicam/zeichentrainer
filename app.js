@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=596; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=597; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,6 +671,8 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v597","Multicards tab: square tiles"],
+  ["app","v597","after writing: 300 ms shorter"],
   ["app","v596","card from a multicard: square pic"],
   ["app","v596","swipe to one: no jump at the snap"],
   ["app","v596","guide + empty deck: square figures"],
@@ -3725,7 +3727,7 @@ async function checkCard(id){ const d=cardOf(id); if(!d||!d.unchecked) return; c
    learner's own stroke order, and the stroke matcher of v141 judges the whole character at Done. The matcher is
    order-free by construction (a Hungarian assignment over the strokes), so the order really is the learner's. Off by
    default — see § the entry for why the automatic trigger at level 3 was measured and not built. */
-const PAD_FLOOR=160, PHOTO_MIN=120, LINE_H=61, CLIP_RATIO=0.65, TRACE_OK=0.18, NEXT_MS=3500, RECAP_SYL=230, RECAP_MAX=5600, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
+const PAD_FLOOR=160, PHOTO_MIN=120, LINE_H=61, CLIP_RATIO=0.65, TRACE_OK=0.18, NEXT_MS=3200, RECAP_SYL=230, RECAP_MAX=5300, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
 const CARD_RATIO=1; /* v595 (H: "Fotos sollten in Zukunft generell quadratisch gespeichert werden. Deshalb soll die Detailseite unter Cards auch quadratisch sein, genauso wie die Lernkarten."): the one window and box shape on every card is the SQUARE now — the cut as well as the box, where v591 made only the box square (styles.css --photo-ar) and left the cut at v519's 3:2, so every picture sat in its square box between two bands of blur. A square cut fills them with the photo itself. Measured: on a frame wider than tall the square window is exactly as WIDE as the 3:2 one and only taller, so the text is the same size on screen and the bands become real surroundings; on a frame taller than wide the square is narrower, so the text comes out BIGGER (a vertical sign 0.36 → 0.53 of the box's width). Declared here, since FRONT_RATIO reads it at load time */
 let LAST_FIT=null; /* v521: the study card's last pad measurement, printed by Diagnostics */
 /* THE MAIN THREAD AT STARTUP, AND WHAT A FOLD DOES TO IT (v532, H: "open/close foldable phone sometimes freezes the startup
@@ -3755,8 +3757,12 @@ window.addEventListener("pageshow",e=>{ if(e.persisted){ RESIZES.push({t:Date.no
 const FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_GRID/1024;
 /* NEXT_MS is the SHORTEST dwell of the finished card's recap (v576): it stands over the pad — the reading and the
    meaning, large, and since v577 no characters — for recapMs(d), which is NEXT_MS plus RECAP_SYL per syllable past the
-   second, capped at RECAP_MAX. All three are 8 % shorter since v577 (H: "ein kleines kleines bisschen kürzer"), since
-   with the glyph gone there is less standing there to read
+   second, capped at RECAP_MAX. v577 took 8 % off all three (H: "ein kleines kleines bisschen kürzer"), since with the
+   glyph gone there is less standing there to read, and v597 takes a flat 300 ms off EVERY card (H: "Bitte die finale
+   Lösung ein kleines bisschen kürzer stehenlassen. Vielleicht 300 Millisekunden kürzer oder so."): the floor and the
+   CAP move together by 300 and RECAP_SYL does not, so a two-syllable card, a four-syllable one and a card sitting on
+   the cap are each exactly 300 ms shorter — scaling all three, as v577 did, would take 300 ms off the short card and
+   450 off the long one, which is not what was asked
    (v523, H: "sollte der Inhalt der Karte nochmal groß und deutlich gut lesbar für wenige Sekunden gezeigt werden, um sich
    das nochmal einzuprägen"; v576, H: "soll die gesamte Übersetzung bissl länger stehen bleiben, genug zum lesen/einprägen"
    — a one-word card and a nine-syllable sign cannot want the same number, the v413 lesson). 3000 flat from v523 to v575,
@@ -4586,17 +4592,15 @@ function cardTileHTML(d,pk){
   const made=pg?its.filter(x=>madeFrom(x)).length:0; /* v488: how many of its texts you have turned into flashcards */
   const sv=pg?null:srcView(d), su=sv?urlOf(sv.blob):""; /* v490: the multicard's photo, derived rather than stored */
   const pic=pg?fullPhoto(d):d.img;
-  const head=pg?esc(d.c):""; /* only a multicard carries a heading since v593 */
+  const head=pg?esc(d.c):""; /* only a multicard carries a heading since v593; v597 puts it ON the picture, so the tile is the square every other tile is */
   const flag=pg?its.some(x=>x.flag):d.flag, ai=pg?its.some(x=>x.ai):d.ai, nw=pg?its.some(x=>x.unchecked):!!d.unchecked; /* v515: not yet checked. Until v592 a page carried this mark on its picture and a plain card in its status line; with that line gone (v593) both carry it in the same place, which is also the one they should always have shared */
   const glyph=!sv&&!pic; /* v506: a card without a picture shows its WHOLE text in the picture area, not its first character */
   return `<button class="ctile${pg?" page":""}${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}"${pk?"":` data-lp="${esc(d.id)}"`}>
       ${pg?`<span class="tstack">`:""}<span class="tw${sv?" src":glyph?" glyph":""}">${sv?`<img class="tbg" src="${su}" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="tpw"><img class="tpi" src="${su}" alt="" loading="lazy" decoding="async">${regionsHTML({id:sv.shot},sv.rs,{learn:true,me:sv.me,span:true,only:true})}</span>`:pic?`<img class="tbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:glyphTileHTML((pg?(its[0]&&its[0].c):(d.trad||d.c))||"")}
         ${pk?`<span class="tick" aria-hidden="true"></span>`:pg?"":starHTML(d)}
         ${pg?`<span class="cnt">${its.length}</span>`:""}
-        ${(flag||ai||nw)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}${nw?`<i class="tm new" title="${esc(t("Not yet checked"))}">${t("tile:New")}</i>`:""}</span>`:""}</span>
-${pg?`</span><span class="prog" aria-hidden="true"><i style="width:${its.length?Math.round(made/its.length*100):0}%"></i></span>`:""}
-${pg?`
-      <span class="th title">${head}</span>`:""}</button>`;
+        ${(flag||ai||nw)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}${nw?`<i class="tm new" title="${esc(t("Not yet checked"))}">${t("tile:New")}</i>`:""}</span>`:""}
+        ${pg?`<span class="tcap"><span class="th title">${head}</span></span><span class="prog" aria-hidden="true"><i style="width:${its.length?Math.round(made/its.length*100):0}%"></i></span>`:""}</span>${pg?`</span>`:""}</button>`;
 }
 function cardsListHTML(){
   const list=cardsList();
