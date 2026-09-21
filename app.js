@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=592; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=593; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,6 +671,9 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v593","Cards: square photos, no text"],
+  ["app","v593","multicard title: two lines, then \u2026"],
+  ["app","v593","open card: no Share, no hole"],
   ["app","v589","Skip fills the character in"],
   ["app","v589","character with no strokes: Skip"],
   ["app","v589","card detail: ← Cards on one line"],
@@ -4321,12 +4324,9 @@ const THUMB={};
 function thumbBlob(d){ return d.img||fullPhoto(d); } /* the crop (H, v86); the whole photo only for cards without one */
 function thumbURL(d){ return THUMB[d.id]||(THUMB[d.id]=URL.createObjectURL(thumbBlob(d))); }
 function dropThumb(id){ if(THUMB[id]){ URL.revokeObjectURL(THUMB[id]); delete THUMB[id]; } }
-function cardStatus(d){
-  if(d.unchecked) return `<span class="st new">${t("tile:New")}</span>`; /* v515: a quiet chip where the due chip sits — a card born from a photo has no progress row yet, so the place is free */
-  const p=S.progress[d.id]; if(!p) return "";
-  const days=Math.round((p.due-today())/DAY);
-  return `<span class="st${days<=0?" due":""}">${days<=0?t("due"):t("in {0} d",days)}</span>`;
-}
+/* v593: cardStatus went with the tile's status line, its last live reader — the only caller of cardRowHTML is the
+   multicard's own text list, which passes dot and so never drew a status (v498). With it the keys "due" and "in {0} d"
+   lost their last reader and left all nine columns (the v403 rule). */
 /* The list keeps its place (v351): a row tap notes where the list stood, the detail's ← Cards puts it back —
    H: "going back by pressing the arrow … please be at the place where the card was and not at the top of the list". */
 /* where the list stood when a row was tapped, which row it was and where on screen it sat (v352, v445) */
@@ -4529,13 +4529,21 @@ function recapHTML(d){
      semibold syllable runs about 0.7 em a character) so no syllable is cut; the clamps under them are the safety net */
   return `<div class="recap" aria-live="polite"><div class="rp" style="font-size:min(${RECAP_CP}px,${(140/mw).toFixed(2)}cqw,${(330/pn).toFixed(2)}cqw)">${py}</div><div class="rm" style="font-size:min(20px,8.2cqw)">${esc(d.m||"")}</div></div>`;
 }
+/* v593 (H: "Cards preview bitte als quadratische Foto Tiles ohne text", then "Two lines are okay for Multicards"):
+   an ordinary card's tile is its square picture and nothing else — the characters and the due date that stood under it
+   since v465 are gone. A card is found by its picture now; the search still reads its text, pinyin and meaning, so
+   nothing became unfindable, only unreadable at a glance. What stays ON the picture is what the picture cannot say:
+   the star, the count chip and the flag / AI / not-yet-checked marks. A MULTICARD keeps its title — it is the only
+   thing that says which multicard it is (v592) — at up to two lines, which is H's own number; its count line goes with
+   the others, since the stack, the count chip and the bar already say how many texts it has and how far through it you
+   are (v461). */
 function cardTileHTML(d,pk){
   const pg=isPage(d), its=pg?pageItems(d):null;
   const made=pg?its.filter(x=>madeFrom(x)).length:0; /* v488: how many of its texts you have turned into flashcards */
   const sv=pg?null:srcView(d), su=sv?urlOf(sv.blob):""; /* v490: the multicard's photo, derived rather than stored */
   const pic=pg?fullPhoto(d):d.img;
-  const head=pg?esc(d.c):esc((d.trad||d.c||"").replace(/\n/g," "));
-  const flag=pg?its.some(x=>x.flag):d.flag, ai=pg?its.some(x=>x.ai):d.ai, nw=pg&&its.some(x=>x.unchecked); /* v515: a page whose text is not yet checked carries the mark at its foot; a plain card's chip sits in its status line */
+  const head=pg?esc(d.c):""; /* only a multicard carries a heading since v593 */
+  const flag=pg?its.some(x=>x.flag):d.flag, ai=pg?its.some(x=>x.ai):d.ai, nw=pg?its.some(x=>x.unchecked):!!d.unchecked; /* v515: not yet checked. Until v592 a page carried this mark on its picture and a plain card in its status line; with that line gone (v593) both carry it in the same place, which is also the one they should always have shared */
   const glyph=!sv&&!pic; /* v506: a card without a picture shows its WHOLE text in the picture area, not its first character */
   return `<button class="ctile${pg?" page":""}${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}"${pk?"":` data-lp="${esc(d.id)}"`}>
       ${pg?`<span class="tstack">`:""}<span class="tw${sv?" src":glyph?" glyph":""}">${sv?`<img class="tbg" src="${su}" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="tpw"><img class="tpi" src="${su}" alt="" loading="lazy" decoding="async">${regionsHTML({id:sv.shot},sv.rs,{learn:true,me:sv.me,span:true,only:true})}</span>`:pic?`<img class="tbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:glyphTileHTML((pg?(its[0]&&its[0].c):(d.trad||d.c))||"")}
@@ -4543,8 +4551,8 @@ function cardTileHTML(d,pk){
         ${pg?`<span class="cnt">${its.length}</span>`:""}
         ${(flag||ai||nw)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}${nw?`<i class="tm new" title="${esc(t("Not yet checked"))}">${t("tile:New")}</i>`:""}</span>`:""}</span>
 ${pg?`</span><span class="prog" aria-hidden="true"><i style="width:${its.length?Math.round(made/its.length*100):0}%"></i></span>`:""}
-      <span class="th${pg?" title":" hanzi"}">${head||`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>
-      <span class="ts2">${pg?esc(t("Texts on this page: {0}, as flashcards: {1}.",its.length,made)):cardStatus(d)}</span></button>`;
+${pg?`
+      <span class="th title">${head}</span>`:""}</button>`;
 }
 function cardsListHTML(){
   const list=cardsList();
@@ -4557,7 +4565,7 @@ function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page d
   return `<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
       <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${srcPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
-      <span class="cs">${dot?stateMark(d.id):""}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}${dot?"":cardStatus(d)}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
+      <span class="cs">${dot?stateMark(d.id):""}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
 }
 /* a filter whose row is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the
    list anymore" — the AI chip shows only while suggestions wait, so the filter had no chip left to switch it off and the
@@ -4610,12 +4618,17 @@ function renderCards(main){
    where the pad would stand the card's actions. Until v517 the detail was the pre-v512 front-and-back preview, which no
    other screen looked like any more. A card still waiting for its reading keeps the reading bar in the text box (v237). */
 const detailCh=d=>(S.detailCh&&S.detailCh.c===d.id)?S.detailCh.i:null; /* the character tapped on the open card, held with the card so it cannot survive onto another */
-function detailActsHTML(d){ return `<div class="detailacts">
+/* v593 (H: "Share Funktion loeschen", then "I mean share cards"): the card's own Share is gone, and with it the picture
+   it made (cardImage). Share the app, Share report, Share flagged cards, Diagnostics and Feedback are other features and
+   are untouched. */
+function detailActsHTML(d){
+  const star=!inPage(d); /* the half-width buttons: Edit, Star (not on a multicard's own text, v493), Flag — and Delete, which spans the row only on a card that has a text */
+  const odd=(2+(star?1:0)+(d.c?0:1))%2?' style="grid-column:1/-1"':""; /* with Share gone the count is odd on an ordinary card, and a lone button would leave a hole beside it (the v551 finding on the fifth Progress tile). A card still waiting for its reading has no Test and a half-width Delete, so its four fill two rows and Flag must NOT span — measured: the first cut of this rule left a hole under it in all ten languages */
+  return `<div class="detailacts">
       ${d.c&&!inPage(d)?`<button class="btn primary" id="d-test">${t("Test this card")}</button>`:""}
       <button class="btn" id="d-edit">${t("Edit")}</button>
-      ${inPage(d)?"":`<button class="btn${d.star?" on":""}" id="d-star">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}
-      <button class="btn${d.flag?" on":""}" id="d-flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button> <!-- v536: the Learn back's own two words (v431). Measured at 393 and 360 px, "⚑ Flag for review" broke across two lines in en, de, es, fr, id, ru and vi - three in id at 360 - and a grid row is as tall as its tallest cell, so two of the six buttons stood at 61.5 px against 50 and the block read ragged. v431 kept the phrase here because "one word would read as the odd one out"; the row already holds Edit, Star and Share, so it does not. -->
-      ${d.c&&!inPage(d)?`<button class="btn" id="d-share">${t("Share")}</button>`:""}
+      ${star?`<button class="btn${d.star?" on":""}" id="d-star">${d.star?"\u2605 "+t("Starred"):"\u2606 "+t("Star")}</button>`:""}
+      <button class="btn${d.flag?" on":""}" id="d-flag"${odd}>${d.flag?t("card:\u2691 Flagged"):t("\u2691 Flag")}</button> <!-- v536: the Learn back's own two words (v431). Measured at 393 and 360 px, the long phrase broke across two lines in en, de, es, fr, id, ru and vi - three in id at 360 - and a grid row is as tall as its tallest cell. -->
       <button class="btn danger" id="d-del"${d.c?' style="grid-column:1/-1"':""}>${t("Delete card")}</button>
     </div>`; } /* a multicard's own text offers Edit, Flag and Delete and nothing else (v498): Test would study a text that is never in Learn (v487), Share would send a row of the multicard as if it were a card, and the star left this screen at v493 */
 function detailCardHTML(d,sw){
@@ -4734,7 +4747,6 @@ function renderCardDetail(main,c){
   $("#d-edit").onclick=()=>{ S.editing=c; render(); };
   if($("#d-star")) $("#d-star").onclick=async()=>{ await setStar(c,!d.star); render(); }; /* the learner's own mark (v425); a multicard's own text has no such button (v493) */
   $("#d-flag").onclick=async()=>{ await setFlag(c,!d.flag); render(); };
-  const sh=$("#d-share"); if(sh) sh.onclick=()=>shareCard(c); /* one image through the share sheet (v269) */
   wireSay(); wireLinks(); wireSrc(); wireExplain(); if(!S.detailHide) explainAuto(d); else explainSoon(d); /* v585: the same on the open card, whose block stands open by default; v586: folded away, it is fetched a moment later all the same */ /* v536: nothing wires a parts row here - the open card passes noParts, so there is no .chars row on it; the camera's finished card is the one screen that still draws one and wires it itself (v589 removed the helper that had no caller left) */
   wireAi();
   const del=$("#d-del"); if(del) del.onclick=async()=>{ await delCustom(c); if(S.detailFrom==="inbox"){ backToPhoto(); return; } if(fromPage()){ backToPage(); return; } S.detail=null; render(); }; /* at once, with Undo (v268) */
@@ -5024,78 +5036,11 @@ async function addManual(){
   ok.textContent=t("“{0}” added.",word); ok.style.display="";
   bump("byHand"); setStats();
 }
-/* Share a card (v269, idea 5 of the improvement list): one image — the crop in the front's box with the blurred fill behind it,
-   the characters as on the front (the traditional form when the card has one, the photo's lines), pinyin, meaning and the app's
-   name — drawn on a canvas at 1080 px, always in the light look, and handed to the share sheet as a PNG (Android shares images;
-   nothing is written to the phone, hard constraint 6). Without a share sheet the notice says so. */
+/* the shared image's own width and padding — the progress report's since v277, and the card's until v593, when H
+   ("Share Funktion loeschen", "I mean share cards") had the card's Share removed. cardImage went with it, and with
+   cardImage its only readers wrapText and textPieces (v402's Thai word breaker, written for that one picture; the
+   progress report wraps nothing). */
 const SHARE_W=1080, SHARE_PAD=72;
-/* the pieces a word too wide for the line is broken into (v402, H: "Ebenso Vietnamesisch, Thai, Indonesisch"): Thai writes
-   without spaces, so a whole clause arrives as one "word" — until v401 it was cut into single code points glued back with a
-   space, which tore every tone mark off its letter (ผ ู ้ จ ั ด) on the shared card and the shared progress report. The
-   browser's own word breaker knows where Thai words end; its grapheme clusters are the fallback, and a piece still too wide
-   for the line is cut into clusters as well. A Japanese meaning comes out as before, since the pieces are joined with
-   nothing either way. */
-function textPieces(w,ctx,maxW){
-  let ps=null;
-  try{ const seg=[...new Intl.Segmenter(undefined,{granularity:"word"}).segment(w)].map(s=>s.segment); if(seg.length>1) ps=seg; }catch(e){}
-  if(!ps){ try{ ps=[...new Intl.Segmenter(undefined,{granularity:"grapheme"}).segment(w)].map(s=>s.segment); }catch(e){ ps=[...w]; } }
-  if(!ctx) return ps;
-  const out=[]; for(const p of ps){ if(ctx.measureText(p).width<=maxW||p.length===1){ out.push(p); continue; }
-    try{ for(const g of new Intl.Segmenter(undefined,{granularity:"grapheme"}).segment(p)) out.push(g.segment); }catch(e){ out.push(...p); } }
-  return out;
-}
-function wrapText(ctx,text,maxW){
-  const out=[]; for(const para of String(text).split("\n")){ let line="";
-    const push=(w,glue)=>{ if(!line){ line=w; return; } const tryL=line+(glue!=null?glue:(/^[\u3000-\u9fff]/.test(w)&&/[\u3000-\u9fff]$/.test(line)?"":" "))+w; if(ctx.measureText(tryL).width<=maxW) line=tryL; else { out.push(line); line=w; } };
-    for(const w of para.split(" ")){ if(ctx.measureText(w).width<=maxW) push(w); else for(const p of textPieces(w,ctx,maxW)) push(p,""); } /* a word wider than the line (a Japanese meaning, a whole Thai clause) breaks inside itself */
-    out.push(line); }
-  return out;
-}
-async function cardImage(d){
-  const cv=document.createElement("canvas"), ctx=cv.getContext("2d"), inner=SHARE_W-2*SHARE_PAD;
-  const hanzi=getComputedStyle(document.documentElement).getPropertyValue("--hanzi")||"serif", sans=getComputedStyle(document.documentElement).getPropertyValue("--sans")||"sans-serif";
-  const lines=(d.trad||(d.kind==="sign"?d.c:frontLines(d).join("\n"))).split("\n").filter(Boolean);
-  let fs=200; ctx.font=`${fs}px ${hanzi}`; const widest=Math.max(...lines.map(l=>ctx.measureText(l).width));
-  if(widest>inner) fs=Math.max(56,Math.floor(fs*inner/widest));
-  const lineH=Math.round(fs*1.2), textH=lines.length*lineH;
-  ctx.font=`600 56px ${sans}`; const pin=d.p?wrapText(ctx,d.p,inner):[];
-  ctx.font=`52px ${sans}`; const mean=d.m?wrapText(ctx,d.m,inner):[];
-  const bmp=d.img?await createImageBitmap(d.img):null, picH=bmp?Math.round(inner/ratioOf(d)):0; /* the box's shape follows the card (v514) */
-  const H=SHARE_PAD+(bmp?picH+56:0)+textH+(pin.length?24+pin.length*72:0)+(mean.length?16+mean.length*68:0)+56+40+SHARE_PAD;
-  cv.width=SHARE_W; cv.height=H;
-  ctx.fillStyle="#FFFFFF"; ctx.fillRect(0,0,SHARE_W,H);
-  let y=SHARE_PAD;
-  if(bmp){ /* the front's photo box: the crop fitted on the grey surface, a blurred copy behind it in the photo's colours (v224–v234) */
-    const rr=(x,y2,w,h,r)=>{ ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(x,y2,w,h,r); else ctx.rect(x,y2,w,h); }; /* an old WebKit without roundRect gets square corners */
-    ctx.save(); rr(SHARE_PAD,y,inner,picH,36); ctx.clip();
-    ctx.fillStyle="#F2F2F7"; ctx.fillRect(SHARE_PAD,y,inner,picH);
-    if("filter" in ctx){ /* Safari's canvas has no filter — there the crop sits on the plain grey, an unblurred copy behind it would look wrong */
-      const cover=Math.max(inner/bmp.width,picH/bmp.height)*1.2, cw=bmp.width*cover, ch=bmp.height*cover;
-      ctx.filter="blur(60px) saturate(55%) brightness(85%)"; ctx.globalAlpha=.55; ctx.drawImage(bmp,SHARE_PAD+(inner-cw)/2,y+(picH-ch)/2,cw,ch); ctx.filter="none"; ctx.globalAlpha=1;
-    }
-    const fit=Math.min(inner/bmp.width,picH/bmp.height), fw=bmp.width*fit, fh=bmp.height*fit;
-    ctx.drawImage(bmp,SHARE_PAD+(inner-fw)/2,y+(picH-fh)/2,fw,fh); ctx.restore();
-    ctx.strokeStyle="rgba(60,60,67,.29)"; ctx.lineWidth=2; rr(SHARE_PAD+1,y+1,inner-2,picH-2,35); ctx.stroke();
-    bmp.close(); y+=picH+56;
-  }
-  ctx.textAlign="center"; ctx.textBaseline="alphabetic"; ctx.fillStyle="#000000"; ctx.font=`${fs}px ${hanzi}`;
-  for(const l of lines){ ctx.fillText(l,SHARE_W/2,y+Math.round(fs*0.92)); y+=lineH; }
-  if(pin.length){ y+=24; ctx.fillStyle="#C8372D"; ctx.font=`600 56px ${sans}`; for(const l of pin){ ctx.fillText(l,SHARE_W/2,y+54); y+=72; } }
-  if(mean.length){ y+=16; ctx.fillStyle="#000000"; ctx.font=`52px ${sans}`; for(const l of mean){ ctx.fillText(l,SHARE_W/2,y+50); y+=68; } }
-  y+=56; ctx.fillStyle="#AEAEB2"; ctx.font=`34px ${sans}`; ctx.fillText("识字 Zeichentrainer",SHARE_W/2,y+32);
-  return new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error("no image")),"image/png"));
-}
-async function shareCard(id){
-  const d=cardOf(id); if(!d||!d.c) return;
-  let blob; try{ blob=await cardImage(d); }catch(err){ logErr("share",err); noteSheet(t("Sharing is not available here.")); return; }
-  const file=new File([blob],"zeichentrainer-card.png",{type:"image/png"});
-  const text=[d.trad||d.c,d.p,d.m].filter(Boolean).join(" — ").replace(/\n/g," / ");
-  if(navigator.canShare && navigator.canShare({files:[file]})){
-    try{ await navigator.share({files:[file],title:d.c.replace(/\n/g," / "),text}); return; }
-    catch(err){ if(err && err.name==="AbortError") return; logErr("share",err); }
-  }
-  noteSheet(t("Sharing is not available here."));
-}
 async function delCustom(id){
   bump("deleted");
   const idx=S.custom.findIndex(x=>x.id===id), d=idx>=0?S.custom[idx]:null, prog=S.progress[id];
@@ -5139,6 +5084,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  593:"The Cards list is square photos now, with nothing written under them — a card is found by its picture, and the search still finds it by its characters, pinyin and meaning. A multicard keeps its name over two lines. Sharing one card as a picture is gone.",
   589:"Skip now fills the whole character in instead of one stroke at a time, a character the app has no strokes for can be skipped too, and a long press that is held a moment longer no longer deletes the card it just marked.",
   588:"More → Learning → Check-up now fills in what a card is missing while it checks it: the description of what its text says, and the tag for what it stands on. The separate Tags and Descriptions rows are gone — one run does all of it.",
   585:"Whole card now shows what the card is about as well — no second tap, and the app fetches it for an older card by itself.",

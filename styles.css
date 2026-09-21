@@ -255,7 +255,6 @@ button,.tab,.chip,.chipset,.pill,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg
 .ct .p{font-size:13px;color:var(--label2)}
 .ct .m{font-size:14px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cs{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
-.st{font-size:12px;font-weight:500;color:var(--label2)} .st.due{color:var(--tint)}
 /* the six buttons of the card detail. minmax(0,1fr) and a label that may wrap, since v472: `1fr` is minmax(auto,1fr),
    so a nowrap label made the track's min-content its own width and the whole grid overflowed the card — measured at
    360 px in Indonesian +21 px, German +6, Spanish +1, which is the v427 fault (a class written for one shape borrowed
@@ -580,7 +579,7 @@ body.noscroll{overflow:hidden}
 /* the Cards list as photo tiles, two in a row (v465): the card's own picture with its heading under it. The grid lives
    on the list, so the empty badge and anything else that is not a tile spans both columns. */
 .clist.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:stretch;border-radius:0;overflow:visible;box-shadow:none;background:none}
-.ctile{display:block;width:100%;height:100%;padding:0 0 9px;border:0;background:var(--card);border-radius:var(--rc);overflow:hidden;box-shadow:var(--shadow);text-align:start;font:inherit;color:inherit;cursor:pointer}
+.ctile{display:block;width:100%;height:100%;padding:0;border:0;background:var(--card);border-radius:var(--rc);overflow:hidden;box-shadow:var(--shadow);text-align:start;font:inherit;color:inherit;cursor:pointer}
 .ctile .tglyph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:46px;color:var(--label3);text-align:center;line-height:1.15;white-space:nowrap;padding:0 6px}
 /* the glyph tile carries the card's whole text (v506): .tw is a size container so the font can be fitted to the tile's
    own width and height with cqw/cqh (the inline style on .tglyph), capped at the 46 px a single character always had */
@@ -593,16 +592,16 @@ body.noscroll{overflow:hidden}
 .ctile .tpw{position:relative;display:block;line-height:0}
 .ctile .tpw .tpi{display:block;width:auto;height:auto;max-width:100cqw;max-height:100cqh}
 .ctile .tpw .regions{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.ctile .th{display:block;margin:8px 10px 0;font-family:var(--hanzi);font-size:19px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* v592 (H: "Title bei Multicards behalten"): the multicard's title is the only thing that says which multicard it is —
-   the model's own "Meituan — order confirmation, 颐堤港店" (v453) — and a two-line clamp cut exactly the half that
-   identifies it: measured at 360 px it wanted four lines and showed two, and a German appliance title wanted five.
-   It wraps as far as it needs now; the tiles of a row stretch to one height anyway, so a long title raises its row. */
-.ctile .th.title{font-family:var(--sans);font-size:14px;font-weight:600;line-height:1.25;white-space:normal;overflow-wrap:anywhere}
-.ctile .th .lbl{font-size:15px;font-weight:400;color:var(--label2)}
-.ctile .ts2{display:block;margin:3px 10px 0;font-size:12px;color:var(--label3);min-height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ctile .ts2 .st{font-size:12px} .ctile .ts2 .st.due{color:var(--tint);font-weight:600}
-.st.new{display:inline-block;padding:0 7px;border-radius:999px;background:var(--tint-soft);color:var(--tint);font-weight:600;line-height:17px} /* v515: the "New" chip of a card not yet checked, where the due chip sits */
+/* v593 (H: "Cards preview bitte als quadratische Foto Tiles ohne text", then "Two lines are okay for Multicards"):
+   an ordinary tile carries no text at all, so .th is the multicard's title alone and .ts2 is gone with cardStatus —
+   and with it the three .st rules, whose only producer it was (the v307 rule). The title is clamped to two lines
+   again, which is H's own number: v592 had unclamped it because a two-line cut lost the shop of "Meituan — order
+   confirmation, 颐堤港店", and that cost is real and is accepted here — a title that needs a third line is read on
+   the multicard itself, one tap away.
+   The line-height is a whole 18 px and not 1.25: at 14 px that ratio gives a 17.5 px line, so the clamped box is 35.0 px
+   and the clip edge falls mid device pixel — measured at 3x, a sliver of the third line's ink was painted under the
+   second. An integer line box clips clean. */
+.ctile .th{margin:8px 10px 0;font-family:var(--sans);font-size:14px;font-weight:600;line-height:18px;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis} /* the ellipsis is what says a title goes on — a -webkit-box clamps without one, and a title that simply stops mid-word reads as a mistake rather than as "there is more" (the v413 lesson) */
 /* the star on a tile must RESET the row layout's negative margin (v469, H: "das Sternchen zu weit rechts an der
    Kante. Wird leicht angeschnitten"). The base .star carries margin:-6px -11px -6px 0, written to pull its 44 px
    touch target into a list row without widening it; the tile rule never undid it, so right:2px resolved to -9px and
@@ -627,6 +626,7 @@ body.noscroll{overflow:hidden}
 /* a Multicard tile carries v461's two tells: the picture on a stack of plates with the count, and a bar for how far
    through it you are (v465, H: "Man muss sofort sehen, dass das eine Multicard ist"). The ghosts are inside the tile's
    own margin, so no tile grows and the grid's rhythm does not move; no negative z-index, or they paint behind the tile. */
+.ctile.page{padding-bottom:9px} /* v593: only a multicard has anything under its picture */
 .ctile.page .tstack{position:relative;display:block;margin:9px 9px 0 0;isolation:isolate}
 .ctile.page .tstack::before,.ctile.page .tstack::after{content:"";position:absolute;inset:0;border-radius:8px;background:var(--card2);box-shadow:inset 0 0 0 1px var(--sep)}
 .ctile.page .tstack::before{transform:translate(4px,-4px);z-index:1}
