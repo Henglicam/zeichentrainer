@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=593; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=594; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,6 +671,9 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v594","delete a card: sheet first"],
+  ["app","v594","Delete N marked: sheet first"],
+  ["app","v594","open card: Flag beside Delete"],
   ["app","v593","Cards: square photos, no text"],
   ["app","v593","multicard title: two lines, then \u2026"],
   ["app","v593","open card: no Share, no hole"],
@@ -2045,6 +2048,16 @@ function askSheet(o){ return new Promise(res=>{
 /* a plain notice as the app's own sheet (v266, from the improvement list — the twelve browser alerts said "henglicam.github.io says"): one line, or a title
    with a sentence, and OK; the backdrop and Escape close it too */
 const noteSheet=(title,text)=>askSheet({title,text,ok:t("OK"),danger:false,cancel:false});
+/* v594 (H: "Zum Löschen einer Karte muss eine Bestätigung erfolgen"): every route that deletes a CARD asks first — the
+   card detail, the multicard, the Edit form, the camera's finished card and the marking's Delete N. That reverses v268's
+   own decision for the card deletes (delete at once, Undo below), on H's word; the Undo line stays as the net under the
+   sheet, and an inbox PHOTO keeps its one-tap delete, since a photo is not a card and its own Delete N sheet is v351's.
+   A multicard takes its texts with it (v453), so it says so instead of naming a learning progress it never had (v488). */
+async function confirmDelCard(d){
+  const name=d&&d.c?d.c.replace(/\n/g," / "):"";
+  return askSheet({ title:name?t("Delete “{0}”?",name):t("Delete this card?"),
+                    text:isPage(d)?t("The multicard and all its texts go with it."):t("Your progress on this card goes with it."),
+                    ok:t("Delete") }); }
 const inWeChat=()=>/MicroMessenger/i.test(navigator.userAgent);
 const isInstalled=()=>{ try{ return matchMedia("(display-mode: standalone)").matches||navigator.standalone===true; }catch(e){ return false; } }; /* runs from the home screen — the strongest sign of a real user (v221) */
 const WX_NOTE="You are inside WeChat. Open this page in your browser to install the app and keep your cards.";
@@ -4622,14 +4635,17 @@ const detailCh=d=>(S.detailCh&&S.detailCh.c===d.id)?S.detailCh.i:null; /* the ch
    it made (cardImage). Share the app, Share report, Share flagged cards, Diagnostics and Feedback are other features and
    are untouched. */
 function detailActsHTML(d){
-  const star=!inPage(d); /* the half-width buttons: Edit, Star (not on a multicard's own text, v493), Flag — and Delete, which spans the row only on a card that has a text */
-  const odd=(2+(star?1:0)+(d.c?0:1))%2?' style="grid-column:1/-1"':""; /* with Share gone the count is odd on an ordinary card, and a lone button would leave a hole beside it (the v551 finding on the fifth Progress tile). A card still waiting for its reading has no Test and a half-width Delete, so its four fill two rows and Flag must NOT span — measured: the first cut of this rule left a hole under it in all ten languages */
+  /* v594 (H: "Flag und Delete sollten nebeneinander in eine Reihe kommen"): Flag and Delete are ONE row, always — so
+     neither of them spans, and what stands above them pairs up by itself: Test this card takes the whole row as the
+     primary always has (.detailacts .primary), then Edit and Star. A multicard's own text has neither Test nor Star
+     (v498/v493), so Edit is alone above the pair and takes the whole row rather than leaving a hole beside it. */
+  const star=!inPage(d);
   return `<div class="detailacts">
       ${d.c&&!inPage(d)?`<button class="btn primary" id="d-test">${t("Test this card")}</button>`:""}
-      <button class="btn" id="d-edit">${t("Edit")}</button>
+      <button class="btn" id="d-edit"${star?"":' style="grid-column:1/-1"'}>${t("Edit")}</button>
       ${star?`<button class="btn${d.star?" on":""}" id="d-star">${d.star?"\u2605 "+t("Starred"):"\u2606 "+t("Star")}</button>`:""}
-      <button class="btn${d.flag?" on":""}" id="d-flag"${odd}>${d.flag?t("card:\u2691 Flagged"):t("\u2691 Flag")}</button> <!-- v536: the Learn back's own two words (v431). Measured at 393 and 360 px, the long phrase broke across two lines in en, de, es, fr, id, ru and vi - three in id at 360 - and a grid row is as tall as its tallest cell. -->
-      <button class="btn danger" id="d-del"${d.c?' style="grid-column:1/-1"':""}>${t("Delete card")}</button>
+      <button class="btn${d.flag?" on":""}" id="d-flag">${d.flag?t("card:\u2691 Flagged"):t("\u2691 Flag")}</button> <!-- v536: the Learn back's own two words (v431). Measured at 393 and 360 px, the long phrase broke across two lines in en, de, es, fr, id, ru and vi - three in id at 360 - and a grid row is as tall as its tallest cell. -->
+      <button class="btn danger" id="d-del">${t("Delete card")}</button>
     </div>`; } /* a multicard's own text offers Edit, Flag and Delete and nothing else (v498): Test would study a text that is never in Learn (v487), Share would send a row of the multicard as if it were a card, and the star left this screen at v493 */
 function detailCardHTML(d,sw){
   const p=S.progress[d.id], pg=frontPage(d); /* v489: the multicard's own photo on a generated card's front, and its name as the pill — so the back drops the duplicate */
@@ -4690,7 +4706,7 @@ function renderPageDetail(main,d){
   $("#back").onclick=fromCard()?backToCard:fromLearn()?backToLearn:backToList; /* opened from a generated flashcard's reference pill (v492) or from the card being studied (v494): back to where the jump started */
   wireRegions(main); /* the dots and the sheet (v448) */
   main.querySelectorAll("#pitems .crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.id; S.detailFrom="page:"+d.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); });
-  $("#d-del").onclick=async()=>{ await delCustom(d.id); if(fromCard()){ backToCard(); return; } if(fromLearn()){ backToLearn(); return; } S.detail=null; render(); }; /* at once, with Undo (v268) — the texts go with it; a generated flashcard survives its multicard (v487), so the way back is still there and its pill becomes plain text */
+  $("#d-del").onclick=async()=>{ if(!await confirmDelCard(d)) return; await delCustom(d.id); if(fromCard()){ backToCard(); return; } if(fromLearn()){ backToLearn(); return; } S.detail=null; render(); }; /* v594: only after the sheet, and with Undo under it (v268) — the texts go with it; a generated flashcard survives its multicard (v487), so the way back is still there and its pill becomes plain text */
   /* a page is swiped like any other open card (v460, H: "Multicards lassen sich nicht swipen"): v445 gave the Cards
      detail its carousel and v453's page renders through this function instead, which never called wireSwipe — so the one
      card kind that holds several texts was the one kind you could not push aside. The neighbours are the same list. */
@@ -4749,7 +4765,7 @@ function renderCardDetail(main,c){
   $("#d-flag").onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   wireSay(); wireLinks(); wireSrc(); wireExplain(); if(!S.detailHide) explainAuto(d); else explainSoon(d); /* v585: the same on the open card, whose block stands open by default; v586: folded away, it is fetched a moment later all the same */ /* v536: nothing wires a parts row here - the open card passes noParts, so there is no .chars row on it; the camera's finished card is the one screen that still draws one and wires it itself (v589 removed the helper that had no caller left) */
   wireAi();
-  const del=$("#d-del"); if(del) del.onclick=async()=>{ await delCustom(c); if(S.detailFrom==="inbox"){ backToPhoto(); return; } if(fromPage()){ backToPage(); return; } S.detail=null; render(); }; /* at once, with Undo (v268) */
+  const del=$("#d-del"); if(del) del.onclick=async()=>{ if(!await confirmDelCard(cardOf(c))) return; await delCustom(c); if(S.detailFrom==="inbox"){ backToPhoto(); return; } if(fromPage()){ backToPage(); return; } S.detail=null; render(); }; /* v594: only after the sheet, with Undo under it (v268) */
   /* the swipe changes the card, and the two pieces of view state go opposite ways because they mean different things.
      S.detailHide is a way of READING — "I am testing myself" — and survives the swipe: the detail is not a test that
      must come closed, which is why Learn resets S.ansOpen and this does not. S.fullPic is about THIS photo — "show me
@@ -4798,7 +4814,8 @@ function renderEdit(main,c){
   $("#e-flag").onchange=()=>{ $("#e-note").hidden=!$("#e-flag").checked; if($("#e-flag").checked) $("#e-note").focus(); }; /* the note only with the flag, as in the Add form and the preview (v136) */
   /* delete from here too (H): from the study back the session goes on with the next card, otherwise back to the list */
   $("#e-del").onclick=async()=>{
-    await delCustom(c); endRecrop(); delete SIGN[eid]; /* at once, with Undo (v268) */
+    if(!await confirmDelCard(cardOf(c))) return; /* v594: the same question as on the open card */
+    await delCustom(c); endRecrop(); delete SIGN[eid]; /* then at once, with Undo under it (v268) */
     const from=S.editFrom; S.editing=null; S.editFrom=null;
     if(from==="study"){ S.queue=S.queue.filter(x=>x!==c); if(S.single===c) S.single=null; S.fullPic=false; S.ansOpen=false; S.mode="study"; }
     else if(from==="camera"){ S.mode="inbox"; S.fullPic=false; }
@@ -5084,6 +5101,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  594:"Deleting a card asks first now, wherever you do it — and one tap on Undo still brings it back. On the open card, Flag and Delete sit side by side.",
   593:"The Cards list is square photos now, with nothing written under them — a card is found by its picture, and the search still finds it by its characters, pinyin and meaning. A multicard keeps its name over two lines. Sharing one card as a picture is gone.",
   589:"Skip now fills the whole character in instead of one stroke at a time, a character the app has no strokes for can be skipped too, and a long press that is held a moment longer no longer deletes the card it just marked.",
   588:"More → Learning → Check-up now fills in what a card is missing while it checks it: the description of what its text says, and the tag for what it stands on. The separate Tags and Descriptions rows are gone — one run does all of it.",
@@ -5302,7 +5320,11 @@ function pickAllBtn(ids,redraw){ /* All marks everything the screen shows, None 
   b.onclick=()=>{ ids.forEach(id=>all?PICK.set.delete(id):PICK.set.add(id)); redraw(); };
 }
 async function delPicked(kind){
-  if(!PICK) return; const ids=[...PICK.set]; endPick();
+  if(!PICK) return; const ids=[...PICK.set];
+  /* v594: the bulk delete asks too — it is the most destructive tap in the app, and the question comes before endPick,
+     so a Cancel leaves the marking exactly as it was. The photos keep their one tap: a photo is not a card. */
+  if(kind==="cards"&&!await askSheet({title:t("Delete {0}?",nOf(ids.length,"card")),text:t("Your progress on this card goes with it."),ok:t("Delete")})) return;
+  endPick();
   for(const id of ids){ if(kind==="cards") await delCustom(id); else await delShot(id,true); } /* each one shows its Undo item, so the line reads "Deleted 12 cards" */
   render();
 }
@@ -9200,7 +9222,7 @@ function renderShots(){
   box.querySelectorAll("[data-autoedit]").forEach(b=> b.onclick=()=>editAuto(b.dataset.autoedit)); /* the frame right after the shutter (v437) */
   box.querySelectorAll("[data-autocancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.autocancel; S.openShot=id; cancelAuto(id); }); /* the card made by itself (v325): Cancel drops the placeholder, the photo stays. The pin is set BEFORE cancelAuto, which renders from inside itself (v468) */
   box.querySelectorAll("[data-resedit]").forEach(b=> b.onclick=()=>{ const cid=b.dataset.resedit; if(!cardOf(cid)) return; S.editing=cid; S.editFrom="camera"; S.editOpenFrame=true; S.fullPic=false; render(); window.scrollTo({top:0}); }); /* Edit opens the form with the photo and the frame the card was cut with */
-  box.querySelectorAll("[data-resdel]").forEach(b=> b.onclick=async()=>{ const cid=b.dataset.resdel; if(cardOf(cid)) await delCustom(cid); renderShots(); }); /* at once, with Undo (v268) — Undo brings the result back, the photo stays with Crop meanwhile */
+  box.querySelectorAll("[data-resdel]").forEach(b=> b.onclick=async()=>{ const cid=b.dataset.resdel, cd=cardOf(cid); if(cd){ if(!await confirmDelCard(cd)) return; await delCustom(cid); } renderShots(); }); /* v594: only after the sheet, with Undo under it (v268) — Undo brings the result back, the photo stays with Crop meanwhile */
   box.querySelectorAll(".result").forEach(el=>{ const d=el.dataset.prov?(PROV[el.dataset.prov]||{}).card:cardOf(el.dataset.card); if(!d) return; /* the provisional card lives in PROV, not in the deck (v440) */
     el.querySelectorAll("[data-pic]").forEach(p=> p.onclick=e=>{ e.stopPropagation(); S.fullPic=!S.fullPic; renderShots(); }); /* the photo's tap: the whole picture and back, as on the front */
     el.querySelectorAll(".chars:not(.sub) .ch").forEach(c=> c.onclick=e=>{ e.stopPropagation(); charInfo(c.dataset.ch,c,d); }); });

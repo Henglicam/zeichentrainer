@@ -233,6 +233,7 @@ de:{
   "The text, pinyin and meaning follow when the reading is done.":"Text, Pinyin und Bedeutung folgen, sobald das Lesen fertig ist.",
   "Test this card":"Diese Karte testen","Edit":"Bearbeiten","Delete card":"Karte löschen",
   "Delete":"Löschen","Cancel":"Abbrechen",
+  "Delete “{0}”?":"„{0}“ löschen?","Delete this card?":"Diese Karte löschen?","Delete {0}?":"{0} löschen?","Your progress on this card goes with it.":"Dein Lernfortschritt für diese Karte ist dann auch weg.","The multicard and all its texts go with it.":"Die Multicard und alle ihre Texte sind dann auch weg.",
   "You are inside WeChat. Open this page in your browser to install the app and keep your cards.":"Du bist in WeChat. Öffne diese Seite im Browser, um die App zu installieren und deine Karten zu behalten.",
   /* More, the Add and Edit forms and the notices (v255) */
   "Copied to the clipboard.":"In die Zwischenablage kopiert.","Sharing is not available here.":"Teilen ist hier nicht möglich.","Cards and photos stay on this phone, and studying works without a connection. Making a new card uses the AI: the card's text goes to the provider, and anonymous usage counts go to the app's owner.":"Karten und Fotos bleiben auf diesem Telefon, und Lernen funktioniert ohne Verbindung. Eine neue Karte macht die App mit der KI: Der Text geht an den Anbieter, und anonyme Nutzungszahlen gehen an den Besitzer der App.","The AI can get a character, its pinyin or its meaning wrong. Check anything you rely on.":"Die KI kann sich bei einem Zeichen, seinem Pinyin oder seiner Bedeutung irren. Prüf nach, worauf du dich verlässt.",
@@ -520,6 +521,7 @@ fr:{
   "The text, pinyin and meaning follow when the reading is done.":"Le texte, le pinyin et le sens suivront une fois la lecture terminée.",
   "Test this card":"Tester cette carte","Edit":"Modifier","Delete card":"Supprimer la carte",
   "Delete":"Supprimer","Cancel":"Annuler",
+  "Delete “{0}”?":"Supprimer « {0} » ?","Delete this card?":"Supprimer cette carte ?","Delete {0}?":"Supprimer {0} ?","Your progress on this card goes with it.":"Ta progression sur cette carte disparaît avec elle.","The multicard and all its texts go with it.":"La multicarte et tous ses textes disparaissent avec elle.",
   "You are inside WeChat. Open this page in your browser to install the app and keep your cards.":"Tu es dans WeChat. Ouvre cette page dans ton navigateur pour installer l'appli et garder tes cartes.",
   /* More, the Add and Edit forms and the notices (v255) */
   "Copied to the clipboard.":"Copié dans le presse-papiers.","Sharing is not available here.":"Le partage n'est pas disponible ici.","Cards and photos stay on this phone, and studying works without a connection. Making a new card uses the AI: the card's text goes to the provider, and anonymous usage counts go to the app's owner.":"Les cartes et les photos restent sur ce téléphone, et tu peux réviser sans connexion. Créer une nouvelle carte passe par l'IA : le texte de la carte va au fournisseur, et des comptages d'utilisation anonymes vont au propriétaire de l'appli.","The AI can get a character, its pinyin or its meaning wrong. Check anything you rely on.":"L'IA peut se tromper sur un caractère, son pinyin ou son sens. Vérifie tout ce sur quoi tu comptes.",
@@ -808,6 +810,7 @@ es:{
   "The text, pinyin and meaning follow when the reading is done.":"El texto, el pinyin y el significado llegarán cuando termine la lectura.",
   "Test this card":"Probar esta tarjeta","Edit":"Editar","Delete card":"Eliminar tarjeta",
   "Delete":"Eliminar","Cancel":"Cancelar",
+  "Delete “{0}”?":"¿Eliminar «{0}»?","Delete this card?":"¿Eliminar esta tarjeta?","Delete {0}?":"¿Eliminar {0}?","Your progress on this card goes with it.":"Tu progreso con esta tarjeta se va con ella.","The multicard and all its texts go with it.":"La multitarjeta y todos sus textos se van con ella.",
   "You are inside WeChat. Open this page in your browser to install the app and keep your cards.":"Estás dentro de WeChat. Abre esta página en tu navegador para instalar la app y conservar tus tarjetas.",
   /* More, the Add and Edit forms and the notices (v255) */
   "Copied to the clipboard.":"Copiado al portapapeles.","Sharing is not available here.":"Compartir no está disponible aquí.","Cards and photos stay on this phone, and studying works without a connection. Making a new card uses the AI: the card's text goes to the provider, and anonymous usage counts go to the app's owner.":"Las tarjetas y las fotos se quedan en este teléfono, y estudiar funciona sin conexión. Crear una tarjeta nueva usa la IA: el texto de la tarjeta va al proveedor, y los recuentos de uso anónimos van al propietario de la app.","The AI can get a character, its pinyin or its meaning wrong. Check anything you rely on.":"La IA puede equivocarse con un carácter, su pinyin o su significado. Comprueba cualquier cosa en la que vayas a confiar.",
@@ -1096,6 +1099,7 @@ ja:{
   "The text, pinyin and meaning follow when the reading is done.":"読み取りが終わると文字・ピンイン・意味が入ります。",
   "Test this card":"このカードをテスト","Edit":"編集","Delete card":"カードを削除",
   "Delete":"削除","Cancel":"キャンセル",
+  "Delete “{0}”?":"「{0}」を削除しますか？","Delete this card?":"このカードを削除しますか？","Delete {0}?":"{0}を削除しますか？","Your progress on this card goes with it.":"このカードの学習記録も一緒に消えます。","The multicard and all its texts go with it.":"マルチカードと中のテキストも全部消えます。",
   "You are inside WeChat. Open this page in your browser to install the app and keep your cards.":"WeChat 内で開いています。アプリをインストールしてカードを残すには、ブラウザでこのページを開いてください。",
   /* More, the Add and Edit forms and the notices (v255) */
   "Copied to the clipboard.":"クリップボードにコピーしました。","Sharing is not available here.":"ここでは共有できません。","Cards and photos stay on this phone, and studying works without a connection. Making a new card uses the AI: the card's text goes to the provider, and anonymous usage counts go to the app's owner.":"カードと写真はこの端末に残り、学習はオフラインでもできます。新しいカードを作るときはAIを使います：カードのテキストは提供元に、匿名の利用回数はアプリの所有者に送られます。","The AI can get a character, its pinyin or its meaning wrong. Check anything you rely on.":"AIは文字やピンイン、意味を間違えることがあります。大事なことは自分で確認してください。",
@@ -1384,6 +1388,7 @@ ko:{
   "The text, pinyin and meaning follow when the reading is done.":"읽기가 끝나면 글자, 병음, 뜻이 채워져요.",
   "Test this card":"이 카드 테스트","Edit":"편집","Delete card":"카드 삭제",
   "Delete":"삭제","Cancel":"취소",
+  "Delete “{0}”?":"“{0}” 삭제할까요?","Delete this card?":"이 카드를 삭제할까요?","Delete {0}?":"{0} 삭제할까요?","Your progress on this card goes with it.":"이 카드의 학습 기록도 같이 사라져요.","The multicard and all its texts go with it.":"멀티카드와 그 안의 텍스트도 모두 사라져요.",
   "You are inside WeChat. Open this page in your browser to install the app and keep your cards.":"WeChat 안에서 열려 있어요. 앱을 설치하고 카드를 보관하려면 브라우저에서 이 페이지를 여세요.",
   /* More, the Add and Edit forms and the notices (v255) */
   "Copied to the clipboard.":"클립보드에 복사했어요.","Sharing is not available here.":"여기서는 공유할 수 없어요.","Cards and photos stay on this phone, and studying works without a connection. Making a new card uses the AI: the card's text goes to the provider, and anonymous usage counts go to the app's owner.":"카드와 사진은 이 휴대폰에 남고, 학습은 연결 없이도 할 수 있어요. 새 카드를 만들 때는 AI를 써요: 카드의 텍스트가 제공자에게 전송되고, 익명의 사용 횟수는 앱 소유자에게 가요.","The AI can get a character, its pinyin or its meaning wrong. Check anything you rely on.":"AI가 글자나 병음, 뜻을 틀릴 수 있어요. 믿고 쓸 내용은 한 번 더 확인하세요.",
@@ -1676,6 +1681,7 @@ ru:{
   "The text, pinyin and meaning follow when the reading is done.":"Текст, пиньинь и значение появятся, когда чтение закончится.",
   "Test this card":"Проверить эту карточку","Edit":"Изменить","Delete card":"Удалить карточку",
   "Delete":"Удалить","Cancel":"Отмена",
+  "Delete “{0}”?":"Удалить «{0}»?","Delete this card?":"Удалить эту карточку?","Delete {0}?":"Удалить {0}?","Your progress on this card goes with it.":"Твой прогресс по этой карточке пропадёт вместе с ней.","The multicard and all its texts go with it.":"Мультикарточка и все её тексты пропадут вместе с ней.",
   "You are inside WeChat. Open this page in your browser to install the app and keep your cards.":"Ты в WeChat. Открой эту страницу в браузере, чтобы установить приложение и сохранить карточки.",
   /* More, the Add and Edit forms and the notices (v255) */
   "Copied to the clipboard.":"Скопировано в буфер обмена.","Sharing is not available here.":"Здесь нельзя поделиться.","Cards and photos stay on this phone, and studying works without a connection. Making a new card uses the AI: the card's text goes to the provider, and anonymous usage counts go to the app's owner.":"Карточки и фото остаются на этом телефоне, а заниматься можно без сети. Новая карточка делается с помощью ИИ: её текст уходит провайдеру, а владельцу приложения уходят анонимные счётчики использования.","The AI can get a character, its pinyin or its meaning wrong. Check anything you rely on.":"ИИ может ошибиться в иероглифе, его пиньине или значении. Проверяй то, на что полагаешься.",
@@ -1964,6 +1970,7 @@ vi:{
   "The text, pinyin and meaning follow when the reading is done.":"Chữ, pinyin và nghĩa sẽ có khi đọc xong.",
   "Test this card":"Kiểm tra thẻ này","Edit":"Sửa","Delete card":"Xóa thẻ",
   "Delete":"Xóa","Cancel":"Hủy",
+  "Delete “{0}”?":"Xóa “{0}”?","Delete this card?":"Xóa thẻ này?","Delete {0}?":"Xóa {0}?","Your progress on this card goes with it.":"Tiến độ học thẻ này cũng mất theo.","The multicard and all its texts go with it.":"Thẻ gộp và toàn bộ văn bản trong đó cũng mất theo.",
   "You are inside WeChat. Open this page in your browser to install the app and keep your cards.":"Bạn đang ở trong WeChat. Mở trang này bằng trình duyệt để cài app và giữ được thẻ của bạn.",
   /* More, the Add and Edit forms and the notices (v255) */
   "Copied to the clipboard.":"Đã sao chép.","Sharing is not available here.":"Ở đây không chia sẻ được.","Cards and photos stay on this phone, and studying works without a connection. Making a new card uses the AI: the card's text goes to the provider, and anonymous usage counts go to the app's owner.":"Thẻ và ảnh ở lại trên máy này, và việc học chạy được cả khi không có mạng. Làm thẻ mới thì có dùng đến AI: chữ trên thẻ được gửi tới nhà cung cấp, còn số liệu sử dụng ẩn danh thì gửi cho chủ app.","The AI can get a character, its pinyin or its meaning wrong. Check anything you rely on.":"AI có thể nhầm một chữ, pinyin hay nghĩa của nó. Cái gì bạn cần chắc chắn thì xem lại nhé.",
@@ -2252,6 +2259,7 @@ th:{
   "The text, pinyin and meaning follow when the reading is done.":"ตัวอักษร พินอิน และความหมายจะตามมาเมื่ออ่านเสร็จ",
   "Test this card":"ทดสอบการ์ดนี้","Edit":"แก้ไข","Delete card":"ลบการ์ด",
   "Delete":"ลบ","Cancel":"ยกเลิก",
+  "Delete “{0}”?":"ลบ “{0}” ไหม","Delete this card?":"ลบการ์ดนี้ไหม","Delete {0}?":"ลบ{0}ไหม","Your progress on this card goes with it.":"ความคืบหน้าของการ์ดใบนี้จะหายไปด้วย","The multicard and all its texts go with it.":"การ์ดรวมและข้อความทั้งหมดในนั้นก็หายไปด้วย",
   "You are inside WeChat. Open this page in your browser to install the app and keep your cards.":"ตอนนี้คุณเปิดแอปอยู่ใน WeChat เปิดหน้านี้ในเบราว์เซอร์เพื่อติดตั้งแอปและเก็บการ์ดไว้",
   /* More, the Add and Edit forms and the notices (v255) */
   "Copied to the clipboard.":"คัดลอกแล้ว","Sharing is not available here.":"ที่นี่แชร์ไม่ได้","Cards and photos stay on this phone, and studying works without a connection. Making a new card uses the AI: the card's text goes to the provider, and anonymous usage counts go to the app's owner.":"การ์ดและรูปอยู่ในเครื่องนี้ และการเรียนใช้ได้แบบออฟไลน์ การสร้างการ์ดใหม่จะใช้ AI: ข้อความของการ์ดจะส่งไปที่ผู้ให้บริการ ส่วนสถิติการใช้งานแบบไม่ระบุตัวตนจะส่งให้เจ้าของแอป","The AI can get a character, its pinyin or its meaning wrong. Check anything you rely on.":"AI อาจให้ตัวอักษร พินอิน หรือความหมายผิดได้ อะไรที่จะเอาไปใช้จริง ตรวจดูอีกที",
@@ -2540,6 +2548,7 @@ id:{
   "The text, pinyin and meaning follow when the reading is done.":"Teks, pinyin dan arti menyusul setelah pembacaan selesai.",
   "Test this card":"Tes kartu ini","Edit":"Edit","Delete card":"Hapus kartu",
   "Delete":"Hapus","Cancel":"Batal",
+  "Delete “{0}”?":"Hapus “{0}”?","Delete this card?":"Hapus kartu ini?","Delete {0}?":"Hapus {0}?","Your progress on this card goes with it.":"Progres belajar kartu ini ikut terhapus.","The multicard and all its texts go with it.":"Multikartu dan semua teksnya ikut terhapus.",
   "You are inside WeChat. Open this page in your browser to install the app and keep your cards.":"Kamu sedang berada di dalam WeChat. Buka halaman ini di browser supaya aplikasinya bisa dipasang dan kartumu tersimpan.",
   /* More, the Add and Edit forms and the notices (v255) */
   "Copied to the clipboard.":"Disalin ke papan klip.","Sharing is not available here.":"Berbagi tidak tersedia di sini.","Cards and photos stay on this phone, and studying works without a connection. Making a new card uses the AI: the card's text goes to the provider, and anonymous usage counts go to the app's owner.":"Kartu dan foto tetap di ponsel ini, dan kamu bisa belajar tanpa koneksi. Membuat kartu baru memakai AI: teks kartunya dikirim ke penyedia, dan hitungan pemakaian yang anonim dikirim ke pemilik aplikasi.","The AI can get a character, its pinyin or its meaning wrong. Check anything you rely on.":"AI bisa memberi karakter, pinyin atau arti yang salah. Periksa apa pun yang kamu andalkan.",
