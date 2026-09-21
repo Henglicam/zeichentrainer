@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=583; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=584; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,7 +673,8 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["app","v583","Learn + Cards: the description at the card's foot"],
+  ["app","v584","Learn: Explain above the tab bar"],
+  ["app","v583","the description at the card's foot"],
   ["app","v582","Learn: no Undo/Clear mid-write on the pad"],
   ["app","v580","Learn: one tap swaps photo and text"],
   ["app","v579","pad: freehand taken at speed?"],
@@ -3675,7 +3676,7 @@ async function checkCard(id){ const d=cardOf(id); if(!d||!d.unchecked) return; c
    order-free by construction (a Hungarian assignment over the strokes), so the order really is the learner's. Off by
    default — see § the entry for why the automatic trigger at level 3 was measured and not built. */
 const HAND_TOP=3, HAND_AT=2; /* the target must be among the matcher's three best — the drawing sheet's own rule since v141 — and the pad starts judging the whole character after two strokes in a row that did not fit (v570) */
-const PAD_FLOOR=160, PHOTO_MIN=120, LINE_H=61, CLIP_RATIO=0.65, TRACE_OK=0.18, NEXT_MS=3500, RECAP_SYL=230, RECAP_MAX=5600, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
+const PAD_FLOOR=160, PHOTO_MIN=120, LINE_H=61, DESC_ROW=52, CLIP_RATIO=0.65, TRACE_OK=0.18, NEXT_MS=3500, RECAP_SYL=230, RECAP_MAX=5600, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
 const CARD_RATIO=1.5; /* the one window and box shape on every card, 3:2 (v519) — declared here, since FRONT_RATIO reads it at load time */
 let LAST_FIT=null; /* v521: the study card's last pad measurement, printed by Diagnostics */
 /* THE MAIN THREAD AT STARTUP, AND WHAT A FOLD DOES TO IT (v532, H: "open/close foldable phone sometimes freezes the startup
@@ -3714,7 +3715,7 @@ const FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_G
    no longer timed by a constant of its own: it lifts out of the recap POP1 before the reading is over, so v523's own
    order — the reading first, the reward second, the flight ending with the card — holds at every length by construction
    instead of by two numbers that have to be kept in step (the v401 lesson), and a milestone card's extra FW_MS (v545)
-   buys the burst its room without costing the reading anything. FRONT_RATIO is the shape the study card's picture is cut in (3:2, v519); the box it shows in is the frame's photo row since v560. PAD_FLOOR, PHOTO_MIN and LINE_H are the frame's constants (mountPad, splitFit), CH_BIG the tile size the enlarged text half may reach (v564), CLIP_RATIO the share of the box's own shape a picture must reach to be clipped rather than fitted. BRUSH_W is the
+   buys the burst its room without costing the reading anything. FRONT_RATIO is the shape the study card's picture is cut in (3:2, v519); the box it shows in is the frame's photo row since v560. PAD_FLOOR, PHOTO_MIN, LINE_H and DESC_ROW are the frame's constants (mountPad, splitFit) — DESC_ROW is the room the pad's budget keeps below the fold row for the card's description, the Explain button's own box and nothing more (v584), CH_BIG the tile size the enlarged text half may reach (v564), CLIP_RATIO the share of the box's own shape a picture must reach to be clipped rather than fitted. BRUSH_W is the
    brush's widest point; OUT_GRID/OUT_Y0 map the stroke outlines, which are stored y-up on a 256 grid. */
 /* TRACE_OK: the mean distance, in pad sides, between the drawn stroke's eight points and the template stroke's — the spec's
    0.28 was a starting number and its own suite refuses a stroke a quarter of the pad off, so the bar sits under that; the
@@ -3921,7 +3922,8 @@ function mountPad(card,d,c,tg,st,cur){
     const ccs=getComputedStyle(card), rect=card.getBoundingClientRect(), top=rect.top+window.scrollY;
     const cardH=Math.floor(navTop-16-top); /* the card's whole room with the page at rest: from its top to 16 px above the tab bar */
     const gap=parseFloat(ccs.rowGap)||8, hn=card.querySelector(":scope>.hint:not(#pad-note)") /* v583: the swipe hint only — a direct child; the description at the foot may carry a .hint of its own (a failed Explain) and is NOT in the pad's budget */, fb=card.querySelector("#fold");
-    const avail=cardH-(parseFloat(ccs.paddingTop)||12)-(parseFloat(ccs.paddingBottom)||14)-(fb?fb.offsetHeight:36)-gap*2-(hn?hn.offsetHeight+gap:0); /* for the two panels */
+    const ds=card.querySelector(":scope>.desc"); /* v584 (H: "Explain soll in Whole Card immer sichtbar sein"): the description row at the card's foot — v583 left it out of the budget, so the Explain button stood half under the tab bar on every folded card (measured 25 of its 49 px hidden). DESC_ROW is a CONSTANT, never the row's own height: a per-card term is exactly what v560 was built to end, and DESC_MAX 700 is some 360 px, which no budget can hold. */
+    const avail=cardH-(parseFloat(ccs.paddingTop)||12)-(parseFloat(ccs.paddingBottom)||14)-(fb?fb.offsetHeight:36)-gap*2-(hn?hn.offsetHeight+gap:0)-(ds?DESC_ROW+gap:0); /* for the two panels */
     const cueMin=Math.max(PHOTO_MIN,CH_MAX+6+LINE_H); /* v580: the cue holds ONE of the two — the picture at its floor, or one row of tiles over the word line — where v564 needed room for both at once (PHOTO_MIN plus a whole text half), so a short screen breaks the symmetry later and the pad keeps more of it */
     let side=Math.min(inner,Math.floor(avail/2)), cueH=side;
     if(side<cueMin){ cueH=cueMin; side=Math.max(PAD_FLOOR,Math.min(inner,avail-cueH)); } /* too short for two equal panels: the photo keeps its floor, the pad gives way */
