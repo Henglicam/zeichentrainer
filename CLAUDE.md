@@ -58,49 +58,46 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v598, 2026-09-21)
-**The guide's figures are real crops of the app** (H: "Nimm doch echte Screenshots anstatt solche
-Fantasiesachen"). v549 banned screenshots in the guide and left one door open in its own words —
-"a crop of one part of one screen is a figure" — and this walks through it: five of the six
-figures are `guide/<name>-{light,dark}.webp`, real screenshots, and only **privacy** is still
-drawn, because it is the one section with no screen behind it. **v549's four objections, each
-answered by measurement rather than waved away:** a whole screen scaled into the guide's 329 px
-is 768 px tall and six of those are 4600 px, so what is photographed is one part of one screen
-(173–322 px at its own scale); **a screenshot is in one language, so every crop carries NO UI
-prose** — pictures, Chinese characters and the fixed endonyms, nothing a translation can change
-(the v427 rule, kept by construction, and the suite asserts the same five files in all ten
-languages); at WebP .86 the ten files are **84 KB** against a 520 KB gzipped shell, one download;
-and staleness — v549's real argument — is answered by **`tools/guide-shots.js`**, which regenerates
-all ten from the app in one command (self-contained: its own static server, the WebP encoded in
-the page, so it needs no image library). **What each shows:** the app's own crop frame on a photographed
-sign, four character buttons with one picked, the pad with three strokes in ink and the fourth lit
-with its dot, two square tiles with one hollow star and one filled, and the ten language chips.
-**The guide gets no taller, which is the one thing a figure change must not cost:** `GF_SHOT`
-gives each crop the height of the drawn figure it replaces and the width is
-`min(100%, h × ar)` with the aspect ratio inline — so a wide crop fills the column and comes out
-*shorter* than h, while the square pad sits centred at h × h; measured over 10 languages × 390
-and 360 px, the page is **80–81 px shorter at 390 and 24–25 px shorter at 360** than v597's, and
-`aspect-ratio` holds the row before the file has decoded. Light and dark are two files chosen by
-`<picture>` on `prefers-color-scheme` — no JS, since the app has no theme switch and follows the
-phone. The ten files are **shell assets** (a figure that 404s offline is worse than no figure),
-`sw.js` learned `image/webp`, and `purge-mirror.yml` purges them so a phone without a VPN gets a
-regenerated figure within one mirror check. `gfBar`, `gfPhoto`, `gfArrow` and `GF_L3` went with
-the drawings that used them. **What it costs, named:** the language chips are photographed with
-**English lit**, so a German reader sees English on — true of a fresh install and of the screen
-they came from, and the only alternative was twenty files for that one figure; and a layout change
-now makes a figure stale until the command is run. Suite `verify-realfig` 21/21 (**15 of 21 fail
-on a v597 root, every one a `[flip]`**; the six that pass on both are the labelled controls and
-two guards, each with its reason in the file); `verify-onepage` **33/33 with three checks
-retargeted** — they asserted what the drawn figures *drew*, which is the contract this version
-reverses on purpose, and they fail on a v597 root, which is what says the retarget is a repair;
-deckpace 34/34, square 19/19, delask 44/44, phototile 39/39, memory 38/38, onephoto 30/30, nofree
-15/15. Overflow scan 6 screens × 10 languages × 2 widths: the guide 0 in all 20 contexts and 0
-differences against v597 elsewhere. Checked by screenshot at 390 px in English light and German
-dark. No `WHATS_NEW` line — the v432 rule: a help screen that looks like the app is what a
-learner expects, not a feature. Not yet field-checked — H's next look at More → How to use the
-app is the check: does it read as the app, and is English-lit on the chips a nuisance?
+## Current state (PWA v599, 2026-09-21)
+**The two sample cards in the app's instructions are real crops of the app** (H: "Real Screenshots
+for the characters" → "I meant the sample cards in the instructions"). v598 made five of the guide's
+six figures real and left two drawn cards standing: the **privacy** figure's card (three drawn rows,
+面/鸡/店) and the **empty deck's example card** (`introHTML`, v569's Beispielkarte). Both are crops
+now — `guide/front-*.webp` is the study card's own front (the photographed plate 推 over the pad,
+three strokes in ink and the fourth lit) and `guide/pcard-*.webp` is the open card (the sign
+坚果供应 with the card's own character tiles under it, 坚果 grouped and lit).
+**The new mechanism is `gfimg`: a real crop INSIDE a drawn figure.** `<picture>` does not exist in
+SVG, so light and dark are two `<image>`s and a media query hides one (`.gfd-l`/`.gfd-d`, not scoped
+to `.guide` — the empty deck is on Learn). The box is **fitted, never stretched**: the ratio comes
+from `GF_SHOT` (`front:[0.494,0]`, `pcard:[0.834,0]`; the second number is unused, these two are not
+figures of their own), so a regenerated crop of another shape re-centres instead of squashing.
+**Each figure keeps a drawn half, and the reason is the rule:** in privacy the arrow and the 文 chip
+stay drawn because *what leaves the phone* is no screen in the app, and the crop stops above the
+reading line, which carries the **meaning** and would put one language into a file serving ten; in
+the example card the **fold bar stays drawn** because the real fold row reads "Whole card" — UI prose
+— and note n3 points at it (v589's lesson: a note must not point at what the picture does not show).
+**The geometry is derived, not typed** (v401): `IH=140/GF_SHOT.front[0]`, and the bar, the frame and
+the viewBox follow — the mock is `0 0 168 345.4`, the three handwritten notes needed no change, and
+the privacy card keeps its centre and its 132 px to the pixel, so that figure is still 160 tall.
+**Measured on both trees, 40 contexts (10 languages × 390/360 px × light/dark): the guide is exactly
+as tall as v598's (0 px, min and max)**, the example card 3–4 px shorter, 0 overflow on either.
+`tools/guide-shots.js` gained the two shots and a `max` cap — a crop shown ~100 px wide needs no
+644 px file; at 320 device px the four are **29 KB**, the set 84 → **113 KB**. All four are shell
+assets (`front` is on the first screen a fresh install shows) and are purged with the rest.
+`GF_FILL` and `GF_LAB` left with the drawn rows. **What it costs:** both figures are half photograph
+and half drawing, a seam; and v598's staleness rule now covers two more screens. The five v598 crops
+were **not** regenerated (the painted sign has random grain, so a full run rewrites ten files for no
+visible change). `verify-sample` 28/28 (**19 of 28 fail on a v598 root**, all `[flip]`);
+`verify-onepage` **33/33 with two checks retargeted** — they asserted what the empty deck *drew*,
+the contract this version reverses, and they fail on a v598 root. realfig 21/21, deckpace 34/34,
+square 19/19, delask 44/44, phototile 39/39, memory 38/38, onephoto 30/30, nofree 15/15. Checked by
+screenshot at 390 px. No `WHATS_NEW` line (the v432 rule, as at v598). Not yet field-checked.
 
 **Recent state worth carrying in the head** (each has its full entry in the archive):
+- **v598** — five of the guide's six figures became real crops of the app, answering v549's four
+  objections by measurement: one part of one screen, **no UI prose in any crop** so one file serves
+  ten languages, 84 KB of WebP, and staleness answered by `tools/guide-shots.js`. The guide came out
+  80 px *shorter* at 390. `<picture>` on `prefers-color-scheme`, no JS.
 - **v597** — the finished card's recap stands a flat 300 ms less at every length (`NEXT_MS` 3200,
   `RECAP_MAX` 5300, `RECAP_SYL` unchanged at 230, so the floor and the cap move together and the
   per-syllable growth does not; the star is derived and needed no change), and the **deck is one
@@ -109,29 +106,27 @@ app is the check: does it read as the app, and is English-lit on the chips a nui
 - **v596** — the square photo box reaches the last box: `.picbox.page` (the page front of a card
   made from a multicard, and of a v452 page card) is the ordinary card's own box to the pixel,
   and `fitPageCover` joins both carousel `ready` hooks so the neighbour no longer shows the
-  multicard's photo at natural size and jumps at the snap. The guide's figures and the empty
-  deck's mock draw the app as it is, and the pad in both writes **上** — 工 at that size renders
-  as a Latin T, which H saw on his own screenshot.
+  multicard's photo at natural size and jumps at the snap.
 - **v595** — one cut shape for every photo: `CARD_RATIO` is **1**, so `windowRect`, `windowCut`
   and `frontPic` are one square. `RECUT_V` stays **5**: cards already on the phone keep their 3:2
-  picture, fitted in the square box between two bands of blur. A re-cut is one constant away and
-  waits for H's word. `spotRatios()` keeps 1.5 so an older card's photo mark still resolves.
+  picture, fitted in the square box between two bands of blur; a re-cut is one constant away and
+  waits for H's word, and `spotRatios()` keeps 1.5 so an older card's photo mark still resolves.
 - **v593** — the Cards list is square photo tiles, two a row, with nothing written under them;
   a multicard's title is clamped to two lines with an ellipsis; a card's **Share** is gone.
 - **v594** — Flag and Delete pair on one row; **every card delete asks first**
   (`confirmDelCard`, five call sites), with the v268 Undo line still under it.
-- **v592** — the freehand write of v570 is removed whole: a stroke that does not fit shakes and
-  is **gone**; the pad is a tracing pad again and asks for the taught stroke order.
-- **v589** — the app says what the memory game is; Skip fills the character in. **An undefined CSS
-  custom property takes its entire declaration with it — the only way to find one is to grep every
-  `var(--x)` against the `:root` list.**
+- **v592** — the freehand write of v570 is removed whole: a stroke that does not fit shakes and is
+  **gone**; the pad is a tracing pad again and asks for the taught stroke order.
+- **v589** — **an undefined CSS custom property takes its entire declaration with it — the only way
+  to find one is to grep every `var(--x)` against the `:root` list.**
 
 ## Files
 `index.html` · `styles.css` · `lang.js` (ten language columns) · `app.js` ·
 `manifest.webmanifest` (with the `share_target`) · `sw.js` · `privacy.html` (the Play Store's
 privacy page, not in the shell) · `signs.json` (phrasebook) · `nmt-model.json` ·
-`icon-192/512/maskable-512.png` · `guide/` (the guide's five figures as real crops of the app,
-light and dark, 84 KB of WebP; shell assets, regenerated by `tools/guide-shots.js`) ·
+`icon-192/512/maskable-512.png` · `guide/` (seven real crops of the app, light and dark, 113 KB of
+WebP: the guide's five figures plus the two sample cards `front` and `pcard`, which sit inside a
+drawn figure; shell assets, regenerated by `tools/guide-shots.js`) ·
 `vendor/` (Tesseract + simplified and traditional readers +
 dictionaries + OpenCC tables + stroke medians `strokes.txt.gz` 2.4 MB and Kai outlines
 `outlines.txt.gz` 7.3 MB, ~23 MB total; `vendor/nmt/` Bergamot 5 MB + zh→en model 50 MB;
@@ -339,9 +334,10 @@ plural forms), en 15.** `nOf`/`wordOf`/`PLURAL` carry the counts.
 - **The v259 rule: a screen that changes takes the guide's sentence with it, in the same PR** —
   and that is checked by rendering, not by grepping for one word (v589).
 - The guide is six sections, five led by a **real crop of one part of one screen** (v598) and the
-  sixth by a drawn figure. A crop must carry **no UI prose**, or it stops serving all ten languages;
-  it must be regenerated by `node tools/guide-shots.js` in the PR that changes the screen it shows,
-  or it goes stale; and a whole screen is still banned (v549's arithmetic: six of them are 4600 px).
+  sixth by a drawn figure whose card is a crop too (v599, `gfimg`) — as is the empty deck's example
+  card. A crop must carry **no UI prose**, or it stops serving all ten languages; it must be
+  regenerated by `node tools/guide-shots.js` in the PR that changes the screen it shows, or it goes
+  stale; and a whole screen is still banned (v549's arithmetic: six of them are 4600 px).
 - ja, ko, ru, vi, th and id are mine and **unchecked by a native speaker**.
 
 ## Hard constraints (learned in the field — do not violate)
@@ -519,17 +515,20 @@ own licences even after the app is sold** (Arphic §2b and CC BY-SA ShareAlike).
 fine; taking those two files private is not.
 
 ## Open / not yet field-checked
-v598 and the versions around it are not field-checked — H's next look at **More → How to use the
-app** is the check for the real figures (does it read as the app, and is the language row's
-English-lit chip a nuisance?); his next finished card for v597's shorter recap (is 3.2 s still
-enough to read?); his next look at the Multicards tab for the square tiles (is the name still
-readable on the picture?); and his next card made from a multicard for v596's square page front.
+v599 and the versions around it are not field-checked — H's next look at an **empty Learn screen**
+is the check for the real example card, and **More → How to use the app** for the figures (does it
+read as the app? is the half-drawn privacy figure a seam? is the language row's English-lit chip a
+nuisance?); his next finished card for v597's shorter recap (is 3.2 s still enough to read?); his
+next look at the Multicards tab for the square tiles; and his next card made from a multicard for
+v596's square page front.
 
-**The rule the figures now carry, and it is easy to break:** a guide figure is a photograph of the
-app, so **it goes stale the moment the screen it shows changes**. Run `node tools/guide-shots.js`
-in the same PR as any change to the Crop view, the Edit form's character strip, the write pad, the
-Cards tile or the language chips — the aspect ratios it prints must match `GF_SHOT` in `app.js`,
-and a changed ratio is a changed `GF_SHOT` entry. A crop must never contain UI prose.
+**The rule the crops carry, and it is easy to break:** a crop is a photograph of the app, so **it
+goes stale the moment the screen it shows changes**. Run `node tools/guide-shots.js` in the same PR
+as any change to the Crop view, the Edit form's character strip, the write pad, the **study card's
+front**, the Cards tile, the language chips or the **open card's character row** — the aspect ratios
+it prints must match `GF_SHOT` in `app.js`, and a changed ratio is a changed `GF_SHOT` entry. A crop
+must never contain UI prose. A full run rewrites all fourteen files (the painted sign has random
+grain), so restore the ones the PR does not touch.
 
 **Named and waiting for H's word** (each changes how he handles the app, so each waits for a "Go"):
 re-cutting the deck square (`RECUT_V` 6, ~95 ms a card, no undo); after one tap the card is dealt

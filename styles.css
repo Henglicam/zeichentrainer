@@ -521,6 +521,11 @@ body.noscroll{overflow:hidden}
    The radius follows the app's own small-box radius, so a crop reads as a piece of the app rather than a poster. */
 .guide .gfp{display:block}
 .guide .gfs{width:auto;height:auto;margin:5px auto;border-radius:10px}
+/* a real crop placed INSIDE a drawn figure (v599, gfimg): <picture> does not exist inside SVG, so light and dark are
+   two <image> elements and the media query hides one. Not scoped to .guide — the empty deck's example card uses the
+   same pair on the Learn tab. The app has no theme switch, so a plain media query is the whole rule. */
+.gfd-d{display:none}
+@media(prefers-color-scheme:dark){ .gfd-l{display:none} .gfd-d{display:inline} }
 .guide .gf .gfh{font-family:var(--hanzi)}
 .guide .gf .gft{font-family:inherit;font-weight:500}
 
