@@ -58,67 +58,67 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v599, 2026-09-21)
-**The two sample cards in the app's instructions are real crops of the app** (H: "Real Screenshots
-for the characters" → "I meant the sample cards in the instructions"). v598 made five of the guide's
-six figures real and left two drawn cards standing: the **privacy** figure's card (three drawn rows,
-面/鸡/店) and the **empty deck's example card** (`introHTML`, v569's Beispielkarte). Both are crops
-now — `guide/front-*.webp` is the study card's own front (the photographed plate 推 over the pad,
-three strokes in ink and the fourth lit) and `guide/pcard-*.webp` is the open card (the sign
-坚果供应 with the card's own character tiles under it, 坚果 grouped and lit).
-**The new mechanism is `gfimg`: a real crop INSIDE a drawn figure.** `<picture>` does not exist in
-SVG, so light and dark are two `<image>`s and a media query hides one (`.gfd-l`/`.gfd-d`, not scoped
-to `.guide` — the empty deck is on Learn). The box is **fitted, never stretched**: the ratio comes
-from `GF_SHOT` (`front:[0.494,0]`, `pcard:[0.834,0]`; the second number is unused, these two are not
-figures of their own), so a regenerated crop of another shape re-centres instead of squashing.
-**Each figure keeps a drawn half, and the reason is the rule:** in privacy the arrow and the 文 chip
-stay drawn because *what leaves the phone* is no screen in the app, and the crop stops above the
-reading line, which carries the **meaning** and would put one language into a file serving ten; in
-the example card the **fold bar stays drawn** because the real fold row reads "Whole card" — UI prose
-— and note n3 points at it (v589's lesson: a note must not point at what the picture does not show).
-**The geometry is derived, not typed** (v401): `IH=140/GF_SHOT.front[0]`, and the bar, the frame and
-the viewBox follow — the mock is `0 0 168 345.4`, the three handwritten notes needed no change, and
-the privacy card keeps its centre and its 132 px to the pixel, so that figure is still 160 tall.
-**Measured on both trees, 40 contexts (10 languages × 390/360 px × light/dark): the guide is exactly
-as tall as v598's (0 px, min and max)**, the example card 3–4 px shorter, 0 overflow on either.
-`tools/guide-shots.js` gained the two shots and a `max` cap — a crop shown ~100 px wide needs no
-644 px file; at 320 device px the four are **29 KB**, the set 84 → **113 KB**. All four are shell
-assets (`front` is on the first screen a fresh install shows) and are purged with the rest.
-`GF_FILL` and `GF_LAB` left with the drawn rows. **What it costs:** both figures are half photograph
-and half drawing, a seam; and v598's staleness rule now covers two more screens. The five v598 crops
-were **not** regenerated (the painted sign has random grain, so a full run rewrites ten files for no
-visible change). `verify-sample` 28/28 (**19 of 28 fail on a v598 root**, all `[flip]`);
-`verify-onepage` **33/33 with two checks retargeted** — they asserted what the empty deck *drew*,
-the contract this version reverses, and they fail on a v598 root. realfig 21/21, deckpace 34/34,
-square 19/19, delask 44/44, phototile 39/39, memory 38/38, onephoto 30/30, nofree 15/15. Checked by
-screenshot at 390 px. No `WHATS_NEW` line (the v432 rule, as at v598). Not yet field-checked.
+## Current state (PWA v600, 2026-09-22)
+**A long word's line wraps instead of being cut, and the finished card's reading is measured instead of
+estimated** (H, on a screenshot of 中华人民共和国地理标志: "Hier wird die Übersetzungszeile abgeschnitten. In
+so einem Fall bitte zweizeilig werden bzw. mehrzeilig werden." and, two minutes later, "Hier ist das finale
+Pinyin viel zu klein"). Two faults on one card, both a static estimate standing in for a measurement.
+
+**(1) The word line.** v540 held each `.plrow` to one line and let the MEANING shrink to an ellipsis — but the
+meaning is the only part allowed to shrink, so on a word whose characters and pinyin alone are wider than the
+card the meaning went to **nothing** and the row was **still** sliced off both ends, a centred flex row
+overflowing symmetrically (390 px: the row 375 px in a 322 px box, `.mn` 0 px, 中华 gone from the left and the
+last syllable from the right). **The same cut reached H once before** — v540's 电动车 card — and the answer
+then was `shortSense`, which strips the parenthetical so that one line fits and leaves the slicing in place;
+a long word carries no parenthetical to strip. The row is `flex-wrap:wrap` now, with `max-width:100%` and
+`overflow-wrap:anywhere` on its parts. **The height had to follow, and that is the trap:** `.cue .padline` is
+`overflow:hidden` and `splitFit` assumed `LINE_H` 61 — true only because a row that did not fit was sliced
+sideways. It reads `line.scrollHeight` at `--plz` 1 now and gives the tiles `base − (lh+6)`, so a three-row
+line takes its room from the **tiles**: 61 → 109 px on H's card, and over 40 contexts (10 languages ×
+390/360 × light/dark) **0 rows cut against v599's 120**, 0 lines cut at the foot, 0 cards past the tab bar,
+the word line 62–109 px against a flat 61, and **the pad 286 px on both trees**.
+
+**(2) The finished card's reading.** It was `min(RECAP_CP, 140/mw cqw, 330/pn cqw)`, `mw` the widest WORD,
+because v555 makes each word a `nowrap` span. One word of H's card is the seven-syllable 中华人民共和国, 29
+pinyin characters, so the reading stood at **12.7 px** in a 286 px square with 156 px empty — smaller than
+the 20 px meaning under it. Now a word of more than `RECAP_WSYL` syllables may break between its own
+syllables (供应 is still one span), and the size is
+**binary-searched over the real layout** by `recapFit` (the v413 rule), **width first**: a `nowrap` word can be
+wider than the square while its line count is still 1, and the first cut tested only the height — 蜜雪冰城 came
+out at the 44 px cap with its one word **475 px wide in a 286 px square**, which is the hole `140/mw` existed
+to plug. `.rp`/`.rm` are capped at `max-width:100%` so that shows up as `scrollWidth` past `clientWidth`.
+Measured **12.7 → 27 px** on H's card, 蜜雪冰城 24 (v599 gave it 23.5), and over the 40 contexts **26–31 px
+against v599's 12.7–25.4**, none clipped; `RECAP_MIN` 14 is the floor, and `RECAP_WSYL` is **4** so 蜜雪冰城
+and 社会主义 stay whole. Unchanged on purpose: the
+three-line clamp (v577), the meaning's own size, the per-character 900 ms breath. **The guide's crops did not go
+stale, and that is measured rather than reasoned:** across 80 comparisons the picture state's PAINTED
+geometry (`--cueh`/`--th`/`--ph`, the pad, the card's foot) is identical to v599 — the only difference is the
+word line's own intrinsic height, and `--th` is `0px` on both trees, so that element is clipped away and
+never drawn. `pcard` stops above the line.
+
+`verify-wrapline` 22/22 (**12 of 22 fail on a v599 root**, every one a `[flip]`), its recap check driving the
+app's own path — every stroke of 中 really written. sample 28/28, realfig 21/21, onepage 33/33, square 19/19,
+delask 44/44, phototile 39/39, memory 38/38, onephoto 30/30, nofree 15/15, deckpace 34/34. The per-character
+900 ms breath is measured byte-identical to v599. One `WHATS_NEW` line, two `TO_TEST` lines. Not yet
+field-checked.
 
 **Recent state worth carrying in the head** (each has its full entry in the archive):
-- **v598** — five of the guide's six figures became real crops of the app, answering v549's four
-  objections by measurement: one part of one screen, **no UI prose in any crop** so one file serves
-  ten languages, 84 KB of WebP, and staleness answered by `tools/guide-shots.js`. The guide came out
-  80 px *shorter* at 390. `<picture>` on `prefers-color-scheme`, no JS.
+- **v599** — the two sample cards in the app's instructions are real crops too: the empty deck's example
+  card and the guide's privacy card. `gfimg` puts a crop INSIDE a drawn figure (two `<image>`s swapped by a
+  media query, since `<picture>` does not exist in SVG); each keeps a drawn half — the arrow and the chip,
+  and the fold bar, whose real label is UI prose.
+- **v598** — five of the guide's six figures became real crops of the app, answering v549's four objections
+  by measurement: one part of one screen, **no UI prose in any crop** so one file serves ten languages,
+  84 KB of WebP, staleness answered by `tools/guide-shots.js`. The guide came out 80 px *shorter* at 390.
 - **v597** — the finished card's recap stands a flat 300 ms less at every length (`NEXT_MS` 3200,
-  `RECAP_MAX` 5300, `RECAP_SYL` unchanged at 230, so the floor and the cap move together and the
-  per-syllable growth does not; the star is derived and needed no change), and the **deck is one
-  grid of squares**: the multicard tile's bar and two-line title moved ON to the picture (a
-  gradient scrim) where they had stood under it, 174 × 239 → 174 × 174.
-- **v596** — the square photo box reaches the last box: `.picbox.page` (the page front of a card
-  made from a multicard, and of a v452 page card) is the ordinary card's own box to the pixel,
-  and `fitPageCover` joins both carousel `ready` hooks so the neighbour no longer shows the
-  multicard's photo at natural size and jumps at the snap.
-- **v595** — one cut shape for every photo: `CARD_RATIO` is **1**, so `windowRect`, `windowCut`
-  and `frontPic` are one square. `RECUT_V` stays **5**: cards already on the phone keep their 3:2
-  picture, fitted in the square box between two bands of blur; a re-cut is one constant away and
-  waits for H's word, and `spotRatios()` keeps 1.5 so an older card's photo mark still resolves.
-- **v593** — the Cards list is square photo tiles, two a row, with nothing written under them;
-  a multicard's title is clamped to two lines with an ellipsis; a card's **Share** is gone.
-- **v594** — Flag and Delete pair on one row; **every card delete asks first**
-  (`confirmDelCard`, five call sites), with the v268 Undo line still under it.
-- **v592** — the freehand write of v570 is removed whole: a stroke that does not fit shakes and is
-  **gone**; the pad is a tracing pad again and asks for the taught stroke order.
-- **v589** — **an undefined CSS custom property takes its entire declaration with it — the only way
-  to find one is to grep every `var(--x)` against the `:root` list.**
+  `RECAP_MAX` 5300, `RECAP_SYL` unchanged at 230), and the **deck is one grid of squares**: the multicard
+  tile's bar and two-line title moved ON to the picture over a gradient scrim, 174 × 239 → 174 × 174.
+- **v596** — `.picbox.page` (the page front of a card made from a multicard, and of a v452 page card) is the
+  ordinary card's own box to the pixel, and `fitPageCover` joins both carousel `ready` hooks so the
+  neighbour no longer shows the multicard's photo at natural size and jumps at the snap.
+- **v593/v594** — the Cards list is square photo tiles, two a row, nothing written under them; a multicard's
+  title is clamped to two lines; a card's **Share** is gone. Flag and Delete pair on one row, and **every
+  card delete asks first** (`confirmDelCard`, five call sites), the v268 Undo line still under it.
 
 ## Files
 `index.html` · `styles.css` · `lang.js` (ten language columns) · `app.js` ·
@@ -211,12 +211,14 @@ after the layout settles (v521/v532).
   character's meaning under it (v553/v571); the **last** character gets one too, then the whole
   card's recap — the reading and the meaning, no characters (v577) — for `recapMs(d)`
   (`NEXT_MS` 3200 + `RECAP_SYL` 230 a syllable past the second, capped `RECAP_MAX` 5300 — v597
-  took a flat 300 ms off the floor and the cap, so every length is 300 shorter). A tap
-  skips. The star flies out of the recap into the counter at `recapMs − POP1`; a milestone
+  took a flat 300 ms off the floor and the cap, so every length is 300 shorter). The reading is set as
+  large as it fits, **measured** by `recapFit` rather than estimated (v600). A tap skips. The star flies out of the recap into the counter at `recapMs − POP1`; a milestone
   (50/100/250/500/1000 points, or a 7/30/100-day streak) bursts (v545).
-- **The line under the pad** is always there and follows the pad: the character being written
-  with its in-word reading, then its word (v518/v527/v540). A parenthetical is stripped from that
-  line only (`shortSense`); the card keeps the whole sentence.
+- **The word line** sits between the tiles and the pad, in the **text** state only — in the photo state
+  `--th` is 0 and it is clipped away with the tiles (v580; it was "under the pad, always there" until then,
+  and this file said so until v600). It reads the character being written with its in-word reading, then
+  its word (v518/v527/v540), and **wraps onto as many lines as it needs** (v600) — a parenthetical is
+  stripped from that line only (`shortSense`); the card keeps the whole sentence.
 - **"Whole card"** folds open at the card's foot — the characters, pinyin, meaning **and the
   description** (v585), fetched by itself 1.2 s after the card appears (v586, `explainSoon`).
 - **The word being written is marked on the photo** (v533), derived from the frame rather than
@@ -472,8 +474,16 @@ The full list is in the archive; these are the ones that keep biting.
   supposed to set it** (v468).
 - **A second copy of one number drifts.** One rule, one reader; when a copy is unavoidable, name
   it on both sides (v401).
+- **A constant that holds only because something else is being cut stops holding the moment the cutting
+  stops** (v600): `LINE_H` 61 was the word line's true height only while a row that did not fit was sliced
+  sideways. The wrap made it a lie, and `.cue .padline`'s `overflow:hidden` would have cut the new third row
+  as silently as the flex row had cut the first. **A static estimate that must be safe for every card is
+  wrong on most of them** — the finished card's reading was estimated from a character count and stood at
+  12.7 px where 27 fits.
 - **A dead constant or class leaves with its last user** (v307), and **a comment that states
   something false is a defect** (v404).
+- **An undefined CSS custom property takes its entire declaration with it** — the only way to find one is to
+  grep every `var(--x)` against the `:root` list (v589).
 - **The app must say what actually happened** — a record that claims an answer was used when it
   404'd, or prints "not round" where the code never looked, costs days (v384/v395/v399/v405/v447).
 - Status text lives in state and is re-queried on every render; a node captured before a
@@ -515,12 +525,12 @@ own licences even after the app is sold** (Arphic §2b and CC BY-SA ShareAlike).
 fine; taking those two files private is not.
 
 ## Open / not yet field-checked
-v599 and the versions around it are not field-checked — H's next look at an **empty Learn screen**
-is the check for the real example card, and **More → How to use the app** for the figures (does it
-read as the app? is the half-drawn privacy figure a seam? is the language row's English-lit chip a
-nuisance?); his next finished card for v597's shorter recap (is 3.2 s still enough to read?); his
-next look at the Multicards tab for the square tiles; and his next card made from a multicard for
-v596's square page front.
+v600 and the versions around it are not field-checked — H's next long-word card is the check for the
+wrapped word line and for the bigger reading on the finished card (is 27 px enough, and does the reading
+still read as one thing when a seven-syllable word breaks across two lines?); an **empty Learn screen** for
+v599's real example card, and **More → How to use the app** for the figures (does it read as the app? is the
+half-drawn privacy figure a seam?); his next finished card for v597's shorter recap; and his next card made
+from a multicard for v596's square page front.
 
 **The rule the crops carry, and it is easy to break:** a crop is a photograph of the app, so **it
 goes stale the moment the screen it shows changes**. Run `node tools/guide-shots.js` in the same PR

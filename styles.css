@@ -805,7 +805,7 @@ body.noscroll{overflow:hidden}
    so the clip box grows while the margin box — and with it the flex layout, the centring and the 143/n cqw fit — is exactly
    what it was; a line-height alone would not do, since the shortfall is the font's and a phone runs Roboto (descender
    .271 em) where this box measures DejaVu. */
-.recap .rp,.recap .rm{padding:.22em .14em;margin:-.22em -.14em}
+.recap .rp,.recap .rm{padding:.22em .14em;margin:-.22em -.14em;max-width:100%} /* v600: max-width so a nowrap word wider than the square overflows .rp, where recapFit can SEE it — without it the block itself grew past the box and was cut sideways (measured: 蜜雪冰城's one word 475 px wide in a 286 px square) */
 .recap .rp .w{white-space:nowrap} /* v555: the reading wraps between words, not inside one */
 /* v555: the reading keeps its own height and the MEANING is the one row that may give way — a flex item shrinks before
    its container overflows, and set large the reading was losing its second line to a long meaning (measured 87 px of
@@ -877,10 +877,18 @@ body.noscroll{overflow:hidden}
 .prspark{position:fixed;left:0;top:0;width:8px;height:8px;border-radius:50%;background:var(--tint);pointer-events:none;z-index:41;opacity:0;will-change:transform,opacity}
 .prspark.gold{background:var(--warn)}
 
-.padline{margin-top:6px;min-height:61px;font-size:15px;color:var(--label2);display:flex;flex-direction:column;align-items:center;gap:3px} /* two rows tall whatever the word (v518), so the pad above it is the same size on a one-character word */
+.padline{margin-top:6px;min-height:61px;font-size:15px;color:var(--label2);display:flex;flex-direction:column;align-items:center;gap:3px} /* AT LEAST two rows tall whatever the word (v518), so the pad is the same size on a one-character word; a word that needs more takes more since v600, and splitFit measures it rather than assuming LINE_H */
 .padline[hidden]{display:none}
-.padline .plrow{display:flex;justify-content:center;gap:10px;align-items:baseline;max-width:100%;white-space:nowrap;overflow:hidden} /* the character, and under it its word (v540; the other way round v517–v539) */
-.padline .plrow>*{flex:none;min-width:0} .padline .plrow .mn{flex:0 1 auto;overflow:hidden;text-overflow:ellipsis} /* v540: a centred flex row slices its overflow off BOTH ends, and text-overflow on the row itself does nothing — the meaning is the one part that may shrink, and it ends in an ellipsis */
+.padline .plrow{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 10px;align-items:baseline;max-width:100%} /* the character, and under it its word (v540; the other way round v517–v539) */
+/* v600 (H, on a screenshot of 中华人民共和国地理标志: "Hier wird die Übersetzungszeile abgeschnitten. In so einem Fall bitte
+   zweizeilig werden bzw. mehrzeilig werden."): the row WRAPS instead of being cut. v540 held it to one line and let the
+   MEANING shrink to an ellipsis, but the meaning is the only part allowed to shrink — so on a word whose characters and
+   pinyin alone are wider than the card the meaning went to nothing AND the row was still sliced off both ends (measured at
+   390 px: the word row 375 px wide in a 322 px box, the meaning 0 px, 中华 gone from the left and the last syllable from
+   the right). flex-wrap moves whichever part does not fit onto a line of its own; max-width and overflow-wrap let a part
+   that is wider than the card on its own break inside itself. Nothing is cut any more, so no ellipsis is needed — and the
+   row gap is 2px, not the 10px between the parts, so a wrapped row reads as one thing. */
+.padline .plrow>*{flex:none;min-width:0;max-width:100%;overflow-wrap:anywhere}
 .padline .hanzi{font-family:var(--hanzi);font-size:20px;color:var(--label)} .padline .hanzi b{color:var(--tint);font-weight:400} .padline .mono{font-weight:600}
 .padline .hanzi b.lock{color:var(--lock)} .padline .plock{display:inline-block;vertical-align:-1px;margin-right:4px;color:var(--lock)} .padline .plock svg{width:13px;height:13px;fill:currentColor} /* v526: the locked character in the lock colour in the line, the padlock before its word (blue since v528) */
 .padacts{display:flex;justify-content:center;gap:2px 14px;flex-wrap:wrap;margin-top:6px} .padacts .del{font-size:15px;padding:8px 6px;min-height:40px}
@@ -949,9 +957,10 @@ body.noscroll{overflow:hidden}
 @media(prefers-reduced-motion:reduce){.chrow .chin{transition:none} .cue{transition:none}}
 .cue .padline{height:auto;min-height:61px;overflow:hidden;flex:none;margin-top:6px;justify-content:center}
 /* v589: in the uncovered state the answer takes the room the tiles leave — splitFit writes --plz, and the line is never
-   scaled past what its widest row can take, so nothing is cut (the rows are nowrap with an ellipsis on the meaning) */
+   scaled past what its widest row can take, so a long meaning simply does not grow. v600: the rows wrap rather than
+   ending in an ellipsis, and splitFit reads the line's own height off the element instead of assuming LINE_H. */
 .card.study.bigtxt .cue .padline{gap:calc(3px*var(--plz,1))}
-.card.study.bigtxt .cue .padline .plrow{font-size:calc(15px*var(--plz,1));gap:calc(10px*var(--plz,1))}
+.card.study.bigtxt .cue .padline .plrow{font-size:calc(15px*var(--plz,1));gap:calc(2px*var(--plz,1)) calc(10px*var(--plz,1))} /* v600: the row gap stays the small one when the row wraps — a single `gap` here put 10px between a word and its own pinyin */
 .card.study.bigtxt .cue .padline .hanzi{font-size:calc(20px*var(--plz,1))}
 .padwrap .padacts{position:absolute;left:0;right:0;bottom:8px;margin:0;display:flex;justify-content:space-between;padding:0 10px;pointer-events:none} .padwrap .padacts>*{pointer-events:auto}
 .padwrap .padacts:not(:has(:not([hidden]))){display:none} /* an empty row takes no taps */

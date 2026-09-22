@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=599; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=600; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,6 +671,8 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v600","long word: the line wraps, not cut"],
+  ["app","v600","finished card: bigger reading"],
   ["app","v599","empty deck: the example card real"],
   ["app","v599","guide: the privacy card is real"],
   ["app","v598","guide: five figures are real crops"],
@@ -3494,11 +3496,18 @@ function textFit(cr,ci,room,cap){ /* the largest tile size whose rows fit the wi
   if(best==null) best=CH_MIN; cr.style.setProperty("--chs",best+"px"); return ci.offsetHeight; }
 function splitFit(root){ const cue=root&&root.querySelector(".cue"), cr=cue&&cue.querySelector(".chrow"), ci=cr&&cr.querySelector(".chin"); if(!cue||!cr||!ci) return;
   const base=root._fit?root._fit.cueH:parseFloat(root.style.getPropertyValue("--cueh"))||0; if(!base) return;
-  const lineH=LINE_H+6; /* the word line and its margin */
   const big=root.classList.contains("bigtxt")?"txt":"pic"; /* v580: two states, and the picture is the one a card without the class is in */
   let ph, th, cueH=base;
   if(big==="pic"){ ph=base; th=0; }
-  else { ph=0; const rows=textFit(cr,ci,base-lineH,CH_BIG); th=Math.max(base,rows+lineH); cueH=th; /* v569: big means big — the rows are whatever gives the largest tiles */
+  else { ph=0;
+    /* v600: the word line's OWN height, read off the element at rest rather than assumed to be LINE_H. Until v599 a row
+       that did not fit was sliced off both ends, so the line was always exactly two rows tall and the constant was true;
+       now it wraps (styles.css), and a word whose characters, pinyin and meaning need three or four rows must be given
+       that room here, or .cue .padline's overflow:hidden would cut it just as silently as the flex row used to. */
+    const line=cue.querySelector(".padline");
+    if(line) line.style.setProperty("--plz","1"); /* measure the rows at rest, or the fit compounds on every render */
+    const lh=line?Math.max(LINE_H,Math.ceil(line.scrollHeight)):LINE_H, lineH=lh+6; /* the word line and its margin */
+    const rows=textFit(cr,ci,base-lineH,CH_BIG); th=Math.max(base,rows+lineH); cueH=th; /* v569: big means big — the rows are whatever gives the largest tiles */
     /* v589 (H: "wenn ich drauf tippe, decke ich quasi die Karte auf und sehe auf der Rückseite die Bedeutung, sprich die
        Übersetzung von Pinyin"): the uncovered half is a fixed square — as tall as the pad since v561 — and a short card's
        answer filled only half of it, so the state the learner taps into read as a hole where the picture state reads as a
@@ -3508,11 +3517,12 @@ function splitFit(root){ const cue=root&&root.querySelector(".cue"), cr=cue&&cue
        takes it instead, which is also the half H names — the word line is scaled by --plz into whatever the tiles leave,
        never past PL_MAX and never past what its widest row can take, so a long meaning simply does not grow and nothing is
        ever cut. A card whose rows already fill the half gets k = 1 and is byte-identical to v588. */
-    const line=cue.querySelector(".padline");
-    if(line){ let k=Math.max(LINE_H,th-rows-6)/LINE_H;
-      line.style.setProperty("--plz","1"); /* measure the rows at rest, or the fit compounds on every render */
+    if(line){ const room=th-rows-6; let k=Math.max(lh,room)/lh;
       for(const r of line.querySelectorAll(".plrow")) if(r.scrollWidth>0) k=Math.min(k,(line.clientWidth-2)/r.scrollWidth);
-      line.style.setProperty("--plz",Math.max(1,Math.min(k,PL_MAX)).toFixed(3)); } }
+      line.style.setProperty("--plz",Math.max(1,Math.min(k,PL_MAX)).toFixed(3));
+      /* v600: a row that grew may wrap one line more than it did at rest, and the room above was measured at --plz 1 —
+         so a grown line that no longer fits goes back to rest rather than being cut at the foot */
+      if(line.scrollHeight>room+1) line.style.setProperty("--plz","1"); } }
   root.style.setProperty("--ph",ph+"px"); root.style.setProperty("--th",th+"px"); root.style.setProperty("--cg","0px"); root.style.setProperty("--cueh",cueH+"px");
   spotAgain(root); /* v575: the halves just moved the picture inside its box — the marks on it move with it */
   const pic=cue.querySelector(".zone1 .picbox:not(.page)"), im=pic&&pic.querySelector(".signimg"), inner=root.clientWidth-36; /* the picture keeps its own height and the half clips it when it is close to the half's shape; a picture much taller (a label's own frame) is fitted inside instead */
@@ -4125,7 +4135,7 @@ function mountPad(card,d,c,tg,st,cur){
        is already on the pad. */
     const pw=document.querySelector(".card.study .padwrap"); let rc=null;
     if(pw){ if(dark){ const cvn=pw.querySelector(".wpad"); if(cvn){ cvn.style.transition="none"; pw.classList.add("recapping"); void cvn.offsetWidth; cvn.style.transition=""; } } /* v558: dark from its first frame */
-      pw.insertAdjacentHTML("beforeend",recapHTML(d)); rc=pw.lastElementChild; pw.classList.add("recapping"); requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); }); }
+      pw.insertAdjacentHTML("beforeend",recapHTML(d)); rc=pw.lastElementChild; recapFit(rc); /* v600: the reading is sized against the real layout before the first frame */ pw.classList.add("recapping"); requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); }); }
     let pr=null, fired=false, tm=0;
     const go=()=>{ if(fired) return; fired=true; clearTimeout(tm); document.removeEventListener("pointerdown",onTap,true);
       if(pr) pr.finish(); else if(PRAISE_N){ PRAISE_N=null; setStats(); } /* v543: skipped before the star flew — the counter goes straight to the day's own total rather than keeping the held number */
@@ -4469,7 +4479,7 @@ function cueGlyphHTML(d){ const tx=(d&&(d.trad||d.c))||""; return tx?`<div class
 /* v523: the finished card, large, over the pad — the characters in the Hanzi font fitted to the pad's square (the pad is a
    size container, so the size is solved by CSS), the pinyin and the meaning under them. The same text the card carries;
    no key in any column. */
-const CHAR_MS=900, RECAP_OUT=200, RECAP_SLACK=120, RECAP_PY=58, RECAP_CP=44;
+const CHAR_MS=900, RECAP_OUT=200, RECAP_SLACK=120, RECAP_PY=58, RECAP_CP=44, RECAP_MIN=14, RECAP_WSYL=4; /* v600: RECAP_MIN is the floor recapFit searches down to, RECAP_WSYL the longest word the reading still keeps whole — 4, so 蜜雪冰城 and 社会主义 keep v555's rule exactly and only a five-syllable compound may break */
 /* v553 (H: "Pinyin nach geschriebenem character vielleicht bissl länger stehenlassen zum einprägen. Und wirklich nach
    jedem Charakter, auch in Mehr-Charakter-worten."): the breath comes back to EVERY character, which reverses v550's own
    narrowing on H's word — 鸡蛋供应 pauses three times again, after 鸡, 蛋 and 供, where v550 paused once at 鸡蛋's end.
@@ -4563,21 +4573,43 @@ function recapMs(d){
    drawn them stroke by stroke; showing them back is the half v553 took out of the one-character recap for the same
    reason. So both recaps say one thing now: what you wrote means this and is read like this. */
 function recapHTML(d){
-  const pn=Math.max(8,[...(d.p||"")].length);
-  /* the widest WORD of the reading, in characters: the words are nowrap spans (v555), so the reading can never be
-     narrower than its longest one and a per-character estimate alone overflows — measured at v577, 蜜雪冰城's one word
-     "mì xuě bīng chéng" came out 456 px wide in a 299 px box at the cap. A semibold syllable runs about 0.63 em a
-     character (measured: "gōng yìng" is 5.7 em), so 140/mw cqw is the one-line fit for the widest word and 330/pn the
-     three-line fit for the whole reading; the clamp under them is the safety net. */
   /* v555: the reading breaks between WORDS, never inside one — set large it wraps to two lines, and "jī dàn gōng / yìng"
      cuts 供应 in half. The card's own gloss already holds each word's syllables, so each one is a nowrap span and the
-     break can only fall between them; a card without a gloss keeps the plain string. */
+     break can only fall between them; a card without a gloss keeps the plain string.
+     v600 (H, on 中华人民共和国地理标志: "Hier ist das finale Pinyin viel zu klein"): a word of more than RECAP_WSYL 4
+     syllables may break between its OWN syllables. v555's rule costs nothing on the words it was written for — 供应 and
+     even 蜜雪冰城 are inside the four and stay whole — but one word's pinyin has to fit on one line, so a seven-syllable
+     compound held the whole reading to what IT could take: measured, "zhōng huá rén mín gòng hé guó" is 29 characters,
+     and 140/29 cqw put the reading at 12.7 px in a 286 px square with 156 px of it empty, smaller than the 20 px meaning
+     under it. Splitting 供应 in half is a real fault; breaking a seven-syllable name over two lines is what a book does. */
   const gl=Array.isArray(d.gloss)&&d.gloss.length&&d.gloss.every(g=>g&&g.p);
-  const py=gl?d.gloss.map(g=>`<span class="w">${esc(g.p)}</span>`).join(" "):esc(d.p||"");
-  const mw=Math.max(3,...(gl?d.gloss.map(g=>[...g.p].length):((d.p||"").match(/\S+/g)||[""]).map(w=>[...w].length)));
-  /* the pinyin and the meaning follow the pad's width too, and a long pinyin is sized to fit two lines (240/n cqw — a
-     semibold syllable runs about 0.7 em a character) so no syllable is cut; the clamps under them are the safety net */
-  return `<div class="recap" aria-live="polite"><div class="rp" style="font-size:min(${RECAP_CP}px,${(140/mw).toFixed(2)}cqw,${(330/pn).toFixed(2)}cqw)">${py}</div><div class="rm" style="font-size:min(20px,8.2cqw)">${esc(d.m||"")}</div></div>`;
+  const chunk=p=>{ const syl=String(p).trim().split(/\s+/);
+    return syl.length>RECAP_WSYL?syl.map(x=>`<span class="w">${esc(x)}</span>`).join(" "):`<span class="w">${esc(p)}</span>`; };
+  const py=gl?d.gloss.map(g=>chunk(g.p)).join(" "):esc(d.p||"");
+  /* v600: the size is MEASURED by recapFit once the block is in the page, not estimated from a character count. The
+     estimate had to be conservative for every card at once and so was wrong on most of them (measured at 286 px: 12.7 px
+     on H's card, 40.8 on a four-syllable one, 44 on a two-syllable one, with 156, 112 and 165 px of the square empty).
+     The meaning keeps its own rule: it is the line under the reading, not the headline. */
+  return `<div class="recap" aria-live="polite"><div class="rp">${py}</div><div class="rm" style="font-size:min(20px,8.2cqw)">${esc(d.m||"")}</div></div>`;
+}
+/* THE FINISHED CARD'S READING IS AS BIG AS IT FITS (v600). The largest whole pixel at which the reading still stands
+   inside its own line clamp AND leaves the meaning its room, by binary search over the real layout — the v413 rule, read
+   the number from the page. The block is inserted at opacity 0 and the `in` class is added on the next frame, so the
+   search is finished before anything is painted. At RECAP_MIN a reading that still does not fit is clamped, as it was. */
+function recapFit(rc){
+  const rp=rc&&rc.querySelector(".rp"); if(!rp||!rc.clientHeight) return;
+  const rm=rc.querySelector(".rm");
+  const room=rc.clientHeight-16-(rm?4:0); /* the square less .recap's own padding and the gap to the meaning */
+  const mh=rm?rm.offsetHeight:0;
+  /* WIDTH FIRST, and this is the one that bit: a word set nowrap (v555) can be wider than the square, and the block
+     then overflows SIDEWAYS while its line count is still 1 — a height test alone calls that a fit. `.rp` is capped at
+     100 % (styles.css), so a word that does not fit shows up as scrollWidth past clientWidth. Measured before the cap:
+     蜜雪冰城 came out at the 44 px cap with its one word 475 px wide in a 286 px square, cut at both ends. */
+  const fits=s=>{ rp.style.fontSize=s+"px";
+    return rp.scrollWidth<=rp.clientWidth+1&&rp.scrollHeight<=rp.clientHeight+1&&rp.offsetHeight+mh<=room; };
+  let lo=RECAP_MIN, hi=RECAP_CP, best=RECAP_MIN;
+  while(lo<=hi){ const mid=(lo+hi)>>1; if(fits(mid)){ best=mid; lo=mid+1; } else hi=mid-1; }
+  rp.style.fontSize=best+"px";
 }
 /* v593 (H: "Cards preview bitte als quadratische Foto Tiles ohne text", then "Two lines are okay for Multicards"):
    an ordinary card's tile is its square picture and nothing else — the characters and the due date that stood under it
@@ -5137,6 +5169,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  600:"A long word no longer runs off the edge of the line under the pad — it wraps onto as many lines as it needs, so its pinyin and its meaning are both there. And the reading on a finished card is now as large as the card has room for, whatever its length.",
   595:"New photos are cut square from now on, and a card's own page under Cards shows its picture in a square too — the same shape the learning card has. The cards you already have keep the picture they were cut with.",
   594:"Deleting a card asks first now, wherever you do it — and one tap on Undo still brings it back. On the open card, Flag and Delete sit side by side.",
   593:"The Cards list is square photos now, with nothing written under them — a card is found by its picture, and the search still finds it by its characters, pinyin and meaning. A multicard keeps its name over two lines. Sharing one card as a picture is gone.",
