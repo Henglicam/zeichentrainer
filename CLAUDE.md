@@ -75,7 +75,8 @@ a long word carries no parenthetical to strip. The row is `flex-wrap:wrap` now, 
 `overflow:hidden` and `splitFit` assumed `LINE_H` 61 — true only because a row that did not fit was sliced
 sideways. It reads `line.scrollHeight` at `--plz` 1 now and gives the tiles `base − (lh+6)`, so a three-row
 line takes its room from the **tiles**: 61 → 109 px on H's card, and over 40 contexts (10 languages ×
-390/360 × light/dark) **0 rows cut, 0 lines cut at the foot, the pad 286 px in every one**.
+390/360 × light/dark) **0 rows cut against v599's 120**, 0 lines cut at the foot, 0 cards past the tab bar,
+the word line 62–109 px against a flat 61, and **the pad 286 px on both trees**.
 
 **(2) The finished card's reading.** It was `min(RECAP_CP, 140/mw cqw, 330/pn cqw)`, `mw` the widest WORD,
 because v555 makes each word a `nowrap` span. One word of H's card is the seven-syllable 中华人民共和国, 29
@@ -86,16 +87,20 @@ syllables (供应 is still one span), and the size is
 wider than the square while its line count is still 1, and the first cut tested only the height — 蜜雪冰城 came
 out at the 44 px cap with its one word **475 px wide in a 286 px square**, which is the hole `140/mw` existed
 to plug. `.rp`/`.rm` are capped at `max-width:100%` so that shows up as `scrollWidth` past `clientWidth`.
-Measured **12.7 → 27 px** on H's card, 蜜雪冰城 24 (v599 gave it 23.5), never clipped; `RECAP_MIN` 14 is the
-floor, and `RECAP_WSYL` is **4** so 蜜雪冰城 and 社会主义 stay whole. Unchanged on purpose: the
-three-line clamp (v577), the meaning's own size, the per-character 900 ms breath. **The guide's crops did
-not go stale** — both faults are in the text state and the recap, while `front` and `learn` are shot in the
-picture state and `pcard` stops above the line.
+Measured **12.7 → 27 px** on H's card, 蜜雪冰城 24 (v599 gave it 23.5), and over the 40 contexts **26–31 px
+against v599's 12.7–25.4**, none clipped; `RECAP_MIN` 14 is the floor, and `RECAP_WSYL` is **4** so 蜜雪冰城
+and 社会主义 stay whole. Unchanged on purpose: the
+three-line clamp (v577), the meaning's own size, the per-character 900 ms breath. **The guide's crops did not go
+stale, and that is measured rather than reasoned:** across 80 comparisons the picture state's PAINTED
+geometry (`--cueh`/`--th`/`--ph`, the pad, the card's foot) is identical to v599 — the only difference is the
+word line's own intrinsic height, and `--th` is `0px` on both trees, so that element is clipped away and
+never drawn. `pcard` stops above the line.
 
-`verify-wrapline` 19/19 (**12 of 19 fail on a v599 root**, all `[flip]`), its recap check driving the app's
-own path — every stroke of 中 really written. sample 28/28, realfig 21/21, onepage 33/33, square 19/19,
-delask 44/44, phototile 39/39, memory 38/38, onephoto 30/30, nofree 15/15, deckpace 34/34. One `WHATS_NEW`
-line, two `TO_TEST` lines. Not yet field-checked.
+`verify-wrapline` 22/22 (**12 of 22 fail on a v599 root**, every one a `[flip]`), its recap check driving the
+app's own path — every stroke of 中 really written. sample 28/28, realfig 21/21, onepage 33/33, square 19/19,
+delask 44/44, phototile 39/39, memory 38/38, onephoto 30/30, nofree 15/15, deckpace 34/34. The per-character
+900 ms breath is measured byte-identical to v599. One `WHATS_NEW` line, two `TO_TEST` lines. Not yet
+field-checked.
 
 **Recent state worth carrying in the head** (each has its full entry in the archive):
 - **v599** — the two sample cards in the app's instructions are real crops too: the empty deck's example
