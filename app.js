@@ -1,5 +1,5 @@
 "use strict";
-/* 识字 · Zeichentrainer — standalone PWA
+/* 街字 Jiēzì — standalone PWA (named 街字 Jiēzì until v601)
    Persistence via IndexedDB (survives restarts). Camera inbox. Offline. */
 
 /* ---------- Deck (in code, survives everything) ---------- */
@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=600; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=601; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -539,7 +539,7 @@ window.addEventListener("error",e=>logErr("error",(e.message||"")+(e.filename?` 
 window.addEventListener("unhandledrejection",e=>{ const r=e.reason; logErr("promise",r&&(r.stack||r.message)||r); });
 function diagText(){
   const ago=t=>{ const d=Math.round((Date.now()-t)/1000); return d<60?d+" s ago":d<3600?Math.round(d/60)+" min ago":Math.round(d/3600)+" h ago"; };
-  const out=[`Zeichentrainer diagnostics — ${new Date().toLocaleString("en-GB")}`,
+  const out=[`Jiezi diagnostics — ${new Date().toLocaleString("en-GB")}`,
     `page ${pageVersion()||"?"} · script ${APP_V} · online ${navigator.onLine} · AI ${aiOn()?aiProvider()+(aiLive()?" live":" off")+(textProvider()!==aiProvider()?` (text ${textProvider()})`:""):"none"} · SW ${swControls()?"yes":"no"+(SW_REG?` (registration ${SW_REG})`:"")}${VENDOR.base?` · reader files from ${VENDOR.base===originVendor()?"github.io":"the mirror"}`:""}`,
     /* what the pipeline actually ran on (v399): poolSize() gives 1 on a phone of 3 GB or less and 3 or 4 otherwise, and the
        number of readers decides which passes exist at all and therefore the competition's agreement bonus — a reading cannot
@@ -671,6 +671,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v601","home screen: 街字 name and icon"],
   ["app","v600","long word: the line wraps, not cut"],
   ["app","v600","finished card: bigger reading"],
   ["app","v599","empty deck: the example card real"],
@@ -1001,11 +1002,11 @@ function fieldText(){
 function feedbackText(rows){ /* laid out like the All users report since v251 (H: "Same for feedback"): a head with the count, one block per message with a blank line between, the sender's id under the time */
   const day=t=>String(t||"").replace("T"," ").slice(0,16);
   const blocks=rows.map(r=>`${day(r.created_at)}, app version ${r.version||"?"}\n  from phone ${r.install||"?"}${r.shot?"\n  [screenshot — see Show]":""}\n  ${String(r.text||"").replace(/\s*\n\s*/g,"\n  ")}`); /* v511: the text report names the picture, Show renders it */
-  return [`识字 Zeichentrainer — feedback, ${day(new Date().toISOString()).slice(0,10)}`,`  messages ${String(rows.length).padStart(4)}  (newest first, up to 500)`,""].concat(blocks.length?blocks.join("\n\n"):"No messages yet.").join("\n")+"\n";
+  return [`街字 Jiēzì — feedback, ${day(new Date().toISOString()).slice(0,10)}`,`  messages ${String(rows.length).padStart(4)}  (newest first, up to 500)`,""].concat(blocks.length?blocks.join("\n\n"):"No messages yet.").join("\n")+"\n";
 }
 async function shareFeedback(){
   const rows=(FEEDBACK&&FEEDBACK.rows)||(await fetchFeedback()).rows;
-  const text=feedbackText(rows), name="zeichentrainer-feedback-"+new Date().toISOString().slice(0,10)+".txt", file=new File([text],name,{type:"text/plain"});
+  const text=feedbackText(rows), name="jiezi-feedback-"+new Date().toISOString().slice(0,10)+".txt", file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
   if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
   try{ await navigator.clipboard.writeText(text); noteSheet(t("Copied to the clipboard.")); }catch(err){ noteSheet(t("Sharing is not available here.")); }
@@ -1027,7 +1028,7 @@ function allUsersText(rows){
     for(const [m,v] of Object.entries(d.models||{})) add(models,m,+v||0); add(tot,"relay",n(r,"relay_today")); }
   users.sort((a,b)=>n(b.data,"cards")-n(a.data,"cards")); tried.sort((a,b)=>n(b,"relay_today")-n(a,"relay_today"));
   const row=(k,v)=>`  ${k.padEnd(30)}${String(v).padStart(4)}`, sub=(k,v)=>row("  "+k,v); /* one figure per line, the numbers in one column — the box holds 40 characters at 390 px */
-  const head=[`识字 Zeichentrainer — all users, ${day(new Date().toISOString())}`,"",
+  const head=[`街字 Jiēzì — all users, ${day(new Date().toISOString())}`,"",
     `Phones ${rows.length}`,"  (one line per browser — a phone that","  opened the link in WeChat and Chrome","  is counted twice)",
     row("made cards",users.length), row("read a photo, saved no card",tried.length), row("only opened the app",lookers.length),
     wx?row("opened it inside WeChat",wx):null, row("installed on the home screen",installed), row("used in the last 7 days",active),
@@ -1062,7 +1063,7 @@ function allUsersText(rows){
 }
 async function shareUsers(){
   const rows=(USERS&&USERS.rows)||(await fetchAllUsers()).rows;
-  const text=allUsersText(rows), name="zeichentrainer-users-"+new Date().toISOString().slice(0,10)+".txt", file=new File([text],name,{type:"text/plain"});
+  const text=allUsersText(rows), name="jiezi-users-"+new Date().toISOString().slice(0,10)+".txt", file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
   if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
   try{ await navigator.clipboard.writeText(text); noteSheet(t("Copied to the clipboard.")); }catch(err){ noteSheet(t("Sharing is not available here.")); }
@@ -1073,7 +1074,7 @@ async function copyText(text,st){
   catch(err){ if(st) st.textContent="Copy is not available here — tap Show and select the text."; }
 }
 async function shareDiag(){
-  const text=diagText(), name="zeichentrainer-diagnostics.txt", file=new File([text],name,{type:"text/plain"});
+  const text=diagText(), name="jiezi-diagnostics.txt", file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
   if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
   try{ await navigator.clipboard.writeText(text); noteSheet(t("Copied to the clipboard.")); }catch(err){ noteSheet(t("Sharing is not available here.")); }
@@ -1990,10 +1991,10 @@ function bump(key,n){ n=n||1; if(key==="byPhoto"||key==="byHand"||key==="deleted
 function bumpModel(name){ const u=usage(); u.models=u.models||{}; u.m.models=u.m.models||{}; u.models[name]=(u.models[name]||0)+1; u.m.models[name]=(u.m.models[name]||0)+1; S.settings.usage=u; clearTimeout(_usageTimer); _usageTimer=setTimeout(()=>{ setSetting("usage",u).catch(()=>{}); },500); }
 function countTokens(pv,data){ const g=(data&&data.usage)||{}; const i=pv==="claude"?g.input_tokens:g.prompt_tokens, o=pv==="claude"?g.output_tokens:g.completion_tokens; bump("aiCalls"); if(i) bump("aiIn",+i); if(o) bump("aiOut",+o); }
 const APP_URL="https://henglicam.github.io/zeichentrainer/";
-const APP_SHARE_TEXT="识字 Zeichentrainer — learn the Chinese characters you see around you. Take a photo of a sign, get the card. Open the link in Safari or Chrome, not inside WeChat, and add it to the home screen:"; /* v219: friends tapped the link inside WeChat's browser, which cannot install the app */ /* no link in the text: the share sheet appends the url field itself (v215, H's WeChat screenshot showed the link twice) */
+const APP_SHARE_TEXT="街字 Jiēzì — learn the Chinese characters you see around you. Take a photo of a sign, get the card. Open the link in Safari or Chrome, not inside WeChat, and add it to the home screen:"; /* v219: friends tapped the link inside WeChat's browser, which cannot install the app */ /* no link in the text: the share sheet appends the url field itself (v215, H's WeChat screenshot showed the link twice) */
 async function shareApp(){
   const st=$("#app-share-status");
-  if(navigator.share){ try{ await navigator.share({title:"识字 Zeichentrainer",text:APP_SHARE_TEXT,url:APP_URL}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
+  if(navigator.share){ try{ await navigator.share({title:"街字 Jiēzì",text:APP_SHARE_TEXT,url:APP_URL}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
   try{ await navigator.clipboard.writeText(APP_SHARE_TEXT+" "+APP_URL); if(st) st.textContent=t("Link copied."); }catch(err){ if(st) st.textContent=t("Sharing is not available here.")+" "+t("The link: {0}",APP_URL); }
 }
 /* Share report = one image of the dashboard (v277, H: "You're still sharing too much! Only this please, sexy! The rest goes to the user
@@ -2023,13 +2024,13 @@ async function progressImage(){
   ctx.font=`34px ${sans}`; let lx=PAD; legend.forEach(([l,n,c])=>{ const s=`${l} ${n}`, w=32+ctx.measureText(s).width; if(legendRows>1&&lx>PAD){ lx=PAD; y+=48; } ctx.fillStyle=c; ctx.beginPath(); ctx.arc(lx+11,y+19,11,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#6E6E73"; ctx.fillText(s,lx+32,y+30); lx+=w+40; });
   y+=48+22;
   ctx.fillStyle="#6E6E73"; ctx.fillText(t("Coming up: {0} due tomorrow, {1} this week.",p.dueTomorrow,p.dueWeek),PAD,y+30); y+=100;
-  ctx.fillStyle="#AEAEB2"; ctx.font=`32px ${sans}`; ctx.fillText("识字 Zeichentrainer",PAD,y+30); ctx.textAlign="right"; ctx.fillText(new Date().toLocaleDateString(LANG_LOCALE[LANG]),W-PAD,y+30); ctx.textAlign="left";
+  ctx.fillStyle="#AEAEB2"; ctx.font=`32px ${sans}`; ctx.fillText("街字 Jiēzì",PAD,y+30); ctx.textAlign="right"; ctx.fillText(new Date().toLocaleDateString(LANG_LOCALE[LANG]),W-PAD,y+30); ctx.textAlign="left";
   return new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error("no image")),"image/png"));
 }
 async function shareProgress(){
   let blob; try{ blob=await progressImage(); }catch(err){ logErr("share",err); noteSheet(t("Sharing is not available here.")); return; }
-  const p=progressData(), file=new File([blob],"zeichentrainer-progress.png",{type:"image/png"}), text=`${t("Day streak")} ${p.streak}, ${t("Cards learned")} ${p.learned}`;
-  if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"识字 Zeichentrainer",text}); return; }catch(err){ if(err && err.name==="AbortError") return; logErr("share",err); } }
+  const p=progressData(), file=new File([blob],"jiezi-progress.png",{type:"image/png"}), text=`${t("Day streak")} ${p.streak}, ${t("Cards learned")} ${p.learned}`;
+  if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"街字 Jiēzì",text}); return; }catch(err){ if(err && err.name==="AbortError") return; logErr("share",err); } }
   noteSheet(t("Sharing is not available here."));
 }
 /* ---------- usage sharing (v170, H: "I want to share the app and get user stats" — automatic reports from every phone):
@@ -2546,7 +2547,7 @@ function renderMore(main){
     ${undoRunHTML("dismiss")}
     <div class="listhead">${t("Your cards")}</div>
     <div class="mrow"><div><div class="t">${t("Export")}</div><div class="s">${t("Progress and cards as one file, via the share sheet.")} ${backupNote()}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="export-photos"${exportPhotos()?" checked":""}> ${t("Include photos (adds about {0} MB)",(photoBytes()*1.37/1048576).toFixed(1))}</label></div><button class="btn mini" id="export">${t("Export")}</button></div>
-    <div class="mrow"><div><div class="t">${t("Import")}</div><div class="s">${t("A zeichentrainer-….json.txt file. Existing cards are overwritten.")}</div></div><button class="btn mini" id="import">${t("Import")}</button></div>
+    <div class="mrow"><div><div class="t">${t("Import")}</div><div class="s">${t("A jiezi-….json.txt file. Existing cards are overwritten.")}</div></div><button class="btn mini" id="import">${t("Import")}</button></div>
     <div class="mrow"><div><div class="t">${t("Flagged cards")}</div><div class="s">${t("{0} flagged for review. Share the list as text, for a teacher.",deck().filter(d=>d.flag).length)}</div></div><span class="btnrow"><button class="btn mini" id="show-flag">${t("Show")}</button><button class="btn mini" id="share-flag">${t("Share")}</button></span></div>
     <div class="mrow"><div><div class="t">${t("Photos")}</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">${t("Delete {0}",oldShots().length)}</button>`:""}</div>
     <div class="mrow"><div><div class="t">${t("Storage")}</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
@@ -2572,7 +2573,7 @@ function renderMore(main){
     <div class="mrow"><div style="flex:1"><div class="t">${t("Review queue")}</div><div class="s" id="ai-runstatus"></div><div class="fieldacts"><button class="btn mini" id="ai-run" hidden></button></div></div></div>
     <div class="mrow"><div><div class="t">${t("Usage sharing")}</div><div class="s">${t("Sends anonymous usage counts to the app's owner once a day, and again when you leave the app after making a card: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.")} <span id="share-status">${esc(shareNote())}</span> ${t("Your id: {0}.",`<span id="share-id">${esc(installId())}</span>`)}<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> ${t("Send once a day")}</label></div></div></div>
     <div class="mrow"><div><label class="check" style="margin:0"><input type="checkbox" id="update-note"${updateNoteOn()?" checked":""}> ${t("Tell me what is new after an update.")}</label></div></div>
-    <div class="mrow"><div><div class="t">识字 Zeichentrainer</div><div class="s" id="about-s">${esc(aboutText())}</div>${whatsNewHTML()}</div></div>
+    <div class="mrow"><div><div class="t">街字 Jiēzì</div><div class="s" id="about-s">${esc(aboutText())}</div>${whatsNewHTML()}</div></div>
     <div class="mrow"><div><div class="t">${t("Open source licenses")}</div><div class="s">${t("The software and data the app is built on, and who made them.")}</div></div><button class="btn mini" id="lic-open">${t("Open")}</button></div> <!-- the notices Apache-2.0, MPL-2.0 and CC BY-SA ask to be delivered with the work (v425); ./vendor/LICENSES.txt goes through the worker's vendor route, so it comes from the mirror behind the wall and is cached after the first look -->
     <div class="listhead">${t("Advanced settings")}</div>
     ${S.admin?`<div class="mrow"><div><div class="t">Logged in as admin</div><div class="s">The AI setup and the owner tools below are open until the app is closed.</div></div><button class="btn mini" id="admin-lock">Log out</button></div>`
@@ -2821,13 +2822,13 @@ function flaggedText(){
   /* plain-text list of flagged cards, e.g. to send to a teacher via the share sheet */
   const list=deck().filter(d=>d.flag);
   const lines=list.map(d=>`${d.c.replace(/\n/g," / ")}\n  ${d.p}\n  ${d.m}${d.flagNote?`\n  note: ${d.flagNote}`:""}`);
-  return `Zeichentrainer — ${list.length} card${list.length===1?"":"s"} flagged for review (${new Date().toLocaleDateString("en-GB")})\n\n`+lines.join("\n\n")+"\n";
+  return `Jiezi — ${list.length} card${list.length===1?"":"s"} flagged for review (${new Date().toLocaleDateString("en-GB")})\n\n`+lines.join("\n\n")+"\n";
 }
 async function shareFlagged(){
   const n=deck().filter(d=>d.flag).length;
   if(!n){ noteSheet(t("No flagged cards.")); return; }
   const text=flaggedText();
-  const name="zeichentrainer-review-"+new Date().toISOString().slice(0,10)+".txt";
+  const name="jiezi-review-"+new Date().toISOString().slice(0,10)+".txt";
   const file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){
     try{ await navigator.share({files:[file],title:name,text:"Cards flagged for review"}); return; }
@@ -5169,6 +5170,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  601:"The app has a new name: 街字 Jiēzì, the characters of the street. Same app, same cards, a new icon.",
   600:"A long word no longer runs off the edge of the line under the pad — it wraps onto as many lines as it needs, so its pinyin and its meaning are both there. And the reading on a finished card is now as large as the card has room for, whatever its length.",
   595:"New photos are cut square from now on, and a card's own page under Cards shows its picture in a square too — the same shape the learning card has. The cards you already have keep the picture they were cut with.",
   594:"Deleting a card asks first now, wherever you do it — and one tap on Undo still brings it back. On the open card, Flag and Delete sit side by side.",
@@ -9459,7 +9461,7 @@ async function b64ToBlob(x){ try{ return await (await fetch(`data:${x.t||"image/
 async function exportData(){
   const withPhotos=exportPhotos(), custom=[];
   for(const d of S.custom){ const {img,imgFull,...rest}=d, r={...rest}, full=fullPhoto(d); if(withPhotos){ if(img) r.imgB64=await blobToB64(img); if(full) r.imgFullB64=await blobToB64(full); } custom.push(r); } /* the whole photo from the inbox when the card holds none (v214) */
-  const data={ app:"zeichentrainer", version:1, exported:new Date().toISOString(), photos:withPhotos,
+  const data={ app:"zeichentrainer", version:1, /* the format's own marker, not the app's name — kept at the v601 rename so every export imports both ways */ exported:new Date().toISOString(), photos:withPhotos,
     progress:Object.entries(S.progress).map(([id,s])=>({id,...s})),
     custom };
   const json=JSON.stringify(data,null,withPhotos?0:2);
@@ -9467,7 +9469,7 @@ async function exportData(){
      sheet is the reliable path, download link only as fallback.
      Chrome/Android only shares whitelisted file types (.txt yes, .json no),
      hence .json.txt with text/plain */
-  const name="zeichentrainer-"+new Date().toISOString().slice(0,10)+".json.txt";
+  const name="jiezi-"+new Date().toISOString().slice(0,10)+".json.txt";
   const file=new File([json],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){
     try{ await navigator.share({files:[file],title:name}); await setSetting("lastExport",Date.now()); return; }
@@ -9488,7 +9490,7 @@ async function importData(e){
   let data=null;
   try{ data=JSON.parse(await file.text()); }catch(err){}
   if(!data || data.app!=="zeichentrainer" || !Array.isArray(data.progress) || !Array.isArray(data.custom)){
-    noteSheet(t("Not a Zeichentrainer export (JSON).")); return;
+    noteSheet(t("Not a 街字 export (JSON).")); return;
   }
   /* exports before v118 carry the text as the key; the id is the text then */
   const prog=data.progress.filter(r=>r && typeof (r.id||r.c)==="string" && typeof r.due==="number").map(({id,c,...s})=>({id:id||c,...s}));
