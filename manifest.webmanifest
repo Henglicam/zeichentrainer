@@ -1,6 +1,6 @@
 {
-  "name": "识字 Zeichentrainer",
-  "short_name": "识字",
+  "name": "街字 Jiēzì",
+  "short_name": "街字",
   "description": "Chinese character trainer with spaced repetition",
   "start_url": ".",
   "scope": "./",

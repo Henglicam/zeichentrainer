@@ -1,4 +1,4 @@
-# CLAUDE.md — 识字 Zeichentrainer
+# CLAUDE.md — 街字 Jiēzì
 
 Working language: **English.** Reply to H in English. Short, direct, no excessive politeness.
 
@@ -27,7 +27,8 @@ PR. This file is consolidated state, **never a version log**; it must not grow p
 When a section here goes stale, rewrite it; the old wording lives in the archive.
 
 ## What this is
-Chinese character trainer for adults (spaced repetition), a reinterpretation of 悟空识字
+Chinese character trainer for adults (spaced repetition), a reinterpretation of 悟空识字 — **街字 Jiēzì**, "the
+characters of the street" (识字 Zeichentrainer until v601),
 without the kids' aesthetic.
 
 **The rule (H, 2026-09-14): "Flash cards are for learning and multi cards are for looking up
@@ -58,51 +59,22 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v600, 2026-09-22)
-**A long word's line wraps instead of being cut, and the finished card's reading is measured instead of
-estimated** (H, on a screenshot of 中华人民共和国地理标志: "Hier wird die Übersetzungszeile abgeschnitten. In
-so einem Fall bitte zweizeilig werden bzw. mehrzeilig werden." and, two minutes later, "Hier ist das finale
-Pinyin viel zu klein"). Two faults on one card, both a static estimate standing in for a measurement.
-
-**(1) The word line.** v540 held each `.plrow` to one line and let the MEANING shrink to an ellipsis — but the
-meaning is the only part allowed to shrink, so on a word whose characters and pinyin alone are wider than the
-card the meaning went to **nothing** and the row was **still** sliced off both ends, a centred flex row
-overflowing symmetrically (390 px: the row 375 px in a 322 px box, `.mn` 0 px, 中华 gone from the left and the
-last syllable from the right). **The same cut reached H once before** — v540's 电动车 card — and the answer
-then was `shortSense`, which strips the parenthetical so that one line fits and leaves the slicing in place;
-a long word carries no parenthetical to strip. The row is `flex-wrap:wrap` now, with `max-width:100%` and
-`overflow-wrap:anywhere` on its parts. **The height had to follow, and that is the trap:** `.cue .padline` is
-`overflow:hidden` and `splitFit` assumed `LINE_H` 61 — true only because a row that did not fit was sliced
-sideways. It reads `line.scrollHeight` at `--plz` 1 now and gives the tiles `base − (lh+6)`, so a three-row
-line takes its room from the **tiles**: 61 → 109 px on H's card, and over 40 contexts (10 languages ×
-390/360 × light/dark) **0 rows cut against v599's 120**, 0 lines cut at the foot, 0 cards past the tab bar,
-the word line 62–109 px against a flat 61, and **the pad 286 px on both trees**.
-
-**(2) The finished card's reading.** It was `min(RECAP_CP, 140/mw cqw, 330/pn cqw)`, `mw` the widest WORD,
-because v555 makes each word a `nowrap` span. One word of H's card is the seven-syllable 中华人民共和国, 29
-pinyin characters, so the reading stood at **12.7 px** in a 286 px square with 156 px empty — smaller than
-the 20 px meaning under it. Now a word of more than `RECAP_WSYL` syllables may break between its own
-syllables (供应 is still one span), and the size is
-**binary-searched over the real layout** by `recapFit` (the v413 rule), **width first**: a `nowrap` word can be
-wider than the square while its line count is still 1, and the first cut tested only the height — 蜜雪冰城 came
-out at the 44 px cap with its one word **475 px wide in a 286 px square**, which is the hole `140/mw` existed
-to plug. `.rp`/`.rm` are capped at `max-width:100%` so that shows up as `scrollWidth` past `clientWidth`.
-Measured **12.7 → 27 px** on H's card, 蜜雪冰城 24 (v599 gave it 23.5), and over the 40 contexts **26–31 px
-against v599's 12.7–25.4**, none clipped; `RECAP_MIN` 14 is the floor, and `RECAP_WSYL` is **4** so 蜜雪冰城
-and 社会主义 stay whole. Unchanged on purpose: the
-three-line clamp (v577), the meaning's own size, the per-character 900 ms breath. **The guide's crops did not go
-stale, and that is measured rather than reasoned:** across 80 comparisons the picture state's PAINTED
-geometry (`--cueh`/`--th`/`--ph`, the pad, the card's foot) is identical to v599 — the only difference is the
-word line's own intrinsic height, and `--th` is `0px` on both trees, so that element is clipped away and
-never drawn. `pcard` stops above the line.
-
-`verify-wrapline` 22/22 (**12 of 22 fail on a v599 root**, every one a `[flip]`), its recap check driving the
-app's own path — every stroke of 中 really written. sample 28/28, realfig 21/21, onepage 33/33, square 19/19,
-delask 44/44, phototile 39/39, memory 38/38, onephoto 30/30, nofree 15/15, deckpace 34/34. The per-character
-900 ms breath is measured byte-identical to v599. One `WHATS_NEW` line, two `TO_TEST` lines. Not yet
-field-checked.
+## Current state (PWA v601, 2026-09-23)
+**The app is called 街字 Jiēzì** (H: "Do 街字 Jiēzì, drop Zeichentrainer"; "Read the street" was his idea and was
+offered as the store subtitle, which is his call in the private repo's listing). The title, manifest `name`/
+`short_name` (街字 Jiēzì / 街字), header logo, About, share text, `privacy.html`, the owner's dumps and every shared
+file (`jiezi-YYYY-MM-DD.json.txt`, `jiezi-progress.png`, …) carry it; the icon is 街 in the old frame, drawn with
+Noto Serif SC Bold, the font the old 识 was confirmed to be drawn in. **What must keep the old name, because
+renaming it breaks installed copies:** the repo, the URL `/zeichentrainer/`, the mirror path, IndexedDB
+`zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` format marker (old and new backups
+import both ways). Not yet field-checked: Android swaps a home-screen icon and name only when Chrome re-checks the
+manifest, which can take a day.
 
 **Recent state worth carrying in the head** (each has its full entry in the archive):
+- **v600** — a long word's line under the pad **wraps** instead of being cut (`.plrow` `flex-wrap`, the word
+  line's height read at `--plz` 1 rather than `LINE_H` 61, its room taken from the tiles), and the finished card's
+  reading is **binary-searched over the real layout** by `recapFit`, width first — 12.7 → 27 px on
+  中华人民共和国地理标志; a word of more than `RECAP_WSYL` 4 syllables may break between its syllables.
 - **v599** — the two sample cards in the app's instructions are real crops too: the empty deck's example
   card and the guide's privacy card. `gfimg` puts a crop INSIDE a drawn figure (two `<image>`s swapped by a
   media query, since `<picture>` does not exist in SVG); each keeps a drawn half — the arrow and the chip,
@@ -179,7 +151,7 @@ no progress row, never sent to the AI, **not in the Deck count** (v504).
 Dictionary/phrasebook prefills stay `verified:false` until a human or the AI checked them; when
 unsure, flag rather than invent. New words come from photos.
 
-Export/import: progress + cards as JSON, `zeichentrainer-YYYY-MM-DD.json.txt` through the share
+Export/import: progress + cards as JSON, `jiezi-YYYY-MM-DD.json.txt` (`zeichentrainer-…` until v601; the filename is never read) through the share
 sheet; import upserts by `id`. Photos ride along as base64 behind a checkbox (v166). **The export
 duplicates a shared photo once per card** — named, not fixed.
 
@@ -527,7 +499,7 @@ own licences even after the app is sold** (Arphic §2b and CC BY-SA ShareAlike).
 fine; taking those two files private is not.
 
 ## Open / not yet field-checked
-v600 and the versions around it are not field-checked — H's next long-word card is the check for the
+v601's name and icon on the home screen, and v600 and the versions around it, are not field-checked — H's next long-word card is the check for the
 wrapped word line and for the bigger reading on the finished card (is 27 px enough, and does the reading
 still read as one thing when a seven-syllable word breaks across two lines?); an **empty Learn screen** for
 v599's real example card, and **More → How to use the app** for the figures (does it read as the app? is the

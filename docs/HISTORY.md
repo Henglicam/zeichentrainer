@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Zeichentrainer, v1–v600
+# HISTORY.md — the full record of 街字 Jiēzì (识字 Zeichentrainer until v601), v1–v601
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,34 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v601, 2026-09-23)
+- **The app is renamed 街字 Jiēzì, and "Zeichentrainer" is dropped (v601, H: "Lass uns mal nach einem neuen Namen suchen. Ich hatte an sowas gedacht wie 'read the street', da es ja darum geht, die Sachen auf der Straße lesen zu können." — then, of the list offered, "Do 街字 Jiēzì, drop Zeichentrainer").**
+  Weighed in the conversation: "Read the Street" names the loop (a sign photographed, a card, the card written) but is
+  three words, says nothing of Chinese, is hard to search and leans towards "street smarts" — it was proposed as the
+  **store subtitle** rather than the name, and that is H's call in the private repo's listing, not built here. Also
+  offered and not taken: 看懂 Kàndǒng, 路牌 Lùpái, Street Hanzi, Signspotter, Hanzi Hunt. **街字** is two characters a
+  learner reads within a week (jiē 1st, zì 4th), fits the icon, and "Jiezi – Read the street" fits Play's 30-column
+  name limit. **Not checked: whether the name is taken in Play or registered as a mark** — named to H before he chose.
+  - **What changed:** the page title, the manifest's `name` "街字 Jiēzì" and `short_name` "街字", the Apple title, the
+    header logo, About, the share-the-app text and title, the progress picture's footer, `privacy.html` (the name
+    three times and its date), the owner's dumps (diagnostics, feedback, all users, flagged cards) and **every file
+    the app hands to the share sheet: `jiezi-YYYY-MM-DD.json.txt`**, `jiezi-progress.png`, `jiezi-diagnostics.txt`,
+    `jiezi-feedback-…`, `jiezi-users-…`, `jiezi-review-…`. Two `lang.js` keys changed in all ten columns (the import
+    hint and "Not a 街字 export"), the name inside the nine translations with them.
+  - **The icon** is 街 in place of 识, in the old icon's own frame, red cross and colours (#141410, #EDE6D6, #B23A2E,
+    #2E2E24), drawn with Noto Serif SC Bold (OFL; the font is used to draw, not shipped). The font was confirmed as
+    the old icon's by redrawing 识 and diffing: 3 020 of 262 144 pixels differ at 512, 1 998 on the maskable one
+    (antialiasing), glyph box 128–364 against the original's 127–363. All three PNGs regenerated.
+  - **What deliberately did NOT change, because changing it breaks installed copies:** the repo, the URL
+    `henglicam.github.io/zeichentrainer/`, the jsDelivr mirror path, IndexedDB `zeichentrainer` (a new name is an
+    empty deck), the `zt-vN` cache prefix, and the export's own `app:"zeichentrainer"` marker — that is the file
+    format's id, not the app's name, so an old backup imports into the new app and a new one into an old app. The
+    import never looked at the filename, so an old `zeichentrainer-….json.txt` still imports.
+  - **Measured:** headless Chromium at 390, light and dark — title, logo, About and manifest read 街字 Jiēzì, PWA v601,
+    no page errors; the German hint and error render from their new keys. **Not yet field-checked:** Android updates a
+    home-screen icon and name only when Chrome re-checks the manifest (a WebAPK update, which can take a day) — one
+    `TO_TEST` line for it, one `WHATS_NEW` line. The Play listing's name lives in the private repo.
 
 ## Native shell and credits moved to a private repo (2026-09-23, no PWA version)
 - **H: "Ich möchte jetzt eine native android app bauen, in der ich mit Credits für Foto AI Analyse verkaufen kann."**
