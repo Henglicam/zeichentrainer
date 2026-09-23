@@ -505,8 +505,10 @@ The full list is in the archive; these are the ones that keep biting.
   from the camera (v316), and at most once in ten minutes (v563).
 
 ## Play Store
-A **Trusted Web Activity** wrapping the live Pages URL — the web app itself does not change, and
-taking the public site down would break every installed copy. H is a **German citizen resident in
+**Since 2026-09-23 the store app is a Capacitor shell, not a TWA** — it shows the live Pages URL and
+adds native payments; its code, the credit rules, prices and store accounts live in the **private
+repo `henglicam/zeichentrainer-app`**, whose `CLAUDE.md` holds those decisions. The web app itself
+does not change, and taking the public site down would break every installed copy. H is a **German citizen resident in
 China**: the passport is the identity document, and the **address proof decides the account's
 country, which cannot be changed afterwards** — China is the honest choice. A personal account
 must pass a **closed test with 12 testers for 14 continuous days** before production. Google Play
