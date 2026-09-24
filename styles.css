@@ -972,8 +972,8 @@ body.noscroll{overflow:hidden}
 .tradmark{position:absolute;left:8px;top:8px;z-index:3;height:24px;line-height:24px;padding:0 10px;border:none;border-radius:999px;background:var(--lock);color:#fff;font-family:var(--sans);font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none;-webkit-user-select:none;box-shadow:0 1px 3px rgba(0,0,0,.25)}
 .tradmark::before{content:"";position:absolute;inset:-10px -6px} /* v604: the chip is the script switch, and the 24 px chip gets a 44 px target */
 .cue .txt .tradmark{position:relative;left:auto;top:auto;flex:none;align-self:center;margin:0 0 10px;box-shadow:none} /* v603: in the text half the chip heads the tiles rather than lying on them; splitFit gives the tiles what it leaves. v604: 10 px under it, so its 44 px target ends where the first tile begins */
-/* v609: the update notes under About as a list — a tint dot per note, the text hanging clear of it, a breath between notes */
+/* v609: the update notes under About as a list — a dot per note (grey since v610), the text hanging clear of it, a breath between notes */
 .more .mrow .s.wnhead{margin-top:10px;font-weight:600;color:var(--label)}
 .wnlist{list-style:none;margin:4px 0 0;padding:0}
 .wnlist li{position:relative;padding-left:16px;margin-top:6px;font-size:14px;color:var(--label2);line-height:1.4}
-.wnlist li::before{content:"";position:absolute;left:3px;top:.58em;width:6px;height:6px;border-radius:50%;background:var(--tint)}
+.wnlist li::before{content:"";position:absolute;left:4px;top:.6em;width:5px;height:5px;border-radius:50%;background:var(--label3)} /* v610 (H: "die Bullet-Punkte bitte nicht in Rot. Das ist ja viel zu auffällig"): the quiet grey of the app's tertiary text */

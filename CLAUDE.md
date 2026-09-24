@@ -59,7 +59,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v609, 2026-09-24)
+## Current state (PWA v610, 2026-09-24)
 **The app is called 识字 Shízì** (v608, H: "Return the name to shizi", then "识字 Shízì" over the full v600 name; v601–v607
 it was 街字 Jiēzì, and Zeichentrainer stays dropped). The title, manifest `name`/`short_name` (识字 Shízì / 识字), header
 logo, About, share text, `privacy.html`, the owner's dumps and every shared file (`shizi-YYYY-MM-DD.json.txt`,
@@ -408,7 +408,7 @@ place the reader can be watched from. "Leave it as it was" means: revert, no dis
    Customers are passionate language learners. Same for the design and layout."
 
 **`WHATS_NEW` (v408):** every PR that changes something a learner would notice adds one English
-sentence keyed by its version; More → About lists the last five **as a bulleted list** (v609) and a line slides
+sentence keyed by its version; More → About lists the last five **as a bulleted list** (v609; grey dots, not red — v610, H: "viel zu auffällig") and a line slides
 up after an update. **Most versions get no note — that is correct, not an oversight.** A note describing a
 control that no longer exists is not a record but a false instruction, so it goes with the
 control (v534). The owner's twin is **`TO_TEST`**, the Still-to-test list under Advanced settings
@@ -487,7 +487,7 @@ own licences even after the app is sold** (Arphic §2b and CC BY-SA ShareAlike).
 fine; taking those two files private is not.
 
 ## Open / not yet field-checked
-v609's bulleted update notes; v608's name and icon on the home screen; v607's square photo in Learn and Test this card; v606's pull-past-the-edge swipe on a zoomed photo; v605's whole dictionary meanings on the phone (the file re-fetches once); v603/v604's Traditional chip and its switch (does the blue read as the script, is the corner tap found, does a tap meant for the photo hit it); v602: does Learn read better without the marks on the photo (H's trial — his word decides whether `SPOT_ON` goes back to true); v600 and the versions around it, are not field-checked — H's next long-word card is the check for the
+v609/v610's bulleted update notes (grey dots); v608's name and icon on the home screen; v607's square photo in Learn and Test this card; v606's pull-past-the-edge swipe on a zoomed photo; v605's whole dictionary meanings on the phone (the file re-fetches once); v603/v604's Traditional chip and its switch (does the blue read as the script, is the corner tap found, does a tap meant for the photo hit it); v602: does Learn read better without the marks on the photo (H's trial — his word decides whether `SPOT_ON` goes back to true); v600 and the versions around it, are not field-checked — H's next long-word card is the check for the
 wrapped word line and for the bigger reading on the finished card (is 27 px enough, and does the reading
 still read as one thing when a seven-syllable word breaks across two lines?); an **empty Learn screen** for
 v599's real example card, and **More → How to use the app** for the figures (does it read as the app? is the

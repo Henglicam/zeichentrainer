@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v609
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v610
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,12 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v610, 2026-09-24)
+- **The update notes' bullets are grey (v610, H on v609: "Ja, aber die Bullet-Punkte bitte nicht in Rot. Das ist ja viel
+  zu auffällig.").** The dot goes from `--tint` to `--label3` (#AEAEB2 / #6E6E73, the app's quietest text) and from 6 to
+  5 px, a pixel further in; nothing else changes. Measured headless: the dot reads rgb(174,174,178) light and
+  rgb(110,110,115) dark, five notes, nothing wider than its row at 390 (en, de) and 360 (ru). **Not yet field-checked.**
 
 ## Current state (PWA v609, 2026-09-24)
 - **The update notes under About are a bulleted list (v609, H with a screenshot of More → About: "Die Liste der
