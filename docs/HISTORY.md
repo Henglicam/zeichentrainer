@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v613
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v614
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,23 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v614, 2026-09-24)
+- **A zoomed picture no longer keeps a finger the swipe took (v614, H: "Card Swipe bei reingezoomtem Bild muss auch im
+  Cards Modus funktionieren").** v606's hand-over had passed every harness case in Learn and on the open card — but the
+  harness zoomed with the mouse wheel on a fresh picture. Rebuilt with real two-finger CDP pinches, the defect showed at
+  once and in both screens: `attachPicZoom` records every finger that goes down on the box in `pts` and forgets it on the
+  box's pointerup — and a finger the carousel took over (`wireSwipe` captures the pointer on the card as soon as a stroke
+  turns sideways, which at rest is any swipe that springs back, or the first finger of a pinch that drifts) never sends
+  that pointerup to the box. The ghost stayed in `pts`; the next single finger was read as the second finger of a pinch
+  against it, the picture leapt to `ZOOM_MAX` 5, every later drag zoomed instead of panning, the edge was never reached
+  and the hand-over never came. Measured on v613: one short swipe that sprang back, then a pinch → 5× at once, then two
+  drags to the edge and past it → the card stayed, in Cards and in Learn. Now the first finger of a touch (`isPrimary`)
+  empties `pts`. Measured on v614: the pinch → 2.43×, the second drag hands over and the card changes (Cards → 出口,
+  Learn → 停车); a stroke on the next card no longer zooms it; v606's suite still passes (its snap-back case now swipes,
+  since v607's narrower picture puts the same drag further past the edge — the fixture's geometry, not a change of
+  behaviour). **Harness lesson: a gesture fixture must use the gesture the phone uses — a wheel zoom never leaves a
+  finger behind.** **Not yet field-checked.**
 
 ## Current state (PWA v613, 2026-09-24)
 - **A tab tap ends a single-card test (v613, H: "Cards > open a card > test this card: Tip on Learn doesn't change to
