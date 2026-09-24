@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=618; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=619; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,7 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["learn","v618","zoom lands on the character"],
+  ["learn","v619","zoom finds the right line"],
   ["learn","v616","recap reading = card after crop"],
   ["cards","v615","swipe: no vertical jump"],
   ["cards","v614","zoomed photo: pull on to swipe"],
@@ -3577,26 +3577,34 @@ let LAST_AZ=null; /* the last decision, for Diagnostics' head line */
    second line is shorter than the first and centred, and a single character sits somewhere in a window twice its size.
    So the ink decides the lines and the frame only says where to look: (1) the text's colour is told from the sign's by
    Otsu's threshold along the principal axis of the frame's own colours (so red on white, white on blue and gold on red
-   all separate), ink being the minority; (2) the line bands are the rows the ink fills — the n heaviest runs for n lines,
-   so fine print beside the text does not become a line; (3) each band's ink runs whose centre lies in the frame give the
-   line's extent, and (4) the line is cut into exactly as many characters as the card's text has, the cuts chosen
+   all separate), ink being the minority; (2) the lines and (3) their extents were v618's
+   heaviest row runs and the ink runs inside the frame, and are SEARCHED since v619 (below); (4) each line is cut into exactly as many characters as the card's text has, the cuts chosen
    together (dynamic programming) to fall on columns with the least ink while each character keeps its share of the
-   line — so a word gap and a character with a gap of its own (北, 川, 小) cannot fool it. A vertical sign (one line, the
-   frame taller than wide) is the same arithmetic turned. Each box says whether it is sure: both cuts clean and the line
-   of a plausible pitch. Returns boxes by position in the text's fractions, or the reason there are none. */
-const CB_LONG=320, CB_INK=0.025;
+   line — so a word gap and a character with a gap of its own (北, 川, 小) cannot fool it. Each box says whether it is
+   sure: both cuts clean, the line of a plausible pitch and of the frame's own size. Returns boxes by position in the text's fractions, or the reason there are none. */
+const CB_LONG=320, CB_INK=0.025, CB_PITCH=1.1;
+/* v619 (H's Zoom check sheet of his 24 newest photo cards: 31 of 124 characters sure): the four ways it failed on real
+   signs were one assumption — that the card's lines are the photo's heaviest lines. A Latin name above the Chinese
+   (YANGGUOFU / 楊國福, CHINA MERCHANTS BANK), a card that is only the small line under a big one (手机数码家电 under
+   京准达), a card whose text is one line where the photo has two (北京首都机场 / 欢迎您, 雀巢 / 脆脆鲨), vertical text in a
+   square frame (贵州茅台酒 on the bottle) and two lines so close they merged into one band. So the layout is SEARCHED:
+   the ink rows are cut finely into segments, any run of neighbouring segments may be a line, and every way of spreading
+   the card's characters over the lines in reading order — the card's own line breaks, and any other split — is scored by
+   how well each line's width fits its characters (a Chinese character is about square, so n characters are about
+   CB_PITCH·n heights wide; a Latin line or a band of two merged lines fails that test by far). Horizontal and vertical
+   (columns right to left) compete the same way. The cuts inside a line are v618's. */
 function charBoxes(src,nw,nh,g,lines){
   try{
     const TX=g.tx*nw, TY=g.ty*nh, TW=g.tw*nw, TH=g.th*nh; if(TW<8||TH<8) return {why:"tiny frame"};
-    const n=Math.max(1,lines.length), first=[...(lines[0]||"")], vert=n===1&&first.length>=2&&TH>TW*1.3;
-    const lh=vert?TW:TH/n, mx=vert?lh*0.3:Math.max(TW*0.06,lh*0.4), my=vert?Math.max(TH*0.06,lh*0.4):lh*0.3;
-    const X0=Math.max(0,TX-mx), X1=Math.min(nw,TX+TW+mx), Y0=Math.max(0,TY-my), Y1=Math.min(nh,TY+TH+my);
+    const chars=[], units=[], cardBreaks=[]; lines.forEach(ln=>{ [...ln].forEach(ch=>{ chars.push(ch); units.push(lineUnits(ch)); }); cardBreaks.push(chars.length); });
+    const K=chars.length; if(!K) return {why:"no text"};
+    const mg=Math.min(TW,TH)*0.12, X0=Math.max(0,TX-mg), X1=Math.min(nw,TX+TW+mg), Y0=Math.max(0,TY-mg), Y1=Math.min(nh,TY+TH+mg);
     const k=Math.min(1,CB_LONG/Math.max(X1-X0,Y1-Y0)), W=Math.max(8,Math.round((X1-X0)*k)), H=Math.max(8,Math.round((Y1-Y0)*k));
     const cv=document.createElement("canvas"); cv.width=W; cv.height=H;
     const ctx=cv.getContext("2d",{willReadFrequently:true}); ctx.drawImage(src,X0,Y0,X1-X0,Y1-Y0,0,0,W,H);
     const px=ctx.getImageData(0,0,W,H).data;
     const c0=Math.max(0,Math.round((TX-X0)*k)), c1=Math.min(W,Math.round((TX+TW-X0)*k)), r0=Math.max(0,Math.round((TY-Y0)*k)), r1=Math.min(H,Math.round((TY+TH-Y0)*k));
-    /* (1) the principal colour axis of the frame, and Otsu's cut along it */
+    /* the ink: Otsu's cut along the frame's principal colour axis, the minority class (v618) */
     let N=0, m=[0,0,0]; for(let y=r0;y<r1;y++) for(let x=c0;x<c1;x++){ const i=(y*W+x)*4; m[0]+=px[i]; m[1]+=px[i+1]; m[2]+=px[i+2]; N++; }
     if(N<64) return {why:"tiny frame"}; m=m.map(v=>v/N);
     const C=[0,0,0,0,0,0]; for(let y=r0;y<r1;y++) for(let x=c0;x<c1;x++){ const i=(y*W+x)*4, a=px[i]-m[0], b=px[i+1]-m[1], c=px[i+2]-m[2]; C[0]+=a*a; C[1]+=a*b; C[2]+=a*c; C[3]+=b*b; C[4]+=b*c; C[5]+=c*c; }
@@ -3611,65 +3619,99 @@ function charBoxes(src,nw,nh,g,lines){
     for(let b=0;b<B;b++){ wB+=hist[b]; if(!wB) continue; const wF=N-wB; if(!wF) break; sB+=b*hist[b]; const mB=sB/wB, mF=(sum-sB)/wF, between=wB*wF*(mB-mF)*(mB-mF); if(between>best){ best=between; cut=b; } }
     let low=0; for(let b=0;b<=cut;b++) low+=hist[b]; const inkLow=low<=N-low, inkFrac=(inkLow?low:N-low)/N;
     if(inkFrac<0.02) return {why:"no ink"};
-    let mask=new Uint8Array(W*H); for(let q=0;q<W*H;q++){ const b=bin(val[q]); mask[q]=(inkLow?b<=cut:b>cut)?1:0; }
-    /* a vertical sign is read turned: its column is a line, its characters run down it */
-    let w=W, h=H, a0=c0, a1=c1, b0=r0, b1=r1;
-    if(vert){ const t=new Uint8Array(W*H); for(let y=0;y<H;y++) for(let x=0;x<W;x++) t[x*H+y]=mask[y*W+x]; mask=t; w=H; h=W; a0=r0; a1=r1; b0=c0; b1=c1; }
-    const M=(x,y)=>mask[y*w+x];
-    /* (2) the line bands: runs of inked rows across the frame, the n heaviest */
-    const rp=new Float32Array(h); for(let y=0;y<h;y++){ let s=0; for(let x=a0;x<a1;x++) s+=M(x,y); rp[y]=s/Math.max(1,a1-a0); }
-    const bandH=(b1-b0)/(vert?1:n), gapRows=Math.max(1,Math.round(bandH*0.12)), runs=[];
-    /* the floor every row shares — a sign's side edges or a pole run through all of them, and would join the text to the
-       border above and below it into one band (measured: 会议室 in a framed sign) — is taken off first */
-    let rpBase=Infinity; for(let y=Math.max(0,b0);y<Math.min(h,b1);y++) rpBase=Math.min(rpBase,rp[y]); if(!isFinite(rpBase)) rpBase=0;
-    for(let y=0;y<h;y++){ const v=rp[y]-rpBase; if(v<=CB_INK*0.4) continue; const l=runs[runs.length-1]; if(l&&y-l.b<=gapRows){ l.b=y+1; l.mass+=v; } else runs.push({a:y,b:y+1,mass:v}); }
-    const inFrame=runs.filter(r=>r.b>b0-bandH*0.3&&r.a<b1+bandH*0.3&&r.b-r.a>=bandH*0.25);
-    const nl=vert?1:n; let bands, bandsOk=true;
-    if(inFrame.length>=nl) bands=inFrame.slice().sort((p,q)=>q.mass-p.mass).slice(0,nl).sort((p,q)=>p.a-q.a).map(r=>[r.a,r.b]);
-    else { bandsOk=false; const ys=inFrame.length?[inFrame[0].a,inFrame[inFrame.length-1].b]:[b0,b1]; bands=[]; for(let i=0;i<nl;i++) bands.push([ys[0]+(ys[1]-ys[0])*i/nl, ys[0]+(ys[1]-ys[0])*(i+1)/nl].map(Math.round)); }
-    const out={boxes:[], bands:bandsOk, vert, ink:+inkFrac.toFixed(3)}; let pos=0;
-    const lineList=vert?[first.join("")]:lines;
-    lineList.forEach((ln,li)=>{
-      const chars=[...ln], us=chars.map(ch=>lineUnits(ch)), U=us.reduce((p,q)=>p+q,0)||1, [y0,y1]=bands[li]||[b0,b1], bh=Math.max(1,y1-y0);
-      const cp=new Float32Array(w); for(let x=0;x<w;x++){ let s=0; for(let y=y0;y<y1;y++) s+=M(x,y); cp[x]=s/bh; }
-      /* a sign's own border or a pole: a narrow run of columns inked through the whole band is a bar, not a stroke — no
-         character has one, and left in it stretched the line to the border (measured: 会议室 in a framed sign, 1 of 3) */
-      { let base=Infinity; for(let x=Math.max(0,a0);x<Math.min(w,a1);x++) base=Math.min(base,cp[x]); if(isFinite(base)&&base>0) for(let x=0;x<w;x++) cp[x]=Math.max(0,cp[x]-base); } /* an underline's share, the same way */
-      for(let x=0;x<w;){ if(cp[x]<=CB_INK){ x++; continue; } let e=x, t=0; while(e<w&&cp[e]>CB_INK){ t+=cp[e]; e++; } if(e-x<0.25*bh&&t/(e-x)>0.92) for(let q=x;q<e;q++) cp[q]=0; x=e; }
-      /* (3) the line's extent: its ink runs whose centre is inside the frame */
-      const gapCols=Math.max(1,Math.round(bh*0.9)), cr=[];
-      for(let x=0;x<w;x++){ if(cp[x]<=CB_INK) continue; const l=cr[cr.length-1]; if(l&&x-l.b<=gapCols) l.b=x+1; else cr.push({a:x,b:x+1}); }
-      const mine=cr.filter(r=>(r.a+r.b)/2>=a0-bh*0.2&&(r.a+r.b)/2<=a1+bh*0.2);
-      const put=(j,bx)=>{ out.boxes[pos+j]=bx; };
-      if(!mine.length){ out.why=out.why||"no ink on a line"; pos+=chars.length; return; }
-      const L=mine[0].a, R=mine[mine.length-1].b, p=(R-L)/U, ratio=p/bh, sane=ratio>0.55&&ratio<2.6;
-      /* (4) the cuts: least ink on the cut, each character near its share of the line */
-      const K=chars.length, cum=[0]; us.forEach(u=>cum.push(cum[cum.length-1]+u));
-      const cutsAt=[L]; let costs=[0];
-      if(K>1){
-        const cand=[]; for(let j=1;j<K;j++){ const ideal=L+p*cum[j], span=Math.max(2,0.5*p*Math.min(us[j-1],us[j])), c=[]; for(let x=Math.max(L+1,Math.round(ideal-span));x<=Math.min(R-1,Math.round(ideal+span));x++) c.push(x); if(!c.length) c.push(Math.round(ideal)); cand.push(c); }
+    const mask0=new Uint8Array(W*H); for(let q=0;q<W*H;q++){ const b=bin(val[q]); mask0[q]=(inkLow?b<=cut:b>cut)?1:0; }
+    /* one orientation's layout: lines found, characters spread over them, each line's extent and cost */
+    const tryLayout=vert=>{
+      let mask=mask0, w=W, h=H, a0=c0, a1=c1, b0=r0, b1=r1;
+      if(vert){ mask=new Uint8Array(W*H); for(let y=0;y<H;y++) for(let x=0;x<W;x++) mask[x*H+y]=mask0[y*W+x]; w=H; h=W; a0=r0; a1=r1; b0=c0; b1=c1; }
+      const M=(x,y)=>mask[y*w+x], fh=Math.max(1,b1-b0);
+      /* the ink rows, cut finely: a row is inked when it carries more than a quarter of the median inked row, after the
+         floor every row shares (a sign's edges, a pole) is taken off */
+      const rp=new Float32Array(h); for(let y=0;y<h;y++){ let s=0; for(let x=a0;x<a1;x++) s+=M(x,y); rp[y]=s/Math.max(1,a1-a0); }
+      let base=Infinity; for(let y=b0;y<b1;y++) base=Math.min(base,rp[y]); if(!isFinite(base)) base=0;
+      const v=Array.from(rp,x=>Math.max(0,x-base)), inked=v.filter((x,y)=>y>=b0&&y<b1&&x>CB_INK*0.4).sort((p,q)=>p-q), med=inked.length?inked[inked.length>>1]:0;
+      const thr=Math.max(CB_INK*0.4,med*0.25), segs=[];
+      for(let y=Math.max(0,b0-2);y<Math.min(h,b1+2);y++){ if(v[y]<=thr) continue; const l=segs[segs.length-1]; if(l&&y-l.b<=1){ l.b=y+1; l.mass+=v[y]; } else segs.push({a:y,b:y+1,mass:v[y]}); }
+      if(!segs.length) return null;
+      /* candidate lines: runs of up to six neighbouring segments whose inner gaps are small against their height */
+      const bands=[]; for(let i=0;i<segs.length;i++){ let mass=0, gap=0; for(let j=i;j<Math.min(segs.length,i+6);j++){ mass+=segs[j].mass; if(j>i){ gap+=segs[j].a-segs[j-1].b; if(segs[j].a-segs[j-1].b>0.35*(segs[j].b-segs[i].a)) break; } const a=segs[i].a, b=segs[j].b; if(b-a>=Math.max(4,fh*0.06)) bands.push({a,b,mass,gf:gap/(b-a)}); } } /* gf: the share of empty rows inside — two lines glued into one band have their gap there */
+      if(!bands.length) return null;
+      if(vert) bands.sort((p,q)=>q.a-p.a); else bands.sort((p,q)=>p.a-q.a); /* reading order: top to bottom, columns right to left */
+      /* one line's column profile, extent and cost for u units of text */
+      const prof=new Map(), lineFor=(bi)=>{ if(prof.has(bi)) return prof.get(bi); const bd=bands[bi], bh=bd.b-bd.a;
+        const cp=new Float32Array(w); for(let x=0;x<w;x++){ let s=0; for(let y=bd.a;y<bd.b;y++) s+=M(x,y); cp[x]=s/bh; }
+        let fl=Infinity; for(let x=a0;x<a1;x++) fl=Math.min(fl,cp[x]); if(isFinite(fl)&&fl>0) for(let x=0;x<w;x++) cp[x]=Math.max(0,cp[x]-fl);
+        for(let x=0;x<w;){ if(cp[x]<=CB_INK){ x++; continue; } let e2=x, t=0; while(e2<w&&cp[e2]>CB_INK){ t+=cp[e2]; e2++; } if(e2-x<0.25*bh&&t/(e2-x)>0.92) for(let q=x;q<e2;q++) cp[q]=0; x=e2; } /* bars (v618) */
+        const runs=[]; for(let x=0;x<w;x++){ if(cp[x]<=CB_INK) continue; const l=runs[runs.length-1]; if(l&&x-l.b<=Math.max(1,Math.round(bh*0.2))){ l.b=x+1; l.mass+=cp[x]; } else runs.push({a:x,b:x+1,mass:cp[x]}); }
+        const mine=runs.filter(r=>(r.a+r.b)/2>=a0-bh*0.3&&(r.a+r.b)/2<=a1+bh*0.3&&r.mass>=0.05*bh), total=mine.reduce((p,r)=>p+r.mass,0)||1; /* a speck at the frame's edge is not a stroke */
+        const o={bh,cp,mine,total,memo:new Map()}; prof.set(bi,o); return o; };
+      const lineCost=(bi,u)=>{ const o=lineFor(bi), key=u.toFixed(2); if(o.memo.has(key)) return o.memo.get(key);
+        let bestL=null; const R=o.mine;
+        /* the pitch is measured without the part of a gap beyond half a character — a word space (北京 欢迎) is not a
+           wider character, and counting it made dropping the last character look cheaper than keeping it */
+        for(let i=0;i<R.length;i++){ let mass=0, extra=0; for(let j=i;j<R.length;j++){ mass+=R[j].mass; if(j>i) extra+=Math.max(0,R[j].a-R[j-1].b-0.5*o.bh);
+          /* ink left out of the line: dear when it runs on from the line across a small gap (the last character of 北京 欢迎),
+             cheap across a wide one (CREDIT CARD beside 信用卡) */
+          let near=0, far=0, fg=false; for(let q=i-1;q>=0;q--){ if(R[q+1].a-R[q].b>0.6*o.bh) fg=true; if(fg) far+=R[q].mass; else near+=R[q].mass; }
+          fg=false; for(let q=j+1;q<R.length;q++){ if(R[q].a-R[q-1].b>0.6*o.bh) fg=true; if(fg) far+=R[q].mass; else near+=R[q].mass; }
+          const L=R[i].a, Rr=R[j].b, r=(Rr-L-extra)/(u*o.bh); let c=Math.abs(Math.log(r/CB_PITCH))+(0.8*near+0.2*far)/o.total;
+          if(!bestL||c<bestL.c) bestL={c,L,R:Rr,r}; } }
+        const res=bestL||{c:9}; o.memo.set(key,res); return res; };
+      /* the size prior: the card's text is the text the reader and the AI framed, and that is the biggest text in the frame
+         far more often than not — on H's sheet the small lines that fitted by chance were CREDIT CARD under 招商银行, the
+         fine print under 雀巢脆脆鲨 and the UN of ALIYUN.COM. A line is measured against the tallest band that looks like a
+         line of text at all (some count of characters fits it well). */
+      let Hmax=0; bands.forEach((bd,bi)=>{ const bh=bd.b-bd.a; if(bh<=Hmax||bd.gf>0.1) return; /* two lines glued are not one tall line */ for(let u=1;u<=Math.min(K,24);u++){ if(lineCost(bi,u).c<0.3){ Hmax=bh; break; } } });
+      const sizeCost=bi=>{ const bd=bands[bi], bh=bd.b-bd.a; return (Hmax>bh?0.45*Math.log(Hmax/bh):0)+2*Math.max(0,bd.gf-0.08); };
+      /* the ways to spread the characters: the card's own lines, and every split into up to four lines (fewer for long texts) */
+      const groupings=[cardBreaks.slice()], maxM=Math.min(4,bands.length,K), seen=new Set([cardBreaks.join(",")]);
+      const add=gs=>{ const kk=gs.join(","); if(!seen.has(kk)){ seen.add(kk); groupings.push(gs); } };
+      const rec=(start,left,acc)=>{ if(groupings.length>400) return; if(left===1){ add([...acc,K]); return; } for(let e2=start+1;e2<=K-left+1;e2++) rec(e2,left-1,[...acc,e2]); };
+      for(let mm=1;mm<=(K>14?Math.min(2,maxM):maxM);mm++) rec(0,mm,[]);
+      let best=null;
+      for(const gs of groupings){ const m2=gs.length; if(m2>bands.length) continue;
+        const us=[]; let st=0; gs.forEach(en=>{ let u=0; for(let q=st;q<en;q++) u+=units[q]; us.push(Math.max(0.3,u)); st=en; });
+        /* the lines for the groups, in reading order and not overlapping: a small dynamic programme over the bands */
+        let prev=bands.map((bd,bi)=>({c:lineCost(bi,us[0]).c+sizeCost(bi),from:-1})), trail=[prev];
+        for(let gi=1;gi<m2;gi++){ const cur=bands.map((bd,bi)=>{ let bb={c:Infinity,from:-1}; prev.forEach((pq,pi)=>{ const pb=bands[pi]; const after=vert?bd.b<=pb.a:bd.a>=pb.b; if(!after||!isFinite(pq.c)) return; const c=pq.c+lineCost(bi,us[gi]).c+sizeCost(bi); if(c<bb.c) bb={c,from:pi}; }); return bb; }); trail.push(cur); prev=cur; }
+        let end=-1, ec=Infinity; prev.forEach((pq,pi)=>{ if(pq.c<ec){ ec=pq.c; end=pi; } }); if(end<0) continue;
+        const merged=cardBreaks.slice(0,-1).filter(cb2=>!gs.includes(cb2)).length; /* a card's own line break the layout ignores: two card lines put on one photo line is rarely true (招商银行 and 信用卡 on H's sheet) */
+        const total=ec+0.06*(m2-1)+0.5*merged-(gs.join(",")===cardBreaks.join(",")?0.2:0);
+        if(!best||total<best.total){ const pick=[]; let bi=end; for(let gi=m2-1;gi>=0;gi--){ pick.unshift(bi); bi=trail[gi][bi].from; } best={total,gs,us,pick}; } }
+      if(!best) return null;
+      const tall=TH>TW*1.3&&K>=2; best.total+=vert?(tall?0:0.15):(tall&&lines.length===1?0.15:0);
+      return {...best,vert,w,h,M,lineFor,lineCost,bands,Hmax};
+    };
+    const hL=tryLayout(false), vL=tryLayout(true), L=!hL?vL:!vL?hL:(vL.total<hL.total?vL:hL);
+    if(!L) return {why:"no line of ink"};
+    const out={boxes:[],vert:L.vert,ink:+inkFrac.toFixed(3),cost:+L.total.toFixed(2),lines:L.gs.length}; let st=0;
+    L.gs.forEach((en,gi)=>{
+      const bi=L.pick[gi], bd=L.bands[bi], o=L.lineFor(bi), lc=L.lineCost(bi,L.us[gi]), bh=o.bh, cp=o.cp;
+      const us=units.slice(st,en), Kg=us.length, U=us.reduce((p,q)=>p+q,0)||1, Lx=lc.L, Rx=lc.R, p=(Rx-Lx)/U, sane=lc.c<0.32&&bh>=0.6*(L.Hmax||0); /* sure only on a line of the frame's own size */
+      /* the cuts: least ink on the cut, each character near its share of the line (v618) */
+      const cum=[0]; us.forEach(u=>cum.push(cum[cum.length-1]+u)); const cutsAt=[Lx], costs=[0];
+      if(Kg>1){
+        const cand=[]; for(let j=1;j<Kg;j++){ const ideal=Lx+p*cum[j], span=Math.max(2,0.5*p*Math.min(us[j-1],us[j])), c=[]; for(let x=Math.max(Lx+1,Math.round(ideal-span));x<=Math.min(Rx-1,Math.round(ideal+span));x++) c.push(x); if(!c.length) c.push(Math.round(ideal)); cand.push(c); }
         const seg=(a,b,u)=>{ const d=((b-a)-p*u)/(p*u); return d*d; };
-        let prev=[{x:L,cost:0,from:-1}]; const hist=[];
-        for(let j=0;j<K-1;j++){ const cur=cand[j].map(x=>{ let bb=null; prev.forEach((q,qi)=>{ if(x<=q.x) return; const c=q.cost+seg(q.x,x,us[j])+4*cp[x]; if(!bb||c<bb.cost) bb={x,cost:c,from:qi}; }); return bb||{x,cost:Infinity,from:0}; }); hist.push(prev); prev=cur; }
-        let end=null; prev.forEach((q,qi)=>{ const c=q.cost+seg(q.x,R,us[K-1]); if(!end||c<end.cost) end={cost:c,qi}; });
-        /* walk the choices back */
-        let layer=prev, idx=end.qi; const xs=new Array(K-1);
-        for(let j=K-2;j>=0;j--){ const q=layer[idx]; xs[j]=q.x; idx=q.from; layer=hist[j]; }
+        let prev=[{x:Lx,cost:0,from:-1}]; const hist2=[];
+        for(let j=0;j<Kg-1;j++){ const cur=cand[j].map(x=>{ let bb=null; prev.forEach((q,qi)=>{ if(x<=q.x) return; const c=q.cost+seg(q.x,x,us[j])+4*cp[x]; if(!bb||c<bb.cost) bb={x,cost:c,from:qi}; }); return bb||{x,cost:Infinity,from:0}; }); hist2.push(prev); prev=cur; }
+        let end=null; prev.forEach((q,qi)=>{ const c=q.cost+seg(q.x,Rx,us[Kg-1]); if(!end||c<end.cost) end={cost:c,qi}; });
+        let layer=prev, idx=end.qi; const xs=new Array(Kg-1);
+        for(let j=Kg-2;j>=0;j--){ const q=layer[idx]; xs[j]=q.x; idx=q.from; layer=hist2[j]; }
         xs.forEach(x=>{ cutsAt.push(x); costs.push(cp[x]); });
       }
-      cutsAt.push(R); costs.push(0);
-      for(let j=0;j<K;j++){
+      cutsAt.push(Rx); costs.push(0);
+      for(let j=0;j<Kg;j++){
         let a=cutsAt[j], b=cutsAt[j+1]; while(a<b-1&&cp[a]<=CB_INK) a++; while(b>a+1&&cp[b-1]<=CB_INK) b--;
-        const rows=[]; for(let y=Math.max(0,Math.round(y0-bh*0.2));y<Math.min(h,Math.round(y1+bh*0.2));y++){ let s=0; for(let x=a;x<b;x++) s+=M(x,y); if(s>Math.max(0.5,(b-a)*0.02)) rows.push(y); }
-        const ya=rows.length?rows[0]:y0, yb=rows.length?rows[rows.length-1]+1:y1;
-        const clean=costs[j]<=0.1&&costs[j+1]<=0.1, fits=(b-a)>=0.3*p*us[j]&&(b-a)<=1.35*bh*Math.max(0.6,us[j])&&(yb-ya)>=0.4*bh; /* a box much wider than the line is tall holds two characters: the card's text is short of the photo's (a reading that lost some), and the cuts only look clean */
-        /* back to the picture's pixels, then to the text's fractions */
-        let bx={x:a,y:ya,w:b-a,h:yb-ya}; if(vert) bx={x:bx.y,y:bx.x,w:bx.h,h:bx.w};
+        const rows=[]; for(let y=Math.max(0,Math.round(bd.a-bh*0.15));y<Math.min(L.h,Math.round(bd.b+bh*0.15));y++){ let s=0; for(let x=a;x<b;x++) s+=L.M(x,y); if(s>Math.max(0.5,(b-a)*0.02)) rows.push(y); }
+        const ya=rows.length?rows[0]:bd.a, yb=rows.length?rows[rows.length-1]+1:bd.b;
+        const clean=costs[j]<=0.1&&costs[j+1]<=0.1, fits=(b-a)>=0.3*p*us[j]&&(b-a)<=1.35*bh*Math.max(0.6,us[j])&&(yb-ya)>=0.4*bh; /* a box much wider than the line is tall holds two characters (v618) */
+        let bx={x:a,y:ya,w:b-a,h:yb-ya}; if(L.vert) bx={x:bx.y,y:bx.x,w:bx.h,h:bx.w};
         const X=X0+bx.x/k, Y=Y0+bx.y/k;
-        put(j,{x:(X-TX)/TW, y:(Y-TY)/TH, w:bx.w/k/TW, h:bx.h/k/TH, ok:sane&&clean&&fits&&bandsOk});
+        out.boxes[st+j]={x:(X-TX)/TW, y:(Y-TY)/TH, w:bx.w/k/TW, h:bx.h/k/TH, ok:sane&&clean&&fits};
       }
-      if(!sane) out.why=out.why||"odd pitch "+ratio.toFixed(2);
-      pos+=chars.length;
+      if(!sane) out.why=out.why||"odd pitch "+lc.r.toFixed(2);
+      st=en;
     });
     return out;
   }catch(e){ return {why:"error "+(e&&e.message||e)}; } }
