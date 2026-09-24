@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=615; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=616; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,6 +671,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v616","recap reading = card after crop"],
   ["cards","v615","swipe: no vertical jump"],
   ["cards","v614","zoomed photo: pull on to swipe"],
   ["learn","v613","Test card, then Learn tab: session"],
@@ -1693,7 +1694,7 @@ let _aiSoon=null;
 function aiAutoSoon(){ if(!aiAutoOn()) return; clearTimeout(_aiSoon); _aiSoon=setTimeout(()=>{ _aiAutoRan=false; aiAuto(); },1500); }
 function aiCardPayload(d){
   return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:d.explain?"write \"desc\" for this card and nothing else; keep zh, p and m exactly as given":d.translate?"translate the meaning into "+meaningLangName()+" (it is in "+(LANG_NAME[d.ml||"en"]||"another language")+" now); keep zh and p unless clearly wrong":[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"the reading looks uncertain ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
-    gloss:d.kind==="sign"?(d.gloss||[]).map(g=>g.w+" "+(g.m||"?")).join(" · "):undefined,
+    gloss:d.kind==="sign"&&glossFits(d)?d.gloss.map(g=>g.w+" "+(g.m||"?")).join(" · "):undefined,
     alt:d.alts&&d.alts.length?d.alts:undefined, script:d.trad?"traditional":undefined };
 }
 /* the meaning in the app's language (v256, PR 4 of the multi-language UI — H: "Go, with the button"): the prompts ask for the
@@ -3029,9 +3030,17 @@ function latinUnitMeaning(w){
   return m[1]+" "+wordOf(+m[1],u[0],u[1]); /* the unit's form for this number, through the app's one plural rule (v401): 1 час, 2 часа, 24 часа, 5 часов */
 }
 const CHARS_MAX=16; /* more buttons than this is no longer a row to tap through — a card with more parts shows none */
-const cardGloss=d=>mergeUnits(d.gloss||[]); /* the stored gloss with a number and its unit as one part (v309; cards from before carry them apart) */
+/* v616 (H with a finished card that read "dì shàng chéng" over "Welcome to Beijing Capital International Airport": "Hier
+   stimmt die finale Übersetzung nicht mit dem Karteninhalt überein"): a card's gloss is its WORDS, stored when the text
+   was read — and Crop again, an AI correction or an edit can replace the text, pinyin and meaning while the gloss of the
+   old reading stays behind (H's card: 地上诚's gloss under 北京首都机场欢迎您). Every reader of the gloss trusted it, so the
+   recap, the character row, the pad's words and the word line all spoke of a text the card no longer has. A gloss counts
+   only while its words spell the card's own text; otherwise the card is read as if it had none. */
+const glossKey=t=>[...String(t||"")].filter(ch=>CJK.test(ch)||/[0-9A-Za-z]/.test(ch)).join(""); /* characters, letters and digits: a gloss may leave out the punctuation and line breaks the text carries */
+const glossFits=d=>Array.isArray(d&&d.gloss)&&d.gloss.length>0&&glossKey(d.gloss.map(g=>g&&g.w||"").join(""))===glossKey(d.c);
+const cardGloss=d=>glossFits(d)?mergeUnits(d.gloss):[]; /* the stored gloss with a number and its unit as one part (v309; cards from before carry them apart) */
 function cardParts(d){
-  let words=d.gloss&&d.gloss.length?cardGloss(d).map(g=>g.w):(d.kind==="sign"?(d.segs||[]).flat():(d.seg||[]).filter(x=>x!=="\n"));
+  let words=glossFits(d)?cardGloss(d).map(g=>g.w):(d.kind==="sign"?(d.segs||[]).flat():(d.seg||[]).filter(x=>x!=="\n"));
   words=words.filter(w=>CJK.test(w)||NUM_PART.test(w)); /* a number with its unit is a part of the meaning and stays in the row (v336, H's 24H存包: "das 24H sollte auch in der Zeile bei den chinesischen Schriftzeichen dabei sein") */
   if(words.length<2) words=[...d.c].filter(ch=>CJK.test(ch)); /* one word → its characters */
   /* a part the text carries twice stays twice (v430, H on his 骑车勿盯 / 还车勿忘 card: "Da fehlt a das zweite Wu"): the row is
@@ -3058,7 +3067,7 @@ async function charInfo(w,btn,d){
   try{
     if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
     await loadDict().catch(()=>{});
-    const known=d&&d.gloss&&cardGloss(d).find(g=>g.w===w);
+    const known=d&&cardGloss(d).find(g=>g.w===w);
     const py=known&&known.p?known.p:pinyinPro.pinyin(w,{toneType:"symbol"});
     const m=cleanSense((known&&known.m)||bestSense(w,py)); /* v573: the word's own reading picks the group; the raw value is never printed, since bestSense returns "" only when the entry has no sense at all */
     const chars=[...w].filter(ch=>CJK.test(ch));
@@ -3622,7 +3631,7 @@ function cueBig(card){ const to=S.cueBig==="txt"?"pic":"txt"; S.cueBig=to; /* v5
    The glyph is the traditional character on a traditional card (v101's rule for the front), which is also the template. */
 function padTargets(d){
   const text=[...String(d.c||"").replace(/\n/g,"")], trad=learnTrad(d)?[...learnTrad(d).replace(/\n/g,"")]:null, tr=trad&&trad.length===text.length?trad:null;
-  let words=d.gloss&&d.gloss.length?cardGloss(d).map(g=>g.w):(d.kind==="sign"?(d.segs||[]).flat():(d.seg||[]).filter(x=>x!=="\n"));
+  let words=glossFits(d)?cardGloss(d).map(g=>g.w):(d.kind==="sign"?(d.segs||[]).flat():(d.seg||[]).filter(x=>x!=="\n"));
   words=words.filter(w=>CJK.test(w)||NUM_PART.test(w));
   const out=[]; let pos=0, wi=0;
   const pushChar=(p,wIdx,word,wstart)=>{ const ch=text[p]; if(CJK.test(ch)) out.push({ch,glyph:tr?tr[p]:ch,pos:p,wi:wIdx,word,wstart,w:true}); };
@@ -3687,7 +3696,7 @@ async function padLineFill(box,d,x){ box.hidden=false;
   try{
     if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
     await loadDict().catch(()=>{});
-    const known=d.gloss&&cardGloss(d).find(g=>g.w===w);
+    const known=cardGloss(d).find(g=>g.w===w);
     const py=known&&known.p?known.p:pinyinPro.pinyin(w,{toneType:"symbol"});
     const m=cleanSense((known&&known.m)||bestSense(w,py));
     /* v517 (H: "Pinyin und Bedeutung für einzelne Charaktere aus einem längeren Wort"): a word of several characters gets a
@@ -4688,10 +4697,17 @@ function recapHTML(d){
      compound held the whole reading to what IT could take: measured, "zhōng huá rén mín gòng hé guó" is 29 characters,
      and 140/29 cqw put the reading at 12.7 px in a 286 px square with 156 px of it empty, smaller than the 20 px meaning
      under it. Splitting 供应 in half is a real fault; breaking a seven-syllable name over two lines is what a book does. */
-  const gl=Array.isArray(d.gloss)&&d.gloss.length&&d.gloss.every(g=>g&&g.p);
   const chunk=p=>{ const syl=String(p).trim().split(/\s+/);
     return syl.length>RECAP_WSYL?syl.map(x=>`<span class="w">${esc(x)}</span>`).join(" "):`<span class="w">${esc(p)}</span>`; };
-  const py=gl?d.gloss.map(g=>chunk(g.p)).join(" "):esc(d.p||"");
+  /* v616: the SYLLABLES are the card's own pinyin (d.p, what "Whole card" shows), and the gloss only says where the words
+     break. Until v615 the gloss's own syllables were printed — the dictionary's reading at the time the photo was read —
+     so a pinyin the AI or H corrected later never reached the recap, and a stale gloss printed another text entirely. The
+     words take the pinyin's syllables in order, as many as each has characters; when the counts do not agree the pinyin
+     stands as one string. */
+  const gl=cardGloss(d), syl=String(d.p||"").replace(/\//g," ").trim().split(/\s+/).filter(Boolean);
+  const lens=gl.map(g=>[...String(g.w||"")].filter(ch=>CJK.test(ch)).length);
+  let py=esc(d.p||"");
+  if(gl.length&&lens.every(n=>n>0)&&lens.reduce((a,b)=>a+b,0)===syl.length){ let i=0; py=lens.map(n=>{ const w=syl.slice(i,i+n).join(" "); i+=n; return chunk(w); }).join(" "); }
   /* v600: the size is MEASURED by recapFit once the block is in the page, not estimated from a character count. The
      estimate had to be conservative for every card at once and so was wrong on most of them (measured at 286 px: 12.7 px
      on H's card, 40.8 on a four-syllable one, 44 on a two-syllable one, with 156, 112 and 165 px of the square empty).

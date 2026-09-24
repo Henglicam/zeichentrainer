@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v615
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v616
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,29 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v616, 2026-09-24)
+- **The finished card reads what the card says (v616, H with two screenshots of his 北京首都机场 / 欢迎您 card in Test this
+  card — the recap "dì shàng chéng" over "Welcome to Beijing Capital International Airport", the Whole card showing the right
+  běi jīng shǒu dū jī chǎng huān yíng nín — and a Diagnostics dump: "Hier stimmt die finale Übersetzung nicht mit dem
+  Karteninhalt überein").** The card had been read weakly as 地上诚, saved before the reading was done, and fixed by Crop
+  again (recrop-edit1: the picture AI read 北京首都机场\n欢迎您, the text check confirmed it). The text, pinyin and meaning
+  were replaced — **the gloss was not**: `d.gloss` still held 地上诚 with dì shàng chéng, and `recapHTML` printed the
+  gloss's own syllables (v555's word grouping). The same stale gloss fed the character row (`cardParts`), the pad's words
+  (`padTargets`), the word line's in-word readings (`padLine`) and the gloss sent to the AI.
+  - **The fix is at the reader, so every stale card heals without an edit:** `glossFits(d)` accepts a gloss only while its
+    words spell the card's own text (compared on characters, letters and digits, since a gloss may leave out punctuation
+    and line breaks); `cardGloss` returns nothing otherwise, and every reader goes through it. **The recap's syllables are
+    now `d.p`** — the pinyin the Whole card shows — cut into the gloss's words by their character counts, so a pinyin the
+    AI or H corrected after the reading reaches the recap too (it never did: the recap printed the dictionary's reading of
+    the day the photo was read). Counts that do not agree print `d.p` as one string.
+  - **Measured** headless with the field card's own shape (new text, pinyin and meaning; gloss and segs of 地上诚): recap
+    "běi jīng shǒu dū jī chǎng huān yíng nín" on v616, "dì shàng chéng" on v615; a card whose gloss says yín xíng under a
+    corrected yín háng: "yín háng" on v616, "yín xíng" on v615 — two checks flip; a two-line 鸡蛋 / 供应 card and a card with
+    a comma keep their word grouping and rows on both `[guard]`. The stale card's row and pad fall back to single
+    characters, since its segs are 地上诚's too. **Named, not built:** Crop again and the text edit still leave the old
+    gloss stored — harmless now that nothing reads it, and re-glossing would need the reader's segmentation of the new
+    text. **Not yet field-checked.**
 
 ## Current state (PWA v615, 2026-09-24)
 - **The open card's neighbour rides in where it lands (v615, H: "Jetzt springen die Karten in der vertikalen beim swipe
