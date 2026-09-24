@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v617
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v618
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,34 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v618, 2026-09-24)
+- **The zoom finds the character on the ink, line by line (v618, H on v617 with a Diagnostics dump: "Er erkennt vieles
+  noch nicht. Die Erkennung der Position der characters im Bild funktioniert noch unzureichend."):** the dump could not say
+  why — v617 kept only the LAST zoom decision (`ch 忘, how out, card done`), a record that says nothing is v399's defect
+  again. What it did show: the frames in the field are loose (the AI's box snapped to the ink carries the sign's margins;
+  several cards' frame is the whole photo), lines are uneven (北京首都机场 over a centred 欢迎您), and v617 believed the
+  frame's even split and only let each edge move to a gap within 0.4 of a character. **`charBoxes` replaces `inkSpan`**:
+  the frame only says where to look. (1) Ink is Otsu's cut along the principal axis of the frame's own colours, the
+  minority class (red on white, white on red, gold on red all separate); (2) the line bands are the n heaviest runs of
+  inked rows, after taking off the floor every row shares (a sign's side edges or a pole joined text and border into one
+  band); (3) the line's extent is its ink runs whose centre lies in the frame, with narrow bars inked through the whole
+  band dropped (the sign's own border); (4) the line is cut into exactly as many characters as the card's text has, the
+  cuts chosen together by dynamic programming — least ink on the cut plus each character near its share of the line — so a
+  word gap or a character with its own gap (北, 川, 小) cannot fool it. A vertical sign (one line, frame taller than wide)
+  is the same arithmetic turned. A box is **sure** only when both its cuts are clean, the line's pitch is plausible (0.55–2.6
+  of its height) and the box is not much wider than the line is tall — the last one added after the owner's check below
+  showed the wrong reading 地上诚 on a photo of 北京首都机场 splitting six glyphs into three "clean" boxes. Unsure boxes
+  still steer the zoom, at the loose scale. **Diagnostics** now prints the last 30 decisions (`ZLOG`: card, character, ink /
+  ink unsure / estimate, why, scale, level). **Owner tools → Diagnostics → Zoom check** (Run / Share) runs the detector over
+  the newest 24 photo cards off screen (`zoomCheck`, geometry through `textFracs`, split out of `spotGeom`) and shares
+  `shizi-zoomcheck.png`: each card's picture with green (on the ink), orange (unsure), red dashed (estimate) and the blue
+  frame — so the next round is judged on H's photos, not on mine. **Measured** on twelve synthetic cases (seeded, stable
+  across seeds): v617 34 of 49 characters within a quarter of a character of their true centre, v618 49 of 49 — the cases
+  v617 lost are the field's shapes: a 40 % loose frame (0 of 4), a short centred second line (7 of 9), a vertical sign
+  (0 of 4), a busy background (2 of 4), a sign border inside the frame (1 of 3). The v617 Learn suite (13 checks) passes on
+  v618. **Not field-checked, and the fixtures are clean fonts:** real photos add perspective, glare, blur and handwriting;
+  H's Zoom check sheet is the test.
 
 ## Current state (PWA v617, 2026-09-24)
 - **The photo zooms onto the character being written (v617, H: "Können wir beim Schreiben dynamisch auf den zu schreibenden

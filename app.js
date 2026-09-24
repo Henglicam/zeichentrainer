@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=617; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=618; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -550,7 +550,8 @@ function diagText(){
     `settings · lang ${LANG} · picture to the AI ${S.settings.aiPicture===false?"off":"on"} · relay ${S.settings.aiRelay===false?"off":"on"} · auto check ${S.settings.aiAuto===false?"off":"on"} · offline model ${S.settings.nmt?"on":"off"} · mirror ${S.settings.mirror===undefined?"default":(S.settings.mirror||"off")} · brightening ${S.settings.brightPass?"done":"not yet"} · re-cut ${recutLine()}`,
     `marks on the photo · ${markLine()}`,
     `main thread · long tasks ${LONG.n}${LONG.n?` (${Math.round(LONG.total)} ms in all, longest ${Math.round(LONG.max)} ms, last ${ago(LONG.at)})`:""} · parse strokes ${PARSE_MS.strokes==null?"not yet":PARSE_MS.strokes+" ms"}, outlines ${PARSE_MS.outlines==null?"not yet":PARSE_MS.outlines+" ms"} · resizes ${RESIZES.length?RESIZES.map(r=>r.bfcache?"back from the cache "+ago(r.t):`${r.from.join("×")}→${r.to.join("×")} ${ago(r.t)}`).join("; "):"none"}`, /* v532: what a fold did to the page, for H's next dump */
-    `learn zoom · ${LAST_AZ?Object.entries(LAST_AZ).filter(([k])=>k!=="at").map(([k,v])=>k+" "+v).join(", ")+" ("+ago(LAST_AZ.at)+")":"no zoom yet"}`, /* v617: the pad's last zoom — ink-found or estimated, the scale, the level */
+    `learn zoom · ${ZLOG.length?ZLOG.length+" decisions, newest last":"no zoom yet"}${ZCHECK?` · zoom check ${ZCHECK.line} (${ago(ZCHECK.at)})`:""}`, /* v617/v618: every decision of the pad's zoom — the card, the character, how its place was found (ink, ink unsure, estimate) and why not better */
+    ...ZLOG.map(z=>`  ${ago(z.at)}  ${String(z.c||"").replace(/\n/g,"/").slice(0,12)} ${z.ch||""} · ${z.how}${z.why?" ("+z.why+")":""}${z.s!=null?" · x"+z.s:""}${z.lv!=null?" · level "+z.lv:""}`),
     `learn fit · ${LAST_FIT?Object.entries(LAST_FIT).filter(([k])=>k!=="at").map(([k,v])=>k+" "+v).join(", ")+" ("+ago(LAST_FIT.at)+")":"no study card measured yet"}`, /* v521: the pad's last measurement — where the card ends against the tab bar, and what was counted under the pad */
     navigator.userAgent, `voices (${voiceList().length}): ${voiceList().join("; ")||"none reported"}`, ""];
   /* v479: every block is one photo's own. The steps used to be a single global list that the next reading wiped, so an album
@@ -672,7 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["learn","v617","photo zooms onto the character"],
+  ["learn","v618","zoom lands on the character"],
   ["learn","v616","recap reading = card after crop"],
   ["cards","v615","swipe: no vertical jump"],
   ["cards","v614","zoomed photo: pull on to swipe"],
@@ -1086,6 +1087,49 @@ async function shareUsers(){
 async function copyText(text,st){
   try{ await navigator.clipboard.writeText(text); if(st) st.textContent="Copied."; }
   catch(err){ if(st) st.textContent="Copy is not available here — tap Show and select the text."; }
+}
+/* THE ZOOM CHECK (v618, owner's): charBoxes run over the newest ZC_N photo cards off screen, counted, and drawn on the
+   cards' own pictures as one sheet the share sheet can send — so the detector is judged on H's photos rather than on the
+   harness's, and a failure comes back as a picture of where it went wrong (the v399 rule: the app says what happened). */
+let ZCHECK=null; const ZC_N=24;
+async function zoomCheck(st){
+  if(ZCHECK) ZCHECK.res.forEach(r=>{ try{ r.bm&&r.bm.close(); }catch(e){} });
+  const cards=deck().filter(d=>d.img&&d.frame&&!inPage(d)).slice(-ZC_N).reverse(), res=[]; let ok=0, unsure=0, est=0, none=0;
+  for(const d of cards){
+    if(st) st.textContent=`Checking ${res.length+1} of ${cards.length} …`;
+    let bm=null; try{ bm=await createImageBitmap(d.img); }catch(e){ res.push({d,why:"no picture"}); none++; continue; }
+    const key=d.shot||d.id, full=fullPhoto(d); let ps=PICSIZE.get(key);
+    if(!ps&&full){ try{ const b2=await createImageBitmap(full); ps={w:b2.width,h:b2.height}; b2.close(); PICSIZE.set(key,ps); }catch(e){} }
+    const tf=ps?textFracs(d,bm.width,bm.height,ps.w,ps.h,false):"nophoto";
+    if(typeof tf==="string"){ res.push({d,bm,why:tf}); none++; continue; }
+    const cb=charBoxes(bm,bm.width,bm.height,tf,spotLines(d)); let pos=0;
+    spotLines(d).forEach(ln=>[...ln].forEach(ch=>{ if(CJK.test(ch)){ const b=cb.boxes&&cb.boxes[pos]; if(!b) est++; else if(b.ok) ok++; else unsure++; } pos++; }));
+    res.push({d,bm,tf,cb}); await yieldNow();
+  }
+  const all=ok+unsure+est;
+  ZCHECK={at:Date.now(),res,line:`${cards.length} cards: ${ok} of ${all} characters on the ink, ${unsure} unsure, ${est} by the estimate${none?`, ${none} cards without a place`:""}`};
+  return ZCHECK;
+}
+async function shareZoomSheet(){
+  const z=ZCHECK, T=300, cols=4, pad=10, lab=40, head=44, rows=Math.max(1,Math.ceil(z.res.length/cols));
+  const cv=document.createElement("canvas"); cv.width=cols*(T+pad)+pad; cv.height=head+rows*(T+lab+pad)+pad; const g=cv.getContext("2d");
+  g.fillStyle="#fff"; g.fillRect(0,0,cv.width,cv.height); g.fillStyle="#000"; g.font="18px sans-serif"; g.textBaseline="top";
+  g.fillText(`Zoom check v${APP_V} · ${z.line}`,pad,14);
+  z.res.forEach((r,i)=>{ const ox=pad+(i%cols)*(T+pad), oy=head+Math.floor(i/cols)*(T+lab+pad);
+    g.fillStyle="#eee"; g.fillRect(ox,oy,T,T);
+    let counts="";
+    if(r.bm){ const sc=Math.min(T/r.bm.width,T/r.bm.height), dw=r.bm.width*sc, dh=r.bm.height*sc, dx=ox+(T-dw)/2, dy=oy+(T-dh)/2; g.drawImage(r.bm,dx,dy,dw,dh);
+      if(r.tf){ const f=r.tf, box=(b,col,dash)=>{ g.setLineDash(dash||[]); g.strokeStyle=col; g.lineWidth=2; g.strokeRect(dx+(f.tx+f.tw*b.x)*dw, dy+(f.ty+f.th*b.y)*dh, f.tw*b.w*dw, f.th*b.h*dh); };
+        box({x:0,y:0,w:1,h:1},"#2F6BD6",[6,4]);
+        let pos=0, ok=0, un=0, es=0;
+        spotLines(r.d).forEach(ln=>[...ln].forEach(ch=>{ if(CJK.test(ch)){ const b=r.cb.boxes&&r.cb.boxes[pos];
+          if(b){ box(b,b.ok?"#1FA34A":"#F08C00"); b.ok?ok++:un++; } else { const e=wordSpan(r.d,{word:ch,wstart:pos}); if(e) box(e,"#E0302A",[3,3]); es++; } } pos++; }));
+        g.setLineDash([]); counts=`${ok} ink, ${un} unsure, ${es} est.${r.cb.why?" · "+r.cb.why:""}`; } }
+    g.fillStyle="#000"; g.font="15px sans-serif"; g.fillText(String(r.d.c||"").replace(/\n/g," / ").slice(0,18),ox,oy+T+3);
+    g.fillStyle="#555"; g.font="12px sans-serif"; g.fillText((r.why||counts).slice(0,46),ox,oy+T+22); });
+  const blob=await new Promise(res=>cv.toBlob(res,"image/png")), name="shizi-zoomcheck.png", file=new File([blob],name,{type:"image/png"});
+  if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; logErr("share",err); } }
+  noteSheet(t("Sharing is not available here."));
 }
 async function shareDiag(){
   const text=diagText(), name="shizi-diagnostics.txt", file=new File([text],name,{type:"text/plain"});
@@ -2642,6 +2686,7 @@ function renderMore(main){
     <div class="listhead">Diagnostics</div>
     <div class="mrow"><div style="flex:1"><div class="t">Diagnostics</div><div class="s" id="diag-status">${LAST_READ.ring.length} photo${LAST_READ.ring.length===1?"":"s"} logged, ${AILOG.length} AI exchange${AILOG.length===1?"":"s"}, ${ERRLOG.length} error${ERRLOG.length===1?"":"s"}.</div><div class="fieldacts"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button><button class="btn mini" id="diag-copy">Copy</button></div></div></div>
     <pre class="diag" id="diag-out" hidden></pre>
+    <div class="mrow"><div style="flex:1"><div class="t">Zoom check</div><div class="s" id="zc-status">${ZCHECK?esc(ZCHECK.line)+".":`Finds every character of the newest ${ZC_N} photo cards the way Learn's zoom does. Share sends the pictures with the boxes drawn: green on the ink, orange unsure, red the estimate, blue the frame.`}</div><div class="fieldacts"><button class="btn mini" id="zc-run">Run</button><button class="btn mini" id="zc-share">Share</button></div></div></div>
     <div class="mrow"><div style="flex:1"><div class="t">Still to test</div><div class="s" id="field-status">${fieldNote()}</div><div class="fieldacts"><button class="btn mini" id="field-show">Show</button><button class="btn mini" id="field-copy">Copy</button></div></div></div>
     <pre class="diag" id="field-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"install")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div><div class="fieldacts"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button><button class="btn mini" id="users-copy">Copy</button></div></div></div>
@@ -2683,6 +2728,9 @@ function renderMore(main){
   if(S.admin&&S.ownerOpen){
     $("#diag-show").onclick=()=>{ const o=$("#diag-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=diagText(); };
     $("#diag-share").onclick=shareDiag;
+    { const zs=$("#zc-status"), zr=$("#zc-run"), zh=$("#zc-share"); /* v618 */
+      if(zr) zr.onclick=async()=>{ zr.disabled=true; try{ await zoomCheck(zs); zs.textContent=ZCHECK.line+"."; }catch(e){ zs.textContent="The check failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zr.disabled=false; };
+      if(zh) zh.onclick=async()=>{ zh.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); zs.textContent=ZCHECK.line+"."; await shareZoomSheet(); }catch(e){ zs.textContent="The sheet failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zh.disabled=false; }; }
     $("#field-show").onclick=()=>{ const o=$("#field-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=fieldText(); };
     $("#field-copy").onclick=()=>copyText(fieldText(),$("#field-status"));
     $("#diag-copy").onclick=()=>copyText(diagText(),$("#diag-status"));
@@ -3405,6 +3453,27 @@ function markLine(){
   const say=[["ok","marked"],["whole","whose text is the whole picture"],["noframe","without a frame"],["nophoto","whose photo is gone"],["nowindow","whose picture is neither the window nor its frame"],["turned","a turned frame on the whole photo"]];
   return `${MARKW.size} cards seen · `+say.filter(([k])=>n[k]).map(([k,t])=>`${n[k]} ${t}`).join(", ");
 }
+/* the text's rectangle as fractions of the card's picture (v533/v552, taken out of spotGeom by v618 so the owner's Zoom
+   check can ask it of a card that is not on screen): the frame itself when the picture is the whole photo, else the frame
+   inside the window it was cut at. A string is the reason there is none, in markWhy's words. */
+function textFracs(d,nw,nh,pw,ph,whole){
+  const f=d.frame; if(!f||!(f.w>0&&f.h>0)) return "noframe";
+  if(whole) return f.a?"turned":{tx:f.x,ty:f.y,tw:f.w,th:f.h}; /* the whole photo, upright: a turned frame's mark would have to be turned with it, and a page front's own region already lights the text (v461) */
+  const rect={x:f.x*pw,y:f.y*ph,w:f.w*pw,h:f.h*ph,a:f.a||0,lw:pw,lh:ph}, r=nw/nh;
+  /* WHICH cut of the photo is this picture? v552: each candidate window is rebuilt from the frame and ITS OWN shape
+     compared with the picture's — where v533 compared the picture's shape with the ratio it was cut at. windowRect
+     clamps a window to the photo (a tall sign on a portrait photo) and trims a turned one to it (v333), so the cut
+     very often does not carry the ratio it was made at, and the bare ratio test then gave up on a picture whose
+     window is perfectly derivable. Rebuilding reproduces the clamp and the trim, so those cards are marked too. */
+  let win=null; for(const R of spotRatios()){ const w=windowRect(rect,R); if(Math.abs(w.w/w.h-r)<=0.02*r){ win=w; break; } }
+  if(win){ /* the text inside the window, in the window's own coordinates. cropBlob draws the photo turned BACK around
+      the window's centre (v185), so a turned frame's picture is upright and the text stands upright in it — the same
+      arithmetic covers both, and at a=0 it is v533's own formula. */
+    const A=(win.a||0)*Math.PI/180, dx=(rect.x+rect.w/2)-(win.x+win.w/2), dy=(rect.y+rect.h/2)-(win.y+win.h/2);
+    const u=dx*Math.cos(A)+dy*Math.sin(A), v=-dx*Math.sin(A)+dy*Math.cos(A);
+    const tw=rect.w/win.w, th=rect.h/win.h; return {tx:0.5+u/win.w-tw/2, ty:0.5+v/win.h-th/2, tw, th}; }
+  if(Math.abs(r-rect.w/rect.h)<=0.05*r) return {tx:0,ty:0,tw:1,th:1}; /* a split label's picture is its frame */
+  return "nowindow"; }
 async function spotGeom(card,d){
   const z=card.querySelector(".zone1"); if(!z) return null;
   const box=z.querySelector(".picbox"), page=!!(box&&box.classList.contains("page"));
@@ -3415,23 +3484,8 @@ async function spotGeom(card,d){
   if(!ps){ try{ const bm=await createImageBitmap(full); ps={w:bm.width,h:bm.height}; bm.close(); }catch(e){ return null; } if(ps.w&&ps.h){ PICSIZE.set(key,ps); if(PICSIZE.size>40) PICSIZE.delete(PICSIZE.keys().next().value); } }
   const pw=ps&&ps.w, ph=ps&&ps.h; if(!img.isConnected||!pw||!ph) return null;
   const nw=img.naturalWidth, nh=img.naturalHeight; if(!nw||!nh) return null;
-  let tx=f.x, ty=f.y, tw=f.w, th=f.h; /* the text's rectangle as fractions of the picture — the frame itself when the whole photo is shown */
-  if(page||!box){ if(f.a){ markWhy(d,"turned"); return null; } } /* the whole photo, upright: a turned frame's mark would have to be turned with it, and a page front's own region already lights the text (v461) */
-  else { const rect={x:f.x*pw,y:f.y*ph,w:f.w*pw,h:f.h*ph,a:f.a||0,lw:pw,lh:ph}, r=nw/nh;
-    /* WHICH cut of the photo is this picture? v552: each candidate window is rebuilt from the frame and ITS OWN shape
-       compared with the picture's — where v533 compared the picture's shape with the ratio it was cut at. windowRect
-       clamps a window to the photo (a tall sign on a portrait photo) and trims a turned one to it (v333), so the cut
-       very often does not carry the ratio it was made at, and the bare ratio test then gave up on a picture whose
-       window is perfectly derivable. Rebuilding reproduces the clamp and the trim, so those cards are marked too. */
-    let win=null; for(const R of spotRatios()){ const w=windowRect(rect,R); if(Math.abs(w.w/w.h-r)<=0.02*r){ win=w; break; } }
-    if(win){ /* the text inside the window, in the window's own coordinates. cropBlob draws the photo turned BACK around
-        the window's centre (v185), so a turned frame's picture is upright and the text stands upright in it — the same
-        arithmetic covers both, and at a=0 it is v533's own formula. */
-      const A=(win.a||0)*Math.PI/180, dx=(rect.x+rect.w/2)-(win.x+win.w/2), dy=(rect.y+rect.h/2)-(win.y+win.h/2);
-      const u=dx*Math.cos(A)+dy*Math.sin(A), v=-dx*Math.sin(A)+dy*Math.cos(A);
-      tw=rect.w/win.w; th=rect.h/win.h; tx=0.5+u/win.w-tw/2; ty=0.5+v/win.h-th/2; }
-    else if(Math.abs(r-rect.w/rect.h)<=0.05*r){ tx=0; ty=0; tw=1; th=1; } /* a split label's picture is its frame */
-    else { markWhy(d,"nowindow"); return null; } }
+  const tf=textFracs(d,nw,nh,pw,ph,page||!box); if(typeof tf==="string"){ markWhy(d,tf); return null; }
+  const {tx,ty,tw,th}=tf;
   const host=box||z;
   /* v541 (H: "Bei zoomen/schieben muss der Highlight frame im Bild mitwandern"): the marks are drawn in the picture's own
      UN-zoomed geometry and the layer they sit in carries the zoom's transform, so a zoomed picture never needs the marks
@@ -3509,49 +3563,122 @@ function wordSpan(d,x){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):
    the first touch of the pad glides it in onto the character, each character written pans it on to the next, and the
    finished card glides back out for the recap. (b): only while the pad itself shows the character — level 1 and 2, or a
    character with no template, whose pad prints it — never at level 3, where the photo would turn recall into copying.
-   (1): the character's place is v533's estimate (the frame, the line's units) corrected on the photo's own ink, and only a
-   correction that finds both edges earns the tight zoom; the estimate alone gets the loose one, so a guess a little off
-   still shows the character. It rides on v541's glide and v575's geometry, not on the marks, so SPOT_ON stays off. The
+   (1): the character's place is found on the photo's own ink by charBoxes (v618; v617 only nudged the frame's estimate),
+   and only a box it is sure of earns the tight zoom; an unsure box or the bare estimate gets the loose one, so a guess a
+   little off still shows the character. It rides on v541's glide and v575's geometry, not on the marks, so SPOT_ON stays off. The
    finger always wins: a pinch or a wheel on the picture hands the zoom to the hand for the rest of that picture (ZOOM_HAND),
    and from then on it only follows, as v541 did. */
 const ZOOM_AUTO=true, AZ_INK=0.68, AZ_EST=0.5, AZ_MAX=3.5, AZ_MIN=1.15; /* the character's larger side as a share of the box — ink-found and estimated —, and the scale's cap and floor */
-const INKSPAN=new Map(); let LAST_AZ=null; /* the ink's answer per card and character, and the last decision for Diagnostics */
-/* the character's own box on the photo, from the ink: in the line's band, a column is ink when enough of its pixels differ
-   from the band's median colour (textRowExtent's test); each edge of the estimate moves to the nearest gap between
-   characters within AZ_TOL of a character's width. Returns the span in the text's fractions, or null when either edge found
-   no gap or the result is not the size of one character — the estimate then stands. */
-const AZ_TOL=0.4;
-function inkSpan(img,geom,sp){
+let LAST_AZ=null; /* the last decision, for Diagnostics' head line */
+/* EVERY CHARACTER'S OWN BOX, FOUND ON THE INK (v618, H on v617 with a Diagnostics dump: "Er erkennt vieles noch nicht. Die
+   Erkennung der Position der characters im Bild funktioniert noch unzureichend."). v617 took the frame's even split as
+   the truth and let each edge move to a gap within 0.4 of a character — which only works on a TIGHT frame whose line
+   fills it. The frames in the field are rarely that: the AI's box snapped to the ink carries the sign's margins, a
+   second line is shorter than the first and centred, and a single character sits somewhere in a window twice its size.
+   So the ink decides the lines and the frame only says where to look: (1) the text's colour is told from the sign's by
+   Otsu's threshold along the principal axis of the frame's own colours (so red on white, white on blue and gold on red
+   all separate), ink being the minority; (2) the line bands are the rows the ink fills — the n heaviest runs for n lines,
+   so fine print beside the text does not become a line; (3) each band's ink runs whose centre lies in the frame give the
+   line's extent, and (4) the line is cut into exactly as many characters as the card's text has, the cuts chosen
+   together (dynamic programming) to fall on columns with the least ink while each character keeps its share of the
+   line — so a word gap and a character with a gap of its own (北, 川, 小) cannot fool it. A vertical sign (one line, the
+   frame taller than wide) is the same arithmetic turned. Each box says whether it is sure: both cuts clean and the line
+   of a plausible pitch. Returns boxes by position in the text's fractions, or the reason there are none. */
+const CB_LONG=320, CB_INK=0.025;
+function charBoxes(src,nw,nh,g,lines){
   try{
-    const nw=img.naturalWidth, nh=img.naturalHeight; if(!nw||!nh) return null;
-    const TX=geom.tx*nw, TY=geom.ty*nh, TW=geom.tw*nw, TH=geom.th*nh;
-    const cw=TW*sp.w, bandH=TH*sp.h; if(cw<4||bandH<4) return null;
-    const x0=Math.max(0,TX+TW*sp.x-1.5*cw), x1=Math.min(nw,TX+TW*(sp.x+sp.w)+1.5*cw);
-    const y0=Math.max(0,TY+TH*sp.y-0.2*bandH), y1=Math.min(nh,TY+TH*(sp.y+sp.h)+0.2*bandH);
-    const k=Math.min(1,64/(y1-y0)), W=Math.max(8,Math.round((x1-x0)*k)), H=Math.max(8,Math.round((y1-y0)*k));
+    const TX=g.tx*nw, TY=g.ty*nh, TW=g.tw*nw, TH=g.th*nh; if(TW<8||TH<8) return {why:"tiny frame"};
+    const n=Math.max(1,lines.length), first=[...(lines[0]||"")], vert=n===1&&first.length>=2&&TH>TW*1.3;
+    const lh=vert?TW:TH/n, mx=vert?lh*0.3:Math.max(TW*0.06,lh*0.4), my=vert?Math.max(TH*0.06,lh*0.4):lh*0.3;
+    const X0=Math.max(0,TX-mx), X1=Math.min(nw,TX+TW+mx), Y0=Math.max(0,TY-my), Y1=Math.min(nh,TY+TH+my);
+    const k=Math.min(1,CB_LONG/Math.max(X1-X0,Y1-Y0)), W=Math.max(8,Math.round((X1-X0)*k)), H=Math.max(8,Math.round((Y1-Y0)*k));
     const cv=document.createElement("canvas"); cv.width=W; cv.height=H;
-    const ctx=cv.getContext("2d",{willReadFrequently:true}); ctx.drawImage(img,x0,y0,x1-x0,y1-y0,0,0,W,H);
+    const ctx=cv.getContext("2d",{willReadFrequently:true}); ctx.drawImage(src,X0,Y0,X1-X0,Y1-Y0,0,0,W,H);
     const px=ctx.getImageData(0,0,W,H).data;
-    const cy0=Math.round((TY+TH*sp.y-y0)*k), cy1=Math.round((TY+TH*(sp.y+sp.h)-y0)*k); /* the line's own band inside the taller strip */
-    const ch=[[],[],[]]; for(let y=cy0;y<cy1;y++) for(let x=0;x<W;x+=2){ const i=(y*W+x)*4; ch[0].push(px[i]); ch[1].push(px[i+1]); ch[2].push(px[i+2]); }
-    if(!ch[0].length) return null; const m=[median(ch[0]),median(ch[1]),median(ch[2])];
-    const ink=(x,y)=>{ const i=(y*W+x)*4; return Math.abs(px[i]-m[0])+Math.abs(px[i+1]-m[1])+Math.abs(px[i+2]-m[2])>120; };
-    const col=[]; for(let x=0;x<W;x++){ let n=0; for(let y=cy0;y<cy1;y++) if(ink(x,y)) n++; col.push(n); }
-    const quiet=Math.max(1,Math.round((cy1-cy0)*0.03)), gaps=[]; /* runs of columns with (almost) no ink */
-    for(let x=0,g=-1;x<=W;x++){ const q=x<W&&col[x]<quiet; if(q&&g<0) g=x; if(!q&&g>=0){ gaps.push([g,x]); g=-1; } }
-    const ea=(TX+TW*sp.x-x0)*k, eb=(TX+TW*(sp.x+sp.w)-x0)*k, tol=AZ_TOL*cw*k;
-    const near=e=>{ let best=null, bd=Infinity; for(const g of gaps){ const dd=e<g[0]?g[0]-e:e>g[1]?e-g[1]:0; if(dd<bd){ bd=dd; best=g; } } return bd<=tol?best:null; };
-    const ga=near(ea), gb=near(eb); if(!ga||!gb||ga===gb) return null;
-    const a=ga[1], b=gb[0]; if(b<=a) return null;
-    const w=(b-a)/k; if(w<0.55*cw||w>1.5*cw) return null;
-    /* the character's rows: ink rows of its own columns, the run nearest the band's middle, small breaks bridged */
-    const rows=[]; for(let y=0;y<H;y++){ let n=0; for(let x=a;x<b;x++) if(ink(x,y)) n++; rows.push(n>Math.max(1,(b-a)*0.03)); }
-    const mid=Math.round((cy0+cy1)/2), br=Math.round((cy1-cy0)*0.15);
-    const runs=[]; for(let y=0;y<H;y++){ if(!rows[y]) continue; const l=runs[runs.length-1]; if(l&&y-l[1]<=br) l[1]=y+1; else runs.push([y,y+1]); }
-    let best=null, bd=Infinity; for(const u of runs){ const dd=mid<u[0]?u[0]-mid:mid>=u[1]?mid-u[1]+1:0; if(dd<bd){ bd=dd; best=u; } }
-    let yA=cy0, yB=cy1; if(best){ const hh=(best[1]-best[0])/k; if(hh>=0.4*bandH&&hh<=1.4*bandH){ yA=best[0]; yB=best[1]; } }
-    return {x:((a/k+x0)-TX)/TW, w:w/TW, y:((yA/k+y0)-TY)/TH, h:((yB-yA)/k)/TH};
-  }catch(e){ return null; } }
+    const c0=Math.max(0,Math.round((TX-X0)*k)), c1=Math.min(W,Math.round((TX+TW-X0)*k)), r0=Math.max(0,Math.round((TY-Y0)*k)), r1=Math.min(H,Math.round((TY+TH-Y0)*k));
+    /* (1) the principal colour axis of the frame, and Otsu's cut along it */
+    let N=0, m=[0,0,0]; for(let y=r0;y<r1;y++) for(let x=c0;x<c1;x++){ const i=(y*W+x)*4; m[0]+=px[i]; m[1]+=px[i+1]; m[2]+=px[i+2]; N++; }
+    if(N<64) return {why:"tiny frame"}; m=m.map(v=>v/N);
+    const C=[0,0,0,0,0,0]; for(let y=r0;y<r1;y++) for(let x=c0;x<c1;x++){ const i=(y*W+x)*4, a=px[i]-m[0], b=px[i+1]-m[1], c=px[i+2]-m[2]; C[0]+=a*a; C[1]+=a*b; C[2]+=a*c; C[3]+=b*b; C[4]+=b*c; C[5]+=c*c; }
+    let e=[0.58,0.58,0.58]; for(let it=0;it<12;it++){ const f=[C[0]*e[0]+C[1]*e[1]+C[2]*e[2], C[1]*e[0]+C[3]*e[1]+C[4]*e[2], C[2]*e[0]+C[4]*e[1]+C[5]*e[2]], l=Math.hypot(...f)||1; e=f.map(v=>v/l); }
+    const val=new Float32Array(W*H); let lo=Infinity, hi=-Infinity;
+    for(let q=0;q<W*H;q++){ const i=q*4; val[q]=(px[i]-m[0])*e[0]+(px[i+1]-m[1])*e[1]+(px[i+2]-m[2])*e[2]; }
+    for(let y=r0;y<r1;y++) for(let x=c0;x<c1;x++){ const v=val[y*W+x]; if(v<lo) lo=v; if(v>hi) hi=v; }
+    if(hi-lo<24) return {why:"no contrast"};
+    const B=64, hist=new Array(B).fill(0), bin=v=>Math.max(0,Math.min(B-1,Math.floor((v-lo)/(hi-lo)*B)));
+    for(let y=r0;y<r1;y++) for(let x=c0;x<c1;x++) hist[bin(val[y*W+x])]++;
+    let sum=0; for(let b=0;b<B;b++) sum+=b*hist[b]; let wB=0, sB=0, best=-1, cut=B>>1;
+    for(let b=0;b<B;b++){ wB+=hist[b]; if(!wB) continue; const wF=N-wB; if(!wF) break; sB+=b*hist[b]; const mB=sB/wB, mF=(sum-sB)/wF, between=wB*wF*(mB-mF)*(mB-mF); if(between>best){ best=between; cut=b; } }
+    let low=0; for(let b=0;b<=cut;b++) low+=hist[b]; const inkLow=low<=N-low, inkFrac=(inkLow?low:N-low)/N;
+    if(inkFrac<0.02) return {why:"no ink"};
+    let mask=new Uint8Array(W*H); for(let q=0;q<W*H;q++){ const b=bin(val[q]); mask[q]=(inkLow?b<=cut:b>cut)?1:0; }
+    /* a vertical sign is read turned: its column is a line, its characters run down it */
+    let w=W, h=H, a0=c0, a1=c1, b0=r0, b1=r1;
+    if(vert){ const t=new Uint8Array(W*H); for(let y=0;y<H;y++) for(let x=0;x<W;x++) t[x*H+y]=mask[y*W+x]; mask=t; w=H; h=W; a0=r0; a1=r1; b0=c0; b1=c1; }
+    const M=(x,y)=>mask[y*w+x];
+    /* (2) the line bands: runs of inked rows across the frame, the n heaviest */
+    const rp=new Float32Array(h); for(let y=0;y<h;y++){ let s=0; for(let x=a0;x<a1;x++) s+=M(x,y); rp[y]=s/Math.max(1,a1-a0); }
+    const bandH=(b1-b0)/(vert?1:n), gapRows=Math.max(1,Math.round(bandH*0.12)), runs=[];
+    /* the floor every row shares — a sign's side edges or a pole run through all of them, and would join the text to the
+       border above and below it into one band (measured: 会议室 in a framed sign) — is taken off first */
+    let rpBase=Infinity; for(let y=Math.max(0,b0);y<Math.min(h,b1);y++) rpBase=Math.min(rpBase,rp[y]); if(!isFinite(rpBase)) rpBase=0;
+    for(let y=0;y<h;y++){ const v=rp[y]-rpBase; if(v<=CB_INK*0.4) continue; const l=runs[runs.length-1]; if(l&&y-l.b<=gapRows){ l.b=y+1; l.mass+=v; } else runs.push({a:y,b:y+1,mass:v}); }
+    const inFrame=runs.filter(r=>r.b>b0-bandH*0.3&&r.a<b1+bandH*0.3&&r.b-r.a>=bandH*0.25);
+    const nl=vert?1:n; let bands, bandsOk=true;
+    if(inFrame.length>=nl) bands=inFrame.slice().sort((p,q)=>q.mass-p.mass).slice(0,nl).sort((p,q)=>p.a-q.a).map(r=>[r.a,r.b]);
+    else { bandsOk=false; const ys=inFrame.length?[inFrame[0].a,inFrame[inFrame.length-1].b]:[b0,b1]; bands=[]; for(let i=0;i<nl;i++) bands.push([ys[0]+(ys[1]-ys[0])*i/nl, ys[0]+(ys[1]-ys[0])*(i+1)/nl].map(Math.round)); }
+    const out={boxes:[], bands:bandsOk, vert, ink:+inkFrac.toFixed(3)}; let pos=0;
+    const lineList=vert?[first.join("")]:lines;
+    lineList.forEach((ln,li)=>{
+      const chars=[...ln], us=chars.map(ch=>lineUnits(ch)), U=us.reduce((p,q)=>p+q,0)||1, [y0,y1]=bands[li]||[b0,b1], bh=Math.max(1,y1-y0);
+      const cp=new Float32Array(w); for(let x=0;x<w;x++){ let s=0; for(let y=y0;y<y1;y++) s+=M(x,y); cp[x]=s/bh; }
+      /* a sign's own border or a pole: a narrow run of columns inked through the whole band is a bar, not a stroke — no
+         character has one, and left in it stretched the line to the border (measured: 会议室 in a framed sign, 1 of 3) */
+      { let base=Infinity; for(let x=Math.max(0,a0);x<Math.min(w,a1);x++) base=Math.min(base,cp[x]); if(isFinite(base)&&base>0) for(let x=0;x<w;x++) cp[x]=Math.max(0,cp[x]-base); } /* an underline's share, the same way */
+      for(let x=0;x<w;){ if(cp[x]<=CB_INK){ x++; continue; } let e=x, t=0; while(e<w&&cp[e]>CB_INK){ t+=cp[e]; e++; } if(e-x<0.25*bh&&t/(e-x)>0.92) for(let q=x;q<e;q++) cp[q]=0; x=e; }
+      /* (3) the line's extent: its ink runs whose centre is inside the frame */
+      const gapCols=Math.max(1,Math.round(bh*0.9)), cr=[];
+      for(let x=0;x<w;x++){ if(cp[x]<=CB_INK) continue; const l=cr[cr.length-1]; if(l&&x-l.b<=gapCols) l.b=x+1; else cr.push({a:x,b:x+1}); }
+      const mine=cr.filter(r=>(r.a+r.b)/2>=a0-bh*0.2&&(r.a+r.b)/2<=a1+bh*0.2);
+      const put=(j,bx)=>{ out.boxes[pos+j]=bx; };
+      if(!mine.length){ out.why=out.why||"no ink on a line"; pos+=chars.length; return; }
+      const L=mine[0].a, R=mine[mine.length-1].b, p=(R-L)/U, ratio=p/bh, sane=ratio>0.55&&ratio<2.6;
+      /* (4) the cuts: least ink on the cut, each character near its share of the line */
+      const K=chars.length, cum=[0]; us.forEach(u=>cum.push(cum[cum.length-1]+u));
+      const cutsAt=[L]; let costs=[0];
+      if(K>1){
+        const cand=[]; for(let j=1;j<K;j++){ const ideal=L+p*cum[j], span=Math.max(2,0.5*p*Math.min(us[j-1],us[j])), c=[]; for(let x=Math.max(L+1,Math.round(ideal-span));x<=Math.min(R-1,Math.round(ideal+span));x++) c.push(x); if(!c.length) c.push(Math.round(ideal)); cand.push(c); }
+        const seg=(a,b,u)=>{ const d=((b-a)-p*u)/(p*u); return d*d; };
+        let prev=[{x:L,cost:0,from:-1}]; const hist=[];
+        for(let j=0;j<K-1;j++){ const cur=cand[j].map(x=>{ let bb=null; prev.forEach((q,qi)=>{ if(x<=q.x) return; const c=q.cost+seg(q.x,x,us[j])+4*cp[x]; if(!bb||c<bb.cost) bb={x,cost:c,from:qi}; }); return bb||{x,cost:Infinity,from:0}; }); hist.push(prev); prev=cur; }
+        let end=null; prev.forEach((q,qi)=>{ const c=q.cost+seg(q.x,R,us[K-1]); if(!end||c<end.cost) end={cost:c,qi}; });
+        /* walk the choices back */
+        let layer=prev, idx=end.qi; const xs=new Array(K-1);
+        for(let j=K-2;j>=0;j--){ const q=layer[idx]; xs[j]=q.x; idx=q.from; layer=hist[j]; }
+        xs.forEach(x=>{ cutsAt.push(x); costs.push(cp[x]); });
+      }
+      cutsAt.push(R); costs.push(0);
+      for(let j=0;j<K;j++){
+        let a=cutsAt[j], b=cutsAt[j+1]; while(a<b-1&&cp[a]<=CB_INK) a++; while(b>a+1&&cp[b-1]<=CB_INK) b--;
+        const rows=[]; for(let y=Math.max(0,Math.round(y0-bh*0.2));y<Math.min(h,Math.round(y1+bh*0.2));y++){ let s=0; for(let x=a;x<b;x++) s+=M(x,y); if(s>Math.max(0.5,(b-a)*0.02)) rows.push(y); }
+        const ya=rows.length?rows[0]:y0, yb=rows.length?rows[rows.length-1]+1:y1;
+        const clean=costs[j]<=0.1&&costs[j+1]<=0.1, fits=(b-a)>=0.3*p*us[j]&&(b-a)<=1.35*bh*Math.max(0.6,us[j])&&(yb-ya)>=0.4*bh; /* a box much wider than the line is tall holds two characters: the card's text is short of the photo's (a reading that lost some), and the cuts only look clean */
+        /* back to the picture's pixels, then to the text's fractions */
+        let bx={x:a,y:ya,w:b-a,h:yb-ya}; if(vert) bx={x:bx.y,y:bx.x,w:bx.h,h:bx.w};
+        const X=X0+bx.x/k, Y=Y0+bx.y/k;
+        put(j,{x:(X-TX)/TW, y:(Y-TY)/TH, w:bx.w/k/TW, h:bx.h/k/TH, ok:sane&&clean&&fits&&bandsOk});
+      }
+      if(!sane) out.why=out.why||"odd pitch "+ratio.toFixed(2);
+      pos+=chars.length;
+    });
+    return out;
+  }catch(e){ return {why:"error "+(e&&e.message||e)}; } }
+/* the zoom's own record (v618): the last ZLOG_MAX decisions, each with the character, how its place was found and why
+   not better — Diagnostics prints them, since v617 kept only the last one and the dump that came back said nothing */
+const ZLOG=[], ZLOG_MAX=30; const zlog=o=>{ ZLOG.push({at:Date.now(),...o}); while(ZLOG.length>ZLOG_MAX) ZLOG.shift(); LAST_AZ=ZLOG[ZLOG.length-1]; };
+const CBOX=new Map(); /* the boxes per card, frame and photo */
+const cbKey=d=>d.id+"|"+(d.shot||"")+"|"+JSON.stringify(d.frame||0)+"|"+(d.c||"");
+const spotLines=d=>d.kind==="sign"?String(d.c||"").split("\n"):frontLines(d); /* wordSpan's own lines, so a box's position is the pad's */
 async function autoZoom(card,d,c,tg,st,cur){
   if(!ZOOM_AUTO||S.mode!=="study"||S.fullPic||S.peek) return;
   await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))); /* after attachPicZoom's own restore of the zoom this picture had */
@@ -3560,17 +3687,18 @@ async function autoZoom(card,d,c,tg,st,cur){
   else if(!st.zoomGo&&z.s<=1) return; /* the card opens on the whole picture; the pad's first touch starts it */
   const allDone=!tg.some((x,j)=>x.w&&!st.done.has(j));
   const level=cur&&cur.w?padLevel(c,cur,st):3, printed=!!cur&&(!STROKE_OF.has(cur.glyph)||level<3);
-  if(allDone||!printed||S.cueBig!=="pic"){ if(z.auto&&z.s>1&&S.cueBig==="pic"){ z.focus(1); LAST_AZ={at:Date.now(),ch:cur&&cur.ch,how:allDone?"out, card done":"out, level 3"}; } return; }
-  const geom=await spotGeom(card,d); if(!geom||!card.isConnected||S.pad!==st) { if(!geom) LAST_AZ={at:Date.now(),ch:cur.ch,how:"no place on the photo"}; return; }
+  if(allDone||!printed||S.cueBig!=="pic"){ if(z.auto&&z.s>1&&S.cueBig==="pic"){ z.focus(1); zlog({c:d.c,ch:cur&&cur.ch,how:allDone?"out, card done":"out, level 3"}); } return; }
+  const geom=await spotGeom(card,d); if(!geom||!card.isConnected||S.pad!==st) { if(!geom) zlog({c:d.c,ch:cur.ch,how:"no place on the photo",why:MARKW.get(d.id)||""}); return; }
   const est=wordSpan(d,{word:cur.ch,wstart:cur.pos}); if(!est) return;
-  const ik=d.id+":"+cur.pos+":"+(d.shot||"")+":"+JSON.stringify(d.frame||0);
-  let sp=INKSPAN.get(ik); if(sp===undefined){ sp=inkSpan(geom.img,geom,est); INKSPAN.set(ik,sp); if(INKSPAN.size>300) INKSPAN.delete(INKSPAN.keys().next().value); }
-  const r=geom.rectOf(sp||est), bw=box.clientWidth, bh=box.clientHeight; if(!r.w||!r.h||!bw||!bh) return;
+  const ck=cbKey(d); let cb=CBOX.get(ck);
+  if(!cb){ cb=charBoxes(geom.img,geom.img.naturalWidth,geom.img.naturalHeight,geom,spotLines(d)); CBOX.set(ck,cb); if(CBOX.size>60) CBOX.delete(CBOX.keys().next().value); }
+  const found=cb.boxes&&cb.boxes[cur.pos], sp=found||est, how=found?(found.ok?"ink":"ink, unsure"):"estimate";
+  const r=geom.rectOf(sp), bw=box.clientWidth, bh=box.clientHeight; if(!r.w||!r.h||!bw||!bh) return;
   const cx=r.x+r.w/2, cy=r.y+r.h/2;
-  if(ZOOM_HAND===key){ z.follow(cx,cy); return; }
-  let s=(sp?AZ_INK:AZ_EST)*Math.min(bw/r.w,bh/r.h); s=Math.min(AZ_MAX,s); if(s<AZ_MIN) s=1;
+  if(ZOOM_HAND===key){ z.follow(cx,cy); zlog({c:d.c,ch:cur.ch,how:how+", hand"}); return; }
+  let s=(found&&found.ok?AZ_INK:AZ_EST)*Math.min(bw/r.w,bh/r.h); s=Math.min(AZ_MAX,s); if(s<AZ_MIN) s=1;
   z.focus(s,cx,cy);
-  LAST_AZ={at:Date.now(),ch:cur.ch,how:sp?"ink":"estimate",s:+s.toFixed(2),lv:level};
+  zlog({c:d.c,ch:cur.ch,how,why:found&&found.ok?"":(cb.why||(found?"cut not clean":"")),s:+s.toFixed(2),lv:level});
 }
 async function spotChar(card,d,cur){
   card.querySelectorAll(".spot").forEach(e=>e.remove()); const z=card.querySelector(".zone1"); if(z) z.classList.remove("spotting");
