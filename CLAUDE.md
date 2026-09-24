@@ -59,7 +59,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v620, 2026-09-24)
+## Current state (PWA v621, 2026-09-24)
 **The app is called 识字 Shízì** (v608, H: "Return the name to shizi", then "识字 Shízì" over the full v600 name; v601–v607
 it was 街字 Jiēzì, and Zeichentrainer stays dropped). The title, manifest `name`/`short_name` (识字 Shízì / 识字), header
 logo, About, share text, `privacy.html`, the owner's dumps and every shared file (`shizi-YYYY-MM-DD.json.txt`,
@@ -70,7 +70,7 @@ jiezi- or shizi- — imports). Not yet field-checked: Android swaps a home-scree
 the manifest, which can take a day.
 
 **Recent state worth carrying in the head** (each has its full entry in the archive):
-- **v620** — a **multicard's regions snap onto their texts** at display (`snapRegion`/`refineShot`, memory only, nothing stored): only when the ink search is sure of 60 % and the result stays on the frame; the Zoom check draws the newest 8 multicards and its **Data** button shares the full-size pictures — the harness from the sheet's 300 px tiles disagreed with the phone.
+- **v620** — a **multicard's regions snap onto their texts** at display (`snapRegion`/`refineShot`, memory only, nothing stored): only when the ink search is sure of 60 % and the result stays on the frame; the Zoom check draws the newest 8 multicards and its **Data** button shares the pictures as PNG sheets with frames and texts in the pixels (v621: the chat cuts a text file at 300 000 bytes) — the harness from the sheet's 300 px tiles disagreed with the phone.
 - **v617–v619** — the Learn photo **zooms onto the character being written** (`autoZoom`); `charBoxes` searches the layout (v619: which ink lines carry the card's characters, horizontal or vertical, by pitch fit, a size prior and the card's own breaks) and cuts each line into exactly its characters (DP on least-ink cuts); judged on the 24 photos of H's own Zoom check sheet (58 of 124 sure, ~52 right); only while the pad shows the character (levels 1–2); Diagnostics logs every decision and **Owner tools → Zoom check** shares the boxes drawn on H's newest 24 photo cards.
 - **v611** — **anti-invention**: both prompts carry a "Never invent" rule and an `unsure` field, the "well-known name"
   nudges are gone, and `aiDoubt` flags a card whose AI pinyin disagrees with pinyin-pro's in-word reading (`pyDictOff`,

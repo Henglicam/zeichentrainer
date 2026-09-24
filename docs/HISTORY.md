@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v620
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v621
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,20 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v621, 2026-09-24)
+- **The Zoom check's Data travels as pictures (v621, H sent v620's sheet and its Data file):** the file arrived cut at
+  exactly 300 000 bytes — the chat's limit for a text attachment — with only the first card in it, while every PNG sheet
+  H sent came through whole and lossless (up to 5 MB). So `shareZoomData` lays the pictures out on PNG sheets
+  (`ZD_W` 1600 × `ZD_H` 1700, about the 2.7 megapixels of the sheet that arrived; a card's cut at most `ZD_CARD` 700 px, a
+  multicard's photo at most `ZD_PAGE` 1200 — the detector reads every search at 320 px, so nothing it sees is lost) and
+  writes the frames and texts into the pixels: the first rows carry a 4-byte length and the UTF-8 JSON, three bytes a
+  pixel. As many sheets as needed, all in one share. **Measured:** encoded in the app and decoded by the new harness
+  `zd.js`, a multicard reproduces its 5 of 6 snapped regions and three cards their 13 sure / 3 unsure; ten cards spread
+  over three sheets decode to the same 41 / 3 as the app computed. **What v620's sheet from the phone said, for the record:**
+  the zoom unchanged at 52 sure; the multicards 6 of 57 regions snapped (脑机接口主题展 1 of 1, the 汤面系列 menu 5 of 5, the
+  menu boards, the tenant directory, the dance schedule and 虞西苏's plates none) — why is the next round's question, on the
+  phone's own pictures. No learner-facing change.
 
 ## Current state (PWA v620, 2026-09-24)
 - **A multicard's regions snap onto their texts (v620, H: "Können wir diese Erkenntnisse bitte auch auf die Multicards
