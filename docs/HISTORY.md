@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v614
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v615
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,17 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v615, 2026-09-24)
+- **The open card's neighbour rides in where it lands (v615, H: "Jetzt springen die Karten in der vertikalen beim swipe
+  (Cards View)").** `detailSwipe`'s peer handed back `detailCardHTML(nd,true)` as a bare string, so `wireSwipe` built it
+  as a plain `.card.peer` — not the open card's `.card.study.detail` — and it took the plain card's padding: its photo
+  rode in **10 px lower** than where the card lands and hopped up at the snap. Measured the same on v600, so not a
+  regression of today's versions; H saw it now. The peer now carries `cls:"study detail"`. Measured at 390 × 910 with
+  touch swipes across four cards (a text-only card, square photos, a 3:2 photo): the photo's top in the neighbour and
+  after landing differ by 10 px on v614 and v600, by 0 on v615 (three checks flip); every block above "Whole card" sits at
+  the same offset in both. What still grows after landing is the fold's own description line ("Explaining …", v586),
+  at the card's foot. **Not yet field-checked.**
 
 ## Current state (PWA v614, 2026-09-24)
 - **A zoomed picture no longer keeps a finger the swipe took (v614, H: "Card Swipe bei reingezoomtem Bild muss auch im

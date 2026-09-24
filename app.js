@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=614; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=615; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,6 +671,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v615","swipe: no vertical jump"],
   ["cards","v614","zoomed photo: pull on to swipe"],
   ["learn","v613","Test card, then Learn tab: session"],
   ["learn","v612","unfolded: Show me inside the pad"],
@@ -4893,7 +4894,7 @@ function detailSwipe(list,li,main){
   return {n:list.length, idx:li,
     peer:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return null; /* the deck is read live, never the captured list (v445) */
       const fp=S.fullPic; S.fullPic=false;
-      const h=isPage(nd)?{html:pageBodyHTML(nd),cls:"bare"}:detailCardHTML(nd,true); /* no swipe hint on a page: its line is a count, and the ordinary detail's hint already teaches the gesture (v226 takes hints away after 20 reviews anyway) */
+      const h=isPage(nd)?{html:pageBodyHTML(nd),cls:"bare"}:{html:detailCardHTML(nd,true),cls:"study detail"}; /* v615 (H: "Jetzt springen die Karten in der vertikalen beim swipe (Cards View)"): the neighbour wears the open card's own classes — as a bare .card it took the plain card's padding, and its photo rode in 10 px lower than where it lands, then hopped up at the snap (measured the same on v600) */ /* no swipe hint on a page: its line is a count, and the ordinary detail's hint already teaches the gesture (v226 takes hints away after 20 reviews anyway) */
       S.fullPic=fp; return h; },
     go:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return; if(LIST_CARD) LIST_CARD=nd.id;
       /* the card you swipe to is not the one you came into: its back button would otherwise claim a way back that
