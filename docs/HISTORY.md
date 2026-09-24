@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 街字 Jiēzì (识字 Zeichentrainer until v601), v1–v605
+# HISTORY.md — the full record of 街字 Jiēzì (识字 Zeichentrainer until v601), v1–v606
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,25 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v606, 2026-09-24)
+- **A zoomed picture hands the stroke to the swipe at its edge (v606, H: "Wenn ich in ein Bild reingezoomt habe und dann
+  zur nächsten Karte swipen möchte, kann ich das nicht. Dann verschiebe ich nur das Bild bis zum Rand. Bitte finde eine
+  Lösung.").** Since v514 a zoomed box stops every pointer event at itself (touch-action none, `stopPropagation`), so a
+  one-finger drag was always a pan and the carousel (v417) never saw it — pulled to the edge, the picture simply stood.
+  The photo-gallery answer: in the one-finger pan, what `apply()`'s clamp refuses of a horizontal move is counted (`ovx`);
+  once the finger is `SW_SLOP` 12 px past the edge, in a stroke more sideways than vertical, the pointer leaves the zoom
+  and `card._swipeFrom(e,ovx)` (new in `wireSwipe`) starts the swipe with its origin set back by the overflow, so the card
+  follows at once and those pixels count towards `SW_MIN`. Any move that does shift the picture sideways resets the count,
+  so a pan inside the picture never becomes a swipe; a stroke pulled past the edge by less than `SW_MIN` springs back and
+  the zoom stays. Learn and the open card both, since both pair `attachPicZoom` with `wireSwipe`.
+  - **Measured** (headless Chromium 390, CDP touch events, zoomed ×2.36 by wheel): pan 60 px inside → pans, same card
+    `[guard]`; drag up 250 → same card `[guard]`; one stroke to the edge and on → next card; the other way → previous
+    card; two pans to the edge, then a fresh stroke from there → next card; 250 px (≈32 past the edge) → springs back,
+    still zoomed `[guard]`; unzoomed swipe `[control]`; the open card under Cards → next card in the list. On v605 the
+    four swipe checks flip (the picture stops at tx −437, H's screen), the guards pass on both.
+  - **Pre-existing, named:** a tap on a zoomed picture does not swap the halves (the same on v605).
+  - **Not yet field-checked:** a `TO_TEST` line and a `WHATS_NEW` line.
 
 ## Current state (PWA v605, 2026-09-24)
 - **No dictionary meaning is cut any more (v605, H with a screenshot of his 徐梓恒 card, the line over the pad reading
