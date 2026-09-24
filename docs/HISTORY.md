@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 街字 Jiēzì (识字 Zeichentrainer until v601), v1–v604
+# HISTORY.md — the full record of 街字 Jiēzì (识字 Zeichentrainer until v601), v1–v605
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,29 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v605, 2026-09-24)
+- **No dictionary meaning is cut any more (v605, H with a screenshot of his 徐梓恒 card, the line over the pad reading
+  "梓 zǐ Chinese catalpa, a tree that serves as a symbol of one's hometown and whose wood is used to make vari…":
+  "Bitte keinen Text abschneiden").** Nothing in the app cut it: `vendor/cedict.tsv.gz` itself held the gloss cut at
+  **120 characters** with a "…", a cap the file had carried since before `tools/cedict-readings.py` (which kept it as
+  `CAP`, "the cap the file has always had"). **3,394 glosses in 3,393 of 115,312 words** were cut mid-word, and every
+  screen that shows a dictionary meaning — the word line, the parts row, a prefilled meaning — showed them cut.
+  - **The fix is in the data, not the layout:** only those glosses were restored, from the same dump the tool names
+    (cedict-json 1.3.20251213), so no other line changed (diffed: 3,394 lines = the header + 3,393 words, 0 prefix
+    mismatches). The cut sense is completed from the word's own sense that begins with it, trying the longest tail first
+    since a CEDICT sense can itself hold "; " (3,338); where the cut fell exactly at a sense's end, that sense and the
+    one after it (56). The four "…" left in the file are CEDICT's own placeholders ("isn't it truly …?"). The file grows
+    2 535 496 → 2 586 332 bytes; the longest value is now 604 characters.
+  - **Every phone fetches it once more:** the header went `#cedict v2` → `#cedict v3` with `DICT_HEAD`, the v573 mechanism
+    that drops a cached copy whose first line does not match and fetches it past the HTTP cache — 2.5 MB once, not the
+    reader's 15 MB. `tools/cedict-readings.py` no longer cuts and writes v3.
+  - **Measured** (headless Chromium, 390 en and 360 de, the vendor cache seeded with the OLD file, a 徐梓恒 card in the
+    text state with 梓 tapped): v605 replaces the cached file and the line reads "…used to make various items", no "…",
+    not clipped (`scrollHeight` ≤ `clientHeight`), the pad under the cue; v604 reproduces H's screen exactly ("vari…").
+  - **Not touched, named:** a card whose saved meaning was PREFILLED from the cut dictionary keeps its own "…" (the fix
+    reaches what is looked up, not what was stored); and the finished card's recap still clamps its meaning to four
+    lines, the character's to two (v571), by design, with an ellipsis. **Not yet field-checked.**
 
 ## Current state (PWA v604, 2026-09-24)
 - **The Traditional chip is a per-card switch to simplified (v604, H: "Bitte in der Lernkarte auch die Möglichkeit geben,

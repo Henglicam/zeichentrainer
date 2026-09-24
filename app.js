@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=604; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=605; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,6 +671,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v605","梓: meaning whole, no …"],
   ["learn","v604","tap Traditional: simplified card"],
   ["learn","v603","traditional card: chip on photo"],
   ["learn","v602","Learn: no marks on the photo"],
@@ -5512,7 +5513,7 @@ async function loadScript(src){
   });
 }
 /* CC-CEDICT (simplified -> English gloss), lazily loaded from ./vendor */
-const DICT_HEAD="#cedict v2"; /* the file's own first line, and the only way to tell a cached v571 copy from this one */
+const DICT_HEAD="#cedict v3"; /* the file's own first line, and the only way to tell a cached older copy from this one — v2 at v573 (a reading per sense), v3 at v605 (no gloss cut at 120 characters any more) */
 /* gzip magic bytes — if a server or proxy already decompressed, treat the body as plain text */
 async function dictText(res){ const buf=new Uint8Array(await res.arrayBuffer());
   return (buf[0]===0x1f&&buf[1]===0x8b)
