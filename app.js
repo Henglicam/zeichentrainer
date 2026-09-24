@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=621; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=622; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1176,8 +1176,20 @@ async function shareZoomData(){
     for(const it of sh.items) g.drawImage(it.p.src,it.x,top+it.y,it.w,it.h);
     const blob=await new Promise(res=>cv.toBlob(res,"image/png")); files.push(new File([blob],`shizi-zoomdata-${si+1}.png`,{type:"image/png"}));
   }
-  if(navigator.canShare && navigator.canShare({files})){ try{ await navigator.share({files,title:"shizi-zoomdata"}); return; }catch(err){ if(err&&err.name==="AbortError") return; logErr("share",err); } }
-  noteSheet(t("Sharing is not available here."));
+  /* v622 (H's screenshot of v621: "Sharing is not available here." on Data): Android opens the share sheet only within a
+     few seconds of a tap, and drawing and compressing half a dozen 2.7-megapixel PNGs outlasts that — the one-sheet Share
+     never did. So the pictures are made first and a second tap sends them, from inside its own click; and a phone that
+     will not take them all at once gets them three at a time, a tap each. What failed is said, not a generic line. */
+  const B=navigator.canShare&&navigator.canShare({files})?files.length:3, mbAll=(files.reduce((q,f)=>q+f.size,0)/1048576).toFixed(1);
+  for(let from=0;from<files.length;){
+    const part=files.slice(from,from+B), mb=(part.reduce((q,f)=>q+f.size,0)/1048576).toFixed(1);
+    const go=await askSheet({title:"Zoom data ready",text:`${files.length} picture${files.length===1?"":"s"}, ${mbAll} MB.${part.length<files.length?(part.length===1?` This tap sends picture ${from+1}.`:` This tap sends ${from+1} to ${from+part.length}.`):""}`,ok:"Share",danger:false});
+    if(!go) return;
+    if(!(navigator.canShare&&navigator.canShare({files:part}))){ noteSheet(`This phone will not share these pictures (${part.length} file${part.length===1?"":"s"}, ${mb} MB).`); return; }
+    try{ await navigator.share({files:part,title:"shizi-zoomdata"}); }
+    catch(err){ if(err&&err.name==="AbortError") return; logErr("share",err); noteSheet(`Sharing failed: ${(err&&err.name)||""} ${(err&&err.message)||err}`); return; }
+    from+=part.length;
+  }
 }
 async function shareDiag(){
   const text=diagText(), name="shizi-diagnostics.txt", file=new File([text],name,{type:"text/plain"});

@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v621
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v622
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,21 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v622, 2026-09-24)
+- **Data shares from its own tap (v622, H's screenshot of v621: "Sharing is not available here." under Zoom check → Data):**
+  Android opens the share sheet only within a few seconds of a tap (transient user activation), and v621 drew and compressed
+  the PNG sheets first — on the phone longer than that, so `navigator.share` was refused and v621 fell through to its generic
+  line. The one-sheet Share never outlasted it. **Fix:** `shareZoomData` builds the sheets, then opens an `askSheet` — "Zoom
+  data ready, N pictures, X MB" — whose Share tap calls `navigator.share` from inside its own click; a phone whose
+  `canShare` refuses all files at once gets them three at a time, one tap each ("This tap sends 1 to 3", "picture 4"); a
+  refusal or failure now names itself (`This phone will not share these pictures (n files, x MB)`, `Sharing failed: <name>
+  <message>`) instead of the generic line, per the rule that the app says what actually happened. **Measured** with a
+  stubbed share that throws NotAllowedError without a live activation, like Android: at 20× CPU throttling v621 built for
+  11.7 s and ended on "Sharing is not available here." with the share refused — H's screenshot, reproduced — while v622 built
+  for 12.7 s, waited, and shared all four sheets from the Share tap given 6 s later; with a phone that takes at most three
+  files it asked twice (1 to 3, then picture 4). The session was in auto mode, whose safety check blocked every edit after
+  v621 for reasons outside the change; H switched it to Accept edits and the fix went in by hand. No learner-facing change.
 
 ## Current state (PWA v621, 2026-09-24)
 - **The Zoom check's Data travels as pictures (v621, H sent v620's sheet and its Data file):** the file arrived cut at
