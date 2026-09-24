@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=625; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=626; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,7 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["learn","v619","zoom finds the right line"],
+  ["learn","v626","zoom never tight on a wrong spot"],
   ["cards","v620","multicard frames on their text"],
   ["learn","v616","recap reading = card after crop"],
   ["cards","v615","swipe: no vertical jump"],
@@ -3771,12 +3771,15 @@ function charBoxes(src,nw,nh,g,lines){
           const L=R[i].a, Rr=R[j].b, r=(Rr-L-extra)/(u*o.bh); let c=Math.abs(Math.log(r/CB_PITCH))+(0.8*near+0.2*far)/o.total;
           if(!bestL||c<bestL.c) bestL={c,L,R:Rr,r}; } }
         const res=bestL||{c:9}; o.memo.set(key,res); return res; };
+      /* v626 (H's full-size Zoom data): a band that is ink nearly wall to wall is a sign's dark edge or a strip under it,
+         not a line of text — 货梯保护板 lost its line to the black strip below 请勿损坏 */
+      const solid=bd=>{ let s=0; for(let y=bd.a;y<bd.b;y++) s+=v[y]; return s/Math.max(1,bd.b-bd.a)>0.7; };
       /* the size prior: the card's text is the text the reader and the AI framed, and that is the biggest text in the frame
          far more often than not — on H's sheet the small lines that fitted by chance were CREDIT CARD under 招商银行, the
          fine print under 雀巢脆脆鲨 and the UN of ALIYUN.COM. A line is measured against the tallest band that looks like a
          line of text at all (some count of characters fits it well). */
-      let Hmax=0; bands.forEach((bd,bi)=>{ const bh=bd.b-bd.a; if(bh<=Hmax||bd.gf>0.1) return; /* two lines glued are not one tall line */ for(let u=1;u<=Math.min(K,24);u++){ if(lineCost(bi,u).c<0.3){ Hmax=bh; break; } } });
-      const sizeCost=bi=>{ const bd=bands[bi], bh=bd.b-bd.a; return (Hmax>bh?0.45*Math.log(Hmax/bh):0)+2*Math.max(0,bd.gf-0.08); };
+      let Hmax=0; bands.forEach((bd,bi)=>{ const bh=bd.b-bd.a; if(bh<=Hmax||bd.gf>0.1||solid(bd)) return; /* two lines glued are not one tall line */ for(let u=1;u<=Math.min(K,24);u++){ if(lineCost(bi,u).c<0.3){ Hmax=bh; break; } } });
+      const sizeCost=bi=>{ const bd=bands[bi], bh=bd.b-bd.a; return (Hmax>bh?0.45*Math.log(Hmax/bh):0)+2*Math.max(0,bd.gf-0.08)+(solid(bd)?2:0); };
       /* the ways to spread the characters: the card's own lines, and every split into up to four lines (fewer for long texts) */
       const groupings=[cardBreaks.slice()], maxM=Math.min(4,bands.length,K), seen=new Set([cardBreaks.join(",")]);
       const add=gs=>{ const kk=gs.join(","); if(!seen.has(kk)){ seen.add(kk); groupings.push(gs); } };
@@ -3815,15 +3818,24 @@ function charBoxes(src,nw,nh,g,lines){
         xs.forEach(x=>{ cutsAt.push(x); costs.push(cp[x]); });
       }
       cutsAt.push(Rx); costs.push(0);
+      /* v626 (H's full-size Zoom data, the four ways a box was sure and wrong): a line is sure only when every Chinese
+         character on it looks like one. The ALIYUN logo taken for 阿 and 景东街 shifted by one left boxes of 95 and 160
+         px side by side; 出租 stacked on its phone number is twice as wide as tall; the building's columns beside
+         违法停车 are tall slivers; a solid block is no character. One bad box doubts its whole line, whose cuts it shares. */
+      const wid=[]; let odd=false;
       for(let j=0;j<Kg;j++){
         let a=cutsAt[j], b=cutsAt[j+1]; while(a<b-1&&cp[a]<=CB_INK) a++; while(b>a+1&&cp[b-1]<=CB_INK) b--;
         const rows=[]; for(let y=Math.max(0,Math.round(bd.a-bh*0.15));y<Math.min(L.h,Math.round(bd.b+bh*0.15));y++){ let s=0; for(let x=a;x<b;x++) s+=L.M(x,y); if(s>Math.max(0.5,(b-a)*0.02)) rows.push(y); }
         const ya=rows.length?rows[0]:bd.a, yb=rows.length?rows[rows.length-1]+1:bd.b;
         const clean=costs[j]<=0.1&&costs[j+1]<=0.1, fits=(b-a)>=0.3*p*us[j]&&(b-a)<=1.35*bh*Math.max(0.6,us[j])&&(yb-ya)>=0.4*bh; /* a box much wider than the line is tall holds two characters (v618) */
+        if(CJK.test(chars[st+j])&&us[j]>=0.9){ let s=0; for(let y=ya;y<yb;y++) for(let x=a;x<b;x++) s+=L.M(x,y); const asp=(b-a)/Math.max(1,yb-ya), dens=s/Math.max(1,(b-a)*(yb-ya));
+          wid.push(b-a); if(asp<0.62||asp>1.7||dens>0.92) odd=true; }
         let bx={x:a,y:ya,w:b-a,h:yb-ya}; if(L.vert) bx={x:bx.y,y:bx.x,w:bx.h,h:bx.w};
         const X=X0+bx.x/k, Y=Y0+bx.y/k;
         out.boxes[st+j]={x:(X-TX)/TW, y:(Y-TY)/TH, w:bx.w/k/TW, h:bx.h/k/TH, ok:sane&&clean&&fits};
       }
+      if(wid.length>1&&Math.max(...wid)>1.5*Math.min(...wid)) odd=true;
+      if(odd){ for(let j=0;j<Kg;j++) out.boxes[st+j].ok=false; out.why=out.why||"odd shapes"; }
       if(!sane) out.why=out.why||"odd pitch "+lc.r.toFixed(2);
       st=en;
     });
