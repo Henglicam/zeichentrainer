@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v626
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v627
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -39,7 +39,17 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
-## Current state (PWA v626, 2026-09-24)
+## Current state (PWA v627, 2026-09-24)
+- **The Zoom data carries what made each multicard (v627, H's "Go" on finding each text's place when the multicard is
+  made):** v626's record found that 23 of 57 texts have no place of their own, but the data held only the frames — not
+  the AI's per-label boxes, not the reading's steps — so why the split fell back to the whole picture could only be
+  guessed, and the rule is that no heuristic is tuned against numbers the phone did not send (v384). So Data now puts
+  into each multicard's entry its reading record (`readRow`: steps and numbers, while Diagnostics still holds it — the
+  ring keeps a hundred photos) and the AI exchanges of the `ZD_AI_MS` 4 minutes after its reading began (request and raw
+  reply, never a key), and the photo itself at its own size (`ZD_PAGE` 1600, was 1200), so a session can replay the
+  split on H's own photo with the model's own answer. Checked on the multicard fixture: the seeded record and the reply
+  inside the window come out in the PDF, one an hour old does not, the page is 1600×1200, pdf.js opens it. The fix
+  itself is the next version, after H's next Data.
 - **The zoom is sure only where the characters look like characters (v626, first use of H's full-size Zoom data —
   `shizi-zoomdata-1.pdf`, 32 pictures, v625):** run over H's own pictures, the harness now agrees with the phone on the
   multicards exactly (6 of 57 snapped) and on the cards within the sheet's 700 px downscale (58 sure against the phone's 52).
