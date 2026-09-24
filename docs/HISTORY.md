@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v622
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v623
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,20 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v623, 2026-09-24)
+- **The Zoom data goes as JPEG sheets and one small PNG (v623, H's screenshot of v622: "Sharing failed: NotAllowedError
+  Failed to execute 'share' on 'Navigator': Permission denied" — from the Share tap itself):** v622's second tap worked (the
+  activation was live), and v622's new message said what the refusal was, which is exactly what it was built for: Chrome
+  refuses a share whose files are too many or too large in total (a count of ten; a size limit I believe is 50 MB — not
+  confirmed). Six or seven 2.7-megapixel PNGs of photographs are tens of megabytes. So the pictures travel as **JPEG
+  sheets** (`ZD_Q` 0.9; a tenth of the size, and the phone's own cuts are JPEGs already) and the frames and texts as **one
+  small PNG**, `shizi-zoomdata-0.png` (512 px wide), whose pixels carry the JSON for every sheet by file name — lossless only
+  where it must be. A tap sends at most `ZD_TAP_FILES` 8 files and `ZD_TAP_MB` 15 MB; more asks for another tap.
+  **Measured** with the share stub now also refusing like Chrome (more than ten files or over a size limit, scaled to the
+  test deck at 1.5 MB): v622 ends on H's exact "Sharing failed: NotAllowedError … Permission denied" with nothing shared;
+  v623 makes the same sixteen cards 0.4 MB instead of 2.1 MB and shares them in one tap, and the rewritten decoder `zd.js`
+  (meta PNG + JPEG sheets) reads back 64 sure, the app's own count. No learner-facing change.
 
 ## Current state (PWA v622, 2026-09-24)
 - **Data shares from its own tap (v622, H's screenshot of v621: "Sharing is not available here." under Zoom check → Data):**

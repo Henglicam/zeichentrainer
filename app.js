@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=622; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=623; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1153,8 +1153,13 @@ async function shareZoomSheet(){
    H sends it through cut that at 300 000 bytes, after the first card; a PNG of 5 MB arrives whole. So the pictures are laid
    out on PNG sheets ZD_W px wide, each picture's long side at most ZD_CARD (a card's cut) or ZD_PAGE (a multicard's photo),
    and the frames and texts ride IN the pixels: the first rows carry a 4-byte length and the UTF-8 JSON, three bytes a
-   pixel, and the pictures stand under them. Owner's, sent only by his own tap through the share sheet. */
-const ZD_W=1600, ZD_H=1700, ZD_CARD=700, ZD_PAGE=1200; /* about 2.7 megapixels a sheet, the size of the 5 MB sheet that came through whole; the detector reads every search at 320 px (CB_LONG), so 700 px of card loses it nothing */
+   pixel, and the pictures stand under them. Owner's, sent only by his own tap through the share sheet.
+   v623 (H's screenshot of v622: "Sharing failed: NotAllowedError … Permission denied" from the Share tap itself): that is
+   Chrome's refusal of a share too large — a limit on the files' count and total size — and six or seven PNG sheets of
+   photographs were tens of megabytes. So the pictures travel as JPEG sheets (a tenth of the size; the phone's own cuts are
+   JPEGs already) and the frames and texts as ONE small PNG, shizi-zoomdata-0.png, whose pixels carry the JSON for every
+   sheet by name — the lossless part is only the part that must be. */
+const ZD_W=1600, ZD_H=1700, ZD_CARD=700, ZD_PAGE=1200, ZD_Q=0.9, ZD_TAP_FILES=8, ZD_TAP_MB=15; /* about 2.7 megapixels a sheet; the detector reads every search at 320 px (CB_LONG), so 700 px of card loses it nothing. A tap sends at most ZD_TAP_FILES files and ZD_TAP_MB megabytes, well inside Chrome's share limits */
 async function shareZoomData(){
   const z=ZCHECK, pics=[];
   for(const r of z.res) if(r.bm) pics.push({src:r.bm,max:ZD_CARD,meta:{kind:"card",c:r.d.c,lines:spotLines(r.d),frame:r.d.frame||null,tf:r.tf||null,why:r.why||""}});
@@ -1164,25 +1169,31 @@ async function shareZoomData(){
     if(cur.x+w>ZD_W){ cur.x=0; cur.y+=cur.rowH; cur.rowH=0; }
     if(cur.y+h>ZD_H-80&&cur.items.length) fresh();
     cur.items.push({p,x:cur.x,y:cur.y,w,h}); cur.x+=w; cur.rowH=Math.max(cur.rowH,h); }
-  const files=[];
-  for(let si=0;si<sheets.length;si++){ const sh=sheets[si];
-    const meta={app:"shizi-zoomdata",v:APP_V,at:new Date().toISOString(),sheet:si+1,of:sheets.length,items:sh.items.map(it=>({...it.p.meta,x:it.x,y:it.y,w:it.w,h:it.h}))};
-    const bytes=new TextEncoder().encode(JSON.stringify(meta)), n=bytes.length+4, top=Math.ceil(n/3/ZD_W), height=top+Math.max(1,...sh.items.map(it=>it.y+it.h));
+  const files=[], meta={app:"shizi-zoomdata",v:APP_V,at:new Date().toISOString(),sheets:[]};
+  for(let si=0;si<sheets.length;si++){ const sh=sheets[si], name=`shizi-zoomdata-${si+1}.jpg`, height=Math.max(1,...sh.items.map(it=>it.y+it.h));
+    meta.sheets.push({name,items:sh.items.map(it=>({...it.p.meta,x:it.x,y:it.y,w:it.w,h:it.h}))});
     const cv=document.createElement("canvas"); cv.width=ZD_W; cv.height=height; const g=cv.getContext("2d");
     g.fillStyle="#fff"; g.fillRect(0,0,ZD_W,height);
-    const im=g.createImageData(ZD_W,top), all=new Uint8Array(top*ZD_W*3); all[0]=n>>>24&255; all[1]=n>>>16&255; all[2]=n>>>8&255; all[3]=n&255; all.set(bytes,4);
-    for(let q=0;q<top*ZD_W;q++){ im.data[q*4]=all[q*3]; im.data[q*4+1]=all[q*3+1]; im.data[q*4+2]=all[q*3+2]; im.data[q*4+3]=255; }
+    for(const it of sh.items) g.drawImage(it.p.src,it.x,it.y,it.w,it.h);
+    const blob=await new Promise(res=>cv.toBlob(res,"image/jpeg",ZD_Q)); files.push(new File([blob],name,{type:"image/jpeg"}));
+  }
+  { /* the frames and texts for every sheet, in the pixels of one small PNG: a 4-byte length, then the UTF-8 JSON, three bytes a pixel */
+    const MW=512, bytes=new TextEncoder().encode(JSON.stringify(meta)), n=bytes.length+4, rows=Math.max(1,Math.ceil(n/3/MW));
+    const cv=document.createElement("canvas"); cv.width=MW; cv.height=rows; const g=cv.getContext("2d");
+    const im=g.createImageData(MW,rows), all=new Uint8Array(rows*MW*3); all[0]=n>>>24&255; all[1]=n>>>16&255; all[2]=n>>>8&255; all[3]=n&255; all.set(bytes,4);
+    for(let q=0;q<rows*MW;q++){ im.data[q*4]=all[q*3]; im.data[q*4+1]=all[q*3+1]; im.data[q*4+2]=all[q*3+2]; im.data[q*4+3]=255; }
     g.putImageData(im,0,0);
-    for(const it of sh.items) g.drawImage(it.p.src,it.x,top+it.y,it.w,it.h);
-    const blob=await new Promise(res=>cv.toBlob(res,"image/png")); files.push(new File([blob],`shizi-zoomdata-${si+1}.png`,{type:"image/png"}));
+    const blob=await new Promise(res=>cv.toBlob(res,"image/png")); files.unshift(new File([blob],"shizi-zoomdata-0.png",{type:"image/png"}));
   }
   /* v622 (H's screenshot of v621: "Sharing is not available here." on Data): Android opens the share sheet only within a
      few seconds of a tap, and drawing and compressing half a dozen 2.7-megapixel PNGs outlasts that — the one-sheet Share
      never did. So the pictures are made first and a second tap sends them, from inside its own click; and a phone that
      will not take them all at once gets them three at a time, a tap each. What failed is said, not a generic line. */
-  const B=navigator.canShare&&navigator.canShare({files})?files.length:3, mbAll=(files.reduce((q,f)=>q+f.size,0)/1048576).toFixed(1);
+  const cap=navigator.canShare&&navigator.canShare({files})?ZD_TAP_FILES:3, mbAll=(files.reduce((q,f)=>q+f.size,0)/1048576).toFixed(1);
   for(let from=0;from<files.length;){
-    const part=files.slice(from,from+B), mb=(part.reduce((q,f)=>q+f.size,0)/1048576).toFixed(1);
+    /* v623: a tap's batch stops at ZD_TAP_FILES files or ZD_TAP_MB megabytes, whichever comes first */
+    let to=from, bytes=0; while(to<files.length&&to-from<cap&&(to===from||bytes+files[to].size<=ZD_TAP_MB*1048576)){ bytes+=files[to].size; to++; }
+    const part=files.slice(from,to), mb=(bytes/1048576).toFixed(1);
     const go=await askSheet({title:"Zoom data ready",text:`${files.length} picture${files.length===1?"":"s"}, ${mbAll} MB.${part.length<files.length?(part.length===1?` This tap sends picture ${from+1}.`:` This tap sends ${from+1} to ${from+part.length}.`):""}`,ok:"Share",danger:false});
     if(!go) return;
     if(!(navigator.canShare&&navigator.canShare({files:part}))){ noteSheet(`This phone will not share these pictures (${part.length} file${part.length===1?"":"s"}, ${mb} MB).`); return; }
