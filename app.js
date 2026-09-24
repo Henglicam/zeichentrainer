@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=616; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=617; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -550,6 +550,7 @@ function diagText(){
     `settings · lang ${LANG} · picture to the AI ${S.settings.aiPicture===false?"off":"on"} · relay ${S.settings.aiRelay===false?"off":"on"} · auto check ${S.settings.aiAuto===false?"off":"on"} · offline model ${S.settings.nmt?"on":"off"} · mirror ${S.settings.mirror===undefined?"default":(S.settings.mirror||"off")} · brightening ${S.settings.brightPass?"done":"not yet"} · re-cut ${recutLine()}`,
     `marks on the photo · ${markLine()}`,
     `main thread · long tasks ${LONG.n}${LONG.n?` (${Math.round(LONG.total)} ms in all, longest ${Math.round(LONG.max)} ms, last ${ago(LONG.at)})`:""} · parse strokes ${PARSE_MS.strokes==null?"not yet":PARSE_MS.strokes+" ms"}, outlines ${PARSE_MS.outlines==null?"not yet":PARSE_MS.outlines+" ms"} · resizes ${RESIZES.length?RESIZES.map(r=>r.bfcache?"back from the cache "+ago(r.t):`${r.from.join("×")}→${r.to.join("×")} ${ago(r.t)}`).join("; "):"none"}`, /* v532: what a fold did to the page, for H's next dump */
+    `learn zoom · ${LAST_AZ?Object.entries(LAST_AZ).filter(([k])=>k!=="at").map(([k,v])=>k+" "+v).join(", ")+" ("+ago(LAST_AZ.at)+")":"no zoom yet"}`, /* v617: the pad's last zoom — ink-found or estimated, the scale, the level */
     `learn fit · ${LAST_FIT?Object.entries(LAST_FIT).filter(([k])=>k!=="at").map(([k,v])=>k+" "+v).join(", ")+" ("+ago(LAST_FIT.at)+")":"no study card measured yet"}`, /* v521: the pad's last measurement — where the card ends against the tab bar, and what was counted under the pad */
     navigator.userAgent, `voices (${voiceList().length}): ${voiceList().join("; ")||"none reported"}`, ""];
   /* v479: every block is one photo's own. The steps used to be a single global list that the next reading wiped, so an album
@@ -671,6 +672,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v617","photo zooms onto the character"],
   ["learn","v616","recap reading = card after crop"],
   ["cards","v615","swipe: no vertical jump"],
   ["cards","v614","zoomed photo: pull on to swipe"],
@@ -3358,6 +3360,7 @@ function renderStudy(main){
   if(cur) padLine(d,cur); /* the line under the pad, always, for the character the pad is on (v518) */
   wireScript(card); /* v604 */
   spotChar(card,d,cur); /* v520: the locked character lit on the photo; v533: the word being written marked on it */
+  card._az=()=>autoZoom(card,d,c,tg,st,cur); card._az(); /* v617: the picture zooms onto the character in the pad */
 }
 /* v527: the block sits under the pad, so opening it scrolls the card until the block stands above the tab bar (or, when it is
    taller than the room, until its head is under the top bar) instead of leaving it under the translucent bar; the detail's
@@ -3375,8 +3378,8 @@ function revealBlock(sel){ const a=$(sel), nav=$("#tabs"), hd=document.querySele
    generated card (no frame of its own), or on a picture that is neither the window nor the frame. */
 /* v602 (H: "Bitte das Hervorheben der characters im Bild wieder abschalten. Nicht komplett verwerfen, will es nur ohne
    testen."): both marks on the photo — the locked character's spotlight (v520) and the word being written (v533/v541/v575)
-   — are switched off here and nowhere else. The code stays whole; true brings every mark back as it was. With it off, a
-   zoomed picture no longer follows the pad onto the next word either, since that move rides on the word's mark (v541). */
+   — are switched off here and nowhere else. The code stays whole; true brings every mark back as it was. With it off, the
+   word's mark no longer moves the picture (v541's follow rode on it); since v617 autoZoom moves it instead, per character. */
 const SPOT_ON=false;
 const spotRatios=()=>[CARD_RATIO,1.5,16/9,2,4/3], SPOT_MS=320; /* v595: 1.5 joins the list by name, or every card cut before v595 would lose the mark on its photo (v533/v552) the moment CARD_RATIO stopped being 3:2. A function, not an array: CARD_RATIO is declared 150 lines further down, and a top-level array literal would read it before its declaration (the v519 lesson) */
 function charSpans(d,ch){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):frontLines(d), n=lines.length||1, out=[];
@@ -3448,8 +3451,9 @@ async function spotGeom(card,d){
     return true; };
   if(!measure()) return null;
   const layer=spotLayer(host); markWhy(d,"ok");
-  return { host:layer, box:host, page, z, zoom:zm||null, tw, th, again:measure,
-    put:(e,sp)=>{ const r={x:ix+iw*(tx+tw*sp.x),y:iy+ih*(ty+th*sp.y),w:iw*tw*sp.w,h:ih*th*sp.h};
+  const rectOf=sp=>({x:ix+iw*(tx+tw*sp.x),y:iy+ih*(ty+th*sp.y),w:iw*tw*sp.w,h:ih*th*sp.h});
+  return { host:layer, box:host, page, z, img, zoom:zm||null, tx, ty, tw, th, again:measure, rectOf,
+    put:(e,sp)=>{ const r=rectOf(sp);
       e.style.left=r.x.toFixed(1)+"px"; e.style.top=r.y.toFixed(1)+"px"; e.style.width=r.w.toFixed(1)+"px"; e.style.height=r.h.toFixed(1)+"px"; return r; } };
 }
 /* one layer per picture box for everything drawn ON the photo (v541): it is the element the zoom transforms beside the
@@ -3499,6 +3503,75 @@ function wordSpan(d,x){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):
       return {x:a/U,y:li/n,w:b/U,h:1/n}; }
     pos=end; }
   return null; }
+/* THE PICTURE ZOOMS ONTO THE CHARACTER BEING WRITTEN (v617, H: "Können wir beim Schreiben dynamisch auf den zu
+   schreibenden character zoomen und danach automatisch zum folgenden character weiter schwenken? … man soll den zu
+   schreibenden character immer gross und deutlich sehen können", then "Go 1 + (b)"). The card opens on the whole picture;
+   the first touch of the pad glides it in onto the character, each character written pans it on to the next, and the
+   finished card glides back out for the recap. (b): only while the pad itself shows the character — level 1 and 2, or a
+   character with no template, whose pad prints it — never at level 3, where the photo would turn recall into copying.
+   (1): the character's place is v533's estimate (the frame, the line's units) corrected on the photo's own ink, and only a
+   correction that finds both edges earns the tight zoom; the estimate alone gets the loose one, so a guess a little off
+   still shows the character. It rides on v541's glide and v575's geometry, not on the marks, so SPOT_ON stays off. The
+   finger always wins: a pinch or a wheel on the picture hands the zoom to the hand for the rest of that picture (ZOOM_HAND),
+   and from then on it only follows, as v541 did. */
+const ZOOM_AUTO=true, AZ_INK=0.68, AZ_EST=0.5, AZ_MAX=3.5, AZ_MIN=1.15; /* the character's larger side as a share of the box — ink-found and estimated —, and the scale's cap and floor */
+const INKSPAN=new Map(); let LAST_AZ=null; /* the ink's answer per card and character, and the last decision for Diagnostics */
+/* the character's own box on the photo, from the ink: in the line's band, a column is ink when enough of its pixels differ
+   from the band's median colour (textRowExtent's test); each edge of the estimate moves to the nearest gap between
+   characters within AZ_TOL of a character's width. Returns the span in the text's fractions, or null when either edge found
+   no gap or the result is not the size of one character — the estimate then stands. */
+const AZ_TOL=0.4;
+function inkSpan(img,geom,sp){
+  try{
+    const nw=img.naturalWidth, nh=img.naturalHeight; if(!nw||!nh) return null;
+    const TX=geom.tx*nw, TY=geom.ty*nh, TW=geom.tw*nw, TH=geom.th*nh;
+    const cw=TW*sp.w, bandH=TH*sp.h; if(cw<4||bandH<4) return null;
+    const x0=Math.max(0,TX+TW*sp.x-1.5*cw), x1=Math.min(nw,TX+TW*(sp.x+sp.w)+1.5*cw);
+    const y0=Math.max(0,TY+TH*sp.y-0.2*bandH), y1=Math.min(nh,TY+TH*(sp.y+sp.h)+0.2*bandH);
+    const k=Math.min(1,64/(y1-y0)), W=Math.max(8,Math.round((x1-x0)*k)), H=Math.max(8,Math.round((y1-y0)*k));
+    const cv=document.createElement("canvas"); cv.width=W; cv.height=H;
+    const ctx=cv.getContext("2d",{willReadFrequently:true}); ctx.drawImage(img,x0,y0,x1-x0,y1-y0,0,0,W,H);
+    const px=ctx.getImageData(0,0,W,H).data;
+    const cy0=Math.round((TY+TH*sp.y-y0)*k), cy1=Math.round((TY+TH*(sp.y+sp.h)-y0)*k); /* the line's own band inside the taller strip */
+    const ch=[[],[],[]]; for(let y=cy0;y<cy1;y++) for(let x=0;x<W;x+=2){ const i=(y*W+x)*4; ch[0].push(px[i]); ch[1].push(px[i+1]); ch[2].push(px[i+2]); }
+    if(!ch[0].length) return null; const m=[median(ch[0]),median(ch[1]),median(ch[2])];
+    const ink=(x,y)=>{ const i=(y*W+x)*4; return Math.abs(px[i]-m[0])+Math.abs(px[i+1]-m[1])+Math.abs(px[i+2]-m[2])>120; };
+    const col=[]; for(let x=0;x<W;x++){ let n=0; for(let y=cy0;y<cy1;y++) if(ink(x,y)) n++; col.push(n); }
+    const quiet=Math.max(1,Math.round((cy1-cy0)*0.03)), gaps=[]; /* runs of columns with (almost) no ink */
+    for(let x=0,g=-1;x<=W;x++){ const q=x<W&&col[x]<quiet; if(q&&g<0) g=x; if(!q&&g>=0){ gaps.push([g,x]); g=-1; } }
+    const ea=(TX+TW*sp.x-x0)*k, eb=(TX+TW*(sp.x+sp.w)-x0)*k, tol=AZ_TOL*cw*k;
+    const near=e=>{ let best=null, bd=Infinity; for(const g of gaps){ const dd=e<g[0]?g[0]-e:e>g[1]?e-g[1]:0; if(dd<bd){ bd=dd; best=g; } } return bd<=tol?best:null; };
+    const ga=near(ea), gb=near(eb); if(!ga||!gb||ga===gb) return null;
+    const a=ga[1], b=gb[0]; if(b<=a) return null;
+    const w=(b-a)/k; if(w<0.55*cw||w>1.5*cw) return null;
+    /* the character's rows: ink rows of its own columns, the run nearest the band's middle, small breaks bridged */
+    const rows=[]; for(let y=0;y<H;y++){ let n=0; for(let x=a;x<b;x++) if(ink(x,y)) n++; rows.push(n>Math.max(1,(b-a)*0.03)); }
+    const mid=Math.round((cy0+cy1)/2), br=Math.round((cy1-cy0)*0.15);
+    const runs=[]; for(let y=0;y<H;y++){ if(!rows[y]) continue; const l=runs[runs.length-1]; if(l&&y-l[1]<=br) l[1]=y+1; else runs.push([y,y+1]); }
+    let best=null, bd=Infinity; for(const u of runs){ const dd=mid<u[0]?u[0]-mid:mid>=u[1]?mid-u[1]+1:0; if(dd<bd){ bd=dd; best=u; } }
+    let yA=cy0, yB=cy1; if(best){ const hh=(best[1]-best[0])/k; if(hh>=0.4*bandH&&hh<=1.4*bandH){ yA=best[0]; yB=best[1]; } }
+    return {x:((a/k+x0)-TX)/TW, w:w/TW, y:((yA/k+y0)-TY)/TH, h:((yB-yA)/k)/TH};
+  }catch(e){ return null; } }
+async function autoZoom(card,d,c,tg,st,cur){
+  if(!ZOOM_AUTO||S.mode!=="study"||S.fullPic||S.peek) return;
+  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))); /* after attachPicZoom's own restore of the zoom this picture had */
+  const box=card.querySelector(".zone1 .picbox"), z=box&&box._zoom; if(!card.isConnected||!z) return;
+  const key=handKey(); if(ZOOM_HAND&&ZOOM_HAND===key){ if(z.s<=1) return; } /* the hand has it: follow only, as v541 */
+  else if(!st.zoomGo&&z.s<=1) return; /* the card opens on the whole picture; the pad's first touch starts it */
+  const allDone=!tg.some((x,j)=>x.w&&!st.done.has(j));
+  const level=cur&&cur.w?padLevel(c,cur,st):3, printed=!!cur&&(!STROKE_OF.has(cur.glyph)||level<3);
+  if(allDone||!printed||S.cueBig!=="pic"){ if(z.auto&&z.s>1&&S.cueBig==="pic"){ z.focus(1); LAST_AZ={at:Date.now(),ch:cur&&cur.ch,how:allDone?"out, card done":"out, level 3"}; } return; }
+  const geom=await spotGeom(card,d); if(!geom||!card.isConnected||S.pad!==st) { if(!geom) LAST_AZ={at:Date.now(),ch:cur.ch,how:"no place on the photo"}; return; }
+  const est=wordSpan(d,{word:cur.ch,wstart:cur.pos}); if(!est) return;
+  const ik=d.id+":"+cur.pos+":"+(d.shot||"")+":"+JSON.stringify(d.frame||0);
+  let sp=INKSPAN.get(ik); if(sp===undefined){ sp=inkSpan(geom.img,geom,est); INKSPAN.set(ik,sp); if(INKSPAN.size>300) INKSPAN.delete(INKSPAN.keys().next().value); }
+  const r=geom.rectOf(sp||est), bw=box.clientWidth, bh=box.clientHeight; if(!r.w||!r.h||!bw||!bh) return;
+  const cx=r.x+r.w/2, cy=r.y+r.h/2;
+  if(ZOOM_HAND===key){ z.follow(cx,cy); return; }
+  let s=(sp?AZ_INK:AZ_EST)*Math.min(bw/r.w,bh/r.h); s=Math.min(AZ_MAX,s); if(s<AZ_MIN) s=1;
+  z.focus(s,cx,cy);
+  LAST_AZ={at:Date.now(),ch:cur.ch,how:sp?"ink":"estimate",s:+s.toFixed(2),lv:level};
+}
 async function spotChar(card,d,cur){
   card.querySelectorAll(".spot").forEach(e=>e.remove()); const z=card.querySelector(".zone1"); if(z) z.classList.remove("spotting");
   if(!SPOT_ON) return; /* v602 */
@@ -3620,7 +3693,7 @@ function cueBig(card){ const to=S.cueBig==="txt"?"pic":"txt"; S.cueBig=to; /* v5
      the start would leave the mark off for the whole slide. It is taken again on every frame of it. */
   const t0=card._spotDrag=performance.now();
   const drag=()=>{ if(!card.isConnected||card._spotDrag!==t0) return; /* a second tap owns the drag and this one stands down */
-    spotAgain(card); if(performance.now()-t0<SLIDE_MS) requestAnimationFrame(drag); };
+    spotAgain(card); if(performance.now()-t0<SLIDE_MS) requestAnimationFrame(drag); else if(to==="pic"&&card._az) card._az(); }; /* v617: back on the picture, it zooms onto the character once the slide has settled */
   requestAnimationFrame(drag); }
 /* v572: the tap toggles the classes itself and never renders, so until now nothing noted it — the half a tap made big
    survived a reload only if some later render happened to note it (v569's own gap). With the photo big by default the
@@ -3738,13 +3811,16 @@ const ZOOM_MAX=5, GLIDE_MS=380;
    character, which rebuilds the card, and a fresh attachPicZoom started at scale 1 — so zooming in and writing one
    character threw the zoom away. It is kept per picture (the card, and separately its whole-photo view, which is a
    different picture), in memory only, and is dropped the moment another picture is shown. */
-let PIC_ZOOM=null;
+let PIC_ZOOM=null, ZOOM_HAND=null; /* ZOOM_HAND (v617): the picture the finger has pinched, in this pass of the pad — the pad's auto zoom stands down on it; the repeat pass starts fresh */
+const handKey=()=>zoomKey()+"|"+(S.mode==="study"&&S.pad?S.pad.key:"");
 const zoomKey=()=>{ const d=S.mode==="cards"?cardOf(S.detail):cardOf(curList()[curIdx()]); return d?d.id+(S.fullPic?":full":"")+(S.peek?":peek":""):null; };
 function attachPicZoom(box){
   const tg=box&&(box.querySelector(".pagewrap")||box.querySelector(".signimg")); if(!tg) return;
   const key=zoomKey();
-  const v={s:1,tx:0,ty:0,r0:null}, pts=new Map(); let last=null, moved=false, eat=false, ovx=0, down=null;
+  const v={s:1,tx:0,ty:0,r0:null,auto:false}, pts=new Map(); let last=null, moved=false, eat=false, ovx=0, down=null;
   tg.style.transformOrigin="0 0";
+  if(ZOOM_HAND&&ZOOM_HAND!==handKey()) ZOOM_HAND=null; /* v617: the hand's claim is on the picture on screen and this pass of the pad, like PIC_ZOOM */
+  const hand=()=>{ if(v.auto){ v.auto=false; apply(); } ZOOM_HAND=handKey(); }; /* v617: a pinch or a wheel takes the zoom over from the pad for the rest of this picture */
   const rel=e=>{ const b=box.getBoundingClientRect(); return {x:e.clientX-b.left,y:e.clientY-b.top}; };
   const measure=()=>{ if(v.s===1||!v.r0){ const b=box.getBoundingClientRect(), r=tg.getBoundingClientRect(); v.r0={x:r.left-b.left,y:r.top-b.top,w:r.width,h:r.height}; } };
   /* v575: r0 is the picture's place in the box BEFORE the zoom, so measure() refuses to take it again while zoomed — the
@@ -3757,27 +3833,34 @@ function attachPicZoom(box){
     v.r0={x:r.left-b.left-v.tx, y:r.top-b.top-v.ty, w:r.width/v.s, h:r.height/v.s}; apply(); };
   const apply=()=>{ const r=v.r0, bw=box.clientWidth, bh=box.clientHeight, cw=r.w*v.s, ch=r.h*v.s;
     v.tx=cw<=bw?(bw-cw)/2-r.x:Math.min(-r.x,Math.max(bw-cw-r.x,v.tx)); v.ty=ch<=bh?(bh-ch)/2-r.y:Math.min(-r.y,Math.max(bh-ch-r.y,v.ty));
-    tg.style.transform=v.s>1?`translate(${v.tx}px,${v.ty}px) scale(${v.s})`:""; box.style.touchAction=v.s>1?"none":""; box.classList.toggle("zoomed",v.s>1);
+    const own=v.s>1&&!v.auto; /* v617: a zoom the pad made leaves one finger to the card — the swipe and the page scroll behave as at rest */
+    tg.style.transform=v.s>1?`translate(${v.tx}px,${v.ty}px) scale(${v.s})`:""; box.style.touchAction=own?"none":""; box.classList.toggle("zoomed",own); box.classList.toggle("zauto",v.s>1&&v.auto);
     /* v541: the marks drawn on the photo ride the same move. The layer sits at the box's own origin while the picture sits
        at r, so the translation that puts a picture point where the picture's own transform puts it is r*(1-s)+t — derived
        once here rather than by re-placing every mark, which would need the geometry (and a photo decode) on every frame.
        --wz counter-scales the ring widths, so a 1.5 px ring stays 1.5 px at 5x instead of becoming 7.5. */
     const lay=box.querySelector(":scope > .spotlayer");
     if(lay){ lay.style.transform=v.s>1?`translate(${(r.x*(1-v.s)+v.tx).toFixed(2)}px,${(r.y*(1-v.s)+v.ty).toFixed(2)}px) scale(${v.s})`:""; lay.style.setProperty("--wz",v.s>1?(1/v.s).toFixed(3):"1"); }
-    PIC_ZOOM=key&&v.s>1?{key,s:v.s,tx:v.tx,ty:v.ty}:null; };
+    PIC_ZOOM=key&&v.s>1?{key,s:v.s,tx:v.tx,ty:v.ty,auto:v.auto}:null; };
   /* pan so a point of the picture, given in the box's own un-zoomed coordinates, sits in the middle of the box — clamped by
      apply() like any pan, so a word at the picture's edge comes as close as the edge allows and no gap opens */
   let glideT=null;
   const glide=on=>{ box.classList.toggle("zgl",!!on); if(glideT) clearTimeout(glideT); glideT=on?setTimeout(()=>{ box.classList.remove("zgl"); glideT=null; },GLIDE_MS+80):null; };
   v.follow=(cx,cy)=>{ if(v.s<=1||!v.r0) return; const r=v.r0;
     v.tx=box.clientWidth/2-r.x-(cx-r.x)*v.s; v.ty=box.clientHeight/2-r.y-(cy-r.y)*v.s; glide(true); apply(); };
+  /* v617: the pad's own zoom — scale s around a point of the picture given, like follow's, in the box's un-zoomed
+     coordinates; s 1 glides back to the whole picture. Marked auto, so one finger still swipes (apply) */
+  v.focus=(s,cx,cy)=>{ if(v.s>1&&v.r0) v.relayout(); else measure(); if(!v.r0||!v.r0.w) return; const r=v.r0;
+    v.auto=s>1; v.s=Math.min(ZOOM_MAX,Math.max(1,s));
+    if(v.s>1){ v.tx=box.clientWidth/2-r.x-(cx-r.x)*v.s; v.ty=box.clientHeight/2-r.y-(cy-r.y)*v.s; } else { v.tx=0; v.ty=0; }
+    glide(true); apply(); };
   const summary=()=>{ const a=[...pts.values()]; if(a.length>=2){ return {x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2,d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}; } return a.length?{x:a[0].x,y:a[0].y,d:0}:null; };
   const zoomAt=(m,s2)=>{ s2=Math.min(ZOOM_MAX,Math.max(1,s2)); const r=v.r0, px=(m.x-r.x-v.tx)/v.s, py=(m.y-r.y-v.ty)/v.s; v.s=s2; v.tx=m.x-r.x-px*s2; v.ty=m.y-r.y-py*s2; apply(); };
   box.addEventListener("pointerdown",e=>{ if(e.button) return; if(e.isPrimary) pts.clear(); /* v614: a new gesture starts with no fingers left over — see below */ glide(false); measure(); pts.set(e.pointerId,rel(e)); last=summary(); moved=false; ovx=0; down=pts.size===1?{x:e.clientX,y:e.clientY}:null;
-    if(pts.size>=2||v.s>1){ e.stopPropagation(); e.preventDefault(); try{ box.setPointerCapture(e.pointerId); }catch(x){} } });
+    if(pts.size>=2||(v.s>1&&!v.auto)){ e.stopPropagation(); e.preventDefault(); try{ box.setPointerCapture(e.pointerId); }catch(x){} } });
   box.addEventListener("pointermove",e=>{ if(!pts.has(e.pointerId)) return; pts.set(e.pointerId,rel(e)); const cur=summary(); if(!last||!cur){ last=cur; return; }
-    if(pts.size>=2){ e.stopPropagation(); e.preventDefault(); moved=true; if(last.d>0&&cur.d>0) zoomAt(cur,v.s*cur.d/last.d); v.tx+=cur.x-last.x; v.ty+=cur.y-last.y; apply(); }
-    else if(v.s>1){
+    if(pts.size>=2){ e.stopPropagation(); e.preventDefault(); moved=true; hand(); if(last.d>0&&cur.d>0) zoomAt(cur,v.s*cur.d/last.d); v.tx+=cur.x-last.x; v.ty+=cur.y-last.y; apply(); }
+    else if(v.s>1&&!v.auto){
       /* v606 (H: "Wenn ich in ein Bild reingezoomt habe und dann zur nächsten Karte swipen möchte, kann ich das nicht. Dann
          verschiebe ich nur das Bild bis zum Rand."): the pan gives the stroke to the carousel at the picture's edge, as a
          photo viewer does. What the clamp in apply() refuses of a horizontal move is counted (ovx); once the finger has
@@ -3803,13 +3886,13 @@ function attachPicZoom(box){
      now empties the list, so no gesture inherits a finger from the one before. */
   box.addEventListener("pointerup",up); box.addEventListener("pointercancel",up);
   box.addEventListener("click",e=>{ if(eat){ eat=false; e.stopPropagation(); e.preventDefault(); } },true); /* a pan's closing click is not the tap that swaps the picture */
-  box.addEventListener("wheel",e=>{ e.preventDefault(); measure(); zoomAt(rel(e),v.s*Math.pow(1.1,-e.deltaY/100)); },{passive:false});
+  box.addEventListener("wheel",e=>{ e.preventDefault(); hand(); measure(); zoomAt(rel(e),v.s*Math.pow(1.1,-e.deltaY/100)); },{passive:false});
   /* the stored zoom is put back once the picture really has its size — measure() is only allowed to take a fresh r0 while
      the view is at rest, so the restore resets to rest first and then applies the remembered scale and offset */
   if(PIC_ZOOM&&PIC_ZOOM.key!==key) PIC_ZOOM=null; /* the zoom belongs to the picture on screen, not to the app: another card, or the same card's whole-photo view, starts at rest */
   const restore=()=>{ if(!PIC_ZOOM||PIC_ZOOM.key!==key||!box.isConnected||!box.clientWidth) return false;
     const st=PIC_ZOOM; v.s=1; v.r0=null; measure(); if(!v.r0||!v.r0.w) return false;
-    v.s=Math.min(ZOOM_MAX,Math.max(1,st.s)); v.tx=st.tx; v.ty=st.ty; apply(); return true; };
+    v.s=Math.min(ZOOM_MAX,Math.max(1,st.s)); v.tx=st.tx; v.ty=st.ty; v.auto=!!st.auto; apply(); return true; };
   if(!restore()){ const img=box.querySelector(".signimg"); if(img&&!img.complete) img.addEventListener("load",restore,{once:true}); else requestAnimationFrame(restore); }
   box._zoom=v; /* used by the tests */
 }
@@ -4135,7 +4218,7 @@ function mountPad(card,d,c,tg,st,cur){
     if(lvl>1) st.hint=true; cv.classList.remove("shake"); void cv.offsetWidth; cv.classList.add("shake"); showStroke(st.k,false);
     acts(); logPadStroke(cur,st.k,false); };
   const pt=e=>{ const r=cv.getBoundingClientRect(); return [(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height]; };
-  cv.onpointerdown=e=>{ e.preventDefault(); e.stopPropagation(); try{ cv.setPointerCapture(e.pointerId); }catch(x){} if(flash) return; drawing=[pt(e)]; anim=null; paint(); };
+  cv.onpointerdown=e=>{ e.preventDefault(); e.stopPropagation(); try{ cv.setPointerCapture(e.pointerId); }catch(x){} if(!st.zoomGo){ st.zoomGo=true; if(card._az) card._az(); } /* v617: the first touch of the pad zooms the picture in */ if(flash) return; drawing=[pt(e)]; anim=null; paint(); };
   cv.onpointermove=e=>{ if(!drawing) return; e.preventDefault(); e.stopPropagation(); drawing.push(pt(e)); paint(); };
   cv.onpointerup=cv.onpointercancel=e=>{ if(!drawing) return; e.stopPropagation(); const s=drawing; drawing=null;
     if(free){ st.free.push(s); paint(); acts(); return; }
@@ -5293,6 +5376,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  617:"While you trace a character, the photo zooms in on it and glides on to the next one. Once you write from memory, it stays whole.",
   611:"The AI is told never to invent, and its pinyin is checked against the dictionary. When they disagree, or the AI is not sure, the card gets a flag instead of a guess.",
   608:"The app is called 识字 Shízì again, with its old 识 icon back. Same app, same cards.",
   606:"Zoomed into a photo? Keep pulling past its edge and the next card comes in, just like in a photo gallery.",
