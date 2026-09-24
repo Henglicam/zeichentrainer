@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=601; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=602; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,6 +671,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v602","Learn: no marks on the photo"],
   ["app","v601","home screen: 街字 name and icon"],
   ["app","v600","long word: the line wraps, not cut"],
   ["app","v600","finished card: bigger reading"],
@@ -3311,6 +3312,11 @@ function revealBlock(sel){ const a=$(sel), nav=$("#tabs"), hd=document.querySele
    spotlight: v461's own shadow, faded in, and faded out again at the release; on a v452 page front, whose own region v461's
    shadow already lights, the character gets a white ring inside it. None on a turned frame, on a linked photo peeked at, on a
    generated card (no frame of its own), or on a picture that is neither the window nor the frame. */
+/* v602 (H: "Bitte das Hervorheben der characters im Bild wieder abschalten. Nicht komplett verwerfen, will es nur ohne
+   testen."): both marks on the photo — the locked character's spotlight (v520) and the word being written (v533/v541/v575)
+   — are switched off here and nowhere else. The code stays whole; true brings every mark back as it was. With it off, a
+   zoomed picture no longer follows the pad onto the next word either, since that move rides on the word's mark (v541). */
+const SPOT_ON=false;
 const spotRatios=()=>[CARD_RATIO,1.5,16/9,2,4/3], SPOT_MS=320; /* v595: 1.5 joins the list by name, or every card cut before v595 would lose the mark on its photo (v533/v552) the moment CARD_RATIO stopped being 3:2. A function, not an array: CARD_RATIO is declared 150 lines further down, and a top-level array literal would read it before its declaration (the v519 lesson) */
 function charSpans(d,ch){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):frontLines(d), n=lines.length||1, out=[];
   lines.forEach((ln,li)=>{ const U=Math.max(0.01,lineUnits(ln)); let u=0; for(const c of [...ln]){ const w=lineUnits(c); if(c===ch) out.push({x:u/U,y:li/n,w:w/U,h:1/n}); u+=w; } });
@@ -3405,6 +3411,7 @@ function spotAgain(card){ const s=card&&card._spot; if(!s||!s.geom||!s.geom.agai
    whole text — there is nothing to point at then. */
 async function spotWord(card,d,x,g){
   card.querySelectorAll(".wspot").forEach(e=>e.remove());
+  if(!SPOT_ON) return; /* v602 */
   if(!x||!x.w||!x.word) return; const sp=wordSpan(d,x); if(!sp) return;
   const geom=g||await spotGeom(card,d); if(!geom||!card.isConnected) return;
   /* v552: "nothing to single out" is a question about the PICTURE, not about the text. v533 skipped the mark whenever the
@@ -3433,6 +3440,7 @@ function wordSpan(d,x){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):
   return null; }
 async function spotChar(card,d,cur){
   card.querySelectorAll(".spot").forEach(e=>e.remove()); const z=card.querySelector(".zone1"); if(z) z.classList.remove("spotting");
+  if(!SPOT_ON) return; /* v602 */
   const ch=S.lockChar, geom=await spotGeom(card,d); if(!geom||!card.isConnected) return;
   await spotWord(card,d,cur,geom); /* v533: the word being written, on the same geometry */
   if(!ch) return;

@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 街字 Jiēzì (识字 Zeichentrainer until v601), v1–v601
+# HISTORY.md — the full record of 街字 Jiēzì (识字 Zeichentrainer until v601), v1–v602
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,24 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v602, 2026-09-24)
+- **The marks on the photo are switched off, not removed (v602, H: "Bitte das Hervorheben der characters im Bild wieder
+  abschalten. Nicht komplett verwerfen, will es nur ohne testen.").** One constant, `SPOT_ON=false` beside `spotRatios`
+  in `app.js`, and one early return at the top of `spotWord` and of `spotChar`, after each has cleared its old marks. That
+  silences both marks at once — the locked character's spotlight that dims the rest of the picture (v520) and the word
+  being written (v533/v541/v552/v575) — in Learn, on the carousel and on the open card, since all three go through those
+  two functions. Everything else (`spotGeom`, the layer, `spotKeep`/`spotAgain`, the `.spot`/`.wspot` CSS, the
+  Diagnostics `markLine`) stays whole; `true` restores the v601 behaviour byte for byte.
+  - **What goes with it, named rather than hidden:** v541's zoom follow — a zoomed picture gliding onto the next word —
+    rides on the word's mark, so it is off too; and Diagnostics' mark line reads "no card seen yet", because nothing
+    asks for the geometry any more.
+  - **Measured:** headless Chromium at 390, one card with a photo and a frame, `spotChar` driven with a locked character
+    and a two-character word: v601 draws 1 `.wspot` and 1 `.spot` and records "1 marked"; v602 draws 0 and 0. Boot has
+    no page errors apart from the harness's own service-worker update message, which v601 shows too. One `TO_TEST` line
+    ("Learn: no marks on the photo"); no `WHATS_NEW` line, since this is H's own trial, not a learner's change.
+  - **Not yet field-checked:** whether H wants it back — the decision is his after the trial, and the v533/v541/v575
+    `TO_TEST` lines about the mark stay until he decides.
 
 ## Current state (PWA v601, 2026-09-23)
 - **The app is renamed 街字 Jiēzì, and "Zeichentrainer" is dropped (v601, H: "Lass uns mal nach einem neuen Namen suchen. Ich hatte an sowas gedacht wie 'read the street', da es ja darum geht, die Sachen auf der Straße lesen zu können." — then, of the list offered, "Do 街字 Jiēzì, drop Zeichentrainer").**
