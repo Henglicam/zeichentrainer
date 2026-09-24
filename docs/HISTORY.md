@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v611
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v612
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,17 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v612, 2026-09-24)
+- **Show me and Skip sit on the pad (v612, H with a screenshot of the unfolded screen, "Show me" standing left of the
+  pad's edge: ""show me" is in the wrong place").** `.padwrap .padacts` is placed absolutely against `.padwrap`, and the
+  wrap was the card's whole inner width while `fit()` caps the pad by HEIGHT — so wherever the pad is narrower than the
+  card the row ran past it. That is not only the unfolded screen: measured on v611, the pad is 356 wide on a 894 × 1000
+  screen (Show me 14 px outside its left edge), and 269 wide on a 390 × 844 phone and 237 on 360 × 780 (Skip 16–17 px
+  outside its right edge). `.padwrap` is now `width:fit-content`, centred by auto margins, so the row, the note and the
+  recap are placed against the pad itself; `fit()` reads the card's width, not the wrap's, so nothing feeds back.
+  Measured at the three sizes: Show me and Skip inside the pad, 10 px in from its edges; on v611 all six checks fail.
+  **Not yet field-checked.**
 
 ## Current state (PWA v611, 2026-09-24)
 - **The AI is told never to invent, and its answer is checked against something that is not the AI (v611, H: "Bitte
