@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=620; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=621; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1147,16 +1147,36 @@ async function shareZoomSheet(){
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; logErr("share",err); } }
   noteSheet(t("Sharing is not available here."));
 }
-/* the Zoom check's own data (v620): the pictures the sheet shows, at the size the phone reads them, with their frames and
-   texts — the sheet's 300 px tiles made a harness that disagreed with the phone (v619: 58 sure there, 52 here), and the
-   rule is that the harness is what gets fixed. Owner's, sent only by his own tap through the share sheet. */
+/* the Zoom check's own data (v620; as pictures since v621): the pictures the sheet shows, at close to the size the phone
+   reads them, with their frames and texts — the sheet's 300 px tiles made a harness that disagreed with the phone (v619:
+   58 sure there, 52 here), and the rule is that the harness is what gets fixed. v620 sent it as a .json.txt, and the chat
+   H sends it through cut that at 300 000 bytes, after the first card; a PNG of 5 MB arrives whole. So the pictures are laid
+   out on PNG sheets ZD_W px wide, each picture's long side at most ZD_CARD (a card's cut) or ZD_PAGE (a multicard's photo),
+   and the frames and texts ride IN the pixels: the first rows carry a 4-byte length and the UTF-8 JSON, three bytes a
+   pixel, and the pictures stand under them. Owner's, sent only by his own tap through the share sheet. */
+const ZD_W=1600, ZD_H=1700, ZD_CARD=700, ZD_PAGE=1200; /* about 2.7 megapixels a sheet, the size of the 5 MB sheet that came through whole; the detector reads every search at 320 px (CB_LONG), so 700 px of card loses it nothing */
 async function shareZoomData(){
-  const z=ZCHECK, url=b=>new Promise(res=>{ if(!b) return res(null); const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=()=>res(null); fr.readAsDataURL(b); });
-  const data={app:"shizi-zoomdata",v:APP_V,at:new Date().toISOString(),cards:[],pages:[]};
-  for(const r of z.res) data.cards.push({c:r.d.c,lines:spotLines(r.d),frame:r.d.frame||null,tf:r.tf||null,why:r.why||"",img:await url(r.d.img)});
-  for(const r of z.pres||[]){ const full=r.items.length?fullPhoto(r.items[0]):null; data.pages.push({c:r.pg.c,photo:await url(full),items:r.items.map(d=>({c:d.c,lines:spotLines(d),frame:d.frame}))}); }
-  const text=JSON.stringify(data), name="shizi-zoomdata.json.txt", file=new File([text],name,{type:"text/plain"});
-  if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; logErr("share",err); } }
+  const z=ZCHECK, pics=[];
+  for(const r of z.res) if(r.bm) pics.push({src:r.bm,max:ZD_CARD,meta:{kind:"card",c:r.d.c,lines:spotLines(r.d),frame:r.d.frame||null,tf:r.tf||null,why:r.why||""}});
+  for(const r of z.pres||[]) if(r.bm) pics.push({src:r.bm,max:ZD_PAGE,meta:{kind:"page",c:r.pg.c,items:r.items.map(d=>({c:d.c,lines:spotLines(d),frame:d.frame}))}});
+  const sheets=[]; let cur=null; const fresh=()=>{ cur={items:[],x:0,y:0,rowH:0}; sheets.push(cur); }; fresh();
+  for(const p of pics){ const sc=Math.min(1,p.max/Math.max(p.src.width,p.src.height)), w=Math.max(1,Math.round(p.src.width*sc)), h=Math.max(1,Math.round(p.src.height*sc));
+    if(cur.x+w>ZD_W){ cur.x=0; cur.y+=cur.rowH; cur.rowH=0; }
+    if(cur.y+h>ZD_H-80&&cur.items.length) fresh();
+    cur.items.push({p,x:cur.x,y:cur.y,w,h}); cur.x+=w; cur.rowH=Math.max(cur.rowH,h); }
+  const files=[];
+  for(let si=0;si<sheets.length;si++){ const sh=sheets[si];
+    const meta={app:"shizi-zoomdata",v:APP_V,at:new Date().toISOString(),sheet:si+1,of:sheets.length,items:sh.items.map(it=>({...it.p.meta,x:it.x,y:it.y,w:it.w,h:it.h}))};
+    const bytes=new TextEncoder().encode(JSON.stringify(meta)), n=bytes.length+4, top=Math.ceil(n/3/ZD_W), height=top+Math.max(1,...sh.items.map(it=>it.y+it.h));
+    const cv=document.createElement("canvas"); cv.width=ZD_W; cv.height=height; const g=cv.getContext("2d");
+    g.fillStyle="#fff"; g.fillRect(0,0,ZD_W,height);
+    const im=g.createImageData(ZD_W,top), all=new Uint8Array(top*ZD_W*3); all[0]=n>>>24&255; all[1]=n>>>16&255; all[2]=n>>>8&255; all[3]=n&255; all.set(bytes,4);
+    for(let q=0;q<top*ZD_W;q++){ im.data[q*4]=all[q*3]; im.data[q*4+1]=all[q*3+1]; im.data[q*4+2]=all[q*3+2]; im.data[q*4+3]=255; }
+    g.putImageData(im,0,0);
+    for(const it of sh.items) g.drawImage(it.p.src,it.x,top+it.y,it.w,it.h);
+    const blob=await new Promise(res=>cv.toBlob(res,"image/png")); files.push(new File([blob],`shizi-zoomdata-${si+1}.png`,{type:"image/png"}));
+  }
+  if(navigator.canShare && navigator.canShare({files})){ try{ await navigator.share({files,title:"shizi-zoomdata"}); return; }catch(err){ if(err&&err.name==="AbortError") return; logErr("share",err); } }
   noteSheet(t("Sharing is not available here."));
 }
 async function shareDiag(){
@@ -2714,7 +2734,7 @@ function renderMore(main){
     <div class="listhead">Diagnostics</div>
     <div class="mrow"><div style="flex:1"><div class="t">Diagnostics</div><div class="s" id="diag-status">${LAST_READ.ring.length} photo${LAST_READ.ring.length===1?"":"s"} logged, ${AILOG.length} AI exchange${AILOG.length===1?"":"s"}, ${ERRLOG.length} error${ERRLOG.length===1?"":"s"}.</div><div class="fieldacts"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button><button class="btn mini" id="diag-copy">Copy</button></div></div></div>
     <pre class="diag" id="diag-out" hidden></pre>
-    <div class="mrow"><div style="flex:1"><div class="t">Zoom check</div><div class="s" id="zc-status">${ZCHECK?esc(ZCHECK.line)+".":`Finds every character of the newest ${ZC_N} photo cards the way Learn's zoom does. Share sends the pictures with the boxes drawn: green on the ink, orange unsure, red the estimate, blue the frame; the newest ${ZC_PAGES} multicards follow, green where a region snapped onto its text. Data sends the pictures themselves.`}</div><div class="fieldacts"><button class="btn mini" id="zc-run">Run</button><button class="btn mini" id="zc-share">Share</button><button class="btn mini" id="zc-data">Data</button></div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">Zoom check</div><div class="s" id="zc-status">${ZCHECK?esc(ZCHECK.line)+".":`Finds every character of the newest ${ZC_N} photo cards the way Learn's zoom does. Share sends the pictures with the boxes drawn: green on the ink, orange unsure, red the estimate, blue the frame; the newest ${ZC_PAGES} multicards follow, green where a region snapped onto its text. Data sends the pictures themselves, as PNG sheets.`}</div><div class="fieldacts"><button class="btn mini" id="zc-run">Run</button><button class="btn mini" id="zc-share">Share</button><button class="btn mini" id="zc-data">Data</button></div></div></div>
     <div class="mrow"><div style="flex:1"><div class="t">Still to test</div><div class="s" id="field-status">${fieldNote()}</div><div class="fieldacts"><button class="btn mini" id="field-show">Show</button><button class="btn mini" id="field-copy">Copy</button></div></div></div>
     <pre class="diag" id="field-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"install")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div><div class="fieldacts"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button><button class="btn mini" id="users-copy">Copy</button></div></div></div>
