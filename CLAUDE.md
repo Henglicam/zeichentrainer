@@ -59,7 +59,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v623, 2026-09-24)
+## Current state (PWA v624, 2026-09-24)
 **The app is called 识字 Shízì** (v608, H: "Return the name to shizi", then "识字 Shízì" over the full v600 name; v601–v607
 it was 街字 Jiēzì, and Zeichentrainer stays dropped). The title, manifest `name`/`short_name` (识字 Shízì / 识字), header
 logo, About, share text, `privacy.html`, the owner's dumps and every shared file (`shizi-YYYY-MM-DD.json.txt`,
@@ -70,7 +70,7 @@ jiezi- or shizi- — imports). Not yet field-checked: Android swaps a home-scree
 the manifest, which can take a day.
 
 **Recent state worth carrying in the head** (each has its full entry in the archive):
-- **v620** — a **multicard's regions snap onto their texts** at display (`snapRegion`/`refineShot`, memory only, nothing stored): only when the ink search is sure of 60 % and the result stays on the frame; the Zoom check draws the newest 8 multicards and its **Data** button shares the pictures as JPEG sheets plus one small PNG whose pixels carry the frames and texts (v621: the chat cuts a text file at 300 000 bytes; v622: built first, sent from a second tap, since Android's share permission lapses while they are drawn; v623: JPEG, at most 8 files and 15 MB a tap, since Chrome refuses a share too large) — the harness from the sheet's 300 px tiles disagreed with the phone.
+- **v620** — a **multicard's regions snap onto their texts** at display (`snapRegion`/`refineShot`, memory only, nothing stored): only when the ink search is sure of 60 % and the result stays on the frame; the Zoom check draws the newest 8 multicards and its **Data** button shares **one PDF** (`zdPdf`, v624: a page per JPEG sheet and the frames and texts as a `/Type/ShiziZoomData` stream — the chat cuts a text file at 300 000 bytes (v621), Chrome refuses a zip and a share too large (v623), Android's share permission lapses while the sheets are drawn so a second tap sends it (v622)) — the harness from the sheet's 300 px tiles disagreed with the phone.
 - **v617–v619** — the Learn photo **zooms onto the character being written** (`autoZoom`); `charBoxes` searches the layout (v619: which ink lines carry the card's characters, horizontal or vertical, by pitch fit, a size prior and the card's own breaks) and cuts each line into exactly its characters (DP on least-ink cuts); judged on the 24 photos of H's own Zoom check sheet (58 of 124 sure, ~52 right); only while the pad shows the character (levels 1–2); Diagnostics logs every decision and **Owner tools → Zoom check** shares the boxes drawn on H's newest 24 photo cards.
 - **v611** — **anti-invention**: both prompts carry a "Never invent" rule and an `unsure` field, the "well-known name"
   nudges are gone, and `aiDoubt` flags a card whose AI pinyin disagrees with pinyin-pro's in-word reading (`pyDictOff`,

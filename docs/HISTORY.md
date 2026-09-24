@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v623
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v624
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,18 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v624, 2026-09-24)
+- **The Zoom data is one PDF (v624, H: "I couldn't save the single files. Can you try export as zip file?", after sending the
+  v623 pictures combined into one PDF by another app):** that PDF held six JPEGs and not the small PNG with the frames, so it
+  could not be read. A zip is refused by Chrome's share (not on its list of shareable types), and disguised as a .txt the
+  chat cuts it at 300 000 bytes as it cut v620's; but the PDF arrived whole, byte for byte. So Data now writes **one PDF
+  itself** (`zdPdf`, by hand — a catalogue, one page per JPEG sheet with the JPEG's own bytes as a DCTDecode image, a
+  `/Type/ShiziZoomData` stream with the frames and texts as JSON, and the cross-reference table): one file to send, nothing a
+  combining app can drop. Over `ZD_TAP_MB` it splits into several PDFs. The sheet reads "Zoom data ready. One PDF, x MB".
+  **Measured:** pdf.js (Firefox's reader) opens the app's PDF with every page and its image; `zdpdf.py` unpacks it and the
+  decoder reads back the app's own counts (sixteen cards, 64 sure; a multicard, 5 of 6 snapped); at 20× CPU throttle and a
+  Chrome-like 1.5 MB share limit, one tap sends one 0.4 MB PDF. Learn 13/13. No learner-facing change.
 
 ## Current state (PWA v623, 2026-09-24)
 - **The Zoom data goes as JPEG sheets and one small PNG (v623, H's screenshot of v622: "Sharing failed: NotAllowedError
