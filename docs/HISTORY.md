@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v618
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v619
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,36 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v619, 2026-09-24)
+- **The layout is searched, and judged on H's own photos (v619, H's Zoom check sheet from v618: 24 cards, "31 of 124
+  characters on the ink, 93 unsure").** The sheet came back as the lossless PNG, so the 24 pictures were cut out of it, my
+  own boxes painted out (runs of the four overlay colours along rows and columns, filled from their neighbours; the frame
+  read from the blue dashes), and they are the fixture now — `field.js` in the session, the first harness built from the
+  phone's own photos rather than mine. On it v618 has 34 sure. **Read by eye, the failures were one assumption** — that the
+  card's lines are the photo's heaviest lines: a Latin name above the Chinese (YANGGUOFU / 楊國福, CHINA MERCHANTS BANK), the
+  card being only the small line under a big one (手机数码家电 under 京准达), the card one line where the photo has two
+  (北京首都机场 / 欢迎您, 雀巢 / 脆脆鲨), vertical text in a square frame (the 茅台 bottle), two close lines merged into one band
+  (货梯保护板 / 请勿损坏). **What changed in `charBoxes`:** the ink rows are cut finely (a row is inked above a quarter of the
+  median inked row) and any run of up to six neighbouring segments is a candidate line; every way of spreading the card's
+  characters over the lines in reading order — the card's own breaks, and any split into up to four lines — is scored by
+  how each line's width fits its characters (`CB_PITCH` 1.1 heights a character, measured without the part of a gap beyond
+  half a character, so 北京 欢迎's word space does not widen the pitch), plus a **size prior** (0.45·ln of the tallest
+  text-like band over this one: the card's text is the text the reader and the AI framed), a penalty for a band with empty
+  rows inside (two lines glued), 0.5 for each of the card's own line breaks the layout ignores, and ink left out of a line
+  priced by distance (0.8 when it runs on across a small gap, 0.2 across a wide one — CREDIT CARD beside 信用卡). Horizontal
+  and vertical (columns right to left) compete. A box is **sure** only when its cuts are clean, the line's pitch cost is
+  under 0.32 and the line is at least 0.6 of the tallest text line. **Tuning path, measured each step and read by eye on the
+  sheet, not by the count:** the search alone gave 67 sure — but CREDIT CARD, the fine print under 雀巢 and the UN of
+  ALIYUN.COM were among them, so the count lied; the size prior alone dropped to 19 because two glued lines made the tallest
+  "line"; excluding glued bands gave 58; the word-gap measure fixed the one synthetic regression (北京 欢迎 had dropped 迎);
+  the break penalty 0.3 → 0.5 put 招商银行 back on its own line. **Result on H's 24 photos:** 58 sure, of which by eye about
+  52 on the right character; the wrong sure ones are 阿里云 (the square logo counted as a character, off by one), two of
+  图像采集 on the building, and 警 of a card whose text (火警119) is not the photo's (火119警). Still unsure and not solved:
+  the vertical and the tilted 茅台 bottle, 北京首都机场欢迎您 as two lines, 放心交给阿里云 on a banner, 雀巢脆脆鲨, the circular
+  emblem, 房屋出租; 手机数码家电 is placed right but held unsure by the size prior. Synthetic suite 49 of 49 on every seed,
+  Learn suite 13 of 13. **Not field-checked:** the fixture tiles are the sheet's 300 px pictures, where the phone runs on the
+  cut at full size — H's next Zoom check says whether it holds.
 
 ## Current state (PWA v618, 2026-09-24)
 - **The zoom finds the character on the ink, line by line (v618, H on v617 with a Diagnostics dump: "Er erkennt vieles
