@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v608
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v609
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,18 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v609, 2026-09-24)
+- **The update notes under About are a bulleted list (v609, H with a screenshot of More → About: "Die Liste der
+  Änderungen sollte irgendwelche Aufzählungszeichen beinhalten, zum Beispiel Bullet Points oder so. Das fehlt irgendwie
+  momentan.").** `whatsNewHTML` wrote "What is new" and each of the last five notes as its own `.s` line, so five
+  sentences of one grey ran together and only the line breaks told them apart. Now the heading is set in the label
+  colour at 600 weight, and the notes are a `ul.wnlist` — each `li` 14 px in `--label2` like the text above it, with a
+  6 px `--tint` dot hung 16 px to its left, so a wrapped note stays clear of the next one's bullet, and 6 px between notes.
+  No wording changed; `WHATS_NEW` stays English, as it always was.
+  - **Measured** headless: five `li`, 14 px, the dot in tint (light and dark), the heading bold, no `li` wider than its row
+    at 390 in English, light, and in German, dark, and at 360 in Russian. No `WHATS_NEW` line for this one (it is the
+    list itself); **not yet field-checked**.
 
 ## Current state (PWA v608, 2026-09-24)
 - **The name goes back to 识字, as 识字 Shízì (v608, H: "Return the name to shizi"; asked one question — the full v600
