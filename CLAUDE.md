@@ -1,4 +1,4 @@
-# CLAUDE.md — 街字 Jiēzì
+# CLAUDE.md — 识字 Shízì
 
 Working language: **English.** Reply to H in English. Short, direct, no excessive politeness.
 
@@ -27,8 +27,8 @@ PR. This file is consolidated state, **never a version log**; it must not grow p
 When a section here goes stale, rewrite it; the old wording lives in the archive.
 
 ## What this is
-Chinese character trainer for adults (spaced repetition), a reinterpretation of 悟空识字 — **街字 Jiēzì**, "the
-characters of the street" (识字 Zeichentrainer until v601),
+Chinese character trainer for adults (spaced repetition), a reinterpretation of 悟空识字 — **识字 Shízì** (识字 Zeichentrainer
+until v601, 街字 Jiēzì v601–v607),
 without the kids' aesthetic.
 
 **The rule (H, 2026-09-14): "Flash cards are for learning and multi cards are for looking up
@@ -59,18 +59,18 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v607, 2026-09-24)
-**The app is called 街字 Jiēzì** (H: "Do 街字 Jiēzì, drop Zeichentrainer"; "Read the street" was his idea and was
-offered as the store subtitle, which is his call in the private repo's listing). The title, manifest `name`/
-`short_name` (街字 Jiēzì / 街字), header logo, About, share text, `privacy.html`, the owner's dumps and every shared
-file (`jiezi-YYYY-MM-DD.json.txt`, `jiezi-progress.png`, …) carry it; the icon is 街 in the old frame, drawn with
-Noto Serif SC Bold, the font the old 识 was confirmed to be drawn in. **What must keep the old name, because
+## Current state (PWA v608, 2026-09-24)
+**The app is called 识字 Shízì** (v608, H: "Return the name to shizi", then "识字 Shízì" over the full v600 name; v601–v607
+it was 街字 Jiēzì, and Zeichentrainer stays dropped). The title, manifest `name`/`short_name` (识字 Shízì / 识字), header
+logo, About, share text, `privacy.html`, the owner's dumps and every shared file (`shizi-YYYY-MM-DD.json.txt`,
+`shizi-progress.png`, …) carry it; the three icons are v600's own 识 files. **What must keep the old name, because
 renaming it breaks installed copies:** the repo, the URL `/zeichentrainer/`, the mirror path, IndexedDB
-`zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` format marker (old and new backups
-import both ways). Not yet field-checked: Android swaps a home-screen icon and name only when Chrome re-checks the
-manifest, which can take a day.
+`zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` format marker (every backup — zeichentrainer-,
+jiezi- or shizi- — imports). Not yet field-checked: Android swaps a home-screen icon and name only when Chrome re-checks
+the manifest, which can take a day.
 
 **Recent state worth carrying in the head** (each has its full entry in the archive):
+- **v608** — **the name is 识字 Shízì** again with the v600 icons; every v601 rename reversed (files `shizi-…`).
 - **v607** — the study card's **photo is a real square**, as wide as the pad (`.cue .zone1` width `min(100%,--ph)`,
   centred); until v606 it took the card's full width and was square only by accident (322 × 286 in Test this card).
 - **v606** — a **zoomed picture hands its pan to the swipe at the edge**: the clamp's refused horizontal move is counted,
@@ -138,7 +138,7 @@ no progress row, never sent to the AI, **not in the Deck count** (v504).
 Dictionary/phrasebook prefills stay `verified:false` until a human or the AI checked them; when
 unsure, flag rather than invent. New words come from photos.
 
-Export/import: progress + cards as JSON, `jiezi-YYYY-MM-DD.json.txt` (`zeichentrainer-…` until v601; the filename is never read) through the share
+Export/import: progress + cards as JSON, `shizi-YYYY-MM-DD.json.txt` (`zeichentrainer-…` until v601, `jiezi-…` v601–v607; the filename is never read) through the share
 sheet; import upserts by `id`. Photos ride along as base64 behind a checkbox (v166). **The export
 duplicates a shared photo once per card** — named, not fixed.
 
@@ -487,7 +487,7 @@ own licences even after the app is sold** (Arphic §2b and CC BY-SA ShareAlike).
 fine; taking those two files private is not.
 
 ## Open / not yet field-checked
-v607's square photo in Learn and Test this card; v606's pull-past-the-edge swipe on a zoomed photo; v605's whole dictionary meanings on the phone (the file re-fetches once); v603/v604's Traditional chip and its switch (does the blue read as the script, is the corner tap found, does a tap meant for the photo hit it); v602: does Learn read better without the marks on the photo (H's trial — his word decides whether `SPOT_ON` goes back to true); v601's name and icon on the home screen, and v600 and the versions around it, are not field-checked — H's next long-word card is the check for the
+v608's name and icon on the home screen; v607's square photo in Learn and Test this card; v606's pull-past-the-edge swipe on a zoomed photo; v605's whole dictionary meanings on the phone (the file re-fetches once); v603/v604's Traditional chip and its switch (does the blue read as the script, is the corner tap found, does a tap meant for the photo hit it); v602: does Learn read better without the marks on the photo (H's trial — his word decides whether `SPOT_ON` goes back to true); v600 and the versions around it, are not field-checked — H's next long-word card is the check for the
 wrapped word line and for the bigger reading on the finished card (is 27 px enough, and does the reading
 still read as one thing when a seven-syllable word breaks across two lines?); an **empty Learn screen** for
 v599's real example card, and **More → How to use the app** for the figures (does it read as the app? is the

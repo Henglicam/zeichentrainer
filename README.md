@@ -1,4 +1,4 @@
-# 街字 Jiēzì (PWA)
+# 识字 Shízì (PWA)
 
 Chinesische Schriftzeichen von der Straße lernen, mit Spaced Repetition (bis v601: 识字 Zeichentrainer).
 Läuft offline, installierbar (Zum Startbildschirm), Fortschritt bleibt dauerhaft (IndexedDB).
