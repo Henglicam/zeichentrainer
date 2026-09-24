@@ -626,6 +626,7 @@ body.noscroll{overflow:hidden}
 .ctile .tm{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;font-family:var(--sans);font-size:10px;font-weight:700;font-style:normal;color:#fff}
 .ctile .tm.flag{background:var(--tint)} .ctile .tm.ai{background:var(--ok)}
 .ctile .tm.trad{background:var(--lock)} .ctile .tmarks.ttrad{top:6px;bottom:auto;right:40px} /* v603: the card is in traditional characters — the tile's top-left corner, clear of the star */
+.tradmark.simp{background:var(--fill);color:var(--label)} /* v604: switched to simplified — the same chip, quieter, since simplified is the app's default script */
 .ctile .tm.new{background:var(--tint-soft);color:var(--tint)} /* v515: a page whose text is not yet checked */
 /* the marking's tick, on a tile (v490, H: "Im markiermodus sind an der Sternposition nun kreise. Das scheint falsch."):
    the filled state has been scoped to .crow and .shot.pick since v355, so on a tile — the Cards list since v465 — a
@@ -967,5 +968,6 @@ body.noscroll{overflow:hidden}
 .padwrap .padacts:not(:has(:not([hidden]))){display:none} /* an empty row takes no taps */
 .padwrap .hint#pad-note{position:absolute;left:12px;right:12px;top:8px;margin:0;text-align:center;pointer-events:none}
 /* v603: a card in traditional characters, named in the picture's top-left corner (the review flag has the right) — on the study card, its neighbour and the open card. Over any photo, so it carries its own fill; pointer-events off, so a tap on it is still the tap on the picture */
-.tradmark{position:absolute;left:8px;top:8px;z-index:3;height:24px;line-height:24px;padding:0 10px;border-radius:999px;background:var(--lock);color:#fff;font-family:var(--sans);font-size:12px;font-weight:600;white-space:nowrap;pointer-events:none;user-select:none;-webkit-user-select:none;box-shadow:0 1px 3px rgba(0,0,0,.25)}
-.cue .txt .tradmark{position:static;flex:none;align-self:center;margin:0 0 6px;box-shadow:none} /* v603: in the text half the chip heads the tiles rather than lying on them; splitFit gives the tiles what it leaves */
+.tradmark{position:absolute;left:8px;top:8px;z-index:3;height:24px;line-height:24px;padding:0 10px;border:none;border-radius:999px;background:var(--lock);color:#fff;font-family:var(--sans);font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none;-webkit-user-select:none;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.tradmark::before{content:"";position:absolute;inset:-10px -6px} /* v604: the chip is the script switch, and the 24 px chip gets a 44 px target */
+.cue .txt .tradmark{position:relative;left:auto;top:auto;flex:none;align-self:center;margin:0 0 10px;box-shadow:none} /* v603: in the text half the chip heads the tiles rather than lying on them; splitFit gives the tiles what it leaves. v604: 10 px under it, so its 44 px target ends where the first tile begins */

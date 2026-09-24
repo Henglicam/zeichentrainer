@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 街字 Jiēzì (识字 Zeichentrainer until v601), v1–v603
+# HISTORY.md — the full record of 街字 Jiēzì (识字 Zeichentrainer until v601), v1–v604
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,28 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v604, 2026-09-24)
+- **The Traditional chip is a per-card switch to simplified (v604, H: "Bitte in der Lernkarte auch die Möglichkeit geben,
+  Simplified Chinese anzuzeigen und zu lernen. Quasi einen Switch einbauen." — offered as three lines with one question,
+  per card or for all traditional cards; H: "Go per Card").** A tap on v603's chip sets `simp:true` on the card and the
+  chip reads **Simplified** (grey `--fill`, the app's default script, so quieter than the blue); a tap again takes it back.
+  - **One reader:** `learnTrad(d)` = `d.trad` unless `d.simp`. `padTargets` (so the tiles AND the pad's template, which is
+    the target's glyph), `cueGlyphHTML`, the whole text at the head of "Whole card" on the study card and the open card,
+    and the Cards tile's glyph and its `.tm.trad` mark all ask it — no screen can show one script while the pad asks for
+    the other. `simpRefHTML` shows the OTHER script under the whole text (Traditional 養樂多 once switched). The photo
+    stays as taken; the key stays simplified; the Edit form spreads the card, so `simp` survives an edit.
+  - **The pad restarts the card on a switch** (`S.pad` of that card and its `S.wroteAt` rows dropped): a stroke half
+    written belongs to the other glyph. `charWrites` is keyed by glyph since v512, so 養 and 养 level separately.
+  - **The target:** the chip stays 24 px and a `::before` gives it 44 px; in the text state its bottom margin goes 6 → 10
+    px (and `splitFit`'s `tmH` with it) so the target ends where the first tile begins — measured, a tap 1 px inside the
+    tile's top still lands on the tile. The handler stops propagation, so the tap no longer swaps the halves (on v603
+    it did — the chip had `pointer-events:none`), and on the open card it does not open the whole photo.
+  - **Measured** (headless Chromium, touch taps; 390 de light/dark, 360 ru): photo state, a tap 8 px under the chip →
+    `simp` true, tiles 养乐多, template 养, whole text 养乐多, reference "Langzeichen 養樂多", `S.cueBig` still "pic";
+    text state, a tap → back to 養樂多, still "txt"; open card → switched, `fullPic` untouched; tile mark present while
+    traditional, gone once simplified; the choice survives a reload. On v603 the first tap swaps the halves and changes
+    nothing else — every switch check flips. **Not yet field-checked:** a `TO_TEST` line and a `WHATS_NEW` line.
 
 ## Current state (PWA v603, 2026-09-24)
 - **A card in traditional characters says so, on its photo and on its tile (v603, H: "Bitte Lernkarten kennzeichnen, in
