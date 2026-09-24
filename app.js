@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=603; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=604; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,6 +671,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v604","tap Traditional: simplified card"],
   ["learn","v603","traditional card: chip on photo"],
   ["learn","v602","Learn: no marks on the photo"],
   ["app","v601","home screen: 街字 name and icon"],
@@ -3026,7 +3027,7 @@ async function charInfo(w,btn,d){
 const HINT_REVIEWS=20;
 const showHints=()=>(usage().reviews||0)<HINT_REVIEWS;
 /* the simplified form of a traditional card, on the back above the pinyin (v227; on the front until v226, H v102) */
-const simpRefHTML=d=>d.trad?`<div class="script back"><span class="scriptref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span></div>`:"";
+const simpRefHTML=d=>d.trad?`<div class="script back"><span class="scriptref"><span class="lbl">${t(d.simp?"Traditional":"Simplified")}</span><span class="hanzi">${esc((d.simp?d.trad:d.c).replace(/\n/g," / "))}</span></span></div>`:""; /* v604: the OTHER script — the simplified form under a card learned in traditional, the traditional one under a card switched to simplified */
 function backHTML(d,o){ const srcHere=!(o&&o.noSrc); /* noSrc: the front of this same screen already carries the multicard's name under the picture (v489), and twice on one screen is noise.
    v536: the OPEN CARD stopped passing it. Its front is frontPic since v518, not frontHTML, so nothing there draws scriptNote - and with noSrc the name was on neither side: a generated flashcard opened from the Cards tab said nowhere where it came from and had no way back into its multicard, which is the one screen v492/v494 built that round trip for.
    The reference is a BUTTON here, on the Learn back as in the detail (v494, H: "Als einer von Multicard erzeugten Flashcard komme ich momentan nicht zurueck in die Multicard"). v487 made it plain text on this
@@ -3233,7 +3234,7 @@ function renderStudy(main){
      has one, the photo's own lines — so the block at the foot of the card is the whole card in one look, while the line
      above the pad is the word being written. Until v526 the block sat above the pad and the line under it, and the two
      said the same thing twice about different words ("doppelt gekoppelt und unlogisch"). */
-  const back=`<div class="anshanzi hanzi">${(d.trad?d.trad.split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}
+  const back=`<div class="anshanzi hanzi">${(learnTrad(d)?learnTrad(d).split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}
       <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button></div>`;
   const noTmpl=cur&&STROKES&&!STROKE_OF.has(cur.glyph);
   const freePad=noTmpl; /* a character the stroke set lacks: the pad draws freehand and needs Undo, Clear and the note. A character WITH a template never shows them — v570 gave them to it mid-write and v582 took them back, so the freehand judging leaves no mark on the screen. */
@@ -3297,6 +3298,7 @@ function renderStudy(main){
   if(pg&&!S.fullPic) fitPageCover(card); /* D5: the multicard's picture cover-fitted around the card's own text */
   attachPicZoom(card.querySelector(".zone1 .picbox")); /* v514: pinch to zoom, one finger to pan (§ 4) */
   if(cur) padLine(d,cur); /* the line under the pad, always, for the character the pad is on (v518) */
+  wireScript(card); /* v604 */
   spotChar(card,d,cur); /* v520: the locked character lit on the photo; v533: the word being written marked on it */
 }
 /* v527: the block sits under the pad, so opening it scrolls the card until the block stands above the tab bar (or, when it is
@@ -3517,7 +3519,7 @@ function splitFit(root){ const cue=root&&root.querySelector(".cue"), cr=cue&&cue
     const line=cue.querySelector(".padline");
     if(line) line.style.setProperty("--plz","1"); /* measure the rows at rest, or the fit compounds on every render */
     const lh=line?Math.max(LINE_H,Math.ceil(line.scrollHeight)):LINE_H, lineH=lh+6; /* the word line and its margin */
-    const tm=cue.querySelector(".txt .tradmark"), tmH=tm?Math.ceil(tm.offsetHeight)+6:0; /* v603: the Traditional chip heads the text half, and the tiles take what it leaves — over them it covered the first tile at 360 px */
+    const tm=cue.querySelector(".txt .tradmark"), tmH=tm?Math.ceil(tm.offsetHeight)+10:0; /* v604: its margin — the switch's target needs the 10 */ /* v603: the Traditional chip heads the text half, and the tiles take what it leaves — over them it covered the first tile at 360 px */
     const rows=textFit(cr,ci,base-lineH-tmH,CH_BIG); th=Math.max(base,rows+lineH+tmH); cueH=th; /* v569: big means big — the rows are whatever gives the largest tiles */
     /* v589 (H: "wenn ich drauf tippe, decke ich quasi die Karte auf und sehe auf der Rückseite die Bedeutung, sprich die
        Übersetzung von Pinyin"): the uncovered half is a fixed square — as tall as the pad since v561 — and a short card's
@@ -3570,7 +3572,7 @@ function cueBig(card){ const to=S.cueBig==="txt"?"pic":"txt"; S.cueBig=to; /* v5
    line under the pad names the word; a number with its unit is one entry for the whole part and is not writable (w:false).
    The glyph is the traditional character on a traditional card (v101's rule for the front), which is also the template. */
 function padTargets(d){
-  const text=[...String(d.c||"").replace(/\n/g,"")], trad=d.trad?[...d.trad.replace(/\n/g,"")]:null, tr=trad&&trad.length===text.length?trad:null;
+  const text=[...String(d.c||"").replace(/\n/g,"")], trad=learnTrad(d)?[...learnTrad(d).replace(/\n/g,"")]:null, tr=trad&&trad.length===text.length?trad:null;
   let words=d.gloss&&d.gloss.length?cardGloss(d).map(g=>g.w):(d.kind==="sign"?(d.segs||[]).flat():(d.seg||[]).filter(x=>x!=="\n"));
   words=words.filter(w=>CJK.test(w)||NUM_PART.test(w));
   const out=[]; let pos=0, wi=0;
@@ -4492,8 +4494,20 @@ const CUE_GLYPH=96;
    "Traditional" pill under the text box went with frontHTML's last use on those screens (v512/v518), so from then on
    nothing in Learn said it. The corner is the frame's own (v560): nothing moves for it, and the review flag keeps the
    right-hand one. No 简/繁 shorthand (H, v106). */
-const tradMark=d=>d&&d.trad?`<span class="tradmark">${t("Traditional")}</span>`:"";
-function cueGlyphHTML(d){ const tx=(d&&(d.trad||d.c))||""; return tx?`<div class="cglyphbox">${glyphTileHTML(tx,CUE_GLYPH)}</div>`:""; }
+/* v604 (H: "Bitte in der Lernkarte auch die Möglichkeit geben, Simplified Chinese anzuzeigen und zu lernen. Quasi einen
+   Switch einbauen." — "Go per Card"): the chip IS the switch. A tap turns a traditional card to its simplified form and
+   back, and the card keeps the choice (`simp`). learnTrad is the one reader of it: the tiles, the pad's template (the
+   glyph padTargets hands the pad), the whole text and the Cards tile all ask it, so no screen can show one script while
+   the pad asks for the other. The photo stays as it was taken, and the key stays simplified as it always was. The pad's
+   levels are kept per glyph (charWrites, v512), so 養 and 养 are learned separately — as they should be. */
+const learnTrad=d=>d&&d.trad&&!d.simp?d.trad:null;
+const tradMark=d=>d&&d.trad?`<button type="button" class="tradmark${d.simp?" simp":""}" data-script="${esc(d.id)}" aria-label="${esc(t(d.simp?"Simplified":"Traditional"))}">${t(d.simp?"Simplified":"Traditional")}</button>`:"";
+async function setSimp(id,on){ const d=cardOf(id); if(!d||!d.trad) return;
+  const upd={...d}; if(on) upd.simp=true; else delete upd.simp; await putCard(upd,id);
+  if(S.pad&&S.pad.key.endsWith(":"+id)) S.pad=null; /* the pad restarts the card: a stroke half-written belongs to the other glyph */
+  if(S.wroteAt) for(const k of Object.keys(S.wroteAt)) if(k.startsWith(id+":")) delete S.wroteAt[k]; }
+function wireScript(root){ if(root) root.querySelectorAll(".tradmark[data-script]").forEach(b=>b.onclick=async e=>{ e.stopPropagation(); const d=cardOf(b.dataset.script); if(!d) return; await setSimp(d.id,!d.simp); render(); }); }
+function cueGlyphHTML(d){ const tx=(d&&(learnTrad(d)||d.c))||""; return tx?`<div class="cglyphbox">${glyphTileHTML(tx,CUE_GLYPH)}</div>`:""; }
 /* v523: the finished card, large, over the pad — the characters in the Hanzi font fitted to the pad's square (the pad is a
    size container, so the size is solved by CSS), the pinyin and the meaning under them. The same text the card carries;
    no key in any column. */
@@ -4643,11 +4657,11 @@ function cardTileHTML(d,pk){
   const sv=pg?null:srcView(d), su=sv?urlOf(sv.blob):""; /* v490: the multicard's photo, derived rather than stored */
   const pic=pg?fullPhoto(d):d.img;
   const head=pg?esc(d.c):""; /* only a multicard carries a heading since v593; v597 puts it ON the picture, so the tile is the square every other tile is */
-  const trad=!pg&&!!d.trad; /* v603: a flashcard in traditional characters says so on its tile too — top-left, its own corner, since the flag, AI and New marks already share the bottom one and a long word (ru) crowded them */
+  const trad=!pg&&!!learnTrad(d); /* v604: only while it is learned in traditional; v603: a flashcard in traditional characters says so on its tile too — top-left, its own corner, since the flag, AI and New marks already share the bottom one and a long word (ru) crowded them */
   const flag=pg?its.some(x=>x.flag):d.flag, ai=pg?its.some(x=>x.ai):d.ai, nw=pg?its.some(x=>x.unchecked):!!d.unchecked; /* v515: not yet checked. Until v592 a page carried this mark on its picture and a plain card in its status line; with that line gone (v593) both carry it in the same place, which is also the one they should always have shared */
   const glyph=!sv&&!pic; /* v506: a card without a picture shows its WHOLE text in the picture area, not its first character */
   return `<button class="ctile${pg?" page":""}${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}"${pk?"":` data-lp="${esc(d.id)}"`}>
-      ${pg?`<span class="tstack">`:""}<span class="tw${sv?" src":glyph?" glyph":""}">${sv?`<img class="tbg" src="${su}" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="tpw"><img class="tpi" src="${su}" alt="" loading="lazy" decoding="async">${regionsHTML({id:sv.shot},sv.rs,{learn:true,me:sv.me,span:true,only:true})}</span>`:pic?`<img class="tbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:glyphTileHTML((pg?(its[0]&&its[0].c):(d.trad||d.c))||"")}
+      ${pg?`<span class="tstack">`:""}<span class="tw${sv?" src":glyph?" glyph":""}">${sv?`<img class="tbg" src="${su}" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="tpw"><img class="tpi" src="${su}" alt="" loading="lazy" decoding="async">${regionsHTML({id:sv.shot},sv.rs,{learn:true,me:sv.me,span:true,only:true})}</span>`:pic?`<img class="tbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:glyphTileHTML((pg?(its[0]&&its[0].c):(learnTrad(d)||d.c))||"")}
         ${pk?`<span class="tick" aria-hidden="true"></span>`:pg?"":starHTML(d)}
         ${pg?`<span class="cnt">${its.length}</span>`:""}
         ${trad?`<span class="tmarks ttrad"><i class="tm trad">${t("Traditional")}</i></span>`:""}${(flag||ai||nw)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}${nw?`<i class="tm new" title="${esc(t("Not yet checked"))}">${t("tile:New")}</i>`:""}</span>`:""}
@@ -4744,7 +4758,7 @@ function detailCardHTML(d,sw){
      line showed only for a tapped character. The block stays open by default here — this is the screen for looking a card up. */
   const tg=padTargets(d), li=detailCh(d), lit=detailLit(d,tg), open=!S.detailHide;
   const btn=x=>`<button class="ch${x.w?"":" num"}${lit===x?" cur":""}" data-i="${tg.indexOf(x)}">${esc(x.glyph)}</button>`;
-  const back=`<div class="anshanzi hanzi">${(d.trad?d.trad.split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}`;
+  const back=`<div class="anshanzi hanzi">${(learnTrad(d)?learnTrad(d).split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}`;
   return `${tagsHTML(d,!p)}<div class="zone1 front${d.flag?" flagged":""}" id="d-reveal">${frontPic(d,{page:true,fixed:true})||cueGlyphHTML(d)}${tradMark(d)}</div>
       ${chrowHTML(d,tg,btn,lit?lit.wi:null)}
       <div class="padline" id="padline"${lit?"":" hidden"}></div>
@@ -4841,6 +4855,7 @@ function renderCardDetail(main,c){
     const lx=detailLit(d,tg); if(lx) padLine(d,lx); /* v531: the first word's line when nothing is tapped */
     chrowFit(dcard);
     const pg=frontPage(d); if(pg&&!S.fullPic) fitPageCover(dcard); /* D5, as on the study card */
+    wireScript(dcard); /* v604 */
     spotWord(dcard,d,lx); /* v533: the word whose line is showing, marked on the photo as in Learn */
     attachPicZoom(dcard.querySelector(".zone1 .picbox")); }
   const test=$("#d-test"); if(test) test.onclick=()=>{
@@ -5188,6 +5203,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  604:"Tap the Traditional chip on a card to learn it in simplified characters instead — and tap again to switch back. Each card remembers its choice.",
   603:"A card written in traditional characters now says so: a small Traditional chip on its photo while you learn it, and on its tile under Cards.",
   601:"The app has a new name: 街字 Jiēzì, the characters of the street. Same app, same cards, a new icon.",
   600:"A long word no longer runs off the edge of the line under the pad — it wraps onto as many lines as it needs, so its pinyin and its meaning are both there. And the reading on a finished card is now as large as the card has room for, whatever its length.",

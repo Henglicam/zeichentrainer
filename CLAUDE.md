@@ -59,7 +59,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v603, 2026-09-24)
+## Current state (PWA v604, 2026-09-24)
 **The app is called 街字 Jiēzì** (H: "Do 街字 Jiēzì, drop Zeichentrainer"; "Read the street" was his idea and was
 offered as the store subtitle, which is his call in the private repo's listing). The title, manifest `name`/
 `short_name` (街字 Jiēzì / 街字), header logo, About, share text, `privacy.html`, the owner's dumps and every shared
@@ -71,9 +71,10 @@ import both ways). Not yet field-checked: Android swaps a home-screen icon and n
 manifest, which can take a day.
 
 **Recent state worth carrying in the head** (each has its full entry in the archive):
-- **v603** — a card in **traditional** characters (`d.trad`) says so: a blue `Traditional` chip (`tradMark`) in the
-  photo's top-left corner in Learn, on its neighbour and on the open card, heading the text half in the text state
-  (`splitFit` takes its height off the tiles), and on the Cards tile's top-left. v227's pill had been invisible since v512.
+- **v603/v604** — a card in **traditional** characters (`d.trad`) carries a chip (`tradMark`) in the photo's top-left
+  (heading the text half in the text state; `splitFit` takes its height off the tiles), and **the chip is a per-card
+  switch**: a tap sets `simp` and the card is learned in simplified — tiles, pad template, whole text and Cards tile all
+  read `learnTrad(d)`; the pad restarts the card. The tile's mark shows only while it is learned in traditional.
 - **v602** — **the marks on the photo are switched off, not removed** (H wants to try Learn without them):
   `SPOT_ON=false` returns early from `spotWord` and `spotChar`, so neither the locked character's spotlight (v520) nor
   the word being written (v533) is drawn, and v541's zoom follow goes with it. `true` brings all of it back.
@@ -81,16 +82,6 @@ manifest, which can take a day.
   line's height read at `--plz` 1 rather than `LINE_H` 61, its room taken from the tiles), and the finished card's
   reading is **binary-searched over the real layout** by `recapFit`, width first — 12.7 → 27 px on
   中华人民共和国地理标志; a word of more than `RECAP_WSYL` 4 syllables may break between its syllables.
-- **v599** — the two sample cards in the app's instructions are real crops too: the empty deck's example
-  card and the guide's privacy card. `gfimg` puts a crop INSIDE a drawn figure (two `<image>`s swapped by a
-  media query, since `<picture>` does not exist in SVG); each keeps a drawn half — the arrow and the chip,
-  and the fold bar, whose real label is UI prose.
-- **v597** — the finished card's recap stands a flat 300 ms less at every length (`NEXT_MS` 3200,
-  `RECAP_MAX` 5300, `RECAP_SYL` unchanged at 230), and the **deck is one grid of squares**: the multicard
-  tile's bar and two-line title moved ON to the picture over a gradient scrim, 174 × 239 → 174 × 174.
-- **v596** — `.picbox.page` (the page front of a card made from a multicard, and of a v452 page card) is the
-  ordinary card's own box to the pixel, and `fitPageCover` joins both carousel `ready` hooks so the
-  neighbour no longer shows the multicard's photo at natural size and jumps at the snap.
 
 ## Files
 `index.html` · `styles.css` · `lang.js` (ten language columns) · `app.js` ·
@@ -135,7 +126,7 @@ timestamp. A card:
   shot:"shot_…", img:<crop Blob>, imgFull:<only when the inbox photo is gone>,
   frame:{x,y,w,h,a},                                   // fractions of the photo; Crop again starts here
   tags:[…], star:true, flag:true, flagNote, unchecked:true,
-  trad:"養樂多", ml:"de", ms:{en,de}, ds:{en,de},       // script, meaning language, meanings, descriptions
+  trad:"養樂多", simp:true, ml:"de", ms:{en,de}, ds:{en,de},       // script (simp: learned in simplified, v604), meaning language, meanings, descriptions
   alts:[…], ai:{zh,p,m,note,ok,bad,at,model}, aiNo:"<fingerprint of a dismissed suggestion>",
   mt:{src:"llm"|"dict"|"phrasebook"|"nmt"|"gloss", verified, pending, suspect},
   reading:{rect,at,failed},                            // saved before its reading finished
@@ -499,7 +490,7 @@ own licences even after the app is sold** (Arphic §2b and CC BY-SA ShareAlike).
 fine; taking those two files private is not.
 
 ## Open / not yet field-checked
-v603's Traditional chip (does the blue read as the script, and does H want it on the tile too); v602: does Learn read better without the marks on the photo (H's trial — his word decides whether `SPOT_ON` goes back to true); v601's name and icon on the home screen, and v600 and the versions around it, are not field-checked — H's next long-word card is the check for the
+v603/v604's Traditional chip and its switch (does the blue read as the script, is the corner tap found, does a tap meant for the photo hit it); v602: does Learn read better without the marks on the photo (H's trial — his word decides whether `SPOT_ON` goes back to true); v601's name and icon on the home screen, and v600 and the versions around it, are not field-checked — H's next long-word card is the check for the
 wrapped word line and for the bigger reading on the finished card (is 27 px enough, and does the reading
 still read as one thing when a seven-syllable word breaks across two lines?); an **empty Learn screen** for
 v599's real example card, and **More → How to use the app** for the figures (does it read as the app? is the
