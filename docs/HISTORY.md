@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 街字 Jiēzì (识字 Zeichentrainer until v601), v1–v607
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v608
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,24 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v608, 2026-09-24)
+- **The name goes back to 识字, as 识字 Shízì (v608, H: "Return the name to shizi"; asked one question — the full v600
+  name 识字 Zeichentrainer, or 识字 with its pinyin as 街字 Jiēzì had it — H: "识字 Shízì").** Every place v601 renamed is
+  renamed again: the title, manifest `name` "识字 Shízì" and `short_name` "识字", the Apple title, the header logo, About,
+  the share-the-app text and title, the progress picture's footer, `privacy.html` (three times, dated 24 September),
+  README, the owner's dumps and every file the app shares (`shizi-YYYY-MM-DD.json.txt`, `shizi-progress.png`,
+  `shizi-diagnostics.txt`, `shizi-feedback-…`, `shizi-users-…`, `shizi-review-…`), and in `lang.js` the import hint and
+  "Not a 识字 export" in all ten columns. **The three icons are v600's own files, byte for byte** (the 识 in the old
+  frame), taken from the commit before v601. Zeichentrainer stays dropped, as H chose at v601.
+  - **Still unchanged, for the same reason as at v601:** repo, URL `/zeichentrainer/`, mirror path, IndexedDB
+    `zeichentrainer`, `zt-vN` caches and the export's `app:"zeichentrainer"` marker; the import never reads a filename,
+    so jiezi-… and zeichentrainer-… backups still import.
+  - **`WHATS_NEW`:** v601's note ("a new name: 街字 Jiēzì") is gone — it now states something false (the v534 rule);
+    v608 says the old name and icon are back. `TO_TEST`'s v601 line becomes v608's.
+  - **Measured** headless at 390: title, logo, About and manifest read 识字 Shízì / 识字, PWA v608; the German import hint
+    reads "shizi-….json.txt" and the error "Kein 识字-Export (JSON)", no page errors. **Not yet field-checked:** the
+    home-screen name and icon follow when Chrome re-checks the manifest, which can take a day.
 
 ## Current state (PWA v607, 2026-09-24)
 - **The study card's photo is a square, the pad's own size (v607, H with a screenshot of a 福 lantern in Test this card:
