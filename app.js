@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=605; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=606; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,6 +671,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v606","zoomed photo: pull on to swipe"],
   ["learn","v605","梓: meaning whole, no …"],
   ["learn","v604","tap Traditional: simplified card"],
   ["learn","v603","traditional card: chip on photo"],
@@ -3686,7 +3687,7 @@ const zoomKey=()=>{ const d=S.mode==="cards"?cardOf(S.detail):cardOf(curList()[c
 function attachPicZoom(box){
   const tg=box&&(box.querySelector(".pagewrap")||box.querySelector(".signimg")); if(!tg) return;
   const key=zoomKey();
-  const v={s:1,tx:0,ty:0,r0:null}, pts=new Map(); let last=null, moved=false, eat=false;
+  const v={s:1,tx:0,ty:0,r0:null}, pts=new Map(); let last=null, moved=false, eat=false, ovx=0, down=null;
   tg.style.transformOrigin="0 0";
   const rel=e=>{ const b=box.getBoundingClientRect(); return {x:e.clientX-b.left,y:e.clientY-b.top}; };
   const measure=()=>{ if(v.s===1||!v.r0){ const b=box.getBoundingClientRect(), r=tg.getBoundingClientRect(); v.r0={x:r.left-b.left,y:r.top-b.top,w:r.width,h:r.height}; } };
@@ -3716,11 +3717,25 @@ function attachPicZoom(box){
     v.tx=box.clientWidth/2-r.x-(cx-r.x)*v.s; v.ty=box.clientHeight/2-r.y-(cy-r.y)*v.s; glide(true); apply(); };
   const summary=()=>{ const a=[...pts.values()]; if(a.length>=2){ return {x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2,d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}; } return a.length?{x:a[0].x,y:a[0].y,d:0}:null; };
   const zoomAt=(m,s2)=>{ s2=Math.min(ZOOM_MAX,Math.max(1,s2)); const r=v.r0, px=(m.x-r.x-v.tx)/v.s, py=(m.y-r.y-v.ty)/v.s; v.s=s2; v.tx=m.x-r.x-px*s2; v.ty=m.y-r.y-py*s2; apply(); };
-  box.addEventListener("pointerdown",e=>{ if(e.button) return; glide(false); measure(); pts.set(e.pointerId,rel(e)); last=summary(); moved=false;
+  box.addEventListener("pointerdown",e=>{ if(e.button) return; glide(false); measure(); pts.set(e.pointerId,rel(e)); last=summary(); moved=false; ovx=0; down=pts.size===1?{x:e.clientX,y:e.clientY}:null;
     if(pts.size>=2||v.s>1){ e.stopPropagation(); e.preventDefault(); try{ box.setPointerCapture(e.pointerId); }catch(x){} } });
   box.addEventListener("pointermove",e=>{ if(!pts.has(e.pointerId)) return; pts.set(e.pointerId,rel(e)); const cur=summary(); if(!last||!cur){ last=cur; return; }
     if(pts.size>=2){ e.stopPropagation(); e.preventDefault(); moved=true; if(last.d>0&&cur.d>0) zoomAt(cur,v.s*cur.d/last.d); v.tx+=cur.x-last.x; v.ty+=cur.y-last.y; apply(); }
-    else if(v.s>1){ e.stopPropagation(); e.preventDefault(); if(Math.hypot(cur.x-last.x,cur.y-last.y)>0) moved=true; v.tx+=cur.x-last.x; v.ty+=cur.y-last.y; apply(); }
+    else if(v.s>1){
+      /* v606 (H: "Wenn ich in ein Bild reingezoomt habe und dann zur nächsten Karte swipen möchte, kann ich das nicht. Dann
+         verschiebe ich nur das Bild bis zum Rand."): the pan gives the stroke to the carousel at the picture's edge, as a
+         photo viewer does. What the clamp in apply() refuses of a horizontal move is counted (ovx); once the finger has
+         pulled SW_SLOP past the edge, in a stroke that is more sideways than up or down, the pointer leaves the zoom and
+         wireSwipe takes it from here — this very move included, so the card starts to follow at once and the pixels
+         already pulled past the edge count towards SW_MIN. Any move that does shift the picture sideways starts the count
+         again, so a pan inside the picture never turns into a swipe. */
+      const mx=cur.x-last.x, want=v.tx+mx; v.tx=want; v.ty+=cur.y-last.y; apply(); const ate=want-v.tx;
+      if(mx){ if(!ate) ovx=0; else if(!ovx||Math.sign(ate)===Math.sign(ovx)) ovx+=ate; else ovx=ate; }
+      const card=box.closest(".card.swipe");
+      if(card&&card._swipeFrom&&down&&Math.abs(ovx)>=SW_SLOP&&Math.abs(e.clientX-down.x)>Math.abs(e.clientY-down.y)){
+        const o=ovx; pts.delete(e.pointerId); last=summary(); moved=false; eat=false; ovx=0; down=null;
+        card._swipeFrom(e,o); return; }
+      e.stopPropagation(); e.preventDefault(); if(Math.hypot(mx,cur.y-last.y)>0) moved=true; }
     last=cur; });
   const up=e=>{ if(!pts.has(e.pointerId)) return; pts.delete(e.pointerId); last=summary(); if(moved) eat=true; };
   box.addEventListener("pointerup",up); box.addEventListener("pointercancel",up);
@@ -4290,6 +4305,10 @@ function wireSwipe(card,o){
     },SW_MS);
   };
   card.addEventListener("pointerup",e=>end(e,false)); card.addEventListener("pointercancel",e=>end(e,true));
+  /* v606: a zoomed picture hands its pan over at the edge (attachPicZoom). Its pointerdown never reached the card, so the
+     stroke is started here with its origin set back by what was already pulled past the edge (ox), and the move that
+     handed it over bubbles on to the listener above */
+  card._swipeFrom=(e,ox)=>{ x0=e.clientX-ox; y0=e.clientY; dx=0; on=false; pid=e.pointerId; };
 }
 
 /* one grade on one card — the schedule, the leech flag, the streak's day and the day's count. Learn's grade() and the
@@ -5204,6 +5223,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  606:"Zoomed into a photo? Keep pulling past its edge and the next card comes in, just like in a photo gallery.",
   604:"Tap the Traditional chip on a card to learn it in simplified characters instead — and tap again to switch back. Each card remembers its choice.",
   603:"A card written in traditional characters now says so: a small Traditional chip on its photo while you learn it, and on its tile under Cards.",
   601:"The app has a new name: 街字 Jiēzì, the characters of the street. Same app, same cards, a new icon.",
