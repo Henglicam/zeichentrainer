@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v610
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v611
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,39 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v611, 2026-09-24)
+- **The AI is told never to invent, and its answer is checked against something that is not the AI (v611, H: "Bitte
+  stelle sicher, dass die AI bei ihren Antworten auf keinen Fall halluziniert" — told plainly that no build can promise
+  "never", offered three measures and a fourth held back, asked "What would you recommend?", then "Go").**
+  - **(1) The prompts.** Three passages invited a guess and are gone: the text check's "when the readings circle around a
+    well-known brand or product name, "zh" is that name", its "alt" rule's "a well-known name or phrase they all circle
+    around; prefer a real sign, menu or product text that every reading could be a misreading of" (now: a character is
+    taken from the other readings only when one of them shows it). Both prompts (`aiSystem`, `picSystem`) end with one
+    "Never invent" rule: "m" names a brand "as it is known" only when the model actually knows the name, "desc" states only
+    what the characters say and facts it is certain of — never a company, place, history, founder, date or product it is
+    not sure exists — and anything it is unsure of stays as given and is named in a new **"unsure"** field. Choosing among
+    the reader's own alternatives for a garbage reading stays: that choice is bounded by what the photo shows.
+  - **(2) The pinyin against the dictionary** (`pyDictOff`): every syllable is compared with the reading pinyin-pro gives
+    the character **in its word** — a first cut compared each character alone, and 银行 "yín xíng" passed because 行 can
+    be xíng, the very slip a model makes. Toneless syllables match by letters (东西 dōngxi), 一/不 by letters (sandhi), 儿
+    as "r"; a line whose syllables do not align with its characters, and a character with no reading, are left alone.
+    **Measured** on 3 000 random CEDICT words with their own reading: 97 flagged (3.2 %), nearly all rare words where
+    pinyin-pro and CEDICT differ (乌拉, 哽咽 gěng yè, 电话簿 bù); on one wrong reading swapped into a word it caught 865
+    of 912 (95 %). Of 25 common sign words one false flag: 还款 huán kuǎn, where pinyin-pro itself reads hái.
+  - **(3) The flag** (`aiDoubt`): a mismatch flags the card "the pinyin does not match the dictionary (行 xíng) — check
+    it", else the model's own doubt flags it "the AI is not sure: …" (`saneUnsure` drops "none", "no" and the like). It
+    runs where every AI answer reaches a card: `readingCard` (the automatic card, Save now, Save card and a split panel's
+    labels) when the pinyin came from the AI and not from H's own hand, and `aiAccept` (the Review queue, Accept all),
+    where an accepted answer the dictionary contradicts stays flagged instead of being cleared. Two new keys, ten columns.
+  - **(4) Held back, named:** a second model checking every answer and flagging disagreement — twice the calls against the
+    relay's caps, and two models often share a mistake on a name; only if (1)–(3) let wrong cards through.
+  - **Measured** headless with the AI mocked: 银行 yín xíng / 绿色 lù sè / 好 hāo / 恒 hén flagged; yín háng, dōng xi, yí gè,
+    bú shì, lǜ sè, zhuō zi, Běi jīng, háng zhǎng, yì diǎnr, a two-line card and a name not flagged `[guard]`; the mocked
+    answer's "unsure" parsed; both prompts carry the rule and neither the nudge; `readingCard` with a wrong reading and
+    with an "unsure" flags, with a right one or H's typed pinyin does not; `aiAccept` of yín xíng stays flagged, of dōng
+    xi does not. On v610 the four flag checks flip, the guards pass on both. **Not yet field-checked** — the measure is
+    whether flags land on the cards that really were wrong, and not on the right ones.
 
 ## Current state (PWA v610, 2026-09-24)
 - **The update notes' bullets are grey (v610, H on v609: "Ja, aber die Bullet-Punkte bitte nicht in Rot. Das ist ja viel
