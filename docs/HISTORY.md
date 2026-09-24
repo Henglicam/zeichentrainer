@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v612
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v613
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,16 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v613, 2026-09-24)
+- **A tab tap ends a single-card test (v613, H: "Cards > open a card > test this card: Tip on Learn doesn't change to
+  learn mode").** `S.single` and the session queue it replaced (`S.saved`) were put back only by the test's own "← Cards"
+  (`endSingle`); the tab handler cleared the edit form, the lock's walk and the marking, but not the test — so Learn,
+  and Cards then Learn, kept showing "Testing from the list" on the one card. `wireChrome`'s tab handler now clears
+  `S.single`, restores `S.saved` and folds the answer, for every tab. Measured headless by clicking the real buttons (open
+  银行, Test this card, then the Learn tab; and again via the Cards tab): v613 is back on the session's own queue and card
+  (出口, 3 cards, no topline), v612 stays on 银行 alone — two checks flip; "← Cards" still lands on the open card `[guard]`.
+  **Not yet field-checked.**
 
 ## Current state (PWA v612, 2026-09-24)
 - **Show me and Skip sit on the pad (v612, H with a screenshot of the unfolded screen, "Show me" standing left of the

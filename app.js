@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=612; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=613; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,6 +671,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v613","Test card, then Learn tab: session"],
   ["learn","v612","unfolded: Show me inside the pad"],
   ["app","v611","AI flags: pinyin vs dictionary"],
   ["learn","v607","photo square, also in Test card"],
@@ -1170,6 +1171,7 @@ function wireChrome(){
       if(m==="inbox") clearResults(); /* … and the finished results of the last capture, so the Camera tab opens on the camera (v471) */
       if(S.lockChar){ S.lockChar=null; S.walk=null; S.walkIdx=0; S.pad=null; } /* … and a locked character's walk (v513, § 7) */
       endPick();                                            /* … and any marking (v351) */
+      if(S.single){ S.single=null; if(S.saved){ Object.assign(S,S.saved); S.saved=null; } S.ansOpen=false; } /* v613 (H: "Cards > open a card > test this card: Tap on Learn doesn't change to learn mode"): a tab tap ends the single-card test and puts the session queue back, as ← Cards does — until now S.single outlived every tab, so Learn stayed "Testing from the list" */
       if(CROP&&RECROP[CROP.id]) RECROP[CROP.id].end();      /* … and its Crop again (v239) */
       if(m==="cards" && (S.mode==="cards"||S.mode==="add")) S.detail=null; /* Cards again → back to the list */
       S.mode=m; render();
