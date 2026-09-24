@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=623; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=624; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1158,8 +1158,30 @@ async function shareZoomSheet(){
    Chrome's refusal of a share too large — a limit on the files' count and total size — and six or seven PNG sheets of
    photographs were tens of megabytes. So the pictures travel as JPEG sheets (a tenth of the size; the phone's own cuts are
    JPEGs already) and the frames and texts as ONE small PNG, shizi-zoomdata-0.png, whose pixels carry the JSON for every
-   sheet by name — the lossless part is only the part that must be. */
+   sheet by name — the lossless part is only the part that must be. Since v624 the frames and texts ride in the PDF
+   instead (zdPdf), and the small PNG is gone: a combining app had dropped it. */
 const ZD_W=1600, ZD_H=1700, ZD_CARD=700, ZD_PAGE=1200, ZD_Q=0.9, ZD_TAP_FILES=8, ZD_TAP_MB=15; /* about 2.7 megapixels a sheet; the detector reads every search at 320 px (CB_LONG), so 700 px of card loses it nothing. A tap sends at most ZD_TAP_FILES files and ZD_TAP_MB megabytes, well inside Chrome's share limits */
+/* a minimal PDF (v624): one page per JPEG, the JPEG's own bytes as the page's image, and the JSON as a stream of its own —
+   written by hand, since the app has no library for it and needs none: a catalogue, the pages, their images and contents,
+   the data stream, and a cross-reference table of byte offsets */
+function zdPdf(jpgs,meta){
+  const enc=new TextEncoder(), parts=[], offs=[]; let len=0;
+  const put=x=>{ const b=typeof x==="string"?enc.encode(x):x; parts.push(b); len+=b.length; };
+  const obj=(n,body,stream)=>{ offs[n]=len; put(`${n} 0 obj\n`); put(body); if(stream){ put("\nstream\n"); put(stream); put("\nendstream"); } put("\nendobj\n"); };
+  const n=jpgs.length, pageNo=i=>3+i*3, dataNo=3+n*3;
+  put("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
+  obj(1,`<</Type/Catalog/Pages 2 0 R/ShiziZoomData ${dataNo} 0 R>>`);
+  obj(2,`<</Type/Pages/Count ${n}/Kids[${jpgs.map((j,i)=>`${pageNo(i)} 0 R`).join(" ")}]>>`);
+  jpgs.forEach((j,i)=>{ const p=pageNo(i), content=`q ${j.w} 0 0 ${j.h} 0 0 cm /Im0 Do Q`;
+    obj(p,`<</Type/Page/Parent 2 0 R/MediaBox[0 0 ${j.w} ${j.h}]/Resources<</XObject<</Im0 ${p+1} 0 R>>>>/Contents ${p+2} 0 R>>`);
+    obj(p+1,`<</Type/XObject/Subtype/Image/Name/${j.name}/Width ${j.w}/Height ${j.h}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${j.bytes.length}>>`,j.bytes);
+    obj(p+2,`<</Length ${content.length}>>`,content); });
+  const data=enc.encode(JSON.stringify(meta)); obj(dataNo,`<</Type/ShiziZoomData/Length ${data.length}>>`,data);
+  const xref=len, size=dataNo+1; put(`xref\n0 ${size}\n0000000000 65535 f \n`);
+  for(let k=1;k<size;k++) put(String(offs[k]).padStart(10,"0")+" 00000 n \n");
+  put(`trailer\n<</Size ${size}/Root 1 0 R>>\nstartxref\n${xref}\n%%EOF\n`);
+  return new Blob(parts,{type:"application/pdf"});
+}
 async function shareZoomData(){
   const z=ZCHECK, pics=[];
   for(const r of z.res) if(r.bm) pics.push({src:r.bm,max:ZD_CARD,meta:{kind:"card",c:r.d.c,lines:spotLines(r.d),frame:r.d.frame||null,tf:r.tf||null,why:r.why||""}});
@@ -1169,22 +1191,25 @@ async function shareZoomData(){
     if(cur.x+w>ZD_W){ cur.x=0; cur.y+=cur.rowH; cur.rowH=0; }
     if(cur.y+h>ZD_H-80&&cur.items.length) fresh();
     cur.items.push({p,x:cur.x,y:cur.y,w,h}); cur.x+=w; cur.rowH=Math.max(cur.rowH,h); }
-  const files=[], meta={app:"shizi-zoomdata",v:APP_V,at:new Date().toISOString(),sheets:[]};
-  for(let si=0;si<sheets.length;si++){ const sh=sheets[si], name=`shizi-zoomdata-${si+1}.jpg`, height=Math.max(1,...sh.items.map(it=>it.y+it.h));
-    meta.sheets.push({name,items:sh.items.map(it=>({...it.p.meta,x:it.x,y:it.y,w:it.w,h:it.h}))});
+  /* v624 (H: "I couldn't save the single files. Can you try export as zip file?", after sending the pictures combined into
+     one PDF by another app — which kept the JPEGs and dropped the small PNG that held the frames): a zip is refused by
+     Chrome's share, and as a .txt the chat cuts it at 300 000 bytes; but a PDF arrived whole. So Data makes ONE PDF itself:
+     each JPEG sheet a page (the JPEG's bytes as they are, DCTDecode), and the frames and texts as a stream of their own
+     (/Type/ShiziZoomData) — one file to send, nothing a combining app can drop. Over ZD_TAP_MB it becomes several PDFs. */
+  const jpgs=[], sheetMeta=[];
+  for(let si=0;si<sheets.length;si++){ const sh=sheets[si], name=`sheet-${si+1}`, height=Math.max(1,...sh.items.map(it=>it.y+it.h));
     const cv=document.createElement("canvas"); cv.width=ZD_W; cv.height=height; const g=cv.getContext("2d");
     g.fillStyle="#fff"; g.fillRect(0,0,ZD_W,height);
     for(const it of sh.items) g.drawImage(it.p.src,it.x,it.y,it.w,it.h);
-    const blob=await new Promise(res=>cv.toBlob(res,"image/jpeg",ZD_Q)); files.push(new File([blob],name,{type:"image/jpeg"}));
+    const blob=await new Promise(res=>cv.toBlob(res,"image/jpeg",ZD_Q));
+    jpgs.push({name,w:ZD_W,h:height,bytes:new Uint8Array(await blob.arrayBuffer())});
+    sheetMeta.push({name,items:sh.items.map(it=>({...it.p.meta,x:it.x,y:it.y,w:it.w,h:it.h}))});
   }
-  { /* the frames and texts for every sheet, in the pixels of one small PNG: a 4-byte length, then the UTF-8 JSON, three bytes a pixel */
-    const MW=512, bytes=new TextEncoder().encode(JSON.stringify(meta)), n=bytes.length+4, rows=Math.max(1,Math.ceil(n/3/MW));
-    const cv=document.createElement("canvas"); cv.width=MW; cv.height=rows; const g=cv.getContext("2d");
-    const im=g.createImageData(MW,rows), all=new Uint8Array(rows*MW*3); all[0]=n>>>24&255; all[1]=n>>>16&255; all[2]=n>>>8&255; all[3]=n&255; all.set(bytes,4);
-    for(let q=0;q<rows*MW;q++){ im.data[q*4]=all[q*3]; im.data[q*4+1]=all[q*3+1]; im.data[q*4+2]=all[q*3+2]; im.data[q*4+3]=255; }
-    g.putImageData(im,0,0);
-    const blob=await new Promise(res=>cv.toBlob(res,"image/png")); files.unshift(new File([blob],"shizi-zoomdata-0.png",{type:"image/png"}));
-  }
+  const files=[]; let grp=[], grpBytes=0;
+  const flush=()=>{ if(!grp.length) return; const k=files.length+1, meta={app:"shizi-zoomdata",v:APP_V,at:new Date().toISOString(),sheets:grp.map(j=>sheetMeta[jpgs.indexOf(j)])};
+    files.push(new File([zdPdf(grp,meta)],`shizi-zoomdata-${k}.pdf`,{type:"application/pdf"})); grp=[]; grpBytes=0; };
+  for(const j of jpgs){ if(grp.length&&grpBytes+j.bytes.length>ZD_TAP_MB*1048576*0.9) flush(); grp.push(j); grpBytes+=j.bytes.length; }
+  flush();
   /* v622 (H's screenshot of v621: "Sharing is not available here." on Data): Android opens the share sheet only within a
      few seconds of a tap, and drawing and compressing half a dozen 2.7-megapixel PNGs outlasts that — the one-sheet Share
      never did. So the pictures are made first and a second tap sends them, from inside its own click; and a phone that
@@ -1194,9 +1219,9 @@ async function shareZoomData(){
     /* v623: a tap's batch stops at ZD_TAP_FILES files or ZD_TAP_MB megabytes, whichever comes first */
     let to=from, bytes=0; while(to<files.length&&to-from<cap&&(to===from||bytes+files[to].size<=ZD_TAP_MB*1048576)){ bytes+=files[to].size; to++; }
     const part=files.slice(from,to), mb=(bytes/1048576).toFixed(1);
-    const go=await askSheet({title:"Zoom data ready",text:`${files.length} picture${files.length===1?"":"s"}, ${mbAll} MB.${part.length<files.length?(part.length===1?` This tap sends picture ${from+1}.`:` This tap sends ${from+1} to ${from+part.length}.`):""}`,ok:"Share",danger:false});
+    const go=await askSheet({title:"Zoom data ready",text:`${files.length===1?"One PDF":files.length+" PDFs"}, ${mbAll} MB.${part.length<files.length?(part.length===1?` This tap sends file ${from+1}.`:` This tap sends ${from+1} to ${from+part.length}.`):""}`,ok:"Share",danger:false});
     if(!go) return;
-    if(!(navigator.canShare&&navigator.canShare({files:part}))){ noteSheet(`This phone will not share these pictures (${part.length} file${part.length===1?"":"s"}, ${mb} MB).`); return; }
+    if(!(navigator.canShare&&navigator.canShare({files:part}))){ noteSheet(`This phone will not share these files (${part.length} PDF${part.length===1?"":"s"}, ${mb} MB).`); return; }
     try{ await navigator.share({files:part,title:"shizi-zoomdata"}); }
     catch(err){ if(err&&err.name==="AbortError") return; logErr("share",err); noteSheet(`Sharing failed: ${(err&&err.name)||""} ${(err&&err.message)||err}`); return; }
     from+=part.length;
