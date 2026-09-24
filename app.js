@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=613; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=614; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,6 +671,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v614","zoomed photo: pull on to swipe"],
   ["learn","v613","Test card, then Learn tab: session"],
   ["learn","v612","unfolded: Show me inside the pad"],
   ["app","v611","AI flags: pinyin vs dictionary"],
@@ -3762,7 +3763,7 @@ function attachPicZoom(box){
     v.tx=box.clientWidth/2-r.x-(cx-r.x)*v.s; v.ty=box.clientHeight/2-r.y-(cy-r.y)*v.s; glide(true); apply(); };
   const summary=()=>{ const a=[...pts.values()]; if(a.length>=2){ return {x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2,d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}; } return a.length?{x:a[0].x,y:a[0].y,d:0}:null; };
   const zoomAt=(m,s2)=>{ s2=Math.min(ZOOM_MAX,Math.max(1,s2)); const r=v.r0, px=(m.x-r.x-v.tx)/v.s, py=(m.y-r.y-v.ty)/v.s; v.s=s2; v.tx=m.x-r.x-px*s2; v.ty=m.y-r.y-py*s2; apply(); };
-  box.addEventListener("pointerdown",e=>{ if(e.button) return; glide(false); measure(); pts.set(e.pointerId,rel(e)); last=summary(); moved=false; ovx=0; down=pts.size===1?{x:e.clientX,y:e.clientY}:null;
+  box.addEventListener("pointerdown",e=>{ if(e.button) return; if(e.isPrimary) pts.clear(); /* v614: a new gesture starts with no fingers left over — see below */ glide(false); measure(); pts.set(e.pointerId,rel(e)); last=summary(); moved=false; ovx=0; down=pts.size===1?{x:e.clientX,y:e.clientY}:null;
     if(pts.size>=2||v.s>1){ e.stopPropagation(); e.preventDefault(); try{ box.setPointerCapture(e.pointerId); }catch(x){} } });
   box.addEventListener("pointermove",e=>{ if(!pts.has(e.pointerId)) return; pts.set(e.pointerId,rel(e)); const cur=summary(); if(!last||!cur){ last=cur; return; }
     if(pts.size>=2){ e.stopPropagation(); e.preventDefault(); moved=true; if(last.d>0&&cur.d>0) zoomAt(cur,v.s*cur.d/last.d); v.tx+=cur.x-last.x; v.ty+=cur.y-last.y; apply(); }
@@ -3783,6 +3784,13 @@ function attachPicZoom(box){
       e.stopPropagation(); e.preventDefault(); if(Math.hypot(mx,cur.y-last.y)>0) moved=true; }
     last=cur; });
   const up=e=>{ if(!pts.has(e.pointerId)) return; pts.delete(e.pointerId); last=summary(); if(moved) eat=true; };
+  /* v614 (H: "Card Swipe bei reingezoomtem Bild muss auch im Cards Modus funktionieren"): a finger the carousel took over
+     (wireSwipe captures the pointer on the card once a stroke turns sideways) never sends its pointerup to the box, so it
+     stayed in pts for good. The next single finger was then read as the second finger of a pinch against that ghost: the
+     picture leapt to ZOOM_MAX, and every later drag zoomed instead of panning, so the edge was never reached and the
+     hand-over to the swipe (v606) never came — measured, after one swipe that sprang back, a pinch went straight to 5x and
+     pulling past the edge left the card where it was, in Cards and in Learn alike. The first finger of a touch (isPrimary)
+     now empties the list, so no gesture inherits a finger from the one before. */
   box.addEventListener("pointerup",up); box.addEventListener("pointercancel",up);
   box.addEventListener("click",e=>{ if(eat){ eat=false; e.stopPropagation(); e.preventDefault(); } },true); /* a pan's closing click is not the tap that swaps the picture */
   box.addEventListener("wheel",e=>{ e.preventDefault(); measure(); zoomAt(rel(e),v.s*Math.pow(1.1,-e.deltaY/100)); },{passive:false});
