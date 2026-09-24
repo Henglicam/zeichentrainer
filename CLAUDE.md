@@ -59,7 +59,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v601, 2026-09-23)
+## Current state (PWA v602, 2026-09-24)
 **The app is called 街字 Jiēzì** (H: "Do 街字 Jiēzì, drop Zeichentrainer"; "Read the street" was his idea and was
 offered as the store subtitle, which is his call in the private repo's listing). The title, manifest `name`/
 `short_name` (街字 Jiēzì / 街字), header logo, About, share text, `privacy.html`, the owner's dumps and every shared
@@ -71,6 +71,9 @@ import both ways). Not yet field-checked: Android swaps a home-screen icon and n
 manifest, which can take a day.
 
 **Recent state worth carrying in the head** (each has its full entry in the archive):
+- **v602** — **the marks on the photo are switched off, not removed** (H wants to try Learn without them):
+  `SPOT_ON=false` returns early from `spotWord` and `spotChar`, so neither the locked character's spotlight (v520) nor
+  the word being written (v533) is drawn, and v541's zoom follow goes with it. `true` brings all of it back.
 - **v600** — a long word's line under the pad **wraps** instead of being cut (`.plrow` `flex-wrap`, the word
   line's height read at `--plz` 1 rather than `LINE_H` 61, its room taken from the tiles), and the finished card's
   reading is **binary-searched over the real layout** by `recapFit`, width first — 12.7 → 27 px on
@@ -88,9 +91,6 @@ manifest, which can take a day.
 - **v596** — `.picbox.page` (the page front of a card made from a multicard, and of a v452 page card) is the
   ordinary card's own box to the pixel, and `fitPageCover` joins both carousel `ready` hooks so the
   neighbour no longer shows the multicard's photo at natural size and jumps at the snap.
-- **v593/v594** — the Cards list is square photo tiles, two a row, nothing written under them; a multicard's
-  title is clamped to two lines; a card's **Share** is gone. Flag and Delete pair on one row, and **every
-  card delete asks first** (`confirmDelCard`, five call sites), the v268 Undo line still under it.
 
 ## Files
 `index.html` · `styles.css` · `lang.js` (ten language columns) · `app.js` ·
@@ -193,7 +193,7 @@ after the layout settles (v521/v532).
   stripped from that line only (`shortSense`); the card keeps the whole sentence.
 - **"Whole card"** folds open at the card's foot — the characters, pinyin, meaning **and the
   description** (v585), fetched by itself 1.2 s after the card appears (v586, `explainSoon`).
-- **The word being written is marked on the photo** (v533), derived from the frame rather than
+- **The word being written is marked on the photo** (v533; **switched off by `SPOT_ON` since v602**, code intact), derived from the frame rather than
   stored, travelling with a pinch and with the fold (v541/v575).
 - **Swipe** = the carousel of v417: the neighbour rides in beside the card and snaps; it grades
   nothing, and a skipped card stays due for next time.
@@ -499,7 +499,7 @@ own licences even after the app is sold** (Arphic §2b and CC BY-SA ShareAlike).
 fine; taking those two files private is not.
 
 ## Open / not yet field-checked
-v601's name and icon on the home screen, and v600 and the versions around it, are not field-checked — H's next long-word card is the check for the
+v602: does Learn read better without the marks on the photo (H's trial — his word decides whether `SPOT_ON` goes back to true); v601's name and icon on the home screen, and v600 and the versions around it, are not field-checked — H's next long-word card is the check for the
 wrapped word line and for the bigger reading on the finished card (is 27 px enough, and does the reading
 still read as one thing when a seven-syllable word breaks across two lines?); an **empty Learn screen** for
 v599's real example card, and **More → How to use the app** for the figures (does it read as the app? is the
