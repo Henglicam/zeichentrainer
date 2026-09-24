@@ -59,7 +59,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v613, 2026-09-24)
+## Current state (PWA v614, 2026-09-24)
 **The app is called 识字 Shízì** (v608, H: "Return the name to shizi", then "识字 Shízì" over the full v600 name; v601–v607
 it was 街字 Jiēzì, and Zeichentrainer stays dropped). The title, manifest `name`/`short_name` (识字 Shízì / 识字), header
 logo, About, share text, `privacy.html`, the owner's dumps and every shared file (`shizi-YYYY-MM-DD.json.txt`,
@@ -70,12 +70,11 @@ jiezi- or shizi- — imports). Not yet field-checked: Android swaps a home-scree
 the manifest, which can take a day.
 
 **Recent state worth carrying in the head** (each has its full entry in the archive):
+- **v614** — `attachPicZoom` empties its finger list on each new touch (`isPrimary`): a finger the swipe had captured stayed behind as a ghost and turned the next drag into a 5× pinch, so the zoomed swipe (v606) never came.
 - **v613** — **any tab tap ends a single-card test** (Test this card) and restores the session queue, as "← Cards" does.
-- **v612** — `.padwrap` is the pad's own width, so **Show me and Skip sit inside the pad** wherever the pad is narrower than the card.
 - **v611** — **anti-invention**: both prompts carry a "Never invent" rule and an `unsure` field, the "well-known name"
   nudges are gone, and `aiDoubt` flags a card whose AI pinyin disagrees with pinyin-pro's in-word reading (`pyDictOff`,
   3.2 % false flags on random CEDICT words, 95 % of wrong readings caught) or that the AI itself doubted.
-- **v608** — **the name is 识字 Shízì** again with the v600 icons; every v601 rename reversed (files `shizi-…`).
 
 ## Files
 `index.html` · `styles.css` · `lang.js` (ten language columns) · `app.js` ·
@@ -370,6 +369,8 @@ Rules that came out of the harness and cost real versions:
   passed because a stale log line from the previous case happened to be there.
 - **A fit check must ask whether the text broke, not whether the box overflowed** — a flex item
   shrinks and wraps inside its button rather than overflowing (v427).
+- **A gesture fixture must use the gesture the phone uses** — v606 passed on wheel zooms, and a real pinch
+  left a captured finger behind that broke it (v614).
 - **A probe that reads the app's own model of an animation cannot see what the compositor
   paints** — use `Page.startScreencast` for a fade (v555).
 - **When the harness and the phone disagree, the harness is wrong and that is what gets fixed
@@ -486,7 +487,7 @@ own licences even after the app is sold** (Arphic §2b and CC BY-SA ShareAlike).
 fine; taking those two files private is not.
 
 ## Open / not yet field-checked
-v613's tab out of Test this card; v612's Show me inside the pad; v611's anti-invention flags (do they land on the wrong cards and not the right ones?); v609/v610's bulleted update notes (grey dots); v608's name and icon on the home screen; v607's square photo in Learn and Test this card; v606's pull-past-the-edge swipe on a zoomed photo; v605's whole dictionary meanings on the phone (the file re-fetches once); v603/v604's Traditional chip and its switch (does the blue read as the script, is the corner tap found, does a tap meant for the photo hit it); v602: does Learn read better without the marks on the photo (H's trial — his word decides whether `SPOT_ON` goes back to true); v600 and the versions around it, are not field-checked — H's next long-word card is the check for the
+v613's tab out of Test this card; v612's Show me inside the pad; v611's anti-invention flags (do they land on the wrong cards and not the right ones?); v609/v610's bulleted update notes (grey dots); v608's name and icon on the home screen; v607's square photo in Learn and Test this card; v606/v614's pull-past-the-edge swipe on a zoomed photo; v605's whole dictionary meanings on the phone (the file re-fetches once); v603/v604's Traditional chip and its switch (does the blue read as the script, is the corner tap found, does a tap meant for the photo hit it); v602: does Learn read better without the marks on the photo (H's trial — his word decides whether `SPOT_ON` goes back to true); v600 and the versions around it, are not field-checked — H's next long-word card is the check for the
 wrapped word line and for the bigger reading on the finished card (is 27 px enough, and does the reading
 still read as one thing when a seven-syllable word breaks across two lines?); an **empty Learn screen** for
 v599's real example card, and **More → How to use the app** for the figures (does it read as the app? is the
