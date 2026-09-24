@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 街字 Jiēzì (识字 Zeichentrainer until v601), v1–v606
+# HISTORY.md — the full record of 街字 Jiēzì (识字 Zeichentrainer until v601), v1–v607
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,25 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v607, 2026-09-24)
+- **The study card's photo is a square, the pad's own size (v607, H with a screenshot of a 福 lantern in Test this card:
+  "Warum ist dieses Bild aus Test this card nicht quadratisch? Das sollte bitte quadratisch sein, auch. Wie bei den ganz
+  normalen Karten zum Lernen auch.").** v561 made the cue and the pad "two equal squares", but only in HEIGHT: the cue's
+  picture half (`.cue .zone1`) took the card's whole inner width, 322 px at 390, while its height is `--ph`, the pad's
+  size. So the photo was square only where the pad happened to be 322 wide — measured on v606 at 390 × 910 (H's phone):
+  Learn 322 × 302, Test this card 322 × 286 (its "← Cards" topline takes 16 px off the pad); at 390 × 844 322 × 269 /
+  253; at 360 × 780 292 × 237 / 221. None was square, the test card least of all.
+  - **The fix:** `.cue .zone1{width:min(100%,var(--ph,100%));justify-self:center}` — the picture half is as wide as it is
+    tall and stands centred over the pad, so the two really are equal squares (measured: 302 × 302 over a 302 pad, both at
+    x 44; 286 × 286 in the test; 269/253 and 237/221 at the smaller screens). `splitFit`'s clip-or-fit decision measured
+    the half as the card's width (`inner`), so it now takes `min(width, --ph)`. The carousel neighbour is square too
+    (302 × 302 mid-swipe); the open card under Cards was already a 322 square and is untouched; the text state (`--ph`
+    0) is unchanged.
+  - **The guide's crops do not change:** in `tools/guide-shots.js`'s 390 × 900 layout the pad is 322 wide, so the photo
+    was already square there; a run rewrote the files with new grain only, and all fourteen were restored.
+  - **Measured** headless at 390 light/dark with a square, a 3:2, a 2:1 and a 1:2 photo; on v606 all six size checks
+    (Learn and test, three screens) are oblong, on v607 all six are square. **Not yet field-checked:** a `TO_TEST` line.
 
 ## Current state (PWA v606, 2026-09-24)
 - **A zoomed picture hands the stroke to the swipe at its edge (v606, H: "Wenn ich in ein Bild reingezoomt habe und dann
