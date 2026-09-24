@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 街字 Jiēzì (识字 Zeichentrainer until v601), v1–v602
+# HISTORY.md — the full record of 街字 Jiēzì (识字 Zeichentrainer until v601), v1–v603
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,30 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v603, 2026-09-24)
+- **A card in traditional characters says so, on its photo and on its tile (v603, H: "Bitte Lernkarten kennzeichnen, in
+  denen Traditional Chinese drin ist, damit man auch weiß, dass man da gerade Traditional Chinese lernt.").** The card
+  has carried `trad` since v101 and v227 gave it a "Traditional" pill under the text box — but that pill lived in
+  `frontHTML`'s `scriptNote`, and since v512/v518 the study card and the open card draw their front with `frontPic`, so
+  **nothing in Learn said it for ninety versions**. The existing `Traditional` key (all ten columns; de "Langzeichen")
+  is reused; no new key, no 简/繁 shorthand (v106).
+  - **Where:** `tradMark(d)` — a `--lock` blue chip, white text, in the picture's **top-left** corner (the review flag
+    keeps the right) on the study card, its carousel neighbour and the open card; `pointer-events:none`, so a tap on it
+    is still the tap that swaps the halves. In the **text** state the picture half is 0 px tall, so the same chip heads
+    the text half instead — first laid over the tiles, where at 360 px in Russian it covered the first tile (measured,
+    `overlapsTile:true`), so it is a flex item and `splitFit` takes its height (`tmH`, 30 px) off what `textFit` gives the
+    tiles and off the word line's room. A card without `trad` gets `tmH` 0 and is unchanged. On the **Cards tile** it is
+    a `.tm.trad` in the tile's top-left corner, its own row — in the bottom row beside flag, AI and New a Russian
+    "Традиционные" crowded them. Multicard tiles get none (a multicard is looked up, not learned).
+  - **Measured** (headless Chromium, a 養樂多 card with photo, flag and AI, and a simplified 出口 card; 390 light/dark in
+    de and ru, 360 in ru): the chip reads Langzeichen / Традиционные at 104 / 124 × 24 px in the photo state; in the
+    text state it sits inside the 260 px half and clear of every tile; the cue stays 260 px (the frame does not move);
+    the open card and the tile carry it, 出口 carries none. On v602 all of it is absent — every check flips.
+  - **Pre-existing, named and not touched:** on a tile with both flag and AI the ⚑ mark sits lower than the AI chip
+    (same on v602).
+  - **Not yet field-checked:** whether blue reads as "script" and not as the old lock, and whether H wants it on the tile
+    too. One `TO_TEST` line, one `WHATS_NEW` line.
 
 ## Current state (PWA v602, 2026-09-24)
 - **The marks on the photo are switched off, not removed (v602, H: "Bitte das Hervorheben der characters im Bild wieder

@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=602; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=603; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -671,6 +671,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v603","traditional card: chip on photo"],
   ["learn","v602","Learn: no marks on the photo"],
   ["app","v601","home screen: 街字 name and icon"],
   ["app","v600","long word: the line wraps, not cut"],
@@ -3246,8 +3247,8 @@ function renderStudy(main){
      v584's DESC_ROW reserve go with it, and the pad has the 30 px back. */
   main.innerHTML=wxNoteHTML()+(S.single?`<div class="topline"><button class="del" id="back-cards">${t("← Cards")}</button><span class="badge">${t("Testing from the list")}</span></div>`:"")+`<div class="card study${rep?" rep":""}${cueBigCls()}">
     <div class="cue">
-    <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}${d.flag||d.unchecked?`<button class="picflag${d.flag?" on":" new"}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}" title="${d.flag?"":esc(t("Not yet checked"))}">${d.flag?"⚑":"⚐"}</button>`:""}</div>
-    <div class="txt" id="cuetxt">${chrow}<div class="padline" id="padline"></div></div></div>
+    <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}${tradMark(d)}${d.flag||d.unchecked?`<button class="picflag${d.flag?" on":" new"}" id="picflag" aria-label="${d.flag?t("⚑ Clear flag"):t("⚑ Flag for review")}" aria-pressed="${d.flag?"true":"false"}" title="${d.flag?"":esc(t("Not yet checked"))}">${d.flag?"⚑":"⚐"}</button>`:""}</div>
+    <div class="txt" id="cuetxt">${tradMark(d)}${chrow}<div class="padline" id="padline"></div></div></div>
     <div class="padwrap"><canvas class="wpad" id="wpad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas><div class="padacts" id="padacts"><button class="del" id="pad-undo" hidden>${t("pad:Undo")}</button><button class="del" id="pad-show" hidden>${t("Show me")}</button><button class="del" id="pad-skip" hidden>${t("Skip")}</button><button class="del" id="pad-done" hidden>${t("Done")}</button><button class="del" id="pad-clear" hidden>${t("Clear")}</button></div>${freePad?`<div class="hint" id="pad-note">${noTmpl?t("not in the stroke set — draw it and tap Done"):""}</div>`:""}</div>
     <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Whole card")}</span>${rep?`<span class="pill again">${t("Again")}</span>`:""}<span class="tail">${!rep&&list.length>1&&!S.single?/* v522: the count in the fold row; on a repeat pass the Again pill takes the slot */`<span class="pos">${esc(t("{0} of {1}",li+1,list.length))}</span>`:""}<i aria-hidden="true">⌄</i></span></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
     ${swipeHint(d)}</div>`; /* no linked-photos row on the study card (v518, H: "No 'also in other cards' in learn mode. Only on Cards mode.") — the detail keeps it */
@@ -3282,7 +3283,7 @@ function renderStudy(main){
      there are no grades that own the screen any more. */
   wireSwipe(card, list.length<2||S.single?null:{
     n:list.length, idx:li, centred:false,
-    peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ const np=frontPic(nd,{page:true,fixed:true}); return { cls:"study"+cueBigCls(), html:`<div class="cue"><div class="zone1 front">${np||cueGlyphHTML(nd)}</div><div class="txt">${peerRowHTML(nd)}<div class="padline"></div></div></div><div class="padwrap"><div class="wpad ghost"${ghostSize(card)}></div></div><div class="fold"><button class="foldbtn"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button></div>${swipeHint(nd)}` }; } finally{ S.fullPic=fp; } }, /* v530: the neighbour carries the study card's own class, so it takes its 16 px top padding and every other rule of the study layout — a plain `.card` neighbour stood 6 px taller (22 px of padding) and hopped by that much at the snap */ /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
+    peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ const np=frontPic(nd,{page:true,fixed:true}); return { cls:"study"+cueBigCls(), html:`<div class="cue"><div class="zone1 front">${np||cueGlyphHTML(nd)}${tradMark(nd)}</div><div class="txt">${peerRowHTML(nd)}<div class="padline"></div></div></div><div class="padwrap"><div class="wpad ghost"${ghostSize(card)}></div></div><div class="fold"><button class="foldbtn"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button></div>${swipeHint(nd)}` }; } finally{ S.fullPic=fp; } }, /* v530: the neighbour carries the study card's own class, so it takes its 16 px top padding and every other rule of the study layout — a plain `.card` neighbour stood 6 px taller (22 px of padding) and hopped by that much at the snap */ /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
     go:goTo, ready:p=>{ p.style.setProperty("--cueh",(card._fit?card._fit.cueH+"px":card.style.getPropertyValue("--cueh"))); splitFit(p); fitPageCover(p); } });
     /* v596: fitPageCover on the neighbour too. renderStudy has cover-fitted the CARD's page front since v478 and nothing
        ever fitted the peer's, while v530 gives the peer the study card's own class — so .card.study .picbox.page .pagewrap
@@ -3516,7 +3517,8 @@ function splitFit(root){ const cue=root&&root.querySelector(".cue"), cr=cue&&cue
     const line=cue.querySelector(".padline");
     if(line) line.style.setProperty("--plz","1"); /* measure the rows at rest, or the fit compounds on every render */
     const lh=line?Math.max(LINE_H,Math.ceil(line.scrollHeight)):LINE_H, lineH=lh+6; /* the word line and its margin */
-    const rows=textFit(cr,ci,base-lineH,CH_BIG); th=Math.max(base,rows+lineH); cueH=th; /* v569: big means big — the rows are whatever gives the largest tiles */
+    const tm=cue.querySelector(".txt .tradmark"), tmH=tm?Math.ceil(tm.offsetHeight)+6:0; /* v603: the Traditional chip heads the text half, and the tiles take what it leaves — over them it covered the first tile at 360 px */
+    const rows=textFit(cr,ci,base-lineH-tmH,CH_BIG); th=Math.max(base,rows+lineH+tmH); cueH=th; /* v569: big means big — the rows are whatever gives the largest tiles */
     /* v589 (H: "wenn ich drauf tippe, decke ich quasi die Karte auf und sehe auf der Rückseite die Bedeutung, sprich die
        Übersetzung von Pinyin"): the uncovered half is a fixed square — as tall as the pad since v561 — and a short card's
        answer filled only half of it, so the state the learner taps into read as a hole where the picture state reads as a
@@ -3526,7 +3528,7 @@ function splitFit(root){ const cue=root&&root.querySelector(".cue"), cr=cue&&cue
        takes it instead, which is also the half H names — the word line is scaled by --plz into whatever the tiles leave,
        never past PL_MAX and never past what its widest row can take, so a long meaning simply does not grow and nothing is
        ever cut. A card whose rows already fill the half gets k = 1 and is byte-identical to v588. */
-    if(line){ const room=th-rows-6; let k=Math.max(lh,room)/lh;
+    if(line){ const room=th-rows-6-tmH; let k=Math.max(lh,room)/lh;
       for(const r of line.querySelectorAll(".plrow")) if(r.scrollWidth>0) k=Math.min(k,(line.clientWidth-2)/r.scrollWidth);
       line.style.setProperty("--plz",Math.max(1,Math.min(k,PL_MAX)).toFixed(3));
       /* v600: a row that grew may wrap one line more than it did at rest, and the room above was measured at --plz 1 —
@@ -4484,6 +4486,13 @@ function glyphTileHTML(tx,cap){
    moves for the content). The tile's own fit is reused with a bigger cap; it stays the placeholder grey, since it stands
    in for a photo that is not there rather than competing with the tiles below. */
 const CUE_GLYPH=96;
+/* v603 (H: "Bitte Lernkarten kennzeichnen, in denen Traditional Chinese drin ist, damit man auch weiß, dass man da gerade
+   Traditional Chinese lernt."): a card whose text stands in traditional characters on its photo (d.trad, v101) says so in
+   the picture's top-left corner — the study card, its carousel neighbour and the open card, the same chip on each. v227's
+   "Traditional" pill under the text box went with frontHTML's last use on those screens (v512/v518), so from then on
+   nothing in Learn said it. The corner is the frame's own (v560): nothing moves for it, and the review flag keeps the
+   right-hand one. No 简/繁 shorthand (H, v106). */
+const tradMark=d=>d&&d.trad?`<span class="tradmark">${t("Traditional")}</span>`:"";
 function cueGlyphHTML(d){ const tx=(d&&(d.trad||d.c))||""; return tx?`<div class="cglyphbox">${glyphTileHTML(tx,CUE_GLYPH)}</div>`:""; }
 /* v523: the finished card, large, over the pad — the characters in the Hanzi font fitted to the pad's square (the pad is a
    size container, so the size is solved by CSS), the pinyin and the meaning under them. The same text the card carries;
@@ -4634,13 +4643,14 @@ function cardTileHTML(d,pk){
   const sv=pg?null:srcView(d), su=sv?urlOf(sv.blob):""; /* v490: the multicard's photo, derived rather than stored */
   const pic=pg?fullPhoto(d):d.img;
   const head=pg?esc(d.c):""; /* only a multicard carries a heading since v593; v597 puts it ON the picture, so the tile is the square every other tile is */
+  const trad=!pg&&!!d.trad; /* v603: a flashcard in traditional characters says so on its tile too — top-left, its own corner, since the flag, AI and New marks already share the bottom one and a long word (ru) crowded them */
   const flag=pg?its.some(x=>x.flag):d.flag, ai=pg?its.some(x=>x.ai):d.ai, nw=pg?its.some(x=>x.unchecked):!!d.unchecked; /* v515: not yet checked. Until v592 a page carried this mark on its picture and a plain card in its status line; with that line gone (v593) both carry it in the same place, which is also the one they should always have shared */
   const glyph=!sv&&!pic; /* v506: a card without a picture shows its WHOLE text in the picture area, not its first character */
   return `<button class="ctile${pg?" page":""}${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}"${pk?"":` data-lp="${esc(d.id)}"`}>
       ${pg?`<span class="tstack">`:""}<span class="tw${sv?" src":glyph?" glyph":""}">${sv?`<img class="tbg" src="${su}" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="tpw"><img class="tpi" src="${su}" alt="" loading="lazy" decoding="async">${regionsHTML({id:sv.shot},sv.rs,{learn:true,me:sv.me,span:true,only:true})}</span>`:pic?`<img class="tbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:glyphTileHTML((pg?(its[0]&&its[0].c):(d.trad||d.c))||"")}
         ${pk?`<span class="tick" aria-hidden="true"></span>`:pg?"":starHTML(d)}
         ${pg?`<span class="cnt">${its.length}</span>`:""}
-        ${(flag||ai||nw)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}${nw?`<i class="tm new" title="${esc(t("Not yet checked"))}">${t("tile:New")}</i>`:""}</span>`:""}
+        ${trad?`<span class="tmarks ttrad"><i class="tm trad">${t("Traditional")}</i></span>`:""}${(flag||ai||nw)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}${nw?`<i class="tm new" title="${esc(t("Not yet checked"))}">${t("tile:New")}</i>`:""}</span>`:""}
         ${pg?`<span class="tcap"><span class="th title">${head}</span></span><span class="prog" aria-hidden="true"><i style="width:${its.length?Math.round(made/its.length*100):0}%"></i></span>`:""}</span>${pg?`</span>`:""}</button>`;
 }
 function cardsListHTML(){
@@ -4735,7 +4745,7 @@ function detailCardHTML(d,sw){
   const tg=padTargets(d), li=detailCh(d), lit=detailLit(d,tg), open=!S.detailHide;
   const btn=x=>`<button class="ch${x.w?"":" num"}${lit===x?" cur":""}" data-i="${tg.indexOf(x)}">${esc(x.glyph)}</button>`;
   const back=`<div class="anshanzi hanzi">${(d.trad?d.trad.split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}`;
-  return `${tagsHTML(d,!p)}<div class="zone1 front${d.flag?" flagged":""}" id="d-reveal">${frontPic(d,{page:true,fixed:true})||cueGlyphHTML(d)}</div>
+  return `${tagsHTML(d,!p)}<div class="zone1 front${d.flag?" flagged":""}" id="d-reveal">${frontPic(d,{page:true,fixed:true})||cueGlyphHTML(d)}${tradMark(d)}</div>
       ${chrowHTML(d,tg,btn,lit?lit.wi:null)}
       <div class="padline" id="padline"${lit?"":" hidden"}></div>
       ${d.reading&&!d.reading.failed?`<div class="hint">${t("The new frame is being read — the text follows when it is done.")}</div>`:""}
@@ -5178,6 +5188,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  603:"A card written in traditional characters now says so: a small Traditional chip on its photo while you learn it, and on its tile under Cards.",
   601:"The app has a new name: 街字 Jiēzì, the characters of the street. Same app, same cards, a new icon.",
   600:"A long word no longer runs off the edge of the line under the pad — it wraps onto as many lines as it needs, so its pinyin and its meaning are both there. And the reading on a finished card is now as large as the card has room for, whatever its length.",
   595:"New photos are cut square from now on, and a card's own page under Cards shows its picture in a square too — the same shape the learning card has. The cards you already have keep the picture they were cut with.",

@@ -625,6 +625,7 @@ body.noscroll{overflow:hidden}
 .ctile .tmarks{position:absolute;left:6px;bottom:6px;z-index:3;display:flex;gap:4px}
 .ctile .tm{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;font-family:var(--sans);font-size:10px;font-weight:700;font-style:normal;color:#fff}
 .ctile .tm.flag{background:var(--tint)} .ctile .tm.ai{background:var(--ok)}
+.ctile .tm.trad{background:var(--lock)} .ctile .tmarks.ttrad{top:6px;bottom:auto;right:40px} /* v603: the card is in traditional characters — the tile's top-left corner, clear of the star */
 .ctile .tm.new{background:var(--tint-soft);color:var(--tint)} /* v515: a page whose text is not yet checked */
 /* the marking's tick, on a tile (v490, H: "Im markiermodus sind an der Sternposition nun kreise. Das scheint falsch."):
    the filled state has been scoped to .crow and .shot.pick since v355, so on a tile — the Cards list since v465 — a
@@ -941,7 +942,7 @@ body.noscroll{overflow:hidden}
 .cue{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:var(--ph,minmax(0,1fr)) var(--th,auto);row-gap:var(--cg,8px);min-height:0;box-sizing:border-box}
 .cue.gl{transition:grid-template-rows .22s cubic-bezier(.22,.61,.36,1),row-gap .22s cubic-bezier(.22,.61,.36,1)} /* v565: the slide only on a tap (cueBig sets .gl for its duration) — a render never animates the halves into place */
 .cue .zone1 .picbox:not(.page):not(.sized) .signimg{opacity:0} /* v565: the picture shows only once splitFit knows its shape — fitted or clipped — so a picture that decodes late never appears in the wrong one and jumps (the carousel's neighbour did) */
-.cue .txt{min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:stretch;overflow:hidden;cursor:pointer} /* the text half: the tiles' rows over the word line, centred in the half */
+.cue .txt{position:relative;min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:stretch;overflow:hidden;cursor:pointer} /* the text half: the tiles' rows over the word line, centred in the half */
 .cue .zone1{min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:var(--rc);cursor:pointer} /* v580: the whole upper zone takes the tap that swaps the two states, as the text half already did */
 /* v577: a card with no photo of its own draws its word in the picture half instead of leaving it empty — the Cards tile's
    own treatment (v506), so the two screens say the same thing about such a card. The box is a size container, as the tile's
@@ -965,3 +966,6 @@ body.noscroll{overflow:hidden}
 .padwrap .padacts{position:absolute;left:0;right:0;bottom:8px;margin:0;display:flex;justify-content:space-between;padding:0 10px;pointer-events:none} .padwrap .padacts>*{pointer-events:auto}
 .padwrap .padacts:not(:has(:not([hidden]))){display:none} /* an empty row takes no taps */
 .padwrap .hint#pad-note{position:absolute;left:12px;right:12px;top:8px;margin:0;text-align:center;pointer-events:none}
+/* v603: a card in traditional characters, named in the picture's top-left corner (the review flag has the right) — on the study card, its neighbour and the open card. Over any photo, so it carries its own fill; pointer-events off, so a tap on it is still the tap on the picture */
+.tradmark{position:absolute;left:8px;top:8px;z-index:3;height:24px;line-height:24px;padding:0 10px;border-radius:999px;background:var(--lock);color:#fff;font-family:var(--sans);font-size:12px;font-weight:600;white-space:nowrap;pointer-events:none;user-select:none;-webkit-user-select:none;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.cue .txt .tradmark{position:static;flex:none;align-self:center;margin:0 0 6px;box-shadow:none} /* v603: in the text half the chip heads the tiles rather than lying on them; splitFit gives the tiles what it leaves */
