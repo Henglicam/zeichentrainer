@@ -769,7 +769,7 @@ body.noscroll{overflow:hidden}
 .desc.want{text-align:center} .desc.want .del{font-size:15px;padding:6px 10px;min-height:36px} .desc.want .hint{margin-top:2px} .desc.want .reading{justify-content:center}
 .desc.want:empty{display:none} /* v585: a card with no description yet renders the empty landing place for refreshDesc and nothing else */
 .pill.again{margin-left:0;background:var(--tint-soft);color:var(--tint)} /* the repeat pass of a written card (§ 8.1) */
-.padwrap{position:relative;margin-top:8px;display:flex;justify-content:center}
+.padwrap{position:relative;margin-top:8px;display:flex;justify-content:center;width:fit-content;margin-left:auto;margin-right:auto} /* v612 (H on the unfolded screen: "show me is in the wrong place"): the wrap is exactly the pad's width, so Show me, Skip and the note are placed on the pad itself — they sat against the card's full width, which on a wide screen is 200 px wider than the pad (fit() caps the pad by height). On a phone the two widths are the same and nothing moves */
 .wpad{display:block;border-radius:var(--rc);background:var(--card2);touch-action:none;box-shadow:inset 0 0 0 1px var(--sep)} /* the pad takes the finger: a stroke is never a swipe */
 .wpad.ghost{width:100%;aspect-ratio:1} /* the carousel's neighbour carries an empty pad; since v530 sized inline to the standing pad's own side (ghostSize), this square is the fallback for a card without one */
 .wpad.shake{animation:padshake .24s}
