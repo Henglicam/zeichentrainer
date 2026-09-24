@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=626; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=627; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1174,7 +1174,7 @@ async function shareZoomSheet(st){
    JPEGs already) and the frames and texts as ONE small PNG, shizi-zoomdata-0.png, whose pixels carry the JSON for every
    sheet by name — the lossless part is only the part that must be. Since v624 the frames and texts ride in the PDF
    instead (zdPdf), and the small PNG is gone: a combining app had dropped it. */
-const ZD_W=1600, ZD_H=1700, ZD_CARD=700, ZD_PAGE=1200, ZD_Q=0.9, ZD_TAP_FILES=8, ZD_TAP_MB=15; /* about 2.7 megapixels a sheet; the detector reads every search at 320 px (CB_LONG), so 700 px of card loses it nothing. A tap sends at most ZD_TAP_FILES files and ZD_TAP_MB megabytes, well inside Chrome's share limits */
+const ZD_W=1600, ZD_H=1700, ZD_CARD=700, ZD_PAGE=1600, ZD_AI_MS=4*60000, ZD_Q=0.92, ZD_TAP_FILES=8, ZD_TAP_MB=15; /* about 2.7 megapixels a sheet; the detector reads every search at 320 px (CB_LONG), so 700 px of card loses it nothing. A multicard's photo goes at its own size (v627: ZD_PAGE is the photo cap, so the reader's own input can be replayed), with the AI exchanges of ZD_AI_MS after its reading began. A tap sends at most ZD_TAP_FILES files and ZD_TAP_MB megabytes, well inside Chrome's share limits */
 /* a minimal PDF (v624): one page per JPEG, the JPEG's own bytes as the page's image, and the JSON as a stream of its own —
    written by hand, since the app has no library for it and needs none: a catalogue, the pages, their images and contents,
    the data stream, and a cross-reference table of byte offsets */
@@ -1199,7 +1199,12 @@ function zdPdf(jpgs,meta){
 async function shareZoomData(st){
   const z=ZCHECK, pics=[];
   for(const r of z.res) if(r.bm) pics.push({src:r.bm,max:ZD_CARD,meta:{kind:"card",c:r.d.c,lines:spotLines(r.d),frame:r.d.frame||null,tf:r.tf||null,why:r.why||""}});
-  for(const r of z.pres||[]) if(r.bm) pics.push({src:r.bm,max:ZD_PAGE,meta:{kind:"page",c:r.pg.c,items:r.items.map(d=>({c:d.c,lines:spotLines(d),frame:d.frame}))}});
+  /* v627: a multicard also carries what made it — its reading record (steps and numbers) and the AI's raw replies of
+     those minutes, from Diagnostics while they are still there — so a session can replay the split on H's own photo with
+     the model's own answer instead of guessing why 23 of 57 texts got the whole picture (v626's finding) */
+  const aiNear=at=>AILOG.filter(e=>e&&e.t>=at-2000&&e.t<=at+ZD_AI_MS).map(e=>({t:e.t,model:e.model||"",status:e.status||"",ms:e.ms||0,req:e.req||"",res:e.res||"",err:e.err||""}));
+  for(const r of z.pres||[]) if(r.bm){ const N=LAST_READ.ring.find(x=>x&&x.shot===r.pg.shot);
+    pics.push({src:r.bm,max:ZD_PAGE,meta:{kind:"page",c:r.pg.c,shot:r.pg.shot,pw:r.bm.width,ph:r.bm.height,items:r.items.map(d=>({c:d.c,lines:spotLines(d),frame:d.frame})),read:N?readRow(N):null,ai:N?aiNear(N.at||0):[]}}); }
   const sheets=[]; let cur=null; const fresh=()=>{ cur={items:[],x:0,y:0,rowH:0}; sheets.push(cur); }; fresh();
   for(const p of pics){ const sc=Math.min(1,p.max/Math.max(p.src.width,p.src.height)), w=Math.max(1,Math.round(p.src.width*sc)), h=Math.max(1,Math.round(p.src.height*sc));
     if(cur.x+w>ZD_W){ cur.x=0; cur.y+=cur.rowH; cur.rowH=0; }
