@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v624
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v625
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,19 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v625, 2026-09-24)
+- **The Zoom check shows what it is doing (v625, H: "Ich drücke auf Share oder Data, der button wird ausgegraut und es tut
+  sich erstmal nichts. In solchen Fällen einen Fortschrittsbalken oder ähnliches anzeigen."):** every step of Run, Share and
+  Data puts the reading's own moving bar (`busyHTML`) in the row's status with its step — "Checking card 5 of 24 …",
+  "Checking multicard 2 of 8 …", "Drawing picture sheet 1 of 6 …", "Writing the PDF …", "Drawing the sheet …",
+  "Compressing the sheet …" — and `zcBusy` waits one frame so the bar is painted before the synchronous drawing that would
+  otherwise hold the screen still; the result line comes back when it is done. **Share** gets v622's lesson too: it still
+  shares straight from its tap, and when drawing outlasted the tap's permission (NotAllowedError) a "Sheet ready" sheet asks
+  for one more tap instead of a dead end; any other failure names itself. The row's own text says Data sends "one PDF" (it
+  still said PNG sheets). **Measured** at 10× CPU throttle with a MutationObserver on the status: 26 status lines, every
+  working one with the bar, the result line after each action; Data shared its PDF from the Share tap; Share's compressing
+  took 7 s, was refused once, and went through from the "Sheet ready" tap. Screenshot at 390 px checked. Learn 13/13.
 
 ## Current state (PWA v624, 2026-09-24)
 - **The Zoom data is one PDF (v624, H: "I couldn't save the single files. Can you try export as zip file?", after sending the
