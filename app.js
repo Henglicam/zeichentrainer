@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=624; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=625; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1093,11 +1093,16 @@ async function copyText(text,st){
    cards' own pictures as one sheet the share sheet can send — so the detector is judged on H's photos rather than on the
    harness's, and a failure comes back as a picture of where it went wrong (the v399 rule: the app says what happened). */
 let ZCHECK=null; const ZC_N=24, ZC_PAGES=8;
+/* v625 (H: "Ich drücke auf Share oder Data, der button wird ausgegraut und es tut sich erstmal nichts. In solchen Fällen
+   einen Fortschrittsbalken oder ähnliches anzeigen."): every step of Run, Share and Data puts the reading's own moving bar
+   (busyHTML) in the row's status with what it is doing, and waits one frame so the bar is painted BEFORE the work that
+   would otherwise hold the screen still — drawing a sheet is one long synchronous stretch. */
+const zcBusy=async(el,txt)=>{ if(!el) return; el.innerHTML=busyHTML(txt); await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0))); };
 async function zoomCheck(st){
   if(ZCHECK) ZCHECK.res.concat(ZCHECK.pres||[]).forEach(r=>{ try{ r.bm&&r.bm.close(); }catch(e){} });
   const cards=deck().filter(d=>d.img&&d.frame&&!inPage(d)).slice(-ZC_N).reverse(), res=[]; let ok=0, unsure=0, est=0, none=0;
   for(const d of cards){
-    if(st) st.textContent=`Checking ${res.length+1} of ${cards.length} …`;
+    await zcBusy(st,`Checking card ${res.length+1} of ${cards.length} …`);
     let bm=null; try{ bm=await createImageBitmap(d.img); }catch(e){ res.push({d,why:"no picture"}); none++; continue; }
     const key=d.shot||d.id, full=fullPhoto(d); let ps=PICSIZE.get(key);
     if(!ps&&full){ try{ const b2=await createImageBitmap(full); ps={w:b2.width,h:b2.height}; b2.close(); PICSIZE.set(key,ps); }catch(e){} }
@@ -1109,7 +1114,8 @@ async function zoomCheck(st){
   }
   /* v620: the newest multicards too — each text's frame and the region its ink search snapped it to */
   const pages=deck().filter(d=>d.kind==="page"&&d.shot).slice(-ZC_PAGES).reverse(), pres=[]; let snapped=0, regions=0;
-  for(const pg of pages){ const items=S.custom.filter(d=>d.shot===pg.shot&&d.kind!=="page"&&d.frame&&d.c), full=items.length&&fullPhoto(items[0]);
+  for(const pg of pages){ await zcBusy(st,`Checking multicard ${pres.length+1} of ${pages.length} …`);
+    const items=S.custom.filter(d=>d.shot===pg.shot&&d.kind!=="page"&&d.frame&&d.c), full=items.length&&fullPhoto(items[0]);
     if(!full){ pres.push({pg,items,why:"no photo"}); continue; }
     let bm=null; try{ bm=await createImageBitmap(full); }catch(e){ pres.push({pg,items,why:"no photo"}); continue; }
     const snaps=items.map(d=>{ const b=snapRegion(d,bm,bm.width,bm.height); REGFIX.set(cbKey(d),b); return b; });
@@ -1118,7 +1124,8 @@ async function zoomCheck(st){
   ZCHECK={at:Date.now(),res,pres,line:`${cards.length} cards: ${ok} of ${all} characters on the ink, ${unsure} unsure, ${est} by the estimate${none?`, ${none} cards without a place`:""}${pages.length?`; ${pages.length} multicards: ${snapped} of ${regions} regions snapped`:""}`};
   return ZCHECK;
 }
-async function shareZoomSheet(){
+async function shareZoomSheet(st){
+  await zcBusy(st,"Drawing the sheet …");
   const z=ZCHECK, T=300, cols=4, pad=10, lab=40, head=44, pr=z.pres||[], rows=Math.max(1,Math.ceil(z.res.length/cols)+Math.ceil(pr.length/cols));
   const cv=document.createElement("canvas"); cv.width=cols*(T+pad)+pad; cv.height=head+rows*(T+lab+pad)+pad; const g=cv.getContext("2d");
   g.fillStyle="#fff"; g.fillRect(0,0,cv.width,cv.height); g.fillStyle="#000"; g.font="18px sans-serif"; g.textBaseline="top";
@@ -1143,9 +1150,16 @@ async function shareZoomSheet(){
       r.items.forEach((d,k)=>{ box(d.frame,"#2F6BD6",[5,3]); if(r.snaps[k]) box(r.snaps[k],"#1FA34A"); }); g.setLineDash([]); }
     g.fillStyle="#000"; g.font="15px sans-serif"; g.fillText(("Multicard · "+String(r.pg.c||"")).slice(0,22),ox,oy+T+3);
     g.fillStyle="#555"; g.font="12px sans-serif"; g.fillText(r.why||`${r.snaps.filter(Boolean).length} of ${r.items.length} regions snapped`,ox,oy+T+22); });
+  await zcBusy(st,"Compressing the sheet …");
   const blob=await new Promise(res=>cv.toBlob(res,"image/png")), name="shizi-zoomcheck.png", file=new File([blob],name,{type:"image/png"});
-  if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; logErr("share",err); } }
-  noteSheet(t("Sharing is not available here."));
+  if(st) st.textContent=z.line+".";
+  if(!(navigator.canShare && navigator.canShare({files:[file]}))){ noteSheet(t("Sharing is not available here.")); return; }
+  /* v625: the sheet is shared straight from the button's tap, as before; when drawing it took longer than Android lets a
+     tap open the share sheet (v622's finding for Data), one more tap sends it instead of a dead end */
+  for(let again=false;;again=true){
+    if(again&&!await askSheet({title:"Sheet ready",text:`${(file.size/1048576).toFixed(1)} MB.`,ok:"Share",danger:false})) return;
+    try{ await navigator.share({files:[file],title:name}); return; }
+    catch(err){ if(err&&err.name==="AbortError") return; if(!again&&err&&err.name==="NotAllowedError") continue; logErr("share",err); noteSheet(`Sharing failed: ${(err&&err.name)||""} ${(err&&err.message)||err}`); return; } }
 }
 /* the Zoom check's own data (v620; as pictures since v621): the pictures the sheet shows, at close to the size the phone
    reads them, with their frames and texts — the sheet's 300 px tiles made a harness that disagreed with the phone (v619:
@@ -1182,7 +1196,7 @@ function zdPdf(jpgs,meta){
   put(`trailer\n<</Size ${size}/Root 1 0 R>>\nstartxref\n${xref}\n%%EOF\n`);
   return new Blob(parts,{type:"application/pdf"});
 }
-async function shareZoomData(){
+async function shareZoomData(st){
   const z=ZCHECK, pics=[];
   for(const r of z.res) if(r.bm) pics.push({src:r.bm,max:ZD_CARD,meta:{kind:"card",c:r.d.c,lines:spotLines(r.d),frame:r.d.frame||null,tf:r.tf||null,why:r.why||""}});
   for(const r of z.pres||[]) if(r.bm) pics.push({src:r.bm,max:ZD_PAGE,meta:{kind:"page",c:r.pg.c,items:r.items.map(d=>({c:d.c,lines:spotLines(d),frame:d.frame}))}});
@@ -1197,7 +1211,8 @@ async function shareZoomData(){
      each JPEG sheet a page (the JPEG's bytes as they are, DCTDecode), and the frames and texts as a stream of their own
      (/Type/ShiziZoomData) — one file to send, nothing a combining app can drop. Over ZD_TAP_MB it becomes several PDFs. */
   const jpgs=[], sheetMeta=[];
-  for(let si=0;si<sheets.length;si++){ const sh=sheets[si], name=`sheet-${si+1}`, height=Math.max(1,...sh.items.map(it=>it.y+it.h));
+  for(let si=0;si<sheets.length;si++){ await zcBusy(st,`Drawing picture sheet ${si+1} of ${sheets.length} …`);
+    const sh=sheets[si], name=`sheet-${si+1}`, height=Math.max(1,...sh.items.map(it=>it.y+it.h));
     const cv=document.createElement("canvas"); cv.width=ZD_W; cv.height=height; const g=cv.getContext("2d");
     g.fillStyle="#fff"; g.fillRect(0,0,ZD_W,height);
     for(const it of sh.items) g.drawImage(it.p.src,it.x,it.y,it.w,it.h);
@@ -1208,8 +1223,10 @@ async function shareZoomData(){
   const files=[]; let grp=[], grpBytes=0;
   const flush=()=>{ if(!grp.length) return; const k=files.length+1, meta={app:"shizi-zoomdata",v:APP_V,at:new Date().toISOString(),sheets:grp.map(j=>sheetMeta[jpgs.indexOf(j)])};
     files.push(new File([zdPdf(grp,meta)],`shizi-zoomdata-${k}.pdf`,{type:"application/pdf"})); grp=[]; grpBytes=0; };
+  await zcBusy(st,"Writing the PDF …");
   for(const j of jpgs){ if(grp.length&&grpBytes+j.bytes.length>ZD_TAP_MB*1048576*0.9) flush(); grp.push(j); grpBytes+=j.bytes.length; }
   flush();
+  if(st) st.textContent=z.line+".";
   /* v622 (H's screenshot of v621: "Sharing is not available here." on Data): Android opens the share sheet only within a
      few seconds of a tap, and drawing and compressing half a dozen 2.7-megapixel PNGs outlasts that — the one-sheet Share
      never did. So the pictures are made first and a second tap sends them, from inside its own click; and a phone that
@@ -2782,7 +2799,7 @@ function renderMore(main){
     <div class="listhead">Diagnostics</div>
     <div class="mrow"><div style="flex:1"><div class="t">Diagnostics</div><div class="s" id="diag-status">${LAST_READ.ring.length} photo${LAST_READ.ring.length===1?"":"s"} logged, ${AILOG.length} AI exchange${AILOG.length===1?"":"s"}, ${ERRLOG.length} error${ERRLOG.length===1?"":"s"}.</div><div class="fieldacts"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button><button class="btn mini" id="diag-copy">Copy</button></div></div></div>
     <pre class="diag" id="diag-out" hidden></pre>
-    <div class="mrow"><div style="flex:1"><div class="t">Zoom check</div><div class="s" id="zc-status">${ZCHECK?esc(ZCHECK.line)+".":`Finds every character of the newest ${ZC_N} photo cards the way Learn's zoom does. Share sends the pictures with the boxes drawn: green on the ink, orange unsure, red the estimate, blue the frame; the newest ${ZC_PAGES} multicards follow, green where a region snapped onto its text. Data sends the pictures themselves, as PNG sheets.`}</div><div class="fieldacts"><button class="btn mini" id="zc-run">Run</button><button class="btn mini" id="zc-share">Share</button><button class="btn mini" id="zc-data">Data</button></div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">Zoom check</div><div class="s" id="zc-status">${ZCHECK?esc(ZCHECK.line)+".":`Finds every character of the newest ${ZC_N} photo cards the way Learn's zoom does. Share sends the pictures with the boxes drawn: green on the ink, orange unsure, red the estimate, blue the frame; the newest ${ZC_PAGES} multicards follow, green where a region snapped onto its text. Data sends the pictures themselves, as one PDF.`}</div><div class="fieldacts"><button class="btn mini" id="zc-run">Run</button><button class="btn mini" id="zc-share">Share</button><button class="btn mini" id="zc-data">Data</button></div></div></div>
     <div class="mrow"><div style="flex:1"><div class="t">Still to test</div><div class="s" id="field-status">${fieldNote()}</div><div class="fieldacts"><button class="btn mini" id="field-show">Show</button><button class="btn mini" id="field-copy">Copy</button></div></div></div>
     <pre class="diag" id="field-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"install")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div><div class="fieldacts"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button><button class="btn mini" id="users-copy">Copy</button></div></div></div>
@@ -2826,8 +2843,8 @@ function renderMore(main){
     $("#diag-share").onclick=shareDiag;
     { const zs=$("#zc-status"), zr=$("#zc-run"), zh=$("#zc-share"); /* v618 */
       if(zr) zr.onclick=async()=>{ zr.disabled=true; try{ await zoomCheck(zs); zs.textContent=ZCHECK.line+"."; }catch(e){ zs.textContent="The check failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zr.disabled=false; };
-      { const zd=$("#zc-data"); if(zd) zd.onclick=async()=>{ zd.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); zs.textContent=ZCHECK.line+"."; await shareZoomData(); }catch(e){ zs.textContent="The data failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zd.disabled=false; }; }
-      if(zh) zh.onclick=async()=>{ zh.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); zs.textContent=ZCHECK.line+"."; await shareZoomSheet(); }catch(e){ zs.textContent="The sheet failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zh.disabled=false; }; }
+      { const zd=$("#zc-data"); if(zd) zd.onclick=async()=>{ zd.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); await shareZoomData(zs); }catch(e){ zs.textContent="The data failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zd.disabled=false; }; }
+      if(zh) zh.onclick=async()=>{ zh.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); await shareZoomSheet(zs); }catch(e){ zs.textContent="The sheet failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zh.disabled=false; }; }
     $("#field-show").onclick=()=>{ const o=$("#field-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=fieldText(); };
     $("#field-copy").onclick=()=>copyText(fieldText(),$("#field-status"));
     $("#diag-copy").onclick=()=>copyText(diagText(),$("#diag-status"));
