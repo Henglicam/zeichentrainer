@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v619
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v620
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,28 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v620, 2026-09-24)
+- **A multicard's regions snap onto their texts (v620, H: "Können wir diese Erkenntnisse bitte auch auf die Multicards
+  anwenden?", then "B" — the dots and frames on a multicard, over A, the zoom on flashcards made from one).** A region is
+  its text's own frame (v448, `photoRegions`), the AI's box or the reader's label, often shifted or loose. `snapRegion`
+  runs v619's `charBoxes` for that text on the whole photo, inside its frame, and the region becomes the union of its
+  characters' boxes plus 12 % — **only** when at least 60 % of its Chinese characters are sure and the union stays on the
+  frame (centre inside, area between a seventh and 1.3 times the frame's), so a sure-but-wrong layout cannot pull a region
+  onto the building beside a sign (the risk H's v619 phone sheet showed: 违法停车 / 图像采集 sure on the building). **Measured
+  at display, kept in memory** (`REGFIX`, `refineSoon` from `regionsHTML`, `refineShot` decodes the photo once and moves the
+  region elements on screen without a render, then re-centres a Learn page front): nothing stored changes, Crop again
+  starts from the frame as before, and every multicard already in the deck is snapped the first time it is shown. A turned
+  frame is left alone. **The Zoom check** now draws the newest 8 multicards after the cards (blue each text's frame, green
+  the snapped region) and has a **Data** button that shares `shizi-zoomdata.json.txt` — the cards' pictures at the size the
+  phone reads them, the multicards' photos, frames and texts — because H's v619 phone sheet disagreed with the harness built
+  from the v618 sheet's 300 px tiles (52 sure on the phone, of which about 35 right; 58 in the harness, about 52 right), and
+  the rule is that the harness gets fixed. **Measured:** a synthetic control panel with six labels whose frames are shifted
+  a fifth and grown 30 % — five snap onto their text (IoU 0.55 → 0.72, the ceiling with the 12 % pad), the sixth, whose frame
+  sits on its neighbour, is left where it was (the snap corrects a place, it does not find a lost text); regions on screen
+  move within the first second. On the 24 pictures of H's sheet treated as regions, 10 snap and all 10 onto their text by
+  eye (杨国福 leaves YANGGUOFU out; 阿里云's takes its logo in), none onto anything else. Learn 13/13, synthetic 49/49.
+  **Not field-checked** — H's next Zoom check (Share and Data) is the test, and the Data file is the next harness.
 
 ## Current state (PWA v619, 2026-09-24)
 - **The layout is searched, and judged on H's own photos (v619, H's Zoom check sheet from v618: 24 cards, "31 of 124
