@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v616
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v617
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,41 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v617, 2026-09-24)
+- **The photo zooms onto the character being written (v617, H: "Können wir beim Schreiben dynamisch auf den zu schreibenden
+  character zoomen und danach automatisch zum folgenden character weiter schwenken? Hintergrund: man soll den zu schreibenden
+  character immer gross und deutlich sehen können", then, on the proposal and two improvements, "Go 1 + (b)"):** v541 had
+  built half of it — a picture the learner had zoomed by hand followed the pad onto the next WORD — and v602 switched that off
+  with the marks, since the follow rode on the word's mark. Asked for better suggestions, I offered (1) correcting the
+  estimated place on the photo's own ink and (2) a magnifier in a corner instead of the zoom (rejected by me: one more element
+  on a frame that must not move, v560), and named a didactic cost H had to decide: at level 3 the pad is empty and the writing
+  is recall, and a big sharp character over the pad makes it copying. H chose (1) and (b): **zoom only while the pad itself
+  shows the character** — level 1 and 2, or a character without a template, whose pad prints it — and **back to the whole
+  picture at level 3**. The behaviour: the card opens on the whole picture (the context first); the pad's first touch
+  (`st.zoomGo`) glides the picture in onto the character; each character written pans it on to the next on v541's 380 ms glide;
+  the finished card glides back out for the recap; the text state never zooms. **The place:** `wordSpan` of the one character
+  on v533's geometry (`spotGeom`, now also returning `rectOf`, `img` and the text's fractions), corrected by `inkSpan` — in the
+  line's band, columns whose colour differs from the band's median by more than 120 are ink (textRowExtent's test), and each
+  edge of the estimate moves to the nearest gap between characters within `AZ_TOL` 0.4 of a character's width; the rows are
+  then the ink run nearest the band's middle. A correction that finds both edges and a width between 0.55 and 1.5 of the
+  estimate earns the tight zoom (`AZ_INK` 0.68 of the box for the character's larger side), anything else keeps the estimate
+  and the loose one (`AZ_EST` 0.5), so a guess a little off still shows the character; the scale is capped at `AZ_MAX` 3.5 (the
+  crop keeps the photo's pixels, ≤1600) and a zoom under `AZ_MIN` 1.15 is not made. Cached per card and character (`INKSPAN`).
+  **The finger wins, and the swipe is untouched:** the pad's zoom is marked `auto`, and an auto zoom leaves one finger to the
+  card — no `touch-action:none`, no `.zoomed` (a `.zauto` class carries the will-change) — so a swipe that starts on the
+  zoomed photo moves to the next card exactly as at rest, without v606's pull past the edge. A pinch or a wheel makes it the
+  hand's (`ZOOM_HAND`, keyed by the picture and the pad pass): from then on the scale is left alone and the picture only
+  follows, as in v541. `PIC_ZOOM` carries `auto` so the restore after each character's render keeps it. `ZOOM_AUTO` switches
+  the whole thing off in one place, as `SPOT_ON` does the marks. Diagnostics prints `learn zoom · ch, how (ink / estimate /
+  out …), s, lv`. **Verified** headless at 390 px on a 1600×1200 photo with 北京欢迎 drawn at deliberately uneven places
+  (the estimate for 京 off by 55 photo px): the card opens at rest; the pad's first touch zooms to 3.5 on the ink; after 北
+  the picture centres 京 within 1 px of its true centre, where the estimate would have put it 90 px off; 欢 at level 3 glides
+  back to whole; 迎 zooms in again; the finished card is whole; after a wheel pinch the hand's scale is kept; the text state
+  does not zoom; one-finger swipe on the zoomed photo reaches the next card. 13 checks; on the v616 tree the zoom checks fail
+  (no zoom at all) and the two at-rest checks are [control]. **Not field-checked:** how often the ink finds the gaps on real
+  signs (connected script, busy backgrounds, vertical signs — a vertical sign whose characters are one line each works by
+  the band; one written as a single tall line is not handled and falls back to the estimate), and whether 3.5× reads sharp.
 
 ## Current state (PWA v616, 2026-09-24)
 - **The finished card reads what the card says (v616, H with two screenshots of his 北京首都机场 / 欢迎您 card in Test this

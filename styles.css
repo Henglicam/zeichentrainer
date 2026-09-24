@@ -927,7 +927,7 @@ body.noscroll{overflow:hidden}
 /* v596: the second copy of the page front's aspect-ratio stood here — the same selector list set to the same 1.5 as the
    rule above it (v518 added it for the carousel's neighbour, which the rule above already covered). One number written
    twice is the v401 trap in CSS: the next hand changes one of them. It is one rule now, above. */
-.picbox.zoomed{touch-action:none} .picbox.zoomed .signimg,.picbox.zoomed .pagewrap{will-change:transform}
+.picbox.zoomed{touch-action:none} .picbox.zoomed .signimg,.picbox.zoomed .pagewrap,.picbox.zauto .signimg,.picbox.zauto .pagewrap{will-change:transform} /* v617: .zauto is the pad's own zoom — no touch-action:none, so one finger still swipes */
 
 
 /* THE FRAME (v560, H: "immer gleich, immer symmetrisch, die Proportionen immer gleich"; v561, H: "drei verschiedene Abschnitte
