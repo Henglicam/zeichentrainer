@@ -23,6 +23,13 @@ cache keeps its name; app.js re-fetches this one file once, by its header line).
 The brackets are what cleanSense() already strips, so anything printing a value
 raw still reads properly.
 
+v605 (H: "Bitte keinen Text abschneiden", on 梓 reading "...used to make vari…"): the file
+had carried a 120-character cap since before this tool, which cut 3,394 glosses mid-word
+and ended them with "…". It was lifted by restoring ONLY those glosses from the same dump —
+the cut sense completed from the word's own sense that begins with it, or, where the cut
+fell exactly at a sense's end, that sense and the one after it — and the header went to v3
+so every phone fetches the file once more. No other line changed. This tool no longer cuts.
+
 A full rebuild from the current dump is a different decision and is NOT done
 here: the newer dump carries 5,137 more words and would change the gloss of some
 7,900 single-reading ones, which is not what was asked for.
@@ -37,10 +44,9 @@ writes is a derived database and is under CC BY-SA 4.0 too.
 """
 import sys, json, gzip, collections, unicodedata
 
-CAP = 120          # the longest a group's gloss may be — the cap the file has always had
 NMAX = 3           # senses per group, as before
 US = "\x1f"        # separates the reading groups of one word
-HEADER = "#cedict v2 — a value with \\x1f carries one group per reading, each opening with [pinyin]"
+HEADER = "#cedict v3 — a value with \\x1f carries one group per reading, each opening with [pinyin]"
 
 VOWELS = "aeiouü"
 MARKS = {1: "̄", 2: "́", 3: "̌", 4: "̀", 5: ""}
@@ -70,8 +76,7 @@ def reading(pinyin):
     return " ".join(toned(x) for x in pinyin.split()).lower()
 
 def gloss(senses):
-    v = "; ".join(senses[:NMAX])
-    return v[:CAP - 1] + "…" if len(v) > CAP else v
+    return "; ".join(senses[:NMAX])     # never cut (v605): a gloss ending "…" reached the phone as a sentence cut in half
 
 def main(src, path):
     data = json.load(open(src, encoding="utf-8"))
