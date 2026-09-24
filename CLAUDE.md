@@ -59,7 +59,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v606, 2026-09-24)
+## Current state (PWA v607, 2026-09-24)
 **The app is called 街字 Jiēzì** (H: "Do 街字 Jiēzì, drop Zeichentrainer"; "Read the street" was his idea and was
 offered as the store subtitle, which is his call in the private repo's listing). The title, manifest `name`/
 `short_name` (街字 Jiēzì / 街字), header logo, About, share text, `privacy.html`, the owner's dumps and every shared
@@ -71,15 +71,13 @@ import both ways). Not yet field-checked: Android swaps a home-screen icon and n
 manifest, which can take a day.
 
 **Recent state worth carrying in the head** (each has its full entry in the archive):
+- **v607** — the study card's **photo is a real square**, as wide as the pad (`.cue .zone1` width `min(100%,--ph)`,
+  centred); until v606 it took the card's full width and was square only by accident (322 × 286 in Test this card).
 - **v606** — a **zoomed picture hands its pan to the swipe at the edge**: the clamp's refused horizontal move is counted,
   and past `SW_SLOP` the pointer goes to `card._swipeFrom` (in `wireSwipe`), in Learn and on the open card.
 - **v605** — **the dictionary no longer cuts a meaning**: `cedict.tsv.gz` had held 3,394 glosses cut at 120 characters
   with "…" (H's 梓 "…make vari…"); only those were restored from the same dump, the header is `#cedict v3` (`DICT_HEAD`,
   so every phone re-fetches once), and `tools/cedict-readings.py` no longer cuts. A meaning a card already STORED keeps its cut.
-- **v603/v604** — a card in **traditional** characters (`d.trad`) carries a chip (`tradMark`) in the photo's top-left
-  (heading the text half in the text state; `splitFit` takes its height off the tiles), and **the chip is a per-card
-  switch**: a tap sets `simp` and the card is learned in simplified — tiles, pad template, whole text and Cards tile all
-  read `learnTrad(d)`; the pad restarts the card. The tile's mark shows only while it is learned in traditional.
 
 ## Files
 `index.html` · `styles.css` · `lang.js` (ten language columns) · `app.js` ·
@@ -151,7 +149,7 @@ v181 and reverted at v183 — do not bring it back unasked). The Camera tab alwa
 
 ### Learn — the write pad (v512 replaced tap-to-reveal and the grade buttons)
 The study card is a CSS grid whose **frame never moves for the content** (v560 — the rule that
-makes it read as professional): the cue and the pad are **two equal squares** (v561), then the
+makes it read as professional): the cue and the pad are **two equal squares** (v561; the photo is as wide as the pad since v607), then the
 fold row. `fit()` computes the frame per device, not per card, and re-fits on every resize and
 after the layout settles (v521/v532).
 
@@ -489,7 +487,7 @@ own licences even after the app is sold** (Arphic §2b and CC BY-SA ShareAlike).
 fine; taking those two files private is not.
 
 ## Open / not yet field-checked
-v606's pull-past-the-edge swipe on a zoomed photo; v605's whole dictionary meanings on the phone (the file re-fetches once); v603/v604's Traditional chip and its switch (does the blue read as the script, is the corner tap found, does a tap meant for the photo hit it); v602: does Learn read better without the marks on the photo (H's trial — his word decides whether `SPOT_ON` goes back to true); v601's name and icon on the home screen, and v600 and the versions around it, are not field-checked — H's next long-word card is the check for the
+v607's square photo in Learn and Test this card; v606's pull-past-the-edge swipe on a zoomed photo; v605's whole dictionary meanings on the phone (the file re-fetches once); v603/v604's Traditional chip and its switch (does the blue read as the script, is the corner tap found, does a tap meant for the photo hit it); v602: does Learn read better without the marks on the photo (H's trial — his word decides whether `SPOT_ON` goes back to true); v601's name and icon on the home screen, and v600 and the versions around it, are not field-checked — H's next long-word card is the check for the
 wrapped word line and for the bigger reading on the finished card (is 27 px enough, and does the reading
 still read as one thing when a seven-syllable word breaks across two lines?); an **empty Learn screen** for
 v599's real example card, and **More → How to use the app** for the figures (does it read as the app? is the
