@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=619; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=620; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -674,6 +674,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["learn","v619","zoom finds the right line"],
+  ["cards","v620","multicard frames on their text"],
   ["learn","v616","recap reading = card after crop"],
   ["cards","v615","swipe: no vertical jump"],
   ["cards","v614","zoomed photo: pull on to swipe"],
@@ -1091,9 +1092,9 @@ async function copyText(text,st){
 /* THE ZOOM CHECK (v618, owner's): charBoxes run over the newest ZC_N photo cards off screen, counted, and drawn on the
    cards' own pictures as one sheet the share sheet can send — so the detector is judged on H's photos rather than on the
    harness's, and a failure comes back as a picture of where it went wrong (the v399 rule: the app says what happened). */
-let ZCHECK=null; const ZC_N=24;
+let ZCHECK=null; const ZC_N=24, ZC_PAGES=8;
 async function zoomCheck(st){
-  if(ZCHECK) ZCHECK.res.forEach(r=>{ try{ r.bm&&r.bm.close(); }catch(e){} });
+  if(ZCHECK) ZCHECK.res.concat(ZCHECK.pres||[]).forEach(r=>{ try{ r.bm&&r.bm.close(); }catch(e){} });
   const cards=deck().filter(d=>d.img&&d.frame&&!inPage(d)).slice(-ZC_N).reverse(), res=[]; let ok=0, unsure=0, est=0, none=0;
   for(const d of cards){
     if(st) st.textContent=`Checking ${res.length+1} of ${cards.length} …`;
@@ -1106,12 +1107,19 @@ async function zoomCheck(st){
     spotLines(d).forEach(ln=>[...ln].forEach(ch=>{ if(CJK.test(ch)){ const b=cb.boxes&&cb.boxes[pos]; if(!b) est++; else if(b.ok) ok++; else unsure++; } pos++; }));
     res.push({d,bm,tf,cb}); await yieldNow();
   }
+  /* v620: the newest multicards too — each text's frame and the region its ink search snapped it to */
+  const pages=deck().filter(d=>d.kind==="page"&&d.shot).slice(-ZC_PAGES).reverse(), pres=[]; let snapped=0, regions=0;
+  for(const pg of pages){ const items=S.custom.filter(d=>d.shot===pg.shot&&d.kind!=="page"&&d.frame&&d.c), full=items.length&&fullPhoto(items[0]);
+    if(!full){ pres.push({pg,items,why:"no photo"}); continue; }
+    let bm=null; try{ bm=await createImageBitmap(full); }catch(e){ pres.push({pg,items,why:"no photo"}); continue; }
+    const snaps=items.map(d=>{ const b=snapRegion(d,bm,bm.width,bm.height); REGFIX.set(cbKey(d),b); return b; });
+    regions+=items.length; snapped+=snaps.filter(Boolean).length; pres.push({pg,items,bm,snaps}); await yieldNow(); }
   const all=ok+unsure+est;
-  ZCHECK={at:Date.now(),res,line:`${cards.length} cards: ${ok} of ${all} characters on the ink, ${unsure} unsure, ${est} by the estimate${none?`, ${none} cards without a place`:""}`};
+  ZCHECK={at:Date.now(),res,pres,line:`${cards.length} cards: ${ok} of ${all} characters on the ink, ${unsure} unsure, ${est} by the estimate${none?`, ${none} cards without a place`:""}${pages.length?`; ${pages.length} multicards: ${snapped} of ${regions} regions snapped`:""}`};
   return ZCHECK;
 }
 async function shareZoomSheet(){
-  const z=ZCHECK, T=300, cols=4, pad=10, lab=40, head=44, rows=Math.max(1,Math.ceil(z.res.length/cols));
+  const z=ZCHECK, T=300, cols=4, pad=10, lab=40, head=44, pr=z.pres||[], rows=Math.max(1,Math.ceil(z.res.length/cols)+Math.ceil(pr.length/cols));
   const cv=document.createElement("canvas"); cv.width=cols*(T+pad)+pad; cv.height=head+rows*(T+lab+pad)+pad; const g=cv.getContext("2d");
   g.fillStyle="#fff"; g.fillRect(0,0,cv.width,cv.height); g.fillStyle="#000"; g.font="18px sans-serif"; g.textBaseline="top";
   g.fillText(`Zoom check v${APP_V} · ${z.line}`,pad,14);
@@ -1127,7 +1135,27 @@ async function shareZoomSheet(){
         g.setLineDash([]); counts=`${ok} ink, ${un} unsure, ${es} est.${r.cb.why?" · "+r.cb.why:""}`; } }
     g.fillStyle="#000"; g.font="15px sans-serif"; g.fillText(String(r.d.c||"").replace(/\n/g," / ").slice(0,18),ox,oy+T+3);
     g.fillStyle="#555"; g.font="12px sans-serif"; g.fillText((r.why||counts).slice(0,46),ox,oy+T+22); });
+  /* the multicards: blue the text's frame, green the region it snapped to (none where the search was not sure) */
+  const top=head+Math.ceil(z.res.length/cols)*(T+lab+pad);
+  pr.forEach((r,i)=>{ const ox=pad+(i%cols)*(T+pad), oy=top+Math.floor(i/cols)*(T+lab+pad); g.fillStyle="#eee"; g.fillRect(ox,oy,T,T);
+    if(r.bm){ const sc=Math.min(T/r.bm.width,T/r.bm.height), dw=r.bm.width*sc, dh=r.bm.height*sc, dx=ox+(T-dw)/2, dy=oy+(T-dh)/2; g.drawImage(r.bm,dx,dy,dw,dh);
+      const box=(b,col,dash)=>{ g.setLineDash(dash||[]); g.strokeStyle=col; g.lineWidth=2; g.strokeRect(dx+b.x*dw,dy+b.y*dh,b.w*dw,b.h*dh); };
+      r.items.forEach((d,k)=>{ box(d.frame,"#2F6BD6",[5,3]); if(r.snaps[k]) box(r.snaps[k],"#1FA34A"); }); g.setLineDash([]); }
+    g.fillStyle="#000"; g.font="15px sans-serif"; g.fillText(("Multicard · "+String(r.pg.c||"")).slice(0,22),ox,oy+T+3);
+    g.fillStyle="#555"; g.font="12px sans-serif"; g.fillText(r.why||`${r.snaps.filter(Boolean).length} of ${r.items.length} regions snapped`,ox,oy+T+22); });
   const blob=await new Promise(res=>cv.toBlob(res,"image/png")), name="shizi-zoomcheck.png", file=new File([blob],name,{type:"image/png"});
+  if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; logErr("share",err); } }
+  noteSheet(t("Sharing is not available here."));
+}
+/* the Zoom check's own data (v620): the pictures the sheet shows, at the size the phone reads them, with their frames and
+   texts — the sheet's 300 px tiles made a harness that disagreed with the phone (v619: 58 sure there, 52 here), and the
+   rule is that the harness is what gets fixed. Owner's, sent only by his own tap through the share sheet. */
+async function shareZoomData(){
+  const z=ZCHECK, url=b=>new Promise(res=>{ if(!b) return res(null); const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=()=>res(null); fr.readAsDataURL(b); });
+  const data={app:"shizi-zoomdata",v:APP_V,at:new Date().toISOString(),cards:[],pages:[]};
+  for(const r of z.res) data.cards.push({c:r.d.c,lines:spotLines(r.d),frame:r.d.frame||null,tf:r.tf||null,why:r.why||"",img:await url(r.d.img)});
+  for(const r of z.pres||[]){ const full=r.items.length?fullPhoto(r.items[0]):null; data.pages.push({c:r.pg.c,photo:await url(full),items:r.items.map(d=>({c:d.c,lines:spotLines(d),frame:d.frame}))}); }
+  const text=JSON.stringify(data), name="shizi-zoomdata.json.txt", file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; logErr("share",err); } }
   noteSheet(t("Sharing is not available here."));
 }
@@ -2686,7 +2714,7 @@ function renderMore(main){
     <div class="listhead">Diagnostics</div>
     <div class="mrow"><div style="flex:1"><div class="t">Diagnostics</div><div class="s" id="diag-status">${LAST_READ.ring.length} photo${LAST_READ.ring.length===1?"":"s"} logged, ${AILOG.length} AI exchange${AILOG.length===1?"":"s"}, ${ERRLOG.length} error${ERRLOG.length===1?"":"s"}.</div><div class="fieldacts"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button><button class="btn mini" id="diag-copy">Copy</button></div></div></div>
     <pre class="diag" id="diag-out" hidden></pre>
-    <div class="mrow"><div style="flex:1"><div class="t">Zoom check</div><div class="s" id="zc-status">${ZCHECK?esc(ZCHECK.line)+".":`Finds every character of the newest ${ZC_N} photo cards the way Learn's zoom does. Share sends the pictures with the boxes drawn: green on the ink, orange unsure, red the estimate, blue the frame.`}</div><div class="fieldacts"><button class="btn mini" id="zc-run">Run</button><button class="btn mini" id="zc-share">Share</button></div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">Zoom check</div><div class="s" id="zc-status">${ZCHECK?esc(ZCHECK.line)+".":`Finds every character of the newest ${ZC_N} photo cards the way Learn's zoom does. Share sends the pictures with the boxes drawn: green on the ink, orange unsure, red the estimate, blue the frame; the newest ${ZC_PAGES} multicards follow, green where a region snapped onto its text. Data sends the pictures themselves.`}</div><div class="fieldacts"><button class="btn mini" id="zc-run">Run</button><button class="btn mini" id="zc-share">Share</button><button class="btn mini" id="zc-data">Data</button></div></div></div>
     <div class="mrow"><div style="flex:1"><div class="t">Still to test</div><div class="s" id="field-status">${fieldNote()}</div><div class="fieldacts"><button class="btn mini" id="field-show">Show</button><button class="btn mini" id="field-copy">Copy</button></div></div></div>
     <pre class="diag" id="field-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"install")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div><div class="fieldacts"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button><button class="btn mini" id="users-copy">Copy</button></div></div></div>
@@ -2730,6 +2758,7 @@ function renderMore(main){
     $("#diag-share").onclick=shareDiag;
     { const zs=$("#zc-status"), zr=$("#zc-run"), zh=$("#zc-share"); /* v618 */
       if(zr) zr.onclick=async()=>{ zr.disabled=true; try{ await zoomCheck(zs); zs.textContent=ZCHECK.line+"."; }catch(e){ zs.textContent="The check failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zr.disabled=false; };
+      { const zd=$("#zc-data"); if(zd) zd.onclick=async()=>{ zd.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); zs.textContent=ZCHECK.line+"."; await shareZoomData(); }catch(e){ zs.textContent="The data failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zd.disabled=false; }; }
       if(zh) zh.onclick=async()=>{ zh.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); zs.textContent=ZCHECK.line+"."; await shareZoomSheet(); }catch(e){ zs.textContent="The sheet failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zh.disabled=false; }; }
     $("#field-show").onclick=()=>{ const o=$("#field-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=fieldText(); };
     $("#field-copy").onclick=()=>copyText(fieldText(),$("#field-status"));
@@ -3720,6 +3749,40 @@ function charBoxes(src,nw,nh,g,lines){
 const ZLOG=[], ZLOG_MAX=30; const zlog=o=>{ ZLOG.push({at:Date.now(),...o}); while(ZLOG.length>ZLOG_MAX) ZLOG.shift(); LAST_AZ=ZLOG[ZLOG.length-1]; };
 const CBOX=new Map(); /* the boxes per card, frame and photo */
 const cbKey=d=>d.id+"|"+(d.shot||"")+"|"+JSON.stringify(d.frame||0)+"|"+(d.c||"");
+/* A MULTICARD'S REGIONS SIT ON THEIR TEXTS (v620, H: "Können wir diese Erkenntnisse bitte auch auf die Multicards
+   anwenden?", then "B" — the dots and frames on a multicard, not the zoom). A region is its text's own frame (v448), and
+   that frame is the AI's box or the reader's label, often a little off or loose. Each text is searched on the whole photo
+   the way Learn's zoom searches it (charBoxes, v619) and the region becomes the union of its characters' boxes — only when
+   the search is sure of at least 60 % of them and the result stays on the frame (its centre inside it, its area between a
+   seventh and 1.3 times the frame's), so a wrong line cannot pull a region onto the building beside the sign. Measured at
+   display, kept in memory: nothing stored changes, Crop again still starts from the frame, and every multicard already in
+   the deck is snapped the first time it is shown. A turned frame is left as it is. */
+const REGFIX=new Map(), REGRUN=new Set();
+function snapRegion(d,src,pw,ph){
+  const f=d.frame; if(!f||f.a||!(f.w>0&&f.h>0)) return null;
+  const lines=spotLines(d), cb=charBoxes(src,pw,ph,{tx:f.x,ty:f.y,tw:f.w,th:f.h},lines); if(!cb.boxes) return null;
+  const all=[], cjk=[]; let pos=0; lines.forEach(ln=>[...ln].forEach(ch=>{ const b=cb.boxes[pos]; if(b) all.push(b); if(CJK.test(ch)) cjk.push(b); pos++; }));
+  if(!cjk.length||cjk.some(b=>!b)||cjk.filter(b=>b.ok).length<Math.ceil(cjk.length*0.6)) return null;
+  let x0=Infinity, y0=Infinity, x1=-Infinity, y1=-Infinity;
+  all.forEach(b=>{ x0=Math.min(x0,f.x+f.w*b.x); y0=Math.min(y0,f.y+f.h*b.y); x1=Math.max(x1,f.x+f.w*(b.x+b.w)); y1=Math.max(y1,f.y+f.h*(b.y+b.h)); });
+  const pad=Math.min(x1-x0,y1-y0)*0.12; x0-=pad; y0-=pad; x1+=pad; y1+=pad;
+  const cx=(x0+x1)/2, cy=(y0+y1)/2, area=(x1-x0)*(y1-y0), fa=f.w*f.h;
+  if(cx<f.x||cx>f.x+f.w||cy<f.y||cy>f.y+f.h||area<fa/7||area>fa*1.3) return null;
+  return {x:Math.max(0,x0),y:Math.max(0,y0),w:Math.min(1,x1)-Math.max(0,x0),h:Math.min(1,y1)-Math.max(0,y0)};
+}
+function refineSoon(shot){ if(REGRUN.has(shot)) return; REGRUN.add(shot); setTimeout(()=>refineShot(shot).catch(e=>logErr("regions",e)),60); }
+async function refineShot(shot){
+  const cards=S.custom.filter(d=>d.shot===shot&&d.kind!=="page"&&d.frame&&d.c), todo=cards.filter(d=>!REGFIX.has(cbKey(d)));
+  if(!todo.length) return; const full=fullPhoto(todo[0]); if(!full) return;
+  let bm=null; try{ bm=await createImageBitmap(full); }catch(e){ return; }
+  let moved=0;
+  for(const d of todo){ const b=snapRegion(d,bm,bm.width,bm.height); REGFIX.set(cbKey(d),b); if(b) moved++; if(REGFIX.size>600) REGFIX.delete(REGFIX.keys().next().value); await yieldNow(); }
+  bm.close(); if(!moved) return;
+  /* the regions on screen move to their measured place; no render, so nothing the learner is doing is interrupted */
+  for(const d of todo){ const b=REGFIX.get(cbKey(d)); if(!b) continue; const pc=x=>(x*100).toFixed(2)+"%";
+    document.querySelectorAll(`.region[data-region="c:${CSS.escape(d.id)}"],.region[data-rid="c:${CSS.escape(d.id)}"]`).forEach(e=>{ e.style.left=pc(b.x); e.style.top=pc(b.y); e.style.width=pc(b.w); e.style.height=pc(b.h); }); }
+  document.querySelectorAll(".card.study").forEach(c=>{ if(c.querySelector(".picbox.page")) fitPageCover(c); }); /* the page front is centred on the card's own region */
+}
 const spotLines=d=>d.kind==="sign"?String(d.c||"").split("\n"):frontLines(d); /* wordSpan's own lines, so a box's position is the pad's */
 async function autoZoom(card,d,c,tg,st,cur){
   if(!ZOOM_AUTO||S.mode!=="study"||S.fullPic||S.peek) return;
@@ -9437,7 +9500,7 @@ function shotBusy(s){ return !!((CROP&&CROP.id===s.id)||PENDING[s.id]||READING[s
 function photoRegions(rec,byShot){
   const cards=byShot?(byShot.get(rec.id)||[]):S.custom.filter(d=>d.shot===rec.id), rs=[];
   for(const d of cards){ const f=d.frame; if(!d.c||!f||!isFinite(f.x)||!isFinite(f.y)||!isFinite(f.w)||!isFinite(f.h)||f.w<=0||f.h<=0) continue;
-    rs.push({rid:"c:"+d.id,zh:d.c,box:f,placed:"card",card:d.id}); }
+    rs.push({rid:"c:"+d.id,zh:d.c,box:REGFIX.get(cbKey(d))||f,placed:"card",card:d.id}); } /* v620: the region snapped onto its text's ink, once it has been measured */
   rs.sort((a,b)=>(a.box.y-b.box.y)||(a.box.x-b.box.x)); /* reading order: top to bottom, left to right */
   return rs.length>=REGION_MIN?rs:[];
 }
@@ -9460,6 +9523,7 @@ const MARK_CROSS=`<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.7 3.7 
 function stateMark(id){ const d=cardOf(id), has=!!(d&&d.page&&madeFrom(d));
   return `<i class="pdot${has?" made":" none"}" aria-hidden="true">${has?MARK_TICK:""}</i>`; }
 function regionsHTML(rec,rs,o){
+  if(rec&&rec.id) refineSoon(rec.id); /* v620 */
   const learn=!!(o&&o.learn); /* v452: on the Learn front the frames take no tap (the photo's own tap and the swipe own the surface) and the card's own is the only one lit */
   const tag=learn?"span":"button";
   /* no state class on the photo: the frame is the same for every word, and .ff is the frame itself — its own container,
