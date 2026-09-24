@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v625
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v626
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -39,7 +39,27 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
-## Current state (PWA v625, 2026-09-24)
+## Current state (PWA v626, 2026-09-24)
+- **The zoom is sure only where the characters look like characters (v626, first use of H's full-size Zoom data —
+  `shizi-zoomdata-1.pdf`, 32 pictures, v625):** run over H's own pictures, the harness now agrees with the phone on the
+  multicards exactly (6 of 57 snapped) and on the cards within the sheet's 700 px downscale (58 sure against the phone's 52).
+  Looked at by eye, about a dozen of the 58 sure boxes were wrong, in four patterns: the ALIYUN logo taken for 阿 (boxes
+  of 95 and 160 px side by side), 景东街 shifted by one onto the sign's edge, 出租 stacked on its phone number as one box
+  (twice as wide as tall), the building's columns beside 违法停车 as tall slivers — and 货梯保护板 lost its line to the
+  black strip under 请勿损坏. Three rules in `charBoxes`: (1) a band whose rows are ink wall to wall on average (> 0.7) is
+  no text line — dear in the layout search and never the size prior's `Hmax`; (2) every Chinese character's tight ink must
+  be of a character's shape — aspect 0.62–1.7, ink density ≤ 0.92 — or its whole line is unsure (the line's cuts are
+  shared, so one bad box doubts them all); (3) a line whose character widths differ by more than 1.5× is unsure.
+  **Measured on H's 24 cards: 43 sure, all 43 right by eye** (货梯保护板/请勿损坏 now found whole, 9 of 9); before, 58
+  sure with ~12 wrong. A wrong sure box zooms tight onto the wrong spot; an unsure one zooms loose (`AZ_EST`) — that is
+  the trade. **Measured and dropped:** a density cap of 0.65 — small dense characters at the 320 px search scale are
+  inky (腩 0.84, 面 0.80) and it unsnapped the whole 茄汁煎蛋面 menu; an aspect floor of 0.55 kept 房屋出租's two wrong
+  boxes (0.57, 0.59). Synthetic suite 49/49 on the ink, Learn suite 13/13, multicard fixture 5 of 6 as before.
+  **What the data says about multicards, and v626 does not fix:** of the 51 unsnapped regions, 23 have no place of their
+  own at all — every text of the tenant directory (13) and of 杭州小笼包 (3) carries the whole picture as its frame, and
+  the dance schedule's 7 all share one tilted frame; 3 of 虞西苏 are tilted (`snapRegion` refuses a turned frame); the rest
+  (建国肉夹馍's 17, the notice's 6) are a label and its price as one text on two plates far apart, or frames off their
+  text. The snap can only refine a frame that is roughly right; these need the place found when the multicard is made.
 - **The Zoom check shows what it is doing (v625, H: "Ich drücke auf Share oder Data, der button wird ausgegraut und es tut
   sich erstmal nichts. In solchen Fällen einen Fortschrittsbalken oder ähnliches anzeigen."):** every step of Run, Share and
   Data puts the reading's own moving bar (`busyHTML`) in the row's status with its step — "Checking card 5 of 24 …",
