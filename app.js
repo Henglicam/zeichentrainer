@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=640; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=641; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v641","sure signs skip the photo AI"],
   ["photo","v640","photo AI faster, meanings ok?"],
   ["photo","v639","card readings, sweep smooth?"],
   ["photo","v638","multicard labels on their lines"],
@@ -6185,6 +6186,12 @@ function pdAsPass(lines){
 /* v638: which line names which text — one to one, the best pairs first. The score is the longest common subsequence of
    their Chinese over the longer of the two, so 肥瘦肉夹馍 goes to 肥瘦肉夹馍¥12/个 (5 of 6) before 优质肥瘦肉夹馍¥16/个 can take it
    (5 of 8), which v637's first-that-fits rule let happen on H's menu board */
+/* v641 (H: "Go B too"): a reading of the phone's reader is sure — it is the reading, and no picture call is made — at one
+   or two lines, two characters or more, every character at PD_SURE or over. Calibrated on the 35 distinct card pictures of
+   H's Zoom data: 14 pass, none with a wrong character (two carry an extra real line the AI left out, 京准达 and a shop's
+   address; 消防栓|火119警 has its digits out of order; 景东街 lacks a 西 set apart); 93 would have let 幸北|福京 (北京幸福
+   read across two columns) through, 91 招商银行 without its 信用卡. Three lines or more may be a board's plates (v457). */
+const PD_ON_SURE=true, PD_SURE=95;
 const PD_ON=true, PD_MATCH=0.66, PD_ROOM=0.25, pdNorm=s=>String(s).replace(/[^\u4e00-\u9fff]/g,"");
 function pdLcs(a,b){ const A=[...a], B=[...b], dp=new Array(B.length+1).fill(0); for(let i=1;i<=A.length;i++){ let prev=0; for(let j=1;j<=B.length;j++){ const t=dp[j]; dp[j]=A[i-1]===B[j-1]?prev+1:Math.max(dp[j],dp[j-1]); prev=t; } } return dp[B.length]; }
 function pdMatch(texts,lines){ const T=texts.map(pdNorm), L=lines.map(l=>pdNorm(l.text)), pairs=[];
@@ -8367,13 +8374,12 @@ async function cropSign(id,opts){
     /* v639 (H: "Kann Paddle auch einzelne Karten besser lesen?", then "Go"): the phone's reader reads the whole straightened
        frame, started here so it runs on the page while the quick look runs in its worker — on his 17 newest single cards it
        found 64 % of their characters where this reader's best pass found 25 %. Its lines become one more pass below; read
-       well (effScore at WEAK_READ, two lines at most) on a photo that is not a board and done before the quick look, the
-       quick look's early picture call is not sent at all. The whole frame, not the close look's crop: that crop is cut
+       surely (PD_SURE, v641) on a photo that is not a board, it is the reading: no picture call, no close look. The whole frame, not the close look's crop: that crop is cut
        around the first pass's boxes, and where those were garbage it cut the text in half (恩尼美甲, 招商银行) */
-    let pdDone=null; const pdP=PD_ON?(async()=>{ const t0=Date.now(); try{ const b=await createImageBitmap(dk.blob), cvp=document.createElement("canvas"); cvp.width=b.width; cvp.height=b.height; cvp.getContext("2d").drawImage(b,0,0); b.close();
-        const pl=pdAsPass(await pdRead(cvp)), good=pl.length>0&&effScore(pl,Hink)>=WEAK_READ, clear=meanCf(pl)>=95&&dictCover(pl)>=1&&pl.map(l=>l.t).join("").replace(/[^\u4e00-\u9fff]/g,"").length>=2;
-        return pdDone={pl,good,clear,ms:Date.now()-t0}; }
-      catch(e){ logErr("paddle",e&&e.message||String(e)); return {pl:[],good:false,clear:false,ms:Date.now()-t0}; } })():null;
+    const pdP=PD_ON?(async()=>{ const t0=Date.now(); try{ const b=await createImageBitmap(dk.blob), cvp=document.createElement("canvas"); cvp.width=b.width; cvp.height=b.height; cvp.getContext("2d").drawImage(b,0,0); b.close();
+        const raw=await pdRead(cvp), rawCjk=raw.filter(l=>CJK.test(l.text)).length, pl=pdAsPass(raw), good=pl.length>0&&effScore(pl,Hink)>=WEAK_READ, cfs=pl.flatMap(l=>l.cf), sure=PD_ON_SURE&&pl.length>=1&&pl.length<=2&&cfs.length>=2&&Math.min(...cfs)>=PD_SURE, clear=meanCf(pl)>=95&&dictCover(pl)>=1&&pl.map(l=>l.t).join("").replace(/[^\u4e00-\u9fff]/g,"").length>=2;
+        return {pl,good,sure,clear,rawCjk,ms:Date.now()-t0}; }
+      catch(e){ logErr("paddle",e&&e.message||String(e)); return {pl:[],good:false,sure:false,clear:false,ms:Date.now()-t0}; } })():null;
     let placedCut=null; /* the frame placed on the text (v288): its cut is the card image and what the AI gets */
     let placedText=""; /* v486: the text the reader placed that frame on, when the placement came from one definite reading (rectOfLines) */
     const placeRect=async (rect,by,txt)=>{ const cut=await frameOnText(id,r.blob,base,rect,dk.angle||0,by,null,true); if(stale()) return; if(cut){ placedCut=cut; if(txt) placedText=txt; renderShots(); } }; /* sure: the reader's placements come from lines that pass textLike on the straightened copy */
@@ -8388,8 +8394,8 @@ async function cropSign(id,opts){
         /* the reading will almost certainly end weak: send the picture now instead of after the passes (v439). Only under
            SKEW_TRUST, because trustAngle needs every pass and below that angle picBase is the same either way — the bytes
            sent are byte for byte what the weak path would send below. Measured: 2 of 40 photos are excluded by it. */
-        const pdR=!ok&&!several?pdDone:null, pdSkip=!!(pdR&&pdR.good&&pdR.pl.length<=2); /* never waited for: holding the call back cost up to 2 s on 15 of H's 17 cards to save it on none of them; two lines at most: three or more may be a board's plates (H's signpost 706北一街, the emergency map), and only the picture answer can make that a multicard (v457) */
-        if(pdSkip) logRead(id,"the quick look found no readable text, but the phone's reader did — no early picture call");
+        const pdR=(!ok||several)&&pdP?await pdP:null, pdSkip=!!(pdR&&pdR.sure&&(!several||pdR.rawCjk<=2)); if(stale()) return; /* v641: waited for — a sure reading saves the whole picture call (20–45 s), the wait is Paddle's time past the quick look's (~0–2 s). A board still gets the picture answer, since only it makes a multicard (v457) — but the ink's bands call many a single sign "several" (H's 良品, 韵达, 消防栓 cards), so the phone's reader's own detection decides: two lines of Chinese at most, the small ones counted too. The cost: a real board's picture call leaves up to ~2 s later */
+        if(pdSkip) logRead(id,`${ok?"the quick look found separated blocks":"the quick look found no readable text"}, but the phone's reader read ${pdR.rawCjk===1?"one line":pdR.rawCjk+" lines"} surely — no picture call`);
         if((!ok||several)&&!pdSkip&&!EARLY[id]&&Math.abs(dk.angle||0)<SKEW_TRUST&&pictureUp()){
           const eb={orig:r.blob,dk,base}, eg=[...new Set(read.map(l=>l.t).filter(Boolean))].slice(0,6);
           EARLY[id]={run,base:eb,guesses:eg,at:Date.now(),p:aiReadPicture(eb.dk.blob,eg,()=>{},N).then(x=>{picOk();return{pic:x};},e=>{picRefused(e);return{err:e&&e.message||String(e)};})};
@@ -8408,21 +8414,21 @@ async function cropSign(id,opts){
     const passes=[{lines:await readPass(w,dk.blob,status),img:dk.blob,angle:dk.angle,tightened:false}];
     if(stale()) return;
     if(pdP){ const pd=await pdP; if(stale()) return; /* v639: its pass (read above, beside the quick look); exempt from the two ink-height rules below, and a clear reading of its own counts as two passes agreeing, so the close look skips its copies */
-      if(pd.pl.length){ passes.push({lines:pd.pl,img:dk.blob,angle:dk.angle,tightened:false,scale:1,paddle:true}); r.pdClear=pd.clear; }
-      N.pd={ms:pd.ms,t:pd.pl.map(l=>l.t).join("|").slice(0,160),cf:Math.round(meanCf(pd.pl)),good:pd.good,clear:pd.clear};
-      logRead(id,`the phone's reader: ${pd.pl.length?pd.pl.map(l=>l.t).join(" | ")+` at ${Math.round(meanCf(pd.pl))} %`:"nothing"} in ${(pd.ms/1000).toFixed(1)} s${pd.clear?" — clear":pd.good?" — good":""}`); }
+      if(pd.pl.length){ passes.push({lines:pd.pl,img:dk.blob,angle:dk.angle,tightened:false,scale:1,paddle:true,sure:pd.sure}); r.pdClear=pd.clear; r.pdSure=pd.sure; }
+      N.pd={ms:pd.ms,t:pd.pl.map(l=>l.t).join("|").slice(0,160),cf:Math.round(meanCf(pd.pl)),good:pd.good,sure:pd.sure,clear:pd.clear};
+      logRead(id,`the phone's reader: ${pd.pl.length?pd.pl.map(l=>l.t).join(" | ")+` at ${Math.round(meanCf(pd.pl))} %`:"nothing"} in ${(pd.ms/1000).toFixed(1)} s${pd.sure?" — sure: it is the reading, the other passes are left out":pd.clear?" — clear":pd.good?" — good":""}`); }
     const place=async band=>{ /* nothing placed yet (the first pass had no usable box): the tight passes so far — after the close look's colour passes, again after the whole close look */
       if(stale()||!(PENDING[id]&&!RECROP[id]?READ_APP[id]&&!PLACED[id]:CROP&&CROP.id===id&&(CROP.hidden||(CROP.proposed&&!CROP.followed)))) return; /* the frame still the app's — hidden, or shown by the 2 s fallback and untouched (v310); a card made by itself while nothing was placed (v325) */
       const tight=passes.filter(p=>p.tightened&&p.lines.length&&!p.tra&&p.scale!=="merged").map(p=>({...p,lines:tallLines(p.lines,Hink)})).filter(p=>p.lines.length&&textLike(p.lines)); if(!tight.length||!band) return; /* without the fine print (v320) */ /* the simplified reader's tight passes as read (the traditional reader's lines are converted, the merged pass is a composite), and only those that look like text (v296) */
       await placeRect(textBandOf(tight,band)); };
     r.onTight=place;
-    const cardRect=await secondLook(w,dk,passes,status,r,Hink);
+    const cardRect=r.pdSure?null:await secondLook(w,dk,passes,status,r,Hink); /* v641: a sure reading needs no close look */
     delete r.onTight; if(stale()) return;
     if(CROP&&CROP.id===id&&CROP.hidden){
       await place(cardRect); if(stale()) return;
       if(CROP&&CROP.id===id&&CROP.hidden){ delete CROP.hidden; logRead(id,"frame shown as proposed"); renderShots(); } /* nothing tighter found: the proposal itself */
     }
-    if(Math.max(0,...passes.map(p=>effScore(p.lines,Hink)))<WEAK_READ&&!r.stop){ /* weak or nothing: the whole frame as black-and-white and chromaticity copies, sizes from the ink — unless the picture answer is already in (v442) */
+    if(Math.max(0,...passes.map(p=>effScore(p.lines,Hink)))<WEAK_READ&&!r.stop&&!r.pdSure){ /* weak or nothing: the whole frame as black-and-white and chromaticity copies, sizes from the ink — unless the picture answer is already in (v442) */
       status("trying a black-and-white copy …");
       const bmp=await createImageBitmap(dk.blob), H=Hink||bmp.height/1.6;
       const combos=[]; for(const k of [...new Set([45,65,90].map(px=>Math.min(1.5,px/H).toFixed(2)))].map(Number)) for(const mode of ["bw","chroma"]) combos.push({k,mode}); /* distinct scales only (v144: with a tiny ink height all three clamped to 1.5, and one pass counted three times in the agreement bonus and the traditional vote) */
@@ -8449,22 +8455,23 @@ async function cropSign(id,opts){
     const hOfPass=p=>boxHeight(p.lines);
     const sizeFit=p=>sizeFitOf(p.lines,Hink);
     const score=p=>readingScore(p.lines,Hink)*Math.min(1.5,1+0.1*((agree.get(textOf(p))||1)-1))*sizeFit(p)*lineFit(p);
-    passes.sort((a,b)=>score(b)-score(a));
+    passes.sort((a,b)=>(b.sure?1:0)-(a.sure?1:0)||score(b)-score(a)); /* v641: a sure reading of the phone's reader wins outright */
     r.passes=passes.map(p=>({s:Math.round(score(p)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),h:Hink?+(hOfPass(p)/Hink).toFixed(2):null,tight:p.tightened,bw:!!p.bw,ch:!!p.chroma,tra:!!p.tra,...(p.paddle?{pd:true}:{}),...(lineFit(p)<1?{over:p.lines.length-maxLines}:{})}));
     N.passes=r.passes; saveReadLog(N); /* v479: on the reading's own record, so the "passes:" line cannot belong to a different photo than the "numbers:" line under it */
     const best=passes[0], lines=best.lines;
-    N.eff=n1(effScore(lines,Hink)); N.weak=N.eff<WEAK_READ; N.nPass=passes.length; /* v399: effScore >= WEAK_READ decides whether the AI is asked at all, and the log states neither it nor Hink */
+    const strong=!!best.sure||effScore(lines,Hink)>=WEAK_READ; /* v641: a sure reading is strong whatever its score — effScore was fitted to Tesseract's confidences, and a two-character sign at 100 % scores under WEAK_READ */
+    N.eff=n1(effScore(lines,Hink)); N.weak=!strong; if(best.sure) N.pdSure=true; N.nPass=passes.length; /* v399: effScore >= WEAK_READ decides whether the AI is asked at all, and the log states neither it nor Hink */
     r.passesDone=true; /* v442: an answer landing from here on stops nothing — the passes are all read, and the weak block below simply takes it (without this the .then above logged "the reading stops" during the weak block's own await, on a reading that had finished) */
     if(r.stop){ N.stop={at:r.stopAt||"the first pass",passes:passes.length,ms:Date.now()-r.stop}; logRead(id,`the reading stopped at ${r.stopAt||"the first pass"} for the picture answer — ${passes.length} passes read, the rest left out`); } /* v442, and v399's rule: N.weak and N.eff are the partial set's from here, so the record says so */
     N.best={t:lines.map(l=>(l.t||"").slice(0,40)).join("|").slice(0,160),tight:!!best.tightened,k:typeof best.scale==="string"?best.scale:n4(best.scale||1),bw:!!best.bw,ch:!!best.chroma,tra:!!best.tra,
       lines:lines.slice(0,6).map(l=>({cf:(l.cf||[]).slice(0,40),bx:(l.bx||[]).slice(0,40).map(b=>[Math.round(b.x0),Math.round(b.y0),Math.round(b.x1),Math.round(b.y1)])}))};
     /* the reading's winning pass places the frame when nothing else did (v321, H's Nongfu Spring bottle taken again at v320: the quick look read garbage, the close look's band sat on the mountain logo, and the text 农夫山泉 / 饮用天然水 was read by the whole-frame fallback at 98 % — a pass that could not place the frame, since only the close look's tight passes did —, so the card's picture kept the logo above the text: "das Bild über der Schrift gehört auch nicht rein"): a strong whole-frame pass whose lines pass the placement bar (textLike, the fine print left out) gives the frame the way the quick look does, while the frame is still the app's and untouched — Diagnostics "frame placed on the text by the reading: …" */
-    if(!placedCut&&lines.length&&!best.tightened&&effScore(lines,Hink)>=WEAK_READ&&(PENDING[id]&&!RECROP[id]?READ_APP[id]&&!PLACED[id]:CROP&&CROP.id===id&&(CROP.hidden||(CROP.proposed&&!CROP.followed)))){
+    if(!placedCut&&lines.length&&!best.tightened&&strong&&(PENDING[id]&&!RECROP[id]?READ_APP[id]&&!PLACED[id]:CROP&&CROP.id===id&&(CROP.hidden||(CROP.proposed&&!CROP.followed)))){
       const tl=tallLines(lines,Hink); if(textLike(tl)){ let rect=null; const bmp=await createImageBitmap(dk.blob); try{ rect=rectOfLines(bmp,tl); } finally{ bmp.close(); } if(stale()) return; if(rect){ await placeRect(rect,"reading",cjkOnly(tl.map(l=>l.t).join(""))); if(stale()) return; } } }
     if(placedCut){ cardImg=placedCut; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=placedCut; } /* the frame placed on the text: the card shows what the frame shows (v288) */
     else if(best.tightened&&cardRect){ const cut=await cutUnrotated(r.blob,cardRect,dk.angle||0); if(stale()) return; if(cut){ cardImg=cut; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=cut; } } /* the text area with its margin, from the crop as framed */
     /* a weak reading, or none: the picture goes to the AI when a provider that takes pictures is set (v173) */
-    const weak=!lines.length||effScore(lines,Hink)<WEAK_READ; let pic=null, picSeen=null;
+    const weak=!lines.length||!strong; let pic=null, picSeen=null;
     const sureAngle=passes.some(p=>!p.tra&&p.scale!=="merged"&&p.lines.length&&textLike(tallLines(p.lines,Hink))); /* a pass that read the straightened copy well confirms the angle (v333) */
     /* a large straightening the reading does not confirm is not trusted for the picture (v346, H's noodle sign 虞西苏 面馆: a straight banner in a doorway was straightened by −20° on a spurious profile peak, every pass came back garbage, Qwen read the tilted copy fine and boxed the text — but that box unrotated into an upright frame (v311, since a turned frame would have left the photo) is the bounding box of a rectangle turned by 20°, half again as large, so it covered the whole proposal and the card's picture was the room around the banner: "Hier ist wieder zu viel Luft drumrum"): the AI then sees the frame as it is and its box maps back one to one */
     const trustAngle=sureAngle||Math.abs(dk.angle||0)<SKEW_TRUST; N.sure=sureAngle; N.trust=trustAngle; /* v399 */

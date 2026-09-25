@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v640
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v641
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,26 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v641, 2026-09-25)
+- **A sure reading of the phone's reader is the reading — no picture call (v641, H: "Go B too", B being "skip the picture
+  call when Paddle is sure"):** calibrated on the 35 distinct card pictures of all seven Zoom data sets, Paddle alone:
+  **sure = one or two lines, two characters or more, every character at `PD_SURE` 95 % or over** — 14 of 35 pass, none
+  with a wrong character. Four differ from the AI's reading: 京准达 and a café's address line are real text the AI left
+  out as not the main text, 消防栓|火119警 has its digits out of order (the text check still runs on it), 景东街 lacks a
+  西 set apart. 93 would have let 幸北|福京 through (北京幸福 read across two columns), 91 招商银行 without 信用卡; 贵州茅台酒
+  (right, one character at 48 %) stays with the AI. A sure reading: the quick look **waits** for Paddle when it would send
+  the early picture call (v639 never waited, and skipped nothing) and does not send it; the close look and the
+  whole-frame copies are left out; the pass wins outright and counts as strong whatever its `effScore` (fitted to
+  Tesseract, it scores a two-character sign at 100 % under `WEAK_READ`), so the frame is placed on it and the text check
+  runs as on any strong reading — a text check that calls it garbage still sends the picture (picOnBad). **A board keeps
+  its picture call:** the quick look's `several` (ink bands) called 良品, 韵达 and 消防栓 boards and sent the call; Paddle's
+  own raw detection now decides — two Chinese lines at most, small ones counted (`rawCjk`). The cost: a real board's
+  picture call leaves up to ~2 s later (Paddle's time past the quick look's). **Measured (rdcards.js, AI aborted, so the
+  count is of calls started):** H's older 23 card pictures (phone3) — picture calls 21 → 12, weak readings 14 → 9,
+  characters found 0.67 → 0.73, right 0.65 → 0.68, no card's text worse except 手机数码家电 gaining the real 京准达 line;
+  his newest 17 (phone7, the hard ones) — 17 → 17, none sure; three multicards replayed — split and placed as before.
+  What a skipped call saves on the phone is the whole picture answer, 15–45 s — **not yet field-checked**.
 
 ## Current state (PWA v640, 2026-09-25)
 - **The picture model writes only what needs the picture (v640, H: "Wie machen wir es jetzt schneller?", then "Go A"):**
