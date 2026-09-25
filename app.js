@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=641; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=642; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v642","multicard swipe smooth now?"],
   ["photo","v641","sure signs skip the photo AI"],
   ["photo","v640","photo AI faster, meanings ok?"],
   ["photo","v639","card readings, sweep smooth?"],
@@ -6120,55 +6121,74 @@ async function loadScript(src){
    where today's reader named about half. v637 ships it as the owner's test only (Zoom check → Paddle), to measure it on the
    phone before anything depends on it. pdRead(canvas) → lines [{x,y,w,h,text,conf,vert}] in the canvas's pixels. */
 const PD="paddle/", PD_DET_MAX=960, PD_DET_THR=0.3, PD_BOX_THR=0.6, PD_UNCLIP=1.6, PD_REC_H=48, PD_REC_MAXW=960;
+/* v642 (H: "Swiping Multicards hakt manchmal ein bissle"): the reader runs in a worker of its own. Until v641 it ran on the
+   page, and every multicard shown for the first time in a session was re-read by it 60 ms later (refineShot, v638) — in the
+   harness with the CPU slowed 4× that is 3–3.5 s of work after every swipe, and the first one of a session also compiled
+   the model: a 633 ms frame in the middle of the swipe. In the worker the page keeps every frame; pdRead's answer is the
+   same. The worker's own source is pdWorkerMain below, handed over as text: no extra file for the shell to cache. */
+function pdWorkerMain(){
+  let det=null, rec=null, keys=null, C=null, queue=Promise.resolve();
+  const ctx2d=(w,h)=>{ const c=new OffscreenCanvas(w,h); return [c,c.getContext("2d",{willReadFrequently:true})]; };
+  /* the probability map thresholded, cut into connected parts, each part's box grown by the unclip ratio (DB's own rule) */
+  async function detect(bm){
+    const W0=bm.width, H0=bm.height, k=Math.min(1,C.DET_MAX/Math.max(W0,H0));
+    const W=Math.max(32,Math.round(W0*k/32)*32), H=Math.max(32,Math.round(H0*k/32)*32);
+    const [,g]=ctx2d(W,H); g.drawImage(bm,0,0,W,H);
+    const px=g.getImageData(0,0,W,H).data, n=W*H, data=new Float32Array(3*n), mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225];
+    for(let i=0;i<n;i++) for(let ch=0;ch<3;ch++) data[ch*n+i]=(px[i*4+ch]/255-mean[ch])/std[ch];
+    const out=await det.run({[det.inputNames[0]]:new ort.Tensor("float32",data,[1,3,H,W])}), prob=out[det.outputNames[0]].data, T=C.DET_THR;
+    const lab=new Int32Array(n).fill(-1), parts=[], stack=[];
+    for(let i=0;i<n;i++){ if(lab[i]>=0||prob[i]<=T) continue;
+      let x0=W,y0=H,x1=0,y1=0,sum=0,cnt=0; const id=parts.length; lab[i]=id; stack.push(i);
+      while(stack.length){ const p=stack.pop(), x=p%W, y=(p/W)|0; sum+=prob[p]; cnt++; if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
+        if(x>0&&lab[p-1]<0&&prob[p-1]>T){ lab[p-1]=id; stack.push(p-1); } if(x<W-1&&lab[p+1]<0&&prob[p+1]>T){ lab[p+1]=id; stack.push(p+1); }
+        if(p>=W&&lab[p-W]<0&&prob[p-W]>T){ lab[p-W]=id; stack.push(p-W); } if(p+W<n&&lab[p+W]<0&&prob[p+W]>T){ lab[p+W]=id; stack.push(p+W); } }
+      parts.push({x0,y0,bw:x1-x0+1,bh:y1-y0+1,score:sum/cnt}); }
+    const sx=W0/W, sy=H0/H, res=[];
+    for(const b of parts){ if(b.score<C.BOX_THR||Math.min(b.bw,b.bh)<3) continue;
+      const d=b.bw*b.bh*C.UNCLIP/(2*(b.bw+b.bh)), x=Math.max(0,(b.x0-d)*sx), y=Math.max(0,(b.y0-d)*sy);
+      res.push({x,y,w:Math.min(W0,(b.x0+b.bw+d)*sx)-x,h:Math.min(H0,(b.y0+b.bh+d)*sy)-y,score:b.score}); }
+    return res; }
+  /* one box cut to height 48 (a tall box is a vertical line and is turned first), CTC decoding */
+  async function recognize(bm,b){
+    const vert=b.h>b.w*1.5, [src,sg]=ctx2d(Math.max(1,Math.round(vert?b.h:b.w)),Math.max(1,Math.round(vert?b.w:b.h)));
+    if(vert){ sg.translate(0,src.height); sg.rotate(-Math.PI/2); } sg.drawImage(bm,b.x,b.y,b.w,b.h,0,0,b.w,b.h);
+    const Wr=Math.min(C.REC_MAXW,Math.max(16,Math.ceil(C.REC_H*src.width/src.height))), [,g]=ctx2d(Wr,C.REC_H); g.drawImage(src,0,0,Wr,C.REC_H);
+    const px=g.getImageData(0,0,Wr,C.REC_H).data, n=Wr*C.REC_H, data=new Float32Array(3*n);
+    for(let i=0;i<n;i++) for(let ch=0;ch<3;ch++) data[ch*n+i]=(px[i*4+ch]/255-0.5)/0.5;
+    const out=await rec.run({[rec.inputNames[0]]:new ort.Tensor("float32",data,[1,3,C.REC_H,Wr])}), o=out[rec.outputNames[0]], T=o.dims[1], K=o.dims[2], v=o.data;
+    let text="", conf=0, cn=0, last=0; const cfs=[];
+    for(let t=0;t<T;t++){ let bi=0,bv=-Infinity; for(let ci=0;ci<K;ci++){ const x=v[t*K+ci]; if(x>bv){ bv=x; bi=ci; } } if(bi&&bi!==last){ const k=keys[bi]||""; text+=k; cfs.push(...[...k].map(()=>bv)); conf+=bv; cn++; } last=bi; }
+    return {text,conf:cn?conf/cn:0,cfs,vert}; }
+  async function handle(m){
+    try{
+      if(m.init){ C=m.C; importScripts(m.ortURL); ort.env.wasm.numThreads=1; ort.env.wasm.proxy=false; ort.env.wasm.wasmPaths={mjs:m.mjsURL,wasm:m.wasmURL};
+        const opt={executionProviders:["wasm"],graphOptimizationLevel:"all"};
+        det=await ort.InferenceSession.create(m.det,opt); rec=await ort.InferenceSession.create(m.rec,opt);
+        keys=["",...m.keys.replace(/\r/g,"").split("\n").filter((l,i,a)=>!(i===a.length-1&&l==="")),"  ".slice(1)]; /* index 0 is the CTC blank; the space closes the list */
+        postMessage({id:m.id}); return; }
+      const t0=performance.now(), bs=await detect(m.bm), t1=performance.now(), lines=[];
+      for(const b of bs){ const r=await recognize(m.bm,b); if(r.text) lines.push({...b,...r}); }
+      m.bm.close(); postMessage({id:m.id,lines,ms:{det:Math.round(t1-t0),rec:Math.round(performance.now()-t1)}}); }
+    catch(e){ postMessage({id:m.id,err:String(e&&e.message||e)}); } }
+  self.onmessage=e=>{ queue=queue.then(()=>handle(e.data)); }; /* one reading at a time: a session runs one inference at once */
+}
 let PDM=null;
 async function pdLoad(){
   if(PDM) return PDM;
   PDM=(async()=>{ const blobURL=async(n,type)=>URL.createObjectURL(new Blob([await (await vendorFetch(PD+n)).arrayBuffer()],{type})); /* the type set here, not taken from the answer: the mirror hands every file out as octet-stream, and a module or a wasm of that type is refused */
-    if(!window.ort) await loadScript("./vendor/"+PD+"ort.wasm.min.js");
-    ort.env.wasm.numThreads=1; ort.env.wasm.proxy=false;
-    ort.env.wasm.wasmPaths={mjs:await blobURL("ort-wasm-simd-threaded.mjs","text/javascript"),wasm:await blobURL("ort-wasm-simd-threaded.wasm","application/wasm")};
-    const opt={executionProviders:["wasm"],graphOptimizationLevel:"all"}, bytes=async n=>new Uint8Array(await (await vendorFetch(PD+n)).arrayBuffer());
-    const det=await ort.InferenceSession.create(await bytes("ch_PP-OCRv4_det_infer.onnx"),opt);
-    const rec=await ort.InferenceSession.create(await bytes("ch_PP-OCRv4_rec_infer.onnx"),opt);
-    const t=await (await vendorFetch(PD+"ppocr_keys_v1.txt")).text();
-    const keys=["",...t.replace(/\r/g,"").split("\n").filter((l,i,a)=>!(i===a.length-1&&l==="")),"  ".slice(1)]; /* index 0 is the CTC blank; the space closes the list */
-    return {det,rec,keys}; })().catch(e=>{ PDM=null; throw e; });
+    const bytes=async n=>new Uint8Array(await (await vendorFetch(PD+n)).arrayBuffer());
+    const w=new Worker(URL.createObjectURL(new Blob([`(${pdWorkerMain.toString()})()`],{type:"text/javascript"})));
+    const waits=new Map(); let seq=0;
+    w.onmessage=e=>{ const p=waits.get(e.data.id); if(!p) return; waits.delete(e.data.id); if(e.data.err) p.rej(new Error(e.data.err)); else p.res(e.data); };
+    w.onerror=e=>{ const err=new Error("the reader's worker: "+(e.message||"failed")); for(const p of waits.values()) p.rej(err); waits.clear(); PDM=null; w.terminate(); };
+    const call=(msg,tr)=>new Promise((res,rej)=>{ const id=++seq; waits.set(id,{res,rej}); w.postMessage({...msg,id},tr||[]); });
+    const det=await bytes("ch_PP-OCRv4_det_infer.onnx"), rec=await bytes("ch_PP-OCRv4_rec_infer.onnx");
+    await call({init:true,ortURL:await blobURL("ort.wasm.min.js","text/javascript"),mjsURL:await blobURL("ort-wasm-simd-threaded.mjs","text/javascript"),wasmURL:await blobURL("ort-wasm-simd-threaded.wasm","application/wasm"),
+      det,rec,keys:await (await vendorFetch(PD+"ppocr_keys_v1.txt")).text(),C:{DET_MAX:PD_DET_MAX,DET_THR:PD_DET_THR,BOX_THR:PD_BOX_THR,UNCLIP:PD_UNCLIP,REC_H:PD_REC_H,REC_MAXW:PD_REC_MAXW}},[det.buffer,rec.buffer]);
+    return call; })().catch(e=>{ PDM=null; throw e; });
   return PDM; }
-/* the probability map thresholded, cut into connected parts, each part's box grown by the unclip ratio (DB's own rule) */
-async function pdDetect(m,cv){
-  const W0=cv.width, H0=cv.height, k=Math.min(1,PD_DET_MAX/Math.max(W0,H0));
-  const W=Math.max(32,Math.round(W0*k/32)*32), H=Math.max(32,Math.round(H0*k/32)*32);
-  const c=document.createElement("canvas"); c.width=W; c.height=H; const g=c.getContext("2d",{willReadFrequently:true}); g.drawImage(cv,0,0,W,H);
-  const px=g.getImageData(0,0,W,H).data, n=W*H, data=new Float32Array(3*n), mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225];
-  for(let i=0;i<n;i++) for(let ch=0;ch<3;ch++) data[ch*n+i]=(px[i*4+ch]/255-mean[ch])/std[ch];
-  const out=await m.det.run({[m.det.inputNames[0]]:new ort.Tensor("float32",data,[1,3,H,W])}), prob=out[m.det.outputNames[0]].data;
-  const lab=new Int32Array(n).fill(-1), parts=[], stack=[];
-  for(let i=0;i<n;i++){ if(lab[i]>=0||prob[i]<=PD_DET_THR) continue;
-    let x0=W,y0=H,x1=0,y1=0,sum=0,cnt=0; const id=parts.length; lab[i]=id; stack.push(i);
-    while(stack.length){ const p=stack.pop(), x=p%W, y=(p/W)|0; sum+=prob[p]; cnt++; if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
-      if(x>0&&lab[p-1]<0&&prob[p-1]>PD_DET_THR){ lab[p-1]=id; stack.push(p-1); } if(x<W-1&&lab[p+1]<0&&prob[p+1]>PD_DET_THR){ lab[p+1]=id; stack.push(p+1); }
-      if(p>=W&&lab[p-W]<0&&prob[p-W]>PD_DET_THR){ lab[p-W]=id; stack.push(p-W); } if(p+W<n&&lab[p+W]<0&&prob[p+W]>PD_DET_THR){ lab[p+W]=id; stack.push(p+W); } }
-    parts.push({x0,y0,bw:x1-x0+1,bh:y1-y0+1,score:sum/cnt}); }
-  const sx=W0/W, sy=H0/H, res=[];
-  for(const b of parts){ if(b.score<PD_BOX_THR||Math.min(b.bw,b.bh)<3) continue;
-    const d=b.bw*b.bh*PD_UNCLIP/(2*(b.bw+b.bh)), x=Math.max(0,(b.x0-d)*sx), y=Math.max(0,(b.y0-d)*sy);
-    res.push({x,y,w:Math.min(W0,(b.x0+b.bw+d)*sx)-x,h:Math.min(H0,(b.y0+b.bh+d)*sy)-y,score:b.score}); }
-  return res; }
-/* one box cut to height 48 (a tall box is a vertical line and is turned first), CTC decoding */
-async function pdRecognize(m,cv,b){
-  const vert=b.h>b.w*1.5, src=document.createElement("canvas"); src.width=Math.max(1,Math.round(vert?b.h:b.w)); src.height=Math.max(1,Math.round(vert?b.w:b.h));
-  const sg=src.getContext("2d"); if(vert){ sg.translate(0,src.height); sg.rotate(-Math.PI/2); } sg.drawImage(cv,b.x,b.y,b.w,b.h,0,0,b.w,b.h);
-  const Wr=Math.min(PD_REC_MAXW,Math.max(16,Math.ceil(PD_REC_H*src.width/src.height)));
-  const c=document.createElement("canvas"); c.width=Wr; c.height=PD_REC_H; const g=c.getContext("2d",{willReadFrequently:true}); g.drawImage(src,0,0,Wr,PD_REC_H);
-  const px=g.getImageData(0,0,Wr,PD_REC_H).data, n=Wr*PD_REC_H, data=new Float32Array(3*n);
-  for(let i=0;i<n;i++) for(let ch=0;ch<3;ch++) data[ch*n+i]=(px[i*4+ch]/255-0.5)/0.5;
-  const out=await m.rec.run({[m.rec.inputNames[0]]:new ort.Tensor("float32",data,[1,3,PD_REC_H,Wr])}), o=out[m.rec.outputNames[0]], T=o.dims[1], C=o.dims[2], v=o.data;
-  let text="", conf=0, cn=0, last=0; const cfs=[];
-  for(let t=0;t<T;t++){ let bi=0,bv=-Infinity; for(let ci=0;ci<C;ci++){ const x=v[t*C+ci]; if(x>bv){ bv=x; bi=ci; } } if(bi&&bi!==last){ const k=m.keys[bi]||""; text+=k; cfs.push(...[...k].map(()=>bv)); conf+=bv; cn++; } last=bi; }
-  return {text,conf:cn?conf/cn:0,cfs,vert}; }
-async function pdRead(cv){ const m=await pdLoad(), t0=performance.now(), bs=await pdDetect(m,cv), t1=performance.now(), out=[];
-  for(const b of bs){ const r=await pdRecognize(m,cv,b); if(r.text) out.push({...b,...r}); await yieldNow(); }
-  out.ms={det:Math.round(t1-t0),rec:Math.round(performance.now()-t1)}; return out; }
+async function pdRead(cv){ const call=await pdLoad(), bm=await createImageBitmap(cv), r=await call({bm},[bm]), out=r.lines; out.ms=r.ms; return out; }
 /* v639: the phone's reader as one more pass of the reading — its lines in the reader's own shape: the characters, sign
    punctuation and digits Tesseract's pass keeps (letters stay out), a confidence per Chinese character on Tesseract's
    0–100 scale (the recognizer's own probability), a box per character cut evenly along the line, and the fine print

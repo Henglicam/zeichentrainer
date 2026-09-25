@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v641
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v642
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,22 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v642, 2026-09-25)
+- **The phone's reader runs in a worker of its own (v642, H: "Swiping Multicards hakt manchmal ein bissle"):** measured in
+  the harness (`mcswipe.js`: four seeded multicards opened in the Cards view, three one-finger swipes, the CPU slowed 4×,
+  frame gaps from requestAnimationFrame, the functions timed by wrapping): every multicard shown for the first time in a
+  session is re-read by PaddleOCR 60–130 ms later (`refineShot`, v638) — 3–3.5 s of work after each swipe, and on the
+  first one of a session also the model's compile and session creation: **a 633 ms and an 800 ms frame** in the swipe (two
+  runs); the later swipes kept 17 ms frames in the harness, which does not say the phone does. `pdLoad` now starts a
+  worker from `pdWorkerMain`'s own source (a Blob, so the shell caches no new file), hands it the bytes the page fetched
+  through `vendorFetch` (the mirror rule unchanged) and the blob URLs of ort's script, module and wasm; the detection and
+  recognition run there on OffscreenCanvas, one reading at a time (a queue — one ONNX session runs one inference at
+  once). `pdRead(canvas)` keeps its answer: the page sends an ImageBitmap and gets the lines back. **Measured after:** the
+  first swipe's worst frame 67 and 33 ms (two runs), the others 17 ms as before; the readings are identical (阿里云, 良品,
+  灭火器, 韵达, 房屋出租 on phone3, same text, same confidences, same sure verdicts) and the rice-cooker multicard places 10
+  of 11 texts as before. Also helps v639's open question (the Camera sweep while Paddle reads), since the reading no
+  longer runs on the page. Not yet field-checked.
 
 ## Current state (PWA v641, 2026-09-25)
 - **A sure reading of the phone's reader is the reading — no picture call (v641, H: "Go B too", B being "skip the picture
