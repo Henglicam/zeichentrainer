@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v636
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v637
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -39,7 +39,22 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
-## Current state (PWA v636, 2026-09-25)
+## Current state (PWA v637, 2026-09-25)
+- **PaddleOCR on the phone, the owner's test (v637, H: "Go B" — the reader built for Chinese, after v628–v633 showed
+  that no prompt and no model on his Token Plan places a multicard's labels):** PP-OCRv4 mobile for Chinese (DB text
+  detection 4.7 MB, CTC recognition 10.8 MB, the 6 623-character list) run by onnxruntime-web 1.30 on WebAssembly in one
+  thread (Pages sends no cross-origin isolation), all under `vendor/paddle/` (~30 MB, each file under the mirror's 20 MB),
+  licences in `vendor/LICENSES.txt` (MIT, Apache-2.0). Loaded only on use, every file through `vendorFetch` — the mirror
+  and the stall rule hold — with the module and the wasm given their types by hand (the mirror hands out octet-stream,
+  and a module or a wasm of that type is refused; `sw.js` learns `mjs`). `pdRead(canvas)` returns every line with its box
+  and its text. **Measured on H's eight multicards of 2026-09-25 (v627's Zoom data, full-size photos), in the harness:
+  68 of 74 texts named by a line with its box**, where the split had placed about half — the misses are 保温/取消 (two
+  lines, one label), 左筒/右筒 (written along the dial's arc, twice) and 应急居住区 (the sign reads 宿住); **1.0–2.7 s a
+  photo, 5–13 s with the CPU slowed 4×**, the models' first load 2–6 s. The boxes sit tight on each label by eye. Nothing
+  depends on it yet: Owner tools → Zoom check → **Paddle** reads the Zoom check's multicards on the phone, says how many
+  texts it named and how long a photo took, logs the line in Diagnostics, and Data carries every line with its box per
+  multicard — the phone's own numbers decide whether it goes into the reading pipeline. Checked end to end by driving
+  Run → Paddle → Data on the eight photos seeded as real multicards: 68/74, the per-photo lines in the PDF.
 - **A generated flashcard keeps its link to its multicard through a reading (v636, H: "Go, fix the flashcard link too",
   after v635 named it):** `finishPending` rebuilds a card from its reading and kept only a short list of fields; v635 added
   `page`, and v636 adds `from`, `fromT` and `of` — the three fields that tie a flashcard generated from a multicard text

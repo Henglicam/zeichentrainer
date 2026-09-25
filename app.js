@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=636; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=637; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v637","Zoom check → Paddle: time a photo"],
   ["cards","v635","Add a text on a multicard"],
   ["cards","v634","pinch a multicard, tap a text"],
   ["learn","v626","zoom never tight on a wrong spot"],
@@ -1206,7 +1207,7 @@ async function shareZoomData(st){
      the model's own answer instead of guessing why 23 of 57 texts got the whole picture (v626's finding) */
   const aiNear=at=>AILOG.filter(e=>e&&e.t>=at-2000&&e.t<=at+ZD_AI_MS).map(e=>({t:e.t,model:e.model||"",status:e.status||"",ms:e.ms||0,req:e.req||"",res:e.res||"",err:e.err||""}));
   for(const r of z.pres||[]) if(r.bm){ const N=LAST_READ.ring.find(x=>x&&x.shot===r.pg.shot);
-    pics.push({src:r.bm,max:ZD_PAGE,meta:{kind:"page",c:r.pg.c,shot:r.pg.shot,pw:r.bm.width,ph:r.bm.height,items:r.items.map(d=>({c:d.c,lines:spotLines(d),frame:d.frame})),read:N?readRow(N):null,ai:N?aiNear(N.at||0):[]}}); }
+    pics.push({src:r.bm,max:ZD_PAGE,meta:{kind:"page",c:r.pg.c,shot:r.pg.shot,pw:r.bm.width,ph:r.bm.height,items:r.items.map(d=>({c:d.c,lines:spotLines(d),frame:d.frame})),read:N?readRow(N):null,ai:N?aiNear(N.at||0):[],paddle:(z.paddle&&z.paddle.per.find(x=>x.shot===r.pg.shot))||null}}); }
   const sheets=[]; let cur=null; const fresh=()=>{ cur={items:[],x:0,y:0,rowH:0}; sheets.push(cur); }; fresh();
   for(const p of pics){ const sc=Math.min(1,p.max/Math.max(p.src.width,p.src.height)), w=Math.max(1,Math.round(p.src.width*sc)), h=Math.max(1,Math.round(p.src.height*sc));
     if(cur.x+w>ZD_W){ cur.x=0; cur.y+=cur.rowH; cur.rowH=0; }
@@ -1250,6 +1251,26 @@ async function shareZoomData(st){
     catch(err){ if(err&&err.name==="AbortError") return; logErr("share",err); noteSheet(`Sharing failed: ${(err&&err.name)||""} ${(err&&err.message)||err}`); return; }
     from+=part.length;
   }
+}
+/* the owner's PaddleOCR test (v637): the Zoom check's multicards read by PaddleOCR on this phone — the time a photo takes
+   and how many of each multicard's texts it names — so the field decides before the reading pipeline depends on it */
+const pdNorm=s=>String(s).replace(/[^\u4e00-\u9fff]/g,"");
+const pdNames=(lz,z)=>!!lz&&!!z&&(lz===z||(z.length>=2&&lz.includes(z))||(lz.length>=2&&z.includes(lz)&&lz.length>=z.length*0.6));
+async function paddleCheck(st){
+  if(!ZCHECK) await zoomCheck(st);
+  await zcBusy(st,"Loading the new reader (about 30 MB the first time) …");
+  const t0=performance.now(); await pdLoad(); const load=Math.round(performance.now()-t0), per=[]; let placed=0, labels=0, msAll=0;
+  const pres=(ZCHECK.pres||[]).filter(r=>r.bm);
+  for(let i=0;i<pres.length;i++){ const r=pres[i]; await zcBusy(st,`Reading multicard ${i+1} of ${pres.length} with the new reader …`);
+    const cv=document.createElement("canvas"); cv.width=r.bm.width; cv.height=r.bm.height; cv.getContext("2d").drawImage(r.bm,0,0);
+    const t1=performance.now(), lines=await pdRead(cv), ms=Math.round(performance.now()-t1);
+    const hits=r.items.map(d=>{ const z=pdNorm(d.c); return z&&lines.some(l=>pdNames(pdNorm(l.text),z)); });
+    placed+=hits.filter(Boolean).length; labels+=r.items.length; msAll+=ms;
+    per.push({shot:r.pg.shot,ms,det:lines.ms.det,rec:lines.ms.rec,placed:hits.filter(Boolean).length,labels:r.items.length,missing:r.items.filter((d,k)=>!hits[k]).map(d=>d.c),
+      lines:lines.map(l=>({x:+(l.x/cv.width).toFixed(4),y:+(l.y/cv.height).toFixed(4),w:+(l.w/cv.width).toFixed(4),h:+(l.h/cv.height).toFixed(4),text:l.text,conf:+l.conf.toFixed(2)}))}); }
+  ZCHECK.paddle={at:Date.now(),load,per,line:`new reader: ${placed} of ${labels} texts named on ${per.length} multicards, ${per.length?(msAll/per.length/1000).toFixed(1):0} s a photo (first load ${(load/1000).toFixed(1)} s)`};
+  if(st) st.textContent=ZCHECK.line+". "+ZCHECK.paddle.line[0].toUpperCase()+ZCHECK.paddle.line.slice(1)+".";
+  logErr("paddle",ZCHECK.paddle.line); /* the line in Diagnostics too, beside the device facts */
 }
 async function shareDiag(){
   const text=diagText(), name="shizi-diagnostics.txt", file=new File([text],name,{type:"text/plain"});
@@ -2808,7 +2829,7 @@ function renderMore(main){
     <div class="listhead">Diagnostics</div>
     <div class="mrow"><div style="flex:1"><div class="t">Diagnostics</div><div class="s" id="diag-status">${LAST_READ.ring.length} photo${LAST_READ.ring.length===1?"":"s"} logged, ${AILOG.length} AI exchange${AILOG.length===1?"":"s"}, ${ERRLOG.length} error${ERRLOG.length===1?"":"s"}.</div><div class="fieldacts"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button><button class="btn mini" id="diag-copy">Copy</button></div></div></div>
     <pre class="diag" id="diag-out" hidden></pre>
-    <div class="mrow"><div style="flex:1"><div class="t">Zoom check</div><div class="s" id="zc-status">${ZCHECK?esc(ZCHECK.line)+".":`Finds every character of the newest ${ZC_N} photo cards the way Learn's zoom does. Share sends the pictures with the boxes drawn: green on the ink, orange unsure, red the estimate, blue the frame; the newest ${ZC_PAGES} multicards follow, green where a region snapped onto its text. Data sends the pictures themselves, as one PDF.`}</div><div class="fieldacts"><button class="btn mini" id="zc-run">Run</button><button class="btn mini" id="zc-share">Share</button><button class="btn mini" id="zc-data">Data</button></div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">Zoom check</div><div class="s" id="zc-status">${ZCHECK?esc(ZCHECK.line)+".":`Finds every character of the newest ${ZC_N} photo cards the way Learn's zoom does. Share sends the pictures with the boxes drawn: green on the ink, orange unsure, red the estimate, blue the frame; the newest ${ZC_PAGES} multicards follow, green where a region snapped onto its text. Data sends the pictures themselves, as one PDF.`}</div><div class="fieldacts"><button class="btn mini" id="zc-run">Run</button><button class="btn mini" id="zc-share">Share</button><button class="btn mini" id="zc-data">Data</button><button class="btn mini" id="zc-paddle">Paddle</button></div></div></div>
     <div class="mrow"><div style="flex:1"><div class="t">Still to test</div><div class="s" id="field-status">${fieldNote()}</div><div class="fieldacts"><button class="btn mini" id="field-show">Show</button><button class="btn mini" id="field-copy">Copy</button></div></div></div>
     <pre class="diag" id="field-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"install")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div><div class="fieldacts"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button><button class="btn mini" id="users-copy">Copy</button></div></div></div>
@@ -2852,6 +2873,7 @@ function renderMore(main){
     $("#diag-share").onclick=shareDiag;
     { const zs=$("#zc-status"), zr=$("#zc-run"), zh=$("#zc-share"); /* v618 */
       if(zr) zr.onclick=async()=>{ zr.disabled=true; try{ await zoomCheck(zs); zs.textContent=ZCHECK.line+"."; }catch(e){ zs.textContent="The check failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zr.disabled=false; };
+      { const zp=$("#zc-paddle"); if(zp) zp.onclick=async()=>{ zp.disabled=true; try{ await paddleCheck(zs); }catch(e){ zs.textContent="The new reader failed: "+(e&&e.message||e); logErr("paddle",e&&e.stack||e); } zp.disabled=false; }; } /* v637 */
       { const zd=$("#zc-data"); if(zd) zd.onclick=async()=>{ zd.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); await shareZoomData(zs); }catch(e){ zs.textContent="The data failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zd.disabled=false; }; }
       if(zh) zh.onclick=async()=>{ zh.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); await shareZoomSheet(zs); }catch(e){ zs.textContent="The sheet failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zh.disabled=false; }; }
     $("#field-show").onclick=()=>{ const o=$("#field-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=fieldText(); };
@@ -6055,6 +6077,63 @@ async function loadScript(src){
     document.head.appendChild(s);
   });
 }
+/* ---------- PaddleOCR on the phone (v637, H: "Go B" — a reader built for Chinese that finds every line with its box) ----------
+   PP-OCRv4 mobile: DB text detection and CTC recognition over 6 623 characters, run by onnxruntime-web on WebAssembly in one
+   thread (GitHub Pages sends no cross-origin isolation, so no worker threads). Every file comes through vendorFetch, so the
+   mirror and the stall rule hold, and the worker keeps them in the vendor cache after the first use (~30 MB). On H's eight
+   multicards of 2026-09-25 in the harness it placed 68 of 74 labels at 1–2.7 s a photo (5–13 s with the CPU slowed 4×),
+   where today's reader named about half. v637 ships it as the owner's test only (Zoom check → Paddle), to measure it on the
+   phone before anything depends on it. pdRead(canvas) → lines [{x,y,w,h,text,conf,vert}] in the canvas's pixels. */
+const PD="paddle/", PD_DET_MAX=960, PD_DET_THR=0.3, PD_BOX_THR=0.6, PD_UNCLIP=1.6, PD_REC_H=48, PD_REC_MAXW=960;
+let PDM=null;
+async function pdLoad(){
+  if(PDM) return PDM;
+  PDM=(async()=>{ const blobURL=async(n,type)=>URL.createObjectURL(new Blob([await (await vendorFetch(PD+n)).arrayBuffer()],{type})); /* the type set here, not taken from the answer: the mirror hands every file out as octet-stream, and a module or a wasm of that type is refused */
+    if(!window.ort) await loadScript("./vendor/"+PD+"ort.wasm.min.js");
+    ort.env.wasm.numThreads=1; ort.env.wasm.proxy=false;
+    ort.env.wasm.wasmPaths={mjs:await blobURL("ort-wasm-simd-threaded.mjs","text/javascript"),wasm:await blobURL("ort-wasm-simd-threaded.wasm","application/wasm")};
+    const opt={executionProviders:["wasm"],graphOptimizationLevel:"all"}, bytes=async n=>new Uint8Array(await (await vendorFetch(PD+n)).arrayBuffer());
+    const det=await ort.InferenceSession.create(await bytes("ch_PP-OCRv4_det_infer.onnx"),opt);
+    const rec=await ort.InferenceSession.create(await bytes("ch_PP-OCRv4_rec_infer.onnx"),opt);
+    const t=await (await vendorFetch(PD+"ppocr_keys_v1.txt")).text();
+    const keys=["",...t.replace(/\r/g,"").split("\n").filter((l,i,a)=>!(i===a.length-1&&l==="")),"  ".slice(1)]; /* index 0 is the CTC blank; the space closes the list */
+    return {det,rec,keys}; })().catch(e=>{ PDM=null; throw e; });
+  return PDM; }
+/* the probability map thresholded, cut into connected parts, each part's box grown by the unclip ratio (DB's own rule) */
+async function pdDetect(m,cv){
+  const W0=cv.width, H0=cv.height, k=Math.min(1,PD_DET_MAX/Math.max(W0,H0));
+  const W=Math.max(32,Math.round(W0*k/32)*32), H=Math.max(32,Math.round(H0*k/32)*32);
+  const c=document.createElement("canvas"); c.width=W; c.height=H; const g=c.getContext("2d",{willReadFrequently:true}); g.drawImage(cv,0,0,W,H);
+  const px=g.getImageData(0,0,W,H).data, n=W*H, data=new Float32Array(3*n), mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225];
+  for(let i=0;i<n;i++) for(let ch=0;ch<3;ch++) data[ch*n+i]=(px[i*4+ch]/255-mean[ch])/std[ch];
+  const out=await m.det.run({[m.det.inputNames[0]]:new ort.Tensor("float32",data,[1,3,H,W])}), prob=out[m.det.outputNames[0]].data;
+  const lab=new Int32Array(n).fill(-1), parts=[], stack=[];
+  for(let i=0;i<n;i++){ if(lab[i]>=0||prob[i]<=PD_DET_THR) continue;
+    let x0=W,y0=H,x1=0,y1=0,sum=0,cnt=0; const id=parts.length; lab[i]=id; stack.push(i);
+    while(stack.length){ const p=stack.pop(), x=p%W, y=(p/W)|0; sum+=prob[p]; cnt++; if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
+      if(x>0&&lab[p-1]<0&&prob[p-1]>PD_DET_THR){ lab[p-1]=id; stack.push(p-1); } if(x<W-1&&lab[p+1]<0&&prob[p+1]>PD_DET_THR){ lab[p+1]=id; stack.push(p+1); }
+      if(p>=W&&lab[p-W]<0&&prob[p-W]>PD_DET_THR){ lab[p-W]=id; stack.push(p-W); } if(p+W<n&&lab[p+W]<0&&prob[p+W]>PD_DET_THR){ lab[p+W]=id; stack.push(p+W); } }
+    parts.push({x0,y0,bw:x1-x0+1,bh:y1-y0+1,score:sum/cnt}); }
+  const sx=W0/W, sy=H0/H, res=[];
+  for(const b of parts){ if(b.score<PD_BOX_THR||Math.min(b.bw,b.bh)<3) continue;
+    const d=b.bw*b.bh*PD_UNCLIP/(2*(b.bw+b.bh)), x=Math.max(0,(b.x0-d)*sx), y=Math.max(0,(b.y0-d)*sy);
+    res.push({x,y,w:Math.min(W0,(b.x0+b.bw+d)*sx)-x,h:Math.min(H0,(b.y0+b.bh+d)*sy)-y,score:b.score}); }
+  return res; }
+/* one box cut to height 48 (a tall box is a vertical line and is turned first), CTC decoding */
+async function pdRecognize(m,cv,b){
+  const vert=b.h>b.w*1.5, src=document.createElement("canvas"); src.width=Math.max(1,Math.round(vert?b.h:b.w)); src.height=Math.max(1,Math.round(vert?b.w:b.h));
+  const sg=src.getContext("2d"); if(vert){ sg.translate(0,src.height); sg.rotate(-Math.PI/2); } sg.drawImage(cv,b.x,b.y,b.w,b.h,0,0,b.w,b.h);
+  const Wr=Math.min(PD_REC_MAXW,Math.max(16,Math.ceil(PD_REC_H*src.width/src.height)));
+  const c=document.createElement("canvas"); c.width=Wr; c.height=PD_REC_H; const g=c.getContext("2d",{willReadFrequently:true}); g.drawImage(src,0,0,Wr,PD_REC_H);
+  const px=g.getImageData(0,0,Wr,PD_REC_H).data, n=Wr*PD_REC_H, data=new Float32Array(3*n);
+  for(let i=0;i<n;i++) for(let ch=0;ch<3;ch++) data[ch*n+i]=(px[i*4+ch]/255-0.5)/0.5;
+  const out=await m.rec.run({[m.rec.inputNames[0]]:new ort.Tensor("float32",data,[1,3,PD_REC_H,Wr])}), o=out[m.rec.outputNames[0]], T=o.dims[1], C=o.dims[2], v=o.data;
+  let text="", conf=0, cn=0, last=0;
+  for(let t=0;t<T;t++){ let bi=0,bv=-Infinity; for(let ci=0;ci<C;ci++){ const x=v[t*C+ci]; if(x>bv){ bv=x; bi=ci; } } if(bi&&bi!==last){ text+=m.keys[bi]||""; conf+=bv; cn++; } last=bi; }
+  return {text,conf:cn?conf/cn:0,vert}; }
+async function pdRead(cv){ const m=await pdLoad(), t0=performance.now(), bs=await pdDetect(m,cv), t1=performance.now(), out=[];
+  for(const b of bs){ const r=await pdRecognize(m,cv,b); if(r.text) out.push({...b,...r}); await yieldNow(); }
+  out.ms={det:Math.round(t1-t0),rec:Math.round(performance.now()-t1)}; return out; }
 /* CC-CEDICT (simplified -> English gloss), lazily loaded from ./vendor */
 const DICT_HEAD="#cedict v3"; /* the file's own first line, and the only way to tell a cached older copy from this one — v2 at v573 (a reading per sense), v3 at v605 (no gloss cut at 120 characters any more) */
 /* gzip magic bytes — if a server or proxy already decompressed, treat the body as plain text */
