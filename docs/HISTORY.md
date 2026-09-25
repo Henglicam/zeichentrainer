@@ -47,6 +47,8 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
   (`sk-ws-`), which H declined: the speed stays as it is. The switch, its field, `FAST_PIC` and the fallback wrapper are
   removed, and `aiReadPicture` is byte for byte v630's again. **Measured and dropped:** qwen3-vl-flash and qwen3.7-flash
   on the Token Plan (404, both).
+  **Afterwards (no version, H checked in the Qwen console, 2026-09-25):** his Token Plan does not include qwen3.8 either —
+  qwen3.7-plus is the plan's only vision model, so the picture's speed is settled unless the key changes.
 - **The faster picture model's default is qwen3.7-flash (v632, H: "Try qwen3.7-flash"):** v631's first round sent three
   panels to qwen3-vl-flash and the Token Plan endpoint answered 404 "Model not exist." every time — the fallback did its
   job, each photo made its cards through qwen3.7-plus in 29–43 s. H's screenshot of the price list names qwen3.7-flash
