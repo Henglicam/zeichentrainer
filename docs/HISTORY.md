@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v627
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v628
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -39,7 +39,25 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
-## Current state (PWA v627, 2026-09-24)
+## Current state (PWA v628, 2026-09-25)
+- **A text the split could not place is not snapped (v628, the first Zoom data with reading records — 8 multicards, H's
+  washing machine and rice cooker panels, a flashcard screenshot, two street signs, an order screen, all from the album
+  and so read whole):** the records say why texts got the whole picture. On every one of these the model's label boxes
+  were judged **a drawing** (round pixels, or all one size — `templateBoxes`), so the reader looked for the labels itself
+  and named only some (2+2 of 9, 6 of 12, 1 of 7); each label it could not name took the whole picture, or on the
+  flashcard screenshot the one frame all seven share. **Measured and dropped, both on these photos:** (a) trusting the
+  model's boxes after all, with the ink search inside each grown by half a label — drawn on the photos they sit half to a
+  whole label off, often on the neighbour, and the search placed 0 of the 11 whole-picture texts; read as a 0–1000 grid
+  instead of pixels they miss the other way, so they are not a unit error, only rough; (b) searching all texts that share
+  one frame at once as the lines of one text in the model's order — the layout search merged them into one or two lines
+  and nothing came out sure, and the flashcard screenshot's shared frame does not even reach its lower labels. **What
+  v628 changes:** the display snap (v620) had been snapping those fallback frames anyway, and on a whole picture the ink
+  search settles on any line that fits — 5 of the 30 snaps on these photos were wrong (右筒 and 时间 on the dial, 左筒 and
+  右筒 again, 桌号 on the order screen). `snapRegion` now refuses a frame over half the photo and a frame another text of
+  the same photo shares: 25 snaps left, all on their text by eye. The shared-frame fixture flips (old tree snapped, new
+  does not; a lone text snaps on both — control); cards 43 sure unchanged; multicard fixture 5 of 6 unchanged.
+  **Still open:** placing a text the reader cannot name needs a new way to ask — the model measures badly on an 800 px
+  panel; a crop per unplaced label, or a grid drawn on the picture, would each cost picture calls against the Qwen cap.
 - **The Zoom data carries what made each multicard (v627, H's "Go" on finding each text's place when the multicard is
   made):** v626's record found that 23 of 57 texts have no place of their own, but the data held only the frames — not
   the AI's per-label boxes, not the reading's steps — so why the split fell back to the whole picture could only be

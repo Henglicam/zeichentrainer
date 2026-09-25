@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=627; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=628; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3862,6 +3862,11 @@ const cbKey=d=>d.id+"|"+(d.shot||"")+"|"+JSON.stringify(d.frame||0)+"|"+(d.c||""
 const REGFIX=new Map(), REGRUN=new Set();
 function snapRegion(d,src,pw,ph){
   const f=d.frame; if(!f||f.a||!(f.w>0&&f.h>0)) return null;
+  /* v628 (H's Zoom data with the reading records): a frame over most of the photo, or one another text of the same photo
+     shares, is the split's fallback for a text it could not place — it says nothing about where THIS text is, and the ink
+     search then settles on any line that fits (右筒 and 时间 on the washing machine's dial, 桌号 on the order screen) */
+  if(f.w*f.h>0.5) return null;
+  if(d.shot&&S.custom.some(x=>x!==d&&x.shot===d.shot&&x.kind!=="page"&&x.frame&&x.frame.x===f.x&&x.frame.y===f.y&&x.frame.w===f.w&&x.frame.h===f.h)) return null;
   const lines=spotLines(d), cb=charBoxes(src,pw,ph,{tx:f.x,ty:f.y,tw:f.w,th:f.h},lines); if(!cb.boxes) return null;
   const all=[], cjk=[]; let pos=0; lines.forEach(ln=>[...ln].forEach(ch=>{ const b=cb.boxes[pos]; if(b) all.push(b); if(CJK.test(ch)) cjk.push(b); pos++; }));
   if(!cjk.length||cjk.some(b=>!b)||cjk.filter(b=>b.ok).length<Math.ceil(cjk.length*0.6)) return null;
