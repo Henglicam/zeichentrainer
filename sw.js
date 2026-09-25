@@ -1,4 +1,4 @@
-const CACHE = "zt-v636";
+const CACHE = "zt-v637";
 /* OCR assets (./vendor/, ~23 MB: the reader's eleven files at ~15 MB plus the 7.3 MB stroke outlines of v517, which are fetched through the same path but deliberately kept out of OCR_FILES) live in their own cache that survives shell
    updates — otherwise every cache version bump would re-download all of
    Tesseract. Only bump this when vendor files change. */
@@ -38,7 +38,7 @@ self.addEventListener("activate", e => {
    current cache and are served from there; the worker script itself stays until github.io is
    reachable again — it only carries the cache name. Model files (> 20 MB) are not mirrored. */
 let MIRROR = "https://fastly.jsdelivr.net/gh/henglicam/zeichentrainer@main/"; /* the page sends its setting on start; fastly. since v483 — cdn.jsdelivr.net is DNS-hijacked in China */
-const TYPES = { html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8", css: "text/css; charset=utf-8", json: "application/json", webmanifest: "application/manifest+json", png: "image/png", webp: "image/webp", wasm: "application/wasm", gz: "application/gzip", txt: "text/plain; charset=utf-8" };
+const TYPES = { html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8", mjs: "text/javascript; charset=utf-8", onnx: "application/octet-stream", css: "text/css; charset=utf-8", json: "application/json", webmanifest: "application/manifest+json", png: "image/png", webp: "image/webp", wasm: "application/wasm", gz: "application/gzip", txt: "text/plain; charset=utf-8" };
 const typeOf = path => TYPES[path.split(".").pop()] || "application/octet-stream";
 self.addEventListener("message", e => {
   const d = e.data || {};

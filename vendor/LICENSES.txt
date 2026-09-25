@@ -12,6 +12,17 @@ offline and without any CDN):
   (compiled Tesseract OCR, Apache License 2.0,
   https://github.com/tesseract-ocr/tesseract)
 
+- paddle/ort.wasm.min.js, paddle/ort-wasm-simd-threaded.mjs, paddle/ort-wasm-simd-threaded.wasm
+  ONNX Runtime Web 1.30.0 — MIT License, Copyright (c) Microsoft Corporation
+  https://github.com/microsoft/onnxruntime
+
+- paddle/ch_PP-OCRv4_det_infer.onnx, paddle/ch_PP-OCRv4_rec_infer.onnx, paddle/ppocr_keys_v1.txt
+  PaddleOCR PP-OCRv4 mobile models for Chinese (text detection and recognition) and
+  their character list — Apache License 2.0, Copyright (c) PaddlePaddle Authors
+  https://github.com/PaddlePaddle/PaddleOCR
+  The models in ONNX form as published in the npm package @gutenye/ocr-models 1.4.2
+  (MIT, https://github.com/gutenye/ocr), unmodified.
+
 - pinyin-pro.js
   pinyin-pro 3.29.3 — MIT License
   https://github.com/zh-lx/pinyin-pro
@@ -82,7 +93,7 @@ offline and without any CDN):
 
 Conditions that travel with these files, in short:
   Apache-2.0 — keep the notice and the license; no NOTICE file exists upstream for any of the
-    four Apache-licensed items above, so there is nothing further to reproduce.
+    Apache-licensed items above, so there is nothing further to reproduce.
   MIT — keep the copyright notice and the license.
   MPL-2.0 — the .wasm and .js are distributed unmodified; the Source Code Form is at the
     addresses given above, which is what section 3.2 asks for.
