@@ -59,7 +59,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v637, 2026-09-25)
+## Current state (PWA v638, 2026-09-25)
 **The app is called 识字 Shízì** (v608, H: "Return the name to shizi", then "识字 Shízì" over the full v600 name; v601–v607
 it was 街字 Jiēzì, and Zeichentrainer stays dropped). The title, manifest `name`/`short_name` (识字 Shízì / 识字), header
 logo, About, share text, `privacy.html`, the owner's dumps and every shared file (`shizi-YYYY-MM-DD.json.txt`,
@@ -71,7 +71,7 @@ the manifest, which can take a day.
 
 **Recent state worth carrying in the head** (each has its full entry in the archive):
 - **v620–v636** — a **multicard's regions snap onto their texts** at display (`snapRegion`, memory only), never on a frame over half the photo or shared with another text (v628). Texts fall back to the whole picture because the model's label boxes are a drawing and the reader names only some labels; a measuring grid (v629–v630) and faster Qwen models (v631–v633, not on H's Token Plan) were tried and removed — see the archive. **Owner tools → Zoom check** (Run, Share, Data, Paddle) shares the newest 24 cards and 8 multicards as one PDF with the full photos, reading records and AI replies (v627). Multicards zoom like cards (v634) and take **Add a text** (v635).
-- **v637** — **PaddleOCR on the phone** (`pdRead`, `vendor/paddle/`), the owner's test only (Zoom check → **Paddle**): on H's eight multicards it named 68 of 74 texts with tight boxes at 1–2.7 s a photo in the harness (5–13 s at 4× CPU slowdown); the phone's own numbers decide whether it enters the reading pipeline.
+- **v637–v638** — **PaddleOCR on the phone** (`pdRead`, `vendor/paddle/`, ~30 MB loaded once on first use): on H's phone 93 of 103 multicard texts named at 1.8 s a photo. Since v638 it **places a multicard's labels**: at the split (`pdMatch`, one to one, before the old label search, which only adds places) and when an older multicard is shown (`refineShot`: a text with the whole picture or a shared frame takes its line). Owner tools → Zoom check → **Paddle** measures it.
 - **v617–v619** — the Learn photo **zooms onto the character being written** (`autoZoom`); `charBoxes` searches the layout (v619: which ink lines carry the card's characters, horizontal or vertical, by pitch fit, a size prior and the card's own breaks) and cuts each line into exactly its characters (DP on least-ink cuts); judged on H's own photos: **v626**, on his full-size Zoom data, makes a line sure only when every character's ink is character-shaped (aspect 0.62–1.7, not solid) and their widths agree within 1.5×, and drops solid bands — 43 of 124 sure, all right by eye (was 58 with ~12 wrong: a tight zoom on the wrong spot is the worse failure); only while the pad shows the character (levels 1–2); Diagnostics logs every decision and **Owner tools → Zoom check** shares the boxes drawn on H's newest 24 photo cards.
 - **v611** — **anti-invention**: both prompts carry a "Never invent" rule and an `unsure` field, the "well-known name"
   nudges are gone, and `aiDoubt` flags a card whose AI pinyin disagrees with pinyin-pro's in-word reading (`pyDictOff`,

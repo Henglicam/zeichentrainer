@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=637; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=638; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,7 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["app","v637","Zoom check → Paddle: time a photo"],
+  ["photo","v638","multicard labels on their lines"],
   ["cards","v635","Add a text on a multicard"],
   ["cards","v634","pinch a multicard, tap a text"],
   ["learn","v626","zoom never tight on a wrong spot"],
@@ -1254,7 +1254,6 @@ async function shareZoomData(st){
 }
 /* the owner's PaddleOCR test (v637): the Zoom check's multicards read by PaddleOCR on this phone — the time a photo takes
    and how many of each multicard's texts it names — so the field decides before the reading pipeline depends on it */
-const pdNorm=s=>String(s).replace(/[^\u4e00-\u9fff]/g,"");
 const pdNames=(lz,z)=>!!lz&&!!z&&(lz===z||(z.length>=2&&lz.includes(z))||(lz.length>=2&&z.includes(lz)&&lz.length>=z.length*0.6));
 async function paddleCheck(st){
   if(!ZCHECK) await zoomCheck(st);
@@ -1264,7 +1263,7 @@ async function paddleCheck(st){
   for(let i=0;i<pres.length;i++){ const r=pres[i]; await zcBusy(st,`Reading multicard ${i+1} of ${pres.length} with the new reader …`);
     const cv=document.createElement("canvas"); cv.width=r.bm.width; cv.height=r.bm.height; cv.getContext("2d").drawImage(r.bm,0,0);
     const t1=performance.now(), lines=await pdRead(cv), ms=Math.round(performance.now()-t1);
-    const hits=r.items.map(d=>{ const z=pdNorm(d.c); return z&&lines.some(l=>pdNames(pdNorm(l.text),z)); });
+    const hits=pdMatch(r.items.map(d=>d.c),lines).map(Boolean);
     placed+=hits.filter(Boolean).length; labels+=r.items.length; msAll+=ms;
     per.push({shot:r.pg.shot,ms,det:lines.ms.det,rec:lines.ms.rec,placed:hits.filter(Boolean).length,labels:r.items.length,missing:r.items.filter((d,k)=>!hits[k]).map(d=>d.c),
       lines:lines.map(l=>({x:+(l.x/cv.width).toFixed(4),y:+(l.y/cv.height).toFixed(4),w:+(l.w/cv.width).toFixed(4),h:+(l.h/cv.height).toFixed(4),text:l.text,conf:+l.conf.toFixed(2)}))}); }
@@ -3886,6 +3885,8 @@ const cbKey=d=>d.id+"|"+(d.shot||"")+"|"+JSON.stringify(d.frame||0)+"|"+(d.c||""
    display, kept in memory: nothing stored changes, Crop again still starts from the frame, and every multicard already in
    the deck is snapped the first time it is shown. A turned frame is left as it is. */
 const REGFIX=new Map(), REGRUN=new Set();
+/* the split's own fallback for a text it could not place: a frame over half the photo, or one another text of the same photo shares (v628) */
+const fallbackFrame=d=>{ const f=d.frame; if(!f) return true; if(f.w*f.h>0.5) return true; return !!(d.shot&&S.custom.some(x=>x!==d&&x.shot===d.shot&&x.kind!=="page"&&x.frame&&x.frame.x===f.x&&x.frame.y===f.y&&x.frame.w===f.w&&x.frame.h===f.h)); };
 function snapRegion(d,src,pw,ph){
   const f=d.frame; if(!f||f.a||!(f.w>0&&f.h>0)) return null;
   /* v628 (H's Zoom data with the reading records): a frame over most of the photo, or one another text of the same photo
@@ -3909,7 +3910,18 @@ async function refineShot(shot){
   if(!todo.length) return; const full=fullPhoto(todo[0]); if(!full) return;
   let bm=null; try{ bm=await createImageBitmap(full); }catch(e){ return; }
   let moved=0;
-  for(const d of todo){ const b=snapRegion(d,bm,bm.width,bm.height); REGFIX.set(cbKey(d),b); if(b) moved++; if(REGFIX.size>600) REGFIX.delete(REGFIX.keys().next().value); await yieldNow(); }
+  /* v638: on a multicard the phone's own reader places the texts first — a text it names takes its line's box. A text the
+     split gave the whole picture or a shared frame takes it wherever it is; a text with a frame of its own only when the
+     line lies on or next to that frame (grown by its own size), so a second 颐堤港店 elsewhere cannot pull it away */
+  let pdAt=null;
+  if(PD_ON&&pageOfShot(shot)){ try{ const cv=document.createElement("canvas"); cv.width=bm.width; cv.height=bm.height; cv.getContext("2d").drawImage(bm,0,0);
+      const lines=await pdRead(cv), m=pdMatch(todo.map(d=>d.c),lines);
+      pdAt=m.map((l,i)=>{ if(!l) return null; const f=todo[i].frame, q={x:l.x/cv.width,y:l.y/cv.height,w:l.w/cv.width,h:l.h/cv.height};
+        const cx=q.x+q.w/2, cy=q.y+q.h/2, own=!fallbackFrame(todo[i]);
+        if(own&&!(cx>f.x-f.w&&cx<f.x+2*f.w&&cy>f.y-f.h&&cy<f.y+2*f.h)) return null;
+        const p=q.h*PD_ROOM; return {x:Math.max(0,q.x-p),y:Math.max(0,q.y-p),w:Math.min(1,q.x+q.w+p)-Math.max(0,q.x-p),h:Math.min(1,q.y+q.h+p)-Math.max(0,q.y-p)}; }); }
+    catch(e){ pdAt=null; logErr("paddle",e&&e.message||String(e)); } }
+  for(let i=0;i<todo.length;i++){ const d=todo[i], b=(pdAt&&pdAt[i])||snapRegion(d,bm,bm.width,bm.height); REGFIX.set(cbKey(d),b); if(b) moved++; if(REGFIX.size>600) REGFIX.delete(REGFIX.keys().next().value); await yieldNow(); }
   bm.close(); if(!moved) return;
   /* the regions on screen move to their measured place; no render, so nothing the learner is doing is interrupted */
   for(const d of todo){ const b=REGFIX.get(cbKey(d)); if(!b) continue; const pc=x=>(x*100).toFixed(2)+"%";
@@ -5764,6 +5776,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  638:"Multicards place their texts much better now: a new reader on your phone finds each label's own line. It downloads once (about 30 MB) the first time you use a multicard.",
   635:"A multicard missed a text? Tap Add a text, frame it on the photo, and it joins the multicard.",
   634:"Pinch to zoom into a multicard's photo, just like a card's. Tap any text while zoomed to look it up.",
   617:"While you trace a character, the photo zooms in on it and glides on to the next one. Once you write from memory, it stays whole.",
@@ -6134,6 +6147,16 @@ async function pdRecognize(m,cv,b){
 async function pdRead(cv){ const m=await pdLoad(), t0=performance.now(), bs=await pdDetect(m,cv), t1=performance.now(), out=[];
   for(const b of bs){ const r=await pdRecognize(m,cv,b); if(r.text) out.push({...b,...r}); await yieldNow(); }
   out.ms={det:Math.round(t1-t0),rec:Math.round(performance.now()-t1)}; return out; }
+/* v638: which line names which text — one to one, the best pairs first. The score is the longest common subsequence of
+   their Chinese over the longer of the two, so 肥瘦肉夹馍 goes to 肥瘦肉夹馍¥12/个 (5 of 6) before 优质肥瘦肉夹馍¥16/个 can take it
+   (5 of 8), which v637's first-that-fits rule let happen on H's menu board */
+const PD_ON=true, PD_MATCH=0.66, PD_ROOM=0.25, pdNorm=s=>String(s).replace(/[^\u4e00-\u9fff]/g,"");
+function pdLcs(a,b){ const A=[...a], B=[...b], dp=new Array(B.length+1).fill(0); for(let i=1;i<=A.length;i++){ let prev=0; for(let j=1;j<=B.length;j++){ const t=dp[j]; dp[j]=A[i-1]===B[j-1]?prev+1:Math.max(dp[j],dp[j-1]); prev=t; } } return dp[B.length]; }
+function pdMatch(texts,lines){ const T=texts.map(pdNorm), L=lines.map(l=>pdNorm(l.text)), pairs=[];
+  T.forEach((z,i)=>{ if(!z) return; L.forEach((lz,j)=>{ if(!lz) return; const sc=pdLcs(z,lz)/Math.max([...z].length,[...lz].length); if(sc>=PD_MATCH) pairs.push({i,j,sc}); }); });
+  pairs.sort((a,b)=>b.sc-a.sc); const out=texts.map(()=>null), usedL=new Set();
+  for(const p of pairs){ if(out[p.i]||usedL.has(p.j)) continue; out[p.i]=lines[p.j]; usedL.add(p.j); }
+  return out; }
 /* CC-CEDICT (simplified -> English gloss), lazily loaded from ./vendor */
 const DICT_HEAD="#cedict v3"; /* the file's own first line, and the only way to tell a cached older copy from this one — v2 at v573 (a reading per sense), v3 at v605 (no gloss cut at 120 characters any more) */
 /* gzip magic bytes — if a server or proxy already decompressed, treat the body as plain text */
@@ -8404,7 +8427,7 @@ async function cropSign(id,opts){
         const zh=pic.zh.split("\n");
       if(pic.box&&picSeen&&(PENDING[id]&&!RECROP[id]?READ_APP[id]:CROP&&CROP.id===id&&CROP.proposed)){ /* the reader could not read this font (v293 — H's 邪不压正 poster: the ink rows and the reader's garbage boxes put the frame around the whole photo): the AI's box places the frame, once, as fractions of the straightened picture it saw — the proposal's crop, or the cut of the frame the quick look had placed from that same garbage; on the placed frame's own cut (v301) the box centres the frame on the characters inside it (v303, H's 绿皮书: "should be more centered") */
         const seen=picSeen.dk?picSeen.dk.blob:picSeen.orig, seenAngle=picSeen.dk?picSeen.dk.angle||0:0, seenBase=picSeen.base||PLACED[id]||(CROP&&CROP.id===id?CROP.rect:null); /* the placed cut is upright, and its frame is the placed one */
-        let W=0,Hh=0,box=null,rect=null,grow=null,altWon=false,labelRects=null,labelWhole=false,splitWhole=false; try{ const b=await createImageBitmap(seen); W=b.width; Hh=b.height; const [bx0,by0,bx1,by1]=pic.box, n=Math.max(1,zh.length);
+        let W=0,Hh=0,box=null,rect=null,grow=null,altWon=false,labelRects=null,labelWhole=false,splitWhole=false,pdPl=null; try{ const b=await createImageBitmap(seen); W=b.width; Hh=b.height; const [bx0,by0,bx1,by1]=pic.box, n=Math.max(1,zh.length);
           box={x0:bx0*W,y0:by0*Hh,x1:bx1*W,y1:by1*Hh}; let [fx0,fy0,fx1,fy1]=pic.box; /* the box as read, for the log (v340) */ const lens=zh.map(l=>l.replace(/[\s\/／·・,，。.、()（）]/g,"").length); let snap=snapBox(b,box,n,lens,pic.droppedBoxes);
           N.seen=[W,Hh]; N.seenBase=numRect(seenBase); N.seenAng=n4(seenAngle); N.lens=lens;
           PICSEEN[id]={base:seenBase,W,Hh,angle:seenAngle}; /* v400: here and nowhere earlier — the v314/v318/v348 re-ask reassigns picSeen above (the frame grew, the AI read again), and a check that mapped the second answer's boxes through the first proposal would be wrong by the whole regrow */
@@ -8459,6 +8482,16 @@ async function cropSign(id,opts){
                are destroyed by the whole percent the log prints, and v390's field regression was exactly this test not firing */
             const tW=pic.picW||W, tmpl=why?false:templateBoxes(lab,tW);
             N.tmpl={W:tW,why:why||"",scale,widths:lab.map(l=>n1((l.box[2]-l.box[0])*tW)),ns:lab.map(l=>[...l.zh].filter(c=>CJK.test(c)).length),round:why?null:roundGrid(lab,tW),uw:n1((Math.max(...lab.map(l=>l.box[2]))-Math.min(...lab.map(l=>l.box[0])))*tW),drawing:!!tmpl,tell:tmpl||""}; /* uw: the label boxes' own union across — a width equal to it is the v436 tautology */
+            /* v638: the phone's own reader names the labels' lines first (PaddleOCR, pdRead): a label it names takes its line's box, and
+               only the rest go the ways below; they can add places, never take one away */
+            pdPl=null;
+            if(!why&&PD_ON){ try{ const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen, sb=src===seen?b:await createImageBitmap(src);
+                const cv=document.createElement("canvas"); cv.width=sb.width; cv.height=sb.height; cv.getContext("2d").drawImage(sb,0,0); if(sb!==b) sb.close();
+                const t0=Date.now(), lines=await pdRead(cv), m=pdMatch(lab.map(l=>l.zh),lines); if(stale()) return;
+                pdPl=m.map(l=>l?{x0:l.x/cv.width,y0:l.y/cv.height,x1:(l.x+l.w)/cv.width,y1:(l.y+l.h)/cv.height,read:l.text}:null);
+                N.paddle={ms:Date.now()-t0,lines:lines.length,named:pdPl.filter(Boolean).length};
+                logRead(id,`the phone's reader found ${lines.length} lines in ${((Date.now()-t0)/1000).toFixed(1)} s and named ${pdPl.filter(Boolean).length} of the ${lab.length} labels on them`); }
+              catch(e){ pdPl=null; logErr("paddle",e&&e.message||String(e)); logRead(id,"the phone's reader could not run ("+(e&&e.message||e)+") — the labels are placed without it"); } }
             if(why){ logRead(id,`the AI calls these ${lab.length} texts separate labels, but ${why} — one card`); }
             else if(tmpl){ /* the boxes are a drawing, not a measurement (v380): the model cannot say where anything is, so the reader looks (v386) */
               logRead(id,`the AI's ${lab.length} label boxes are ${tmpl==="round"?"drawn on round pixels":"all the same size"} — a drawing of the grid, not a measurement: the reader looks for the labels in the picture itself`); /* v447: the sentence used to claim the width tell whichever one fired, and on H's dial (widths 180, 160, 160) it was the round pixels — a record that names the wrong reason is the v399 fault one level down */
@@ -8491,6 +8524,11 @@ async function cropSign(id,opts){
                 logRead(id,sn?`${l.zh}: the AI's box ${pcv(l.box[0])}–${pcv(l.box[2])} % across, ${pcv(l.box[1])}–${pcv(l.box[3])} % down, its characters at ${pcv(sn.x0)}–${pcv(sn.x1)} %, ${pcv(sn.y0)}–${pcv(sn.y1)} %`:`${l.zh}: nothing of a character's shape near the AI's box — the box stays`);
                 const q=sn||{x0:l.box[0],y0:l.box[1],x1:l.box[2],y1:l.box[3]}, Hk=Math.max(1/Hh,q.y1-q.y0); /* the label's own characters (v359), not snapBox's poster machinery: its room reaches into the neighbours and its passes take the button */
                 return {x0:Math.max(0,q.x0-Hk*FRAME_ROOM)*W,y0:Math.max(0,q.y0-Hk*FRAME_ROOM)*Hh,x1:Math.min(1,q.x1+Hk*FRAME_ROOM)*W,y1:Math.min(1,q.y1+Hk*FRAME_ROOM)*Hh}; }); } }
+          if(pdPl&&pdPl.some(Boolean)&&pic.labels&&!noSplit){
+            if(!labelRects){ labelRects=pic.labels.map(()=>null); labelWhole=true; splitWhole=false; } /* the ones the phone's reader could not name keep the frame's own picture, as a label the old search missed does */
+            const pcv=v=>Math.round(v*100);
+            pdPl.forEach((q,k)=>{ if(!q) return; const Hk=q.y1-q.y0; labelRects[k]={x0:Math.max(0,q.x0-Hk*PD_ROOM)*W,y0:Math.max(0,q.y0-Hk*PD_ROOM)*Hh,x1:Math.min(1,q.x1+Hk*PD_ROOM)*W,y1:Math.min(1,q.y1+Hk*PD_ROOM)*Hh};
+              logRead(id,`${pic.labels[k].zh}: the phone's reader read ${q.read} at ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`); }); }
           if(labelRects) N.lrects=labelRects.map(rc=>rc?numBox(rc):null); /* v399: in the picture's own pixels, the input photoFrameOf maps onto the photo */
           b.close();
           r.pic.snap=snap?[box.x0/W,box.y0/Hh,box.x1/W,box.y1/Hh].map(v=>+v.toFixed(3)):null; /* with the lines the reader confirmed (v324) */
