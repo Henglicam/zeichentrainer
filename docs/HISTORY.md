@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v628
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v629
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -39,7 +39,19 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
-## Current state (PWA v628, 2026-09-25)
+## Current state (PWA v629, 2026-09-25)
+- **A measuring grid on the AI's picture, the owner's test (v629, H's "Go B" after v628's record):** the model's label
+  boxes on a panel are a drawing, half to a whole label off, so every label the reader cannot name takes the whole
+  picture. Of the two ways to ask again — a second picture call per unplaced label (A, 3–6 calls a panel against the
+  Qwen cap) or a grid on the one picture already sent (B, no extra call, but every photo's question changes) — H chose B,
+  on his phone first. Owner tools → Zoom check carries the switch "Measuring grid on the AI's pictures" (`aiGrid`, a
+  setting, off by default): with it on, `pictureJpeg` draws a faint magenta line every `GRID_STEP` 100 pixels, numbered
+  in pixels along the top and left edges, and the question adds one sentence saying what the grid is and to measure
+  every box against it; the reading's record says the picture went out with it. The answer's format and its handling
+  are unchanged — the drawing test still distrusts round boxes — so nothing about the cards changes yet: H's next panels
+  with the grid on, and their Zoom data (the AI replies carry the grid sentence), say whether the boxes land on their
+  labels. Only then is it worth trusting them. Checked in the harness: the request carries the sentence and the gridded
+  picture with the switch on, neither with it off.
 - **A text the split could not place is not snapped (v628, the first Zoom data with reading records — 8 multicards, H's
   washing machine and rice cooker panels, a flashcard screenshot, two street signs, an order screen, all from the album
   and so read whole):** the records say why texts got the whole picture. On every one of these the model's label boxes
