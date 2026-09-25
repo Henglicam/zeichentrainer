@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=644; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=645; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["more","v645","Re-read all: report, deck same?"],
   ["photo","v644","every multicard text placed?"],
   ["cards","v642","multicard swipe smooth now?"],
   ["photo","v641","sure signs skip the photo AI"],
@@ -1276,6 +1277,89 @@ async function paddleCheck(st){
   if(st) st.textContent=ZCHECK.line+". "+ZCHECK.paddle.line[0].toUpperCase()+ZCHECK.paddle.line.slice(1)+".";
   logErr("paddle",ZCHECK.paddle.line); /* the line in Diagnostics too, beside the device facts */
 }
+/* v645 (H: "Please re-run all existing cards so I can check how the new implementation works", then "No Re-read button"
+   on the three lines that proposed it): Owner tools → Re-read all. Every photo of the deck goes through today's reading once
+   more, one after the other while the app is open — the proposal the Camera tab would make, the quick look, the phone's
+   reader, the picture call and the text check exactly as for a new photo — but where the camera flow saves, the re-read
+   writes a report line: the old text and the new, or a multicard's texts with a place of their own then and now, the time
+   and whether the picture went to the AI. No card changes. The run stands in settings ("rr") after every photo, so it goes
+   on where it stopped; it waits while the Camera tab is working on a photo of H's own. The photo keeps the flags the inbox
+   had for it (a screenshot is read whole); a photo whose inbox record is gone is read as a camera photo. */
+const RRPH={}, RRWAIT={}; let RR_PICS=0, RR_ON=false, RR_LOOP=false; /* RR_ON: the run is wanted; RR_LOOP: the loop is still working — Pause lets the photo in hand finish, and Go on during that finish keeps the one loop instead of starting a second */
+const rrSleep=ms=>new Promise(r=>setTimeout(r,ms));
+function rrShots(){ const seen=new Set(), out=[];
+  for(const d of deck().slice().reverse()){ if(!d.shot||seen.has(d.shot)) continue; const src=S.custom.find(x=>x.shot===d.shot&&fullPhoto(x)); if(!src) continue; seen.add(d.shot); out.push(d.shot); }
+  return out; }
+function rrOld(shot){ const cs=S.custom.filter(d=>d.shot===shot), pg=cs.find(d=>d.kind==="page");
+  if(pg){ const its=pageItems(pg); return {kind:"multi",n:its.length,own:its.filter(d=>!fallbackFrame(d)).length}; }
+  return {kind:"card",c:cs.filter(d=>d.kind!=="page").map(d=>d.c).join(" · ")}; }
+const rrBusy=()=>!!CROP||Object.keys(PENDING).some(k=>!/^rr_/.test(k))||Object.keys(READING).some(k=>!/^rr_/.test(k))||AUTOQ.length>0;
+async function rrOne(shot){
+  const src=S.custom.find(x=>x.shot===shot&&fullPhoto(x)), blob=src&&fullPhoto(src); if(!blob) return {shot,skip:"no photo"};
+  /* where the photo came from decides the proposal (a screenshot or an album photo without camera data is read whole, v450/v453):
+     the inbox's own flags, else the photo's reading record, else the stored photo judged as From album would judge it today —
+     which, the stored copy carrying no camera data, reads it whole. H's Zoom data: every multicard photo was read whole. */
+  const rec0=S.inbox.find(x=>x.id===shot), N0=LAST_READ.ring.slice().reverse().find(N=>N&&N.shot===shot&&N.prop), id="rr_"+Date.now();
+  let shared=false, screenshot=false, origin="inbox";
+  if(rec0){ shared=!!rec0.shared; screenshot=!!rec0.screenshot; }
+  else if(N0){ shared=!!N0.prop.shared; screenshot=!!N0.prop.screenshot; origin="record"; }
+  else { origin="album"; try{ screenshot=!!(await photoSource(blob)).screenshot; }catch(e){ screenshot=false; } }
+  SHOTS_EXTRA[id]={id,blob,ts:Date.now(),shared,screenshot};
+  /* the proposal as proposeFrame makes it for a card made by itself, off the Camera tab (AUTO_LW) — proposeFrame itself saves the placeholder card */
+  let reg=null, PW=4, PH=3; try{ const bmp=await createImageBitmap(blob); PW=bmp.width; PH=bmp.height; try{ reg=textRegion(bmp); } finally{ bmp.close(); } }catch(e){ logErr("reread",e&&e.message||String(e)); }
+  const reg0=reg; if(shared||screenshot) reg=null;
+  const lw=AUTO_LW, lh=AUTO_LW*PH/PW, full=!reg||(reg.x1-reg.x>=0.9&&reg.y1-reg.y>=0.9), b=full?{x:0,y:0,x1:1,y1:1}:reg, shaped=full?null:shapeBox(b,lw,lh);
+  const f=shaped||{x:b.x*lw,y:b.y*lh,w:(b.x1-b.x)*lw,h:(b.y1-b.y)*lh}, rect={x:f.x,y:f.y,w:f.w,h:f.h,a:0,lw,lh};
+  { const N=numsReset(id); N.pre=true; N.photo=[PW,PH]; N.reread=shot; N.prop={r:numRect(rect),kind:full?"whole":shaped?"16:9":"text",hidden:true,reg:reg0?[n4(reg0.x),n4(reg0.y),n4(reg0.x1),n4(reg0.y1)]:null,blocks:reg0&&reg0.blocks||0,shared,screenshot}; }
+  logRead(id,`re-read of the photo of ${shot}: frame proposed by the app, ${full?"the whole photo":"the ink rows"}`);
+  const ph={id:"rr#"+id,c:"",shot:id,reading:{rect,at:Date.now(),app:true,auto:true}}; RRPH[ph.id]=ph; PENDING[id]=ph.id; AUTO[id]=true;
+  const t0=Date.now(), p0=RR_PICS, done=new Promise(r=>{ RRWAIT[id]=r; });
+  cropSign(id,{rect,app:true});
+  const out=await Promise.race([done,rrSleep(RR_MAX_MS).then(()=>({kind:"none",why:"no answer within "+RR_MAX_MS/1000+" s"}))]);
+  const N=numsFor(id)||{}; rrEnd(id,null);
+  return {shot,old:rrOld(shot),now:out,ms:Date.now()-t0,pics:RR_PICS-p0,sure:!!N.pdSure,weak:!!N.weak,origin,whole:full}; }
+const RR_MAX_MS=180000;
+async function rrFinish(id){ const sg=SIGN[id];
+  try{ if(sg&&sg.aiPromise) await sg.aiPromise;
+    if(sg&&sg.noText) return rrEnd(id,{kind:"none",why:"the AI found no Chinese text"});
+    const vouched=!!(sg&&sg.ai&&!sg.ai.bad&&(sg.ai.ok||sg.ai.textOk));
+    if(sg&&sg.region&&sg.region.picErr&&!vouched&&(sg.weak||(sg.ai&&sg.ai.bad&&!sg.sureLines))) return rrEnd(id,{kind:"none",why:"the AI could not check the photo and the reading is weak"});
+    if(SPLIT[id]&&sg&&sg.ai&&sg.ai.ok&&!sg.ai.bad&&sg.ai.labels){ const fr=SPLIT[id];
+      const own=fr.filter((f,k)=>!(f.w*f.h>0.5*f.lw*f.lh)&&!fr.some((g,j)=>j!==k&&g.x===f.x&&g.y===f.y&&g.w===f.w&&g.h===f.h)).length;
+      return rrEnd(id,{kind:"multi",n:fr.length,own,texts:sg.ai.labels.map(l=>l.zh).join(" · ").slice(0,300)}); }
+    const built=sg&&SIGN[id]===sg?await readingCard(id,sg):null;
+    return rrEnd(id,built?{kind:"card",c:built.card.c,p:built.card.p,m:String(built.card.m||"").slice(0,80),src:built.mt&&built.mt.src}:{kind:"none",why:"nothing to save"}); }
+  catch(e){ logErr("reread",e&&(e.stack||e.message)||e); return rrEnd(id,{kind:"none",why:"failed: "+(e&&e.message||e)}); } }
+function rrEnd(id,res){ const w=RRWAIT[id]; delete RRWAIT[id]; if(res&&w){ w(res); return; }
+  delete RRPH[PENDING[id]]; delete PENDING[id]; delete AUTO[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; delete EARLY[id]; delete READING[id]; READ_RUN[id]=(READ_RUN[id]||0)+1; dropExtraShot(id); }
+function rrLine(){ const R=S.settings.rr; if(!R) return "Reads the photo of every card again with today's reading, one after the other while the app is open, and writes a report. No card changes. It waits while the Camera tab works on a photo of yours.";
+  const res=R.res||[], m=res.filter(r=>r.old&&r.old.kind==="multi"&&r.now&&r.now.kind==="multi"), c=res.filter(r=>r.old&&r.old.kind==="card"&&r.now);
+  const same=c.filter(r=>r.now.kind==="card"&&cjkOnly(r.now.c)===cjkOnly(r.old.c)).length, secs=res.reduce((a,r)=>a+(r.ms||0),0)/1000, pics=res.filter(r=>r.pics).length;
+  return `${RR_ON?"Running":R.done?"Done":"Paused"}: ${res.length} of ${R.list.length} photos${res.length?`, ${Math.round(secs/Math.max(1,res.length))} s a photo, the AI saw ${pics} of them`:""}. Multicards: ${m.reduce((a,r)=>a+r.now.own,0)} of ${m.reduce((a,r)=>a+r.now.n,0)} texts with a place of their own (were ${m.reduce((a,r)=>a+r.old.own,0)} of ${m.reduce((a,r)=>a+r.old.n,0)}). Cards: ${same} of ${c.length} read as the card says.`; }
+function rrShow(){ const st=$("#rr-status"); if(st) st.textContent=rrLine()+(RR_LOOP&&!RR_ON?" Pausing after this photo …":""); const b=$("#rr-run"); if(b) b.textContent=RR_ON?"Pause":(S.settings.rr&&!S.settings.rr.done?"Go on":"Start"); }
+async function rrRun(){
+  if(RR_ON){ RR_ON=false; rrShow(); return; }
+  if(RR_LOOP){ RR_ON=true; rrShow(); return; } /* still finishing the photo in hand: it simply goes on */
+  let R=S.settings.rr; if(!R||R.done) R={at:Date.now(),v:APP_V,list:rrShots(),i:0,res:[]};
+  RR_ON=true; RR_LOOP=true; await setSetting("rr",R); rrShow();
+  try{ await pdLoad().catch(()=>{});
+    while(RR_ON&&R.i<R.list.length){
+      if(rrBusy()){ await rrSleep(3000); continue; }
+      const shot=R.list[R.i]; let res; try{ res=await rrOne(shot); }catch(e){ res={shot,err:String(e&&e.message||e)}; logErr("reread",e&&(e.stack||e.message)||e); }
+      R.res.push(res); R.i++; await setSetting("rr",R); rrShow(); }
+    if(R.i>=R.list.length){ R.done=Date.now(); await setSetting("rr",R); } }
+  finally{ RR_ON=false; RR_LOOP=false; rrShow(); } }
+function rrText(){ const R=S.settings.rr; if(!R) return "No re-read yet.";
+  const L=[`Re-read v${R.v} (report v${APP_V}), started ${new Date(R.at).toISOString()}`,rrLine(),""];
+  for(const r of R.res||[]){ const o=r.old||{}, n=r.now||{}, head=`${r.shot} · ${Math.round((r.ms||0)/1000)} s${r.whole?" · read whole":""}${r.origin&&r.origin!=="inbox"?" ("+(r.origin==="album"?"as if from the album":"as recorded")+")":""}${r.pics?" · AI saw the photo":""}${r.sure?" · sure":""}${r.weak?" · weak":""}`;
+    if(r.skip||r.err){ L.push(head+" · "+(r.skip||r.err)); continue; }
+    const was=o.kind==="multi"?`multicard ${o.own} of ${o.n} placed`:`card "${(o.c||"").replace(/\n/g," / ")}"`;
+    const now=n.kind==="multi"?`multicard ${n.own} of ${n.n} placed: ${n.texts}`:n.kind==="card"?`card "${(n.c||"").replace(/\n/g," / ")}" ${n.p||""} = ${n.m||""}${n.src&&n.src!=="llm"?" ("+n.src+")":""}`:`no card (${n.why||"?"})`;
+    L.push(head,"  was: "+was,"  now: "+now); }
+  return L.join("\n"); }
+async function rrShare(){ const text=rrText(), name="shizi-reread.txt", file=new File([text],name,{type:"text/plain"});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
+  try{ await navigator.clipboard.writeText(text); noteSheet(t("Copied to the clipboard.")); }catch(err){ noteSheet(t("Sharing is not available here.")); } }
 async function shareDiag(){
   const text=diagText(), name="shizi-diagnostics.txt", file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
@@ -1667,6 +1751,7 @@ function picOk(){ PIC_DOWN_AT=0; PIC_DOWN_WHY=""; }
 const PIC_DOWN_TEXT=()=>`the picture provider refused the last call and is not asked again for ${Math.round(PIC_DOWN/60000)} minutes: ${PIC_DOWN_WHY}`;
 function pictureUp(){ return !!pictureProvider()&&aiAutoOn()&&navigator.onLine&&!picDown(); } /* the one switch covers text and pictures (v193) */
 async function aiReadPicture(blob,alts,status,rec){
+  RR_PICS++; /* v645: the re-read's report counts the picture calls */
   const pv=pictureProvider(); if(!pv) throw new Error("no picture provider");
   const key=aiKey(pv), model=pictureModel(pv), pic=await pictureJpeg(blob), relay=!key&&viaRelay(pv);
   const sys=picSystem(); if(rec) rec.prompt=[sys.length,strHash(sys)]; /* v399: picSystem() is 7 200 characters and changed at v361, v363, v367, v377, v449 and v455, so an answer cannot be attributed to a prompt without a fingerprint — the version says which code, this says which words went out */
@@ -2853,6 +2938,7 @@ function renderMore(main){
     <div class="mrow"><div style="flex:1"><div class="t">Diagnostics</div><div class="s" id="diag-status">${LAST_READ.ring.length} photo${LAST_READ.ring.length===1?"":"s"} logged, ${AILOG.length} AI exchange${AILOG.length===1?"":"s"}, ${ERRLOG.length} error${ERRLOG.length===1?"":"s"}.</div><div class="fieldacts"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button><button class="btn mini" id="diag-copy">Copy</button></div></div></div>
     <pre class="diag" id="diag-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">Zoom check</div><div class="s" id="zc-status">${ZCHECK?esc(ZCHECK.line)+".":`Finds every character of the newest ${ZC_N} photo cards the way Learn's zoom does. Share sends the pictures with the boxes drawn: green on the ink, orange unsure, red the estimate, blue the frame; the newest ${ZC_PAGES} multicards follow, green where a region snapped onto its text. Data sends the pictures themselves, as one PDF.`}</div><div class="fieldacts"><button class="btn mini" id="zc-run">Run</button><button class="btn mini" id="zc-share">Share</button><button class="btn mini" id="zc-data">Data</button><button class="btn mini" id="zc-paddle">Paddle</button></div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">Re-read all</div><div class="s" id="rr-status">${esc(rrLine())}</div><div class="fieldacts"><button class="btn mini" id="rr-run">${RR_ON?"Pause":(S.settings.rr&&!S.settings.rr.done?"Go on":"Start")}</button><button class="btn mini" id="rr-share">Share</button></div></div></div>
     <div class="mrow"><div style="flex:1"><div class="t">Still to test</div><div class="s" id="field-status">${fieldNote()}</div><div class="fieldacts"><button class="btn mini" id="field-show">Show</button><button class="btn mini" id="field-copy">Copy</button></div></div></div>
     <pre class="diag" id="field-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"install")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div><div class="fieldacts"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button><button class="btn mini" id="users-copy">Copy</button></div></div></div>
@@ -2899,6 +2985,7 @@ function renderMore(main){
       { const zp=$("#zc-paddle"); if(zp) zp.onclick=async()=>{ zp.disabled=true; try{ await paddleCheck(zs); }catch(e){ zs.textContent="The new reader failed: "+(e&&e.message||e); logErr("paddle",e&&e.stack||e); } zp.disabled=false; }; } /* v637 */
       { const zd=$("#zc-data"); if(zd) zd.onclick=async()=>{ zd.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); await shareZoomData(zs); }catch(e){ zs.textContent="The data failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zd.disabled=false; }; }
       if(zh) zh.onclick=async()=>{ zh.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); await shareZoomSheet(zs); }catch(e){ zs.textContent="The sheet failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zh.disabled=false; }; }
+    $("#rr-run").onclick=()=>{ rrRun().catch(e=>logErr("reread",e&&(e.stack||e.message)||e)); }; $("#rr-share").onclick=rrShare; /* v645 */
     $("#field-show").onclick=()=>{ const o=$("#field-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=fieldText(); };
     $("#field-copy").onclick=()=>copyText(fieldText(),$("#field-status"));
     $("#diag-copy").onclick=()=>copyText(diagText(),$("#diag-status"));
@@ -8877,7 +8964,7 @@ async function saveNow(id,auto){ /* auto (v325): the card made by itself from a 
   clearTimeout(READ_TIMER[id]); if(!READING[id]) cropSign(id,{rect,app}); /* the reading had not started yet (the 1.2 s wait) — start it with the frame it was saved with */
   setStats(); renderShots();
 }
-function pendingCard(id){ const cid=PENDING[id]; return cid?cardOf(cid):null; }
+function pendingCard(id){ const cid=PENDING[id]; return cid?(RRPH[cid]||cardOf(cid)):null; } /* v645: a re-read's placeholder lives in memory only */
 /* The card as the reader read it, before the AI has answered (v440, H: "Du musst mit den Uebersetzungen schneller werden. Waere es
    nicht moeglich, dass Du ziemlich schnell erst mal ein OCR Ergebnis zeigst … und das auch irgendwie angezeigt wird, dass das
    noch Work in Progress ist, damit man zumindest mal gleich was sieht?"): on a strong reading the row shows the finished card's
@@ -8977,6 +9064,7 @@ async function splitCards(id,sg,ph){
   return n;
 }
 async function finishPending(id){
+  if(RRPH[PENDING[id]]) return rrFinish(id); /* v645: a re-read ends in the report, never in the deck */
   const sg=SIGN[id], ph=pendingCard(id); if(!ph){ delete PENDING[id]; return; }
   if(!ph.reading){ delete PENDING[id]; delete SIGN[id]; return; } /* H gave it a text meanwhile (Edit) — the reading is not needed */
   try{
@@ -9035,6 +9123,7 @@ async function finishPending(id){
   autoNext(); /* the next photo of the batch (v411) */
 }
 async function failPending(id,why,msg){
+  if(RRPH[PENDING[id]]) return rrEnd(id,{kind:"none",why:String(why||msg||"")});
   const ph=pendingCard(id); delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; if(!ph) return; if(!ph.reading){ todoDone(id); return; } /* the card is there with a text of H's own: the photo has its card (v509) */
   dropExtraShot(id);
   if(ph.reading.auto&&!ph.c){ await dropAuto(id,ph.id); delete READING[id]; const note=/^the reader did not load/.test(msg||"")?failText("Reading failed: "+msg):/^the AI could not check the photo/.test(why||"")?"The AI could not check this photo, and the reading alone was not good enough for a card. Tap Crop to read the photo again.":"Nothing could be read. Tap Crop to frame the text by hand."; /* a reader that never loaded is not a photo without text (v335) */

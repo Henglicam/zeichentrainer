@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v644
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v645
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,33 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v645, 2026-09-25)
+- **Owner tools → Re-read all (v645, H: "Please re-run all existing cards so I can check how the new implementation works";
+  offered as a report that changes no card, the alternative — overwrite every card, H's own edits with it, no undo — named;
+  H's answer was a screenshot of the owner rows: "No Re-read button"):** every distinct photo of the deck (516 cards on his
+  phone) goes through today's reading once more, one after the other while the app is open: the proposal the Camera tab
+  makes for a card made by itself, the quick look with its early picture call, the phone's reader, the close look, the
+  picture answer and the text check — **the real pipeline**, entered with a placeholder that lives in memory only
+  (`RRPH`; `pendingCard` looks there first) under a shot id `rr_…` of its own (`SHOTS_EXTRA`). Where the camera flow saves,
+  `finishPending` and `failPending` hand the result to `rrFinish`/`rrEnd` instead: a single card is built by `readingCard`
+  and written into the report, a multicard reports its `SPLIT` frames — how many texts have a place of their own (not the
+  whole picture, not shared) — and the same gates as `finishPending` decide "no card". The report line per photo: the old
+  text or the old multicard count, the new one, the seconds, whether the AI saw the photo, whether the phone's reader was
+  sure. The run stands in settings (`rr`) after every photo and goes on where it stopped (Start / Pause / Go on); it waits
+  while the Camera tab is working on a photo of H's own. `proposeFrame` itself could not be used — its last step saves the
+  placeholder card — so `rrOne` makes the same proposal (textRegion, whole for a screenshot, shapeBox at `AUTO_LW`).
+  **Where a photo came from decides the proposal, and the card does not store it:** the inbox's flags, else the reading
+  record, else the stored photo judged as From album would judge it today — the stored copy has no camera data, so it is
+  read whole. Found by the harness: the first build read unknown photos as camera photos, the ink rows framed half of the
+  rice cooker and 3 of 11 texts were placed; H's reading records show all his multicard photos came from the album as
+  "screenshots" and were read whole, and with that rule the re-read gives 11 of 11 as the replay does. **Also found and
+  fixed before shipping:** Go on pressed while a paused photo was still finishing started a second loop beside the first
+  (one photo read twice, two readings crossed) — `RR_LOOP` keeps one loop. **Harness** (`rr.js`, `rr2.js`): one multicard
+  and four single cards, paused after the second photo and continued — every card in IndexedDB byte-identical before and
+  after (16 records), nothing left in PENDING, SIGN, SHOTS_EXTRA or READING; with the AI answering, 4 of 4 cards read as
+  the card says and the multicard 11 of 11 (was 4 of 11 in the seeded deck). What it costs on the phone: one picture call
+  per photo the reader cannot read surely, one text call per photo, ~5–45 s a photo — not yet field-checked.
 
 ## Current state (PWA v644, 2026-09-25)
 - **Every multicard text finds its place (v644, H: "Please also analyze other incomplete cards and find a fix that
