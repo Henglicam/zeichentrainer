@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=643; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=644; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v644","every multicard text placed?"],
   ["cards","v642","multicard swipe smooth now?"],
   ["photo","v641","sure signs skip the photo AI"],
   ["photo","v640","photo AI faster, meanings ok?"],
@@ -6221,16 +6222,35 @@ function pdMatch(texts,lines){ const T=texts.map(pdNorm), L=lines.map(l=>pdNorm(
   /* v643 (H: "Why is the rice cooker only 10 of 11 texts?"): a label printed on two lines — 保温 over 取消 on one button —
      is one text for the AI and two lines for the reader, and neither line alone holds two thirds of it. A text left over
      may take two lines still free that stand one over the other (overlapping across, the gap under one line's height),
-     read top to bottom at the same PD_MATCH; its place is the box around both */
+     read top to bottom at the same PD_MATCH; its place is the box around both. v644 (H: "Please also analyze other
+     incomplete cards and find a fix that generally works"): or side by side on one row (overlapping down by half the
+     smaller, the gap under one and a half line heights), read left to right — 个人版 | Lite套餐 on his Token Plan screen */
   const two=[];
   T.forEach((z,i)=>{ if(!z||out[i]) return; lines.forEach((a,j)=>{ if(usedL.has(j)||!L[j]) return; lines.forEach((b,k)=>{ if(k===j||usedL.has(k)||!L[k]) return;
     const h=Math.min(a.h,b.h), gap=b.y-(a.y+a.h), over=Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x);
-    if(b.y<=a.y||gap>h||over<0.5*Math.min(a.w,b.w)) return;
+    const gapX=b.x-(a.x+a.w), overY=Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y);
+    const stacked=b.y>a.y&&gap<=h&&over>=0.5*Math.min(a.w,b.w), row=b.x>a.x&&gapX<=1.5*h&&overY>=0.5*h;
+    if(!stacked&&!row) return;
     const lz=L[j]+L[k], sc=pdLcs(z,lz)/Math.max([...z].length,[...lz].length); if(sc>=PD_MATCH) two.push({i,j,k,sc}); }); }); });
   two.sort((x,y)=>y.sc-x.sc);
-  for(const p of two){ if(out[p.i]||usedL.has(p.j)||usedL.has(p.k)) continue; const a=lines[p.j], b=lines[p.k], x=Math.min(a.x,b.x), y=a.y;
-    out[p.i]={...a,x,y,w:Math.max(a.x+a.w,b.x+b.w)-x,h:b.y+b.h-y,text:a.text+b.text,two:true}; usedL.add(p.j); usedL.add(p.k); }
+  for(const p of two){ if(out[p.i]||usedL.has(p.j)||usedL.has(p.k)) continue; const a=lines[p.j], b=lines[p.k], x=Math.min(a.x,b.x);
+    const y0=Math.min(a.y,b.y); out[p.i]={...a,x,y:y0,w:Math.max(a.x+a.w,b.x+b.w)-x,h:Math.max(a.y+a.h,b.y+b.h)-y0,text:a.text+b.text,two:true}; usedL.add(p.j); usedL.add(p.k); }
   return out; }
+/* v644: how far the AI's label boxes are off on this photo, measured on the labels the phone's reader placed — the centres
+   fitted per axis by one scale and one shift (least squares), the error of each in its own box's size. Trusted only with
+   three labels or more, a median error under AI_CAL_ERR and none over twice that: then a label the reader did not find
+   (左筒 and 右筒, printed at 45° along a washing machine's dial, where the model's box is right) takes the model's box
+   through the same fit. On a photo where the boxes are a drawing (v386) the fit fails and nothing changes. */
+const AI_CAL_ERR=0.5;
+function aiBoxCal(labels,pl){
+  const P=[]; labels.forEach((l,k)=>{ const q=pl[k]; if(!q||!l.box) return; const b=l.box; P.push({ax:(b[0]+b[2])/2,ay:(b[1]+b[3])/2,aw:b[2]-b[0],ah:b[3]-b[1],px:(q.x0+q.x1)/2,py:(q.y0+q.y1)/2,pw:q.x1-q.x0,ph:q.y1-q.y0}); });
+  if(P.length<3) return null;
+  const fit=(xs,ys)=>{ const n=xs.length, mx=xs.reduce((a,v)=>a+v,0)/n, my=ys.reduce((a,v)=>a+v,0)/n; let sxy=0,sxx=0; xs.forEach((x,i)=>{ sxy+=(x-mx)*(ys[i]-my); sxx+=(x-mx)*(x-mx); }); const a=sxx>1e-9?sxy/sxx:1; return {a,b:my-a*mx}; };
+  const fx=fit(P.map(p=>p.ax),P.map(p=>p.px)), fy=fit(P.map(p=>p.ay),P.map(p=>p.py));
+  if(!(fx.a>0.5&&fx.a<2&&fy.a>0.5&&fy.a<2)) return null;
+  const errs=P.map(p=>Math.max(Math.abs(fx.a*p.ax+fx.b-p.px)/Math.max(p.pw,p.ph),Math.abs(fy.a*p.ay+fy.b-p.py)/Math.max(p.pw,p.ph))).sort((a,b)=>a-b);
+  const med=errs[errs.length>>1]; if(med>AI_CAL_ERR||errs[errs.length-1]>2*AI_CAL_ERR) return null;
+  return {n:P.length,err:+med.toFixed(2),map:b=>{ const cx=fx.a*(b[0]+b[2])/2+fx.b, cy=fy.a*(b[1]+b[3])/2+fy.b, w=(b[2]-b[0])*fx.a, h=(b[3]-b[1])*fy.a; return {x0:cx-w/2,y0:cy-h/2,x1:cx+w/2,y1:cy+h/2}; }}; }
 /* CC-CEDICT (simplified -> English gloss), lazily loaded from ./vendor */
 const DICT_HEAD="#cedict v3"; /* the file's own first line, and the only way to tell a cached older copy from this one — v2 at v573 (a reading per sense), v3 at v605 (no gloss cut at 120 characters any more) */
 /* gzip magic bytes — if a server or proxy already decompressed, treat the body as plain text */
@@ -8621,7 +8641,17 @@ async function cropSign(id,opts){
             if(!labelRects){ labelRects=pic.labels.map(()=>null); labelWhole=true; splitWhole=false; } /* the ones the phone's reader could not name keep the frame's own picture, as a label the old search missed does */
             const pcv=v=>Math.round(v*100);
             pdPl.forEach((q,k)=>{ if(!q) return; const Hk=q.y1-q.y0; labelRects[k]={x0:Math.max(0,q.x0-Hk*PD_ROOM)*W,y0:Math.max(0,q.y0-Hk*PD_ROOM)*Hh,x1:Math.min(1,q.x1+Hk*PD_ROOM)*W,y1:Math.min(1,q.y1+Hk*PD_ROOM)*Hh};
-              logRead(id,`${pic.labels[k].zh}: the phone's reader read ${q.read} at ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`); }); }
+              logRead(id,`${pic.labels[k].zh}: the phone's reader read ${q.read} at ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`); });
+            const cal=aiBoxCal(pic.labels,pdPl);
+            if(cal){ let took=0; const placed=()=>labelRects.filter(Boolean).map(rc=>({x0:rc.x0/W,y0:rc.y0/Hh,x1:rc.x1/W,y1:rc.y1/Hh}));
+              pic.labels.forEach((l,k)=>{ if(labelRects[k]||!l.box) return; /* only a label with no place at all: what the reader or the old search placed stays */ const q=cal.map(l.box);
+                if(!(q.x1>q.x0&&q.y1>q.y0)||q.x0<-0.02||q.y0<-0.02||q.x1>1.02||q.y1>1.02) return;
+                if(placed().some(o=>{ const ix=Math.min(o.x1,q.x1)-Math.max(o.x0,q.x0), iy=Math.min(o.y1,q.y1)-Math.max(o.y0,q.y0); return ix>0&&iy>0&&ix*iy>0.25*Math.min((o.x1-o.x0)*(o.y1-o.y0),(q.x1-q.x0)*(q.y1-q.y0)); })) { logRead(id,`${l.zh}: the AI's box, corrected, would lie on another text — no place`); return; }
+                took++; const Hk=Math.min(q.y1-q.y0,q.x1-q.x0);
+                labelRects[k]={x0:Math.max(0,q.x0-Hk*PD_ROOM)*W,y0:Math.max(0,q.y0-Hk*PD_ROOM)*Hh,x1:Math.min(1,q.x1+Hk*PD_ROOM)*W,y1:Math.min(1,q.y1+Hk*PD_ROOM)*Hh};
+                logRead(id,`${l.zh}: the phone's reader did not find it — the AI's box, corrected by the ${cal.n} texts both placed (off by ${cal.err} of a text's size), at ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`); });
+              N.aiCal={n:cal.n,err:cal.err,took}; }
+            else if(pic.labels.some((l,k)=>!pdPl[k])) logRead(id,"the AI's boxes do not agree with where the phone's reader found the texts — the texts it did not find keep the whole picture"); }
           if(labelRects) N.lrects=labelRects.map(rc=>rc?numBox(rc):null); /* v399: in the picture's own pixels, the input photoFrameOf maps onto the photo */
           b.close();
           r.pic.snap=snap?[box.x0/W,box.y0/Hh,box.x1/W,box.y1/Hh].map(v=>+v.toFixed(3)):null; /* with the lines the reader confirmed (v324) */
