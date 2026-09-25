@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v637
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v638
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -39,7 +39,25 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
-## Current state (PWA v637, 2026-09-25)
+## Current state (PWA v638, 2026-09-25)
+- **The phone's own reader places a multicard's texts (v638, H's phone answered v637's test: "New reader: 93 of 103 texts
+  named on 8 multicards, 1.8 s a photo (first load 5.8 s)" — the same speed as the harness unthrottled; the old snap had
+  22 of those 103):** PaddleOCR goes into the two places a multicard's texts get their place. **(1) Making one:** in the
+  split, before the old label search, `pdRead` reads the same picture and `pdMatch` pairs the AI's labels with its lines —
+  one to one, the best pairs first, by the longest common subsequence of their Chinese over the longer (≥ `PD_MATCH`
+  0.66); v637's first-that-fits rule had given 优质肥瘦肉夹馍 the line of 肥瘦肉夹馍 on H's menu board. A named label takes its
+  line's box grown by `PD_ROOM` 0.25 of its height; the rest go the old ways, so it adds places and never takes one; a
+  split that fell back to the whole picture for all becomes a split with frames. The record says how many lines, in how
+  long, and each label's line. **(2) Showing one made before:** `refineShot` reads the photo once (display only, in memory,
+  like the snap of v620) — a text the split gave the whole picture or a shared frame (`fallbackFrame`) takes its line
+  wherever it is; a text with its own frame only when the line's centre lies within that frame grown by its own size.
+  **Measured:** replaying H's own making of three multicards (his photo through From album, the picture call answered with
+  the reply his phone recorded) — the old tree gives exactly what his phone gave (washing machine 4 of 9 texts with a frame
+  of their own, order screen 6 of 12), the new 7/9, 12/12, rice cooker 10/11; the misses are 左筒/右筒 on the dial's arc and
+  保温/取消 on two lines. Showing his eight existing multicards: 66 of 74 texts placed, 17 of the 21 that had only the whole
+  picture or a shared frame, every outline on its own label by eye (the flashcard-app screenshot's seven texts, the order
+  screen's six). **Cost:** every learner downloads ~30 MB once, the first time a photo becomes or shows a multicard; ~2 s
+  of the phone's work per photo, inside the 25–45 s the picture call takes anyway.
 - **PaddleOCR on the phone, the owner's test (v637, H: "Go B" — the reader built for Chinese, after v628–v633 showed
   that no prompt and no model on his Token Plan places a multicard's labels):** PP-OCRv4 mobile for Chinese (DB text
   detection 4.7 MB, CTC recognition 10.8 MB, the 6 623-character list) run by onnxruntime-web 1.30 on WebAssembly in one
