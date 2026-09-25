@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=642; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=643; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -6218,6 +6218,18 @@ function pdMatch(texts,lines){ const T=texts.map(pdNorm), L=lines.map(l=>pdNorm(
   T.forEach((z,i)=>{ if(!z) return; L.forEach((lz,j)=>{ if(!lz) return; const sc=pdLcs(z,lz)/Math.max([...z].length,[...lz].length); if(sc>=PD_MATCH) pairs.push({i,j,sc}); }); });
   pairs.sort((a,b)=>b.sc-a.sc); const out=texts.map(()=>null), usedL=new Set();
   for(const p of pairs){ if(out[p.i]||usedL.has(p.j)) continue; out[p.i]=lines[p.j]; usedL.add(p.j); }
+  /* v643 (H: "Why is the rice cooker only 10 of 11 texts?"): a label printed on two lines — 保温 over 取消 on one button —
+     is one text for the AI and two lines for the reader, and neither line alone holds two thirds of it. A text left over
+     may take two lines still free that stand one over the other (overlapping across, the gap under one line's height),
+     read top to bottom at the same PD_MATCH; its place is the box around both */
+  const two=[];
+  T.forEach((z,i)=>{ if(!z||out[i]) return; lines.forEach((a,j)=>{ if(usedL.has(j)||!L[j]) return; lines.forEach((b,k)=>{ if(k===j||usedL.has(k)||!L[k]) return;
+    const h=Math.min(a.h,b.h), gap=b.y-(a.y+a.h), over=Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x);
+    if(b.y<=a.y||gap>h||over<0.5*Math.min(a.w,b.w)) return;
+    const lz=L[j]+L[k], sc=pdLcs(z,lz)/Math.max([...z].length,[...lz].length); if(sc>=PD_MATCH) two.push({i,j,k,sc}); }); }); });
+  two.sort((x,y)=>y.sc-x.sc);
+  for(const p of two){ if(out[p.i]||usedL.has(p.j)||usedL.has(p.k)) continue; const a=lines[p.j], b=lines[p.k], x=Math.min(a.x,b.x), y=a.y;
+    out[p.i]={...a,x,y,w:Math.max(a.x+a.w,b.x+b.w)-x,h:b.y+b.h-y,text:a.text+b.text,two:true}; usedL.add(p.j); usedL.add(p.k); }
   return out; }
 /* CC-CEDICT (simplified -> English gloss), lazily loaded from ./vendor */
 const DICT_HEAD="#cedict v3"; /* the file's own first line, and the only way to tell a cached older copy from this one — v2 at v573 (a reading per sense), v3 at v605 (no gloss cut at 120 characters any more) */
