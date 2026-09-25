@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=645; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=646; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v646","sure card: AI check flags diff?"],
   ["more","v645","Re-read all: report, deck same?"],
   ["photo","v644","every multicard text placed?"],
   ["cards","v642","multicard swipe smooth now?"],
@@ -1309,15 +1310,19 @@ async function rrOne(shot){
   let reg=null, PW=4, PH=3; try{ const bmp=await createImageBitmap(blob); PW=bmp.width; PH=bmp.height; try{ reg=textRegion(bmp); } finally{ bmp.close(); } }catch(e){ logErr("reread",e&&e.message||String(e)); }
   const reg0=reg; if(shared||screenshot) reg=null;
   const lw=AUTO_LW, lh=AUTO_LW*PH/PW, full=!reg||(reg.x1-reg.x>=0.9&&reg.y1-reg.y>=0.9), b=full?{x:0,y:0,x1:1,y1:1}:reg, shaped=full?null:shapeBox(b,lw,lh);
-  const f=shaped||{x:b.x*lw,y:b.y*lh,w:(b.x1-b.x)*lw,h:(b.y1-b.y)*lh}, rect={x:f.x,y:f.y,w:f.w,h:f.h,a:0,lw,lh};
+  const f=shaped||{x:b.x*lw,y:b.y*lh,w:(b.x1-b.x)*lw,h:(b.y1-b.y)*lh};
+  /* v646: a photo that made one card is read from that card's own frame, as the automatic card reads its proposal — the v645 report read every
+     photo whole and compared a whole photo's text with a card H had cut to one sign (绿茶 read as 低糖 beside it) */
+  const own=S.custom.filter(d=>d.shot===shot&&d.kind!=="page"), fr=own.length===1&&!own[0].page&&own[0].frame&&own[0].frame.w*own[0].frame.h<0.9?own[0].frame:null;
+  const rect=fr?{x:fr.x*lw,y:fr.y*lh,w:fr.w*lw,h:fr.h*lh,a:fr.a||0,lw,lh}:{x:f.x,y:f.y,w:f.w,h:f.h,a:0,lw,lh};
   { const N=numsReset(id); N.pre=true; N.photo=[PW,PH]; N.reread=shot; N.prop={r:numRect(rect),kind:full?"whole":shaped?"16:9":"text",hidden:true,reg:reg0?[n4(reg0.x),n4(reg0.y),n4(reg0.x1),n4(reg0.y1)]:null,blocks:reg0&&reg0.blocks||0,shared,screenshot}; }
   logRead(id,`re-read of the photo of ${shot}: frame proposed by the app, ${full?"the whole photo":"the ink rows"}`);
   const ph={id:"rr#"+id,c:"",shot:id,reading:{rect,at:Date.now(),app:true,auto:true}}; RRPH[ph.id]=ph; PENDING[id]=ph.id; AUTO[id]=true;
   const t0=Date.now(), p0=RR_PICS, done=new Promise(r=>{ RRWAIT[id]=r; });
-  cropSign(id,{rect,app:true});
+  cropSign(id,{rect,app:true}); /* the card's own frame is where the automatic card starts, with the quick look and its early picture call, as a new photo's proposal does */
   const out=await Promise.race([done,rrSleep(RR_MAX_MS).then(()=>({kind:"none",why:"no answer within "+RR_MAX_MS/1000+" s"}))]);
   const N=numsFor(id)||{}; rrEnd(id,null);
-  return {shot,old:rrOld(shot),now:out,ms:Date.now()-t0,pics:RR_PICS-p0,sure:!!N.pdSure,weak:!!N.weak,origin,whole:full}; }
+  return {shot,old:rrOld(shot),now:out,ms:Date.now()-t0,pics:RR_PICS-p0,sure:!!N.pdSure,weak:!!N.weak,origin,whole:!fr&&full,frame:!!fr}; }
 const RR_MAX_MS=180000;
 async function rrFinish(id){ const sg=SIGN[id];
   try{ if(sg&&sg.aiPromise) await sg.aiPromise;
@@ -1328,10 +1333,12 @@ async function rrFinish(id){ const sg=SIGN[id];
       const own=fr.filter((f,k)=>!(f.w*f.h>0.5*f.lw*f.lh)&&!fr.some((g,j)=>j!==k&&g.x===f.x&&g.y===f.y&&g.w===f.w&&g.h===f.h)).length;
       return rrEnd(id,{kind:"multi",n:fr.length,own,texts:sg.ai.labels.map(l=>l.zh).join(" · ").slice(0,300)}); }
     const built=sg&&SIGN[id]===sg?await readingCard(id,sg):null;
-    return rrEnd(id,built?{kind:"card",c:built.card.c,p:built.card.p,m:String(built.card.m||"").slice(0,80),src:built.mt&&built.mt.src}:{kind:"none",why:"nothing to save"}); }
+    let check=""; if(built&&SURECHK[id]){ const sc=SURECHK[id]; delete SURECHK[id]; const e=await Promise.race([sc.p,rrSleep(90000).then(()=>null)]); /* v646: the report says what the check beside a sure reading found */
+      check=!e||!e.pic?"the AI's check did not come":e.pic.bad?"the AI found no Chinese text":cjkOnly(e.pic.zh)===cjkOnly(built.card.c)&&!(e.pic.apart&&e.pic.labels)?"the AI agrees":`the AI reads "${e.pic.zh.replace(/\n/g," / ")}" — flagged`; }
+    return rrEnd(id,built?{kind:"card",c:built.card.c,p:built.card.p,m:String(built.card.m||"").slice(0,80),src:built.mt&&built.mt.src,check}:{kind:"none",why:"nothing to save"}); }
   catch(e){ logErr("reread",e&&(e.stack||e.message)||e); return rrEnd(id,{kind:"none",why:"failed: "+(e&&e.message||e)}); } }
 function rrEnd(id,res){ const w=RRWAIT[id]; delete RRWAIT[id]; if(res&&w){ w(res); return; }
-  delete RRPH[PENDING[id]]; delete PENDING[id]; delete AUTO[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; delete EARLY[id]; delete READING[id]; READ_RUN[id]=(READ_RUN[id]||0)+1; dropExtraShot(id); }
+  delete SURECHK[id]; delete RRPH[PENDING[id]]; delete PENDING[id]; delete AUTO[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; delete EARLY[id]; delete READING[id]; READ_RUN[id]=(READ_RUN[id]||0)+1; dropExtraShot(id); }
 function rrLine(){ const R=S.settings.rr; if(!R) return "Reads the photo of every card again with today's reading, one after the other while the app is open, and writes a report. No card changes. It waits while the Camera tab works on a photo of yours.";
   const res=R.res||[], m=res.filter(r=>r.old&&r.old.kind==="multi"&&r.now&&r.now.kind==="multi"), c=res.filter(r=>r.old&&r.old.kind==="card"&&r.now);
   const same=c.filter(r=>r.now.kind==="card"&&cjkOnly(r.now.c)===cjkOnly(r.old.c)).length, secs=res.reduce((a,r)=>a+(r.ms||0),0)/1000, pics=res.filter(r=>r.pics).length;
@@ -1351,10 +1358,10 @@ async function rrRun(){
   finally{ RR_ON=false; RR_LOOP=false; rrShow(); } }
 function rrText(){ const R=S.settings.rr; if(!R) return "No re-read yet.";
   const L=[`Re-read v${R.v} (report v${APP_V}), started ${new Date(R.at).toISOString()}`,rrLine(),""];
-  for(const r of R.res||[]){ const o=r.old||{}, n=r.now||{}, head=`${r.shot} · ${Math.round((r.ms||0)/1000)} s${r.whole?" · read whole":""}${r.origin&&r.origin!=="inbox"?" ("+(r.origin==="album"?"as if from the album":"as recorded")+")":""}${r.pics?" · AI saw the photo":""}${r.sure?" · sure":""}${r.weak?" · weak":""}`;
+  for(const r of R.res||[]){ const o=r.old||{}, n=r.now||{}, head=`${r.shot} · ${Math.round((r.ms||0)/1000)} s${r.frame?" · from its frame":""}${r.whole?" · read whole":""}${r.origin&&r.origin!=="inbox"?" ("+(r.origin==="album"?"as if from the album":"as recorded")+")":""}${r.pics?" · AI saw the photo":""}${r.sure?" · sure":""}${r.weak?" · weak":""}`;
     if(r.skip||r.err){ L.push(head+" · "+(r.skip||r.err)); continue; }
     const was=o.kind==="multi"?`multicard ${o.own} of ${o.n} placed`:`card "${(o.c||"").replace(/\n/g," / ")}"`;
-    const now=n.kind==="multi"?`multicard ${n.own} of ${n.n} placed: ${n.texts}`:n.kind==="card"?`card "${(n.c||"").replace(/\n/g," / ")}" ${n.p||""} = ${n.m||""}${n.src&&n.src!=="llm"?" ("+n.src+")":""}`:`no card (${n.why||"?"})`;
+    const now=n.kind==="multi"?`multicard ${n.own} of ${n.n} placed: ${n.texts}`:n.kind==="card"?`card "${(n.c||"").replace(/\n/g," / ")}" ${n.p||""} = ${n.m||""}${n.src&&n.src!=="llm"?" ("+n.src+")":""}${n.check?" · "+n.check:""}`:`no card (${n.why||"?"})`;
     L.push(head,"  was: "+was,"  now: "+now); }
   return L.join("\n"); }
 async function rrShare(){ const text=rrText(), name="shizi-reread.txt", file=new File([text],name,{type:"text/plain"});
@@ -6284,13 +6291,20 @@ async function pdRead(cv){ const call=await pdLoad(), bm=await createImageBitmap
 function pdAsPass(lines){
   const out=[];
   for(const l of lines){ const chars=[...l.text], n=chars.length; if(!n) continue; const syms=[];
-    chars.forEach((ch,i)=>{ const keep=CJK.test(ch)||SIGN_PUNCT.test(ch)||/^[0-9]$/.test(ch); if(!keep) return;
+    chars.forEach((ch,i)=>{ const keep=CJK.test(ch)||SIGN_PUNCT.test(ch)||/^[0-9A-Za-z ]$/.test(ch); if(!keep) return; /* v646: Latin letters too — inside a Chinese line they are the text (D座电梯, AI实验室, 24H); a line of letters alone still stays out below */
       const b=l.vert?{x0:l.x,x1:l.x+l.w,y0:l.y+l.h*i/n,y1:l.y+l.h*(i+1)/n}:{x0:l.x+l.w*i/n,x1:l.x+l.w*(i+1)/n,y0:l.y,y1:l.y+l.h};
       syms.push({ch,cf:Math.round(((l.cfs&&l.cfs[i])||l.conf)*100),b}); });
+    for(let i=0;i<syms.length;){ if(!/[A-Za-z]/.test(syms[i].ch)){ i++; continue; } let j=i; while(j<syms.length&&/[A-Za-z]/.test(syms[j].ch)) j++; if(j-i>4) syms.splice(i,j-i); else i=j; } /* a run of letters up to four long is part of the line (D座, AI实验室, 24H, SOHO); a longer one is an English name beside the Chinese (雀巢Nestle), which the AI leaves out too */
+    for(let i=syms.length-1;i>=0;i--) if(syms[i].ch===" "&&!(i>0&&i<syms.length-1&&/[0-9A-Za-z]/.test(syms[i-1].ch+syms[i+1].ch))) syms.splice(i,1); /* a space stays only beside a letter or a digit (朝外SOHO B座, 美甲 38元), so it can end a run of letters */
     while(syms.length&&/[、，。：:,.]/.test(syms[0].ch)) syms.shift(); while(syms.length&&/[、，。：:,.]/.test(syms[syms.length-1].ch)) syms.pop();
     const t=syms.map(x=>x.ch).join(""); if(CJK.test(t)) out.push({t,cf:syms.filter(x=>CJK.test(x.ch)).map(x=>x.cf),bx:syms.map(x=>x.b),pd:true}); }
   const hOf=l=>l.bx.length?median(l.bx.map(b=>b.y1-b.y0)):0, hmax=Math.max(0,...out.map(hOf));
-  return out.filter(l=>hOf(l)>=0.45*hmax); }
+  /* v646 (H's Re-read all of 521 photos): fine print is the AI's own rule, under a third of the tallest line (FINE_PRINT) —
+     0.45 dropped real second lines (电动车 / 禁止入园 read as 电动车, 百联地产 / 租售部, 味多美 / 现烤面包坊); a stray single
+     character beside a line of three or more is decoration or a neighbour's edge (朝 / 自助图书馆, 阿诺莱德贸易 / 劳); a line
+     read twice counts once (高峰期不供应 / 高峰期不供应) */
+  const kept=out.filter(l=>hOf(l)>=FINE_PRINT*hmax), big=kept.some(l=>l.cf.length>=3), seen=new Set();
+  return kept.filter(l=>!(big&&l.cf.length===1&&l.t.length<=3)).filter(l=>{ if(seen.has(l.t)) return false; seen.add(l.t); return true; }); }
 /* v638: which line names which text — one to one, the best pairs first. The score is the longest common subsequence of
    their Chinese over the longer of the two, so 肥瘦肉夹馍 goes to 肥瘦肉夹馍¥12/个 (5 of 6) before 优质肥瘦肉夹馍¥16/个 can take it
    (5 of 8), which v637's first-that-fits rule let happen on H's menu board */
@@ -7662,6 +7676,7 @@ const SKEW_TRUST=12; /* an unconfirmed straightening beyond this many degrees is
    that the text check rejects, so picOnBad would have sent the picture anyway and gets the early answer instead — three
    genuinely wasted calls per 40 photos, +7.5 %, far under the relay's 200 a day. */
 const EARLY={}; /* photo id -> {run, base, guesses, at, p} — the picture call already on its way */
+const SURECHK={}; /* v646: photo id -> {run, at, p} — the picture check beside a sure reading of the phone's reader */
 const SKEW_STOP=1.5; /* the reading stops for a good early answer only where the reader did not straighten the frame (v442): deskewBlob leaves anything under 1.5° alone, so this is "no straightening" — a turned frame keeps every pass, since sureAngle (the v333/v334 trim of a turned frame that leaves the photo) needs them, and the field-confirmed posters at −8° and 18° stay on the path that confirmed them */
 const SNAP_ROOM=1, SNAP_MIN=0.15, SNAP_MAX=0.95, SNAP_COL=0.15, SNAP_WIDE=1.6, SNAP_GAP=0.8, SNAP_BAR=1.6, SNAP_STACK=0.5; /* BAR: how much wider than tall a blob must be to be read as one stroke of a character written in bars · STACK: how far apart two of them may stand */
 const SNAP_SQUARE=0.25, SNAP_KEEP=0.65; /* SQUARE: how far the model's own box may be from "its character count of squares" and still count as a measurement · KEEP: how much of such a box's height the snap must keep, or it found something other than the line (v449, H's shopfront 江苏淮扬菜代表品牌) */
@@ -8534,7 +8549,7 @@ async function cropSign(id,opts){
            SKEW_TRUST, because trustAngle needs every pass and below that angle picBase is the same either way — the bytes
            sent are byte for byte what the weak path would send below. Measured: 2 of 40 photos are excluded by it. */
         const pdR=(!ok||several)&&pdP?await pdP:null, pdSkip=!!(pdR&&pdR.sure&&(!several||pdR.rawCjk<=2)); if(stale()) return; /* v641: waited for — a sure reading saves the whole picture call (20–45 s), the wait is Paddle's time past the quick look's (~0–2 s). A board still gets the picture answer, since only it makes a multicard (v457) — but the ink's bands call many a single sign "several" (H's 良品, 韵达, 消防栓 cards), so the phone's reader's own detection decides: two lines of Chinese at most, the small ones counted too. The cost: a real board's picture call leaves up to ~2 s later */
-        if(pdSkip) logRead(id,`${ok?"the quick look found separated blocks":"the quick look found no readable text"}, but the phone's reader read ${pdR.rawCjk===1?"one line":pdR.rawCjk+" lines"} surely — no picture call`);
+        if(pdSkip) logRead(id,`${ok?"the quick look found separated blocks":"the quick look found no readable text"}, but the phone's reader read ${pdR.rawCjk===1?"one line":pdR.rawCjk+" lines"} surely — the reading does not wait for the AI, which checks it beside the card`);
         if((!ok||several)&&!pdSkip&&!EARLY[id]&&Math.abs(dk.angle||0)<SKEW_TRUST&&pictureUp()){
           const eb={orig:r.blob,dk,base}, eg=[...new Set(read.map(l=>l.t).filter(Boolean))].slice(0,6);
           EARLY[id]={run,base:eb,guesses:eg,at:Date.now(),p:aiReadPicture(eb.dk.blob,eg,()=>{},N).then(x=>{picOk();return{pic:x};},e=>{picRefused(e);return{err:e&&e.message||String(e)};})};
@@ -8554,6 +8569,14 @@ async function cropSign(id,opts){
     if(stale()) return;
     if(pdP){ const pd=await pdP; if(stale()) return; /* v639: its pass (read above, beside the quick look); exempt from the two ink-height rules below, and a clear reading of its own counts as two passes agreeing, so the close look skips its copies */
       if(pd.pl.length){ passes.push({lines:pd.pl,img:dk.blob,angle:dk.angle,tightened:false,scale:1,paddle:true,sure:pd.sure}); r.pdClear=pd.clear; r.pdSure=pd.sure; }
+      /* v646 (H: "A", on the Re-read's finding that 4–5 of ~150 sure readings carried a wrong character — 暂时离开 read 时离开,
+         低糖 低下, 唐潮 唐代, 米兰西饼 兰西饼 — which the text check cannot touch, the v143 rule): a sure reading stays the card,
+         made in seconds, and the picture goes to the AI beside it, with no guesses so the answer is its own; when it lands
+         and reads the photo differently, the finished card is flagged and carries the AI's reading as its suggestion
+         (sureCheck). One picture call per sure card. */
+      if(pd.sure&&!EARLY[id]&&!SURECHK[id]&&Math.abs(dk.angle||0)<SKEW_TRUST&&pictureUp()){
+        SURECHK[id]={run,at:Date.now(),p:aiReadPicture(dk.blob,[],()=>{},N).then(x=>{ picOk(); return {pic:x}; },e=>{ picRefused(e); return {err:e&&e.message||String(e)}; })};
+        logRead(id,"the phone's reader is sure — the card is made from it, and the AI checks the picture beside it"); }
       N.pd={ms:pd.ms,t:pd.pl.map(l=>l.t).join("|").slice(0,160),cf:Math.round(meanCf(pd.pl)),good:pd.good,sure:pd.sure,clear:pd.clear};
       logRead(id,`the phone's reader: ${pd.pl.length?pd.pl.map(l=>l.t).join(" | ")+` at ${Math.round(meanCf(pd.pl))} %`:"nothing"} in ${(pd.ms/1000).toFixed(1)} s${pd.sure?" — sure: it is the reading, the other passes are left out":pd.clear?" — clear":pd.good?" — good":""}`); }
     const place=async band=>{ /* nothing placed yet (the first pass had no usable box): the tight passes so far — after the close look's colour passes, again after the whole close look */
@@ -9063,6 +9086,20 @@ async function splitCards(id,sg,ph){
   logRead(id,`${n} cards from this photo: ${rows.slice(0,n).map(c=>c.c).join(", ")}`);
   return n;
 }
+/* v646: the picture answer for a sure reading, when it lands. The card is judged only while it still says what it was
+   made with (a card H has edited meanwhile is his); the same Chinese is a confirmation, anything else flags the card and
+   puts the AI's reading on it as the suggestion the open card already knows how to offer (aiBoxHTML: Accept / Dismiss) */
+function sureCheck(cid,c0,sc,shot){
+  sc.p.then(async e=>{ const d=cardOf(cid); if(!d||d.c!==c0) return;
+    if(!e||!e.pic){ logRead(shot,`the AI's check of the sure reading did not come: ${(e&&e.err)||"no answer"}`); return; }
+    const pic=e.pic, ms=((Date.now()-sc.at)/1000).toFixed(1);
+    if(pic.bad){ d.flag=true; d.flagNote=t("the reading looks wrong"); logRead(shot,`the AI found no Chinese text in the picture (${ms} s) — the sure reading ${c0.replace(/\n/g," / ")} is flagged`); }
+    else if(cjkOnly(pic.zh)===cjkOnly(c0)&&!(pic.apart&&pic.labels)){ logRead(shot,`the AI reads the picture as the phone's reader did (${ms} s)`); return; }
+    else { d.ai={zh:pic.zh,p:pic.p||"",m:pic.m||"",note:pic.apart&&pic.labels?t("the picture may not show this text — check the photo"):"",ok:false,bad:false,at:Date.now(),model:pic.model};
+      d.flag=true; d.flagNote=t("the reading looks unsure — check text, pinyin and meaning");
+      logRead(shot,`the AI reads the picture as ${pic.zh.replace(/\n/g," / ")}${pic.apart&&pic.labels?` (${pic.labels.length} separate texts)`:""} (${ms} s), the phone's reader as ${c0.replace(/\n/g," / ")} — the card is flagged with the AI's reading as its suggestion`); }
+    try{ await idbPut("custom",d); }catch(err){} if(S.mode==="cards"&&!S.editing) render(); });
+}
 async function finishPending(id){
   if(RRPH[PENDING[id]]) return rrFinish(id); /* v645: a re-read ends in the report, never in the deck */
   const sg=SIGN[id], ph=pendingCard(id); if(!ph){ delete PENDING[id]; return; }
@@ -9113,6 +9150,7 @@ async function finishPending(id){
     else { ph.flag=true; ph.flagNote=weak?t("saved before the reading was done, and the reading is weak — check text, pinyin and meaning"):t("saved before the reading was done — check text, pinyin and meaning"); } /* nobody saw the preview (v245, H: "flag cards that were saved before the final stage, with an appropriate comment") */
     if(!ph.flag&&cropDisagrees(ph.frame,sg.region&&sg.region.pic,sg.ai&&sg.ai.labels,PICSEEN[id])){ ph.flag=true; ph.flagNote=t("the picture may not show this text — check the photo"); logRead(id,"the card's frame lies outside everything the AI named — flagged"); } /* v400: the picture is not touched — v380's wide fallback measured 0 of 75 usable cards (6.1 CSS px a character) and H rejected exactly that picture in the field at v382 ("Die Bild crops sind noch falsch"), so this only says so */ /* the card made by itself (v325) and the card saved early from Crop again (v342, H's "Go" on the recommendation — the analysis counts): only a doubtful reading carries the flag */ /* the card made by itself (v325): the row shows it, so only a doubtful reading carries the flag — a weak reader score the AI check then confirmed is no doubt */
     try{ await idbPut("custom",ph); }catch(e){}
+    if(SURECHK[id]){ const sc=SURECHK[id]; delete SURECHK[id]; sureCheck(ph.id,ph.c,sc,id); } /* v646 */
     todoDone(id); /* v509: the card is written — the next start owes this photo nothing */
     if(!auto) delete QSBAD[id];
     if(!auto) QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}.`+(mt.pending?" Translation pending.":"")+(ph.flag?" Flagged for review.":"");
@@ -9123,6 +9161,7 @@ async function finishPending(id){
   autoNext(); /* the next photo of the batch (v411) */
 }
 async function failPending(id,why,msg){
+  delete SURECHK[id];
   if(RRPH[PENDING[id]]) return rrEnd(id,{kind:"none",why:String(why||msg||"")});
   const ph=pendingCard(id); delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; if(!ph) return; if(!ph.reading){ todoDone(id); return; } /* the card is there with a text of H's own: the photo has its card (v509) */
   dropExtraShot(id);
