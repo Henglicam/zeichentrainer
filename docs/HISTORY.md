@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v643
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v644
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,27 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v644, 2026-09-25)
+- **Every multicard text finds its place (v644, H: "Please also analyze other incomplete cards and find a fix that
+  generally works"):** all 24 multicard photos of the seven Zoom data sets that carry the AI's recorded answer replayed
+  (`replay3.js`: the photo through From album, the picture call answered with the recorded reply, the phone's reader's
+  lines dumped beside it). After v643, 212 of 227 texts had a place of their own; the 15 left were of **two kinds**:
+  (1) **a label the reader splits side by side** — 个人版 | Lite套餐 on his Token Plan screen (one text for the AI, two
+  lines for the reader, neither with two thirds of it); (2) **text the reader does not detect at all** — 左筒 and 右筒,
+  printed at 45° along a washing machine's dial (7 photos). The fixes: (1) v643's two-line rule in `pdMatch` also takes
+  two free lines **side by side on one row** (overlapping down by half the smaller, the gap under one and a half line
+  heights), read left to right; (2) **the AI's own box, checked against the reader on the same photo** (`aiBoxCal`): the
+  labels the reader placed give pairs (the AI's box, the reader's box); their centres are fitted per axis by one scale and
+  one shift, and when three or more agree — median error under `AI_CAL_ERR` 0.5 of a label's size, none over twice that —
+  a label that has **no place at all** takes the AI's box through the same fit, unless it would cover a quarter of
+  another label's place. On a photo where the model's boxes are a drawing (v386) the fit fails and nothing changes; a
+  place the reader or the old label search gave is never replaced (a first cut did replace them — it moved
+  获取专属APIKey and one 左筒 that already had places — and was narrowed). **Measured:** 227 of 227 placed, nothing that
+  had a place moved; every new box checked by eye on the drawn photos (右筒 on the 14-text photo, 左筒/右筒 on the dial
+  twice, 个人版Lite套餐) — on the dial the boxes are a little loose but centred. **What older multicards get:** the
+  side-by-side rule works at display too (`refineShot` uses `pdMatch`), the AI-box rule does not — the model's boxes are
+  not stored on the card, so an old multicard's 左筒 keeps the whole picture until the photo is made again.
 
 ## Current state (PWA v643, 2026-09-25)
 - **A label on two lines finds its place (v643, H: "Why is the rice cooker only 10 of 11 texts? What will you do to fix
