@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v632
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v633
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -39,7 +39,14 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
-## Current state (PWA v632, 2026-09-25)
+## Current state (PWA v633, 2026-09-25)
+- **The faster-picture-model switch is gone (v633, H: "Leave it, remove the switch"):** v632's round sent six photos to
+  qwen3.7-flash and the Token Plan endpoint answered 404 "Model not exist." every time, as it had for qwen3-vl-flash —
+  the plan (Personal Lite, `sk-sp-`) serves only its own models, and no faster vision model is among them. Every photo
+  still made its cards through qwen3.7-plus (32–63 s). The only way to a faster model is a separate pay-as-you-go key
+  (`sk-ws-`), which H declined: the speed stays as it is. The switch, its field, `FAST_PIC` and the fallback wrapper are
+  removed, and `aiReadPicture` is byte for byte v630's again. **Measured and dropped:** qwen3-vl-flash and qwen3.7-flash
+  on the Token Plan (404, both).
 - **The faster picture model's default is qwen3.7-flash (v632, H: "Try qwen3.7-flash"):** v631's first round sent three
   panels to qwen3-vl-flash and the Token Plan endpoint answered 404 "Model not exist." every time — the fallback did its
   job, each photo made its cards through qwen3.7-plus in 29–43 s. H's screenshot of the price list names qwen3.7-flash
