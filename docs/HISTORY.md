@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v629
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v630
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -39,7 +39,19 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
-## Current state (PWA v629, 2026-09-25)
+## Current state (PWA v630, 2026-09-25)
+- **The measuring grid is gone again (v630, H after one round with it on: "es dauert viel zu lange!" — the photo to the
+  finished card):** his Zoom data of v629 holds the same seven panels and signs read with the grid, beside v627's reading
+  of them without it. **Measured and dropped:** (1) the boxes did not land closer — the ink search inside the model's box
+  was sure on 14 of these texts with the grid against about 20 without; (2) the grid pulls the model onto round numbers,
+  so `roundGrid` judged EVERY answer a drawing (without the grid three of eight were measurements), which sends every photo
+  down the reader's own label search (`readLabels`): 3–16 s a photo, 61 s once (the rice cooker, whose labels the reader
+  then found all by itself). The picture call itself took as long as before (15–45 s; one 96 s outlier). So the grid
+  cost time and bought nothing; the switch, `drawGrid` and the prompt's sentence are removed and the question goes out
+  word for word as before v629 (checked: the request is identical with the old setting still on). **Where the time goes
+  without it** (v627's records, 8 photos from the album, 23–52 s each): the model's picture answer 15–45 s of it, the
+  reader's quick look 1–6 s, the label search 0.4–8 s. The picture model's own time is the one big lever left, and it is
+  H's call (a faster model reads worse).
 - **A measuring grid on the AI's picture, the owner's test (v629, H's "Go B" after v628's record):** the model's label
   boxes on a panel are a drawing, half to a whole label off, so every label the reader cannot name takes the whole
   picture. Of the two ways to ask again — a second picture call per unplaced label (A, 3–6 calls a panel against the
