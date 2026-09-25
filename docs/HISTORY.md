@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v638
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v639
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,38 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v639, 2026-09-25)
+- **The phone's own reader reads single cards too (v639, H: "Kann Paddle auch einzelne Karten besser lesen?", then "Go" on
+  "measure head-to-head; if it wins, add it as one more competing reading; where it reads cleanly, skip the AI picture
+  call"):** head-to-head on the card pictures of his 17 newest single cards (the Zoom data of v637), PaddleOCR alone found
+  64 % of their characters, Tesseract's pipeline 25 %. Built as one more pass: `cropSign` starts `pdRead` on the whole
+  straightened frame right after `inkHeight`, so it runs on the page while the quick look runs in its worker; after the
+  first pass its lines join `passes` through `pdAsPass` (the reader's own line shape: CJK, sign punctuation and digits,
+  a per-character confidence from the recognizer's probability, boxes cut evenly along the line, fine print under 0.45 of
+  the tallest line dropped), flagged `paddle`/`pd`. **Two ink-height rules exempt it:** `lineFit` (maxLines) and
+  `sizeFitOf` — measured: on the signpost 706北一街 and the emergency map the frame's ink height had measured the whole
+  post (maxLines 1, Paddle's characters at 0.10–0.15 of it), and the right reading scored 2 and 0 against Tesseract's
+  one-character garbage at 78 and 64. **The whole frame, not the close look's tight crop:** built first on the crop,
+  it lost 招商银行 (the crop, cut around the first pass's boxes, held only 信用卡) and read 恩尼美甲 half; the whole frame
+  took found 0.35 → 0.44. A clear Paddle reading (95 %, all dictionary words) counts as two passes agreeing, so the close
+  look skips its copies (`r.pdClear`). Diagnostics: "the phone's reader: … at N % in s" and `N.pd`; the pass
+  scoreboard marks its row `pd`. **Measured (rdcards.js, the full pipeline, AI off, 17 card pictures, old = v638 on the
+  same harness):** characters found 0.17 → 0.44, of what it read right 0.19 → 0.42, weak readings 16 → 14, mean
+  7.1 → 8.0 s. Now right: 706北一街/798创意广场 (was 上), 贵州茅台酒 (was 打), 夏季限定鲜藕上市, 招商银行 (was
+  招商银行/停用下4); still wrong: 北京幸福 (Paddle 幸北|福京, read across two columns), 杨国福 (Paddle 杨國福 at 85 %
+  loses to 一一), 福 and 中华人民共和国地理标志 (Paddle nothing). **The picture-call skip, measured and cut down:**
+  holding the quick look's early picture call until Paddle was done, and skipping it on a good reading, skipped 2 of 17 —
+  both multi-line boards (the signpost, the emergency map), which only the picture answer can make a multicard (v457), so
+  the skip is limited to readings of **two lines at most**, which left 0 of 17 skipped while the wait cost up to 2 s on
+  every other photo. So the skip now **never waits**: it applies only when Paddle has already finished when the quick
+  look decides (`pdDone`). **The speed lever H hoped for is therefore not delivered on his cards:** the weak ones still go
+  to the AI, and what v639 buys is a better reading where the AI is not asked or not reached (offline, the relay's cap),
+  a strong reading on 2 more of 17 cards (made without waiting for the picture answer), and the text check starting from
+  a real text. Multicards unchanged: `replay.js` on all 8 of v637's multicards still splits and places as v638; the Learn
+  zoom (`az.js`) and Add a text (`addtext.js`) suites pass. Paddle runs on the page's thread (~2 s, 5.8 s the first time
+  on H's phone for a multicard) — whether the camera tab's sweep stutters meanwhile is **not yet field-checked**.
+  No update note: the AI's answer still decides most cards.
 
 ## Current state (PWA v638, 2026-09-25)
 - **The phone's own reader places a multicard's texts (v638, H's phone answered v637's test: "New reader: 93 of 103 texts

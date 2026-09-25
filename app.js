@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=638; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=639; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v639","card readings, sweep smooth?"],
   ["photo","v638","multicard labels on their lines"],
   ["cards","v635","Add a text on a multicard"],
   ["cards","v634","pinch a multicard, tap a text"],
@@ -6141,12 +6142,26 @@ async function pdRecognize(m,cv,b){
   const px=g.getImageData(0,0,Wr,PD_REC_H).data, n=Wr*PD_REC_H, data=new Float32Array(3*n);
   for(let i=0;i<n;i++) for(let ch=0;ch<3;ch++) data[ch*n+i]=(px[i*4+ch]/255-0.5)/0.5;
   const out=await m.rec.run({[m.rec.inputNames[0]]:new ort.Tensor("float32",data,[1,3,PD_REC_H,Wr])}), o=out[m.rec.outputNames[0]], T=o.dims[1], C=o.dims[2], v=o.data;
-  let text="", conf=0, cn=0, last=0;
-  for(let t=0;t<T;t++){ let bi=0,bv=-Infinity; for(let ci=0;ci<C;ci++){ const x=v[t*C+ci]; if(x>bv){ bv=x; bi=ci; } } if(bi&&bi!==last){ text+=m.keys[bi]||""; conf+=bv; cn++; } last=bi; }
-  return {text,conf:cn?conf/cn:0,vert}; }
+  let text="", conf=0, cn=0, last=0; const cfs=[];
+  for(let t=0;t<T;t++){ let bi=0,bv=-Infinity; for(let ci=0;ci<C;ci++){ const x=v[t*C+ci]; if(x>bv){ bv=x; bi=ci; } } if(bi&&bi!==last){ const k=m.keys[bi]||""; text+=k; cfs.push(...[...k].map(()=>bv)); conf+=bv; cn++; } last=bi; }
+  return {text,conf:cn?conf/cn:0,cfs,vert}; }
 async function pdRead(cv){ const m=await pdLoad(), t0=performance.now(), bs=await pdDetect(m,cv), t1=performance.now(), out=[];
   for(const b of bs){ const r=await pdRecognize(m,cv,b); if(r.text) out.push({...b,...r}); await yieldNow(); }
   out.ms={det:Math.round(t1-t0),rec:Math.round(performance.now()-t1)}; return out; }
+/* v639: the phone's reader as one more pass of the reading — its lines in the reader's own shape: the characters, sign
+   punctuation and digits Tesseract's pass keeps (letters stay out), a confidence per Chinese character on Tesseract's
+   0–100 scale (the recognizer's own probability), a box per character cut evenly along the line, and the fine print
+   beside taller text left out as readPass does */
+function pdAsPass(lines){
+  const out=[];
+  for(const l of lines){ const chars=[...l.text], n=chars.length; if(!n) continue; const syms=[];
+    chars.forEach((ch,i)=>{ const keep=CJK.test(ch)||SIGN_PUNCT.test(ch)||/^[0-9]$/.test(ch); if(!keep) return;
+      const b=l.vert?{x0:l.x,x1:l.x+l.w,y0:l.y+l.h*i/n,y1:l.y+l.h*(i+1)/n}:{x0:l.x+l.w*i/n,x1:l.x+l.w*(i+1)/n,y0:l.y,y1:l.y+l.h};
+      syms.push({ch,cf:Math.round(((l.cfs&&l.cfs[i])||l.conf)*100),b}); });
+    while(syms.length&&/[、，。：:,.]/.test(syms[0].ch)) syms.shift(); while(syms.length&&/[、，。：:,.]/.test(syms[syms.length-1].ch)) syms.pop();
+    const t=syms.map(x=>x.ch).join(""); if(CJK.test(t)) out.push({t,cf:syms.filter(x=>CJK.test(x.ch)).map(x=>x.cf),bx:syms.map(x=>x.b),pd:true}); }
+  const hOf=l=>l.bx.length?median(l.bx.map(b=>b.y1-b.y0)):0, hmax=Math.max(0,...out.map(hOf));
+  return out.filter(l=>hOf(l)>=0.45*hmax); }
 /* v638: which line names which text — one to one, the best pairs first. The score is the longest common subsequence of
    their Chinese over the longer of the two, so 肥瘦肉夹馍 goes to 肥瘦肉夹馍¥12/个 (5 of 6) before 优质肥瘦肉夹馍¥16/个 can take it
    (5 of 8), which v637's first-that-fits rule let happen on H's menu board */
@@ -7239,7 +7254,7 @@ function readingScore(ls,Hink){
 /* readings whose boxes are far smaller than the frame's ink height are fragments of the decoration (v98); the gates use
    the effective score too (v100, H's granite sign: a soup of seventy fragments scored 183 raw, so neither the copies nor
    the traditional reader nor the whole-frame passes ever ran — five passes instead of forty) */
-function sizeFitOf(lines,Hink){ if(!Hink) return 1; const h=boxHeight(lines); if(!h) return 1; const q=h/Hink; return q>=0.5?1:Math.pow(q/0.5,2); } /* from half the ink height down: decoration taller than the text (stripes, a ribbon) inflates the ink height by up to 2× */
+function sizeFitOf(lines,Hink){ if(!Hink||lines.length&&lines.every(l=>l.pd)) return 1; const h=boxHeight(lines); if(!h) return 1; const q=h/Hink; return q>=0.5?1:Math.pow(q/0.5,2); } /* from half the ink height down: decoration taller than the text (stripes, a ribbon) inflates the ink height by up to 2× */
 function effScore(lines,Hink){ return readingScore(lines,Hink)*sizeFitOf(lines,Hink); } /* a declaration, so the harness can stand it down as it does textLike (v324) */
 async function secondLook(w,dk,passes,status,r,Hink){
   const first=passes[0].lines, boxes=first.flatMap(l=>l.bx).filter(Boolean);
@@ -7298,7 +7313,7 @@ async function secondLook(w,dk,passes,status,r,Hink){
        more — the black-and-white and chromaticity copies exist for light-on-colour and shaded text, where the colour
        passes are not clear; on a clean print sign they only lose (measured: the ten regression images read the same) */
     const clear=p=>meanCf(p.lines)>=95&&dictCover(p.lines)>=1&&p.lines.map(l=>l.t).join("").replace(/[^\u4e00-\u9fff]/g,"").length>=2;
-    const texts=passes.filter(p=>p.tightened&&clear(p)).map(p=>p.lines.map(l=>l.t).join("\n")), agreed=texts.some((t,i)=>texts.indexOf(t)!==i);
+    const texts=passes.filter(p=>p.tightened&&clear(p)).map(p=>p.lines.map(l=>l.t).join("\n")), agreed=!!r.pdClear||texts.some((t,i)=>texts.indexOf(t)!==i);
     const weak=()=>Math.max(...passes.map(p=>effScore(p.lines,Hink)))<180;
     /* the traditional reader's chain — 18 passes one after another on its own worker — used to wait for every simplified
        pass; when the colour passes are already weak it now starts beside the simplified copies and its results are kept
@@ -8329,6 +8344,16 @@ async function cropSign(id,opts){
        ten passes agreeing on a three-character reading */
     const Hink=await (async()=>{ const b=await createImageBitmap(dk.blob); try{ r.frameH=b.height; N.copy=[b.width,b.height]; return inkHeight(b); } finally{ b.close(); } })(); r.ink=Math.round(Hink);
     N.ink=n1(Hink); N.frameH=r.frameH; N.dk=n4(dk.angle||0); /* v399: the angle unrounded — the log says "straightened by N°" in whole degrees, and every gate below is a function of Hink, which the log never states at all */
+    /* v639 (H: "Kann Paddle auch einzelne Karten besser lesen?", then "Go"): the phone's reader reads the whole straightened
+       frame, started here so it runs on the page while the quick look runs in its worker — on his 17 newest single cards it
+       found 64 % of their characters where this reader's best pass found 25 %. Its lines become one more pass below; read
+       well (effScore at WEAK_READ, two lines at most) on a photo that is not a board and done before the quick look, the
+       quick look's early picture call is not sent at all. The whole frame, not the close look's crop: that crop is cut
+       around the first pass's boxes, and where those were garbage it cut the text in half (恩尼美甲, 招商银行) */
+    let pdDone=null; const pdP=PD_ON?(async()=>{ const t0=Date.now(); try{ const b=await createImageBitmap(dk.blob), cvp=document.createElement("canvas"); cvp.width=b.width; cvp.height=b.height; cvp.getContext("2d").drawImage(b,0,0); b.close();
+        const pl=pdAsPass(await pdRead(cvp)), good=pl.length>0&&effScore(pl,Hink)>=WEAK_READ, clear=meanCf(pl)>=95&&dictCover(pl)>=1&&pl.map(l=>l.t).join("").replace(/[^\u4e00-\u9fff]/g,"").length>=2;
+        return pdDone={pl,good,clear,ms:Date.now()-t0}; }
+      catch(e){ logErr("paddle",e&&e.message||String(e)); return {pl:[],good:false,clear:false,ms:Date.now()-t0}; } })():null;
     let placedCut=null; /* the frame placed on the text (v288): its cut is the card image and what the AI gets */
     let placedText=""; /* v486: the text the reader placed that frame on, when the placement came from one definite reading (rectOfLines) */
     const placeRect=async (rect,by,txt)=>{ const cut=await frameOnText(id,r.blob,base,rect,dk.angle||0,by,null,true); if(stale()) return; if(cut){ placedCut=cut; if(txt) placedText=txt; renderShots(); } }; /* sure: the reader's placements come from lines that pass textLike on the straightened copy */
@@ -8343,7 +8368,9 @@ async function cropSign(id,opts){
         /* the reading will almost certainly end weak: send the picture now instead of after the passes (v439). Only under
            SKEW_TRUST, because trustAngle needs every pass and below that angle picBase is the same either way — the bytes
            sent are byte for byte what the weak path would send below. Measured: 2 of 40 photos are excluded by it. */
-        if((!ok||several)&&!EARLY[id]&&Math.abs(dk.angle||0)<SKEW_TRUST&&pictureUp()){
+        const pdR=!ok&&!several?pdDone:null, pdSkip=!!(pdR&&pdR.good&&pdR.pl.length<=2); /* never waited for: holding the call back cost up to 2 s on 15 of H's 17 cards to save it on none of them; two lines at most: three or more may be a board's plates (H's signpost 706北一街, the emergency map), and only the picture answer can make that a multicard (v457) */
+        if(pdSkip) logRead(id,"the quick look found no readable text, but the phone's reader did — no early picture call");
+        if((!ok||several)&&!pdSkip&&!EARLY[id]&&Math.abs(dk.angle||0)<SKEW_TRUST&&pictureUp()){
           const eb={orig:r.blob,dk,base}, eg=[...new Set(read.map(l=>l.t).filter(Boolean))].slice(0,6);
           EARLY[id]={run,base:eb,guesses:eg,at:Date.now(),p:aiReadPicture(eb.dk.blob,eg,()=>{},N).then(x=>{picOk();return{pic:x};},e=>{picRefused(e);return{err:e&&e.message||String(e)};})};
           logRead(id,`${ok?`the quick look read the text but found it in ${blocks} separated blocks — a board, not one sign`:"the quick look found no readable text"} — the AI gets the picture now, beside the reading (${eg.length} guesses)`);
@@ -8360,6 +8387,10 @@ async function cropSign(id,opts){
     status("reading the text …");
     const passes=[{lines:await readPass(w,dk.blob,status),img:dk.blob,angle:dk.angle,tightened:false}];
     if(stale()) return;
+    if(pdP){ const pd=await pdP; if(stale()) return; /* v639: its pass (read above, beside the quick look); exempt from the two ink-height rules below, and a clear reading of its own counts as two passes agreeing, so the close look skips its copies */
+      if(pd.pl.length){ passes.push({lines:pd.pl,img:dk.blob,angle:dk.angle,tightened:false,scale:1,paddle:true}); r.pdClear=pd.clear; }
+      N.pd={ms:pd.ms,t:pd.pl.map(l=>l.t).join("|").slice(0,160),cf:Math.round(meanCf(pd.pl)),good:pd.good,clear:pd.clear};
+      logRead(id,`the phone's reader: ${pd.pl.length?pd.pl.map(l=>l.t).join(" | ")+` at ${Math.round(meanCf(pd.pl))} %`:"nothing"} in ${(pd.ms/1000).toFixed(1)} s${pd.clear?" — clear":pd.good?" — good":""}`); }
     const place=async band=>{ /* nothing placed yet (the first pass had no usable box): the tight passes so far — after the close look's colour passes, again after the whole close look */
       if(stale()||!(PENDING[id]&&!RECROP[id]?READ_APP[id]&&!PLACED[id]:CROP&&CROP.id===id&&(CROP.hidden||(CROP.proposed&&!CROP.followed)))) return; /* the frame still the app's — hidden, or shown by the 2 s fallback and untouched (v310); a card made by itself while nothing was placed (v325) */
       const tight=passes.filter(p=>p.tightened&&p.lines.length&&!p.tra&&p.scale!=="merged").map(p=>({...p,lines:tallLines(p.lines,Hink)})).filter(p=>p.lines.length&&textLike(p.lines)); if(!tight.length||!band) return; /* without the fine print (v320) */ /* the simplified reader's tight passes as read (the traditional reader's lines are converted, the merged pass is a composite), and only those that look like text (v296) */
@@ -8384,19 +8415,22 @@ async function cropSign(id,opts){
       bmp.close();
       if(stale()) return;
     }
+    /* v639: the phone's reader is exempt from both ink-height rules (maxLines here, sizeFitOf's lines marked pd) — its detector
+       finds the text itself, and where it read H's signposts right the frame's ink height had measured the whole post (maxLines 1,
+       its characters at 0.1–0.15 of it), so both rules threw away the one reading that was right */
     /* the frame can hold only so many lines of its own text height (v137, H's bicycle sticker 减震单车: a whole-frame
        pass read the sticker's wave pattern as a second line 一一八位, the count doubled and the soup beat four passes
        that agreed on 减震): a pass with more lines than fit is penalised quadratically — its text stays as read (cutting
        the extra lines instead once removed a soup's fragment penalty and let a three-character wave line win) */
     const maxLines=Hink?Math.max(1,Math.floor(r.frameH/(0.9*Hink))):99; r.maxLines=maxLines; N.maxLines=maxLines; /* v399 */
-    const lineFit=p=>p.lines.length>maxLines?Math.pow(maxLines/p.lines.length,2):1;
+    const lineFit=p=>!p.paddle&&p.lines.length>maxLines?Math.pow(maxLines/p.lines.length,2):1;
     /* agreement counts: a text several passes produced beats a single pass's near-equal score (v96: 业主直租 ×3 lost a tie to 业主直祖 ×1) */
     const textOf=p=>p.lines.map(x=>x.t).join("\n"), agree=new Map(); passes.forEach(p=>{ const tx=textOf(p); if(tx) agree.set(tx,(agree.get(tx)||0)+1); });
     const hOfPass=p=>boxHeight(p.lines);
     const sizeFit=p=>sizeFitOf(p.lines,Hink);
     const score=p=>readingScore(p.lines,Hink)*Math.min(1.5,1+0.1*((agree.get(textOf(p))||1)-1))*sizeFit(p)*lineFit(p);
     passes.sort((a,b)=>score(b)-score(a));
-    r.passes=passes.map(p=>({s:Math.round(score(p)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),h:Hink?+(hOfPass(p)/Hink).toFixed(2):null,tight:p.tightened,bw:!!p.bw,ch:!!p.chroma,tra:!!p.tra,...(lineFit(p)<1?{over:p.lines.length-maxLines}:{})}));
+    r.passes=passes.map(p=>({s:Math.round(score(p)),cf:Math.round(meanCf(p.lines)),cov:+dictCover(p.lines).toFixed(2),t:p.lines.map(l=>l.t).join("|"),k:typeof p.scale==="string"?p.scale:+(p.scale||1).toFixed(2),h:Hink?+(hOfPass(p)/Hink).toFixed(2):null,tight:p.tightened,bw:!!p.bw,ch:!!p.chroma,tra:!!p.tra,...(p.paddle?{pd:true}:{}),...(lineFit(p)<1?{over:p.lines.length-maxLines}:{})}));
     N.passes=r.passes; saveReadLog(N); /* v479: on the reading's own record, so the "passes:" line cannot belong to a different photo than the "numbers:" line under it */
     const best=passes[0], lines=best.lines;
     N.eff=n1(effScore(lines,Hink)); N.weak=N.eff<WEAK_READ; N.nPass=passes.length; /* v399: effScore >= WEAK_READ decides whether the AI is asked at all, and the log states neither it nor Hink */
