@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v630
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v631
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -39,7 +39,18 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
-## Current state (PWA v630, 2026-09-25)
+## Current state (PWA v631, 2026-09-25)
+- **A faster picture model, the owner's test (v631, H's "Go" after v630's finding that the picture model's answer is
+  15–45 s of every photo's 23–52 s):** Owner tools → Zoom check carries "Faster picture model (test, this phone only,
+  Qwen)" and a field for the model's name (`fastPic`/`fastPicModel`, empty means `FAST_PIC` "qwen3-vl-flash"). With it
+  on and Qwen the picture provider, `aiReadPicture` sends the picture to that model; the reading's record names it, and
+  the AI log's `model` and `ms` carry the speed into the Zoom data, beside v627's readings of the same kind of panel. **H's
+  key is a Token Plan (Personal Lite) whose models are not known here**, so a refusal of the test model (a 4xx other
+  than 429) goes straight to the normal model for the same photo, with a line in the record: the test can cost one wasted
+  call, never a card, and never trips v472's refusal pause. Nothing else about the answer's handling changes. Checked in
+  the harness, four cases: off (qwen3.7-plus), on (qwen3-vl-flash), on with another name typed (that name), on and
+  refused with a 400 (the flash call, then qwen3.7-plus, and the record says why); the row screenshotted at 390 px light
+  and 360 px dark. **Not known:** whether the Token Plan takes the flash model, and whether it reads H's panels as well.
 - **The measuring grid is gone again (v630, H after one round with it on: "es dauert viel zu lange!" — the photo to the
   finished card):** his Zoom data of v629 holds the same seven panels and signs read with the grid, beside v627's reading
   of them without it. **Measured and dropped:** (1) the boxes did not land closer — the ink search inside the model's box

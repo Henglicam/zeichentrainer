@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=630; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=631; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v631","faster picture model: speed?"],
   ["learn","v626","zoom never tight on a wrong spot"],
   ["cards","v620","multicard frames on their text"],
   ["learn","v616","recap reading = card after crop"],
@@ -1637,12 +1638,25 @@ function picRefused(err){ const st=err&&err.status; if(st>=400&&st<500&&st!==429
 function picOk(){ PIC_DOWN_AT=0; PIC_DOWN_WHY=""; }
 const PIC_DOWN_TEXT=()=>`the picture provider refused the last call and is not asked again for ${Math.round(PIC_DOWN/60000)} minutes: ${PIC_DOWN_WHY}`;
 function pictureUp(){ return !!pictureProvider()&&aiAutoOn()&&navigator.onLine&&!picDown(); } /* the one switch covers text and pictures (v193) */
+/* v631 (H: "es dauert viel zu lange!", then "Go" on trying a faster picture model): his records put 15–45 s of every
+   photo's 23–52 s in the picture model's answer (qwen3.7-plus), so the owner's switch under Zoom check sends the picture
+   to a faster model (FAST_PIC, editable, this phone only) and the Zoom data compares time and reading. His key is a Token
+   Plan whose models are not known here: a refusal of the test model (a 4xx other than 429) goes straight to the normal
+   model for the same photo, and the record says so — the test can cost one wasted call, never a card. */
+const FAST_PIC="qwen3-vl-flash", fastPic=pv=>pv==="qwen"&&S.settings.fastPic?(String(S.settings.fastPicModel||"").trim()||FAST_PIC):"";
 async function aiReadPicture(blob,alts,status,rec){
+  const pv=pictureProvider(), fast=pv?fastPic(pv):"";
+  if(!fast) return aiReadPicture0(blob,alts,status,rec,"");
+  try{ return await aiReadPicture0(blob,alts,status,rec,fast); }
+  catch(err){ const st=err&&err.status; if(!(st>=400&&st<500&&st!==429)) throw err;
+    logRead(rec&&rec.shot,`the faster picture model ${fast} was refused (${st}) — the normal model reads this photo`); return aiReadPicture0(blob,alts,status,rec,""); } }
+async function aiReadPicture0(blob,alts,status,rec,modelOver){
   const pv=pictureProvider(); if(!pv) throw new Error("no picture provider");
-  const key=aiKey(pv), model=pictureModel(pv), pic=await pictureJpeg(blob), relay=!key&&viaRelay(pv);
+  const key=aiKey(pv), model=modelOver||pictureModel(pv), pic=await pictureJpeg(blob), relay=!key&&viaRelay(pv);
   const sys=picSystem(); if(rec) rec.prompt=[sys.length,strHash(sys)]; /* v399: picSystem() is 7 200 characters and changed at v361, v363, v367, v377, v449 and v455, so an answer cannot be attributed to a prompt without a fingerprint — the version says which code, this says which words went out */
   const text=`Read the Chinese text on this picture (${pic.w}×${pic.h} pixels). The reader's guesses: ${alts.length?alts.map(a=>a.replace(/\n/g," / ")).join(" | "):"none"}.`; /* the size, so the box comes in its pixels (v294 — fractions came out shifted by a tenth on H's poster) */
   const req=`[picture ${pic.w}×${pic.h} JPEG, ${pic.kb} KB] ${text}`; /* the log never carries the picture */
+  if(rec&&modelOver){ rec.fastPic=modelOver; logRead(rec.shot,`the picture goes to the faster model ${modelOver} (the owner's test, v631)`); }
   status&&status("Asking the AI about the picture …");
   let r; const t0=Date.now();
   try{
@@ -2804,7 +2818,7 @@ function renderMore(main){
     <div class="listhead">Diagnostics</div>
     <div class="mrow"><div style="flex:1"><div class="t">Diagnostics</div><div class="s" id="diag-status">${LAST_READ.ring.length} photo${LAST_READ.ring.length===1?"":"s"} logged, ${AILOG.length} AI exchange${AILOG.length===1?"":"s"}, ${ERRLOG.length} error${ERRLOG.length===1?"":"s"}.</div><div class="fieldacts"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button><button class="btn mini" id="diag-copy">Copy</button></div></div></div>
     <pre class="diag" id="diag-out" hidden></pre>
-    <div class="mrow"><div style="flex:1"><div class="t">Zoom check</div><div class="s" id="zc-status">${ZCHECK?esc(ZCHECK.line)+".":`Finds every character of the newest ${ZC_N} photo cards the way Learn's zoom does. Share sends the pictures with the boxes drawn: green on the ink, orange unsure, red the estimate, blue the frame; the newest ${ZC_PAGES} multicards follow, green where a region snapped onto its text. Data sends the pictures themselves, as one PDF.`}</div><div class="fieldacts"><button class="btn mini" id="zc-run">Run</button><button class="btn mini" id="zc-share">Share</button><button class="btn mini" id="zc-data">Data</button></div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">Zoom check</div><div class="s" id="zc-status">${ZCHECK?esc(ZCHECK.line)+".":`Finds every character of the newest ${ZC_N} photo cards the way Learn's zoom does. Share sends the pictures with the boxes drawn: green on the ink, orange unsure, red the estimate, blue the frame; the newest ${ZC_PAGES} multicards follow, green where a region snapped onto its text. Data sends the pictures themselves, as one PDF.`}</div><div class="fieldacts"><button class="btn mini" id="zc-run">Run</button><button class="btn mini" id="zc-share">Share</button><button class="btn mini" id="zc-data">Data</button></div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="zc-fast"${S.settings.fastPic?" checked":""}> Faster picture model (test, this phone only, Qwen)</label><div class="field" style="margin:6px 0 0"><input id="zc-fastm" class="mono" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${FAST_PIC}" value="${esc(S.settings.fastPicModel||"")}"></div></div></div>
     <div class="mrow"><div style="flex:1"><div class="t">Still to test</div><div class="s" id="field-status">${fieldNote()}</div><div class="fieldacts"><button class="btn mini" id="field-show">Show</button><button class="btn mini" id="field-copy">Copy</button></div></div></div>
     <pre class="diag" id="field-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"install")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div><div class="fieldacts"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button><button class="btn mini" id="users-copy">Copy</button></div></div></div>
@@ -2848,6 +2862,7 @@ function renderMore(main){
     $("#diag-share").onclick=shareDiag;
     { const zs=$("#zc-status"), zr=$("#zc-run"), zh=$("#zc-share"); /* v618 */
       if(zr) zr.onclick=async()=>{ zr.disabled=true; try{ await zoomCheck(zs); zs.textContent=ZCHECK.line+"."; }catch(e){ zs.textContent="The check failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zr.disabled=false; };
+      { const zf=$("#zc-fast"), zm=$("#zc-fastm"); if(zf) zf.onchange=()=>setSetting("fastPic",zf.checked); if(zm) zm.onchange=()=>setSetting("fastPicModel",zm.value.trim()); } /* v631 */
       { const zd=$("#zc-data"); if(zd) zd.onclick=async()=>{ zd.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); await shareZoomData(zs); }catch(e){ zs.textContent="The data failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zd.disabled=false; }; }
       if(zh) zh.onclick=async()=>{ zh.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); await shareZoomSheet(zs); }catch(e){ zs.textContent="The sheet failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zh.disabled=false; }; }
     $("#field-show").onclick=()=>{ const o=$("#field-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=fieldText(); };
