@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v645
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v646
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,33 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v646, 2026-09-25)
+- **H's Re-read all of 521 photos, and what came of it (v646, H pasted the report; the findings offered as four reading
+  rules plus a choice, H: "A"):** the report — multicards 491 of 493 texts placed (were 319 of 488), 13 s a photo, the AI
+  saw 319 of 521, sure readings 3–5 s, cards 336 of 471 reading as the card says — showed four faults, all on the phone's
+  reader's sure path (~150 cards), and one fault of the report itself. **(1) Latin letters dropped** inside Chinese lines
+  (D座电梯 → 座电梯, AI实验室, 郑少忠24H, C座): `pdAsPass` now keeps letters and a space beside them, a run of up to four
+  letters (D, AI, 24H, SOHO) — a longer run is an English name the AI also leaves out (雀巢Nestle → 雀巢); a line of letters
+  alone still stays out. **(2) Real second lines dropped** (电动车 / 禁止入园 → 电动车, 百联地产 / 租售部, 味多美 / 现烤面包坊,
+  泰古龙 / 龙筋保养): the fine-print cut is the AI's own `FINE_PRINT` (a third of the tallest line) instead of 0.45.
+  **(3) Strays** (朝 / 自助图书馆, 阿诺莱德贸易 / 劳, 高峰期不供应 twice, 贵州茅台酒 / D酒): a line of one Chinese character and at
+  most three signs beside a line of three is dropped, a line read twice counts once. **(4) Wrong characters read as sure**
+  — 暂时离开 → 时离开, 低糖 → 低下, 唐潮 → 唐代, 米兰西饼 → 兰西饼, 火警119 → 火119警 (4–5 of ~150) — which the text check
+  cannot touch (the v143 rule). H chose **A** over B (accept ~3 %): a sure reading is still the card, made in seconds, and
+  the picture goes to the AI beside it (`SURECHK`, no guesses, so the answer is its own); when it lands, `sureCheck`
+  compares it with the card as saved — the same Chinese confirms it, anything else (or a picture of separate texts) flags
+  the card and stores the AI's reading as `d.ai`, which the open card already offers as "AI suggestion" with Accept /
+  Dismiss; a card H edited meanwhile is left alone. One picture call more per sure card (on H's 23 older card pictures,
+  AI off: calls started 12 → 23). **(5) The report** read every photo whole and compared it with cards H had cut to one
+  sign (绿茶 → 低糖 beside it, 为什么跳 → 莉莉丝…): a photo that made one card is now re-read from that card's own frame,
+  as the automatic card starts from its proposal (quick look and early picture call included — a first cut used Crop
+  again's path, which has neither, and 北京幸福 read as garbage without the AI ever seeing it), and each line says "from its
+  frame" and what the AI's check beside a sure reading found. **Measured:** the report's own cases through `pdAsPass`
+  (13 fixtures) all right; the camera flow with a sure photo (阿里云) and the picture answer held 6 s — the card at 3.5 s,
+  an agreeing answer changes nothing, a different one ("阿里去") flags the card with it as the suggestion; H's 23 older
+  card pictures unchanged but for one real line gained (温馨提示 over 货梯保护板); the Re-read suites pass (deck
+  byte-identical, framed cards read from their frame, 4 of 4); the rice cooker and 建国肉夹馍 multicards 11/11 and 17/17.
 
 ## Current state (PWA v645, 2026-09-25)
 - **Owner tools → Re-read all (v645, H: "Please re-run all existing cards so I can check how the new implementation works";
