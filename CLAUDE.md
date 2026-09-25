@@ -59,7 +59,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v639, 2026-09-25)
+## Current state (PWA v640, 2026-09-25)
 **The app is called 识字 Shízì** (v608, H: "Return the name to shizi", then "识字 Shízì" over the full v600 name; v601–v607
 it was 街字 Jiēzì, and Zeichentrainer stays dropped). The title, manifest `name`/`short_name` (识字 Shízì / 识字), header
 logo, About, share text, `privacy.html`, the owner's dumps and every shared file (`shizi-YYYY-MM-DD.json.txt`,
@@ -269,6 +269,8 @@ the key, counts the call and refuses past the cap — **per provider since 2026-
 deepseek 400, `CAP_ALL` 6000**; the owner's phone is exempt through the `OWNER_INSTALL` secret.
 The Qwen endpoint follows the key's own prefix (`sk-ws-` pay-as-you-go, `sk-sp-` Token Plan), and
 both keys are trimmed — a newline from a phone paste produced a 401 that read like a dead key.
+
+**The picture model writes only what needs the picture** (v640, `picWords`): characters, boxes, board or not, kind, page; the pinyin, meaning and description come from the text model in the same `aiReadPicture` call — the picture's answer time is ~5 s + 7.5 ms per character it writes, and those fields were two thirds of it. Words that do not come leave the gloss, pending.
 
 **Answers are checked, never trusted:** `zh` normalised to simplified; `saneM` drops a meaning
 that echoes the text or is Han-only outside Japanese; `saneP` takes the model's pinyin only when
@@ -491,7 +493,7 @@ own licences even after the app is sold** (Arphic §2b and CC BY-SA ShareAlike).
 fine; taking those two files private is not.
 
 ## Open / not yet field-checked
-v639's Paddle pass on single cards (does the Camera tab's sweep stutter while it reads, ~2 s on the page's thread?); v617–v620/v626's auto zoom and multicard snap (the multicards that do not snap mostly have no frame of their own — v626/v628's records; H's next Owner tools → Zoom check → Share and Data is the test; is 3.5× sharp enough?); v616's recap after a Crop again; v615's steady Cards swipe; v613's tab out of Test this card; v612's Show me inside the pad; v611's anti-invention flags (do they land on the wrong cards and not the right ones?); v609/v610's bulleted update notes (grey dots); v608's name and icon on the home screen; v607's square photo in Learn and Test this card; v606/v614's pull-past-the-edge swipe on a zoomed photo; v605's whole dictionary meanings on the phone (the file re-fetches once); v603/v604's Traditional chip and its switch (does the blue read as the script, is the corner tap found, does a tap meant for the photo hit it); v602: does Learn read better without the marks on the photo (H's trial — his word decides whether `SPOT_ON` goes back to true); v600 and the versions around it, are not field-checked — H's next long-word card is the check for the
+v640's split picture call (is a photo's card really faster, and are brand meanings as good without the picture?); v639's Paddle pass on single cards (does the Camera tab's sweep stutter while it reads, ~2 s on the page's thread?); v617–v620/v626's auto zoom and multicard snap (the multicards that do not snap mostly have no frame of their own — v626/v628's records; H's next Owner tools → Zoom check → Share and Data is the test; is 3.5× sharp enough?); v616's recap after a Crop again; v615's steady Cards swipe; v613's tab out of Test this card; v612's Show me inside the pad; v611's anti-invention flags (do they land on the wrong cards and not the right ones?); v609/v610's bulleted update notes (grey dots); v608's name and icon on the home screen; v607's square photo in Learn and Test this card; v606/v614's pull-past-the-edge swipe on a zoomed photo; v605's whole dictionary meanings on the phone (the file re-fetches once); v603/v604's Traditional chip and its switch (does the blue read as the script, is the corner tap found, does a tap meant for the photo hit it); v602: does Learn read better without the marks on the photo (H's trial — his word decides whether `SPOT_ON` goes back to true); v600 and the versions around it, are not field-checked — H's next long-word card is the check for the
 wrapped word line and for the bigger reading on the finished card (is 27 px enough, and does the reading
 still read as one thing when a seven-syllable word breaks across two lines?); an **empty Learn screen** for
 v599's real example card, and **More → How to use the app** for the figures (does it read as the app? is the
