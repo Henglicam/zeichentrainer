@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=633; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=634; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v634","pinch a multicard, tap a text"],
   ["learn","v626","zoom never tight on a wrong spot"],
   ["cards","v620","multicard frames on their text"],
   ["learn","v616","recap reading = card after crop"],
@@ -4155,7 +4156,7 @@ let PIC_ZOOM=null, ZOOM_HAND=null; /* ZOOM_HAND (v617): the picture the finger h
 const handKey=()=>zoomKey()+"|"+(S.mode==="study"&&S.pad?S.pad.key:"");
 const zoomKey=()=>{ const d=S.mode==="cards"?cardOf(S.detail):cardOf(curList()[curIdx()]); return d?d.id+(S.fullPic?":full":"")+(S.peek?":peek":""):null; };
 function attachPicZoom(box){
-  const tg=box&&(box.querySelector(".pagewrap")||box.querySelector(".signimg")); if(!tg) return;
+  const tg=box&&(box.querySelector(".pagewrap")||box.querySelector(".signimg")||box.querySelector(".zwrap")); if(!tg) return; /* .zwrap (v634): a multicard's photo and its regions, zoomed as one */
   const key=zoomKey();
   const v={s:1,tx:0,ty:0,r0:null,auto:false}, pts=new Map(); let last=null, moved=false, eat=false, ovx=0, down=null;
   tg.style.transformOrigin="0 0";
@@ -4196,7 +4197,7 @@ function attachPicZoom(box){
     glide(true); apply(); };
   const summary=()=>{ const a=[...pts.values()]; if(a.length>=2){ return {x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2,d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}; } return a.length?{x:a[0].x,y:a[0].y,d:0}:null; };
   const zoomAt=(m,s2)=>{ s2=Math.min(ZOOM_MAX,Math.max(1,s2)); const r=v.r0, px=(m.x-r.x-v.tx)/v.s, py=(m.y-r.y-v.ty)/v.s; v.s=s2; v.tx=m.x-r.x-px*s2; v.ty=m.y-r.y-py*s2; apply(); };
-  box.addEventListener("pointerdown",e=>{ if(e.button) return; if(e.isPrimary) pts.clear(); /* v614: a new gesture starts with no fingers left over — see below */ glide(false); measure(); pts.set(e.pointerId,rel(e)); last=summary(); moved=false; ovx=0; down=pts.size===1?{x:e.clientX,y:e.clientY}:null;
+  box.addEventListener("pointerdown",e=>{ if(e.button) return; if(e.isPrimary){ pts.clear(); eat=false; } /* v614: a new gesture starts with no fingers left over — see below. v634: nor with a click to swallow: a pinch or a touch pan sends no closing click, so the guard it armed ate the NEXT tap (on a zoomed multicard, the first tap on a text did nothing) */ glide(false); measure(); pts.set(e.pointerId,rel(e)); last=summary(); moved=false; ovx=0; down=pts.size===1?{x:e.clientX,y:e.clientY}:null;
     if(pts.size>=2||(v.s>1&&!v.auto)){ e.stopPropagation(); e.preventDefault(); try{ box.setPointerCapture(e.pointerId); }catch(x){} } });
   box.addEventListener("pointermove",e=>{ if(!pts.has(e.pointerId)) return; pts.set(e.pointerId,rel(e)); const cur=summary(); if(!last||!cur){ last=cur; return; }
     if(pts.size>=2){ e.stopPropagation(); e.preventDefault(); moved=true; hand(); if(last.d>0&&cur.d>0) zoomAt(cur,v.s*cur.d/last.d); v.tx+=cur.x-last.x; v.ty+=cur.y-last.y; apply(); }
@@ -4233,7 +4234,7 @@ function attachPicZoom(box){
   const restore=()=>{ if(!PIC_ZOOM||PIC_ZOOM.key!==key||!box.isConnected||!box.clientWidth) return false;
     const st=PIC_ZOOM; v.s=1; v.r0=null; measure(); if(!v.r0||!v.r0.w) return false;
     v.s=Math.min(ZOOM_MAX,Math.max(1,st.s)); v.tx=st.tx; v.ty=st.ty; v.auto=!!st.auto; apply(); return true; };
-  if(!restore()){ const img=box.querySelector(".signimg"); if(img&&!img.complete) img.addEventListener("load",restore,{once:true}); else requestAnimationFrame(restore); }
+  if(!restore()){ const img=box.querySelector(".signimg,.zwrap img"); if(img&&!img.complete) img.addEventListener("load",restore,{once:true}); else requestAnimationFrame(restore); }
   box._zoom=v; /* used by the tests */
 }
 /* Not yet checked (v515, § 9 of SPEC-flashcard-layout.md — H: "All new Cards flagged for review, must manually unflag", then,
@@ -5299,7 +5300,7 @@ function pageBodyHTML(d){
   const order=rs.map(r=>r.card), sorted=its.slice().sort((a,b)=>{ const ia=order.indexOf(a.id), ib=order.indexOf(b.id); return (ia<0?1e9:ia)-(ib<0?1e9:ib); });
   const made=its.filter(x=>madeFrom(x)).length;
   return `<div class="shot pagecard" data-page="${esc(d.id)}">
-      <div class="shotwrap">${full?`<img src="${urlOf(full)}" alt="${t("alt:photo")}">`:""}${rs.length?regionsHTML({id:d.shot},rs):""}</div>
+      <div class="shotwrap"><div class="zwrap">${full?`<img src="${urlOf(full)}" alt="${t("alt:photo")}">`:""}${rs.length?regionsHTML({id:d.shot},rs):""}</div></div>
       <div class="ptitle">${esc(d.c)}</div>
       <div class="regline">${esc(t("Texts on this page: {0}, as flashcards: {1}.",its.length,made))}</div>
       <div class="taphint">${esc(t("Tap any text on the photo."))}</div>
@@ -5318,6 +5319,11 @@ function renderPageDetail(main,d){
   </div>`;
   $("#back").onclick=fromCard()?backToCard:fromLearn()?backToLearn:backToList; /* opened from a generated flashcard's reference pill (v492) or from the card being studied (v494): back to where the jump started */
   wireRegions(main); /* the dots and the sheet (v448) */
+  { const sw=main.querySelector(".pagecard .shotwrap"), rb=sw&&sw.querySelector("[data-regions]");
+    /* while the photo is zoomed the zoom holds the finger (pointer capture), so a tap's click lands on the frame, not on the
+       region under it — the region is found from the point instead, the same nearest-region rule as a tap beside one */
+    if(sw&&rb) sw.addEventListener("click",e=>{ if(e.target.closest("[data-regions]")) return; const b=regionAt(rb,e.clientX,e.clientY); if(b) openLookup(rb.dataset.regions,b.dataset.region); });
+    attachPicZoom(sw); } /* v634 (H: "Zooming into a Multicard shall also be possible, just like normal cards"): the same pinch, pan and edge-to-swipe as the open card's photo, the regions riding along */
   main.querySelectorAll("#pitems .crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.id; S.detailFrom="page:"+d.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); });
   $("#d-del").onclick=async()=>{ if(!await confirmDelCard(d)) return; await delCustom(d.id); if(fromCard()){ backToCard(); return; } if(fromLearn()){ backToLearn(); return; } S.detail=null; render(); }; /* v594: only after the sheet, and with Undo under it (v268) — the texts go with it; a generated flashcard survives its multicard (v487), so the way back is still there and its pill becomes plain text */
   /* a page is swiped like any other open card (v460, H: "Multicards lassen sich nicht swipen"): v445 gave the Cards
@@ -5716,6 +5722,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  634:"Pinch to zoom into a multicard's photo, just like a card's. Tap any text while zoomed to look it up.",
   617:"While you trace a character, the photo zooms in on it and glides on to the next one. Once you write from memory, it stays whole.",
   611:"The AI is told never to invent, and its pinyin is checked against the dictionary. When they disagree, or the AI is not sure, the card gets a flag instead of a guess.",
   608:"The app is called 识字 Shízì again, with its old 识 icon back. Same app, same cards.",
@@ -9653,15 +9660,17 @@ function regionLine(rs,pg){ const n=rs.filter(r=>r.card).length; /* pg (v453): t
    finds a word a few pixels tall from 44 px away. Learn is deliberately untouched: there the one lit frame with its
    spotlight says WHICH word this card is, and there is no tap to ask with. */
 function markRegion(rid){ document.querySelectorAll(".regions .region").forEach(e=> e.classList.toggle("on",!!rid&&e.dataset.region===rid)); }
+/* the region a tap at (x,y) means: the nearest one whose box, grown to REGION_HIT around its centre, holds the point */
+function regionAt(box,x,y){ let best=null, bd=Infinity;
+  box.querySelectorAll("[data-region]").forEach(b=>{ const r=b.getBoundingClientRect(), cx=(r.left+r.right)/2, cy=(r.top+r.bottom)/2, hw=Math.max(r.width,REGION_HIT)/2, hh=Math.max(r.height,REGION_HIT)/2;
+    if(Math.abs(x-cx)>hw||Math.abs(y-cy)>hh) return; const d=Math.hypot(x-cx,y-cy); if(d<bd){ bd=d; best=b; } });
+  return best; }
 function wireRegions(root){
   root.querySelectorAll("[data-regions]").forEach(box=>{
     const shot=box.dataset.regions;
     box.querySelectorAll("[data-region]").forEach(b=> b.onclick=e=>{ e.stopPropagation(); openLookup(shot,b.dataset.region); });
     /* a tap beside a small region still opens it: the nearest region whose box, grown to REGION_HIT around its centre, holds the point */
-    box.onclick=e=>{ if(e.target!==box) return; const x=e.clientX, y=e.clientY; let best=null, bd=Infinity;
-      box.querySelectorAll("[data-region]").forEach(b=>{ const r=b.getBoundingClientRect(), cx=(r.left+r.right)/2, cy=(r.top+r.bottom)/2, hw=Math.max(r.width,REGION_HIT)/2, hh=Math.max(r.height,REGION_HIT)/2;
-        if(Math.abs(x-cx)>hw||Math.abs(y-cy)>hh) return; const d=Math.hypot(x-cx,y-cy); if(d<bd){ bd=d; best=b; } });
-      if(best) openLookup(shot,best.dataset.region); };
+    box.onclick=e=>{ if(e.target!==box) return; const best=regionAt(box,e.clientX,e.clientY); if(best) openLookup(shot,best.dataset.region); };
   });
   markRegion(LOOKUP?LOOKUP.rid:null); /* a re-render (a grade writes the row and draws the photo again) rebuilds the regions — the open one keeps its frame */
 }
