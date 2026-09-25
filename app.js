@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=628; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=629; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v629","grid on: panel labels placed?"],
   ["learn","v626","zoom never tight on a wrong spot"],
   ["cards","v620","multicard frames on their text"],
   ["learn","v616","recap reading = card after crop"],
@@ -1613,9 +1614,24 @@ const PIC_SMALL=0.15, PIC_EDGE=0.05, PIC_SIDE=[0.35,0.6], PIC_TINY=0.06; /* an a
    picture, against an edge, means the app's frame was pointed at the wrong place (v393) — and smaller than PIC_TINY it means
    that wherever it sits (v447): the frame is then more than sixteen times the area of the text the model found in it */
 const PIC_MAX=800;
-async function pictureJpeg(blob){
+/* v629 (H's "Go B"): the owner's test of a measuring grid on the picture the AI gets. v628's records showed the model's
+   label boxes on a panel sit half to a whole label off — a drawing, not a measurement — so the labels the reader cannot
+   name get the whole picture. With the switch on (Owner tools, this phone only) a faint magenta line every GRID_STEP
+   pixels, numbered in pixels along the top and left edges, goes onto the picture, and the question says what it is; the
+   answer's format and its handling are unchanged, so the Zoom data can measure whether the boxes land closer */
+const GRID_STEP=100, aiGrid=()=>!!S.settings.aiGrid;
+function drawGrid(cv){ const g=cv.getContext("2d"), W=cv.width, H=cv.height;
+  g.save(); g.strokeStyle="rgba(255,0,200,0.45)"; g.lineWidth=1; g.beginPath();
+  for(let x=GRID_STEP;x<W;x+=GRID_STEP){ g.moveTo(x+0.5,0); g.lineTo(x+0.5,H); }
+  for(let y=GRID_STEP;y<H;y+=GRID_STEP){ g.moveTo(0,y+0.5); g.lineTo(W,y+0.5); } g.stroke();
+  g.font="bold 13px sans-serif"; g.textBaseline="top"; g.lineWidth=3; g.strokeStyle="rgba(255,255,255,0.85)"; g.fillStyle="rgb(220,0,170)";
+  const label=(s,x,y)=>{ g.strokeText(s,x,y); g.fillText(s,x,y); };
+  for(let x=GRID_STEP;x<W;x+=GRID_STEP) label(String(x),x+3,2);
+  for(let y=GRID_STEP;y<H;y+=GRID_STEP) label(String(y),2,y+3);
+  g.restore(); }
+async function pictureJpeg(blob,grid){
   const bmp=await createImageBitmap(blob); const k=Math.min(1,PIC_MAX/Math.max(bmp.width,bmp.height));
-  const cv=scaledCanvas(bmp,k); bmp.close();
+  const cv=scaledCanvas(bmp,k); bmp.close(); if(grid) drawGrid(cv);
   const out=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
   const b64=(await blobToB64(out)).d; return {b64,w:cv.width,h:cv.height,kb:Math.round(out.size/1024)};
 }
@@ -1639,9 +1655,10 @@ const PIC_DOWN_TEXT=()=>`the picture provider refused the last call and is not a
 function pictureUp(){ return !!pictureProvider()&&aiAutoOn()&&navigator.onLine&&!picDown(); } /* the one switch covers text and pictures (v193) */
 async function aiReadPicture(blob,alts,status,rec){
   const pv=pictureProvider(); if(!pv) throw new Error("no picture provider");
-  const key=aiKey(pv), model=pictureModel(pv), pic=await pictureJpeg(blob), relay=!key&&viaRelay(pv);
+  const grid=aiGrid(), key=aiKey(pv), model=pictureModel(pv), pic=await pictureJpeg(blob,grid), relay=!key&&viaRelay(pv);
   const sys=picSystem(); if(rec) rec.prompt=[sys.length,strHash(sys)]; /* v399: picSystem() is 7 200 characters and changed at v361, v363, v367, v377, v449 and v455, so an answer cannot be attributed to a prompt without a fingerprint — the version says which code, this says which words went out */
-  const text=`Read the Chinese text on this picture (${pic.w}×${pic.h} pixels). The reader's guesses: ${alts.length?alts.map(a=>a.replace(/\n/g," / ")).join(" | "):"none"}.`; /* the size, so the box comes in its pixels (v294 — fractions came out shifted by a tenth on H's poster) */
+  if(rec&&grid){ rec.grid=GRID_STEP; logRead(rec.shot,`the picture goes out with a measuring grid, a line every ${GRID_STEP} pixels (the owner's test, v629)`); }
+  const text=`Read the Chinese text on this picture (${pic.w}×${pic.h} pixels).${grid?` A thin magenta grid is drawn on it for measuring: a line every ${GRID_STEP} pixels, numbered in pixels along the top and left edges. Measure every box against it, in these pixels. The grid and its numbers are not text of the picture.`:""} The reader's guesses: ${alts.length?alts.map(a=>a.replace(/\n/g," / ")).join(" | "):"none"}.`; /* the size, so the box comes in its pixels (v294 — fractions came out shifted by a tenth on H's poster) */
   const req=`[picture ${pic.w}×${pic.h} JPEG, ${pic.kb} KB] ${text}`; /* the log never carries the picture */
   status&&status("Asking the AI about the picture …");
   let r; const t0=Date.now();
@@ -2804,7 +2821,7 @@ function renderMore(main){
     <div class="listhead">Diagnostics</div>
     <div class="mrow"><div style="flex:1"><div class="t">Diagnostics</div><div class="s" id="diag-status">${LAST_READ.ring.length} photo${LAST_READ.ring.length===1?"":"s"} logged, ${AILOG.length} AI exchange${AILOG.length===1?"":"s"}, ${ERRLOG.length} error${ERRLOG.length===1?"":"s"}.</div><div class="fieldacts"><button class="btn mini" id="diag-show">Show</button><button class="btn mini" id="diag-share">Share</button><button class="btn mini" id="diag-copy">Copy</button></div></div></div>
     <pre class="diag" id="diag-out" hidden></pre>
-    <div class="mrow"><div style="flex:1"><div class="t">Zoom check</div><div class="s" id="zc-status">${ZCHECK?esc(ZCHECK.line)+".":`Finds every character of the newest ${ZC_N} photo cards the way Learn's zoom does. Share sends the pictures with the boxes drawn: green on the ink, orange unsure, red the estimate, blue the frame; the newest ${ZC_PAGES} multicards follow, green where a region snapped onto its text. Data sends the pictures themselves, as one PDF.`}</div><div class="fieldacts"><button class="btn mini" id="zc-run">Run</button><button class="btn mini" id="zc-share">Share</button><button class="btn mini" id="zc-data">Data</button></div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">Zoom check</div><div class="s" id="zc-status">${ZCHECK?esc(ZCHECK.line)+".":`Finds every character of the newest ${ZC_N} photo cards the way Learn's zoom does. Share sends the pictures with the boxes drawn: green on the ink, orange unsure, red the estimate, blue the frame; the newest ${ZC_PAGES} multicards follow, green where a region snapped onto its text. Data sends the pictures themselves, as one PDF.`}</div><div class="fieldacts"><button class="btn mini" id="zc-run">Run</button><button class="btn mini" id="zc-share">Share</button><button class="btn mini" id="zc-data">Data</button></div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="zc-grid"${aiGrid()?" checked":""}> Measuring grid on the AI's pictures (test, this phone only)</label></div></div>
     <div class="mrow"><div style="flex:1"><div class="t">Still to test</div><div class="s" id="field-status">${fieldNote()}</div><div class="fieldacts"><button class="btn mini" id="field-show">Show</button><button class="btn mini" id="field-copy">Copy</button></div></div></div>
     <pre class="diag" id="field-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"install")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div><div class="fieldacts"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button><button class="btn mini" id="users-copy">Copy</button></div></div></div>
@@ -2848,6 +2865,7 @@ function renderMore(main){
     $("#diag-share").onclick=shareDiag;
     { const zs=$("#zc-status"), zr=$("#zc-run"), zh=$("#zc-share"); /* v618 */
       if(zr) zr.onclick=async()=>{ zr.disabled=true; try{ await zoomCheck(zs); zs.textContent=ZCHECK.line+"."; }catch(e){ zs.textContent="The check failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zr.disabled=false; };
+      { const zg=$("#zc-grid"); if(zg) zg.onchange=()=>setSetting("aiGrid",zg.checked); } /* v629 */
       { const zd=$("#zc-data"); if(zd) zd.onclick=async()=>{ zd.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); await shareZoomData(zs); }catch(e){ zs.textContent="The data failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zd.disabled=false; }; }
       if(zh) zh.onclick=async()=>{ zh.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); await shareZoomSheet(zs); }catch(e){ zs.textContent="The sheet failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zh.disabled=false; }; }
     $("#field-show").onclick=()=>{ const o=$("#field-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=fieldText(); };
