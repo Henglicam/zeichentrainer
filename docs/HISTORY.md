@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v639
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v640
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,29 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v640, 2026-09-25)
+- **The picture model writes only what needs the picture (v640, H: "Wie machen wir es jetzt schneller?", then "Go A"):**
+  measured on the 31 picture replies recorded in his Zoom data (all multicards, qwen3.7-plus through the relay): the
+  answer time is ~5 s + 7.5 ms per character the model writes — 680 characters 8.7 s, 1 431 14.4 s, 2 450 (the median)
+  21 s, 3 499 28.8 s, 5 300 45 s (one outlier, 2 209 in 47.6 s, is the network). Output, not the picture, is the time. The
+  same 29 parseable replies with only zh, box, boxes, cut, apart, kind, bad, unsure and the labels' zh and box are **35 %**
+  as long (53 495 → 18 457 characters). So `picSystem` no longer asks for "p", "m", "desc", "note" or the labels' pinyin
+  and meaning (8 292 → 6 735 characters of prompt; "page" and "kind" stay, they are short and need the picture), and
+  `aiReadPicture` asks the text model for them through the new `picWords` — one `aiAsk` call with the picture's text
+  as the card (a label per card on a panel), its payload saying "read from the photo by a model that sees it (it shows:
+  <kind>) — keep zh exactly as given, write p and m and desc" (a label: desc ""). DeepSeek answered H's multicards'
+  text checks in 2.3–4.1 s (8 recorded). Every consumer (the weak path, picOnBad, picPanel, the re-ask) gets the same
+  answer shape as before. A zh the text model changes is logged and not taken. **Expected, not measured on the phone:**
+  the median photo 21 s → ~11 s for the picture plus ~3 s for the words; a big board 45 s → ~20 s. **The risk named to H
+  and taken:** the text model does not see the photo, so a brand's "as it is known" meaning may be weaker; the picture's
+  kind goes along as the hint. **Failure is honest:** words that do not come (relay down, cap, offline) leave the card
+  with the reader's gloss, `mt` gloss and pending — `readingCard` now marks a meaning llm-verified only when the AI gave
+  one (until v640 an empty AI meaning still set verified). Harness (`words.js`, picture and text mocked): a single card
+  (贵州茅台酒) — one picture call whose prompt has no pinyin or description clause, one text call, the card with the
+  text model's meaning and description, llm verified; the text call failing — gloss, pending; the rice-cooker multicard
+  — 11 labels, each with its own pinyin and meaning. `privacy.html` unchanged: it already says every new card's text
+  goes to the AI. No update note until H has seen it faster on the phone.
 
 ## Current state (PWA v639, 2026-09-25)
 - **The phone's own reader reads single cards too (v639, H: "Kann Paddle auch einzelne Karten besser lesen?", then "Go" on
