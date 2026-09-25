@@ -716,6 +716,7 @@ body.noscroll{overflow:hidden}
 /* the page card (v453): one row for a whole screen — its title in the UI font, the photo with the dots in its detail, and each text's dot state before its status in the item list */
 .ptitle{font-size:15px;font-weight:600;line-height:1.3;margin:0 2px 2px;color:var(--label)}
 .pagecard .shotwrap img{width:100%;display:block;border-radius:10px}
+.pagecard .shotwrap{overflow:hidden;border-radius:10px} .pagecard .shotwrap .zwrap{position:relative;transform-origin:0 0} .pagecard .shotwrap.zoomed .zwrap{will-change:transform} /* v634: the multicard's photo zooms with its regions inside the frame, as the open card's picbox does */
 .pagecard+.clist{margin-top:0}
 /* the two states, where a card is listed or opened (v461): a red cross for one still to learn, a green check for one
    ticked off. Colour is never the only channel — the glyph is, which is what the owner asked for. */

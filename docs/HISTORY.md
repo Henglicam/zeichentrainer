@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v633
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v634
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -39,7 +39,20 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
-## Current state (PWA v633, 2026-09-25)
+## Current state (PWA v634, 2026-09-25)
+- **A multicard's photo zooms like a card's (v634, H: "Zooming into a Multicard shall also be possible, just like normal
+  cards"):** the page detail's photo and its regions now sit in one layer (`.zwrap` inside `.shotwrap`) that
+  `attachPicZoom` moves as one — pinch, one-finger pan, the wheel, the stored zoom per card, and the pull past the edge
+  that hands the stroke to the swipe (v606), all the open card's own code; the frame clips the zoomed photo. **Two things
+  the zoom broke that the harness caught with a real two-finger pinch (CDP touch events, v614's rule):** (1) while the
+  photo is zoomed the zoom captures the finger, so a tap's click lands on the frame and never on the region under it — a
+  click on the frame now finds its region by the point (`regionAt`, the nearest-region rule a tap beside a small region
+  already used, factored out of `wireRegions`); (2) a pinch or a touch pan arms the guard that swallows a pan's closing
+  click, but a touch gesture sends no closing click, so the guard ate the NEXT tap — on the open card as well, since
+  v517. The guard is now cleared when a new touch begins. Measured in the harness: at rest, after a pinch (1.67×) and after
+  a pinch and a pan, a tap on a text opens its sheet (the old tree has no zoom at all; the tap at rest passes on both,
+  control); a tap within ~0.4 s of a pan's release is still eaten by Chrome itself, which reads it as stopping the glide.
+  Learn's zoom suite 13/13. **Not done:** the region's outline grows with the zoom (1.7 px becomes ~6 px at 3.5×).
 - **The faster-picture-model switch is gone (v633, H: "Leave it, remove the switch"):** v632's round sent six photos to
   qwen3.7-flash and the Token Plan endpoint answered 404 "Model not exist." every time, as it had for qwen3-vl-flash —
   the plan (Personal Lite, `sk-sp-`) serves only its own models, and no faster vision model is among them. Every photo
