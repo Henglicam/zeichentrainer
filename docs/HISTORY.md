@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v642
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v643
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,18 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v643, 2026-09-25)
+- **A label on two lines finds its place (v643, H: "Why is the rice cooker only 10 of 11 texts? What will you do to fix
+  that to be 11 of 11?"):** the one text left on the whole picture was 保温/取消 — one button, its label printed as 保温
+  over 取消. The AI names it as one text, the phone's reader reads two lines, and `pdMatch` compared 保温取消 with each line
+  alone: 2 of 4 characters, under `PD_MATCH` 0.66. Now a text still unmatched after the one-to-one pairing may take **two
+  free lines standing one over the other** (overlapping across by half the narrower, the gap under the smaller line's
+  height), read top to bottom at the same `PD_MATCH`; its place is the box around both. Replayed on all 8 multicards of
+  v637's Zoom data against v642: rice cooker 10 → **11 of 11** (both photos), washing machine 10 → 11 of 12 — 洗衣液 over
+  长按童锁 found — and on the third washing-machine photo the same text **moved from 袜子's button (wrong, v638's place) to
+  its own** (checked by eye on the drawn boxes); nothing else moved on any of the 8. Still without a place: 右筒 on one
+  photo (curved text), one text each on two washing-machine photos.
 
 ## Current state (PWA v642, 2026-09-25)
 - **The phone's reader runs in a worker of its own (v642, H: "Swiping Multicards hakt manchmal ein bissle"):** measured in
