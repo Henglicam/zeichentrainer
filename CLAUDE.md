@@ -59,7 +59,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v635, 2026-09-25)
+## Current state (PWA v636, 2026-09-25)
 **The app is called 识字 Shízì** (v608, H: "Return the name to shizi", then "识字 Shízì" over the full v600 name; v601–v607
 it was 街字 Jiēzì, and Zeichentrainer stays dropped). The title, manifest `name`/`short_name` (识字 Shízì / 识字), header
 logo, About, share text, `privacy.html`, the owner's dumps and every shared file (`shizi-YYYY-MM-DD.json.txt`,

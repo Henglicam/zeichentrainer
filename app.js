@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=635; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=636; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -8776,7 +8776,7 @@ async function finishPending(id){
     if(PLACED[id]) ph.frame=frameOf(PLACED[id]); else if(ph.reading.rect&&ph.reading.rect.lw) ph.frame=frameOf(ph.reading.rect); /* the frame the reader or the AI placed on the text while the card waited (v304), else the one it was saved with */
     const fr=PLACED[id]||(ph.reading.rect&&ph.reading.rect.lw?ph.reading.rect:null); /* for the window below, read before the card's fields are replaced (v329) */
     numSet(id,"placed",numRect(PLACED[id]||null)); numSet(id,"cardFrame",ph.frame||null); numSet(id,"win",fr?numRect(windowRect(fr,ratioOf(card))):null); numCards(id,[ph.id]); numsFile(id); /* v399: windowRect and windowCut are the last two steps of the chain and have never left a trace, so even a perfect reconstruction of the frame did not explain the picture on the card */
-    for(const k of Object.keys(ph)) if(!["id","at","img","imgFull","shot","tags","frame","page"].includes(k)) delete ph[k]; /* v635: "page" too — a multicard's text saved during its reading (Add a text, or Crop again on one of its texts) lost its multicard here and became a flashcard */
+    for(const k of Object.keys(ph)) if(!["id","at","img","imgFull","shot","tags","frame","page","from","fromT","of"].includes(k)) delete ph[k]; /* v635: "page" too — a multicard's text saved during its reading (Add a text, or Crop again on one of its texts) lost its multicard here and became a flashcard. v636: and a generated flashcard's link back to its multicard (from, fromT, of), lost the same way */
     const {id:_i,at:_a,img:_m,shot:_s,...fields}=card; Object.assign(ph,fields);
     if(sg.cardImg){ ph.img=await cardJpeg(sg.cardImg); dropThumb(ph.id); } /* the list's thumbnail was made from the crop saved first (v242, H: "the card with a photo before the re-crop remains") */
     { const win=fr?await windowCut(id,fr,ratioOf(card)):null; if(win){ ph.img=await cardJpeg(win.blob); dropThumb(ph.id); } } /* the window around the text at the card's own ratio (v329, v514) — the tight cut only when the photo is gone */
