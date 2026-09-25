@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v634
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v635
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -39,7 +39,22 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
-## Current state (PWA v634, 2026-09-25)
+## Current state (PWA v635, 2026-09-25)
+- **Add a text to a multicard (v635, H: "It shall be possible to add a text field to a Multicard by adding another
+  crop", described first in three lines, then "All go"):** the multicard's screen carries **Add a text** above Delete
+  card (only when its photo is on the phone). A tap makes a blank text in the page (`addPageText`: `text#<at>`, a sign,
+  the page's shot and photo, `page`, and `adding:true`) and opens it in the Edit form with its Crop again already
+  running on the whole photo (`S.editOpenFrame`) — the frame, the reading, pinyin, meaning, the AI check and Save during
+  the reading are all that form's own, nothing new. Save takes the mark off; Cancel, Back, a tab tap, or a restart with
+  the blank never read, drop it and its place in the page without a trace or an Undo (`dropAddedText`, the boot's own
+  sweep). **A bug found on the way and fixed, not only the new path's:** `finishPending` rebuilds a card from its reading
+  and kept only id/at/img/imgFull/shot/tags/frame, so a multicard's text saved DURING its reading lost `page` and became
+  a flashcard — Crop again on one of a multicard's texts with an early save had the same fault since v453. `page` is
+  kept now. (`from`/`fromT`/`of` of a generated flashcard go the same way — named, not fixed.) Suite, 7 checks, all
+  driving the real buttons: the button is there (fails on the old tree, where the rest cannot run); it opens the form
+  with the photo; Cancel and a tab tap leave no blank; 脱水 framed and read, Save adds it with its frame, its region and
+  its row (3 of 3); a blank from a closed app is gone after a reload; and the early save fills the text in the
+  background with `page` kept (failed before the fix). Screenshots: 390 px light and 360 px dark, German.
 - **A multicard's photo zooms like a card's (v634, H: "Zooming into a Multicard shall also be possible, just like normal
   cards"):** the page detail's photo and its regions now sit in one layer (`.zwrap` inside `.shotwrap`) that
   `attachPicZoom` moves as one — pinch, one-finger pan, the wheel, the stored zoom per card, and the pull past the edge

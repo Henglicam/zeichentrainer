@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=634; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=635; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v635","Add a text on a multicard"],
   ["cards","v634","pinch a multicard, tap a text"],
   ["learn","v626","zoom never tight on a wrong spot"],
   ["cards","v620","multicard frames on their text"],
@@ -1293,6 +1294,7 @@ async function boot(){
     bump("opens");
     /* progress of cards that no longer exist (the built-in deck of v1–v32) is dropped */
     cust.forEach(d=>{ if(!d.id) d.id=d.c; });
+    for(let i=cust.length-1;i>=0;i--){ const d=cust[i]; if(d.adding&&!d.c&&!d.reading){ cust.splice(i,1); idbDel("custom",d.id).catch(()=>{}); const pg=cust.find(x=>x.id===d.page); if(pg&&(pg.items||[]).includes(d.id)){ pg.items=pg.items.filter(x=>x!==d.id); idbPut("custom",pg).catch(()=>{}); } } } /* v635: a text being added when the app closed, never read */
     const have=new Set(cust.map(d=>d.id));
     for(const id of Object.keys(S.progress)) if(!have.has(id)){ delete S.progress[id]; idbDel("progress",id).catch(()=>{}); }
     /* creation order (cards without a timestamp, from before v33, come first in key order) */
@@ -1335,6 +1337,7 @@ const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 function wireChrome(){
   document.querySelectorAll(".tab").forEach(b=>{
     b.onclick=()=>{ const m=b.dataset.mode;
+      if(typeof S.editFrom==="string"&&S.editFrom.startsWith("addtext:")&&S.editing){ const aid=S.editing; setTimeout(()=>dropAddedText(aid),0); } /* v635: after the form's own end below */
       S.editing=null; S.editFrom=null; S.detailFrom=null; S.openShot=null; /* a tab tap always leaves the edit form, the way back to a photo (v448), the photo opened from the grid (v462) and the photos already done (v463) */
       if(m==="inbox") clearResults(); /* … and the finished results of the last capture, so the Camera tab opens on the camera (v471) */
       if(S.lockChar){ S.lockChar=null; S.walk=null; S.walkIdx=0; S.pad=null; } /* … and a locked character's walk (v513, § 7) */
@@ -5307,6 +5310,20 @@ function pageBodyHTML(d){
     </div>
     <div class="clist" id="pitems">${sorted.map(x=>cardRowHTML(x,false,new Map(),true)).join("")}</div>`;
 }
+/* Add a text (v635, H: "It shall be possible to add a text field to a Multicard by adding another crop", "All go"): a
+   blank text joins the page and opens in the Edit form with its Crop again already running on the page's photo — the
+   frame, the reading, the pinyin and meaning, the AI check and Save during the reading are all that form's own. The blank
+   is marked `adding` until it has a text or a reading; Cancel, Back, a tab tap or a restart drop it without a trace. */
+async function addPageText(pg){
+  const full=fullPhoto(pg); if(!full) return;
+  const at=Date.now(), id="text#"+at;
+  await putCard({id,c:"",p:"",m:"",t:"Sign",kind:"sign",at,v:APP_V,shot:pg.shot,imgFull:full,page:pg.id,adding:true},id);
+  await putCard({...pg,items:[...(pg.items||[]),id]},pg.id);
+  S.editing=id; S.editFrom="addtext:"+pg.id; S.editOpenFrame=true; S.fullPic=false; render(); window.scrollTo(0,0); }
+async function dropAddedText(id){
+  const d=cardOf(id); if(!d||!d.adding||d.c||d.reading||Object.values(PENDING).includes(id)) return;
+  S.custom=S.custom.filter(x=>x!==d); try{ await idbDel("custom",id); }catch(e){} dropThumb(id);
+  const pg=d.page&&cardOf(d.page); if(pg&&(pg.items||[]).includes(id)) await putCard({...pg,items:pg.items.filter(x=>x!==id)},pg.id); }
 function renderPageDetail(main,d){
   normaliseFilters(); /* the same rule as the ordinary detail (v308/v445): a star cleared on the open page must not strand it outside its own list */
   const list=cardsList(), li=list.findIndex(x=>x.id===d.id), sw=li>=0&&list.length>1;
@@ -5314,6 +5331,7 @@ function renderPageDetail(main,d){
     <div class="topline"><button class="del" id="back">${fromCard()?t("← Back to the flashcard"):fromLearn()?t("← Back"):onPages()?"← "+t("Multicards"):t("← Cards")}</button><span class="badge">${esc((d.tags||[]).join(", "))}</span></div>
     <div class="card bare">${pageBodyHTML(d)}</div>
     <div class="detailacts">
+      ${fullPhoto(d)?`<button class="btn" id="d-addtext" style="grid-column:1/-1">${t("Add a text")}</button>`:""}
       <button class="btn danger" id="d-del" style="grid-column:1/-1">${t("Delete card")}</button>
     </div>
   </div>`;
@@ -5325,6 +5343,7 @@ function renderPageDetail(main,d){
     if(sw&&rb) sw.addEventListener("click",e=>{ if(e.target.closest("[data-regions]")) return; const b=regionAt(rb,e.clientX,e.clientY); if(b) openLookup(rb.dataset.regions,b.dataset.region); });
     attachPicZoom(sw); } /* v634 (H: "Zooming into a Multicard shall also be possible, just like normal cards"): the same pinch, pan and edge-to-swipe as the open card's photo, the regions riding along */
   main.querySelectorAll("#pitems .crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.id; S.detailFrom="page:"+d.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); });
+  { const ad=$("#d-addtext"); if(ad) ad.onclick=()=>{ ad.disabled=true; addPageText(d); }; } /* v635 */
   $("#d-del").onclick=async()=>{ if(!await confirmDelCard(d)) return; await delCustom(d.id); if(fromCard()){ backToCard(); return; } if(fromLearn()){ backToLearn(); return; } S.detail=null; render(); }; /* v594: only after the sheet, and with Undo under it (v268) — the texts go with it; a generated flashcard survives its multicard (v487), so the way back is still there and its pill becomes plain text */
   /* a page is swiped like any other open card (v460, H: "Multicards lassen sich nicht swipen"): v445 gave the Cards
      detail its carousel and v453's page renders through this function instead, which never called wireSwipe — so the one
@@ -5409,6 +5428,7 @@ function renderEdit(main,c){
   const leave=newC=>{ /* back to where the edit started: study back or card detail */
     endRecrop(); delete SIGN[eid]; if(cropURL) URL.revokeObjectURL(cropURL);
     const from=S.editFrom; S.editing=null; S.editFrom=null;
+    if(typeof from==="string"&&from.startsWith("addtext:")){ const pid=from.slice(8); S.mode="cards"; S.detail=cardOf(pid)?pid:null; dropAddedText(c).then(()=>render()); return; } /* v635: back to the multicard; a blank never read goes */
     if(from==="study"){ S.mode="study"; S.ansOpen=true; } /* v512: back to the card with its answer block open */ else if(from==="camera"){ S.mode="inbox"; S.fullPic=false; } else { S.mode="cards"; if(newC) S.detail=newC; } /* from the finished card in the Camera tab (v325): back to it */
     render();
   };
@@ -5583,7 +5603,7 @@ function renderEdit(main,c){
       newC=isSign?wordLines.join("\n"):wordLines.join("");
       if(!CJK.test(newC)){ if(willHand||aiLate){ newC=d.c; wordLines=undefined; } else return fail(t("Please enter Chinese text.")); } /* an empty card saved early keeps its text until the analysis fills it */
     }
-    const upd={...d, p:pin, m:mean}; delete upd.ex; delete upd.exp; delete upd.exm; /* example sentences were dropped in v41 */
+    const upd={...d, p:pin, m:mean}; delete upd.ex; delete upd.exp; delete upd.exm; delete upd.adding; /* v635: an added text is a text once saved */ /* example sentences were dropped in v41 */
     /* Save changes while the new frame is still being read (v241, H: "allow instant saving"): the card takes the new crop now, the
        reading goes on in the background and fills text, pinyin and meaning when done — like Save now in the Camera tab */
     let handoff=null;
@@ -5722,6 +5742,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  635:"A multicard missed a text? Tap Add a text, frame it on the photo, and it joins the multicard.",
   634:"Pinch to zoom into a multicard's photo, just like a card's. Tap any text while zoomed to look it up.",
   617:"While you trace a character, the photo zooms in on it and glides on to the next one. Once you write from memory, it stays whole.",
   611:"The AI is told never to invent, and its pinyin is checked against the dictionary. When they disagree, or the AI is not sure, the card gets a flag instead of a guess.",
@@ -8755,7 +8776,7 @@ async function finishPending(id){
     if(PLACED[id]) ph.frame=frameOf(PLACED[id]); else if(ph.reading.rect&&ph.reading.rect.lw) ph.frame=frameOf(ph.reading.rect); /* the frame the reader or the AI placed on the text while the card waited (v304), else the one it was saved with */
     const fr=PLACED[id]||(ph.reading.rect&&ph.reading.rect.lw?ph.reading.rect:null); /* for the window below, read before the card's fields are replaced (v329) */
     numSet(id,"placed",numRect(PLACED[id]||null)); numSet(id,"cardFrame",ph.frame||null); numSet(id,"win",fr?numRect(windowRect(fr,ratioOf(card))):null); numCards(id,[ph.id]); numsFile(id); /* v399: windowRect and windowCut are the last two steps of the chain and have never left a trace, so even a perfect reconstruction of the frame did not explain the picture on the card */
-    for(const k of Object.keys(ph)) if(!["id","at","img","imgFull","shot","tags","frame"].includes(k)) delete ph[k];
+    for(const k of Object.keys(ph)) if(!["id","at","img","imgFull","shot","tags","frame","page"].includes(k)) delete ph[k]; /* v635: "page" too — a multicard's text saved during its reading (Add a text, or Crop again on one of its texts) lost its multicard here and became a flashcard */
     const {id:_i,at:_a,img:_m,shot:_s,...fields}=card; Object.assign(ph,fields);
     if(sg.cardImg){ ph.img=await cardJpeg(sg.cardImg); dropThumb(ph.id); } /* the list's thumbnail was made from the crop saved first (v242, H: "the card with a photo before the re-crop remains") */
     { const win=fr?await windowCut(id,fr,ratioOf(card)):null; if(win){ ph.img=await cardJpeg(win.blob); dropThumb(ph.id); } } /* the window around the text at the card's own ratio (v329, v514) — the tight cut only when the photo is gone */

@@ -59,7 +59,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v634, 2026-09-25)
+## Current state (PWA v635, 2026-09-25)
 **The app is called 识字 Shízì** (v608, H: "Return the name to shizi", then "识字 Shízì" over the full v600 name; v601–v607
 it was 街字 Jiēzì, and Zeichentrainer stays dropped). The title, manifest `name`/`short_name` (识字 Shízì / 识字), header
 logo, About, share text, `privacy.html`, the owner's dumps and every shared file (`shizi-YYYY-MM-DD.json.txt`,
@@ -202,7 +202,7 @@ marking (v354); the list keeps its place when a card is opened and closed (v352/
 
 The **open card** follows the study card's own order (v531) and is swipeable through the list
 (v445). Actions: Test this card · Edit | Star · Flag | Delete. A **multicard's own text** gets
-Edit, Flag and Delete and nothing else (v498) — no Test, no Star, no schedule, no state pill.
+Edit, Flag and Delete and nothing else (v498) — no Test, no Star, no schedule, no state pill. The multicard itself: **Add a text** and Delete card (v635).
 
 ### Camera — photo to card
 The Camera tab is the camera: with nothing being worked on, the **shutter card** with Take photo
@@ -214,7 +214,7 @@ the app is open (v411) — the background is not available on the web and a TWA 
 sweeping across it, then the finished card with Edit and Delete. Save now (v237) makes the card
 before the reading is done; Crop (v437) hands the app's own frame to the hand; Crop again (v239)
 does the same from the Edit form. A photo whose texts stand apart becomes **one multicard** for
-the whole picture with a dot on every text (v448/v453/v457); each region is snapped onto its text's ink when shown (v620). The multicard's photo pinches, pans and hands off to the swipe like a card's (v634; a tap while zoomed finds its region by the point, `regionAt`).
+the whole picture with a dot on every text (v448/v453/v457); each region is snapped onto its text's ink when shown (v620). The multicard's photo pinches, pans and hands off to the swipe like a card's (v634; a tap while zoomed finds its region by the point, `regionAt`). **Add a text** (v635) frames a missing text on a multicard's photo through the Edit form's Crop again; a blank never read is dropped on Cancel, a tab tap or a restart.
 
 ### More — four sections (v547)
 **Learning** (Progress, Card order, Tags, Check-up and the undo rows) · **Your cards** (Export,
