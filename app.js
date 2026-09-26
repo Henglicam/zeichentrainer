@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=660; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=661; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,9 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["learn","v660","zoom on known characters too"],
-  ["learn","v656","Crop again, early Save: new text"],
-  ["learn","v654","Edit under Whole card, and back"],
+  ["learn","v661","zoom on signs set in columns?"],
   ["learn","v653","zoom lands on the character?"],
   ["photo","v652","sure card: AI text wins, ok?"],
   ["more","v651","Rebuild all: better? Undo ok?"],
@@ -4234,6 +4232,13 @@ async function pdCharBoxes(src,nw,nh,g,lines){
   const dp=Array.from({length:n+1},()=>new Int16Array(m+1));
   for(let a=n-1;a>=0;a--) for(let b=m-1;b>=0;b--) dp[a][b]=A[a]===seq[b].ch?dp[a+1][b+1]+1:Math.max(dp[a+1][b],dp[a][b+1]);
   const hit=new Map(); for(let a=0,b=0;a<n&&b<m;){ if(A[a]===seq[b].ch){ hit.set(ci[a],seq[b]); a++; b++; } else if(dp[a+1][b]>=dp[a][b+1]) a++; else b++; }
+  /* v661 (H: "Und der 2. Character wird hier nicht gezoomt", on 幸福/北京): the reader reads rows where the sign stands in
+     columns — 幸北 | 福京 — and the order match keeps only three of the four, the fourth placed between two neighbours it is
+     not between. A character the order left over that the reader read exactly as often as the card has it, and nowhere
+     already taken, is that reading, whatever its order */
+  if(hit.size<n){ const used=new Set(hit.values());
+    for(let q=0;q<n;q++){ if(hit.has(ci[q])) continue; const ch=A[q], free=seq.filter(s=>s.ch===ch&&!used.has(s));
+      if(free.length===1&&A.filter(x=>x===ch).length===seq.filter(s=>s.ch===ch).length){ hit.set(ci[q],free[0]); used.add(free[0]); } } }
   if(!hit.size) return {why:"the reader read other text"};
   const boxOf=(l,pos,ok)=>{ const lv=l.vert, len=lv?l.h:l.w, thick=lv?l.w:l.h, n2=l.at.length;
     const pitch=n2>1?len*(l.at[n2-1]-l.at[0])/(n2-1):Math.min(len,thick), side=Math.min(thick,pitch||thick)*1.05, c=(lv?l.y:l.x)+pos*len;

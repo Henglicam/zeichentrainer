@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v660
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v661
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,20 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v661, 2026-09-26)
+- **The Learn zoom finds a character the phone's reader read in another order (v661, H: "Und der 2. Character wird hier nicht
+  gezoomt", on 幸福 / 北京).** The sign stands in two columns (幸福 left, 北京 right) and Paddle reads rows: 幸北 | 福京.
+  `pdCharBoxes` matched the card's characters to the reader's by order (LCS), which keeps three of four; the fourth, 福, was
+  interpolated between its order neighbours 幸 and 北 — on the top row, where it is not — and marked unsure, so AZ_EST 0.5 put
+  the scale under AZ_MIN and the photo stayed whole (the log: "福 · reader, unsure (3 of 4 characters read) · x1"). Now a
+  character the order match left over takes the reader's one free reading of it when the reader has it exactly as often as the
+  card does; a repeated character is still not guessed. Suite `pdc` (4 checks, pdRead stubbed): the two 福 checks flip
+  (old: 福 at the top row between 幸 and 北, unsure; new: under 幸, sure); `[control]` a same-order line and `[guard]` a repeated
+  大 pass on both. `az` 13/13 and `az2` identical on both trees. **The 使 of 使用方法 cut at the right edge is not this:** the
+  log says reader, x3.22 — the pan is clamped at the card's own picture, and that picture ends inside 使; the zoom cannot show
+  what the crop does not hold (a Crop again fixes that card). TO_TEST: v660, v656 and v654 go (H: works on the phone); v661's
+  line comes in. Not yet field-checked.
 
 ## Current state (PWA v660, 2026-09-26)
 - **The Learn photo zooms onto known characters too (v660, H: "I'd rather have it, please change the rule so the photo still zooms
