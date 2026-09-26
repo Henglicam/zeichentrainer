@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v655
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v656
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,26 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v656, 2026-09-26)
+- **A Crop again saved before its reading was done keeps the new reading (v656, H: "Edit > crop again > save before AI is ready:
+  doesn't actually save the crop translation and meaning. But it should.", with a Diagnostics dump and a screenshot: the new
+  crop 幸福 / 北京 on the Learn card under the old text 新鲜现磨60秒 … 一个有咖啡的).** The dump had the whole story: the reading
+  `recrop-edit4` was handed over (`PENDING`), finished with the picture's 幸福 / 北京 and wrote its card (`cards` in its numbers) —
+  and in the same seconds the Learn card, back on screen, asked for its **description** (`explainSoon`) for the OLD text. **The
+  cause is a race between two writers:** `finishPending` fills the card object `ph` in place across several awaits
+  (`readingCard`, `cardJpeg`, `windowCut`), while `explainCard` saves through `putCard(setDesc({...d2}))`, which puts a **copy**
+  into `S.custom`. When the description landed inside that window, the deck held the copy — old text, plus a description of the
+  old text — and the reading filled an object no screen showed. **Fix, both ends:** `finishPending` puts its card back into
+  `S.custom` before it writes (a star tapped meanwhile is kept), and `explainCard` drops an answer whose card text changed while
+  it was asked, or whose card is still being read. **Reproduced in the harness** (suite `recrop`: a photo card 旧文字 → Edit →
+  Crop again → Read now → Save while the reading runs, the picture answered 贵州茅台酒 after 6 s, the description's answer forced
+  into `readingCard`): before, memory 旧文字 with a description of 旧文字 — **FAIL**; after, 贵州茅台酒 in memory and on disk,
+  from Learn and from Cards — **PASS**; the unforced timing passes on both (`[control]`). Suites `edit` 11/11, `crop` 4/4.
+  **Seen and not changed (named):** Save in the gap after the phone's reader has finished but before a picture call that went
+  out at the quick look answers (the reader sure, v641) saves the reader's text, and that picture answer is not used — in the
+  Edit form a sure reading has never been checked against the picture (v646/v648 check only cards the app makes). A
+  `TO_TEST` line. Not yet field-checked.
 
 ## Current state (PWA v655, 2026-09-26)
 - **The study card's Star · Flag · Edit is one quiet toolbar (v655, H: "Works on the phone. Polish the layout/design, not sure if
