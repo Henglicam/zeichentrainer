@@ -476,8 +476,9 @@ body.noscroll{overflow:hidden}
    mid-phrase — without nowrap the German row came out as three ragged two-line columns with the glyph stranded above its word.
    The gap is 14 px and the padding 2 px since v431: with 22 px the three buttons fitted (287 px of 322 in Russian) and the two
    gaps pushed the row over anyway, so it wrapped on the labels' account when it was the spacing */
-.backacts{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 14px;margin-top:12px} .backacts .del{font-size:15px;padding:10px 2px;white-space:nowrap} .backacts .del.quietact{color:var(--label2);font-weight:400;min-height:44px} /* v654: Edit on the study card, there but not asking for the eye (H: "not too prominent") */
-.flagbtn.on{color:var(--tint)}
+.backacts{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;margin-top:14px;padding-top:6px;border-top:.5px solid var(--sep)} /* v655 (H chose B): one toolbar of equal columns under a hairline, all three grey and equally quiet */
+.tbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;padding:6px 2px;background:none;border:none;border-radius:10px;cursor:pointer;color:var(--label2);font:inherit;font-size:12px;font-weight:500;line-height:1.2;text-align:center} .tbtn:active{background:var(--fill)}
+.tbtn svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round} .tbtn.on{color:var(--tint)} .tbtn.on svg{fill:currentColor} .tbtn#edit-card svg{fill:none} /* on: a starred or flagged card's own button in the tint, its icon filled */
 /* a text box inside a More row (the Feedback row, v218): the form field's look on the row's secondary surface, full width, growing with its text */
 .mrow textarea{width:100%;background:var(--card2);border:none;border-radius:10px;color:var(--label);font-family:var(--sans);font-size:17px;padding:12px 14px;outline:none;box-shadow:none;margin-top:10px;resize:none;overflow:hidden;line-height:1.35;min-height:46px;display:block}
 .mrow textarea:focus{box-shadow:inset 0 0 0 2px var(--tint)} .mrow textarea::placeholder{color:var(--label3)}
