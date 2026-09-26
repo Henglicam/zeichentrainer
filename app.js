@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=651; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=652; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v652","sure card: AI text wins, ok?"],
   ["more","v651","Rebuild all: better? Undo ok?"],
   ["more","v650","Check texts: right cards flagged?"],
   ["photo","v649","AI down: long sign waits?"],
@@ -1347,7 +1348,7 @@ async function rrFinish(id){ const sg=SIGN[id];
     const built=sg&&SIGN[id]===sg?await readingCard(id,sg):null;
     let check=""; const scE=built&&!SURECHK[id]&&sg.picEarly&&!sg.picAsked&&(numsFor(id)||{}).pdSure?{at:sg.picEarly.at,p:sg.picEarly.p}:null; /* v648 */
     if(built&&(SURECHK[id]||scE)){ const sc=SURECHK[id]||scE; delete SURECHK[id]; const e=await Promise.race([sc.p,rrSleep(90000).then(()=>null)]); /* v646: the report says what the check beside a sure reading found */
-      check=!e||!e.pic?"the AI's check did not come":e.pic.bad?"the AI found no Chinese text":sureKey(e.pic.zh)===sureKey(built.card.c)&&!(e.pic.apart&&e.pic.labels)?"the AI agrees":`the AI reads "${e.pic.zh.replace(/\n/g," / ")}" — flagged`; }
+      check=!e||!e.pic?"the AI's check did not come":e.pic.bad?"the AI found no Chinese text":sureKey(e.pic.zh)===sureKey(built.card.c)&&!(e.pic.apart&&e.pic.labels)?"the AI agrees":`the AI reads "${e.pic.zh.replace(/\n/g," / ")}" — ${e.pic.apart&&e.pic.labels?"flagged":"the card would take it, flagged"}`; }
     return rrEnd(id,built?{kind:"card",c:built.card.c,p:built.card.p,m:String(built.card.m||"").slice(0,80),src:built.mt&&built.mt.src,check}:{kind:"none",why:"nothing to save"}); }
   catch(e){ logErr("reread",e&&(e.stack||e.message)||e); return rrEnd(id,{kind:"none",why:"failed: "+(e&&e.message||e)}); } }
 function rrEnd(id,res){ const w=RRWAIT[id]; delete RRWAIT[id]; if(res&&w){ w(res); return; }
@@ -1471,12 +1472,14 @@ async function ctShare(){ const text=ctText(), name="shizi-textcheck.txt", file=
 const RB_MAX_MS=240000; let RB_ON=false, RB_LOOP=false;
 const rbSum=cs=>{ const pg=cs.find(d=>d.kind==="page"); return pg?{kind:"multi",n:pageItems(pg).length,c:pg.c,texts:pageItems(pg).map(d=>d.c).join(" · ").slice(0,300)}:{kind:"card",c:cs.filter(d=>d.kind!=="page").map(d=>d.c).join(" · ")}; };
 async function rbOne(shot){
-  const old=S.custom.filter(d=>d.shot===shot); if(!old.length) return {shot,skip:"no card"};
+  /* v652: on a multicard photo only the multicard and its own texts are the reading's to replace — a flashcard made on the same photo
+     by other means stays (v651 took every card of the photo, so those vanished: H's Deck went 516 → 472 where the report explains 17) */
+  const pg0=S.custom.find(d=>d.shot===shot&&d.kind==="page"), old=S.custom.filter(d=>d.shot===shot&&(!pg0||d===pg0||d.page===pg0.id)); if(!old.length) return {shot,skip:"no card"};
   const P=await rrPrep(shot,"rb_"); if(!P) return {shot,skip:"no photo"}; const {id,blob,rect}=P;
   const hadFull=old.some(d=>d.imgFull), u0=usage(), by0=[u0.byPhoto||0,(u0.m||{}).byPhoto||0], t0=Date.now();
   const prog={}; for(const d of old) if(S.progress[d.id]) prog[d.id]=S.progress[d.id];
   await setSetting("rb:"+shot,{cards:old,prog});
-  S.custom=S.custom.filter(d=>d.shot!==shot); for(const d of old){ try{ await idbDel("custom",d.id); }catch(e){} dropThumb(d.id); }
+  S.custom=S.custom.filter(d=>!old.includes(d)); for(const d of old){ try{ await idbDel("custom",d.id); }catch(e){} dropThumb(d.id); } /* only the cards being replaced — a flashcard of its own on a multicard photo stays (v652) */
   const restore=async why=>{ for(const d of S.custom.filter(x=>x.shot===id)){ S.custom=S.custom.filter(x=>x!==d); try{ await idbDel("custom",d.id); }catch(e){} }
     for(const d of old){ S.custom.push(d); try{ await idbPut("custom",d); }catch(e){} } await delRow("rb:"+shot); delete S.settings["rb:"+shot]; return {shot,kept:why,old:rbSum(old),ms:Date.now()-t0}; };
   const cid="reading#"+Date.now(); let img=null; try{ const r=await cropBlob(id,windowRect(rect)); if(r) img=await cardJpeg(r.blob); }catch(e){}
@@ -1501,7 +1504,7 @@ async function rbOne(shot){
 const RB_WHY={}; /* failPending's reason for a rebuilt photo, for the report */
 function rbLine(){ const R=S.settings.rb; if(!R) return `Makes the cards of every photo again with today's reading and replaces the old ones, one photo after the other while the app is open. Your edits and crops on those cards are replaced; review history, stars and tags stay. Undo puts everything back. About ${rrShots().length} photos.`;
   const res=R.res||[], ch=res.filter(r=>r.ids).length, kept=res.filter(r=>r.kept||r.err).length;
-  return `${RB_ON?"Running":R.undone?"Undone":R.done?"Done":"Paused"}: ${res.length} of ${R.list.length} photos, ${ch} rebuilt${kept?`, ${kept} kept as they were`:""}.`; }
+  return `${RB_ON?"Running":R.undone?"Undone":R.done?"Done":"Paused"}: ${res.length} of ${R.list.length} photos, ${ch} rebuilt${kept?`, ${kept} kept as they were`:""}.${R.repaired?` ${R.repaired} flashcard${R.repaired===1?"":"s"} the rebuild had taken off a multicard photo ${R.repaired===1?"is":"are"} back.`:""}`; }
 function rbShow(){ const st=$("#rb-status"); if(st) st.textContent=rbLine()+(RB_LOOP&&!RB_ON?" Pausing after this photo …":""); const b=$("#rb-run"); if(b) b.textContent=RB_ON?"Pause":(S.settings.rb&&!S.settings.rb.done&&!S.settings.rb.undone?"Go on":"Start"); const u=$("#rb-undo"); if(u) u.disabled=RB_LOOP||!rbCanUndo(); }
 const rbCanUndo=()=>{ const R=S.settings.rb; return !!(R&&!R.undone&&(R.res||[]).some(r=>r.ids)); };
 async function rbRun(){
@@ -1510,7 +1513,7 @@ async function rbRun(){
   if(RR_LOOP||CT_LOOP){ const st=$("#rb-status"); if(st) st.textContent="Re-read all or Check texts is running — pause it first."; return; }
   let R=S.settings.rb;
   if(!R||R.done||R.undone){ if(R&&!R.undone&&rbCanUndo()&&!await askSheet({title:"Start a new rebuild?",text:"The undo of the last one is lost.",ok:"Start",danger:true})) return;
-    await rbForget(); R={at:Date.now(),v:APP_V,list:rrShots(),i:0,res:[]}; }
+    await rbForget(); R={at:Date.now(),v:APP_V,list:rrShots(),i:0,res:[],repaired:0}; }
   await rbRecover(); RB_ON=true; RB_LOOP=true; await setSetting("rb",R); rbShow();
   try{ await pdLoad().catch(()=>{});
     while(RB_ON&&R.i<R.list.length){
@@ -1532,6 +1535,15 @@ async function rbRecover(){
     for(const [id,pr] of Object.entries((bak&&bak.prog)||{})){ S.progress[id]=pr; try{ await idbPut("progress",{...pr,id}); }catch(e){} }
     delete S.settings[k]; await delRow(k); }
   if(S.ready){ S.queue=buildQueue(false); setStats(); } }
+/* v652: the flashcards v651 took off a multicard photo without a successor come back from the photo's "rb:" row, with their history —
+   once, at the start after the update; the Rebuild row says how many */
+async function rbRepair(){
+  const R=S.settings.rb; if(!R||R.repaired!==undefined||RB_LOOP) return; let n=0;
+  for(const k of Object.keys(S.settings)){ if(!k.startsWith("rb:")) continue; const bak=S.settings[k]; if(!bak||!(bak.cards||[]).some(d=>d.kind==="page")) continue;
+    for(const d of bak.cards){ if(d.kind==="page"||d.page||cardOf(d.id)) continue;
+      S.custom.push(d); try{ await idbPut("custom",d); }catch(e){} n++;
+      const pr=(bak.prog||{})[d.id]; if(pr&&!S.progress[d.id]){ S.progress[d.id]=pr; try{ await idbPut("progress",{...pr,id:d.id}); }catch(e){} } } }
+  R.repaired=n; await setSetting("rb",R); if(n&&S.ready){ S.queue=buildQueue(false); setStats(); } }
 async function rbForget(){ for(const k of Object.keys(S.settings)) if(k.startsWith("rb:")){ delete S.settings[k]; await delRow(k); } }
 async function rbUndo(){
   const R=S.settings.rb; if(!R||RB_LOOP||!rbCanUndo()) return;
@@ -1628,7 +1640,7 @@ async function boot(){
   autoBreaks(); /* old cards get their photo lines estimated once */
   fixNumberSegs(); /* word cards from before v338 get their numbers back into their lines */
   dedupePhotos(); /* cards from before v214 drop the whole photo they hold twice */
-  setTimeout(()=>normalizeRaw().catch(()=>{}).then(()=>rbRecover().catch(()=>{})).then(resumeShots).then(resumePending).then(autoNext,autoNext),1500); /* v651: a rebuild killed mid-photo is put back first, before resumePending would read its placeholder */ /* a photo left as it came is downscaled and queued (v509), cards saved before their reading finished get it now (v237), then the batch goes on where it stopped (v411) */
+  setTimeout(()=>normalizeRaw().catch(()=>{}).then(()=>rbRecover().catch(()=>{})).then(()=>rbRepair().catch(()=>{})).then(resumeShots).then(resumePending).then(autoNext,autoNext),1500); /* v651: a rebuild killed mid-photo is put back first, before resumePending would read its placeholder */ /* a photo left as it came is downscaled and queued (v509), cards saved before their reading finished get it now (v237), then the batch goes on where it stopped (v411) */
   aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); resumeRecheck(); });
   /* an interrupted Translate-all, Tag-all or Check-up run, and the deck's two one-off passes, go on by themselves (v262, v368, v370, v373, v398) */
   setTimeout(updateNote,1200); /* v408: after the restored screen is up, not during the first paint */
@@ -9291,9 +9303,20 @@ function sureCheck(cid,c0,sc,shot){
     const pic=e.pic, ms=((Date.now()-sc.at)/1000).toFixed(1);
     if(pic.bad){ d.flag=true; d.flagNote=t("the reading looks wrong"); logRead(shot,`the AI found no Chinese text in the picture (${ms} s) — the sure reading ${c0.replace(/\n/g," / ")} is flagged`); }
     else if(sureKey(pic.zh)===sureKey(c0)&&!(pic.apart&&pic.labels)){ logRead(shot,`the AI reads the picture as the phone's reader did (${ms} s)`); return; }
-    else { d.ai={zh:pic.zh,p:pic.p||"",m:pic.m||"",note:pic.apart&&pic.labels?t("the picture may not show this text — check the photo"):"",ok:false,bad:false,at:Date.now(),model:pic.model};
+    else if(pic.apart&&pic.labels){ d.ai={zh:pic.zh,p:pic.p||"",m:pic.m||"",note:t("the picture may not show this text — check the photo"),ok:false,bad:false,at:Date.now(),model:pic.model};
       d.flag=true; d.flagNote=t("the reading looks unsure — check text, pinyin and meaning");
-      logRead(shot,`the AI reads the picture as ${pic.zh.replace(/\n/g," / ")}${pic.apart&&pic.labels?` (${pic.labels.length} separate texts)`:""} (${ms} s), the phone's reader as ${c0.replace(/\n/g," / ")} — the card is flagged with the AI's reading as its suggestion`); }
+      logRead(shot,`the AI reads the picture as ${pic.zh.replace(/\n/g," / ")} (${pic.labels.length} separate texts) (${ms} s), the phone's reader as ${c0.replace(/\n/g," / ")} — the card is flagged with the AI's reading as its suggestion`); }
+    else { /* v652 (H's Rebuild of 521 photos, 2026-09-26: 良品 read 一品, 低糖 低下, 九号 一号, 味多美 圣多美 — every one of them sure, and on every one the
+         check's suggestion was right; in the third Re-read nearly all of the check's 17 flags were the AI being right): the two disagree, so the
+         card takes the AI's reading and stays flagged, and the reader's text is named in the note and kept among the alternatives, so Edit
+         brings it back in one tap when the AI was the one that was wrong (里兰卡餐厅) */
+      const upd={...d, p:pic.p||"", m:pic.m||"", flag:true, flagNote:t("the reading looks unsure — check text, pinyin and meaning")+t(" (reading uncertain: {0})",c0.replace(/\n/g," / ")),
+        alts:[c0,...(d.alts||[]).filter(x=>x!==c0&&x!==pic.zh)].slice(0,6), mt:{src:"llm",verified:false,pending:!pic.m}};
+      delete upd.ai; if(pic.m) setMl(upd,pic.ml);
+      const was=!!d.unchecked, r=await applyCardUpdate(d.id,upd,pic.zh.replace(/\r/g,""),!!pic.p);
+      if(r&&was){ r.unchecked=true; try{ await idbPut("custom",r); }catch(err){} } /* the AI's reading is not H's check */
+      logRead(shot,`the AI reads the picture as ${pic.zh.replace(/\n/g," / ")} (${ms} s), the phone's reader as ${c0.replace(/\n/g," / ")} — the card takes the AI's reading, flagged, the reader's kept as an alternative`);
+      if(S.mode==="cards"&&!S.editing) render(); return; }
     try{ await idbPut("custom",d); }catch(err){} if(S.mode==="cards"&&!S.editing) render(); });
 }
 async function finishPending(id){

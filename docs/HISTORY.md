@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v651
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v652
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,32 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v652, 2026-09-26)
+- **When the AI's check disagrees with a sure reading, the card takes the AI's reading (v652, `sureCheck`).** H's Rebuild of
+  521 photos and his Check texts over them (1 093 cards, 60 flagged): the wrong single cards were 良品→一品, 低糖→低下, 九号→一号,
+  味多美→圣多美, 半糖→无名 — and H's screenshots of 一品 and 低下 showed the check had flagged both with the right suggestion
+  (良品, 低糖). Measured first, from the two reports: the sure path is **not** worse than the others — Check texts flagged 6 % of
+  the single cards made in ≤ 5 s (the sure path), 8 % at 6–12 s, 7 % over 12 s — so restricting the shortcut (≥ 3 characters, or
+  one line) would not have helped and was not built. What helps is the default: in the third Re-read the check's 17 flags were
+  nearly all the AI being right. Now the card takes the AI's text (pinyin from the AI, else pinyin-pro; its meaning, else pending
+  for the text check), stays flagged with the note "…(reading uncertain: 一品)", keeps the reader's text first among `alts`, and
+  stays unchecked; a panel answer (`apart`) still only suggests. Cost, named to H: where the AI is the one that is wrong
+  (里兰卡餐厅), the card is wrong until the flag is looked at. Many of the 60 Check-texts flags look false — rare characters the
+  check cannot make out (骏, 榆, 熏, 猩, 匹, 摊, 嗷, 籽, 颐 on all four copies of the same screen, 洲 which every reading found);
+  about 15 are real.
+- **Rebuild all took flashcards off multicard photos (v651 bug, fixed in v652).** H's Deck went 516 → 472 where the report
+  explains 17 (14 cards became multicards, five two-card photos became one). `rbOne` removed every card of a photo; on a
+  multicard photo a flashcard of its own (not one of the multicard's texts) was deleted without a successor, and `rbSum`
+  summarised such a photo by its multicard, so the report never showed it. Now a multicard photo replaces only the multicard
+  and its texts; `rbRepair`, once at the first start after the update, puts every flashcard v651 took off a multicard photo back
+  from the photo's `rb:` row, with its history, and the Rebuild row says how many (0 would mean the guess was wrong). The first
+  harness run also caught the new filter leaving the kept card stored but out of `S.custom` until a restart — fixed.
+  Harness: `sureCheck` with the AI answering 阿里去 on a sure 阿里云 — the card becomes 阿里去, flagged with 阿里云 named and
+  kept, v651 only suggested (1 flip; the agreeing answer unchanged on both [control]); the v648 early-picture path takes it
+  too; a multicard photo with a starred flashcard of 6 reviews — kept on v652, gone on v651; a v651-state phone restarted on
+  v652 — the card back with its 6 reviews, the row saying so, once; Rebuild (13) and Check texts (11) suites and the Re-read
+  guard pass.
 
 ## Current state (PWA v651, 2026-09-26)
 - **Owner tools → Rebuild all (v651, `rbRun`/`rbOne`/`rbUndo`/`rbRecover`).** H: "Re-build", then, told the costs (his edits
