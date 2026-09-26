@@ -476,7 +476,7 @@ body.noscroll{overflow:hidden}
    mid-phrase — without nowrap the German row came out as three ragged two-line columns with the glyph stranded above its word.
    The gap is 14 px and the padding 2 px since v431: with 22 px the three buttons fitted (287 px of 322 in Russian) and the two
    gaps pushed the row over anyway, so it wrapped on the labels' account when it was the spacing */
-.backacts{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 14px;margin-top:12px} .backacts .del{font-size:15px;padding:10px 2px;white-space:nowrap}
+.backacts{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 14px;margin-top:12px} .backacts .del{font-size:15px;padding:10px 2px;white-space:nowrap} .backacts .del.quietact{color:var(--label2);font-weight:400;min-height:44px} /* v654: Edit on the study card, there but not asking for the eye (H: "not too prominent") */
 .flagbtn.on{color:var(--tint)}
 /* a text box inside a More row (the Feedback row, v218): the form field's look on the row's secondary surface, full width, growing with its text */
 .mrow textarea{width:100%;background:var(--card2);border:none;border-radius:10px;color:var(--label);font-family:var(--sans);font-size:17px;padding:12px 14px;outline:none;box-shadow:none;margin-top:10px;resize:none;overflow:hidden;line-height:1.35;min-height:46px;display:block}

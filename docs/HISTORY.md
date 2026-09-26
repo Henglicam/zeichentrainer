@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v653
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v654
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,27 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v654, 2026-09-26)
+- **Edit on the Learn card, quiet (v654, H: "Please offer an edit button in the learn cards. But not too prominent").** Proposed in
+  three lines and H said "Go". **Where:** inside the "Whole card" fold, a third button after Star and Flag (`#edit-card`,
+  `.backacts .del.quietact`): the label grey `--label2`, weight 400, not the tint, 44 px tall — so the folded card shows nothing new.
+  **What it does:** `S.editing=c; S.editFrom="study"` — the Edit form's own way back to Learn, which v512 had kept in `renderEdit`
+  (`from==="study"` → back on the card with the block open, and Delete going on with the next card) while no button set it any
+  more: v512's suite asserted "the open fold with the word line, star and flag and **no Edit**", with no reason recorded and no
+  word of H's against it. Opening it grades nothing. **The pad keeps its strokes** across Cancel and a Save that leaves the
+  characters alone; **a Save that changes the characters starts the pad afresh** (`c0`, the text the form opened on — the pad's
+  key is the card id, so without it the strokes of the old characters would stand on the new ones). The zoom's cache key
+  `cbKey` already carries the text and the frame. **Cost, measured smaller than proposed:** the proposal named one more row
+  (44 px); it fits on the Star · Flag row in all ten languages at 360 px (German "Bearbeiten" the widest, right edge 317 of 360),
+  so the block is no taller. **The guide's Learn section gains one sentence** (the v259 rule), a key in nine columns (480 a column,
+  ru 509); its figure shows the folded front, so no crop changes. Suite `edit` (11 checks: folded no Edit; unfolded Edit; grey
+  not tint; ≥ 44 px; no overflow at 390 and 360 in de, fr, ru, es, ja, th, id dark; opens the form on this card with
+  `editFrom` study; grades nothing; Cancel back on the same card with the block open and the pad's strokes; Save of the meaning
+  keeps the pad; Save of a new text restarts it) — **10 flip on the old tree**, the folded check is the `[guard]` (passes on
+  both, because there was no Edit anywhere). Suite `crop` (4): Edit from Learn → Crop again opens in the form → Save → back on the
+  Learn card, reading finished, nothing pending — **saved with the frame as it was; a moved frame was not driven.** Suite `az`
+  13/13. A `WHATS_NEW` line, a `TO_TEST` line. Not yet field-checked.
 
 ## Current state (PWA v653, 2026-09-26)
 - **The Learn zoom finds the characters with the phone's reader (v653, `pdCharBoxes`/`pdBoxesFor`).** H: "Dieses automatische
