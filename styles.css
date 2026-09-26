@@ -734,7 +734,9 @@ body.noscroll{overflow:hidden}
 .card.study .zone1{position:relative}
 .card.study .zone1 .picbox{margin-bottom:0}
 .picflag{position:absolute;right:8px;top:8px;width:36px;height:36px;border:none;border-radius:999px;background:rgba(255,255,255,.85);color:var(--label3);font-size:18px;line-height:36px;padding:0;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.25)} /* the review flag on the picture, as the star sits on a tile (v465) */
-.picflag.on{color:var(--tint)}
+.picflag{display:grid;place-items:center} .picflag svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round} .picflag.on svg{fill:currentColor} .picflag.on{color:var(--tint)}
+.picstar{position:absolute;right:8px;top:8px;z-index:3;width:36px;height:36px;border:none;border-radius:999px;background:rgba(255,255,255,.85);color:var(--label3);padding:0;display:grid;place-items:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.25)} .picstar::before{content:"";position:absolute;inset:-4px} .picstar svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round} .picstar.on{color:var(--tint)} .picstar.on svg{fill:currentColor} /* v658: the star on the Learn photo, the flag's twin — marks on the picture, as on a Cards tile */
+.zone1 .picstar~.picflag{right:52px} /* v658: the flag beside the star, not under it */
 .picflag.new{color:var(--label2)} /* v515: hollow ⚐ — not yet checked; a tap flags it. Nothing is drawn once the card is checked and clean */
 /* THE CHARACTERS ARE ONE ROW (v517, H: "Die Felder für Bild und Zeichenfläche dürfen sich nicht in der Größe verändern.
    Das müssen Konstanten sein."). Until v516 there was one row per photo line, so a three-line sign gave three rows, 196 px
