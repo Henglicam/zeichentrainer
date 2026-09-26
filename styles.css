@@ -814,6 +814,7 @@ body.noscroll{overflow:hidden}
 .recap .rp{flex:none}
 .recap .rm{flex:0 1 auto;min-height:0}
 .recap.one .rp{-webkit-line-clamp:2} /* v577: the whole card's reading may take three lines now that no glyph stands over it; one character's is one line and never needs them */
+.recap.one.in{transition-delay:.2s} /* v668 (H: "Der grün ausgeschriebene Charakter und das grüne Pinyin überlappen sich leicht … unsauber"): the character's reading comes in once the pad, green ink and all, has faded out (.padwrap .wpad, .2 s) — the two fades crossed; the way out (.in removed) keeps no delay */
 .recap.one .rm{-webkit-line-clamp:2} /* v571: the character's own meaning under its reading — a 900 ms breath, so two lines, where the whole card's recap allows three */
 .recap.py .rp{line-height:1.12;letter-spacing:.6px} /* v555: the entrance, the exit and the green are the base rules now — one language for both recaps */
 .recap .rm{font-size:18px;line-height:1.25;color:var(--label2);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
