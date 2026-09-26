@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v647
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v648
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,22 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v648, 2026-09-26)
+- **The third Re-read (v648, H pasted the report):** multicards 471 of 471; cards reading as the card says 371 → 361 of
+  471 — v647's frame margin brings neighbouring text into some framed cards (a Re-read effect: a new photo is read from a
+  proposal, not from a stored frame). **One real bug:** a sure reading was checked only when its picture call started
+  *after* the reader turned sure (`SURECHK`). When the quick look had already sent the picture (`EARLY`, parked as
+  `picEarly` for `picPanel`), the answer was kept for a panel and otherwise never compared — 良品 read 一品 went through
+  unflagged. `finishPending` and `rrFinish` now hand that parked answer to `sureCheck` when the reading is sure and no
+  panel took it (`!picAsked`). Harness on phone3's cards with the AI answering 阿里去: 良品 unflagged on v647, flagged on
+  v648 (1 flip; 公共区域 / 请勿吸烟 and 阿里云 flagged on both — controls); the AI answering 良品 leaves it unflagged; the
+  Re-read suite passes (deck unchanged). **Kept as is, named:** the check flags where the AI adds or drops a line the
+  reader left out or kept (蛋白粉 + 汤臣倍健, 学音乐 + 薄荷音乐, 出院通知单 + a hospital name, 精选老抽 + 豉香浓郁, 百联地产
+  without 租售部, 外星人 without 0糖0卡, U3美业商学, a misread 斯里兰卡餐厅) — each is one Dismiss, and deciding which
+  lines belong on the card is the question the check exists to raise. Also seen, not changed: 建国肉夹馍 came back as a
+  card instead of a multicard (the AI's `apart` answer varies between calls), two photos hit the 180 s limit (沙洲市集,
+  礼让行人), and 早日退休 → 退休 and 火119警 were confirmed by the AI itself.
 
 ## Current state (PWA v647, 2026-09-26)
 - **The second Re-read of 521 photos (v647, H pasted the report):** cards reading as the card says 336 → 371 of 471,
