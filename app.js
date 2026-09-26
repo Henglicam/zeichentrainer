@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=664; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=665; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v665","zoom goes in once, no correction?"],
   ["learn","v664","tilted text: no zoom off it?"],
   ["learn","v663","zoom on cards with no frame?"],
   ["learn","v662","1.5 s overview, then zoom: ok?"],
@@ -3891,7 +3892,16 @@ function renderStudy(main){
   /* v662 (H: "die rausgezoomte Karte kurz zur Übersicht anzeigen und dann automatisch auf den ersten Character zoomen", "Go 1.5 s"):
      the whole picture stands AZ_OVERVIEW, then the zoom goes in by itself as the pad's first touch would; a touch before that
      goes in at once. st._az is the card's latest render, so a stroke's re-render in between does not zoom a detached card */
-  if(ZOOM_AUTO&&!st.zoomGo&&!st._ovT) st._ovT=setTimeout(()=>{ if(S.pad===st&&!st.zoomGo){ st.zoomGo=true; if(st._az) st._az(); } },AZ_OVERVIEW);
+  st._card=card;
+  /* v665 (H: "it should be professional and user friendly", on the zoom going in on the ink's guess and then out to the reader's
+     place): past AZ_OVERVIEW the zoom waits for the phone's reader, up to AZ_READER after the card came up, so it goes in once,
+     to its final place. A reader slower than that (its first load) still gets the ink's guess first; a touch never waits */
+  if(ZOOM_AUTO&&!st.zoomGo&&!st._ovT){ const t0=performance.now();
+    const go=()=>{ if(S.pad===st&&!st.zoomGo){ st.zoomGo=true; if(st._az) st._az(); } };
+    st._ovT=setTimeout(()=>{ const cd=st._card;
+      if(!d.img||!cd||!cd.isConnected||PDDONE.has(cbKey(d))) return go();
+      const cap=setTimeout(go,Math.max(0,AZ_READER-(performance.now()-t0)));
+      pdBoxesFor(cd,d).then(()=>{ clearTimeout(cap); go(); }); },AZ_OVERVIEW); }
 }
 /* v527: the block sits under the pad, so opening it scrolls the card until the block stands above the tab bar (or, when it is
    taller than the room, until its head is under the top bar) instead of leaving it under the translucent bar; the detail's
@@ -4060,7 +4070,7 @@ function wordSpan(d,x){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):
    little off still shows the character. It rides on v541's glide and v575's geometry, not on the marks, so SPOT_ON stays off. The
    finger always wins: a pinch or a wheel on the picture hands the zoom to the hand for the rest of that picture (ZOOM_HAND),
    and from then on it only follows, as v541 did. */
-const AZ_OVERVIEW=1500; /* v662: how long a card shows its whole picture before the zoom goes in by itself */
+const AZ_OVERVIEW=1500, AZ_READER=2500; /* v662: how long a card shows its whole picture before the zoom goes in by itself; v665: how long past the card's start it may wait for the phone's reader, so the zoom goes in once */
 const ZOOM_AUTO=true, AZ_INK=0.68, AZ_EST=0.5, AZ_MAX=3.5, AZ_MIN=1.15; /* the character's larger side as a share of the box — ink-found and estimated —, and the scale's cap and floor */
 let LAST_AZ=null; /* the last decision, for Diagnostics' head line */
 /* EVERY CHARACTER'S OWN BOX, FOUND ON THE INK (v618, H on v617 with a Diagnostics dump: "Er erkennt vieles noch nicht. Die
