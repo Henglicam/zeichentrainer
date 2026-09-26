@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=655; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=656; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v656","Crop again, early Save: new text"],
   ["learn","v654","Edit under Whole card, and back"],
   ["learn","v653","zoom lands on the character?"],
   ["photo","v652","sure card: AI text wins, ok?"],
@@ -3672,7 +3673,7 @@ async function explainCard(id){
   EXPLAIN[id]="busy"; refreshDesc(id);
   try{ const [r]=await aiAsk([{...d,explain:true}]); const s=r&&!r.bad?saneDesc(r.desc,d.c):"";
     if(!s){ EXPLAIN[id]=t("No description came back. Try again."); refreshDesc(id); return; }
-    const d2=cardOf(id); if(!d2) return; await putCard(setDesc({...d2},s,r.ml||LANG),id); delete EXPLAIN[id]; refreshDesc(id); }
+    const d2=cardOf(id); if(!d2) return; if(d2.c!==d.c||Object.values(PENDING).includes(id)){ delete EXPLAIN[id]; refreshDesc(id); return; } /* v656: the text changed while the description was asked for (a Crop again saved before its reading was done) — it describes the old text, and a card still being read is filled by the reading */ await putCard(setDesc({...d2},s,r.ml||LANG),id); delete EXPLAIN[id]; refreshDesc(id); }
   catch(err){ const m=err&&err.message||String(err); EXPLAIN[id]=m===AI_NET_ERR?t(m)+".":t("The AI check failed: {0}",m); refreshDesc(id); }
 }
 /* the other cards with the same text (v122, H: "if one character connects to various photos, then link them"): their
@@ -9435,6 +9436,7 @@ async function finishPending(id){
     if(auto||edit){ if(mt.suspect||(sg.ai&&sg.ai.bad)||(sg.weak&&!vouched)){ ph.flag=true; ph.flagNote=t("the reading looks unsure — check text, pinyin and meaning"); } }
     else { ph.flag=true; ph.flagNote=weak?t("saved before the reading was done, and the reading is weak — check text, pinyin and meaning"):t("saved before the reading was done — check text, pinyin and meaning"); } /* nobody saw the preview (v245, H: "flag cards that were saved before the final stage, with an appropriate comment") */
     if(!ph.flag&&cropDisagrees(ph.frame,sg.region&&sg.region.pic,sg.ai&&sg.ai.labels,PICSEEN[id])){ ph.flag=true; ph.flagNote=t("the picture may not show this text — check the photo"); logRead(id,"the card's frame lies outside everything the AI named — flagged"); } /* v400: the picture is not touched — v380's wide fallback measured 0 of 75 usable cards (6.1 CSS px a character) and H rejected exactly that picture in the field at v382 ("Die Bild crops sind noch falsch"), so this only says so */ /* the card made by itself (v325) and the card saved early from Crop again (v342, H's "Go" on the recommendation — the analysis counts): only a doubtful reading carries the flag */ /* the card made by itself (v325): the row shows it, so only a doubtful reading carries the flag — a weak reader score the AI check then confirmed is no doubt */
+    { const i=S.custom.findIndex(x=>x.id===ph.id); if(i>=0&&S.custom[i]!==ph){ if(S.custom[i].star) ph.star=true; S.custom[i]=ph; } } /* v656 (H: "Edit > crop again > save before AI is ready: doesn't actually save"): ph is filled in place across the awaits above, and anything that saved the card meanwhile through putCard — the description fetched for the card back on Learn, a star — put a COPY of the old card into the deck, so the reading landed on an object no screen showed and the deck kept the old text. The reading's card goes back in; a star tapped meanwhile stays */
     try{ await idbPut("custom",ph); }catch(e){}
     if(SURECHK[id]){ const sc=SURECHK[id]; delete SURECHK[id]; sureCheck(ph.id,ph.c,sc,id); } /* v646 */
     else if(sg&&sg.picEarly&&!sg.picAsked&&(numsFor(id)||{}).pdSure) sureCheck(ph.id,ph.c,{at:sg.picEarly.at,p:sg.picEarly.p},id); /* v648: the picture went out at the quick look, before the reading turned sure — that answer is the check (H's third Re-read: 良品 read 一品, unchecked, since the parked answer was kept only for a panel) */
