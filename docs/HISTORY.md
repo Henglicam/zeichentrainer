@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v665
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v666
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,18 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v666, 2026-09-26)
+- **The zoom's record says where it went and what held it (v666, H: "Hier hat er ja gar nicht mittig reingezoomt", on 内 of
+  京城内外首善全图, a right-to-left title the reader reads as 图全善首外内城京; the log said only "reader, unsure x3.5").**
+  Two causes fit the screenshot and the record could tell neither apart: the pan is clamped at the picture's edges (a title
+  at the top of its crop cannot come to the middle, by design since v617 — no gap opens), or the reader's box for 内 was on
+  another 内 (a map label near the title: the order match then takes it, and v661's identity fallback does not apply when
+  the reader has the character twice). Each Diagnostics zoom line now carries `at x,y %` (the place's centre in the card's
+  frame), `edge dx,dy px` when the picture's edge held the pan off it (`z.focus` returns the clamp), and under the first line
+  of each card `the reader read: …`. No behaviour changes. On the harness's 北京欢迎: 北 and 迎 are held by the edge by
+  51–64 px at x3.3 — the clamp is common on a card whose crop is tight around its text. The fix waits for H's next
+  Diagnostics on that card; no heuristic is tuned before the phone says which it is. Not yet field-checked.
 
 ## Current state (PWA v665, 2026-09-26)
 - **The Learn zoom goes in once, to its final place (v665, H: "Warum wird hier erstmal voll rein- und dann wieder etwas

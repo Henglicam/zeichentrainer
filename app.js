@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=665; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=666; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -551,7 +551,8 @@ function diagText(){
     `marks on the photo · ${markLine()}`,
     `main thread · long tasks ${LONG.n}${LONG.n?` (${Math.round(LONG.total)} ms in all, longest ${Math.round(LONG.max)} ms, last ${ago(LONG.at)})`:""} · parse strokes ${PARSE_MS.strokes==null?"not yet":PARSE_MS.strokes+" ms"}, outlines ${PARSE_MS.outlines==null?"not yet":PARSE_MS.outlines+" ms"} · resizes ${RESIZES.length?RESIZES.map(r=>r.bfcache?"back from the cache "+ago(r.t):`${r.from.join("×")}→${r.to.join("×")} ${ago(r.t)}`).join("; "):"none"}`, /* v532: what a fold did to the page, for H's next dump */
     `learn zoom · ${ZLOG.length?ZLOG.length+" decisions, newest last":"no zoom yet"}${ZCHECK?` · zoom check ${ZCHECK.line} (${ago(ZCHECK.at)})`:""}`, /* v617/v618: every decision of the pad's zoom — the card, the character, how its place was found (ink, ink unsure, estimate) and why not better */
-    ...ZLOG.map(z=>`  ${ago(z.at)}  ${String(z.c||"").replace(/\n/g,"/").slice(0,12)} ${z.ch||""} · ${z.how}${z.why?" ("+z.why+")":""}${z.s!=null?" · x"+z.s:""}${z.lv!=null?" · level "+z.lv:""}`),
+    ...ZLOG.flatMap((z,i)=>[`  ${ago(z.at)}  ${String(z.c||"").replace(/\n/g,"/").slice(0,12)} ${z.ch||""} · ${z.how}${z.why?" ("+z.why+")":""}${z.s!=null?" · x"+z.s:""}${z.lv!=null?" · level "+z.lv:""}${z.pos?" · at "+z.pos:""}${z.edge?" · "+z.edge:""}`,
+      ...(z.rd&&(i===0||ZLOG[i-1].rd!==z.rd||ZLOG[i-1].c!==z.c)?[`      the reader read: ${z.rd.slice(0,60)}`]:[])]), /* v666: at, edge and the reader's text */
     `learn fit · ${LAST_FIT?Object.entries(LAST_FIT).filter(([k])=>k!=="at").map(([k,v])=>k+" "+v).join(", ")+" ("+ago(LAST_FIT.at)+")":"no study card measured yet"}`, /* v521: the pad's last measurement — where the card ends against the tab bar, and what was counted under the pad */
     navigator.userAgent, `voices (${voiceList().length}): ${voiceList().join("; ")||"none reported"}`, ""];
   /* v479: every block is one photo's own. The steps used to be a single global list that the next reading wiped, so an album
@@ -4371,8 +4372,13 @@ async function autoZoom(card,d,c,tg,st,cur){
   const cx=r.x+r.w/2, cy=r.y+r.h/2;
   if(ZOOM_HAND===key){ z.follow(cx,cy); zlog({c:d.c,ch:cur.ch,how:how+", hand"}); return; }
   let s=(off?0.9:found&&found.ok?AZ_INK:AZ_EST)*Math.min(bw/r.w,bh/r.h); s=Math.min(AZ_MAX,s); if(s<AZ_MIN) s=1;
-  z.focus(s,cx,cy);
-  zlog({c:d.c,ch:cur.ch,how,why:found&&found.ok?"":pf?(pb.why||"read unsure"):((pb&&pb.why?"reader: "+pb.why+"; ":"")+(cb.why||(found?"cut not clean":""))),s:+s.toFixed(2),lv:level});
+  const held=z.focus(s,cx,cy)||{dx:0,dy:0};
+  /* v666 (H: "Hier hat er ja gar nicht mittig reingezoomt", 内 of 京城内外首善全图 off-centre, and the record could not say why):
+     where on the text the place was (per cent of the frame across and down), whether the picture's edge held the character off
+     the middle, and what the reader read there */
+  const edge=Math.abs(held.dx)>2||Math.abs(held.dy)>2?`edge ${Math.round(-held.dx)},${Math.round(-held.dy)} px`:"";
+  zlog({c:d.c,ch:cur.ch,how,why:found&&found.ok?"":pf?(pb.why||"read unsure"):((pb&&pb.why?"reader: "+pb.why+"; ":"")+(cb.why||(found?"cut not clean":""))),s:+s.toFixed(2),lv:level,
+    pos:`${Math.round((sp.x+sp.w/2)*100)},${Math.round((sp.y+sp.h/2)*100)} %`,edge,rd:pb&&pb.read||""});
 }
 async function spotChar(card,d,cur){
   card.querySelectorAll(".spot").forEach(e=>e.remove()); const z=card.querySelector(".zone1"); if(z) z.classList.remove("spotting");
@@ -4655,7 +4661,7 @@ function attachPicZoom(box){
   v.focus=(s,cx,cy)=>{ if(v.s>1&&v.r0) v.relayout(); else measure(); if(!v.r0||!v.r0.w) return; const r=v.r0;
     v.auto=s>1; v.s=Math.min(ZOOM_MAX,Math.max(1,s));
     if(v.s>1){ v.tx=box.clientWidth/2-r.x-(cx-r.x)*v.s; v.ty=box.clientHeight/2-r.y-(cy-r.y)*v.s; } else { v.tx=0; v.ty=0; }
-    glide(true); apply(); };
+    const wx=v.tx, wy=v.ty; glide(true); apply(); return {dx:v.tx-wx,dy:v.ty-wy}; }; /* v666: how far the picture's edge held the pan off the point, for the zoom's record */
   const summary=()=>{ const a=[...pts.values()]; if(a.length>=2){ return {x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2,d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}; } return a.length?{x:a[0].x,y:a[0].y,d:0}:null; };
   const zoomAt=(m,s2)=>{ s2=Math.min(ZOOM_MAX,Math.max(1,s2)); const r=v.r0, px=(m.x-r.x-v.tx)/v.s, py=(m.y-r.y-v.ty)/v.s; v.s=s2; v.tx=m.x-r.x-px*s2; v.ty=m.y-r.y-py*s2; apply(); };
   box.addEventListener("pointerdown",e=>{ if(e.button) return; if(e.isPrimary){ pts.clear(); eat=false; } /* v614: a new gesture starts with no fingers left over — see below. v634: nor with a click to swallow: a pinch or a touch pan sends no closing click, so the guard it armed ate the NEXT tap (on a zoomed multicard, the first tap on a text did nothing) */ glide(false); measure(); pts.set(e.pointerId,rel(e)); last=summary(); moved=false; ovx=0; down=pts.size===1?{x:e.clientX,y:e.clientY}:null;
