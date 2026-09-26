@@ -55,6 +55,16 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
   note, answers outside the card's text ignored, the multicard page never flagged, one call for a multicard photo, 1280 px
   and no enlarging, the retry of a failed photo; the v649 tree has no such row. **Not known:** how often the real model
   calls a visible character missing — H's run is the measurement.
+  **尚都国际中心 → 尚都国际 in the third Re-read, explained and left as is (H: "Leave it as is"):** H's screenshot shows 中心
+  the same size on the same line (my first guess, fine print, was wrong). Today's Paddle on the card's picture reads
+  尚都国际中 — every character at 100 %, 心 simply gone — so a sure reading can drop a character. **Measured and dropped:** the
+  recognizer's own character positions as a test for a dropped one (the CTC step of each character along the line): it
+  spreads its five characters evenly over the line, and on 563 lines of H's Zoom data 尚都国际中 is unremarkable (start 0.33,
+  end 0.67 pitches; sure lines' end-minus-start 90th percentile 0.5). In a camera photo the v646 check catches it: replayed
+  with the AI answering 尚都国际中心, the card 尚都国际中 is flagged with the AI's reading as its suggestion. In the Re-read the
+  check saw the same crop as the reader (the card's frame, which most likely ends before 中心), so it agreed; not proven —
+  the AI's answer is gone from Diagnostics. Not taken: trusting the reader's confidence less (the slow path for every sure
+  sign) or sending the check a wider picture (neighbouring signs, more false flags).
 
 ## Current state (PWA v649, 2026-09-26)
 - **A reading of five lines or more with no picture answer makes no card (v649, `NOPIC_LINES`).** H's third Re-read: the
