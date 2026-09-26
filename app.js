@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=652; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=653; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v653","zoom lands on the character?"],
   ["photo","v652","sure card: AI text wins, ok?"],
   ["more","v651","Rebuild all: better? Undo ok?"],
   ["more","v650","Check texts: right cards flagged?"],
@@ -3874,6 +3875,7 @@ function renderStudy(main){
   mountPad(card,d,c,tg,st,cur);
   if(pg&&!S.fullPic) fitPageCover(card); /* D5: the multicard's picture cover-fitted around the card's own text */
   attachPicZoom(card.querySelector(".zone1 .picbox")); /* v514: pinch to zoom, one finger to pan (§ 4) */
+  if(ZOOM_AUTO&&d.shot&&d.frame) setTimeout(()=>{ if(card.isConnected) pdBoxesFor(card,d); },400); /* v653: the reader looks for the characters while the card is read, so the first touch rarely waits */
   if(cur) padLine(d,cur); /* the line under the pad, always, for the character the pad is on (v518) */
   wireScript(card); /* v604 */
   spotChar(card,d,cur); /* v520: the locked character lit on the photo; v533: the word being written marked on it */
@@ -4199,6 +4201,50 @@ function charBoxes(src,nw,nh,g,lines){
 /* the zoom's own record (v618): the last ZLOG_MAX decisions, each with the character, how its place was found and why
    not better — Diagnostics prints them, since v617 kept only the last one and the dump that came back said nothing */
 const ZLOG=[], ZLOG_MAX=30; const zlog=o=>{ ZLOG.push({at:Date.now(),...o}); while(ZLOG.length>ZLOG_MAX) ZLOG.shift(); LAST_AZ=ZLOG[ZLOG.length-1]; };
+/* THE PHONE'S READER FINDS THE CHARACTERS (v653, H: "Dieses automatische Reinzoomen und weiter Zoomen auf den aktuellen Charakter
+   funktioniert leider fast nie", with a Diagnostics dump: 18 of 21 decisions "ink, unsure (odd shapes)", the zoom then loose or
+   none at all — v626's shape test, which had to be strict because the ink search puts a tight box on the wrong spot, trusts
+   almost nothing on the signs H studies). The reader of v637 reads those same pictures at 99–100 % and knows where each
+   character of a line was emitted along it (`at`, the CTC step, since v653): on test signs every centre came within a tenth of
+   the character's size, horizontal and vertical. So the card's characters are matched to the reader's lines in reading order
+   (longest common subsequence, traditional and simplified alike) and each matched one gets a box around its own place, as tall
+   as the reader's line and as wide as its pitch; a character between two matched ones on the same line is placed between them,
+   unsure. The ink search stays for what the reader cannot place (digits, Latin letters, a line it did not read). Once per
+   card and picture, started when the card comes up. */
+const PD_ZOOM_W=960, PDBOX=new Map(), PDDONE=new Map(); /* PDDONE: the reader's answer once it is in, read without waiting */
+async function pdCharBoxes(src,nw,nh,g,lines){
+  const TX=g.tx*nw, TY=g.ty*nh, TW=g.tw*nw, TH=g.th*nh; if(TW<8||TH<8) return {why:"tiny frame"};
+  const chars=[]; lines.forEach(ln=>[...ln].forEach(ch=>chars.push(ch))); if(!chars.some(ch=>CJK.test(ch))) return {why:"no text"};
+  const mg=Math.max(TW,TH)*0.15, X0=Math.max(0,TX-mg), X1=Math.min(nw,TX+TW+mg), Y0=Math.max(0,TY-mg), Y1=Math.min(nh,TY+TH+mg);
+  const k=Math.min(2,PD_ZOOM_W/Math.max(X1-X0,Y1-Y0)), W=Math.max(8,Math.round((X1-X0)*k)), H=Math.max(8,Math.round((Y1-Y0)*k));
+  const cv=document.createElement("canvas"); cv.width=W; cv.height=H; cv.getContext("2d").drawImage(src,X0,Y0,X1-X0,Y1-Y0,0,0,W,H);
+  const L=(await pdRead(cv)).filter(l=>Array.isArray(l.at)&&CJK.test(l.text||""));
+  if(!L.length) return {why:"the reader found no line"};
+  const vert=L.filter(l=>l.vert).length>L.length/2;
+  L.sort((a,b)=>vert?(b.x+b.w/2)-(a.x+a.w/2):(a.y+a.h/2)-(b.y+b.h/2)||a.x-b.x);
+  const seq=[]; L.forEach(l=>[...l.text].forEach((ch,i)=>{ if(CJK.test(ch)) seq.push({ch:t2s(ch),l,i}); }));
+  const ci=chars.map((ch,j)=>CJK.test(ch)?j:-1).filter(j=>j>=0), A=ci.map(j=>t2s(chars[j])), n=A.length, m=seq.length;
+  const dp=Array.from({length:n+1},()=>new Int16Array(m+1));
+  for(let a=n-1;a>=0;a--) for(let b=m-1;b>=0;b--) dp[a][b]=A[a]===seq[b].ch?dp[a+1][b+1]+1:Math.max(dp[a+1][b],dp[a][b+1]);
+  const hit=new Map(); for(let a=0,b=0;a<n&&b<m;){ if(A[a]===seq[b].ch){ hit.set(ci[a],seq[b]); a++; b++; } else if(dp[a+1][b]>=dp[a][b+1]) a++; else b++; }
+  if(!hit.size) return {why:"the reader read other text"};
+  const boxOf=(l,pos,ok)=>{ const lv=l.vert, len=lv?l.h:l.w, thick=lv?l.w:l.h, n2=l.at.length;
+    const pitch=n2>1?len*(l.at[n2-1]-l.at[0])/(n2-1):Math.min(len,thick), side=Math.min(thick,pitch||thick)*1.05, c=(lv?l.y:l.x)+pos*len;
+    let bx=lv?{x:l.x,y:c-side/2,w:l.w,h:side}:{x:c-side/2,y:l.y,w:side,h:l.h};
+    const X=X0+bx.x/k, Y=Y0+bx.y/k; return {x:(X-TX)/TW,y:(Y-TY)/TH,w:bx.w/k/TW,h:bx.h/k/TH,ok}; };
+  const boxes=chars.map(()=>null);
+  for(const [j,h] of hit) boxes[j]=boxOf(h.l,h.l.at[h.i],((h.l.cfs||[])[h.i]??h.l.conf)>=0.8);
+  /* a character the reader read otherwise, between two matched ones on one line: its place is between them */
+  for(let q=0;q<ci.length;q++){ const j=ci[q]; if(boxes[j]) continue;
+    let a=q-1; while(a>=0&&!hit.has(ci[a])) a--; let b=q+1; while(b<ci.length&&!hit.has(ci[b])) b++;
+    if(a<0||b>=ci.length) continue; const ha=hit.get(ci[a]), hb=hit.get(ci[b]); if(ha.l!==hb.l) continue;
+    const pa=ha.l.at[ha.i], pb=hb.l.at[hb.i]; boxes[j]=boxOf(ha.l,pa+(pb-pa)*(q-a)/(b-a),false); }
+  return {boxes,why:hit.size<ci.length?`${hit.size} of ${ci.length} characters read`:"",read:L.map(l=>l.text).join(" | ")};
+}
+function pdBoxesFor(card,d){ const key=cbKey(d); let p=PDBOX.get(key);
+  if(!p){ p=(async()=>{ const geom=await spotGeom(card,d); if(!geom) return null; return await pdCharBoxes(geom.img,geom.img.naturalWidth,geom.img.naturalHeight,geom,spotLines(d)); })().catch(e=>({why:"error "+(e&&e.message||e)})).then(r=>{ PDDONE.set(key,r); if(PDDONE.size>60) PDDONE.delete(PDDONE.keys().next().value); return r; });
+    PDBOX.set(key,p); if(PDBOX.size>60) PDBOX.delete(PDBOX.keys().next().value); }
+  return p; }
 const CBOX=new Map(); /* the boxes per card, frame and photo */
 const cbKey=d=>d.id+"|"+(d.shot||"")+"|"+JSON.stringify(d.frame||0)+"|"+(d.c||"");
 /* A MULTICARD'S REGIONS SIT ON THEIR TEXTS (v620, H: "Können wir diese Erkenntnisse bitte auch auf die Multicards
@@ -4265,15 +4311,21 @@ async function autoZoom(card,d,c,tg,st,cur){
   if(allDone||!printed||S.cueBig!=="pic"){ if(z.auto&&z.s>1&&S.cueBig==="pic"){ z.focus(1); zlog({c:d.c,ch:cur&&cur.ch,how:allDone?"out, card done":"out, level 3"}); } return; }
   const geom=await spotGeom(card,d); if(!geom||!card.isConnected||S.pad!==st) { if(!geom) zlog({c:d.c,ch:cur.ch,how:"no place on the photo",why:MARKW.get(d.id)||""}); return; }
   const est=wordSpan(d,{word:cur.ch,wstart:cur.pos}); if(!est) return;
+  /* v653: the reader's place when it is there; while it is still reading (its first load on a phone takes seconds) the zoom goes
+     on the ink's guess at once and moves to the reader's place the moment it has one */
+  const pk=cbKey(d), pp=pdBoxesFor(card,d), pb=PDDONE.get(pk);
+  if(pb===undefined&&!st._pdWait){ st._pdWait=true; pp.then(()=>{ st._pdWait=false; if(card.isConnected&&S.pad===st&&card._az) card._az(); }); } /* card._az is the card's current character */
+  const pf=pb&&pb.boxes&&pb.boxes[cur.pos];
   const ck=cbKey(d); let cb=CBOX.get(ck);
-  if(!cb){ cb=charBoxes(geom.img,geom.img.naturalWidth,geom.img.naturalHeight,geom,spotLines(d)); CBOX.set(ck,cb); if(CBOX.size>60) CBOX.delete(CBOX.keys().next().value); }
-  const found=cb.boxes&&cb.boxes[cur.pos], sp=found||est, how=found?(found.ok?"ink":"ink, unsure"):"estimate";
+  if(!pf&&!cb){ cb=charBoxes(geom.img,geom.img.naturalWidth,geom.img.naturalHeight,geom,spotLines(d)); CBOX.set(ck,cb); if(CBOX.size>60) CBOX.delete(CBOX.keys().next().value); }
+  const found=pf||(cb&&cb.boxes&&cb.boxes[cur.pos]), sp=found||est, how=pf?(pf.ok?"reader":"reader, unsure"):found?(found.ok?"ink":"ink, unsure"):"estimate";
+  if(!cb) cb={why:""};
   const r=geom.rectOf(sp), bw=box.clientWidth, bh=box.clientHeight; if(!r.w||!r.h||!bw||!bh) return;
   const cx=r.x+r.w/2, cy=r.y+r.h/2;
   if(ZOOM_HAND===key){ z.follow(cx,cy); zlog({c:d.c,ch:cur.ch,how:how+", hand"}); return; }
   let s=(found&&found.ok?AZ_INK:AZ_EST)*Math.min(bw/r.w,bh/r.h); s=Math.min(AZ_MAX,s); if(s<AZ_MIN) s=1;
   z.focus(s,cx,cy);
-  zlog({c:d.c,ch:cur.ch,how,why:found&&found.ok?"":(cb.why||(found?"cut not clean":"")),s:+s.toFixed(2),lv:level});
+  zlog({c:d.c,ch:cur.ch,how,why:found&&found.ok?"":pf?(pb.why||"read unsure"):((pb&&pb.why?"reader: "+pb.why+"; ":"")+(cb.why||(found?"cut not clean":""))),s:+s.toFixed(2),lv:level});
 }
 async function spotChar(card,d,cur){
   card.querySelectorAll(".spot").forEach(e=>e.remove()); const z=card.querySelector(".zone1"); if(z) z.classList.remove("spotting");
@@ -6459,9 +6511,9 @@ function pdWorkerMain(){
     const px=g.getImageData(0,0,Wr,C.REC_H).data, n=Wr*C.REC_H, data=new Float32Array(3*n);
     for(let i=0;i<n;i++) for(let ch=0;ch<3;ch++) data[ch*n+i]=(px[i*4+ch]/255-0.5)/0.5;
     const out=await rec.run({[rec.inputNames[0]]:new ort.Tensor("float32",data,[1,3,C.REC_H,Wr])}), o=out[rec.outputNames[0]], T=o.dims[1], K=o.dims[2], v=o.data;
-    let text="", conf=0, cn=0, last=0; const cfs=[];
-    for(let t=0;t<T;t++){ let bi=0,bv=-Infinity; for(let ci=0;ci<K;ci++){ const x=v[t*K+ci]; if(x>bv){ bv=x; bi=ci; } } if(bi&&bi!==last){ const k=keys[bi]||""; text+=k; cfs.push(...[...k].map(()=>bv)); conf+=bv; cn++; } last=bi; }
-    return {text,conf:cn?conf/cn:0,cfs,vert}; }
+    let text="", conf=0, cn=0, last=0; const cfs=[], at=[];
+    for(let t=0;t<T;t++){ let bi=0,bv=-Infinity; for(let ci=0;ci<K;ci++){ const x=v[t*K+ci]; if(x>bv){ bv=x; bi=ci; } } if(bi&&bi!==last){ const k=keys[bi]||""; text+=k; cfs.push(...[...k].map(()=>bv)); at.push(...[...k].map(()=>(t+0.5)/T)); conf+=bv; cn++; } last=bi; }
+    return {text,conf:cn?conf/cn:0,cfs,at,vert}; } /* at (v653): where along the line each character was emitted, as a share of the line's length — the Learn zoom's place for it */
   async function handle(m){
     try{
       if(m.init){ C=m.C; importScripts(m.ortURL); ort.env.wasm.numThreads=1; ort.env.wasm.proxy=false; ort.env.wasm.wasmPaths={mjs:m.mjsURL,wasm:m.wasmURL};
