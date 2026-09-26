@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v654
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v655
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,17 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v655, 2026-09-26)
+- **The study card's Star · Flag · Edit is one quiet toolbar (v655, H: "Works on the phone. Polish the layout/design, not sure if
+  Edit should be grey?").** Three mock-ups rendered on the real card and sent as pictures — A all red with glyph icons, B a toolbar,
+  C all grey — and H chose **B**. The row (`.backacts`) is a grid of equal columns under a hairline; each button (`.tbtn`) is a
+  drawn icon (`TB_ICON`: star, flag, pencil — SVG, stroke `currentColor`, because ☆ ⚑ ✎ are font glyphs a phone may draw at any
+  size or as an emoji) over a 12 px label, all `--label2`; **a starred or flagged card's own button turns the tint with its icon
+  filled**, so the state still reads at a glance while Edit never does. The ⚑ inside the two flag keys is cut off in the render
+  (the keys also label other screens), so no key changes. `.flagbtn.on` lost its only user and went (v307). Measured at 360 px in
+  all ten languages, on and off: every label on one line, no overflow, buttons 54 px tall (was 40 for Star and Flag).
+  Suites `edit` (11) and `crop` (4) pass with the colour check now asking only that Edit is `--label2`. No key, no note.
 
 ## Current state (PWA v654, 2026-09-26)
 - **Edit on the Learn card, quiet (v654, H: "Please offer an edit button in the learn cards. But not too prominent").** Proposed in

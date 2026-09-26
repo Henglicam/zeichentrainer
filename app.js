@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=654; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=655; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3375,6 +3375,10 @@ async function setStar(id,on){
   const upd={...d}; if(on) upd.star=true; else delete upd.star;
   await putCard(upd,id);
 }
+const TB_ICON={ /* v655: the study card's toolbar, drawn rather than typed — ☆ ⚑ ✎ are font glyphs, and a phone's font decides their size, weight and whether one comes as an emoji */
+  star:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.63 5.33 5.87.86-4.25 4.14 1 5.85L12 17.02l-5.25 2.76 1-5.85L3.5 9.79l5.87-.86z"/></svg>`,
+  flag:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 21V4M5.5 4.5h11.5l-2.6 4.25 2.6 4.25H5.5"/></svg>`,
+  edit:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.2 5.3l3.5 3.5M4.5 19.5l.9-4.3L16.6 4a1.6 1.6 0 0 1 2.3 0l1.1 1.1a1.6 1.6 0 0 1 0 2.3L8.8 18.6z"/></svg>`};
 const starIcon=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.63 5.33 5.87.86-4.25 4.14 1 5.85L12 17.02l-5.25 2.76 1-5.85L3.5 9.79l5.87-.86z"/></svg>`;
 const starHTML=d=>`<span class="star${d.star?" on":""}" data-star="${esc(d.id)}" role="button" tabindex="-1" aria-pressed="${d.star?"true":"false"}" aria-label="${t("Star")}">${starIcon}</span>`;
 /* the tap is the learner's, not the scroll's: a finger that arrests a flick still fires a click on Chrome/Android, and the page
@@ -3815,7 +3819,7 @@ function renderStudy(main){
      above the pad is the word being written. Until v526 the block sat above the pad and the line under it, and the two
      said the same thing twice about different words ("doppelt gekoppelt und unlogisch"). */
   const back=`<div class="anshanzi hanzi">${(learnTrad(d)?learnTrad(d).split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}
-      <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button><button class="del quietact" id="edit-card">${t("Edit")}</button></div>`; /* v654 (H: "Please offer an edit button in the learn cards. But not too prominent"): Edit in the label grey after Star and Flag, inside the fold, so the folded card shows nothing new; the Edit form's own "study" way back (v512) brings the card back with the block open */
+      <div class="backacts">${inPage(d)?"":`<button class="tbtn${d.star?" on":""}" id="star-card" aria-pressed="${d.star?"true":"false"}">${TB_ICON.star}<span>${d.star?t("Starred"):t("Star")}</span></button>`}<button class="tbtn${d.flag?" on":""}" id="flag" aria-pressed="${d.flag?"true":"false"}">${TB_ICON.flag}<span>${(d.flag?t("card:⚑ Flagged"):t("⚑ Flag")).replace(/^⚑\s*/,"")}</span></button><button class="tbtn" id="edit-card">${TB_ICON.edit}<span>${t("Edit")}</span></button></div>`; /* v654 (H: "Please offer an edit button in the learn cards. But not too prominent"): Edit beside Star and Flag inside the fold, so the folded card shows nothing new; the Edit form's own "study" way back (v512) brings the card back with the block open. v655 (H: "Polish the layout/design, not sure if Edit should be grey?", then B of three mock-ups): the three are one toolbar — equal columns, a drawn icon over a small label, all grey, and a starred or flagged card's own button in the tint. The ⚑ in the two flag keys is the button's old glyph and is cut off here, not in lang.js, where "⚑ Flag" also labels other screens */
   const noTmpl=cur&&STROKES&&!STROKE_OF.has(cur.glyph);
   const freePad=noTmpl; /* a character the stroke set lacks: the pad draws freehand and needs Undo, Clear and the note. A character WITH a template never shows them — v570 gave them to it mid-write and v582 took them back, so the freehand judging leaves no mark on the screen. */
   /* v574 (H with a screenshot of a single-card test: "Warum ist oben so viel Platz??"): the ← Cards row is a SIBLING of the
