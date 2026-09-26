@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v652
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v653
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,25 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v653, 2026-09-26)
+- **The Learn zoom finds the characters with the phone's reader (v653, `pdCharBoxes`/`pdBoxesFor`).** H: "Dieses automatische
+  Reinzoomen und weiter Zoomen auf den aktuellen Charakter funktioniert leider fast nie", with a Diagnostics dump: of 21 zoom
+  decisions 18 were "ink, unsure (odd shapes)" — v626's shape test, strict because the ink search puts a tight box on the wrong
+  spot, trusted almost nothing on H's signs, so the zoom went loose (`AZ_EST`) or not at all (x1 on 椰子水, 24小时营业). The reader
+  of v637 reads those pictures at 99–100 %, and its CTC decoding knows where along a line each character was emitted: the worker
+  now returns `at` per character (`(t+0.5)/T`). Measured on drawn signs: every centre within about a tenth of the character's
+  size, horizontal and vertical. The card's characters are matched to the reader's lines in reading order (LCS, traditional and
+  simplified alike); a matched one gets a box as thick as the reader's line and as long as its pitch, sure at a confidence of
+  0.8; one between two matched ones on the same line is placed between them, unsure; what the reader cannot place (digits,
+  Latin, an unread line) keeps v619/v626's ink search. **On H's 35 Zoom-data cards: 301 characters, the reader places 222 surely
+  + 19 unsure, the ink search was sure of 48;** drawn on the pictures, the reader's boxes sit on the right characters on nearly
+  every card (招商银行, 阿里云, 公共区域, 三立方咖啡, 违法停车, 嘉和口腔, 景东街, 706北一街, the vertical 贵州茅台酒); the one
+  misplacement seen is the second 美 of 恩尼美甲 on a neighbour's sign; the seal 中华人民共和国地理标志, the brush 福 and a far
+  menu are not read and fall back. The reader starts when the card comes up; the zoom never waits for it — the first touch
+  goes on the ink's guess and the picture glides to the reader's place when it is in (the first harness build waited up to
+  2.5 s and failed the suite's first-touch check). Diagnostics' zoom line says "reader" or "reader, unsure". The v617 suite
+  passes 13/13 on v652 and v653; on v653 京 is placed "reader", 146 px against its true 139.
 
 ## Current state (PWA v652, 2026-09-26)
 - **When the AI's check disagrees with a sure reading, the card takes the AI's reading (v652, `sureCheck`).** H's Rebuild of
