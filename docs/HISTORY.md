@@ -58,6 +58,14 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
   catches it only if the reader again finds five lines. 中彩快印 was a card before and still is, with 朝外SOHO店 and 自有工厂
   around it: v647's Re-read frame margin, which a camera photo does not have; a smaller margin would bring back the lost
   edge characters (早日退休 → 退休).
+  **早日退休 → 退休 was a bad crop, not a bad reading:** v645's Re-read read the whole photo and got 早日退休; from v646 on it
+  read the card's own frame and got 退休, with the AI agreeing. H's screenshot of the card: its picture shows 日退休 with
+  日 cut in half — the card's text came from a reading of the whole sign, its frame from the part the reader was surest
+  of. The third report lists ten such cards (a crop reading shorter than the card: 早日退休, 盒马鲜生超市入口, 尚都国际中心,
+  甭废话, 喵辣 骨汤麻辣烫, 西 / 景东街, 萌兰, 欢迎来 / 龙餐馆, 进口食品折扣店, 姜文电影); the other 13 shorter ones are
+  fine print left out by rule. **H fixes the ten by hand with Crop again**, over an automatic repair (a one-time Owner tool
+  widening each crop to its line on the full photo), which was offered and not taken. Whether today's pipeline still places
+  such a frame is not known — the Re-read report does not record a card's frame.
 
 ## Current state (PWA v648, 2026-09-26)
 - **The third Re-read (v648, H pasted the report):** multicards 471 of 471; cards reading as the card says 371 → 361 of
