@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v657
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v658
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,15 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v658, 2026-09-26)
+- **One flag on the study card, not two (v658, H: "Works on the phone. Aber jetzt hab ich 2 mal Flag: oben rechts und ganz unten.
+  Doppelt gemoppelt ist zu vermeiden").** Asked which one goes (the toolbar's, or the photo's corner flag); H had no preference, so
+  the recommendation stood: **Flag leaves the toolbar**, which is now Star · Edit in two equal columns. The corner flag
+  (`#picflag`, v515) stays because it is seen without opening Whole card and carries the "not yet checked" state; a clean card —
+  which shows no corner flag — is flagged through Edit's checkbox (named: one tap more than before for that case). `TB_ICON.flag`
+  left with its last user. Checked at 390/360 px, light and dark, en/de/ru, starred and not: labels on one line, 54 px tall; a
+  flagged card shows the corner flag and no toolbar flag, and a tap on the corner clears it. `edit` 11/11. No key, no note.
 
 ## Current state (PWA v657, 2026-09-26)
 - **Crop again: the picture check of a sure reading is used, and an AI answer never writes an older text over a newer one (v657,
