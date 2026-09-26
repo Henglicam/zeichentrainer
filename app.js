@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=647; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=648; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v648","early-sent sure cards flagged?"],
   ["photo","v646","sure card: AI check flags diff?"],
   ["more","v645","Re-read all: report, deck same?"],
   ["photo","v644","every multicard text placed?"],
@@ -1337,7 +1338,8 @@ async function rrFinish(id){ const sg=SIGN[id];
       const own=fr.filter((f,k)=>!(f.w*f.h>0.5*f.lw*f.lh)&&!fr.some((g,j)=>j!==k&&g.x===f.x&&g.y===f.y&&g.w===f.w&&g.h===f.h)).length;
       return rrEnd(id,{kind:"multi",n:fr.length,own,texts:sg.ai.labels.map(l=>l.zh).join(" · ").slice(0,300)}); }
     const built=sg&&SIGN[id]===sg?await readingCard(id,sg):null;
-    let check=""; if(built&&SURECHK[id]){ const sc=SURECHK[id]; delete SURECHK[id]; const e=await Promise.race([sc.p,rrSleep(90000).then(()=>null)]); /* v646: the report says what the check beside a sure reading found */
+    let check=""; const scE=built&&!SURECHK[id]&&sg.picEarly&&!sg.picAsked&&(numsFor(id)||{}).pdSure?{at:sg.picEarly.at,p:sg.picEarly.p}:null; /* v648 */
+    if(built&&(SURECHK[id]||scE)){ const sc=SURECHK[id]||scE; delete SURECHK[id]; const e=await Promise.race([sc.p,rrSleep(90000).then(()=>null)]); /* v646: the report says what the check beside a sure reading found */
       check=!e||!e.pic?"the AI's check did not come":e.pic.bad?"the AI found no Chinese text":sureKey(e.pic.zh)===sureKey(built.card.c)&&!(e.pic.apart&&e.pic.labels)?"the AI agrees":`the AI reads "${e.pic.zh.replace(/\n/g," / ")}" — flagged`; }
     return rrEnd(id,built?{kind:"card",c:built.card.c,p:built.card.p,m:String(built.card.m||"").slice(0,80),src:built.mt&&built.mt.src,check}:{kind:"none",why:"nothing to save"}); }
   catch(e){ logErr("reread",e&&(e.stack||e.message)||e); return rrEnd(id,{kind:"none",why:"failed: "+(e&&e.message||e)}); } }
@@ -9156,6 +9158,7 @@ async function finishPending(id){
     if(!ph.flag&&cropDisagrees(ph.frame,sg.region&&sg.region.pic,sg.ai&&sg.ai.labels,PICSEEN[id])){ ph.flag=true; ph.flagNote=t("the picture may not show this text — check the photo"); logRead(id,"the card's frame lies outside everything the AI named — flagged"); } /* v400: the picture is not touched — v380's wide fallback measured 0 of 75 usable cards (6.1 CSS px a character) and H rejected exactly that picture in the field at v382 ("Die Bild crops sind noch falsch"), so this only says so */ /* the card made by itself (v325) and the card saved early from Crop again (v342, H's "Go" on the recommendation — the analysis counts): only a doubtful reading carries the flag */ /* the card made by itself (v325): the row shows it, so only a doubtful reading carries the flag — a weak reader score the AI check then confirmed is no doubt */
     try{ await idbPut("custom",ph); }catch(e){}
     if(SURECHK[id]){ const sc=SURECHK[id]; delete SURECHK[id]; sureCheck(ph.id,ph.c,sc,id); } /* v646 */
+    else if(sg&&sg.picEarly&&!sg.picAsked&&(numsFor(id)||{}).pdSure) sureCheck(ph.id,ph.c,{at:sg.picEarly.at,p:sg.picEarly.p},id); /* v648: the picture went out at the quick look, before the reading turned sure — that answer is the check (H's third Re-read: 良品 read 一品, unchecked, since the parked answer was kept only for a panel) */
     todoDone(id); /* v509: the card is written — the next start owes this photo nothing */
     if(!auto) delete QSBAD[id];
     if(!auto) QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}.`+(mt.pending?" Translation pending.":"")+(ph.flag?" Flagged for review.":"");
