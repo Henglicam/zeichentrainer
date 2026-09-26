@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=648; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=649; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v649","AI down: long sign waits?"],
   ["photo","v648","early-sent sure cards flagged?"],
   ["photo","v646","sure card: AI check flags diff?"],
   ["more","v645","Re-read all: report, deck same?"],
@@ -1334,6 +1335,7 @@ async function rrFinish(id){ const sg=SIGN[id];
     if(sg&&sg.noText) return rrEnd(id,{kind:"none",why:"the AI found no Chinese text"});
     const vouched=!!(sg&&sg.ai&&!sg.ai.bad&&(sg.ai.ok||sg.ai.textOk));
     if(sg&&sg.region&&sg.region.picErr&&!vouched&&(sg.weak||(sg.ai&&sg.ai.bad&&!sg.sureLines))) return rrEnd(id,{kind:"none",why:"the AI could not check the photo and the reading is weak"});
+    if(sg&&sg.region&&sg.region.picErr&&!sg.region.pic&&(sg.lines||[]).filter(x=>String(x).trim()).length>=NOPIC_LINES) return rrEnd(id,{kind:"none",why:"the AI could not check the photo and the reading has many lines"}); /* v649: finishPending's twin */
     if(SPLIT[id]&&sg&&sg.ai&&sg.ai.ok&&!sg.ai.bad&&sg.ai.labels){ const fr=SPLIT[id];
       const own=fr.filter((f,k)=>!(f.w*f.h>0.5*f.lw*f.lh)&&!fr.some((g,j)=>j!==k&&g.x===f.x&&g.y===f.y&&g.w===f.w&&g.h===f.h)).length;
       return rrEnd(id,{kind:"multi",n:fr.length,own,texts:sg.ai.labels.map(l=>l.zh).join(" · ").slice(0,300)}); }
@@ -9130,6 +9132,13 @@ async function finishPending(id){
     const noPic=sg&&SIGN[id]===sg&&sg.region&&sg.region.picErr&&!vouched;
     const unsure=sg&&(sg.weak||(sg.ai&&sg.ai.bad&&!sg.sureLines));
     if(ph.reading.auto&&!ph.c&&noPic&&unsure){ const why=sg.weak?"the AI could not check the photo and the reading is weak":"the AI could not check the photo and the text check called the reading garbage"; logRead(id,why+" — no card"); return failPending(id,why); }
+    /* v649 (H's third Re-read, 2026-09-26: the 建国肉夹馍 menu, a 17/17 multicard three times, came back once as one card of
+       ten dish names without prices — the picture call died twice, 123 s, and only the picture can say "these are separate
+       texts"; replayed with a dead picture call it made that very card, H: "Ok, go"): a reading of many lines with no picture
+       answer is a board the app cannot split, so it makes no card, however well it was read or vouched for — the photo stays
+       on the Camera tab. Offline the picture is never asked (no picErr) and the card is made as before. rrFinish has the twin. */
+    const nLines=sg?(sg.lines||[]).filter(x=>String(x).trim()).length:0;
+    if(ph.reading.auto&&!ph.c&&sg&&SIGN[id]===sg&&sg.region&&sg.region.picErr&&!sg.region.pic&&nLines>=NOPIC_LINES){ /* !pic: a re-ask that died keeps the first answer and still writes picErr (v449) */ const why=`the AI could not check the photo and the reading has ${nLines} lines — a board only the picture can split`; logRead(id,why+" — no card"); return failPending(id,why); }
     /* several labels on one photo, one card each (v357): the answer's lines, its per-line pinyin and meanings and the frames
        SPLIT[id] carries — the placeholder becomes the first label's card, the rest are saved beside it. Only when every line
        has its own pinyin and its own meaning; if the model joined them, nothing is split and the photo makes one card as before. */
@@ -9168,6 +9177,7 @@ async function finishPending(id){
   if(S.mode==="cards"&&!S.editing) render(); else renderShots(); /* the list or the detail shows the filled card at once */
   autoNext(); /* the next photo of the batch (v411) */
 }
+const NOPIC_LINES=5; /* v649: from this many lines on, a reading with no picture answer makes no card (finishPending, rrFinish) */
 async function failPending(id,why,msg){
   delete SURECHK[id];
   if(RRPH[PENDING[id]]) return rrEnd(id,{kind:"none",why:String(why||msg||"")});

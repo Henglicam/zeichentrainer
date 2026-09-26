@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v648
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v649
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,19 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v649, 2026-09-26)
+- **A reading of five lines or more with no picture answer makes no card (v649, `NOPIC_LINES`).** H's third Re-read: the
+  建国肉夹馍 menu, a 17 of 17 multicard on its three other copies, came back once as one card of ten dish names without
+  prices, in 123 s. Only the picture model can say "these are separate texts"; the reader and the text model give one block.
+  Replayed from phone7's Zoom data: with its recorded answer, a 17 of 17 multicard in 35 s; with a picture call that never
+  answers (two 60 s tries), the very card of the report, line for line, at 130 s. The old no-card gate (v438/v472) fired
+  only for a weak or garbage reading nobody vouched for; this one fires on the line count alone, when the picture failed and
+  left no answer at all (`!region.pic` — a re-ask that dies keeps the first answer and still writes `picErr`, v449). The
+  photo stays on the Camera tab with v509's note ("The AI could not check this photo…"), and Crop reads it again. Offline
+  the picture is never asked, so an offline reading still makes its card. `rrFinish` has the twin. Harness: menu, AI dead —
+  card on v648, no card and the note on v649 (1 flip); menu, AI answering — 17 of 17 [guard]; the 4-line 沙洲市集 sign, AI
+  dead — still a card [guard]; the Re-read suite passes. H: "Ok, go".
 
 ## Current state (PWA v648, 2026-09-26)
 - **The third Re-read (v648, H pasted the report):** multicards 471 of 471; cards reading as the card says 371 → 361 of
