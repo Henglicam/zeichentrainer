@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=659; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=660; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v660","zoom on known characters too"],
   ["learn","v656","Crop again, early Save: new text"],
   ["learn","v654","Edit under Whole card, and back"],
   ["learn","v653","zoom lands on the character?"],
@@ -4313,8 +4314,8 @@ async function autoZoom(card,d,c,tg,st,cur){
   const key=handKey(); if(ZOOM_HAND&&ZOOM_HAND===key){ if(z.s<=1) return; } /* the hand has it: follow only, as v541 */
   else if(!st.zoomGo&&z.s<=1) return; /* the card opens on the whole picture; the pad's first touch starts it */
   const allDone=!tg.some((x,j)=>x.w&&!st.done.has(j));
-  const level=cur&&cur.w?padLevel(c,cur,st):3, printed=!!cur&&(!STROKE_OF.has(cur.glyph)||level<3);
-  if(allDone||!printed||S.cueBig!=="pic"){ if(z.auto&&z.s>1&&S.cueBig==="pic"){ z.focus(1); zlog({c:d.c,ch:cur&&cur.ch,how:allDone?"out, card done":"out, level 3"}); } return; }
+  const level=cur&&cur.w?padLevel(c,cur,st):3, onChar=!!cur; /* v660 (H: "I'd rather have it, please change the rule so the photo still zooms onto a known character"): the zoom follows every character, level 3 included — v617 kept the photo whole at level 3 (H's "(b)": at recall a big sharp character makes it copying), and on the phone that read as the pan failing (车 of 减震单车 zoomed out) */
+  if(allDone||!onChar||S.cueBig!=="pic"){ if(z.auto&&z.s>1&&S.cueBig==="pic"){ z.focus(1); zlog({c:d.c,ch:cur&&cur.ch,how:allDone?"out, card done":"out"}); } return; }
   const geom=await spotGeom(card,d); if(!geom||!card.isConnected||S.pad!==st) { if(!geom) zlog({c:d.c,ch:cur.ch,how:"no place on the photo",why:MARKW.get(d.id)||""}); return; }
   const est=wordSpan(d,{word:cur.ch,wstart:cur.pos}); if(!est) return;
   /* v653: the reader's place when it is there; while it is still reading (its first load on a phone takes seconds) the zoom goes
@@ -6173,11 +6174,12 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  660:"The photo now zooms onto every character you write — the ones you know by heart too.",
   654:"Spot a mistake while learning? Open Whole card and tap Edit.",
   638:"Multicards place their texts much better now: a new reader on your phone finds each label's own line. It downloads once (about 30 MB) the first time you use a multicard.",
   635:"A multicard missed a text? Tap Add a text, frame it on the photo, and it joins the multicard.",
   634:"Pinch to zoom into a multicard's photo, just like a card's. Tap any text while zoomed to look it up.",
-  617:"While you trace a character, the photo zooms in on it and glides on to the next one. Once you write from memory, it stays whole.",
+  617:"While you write, the photo zooms in on each character and glides on to the next one.", /* v660: "Once you write from memory, it stays whole" went with the rule */
   611:"The AI is told never to invent, and its pinyin is checked against the dictionary. When they disagree, or the AI is not sure, the card gets a flag instead of a guess.",
   608:"The app is called 识字 Shízì again, with its old 识 icon back. Same app, same cards.",
   606:"Zoomed into a photo? Keep pulling past its edge and the next card comes in, just like in a photo gallery.",

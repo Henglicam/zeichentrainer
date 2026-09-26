@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v659
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v660
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,17 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v660, 2026-09-26)
+- **The Learn photo zooms onto known characters too (v660, H: "I'd rather have it, please change the rule so the photo still zooms
+  onto a known character").** v617 kept the photo whole at level 3 (H's "(b)": at recall a big sharp character over an empty pad
+  makes it copying); on the phone that read as the pan failing — 车 of 减震单车, written often enough to be at level 3, zoomed out
+  (see the field note under v659). Offered as a change of the recall rule, and H chose it. `autoZoom` now zooms for every
+  character (`onChar`, was `printed` = level < 3); it still goes out when the card is done or the text half is big, and the log
+  says "out" rather than "out, level 3". **What it costs, named:** at level 3 the character stands large and sharp on the photo
+  while the pad is empty, so recall leans on the picture — H's call. v617's update note ("Once you write from memory, it stays
+  whole") was a false instruction now and was rewritten; a note for v660. Suite `az`: the level-3 check is inverted — 欢 at level 3
+  is zoomed (3.18×) and centred (154 of 278) — and flips on the old tree ("out, level 3"); 13/13. Not yet field-checked.
 
 ## Current state (PWA v659, 2026-09-26)
 - **The flag on the Learn photo stays after unflagging (v659, H: "Flag disappears after unflagging.").** v515 drew the corner flag
