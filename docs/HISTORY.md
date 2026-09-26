@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v650
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v651
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,32 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v651, 2026-09-26)
+- **Owner tools → Rebuild all (v651, `rbRun`/`rbOne`/`rbUndo`/`rbRecover`).** H: "Re-build", then, told the costs (his edits
+  and crops overwritten, ~1 in 5 single cards reading worse in the third Re-read, an undo), "I care about character
+  recognition and zoom. Do all" — over "multicards only", which I had recommended. Every photo goes through today's reading
+  exactly as Re-read all sends it (`rrPrep`, split out of `rrOne`: the card's own frame with v647's margin for a one-card
+  photo, else the proposal), but through the camera's own save: a placeholder as `saveNow` makes it, `finishPending` and
+  `splitCards` fill it, under a temporary photo id `rb_…` that the new cards give back for the photo's own id afterwards
+  (with `imgFull` when the inbox no longer has the photo). The photo's old cards leave first and go, with their progress rows,
+  to a settings row `rb:<shot>`; a photo whose reading makes no card (or no answer within `RB_MAX_MS` 240 s) gets them back.
+  **History:** a new flashcard with an old card's text, or the one card of a one-card photo, takes that card's progress row,
+  star, tags and checked state — camera cards keep their `reading#…` ids, so the match is by text, not id (my first build
+  matched by id and would have lost every history). The new cards take the old cards' `at`, so the deck keeps its order, and
+  the usage counters stay as they were. **Undo** puts every rebuilt photo back from its row; starting a new rebuild after a
+  finished one asks, since it drops that undo. **Killed mid-photo** (MIUI): `rbRecover` at the next start, before
+  `resumePending`, deletes the half-made cards and restores the old ones and their history — and the boot's sweep of progress
+  rows without a card now spares the cards held in `rb:` rows, which the first harness run showed deleting the photo in
+  hand's history. A finished photo's card that a late write took back to its `rb_` id gets the photo's id again. Hand-typed
+  cards and cards generated from a multicard text have no photo and are not touched; a generated card's link to its old
+  multicard breaks when that multicard is rebuilt (Undo restores it). Harness on phone3's photos (the 沙洲市集 board with its
+  recorded answer, 良品, 贵州茅台酒, a blank photo, a hand card), the buttons clicked: 13 checks — 一品 → 良品 with star, tag
+  and 7 reviews; the same text keeping star and 4 reviews; a one-card photo turned multicard of 4 texts on the photo's own id;
+  the blank photo kept; the hand card untouched; no temporary id left; pictures; usage; deck order; Undo byte-equal to before;
+  no backup rows after it; a reload mid-photo restoring the deck and its history exactly — also with the text model answering
+  4 s late (its meanings land on the rebuilt cards, the photo ids hold). The v650 tree has no such row. Check texts (11) and
+  the Re-read suite (deck unchanged) pass with `rrPrep` split out. "Undo rebuild" wrapped at 360 px — the button says Undo.
 
 ## Current state (PWA v650, 2026-09-26)
 - **Owner tools → Check texts (v650, `ctRun`/`ctAsk`):** every photo goes to the picture model once, with the texts of all
