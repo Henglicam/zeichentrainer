@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v658
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v659
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,15 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v659, 2026-09-26)
+- **The flag on the Learn photo stays after unflagging (v659, H: "Flag disappears after unflagging.").** v515 drew the corner flag
+  only while a card was flagged or not yet checked; a tap that cleared a flag also left the card checked, so the flag vanished and
+  the card could not be flagged again from Learn — tolerable while the toolbar had its own Flag, a dead end since v658 moved the
+  marks onto the photo. Now the flag is **always drawn**, like the star beside it: filled tint when flagged, a darker hollow
+  (`--label2`, title "Not yet checked") when unchecked, and the star's quiet `--label3` hollow when checked and clean. Checked in
+  the harness: flagged → tap → hollow grey, still there → tap → flagged again; an unchecked card keeps its darker hollow and title.
+  The guide's `front-{light,dark}` crop was regenerated (it now shows both marks; ratio unchanged), the others restored. No key.
 
 ## Current state (PWA v658, 2026-09-26)
 - **Marks on the photo, actions in the toolbar (v658, H: "Works on the phone. Aber jetzt hab ich 2 mal Flag: oben rechts und
