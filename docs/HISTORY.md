@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v664
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v665
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,19 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v665, 2026-09-26)
+- **The Learn zoom goes in once, to its final place (v665, H: "Warum wird hier erstmal voll rein- und dann wieder etwas
+  rausgezoomt?", then on the choice "it should be professional and user friendly", then "Go").** 志在千里's log: "ink, unsure
+  x2.11" then "reader, unsure x1.61" — since v653 the zoom never waits for the phone's reader and moves when the reader
+  answers, and since v662 the zoom starts by itself at 1.5 s, often before the reader is done. Now the overview timer, at
+  `AZ_OVERVIEW`, waits for the reader (`pdBoxesFor`, prefetched at 400 ms) up to `AZ_READER` 2500 ms after the card came up,
+  then zooms once; a reader slower than that (its first load) still gets the ink's guess first and the correction after; a
+  touch on the pad still zooms at once; the timer uses the card's latest render (`st._card`). Suite `once` (2 checks, `pdRead`
+  stubbed with a delay): 1.8 s reader flips (v664: ink at 1.5 s then reader at 2.2 s; v665: one zoom, reader, at 2.2 s);
+  `[guard]` a 4 s reader still gets ink at 2.5 s and the reader after, on both. `ov` (its zoom check moved from 2.4 s to
+  2.9 s, the new rule's latest time) 5/5, `az` 13/13, `nf` 2/2, `off` 2/2, `pdc` 4/4. Not yet field-checked: how often the
+  overview now runs to 2.5 s on the phone.
 
 ## Current state (PWA v664, 2026-09-26)
 - **The Learn zoom no longer dives onto a spot beside the text (v664, H: "Warum zoomt er hier so falsch?", on 贵州茅台酒, a label
