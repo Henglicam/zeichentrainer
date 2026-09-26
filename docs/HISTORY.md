@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v666
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v667
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,21 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v667, 2026-09-26)
+- **Star and Flag leave the Learn photo; the toolbar is Star · Flag · Edit again, and the fold row shows the marks (v667, H: "Ich
+  bin mit Flag und Star oben rechts im Bild auf der Lernkarte überhaupt nicht happy. Das lenkt ab und überdeckt einen Teil des
+  Bildes", then, of toolbar only or toolbar plus a small icon next to Whole card, "toolbar plus small icon next to Whole card").**
+  Reverses v658's placement (marks on the photo, H's choice then, after v655's toolbar had shown the flag twice — the corner flag
+  of v515 and the toolbar's). One flag still: the photo carries nothing now, not even v515's corner flag, so the toolbar's Flag is
+  the only one. The toolbar is v655's (`#star-card`, `#flag`, `#edit-card`, tint and filled icon when on), drawn with `starIcon`
+  and `flagIcon`; `.picstar`/`.picflag` left with their last users. `foldMarks` puts a 15 px tint star and/or flag beside the
+  label "Whole card" when the card is starred or flagged (a multicard text shows no star), on the study card and on its swipe
+  neighbour, so the row does not change at the snap. **Named cost:** "not yet checked" (v515's hollow corner flag) is no longer
+  seen in Learn; a clean card is flagged from the toolbar. Checked: 360 px in all ten languages, on and off — every label on one
+  line, 54 px buttons, no overflow; 390 light/dark and 360 German — no button on the photo, both marks beside Whole card, fold row
+  36 px; the toolbar's Star and Flag toggle the card and the marks, the fold stays open; a tap on the photo still swaps the cue.
+  `guide/front-{light,dark}` regenerated (no star on the photo; ratio 0.494 unchanged), the rest restored. No key, no note.
 
 ## Current state (PWA v666, 2026-09-26)
 - **The zoom's record says where it went and what held it (v666, H: "Hier hat er ja gar nicht mittig reingezoomt", on 内 of
