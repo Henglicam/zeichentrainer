@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=656; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=657; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -5836,6 +5836,7 @@ function renderCardDetail(main,c){
 function renderEdit(main,c){
   const d=cardOf(c); if(!d){ S.editing=null; S.editFrom=null; return render(); } const c0=d.c; /* v654: the text the form opened on, for the way back to Learn */
   const isSign=d.kind==="sign";
+  let formCheck=null; /* v657: the picture check beside a sure reading of Crop again, until it answers or the card is saved */
   let removeImg=false, aiApplied=false, aiMl=null, aiDesc=null, recropImg=null, recropRect=null, meanTouched=false, aiRun=null; /* aiRun: the form's AI request while it runs (v341) */ /* aiMl: the language of the meaning the AI filled in (v256) */ /* recropImg: the crop framed again in this form (v239), stored on Save with its frame (recropRect, v244) */
   /* the text is edited like the Read preview (H): a character strip per line, tap a character for the picker and the
      drawing sheet; SIGN carries the lines and the card's crop as the photo reference (no boxes: the whole crop) */
@@ -5906,9 +5907,10 @@ function renderEdit(main,c){
       let [r]=await aiAsk([{kind:d.kind||"word",c:isSign?zh.split("\n").map(l=>l.trim()).filter(Boolean).join("\n"):zh.replace(/\s+/g,""),p:pin,m:mean,flagNote:note,gloss:d.gloss,mt:{src:"dict",verified:false,suspect:"please check"}}],()=>{ if(st&&st.isConnected) st.innerHTML=busyHTML(t(AI_BUSY_TEXT)); });
       if(r.bad&&(recropImg||d.img)){ const pic=await picOnBad({picBlob:recropImg||d.img,region:null},[zh]); if(pic) r={...pic,ok:true,bad:false}; } /* garbage says the text check: the card's own picture goes to the AI that takes pictures (v302) */
       return r; })();
-    aiRun=run; { const clear=()=>{ if(aiRun===run) aiRun=null; }; run.then(clear,clear); } /* no derived promise that could reject unhandled */
+    run.zh=zh; /* v657: the text this check was asked about */ aiRun=run; { const clear=()=>{ if(aiRun===run) aiRun=null; }; run.then(clear,clear); } /* no derived promise that could reject unhandled */
     try{
       const r=await run; if(!ab.isConnected) return; /* the form is gone — Save changes took the card, and the answer lands there (v341) */
+      if(sureKey($("#e-word").value)!==sureKey(zh)){ ab.disabled=false; st.textContent=""; if(aiLive()) ab.click(); return; } /* v657: the text was changed while this check ran — its answer is about the old text and must not write it back; the new text gets its own check */
       if(!r.bad){
         if(r.zh&&CJK.test(r.zh)){ const zh=r.zh.replace(/\r/g,""); sg.lines=(isSign?zh:recutLines(zh.replace(/\s+/g,""),sg.lines)).split("\n").map(l=>l.trim()).filter(Boolean); sg.orig=sg.lines.slice(); syncWord(); drawLines(); }
         if(r.p){ $("#e-pin").value=r.p; autoGrow($("#e-pin")); }
@@ -5989,6 +5991,16 @@ function renderEdit(main,c){
     RECROP[rid]={redraw:drawRecrop,stage:"idle",end:()=>{ endRecrop(); },onZoom,
       onImage:blob=>setResult(blob,""),
       onRead:sg2=>{ if(!sg2) return;
+        { const sc=SURECHK[rid]||(sg2.picEarly&&!sg2.picAsked&&(numsFor(rid)||{}).pdSure?{at:sg2.picEarly.at,p:sg2.picEarly.p}:null); delete SURECHK[rid]; /* v657 (H: "Fix the open gap too"): the check beside a sure reading (v646/v648) was started for Crop again as well and then used by nothing — the form took the reader's text, and a Save made it the card's */
+          if(sc){ const c0=sg2.lines.join(isSign?"\n":""); formCheck={...sc,c0};
+            sc.p.then(e=>{ if(formCheck&&formCheck.p!==sc.p||!$("#e-save")||S.editing!==c) return; formCheck=null; /* saved meanwhile: the card has it (the save handler) */
+              const pic=e&&e.pic; if(!pic||pic.bad||(pic.apart&&pic.labels)||!pic.zh||!CJK.test(pic.zh)||sureKey(pic.zh)===sureKey(c0)) return;
+              if(sureKey(sg.lines.join(""))!==sureKey(c0)) return; /* the text was changed by hand meanwhile */
+              const zh=pic.zh.replace(/\r/g,""); sg.lines=(isSign?zh:zh.replace(/\s+/g,"")).split("\n").map(l=>l.trim()).filter(Boolean); sg.orig=sg.lines.slice(); syncWord(); drawLines();
+              if(pic.p){ $("#e-pin").value=pic.p; autoGrow($("#e-pin")); } else pinyinFollow();
+              if(pic.m){ $("#e-mean").value=pic.m; autoGrow($("#e-mean")); aiMl=pic.ml||"en"; meanTouched=false; }
+              $("#e-flag").checked=true; $("#e-note").hidden=false; $("#e-note").value=t("the reading looks unsure — check text, pinyin and meaning")+t(" (reading uncertain: {0})",c0.replace(/\n/g," / ")); /* v652's rule in the form: the AI's reading is taken, flagged, the reader's named */
+              logRead(rid,`the AI reads the picture as ${zh.replace(/\n/g," / ")}, the phone's reader as ${c0.replace(/\n/g," / ")} — the form takes the AI's reading, flagged`); }); } }
         sg.lines=sg2.lines.slice(); sg.orig=sg2.orig.slice(); sg.conf=sg2.conf; sg.boxes=sg2.boxes; sg.img=sg2.img; sg.alts=sg2.alts;
         sg.trad=!!sg2.trad; sg.tradDetected=!!sg2.tradDetected||!!sg.tradDetected; sg.tradText=sg2.tradText||""; sg.tradTouched=false; sg.tradUser=false; sg.sel=null; delete sg.ai;
         setResult(sg2.cardImg||recropImg,sg.lines.join(" / ")); /* the tightened cut when there is one, else the crop as framed; the frame stays on the photo */
@@ -6040,13 +6052,15 @@ function renderEdit(main,c){
     else { delete upd.flag; delete upd.flagNote; }
     if(sg.trad){ const trad=(sg.tradText||"").trim(); if(trad) upd.trad=trad; else delete upd.trad; } else delete upd.trad; /* the strip's line carries the traditional form; no separate field (H, v110); the link drops the mark (v146) */
     await applyCardUpdate(c,upd,newC,pin!==d.p,isSign?undefined:wordLines);
+    if(formCheck&&!handoff&&newC&&sureKey(newC)===sureKey(formCheck.c0)){ const sc=formCheck; formCheck=null; sureCheck(c,cardOf(c)&&cardOf(c).c,sc,rid); } /* v657: saved before the picture check answered — the card takes its answer as a card from the camera does (v652); a text typed by hand is not the reader's and is left alone */
+    formCheck=null;
     if(handoff){ const rect=win?photoRect(handoff.rect):handoff.rect; if(win) leaveWindow(frameOf(handoff.rect)); /* the reading rect on the whole photo's pixels, and the record back to the whole photo, so the reading, resume and the fill see the photo (v247) */
       const d2=cardOf(c); if(d2){ d2.reading={rect,at:Date.now(),edit:true}; try{ await idbPut("custom",d2); }catch(e){} } /* edit: saved early from Crop again — flagged only when the reading is doubtful (v342) */
       delete RECROP[rid]; PENDING[rid]=c; CROP=null; /* the form's hooks go, the photo record stays for the reading */
       clearTimeout(READ_TIMER[rid]); if(!READING[rid]) cropSign(rid,{rect}); }
     if(aiLate&&!handoff){ const lines0=sg.lines.slice(); /* the AI's answer lands on the card when it comes (v341): text, pinyin and meaning as the form would have taken them, the card verified by the AI; a failed call leaves the card pending for the auto run */
       aiLate.then(async r=>{ const d2=cardOf(c); if(!d2) return;
-        if(!r||r.bad){ d2.mt={...(d2.mt||{}),verified:false,pending:true}; try{ await idbPut("custom",d2); }catch(e){} aiAutoSoon(); return; }
+        if(!r||r.bad||sureKey(aiLate.zh||"")!==sureKey(lines0.join(""))){ d2.mt={...(d2.mt||{}),verified:false,pending:true}; try{ await idbPut("custom",d2); }catch(e){} aiAutoSoon(); return; } /* v657: a check asked about another text than the one saved (typed while it ran — the button is disabled then, so no new check starts) must not write its text over the typed one; the card goes to the auto run instead */
         const upd2={...d2}; let newC2=d2.c, lines2;
         if(r.zh&&CJK.test(r.zh)){ const zh=r.zh.replace(/\r/g,""); lines2=(isSign?zh:recutLines(zh.replace(/\s+/g,""),lines0)).split("\n").map(l=>l.trim()).filter(Boolean); newC2=isSign?lines2.join("\n"):lines2.join(""); }
         if(r.p) upd2.p=r.p; if(r.m){ upd2.m=r.m; setMl(upd2,r.ml||"en"); } if(r.desc) setDesc(upd2,r.desc,r.ml||"en");

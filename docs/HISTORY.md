@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v656
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v657
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,22 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v657, 2026-09-26)
+- **Crop again: the picture check of a sure reading is used, and an AI answer never writes an older text over a newer one (v657,
+  H: "Fix the open gap too" — the gap v656 named).** Three places, one rule — *an answer counts only for the text it was asked
+  about*: **(1)** a sure reading's picture check (`SURECHK`, or the parked quick-look answer, v646/v648) was started for Crop again
+  and then used by nothing: the form took the reader's text. Now the form keeps it (`formCheck`): answering while the form is open,
+  a different reading is put in with its pinyin and meaning and the flag ticked with v652's note ("… (reading uncertain: <reader's
+  text>)"); saved before it answered, the card is handed to `sureCheck`, as a camera card is. **(2)** Neither happens when the text
+  in the form is no longer the reader's (typed by hand). **(3)** Found while testing (2), and on the old tree too: the form's own
+  AI check, when the text was changed while it ran, wrote its answer for the *old* text back into the open form (the button is
+  disabled while a check runs, so the edit started no new one), and a Save handed that stale answer to the card (`aiLate`). Now an
+  answer whose asked text (`run.zh`) is not the form's text is dropped and a check for the new text starts; a stale `aiLate` marks
+  the card pending for the auto run instead. **Suite `recrop`** (7 timings): Save while the check is out → 贵州茅台酒 (old tree:
+  the reader's C净含量：5 — FAIL); Save after it answered in the form → 贵州茅台酒, flagged (old: FAIL); a hand-typed 我的字 before
+  and after the answer → kept (old: lost — FAIL); the AI agreeing → no flag, both trees (`[control]`); v656's forced description
+  race and the Cards entry still pass. `edit` 11/11, `crop` 4/4. Not yet field-checked.
 
 ## Current state (PWA v656, 2026-09-26)
 - **A Crop again saved before its reading was done keeps the new reading (v656, H: "Edit > crop again > save before AI is ready:
