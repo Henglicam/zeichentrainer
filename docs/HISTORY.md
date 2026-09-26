@@ -47,6 +47,12 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
   (`--label2`, title "Not yet checked") when unchecked, and the star's quiet `--label3` hollow when checked and clean. Checked in
   the harness: flagged → tap → hollow grey, still there → tap → flagged again; an unchecked card keeps its darker hollow and title.
   The guide's `front-{light,dark}` crop was regenerated (it now shows both marks; ratio unchanged), the others restored. No key.
+- **Field note, no change: the zoom going out at 车 of 减震单车 is v617's rule, not a fault (H: "automatisches pan zum nächsten
+  gezoomten character funktioniert immer noch nicht zuverlässig. Zum Beispiel beim 车" — "Zooms out" — the pad at 车 was empty,
+  no grey template).** 车 is on many of H's cards, so it is at level 3, where the photo stays whole by H's own choice at v617
+  ("zoom only while the pad itself shows the character" — at recall a big sharp character would make it copying). A replay of the
+  card cut from H's screenshot also showed the phone's reader reading 1 of 4 characters of this outlined font (震 | 减) and a 震 box
+  off the text; not acted on — a screenshot cut-out is not the photo, and H's Diagnostics after a failed card is the test.
 
 ## Current state (PWA v658, 2026-09-26)
 - **Marks on the photo, actions in the toolbar (v658, H: "Works on the phone. Aber jetzt hab ich 2 mal Flag: oben rechts und
