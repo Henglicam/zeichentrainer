@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=661; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=662; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v662","1.5 s overview, then zoom: ok?"],
   ["learn","v661","zoom on signs set in columns?"],
   ["learn","v653","zoom lands on the character?"],
   ["photo","v652","sure card: AI text wins, ok?"],
@@ -3884,7 +3885,11 @@ function renderStudy(main){
   if(cur) padLine(d,cur); /* the line under the pad, always, for the character the pad is on (v518) */
   wireScript(card); /* v604 */
   spotChar(card,d,cur); /* v520: the locked character lit on the photo; v533: the word being written marked on it */
-  card._az=()=>autoZoom(card,d,c,tg,st,cur); card._az(); /* v617: the picture zooms onto the character in the pad */
+  card._az=()=>autoZoom(card,d,c,tg,st,cur); st._az=card._az; card._az(); /* v617: the picture zooms onto the character in the pad */
+  /* v662 (H: "die rausgezoomte Karte kurz zur Übersicht anzeigen und dann automatisch auf den ersten Character zoomen", "Go 1.5 s"):
+     the whole picture stands AZ_OVERVIEW, then the zoom goes in by itself as the pad's first touch would; a touch before that
+     goes in at once. st._az is the card's latest render, so a stroke's re-render in between does not zoom a detached card */
+  if(ZOOM_AUTO&&!st.zoomGo&&!st._ovT) st._ovT=setTimeout(()=>{ if(S.pad===st&&!st.zoomGo){ st.zoomGo=true; if(st._az) st._az(); } },AZ_OVERVIEW);
 }
 /* v527: the block sits under the pad, so opening it scrolls the card until the block stands above the tab bar (or, when it is
    taller than the room, until its head is under the top bar) instead of leaving it under the translucent bar; the detail's
@@ -4044,6 +4049,7 @@ function wordSpan(d,x){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):
    little off still shows the character. It rides on v541's glide and v575's geometry, not on the marks, so SPOT_ON stays off. The
    finger always wins: a pinch or a wheel on the picture hands the zoom to the hand for the rest of that picture (ZOOM_HAND),
    and from then on it only follows, as v541 did. */
+const AZ_OVERVIEW=1500; /* v662: how long a card shows its whole picture before the zoom goes in by itself */
 const ZOOM_AUTO=true, AZ_INK=0.68, AZ_EST=0.5, AZ_MAX=3.5, AZ_MIN=1.15; /* the character's larger side as a share of the box — ink-found and estimated —, and the scale's cap and floor */
 let LAST_AZ=null; /* the last decision, for Diagnostics' head line */
 /* EVERY CHARACTER'S OWN BOX, FOUND ON THE INK (v618, H on v617 with a Diagnostics dump: "Er erkennt vieles noch nicht. Die
@@ -4317,7 +4323,7 @@ async function autoZoom(card,d,c,tg,st,cur){
   await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))); /* after attachPicZoom's own restore of the zoom this picture had */
   const box=card.querySelector(".zone1 .picbox"), z=box&&box._zoom; if(!card.isConnected||!z) return;
   const key=handKey(); if(ZOOM_HAND&&ZOOM_HAND===key){ if(z.s<=1) return; } /* the hand has it: follow only, as v541 */
-  else if(!st.zoomGo&&z.s<=1) return; /* the card opens on the whole picture; the pad's first touch starts it */
+  else if(!st.zoomGo&&z.s<=1) return; /* the card opens on the whole picture; the pad's first touch, or AZ_OVERVIEW (v662), starts it */
   const allDone=!tg.some((x,j)=>x.w&&!st.done.has(j));
   const level=cur&&cur.w?padLevel(c,cur,st):3, onChar=!!cur; /* v660 (H: "I'd rather have it, please change the rule so the photo still zooms onto a known character"): the zoom follows every character, level 3 included — v617 kept the photo whole at level 3 (H's "(b)": at recall a big sharp character makes it copying), and on the phone that read as the pan failing (车 of 减震单车 zoomed out) */
   if(allDone||!onChar||S.cueBig!=="pic"){ if(z.auto&&z.s>1&&S.cueBig==="pic"){ z.focus(1); zlog({c:d.c,ch:cur&&cur.ch,how:allDone?"out, card done":"out"}); } return; }
@@ -6179,6 +6185,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  662:"A new card shows its whole photo for a moment, then zooms onto the first character by itself.",
   660:"The photo now zooms onto every character you write — the ones you know by heart too.",
   654:"Spot a mistake while learning? Open Whole card and tap Edit.",
   638:"Multicards place their texts much better now: a new reader on your phone finds each label's own line. It downloads once (about 30 MB) the first time you use a multicard.",

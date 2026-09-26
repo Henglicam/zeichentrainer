@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v661
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v662
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,18 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v662, 2026-09-26)
+- **A Learn card shows its whole photo for 1.5 s, then zooms onto the first character by itself (v662, H: "Würde es nicht Sinn
+  machen, die rausgezoomte Karte kurz zur Übersicht anzuzeigen und dann automatisch auf den ersten Character zu zoomen? Und
+  reinzoomen spätestens wenn man anfängt zu schreiben", then "Go 1.5 s").** Since v617 the zoom went in only on the pad's first
+  touch (`st.zoomGo`); now `renderStudy` arms one timer per pad state (`st._ovT`, `AZ_OVERVIEW` 1500 ms) that sets `zoomGo` and
+  calls the card's latest `_az` (`st._az`, so a re-render in between does not zoom a detached card). A touch before it still
+  zooms at once; a card dealt away before it stays untouched (`S.pad===st`). Never tried or rejected before (grep'd). Suite `ov`
+  (5 checks): "zoomed in by itself" and "onto the first character" flip (old: s 1 at 2.4 s); `[guard]` whole at open, whole at
+  1.2 s and an older deal's timer not zooming the new deal pass on both. `az` 13/13, `edit` 11/11. A note for v662; TO_TEST
+  line. The guide says nothing about when the zoom goes in, so no guide sentence changes; the study card's rest front is
+  unchanged, so no crop. Not yet field-checked.
 
 ## Current state (PWA v661, 2026-09-26)
 - **The Learn zoom finds a character the phone's reader read in another order (v661, H: "Und der 2. Character wird hier nicht
