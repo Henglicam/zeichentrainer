@@ -319,6 +319,7 @@ de:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"Die KI-Prüfung schickt Text, Pinyin und Bedeutung einer Karte, und wenn die Lesung schwer ist ein Bild des Textes — manchmal das ganze Foto. Sie fragt auch von allein nach den paar Sätzen zu einer Karte, sobald du zu einer kommst, die noch keine hat.",
 
   "Tap the star counter at the top to see how your points are counted.":"Tipp oben auf den Sternzähler, um zu sehen, wie deine Punkte zustande kommen.",
+  "Edit sits under Whole card too, for a card that needs fixing.":"Unter Ganze Karte steht auch Bearbeiten, falls eine Karte nicht stimmt.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Einmal am Tag – und noch einmal, wenn du die App nach einer neuen Karte verlässt – gehen anonyme Nutzungszahlen und die Fehlermeldungen der App an den Besitzer der App; unter Mehr → Nutzungsdaten kannst du das abschalten. Fragen oder Ideen? Mehr → Feedback.",
 
 },
@@ -608,6 +609,7 @@ fr:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"La vérification par l'IA envoie le texte, le pinyin et le sens d'une carte, et une image du texte — parfois la photo entière — quand la lecture est difficile. Elle demande aussi d'elle-même les quelques phrases d'une carte, dès que tu arrives sur une carte qui n'en a pas encore.",
 
   "Tap the star counter at the top to see how your points are counted.":"Touche le compteur d'étoiles en haut pour voir comment tes points sont comptés.",
+  "Edit sits under Whole card too, for a card that needs fixing.":"Modifier se trouve aussi sous Toute la carte, pour une carte à corriger.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Une fois par jour, et une fois de plus quand tu quittes l'appli après avoir fait une carte, des comptages anonymes et les messages d'erreur de l'appli vont au propriétaire de l'appli ; désactive-les sous Plus → Partage d'utilisation. Des questions ou des idées ? Plus → Commentaires.",
 
 },
@@ -897,6 +899,7 @@ es:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"La revisión con IA envía el texto, el pinyin y el significado de una tarjeta, y una imagen del texto — a veces la foto entera — cuando la lectura es difícil. También pide por su cuenta las pocas frases de una tarjeta, en cuanto llegas a una que todavía no las tiene.",
 
   "Tap the star counter at the top to see how your points are counted.":"Toca el contador de estrellas de arriba para ver cómo se cuentan tus puntos.",
+  "Edit sits under Whole card too, for a card that needs fixing.":"Editar también está en Toda la tarjeta, por si una tarjeta necesita arreglo.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Una vez al día, y otra vez cuando sales de la app tras crear una tarjeta, van recuentos de uso anónimos y los mensajes de error de la app al propietario de la app; desactívalo en Más → Datos de uso. ¿Preguntas o ideas? Más → Comentarios.",
 
 },
@@ -1186,6 +1189,7 @@ ja:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"AI確認はカードの文字・ピンイン・意味を送ります。読み取りが難しいときは、文字の画像 — ときには写真全体 — も送ります。まだ解説のないカードに進むと、そのカードの解説も自分から問い合わせます。",
 
   "Tap the star counter at the top to see how your points are counted.":"上の星のカウンターをタップすると、ポイントの数え方がわかります。",
+  "Edit sits under Whole card too, for a card that needs fixing.":"カード全体の中には編集もあるよ。直したいカードがあったらどうぞ。",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"1日1回、そしてカードを作ってアプリを離れるときにもう一度、匿名の利用回数とアプリのエラーメッセージがアプリの所有者に送られます。「その他 → 利用状況の送信」でオフにできます。質問やアイデアは「その他 → フィードバック」へ。",
 
 },
@@ -1475,6 +1479,7 @@ ko:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"AI 확인은 카드의 글자와 병음, 뜻을 보내요. 읽기가 어려울 때는 글자 사진 — 때로는 사진 전체 — 도 함께 보내요. 설명이 아직 없는 카드를 보게 되면 그 카드의 설명도 알아서 물어봐요.",
 
   "Tap the star counter at the top to see how your points are counted.":"위쪽 별 카운터를 누르면 포인트가 어떻게 쌓이는지 볼 수 있어요.",
+  "Edit sits under Whole card too, for a card that needs fixing.":"카드 전체 안에 편집도 있어요. 고칠 카드가 있으면 써 보세요.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"하루 한 번, 그리고 카드를 만든 뒤 앱을 나갈 때 한 번 더 익명의 사용 횟수와 앱의 오류 메시지가 앱 소유자에게 가요. 더보기 → 사용 정보 공유에서 끌 수 있어요. 질문이나 아이디어가 있으면 더보기 → 피드백.",
 
 },
@@ -1767,6 +1772,7 @@ ru:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"Проверка ИИ отправляет текст карточки, пиньинь и значение, а когда чтение даётся трудно — ещё и снимок текста, иногда всё фото целиком. Ещё она сама спрашивает пару фраз о карточке, как только ты дойдёшь до той, у которой их ещё нет.",
 
   "Tap the star counter at the top to see how your points are counted.":"Нажми на счётчик со звездой наверху, чтобы увидеть, как считаются очки.",
+  "Edit sits under Whole card too, for a card that needs fixing.":"В «Вся карточка» есть и «Изменить» — если карточку нужно поправить.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Раз в день — и ещё раз, когда ты выходишь из приложения после новой карточки, — владельцу приложения уходят обезличенные счётчики и сообщения об ошибках приложения; в «Ещё → Статистика использования» это можно выключить. Вопросы или идеи? «Ещё» → «Отзыв».",
 
 },
@@ -2056,6 +2062,7 @@ vi:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"Kiểm tra bằng AI gửi đi chữ, phiên âm và nghĩa của thẻ, và khi đọc khó thì gửi thêm ảnh của đoạn chữ — đôi khi là cả tấm ảnh. Nó cũng tự hỏi vài câu mô tả cho một thẻ, ngay khi bạn tới một thẻ chưa có.",
 
   "Tap the star counter at the top to see how your points are counted.":"Chạm vào bộ đếm sao ở trên để xem điểm được tính thế nào.",
+  "Edit sits under Whole card too, for a card that needs fixing.":"Trong Cả thẻ còn có Sửa, khi một thẻ cần chỉnh lại.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Mỗi ngày một lần, và thêm một lần khi bạn rời app sau khi tạo thẻ, vài số liệu sử dụng ẩn danh và các thông báo lỗi của app được gửi cho chủ app; bạn tắt chuyện đó ở Thêm → Chia sẻ số liệu sử dụng. Có thắc mắc hay ý tưởng gì không? Thêm → Góp ý.",
 
 },
@@ -2345,6 +2352,7 @@ th:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"AI ตรวจให้จะส่งตัวอักษร พินอิน และความหมายของการ์ด และถ้าอ่านยากก็ส่งภาพของข้อความไปด้วย — บางครั้งก็ทั้งรูป และยังขอคำอธิบายสั้นๆ ของการ์ดใบหนึ่งเอง ตอนที่คุณมาถึงการ์ดที่ยังไม่มี",
 
   "Tap the star counter at the top to see how your points are counted.":"แตะที่ตัวนับดาวด้านบนเพื่อดูว่าคะแนนนับอย่างไร",
+  "Edit sits under Whole card too, for a card that needs fixing.":"ใน ทั้งการ์ด มี แก้ไข ด้วย ถ้าการ์ดไหนต้องแก้",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"วันละครั้ง และอีกครั้งตอนออกจากแอปหลังสร้างการ์ด สถิติการใช้งานแบบไม่ระบุตัวตนและข้อความแจ้งข้อผิดพลาดจะถูกส่งให้เจ้าของแอป ปิดได้ที่ อื่นๆ → ส่งสถิติการใช้งาน มีคำถามหรือไอเดีย? อื่นๆ → ส่งความเห็น",
 
 },
@@ -2634,6 +2642,7 @@ id:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"Pemeriksaan AI mengirim teks, pinyin, dan arti sebuah kartu, dan saat pembacaannya sulit juga gambar teksnya — kadang seluruh fotonya. Ia juga meminta sendiri beberapa kalimat untuk satu kartu, begitu kamu sampai di kartu yang belum punya.",
 
   "Tap the star counter at the top to see how your points are counted.":"Ketuk penghitung bintang di atas untuk melihat cara poin dihitung.",
+  "Edit sits under Whole card too, for a card that needs fixing.":"Di Seluruh kartu ada Edit juga, kalau ada kartu yang perlu dibetulkan.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Sekali sehari, dan sekali lagi saat kamu keluar dari aplikasi setelah membuat kartu, hitungan pemakaian yang anonim dan pesan error aplikasi dikirim ke pemilik aplikasi; matikan itu di Lainnya → Berbagi data pemakaian. Ada pertanyaan atau ide? Lainnya → Masukan.",
 }
 };

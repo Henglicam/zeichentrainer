@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=653; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=654; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v654","Edit under Whole card, and back"],
   ["learn","v653","zoom lands on the character?"],
   ["photo","v652","sure card: AI text wins, ok?"],
   ["more","v651","Rebuild all: better? Undo ok?"],
@@ -3327,6 +3328,7 @@ const GUIDE=()=>[
     t("Due cards first, then up to eight new ones. The photo is the question and the pad is the answer: trace the lit stroke and it moves on by itself, character by character.")
       +" "+t("A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back."), /* v568: the one thing a learner cannot find by tapping, so the guide says it (the v259 rule); the empty deck says it in its own short words beside the drawn card since v569, so this key is the guide's alone. v589: rewritten as the memory loop H described — the photo is the question, the tap uncovers the answer. Until v588 it named the tap as a view switch ("a tap gives the whole text the top of the card"), which names the characters the photo already shows and never names the pinyin and the meaning. */
     t("Stuck? Show me draws the stroke and Skip fills the character in. The whole card — pinyin, meaning and what the text is about — is one tap away at its foot. Swipe sideways to pick another card — nothing is graded by swiping.")
+      +" "+t("Edit sits under Whole card too, for a card that needs fixing.") /* v654: the v259 rule — the fold gained Edit */
       +" "+t("Tap the star counter at the top to see how your points are counted.")] /* the counter is a tap target with no other affordance (v546), so this one sentence survives the cut */
     .concat(lockOn()?[t("Press and hold a character to walk through every card that has it; press and hold it again to come back.")]:[])}, /* v531: only while the lock is on */
   {h:t("Cards"),fig:GFIG.cards(),p:[
@@ -3813,7 +3815,7 @@ function renderStudy(main){
      above the pad is the word being written. Until v526 the block sat above the pad and the line under it, and the two
      said the same thing twice about different words ("doppelt gekoppelt und unlogisch"). */
   const back=`<div class="anshanzi hanzi">${(learnTrad(d)?learnTrad(d).split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}
-      <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button></div>`;
+      <div class="backacts">${inPage(d)?"":`<button class="del" id="star-card">${d.star?"★ "+t("Starred"):"☆ "+t("Star")}</button>`}<button class="del flagbtn${d.flag?" on":""}" id="flag">${d.flag?t("card:⚑ Flagged"):t("⚑ Flag")}</button><button class="del quietact" id="edit-card">${t("Edit")}</button></div>`; /* v654 (H: "Please offer an edit button in the learn cards. But not too prominent"): Edit in the label grey after Star and Flag, inside the fold, so the folded card shows nothing new; the Edit form's own "study" way back (v512) brings the card back with the block open */
   const noTmpl=cur&&STROKES&&!STROKE_OF.has(cur.glyph);
   const freePad=noTmpl; /* a character the stroke set lacks: the pad draws freehand and needs Undo, Clear and the note. A character WITH a template never shows them — v570 gave them to it mid-write and v582 took them back, so the freehand judging leaves no mark on the screen. */
   /* v574 (H with a screenshot of a single-card test: "Warum ist oben so viel Platz??"): the ← Cards row is a SIBLING of the
@@ -3842,6 +3844,7 @@ function renderStudy(main){
   $("#fold").onclick=()=>{ S.ansOpen=!S.ansOpen; render(); if(S.ansOpen) revealBlock("#ans"); };
   const st2=$("#star-card"); if(st2) st2.onclick=async()=>{ await setStar(c,!d.star); render(); };
   const fl=$("#flag"); if(fl) fl.onclick=async()=>{ await setFlag(c,!d.flag); render(); };
+  const ed=$("#edit-card"); if(ed) ed.onclick=()=>{ S.editing=c; S.editFrom="study"; S.fullPic=false; render(); window.scrollTo({top:0}); }; /* v654: grades nothing; the pad keeps its strokes unless the text changes */
   const bk=$("#back-cards"); if(bk) bk.onclick=endSingle;
   const goTo=stepCard; /* the chevrons ‹ › beside the pad are gone (v520, H's "A" on the three ways offered: "that design won't win an award … better ideas?") — the swipe is the way from card to card since v518 starts anywhere, and the count in the helper row says where you are */
   const pick=i=>{ const x=tg[i]; if(!x) return;
@@ -5826,7 +5829,7 @@ function renderCardDetail(main,c){
   wireSwipe(main.querySelector(".card"), sw?detailSwipe(list,li,main):null); /* v460: the same options the page detail uses, so a neighbour that is a page renders as one */
 }
 function renderEdit(main,c){
-  const d=cardOf(c); if(!d){ S.editing=null; S.editFrom=null; return render(); }
+  const d=cardOf(c); if(!d){ S.editing=null; S.editFrom=null; return render(); } const c0=d.c; /* v654: the text the form opened on, for the way back to Learn */
   const isSign=d.kind==="sign";
   let removeImg=false, aiApplied=false, aiMl=null, aiDesc=null, recropImg=null, recropRect=null, meanTouched=false, aiRun=null; /* aiRun: the form's AI request while it runs (v341) */ /* aiMl: the language of the meaning the AI filled in (v256) */ /* recropImg: the crop framed again in this form (v239), stored on Save with its frame (recropRect, v244) */
   /* the text is edited like the Read preview (H): a character strip per line, tap a character for the picker and the
@@ -5840,7 +5843,7 @@ function renderEdit(main,c){
     endRecrop(); delete SIGN[eid]; if(cropURL) URL.revokeObjectURL(cropURL);
     const from=S.editFrom; S.editing=null; S.editFrom=null;
     if(typeof from==="string"&&from.startsWith("addtext:")){ const pid=from.slice(8); S.mode="cards"; S.detail=cardOf(pid)?pid:null; dropAddedText(c).then(()=>render()); return; } /* v635: back to the multicard; a blank never read goes */
-    if(from==="study"){ S.mode="study"; S.ansOpen=true; } /* v512: back to the card with its answer block open */ else if(from==="camera"){ S.mode="inbox"; S.fullPic=false; } else { S.mode="cards"; if(newC) S.detail=newC; } /* from the finished card in the Camera tab (v325): back to it */
+    if(from==="study"){ S.mode="study"; S.ansOpen=true; const n=cardOf(newC||c); if(!n||n.c!==c0) S.pad=null; } /* v512: back to the card with its answer block open. v654: a changed text starts the pad afresh — its strokes belonged to the old characters */ else if(from==="camera"){ S.mode="inbox"; S.fullPic=false; } else { S.mode="cards"; if(newC) S.detail=newC; } /* from the finished card in the Camera tab (v325): back to it */
     render();
   };
   main.innerHTML=`<div class="pane">
@@ -6153,6 +6156,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  654:"Spot a mistake while learning? Open Whole card and tap Edit.",
   638:"Multicards place their texts much better now: a new reader on your phone finds each label's own line. It downloads once (about 30 MB) the first time you use a multicard.",
   635:"A multicard missed a text? Tap Add a text, frame it on the photo, and it joins the multicard.",
   634:"Pinch to zoom into a multicard's photo, just like a card's. Tap any text while zoomed to look it up.",
