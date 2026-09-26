@@ -733,11 +733,6 @@ body.noscroll{overflow:hidden}
 .card.study{padding-top:12px;padding-bottom:14px} /* v559: 16/18 until then — the two smallest of the six gaps the pad pays for on a wrapped card */
 .card.study .zone1{position:relative}
 .card.study .zone1 .picbox{margin-bottom:0}
-.picflag{position:absolute;right:8px;top:8px;width:36px;height:36px;border:none;border-radius:999px;background:rgba(255,255,255,.85);color:var(--label3);font-size:18px;line-height:36px;padding:0;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.25)} /* the review flag on the picture, as the star sits on a tile (v465) */
-.picflag{display:grid;place-items:center} .picflag svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round} .picflag.on svg{fill:currentColor} .picflag.on{color:var(--tint)}
-.picstar{position:absolute;right:8px;top:8px;z-index:3;width:36px;height:36px;border:none;border-radius:999px;background:rgba(255,255,255,.85);color:var(--label3);padding:0;display:grid;place-items:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.25)} .picstar::before{content:"";position:absolute;inset:-4px} .picstar svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round} .picstar.on{color:var(--tint)} .picstar.on svg{fill:currentColor} /* v658: the star on the Learn photo, the flag's twin — marks on the picture, as on a Cards tile */
-.zone1 .picstar~.picflag{right:52px} /* v658: the flag beside the star, not under it */
-.picflag.new{color:var(--label2)} /* v515: hollow — not yet checked, a shade darker; a tap flags it. v658: a checked, clean card shows the flag too, in --label3 like the star */
 /* THE CHARACTERS ARE ONE ROW (v517, H: "Die Felder für Bild und Zeichenfläche dürfen sich nicht in der Größe verändern.
    Das müssen Konstanten sein."). Until v516 there was one row per photo line, so a three-line sign gave three rows, 196 px
    against a one-line card's 60, and the pad paid the difference. The rows are laid side by side now with the photo's own
@@ -829,6 +824,7 @@ body.noscroll{overflow:hidden}
    since v522 (H: "So unwichtig und braucht so viel Platz"), where it costs no height; under the pad from v520 to v521 */
 .foldbtn>span{white-space:nowrap} /* the label and the Again pill never break inside; a row that has no room wraps its tail onto a second line as whole items (German at 360 px) */
 .foldbtn .tail{margin-left:auto;display:inline-flex;align-items:center;gap:8px} .foldbtn .tail i{margin-left:0}
+.foldbtn .fmarks{display:inline-flex;gap:4px;color:var(--tint)} .foldbtn .fmarks svg{width:15px;height:15px;fill:currentColor;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round} /* v667: the star and flag of the card, off the photo */
 .foldbtn .pos{font-size:13px;font-weight:400;color:var(--label3);white-space:nowrap}
 /* the locked character lit on the photo (v520): v461's shadow around the character's own rectangle, faded in and out */
 /* the word being written, marked on the photo (v533, H: "Bitte ausgewählte Worte dezent im Bild highlighten"): a tint ring
