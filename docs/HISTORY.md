@@ -40,13 +40,20 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
 ## Current state (PWA v658, 2026-09-26)
-- **One flag on the study card, not two (v658, H: "Works on the phone. Aber jetzt hab ich 2 mal Flag: oben rechts und ganz unten.
-  Doppelt gemoppelt ist zu vermeiden").** Asked which one goes (the toolbar's, or the photo's corner flag); H had no preference, so
-  the recommendation stood: **Flag leaves the toolbar**, which is now Star · Edit in two equal columns. The corner flag
-  (`#picflag`, v515) stays because it is seen without opening Whole card and carries the "not yet checked" state; a clean card —
-  which shows no corner flag — is flagged through Edit's checkbox (named: one tap more than before for that case). `TB_ICON.flag`
-  left with its last user. Checked at 390/360 px, light and dark, en/de/ru, starred and not: labels on one line, 54 px tall; a
-  flagged card shows the corner flag and no toolbar flag, and a tap on the corner clears it. `edit` 11/11. No key, no note.
+- **Marks on the photo, actions in the toolbar (v658, H: "Works on the phone. Aber jetzt hab ich 2 mal Flag: oben rechts und
+  ganz unten. Doppelt gemoppelt ist zu vermeiden", then, on the first build — Flag out of the toolbar, Star left in it — "Why? And
+  star stays in toolbar? Unlogisch.").** The first build removed the toolbar's Flag because the corner flag is seen without opening
+  Whole card, and kept Star because it had no twin: two rules for two buttons, and H was right to call it. Asked for one rule, H
+  chose **marks on the photo**: the **star now sits in the photo's top-right corner** (`#picstar`, a white 36 px disc like the
+  flag's, outline in `--label3`, filled tint when starred — the Cards tile's convention), the **flag beside it** (`right:52px`),
+  both drawn as SVG now (`starIcon`, new `flagIcon`; the flag was the ⚐/⚑ font glyph and looked a different weight beside the drawn
+  star), and the **toolbar under Whole card holds only Edit**. A tap on either mark does not swap the cue (`#reveal` ignores both).
+  The flag's own rule is unchanged (v515): drawn only when the card is flagged or not yet checked, so a clean card is flagged
+  through Edit's checkbox — named, one tap more than before for that case. `TB_ICON.star`/`.flag` left with their last users.
+  The study card's front changed, so `node tools/guide-shots.js` was run: `front-{light,dark}` now show the star (aspect ratios
+  unchanged, `GF_SHOT` untouched), the other crops were restored (only their grain differed). Checked at 390 px light/dark, starred,
+  flagged, not yet checked, clean and with the Traditional chip (top left, clear of both); `edit` 11/11 (en 390, de 360), `az`
+  13/13. No key, no note.
 
 ## Current state (PWA v657, 2026-09-26)
 - **Crop again: the picture check of a sure reading is used, and an AI answer never writes an older text over a newer one (v657,
