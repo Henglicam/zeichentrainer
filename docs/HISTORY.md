@@ -54,6 +54,13 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
   lines belong on the card is the question the check exists to raise. Also seen, not changed: 建国肉夹馍 came back as a
   card instead of a multicard (the AI's `apart` answer varies between calls), two photos hit the 180 s limit (沙洲市集,
   礼让行人), and 早日退休 → 退休 and 火119警 were confirmed by the AI itself.
+  **The two 180 s timeouts, measured afterwards:** the 沙洲市集 multicard (phone3's Zoom data, the same photo) reads in
+  31 s with its recorded answer; a picture call that never answers ends the card at 128 s (two 60 s tries), text calls
+  hanging beside it change nothing; only a picture retry answering late (55 s) followed by a hanging text call for the
+  pinyin and meaning (v640's split, two 25 s tries) reaches 178 s — the phone's 181 s. So a slow AI at that moment, not
+  the photo; unproven, since the report carries no AI timings (礼让行人's photo is not in the harness). **Rejected (H,
+  2026-09-26: "Leave it as is"):** skipping the text call once the picture has cost two minutes (the card pending, ~50 s
+  sooner) — 2 of 521 photos, and the 180 s is only the Re-read's own limit; a camera photo just waits.
 
 ## Current state (PWA v647, 2026-09-26)
 - **The second Re-read of 521 photos (v647, H pasted the report):** cards reading as the card says 336 → 371 of 471,
