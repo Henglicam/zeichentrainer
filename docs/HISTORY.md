@@ -51,6 +51,13 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
   the picture is never asked, so an offline reading still makes its card. `rrFinish` has the twin. Harness: menu, AI dead —
   card on v648, no card and the note on v649 (1 flip); menu, AI answering — 17 of 17 [guard]; the 4-line 沙洲市集 sign, AI
   dead — still a card [guard]; the Re-read suite passes. H: "Ok, go".
+  **Two more from the same report, explained and left as they are (H: "Leave it as is"):** 706北一街 (a multicard on its
+  other copies) came back as a card in 12 s — too fast for a picture answer (20–35 s on that sign), and its text is the
+  reader's (no "120M" distances, the reader's junk 大雅ltt), so the picture call most likely failed at once and the text
+  model vouched for the reading; replayed on phone4's copy with the picture refused, v648 made the card in 12 s. v649
+  catches it only if the reader again finds five lines. 中彩快印 was a card before and still is, with 朝外SOHO店 and 自有工厂
+  around it: v647's Re-read frame margin, which a camera photo does not have; a smaller margin would bring back the lost
+  edge characters (早日退休 → 退休).
 
 ## Current state (PWA v648, 2026-09-26)
 - **The third Re-read (v648, H pasted the report):** multicards 471 of 471; cards reading as the card says 371 → 361 of
