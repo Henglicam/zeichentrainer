@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v649
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v650
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,23 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v650, 2026-09-26)
+- **Owner tools → Check texts (v650, `ctRun`/`ctAsk`):** every photo goes to the picture model once, with the texts of all
+  the cards made from it, and one question — which characters of each text are not written on the photo? A card with an
+  answer is flagged "Not on the photo: 早" (an older note stays behind it; `unchecked` stays, the flag is the AI's, not H's
+  verdict); nothing else about the card changes. The reason: 早日退休 (the photo itself stops at a sliver of 早) and
+  盒马鲜生超市入口 (no 盒马鲜生 on the photo; today's pipeline reads it without) carry text their photo does not show — both
+  made before v611's "Never invent". H: "But there shouldn't be text that isn't visible", then "Go" on this tool over fixing
+  by eye. **The phone's own reader cannot judge it:** on H's 35 Zoom-data cards Paddle "missed" characters on 9, all its own
+  misreadings (杨國福, 雀巢脆脆鲨, the 蔡澜 menu) — measured, not used. Only characters of the card's own text count as an
+  answer (at most as often as the text holds them). The photo goes at `CT_MAX` 1280 px rather than the reading's 800, so
+  small print stays legible. One call per photo (~520 on H's deck, multicard texts in one call), sequential, waiting while
+  the Camera tab works; the run stands in settings ("ct") after every photo, and a finished run with failed calls offers
+  "Ask the N again". Report `shizi-textcheck.txt`. Harness (AI mocked, the buttons clicked): 10 checks — the flag and its
+  note, answers outside the card's text ignored, the multicard page never flagged, one call for a multicard photo, 1280 px
+  and no enlarging, the retry of a failed photo; the v649 tree has no such row. **Not known:** how often the real model
+  calls a visible character missing — H's run is the measurement.
 
 ## Current state (PWA v649, 2026-09-26)
 - **A reading of five lines or more with no picture answer makes no card (v649, `NOPIC_LINES`).** H's third Re-read: the

@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=649; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=650; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["more","v650","Check texts: right cards flagged?"],
   ["photo","v649","AI down: long sign waits?"],
   ["photo","v648","early-sent sure cards flagged?"],
   ["photo","v646","sure card: AI check flags diff?"],
@@ -1375,6 +1376,84 @@ function rrText(){ const R=S.settings.rr; if(!R) return "No re-read yet.";
 async function rrShare(){ const text=rrText(), name="shizi-reread.txt", file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
   try{ await navigator.clipboard.writeText(text); noteSheet(t("Copied to the clipboard.")); }catch(err){ noteSheet(t("Sharing is not available here.")); } }
+/* ---------- Owner tools → Check texts (v650, H on the third Re-read, 2026-09-26: 早日退休 and 盒马鲜生超市入口 carry text their
+   photo does not show — the photo itself stops at 早, and no 盒马鲜生 is on it; both cards are from before v611's "Never invent".
+   H: "But there shouldn't be text that isn't visible", then "Go" on this tool). Every photo goes to the picture model once, with
+   the texts of all the cards made from it, and one question: which characters of each text are not written on the photo? A card
+   with an answer is flagged "Not on the photo: 早" — H decides in Flagged cards (shorten, Crop again, delete); nothing else about
+   the card changes. The phone's own reader cannot judge this: on H's 35 Zoom-data cards it "missed" characters on 9, all its own
+   misreadings (杨國福, 脆脆鲨, the 蔡澜 menu). The photo goes at CT_MAX, not the reading's PIC_MAX, so small print stays legible.
+   The run stands in settings ("ct") after every photo and goes on where it stopped; a photo whose call failed is asked again by
+   the next Start. ---------- */
+const CT_MAX=1280; let CT_ON=false, CT_LOOP=false;
+function ctShots(){ const by=new Map();
+  for(const d of deck().slice().reverse()){ if(d.kind==="page"||!d.shot||!CJK.test(d.c||"")) continue; if(!by.has(d.shot)) by.set(d.shot,[]); by.get(d.shot).push(d.id); }
+  return [...by.keys()].filter(sh=>S.custom.some(x=>x.shot===sh&&fullPhoto(x))); }
+const ctSys=()=>`You check flashcards against the photo they were made from. Each card holds Chinese text a learner will study, and that text must be written on the photo. For every card, list the characters of its text that are not written anywhere on the photo. A character counts as written when it stands on the photo in its simplified or its traditional form, in any font, size or angle, small print included — look carefully before you call one missing. A character that the photo's edge cuts off so far that it cannot be read is not written. Ignore punctuation, digits and Latin letters. Answer with one JSON object only: {"cards":[{"n":1,"missing":"…"},…]} — one entry per card, in the order given; "missing" = the characters that are not on the photo, in the order of the card's text, "" when every character is there. No prose, no code fences.`;
+async function ctAsk(blob,texts){
+  const pv=pictureProvider(); if(!pv) throw new Error("no picture provider");
+  const key=aiKey(pv), model=pictureModel(pv), pic=await pictureJpeg(blob,CT_MAX), relay=!key&&viaRelay(pv), sys=ctSys();
+  const text=`The photo is ${pic.w}×${pic.h} pixels. The cards:\n${texts.map((c,i)=>`${i+1}. ${c.replace(/\n/g," / ")}`).join("\n")}`;
+  const req=`[picture ${pic.w}×${pic.h} JPEG, ${pic.kb} KB, text check] ${text}`; let r; const t0=Date.now();
+  try{
+    if(pv==="claude") r=await aiFetch(aiBase(pv),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model,max_tokens:1000,system:sys,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:pic.b64}},{type:"text",text}]}]})},PIC_TIMEOUT_MS);
+    else { const body={model,max_tokens:1000,temperature:0,messages:[{role:"system",content:sys},{role:"user",content:[{type:"text",text},{type:"image_url",image_url:{url:"data:image/jpeg;base64,"+pic.b64}}]}]};
+      noThinking(pv,model,body); r=relay?await relayFetch(pv,body,PIC_TIMEOUT_MS):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)},PIC_TIMEOUT_MS); }
+  }catch(err){ logAi({model,req,err:"no connection: "+(err&&err.message||err)}); throw new Error(AI_NET_ERR); }
+  if(!r.ok){ const t=await apiErrText(r); logAi({model,status:r.status,req,err:t}); throw new Error(relay?relayError(r,t):"API error "+r.status+(t?": "+t:"")); }
+  const data=await r.json(); countTokens(pv,data); bump("pics"); bumpModel(model);
+  const raw=pv==="claude"?(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join(""):String(((data.choices||[])[0]||{}).message?.content||"");
+  logAi({model,status:r.status,ms:Date.now()-t0,req,res:raw.slice(0,AI_LOG_RES)});
+  let x; try{ x=JSON.parse(raw.trim().replace(/^```(?:json)?\s*|\s*```$/g,"")); }catch(e){ throw new Error("could not read the model's answer"); }
+  const arr=Array.isArray(x&&x.cards)?x.cards:[];
+  /* only characters of the card's own text count, each at most as often as the text holds it — whatever else the model writes is not an answer to the question */
+  return texts.map((c,i)=>{ const e=arr.find(y=>y&&+y.n===i+1)||arr[i]||{}, left=[...c].filter(ch=>CJK.test(ch)), miss=[];
+    for(const ch of [...String(e.missing||"")]){ const j=left.indexOf(ch); if(j>=0){ left.splice(j,1); miss.push(ch); } }
+    return miss.join(""); }); }
+async function ctOne(shot){
+  const src=S.custom.find(x=>x.shot===shot&&fullPhoto(x)), blob=src&&fullPhoto(src); if(!blob) return {shot,skip:"no photo"};
+  const cards=deck().filter(d=>d.shot===shot&&d.kind!=="page"&&CJK.test(d.c||"")); if(!cards.length) return {shot,skip:"no card"};
+  const miss=await ctAsk(blob,cards.map(d=>d.c)), out=[];
+  for(let i=0;i<cards.length;i++){ const d=cardOf(cards[i].id); if(!d) continue; out.push({id:d.id,c:d.c,miss:miss[i]});
+    if(!miss[i]) continue;
+    const note=`Not on the photo: ${miss[i]}`; if(d.flag&&String(d.flagNote||"").includes(note)) continue;
+    const old=d.flag?String(d.flagNote||""):""; d.flag=true; d.flagNote=old?note+" — "+old:note; /* a note already on the card stays behind the new one; "unchecked" stays — this flag is the AI's, not a verdict by hand (v515) */
+    try{ await idbPut("custom",d); }catch(e){} }
+  return {shot,cards:out}; }
+function ctLine(){ const R=S.settings.ct; if(!R) return `Asks the AI, photo by photo, which characters of each card are not on its photo, and flags those cards. About ${ctShots().length} photos, one picture call each.`;
+  const res=R.res||[], cs=res.flatMap(r=>r.cards||[]), bad=cs.filter(c=>c.miss).length, err=res.filter(r=>r.err).length;
+  return `${CT_ON?"Running":R.done?"Done":"Paused"}: ${res.length} of ${R.list.length} photos, ${cs.length} cards checked, ${bad} flagged${err?`, ${err} photo${err===1?"":"s"} not answered`:""}.`; }
+function ctShow(){ const st=$("#ct-status"); if(st) st.textContent=ctLine()+(CT_LOOP&&!CT_ON?" Pausing after this photo …":""); const b=$("#ct-run"); if(b) b.textContent=ctLabel(); }
+function ctLabel(){ const R=S.settings.ct; if(CT_ON) return "Pause"; if(R&&!R.done) return "Go on"; const err=R?(R.res||[]).filter(r=>r.err).length:0; return err?`Ask the ${err} again`:"Start"; }
+async function ctRun(){
+  if(CT_ON){ CT_ON=false; ctShow(); return; }
+  if(CT_LOOP){ CT_ON=true; ctShow(); return; }
+  let R=S.settings.ct;
+  if(R&&R.done){ const err=(R.res||[]).filter(r=>r.err).map(r=>r.shot); /* a finished run with failed calls: the next Start asks those photos again, keeping the rest */
+    R=err.length?{...R,done:0,list:R.list,i:R.i,res:R.res.filter(r=>!r.err),again:err}:null; }
+  if(!R) R={at:Date.now(),v:APP_V,list:ctShots(),i:0,res:[]};
+  CT_ON=true; CT_LOOP=true; await setSetting("ct",R); ctShow();
+  try{
+    while(CT_ON){
+      const shot=R.again&&R.again.length?R.again[0]:R.i<R.list.length?R.list[R.i]:null; if(!shot) break;
+      if(rrBusy()){ await rrSleep(3000); continue; }
+      if(!pictureUp()){ CT_ON=false; const st=$("#ct-status"); if(st) st.textContent=ctLine()+" The picture AI is off or not reachable — paused."; break; }
+      let res; try{ res=await ctOne(shot); }catch(e){ res={shot,err:String(e&&e.message||e)}; logErr("textcheck",e&&(e.stack||e.message)||e); }
+      R.res.push(res); if(R.again&&R.again[0]===shot) R.again.shift(); else R.i++;
+      await setSetting("ct",R); ctShow(); }
+    if(R.i>=R.list.length&&!(R.again&&R.again.length)){ R.done=Date.now(); delete R.again; await setSetting("ct",R); }
+    if(S.mode==="cards"&&!S.editing) render(); }
+  finally{ CT_ON=false; CT_LOOP=false; ctShow(); } }
+function ctText(){ const R=S.settings.ct; if(!R) return "No text check yet.";
+  const res=R.res||[], L=[`Check texts v${R.v} (report v${APP_V}), started ${new Date(R.at).toISOString()}`,ctLine(),"","Not on the photo:"];
+  for(const r of res) for(const c of r.cards||[]) if(c.miss) L.push(`  ${c.c.replace(/\n/g," / ")} — ${c.miss}   (${r.shot})`);
+  const err=res.filter(r=>r.err); if(err.length){ L.push("","Not answered:"); for(const r of err) L.push(`  ${r.shot} — ${r.err}`); }
+  L.push("","Every text found on its photo:"); for(const r of res) for(const c of r.cards||[]) if(!c.miss) L.push(`  ${c.c.replace(/\n/g," / ")}`);
+  return L.join("\n"); }
+async function ctShare(){ const text=ctText(), name="shizi-textcheck.txt", file=new File([text],name,{type:"text/plain"});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
+  try{ await navigator.clipboard.writeText(text); noteSheet(t("Copied to the clipboard.")); }catch(err){ noteSheet(t("Sharing is not available here.")); } }
 async function shareDiag(){
   const text=diagText(), name="shizi-diagnostics.txt", file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
@@ -1741,8 +1820,8 @@ const PIC_SMALL=0.15, PIC_EDGE=0.05, PIC_SIDE=[0.35,0.6], PIC_TINY=0.06; /* an a
    picture, against an edge, means the app's frame was pointed at the wrong place (v393) — and smaller than PIC_TINY it means
    that wherever it sits (v447): the frame is then more than sixteen times the area of the text the model found in it */
 const PIC_MAX=800;
-async function pictureJpeg(blob){
-  const bmp=await createImageBitmap(blob); const k=Math.min(1,PIC_MAX/Math.max(bmp.width,bmp.height));
+async function pictureJpeg(blob,max){
+  const bmp=await createImageBitmap(blob); const k=Math.min(1,(max||PIC_MAX)/Math.max(bmp.width,bmp.height));
   const cv=scaledCanvas(bmp,k); bmp.close();
   const out=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
   const b64=(await blobToB64(out)).d; return {b64,w:cv.width,h:cv.height,kb:Math.round(out.size/1024)};
@@ -2954,6 +3033,7 @@ function renderMore(main){
     <pre class="diag" id="diag-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">Zoom check</div><div class="s" id="zc-status">${ZCHECK?esc(ZCHECK.line)+".":`Finds every character of the newest ${ZC_N} photo cards the way Learn's zoom does. Share sends the pictures with the boxes drawn: green on the ink, orange unsure, red the estimate, blue the frame; the newest ${ZC_PAGES} multicards follow, green where a region snapped onto its text. Data sends the pictures themselves, as one PDF.`}</div><div class="fieldacts"><button class="btn mini" id="zc-run">Run</button><button class="btn mini" id="zc-share">Share</button><button class="btn mini" id="zc-data">Data</button><button class="btn mini" id="zc-paddle">Paddle</button></div></div></div>
     <div class="mrow"><div style="flex:1"><div class="t">Re-read all</div><div class="s" id="rr-status">${esc(rrLine())}</div><div class="fieldacts"><button class="btn mini" id="rr-run">${RR_ON?"Pause":(S.settings.rr&&!S.settings.rr.done?"Go on":"Start")}</button><button class="btn mini" id="rr-share">Share</button></div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">Check texts</div><div class="s" id="ct-status">${esc(ctLine())}</div><div class="fieldacts"><button class="btn mini" id="ct-run">${ctLabel()}</button><button class="btn mini" id="ct-share">Share</button></div></div></div>
     <div class="mrow"><div style="flex:1"><div class="t">Still to test</div><div class="s" id="field-status">${fieldNote()}</div><div class="fieldacts"><button class="btn mini" id="field-show">Show</button><button class="btn mini" id="field-copy">Copy</button></div></div></div>
     <pre class="diag" id="field-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"install")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div><div class="fieldacts"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button><button class="btn mini" id="users-copy">Copy</button></div></div></div>
@@ -3001,6 +3081,7 @@ function renderMore(main){
       { const zd=$("#zc-data"); if(zd) zd.onclick=async()=>{ zd.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); await shareZoomData(zs); }catch(e){ zs.textContent="The data failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zd.disabled=false; }; }
       if(zh) zh.onclick=async()=>{ zh.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); await shareZoomSheet(zs); }catch(e){ zs.textContent="The sheet failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zh.disabled=false; }; }
     $("#rr-run").onclick=()=>{ rrRun().catch(e=>logErr("reread",e&&(e.stack||e.message)||e)); }; $("#rr-share").onclick=rrShare; /* v645 */
+    $("#ct-run").onclick=()=>{ ctRun().catch(e=>logErr("textcheck",e&&(e.stack||e.message)||e)); }; $("#ct-share").onclick=ctShare; /* v650 */
     $("#field-show").onclick=()=>{ const o=$("#field-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=fieldText(); };
     $("#field-copy").onclick=()=>copyText(fieldText(),$("#field-status"));
     $("#diag-copy").onclick=()=>copyText(diagText(),$("#diag-status"));
