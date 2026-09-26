@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=646; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=647; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1314,7 +1314,11 @@ async function rrOne(shot){
   /* v646: a photo that made one card is read from that card's own frame, as the automatic card reads its proposal — the v645 report read every
      photo whole and compared a whole photo's text with a card H had cut to one sign (绿茶 read as 低糖 beside it) */
   const own=S.custom.filter(d=>d.shot===shot&&d.kind!=="page"), fr=own.length===1&&!own[0].page&&own[0].frame&&own[0].frame.w*own[0].frame.h<0.9?own[0].frame:null;
-  const rect=fr?{x:fr.x*lw,y:fr.y*lh,w:fr.w*lw,h:fr.h*lh,a:fr.a||0,lw,lh}:{x:f.x,y:f.y,w:f.w,h:f.h,a:0,lw,lh};
+  /* v647: with a margin of a third of its short side all round, as a new photo's proposal has one — cut exactly at the card's
+     frame, a character on its edge was lost to the phone's reader and to the AI alike (早日退休 read 退休 with the AI agreeing,
+     三立方咖啡 立方咖啡, 自行车优先 "no Chinese text") */
+  const fm=fr?Math.min(fr.w*lw,fr.h*lh)/3:0, fx0=fr?Math.max(0,fr.x*lw-fm):0, fy0=fr?Math.max(0,fr.y*lh-fm):0;
+  const rect=fr?{x:fx0,y:fy0,w:Math.min(lw,(fr.x+fr.w)*lw+fm)-fx0,h:Math.min(lh,(fr.y+fr.h)*lh+fm)-fy0,a:fr.a||0,lw,lh}:{x:f.x,y:f.y,w:f.w,h:f.h,a:0,lw,lh};
   { const N=numsReset(id); N.pre=true; N.photo=[PW,PH]; N.reread=shot; N.prop={r:numRect(rect),kind:full?"whole":shaped?"16:9":"text",hidden:true,reg:reg0?[n4(reg0.x),n4(reg0.y),n4(reg0.x1),n4(reg0.y1)]:null,blocks:reg0&&reg0.blocks||0,shared,screenshot}; }
   logRead(id,`re-read of the photo of ${shot}: frame proposed by the app, ${full?"the whole photo":"the ink rows"}`);
   const ph={id:"rr#"+id,c:"",shot:id,reading:{rect,at:Date.now(),app:true,auto:true}}; RRPH[ph.id]=ph; PENDING[id]=ph.id; AUTO[id]=true;
@@ -1334,7 +1338,7 @@ async function rrFinish(id){ const sg=SIGN[id];
       return rrEnd(id,{kind:"multi",n:fr.length,own,texts:sg.ai.labels.map(l=>l.zh).join(" · ").slice(0,300)}); }
     const built=sg&&SIGN[id]===sg?await readingCard(id,sg):null;
     let check=""; if(built&&SURECHK[id]){ const sc=SURECHK[id]; delete SURECHK[id]; const e=await Promise.race([sc.p,rrSleep(90000).then(()=>null)]); /* v646: the report says what the check beside a sure reading found */
-      check=!e||!e.pic?"the AI's check did not come":e.pic.bad?"the AI found no Chinese text":cjkOnly(e.pic.zh)===cjkOnly(built.card.c)&&!(e.pic.apart&&e.pic.labels)?"the AI agrees":`the AI reads "${e.pic.zh.replace(/\n/g," / ")}" — flagged`; }
+      check=!e||!e.pic?"the AI's check did not come":e.pic.bad?"the AI found no Chinese text":sureKey(e.pic.zh)===sureKey(built.card.c)&&!(e.pic.apart&&e.pic.labels)?"the AI agrees":`the AI reads "${e.pic.zh.replace(/\n/g," / ")}" — flagged`; }
     return rrEnd(id,built?{kind:"card",c:built.card.c,p:built.card.p,m:String(built.card.m||"").slice(0,80),src:built.mt&&built.mt.src,check}:{kind:"none",why:"nothing to save"}); }
   catch(e){ logErr("reread",e&&(e.stack||e.message)||e); return rrEnd(id,{kind:"none",why:"failed: "+(e&&e.message||e)}); } }
 function rrEnd(id,res){ const w=RRWAIT[id]; delete RRWAIT[id]; if(res&&w){ w(res); return; }
@@ -6294,7 +6298,7 @@ function pdAsPass(lines){
     chars.forEach((ch,i)=>{ const keep=CJK.test(ch)||SIGN_PUNCT.test(ch)||/^[0-9A-Za-z ]$/.test(ch); if(!keep) return; /* v646: Latin letters too — inside a Chinese line they are the text (D座电梯, AI实验室, 24H); a line of letters alone still stays out below */
       const b=l.vert?{x0:l.x,x1:l.x+l.w,y0:l.y+l.h*i/n,y1:l.y+l.h*(i+1)/n}:{x0:l.x+l.w*i/n,x1:l.x+l.w*(i+1)/n,y0:l.y,y1:l.y+l.h};
       syms.push({ch,cf:Math.round(((l.cfs&&l.cfs[i])||l.conf)*100),b}); });
-    for(let i=0;i<syms.length;){ if(!/[A-Za-z]/.test(syms[i].ch)){ i++; continue; } let j=i; while(j<syms.length&&/[A-Za-z]/.test(syms[j].ch)) j++; if(j-i>4) syms.splice(i,j-i); else i=j; } /* a run of letters up to four long is part of the line (D座, AI实验室, 24H, SOHO); a longer one is an English name beside the Chinese (雀巢Nestle), which the AI leaves out too */
+    for(let i=0;i<syms.length;){ if(!/[A-Za-z0-9 ]/.test(syms[i].ch)){ i++; continue; } let j=i; while(j<syms.length&&/[A-Za-z0-9 ]/.test(syms[j].ch)) j++; const letters=syms.slice(i,j).filter(x=>/[A-Za-z]/.test(x.ch)).length; if(letters>5) syms.splice(i,j-i); else i=j; } /* a stretch of letters, digits and spaces with five letters at most is part of the line (D座, AI实验室, 24H, 朝外SOHO B座); more is an English name or slogan beside the Chinese (雀巢Nestle, 买一赠一BUY1get1FREE — v647), which the AI leaves out too */
     for(let i=syms.length-1;i>=0;i--) if(syms[i].ch===" "&&!(i>0&&i<syms.length-1&&/[0-9A-Za-z]/.test(syms[i-1].ch+syms[i+1].ch))) syms.splice(i,1); /* a space stays only beside a letter or a digit (朝外SOHO B座, 美甲 38元), so it can end a run of letters */
     while(syms.length&&/[、，。：:,.]/.test(syms[0].ch)) syms.shift(); while(syms.length&&/[、，。：:,.]/.test(syms[syms.length-1].ch)) syms.pop();
     const t=syms.map(x=>x.ch).join(""); if(CJK.test(t)) out.push({t,cf:syms.filter(x=>CJK.test(x.ch)).map(x=>x.cf),bx:syms.map(x=>x.b),pd:true}); }
@@ -9086,6 +9090,7 @@ async function splitCards(id,sg,ph){
   logRead(id,`${n} cards from this photo: ${rows.slice(0,n).map(c=>c.c).join(", ")}`);
   return n;
 }
+const sureKey=x=>String(x||"").replace(/[^\u4e00-\u9fff0-9]/g,""); /* v647: the characters and the digits, in order — 火119警 is not 火警119 */
 /* v646: the picture answer for a sure reading, when it lands. The card is judged only while it still says what it was
    made with (a card H has edited meanwhile is his); the same Chinese is a confirmation, anything else flags the card and
    puts the AI's reading on it as the suggestion the open card already knows how to offer (aiBoxHTML: Accept / Dismiss) */
@@ -9094,7 +9099,7 @@ function sureCheck(cid,c0,sc,shot){
     if(!e||!e.pic){ logRead(shot,`the AI's check of the sure reading did not come: ${(e&&e.err)||"no answer"}`); return; }
     const pic=e.pic, ms=((Date.now()-sc.at)/1000).toFixed(1);
     if(pic.bad){ d.flag=true; d.flagNote=t("the reading looks wrong"); logRead(shot,`the AI found no Chinese text in the picture (${ms} s) — the sure reading ${c0.replace(/\n/g," / ")} is flagged`); }
-    else if(cjkOnly(pic.zh)===cjkOnly(c0)&&!(pic.apart&&pic.labels)){ logRead(shot,`the AI reads the picture as the phone's reader did (${ms} s)`); return; }
+    else if(sureKey(pic.zh)===sureKey(c0)&&!(pic.apart&&pic.labels)){ logRead(shot,`the AI reads the picture as the phone's reader did (${ms} s)`); return; }
     else { d.ai={zh:pic.zh,p:pic.p||"",m:pic.m||"",note:pic.apart&&pic.labels?t("the picture may not show this text — check the photo"):"",ok:false,bad:false,at:Date.now(),model:pic.model};
       d.flag=true; d.flagNote=t("the reading looks unsure — check text, pinyin and meaning");
       logRead(shot,`the AI reads the picture as ${pic.zh.replace(/\n/g," / ")}${pic.apart&&pic.labels?` (${pic.labels.length} separate texts)`:""} (${ms} s), the phone's reader as ${c0.replace(/\n/g," / ")} — the card is flagged with the AI's reading as its suggestion`); }

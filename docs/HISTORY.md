@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v646
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v647
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,24 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v647, 2026-09-26)
+- **The second Re-read of 521 photos (v647, H pasted the report):** cards reading as the card says 336 → 371 of 471,
+  multicards 487 of 490. **The check beside a sure card works** — it flagged 17 sure cards, nearly all rightly (急停 read
+  不停, 中旅 旅 / 中, 甭废话 废话, 很久以前羊肉串 很 / 串, 唐潮影视, 语翼中文, 张记 / 烤炉鸡蛋灌饼, 16开 / 景德镇, dropped lines on
+  泰古龙, 小苏打, 黑丝妹妹), and v646's rules held (暂时离开, 米兰西饼, 电动车 / 禁止入园, D座电梯, AI实验室, 郑少忠24H, 朝外SOHO).
+  Fixed: **(1)** the check compared the Chinese alone, so 火119警 against 火警119 passed — `sureKey` compares characters
+  and digits in order. **(2)** Latin junk slipped through v646's four-letter runs (买一赠一BUY1get1FREE, whose runs of
+  three and four are split by digits): a stretch of letters, digits and spaces with more than five letters is dropped
+  (朝外SOHO B座 keeps its five). **(3)** The Re-read cut a framed card exactly at `card.frame`, so a character on its edge
+  was lost to the phone's reader and to the AI alike — 早日退休 read 退休 and 三立方咖啡 立方咖啡 with the AI agreeing, and
+  自行车优先, 禁放单位, 礼让行人, 东方雀友汇 came out "no Chinese text": the frame now gets a third of its short side as
+  margin all round, as a proposal has one (that this was the cause is not proven — H's photos are not in the harness).
+  **Measured and dropped:** turning a line round when it forms dictionary words only backwards, for the right-to-left
+  signs (京城内外首善全图 read 图全善首外内城京, 和星盛记 记盛星和) — `dictCover` gives 京城… 0.50 forwards against 0.25 read
+  backwards, and 蜜雪冰城 0.00 forwards against 0.50 backwards (城冰雪蜜 holds 冰雪), so the rule would have turned a
+  right brand round; right-to-left stays the AI's. Harness: the report's cases through `pdAsPass`, the Re-read suites
+  (deck byte-identical), H's 23 older card pictures unchanged.
 
 ## Current state (PWA v646, 2026-09-25)
 - **H's Re-read all of 521 photos, and what came of it (v646, H pasted the report; the findings offered as four reading
