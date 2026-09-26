@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=662; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=663; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v663","zoom on cards with no frame?"],
   ["learn","v662","1.5 s overview, then zoom: ok?"],
   ["learn","v661","zoom on signs set in columns?"],
   ["learn","v653","zoom lands on the character?"],
@@ -3881,7 +3882,7 @@ function renderStudy(main){
   mountPad(card,d,c,tg,st,cur);
   if(pg&&!S.fullPic) fitPageCover(card); /* D5: the multicard's picture cover-fitted around the card's own text */
   attachPicZoom(card.querySelector(".zone1 .picbox")); /* v514: pinch to zoom, one finger to pan (§ 4) */
-  if(ZOOM_AUTO&&d.shot&&d.frame) setTimeout(()=>{ if(card.isConnected) pdBoxesFor(card,d); },400); /* v653: the reader looks for the characters while the card is read, so the first touch rarely waits */
+  if(ZOOM_AUTO&&d.img) setTimeout(()=>{ if(card.isConnected) pdBoxesFor(card,d); },400); /* v653: the reader looks for the characters while the card is read, so the first touch rarely waits */
   if(cur) padLine(d,cur); /* the line under the pad, always, for the character the pad is on (v518) */
   wireScript(card); /* v604 */
   spotChar(card,d,cur); /* v520: the locked character lit on the photo; v533: the word being written marked on it */
@@ -3955,17 +3956,26 @@ function textFracs(d,nw,nh,pw,ph,whole){
     const tw=rect.w/win.w, th=rect.h/win.h; return {tx:0.5+u/win.w-tw/2, ty:0.5+v/win.h-th/2, tw, th}; }
   if(Math.abs(r-rect.w/rect.h)<=0.05*r) return {tx:0,ty:0,tw:1,th:1}; /* a split label's picture is its frame */
   return "nowindow"; }
-async function spotGeom(card,d){
+async function spotGeom(card,d,opt){
   const z=card.querySelector(".zone1"); if(!z) return null;
   const box=z.querySelector(".picbox"), page=!!(box&&box.classList.contains("page"));
-  if(S.peek&&S.peek!==d.id) return null; const f=d.frame; if(!f||!(f.w>0&&f.h>0)){ markWhy(d,"noframe"); return null; }
-  const img=z.querySelector(".signimg"), full=fullPhoto(d); if(!img||!full){ if(!full) markWhy(d,"nophoto"); return null; }
+  if(S.peek&&S.peek!==d.id) return null; const f=d.frame, framed=!!(f&&f.w>0&&f.h>0);
+  /* v663 (H: "Warum wird hier nichts gezoomt?", on 一次性手套): a card with no frame (32 of H's 579) has only its own cut, and
+     for the Learn zoom that cut is where the text is — the reader and the ink search look for the characters in the whole
+     picture. Only the zoom asks for it (opt.whole); the marks still want a frame */
+  const bare=!framed&&!page&&!!(opt&&opt.whole);
+  if(!framed&&!bare){ markWhy(d,"noframe"); return null; }
+  const img=z.querySelector(".signimg"), full=bare?null:fullPhoto(d); if(!img||(!bare&&!full)){ if(!bare&&!full) markWhy(d,"nophoto"); return null; }
   if(!img.complete||!img.naturalWidth) await new Promise(r=>{ img.addEventListener("load",r,{once:true}); img.addEventListener("error",r,{once:true}); });
+  let tf;
+  if(bare){ if(!img.isConnected||!img.naturalWidth||!img.naturalHeight) return null; tf={tx:0,ty:0,tw:1,th:1}; }
+  else {
   const key=d.shot||d.id; let ps=PICSIZE.get(key);
   if(!ps){ try{ const bm=await createImageBitmap(full); ps={w:bm.width,h:bm.height}; bm.close(); }catch(e){ return null; } if(ps.w&&ps.h){ PICSIZE.set(key,ps); if(PICSIZE.size>40) PICSIZE.delete(PICSIZE.keys().next().value); } }
   const pw=ps&&ps.w, ph=ps&&ps.h; if(!img.isConnected||!pw||!ph) return null;
   const nw=img.naturalWidth, nh=img.naturalHeight; if(!nw||!nh) return null;
-  const tf=textFracs(d,nw,nh,pw,ph,page||!box); if(typeof tf==="string"){ markWhy(d,tf); return null; }
+  tf=textFracs(d,nw,nh,pw,ph,page||!box); if(typeof tf==="string"){ markWhy(d,tf); return null; } }
+  const nw=img.naturalWidth, nh=img.naturalHeight;
   const {tx,ty,tw,th}=tf;
   const host=box||z;
   /* v541 (H: "Bei zoomen/schieben muss der Highlight frame im Bild mitwandern"): the marks are drawn in the picture's own
@@ -3985,7 +3995,7 @@ async function spotGeom(card,d){
     if(box&&!page){ const s=Math.min(iw/nw,ih/nh), w=nw*s, h=nh*s; ix+=(iw-w)/2; iy+=(ih-h)/2; iw=w; ih=h; } /* the rendered picture inside its box (object-fit:contain); a page front's picture is the whole photo at the rendered size fitPageCover gave it */
     return true; };
   if(!measure()) return null;
-  const layer=spotLayer(host); markWhy(d,"ok");
+  const layer=spotLayer(host); markWhy(d,bare?"noframe":"ok");
   const rectOf=sp=>({x:ix+iw*(tx+tw*sp.x),y:iy+ih*(ty+th*sp.y),w:iw*tw*sp.w,h:ih*th*sp.h});
   return { host:layer, box:host, page, z, img, zoom:zm||null, tx, ty, tw, th, again:measure, rectOf,
     put:(e,sp)=>{ const r=rectOf(sp);
@@ -4260,7 +4270,7 @@ async function pdCharBoxes(src,nw,nh,g,lines){
   return {boxes,why:hit.size<ci.length?`${hit.size} of ${ci.length} characters read`:"",read:L.map(l=>l.text).join(" | ")};
 }
 function pdBoxesFor(card,d){ const key=cbKey(d); let p=PDBOX.get(key);
-  if(!p){ p=(async()=>{ const geom=await spotGeom(card,d); if(!geom) return null; return await pdCharBoxes(geom.img,geom.img.naturalWidth,geom.img.naturalHeight,geom,spotLines(d)); })().catch(e=>({why:"error "+(e&&e.message||e)})).then(r=>{ PDDONE.set(key,r); if(PDDONE.size>60) PDDONE.delete(PDDONE.keys().next().value); return r; });
+  if(!p){ p=(async()=>{ const geom=await spotGeom(card,d,{whole:true}); if(!geom) return null; return await pdCharBoxes(geom.img,geom.img.naturalWidth,geom.img.naturalHeight,geom,spotLines(d)); })().catch(e=>({why:"error "+(e&&e.message||e)})).then(r=>{ PDDONE.set(key,r); if(PDDONE.size>60) PDDONE.delete(PDDONE.keys().next().value); return r; });
     PDBOX.set(key,p); if(PDBOX.size>60) PDBOX.delete(PDBOX.keys().next().value); }
   return p; }
 const CBOX=new Map(); /* the boxes per card, frame and photo */
@@ -4327,7 +4337,7 @@ async function autoZoom(card,d,c,tg,st,cur){
   const allDone=!tg.some((x,j)=>x.w&&!st.done.has(j));
   const level=cur&&cur.w?padLevel(c,cur,st):3, onChar=!!cur; /* v660 (H: "I'd rather have it, please change the rule so the photo still zooms onto a known character"): the zoom follows every character, level 3 included — v617 kept the photo whole at level 3 (H's "(b)": at recall a big sharp character makes it copying), and on the phone that read as the pan failing (车 of 减震单车 zoomed out) */
   if(allDone||!onChar||S.cueBig!=="pic"){ if(z.auto&&z.s>1&&S.cueBig==="pic"){ z.focus(1); zlog({c:d.c,ch:cur&&cur.ch,how:allDone?"out, card done":"out"}); } return; }
-  const geom=await spotGeom(card,d); if(!geom||!card.isConnected||S.pad!==st) { if(!geom) zlog({c:d.c,ch:cur.ch,how:"no place on the photo",why:MARKW.get(d.id)||""}); return; }
+  const geom=await spotGeom(card,d,{whole:true}); if(!geom||!card.isConnected||S.pad!==st) { if(!geom) zlog({c:d.c,ch:cur.ch,how:"no place on the photo",why:MARKW.get(d.id)||""}); return; }
   const est=wordSpan(d,{word:cur.ch,wstart:cur.pos}); if(!est) return;
   /* v653: the reader's place when it is there; while it is still reading (its first load on a phone takes seconds) the zoom goes
      on the ink's guess at once and moves to the reader's place the moment it has one */
