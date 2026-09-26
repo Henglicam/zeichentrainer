@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v663
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v664
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,17 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v664, 2026-09-26)
+- **The Learn zoom no longer dives onto a spot beside the text (v664, H: "Warum zoomt er hier so falsch?", on 贵州茅台酒, a label
+  at ~20°).** The dump: "贵 · ink, unsure (reader: the reader read other text; odd shapes) · x3.5". Paddle found the label's
+  lines but read other characters, so `pdCharBoxes` matched none; the ink search was unsure and still took the zoom to 3.5 on
+  an empty corner of the card. `pdCharBoxes` now returns `area`, the union of the lines the reader saw (in frame fractions),
+  also when it read other text; `autoZoom` keeps an unsure place (ink unsure or the estimate) only when its centre lies on
+  that area, and otherwise shows the reader's text whole (`0.9` of the fit, log "the reader's text, whole"). Suite `off`
+  (2 checks, `pdRead` and `charBoxes` stubbed): the off-text case flips (v663: "ink, unsure", s 3.5; v664: the text whole,
+  s 1.8); `[guard]` an unsure place on the text keeps its tight zoom on both. `az` 13/13, `ov` 5/5, `pdc` 4/4, `nf` 2/2.
+  Not yet field-checked.
 
 ## Current state (PWA v663, 2026-09-26)
 - **The Learn zoom works on a card with no frame (v663, H: "Warum wird hier nichts gezoomt?", on 一次性手套).** The dump:

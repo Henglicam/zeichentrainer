@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=663; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=664; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -673,6 +673,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v664","tilted text: no zoom off it?"],
   ["learn","v663","zoom on cards with no frame?"],
   ["learn","v662","1.5 s overview, then zoom: ok?"],
   ["learn","v661","zoom on signs set in columns?"],
@@ -4255,7 +4256,11 @@ async function pdCharBoxes(src,nw,nh,g,lines){
   if(hit.size<n){ const used=new Set(hit.values());
     for(let q=0;q<n;q++){ if(hit.has(ci[q])) continue; const ch=A[q], free=seq.filter(s=>s.ch===ch&&!used.has(s));
       if(free.length===1&&A.filter(x=>x===ch).length===seq.filter(s=>s.ch===ch).length){ hit.set(ci[q],free[0]); used.add(free[0]); } } }
-  if(!hit.size) return {why:"the reader read other text"};
+  /* v664 (H: "Warum zoomt er hier so falsch?", on 贵州茅台酒 — a label at 20°, read as other characters): where the reader saw its
+     lines is where the text is, even when it read them wrong. autoZoom keeps an unsure place only when it lies on them */
+  let ax0=Infinity, ay0=Infinity, ax1=-Infinity, ay1=-Infinity; L.forEach(l=>{ ax0=Math.min(ax0,l.x); ay0=Math.min(ay0,l.y); ax1=Math.max(ax1,l.x+l.w); ay1=Math.max(ay1,l.y+l.h); });
+  const area={x:(X0+ax0/k-TX)/TW,y:(Y0+ay0/k-TY)/TH,w:(ax1-ax0)/k/TW,h:(ay1-ay0)/k/TH};
+  if(!hit.size) return {why:"the reader read other text",area};
   const boxOf=(l,pos,ok)=>{ const lv=l.vert, len=lv?l.h:l.w, thick=lv?l.w:l.h, n2=l.at.length;
     const pitch=n2>1?len*(l.at[n2-1]-l.at[0])/(n2-1):Math.min(len,thick), side=Math.min(thick,pitch||thick)*1.05, c=(lv?l.y:l.x)+pos*len;
     let bx=lv?{x:l.x,y:c-side/2,w:l.w,h:side}:{x:c-side/2,y:l.y,w:side,h:l.h};
@@ -4267,7 +4272,7 @@ async function pdCharBoxes(src,nw,nh,g,lines){
     let a=q-1; while(a>=0&&!hit.has(ci[a])) a--; let b=q+1; while(b<ci.length&&!hit.has(ci[b])) b++;
     if(a<0||b>=ci.length) continue; const ha=hit.get(ci[a]), hb=hit.get(ci[b]); if(ha.l!==hb.l) continue;
     const pa=ha.l.at[ha.i], pb=hb.l.at[hb.i]; boxes[j]=boxOf(ha.l,pa+(pb-pa)*(q-a)/(b-a),false); }
-  return {boxes,why:hit.size<ci.length?`${hit.size} of ${ci.length} characters read`:"",read:L.map(l=>l.text).join(" | ")};
+  return {boxes,why:hit.size<ci.length?`${hit.size} of ${ci.length} characters read`:"",read:L.map(l=>l.text).join(" | "),area};
 }
 function pdBoxesFor(card,d){ const key=cbKey(d); let p=PDBOX.get(key);
   if(!p){ p=(async()=>{ const geom=await spotGeom(card,d,{whole:true}); if(!geom) return null; return await pdCharBoxes(geom.img,geom.img.naturalWidth,geom.img.naturalHeight,geom,spotLines(d)); })().catch(e=>({why:"error "+(e&&e.message||e)})).then(r=>{ PDDONE.set(key,r); if(PDDONE.size>60) PDDONE.delete(PDDONE.keys().next().value); return r; });
@@ -4346,12 +4351,16 @@ async function autoZoom(card,d,c,tg,st,cur){
   const pf=pb&&pb.boxes&&pb.boxes[cur.pos];
   const ck=cbKey(d); let cb=CBOX.get(ck);
   if(!pf&&!cb){ cb=charBoxes(geom.img,geom.img.naturalWidth,geom.img.naturalHeight,geom,spotLines(d)); CBOX.set(ck,cb); if(CBOX.size>60) CBOX.delete(CBOX.keys().next().value); }
-  const found=pf||(cb&&cb.boxes&&cb.boxes[cur.pos]), sp=found||est, how=pf?(pf.ok?"reader":"reader, unsure"):found?(found.ok?"ink":"ink, unsure"):"estimate";
+  const found=pf||(cb&&cb.boxes&&cb.boxes[cur.pos]); let sp=found||est, how=pf?(pf.ok?"reader":"reader, unsure"):found?(found.ok?"ink":"ink, unsure"):"estimate";
+  /* v664: a place nobody is sure of (the ink's guess or the estimate) that lies off every line the reader saw is off the text —
+     the zoom shows the reader's text whole instead (贵州茅台酒 at 20°: x3.5 onto the empty card beside the label) */
+  const area=!pf&&pb&&pb.area, off=area&&!(found&&found.ok)&&(()=>{ const mx=sp.x+sp.w/2, my=sp.y+sp.h/2; return mx<area.x||mx>area.x+area.w||my<area.y||my>area.y+area.h; })();
+  if(off){ sp=area; how="the reader's text, whole"; }
   if(!cb) cb={why:""};
   const r=geom.rectOf(sp), bw=box.clientWidth, bh=box.clientHeight; if(!r.w||!r.h||!bw||!bh) return;
   const cx=r.x+r.w/2, cy=r.y+r.h/2;
   if(ZOOM_HAND===key){ z.follow(cx,cy); zlog({c:d.c,ch:cur.ch,how:how+", hand"}); return; }
-  let s=(found&&found.ok?AZ_INK:AZ_EST)*Math.min(bw/r.w,bh/r.h); s=Math.min(AZ_MAX,s); if(s<AZ_MIN) s=1;
+  let s=(off?0.9:found&&found.ok?AZ_INK:AZ_EST)*Math.min(bw/r.w,bh/r.h); s=Math.min(AZ_MAX,s); if(s<AZ_MIN) s=1;
   z.focus(s,cx,cy);
   zlog({c:d.c,ch:cur.ch,how,why:found&&found.ok?"":pf?(pb.why||"read unsure"):((pb&&pb.why?"reader: "+pb.why+"; ":"")+(cb.why||(found?"cut not clean":""))),s:+s.toFixed(2),lv:level});
 }
