@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=701; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=702; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -686,6 +686,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["app","v694","No Google popup on text taps?"],
+  ["more","v702","Rebuild Menus: menus only?"],
   ["photo","v701","Menu photo: dish photos in rows?"],
   ["cards","v700","MC text: only its frame?"],
   ["cards","v699","Menu: dish, desc, price shown?"],
@@ -1546,16 +1547,21 @@ async function rbOne(shot){
 const RB_WHY={}; /* failPending's reason for a rebuilt photo, for the report */
 function rbLine(){ const R=S.settings.rb; if(!R) return `Makes the cards of every photo again with today's reading and replaces the old ones, one photo after the other while the app is open. Your edits and crops on those cards are replaced; review history, stars and tags stay. Undo puts everything back. About ${rrShots().length} photos.`;
   const res=R.res||[], ch=res.filter(r=>r.ids).length, kept=res.filter(r=>r.kept||r.err).length;
-  return `${RB_ON?"Running":R.undone?"Undone":R.done?"Done":"Paused"}: ${res.length} of ${R.list.length} photos, ${ch} rebuilt${kept?`, ${kept} kept as they were`:""}.${R.repaired?` ${R.repaired} flashcard${R.repaired===1?"":"s"} the rebuild had taken off a multicard photo ${R.repaired===1?"is":"are"} back.`:""}`; }
-function rbShow(){ const st=$("#rb-status"); if(st) st.textContent=rbLine()+(RB_LOOP&&!RB_ON?" Pausing after this photo …":""); const b=$("#rb-run"); if(b) b.textContent=RB_ON?"Pause":(S.settings.rb&&!S.settings.rb.done&&!S.settings.rb.undone?"Go on":"Start"); const u=$("#rb-undo"); if(u) u.disabled=RB_LOOP||!rbCanUndo(); }
+  return `${R.menus?"Menus — ":""}${RB_ON?"Running":R.undone?"Undone":R.done?"Done":"Paused"}: ${res.length} of ${R.list.length} photos, ${ch} rebuilt${kept?`, ${kept} kept as they were`:""}.${R.repaired?` ${R.repaired} flashcard${R.repaired===1?"":"s"} the rebuild had taken off a multicard photo ${R.repaired===1?"is":"are"} back.`:""}`; }
+function rbShow(){ const st=$("#rb-status"); if(st) st.textContent=rbLine()+(RB_LOOP&&!RB_ON?" Pausing after this photo …":""); const b=$("#rb-run"); if(b) b.textContent=RB_ON?"Pause":(S.settings.rb&&!S.settings.rb.done&&!S.settings.rb.undone?"Go on":"Start"); const u=$("#rb-undo"); if(u) u.disabled=RB_LOOP||!rbCanUndo(); const mn=$("#rb-menus"); if(mn) mn.disabled=RB_LOOP; }
 const rbCanUndo=()=>{ const R=S.settings.rb; return !!(R&&!R.undone&&(R.res||[]).some(r=>r.ids)); };
-async function rbRun(){
-  if(RB_ON){ RB_ON=false; rbShow(); return; }
-  if(RB_LOOP){ RB_ON=true; rbShow(); return; }
+/* v702 (H: "Mach Rebuild all für die Menüs möglich"): Menus rebuilds only the photos behind a menu multicard (isMenuPage, v699),
+   so an older menu gets its prices, dish descriptions and dish photos (v699–v701) without touching the rest of the deck —
+   the same rebuild, the same undo, a shorter list */
+const rbMenuShots=()=>rrShots().filter(sh=>{ const pg=S.custom.find(d=>d.shot===sh&&d.kind==="page"); return !!(pg&&isMenuPage(pg)); });
+async function rbRun(menus){
+  if(RB_ON&&!menus){ RB_ON=false; rbShow(); return; }
+  if(RB_LOOP){ if(!menus){ RB_ON=true; rbShow(); } return; }
   if(RR_LOOP||CT_LOOP){ const st=$("#rb-status"); if(st) st.textContent="Re-read all or Check texts is running — pause it first."; return; }
   let R=S.settings.rb;
-  if(!R||R.done||R.undone){ if(R&&!R.undone&&rbCanUndo()&&!await askSheet({title:"Start a new rebuild?",text:"The undo of the last one is lost.",ok:"Start",danger:true})) return;
-    await rbForget(); R={at:Date.now(),v:APP_V,list:rrShots(),i:0,res:[],repaired:0}; }
+  if(menus&&!rbMenuShots().length){ const st=$("#rb-status"); if(st) st.textContent="No menu multicards to rebuild."; return; }
+  if(menus||!R||R.done||R.undone){ if(R&&!R.undone&&rbCanUndo()&&!await askSheet({title:"Start a new rebuild?",text:"The undo of the last one is lost.",ok:"Start",danger:true})) return;
+    await rbForget(); R={at:Date.now(),v:APP_V,list:menus?rbMenuShots():rrShots(),menus:!!menus,i:0,res:[],repaired:0}; }
   await rbRecover(); RB_ON=true; RB_LOOP=true; await setSetting("rb",R); rbShow();
   try{ await pdLoad().catch(()=>{});
     while(RB_ON&&R.i<R.list.length){
@@ -3197,7 +3203,7 @@ function renderMore(main){
     <div class="mrow"><div style="flex:1"><div class="t">Zoom check</div><div class="s" id="zc-status">${ZCHECK?esc(ZCHECK.line)+".":`Finds every character of the newest ${ZC_N} photo cards the way Learn's zoom does. Share sends the pictures with the boxes drawn: green on the ink, orange unsure, red the estimate, blue the frame; the newest ${ZC_PAGES} multicards follow, green where a region snapped onto its text. Data sends the pictures themselves, as one PDF.`}</div><div class="fieldacts"><button class="btn mini" id="zc-run">Run</button><button class="btn mini" id="zc-share">Share</button><button class="btn mini" id="zc-data">Data</button><button class="btn mini" id="zc-paddle">Paddle</button></div></div></div>
     <div class="mrow"><div style="flex:1"><div class="t">Re-read all</div><div class="s" id="rr-status">${esc(rrLine())}</div><div class="fieldacts"><button class="btn mini" id="rr-run">${RR_ON?"Pause":(S.settings.rr&&!S.settings.rr.done?"Go on":"Start")}</button><button class="btn mini" id="rr-share">Share</button></div></div></div>
     <div class="mrow"><div style="flex:1"><div class="t">Check texts</div><div class="s" id="ct-status">${esc(ctLine())}</div><div class="fieldacts"><button class="btn mini" id="ct-run">${ctLabel()}</button><button class="btn mini" id="ct-share">Share</button></div></div></div>
-    <div class="mrow"><div style="flex:1"><div class="t">Rebuild all</div><div class="s" id="rb-status">${esc(rbLine())}</div><div class="fieldacts"><button class="btn mini" id="rb-run">${RB_ON?"Pause":(S.settings.rb&&!S.settings.rb.done&&!S.settings.rb.undone?"Go on":"Start")}</button><button class="btn mini" id="rb-share">Share</button><button class="btn mini" id="rb-undo"${RB_LOOP||!rbCanUndo()?" disabled":""}>Undo</button></div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">Rebuild all</div><div class="s" id="rb-status">${esc(rbLine())}</div><div class="fieldacts"><button class="btn mini" id="rb-run">${RB_ON?"Pause":(S.settings.rb&&!S.settings.rb.done&&!S.settings.rb.undone?"Go on":"Start")}</button><button class="btn mini" id="rb-menus"${RB_LOOP?" disabled":""}>Menus</button><button class="btn mini" id="rb-share">Share</button><button class="btn mini" id="rb-undo"${RB_LOOP||!rbCanUndo()?" disabled":""}>Undo</button></div></div></div>
     <div class="mrow"><div style="flex:1"><div class="t">Still to test</div><div class="s" id="field-status">${fieldNote()}</div><div class="fieldacts"><button class="btn mini" id="field-show">Show</button><button class="btn mini" id="field-copy">Copy</button></div></div></div>
     <pre class="diag" id="field-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"install")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div><div class="fieldacts"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button><button class="btn mini" id="users-copy">Copy</button></div></div></div>
@@ -3247,7 +3253,7 @@ function renderMore(main){
       if(zh) zh.onclick=async()=>{ zh.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); await shareZoomSheet(zs); }catch(e){ zs.textContent="The sheet failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zh.disabled=false; }; }
     $("#rr-run").onclick=()=>{ rrRun().catch(e=>logErr("reread",e&&(e.stack||e.message)||e)); }; $("#rr-share").onclick=rrShare; /* v645 */
     $("#ct-run").onclick=()=>{ ctRun().catch(e=>logErr("textcheck",e&&(e.stack||e.message)||e)); }; $("#ct-share").onclick=ctShare; /* v650 */
-    $("#rb-run").onclick=()=>{ rbRun().catch(e=>logErr("rebuild",e&&(e.stack||e.message)||e)); }; $("#rb-share").onclick=rbShare; $("#rb-undo").onclick=()=>{ rbUndo().catch(e=>logErr("rebuild",e&&(e.stack||e.message)||e)); }; /* v651 */
+    $("#rb-run").onclick=()=>{ rbRun().catch(e=>logErr("rebuild",e&&(e.stack||e.message)||e)); }; $("#rb-menus").onclick=()=>{ rbRun(true).catch(e=>logErr("rebuild",e&&(e.stack||e.message)||e)); }; /* v702 */ $("#rb-share").onclick=rbShare; $("#rb-undo").onclick=()=>{ rbUndo().catch(e=>logErr("rebuild",e&&(e.stack||e.message)||e)); }; /* v651 */
     $("#field-show").onclick=()=>{ const o=$("#field-out"); o.hidden=!o.hidden; if(!o.hidden) o.textContent=fieldText(); };
     $("#field-copy").onclick=()=>copyText(fieldText(),$("#field-status"));
     $("#diag-copy").onclick=()=>copyText(diagText(),$("#diag-status"));
