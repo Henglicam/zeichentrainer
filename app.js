@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=704; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=705; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -686,6 +686,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["app","v694","No Google popup on text taps?"],
+  ["cards","v705","Dish card: dish+name+price pic?"],
   ["cards","v703","Open card: buttons at the foot?"],
   ["more","v702","Rebuild Menus: menus only?"],
   ["photo","v701","Menu photo: dish photos in rows?"],
@@ -2172,7 +2173,7 @@ function outsideWindow(pic,placed,base,W,Hh,angle){
 const PIC_MIN=0.02, LABEL_MIN=0.005; /* a box must cover this much of the picture — the union box a fiftieth (v293), one label of a phone screenshot far less: 外卖 is 30 of 2520 pixels tall on H's Meituan home screen (v367) */
 /* v701 (H: "Beim Menü bitte auch die Fotos der Gerichte zeigen"): on a menu the picture model names each dish's photo, and the
    dish's row shows that photo instead of its name's cut. A photo under DISH_MIN of the picture on a side is a stray mark. */
-const DISH_MIN=0.06;
+const DISH_MIN=0.06, DISH_ROOM=0.06;
 function picBox(b,w,h,min,force){ /* force (v379): read the numbers this way — the labels of one panel must all be read alike */
   if(!Array.isArray(b)||b.length!==4||!b.every(v=>typeof v==="number"&&isFinite(v)&&v>=0)) return null;
   let [x0,y0,x1,y1]=b; const mx=Math.max(x0,x1), my=Math.max(y0,y1);
@@ -3513,6 +3514,7 @@ function srcView(d){
   const blob=fullPhoto(pg); if(!blob) return null; /* the multicard's photo was deleted: the card keeps its text alone */
   return {shot:pg.shot,rs,blob,me:me.id,src:true};
 }
+const dishOf=d=>{ if(!d) return null; if(d.dish&&d.img) return d; const pg=srcPage(d); if(!pg) return null; const me=pageItems(pg).find(x=>d.of?x.id===d.of:x.c===d.c); return me&&me.dish&&me.img?me:null; }; /* v705 */
 const frontPage=d=>pageOf(d)||srcView(d); /* one page view for both: a card that IS one of several on a photo (v452), and one MADE from a multicard's text (v489) */
 function pageHTML(d,pg){
   const u=urlOf(pg.blob);
@@ -3521,6 +3523,8 @@ function pageHTML(d,pg){
 function frontPic(d,o){
   const pk=S.peek&&S.peek!==d.id?cardOf(S.peek):null; /* Learn: a linked card's photo, tapped in the "Also on another photo" row (v155) */
   const full=pk?fullPhoto(pk):fullPhoto(d);
+  const dish=!pk&&dishOf(d); /* v705: a menu dish shows its own picture — the dish with its name and price — not the whole menu with a frame */
+  if(dish&&!S.fullPic){ const ratio=(o&&o.fixed)?FRONT_RATIO:ratioOf(dish); return `<div class="picbox" data-pic="1" style="--pr:${ratio}"><img class="picbg" src="${urlOf(dish.img)}" alt="" aria-hidden="true"><img class="signimg" data-pic="1" src="${urlOf(dish.img)}" alt="${t("alt:photo")}"></div>`; }
   const pg=o&&o.page&&!pk?frontPage(d):null; /* v452: the page with its dots by default, the card's own cut on a tap — and v489, where the page is the multicard's photo and there is no own cut */
   if(pg&&!S.fullPic) return pageHTML(d,pg);
   const blob=pk?(pk.img||full):(S.fullPic&&full&&!pg?full:d.img); if(!blob) return "";
@@ -9634,7 +9638,13 @@ async function splitCards(id,sg,ph){
       if(!b||!b.card||!b.card.c) continue;
       let cut=null; try{ cut=await cropBlob(id,fr[k]); }catch(e){ cut=null; } /* the label's own cut at the photo's pixels (v362, H: "do the label crops at full resolution") — not the 16:9 window of v329, which on a panel widens a small label until its neighbours stand in the picture */
       if(cropDisagrees(frameOf(fr[k]),sg.region&&sg.region.pic,lab,PICSEEN[id])){ b.card.flag=true; b.card.flagNote=t("the picture may not show this text — check the photo"); } /* v400: on a panel this is the two dishwasher cards of H's own v398 run that came out as bare chrome trim and that nothing noticed */
-      if(lab[k].dishFrame){ let dc=null; try{ dc=await cropBlob(id,lab[k].dishFrame); }catch(e){ dc=null; } if(dc&&dc.blob){ cut=dc; logRead(id,`${lab[k].zh}: the dish's own photo is its picture`); } } /* v701 */
+      if(lab[k].dishFrame){ const df=lab[k].dishFrame, lf=fr[k]; let u=df;
+        /* v705 (H: "Vielleicht ein bisschen großzügiger mit dem Bild und der Bezeichnung dazu, samt Preis, also zusammenhängend"):
+           the dish's photo together with its name and price — the two frames' union and DISH_ROOM around it — unless the
+           name's frame is the whole-frame fallback of a label nobody placed, which would take the menu along */
+        if(lf&&lf.lw===df.lw&&lf.w*lf.h<=df.w*df.h*3){ const x0=Math.min(df.x,lf.x), y0=Math.min(df.y,lf.y), x1=Math.max(df.x+df.w,lf.x+lf.w), y1=Math.max(df.y+df.h,lf.y+lf.h), m=Math.max(x1-x0,y1-y0)*DISH_ROOM;
+          u={...df,x:Math.max(0,x0-m),y:Math.max(0,y0-m)}; u.w=Math.min(df.lw,x1+m)-u.x; u.h=Math.min(df.lh,y1+m)-u.y; }
+        let dc=null; try{ dc=await cropBlob(id,u); }catch(e){ dc=null; } if(dc&&dc.blob){ cut=dc; b.card.dish=true; logRead(id,`${lab[k].zh}: the dish's own photo${u!==df?" with its name and price":""} is its picture`); } } /* v701 */
       out.push({card:b.card,img:cut&&cut.blob?await cardJpeg(cut.blob):null,frame:fr[k]});
     }
   } finally{ SIGN[id]=prev; }
