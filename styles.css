@@ -528,7 +528,6 @@ body.noscroll{overflow:hidden}
 .gfd-d{display:none}
 @media(prefers-color-scheme:dark){ .gfd-l{display:none} .gfd-d{display:inline} }
 .guide .gf .gfh{font-family:var(--hanzi)}
-.guide .gf .gft{font-family:inherit;font-weight:500}
 
 .done .hint{margin:18px 0 6px} /* the pointer to the guide under Take a photo (v266) */
 /* v569 (H: "ich möchte eigentlich quasi eine Beispielkarte haben und dann mit Pfeilen kurz erklärt, handschriftlich am besten auch noch ... Wie als ob da eine Karte wäre und jemand da was hinkritzelt"): the drawn card on the left, three notes beside it, each with its own hand-drawn arrow pointing back into the card. v568's numbered list is gone. The notes are spread over the card's own height (space-around), so each sits at about the height of the part it points at — a scribble points approximately, which is the whole look. */
