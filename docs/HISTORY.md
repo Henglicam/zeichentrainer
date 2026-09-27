@@ -39,6 +39,18 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v695, 2026-09-27)
+- **+ Flashcard and Edit share a row (v695, H: "Generate flashcard und Edit in eine Zeile bitte. Layout/Design polish").**
+  v692 gave "Generate flashcard" a whole row because the label broke onto two lines beside Edit at 390 px. The label is now
+  **+ Flashcard** — the app's own "+ New" form — and, once the flashcard exists, **Flashcard ›**; in German + Karte and
+  Karte ›, in every column the language's word for the card with a plus or a chevron. So a multicard text's screen is one
+  even 2 × 2 grid: + Flashcard | Edit, Flag | Delete. The keys "Generate flashcard" and "Open the flashcard" left with
+  their last user (still 482 a column, ru 511); the Take-a-photo guide sentence names + Flashcard in all ten. Measured with
+  `mcfit.js` (every label of the grid, ten languages, 390 and 360 px, before and after the flashcard is made): no label
+  breaks. Looked at by screenshot at 390 px, light en and de, dark ru. The blank band under the character line on the
+  test card is `.padline`'s 61 px kept for its two rows (the character, then its word) so the buttons do not jump when
+  another character is tapped — a card with its word breaks fills it; left as it is. Not yet field-checked.
+
 ## Current state (PWA v694, 2026-09-27)
 - **No text in the app is selectable, so Chrome's Google panel has nothing to search (v694, H with a screenshot of
   Chrome's "京 — Tap to see search results" panel over an open card: "Bitte nicht diese Google popups zulassen").** Chrome

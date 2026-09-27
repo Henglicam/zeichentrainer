@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=694; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=695; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -686,7 +686,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["app","v694","No Google popup on text taps?"],
-  ["cards","v692","Multicard text: Generate there?"],
+  ["cards","v695","+ Flashcard beside Edit, tidy?"],
   ["cards","v691","Character pages: useful?"],
   ["cards","v690","Search wendu finds 温度?"],
   ["cards","v688","Multicard: big frame from start?"],
@@ -3358,7 +3358,7 @@ const GFIG={
 const GUIDE=()=>[
   {h:t("Take a photo"),fig:GFIG.photo(),p:[
     t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card for you; Crop frames it by hand when the app gets it wrong."),
-    t("A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up; to learn one, open it from the list under the photo and press Generate flashcard.")]},
+    t("A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up; to learn one, open it from the list under the photo and press + Flashcard.")]},
   {h:t("Fix the characters"),fig:GFIG.chars(),p:[
     t("Every character under the photo is a button: tap one for other readings, or draw it with your finger. Pinyin and meaning follow by themselves and the AI checks them — flag a card when something still looks wrong.")]},
   {h:t("Learn"),fig:GFIG.learn(),p:[
@@ -5871,8 +5871,8 @@ function detailActsHTML(d){
   const star=!inPage(d);
   return `<div class="detailacts">
       ${d.c&&!inPage(d)?`<button class="btn primary" id="d-test">${t("Test this card")}</button>`:""}
-      ${inPage(d)&&d.c?(madeFrom(d)?`<button class="btn" id="d-openfc" style="grid-column:1/-1">${t("Open the flashcard")}</button>`:`<button class="btn" id="d-make" style="grid-column:1/-1">${t("Generate flashcard")}</button>`):""}
-      <button class="btn" id="d-edit"${star?"":' style="grid-column:1/-1"'}>${t("Edit")}</button>
+      ${inPage(d)&&d.c?(madeFrom(d)?`<button class="btn" id="d-openfc">${t("Flashcard ›")}</button>`:`<button class="btn" id="d-make">${t("+ Flashcard")}</button>`):""}
+      <button class="btn" id="d-edit"${star||inPage(d)&&d.c?"":' style="grid-column:1/-1"'}>${t("Edit")}</button>
       ${star?`<button class="btn${d.star?" on":""}" id="d-star">${d.star?"\u2605 "+t("Starred"):"\u2606 "+t("Star")}</button>`:""}
       <button class="btn${d.flag?" on":""}" id="d-flag">${d.flag?t("card:\u2691 Flagged"):t("\u2691 Flag")}</button> <!-- v536: the Learn back's own two words (v431). Measured at 393 and 360 px, the long phrase broke across two lines in en, de, es, fr, id, ru and vi - three in id at 360 - and a grid row is as tall as its tallest cell. -->
       <button class="btn danger" id="d-del">${t("Delete card")}</button>
