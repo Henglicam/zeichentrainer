@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v668
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v669
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,24 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v669, 2026-09-27)
+- **No zoom on a guess: a character nobody is sure of shows the text whole (v669, H: "Hier ist er nicht auf den nächsten character
+  gesprungen" on 电动车/禁止入园, "Und hier entspricht der Bildausschnitt überhaupt nicht dem character" on 无名, then "For wrong
+  zoom, check Wu Ming" with the Diagnostics).** v666's record showed both as "ink, unsure": on 电动车/禁止入园 the reader read only
+  `电动车 | 木木` (禁 as its top 林, 止入园 not at all) and the ink search put 止 at 70,50 % of the frame, on the first line, ×2.35;
+  on 无名 (brush calligraphy on a film poster) the reader found no line and the ink search put 无 at 61,25 % and 名 at 86,25 %, ×1.8,
+  onto brush splashes; 贵州茅台酒 (v664) was the same kind. v664 caught such a guess only when it lay off the reader's lines. Now every
+  place that neither the reader (`pdCharBoxes`, sure or interpolated) nor a sure ink cut gives is replaced by the text whole — the
+  reader's `area` when it saw lines ("the reader's text, whole"), else the card's frame ("the text, whole"), at 0.9 of the box, so a
+  frame the size of the picture stays at ×1. Reader places, "reader, unsure" included, are untouched. Cost, named to H: on photos the
+  reader cannot read (calligraphy, very small or blurred text) there is no per-character zoom. Suite `off` 3/3 new, 1/3 old (the two
+  v669 checks flip, one of them the former `[guard]` that pinned the old behaviour); `az` 13/13 (one run of five failed its
+  after-京 place check by timing, not reproduced), `nf`, `pdc`, `ov`, `once` unchanged. Not yet field-checked.
+- **Field note, no change: 无名's card is framed off its title.** Its reading record: the AI named the title at 30–70 % across,
+  `snapBox` moved the box to 3–38 % (onto the splashes beside it) and the frame was placed there. One case; `snapBox` has twelve
+  versions behind it, so no rule is changed on it — H fixes the card with Crop again, and more such cards would justify a guard
+  (refuse a snap whose centre leaves the AI's own box).
 
 ## Current state (PWA v668, 2026-09-26)
 - **The character's reading comes in after the green character has gone (v668, H: "Wenn ich einen Charakter ausgeschrieben habe,
