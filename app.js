@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=689; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=690; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -685,6 +685,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v690","Search wendu finds 温度?"],
   ["cards","v689","Generate flashcard quiet enough?"],
   ["cards","v688","Multicard: big frame from start?"],
   ["cards","v687","2-line labels: frame both lines?"],
@@ -5542,6 +5543,7 @@ const onPages=()=>pagesInDeck()&&S.cardsTab==="pages";
    the filter sheet's own numbers all read, so the sheet can never say "12" over a list of one (v477) */
 const tabPool=()=>{ const pages=onPages(); return S.custom.filter(d=>!hiddenCard(d)&&(pagesInDeck()?(isPage(d)===pages):true)); }; /* a multicard's own texts are listed through their multicard and nowhere else (v487) */
 const anyOf=(d,f)=>isPage(d)?(!!f(d)||pageItems(d).some(f)):!!f(d); /* a page matches a filter or a search when it or any of its texts does (v453) */
+const toneless=s=>String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 function cardsList(){
   const q=S.query.trim().toLowerCase();
   let list=tabPool().sort((a,b)=>(b.at||0)-(a.at||0)); /* newest first; a page's texts sit inside its row (v453) */
@@ -5550,7 +5552,11 @@ function cardsList(){
   /* several rows may be ticked at once (v366): a card must match one of the ticked status rows and one of the ticked tags */
   if(S.filterUnv||S.filterFlag||S.filterAi||S.filterStar||S.filterNew) list=list.filter(d=>(S.filterUnv&&any(d,x=>x.mt&&!x.mt.verified))||(S.filterFlag&&any(d,x=>x.flag))||(S.filterAi&&any(d,x=>x.ai))||(S.filterStar&&starred(d))||(S.filterNew&&any(d,unchecked)));
   if(S.filterTags.length) list=list.filter(d=>S.filterTags.some(g=>any(d,x=>hasTag(x,g))));
-  if(q) list=list.filter(d=>fieldsOf(d).filter(Boolean).join(" ").toLowerCase().includes(q));
+  /* v690 (H, "Go B": the Cards tab is a reference, and a reference has to find what you type). The pinyin is also
+     searched without its tone marks and spaces, so wendu, wen du, wen1du4 and wēndù all find 温度 (and lv finds lǜ) */
+  const qp=/[a-zü]/.test(q)?toneless(q).replace(/[\s'’\d]/g,"").replace(/v/g,"u"):"";
+  const pyOf=d=>isPage(d)?pageItems(d).flatMap(pyOf):[d.p];
+  if(q) list=list.filter(d=>fieldsOf(d).filter(Boolean).join(" ").toLowerCase().includes(q)||(qp&&pyOf(d).some(p=>p&&toneless(p).replace(/[\s'’\d]/g,"").includes(qp))));
   return list;
 }
 /* The Cards list is photo tiles, two in a row (v465, H: "Ich bin auch nicht zufrieden mit der Cards Ansicht. Ich finde,
