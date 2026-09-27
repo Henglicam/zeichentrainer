@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v670
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v671
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,17 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v671, 2026-09-27)
+- **The reader's zoom cache is one cache (v671, findings 2 and 3 of H's code review).** `PDBOX` (the reads asked for) and `PDDONE`
+  (the answers in) each dropped their own oldest entry at 60; when reads resolved out of order a card stood resolved in `PDBOX` and
+  missing from `PDDONE`, and `autoZoom` read that as "still reading" and re-ran itself every two frames while the card was up. Now an
+  entry leaves both at once (`pdForget`), and an answer is kept only while its own read is still the cached one. Second, a read whose
+  `spotGeom` came back empty only because the card had left the screen (a swipe during the decode) or a linked photo was peeked was
+  kept as the card's answer for the session — since v669 that meant the text whole on every character; it is now forgotten
+  (`PD_TRANSIENT`) and read again when the card comes back. A card on screen that really has no picture is still remembered, so
+  nothing retries in a loop. Suite `pdcache` 3/3 new, 1/3 old (the `[guard]` passes on both); `az` 13/13, `off` 3/3, `pdc` 4/4, `ov`
+  5/5, `once` 2/2, `nf` 2/2. No learner-visible change except where the bug struck. Not yet field-checked.
 
 ## Current state (PWA v670, 2026-09-27)
 - **A card saved or recovered in the background no longer moves the Learn session (v670, finding 1 of H's code review, H: "Ok,

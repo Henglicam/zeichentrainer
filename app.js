@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=670; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=671; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -4301,9 +4301,17 @@ async function pdCharBoxes(src,nw,nh,g,lines){
     const pa=ha.l.at[ha.i], pb=hb.l.at[hb.i]; boxes[j]=boxOf(ha.l,pa+(pb-pa)*(q-a)/(b-a),false); }
   return {boxes,why:hit.size<ci.length?`${hit.size} of ${ci.length} characters read`:"",read:L.map(l=>l.text).join(" | "),area};
 }
+/* v671 (the code review, findings 2 and 3): the two maps are one cache and leave together — PDBOX dropped its oldest at 60 and
+   PDDONE its own oldest, and when their orders differed a card stood resolved in PDBOX and missing from PDDONE, so autoZoom saw
+   "still reading" and re-ran itself every two frames for as long as the card was up. And a read that found no picture only
+   because the card had left the screen (a swipe during the decode) or a linked photo was peeked was kept as the card's answer for
+   the session; it is forgotten now, so the card's next showing reads it again */
+const PD_TRANSIENT={};
+const pdForget=key=>{ PDBOX.delete(key); PDDONE.delete(key); };
 function pdBoxesFor(card,d){ const key=cbKey(d); let p=PDBOX.get(key);
-  if(!p){ p=(async()=>{ const geom=await spotGeom(card,d,{whole:true}); if(!geom) return null; return await pdCharBoxes(geom.img,geom.img.naturalWidth,geom.img.naturalHeight,geom,spotLines(d)); })().catch(e=>({why:"error "+(e&&e.message||e)})).then(r=>{ PDDONE.set(key,r); if(PDDONE.size>60) PDDONE.delete(PDDONE.keys().next().value); return r; });
-    PDBOX.set(key,p); if(PDBOX.size>60) PDBOX.delete(PDBOX.keys().next().value); }
+  if(!p){ p=(async()=>{ const geom=await spotGeom(card,d,{whole:true}); if(!geom){ if(!card.isConnected||S.peek) throw PD_TRANSIENT; return null; } return await pdCharBoxes(geom.img,geom.img.naturalWidth,geom.img.naturalHeight,geom,spotLines(d)); })()
+      .then(r=>{ if(PDBOX.get(key)===p) PDDONE.set(key,r); return r; },e=>{ if(e===PD_TRANSIENT){ if(PDBOX.get(key)===p) pdForget(key); return null; } const r={why:"error "+(e&&e.message||e)}; if(PDBOX.get(key)===p) PDDONE.set(key,r); return r; });
+    PDBOX.set(key,p); if(PDBOX.size>60) pdForget(PDBOX.keys().next().value); }
   return p; }
 const CBOX=new Map(); /* the boxes per card, frame and photo */
 const cbKey=d=>d.id+"|"+(d.shot||"")+"|"+JSON.stringify(d.frame||0)+"|"+(d.c||"");
