@@ -39,6 +39,18 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v706, 2026-09-27)
+- **The write pad no longer jumps when the app opens (v706, H: "Der Charakter auf dem schreibpad springt nach öffnen der
+  App").** The first study card of a session is drawn before `strokes.txt.gz` is parsed (H's Diagnostics: parse strokes 449
+  ms, outlines 757). Until then `STROKE_OF` has no template for the character, so `mountPad` took the pad for a FREE one — a
+  character the stroke set lacks (v512) — and drew the character in the Hanzi font, 0.6 of the pad and centred, with Done
+  and Clear (v582 says the free mode must not be visible), until the render after `loadStrokes` put the template in its own
+  place and size. Now a pad whose character has no template while the stroke file is still loading (`waiting`) shows its
+  grid alone, takes no stroke (its ink is dropped, nothing is judged against a guess) and is not free; the template appears
+  once, in place. A character the loaded file lacks is still the free pad with its faint glyph and Done. Checked by
+  screencast from the reload (393 px): v705 shows the font glyph with Done/Clear at 150–700 ms and the template from ~710
+  ms; v706 the bare grid until the template at ~800 ms. Not yet field-checked.
+
 ## Current state (PWA v705, 2026-09-27)
 - **A menu dish's card is its dish, with its name and price (v705, H: "Die Karte eines Menü-Items mit Bild sollte bitte als
   Bild dann auch das Dish beinhalten und nicht die gesamte Karte mit einem kleinen Frame um das Dish", then "Vielleicht ein
