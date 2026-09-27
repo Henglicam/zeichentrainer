@@ -39,6 +39,16 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v675, 2026-09-27)
+- **Cleanup (v675, H: "Clean up old code as well", after the code review).** Removed what nothing uses: `pdNames` (the v637
+  Paddle check's name matcher, orphaned when `pdMatch` took over), the `.gft` rule in styles.css, and the "⚑ Clear flag" key in
+  all nine translated columns (the control went long ago; counts now 479 a column, ru 508, en 15). `snapRegion` calls
+  `fallbackFrame` instead of repeating its two tests (same result: `snapRegion` already returns early without a frame). No
+  behaviour changes. **CLAUDE.md trimmed from 53 KB to under 40 KB** as its own rule demands: "Current state" rewritten from a
+  version-by-version list into topics (the phone's reader, owner tools, the Learn zoom, the Learn card, Crop again), "Open"
+  grouped into what decides the next work, and Files, Cards, Camera, Play Store and the crops rule condensed — every removed
+  sentence is still in this file, verbatim, under its version. Suites az, hyph, off, pdc unchanged.
+
 ## Current state (PWA v674, 2026-09-27)
 - **The Learn zoom no longer skips a character after a hyphen (v674, H: "Bug: it skips one character in the photo", 一汽-大众 with
   Diagnostics: 一 at 13 %, 汽 at 30 %, 大 at 80 % — 众's place — and no line for 众).** The pad names each character by its place
