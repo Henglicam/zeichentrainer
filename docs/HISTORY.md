@@ -39,6 +39,21 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v701, 2026-09-27)
+- **A menu's dishes take their own photos as their picture (v701, H: "Beim Menü bitte auch die Fotos der Gerichte zeigen").**
+  A dish's card on a menu multicard carried the cut of its name, so its row showed the text a second time. The picture
+  prompt's `labels` now ask, on a menu whose dishes are shown with photos, for `"photo"` — the rectangle around that dish's
+  food picture — and leave it out for an element with none. The answer is read like the label's box (`picBox`, the label
+  scale, at least `DISH_MIN` 6 % of the picture on a side, never the label's own box over again), turned into a frame on the
+  photo next to the labels' (`photoFrameOf`, stored on the label as `dishFrame`) and, in `splitCards`, cut in place of the
+  name's cut (the log says "the dish's own photo is its picture"). Nothing new is stored: the dish's photo is the card's
+  `img`, so the export, the rows and the thumbnails carry it as they carry any picture. Photos from the web were not an
+  option (no external sources, v1's rule). **Existing menus** get dish photos only when their photo is split again.
+  **The cost:** four numbers more per dish in the picture answer. Harness `dish.js` (a drawn menu, three dishes each with a
+  red, green or blue food square, through From album with the picture answer mocked): each dish's card picture is its own
+  colour on v701, the text background on v700 — 1 flip. Not yet field-checked; the model's photo rectangles on a real menu
+  are the open question.
+
 ## Current state (PWA v700, 2026-09-27)
 - **A multicard's text frames only itself on the photo (v700, H: "Wenn ich eine Karte einer Multicard öffne, dann sollte in
   dem Bild bitte nur der Text eingerahmt sein, der dieser Karte zugeordnet ist").** The opened text's screen showed the
