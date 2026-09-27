@@ -39,6 +39,18 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v704, 2026-09-27)
+- **"Whole card" is called "Details" (v704, H: "Die Bezeichnung Whole Card ist irgendwie doof, oder? Wäre das nicht Karte mit
+  Details oder so?", then on the proposal "Go, Details").** The fold at the foot of the study card and of the open card —
+  the characters, pinyin, meaning and description, and on the study card Star · Flag · Edit — was labelled "Whole card"
+  (v518/v531), a name that says nothing about what is inside and nothing about Learn, where the fold is the answer. The key
+  is now "Details": Details, Détails, Detalles, 詳細, 상세 정보, Подробности, Chi tiết, รายละเอียด, Detail. Rejected
+  alternatives named to H: "Meaning & details" (longer), "Answer" (right in Learn, wrong on the look-up card). The guide's
+  sentence ("Edit sits under Details too …", v654) follows in all ten (v259 rule); the update notes 654 and 585 and the
+  owner's Still-to-test lines that named the old label say Details, so none describes a label that is gone (v534). Still
+  482 keys a column. Checked by rendering at 360 px in en, de, ru, ko and th with the star and flag marks beside it: one
+  line each, and the guide carries the new word. Not yet field-checked.
+
 ## Current state (PWA v703, 2026-09-27)
 - **On the open card the actions close the card, under Whole card (v703, H: "Macht doch mal Flag, Edit, Delete und so
   weiter ganz nach unten und Whole Card darüber").** Since v518/v531 the open card put its actions where the study card's

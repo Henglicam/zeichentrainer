@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=703; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=704; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -711,7 +711,7 @@ const TO_TEST=[
   ["learn","v670","session steady while saving?"],
   ["learn","v669","unsure place: text whole, ok?"],
   ["learn","v668","pinyin after green char: clean?"],
-  ["learn","v667","star/flag by Whole card: ok?"],
+  ["learn","v667","star/flag by Details: ok?"],
   ["learn","v665","zoom goes in once, no correction?"],
   ["learn","v664","tilted text: no zoom off it?"],
   ["learn","v663","zoom on cards with no frame?"],
@@ -775,7 +775,7 @@ const TO_TEST=[
   ["app","v591","Cards and Camera: square photos"],
   ["learn","v592","pad: a wrong stroke shakes and is gone"],
   ["app","v588","Check-up adds description and tag"],
-  ["app","v586","Whole card: the text is already there"],
+  ["app","v586","Details: the text is already there"],
   ["app","v582","Learn: no Undo/Clear mid-write on the pad"],
   ["app","v580","Learn: one tap swaps photo and text"],
   ["app","v578","card with no photo: word on top"],
@@ -827,7 +827,7 @@ const TO_TEST=[
   ["app","v535","the recap alone; the pad finishes its word; a dismissed suggestion stays gone"],
   ["app","v533","the word being written marked on the photo, quietly"],
   ["app","v532","fold/unfold at startup: no frozen screen; Diagnostics' main-thread line"],
-  ["app","v531","open card: the word's line under the row, Whole card at the foot"],
+  ["app","v531","open card: the word's line under the row, Details at the foot"],
   ["app","v531","a hold on a character does nothing (the lock is off)"],
   ["app","v530","swipe: the next card as tall as the one it replaces"],
     ["app","v529","Explain: a few sentences under the meaning"],
@@ -3381,7 +3381,7 @@ const GUIDE=()=>[
     t("Due cards first, then up to eight new ones. The photo is the question and the pad is the answer: trace the lit stroke and it moves on by itself, character by character.")
       +" "+t("A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back."), /* v568: the one thing a learner cannot find by tapping, so the guide says it (the v259 rule); the empty deck says it in its own short words beside the drawn card since v569, so this key is the guide's alone. v589: rewritten as the memory loop H described — the photo is the question, the tap uncovers the answer. Until v588 it named the tap as a view switch ("a tap gives the whole text the top of the card"), which names the characters the photo already shows and never names the pinyin and the meaning. */
     t("Stuck? Show me draws the stroke and Skip fills the character in. The whole card — pinyin, meaning and what the text is about — is one tap away at its foot. Swipe sideways to pick another card — nothing is graded by swiping.")
-      +" "+t("Edit sits under Whole card too, for a card that needs fixing.") /* v654: the v259 rule — the fold gained Edit */
+      +" "+t("Edit sits under Details too, for a card that needs fixing.") /* v654: the v259 rule — the fold gained Edit */
       +" "+t("Tap the star counter at the top to see how your points are counted.")] /* the counter is a tap target with no other affordance (v546), so this one sentence survives the cut */
     .concat(lockOn()?[t("Press and hold a character to walk through every card that has it; press and hold it again to come back.")]:[])}, /* v531: only while the lock is on */
   {h:t("Cards"),fig:GFIG.cards(),p:[
@@ -3822,7 +3822,7 @@ function introHTML(){
   /* v599 (H: "Real screenshots ... I meant the sample cards in the instructions"): the photo and the pad are no longer
      drawn — they are one real crop of the study card's own front, the photographed sign over the pad with three strokes
      in ink and the next lit. What stays drawn is the card's frame and the fold bar at its foot, and for one reason: the
-     fold row's real label reads "Whole card", and a crop with a UI sentence in it serves one language out of ten (the
+     fold row's real label reads "Details" (until v704 "Whole card"), and a crop with a UI sentence in it serves one language out of ten (the
      v427 rule). Note n3 points at that bar, so the bar has to be there — v589's lesson, a note pointing at something the
      picture does not show, is the one fault this figure must not repeat.
      Every number below the image is DERIVED from the crop's own aspect ratio, so a regenerated crop of another shape
@@ -3917,7 +3917,7 @@ function renderStudy(main){
     <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}${tradMark(d)}</div>
     <div class="txt" id="cuetxt">${tradMark(d)}${chrow}<div class="padline" id="padline"></div></div></div>
     <div class="padwrap"><canvas class="wpad" id="wpad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas><div class="padacts" id="padacts"><button class="del" id="pad-undo" hidden>${t("pad:Undo")}</button><button class="del" id="pad-show" hidden>${t("Show me")}</button><button class="del" id="pad-skip" hidden>${t("Skip")}</button><button class="del" id="pad-done" hidden>${t("Done")}</button><button class="del" id="pad-clear" hidden>${t("Clear")}</button></div>${freePad?`<div class="hint" id="pad-note">${noTmpl?t("not in the stroke set — draw it and tap Done"):""}</div>`:""}</div>
-    <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Whole card")}</span>${foldMarks(d)}${rep?`<span class="pill again">${t("Again")}</span>`:""}<span class="tail">${!rep&&list.length>1&&!S.single?/* v522: the count in the fold row; on a repeat pass the Again pill takes the slot */`<span class="pos">${esc(t("{0} of {1}",li+1,list.length))}</span>`:""}<i aria-hidden="true">⌄</i></span></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
+    <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Details")}</span>${foldMarks(d)}${rep?`<span class="pill again">${t("Again")}</span>`:""}<span class="tail">${!rep&&list.length>1&&!S.single?/* v522: the count in the fold row; on a repeat pass the Again pill takes the slot */`<span class="pos">${esc(t("{0} of {1}",li+1,list.length))}</span>`:""}<i aria-hidden="true">⌄</i></span></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
     ${swipeHint(d)}</div>`; /* no linked-photos row on the study card (v518, H: "No 'also in other cards' in learn mode. Only on Cards mode.") — the detail keeps it */
   /* v536: no warmParts here. The block has carried backHTML(...{noParts:true}) since v512 ("backHTML without the parts
      row"), so opening it parsed cedict.tsv.gz - 2.5 MB - for a row this screen does not draw. The row lives on the camera's
@@ -3950,7 +3950,7 @@ function renderStudy(main){
      there are no grades that own the screen any more. */
   wireSwipe(card, list.length<2||S.single?null:{
     n:list.length, idx:li, centred:false,
-    peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ const np=frontPic(nd,{page:true,fixed:true}); return { cls:"study"+cueBigCls(), html:`<div class="cue"><div class="zone1 front">${np||cueGlyphHTML(nd)}${tradMark(nd)}</div><div class="txt">${peerRowHTML(nd)}<div class="padline"></div></div></div><div class="padwrap"><div class="wpad ghost"${ghostSize(card)}></div></div><div class="fold"><button class="foldbtn"><span>${t("Whole card")}</span>${foldMarks(nd)}<i aria-hidden="true">⌄</i></button></div>${swipeHint(nd)}` }; } finally{ S.fullPic=fp; } }, /* v530: the neighbour carries the study card's own class, so it takes its 16 px top padding and every other rule of the study layout — a plain `.card` neighbour stood 6 px taller (22 px of padding) and hopped by that much at the snap */ /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
+    peer:i=>{ const nd=cardOf(list[i]); if(!nd) return null; const fp=S.fullPic; S.fullPic=false; try{ const np=frontPic(nd,{page:true,fixed:true}); return { cls:"study"+cueBigCls(), html:`<div class="cue"><div class="zone1 front">${np||cueGlyphHTML(nd)}${tradMark(nd)}</div><div class="txt">${peerRowHTML(nd)}<div class="padline"></div></div></div><div class="padwrap"><div class="wpad ghost"${ghostSize(card)}></div></div><div class="fold"><button class="foldbtn"><span>${t("Details")}</span>${foldMarks(nd)}<i aria-hidden="true">⌄</i></button></div>${swipeHint(nd)}` }; } finally{ S.fullPic=fp; } }, /* v530: the neighbour carries the study card's own class, so it takes its 16 px top padding and every other rule of the study layout — a plain `.card` neighbour stood 6 px taller (22 px of padding) and hopped by that much at the snap */ /* fixed: the neighbour's box at the study card's one shape (v518, H: "Swiping cards in learn mode somehow jumps the image") — without it the neighbour came in at its own v514 ratio and jumped to 2:1 at the snap */
     go:goTo, ready:p=>{ p.style.setProperty("--cueh",(card._fit?card._fit.cueH+"px":card.style.getPropertyValue("--cueh"))); splitFit(p); fitPageCover(p); } });
     /* v596: fitPageCover on the neighbour too. renderStudy has cover-fitted the CARD's page front since v478 and nothing
        ever fitted the peer's, while v530 gives the peer the study card's own class — so .card.study .picbox.page .pagewrap
@@ -5938,8 +5938,8 @@ function detailCardHTML(d,sw){
       <div class="padline" id="padline"${lit?"":" hidden"}></div>
       ${lit&&lit.w&&CJK.test(lit.ch)?`<button class="chlink" id="d-chpage" data-ch="${esc(lit.ch)}"><span>${esc(t("Cards with {0}",lit.ch))}</span><span class="n">${charCards(lit.ch).length}</span><i aria-hidden="true">›</i></button>`:""}
       ${d.reading&&!d.reading.failed?`<div class="hint">${t("The new frame is being read — the text follows when it is done.")}</div>`:""}
-      <div class="fold${open?" open":""}"><button class="foldbtn" id="d-fold" aria-expanded="${open?"true":"false"}"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button><div class="ans" id="d-ans"${open?"":" hidden"}>${back}</div></div>
-      ${detailActsHTML(d)} <!-- v703 (H: "Macht doch mal Flag, Edit, Delete und so weiter ganz nach unten und Whole Card darüber"): the actions close the card, under Whole card -->
+      <div class="fold${open?" open":""}"><button class="foldbtn" id="d-fold" aria-expanded="${open?"true":"false"}"><span>${t("Details")}</span><i aria-hidden="true">⌄</i></button><div class="ans" id="d-ans"${open?"":" hidden"}>${back}</div></div>
+      ${detailActsHTML(d)} <!-- v703 (H: "Macht doch mal Flag, Edit, Delete und so weiter ganz nach unten und Whole Card darüber"): the actions close the card, under Details (called Whole card until v704) -->
       ${sw&&showHints()?`<div class="hint">${t("Swipe left or right to pick another card.")}</div>`:""}`;
 }
 /* the character the detail's line reads: the tapped one, else the first writable one — so the line is always there, as in Learn (v531) */
@@ -6074,7 +6074,7 @@ function renderCardDetail(main,c){
     <div class="card study detail">${detailCardHTML(d,sw)}</div>
     ${inPage(d)||!stat?"":`<div class="badge" style="margin-top:14px">${esc(stat)}</div>`}
     ${linkedHTML(d)}
-  </div>`; /* the actions close the card, under Whole card (v703; v518 had them where the pad would stand); the schedule line and the linked-photos row stay under it, on the pane */
+  </div>`; /* the actions close the card, under Details (v703/v704; v518 had them where the pad would stand); the schedule line and the linked-photos row stay under it, on the pane */
   $("#back").onclick=S.detailFrom==="inbox"?backToPhoto:S.detailFrom==="char"?backToChar:fromPage()?backToPage:backToList; /* opened from a photo's sheet (v448): ← goes back to the photo; from a page's row or sheet (v453): back to the page */
   /* the preview behaves like the test: tap the photo for the whole picture, tap the character to hide and show the answer (H) */
   const rv=$("#d-reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); } }; /* v518: the answer folds by its own button now, not by a tap on the picture */
@@ -6450,6 +6450,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  704:"The fold with the pinyin, meaning and description is now simply called Details.",
   701:"On a menu with pictures, each dish now shows its own photo.",
   699:"A menu you photographed now reads like a menu: every dish with its price and a line about what it is.",
   692:"On a multicard, open a text from the list under the photo to turn it into a flashcard — the pop-up is just for looking up.",
@@ -6458,7 +6459,7 @@ const WHATS_NEW={
   683:"Don't want the photo to zoom while you write? Switch it off under More.",
   662:"A new card shows its whole photo for a moment, then zooms onto the first character by itself.",
   660:"The photo now zooms onto every character you write — the ones you know by heart too.",
-  654:"Spot a mistake while learning? Open Whole card and tap Edit.",
+  654:"Spot a mistake while learning? Open Details and tap Edit.",
   638:"Multicards place their texts much better now: a new reader on your phone finds each label's own line. It downloads once (about 30 MB) the first time you use a multicard.",
   635:"A multicard missed a text? Tap Add a text, frame it on the photo, and it joins the multicard.",
   634:"Pinch to zoom into a multicard's photo, just like a card's. Tap any text while zoomed to look it up.",
@@ -6474,7 +6475,7 @@ const WHATS_NEW={
   593:"The Cards list is square photos now, with nothing written under them — a card is found by its picture, and the search still finds it by its characters, pinyin and meaning. A multicard keeps its name over two lines. Sharing one card as a picture is gone.",
   589:"Skip now fills the whole character in instead of one stroke at a time, a character the app has no strokes for can be skipped too, and a long press that is held a moment longer no longer deletes the card it just marked.",
   588:"More → Learning → Check-up now fills in what a card is missing while it checks it: the description of what its text says, and the tag for what it stands on. The separate Tags and Descriptions rows are gone — one run does all of it.",
-  585:"Whole card now shows what the card is about as well — no second tap, and the app fetches it for an older card by itself.",
+  585:"Details now shows what the card is about as well — no second tap, and the app fetches it for an older card by itself.",
   580:"The top of a card is the photo or the whole text — one tap swaps the two, and it stays that way while you write the card.",
   569:"Fold the phone or leave the app: the card comes back exactly as you left it, with the strokes you had already written. And the characters tapped big now break onto more rows, so they come out as large as they fit.",
   573:"The dictionary knows which reading a character has: 合 read hé now means “to close”, not gě’s “100 ml”.",
@@ -6490,7 +6491,7 @@ const WHATS_NEW={
   543:"The star counter now counts up when the star lands on it, not at your last stroke — and it no longer dips by one on the way.",
   542:"Every character you finish shows large with its reading for a moment, and on a card with two rows of characters the page no longer jumps back to the top between them.",
   541:"Zoom into a card's photo and it stays zoomed: the mark around the word travels with the picture, and the picture glides on to the next character as you write.",
-  540:"The line under the writing pad now leads with the character you are writing, and shows the translation alone — the whole explanation is one fold away, under Whole card.",
+  540:"The line under the writing pad now leads with the character you are writing, and shows the translation alone — the whole explanation is one fold away, under Details.",
   537:"The hint under your first cards is no longer cut off by the tab bar, and the admin row, the empty deck and a few dictionary notes are tidied up.",
   536:"Ask AI under More → Review queue works again, so a card you flag can be checked; and a card made from a multicard names it again and takes you back to it.",
   535:"A finished card now shows on its own, with no writing pad behind it; the pad writes one word out before it moves to the next character; and a suggestion you dismiss stays dismissed.",
