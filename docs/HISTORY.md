@@ -39,6 +39,39 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v711, 2026-09-27)
+- **The design half of the review pass (v711, H: "Consistency also regarding layout and design please").** A reviewer
+  rendered ten screens at 390/360, light/dark, en/de (88 shots, computed styles and boxes measured, contrast, overflow) and
+  found twenty points; sixteen are built here, each measured on v710 → v711 with the same harness. **Type:** the character
+  page's big character, its rows' characters and the Details block's characters were set in the UI font — every `.hanzi`
+  rule was scoped, none matched them; they are Songti now (`.chbig`, `.chcard .zh/.ph`, `.anshanzi`). One row spec: the
+  character page's rows take the Cards list's numbers (83 px thumbnail r8, 19 px Songti, 13 px pinyin, 14 px label2
+  meaning — they were 56/22/14/15); the row description is 14 px on a 19 px line (was 13/18, the label size used for
+  prose); the character page's reading/sense pair is 21/18 (`.pin`/`.mean`), its section head has `.listhead`'s weight
+  and margins and its count is label2 (1.98:1 as label3). **Spacing:** the open card carried the pad's two-row
+  reservation (`.padline` min-height 61) with no pad — a 40 px band over "Cards with 行"; 0 on `.card.study.detail`
+  (61 → 29 px). **The 44 px rule:** the Details row (36 → 44, and the same weight/colour as the link over it), the tile
+  star's box (34 → 44, the glyph as before), `.del` text buttons (40 → 44: ← Back, Explain, Crop again), chips (36 → 44:
+  filter, language, card order), the look-up's close (34 → 44), the speaker's hit area (a ::before, the disc stays 38);
+  the Cards/Multicards bar's buttons 30 → 38 in a 44 px bar — named as 38, not 44 (a 50 px segmented control is not the
+  design). **Radii:** a list of rows is a card (`.crow` ends at `--rc` 16, not the buttons' 12); the multicard's photo
+  r10 → 16 like the open card's. **Wording:** "Texts on this page: …" names the record's kind; it is "Texts on this
+  multicard: …" (ten columns), the multicard's red button is "Delete multicard" (new key; "Delete card" stays on the
+  flashcard), and the row pill "⚑ Review" is "⚑ Flagged" as the button and More say (the key "⚑ Review" is gone; 482 a
+  column, ru 511). **The look-up's speaker** dropped onto a line of its own at the left when the pinyin filled the line;
+  it is bound to the last syllable (`pinSay`, `.pin .nw` nowrap) on the look-up and the Details block alike (a flex row was
+  tried first and put it at the left on every wrap — measured, dropped). **Guide crops:** the language chips crop is
+  regenerated (chips 44: 350×160, `GF_SHOT` lang 2.574 → 2.188) and the Cards tile crop (the star's box); chars, front,
+  pcard and photo differed by grain alone (0 pixels over the threshold) and are restored. **Not built, for H:** (a) a
+  dish's own screen and look-up show its price inside the text, pinyin and meaning (砂锅刀削面¥16/份, 份 as a tile)
+  while its row shows it apart — applying the row's helpers there changes the character strip and `padTargets`, so it
+  waits for a word; (b) dictionary senses are English in every language (CEDICT) and carry no "English" pill — a data
+  limit, recorded; (c) label3 hints/tab labels at 2.1–2.2:1 in light mode are iOS tertiary by choice; (d) a six-character
+  text's tiles shrink to 40 px at 360 (`CH_MIN`, by construction since v519). Harness: the reviewer's `review.js` +
+  `cmp.js`, 17 checks × 2 combos: 15 FAIL on v710 → all PASS on v711 (2 guards); `chpage`, `lkshot`, `mcfit`, `ptags`,
+  `menu`, `actsbottom`, `detchk`, `itemswipe`, `mcacts`, `nosel`, `guidechk2`, `mcz4`, `dish` unchanged; Learn at 360
+  still fits with the 44 px Details row (screenshot). Not yet field-checked.
+
 ## Current state (PWA v710, 2026-09-27)
 - **Seven of the logic review's findings fixed (v710, H: "Jetzt App bitte nochmal auf Logikfehler und Inkonsistenzen
   untersuchen" — the logic half, a reviewer over the v686–v709 diff, each finding then read in the code and driven in the
