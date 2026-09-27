@@ -58,7 +58,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v702, 2026-09-27)
+## Current state (PWA v703, 2026-09-27)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -185,7 +185,7 @@ Square photo tiles, two a row, **nothing written under them** (v593); a text-onl
 On the picture: the star (v425, one tap), flag and AI marks; a multicard adds its plates, count chip, progress bar and a
 two-line title (v461–v597). **Two tabs, Cards and Multicards** (v477); the filter is **one pill and a sheet** (v365/v366);
 search also takes toneless pinyin (`toneless`, v690; H skipped a dictionary-row list, proposal A); a long press marks (v354);
-the list keeps its place (v352/v445). The **open card** swipes through the list (v445): Test this card · Edit | Star ·
+the list keeps its place (v352/v445). The **open card** swipes through the list (v445); Whole card, then its actions at the foot (v703): Test this card · Edit | Star ·
 Flag | Delete; its line under the character row ends in **Cards with 行 ›**, the character's page — its readings in your
 cards and every card that holds it (v691). A **multicard's own text**: its photo frames it alone (v700); + Flashcard (Flashcard › once made) | Edit, Flag |
 Delete (v692/v695); the pop-up over the photo carries **no action** (v496/v692). The multicard: **Add a text**, Delete card

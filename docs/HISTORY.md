@@ -39,6 +39,16 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v703, 2026-09-27)
+- **On the open card the actions close the card, under Whole card (v703, H: "Macht doch mal Flag, Edit, Delete und so
+  weiter ganz nach unten und Whole Card darüber").** Since v518/v531 the open card put its actions where the study card's
+  pad stands — right under the character line — and the "Whole card" fold at the foot. Now the fold (open by default here)
+  comes first and the actions — Test this card · Edit | Star · Flag | Delete, or a multicard text's + Flashcard | Edit ·
+  Flag | Delete — are the card's last block, for flashcards and multicard texts alike (`detailCardHTML`); a card still
+  waiting for its reading already ended in them. Harness `actsbottom.js` (a flashcard and a multicard text, 390 px): the
+  fold stands above the actions on both — 2 flips against v702; the actions as the card's last block pass on both (guard).
+  Screenshots light en and dark de. Not yet field-checked.
+
 ## Current state (PWA v702, 2026-09-27)
 - **Rebuild all can rebuild the menus alone (v702, H: "Mach Rebuild all für die Menüs möglich").** Owner tools → Rebuild all
   gains a **Menus** button: the same rebuild (v651/v652 — the photo read again as a new photo, the old cards kept in its
