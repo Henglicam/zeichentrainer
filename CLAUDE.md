@@ -58,7 +58,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v701, 2026-09-27)
+## Current state (PWA v702, 2026-09-27)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -70,7 +70,7 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   v646–v652). It places a multicard's labels (`pdMatch`, `aiBoxCal`, v638–v644; single lines and two-line pairs compete,
   v687); regions snap onto their texts at display (`refineShot`/`snapRegion`, v620/v628), kept in the `regfix` settings row
   so they start in place (v688).
-- **Owner tools** — Zoom check (v627), Re-read all (v645), Check texts (v650), Rebuild all with Undo (v651/v652). Background
+- **Owner tools** — Zoom check (v627), Re-read all (v645), Check texts (v650), Rebuild all with Undo (v651/v652; Menus alone, v702). Background
   saves rebuild the Learn queue through `requeue()` (v670).
 - **The Learn zoom's place** — the phone's reader first (`pdCharBoxes`, v653): characters matched to its lines by LCS, then
   out of order (v661), a misread line by position (v677), spread along it (v680), a partly matched line stepped from its match

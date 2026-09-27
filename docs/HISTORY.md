@@ -39,6 +39,17 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v702, 2026-09-27)
+- **Rebuild all can rebuild the menus alone (v702, H: "Mach Rebuild all für die Menüs möglich").** Owner tools → Rebuild all
+  gains a **Menus** button: the same rebuild (v651/v652 — the photo read again as a new photo, the old cards kept in its
+  `rb:<shot>` row, Undo puts them back) over the photos whose multicard is a menu (`rbMenuShots`: `isMenuPage`, v699 —
+  kind Menu or half its texts priced). So an older menu gets v699's prices and dish descriptions and v701's dish photos
+  without the rest of the deck being read again. The run is marked (`R.menus`, the line reads "Menus — …"); Start / Go on
+  and Undo work on it as on any rebuild; Menus is disabled while a rebuild runs and says "No menu multicards to rebuild."
+  when there are none. Harness `rbmenu.js` (two menus — one priced, one tagged —, a panel and a single card): Menus lists the
+  two menus, Rebuild all all four (guard), the row carries the button — 2 flips. The rebuild itself is v651's, not run again
+  here. Not yet field-checked.
+
 ## Current state (PWA v701, 2026-09-27)
 - **A menu's dishes take their own photos as their picture (v701, H: "Beim Menü bitte auch die Fotos der Gerichte zeigen").**
   A dish's card on a menu multicard carried the cut of its name, so its row showed the text a second time. The picture
