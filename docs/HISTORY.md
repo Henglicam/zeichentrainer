@@ -39,6 +39,19 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v679, 2026-09-27)
+- **One on-screen size for every character of a card, across its lines (v679, H: "Möglichst gleich groß", after v678 made
+  one line one scale).** Each reader line's characters already filled the same share of the picture box (`AZ_INK`) unless
+  the line needed v676's edge raise; then that line stood larger than the card's other lines. `autoZoom` now works out, per
+  reader line, the share of the box its characters fill (its own scale from v678 over the scale at which one fills the whole
+  box), takes the largest share of the card, and gives every line the scale that shows its characters at that share. Edge
+  characters keep their raise (no line goes below its own v678 scale). **Limit, named:** a line of much smaller characters
+  can be held by `AZ_MAX` 3.5 and then stays smaller; making it equal would mean zooming the big line out, and its edge
+  characters off the middle. Harness: `twoline.js` (雀 and 巢 at the picture's edges over a smaller 脆脆鲨) old 197.7 / 181.8 px
+  FAIL, new 197.7 / 194.6 px PASS (the second line at the cap); with the cap binding harder (110 px under 220 px) both builds
+  give 180 / 136 px, the limit above. az 13, ov 5, once 2, off 3, nf 2, pdc 4, pdcache 3, hyph 2, est 1, quecao 3, chipeng 2,
+  jin, glide and swapfast unchanged. Not yet field-checked.
+
 ## Current state (PWA v678, 2026-09-27)
 - **One zoom size for every character of a line (v678, H: "Warum wird hier auf verschiedene Größen gezoomt? sollte immer
   gleich sein", 吃碰杠听胡 with Diagnostics: 吃 `reader · x3.5 · edge 17,0 px`, 碰 and 杠 `reader, unsure · x2.43`; then "Size of

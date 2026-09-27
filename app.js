@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=678; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=679; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -686,6 +686,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["learn","v677","雀巢/脆脆鲨: 2nd line zoomed?"],
+  ["learn","v679","2 lines: chars one size?"],
   ["learn","v678","吃碰杠听胡: one zoom size?"],
   ["learn","v674","一汽-大众: zoom on each char?"],
   ["learn","v673","pinyin after green, truly?"],
@@ -4432,9 +4433,14 @@ async function autoZoom(card,d,c,tg,st,cur){
      reader's boxes on one line are all as tall as the line and as wide as its pitch, but a character it read unsurely (碰 read as
      雄, 杠 at 64 %) was zoomed looser than one it was sure of, and an edge character further in. Every character on one reader
      line now takes one scale — the largest any of them needs, so the edge ones still stand in the middle — and never so far that
-     a character of the line fills more than the picture box */
-  if(pf&&pb.boxes){ const same=pb.boxes.filter(b=>b&&b.ln===pf.ln), full=Math.min(...same.map(b=>{ const q=geom.rectOf(b); return Math.min(bw/q.w,bh/q.h); }));
-    s=Math.max(...same.map(scaleOf)); s=Math.max(Math.min(s,full),Math.min(AZ_MAX,AZ_INK*full)); }
+     a character of the line fills more than the picture box.
+     v679 (H: "Möglichst gleich groß"): and across the card's lines — each line's characters stand on the screen as large as the
+     largest any line of the card needs (the share of the picture box one of them fills), so 雀巢 over a smaller 脆脆鲨 are
+     written at one size; a line held by AZ_MAX stays as near to it as the cap allows */
+  if(pf&&pb.boxes){ const lines=new Map(); pb.boxes.forEach(b=>{ if(b){ if(!lines.has(b.ln)) lines.set(b.ln,[]); lines.get(b.ln).push(b); } });
+    const per=[...lines.values()].map(same=>{ const full=Math.min(...same.map(b=>{ const q=geom.rectOf(b); return Math.min(bw/q.w,bh/q.h); }));
+      const t=Math.max(Math.min(Math.max(...same.map(scaleOf)),full),Math.min(AZ_MAX,AZ_INK*full)); return {ln:same[0].ln,full,fill:Math.min(1,t/full)}; });
+    const F=Math.max(...per.map(o=>o.fill)), mine=per.find(o=>o.ln===pf.ln); s=F*mine.full; }
   s=Math.min(AZ_MAX,s); if(s<AZ_MIN) s=1;
   const held=z.focus(s,cx,cy)||{dx:0,dy:0};
   /* v666 (H: "Hier hat er ja gar nicht mittig reingezoomt", 内 of 京城内外首善全图 off-centre, and the record could not say why):
