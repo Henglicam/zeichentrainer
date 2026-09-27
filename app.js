@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=683; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=684; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -685,6 +685,8 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v684","4-line poster: last line in crop?"],
+  ["learn","v684","Char off picture: no wrong zoom?"],
   ["learn","v683","More: zoom switch off and on?"],
   ["learn","v677","雀巢/脆脆鲨: 2nd line zoomed?"],
   ["learn","v679","2 lines: chars one size?"],
@@ -4441,8 +4443,15 @@ async function autoZoom(card,d,c,tg,st,cur){
      überhaupt nicht dem character" on 无名, both logged "ink, unsure"; 贵州茅台酒 at v664 the same): a place only the ink search
      guessed, unsure, is wrong too often to zoom on — v664 caught it only when it lay off the reader's lines. Now any place neither
      the reader nor a sure ink cut gives shows the text whole: the reader's lines when it saw some, else the card's own frame */
-  const area=!pf&&pb&&pb.area, off=!pf&&!(found&&found.ok);
-  if(off){ sp=area||{x:0,y:0,w:1,h:1}; how=area?"the reader's text, whole":"the text, whole"; }
+  const area=!pf&&pb&&pb.area;
+  /* v684 (H: "Hier hat er … nicht auf die dritte Zeile gezoomt", 有些时候/我特别/喜欢/爸爸 — the card's picture ends above 爸爸, the
+     reader placed the three lines it holds, and the ink search put a "sure" box for 爸 on 喜, the character the reader had
+     already placed there, so the pad said 爸 and the photo showed 喜): an ink box whose middle lies on a reader box of another
+     character is that character, not this one — the card's text whole instead */
+  const taken=!pf&&found&&found.ok&&pb&&pb.boxes&&pb.boxes.some((b,j)=>b&&j!==li&&found.x+found.w/2>=b.x&&found.x+found.w/2<=b.x+b.w&&found.y+found.h/2>=b.y&&found.y+found.h/2<=b.y+b.h);
+  const off=!pf&&(!(found&&found.ok)||taken);
+  if(taken){ sp={x:0,y:0,w:1,h:1}; how="ink on another character, the text whole"; }
+  else if(off){ sp=area||{x:0,y:0,w:1,h:1}; how=area?"the reader's text, whole":"the text, whole"; }
   if(!cb) cb={why:""};
   const r=geom.rectOf(sp), bw=box.clientWidth, bh=box.clientHeight; if(!r.w||!r.h||!bw||!bh) return;
   const cx=r.x+r.w/2, cy=r.y+r.h/2;
@@ -8970,9 +8979,9 @@ async function cropSign(id,opts){
         const raw=await pdRead(cvp), rawCjk=raw.filter(l=>CJK.test(l.text)).length, pl=pdAsPass(raw), good=pl.length>0&&effScore(pl,Hink)>=WEAK_READ, cfs=pl.flatMap(l=>l.cf), sure=PD_ON_SURE&&pl.length>=1&&pl.length<=2&&cfs.length>=2&&Math.min(...cfs)>=PD_SURE, clear=meanCf(pl)>=95&&dictCover(pl)>=1&&pl.map(l=>l.t).join("").replace(/[^\u4e00-\u9fff]/g,"").length>=2;
         return {pl,good,sure,clear,rawCjk,ms:Date.now()-t0}; }
       catch(e){ logErr("paddle",e&&e.message||String(e)); return {pl:[],good:false,sure:false,clear:false,ms:Date.now()-t0}; } })():null;
-    let placedCut=null; /* the frame placed on the text (v288): its cut is the card image and what the AI gets */
+    let placedCut=null, placedRect=null; /* the frame placed on the text (v288): its cut is the card image and what the AI gets; placedRect: the rectangle it was placed on, in the straightened copy's pixels (v684) */
     let placedText=""; /* v486: the text the reader placed that frame on, when the placement came from one definite reading (rectOfLines) */
-    const placeRect=async (rect,by,txt)=>{ const cut=await frameOnText(id,r.blob,base,rect,dk.angle||0,by,null,true); if(stale()) return; if(cut){ placedCut=cut; if(txt) placedText=txt; renderShots(); } }; /* sure: the reader's placements come from lines that pass textLike on the straightened copy */
+    const placeRect=async (rect,by,txt)=>{ const cut=await frameOnText(id,r.blob,base,rect,dk.angle||0,by,null,true); if(stale()) return; if(cut){ placedCut=cut; placedRect=rect; if(txt) placedText=txt; renderShots(); } }; /* sure: the reader's placements come from lines that pass textLike on the straightened copy */
     if((CROP&&CROP.id===id&&CROP.hidden)||(PENDING[id]&&!RECROP[id]&&READ_APP[id]&&!PLACED[id])){ /* a quick look for the frame alone (v290; also for a card made by itself, whose frame is the app's until the reader or the AI places it — v325, H: "you don't need to translate first, you just need to identify text first"): one pass on a copy of at most FIRST_MAX px — 0.3 s on H's poster where the whole frame at 1 600 px takes 1.1 s — whose confident boxes give the lines and the image their ends; the frame goes there before the reading proper starts. It is not one of the reading's passes: as the first pass it lost 爸爸 on that poster, so the reading stays as it was */
       status("looking for the text …"); const bmp=await createImageBitmap(dk.blob); const k=Math.min(1,FIRST_MAX/Math.max(bmp.width,bmp.height)); const src=k<1?await toJpeg(bmp,k):dk.blob;
       let rect=null, rtxt=""; try{ const read=scaleBoxes(await readPass(w,src,status),k); if(stale()) return; const lines=tallLines(read,Hink), fine=read.filter(l=>!lines.includes(l)); /* fine print beside taller ink places nothing (v320) */
@@ -9066,6 +9075,18 @@ async function cropSign(id,opts){
     /* the reading's winning pass places the frame when nothing else did (v321, H's Nongfu Spring bottle taken again at v320: the quick look read garbage, the close look's band sat on the mountain logo, and the text 农夫山泉 / 饮用天然水 was read by the whole-frame fallback at 98 % — a pass that could not place the frame, since only the close look's tight passes did —, so the card's picture kept the logo above the text: "das Bild über der Schrift gehört auch nicht rein"): a strong whole-frame pass whose lines pass the placement bar (textLike, the fine print left out) gives the frame the way the quick look does, while the frame is still the app's and untouched — Diagnostics "frame placed on the text by the reading: …" */
     if(!placedCut&&lines.length&&!best.tightened&&strong&&(PENDING[id]&&!RECROP[id]?READ_APP[id]&&!PLACED[id]:CROP&&CROP.id===id&&(CROP.hidden||(CROP.proposed&&!CROP.followed)))){
       const tl=tallLines(lines,Hink); if(textLike(tl)){ let rect=null; const bmp=await createImageBitmap(dk.blob); try{ rect=rectOfLines(bmp,tl); } finally{ bmp.close(); } if(stale()) return; if(rect){ await placeRect(rect,"reading",cjkOnly(tl.map(l=>l.t).join(""))); if(stale()) return; } } }
+    /* v684 (H: "find out why the baba wasn't in the automatic crop", 有些时候/我特别/喜欢/爸爸: the close look's band placed the frame
+       on the first three lines — its passes lost the large bottom line — and the phone's reader then read all four at 100 %, but
+       the winning pass may place the frame only when nothing else did, so the card's picture ended above 爸爸): a strong winning
+       pass with a line read at PLACE_CF whose middle lies outside the placed frame places it again, around both — the text it
+       read is the card's text, so the picture must hold it. The frame still has to be the app's (frameOnText's own guard) */
+    else if(placedCut&&placedRect&&lines.length&&!best.tightened&&strong){
+      const tl=tallLines(lines,Hink), R=placedRect, sureL=tl.filter(l=>{ const cf=l.cf||[]; return cf.length&&cf.reduce((s,c)=>s+c,0)/cf.length>=PLACE_CF&&cjkOnly(l.t).length; });
+      const outL=sureL.filter(l=>{ const e=lineExtent(l); if(!e) return false; const cx=(e.x0+e.x1)/2, cy=(e.y0+e.y1)/2; return cx<R.x0||cx>R.x1||cy<R.y0||cy>R.y1; });
+      if(outL.length&&textLike(sureL)){ let rect=null; const bmp=await createImageBitmap(dk.blob); try{ rect=rectOfLines(bmp,sureL); } finally{ bmp.close(); } if(stale()) return;
+        if(rect){ const u={x0:Math.min(rect.x0,R.x0),y0:Math.min(rect.y0,R.y0),x1:Math.max(rect.x1,R.x1),y1:Math.max(rect.y1,R.y1)};
+          logRead(id,`the reading holds ${outL.map(l=>cjkOnly(l.t)).join(" | ")} outside the placed frame — the frame is placed again around it`);
+          await placeRect(u,"reading",cjkOnly(sureL.map(l=>l.t).join(""))); if(stale()) return; } } }
     if(placedCut){ cardImg=placedCut; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=placedCut; } /* the frame placed on the text: the card shows what the frame shows (v288) */
     else if(best.tightened&&cardRect){ const cut=await cutUnrotated(r.blob,cardRect,dk.angle||0); if(stale()) return; if(cut){ cardImg=cut; if(!PENDING[id]&&!RECROP[id]) S.pendingImg=cut; } } /* the text area with its margin, from the crop as framed */
     /* a weak reading, or none: the picture goes to the AI when a provider that takes pictures is set (v173) */
