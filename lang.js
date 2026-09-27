@@ -37,7 +37,7 @@ de:{
   "reading confidence {0}%":"Lesesicherheit {0} %","unknown {0}":"unbekannt: {0}","no dictionary meaning":"keine Wörterbuchbedeutung","the text looks misread":"der Text sieht falsch gelesen aus","the framed area":"der eingerahmte Bereich","card image":"Kartenbild","alt:photo":"Foto",
   "Not yet checked":"Noch nicht geprüft","tile:New":"Neu",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Halte ein Zeichen gedrückt, um alle Karten damit durchzugehen; halte es noch einmal gedrückt, um zurückzukommen.",
-  "Whole card":"Ganze Karte",
+  "Details":"Details",
   "Explain":"Erklären",
   "Explaining …":"Wird erklärt …",
   "No description came back. Try again.":"Keine Beschreibung gekommen. Versuch es noch mal.",
@@ -321,7 +321,7 @@ de:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"Die KI-Prüfung schickt Text, Pinyin und Bedeutung einer Karte, und wenn die Lesung schwer ist ein Bild des Textes — manchmal das ganze Foto. Sie fragt auch von allein nach den paar Sätzen zu einer Karte, sobald du zu einer kommst, die noch keine hat.",
 
   "Tap the star counter at the top to see how your points are counted.":"Tipp oben auf den Sternzähler, um zu sehen, wie deine Punkte zustande kommen.",
-  "Edit sits under Whole card too, for a card that needs fixing.":"Unter Ganze Karte steht auch Bearbeiten, falls eine Karte nicht stimmt.",
+  "Edit sits under Details too, for a card that needs fixing.":"Unter Details steht auch Bearbeiten, falls eine Karte nicht stimmt.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Einmal am Tag – und noch einmal, wenn du die App nach einer neuen Karte verlässt – gehen anonyme Nutzungszahlen und die Fehlermeldungen der App an den Besitzer der App; unter Mehr → Nutzungsdaten kannst du das abschalten. Fragen oder Ideen? Mehr → Feedback.",
 
 },
@@ -329,7 +329,7 @@ fr:{
   "reading confidence {0}%":"confiance de lecture {0} %","unknown {0}":"inconnus : {0}","no dictionary meaning":"aucun sens au dictionnaire","the text looks misread":"le texte semble mal lu","the framed area":"la zone encadrée","card image":"image de la carte","alt:photo":"photo",
   "Not yet checked":"Pas encore vérifiées","tile:New":"Nouvelle",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Maintiens un caractère appuyé pour parcourir toutes les cartes qui le contiennent ; maintiens-le appuyé de nouveau pour revenir.",
-  "Whole card":"Toute la carte",
+  "Details":"Détails",
   "Explain":"Expliquer",
   "Explaining …":"Explication en cours …",
   "No description came back. Try again.":"Aucune description n’est arrivée. Réessaie.",
@@ -613,7 +613,7 @@ fr:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"La vérification par l'IA envoie le texte, le pinyin et le sens d'une carte, et une image du texte — parfois la photo entière — quand la lecture est difficile. Elle demande aussi d'elle-même les quelques phrases d'une carte, dès que tu arrives sur une carte qui n'en a pas encore.",
 
   "Tap the star counter at the top to see how your points are counted.":"Touche le compteur d'étoiles en haut pour voir comment tes points sont comptés.",
-  "Edit sits under Whole card too, for a card that needs fixing.":"Modifier se trouve aussi sous Toute la carte, pour une carte à corriger.",
+  "Edit sits under Details too, for a card that needs fixing.":"Modifier se trouve aussi sous Détails, pour une carte à corriger.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Une fois par jour, et une fois de plus quand tu quittes l'appli après avoir fait une carte, des comptages anonymes et les messages d'erreur de l'appli vont au propriétaire de l'appli ; désactive-les sous Plus → Partage d'utilisation. Des questions ou des idées ? Plus → Commentaires.",
 
 },
@@ -621,7 +621,7 @@ es:{
   "reading confidence {0}%":"confianza de lectura {0} %","unknown {0}":"desconocidos: {0}","no dictionary meaning":"sin significado en el diccionario","the text looks misread":"el texto parece mal leído","the framed area":"el área enmarcada","card image":"imagen de la tarjeta","alt:photo":"foto",
   "Not yet checked":"Sin revisar todavía","tile:New":"Nueva",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Mantén pulsado un carácter para recorrer todas las tarjetas que lo tienen; mantenlo pulsado otra vez para volver.",
-  "Whole card":"Toda la tarjeta",
+  "Details":"Detalles",
   "Explain":"Explicar",
   "Explaining …":"Explicando …",
   "No description came back. Try again.":"No llegó ninguna descripción. Inténtalo otra vez.",
@@ -905,7 +905,7 @@ es:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"La revisión con IA envía el texto, el pinyin y el significado de una tarjeta, y una imagen del texto — a veces la foto entera — cuando la lectura es difícil. También pide por su cuenta las pocas frases de una tarjeta, en cuanto llegas a una que todavía no las tiene.",
 
   "Tap the star counter at the top to see how your points are counted.":"Toca el contador de estrellas de arriba para ver cómo se cuentan tus puntos.",
-  "Edit sits under Whole card too, for a card that needs fixing.":"Editar también está en Toda la tarjeta, por si una tarjeta necesita arreglo.",
+  "Edit sits under Details too, for a card that needs fixing.":"Editar también está en Detalles, por si una tarjeta necesita arreglo.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Una vez al día, y otra vez cuando sales de la app tras crear una tarjeta, van recuentos de uso anónimos y los mensajes de error de la app al propietario de la app; desactívalo en Más → Datos de uso. ¿Preguntas o ideas? Más → Comentarios.",
 
 },
@@ -913,7 +913,7 @@ ja:{
   "reading confidence {0}%":"読み取りの確からしさ {0}%","unknown {0}":"不明な文字：{0}","no dictionary meaning":"辞書に意味がありません","the text looks misread":"テキストの読み取りが誤っているようです","the framed area":"枠で囲んだ範囲","card image":"カードの画像","alt:photo":"写真",
   "Not yet checked":"まだ確認していない","tile:New":"新規",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"文字を長押しすると、その文字が入ったカードを順に見られます。もう一度長押しすると戻ります。",
-  "Whole card":"カード全体",
+  "Details":"詳細",
   "Explain":"解説",
   "Explaining …":"解説を作成中 …",
   "No description came back. Try again.":"解説が届きませんでした。もう一度試してみましょう。",
@@ -1197,7 +1197,7 @@ ja:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"AI確認はカードの文字・ピンイン・意味を送ります。読み取りが難しいときは、文字の画像 — ときには写真全体 — も送ります。まだ解説のないカードに進むと、そのカードの解説も自分から問い合わせます。",
 
   "Tap the star counter at the top to see how your points are counted.":"上の星のカウンターをタップすると、ポイントの数え方がわかります。",
-  "Edit sits under Whole card too, for a card that needs fixing.":"カード全体の中には編集もあるよ。直したいカードがあったらどうぞ。",
+  "Edit sits under Details too, for a card that needs fixing.":"詳細の中には編集もあるよ。直したいカードがあったらどうぞ。",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"1日1回、そしてカードを作ってアプリを離れるときにもう一度、匿名の利用回数とアプリのエラーメッセージがアプリの所有者に送られます。「その他 → 利用状況の送信」でオフにできます。質問やアイデアは「その他 → フィードバック」へ。",
 
 },
@@ -1205,7 +1205,7 @@ ko:{
   "reading confidence {0}%":"읽기 신뢰도 {0}%","unknown {0}":"모르는 글자: {0}","no dictionary meaning":"사전에 뜻이 없어요","the text looks misread":"글자를 잘못 읽은 것 같아요","the framed area":"틀로 감싼 부분","card image":"카드 이미지","alt:photo":"사진",
   "Not yet checked":"아직 확인 안 함","tile:New":"새 카드",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"글자를 길게 누르면 그 글자가 든 카드를 차례로 볼 수 있어요. 다시 길게 누르면 돌아와요.",
-  "Whole card":"카드 전체",
+  "Details":"상세 정보",
   "Explain":"설명",
   "Explaining …":"설명 만드는 중 …",
   "No description came back. Try again.":"설명이 오지 않았어요. 다시 시도해 보세요.",
@@ -1489,7 +1489,7 @@ ko:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"AI 확인은 카드의 글자와 병음, 뜻을 보내요. 읽기가 어려울 때는 글자 사진 — 때로는 사진 전체 — 도 함께 보내요. 설명이 아직 없는 카드를 보게 되면 그 카드의 설명도 알아서 물어봐요.",
 
   "Tap the star counter at the top to see how your points are counted.":"위쪽 별 카운터를 누르면 포인트가 어떻게 쌓이는지 볼 수 있어요.",
-  "Edit sits under Whole card too, for a card that needs fixing.":"카드 전체 안에 편집도 있어요. 고칠 카드가 있으면 써 보세요.",
+  "Edit sits under Details too, for a card that needs fixing.":"상세 정보 안에 편집도 있어요. 고칠 카드가 있으면 써 보세요.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"하루 한 번, 그리고 카드를 만든 뒤 앱을 나갈 때 한 번 더 익명의 사용 횟수와 앱의 오류 메시지가 앱 소유자에게 가요. 더보기 → 사용 정보 공유에서 끌 수 있어요. 질문이나 아이디어가 있으면 더보기 → 피드백.",
 
 },
@@ -1500,7 +1500,7 @@ ru:{
   "reading confidence {0}%":"уверенность распознавания {0} %","unknown {0}":"неизвестные знаки: {0}","no dictionary meaning":"нет значения в словаре","the text looks misread":"текст, похоже, прочитан неверно","the framed area":"область в рамке","card image":"картинка карточки","alt:photo":"фото",
   "Not yet checked":"Ещё не проверены","tile:New":"Новая",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Удерживай иероглиф, чтобы пройти по всем карточкам с ним; удержи его ещё раз, чтобы вернуться.",
-  "Whole card":"Вся карточка",
+  "Details":"Подробности",
   "Explain":"Объяснить",
   "Explaining …":"Объясняю …",
   "No description came back. Try again.":"Описание не пришло. Попробуй ещё раз.",
@@ -1784,7 +1784,7 @@ ru:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"Проверка ИИ отправляет текст карточки, пиньинь и значение, а когда чтение даётся трудно — ещё и снимок текста, иногда всё фото целиком. Ещё она сама спрашивает пару фраз о карточке, как только ты дойдёшь до той, у которой их ещё нет.",
 
   "Tap the star counter at the top to see how your points are counted.":"Нажми на счётчик со звездой наверху, чтобы увидеть, как считаются очки.",
-  "Edit sits under Whole card too, for a card that needs fixing.":"В «Вся карточка» есть и «Изменить» — если карточку нужно поправить.",
+  "Edit sits under Details too, for a card that needs fixing.":"В «Подробности» есть и «Изменить» — если карточку нужно поправить.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Раз в день — и ещё раз, когда ты выходишь из приложения после новой карточки, — владельцу приложения уходят обезличенные счётчики и сообщения об ошибках приложения; в «Ещё → Статистика использования» это можно выключить. Вопросы или идеи? «Ещё» → «Отзыв».",
 
 },
@@ -1792,7 +1792,7 @@ vi:{
   "reading confidence {0}%":"độ chắc chắn khi đọc {0}%","unknown {0}":"không nhận ra: {0}","no dictionary meaning":"không có nghĩa trong từ điển","the text looks misread":"văn bản có vẻ bị đọc sai","the framed area":"vùng trong khung","card image":"ảnh của thẻ","alt:photo":"ảnh",
   "Not yet checked":"Chưa kiểm tra","tile:New":"Mới",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Nhấn giữ một chữ để đi qua mọi thẻ có chữ đó; nhấn giữ lần nữa để quay về.",
-  "Whole card":"Cả thẻ",
+  "Details":"Chi tiết",
   "Explain":"Giải thích",
   "Explaining …":"Đang giải thích …",
   "No description came back. Try again.":"Không nhận được mô tả. Thử lại nhé.",
@@ -2076,7 +2076,7 @@ vi:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"Kiểm tra bằng AI gửi đi chữ, phiên âm và nghĩa của thẻ, và khi đọc khó thì gửi thêm ảnh của đoạn chữ — đôi khi là cả tấm ảnh. Nó cũng tự hỏi vài câu mô tả cho một thẻ, ngay khi bạn tới một thẻ chưa có.",
 
   "Tap the star counter at the top to see how your points are counted.":"Chạm vào bộ đếm sao ở trên để xem điểm được tính thế nào.",
-  "Edit sits under Whole card too, for a card that needs fixing.":"Trong Cả thẻ còn có Sửa, khi một thẻ cần chỉnh lại.",
+  "Edit sits under Details too, for a card that needs fixing.":"Trong Chi tiết còn có Sửa, khi một thẻ cần chỉnh lại.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Mỗi ngày một lần, và thêm một lần khi bạn rời app sau khi tạo thẻ, vài số liệu sử dụng ẩn danh và các thông báo lỗi của app được gửi cho chủ app; bạn tắt chuyện đó ở Thêm → Chia sẻ số liệu sử dụng. Có thắc mắc hay ý tưởng gì không? Thêm → Góp ý.",
 
 },
@@ -2084,7 +2084,7 @@ th:{
   "reading confidence {0}%":"ความมั่นใจในการอ่าน {0}%","unknown {0}":"ไม่รู้จัก: {0}","no dictionary meaning":"ไม่มีความหมายในพจนานุกรม","the text looks misread":"ข้อความน่าจะอ่านผิด","the framed area":"บริเวณในกรอบ","card image":"รูปของการ์ด","alt:photo":"รูป",
   "Not yet checked":"ยังไม่ได้ตรวจ","tile:New":"ใหม่",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"กดค้างที่ตัวอักษรเพื่อไล่ดูทุกการ์ดที่มีตัวนั้น กดค้างอีกครั้งเพื่อกลับ",
-  "Whole card":"ทั้งการ์ด",
+  "Details":"รายละเอียด",
   "Explain":"อธิบาย",
   "Explaining …":"กำลังอธิบาย …",
   "No description came back. Try again.":"ไม่ได้รับคำอธิบาย ลองอีกครั้ง",
@@ -2368,7 +2368,7 @@ th:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"AI ตรวจให้จะส่งตัวอักษร พินอิน และความหมายของการ์ด และถ้าอ่านยากก็ส่งภาพของข้อความไปด้วย — บางครั้งก็ทั้งรูป และยังขอคำอธิบายสั้นๆ ของการ์ดใบหนึ่งเอง ตอนที่คุณมาถึงการ์ดที่ยังไม่มี",
 
   "Tap the star counter at the top to see how your points are counted.":"แตะที่ตัวนับดาวด้านบนเพื่อดูว่าคะแนนนับอย่างไร",
-  "Edit sits under Whole card too, for a card that needs fixing.":"ใน ทั้งการ์ด มี แก้ไข ด้วย ถ้าการ์ดไหนต้องแก้",
+  "Edit sits under Details too, for a card that needs fixing.":"ใน รายละเอียด มี แก้ไข ด้วย ถ้าการ์ดไหนต้องแก้",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"วันละครั้ง และอีกครั้งตอนออกจากแอปหลังสร้างการ์ด สถิติการใช้งานแบบไม่ระบุตัวตนและข้อความแจ้งข้อผิดพลาดจะถูกส่งให้เจ้าของแอป ปิดได้ที่ อื่นๆ → ส่งสถิติการใช้งาน มีคำถามหรือไอเดีย? อื่นๆ → ส่งความเห็น",
 
 },
@@ -2376,7 +2376,7 @@ id:{
   "reading confidence {0}%":"keyakinan pembacaan {0}%","unknown {0}":"tidak dikenal: {0}","no dictionary meaning":"tidak ada arti di kamus","the text looks misread":"teks sepertinya salah dibaca","the framed area":"area dalam bingkai","card image":"gambar kartu","alt:photo":"foto",
   "Not yet checked":"Belum diperiksa","tile:New":"Baru",
   "Press and hold a character to walk through every card that has it; press and hold it again to come back.":"Tekan dan tahan sebuah karakter untuk menelusuri semua kartu yang memuatnya; tekan dan tahan lagi untuk kembali.",
-  "Whole card":"Seluruh kartu",
+  "Details":"Detail",
   "Explain":"Jelaskan",
   "Explaining …":"Menjelaskan …",
   "No description came back. Try again.":"Tidak ada penjelasan yang masuk. Coba lagi.",
@@ -2660,7 +2660,7 @@ id:{
   "The AI check sends a card's text, pinyin and meaning, and a picture of the text — sometimes the whole photo — when the reading is hard. It also asks for one card's few sentences by itself, when you come to a card that has none yet.":"Pemeriksaan AI mengirim teks, pinyin, dan arti sebuah kartu, dan saat pembacaannya sulit juga gambar teksnya — kadang seluruh fotonya. Ia juga meminta sendiri beberapa kalimat untuk satu kartu, begitu kamu sampai di kartu yang belum punya.",
 
   "Tap the star counter at the top to see how your points are counted.":"Ketuk penghitung bintang di atas untuk melihat cara poin dihitung.",
-  "Edit sits under Whole card too, for a card that needs fixing.":"Di Seluruh kartu ada Edit juga, kalau ada kartu yang perlu dibetulkan.",
+  "Edit sits under Details too, for a card that needs fixing.":"Di Detail ada Edit juga, kalau ada kartu yang perlu dibetulkan.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Sekali sehari, dan sekali lagi saat kamu keluar dari aplikasi setelah membuat kartu, hitungan pemakaian yang anonim dan pesan error aplikasi dikirim ke pemilik aplikasi; matikan itu di Lainnya → Berbagi data pemakaian. Ada pertanyaan atau ide? Lainnya → Masukan.",
 }
 };
