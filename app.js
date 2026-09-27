@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=696; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=697; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -686,6 +686,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["app","v694","No Google popup on text taps?"],
+  ["cards","v697","Multicard rows: no ring, ok?"],
   ["cards","v696","Multicard: tags top, desc rows?"],
   ["cards","v695","+ Flashcard beside Edit, tidy?"],
   ["cards","v691","Character pages: useful?"],
@@ -5803,11 +5804,11 @@ function cardsListHTML(){
   const empty=S.custom.length?t("No cards match."):t("No cards yet — take a photo under Camera, or tap + New.");
   return {html:rows||`<div class="badge" style="margin-top:20px;grid-column:1/-1">${empty}</div>`, n:list.length, ids:list.map(d=>d.id)};
 }
-function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page detail's item list carries the dot's own state before the status. v696 (H: "Die Tags für eine Multicard bitte in der Multicard-Übersichtskarte anzeigen und nicht in jeder einzelnen Karte der Multicard. Den gewonnenen Platz bitte für die Description"): there a text's tags are the multicard's own, shown once at its top, so the row carries its description instead, three lines at most */
+function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page detail's item list. v697 (H: "Nicht in dieser Ansicht anzeigen. Sondern nur im geöffneten Zustand"): its ring — has this text a flashcard — is gone from the row; the open text says it on its own button, + Flashcard or Flashcard ›. v696 (H: "Die Tags für eine Multicard bitte in der Multicard-Übersichtskarte anzeigen und nicht in jeder einzelnen Karte der Multicard. Den gewonnenen Platz bitte für die Description"): there a text's tags are the multicard's own, shown once at its top, so the row carries its description instead, three lines at most */
   return `<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
       <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${srcPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${dot?"":(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span>${dot&&descOf(d)?`<span class="d">${esc(descOf(d))}</span>`:""}</span>
-      <span class="cs">${dot?stateMark(d.id):""}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
+      <span class="cs">${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
 }
 /* a filter whose row is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the
    list anymore" — the AI chip shows only while suggestions wait, so the filter had no chip left to switch it off and the
@@ -10578,13 +10579,6 @@ function regionState(r){ if(!r.card) return 0; const p=S.progress[r.card]; if(!p
 const MARK_TICK=`<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.6 6.4 4.9 8.7 9.5 3.7"/></svg>`;
 const MARK_LOCK=`<svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2.4" y="5.4" width="7.2" height="5.4" rx="1.2"/><path d="M4.1 5.4V3.9a1.9 1.9 0 0 1 3.8 0v1.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`; /* the padlock on a locked character (v518) */
 const MARK_CROSS=`<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.7 3.7 8.3 8.3M8.3 3.7 3.7 8.3"/></svg>`;
-/* the mark on a multicard's own row, which is the only place it is drawn. It says the one thing about that text that can
-   still move (v488, H: "Not yet und Got it machen eigentlich nur Sinn in der Flashcard. Kann aus Multicard raus."):
-   whether it has a flashcard. A learning mark here would be tracking a progress row nothing can write — v478 took these
-   marks away for that reason, v487 brought them back because the vote could write it, and with the vote gone the reason
-   stands again; what replaces it is not a learning state at all. */
-function stateMark(id){ const d=cardOf(id), has=!!(d&&d.page&&madeFrom(d));
-  return `<i class="pdot${has?" made":" none"}" aria-hidden="true">${has?MARK_TICK:""}</i>`; }
 function regionsHTML(rec,rs,o){
   if(rec&&rec.id) refineSoon(rec.id); /* v620 */
   const learn=!!(o&&o.learn); /* v452: on the Learn front the frames take no tap (the photo's own tap and the swipe own the surface) and the card's own is the only one lit */

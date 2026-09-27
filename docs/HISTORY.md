@@ -39,6 +39,15 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v697, 2026-09-27)
+- **A multicard's text rows lose their ring (v697, H with a screenshot of a menu multicard's rows: "Wofür ist der Kreis über
+  dem Review Tag?", then "Nicht in dieser Ansicht anzeigen. Sondern nur im geöffneten Zustand").** The ring (`stateMark`,
+  v488) said whether a text had a flashcard — empty for no, green with a tick for yes — and stood in every row above the
+  Review pill. It is gone from the rows; the opened text says the same on its own button since v692/v695 (+ Flashcard, or
+  Flashcard › once made). `stateMark` and `.crow .pdot` left with their last user; `MARK_TICK`/`MARK_CROSS` stay (the AI bar).
+  The description takes the freed width. Harness `ptags.js` gains the check: 1 flip against v696, the v696 checks as
+  controls; `mcacts.js` unchanged. Not yet field-checked.
+
 ## Docs only (after PWA v696, 2026-09-27) — CLAUDE.md trimmed
 - H: "Ja, trim CLAUDE.md". At 42.5 KB it was past its ~40 KB limit. "Current state" keeps one short bullet per mechanism
   (the reader, owner tools, the Learn zoom's place, Crop again) and drops the Learn-card bullet that repeated The app → Learn;
