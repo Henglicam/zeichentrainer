@@ -262,7 +262,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .ct .p{font-size:13px;color:var(--label2)}
 .ct .m{font-size:14px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ptags{display:flex;flex-wrap:wrap;gap:6px;margin:6px 2px 4px} .ptags .pill{margin-left:0}
-.ct .d{font-size:13px;line-height:18px;color:var(--label2);margin-top:3px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;white-space:normal} /* v696: a multicard text's description in its row, clamped on a whole-pixel line box (v593) */
+.ct .d{font-size:13px;line-height:18px;color:var(--label2);margin-top:3px;white-space:normal} /* v696: a multicard text's description in its row; since v698 its short one, shown whole */
 .cs{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
 /* the six buttons of the card detail. minmax(0,1fr) and a label that may wrap, since v472: `1fr` is minmax(auto,1fr),
    so a nowrap label made the track's min-content its own width and the whole grid overflowed the card — measured at

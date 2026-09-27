@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=697; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=698; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -686,8 +686,8 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["app","v694","No Google popup on text taps?"],
+  ["cards","v698","Multicard rows: short descs?"],
   ["cards","v697","Multicard rows: no ring, ok?"],
-  ["cards","v696","Multicard: tags top, desc rows?"],
   ["cards","v695","+ Flashcard beside Edit, tidy?"],
   ["cards","v691","Character pages: useful?"],
   ["cards","v690","Search wendu finds 温度?"],
@@ -2239,7 +2239,7 @@ function ocrDoubt(confs,meaning,unknown){
 let _aiSoon=null;
 function aiAutoSoon(){ if(!aiAutoOn()) return; clearTimeout(_aiSoon); _aiSoon=setTimeout(()=>{ _aiAutoRan=false; aiAuto(); },1500); }
 function aiCardPayload(d){
-  return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:d.fromPic?`read from the photo by a model that sees it${d.fromPic!==true?" (it shows: "+d.fromPic+")":""} — keep zh exactly as given, write p and m${d.label?", and \"desc\" \"\" (this is one element of a panel)":" and desc"}`:d.explain?"write \"desc\" for this card and nothing else; keep zh, p and m exactly as given":d.translate?"translate the meaning into "+meaningLangName()+" (it is in "+(LANG_NAME[d.ml||"en"]||"another language")+" now); keep zh and p unless clearly wrong":[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"the reading looks uncertain ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
+  return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:d.short?`write "desc" as ONE short sentence of at most 15 words saying what this text is or does${d.shortCtx?" on this "+d.shortCtx:""} — no background, no history, no "you see it on"; nothing else; keep zh, p and m exactly as given`:d.fromPic?`read from the photo by a model that sees it${d.fromPic!==true?" (it shows: "+d.fromPic+")":""} — keep zh exactly as given, write p and m${d.label?", and \"desc\" \"\" (this is one element of a panel)":" and desc"}`:d.explain?"write \"desc\" for this card and nothing else; keep zh, p and m exactly as given":d.translate?"translate the meaning into "+meaningLangName()+" (it is in "+(LANG_NAME[d.ml||"en"]||"another language")+" now); keep zh and p unless clearly wrong":[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"the reading looks uncertain ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
     gloss:d.kind==="sign"&&glossFits(d)?d.gloss.map(g=>g.w+" "+(g.m||"?")).join(" · "):undefined,
     alt:d.alts&&d.alts.length?d.alts:undefined, script:d.trad?"traditional":undefined };
 }
@@ -3715,6 +3715,23 @@ async function explainCard(id){
     const d2=cardOf(id); if(!d2) return; if(d2.c!==d.c||Object.values(PENDING).includes(id)){ delete EXPLAIN[id]; refreshDesc(id); return; } /* v656: the text changed while the description was asked for (a Crop again saved before its reading was done) — it describes the old text, and a card still being read is filled by the reading */ await putCard(setDesc({...d2},s,r.ml||LANG),id); delete EXPLAIN[id]; refreshDesc(id); }
   catch(err){ const m=err&&err.message||String(err); EXPLAIN[id]=m===AI_NET_ERR?t(m)+".":t("The AI check failed: {0}",m); refreshDesc(id); }
 }
+/* v698 (H: "In the list overview, show the full description, but not the extended AI details those only in the opened card.
+   And load it during creation of the Multicard"): a multicard's texts carry a SHORT description of their own — one sentence,
+   what the text is or does on this panel or menu — shown whole in the multicard's rows; the long one (Explain, `ds`) stays on
+   the opened text. All of a multicard's texts are asked in ONE call: when the multicard is made, and for a multicard made
+   before this the first time it is shown (once a session). Kept per language in `dsh`, as `ds` is. */
+const shortOf=d=>(d.dsh&&d.dsh[LANG])||"";
+const saneShort=(s,zh)=>{ s=saneDesc(s,zh); if(!s) return ""; const one=(s.match(/^.*?[.!?。！？](\s|$)/)||[s])[0].trim(); return one.length>160?one.slice(0,160).replace(/\s+\S*$/,"")+" …":one; };
+const SHORTRUN=new Set();
+async function pageShorts(pid){
+  const pg=cardOf(pid); if(!pg||SHORTRUN.has(pid+"|"+LANG)||!aiAutoOn()||!navigator.onLine) return;
+  const todo=pageItems(pg).filter(d=>d.c&&!shortOf(d)); if(!todo.length) return;
+  SHORTRUN.add(pid+"|"+LANG);
+  let res; try{ res=await aiAsk(todo.map(d=>({...d,short:true,shortCtx:pg.c}))); }catch(e){ logErr("short descriptions",e&&e.message||String(e)); return; }
+  let n=0;
+  for(let i=0;i<todo.length;i++){ const r=res[i], d=cardOf(todo[i].id); if(!r||r.bad||!d||sureKey(r.zh)!==sureKey(d.c)) continue; /* an answer is only its own text's */
+    const s=saneShort(r.desc,d.c); if(!s) continue; await putCard({...d,dsh:{...(d.dsh||{}),[r.ml||LANG]:s}},d.id); n++; }
+  if(n&&S.mode==="cards"&&S.detail===pid&&!LOOKUP) render(); }
 /* the other cards with the same text (v122, H: "if one character connects to various photos, then link them"): their
    crops in a row on the back and in the card detail; a tap opens that card.
    A card generated from a multicard (v487) has no photo of its own — it carries no img, no shot and no frame —, so the
@@ -5807,7 +5824,7 @@ function cardsListHTML(){
 function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page detail's item list. v697 (H: "Nicht in dieser Ansicht anzeigen. Sondern nur im geöffneten Zustand"): its ring — has this text a flashcard — is gone from the row; the open text says it on its own button, + Flashcard or Flashcard ›. v696 (H: "Die Tags für eine Multicard bitte in der Multicard-Übersichtskarte anzeigen und nicht in jeder einzelnen Karte der Multicard. Den gewonnenen Platz bitte für die Description"): there a text's tags are the multicard's own, shown once at its top, so the row carries its description instead, three lines at most */
   return `<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
-      <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${srcPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${dot?"":(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span>${dot&&descOf(d)?`<span class="d">${esc(descOf(d))}</span>`:""}</span>
+      <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${srcPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${dot?"":(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span>${dot&&shortOf(d)?`<span class="d">${esc(shortOf(d))}</span>`:""}</span>
       <span class="cs">${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
 }
 /* a filter whose row is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the
@@ -5942,6 +5959,7 @@ async function dropAddedText(id){
   S.custom=S.custom.filter(x=>x!==d); try{ await idbDel("custom",id); }catch(e){} dropThumb(id);
   const pg=d.page&&cardOf(d.page); if(pg&&(pg.items||[]).includes(id)) await putCard({...pg,items:pg.items.filter(x=>x!==id)},pg.id); }
 function renderPageDetail(main,d){
+  pageShorts(d.id); /* v698: a multicard from before gets its texts' short descriptions once */
   normaliseFilters(); /* the same rule as the ordinary detail (v308/v445): a star cleared on the open page must not strand it outside its own list */
   const list=cardsList(), li=list.findIndex(x=>x.id===d.id), sw=li>=0&&list.length>1;
   main.innerHTML=`<div class="pane">
@@ -9620,7 +9638,7 @@ async function splitCards(id,sg,ph){
   numCards(id,rows.map(d=>d.id)); numsFile(id); /* v399 */
   try{ await idbPutMany("custom",rows); }catch(e){ logErr("split",e&&e.message||String(e)); return null; } /* all the labels together or none (v264's rule): half of them saved while the placeholder still carries its reading would be read again at the next start and doubled */
   for(let k=0;k<rest.length;k++){ bump("byPhoto"); S.custom.push(rows[k+1]); }
-  if(pg){ S.custom.push(pg); numSet(id,"page",{id:pg.id,title:pg.c,why:screen?(shotRec.shared?"shared":"screenshot"):kindApp?"kind App":"split",n}); logRead(id,`one page card for the ${screen?"screenshot":kindApp?"app screen":"picture"}: ${pg.c} — its ${n} texts are its dots`); }
+  if(pg){ S.custom.push(pg); setTimeout(()=>pageShorts(pg.id),0); /* v698 */ numSet(id,"page",{id:pg.id,title:pg.c,why:screen?(shotRec.shared?"shared":"screenshot"):kindApp?"kind App":"split",n}); logRead(id,`one page card for the ${screen?"screenshot":kindApp?"app screen":"picture"}: ${pg.c} — its ${n} texts are its dots`); }
   QSMORE[id]=more; QSCARD[id]=ph.id;
   logRead(id,`${n} cards from this photo: ${rows.slice(0,n).map(c=>c.c).join(", ")}`);
   return n;

@@ -58,7 +58,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v697, 2026-09-27)
+## Current state (PWA v698, 2026-09-27)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -114,7 +114,7 @@ timestamp. A card:
   shot:"shot_…", img:<crop Blob>, imgFull:<only when the inbox photo is gone>,
   frame:{x,y,w,h,a},                                   // fractions of the photo; Crop again starts here
   tags:[…], star:true, flag:true, flagNote, unchecked:true,
-  trad:"養樂多", simp:true, ml:"de", ms:{en,de}, ds:{en,de},       // script (simp: learned in simplified, v604), meaning language, meanings, descriptions
+  trad:"養樂多", simp:true, ml:"de", ms:{en,de}, ds:{en,de}, dsh,  // script (simp, v604), meaning language, meanings, descriptions (dsh: a multicard text's short one, v698)
   alts:[…], ai:{zh,p,m,note,ok,bad,at,model}, aiNo:"<fingerprint of a dismissed suggestion>",
   mt:{src:"llm"|"dict"|"phrasebook"|"nmt"|"gloss", verified, pending, suspect},
   reading:{rect,at,failed},                            // saved before its reading finished
@@ -189,7 +189,7 @@ the list keeps its place (v352/v445). The **open card** swipes through the list 
 Flag | Delete; its line under the character row ends in **Cards with 行 ›**, the character's page — its readings in your
 cards and every card that holds it (v691). A **multicard's own text**: + Flashcard (Flashcard › once made) | Edit, Flag |
 Delete (v692/v695); the pop-up over the photo carries **no action** (v496/v692). The multicard: **Add a text**, Delete card
-(v635); its tags once under its title, its texts' rows show their description and no flashcard ring (v696/v697).
+(v635); its tags once under its title, its texts' rows show a short one-sentence description (`dsh`, all texts in one AI call at creation, `pageShorts`) and no flashcard ring; the long one stays on the opened text (v696–v698).
 
 ### Camera — photo to card
 The Camera tab is the camera: the **shutter card** (Take photo, From album) centred, work under it (v466/v470); a photo that
