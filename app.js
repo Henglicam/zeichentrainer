@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=705; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=706; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -686,6 +686,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["app","v694","No Google popup on text taps?"],
+  ["learn","v706","Pad: no jump after opening?"],
   ["cards","v705","Dish card: dish+name+price pic?"],
   ["cards","v703","Open card: buttons at the foot?"],
   ["more","v702","Rebuild Menus: menus only?"],
@@ -5178,7 +5179,11 @@ function mountPad(card,d,c,tg,st,cur){
      (padLine calls it) — and on every resize through the one listener below, where v517–v520 fitted once and took the first
      resize only. On a card where nothing moved the repeat measures the same numbers and the pad stays exactly as it was. */
   requestAnimationFrame(()=>fit()); const pic=card.querySelector(".zone1 img.signimg"); if(pic&&!pic.complete) pic.addEventListener("load",()=>fit(),{once:true});
-  const tmpl=cur&&STROKE_OF.get(cur.glyph); let free=!tmpl; const strokes=tmpl?tmpl.map(s=>s.map(padPt)):null; let drawing=null, anim=null, flash=0;
+  /* v706 (H: "Der Charakter auf dem schreibpad springt nach öffnen der App"): the first card of a session is drawn before the
+     stroke file is parsed (~0.5 s on H's phone). That pad counted as FREE — a character the stroke set lacks — and drew the
+     character in the Hanzi font, bigger and centred, with Done and Clear, until the template replaced it at its own place.
+     While the file is still loading the pad now shows its grid alone, takes no stroke, and draws the template once it is there. */
+  const tmpl=cur&&STROKE_OF.get(cur.glyph), waiting=!!cur&&!tmpl&&!STROKES; let free=!tmpl&&!waiting; const strokes=tmpl?tmpl.map(s=>s.map(padPt)):null; let drawing=null, anim=null, flash=0;
   const outl=tmpl&&cur?outlinesFor(cur.glyph,tmpl.length):null; /* the real Kai outlines when they have arrived (v517) */
   const kinds=strokes?strokes.map(strokeKind):null;
   const lvl=cur?padLevel(c,cur,st):1;
@@ -5198,7 +5203,7 @@ function mountPad(card,d,c,tg,st,cur){
       const lit=st.k<strokes.length&&(lvl===1||st.hint)&&!flash;
       if(lit){ ctx.globalAlpha=0.55; ctx.fillStyle=cssVar("--tint")||"#c8372d"; glyph(st.k); ctx.globalAlpha=1; const p0=P(strokes[st.k][0]); ctx.fillStyle=cssVar("--tint")||"#c8372d"; ctx.beginPath(); ctx.arc(p0[0],p0[1],10,0,Math.PI*2); ctx.fill(); }
       if(anim){ const f=reduced?1:Math.min(1,(performance.now()-anim.t0)/500); ctx.strokeStyle=cssVar("--tint")||"#c8372d"; ctx.lineWidth=PAD_LW; path(strokes[anim.k],f); } /* "Show me" draws the stroke on, so it follows the centreline rather than the outline */
-    } else if(cur){ ctx.globalAlpha=0.25; ctx.fillStyle=cssVar("--label3")||"#aaa"; ctx.font=`${Math.round(N*0.6)}px ${cssVar("--hanzi")||"serif"}`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(cur.glyph,N/2,N/2); ctx.globalAlpha=1; }
+    } else if(cur&&!waiting){ ctx.globalAlpha=0.25; ctx.fillStyle=cssVar("--label3")||"#aaa"; ctx.font=`${Math.round(N*0.6)}px ${cssVar("--hanzi")||"serif"}`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(cur.glyph,N/2,N/2); ctx.globalAlpha=1; }
     ctx.strokeStyle=cssVar("--label")||"#000"; ctx.lineWidth=PAD_LW; for(const s of st.free.concat(drawing?[drawing]:[])) inked(s);
   };
   const acts=()=>{ const sh=$("#pad-show"), sk=$("#pad-skip"), dn=$("#pad-done"), un=$("#pad-undo"), cl=$("#pad-clear");
@@ -5218,6 +5223,7 @@ function mountPad(card,d,c,tg,st,cur){
   cv.onpointerdown=e=>{ e.preventDefault(); e.stopPropagation(); try{ cv.setPointerCapture(e.pointerId); }catch(x){} if(!st.zoomGo){ st.zoomGo=true; if(card._az) card._az(); } /* v617: the first touch of the pad zooms the picture in */ if(flash) return; drawing=[pt(e)]; anim=null; paint(); };
   cv.onpointermove=e=>{ if(!drawing) return; e.preventDefault(); e.stopPropagation(); drawing.push(pt(e)); paint(); };
   cv.onpointerup=cv.onpointercancel=e=>{ if(!drawing) return; e.stopPropagation(); const s=drawing; drawing=null;
+    if(waiting){ paint(); return; } /* v706: no template yet — the stroke is not judged against a guess, and its ink goes */
     if(free){ st.free.push(s); paint(); acts(); return; }
     if(!strokes||st.k>=strokes.length){ paint(); return; }
     const tm=strokes[st.k], dist=traceDist(s,tm), back=traceDist(s,tm.slice().reverse()), len=strokeLen(tm), bar=Math.min(TRACE_OK,0.07+0.5*len); /* a short stroke gets a tighter bar — a dot could otherwise land anywhere within 18 % of the pad — and a stroke that fits the template better backwards than forwards is a stroke drawn backwards, whatever its distance */
