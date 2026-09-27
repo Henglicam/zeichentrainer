@@ -58,7 +58,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v677, 2026-09-27)
+## Current state (PWA v678, 2026-09-27)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -184,8 +184,8 @@ after the layout settles (v521/v532).
 - **The word being written is marked on the photo** (v533) — **switched off by `SPOT_ON` since v602**, code intact.
 - **The photo zooms onto the character being written** (v617, `ZOOM_AUTO`): whole first, in after `AZ_OVERVIEW` or the pad's
   first touch, on to each next character on a glide, out for the recap — on every character, level 3 included (v660, H's
-  choice over v617's recall rule). Tight `AZ_INK` on a sure box, loose `AZ_EST` on the reader's unsure one, the text whole on
-  an unsure ink guess (v669); cap `AZ_MAX` 3.5. How the place is found: Current state. A pinch makes the zoom the hand's
+  choice over v617's recall rule). `AZ_INK` on a sure ink box; the reader's boxes of one line share one scale, the largest any of them
+  needs (v678); the text whole on an unsure ink guess (v669); cap `AZ_MAX` 3.5. How the place is found: Current state. A pinch makes the zoom the hand's
   (`ZOOM_HAND`) and it then only follows; one finger still swipes.
 - **Swipe** = the carousel of v417: the neighbour rides in beside the card and snaps; it grades
   nothing, and a skipped card stays due for next time. On a **zoomed** picture the one-finger drag pans, and pulling on past
@@ -481,7 +481,7 @@ CC BY-SA).
 ## Open / not yet field-checked
 Everything from **v597 to v674** is unconfirmed on the phone unless H has said otherwise; each version's entry in the archive
 names its own open question. The ones that decide what comes next:
-- **The Learn zoom** (v653–v677) — does it land on the character being written, and is 3.5× sharp enough? H's next Diagnostics
+- **The Learn zoom** (v653–v678) — does it land on the character being written, and is 3.5× sharp enough? H's next Diagnostics
   and Owner tools → Zoom check → Share and Data are the test (京城内外首善全图's 内: clamp or a second 内?).
 - **The phone's reader as the reading** (v641/v646/v652) — are sure cards fast and right, and does the check flag the right ones?
 - **Owner tools** — Re-read all (v645), Check texts (v650: false flags?), Rebuild all (v651: better cards, does Undo restore all?).

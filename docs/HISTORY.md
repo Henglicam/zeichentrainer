@@ -39,6 +39,19 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v678, 2026-09-27)
+- **One zoom size for every character of a line (v678, H: "Warum wird hier auf verschiedene Größen gezoomt? sollte immer
+  gleich sein", 吃碰杠听胡 with Diagnostics: 吃 `reader · x3.5 · edge 17,0 px`, 碰 and 杠 `reader, unsure · x2.43`; then "Size of
+  the first character in the example is great").** The reader's boxes on one line are all as tall as the line and as wide as
+  its pitch, but a character it read unsurely (碰 read as 雄, 杠 at 64 %) was zoomed with `AZ_EST` 0.5 where a sure one got
+  `AZ_INK` 0.68, and v676 raised an edge character further. `pdCharBoxes` now tags each box with its reader line (`ln`), and
+  `autoZoom` gives every character of that line one scale: the largest any of them needs (edge raise included, so the first
+  and last still stand in the middle), capped where a character of the line would fill the whole picture box, never below
+  the tight fill. `AZ_EST` left with its last user. Ink boxes and the whole-text view are unchanged. Harness: `chipeng.js`
+  (吃雄杠听胡 at the field's confidences, large characters) old 2.55 / 1.56 / 1.56 / 2.12 / 2.55 FAIL, new 2.55 all five PASS;
+  az 13, ov 5, once 2, off 3, nf 2, pdc 4, pdcache 3, hyph 2, est 1, quecao 3, jin, glide and swapfast unchanged. Not yet
+  field-checked beyond H's word on the first character's size.
+
 ## Current state (PWA v677, 2026-09-27)
 - **The Learn zoom goes onto a line the phone's reader read wrongly (v677, H: "Warum hat er hier nicht die zweite Zeile
   gezoomt?", 雀巢 Nestlé over 脆脆鲨, with Diagnostics: the reader read `雀巢Nestle | 脏脏量 | 千售银件 | 一`, 雀 and 巢 zoomed
