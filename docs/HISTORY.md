@@ -39,6 +39,22 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v687, 2026-09-27)
+- **A multicard label printed on two lines takes both lines (v687, H: "Bei den zweizeiligen Feldern der Multicards sind die
+  Rahmen nicht richtig gesetzt", screenshots of the washing machine panel: 温度长按联网, 时间长按远程 and +烘干长按单烘 each
+  framed only around the small boxed second line).** `pdMatch` matched single lines first and tried two lines (v643/v644)
+  only for texts left over. The boxed 长按联网 alone holds 4 of the text's 6 characters, 0.667, just over `PD_MATCH` 0.66, so
+  it took the text and the pair 温度 + 长按联网 (6 of 6) was never tried. Single lines and pairs now compete in one list, the
+  better share first, and at a tie the one holding more of the text's characters. `pdMatch` serves the regions shown on a
+  multicard (`refineShot`, measured again at every display, so existing multicards are corrected without a rebuild) and the
+  split's label placement and `aiBoxCal` fit (new photos only). Possibly the cause of 左筒's frame sitting under the text too:
+  three labels placed half a line low shift the fit that places the labels the reader cannot read (左筒 stands at 45° on
+  the dial) — but 左筒's frame is stored at the split, so it moves only if the photo is split again (Rebuild all); not
+  verified, the dump carries no multicard reading. Harness `twoline2.js` (the panel's labels as lines, their second line
+  boxed just under the first — line shapes are my assumption, not the phone's numbers): v687 gives all three labels both
+  lines, v686 the second line alone (3 flips; single-line labels and v643/v644's 保温|取消 and 个人版|Lite套餐 as controls).
+  Not yet field-checked.
+
 ## Current state (PWA v686, 2026-09-27)
 - **A partly read line's other characters step from where the reader saw its match (v686, H: "Works now, zooms on each
   character. Aber der letzte character ist leicht beschnitten", 邪不压正 — v685 field-checked).** The dump: the reader read

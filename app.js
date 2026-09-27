@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=686; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=687; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -685,6 +685,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v687","2-line labels: frame both lines?"],
   ["learn","v686","邪不压正: last char not cut?"],
   ["photo","v684","4-line poster: last line in crop?"],
   ["learn","v684","Char off picture: no wrong zoom?"],
@@ -6779,23 +6780,28 @@ const PD_ON=true, PD_MATCH=0.66, PD_ROOM=0.25, pdNorm=s=>String(s).replace(/[^\u
 function pdLcs(a,b){ const A=[...a], B=[...b], dp=new Array(B.length+1).fill(0); for(let i=1;i<=A.length;i++){ let prev=0; for(let j=1;j<=B.length;j++){ const t=dp[j]; dp[j]=A[i-1]===B[j-1]?prev+1:Math.max(dp[j],dp[j-1]); prev=t; } } return dp[B.length]; }
 function pdMatch(texts,lines){ const T=texts.map(pdNorm), L=lines.map(l=>pdNorm(l.text)), pairs=[];
   T.forEach((z,i)=>{ if(!z) return; L.forEach((lz,j)=>{ if(!lz) return; const sc=pdLcs(z,lz)/Math.max([...z].length,[...lz].length); if(sc>=PD_MATCH) pairs.push({i,j,sc}); }); });
-  pairs.sort((a,b)=>b.sc-a.sc); const out=texts.map(()=>null), usedL=new Set();
-  for(const p of pairs){ if(out[p.i]||usedL.has(p.j)) continue; out[p.i]=lines[p.j]; usedL.add(p.j); }
+  const out=texts.map(()=>null), usedL=new Set();
   /* v643 (H: "Why is the rice cooker only 10 of 11 texts?"): a label printed on two lines — 保温 over 取消 on one button —
      is one text for the AI and two lines for the reader, and neither line alone holds two thirds of it. A text left over
      may take two lines still free that stand one over the other (overlapping across, the gap under one line's height),
      read top to bottom at the same PD_MATCH; its place is the box around both. v644 (H: "Please also analyze other
      incomplete cards and find a fix that generally works"): or side by side on one row (overlapping down by half the
      smaller, the gap under one and a half line heights), read left to right — 个人版 | Lite套餐 on his Token Plan screen */
+  /* v687 (H: "Bei den zweizeiligen Feldern der Multicards sind die Rahmen nicht richtig gesetzt", the washing machine's 温度 over
+     a framed 长按联网): the second line alone holds 4 of the text's 6 characters, 0.667 — just over PD_MATCH — so it took
+     the text before the pair was ever tried, and the region framed only the small line. Single lines and pairs now compete
+     in one list, the better share first (at a tie the one holding more of the text's characters) */
   const two=[];
-  T.forEach((z,i)=>{ if(!z||out[i]) return; lines.forEach((a,j)=>{ if(usedL.has(j)||!L[j]) return; lines.forEach((b,k)=>{ if(k===j||usedL.has(k)||!L[k]) return;
+  T.forEach((z,i)=>{ if(!z) return; lines.forEach((a,j)=>{ if(usedL.has(j)||!L[j]) return; lines.forEach((b,k)=>{ if(k===j||usedL.has(k)||!L[k]) return;
     const h=Math.min(a.h,b.h), gap=b.y-(a.y+a.h), over=Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x);
     const gapX=b.x-(a.x+a.w), overY=Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y);
     const stacked=b.y>a.y&&gap<=h&&over>=0.5*Math.min(a.w,b.w), row=b.x>a.x&&gapX<=1.5*h&&overY>=0.5*h;
     if(!stacked&&!row) return;
-    const lz=L[j]+L[k], sc=pdLcs(z,lz)/Math.max([...z].length,[...lz].length); if(sc>=PD_MATCH) two.push({i,j,k,sc}); }); }); });
-  two.sort((x,y)=>y.sc-x.sc);
-  for(const p of two){ if(out[p.i]||usedL.has(p.j)||usedL.has(p.k)) continue; const a=lines[p.j], b=lines[p.k], x=Math.min(a.x,b.x);
+    const lz=L[j]+L[k], n=pdLcs(z,lz), sc=n/Math.max([...z].length,[...lz].length); if(sc>=PD_MATCH) two.push({i,j,k,sc,n}); }); }); });
+  pairs.forEach(p=>{ p.n=pdLcs(T[p.i],L[p.j]); }); const all=[...pairs,...two].sort((x,y)=>y.sc-x.sc||y.n-x.n);
+  for(const p of all){ if(out[p.i]||usedL.has(p.j)||(p.k!=null&&usedL.has(p.k))) continue;
+    if(p.k==null){ out[p.i]=lines[p.j]; usedL.add(p.j); continue; }
+    const a=lines[p.j], b=lines[p.k], x=Math.min(a.x,b.x);
     const y0=Math.min(a.y,b.y); out[p.i]={...a,x,y:y0,w:Math.max(a.x+a.w,b.x+b.w)-x,h:Math.max(a.y+a.h,b.y+b.h)-y0,text:a.text+b.text,two:true}; usedL.add(p.j); usedL.add(p.k); }
   return out; }
 /* v644: how far the AI's label boxes are off on this photo, measured on the labels the phone's reader placed — the centres
