@@ -40,6 +40,7 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
 ## Current state (PWA v676, 2026-09-27)
+- **Field-checked 2026-09-27 (H: "Looks good now"):** v676 on the phone — 禁 of 禁止烟火 centred, and photo → text → photo keeps the zoom's place (on v675 the same taps left it at `edge 87,621` / `0,-472 px`). The `TO_TEST` line "禁止烟火: 禁 in the middle?" goes with the next shell version.
 - **The Learn zoom centres a character at the picture's edge and keeps its place when it moves on mid-glide (v676, H:
   "Falsche Zoom-Position, nicht mittig", 禁止烟火 with two screenshots — 禁 low and left of the middle — and Diagnostics:
   `禁 · reader · x2.61 · at 16,49 % · edge 48,17 px`).** Two causes, both reproduced at H's 360 px width on a rebuilt
