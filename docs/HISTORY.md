@@ -39,6 +39,21 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v692, 2026-09-27)
+- **A multicard text's actions stand together on its own screen; the pop-up over the photo has none (v692, H: "Mach doch
+  das Generate Flashcard und Edit und Delete und alles sowas in die Karte selber, wenn man die in einer Multicard öffnet,
+  zusammen rein", then — asked which of two readings, since v496 had said the pop-up carries no functions — "The text's own
+  screen").** The text's screen (opened from the row list under the multicard's photo) now leads with **Generate
+  flashcard** on a row of its own — **Open the flashcard** once it exists, which opens it on the Cards tab — then Edit, then
+  Flag and Delete side by side (v594's pair). It takes a whole row because "Generate flashcard" broke onto two lines beside
+  Edit at 390 px; the flashcard's own screen leads with Test this card the same way. The pop-up over the photo lost v689's
+  quiet button and is a look-up with no action at all — v496's rule without its one exception; `lk-make`/`lk-open`,
+  `afterMake` and `.lkmake`/`.lkbtn` left with their last user. The Take-a-photo guide sentence says where Generate
+  flashcard now is, in ten columns (key replaced, still 482 a column). Harness `mcacts.js`: 3 flips against v691 (no button
+  on the pop-up; the four actions together; Generate → Open → the flashcard), no Test or Star on the text as a guard. No
+  action label breaks in any of the ten languages at 390 or 360 px except "Delete card" in fr/ru (and es at 360), which
+  broke the same on v691 — fixed as v693. The v689 line leaves Still to test (its button is gone). `WHATS_NEW` gains 692, and 691 and 690, which shipped without their note. Not yet field-checked.
+
 ## Current state (PWA v691, 2026-09-27)
 - **Character pages (v691, H: "Mach dann C, die Zeichenseiten" — proposal C of the Cards-as-a-reference review).** On an
   open card the line under the character row now ends in a row "Cards with 行 3 ›" for the character that is lit (the
