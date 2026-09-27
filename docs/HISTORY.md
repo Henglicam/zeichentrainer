@@ -39,6 +39,22 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v685, 2026-09-27)
+- **A line the phone's reader read partly is zoomed on character by character (v685, H: "Also hier zoomt er leider auch total
+  falsch", 邪不压正, a film title in a drawn typeface).** The dump after H's Crop again: the reader read the title as `优压动
+  54,54 % h92` — one line, the whole title, three characters for four — so only 压 matched ("reader, unsure x3.11 at 61,54 %")
+  and 邪, 不 and 正 showed the text whole (x1.45, or x1 when the reader found nothing). None of the earlier rules applies: the
+  between-rule needs a match on both sides, v677/v680 need the card line to have no match at all. Now a card line whose
+  matched characters all lie on one reader line, with no other card line's match on it, each inside its own slot of an even
+  spread of the card line along that reader line (`|at − (t+½)/n| ≤ ½/n`), is that line: its unplaced characters take their
+  slots on it, unsure — the same place v680 gives a wholly misread line. Before the Crop again the record said only "the
+  reader read other text" with a x3.5 zoom at 58,30 %; that path gave the record no reading, so it now carries the reader's
+  lines too (`read`), for the next dump. Nothing is fitted to it.
+  Harness `xie.js` (the title drawn, the reader answering `优压动` with 压 at 0.62): v685 zooms all four by the reader on the
+  title, left to right at 22/42/62/82 %, one scale; v684 took the ink search for 邪 不 正 (1 flip, 2 controls — on the drawn
+  title the ink is clean, on H's photo it was "odd shapes"). az, ov, once, off, nf, pdc, pdcache, hyph, quecao, chipeng,
+  twoline, dian, dian3, baba, zsw, glide unchanged. Not yet field-checked.
+
 ## Current state (PWA v684, 2026-09-27)
 - **A line the reading holds outside the placed frame puts the frame around it, and the zoom no longer lands on another
   character (v684, H: "Hier hat er … nicht auf die dritte Zeile gezoomt … Genauer gesagt, das Baba", on 有些时候/我特别/喜欢/爸爸,
