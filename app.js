@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=709; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=710; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -685,6 +685,8 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v710","Dish flashcard: zoom sane?"],
+  ["cards","v710","Char page → back: right place?"],
   ["app","v694","No Google popup on text taps?"],
   ["cards","v707","MC texts: swipe to the next?"],
   ["learn","v706","Pad: no jump after opening?"],
@@ -1150,7 +1152,7 @@ async function shareUsers(){
 /* the owner's texts onto the clipboard (v292, H: "offer the option to share/copy diagnostics and user data and feedback directly from the app"): Share hands a file to the share sheet, Copy puts the same text where a chat can take it; the row's line says so */
 async function copyText(text,st){
   try{ await navigator.clipboard.writeText(text); if(st) st.textContent="Copied."; }
-  catch(err){ if(st) st.textContent="Copy is not available here — tap Show and select the text."; }
+  catch(err){ if(st) st.textContent="Copy is not available here — tap Show and select the text."; } /* the Diagnostics boxes are the one prose left selectable (v710, styles.css .diag) so this advice can be followed */
 }
 /* THE ZOOM CHECK (v618, owner's): charBoxes run over the newest ZC_N photo cards off screen, counted, and drawn on the
    cards' own pictures as one sheet the share sheet can send — so the detector is judged on H's photos rather than on the
@@ -2894,7 +2896,7 @@ async function recutPass(){
   try{
     for(const id of ids){
       if(passBusy()){ await write(); while(passBusy()) await new Promise(r=>setTimeout(r,RC_WAIT)); } /* the camera, the reader and the forms come first — and the rows in hand are written before the wait, never held across it */
-      const d=cardOf(id); if(!d||!d.img||!d.frame||d.reading) continue;
+      const d=cardOf(id); if(!d||!d.img||!d.frame||d.reading||d.dish) continue; /* v710: a dish's picture (v705) is not its frame's cut — a re-cut would replace the dish with its name */
       const img0=d.img, fkey=frameKey(d.frame), full0=fullPhoto(d);
       let b=null; try{ b=await recutCard(d); }catch(e){ b=null; }
       if(b){ rows.push({id,img:b,img0,fkey,full0}); RECUT.done++; if(rows.length>=RC_BATCH) await write(); } else RECUT.skipped++;
@@ -3526,7 +3528,7 @@ function frontPic(d,o){
   const pk=S.peek&&S.peek!==d.id?cardOf(S.peek):null; /* Learn: a linked card's photo, tapped in the "Also on another photo" row (v155) */
   const full=pk?fullPhoto(pk):fullPhoto(d);
   const dish=!pk&&dishOf(d); /* v705: a menu dish shows its own picture — the dish with its name and price — not the whole menu with a frame */
-  if(dish&&!S.fullPic){ const ratio=(o&&o.fixed)?FRONT_RATIO:ratioOf(dish); return `<div class="picbox" data-pic="1" style="--pr:${ratio}"><img class="picbg" src="${urlOf(dish.img)}" alt="" aria-hidden="true"><img class="signimg" data-pic="1" src="${urlOf(dish.img)}" alt="${t("alt:photo")}"></div>`; }
+  if(dish&&(!S.fullPic||!full)){ const ratio=(o&&o.fixed)?FRONT_RATIO:ratioOf(dish), tap=full?` data-pic="1"`:""; return `<div class="picbox"${tap} style="--pr:${ratio}"><img class="picbg" src="${urlOf(dish.img)}" alt="" aria-hidden="true"><img class="signimg"${tap} src="${urlOf(dish.img)}" alt="${t("alt:photo")}"></div>`; } /* v710: a generated flashcard has no whole photo to tap through to — the dish stays, and the box does not offer the tap (it showed the bare character with no way back) */
   const pg=o&&o.page&&!pk?frontPage(d):null; /* v452: the page with its dots by default, the card's own cut on a tap — and v489, where the page is the multicard's photo and there is no own cut */
   if(pg&&!S.fullPic) return pageHTML(d,pg);
   const blob=pk?(pk.img||full):(S.fullPic&&full&&!pg?full:d.img); if(!blob) return "";
@@ -3747,18 +3749,18 @@ const SHORTRUN=new Set();
    description of the meal and the price of course"): a price printed with a dish — ¥16/份, ￥12, 28元 — is read off its text
    and stands at the right of its row; the name, the pinyin and the meaning are shown without it and whole. A multicard is a
    menu when its kind says so or half its texts carry a price; a dish's short description then says what the dish is. */
-const PRICE_RE=/(?:[¥￥]\s*\d+(?:\.\d+)?|\d+(?:\.\d+)?\s*元)(?:\s*\/\s*[\u4e00-\u9fff]{1,2})?/;
+const PRICE_RE=/(?:[¥￥]\s*\d+(?:\.\d+)?|\d+(?:\.\d+)?\s*元(?![一-鿿]))(?:\s*\/\s*[一-鿿]{1,2})?/; /* v710: 元 followed by another character is a word (第2元素, 元旦), not a price */
 const priceOf=s=>{ const m=String(s||"").match(PRICE_RE); return m?m[0].replace(/\s+/g,"").replace("￥","¥"):""; };
 const noPrice=s=>String(s||"").replace(PRICE_RE,"").replace(/\s+\/\s*$/,"").replace(/\s{2,}/g," ").trim();
-const noPricePy=p=>String(p||"").replace(/\s*[¥￥].*$/,"").replace(/\s+\d+(?:\.\d+)?\s*(?:yuán|yuan)?(?:\s*\/\s*\S+)?\s*$/i,"").trim();
-const noPriceM=m=>String(m||"").replace(/\s*[(\[]?\s*(?:[¥￥]|CNY|RMB)\s*\d+(?:\.\d+)?[^;,)\]]*[)\]]?/gi,"").replace(/\s*\d+(?:\.\d+)?\s*(?:yuan|元)\b.*$/i,"").trim();
+const noPricePy=p=>String(p||"").replace(/\s*[¥￥]\s*\d+(?:\.\d+)?(?:\s*\/\s*\S+)?/g,"").replace(/\s+\d+(?:\.\d+)?\s*(?:yuán|yuan)?(?:\s*\/\s*\S+)?\s*$/i,"").replace(/\s{2,}/g," ").trim(); /* v710: only the ¥ and its number go, wherever they stand — a price first (¥12 宫保鸡丁) took the whole pinyin line with it */
+const noPriceM=m=>String(m||"").replace(/\s*[(\[]?\s*(?:[¥￥]|CNY|RMB)\s*\d+(?:\.\d+)?[^;,)\]]*[)\]]?/gi,"").replace(/\s*\d+(?:\.\d+)?\s*(?:yuan|元)(?![\w一-鿿]).*$/i,"").trim(); /* v710: \b after 元 never matched at the end of a line ("… chicken 38元" kept its price) */
 const isMenuPage=pg=>{ if((pg.tags||[]).includes(t("kind:Menu"))) return true; const its=pageItems(pg).filter(d=>d.c); return its.length>0&&its.filter(d=>priceOf(d.c)).length*2>=its.length; };
 async function pageShorts(pid){
   const pg=cardOf(pid); if(!pg||SHORTRUN.has(pid+"|"+LANG)||!aiAutoOn()||!navigator.onLine) return;
   const todo=pageItems(pg).filter(d=>d.c&&!shortOf(d)); if(!todo.length) return;
   SHORTRUN.add(pid+"|"+LANG);
   const menu=isMenuPage(pg);
-  let res; try{ res=await aiAsk(todo.map(d=>({...d,short:true,shortCtx:pg.c,dish:menu&&!!priceOf(d.c)}))); }catch(e){ logErr("short descriptions",e&&e.message||String(e)); return; }
+  let res; try{ res=await aiAsk(todo.map(d=>({...d,short:true,shortCtx:pg.c,dish:menu&&!!priceOf(d.c)}))); }catch(e){ SHORTRUN.delete(pid+"|"+LANG); logErr("short descriptions",e&&e.message||String(e)); return; } /* v710: a failed call (the relay down, the VPN toggled) is tried again the next time the multicard is shown — the guard is for a running or answered call, not a lost one */
   let n=0;
   for(let i=0;i<todo.length;i++){ const r=res[i], d=cardOf(todo[i].id); if(!r||r.bad||!d||sureKey(r.zh)!==sureKey(d.c)) continue; /* an answer is only its own text's */
     const s=saneShort(r.desc,d.c); if(!s) continue; await putCard({...d,dsh:{...(d.dsh||{}),[r.ml||LANG]:s}},d.id); n++; }
@@ -4475,15 +4477,15 @@ async function refineShot(shot){
   /* v638: on a multicard the phone's own reader places the texts first — a text it names takes its line's box. A text the
      split gave the whole picture or a shared frame takes it wherever it is; a text with a frame of its own only when the
      line lies on or next to that frame (grown by its own size), so a second 颐堤港店 elsewhere cannot pull it away */
-  let pdAt=null;
+  let pdAt=null, pdFail=false;
   if(PD_ON&&pageOfShot(shot)){ try{ const cv=document.createElement("canvas"); cv.width=bm.width; cv.height=bm.height; cv.getContext("2d").drawImage(bm,0,0);
       const lines=await pdRead(cv), m=pdMatch(todo.map(d=>d.c),lines);
       pdAt=m.map((l,i)=>{ if(!l) return null; const f=todo[i].frame, q={x:l.x/cv.width,y:l.y/cv.height,w:l.w/cv.width,h:l.h/cv.height};
         const cx=q.x+q.w/2, cy=q.y+q.h/2, own=!fallbackFrame(todo[i]);
         if(own&&!(cx>f.x-f.w&&cx<f.x+2*f.w&&cy>f.y-f.h&&cy<f.y+2*f.h)) return null;
         const p=q.h*PD_ROOM; return {x:Math.max(0,q.x-p),y:Math.max(0,q.y-p),w:Math.min(1,q.x+q.w+p)-Math.max(0,q.x-p),h:Math.min(1,q.y+q.h+p)-Math.max(0,q.y-p)}; }); }
-    catch(e){ pdAt=null; logErr("paddle",e&&e.message||String(e)); } }
-  for(let i=0;i<todo.length;i++){ const d=todo[i], b=(pdAt&&pdAt[i])||snapRegion(d,bm,bm.width,bm.height); REGFIX.set(cbKey(d),b); if(b) moved++; await yieldNow(); }
+    catch(e){ pdAt=null; pdFail=true; logErr("paddle",e&&e.message||String(e)); } }
+  for(let i=0;i<todo.length;i++){ const d=todo[i], b=(pdAt&&pdAt[i])||snapRegion(d,bm,bm.width,bm.height); if(b||!pdFail) REGFIX.set(cbKey(d),b); if(b) moved++; await yieldNow(); } /* v710: a text the reader could not be asked about (its files not yet downloaded, offline) is not stored as "no snap" — v688 kept that null for good, and the multicard stayed at the AI's loose boxes with the reader installed; it is measured again next time */
   bm.close(); regSave(); if(!moved) return;
   /* the regions on screen move to their measured place; no render, so nothing the learner is doing is interrupted */
   for(const d of todo){ const b=REGFIX.get(cbKey(d)); if(!b) continue; const pc=x=>(x*100).toFixed(2)+"%";
@@ -5348,7 +5350,7 @@ function mountPad(card,d,c,tg,st,cur){
       if(got.slice(0,3).includes(cur.glyph)){ charDone(false); } else { st.miss++; st.maxMiss=Math.max(st.maxMiss,st.miss); acts(); if(note) note.textContent=t("Not recognized — try cleaner, well-separated strokes."); } } /* v589: a refused Done is a try, so Skip arrives after four of them */
     catch(err){ if(note) note.textContent=t("Reading failed: {0}",err&&err.message||err); } };
   paint(); acts();
-  if(!STROKES) loadStrokes().then(()=>{ if(cv.isConnected&&S.pad===st) render(); }).catch(err=>{ logErr("strokes",err&&err.message||err); if(cv.isConnected&&S.pad===st) render(); }); /* v708: a failed load redraws too — the waiting pad becomes the free pad with Done, as before v706 */ /* the first card of a session loads the medians; the pad redraws with the template once they are in */
+  if(!STROKES){ const first=!STROKES_FAIL; loadStrokes().then(()=>{ if(cv.isConnected&&S.pad===st) render(); }).catch(err=>{ if(!first) return; logErr("strokes",err&&err.message||err); if(cv.isConnected&&S.pad===st) render(); }); } /* v708: a failed load redraws too — the waiting pad becomes the free pad with Done, as before v706. v710: only the FIRST failure redraws and is logged — that redraw mounts the pad again, which tries the file again, and an offline phone went round fetch → fail → redraw without end, wiping every stroke in progress; later tries stay silent and the template appears when one lands */ /* the first card of a session loads the medians; the pad redraws with the template once they are in */
   /* and then, behind it and without anything waiting for it, the real outlines — the brush draws until they land (v517) */
   if(!OUTLINES) loadOutlines().then(()=>{ if(cv.isConnected&&S.pad===st) paint(); }).catch(err=>{ logErr("outlines",err&&err.message||err); });
   card._pad={st,strokes,paint,lvl,free:()=>free}; /* used by the tests */
@@ -6032,7 +6034,7 @@ function detailSwipe(list,li,main,keepFrom){
       const fp=S.fullPic; S.fullPic=false;
       const h=isPage(nd)?{html:pageBodyHTML(nd),cls:"bare"}:{html:detailCardHTML(nd,true),cls:"study detail"}; /* v615 (H: "Jetzt springen die Karten in der vertikalen beim swipe (Cards View)"): the neighbour wears the open card's own classes — as a bare .card it took the plain card's padding, and its photo rode in 10 px lower than where it lands, then hopped up at the snap (measured the same on v600) */ /* no swipe hint on a page: its line is a count, and the ordinary detail's hint already teaches the gesture (v226 takes hints away after 20 reviews anyway) */
       S.fullPic=fp; return h; },
-    go:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return; if(LIST_CARD) LIST_CARD=nd.id;
+    go:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return; if(LIST_CARD&&!keepFrom) LIST_CARD=nd.id; /* v710: a swipe between a multicard's texts (v707) leaves the Multicards list's remembered tile alone — a text's id is no tile there */
       /* the card you swipe to is not the one you came into: its back button would otherwise claim a way back that
          belongs to another card (v492) — true of the page flag of v453 as well, which survived a swipe until now */
       S.detail=nd.id; if(!keepFrom) S.detailFrom=null; S.fullPic=false; render(); },
@@ -6050,7 +6052,7 @@ function charReadings(ch,list){ const n=new Map();
   for(const d of list){ const cj=[...d.c].filter(x=>CJK.test(x)), toks=String(d.p||"").toLowerCase().split(/[\s\/·,;]+/).filter(Boolean);
     if(toks.length!==cj.length) continue; cj.forEach((x,k)=>{ if(x===ch) n.set(toks[k],(n.get(toks[k])||0)+1); }); }
   return [...n].sort((a,b)=>b[1]-a[1]).map(([p])=>p); }
-function backToChar(){ const cb=S.charBack; S.detailFrom=null; S.charBack=null; S.fullPic=false; if(cb&&cardOf(cb.from)){ S.detail=cb.from; S.charPage=cb; } else S.detail=null; render(); window.scrollTo(0,0); }
+function backToChar(){ const cb=S.charBack; S.detailFrom=cb&&cb.back||null; S.charBack=null; /* v710: the card under the page keeps its own way back (its multicard, the photo, the session) — v691 set it to the list */ S.fullPic=false; if(cb&&cardOf(cb.from)){ S.detail=cb.from; S.charPage=cb; } else S.detail=null; render(); window.scrollTo(0,0); }
 function renderCharPage(main){
   const cp=S.charPage, ch=cp.ch, list=charCards(ch);
   const row=d=>{ const pic=d.img?`<img src="${urlOf(d.img)}" alt="">`:`<span class="ph hanzi">${esc([...d.c].find(x=>CJK.test(x))||"")}</span>`;
@@ -6096,7 +6098,7 @@ function renderCardDetail(main,c){
     const dcard=main.querySelector(".card.study.detail"), tg=d.c?padTargets(d):[];
     dcard.querySelectorAll(".chrow .ch").forEach(b=>{ const i=+b.dataset.i, x=tg[i]; if(!x) return; b.onclick=e=>{ e.stopPropagation(); S.detailCh=detailCh(d)===i?null:{c:d.id,i}; render(); }; }); /* a tap lights the word and reads it under the answer; the same character again puts it out — there is no pad here to keep it */
     const lx=detailLit(d,tg); if(lx) padLine(d,lx); /* v531: the first word's line when nothing is tapped */
-    { const cl=$("#d-chpage"); if(cl) cl.onclick=e=>{ e.stopPropagation(); S.charPage={ch:cl.dataset.ch,from:d.id}; render(); window.scrollTo(0,0); }; } /* v691 */
+    { const cl=$("#d-chpage"); if(cl) cl.onclick=e=>{ e.stopPropagation(); S.charPage={ch:cl.dataset.ch,from:d.id,back:S.detailFrom}; render(); window.scrollTo(0,0); }; } /* v691; v710: the card's own way back rides along */
     chrowFit(dcard);
     const pg=frontPage(d); if(pg&&!S.fullPic) fitPageCover(dcard); /* D5, as on the study card */
     wireScript(dcard); /* v604 */
@@ -6331,6 +6333,7 @@ function renderEdit(main,c){
     if(removeImg){ delete upd.img; delete upd.imgFull; delete upd.shot; delete upd.frame; dropThumb(c); } /* shot too — without it the front would still show the inbox photo through fullPhoto (v214) */
     else if(handoff){ const win=await windowCut(rid,handoff.rect,ratioOf(upd)); upd.img=await cardJpeg(win?win.blob:handoff.blob); upd.frame=photoFrame(handoff.rect); dropThumb(c); } /* the window around the frame (v329, at CARD_RATIO) */
     else if(recropImg){ const win=recropRect?await windowCut(rid,recropRect,ratioOf(upd)):null; upd.img=await cardJpeg(win?win.blob:recropImg); if(recropRect) upd.frame=photoFrame(recropRect); dropThumb(c); } /* the crop framed again in this form (v239) with its frame (v244), as fractions of the whole photo even when framed in the window (v247) */
+    if(removeImg||handoff||recropImg) delete upd.dish; /* v710: a picture framed by hand, or taken away, is no longer the dish's own photo (v705) */
     if(upd.mt){ upd.mt={...upd.mt, verified:true, pending:false}; delete upd.mt.suspect; } /* a human edited it */
     if(aiApplied) upd.mt={...(upd.mt||{}), src:"llm", verified:true, pending:false};
     else if(aiLate){ upd.mt={...(upd.mt||{}), src:"dict", verified:false, pending:false}; delete upd.mt.suspect; } /* unverified until the running AI check answers (v341); its failure marks the card pending for the next auto run */
@@ -10089,9 +10092,9 @@ function loadStrokes(){
       const i=line.indexOf("\t"); if(i<1) return; const ch=line.slice(0,i); let st; try{ st=JSON.parse(line.slice(i+1)); }catch(e){ return; }
       if(Array.isArray(st)&&st.length) STROKE_OF.set(ch,st); /* the pad's templates (v512): the medians as the file has them */
       const prep=prepStrokes(st); if(!prep) return; const a=byCount.get(prep.length)||[]; a.push({ch,st:prep}); byCount.set(prep.length,a); });
-    PARSE_MS.strokes=Math.round(performance.now()-t0); STROKES=byCount; return STROKES;
+    PARSE_MS.strokes=Math.round(performance.now()-t0); STROKES=byCount; STROKES_FAIL=false; return STROKES;
   })().catch(err=>{ _strokesLoading=null; STROKES_FAIL=true; throw err; });
-  STROKES_FAIL=false; return _strokesLoading;
+  return _strokesLoading; /* v710: a try does not clear the failure — the pad stays free while the file is tried again (a cleared flag put it back to waiting, and a second failure left it there) */
 }
 const STROKE_PTS=8, STROKE_SKIP=0.32;
 /* the strokes scaled into the unit square as a whole (aspect kept, centred) and resampled to STROKE_PTS points each */

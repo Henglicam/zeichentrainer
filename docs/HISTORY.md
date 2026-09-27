@@ -39,6 +39,37 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v710, 2026-09-27)
+- **Seven of the logic review's findings fixed (v710, H: "Jetzt App bitte nochmal auf Logikfehler und Inkonsistenzen
+  untersuchen" — the logic half, a reviewer over the v686–v709 diff, each finding then read in the code and driven in the
+  harness).** (1) **v708's fallback looped offline**: the failed load redrew the pad, the redraw mounted it again, the mount
+  tried the file again — the harness counted 290 fetches of `strokes.txt.gz` in four seconds and the error log full (100
+  rows) on a fresh offline install, every stroke in progress wiped. Now only the FIRST failure logs and redraws
+  (`STROKES_FAIL` is no longer cleared by a try, only by a landed file); later mounts retry silently, 2 fetches in the same
+  four seconds. (2) **v688 stored "no snap" for good** when the phone's reader could not be loaded (its 30 MB not yet
+  downloaded, offline): `refineShot` kept every null in `REGFIX` and `regfix`, so the multicard stayed at the AI's loose
+  boxes with the reader installed later. A pass whose `pdRead` threw stores only what it measured; the next session measures
+  again. (3) **The character page (v691) lost the card's way back**: `S.charPage` carries `back:S.detailFrom` now and
+  `backToChar` restores it — multicard → text → Cards with 温 → a row → back → back showed "← Cards" and landed in the
+  flashcard list, where a multicard's text is not. (4) **A generated dish flashcard (v705)**: a tap on the dish toggled
+  `S.fullPic` with no whole photo to show, `frontPic` fell through to the bare character and nothing toggled back; the dish
+  box offers the tap only when there is a whole photo. (5) **`pageShorts` (v698)** kept its session guard after a failed
+  call (relay down, VPN toggled for Qwen), so no text of that multicard got its description until a restart; the guard is
+  dropped in the catch and the next visit asks again. (6) **v707's swipe** overwrote `LIST_CARD` with the text's id, so
+  ← Multicards found no tile to scroll to; a swipe with `keepFrom` leaves it. (7) **`dish` outlived its picture**: the
+  recut pass skips dish cards (a bump of `RECUT_V` would have replaced every dish with its name's cut) and the Edit form
+  drops the mark when the picture is framed again or taken away. Also: the price regexes — 元 followed by a character is
+  a word (第2元素, 元旦 no longer count as prices, `PRICE_RE`), `noPriceM`'s `\b` after 元 never matched at a line's end
+  ("… chicken 38元" kept its price), `noPricePy` drops only the ¥ token wherever it stands (a price first took the whole
+  pinyin line); `.diag` is selectable again so `copyText`'s fallback advice ("select the text") can be followed, and
+  styles.css's "the meaning stays selectable" comment (false since v694) is rewritten. **Not built:** chunking the
+  short-description call (a 30-text menu is near `max_tokens` 4000; v709's "What is sent" says one request, so chunking
+  would change that text — named to H); a several-prices line ("小份12元 大份18元") shows the first. Harness `v710.js`
+  (seven cases, each with a `[control]`): 7 FAIL on v709 → 7 PASS on v710; `padfail`, `chpage`, `itemswipe`, `menu`,
+  `dish`, `dishlearn`, `regkeep`, `shorts`, `mcacts`, `actsbottom` unchanged. TO_TEST: the dish flashcard's Learn zoom
+  (its picture is now the dish cut, so the zoom searches it for the name — sane on the phone?) and the char page's way
+  back. Not yet field-checked.
+
 ## Current state (PWA v709, 2026-09-27)
 - **The texts say what the app does again (v709, H: "Jetzt App bitte nochmal auf Logikfehler und Inkonsistenzen untersuchen"
   — the consistency half of the review pass; the logic half found v708).** Found by rendering and grepping, all fixed here:
