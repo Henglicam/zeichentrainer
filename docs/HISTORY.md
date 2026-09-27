@@ -39,6 +39,15 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v700, 2026-09-27)
+- **A multicard's text frames only itself on the photo (v700, H: "Wenn ich eine Karte einer Multicard öffne, dann sollte in
+  dem Bild bitte nur der Text eingerahmt sein, der dieser Karte zugeordnet ist").** The opened text's screen showed the
+  multicard's photo with every text's frame, its own lit (v452's page front); a flashcard made from a multicard text has
+  shown its own frame alone since v499. `pageHTML` now passes `only` for a multicard's own text too (`inPage(d)`), so its
+  siblings are not in the markup; the multicard's own screen still frames every text, and a marked photo's cards (v448) keep
+  v452's front. Harness `onlyme.js`: the text screen of 左筒 draws one frame, c:左筒 (v699 drew three) — 1 flip; the
+  multicard's screen with three frames as a guard. Not yet field-checked.
+
 ## Current state (PWA v699, 2026-09-27)
 - **A menu multicard lists its dishes whole, with their prices and a dish description (v699, H: "if the multicard is a menu
   to have the full list of meals below it and not only the name of the meal but also the description of the meal and the
