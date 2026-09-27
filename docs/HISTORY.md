@@ -39,6 +39,17 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v690, 2026-09-27)
+- **The Cards search finds pinyin typed without tones (v690, H: "Bitte auch noch mal das Design überdenken. Unter Cards sind
+  die Karten ein Nachschlagewerk", then "Go B" of four proposals, and "Ship B, skip A").** The search matched a substring of
+  the characters, pinyin, meanings, flag note and tags — so pinyin had to be typed with its tone marks and spaces, which no
+  phone keyboard does: "wendu" found nothing. The pinyin (a multicard's texts' too) is now also compared with its tone
+  marks, spaces, apostrophes and tone digits taken out, and a v in the query reads as ü: wendu, wen du, wen1du4, wēndù,
+  lvcha, lücha and lu cha all find their cards. Characters, meanings and tags match as before. **Proposal A** (the Cards tab
+  as a dictionary list — photo small, characters, pinyin, meaning in one row) was shown as a mockup and **not taken**; C
+  (character pages) comes as its own version. Harness `pysearch.js`: 5 flips against v689 (wendu, wen du, wen1du4, lvcha
+  and its variants, wen finding both 温 cards), 4 controls (toned pinyin, 温, a meaning, no match). Not yet field-checked.
+
 ## Current state (PWA v689, 2026-09-27)
 - **Generate flashcard is a quiet grey text button (v689, H: "In den Karten unter Multicards steht ziemlich prominent
   Generate Flashcard. Das ist aber die absolute Ausnahme. Bitte weniger prominent darstellen").** The look-up sheet on a
