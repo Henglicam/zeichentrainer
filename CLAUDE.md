@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v709, 2026-09-27)
+## Current state (PWA v710, 2026-09-27)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -67,7 +67,7 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   checked by the AI's picture beside it — a different answer flags the card and takes the AI's reading (`sureCheck`,
   v646–v652). It places a multicard's labels (`pdMatch`, `aiBoxCal`, v638–v644; single lines and two-line pairs compete,
   v687); regions snap onto their texts at display (`refineShot`/`snapRegion`, v620/v628), kept in the `regfix` settings row
-  so they start in place (v688).
+  so they start in place (v688; a pass the reader could not join stores nothing, v710).
 - **Owner tools** — Zoom check (v627), Re-read all (v645), Check texts (v650), Rebuild all with Undo (v651/v652; Menus alone, v702). Background
   saves rebuild the Learn queue through `requeue()` (v670).
 - **The Learn zoom's place** — the phone's reader first (`pdCharBoxes`, v653): characters matched to its lines by LCS, then
@@ -115,7 +115,7 @@ timestamp. A card:
   alts:[…], ai:{zh,p,m,note,ok,bad,at,model}, aiNo:"<fingerprint of a dismissed suggestion>",
   mt:{src:"llm"|"dict"|"phrasebook"|"nmt"|"gloss", verified, pending, suspect},
   reading:{rect,at,failed},                            // saved before its reading finished
-  page:"page#…", dish:true,                            // one text of a multicard; a menu dish whose picture is its photo (v705)
+  page:"page#…", dish:true,                            // one text of a multicard; a menu dish whose picture is its photo (v705; a new cut clears it, v710)
   from, fromT, of }                                    // a flashcard generated from a multicard text
 ```
 
@@ -150,7 +150,7 @@ after the layout settles (v521/v532).
   template with the next stroke lit; a stroke that fits snaps into ink, one that does not
   **shakes and is gone** (v592). Three levels by `charWrites[ch]` (trace / faint template /
   empty pad). Two misses offer **Show me**, four offer **Skip**, which fills the character in and
-  grades the card `again`. The template is the real Kai outline (`outlines.txt.gz`, v517). Until the stroke file is parsed the pad shows its grid alone — no stand-in glyph (v706); a failed load makes it the free pad (v708).
+  grades the card `again`. The template is the real Kai outline (`outlines.txt.gz`, v517). Until the stroke file is parsed the pad shows its grid alone — no stand-in glyph (v706); a failed load makes it the free pad (v708), once — later tries are silent (v710).
 - **The grade is the writing.** The last stroke of the last character writes the review through
   `recordGrade`, counts the points (**one point per character written without help**, v546),
   bumps `charWrites`, and queues the card **once more `REP_GAP` 3 cards on** (a repeat pass).
@@ -184,9 +184,9 @@ two-line title (v461–v597). **Two tabs, Cards and Multicards** (v477); the fil
 search also takes toneless pinyin (`toneless`, v690; H skipped a dictionary-row list, proposal A); a long press marks (v354);
 the list keeps its place (v352/v445). The **open card** swipes through the list (v445); Details, then its actions at the foot (v703): Test this card · Edit | Star ·
 Flag | Delete; its line under the character row ends in **Cards with 行 ›**, the character's page — its readings in your
-cards and every card that holds it (v691). A **multicard's own text**: it swipes to the multicard's next text (v707); its photo frames it alone (v700); + Flashcard (Flashcard › once made) | Edit, Flag |
+cards and every card that holds it (v691; the card under it keeps its own way back, v710). A **multicard's own text**: it swipes to the multicard's next text (v707); its photo frames it alone (v700); + Flashcard (Flashcard › once made) | Edit, Flag |
 Delete (v692/v695); the pop-up over the photo carries **no action** (v496/v692). The multicard: **Add a text**, Delete card
-(v635); its tags once under its title, its texts' rows show a short one-sentence description (`dsh`, all texts in one AI call at creation and once when an older multicard is opened, `pageShorts`) and no flashcard ring; the long one stays on the opened text (v696–v698). On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right, name/pinyin/meaning without it and whole, and a dish description (`priceOf`, `isMenuPage`, v699); a dish with its own photo on the menu takes it, with its name and price, as its picture and shows it on its own screen (the picture model's `photo` box, `dish`, v701/v705).
+(v635); its tags once under its title, its texts' rows show a short one-sentence description (`dsh`, all texts in one AI call at creation and once when an older multicard is opened, `pageShorts`; a failed call is asked again on the next visit, v710) and no flashcard ring; the long one stays on the opened text (v696–v698). On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right, name/pinyin/meaning without it and whole, and a dish description (`priceOf`, `isMenuPage`, v699); a dish with its own photo on the menu takes it, with its name and price, as its picture and shows it on its own screen (the picture model's `photo` box, `dish`, v701/v705).
 
 ### Camera — photo to card
 The Camera tab is the camera: the **shutter card** (Take photo, From album) centred, work under it (v466/v470); a photo that
