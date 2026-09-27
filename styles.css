@@ -261,6 +261,8 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .ct .c{font-family:var(--hanzi);font-size:19px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .ct .pills{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0} .ct .pills .pill{margin-left:0;font-size:10px;padding:1px 7px} /* the pills have their own line under the pinyin, the text keeps its room (v126/v134) */
 .ct .p{font-size:13px;color:var(--label2)}
 .ct .m{font-size:14px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ptags{display:flex;flex-wrap:wrap;gap:6px;margin:6px 2px 4px} .ptags .pill{margin-left:0}
+.ct .d{font-size:13px;line-height:18px;color:var(--label2);margin-top:3px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;white-space:normal} /* v696: a multicard text's description in its row, clamped on a whole-pixel line box (v593) */
 .cs{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
 /* the six buttons of the card detail. minmax(0,1fr) and a label that may wrap, since v472: `1fr` is minmax(auto,1fr),
    so a nowrap label made the track's min-content its own width and the whole grid overflowed the card — measured at
