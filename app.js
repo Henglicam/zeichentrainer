@@ -4441,8 +4441,15 @@ async function autoZoom(card,d,c,tg,st,cur){
      überhaupt nicht dem character" on 无名, both logged "ink, unsure"; 贵州茅台酒 at v664 the same): a place only the ink search
      guessed, unsure, is wrong too often to zoom on — v664 caught it only when it lay off the reader's lines. Now any place neither
      the reader nor a sure ink cut gives shows the text whole: the reader's lines when it saw some, else the card's own frame */
-  const area=!pf&&pb&&pb.area, off=!pf&&!(found&&found.ok);
-  if(off){ sp=area||{x:0,y:0,w:1,h:1}; how=area?"the reader's text, whole":"the text, whole"; }
+  const area=!pf&&pb&&pb.area;
+  /* v684 (H: "Hier hat er … nicht auf die dritte Zeile gezoomt", 有些时候/我特别/喜欢/爸爸 — the card's picture ends above 爸爸, the
+     reader placed the three lines it holds, and the ink search put a "sure" box for 爸 on 喜, the character the reader had
+     already placed there, so the pad said 爸 and the photo showed 喜): an ink box whose middle lies on a reader box of another
+     character is that character, not this one — the card's text whole instead */
+  const taken=!pf&&found&&found.ok&&pb&&pb.boxes&&pb.boxes.some((b,j)=>b&&j!==li&&found.x+found.w/2>=b.x&&found.x+found.w/2<=b.x+b.w&&found.y+found.h/2>=b.y&&found.y+found.h/2<=b.y+b.h);
+  const off=!pf&&(!(found&&found.ok)||taken);
+  if(taken){ sp={x:0,y:0,w:1,h:1}; how="ink on another character, the text whole"; }
+  else if(off){ sp=area||{x:0,y:0,w:1,h:1}; how=area?"the reader's text, whole":"the text, whole"; }
   if(!cb) cb={why:""};
   const r=geom.rectOf(sp), bw=box.clientWidth, bh=box.clientHeight; if(!r.w||!r.h||!bw||!bh) return;
   const cx=r.x+r.w/2, cy=r.y+r.h/2;
