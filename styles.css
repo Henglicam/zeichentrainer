@@ -723,10 +723,6 @@ body.noscroll{overflow:hidden}
 .pagecard+.clist{margin-top:0}
 /* the two states, where a card is listed or opened (v461): a red cross for one still to learn, a green check for one
    ticked off. Colour is never the only channel — the glyph is, which is what the owner asked for. */
-.crow .pdot{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--tint);margin-right:6px;vertical-align:middle;flex:none}
-.crow .pdot.made{background:var(--ok)} /* v488: this text has a flashcard */
-.crow .pdot.none{background:transparent;box-shadow:inset 0 0 0 1.5px var(--label3)} /* and this one has not — an empty ring, never a red cross, which would claim you do not know a text nobody asked you to learn */
-.crow .pdot svg{width:12px;height:12px;stroke:#fff;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
 /* the Multicard's row: the thumbnail is a stack of plates with the count on it, and a bar says how far through it you
    are. The three plates together are exactly the 124 x 70 the row's first column already reserves, so no row grows. */
 
