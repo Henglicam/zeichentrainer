@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=708; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=709; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3175,7 +3175,7 @@ function renderMore(main){
     <div class="mrow"><div style="flex:1"><div class="t">${t("Language")}</div><div class="s">${t("The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.")}</div><div class="chipset" id="lang-chips" style="margin-top:8px">${LANGS.map(([c,n])=>`<button class="chip${LANG===c?" on":""}" data-lang="${c}">${n}</button>`).join("")}</div></div></div>
     ${translateRowHTML()}
     ${undoRunHTML("meanings")}
-    <div class="mrow"><div><div class="t">${t("AI review")}</div><div class="s" id="ai-status"></div><div class="s" style="margin-top:6px">${t("What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count.")}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> ${t("Check every new card with the AI automatically (when online)")}</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
+    <div class="mrow"><div><div class="t">${t("AI review")}</div><div class="s" id="ai-status"></div><div class="s" style="margin-top:6px">${t("What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count. On a multicard, all its texts go out in one request with the multicard's title, for a one-line description each — when it is made, and once when you open an older one.")}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> ${t("Check every new card with the AI automatically (when online)")}</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
     ${S.admin?`<div class="aiform" id="ai-form" hidden>
       <div class="field"><label>Provider</label><div class="chipset" id="ai-providers">${Object.entries(AI_PROVIDERS).map(([k,v])=>`<button class="chip" data-aipv="${k}">${esc(v.short)}</button>`).join("")}</div>
         <div class="badge" id="ai-acct" style="margin-top:8px"></div>
@@ -3383,7 +3383,7 @@ const GUIDE=()=>[
   {h:t("Learn"),fig:GFIG.learn(),p:[
     t("Due cards first, then up to eight new ones. The photo is the question and the pad is the answer: trace the lit stroke and it moves on by itself, character by character.")
       +" "+t("A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back."), /* v568: the one thing a learner cannot find by tapping, so the guide says it (the v259 rule); the empty deck says it in its own short words beside the drawn card since v569, so this key is the guide's alone. v589: rewritten as the memory loop H described — the photo is the question, the tap uncovers the answer. Until v588 it named the tap as a view switch ("a tap gives the whole text the top of the card"), which names the characters the photo already shows and never names the pinyin and the meaning. */
-    t("Stuck? Show me draws the stroke and Skip fills the character in. The whole card — pinyin, meaning and what the text is about — is one tap away at its foot. Swipe sideways to pick another card — nothing is graded by swiping.")
+    t("Stuck? Show me draws the stroke and Skip fills the character in. Details — pinyin, meaning and what the text is about — is one tap away at its foot. Swipe sideways to pick another card — nothing is graded by swiping.")
       +" "+t("Edit sits under Details too, for a card that needs fixing.") /* v654: the v259 rule — the fold gained Edit */
       +" "+t("Tap the star counter at the top to see how your points are counted.")] /* the counter is a tap target with no other affordance (v546), so this one sentence survives the cut */
     .concat(lockOn()?[t("Press and hold a character to walk through every card that has it; press and hold it again to come back.")]:[])}, /* v531: only while the lock is on */
@@ -3436,7 +3436,7 @@ const TB_ICON={ /* v655: the study card's toolbar, drawn rather than typed — �
   edit:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.2 5.3l3.5 3.5M4.5 19.5l.9-4.3L16.6 4a1.6 1.6 0 0 1 2.3 0l1.1 1.1a1.6 1.6 0 0 1 0 2.3L8.8 18.6z"/></svg>`};
 const flagIcon=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4M6 4.5h11.5l-2.6 4.25 2.6 4.25H6"/></svg>`; /* v658: the flag, drawn like the star; the study card's toolbar and fold row since v667 */
 const starIcon=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.63 5.33 5.87.86-4.25 4.14 1 5.85L12 17.02l-5.25 2.76 1-5.85L3.5 9.79l5.87-.86z"/></svg>`;
-const foldMarks=d=>d.star&&!inPage(d)||d.flag?`<span class="fmarks" aria-hidden="true">${d.star&&!inPage(d)?starIcon:""}${d.flag?flagIcon:""}</span>`:""; /* v667: a starred or flagged card says so beside "Whole card", off the photo */
+const foldMarks=d=>d.star&&!inPage(d)||d.flag?`<span class="fmarks" aria-hidden="true">${d.star&&!inPage(d)?starIcon:""}${d.flag?flagIcon:""}</span>`:""; /* v667: a starred or flagged card says so beside "Details", off the photo */
 const starHTML=d=>`<span class="star${d.star?" on":""}" data-star="${esc(d.id)}" role="button" tabindex="-1" aria-pressed="${d.star?"true":"false"}" aria-label="${t("Star")}">${starIcon}</span>`;
 /* the tap is the learner's, not the scroll's: a finger that arrests a flick still fires a click on Chrome/Android, and the page
    has moved between the press and that click — a deliberate tap on a list at rest has not. No timer, so a fast tap is never eaten. */
@@ -3692,7 +3692,7 @@ function backHTML(d,o){ const srcHere=!(o&&o.noSrc); /* noSrc: the front of this
 /* the card's own description (v529): in the app's language when it has one. v585 (H: "Ich moechte, dass wenn ich auf Whole
    Card tippe, sich Whole Card aufklappt, da der ganze Inhalt von der Karte zu sehen ist, plus der Inhalt von Explain. Ich
    moechte nicht, dass Explain ein extra Link ist, wo ich extra nochmal auftippen muss. Der Inhalt muss einfach da sein, von
-   Anfang an."): it is INSIDE the "Whole card" block again, under the meaning, on the study card and on the open card alike,
+   Anfang an."): it is INSIDE the "Details" block again, under the meaning, on the study card and on the open card alike,
    so one tap on the fold gives the whole card AND what it is about, with no second thing to tap. v583's row at the foot and
    v584's pad reserve for its button are both reversed with it. A card that has none yet asks for one BY ITSELF while the
    block is open (explainAuto, gated on the AI-review switch), so the content is simply there rather than a tap away; only a
@@ -5792,7 +5792,7 @@ function recapHTML(d){
      under it. Splitting 供应 in half is a real fault; breaking a seven-syllable name over two lines is what a book does. */
   const chunk=p=>{ const syl=String(p).trim().split(/\s+/);
     return syl.length>RECAP_WSYL?syl.map(x=>`<span class="w">${esc(x)}</span>`).join(" "):`<span class="w">${esc(p)}</span>`; };
-  /* v616: the SYLLABLES are the card's own pinyin (d.p, what "Whole card" shows), and the gloss only says where the words
+  /* v616: the SYLLABLES are the card's own pinyin (d.p, what "Details" shows), and the gloss only says where the words
      break. Until v615 the gloss's own syllables were printed — the dictionary's reading at the time the photo was read —
      so a pinyin the AI or H corrected later never reached the recap, and a stale gloss printed another text entirely. The
      words take the pinyin's syllables in order, as many as each has characters; when the counts do not agree the pinyin
@@ -5912,7 +5912,7 @@ function renderCards(main){
 /* THE OPEN CARD IS THE STUDY CARD WITHOUT THE PAD (v518, H: "Cards overview should follow layout. Without drawing pad: edit,
    star, etc instead"): the photo in the one box shape, the character row grouped by word, the answer block — open here,
    since this screen is for looking a card up, and folded by its own button —, the line under it for a tapped word, and
-   where the pad would stand the card's actions. Until v517 the detail was the pre-v512 front-and-back preview, which no
+   the card's actions at its foot under Details (v703; where the pad would stand until then). Until v517 the detail was the pre-v512 front-and-back preview, which no
    other screen looked like any more. A card still waiting for its reading keeps the reading bar in the text box (v237). */
 const detailCh=d=>(S.detailCh&&S.detailCh.c===d.id)?S.detailCh.i:null; /* the character tapped on the open card, held with the card so it cannot survive onto another */
 /* v593 (H: "Share Funktion loeschen", then "I mean share cards"): the card's own Share is gone, and with it the picture
@@ -5922,7 +5922,7 @@ function detailActsHTML(d){
   /* v594 (H: "Flag und Delete sollten nebeneinander in eine Reihe kommen"): Flag and Delete are ONE row, always — so
      neither of them spans, and what stands above them pairs up by itself: Test this card takes the whole row as the
      primary always has (.detailacts .primary), then Edit and Star. A multicard's own text has neither Test nor Star
-     (v498/v493), so Edit is alone above the pair and takes the whole row rather than leaving a hole beside it. */
+     (v498/v493); since v695 + Flashcard (Flashcard › once made) shares the row with Edit, and Edit spans the row only for a text with no characters yet. */
   const star=!inPage(d);
   return `<div class="detailacts">
       ${d.c&&!inPage(d)?`<button class="btn primary" id="d-test">${t("Test this card")}</button>`:""}
@@ -5931,14 +5931,14 @@ function detailActsHTML(d){
       ${star?`<button class="btn${d.star?" on":""}" id="d-star">${d.star?"\u2605 "+t("Starred"):"\u2606 "+t("Star")}</button>`:""}
       <button class="btn${d.flag?" on":""}" id="d-flag">${d.flag?t("card:\u2691 Flagged"):t("\u2691 Flag")}</button> <!-- v536: the Learn back's own two words (v431). Measured at 393 and 360 px, the long phrase broke across two lines in en, de, es, fr, id, ru and vi - three in id at 360 - and a grid row is as tall as its tallest cell. -->
       <button class="btn danger" id="d-del">${t("Delete card")}</button>
-    </div>`; } /* v692 (H: "Mach doch das Generate Flashcard und Edit und Delete und alles sowas in die Karte selber, wenn man die in einer Multicard öffnet, zusammen rein", then "The text's own screen"): Generate flashcard — Open the flashcard once made — stands beside Edit, and the pop-up over the photo is a look-up with no button at all (v496's rule, now without exception). Before: a multicard's own text offers Edit, Flag and Delete and nothing else (v498): Test would study a text that is never in Learn (v487), Share would send a row of the multicard as if it were a card, and the star left this screen at v493 */
+    </div>`; } /* v692 (H: "Mach doch das Generate Flashcard und Edit und Delete und alles sowas in die Karte selber, wenn man die in einer Multicard öffnet, zusammen rein", then "The text's own screen"): + Flashcard — Flashcard › once made — stands beside Edit, and the pop-up over the photo is a look-up with no button at all (v496's rule, now without exception). Before: a multicard's own text offers Edit, Flag and Delete and nothing else (v498): Test would study a text that is never in Learn (v487), Share would send a row of the multicard as if it were a card, and the star left this screen at v493 */
 function detailCardHTML(d,sw){
   const p=S.progress[d.id], pg=frontPage(d); /* v489: the multicard's own photo on a generated card's front, and its name as the pill — so the back drops the duplicate */
   if(!d.c) return `${tagsHTML(d,!p)}<div class="front tap" id="d-reveal">${frontHTML(d,{page:true,tap:true})}</div>
       ${d.reading&&d.reading.failed?"":`<div class="hint">${t("The text, pinyin and meaning follow when the reading is done.")}</div>`}${flagNoteHTML(d)}${detailActsHTML(d)}`; /* a card still waiting for its reading has no back (v237) */
   /* v531 (H: "Cards View dem Learn View nachziehen"): the open card is the study card's own order of v527 — the photo, the
      character row, the WORD's line under the row (the tapped character's word, else the first — always there, as the pad's
-     line is in Learn), the actions where the pad stands, and the fold "Whole card" at the foot, leading with the card's
+     line is in Learn), the fold "Details" (v704; "Whole card" until then) and, since v703, the actions at the foot under it, leading with the card's
      characters. Until v530 the fold stood above the line under its own label "Pinyin and meaning", the v518 shape, and the
      line showed only for a tapped character. The block stays open by default here — this is the screen for looking a card up. */
   const tg=padTargets(d), li=detailCh(d), lit=detailLit(d,tg), open=!S.detailHide;
@@ -6109,7 +6109,7 @@ function renderCardDetail(main,c){
   $("#d-edit").onclick=()=>{ S.editing=c; render(); };
   if($("#d-star")) $("#d-star").onclick=async()=>{ await setStar(c,!d.star); render(); }; /* the learner's own mark (v425); a multicard's own text has no such button (v493) */
   $("#d-flag").onclick=async()=>{ await setFlag(c,!d.flag); render(); };
-  { const mk=$("#d-make"); if(mk) mk.onclick=async()=>{ mk.disabled=true; bump("regionCards"); await makeFlashcard(c); setStats(); render(); }; /* v692: the button turns into Open the flashcard */
+  { const mk=$("#d-make"); if(mk) mk.onclick=async()=>{ mk.disabled=true; bump("regionCards"); await makeFlashcard(c); setStats(); render(); }; /* v692: the button turns into Flashcard › */
     const of=$("#d-openfc"); if(of) of.onclick=()=>{ const fc=madeFrom(cardOf(c)); if(!fc) return; S.cardsTab="cards"; S.detail=fc.id; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); }; }
   wireSay(); wireLinks(); wireSrc(); wireExplain(); if(!S.detailHide) explainAuto(d); else explainSoon(d); /* v585: the same on the open card, whose block stands open by default; v586: folded away, it is fetched a moment later all the same */ /* v536: nothing wires a parts row here - the open card passes noParts, so there is no .chars row on it; the camera's finished card is the one screen that still draws one and wires it itself (v589 removed the helper that had no caller left) */
   wireAi();
@@ -10701,7 +10701,7 @@ function openLookup(shot,rid,silent){
     ${pid?"":`<div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div>`}</div>`;
   /* a multicard's description is a look-up and nothing else (v496, H: "kein More und keine weiteren Funktionen in den Pop
      ups. Du kannst das doch alles über die Multicards steuern."): More opened the text's own screen, which the row list
-     under the photo already opens on a tap — Edit, Flag, Delete and, since v692, Generate flashcard live there. On a MARKED PHOTO (v448) More
+     under the photo already opens on a tap — Edit, Flag, Delete and, since v692, + Flashcard live there. On a MARKED PHOTO (v448) More
      stays: there is no row list, so it is the only way from the photo to the card's own screen. */
   let el=LOOKUP&&LOOKUP.el; const swap=!!el;
   if(!el){ el=document.createElement("div"); el.className="ask lookup"; document.body.appendChild(el); }

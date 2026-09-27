@@ -11,13 +11,11 @@ and H's own words — is in **`docs/HISTORY.md`** (1.5 MB, not loaded automatica
 It was `CLAUDE.md` until 2026-09-21, when at ~400k tokens it broke every session ("Prompt is too long"); it was archived
 verbatim. **Grep it for the reason behind anything:**
 
-    grep -n "v487" docs/HISTORY.md              # what one version did and why
-    grep -n "snapBox" docs/HISTORY.md           # every decision that touched one mechanism
-    grep -n "Measured and dropped" docs/HISTORY.md   # what was tried and must not come back
-    grep -n "Rejected" docs/HISTORY.md          # what H turned down
+    grep -n "v487" docs/HISTORY.md          # one version's reason      grep -n "snapBox" docs/HISTORY.md   # one mechanism
+    grep -n "Measured and dropped" docs/HISTORY.md   # tried, must not come back      grep -n "Rejected" docs/HISTORY.md
 
-**Much of what looks like an obvious improvement was already built, measured and reverted,
-with H's verdict recorded next to it.** Check before you propose it again.
+**Much of what looks like an obvious improvement was already built, measured and reverted, with H's verdict
+recorded next to it.** Check before you propose it again.
 
 **Keeping the record (the rule that replaces the old one):** every PR appends its entry to the
 **top of the version log** in `docs/HISTORY.md` — the same prose as before, the reason and the
@@ -58,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v708, 2026-09-27)
+## Current state (PWA v709, 2026-09-27)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -90,10 +88,9 @@ made by `tools/guide-shots.js`). `vendor/`: Tesseract and its readers, dictionar
 places), `tools/`, `docs/HISTORY.md`, `.github/workflows/` (nmt fetch, mirror purge), `supabase/` (the relay and usage
 functions and the SQL H ran once).
 
-Vanilla JS, no frameworks, **no build step**. `app.js` in reading order: helpers and state →
-IndexedDB → online AI → study screen → cards, detail, edit form → More → camera and inbox →
-reading pipeline → character picker and drawing sheet → sign editor and save → service worker,
-mirror, shell check, shared screenshots. Shared helpers: `askSheet`, `putCard`, `pySpaced`,
+Vanilla JS, no frameworks, **no build step**. `app.js` in reading order: helpers and state → IndexedDB → online AI →
+study screen → cards, detail, edit form → More → camera and inbox → reading pipeline → character picker and drawing
+sheet → sign editor and save → service worker, mirror, shell check, shared screenshots. Shared helpers: `askSheet`, `putCard`, `pySpaced`,
 `eachLine`, `slineHTML`/`wireSlines`, `urlOf`, `fullPhoto`, `median`, `readingStatus`,
 `logErr`/`diagText`, `busyHTML`, `apiErrText`.
 
@@ -118,13 +115,13 @@ timestamp. A card:
   alts:[…], ai:{zh,p,m,note,ok,bad,at,model}, aiNo:"<fingerprint of a dismissed suggestion>",
   mt:{src:"llm"|"dict"|"phrasebook"|"nmt"|"gloss", verified, pending, suspect},
   reading:{rect,at,failed},                            // saved before its reading finished
-  page:"page#…",                                       // this card is one text of a multicard
+  page:"page#…", dish:true,                            // one text of a multicard; a menu dish whose picture is its photo (v705)
   from, fromT, of }                                    // a flashcard generated from a multicard text
 ```
 
 A **page card / multicard** (v453): `{id:"page#<at>", kind:"page", t:"Page", c:<title>,
 name:{name,what,place}, ml, at, shot, items:[ids], tags:[kind], mt llm-verified, v}` — no `img`,
-no progress row, never sent to the AI, **not in the Deck count** (v504).
+no progress row, never reviewed by the AI (its title goes out as context for its texts' short descriptions, v698), **not in the Deck count** (v504).
 
 **Pinyin only verified, with correct tones — never guess.** Meanings in the app's language.
 Dictionary/phrasebook prefills stay `verified:false` until a human or the AI checked them; when
@@ -189,7 +186,7 @@ the list keeps its place (v352/v445). The **open card** swipes through the list 
 Flag | Delete; its line under the character row ends in **Cards with 行 ›**, the character's page — its readings in your
 cards and every card that holds it (v691). A **multicard's own text**: it swipes to the multicard's next text (v707); its photo frames it alone (v700); + Flashcard (Flashcard › once made) | Edit, Flag |
 Delete (v692/v695); the pop-up over the photo carries **no action** (v496/v692). The multicard: **Add a text**, Delete card
-(v635); its tags once under its title, its texts' rows show a short one-sentence description (`dsh`, all texts in one AI call at creation, `pageShorts`) and no flashcard ring; the long one stays on the opened text (v696–v698). On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right, name/pinyin/meaning without it and whole, and a dish description (`priceOf`, `isMenuPage`, v699); a dish with its own photo on the menu takes it, with its name and price, as its picture and shows it on its own screen (the picture model's `photo` box, `dish`, v701/v705).
+(v635); its tags once under its title, its texts' rows show a short one-sentence description (`dsh`, all texts in one AI call at creation and once when an older multicard is opened, `pageShorts`) and no flashcard ring; the long one stays on the opened text (v696–v698). On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right, name/pinyin/meaning without it and whole, and a dish description (`priceOf`, `isMenuPage`, v699); a dish with its own photo on the menu takes it, with its name and price, as its picture and shows it on its own screen (the picture model's `photo` box, `dish`, v701/v705).
 
 ### Camera — photo to card
 The Camera tab is the camera: the **shutter card** (Take photo, From album) centred, work under it (v466/v470); a photo that
@@ -364,26 +361,22 @@ Rules that came out of the harness and cost real versions:
   `[guard]`, with the reason written beside them.
 - **A green result whose mechanism is not the one claimed is worthless** (v439/v447): a case
   passed because a stale log line from the previous case happened to be there.
-- **A fit check must ask whether the text broke, not whether the box overflowed** — a flex item
-  shrinks and wraps inside its button rather than overflowing (v427).
-- **A gesture fixture must use the gesture the phone uses** — v606 passed on wheel zooms, and a real pinch
-  left a captured finger behind that broke it (v614).
-- **A probe that reads the app's own model of an animation cannot see what the compositor
-  paints** — use `Page.startScreencast` for a fade (v555).
+- **A fit check must ask whether the text broke, not whether the box overflowed** — a flex item wraps inside its
+  button rather than overflowing (v427).
+- **A gesture fixture must use the gesture the phone uses** — v606 passed on wheel zooms and a real pinch broke it (v614).
+- **A probe that reads the app's own model of an animation cannot see what the compositor paints** — use
+  `Page.startScreencast` for a fade (v555).
 - **When the harness and the phone disagree, the harness is wrong and that is what gets fixed
   first.** No heuristic is tuned against numbers the phone did not actually send (v384): five
   versions were fitted to a rounded log and every one failed in the field.
-- **A suite that freezes a copy of the build stops being a test the moment the build moves**
-  (v419).
-- A fixture must carry the field case's own shape — its angle, its own photo, its own answer
-  (v446/v552); two cards on one photo are page fronts and test something else entirely.
+- **A suite that freezes a copy of the build stops being a test the moment the build moves** (v419).
+- A fixture must carry the field case's own shape — its angle, its own photo, its own answer (v446/v552).
 - Layout is checked by screenshot at 390 px (and 360 px for the narrow phones), light and dark,
   in German and in the widest language for the row in question.
 
 ## Working with H — the how-to rules (v128, agreed after the four-corner episode)
-**What H sends.** One request per message: a sentence, and a screenshot when it is about a
-screen. When the reader is wrong, More → Diagnostics → Share with it — the phone is the only
-place the reader can be watched from. "Leave it as it was" means: revert, no discussion.
+**What H sends.** One request per message: a sentence, and a screenshot when it is about a screen; when the reader is
+wrong, More → Diagnostics → Share with it. "Leave it as it was" means: revert, no discussion.
 
 1. **Restate before building.** One sentence: what changes for H on the phone. Two readings that
    lead to different work → one question, not five. Otherwise no questions.
@@ -420,15 +413,12 @@ The full list is in the archive; these are the ones that keep biting.
   padding, width and `nowrap`, and cost the update note five versions of silence (v413); `.lbl`
   greyed out a vote's labels (v487); `.btn.mini`'s `nowrap` pushed a whole sentence past the card
   (v432). **Inheritance loses to any matching rule, however weak.**
-- **A clamped box wants a whole-pixel line box**, or the line it clamps away leaves its top edge
-  behind (v593).
-- **Presence that costs width is not free in a ten-language app** — check the language with no
-  room *before*, not after (v474).
+- **A clamped box wants a whole-pixel line box**, or the clamped line leaves its top edge behind (v593).
+- **Presence that costs width is not free in a ten-language app** — check the tightest language *before* (v474).
 - **A guard whose lifetime is a timer from the moment it was armed does not cover the gesture it
   guards — end it on the event that ends the gesture** (v589: a long press held a moment longer
   deleted the card it had just marked).
-- **A guard asserted by setting its own state by hand is not tested — drive the button that is
-  supposed to set it** (v468).
+- **A guard asserted by setting its own state by hand is not tested — drive the button that sets it** (v468).
 - **A second copy of one number drifts.** One rule, one reader; when a copy is unavoidable, name
   it on both sides (v401).
 - **A constant that holds only because something else is being cut stops holding the moment the cutting stops** (v600:
@@ -440,17 +430,12 @@ The full list is in the archive; these are the ones that keep biting.
   grep every `var(--x)` against the `:root` list (v589).
 - **The app must say what actually happened** — a record that claims an answer was used when it
   404'd, or prints "not round" where the code never looked, costs days (v384/v395/v399/v405/v447).
-- Status text lives in state and is re-queried on every render; a node captured before a
-  re-render disappears silently (v47).
-- A long-running action keeps its state **outside** the row it was started from (v257).
-- **`git checkout -B <branch> origin/main` uses the local ref** — `git fetch origin main` first,
-  or you build on a stale tree (v458/v459; it happened again while writing this file, and only
-  the byte count caught it). After a **squash** merge, reset the branch onto `origin/main` before
-  the next commit.
-- A tap on a scrollable layer is read from the **click** event, not from `pointerup` — iOS turns
-  the touch into a scroll and sends `pointercancel` (v206).
-- The worker helps only while it **controls** the page; a page with no controller needs its own
-  origin-then-mirror rule and a stall that ends a load (v335).
+- Status text lives in state and is re-queried on every render (v47); a long-running action keeps its state **outside**
+  the row it was started from (v257).
+- **`git checkout -B <branch> origin/main` uses the local ref** — `git fetch origin main` first, or you build on a
+  stale tree (v458/v459, and again while writing this file). After a **squash** merge, reset the branch onto `origin/main`.
+- A tap on a scrollable layer is read from the **click** event, not `pointerup` — iOS sends `pointercancel` (v206).
+- The worker helps only while it **controls** the page; a page with no controller needs its own origin-then-mirror rule (v335).
 - **No VPN is needed to use the app.** Updates and vendor files come through the jsDelivr mirror
   (`fastly.jsdelivr.net`, since `cdn.` is DNS-hijacked in China for about two fifths of users,
   v483), purged on every push by `purge-mirror.yml`. A **first install** still needs github.io —
@@ -480,9 +465,9 @@ each version's archive entry names its open question. The ones that decide what 
 - **Owner tools** (v645–v651), **speed** (v640, v642, v672), **Learn screen** (v667–v673, v602's `SPOT_ON` trial) and the
   older v599–v614 items — see their entries.
 
-**The crops go stale with their screens:** run `node tools/guide-shots.js` in the same PR as any change to the Crop view,
-the Edit form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's
-character row; its printed ratios must match `GF_SHOT`; restore the files the PR does not touch (the painted sign has random grain).
+**The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
+form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's character
+row; ratios must match `GF_SHOT`; restore the files the PR does not touch (the painted sign has random grain).
 
 **Named and waiting for H's word** (each changes how he handles the app, so each waits for a "Go"):
 re-cutting the deck square (`RECUT_V` 6, ~95 ms a card, no undo); after one tap the card is dealt
