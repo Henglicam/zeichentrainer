@@ -51,8 +51,9 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
   Cards whose lines all place on the first read are untouched and read once. Harness: `dian3.js` (frame around 电动车 only,
   the crop read as `电动车 | 木木` at the edge, the whole picture as both lines) — v681 zooms 禁止入园 whole, v682 on each
   character on the second line, left to right (2 checks flip, 1 control); az 13, ov 5, once 2, off 3, nf 2, pdc 4, pdcache
-  3, hyph 2, est 1, quecao 3, chipeng 2, twoline 2, dian 3, jin, glide, swapfast unchanged. Not yet field-checked: whether
-  the phone's reader reads 禁止入园 on the whole cut.
+  3, hyph 2, est 1, quecao 3, chipeng 2, twoline 2, dian 3, jin, glide, swapfast unchanged. **Field-checked by H the same
+  day: "Works now, second line zooms."** Its Still-to-test line (v680's) leaves with the next build — removing it alone would
+  cost every phone a shell download.
 
 ## Current state (PWA v681, 2026-09-27)
 - **Diagnostics show where the phone's reader saw each line (v681, H: "Geht immer noch nicht", 电动车/禁止入园 on page 680:

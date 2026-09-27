@@ -78,7 +78,7 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
 - **The Learn zoom** (v617 on; see The app → Learn) — place from the phone's reader (`pdCharBoxes`, v653: characters matched
   to its lines by LCS, v661 out-of-order match, v677 a wrongly read line of the same length taken
   by position, v680 of another length spread evenly along it, unsure; each at its CTC position `at`; the reader gets the frame and 15 %, and
-  the whole cut when a card line is still open, v682), else a **sure** ink cut (`charBoxes`, v619/v626);
+  the whole cut when a card line is still open, v682 — field-checked by H on 电动车/禁止入园), else a **sure** ink cut (`charBoxes`, v619/v626);
   an unsure place is never zoomed on — the text whole instead (v664/v669). The pad's character is mapped to its box through
   `spotIdx` (v674: a hyphen no word claims shifted every later character onto its neighbour). A character near the picture's
   edge is zoomed in just far enough to stand in the middle (≤ 3.5×), and the zoom's rest rect is read with the live transform
