@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=677; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=678; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -686,6 +686,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["learn","v677","雀巢/脆脆鲨: 2nd line zoomed?"],
+  ["learn","v678","吃碰杠听胡: one zoom size?"],
   ["learn","v674","一汽-大众: zoom on each char?"],
   ["learn","v673","pinyin after green, truly?"],
   ["photo","v672","share w/o VPN opens fast?"],
@@ -4091,7 +4092,7 @@ function wordSpan(d,x){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):
    finger always wins: a pinch or a wheel on the picture hands the zoom to the hand for the rest of that picture (ZOOM_HAND),
    and from then on it only follows, as v541 did. */
 const AZ_OVERVIEW=1500, AZ_READER=2500; /* v662: how long a card shows its whole picture before the zoom goes in by itself; v665: how long past the card's start it may wait for the phone's reader, so the zoom goes in once */
-const ZOOM_AUTO=true, AZ_INK=0.68, AZ_EST=0.5, AZ_MAX=3.5, AZ_MIN=1.15; /* the character's larger side as a share of the box — ink-found and estimated —, and the scale's cap and floor */
+const ZOOM_AUTO=true, AZ_INK=0.68, AZ_MAX=3.5, AZ_MIN=1.15; /* the character's larger side as a share of the box, and the scale's cap and floor (v678: AZ_EST's looser share for an unsure place left — the reader's boxes of one line take one scale) */
 let LAST_AZ=null; /* the last decision, for Diagnostics' head line */
 /* EVERY CHARACTER'S OWN BOX, FOUND ON THE INK (v618, H on v617 with a Diagnostics dump: "Er erkennt vieles noch nicht. Die
    Erkennung der Position der characters im Bild funktioniert noch unzureichend."). v617 took the frame's even split as
@@ -4294,7 +4295,7 @@ async function pdCharBoxes(src,nw,nh,g,lines){
   const boxOf=(l,pos,ok)=>{ const lv=l.vert, len=lv?l.h:l.w, thick=lv?l.w:l.h, n2=l.at.length;
     const pitch=n2>1?len*(l.at[n2-1]-l.at[0])/(n2-1):Math.min(len,thick), side=Math.min(thick,pitch||thick)*1.05, c=(lv?l.y:l.x)+pos*len;
     let bx=lv?{x:l.x,y:c-side/2,w:l.w,h:side}:{x:c-side/2,y:l.y,w:side,h:l.h};
-    const X=X0+bx.x/k, Y=Y0+bx.y/k; return {x:(X-TX)/TW,y:(Y-TY)/TH,w:bx.w/k/TW,h:bx.h/k/TH,ok}; };
+    const X=X0+bx.x/k, Y=Y0+bx.y/k; return {x:(X-TX)/TW,y:(Y-TY)/TH,w:bx.w/k/TW,h:bx.h/k/TH,ok,ln:L.indexOf(l)}; };
   const boxes=chars.map(()=>null);
   for(const [j,h] of hit) boxes[j]=boxOf(h.l,h.l.at[h.i],((h.l.cfs||[])[h.i]??h.l.conf)>=0.8);
   /* a character the reader read otherwise, between two matched ones on one line: its place is between them */
@@ -4418,13 +4419,23 @@ async function autoZoom(card,d,c,tg,st,cur){
   const r=geom.rectOf(sp), bw=box.clientWidth, bh=box.clientHeight; if(!r.w||!r.h||!bw||!bh) return;
   const cx=r.x+r.w/2, cy=r.y+r.h/2;
   if(ZOOM_HAND===key){ z.follow(cx,cy); zlog({c:d.c,ch:cur.ch,how:how+", hand"}); return; }
-  let s=(off?0.9:found&&found.ok?AZ_INK:AZ_EST)*Math.min(bw/r.w,bh/r.h); s=Math.min(AZ_MAX,s); if(s<AZ_MIN) s=1;
   /* v676 (H: "Falsche Zoom-Position, nicht mittig", 禁 of 禁止烟火 held 48 px off the middle by the picture's edge): a card's
      picture is cut as wide as its text, so the first and last character of a line stand near its edge, and at scale s the
      pan can bring a point no nearer the edge than half a box divided by s. A character there is zoomed in just far enough
      to stand in the middle, up to AZ_MAX — never less than it would be anyway */
-  if(!off&&s>1){ const P=geom.pic(), ex=Math.min(cx-P.x,P.x+P.w-cx), ey=Math.min(cy-P.y,P.y+P.h-cy);
-    const need=Math.max(P.w*s>bw&&ex>0?bw/(2*ex):0, P.h*s>bh&&ey>0?bh/(2*ey):0); if(need>s) s=Math.min(AZ_MAX,need); }
+  const P=geom.pic(), scaleOf=b=>{ const q=geom.rectOf(b), qx=q.x+q.w/2, qy=q.y+q.h/2; let t=Math.min(AZ_MAX,AZ_INK*Math.min(bw/q.w,bh/q.h));
+    if(t>1){ const ex=Math.min(qx-P.x,P.x+P.w-qx), ey=Math.min(qy-P.y,P.y+P.h-qy);
+      const need=Math.max(P.w*t>bw&&ex>0?bw/(2*ex):0, P.h*t>bh&&ey>0?bh/(2*ey):0); if(need>t) t=Math.min(AZ_MAX,need); }
+    return t; };
+  let s=off?0.9*Math.min(bw/r.w,bh/r.h):scaleOf(found);
+  /* v678 (H: "Warum wird hier auf verschiedene Größen gezoomt? sollte immer gleich sein", 吃碰杠听胡 at x3.5, x2.43, x2.43): the
+     reader's boxes on one line are all as tall as the line and as wide as its pitch, but a character it read unsurely (碰 read as
+     雄, 杠 at 64 %) was zoomed looser than one it was sure of, and an edge character further in. Every character on one reader
+     line now takes one scale — the largest any of them needs, so the edge ones still stand in the middle — and never so far that
+     a character of the line fills more than the picture box */
+  if(pf&&pb.boxes){ const same=pb.boxes.filter(b=>b&&b.ln===pf.ln), full=Math.min(...same.map(b=>{ const q=geom.rectOf(b); return Math.min(bw/q.w,bh/q.h); }));
+    s=Math.max(...same.map(scaleOf)); s=Math.max(Math.min(s,full),Math.min(AZ_MAX,AZ_INK*full)); }
+  s=Math.min(AZ_MAX,s); if(s<AZ_MIN) s=1;
   const held=z.focus(s,cx,cy)||{dx:0,dy:0};
   /* v666 (H: "Hier hat er ja gar nicht mittig reingezoomt", 内 of 京城内外首善全图 off-centre, and the record could not say why):
      where on the text the place was (per cent of the frame across and down), whether the picture's edge held the character off
