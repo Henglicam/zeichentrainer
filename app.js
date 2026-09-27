@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=668; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=669; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -674,6 +674,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v669","unsure place: text whole, ok?"],
   ["learn","v668","pinyin after green char: clean?"],
   ["learn","v667","star/flag by Whole card: ok?"],
   ["learn","v665","zoom goes in once, no correction?"],
@@ -4368,8 +4369,12 @@ async function autoZoom(card,d,c,tg,st,cur){
   const found=pf||(cb&&cb.boxes&&cb.boxes[cur.pos]); let sp=found||est, how=pf?(pf.ok?"reader":"reader, unsure"):found?(found.ok?"ink":"ink, unsure"):"estimate";
   /* v664: a place nobody is sure of (the ink's guess or the estimate) that lies off every line the reader saw is off the text —
      the zoom shows the reader's text whole instead (贵州茅台酒 at 20°: x3.5 onto the empty card beside the label) */
-  const area=!pf&&pb&&pb.area, off=area&&!(found&&found.ok)&&(()=>{ const mx=sp.x+sp.w/2, my=sp.y+sp.h/2; return mx<area.x||mx>area.x+area.w||my<area.y||my>area.y+area.h; })();
-  if(off){ sp=area; how="the reader's text, whole"; }
+  /* v669 (H: "Hier ist er nicht auf den nächsten character gesprungen" on 电动车/禁止入园, "Und hier entspricht der Bildausschnitt
+     überhaupt nicht dem character" on 无名, both logged "ink, unsure"; 贵州茅台酒 at v664 the same): a place only the ink search
+     guessed, unsure, is wrong too often to zoom on — v664 caught it only when it lay off the reader's lines. Now any place neither
+     the reader nor a sure ink cut gives shows the text whole: the reader's lines when it saw some, else the card's own frame */
+  const area=!pf&&pb&&pb.area, off=!pf&&!(found&&found.ok);
+  if(off){ sp=area||{x:0,y:0,w:1,h:1}; how=area?"the reader's text, whole":"the text, whole"; }
   if(!cb) cb={why:""};
   const r=geom.rectOf(sp), bw=box.clientWidth, bh=box.clientHeight; if(!r.w||!r.h||!bw||!bh) return;
   const cx=r.x+r.w/2, cy=r.y+r.h/2;
