@@ -39,6 +39,20 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v686, 2026-09-27)
+- **A partly read line's other characters step from where the reader saw its match (v686, H: "Works now, zooms on each
+  character. Aber der letzte character ist leicht beschnitten", 邪不压正 — v685 field-checked).** The dump: the reader read
+  the title as `阳不医所 52,53 % h56`, only 不 matched (36 %), and v685's even spread put 邪 22 %, 压 63 %, 正 83 % (x2.91). The
+  reader's line box ran from ~12 % to ~94 % of the frame, past the title into the poster's edge, so every slot drifted right
+  and 正 stood about a quarter of a character right of its ink — cut at the zoom's edge. Now the unplaced characters are
+  placed from the nearest matched character's own CTC place, one step per character, the step being the reader's own spacing
+  (the median gap of its CTC places on that line) when that lies within half a slot of the even one, else the even slot. The
+  slot test that decides whether the line is the card's line is unchanged. Nothing is fitted to the dump's numbers: H's
+  dump carries no per-character CTC places, so how far 正 moves on the phone is not known.
+  Harness `xie.js` gains a field-shaped case (reader line `阳不医所` 1/0.85 the title's width, running on past it to the right,
+  CTC places at the characters' true places): v686 puts 正 within 0.01 of the picture's width of its ink, v685 0.13 (1 flip,
+  the v685 checks as controls). pdc, dian, dian3, twoline, zsw, hyph, quecao, chipeng unchanged. Not yet field-checked.
+
 ## Current state (PWA v685, 2026-09-27)
 - **A line the phone's reader read partly is zoomed on character by character (v685, H: "Also hier zoomt er leider auch total
   falsch", 邪不压正, a film title in a drawn typeface).** The dump after H's Crop again: the reader read the title as `优压动
@@ -53,7 +67,7 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
   Harness `xie.js` (the title drawn, the reader answering `优压动` with 压 at 0.62): v685 zooms all four by the reader on the
   title, left to right at 22/42/62/82 %, one scale; v684 took the ink search for 邪 不 正 (1 flip, 2 controls — on the drawn
   title the ink is clean, on H's photo it was "odd shapes"). az, ov, once, off, nf, pdc, pdcache, hyph, quecao, chipeng,
-  twoline, dian, dian3, baba, zsw, glide unchanged. Not yet field-checked.
+  twoline, dian, dian3, baba, zsw, glide unchanged. Field-checked by H (v686's entry).
 
 ## Current state (PWA v684, 2026-09-27)
 - **A line the reading holds outside the placed frame puts the frame around it, and the zoom no longer lands on another
