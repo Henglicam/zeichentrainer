@@ -39,6 +39,27 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v684, 2026-09-27)
+- **A line the reading holds outside the placed frame puts the frame around it, and the zoom no longer lands on another
+  character (v684, H: "Hier hat er … nicht auf die dritte Zeile gezoomt … Genauer gesagt, das Baba", on 有些时候/我特别/喜欢/爸爸,
+  then "find out why the baba wasn't in the automatic crop first" and "Go, build v684 with both fixes").**
+  Why 爸爸 was cut (the card's reading record, rebuilt at v651): the quick look read four lines (爸爸 as 苦音) and moved nothing;
+  the close look's band then placed the frame at 0–68 % down — its tight passes lost the large bottom line; the phone's reader
+  read all four lines at 100 % and won the reading, but the winning pass places the frame only when nothing else did
+  (v321's `!placedCut`), so the card's text had 爸爸 and its picture ended above it. Replayed: `rectOfLines` on the four
+  lines of the dump reaches 1561 of 1600 px, on the first three 1064 (the field's 1083). Now a strong winning pass with a
+  line read at `PLACE_CF` whose middle lies outside the placed frame (`placedRect`, kept by `placeRect`) places it again
+  around both, logged "the reading holds … outside the placed frame"; `frameOnText`'s own guard still keeps the hand's frame.
+  And in Learn: the card's picture held no 爸爸, the reader placed the three lines it holds, and the ink search's "sure" box
+  for 爸 lay on 喜 — the pad said 爸, the photo showed 喜 at x2.72. An ink box whose middle lies on a reader box of another
+  character now shows the text whole ("ink on another character, the text whole").
+  Harness: `babaread.js` (a drawn 4-line poster through From album, the phone's reader answering with the dump's lines, the
+  close look's band cut at the dump's 1083 px, and the reader's four lines made to win as they did there — the older
+  reader reads the drawn poster better than H's photo): v683 frame 0–68 %, v684 0–95 % with 爸爸; the 尚都 photo (`sd.js`)
+  reads identically on both. `baba.js`: v683 zooms 爸 onto 喜 at x2.94, v684 shows the text whole (1 flip, 1 control).
+  az, ov, once, pdc, quecao, chipeng, twoline, dian, dian3, zsw, glide unchanged. The existing 爸爸 card stays cut until
+  Crop again or Rebuild. Not yet field-checked.
+
 ## Current state (PWA v683, 2026-09-27)
 - **The Learn zoom can be switched off under More (v683, H: "Mach das Zoomen unter More an- und ausschaltbar. Default ist an.").**
   More → Learning, under Card order: one checkbox, "Zoom the photo onto the character you're writing.", in the style of the

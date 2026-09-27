@@ -58,7 +58,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v683, 2026-09-27)
+## Current state (PWA v684, 2026-09-27)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -79,7 +79,7 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   to its lines by LCS, v661 out-of-order match, v677 a wrongly read line of the same length taken
   by position, v680 of another length spread evenly along it, unsure; each at its CTC position `at`; the reader gets the frame and 15 %, and
   the whole cut when a card line is still open, v682 — field-checked by H on 电动车/禁止入园), else a **sure** ink cut (`charBoxes`, v619/v626);
-  an unsure place is never zoomed on — the text whole instead (v664/v669). The pad's character is mapped to its box through
+  an unsure place is never zoomed on — the text whole instead (v664/v669), nor an ink box on another character's reader place (v684). The pad's character is mapped to its box through
   `spotIdx` (v674: a hyphen no word claims shifted every later character onto its neighbour). A character near the picture's
   edge is zoomed in just far enough to stand in the middle (≤ 3.5×), and the zoom's rest rect is read with the live transform
   taken out, so a move mid-glide keeps its place (`rest()`, v676 — field-checked by H on 禁止烟火). Whole photo for `AZ_OVERVIEW`
@@ -250,6 +250,8 @@ merged by line band and scored by `readingScore`/`effScore` → the editor.
   not.**
 - **No picture answer and five lines or more → no card** (v649, `NOPIC_LINES`): only the picture can split a board; the photo
   stays on the Camera tab for Crop. Offline (picture never asked) the card is still made.
+- **A strong winning reading with a sure line outside the placed frame places it again around it** (v684: the close look's
+  band had cut 爸爸 off a 4-line poster the phone's reader read whole).
 - The card's picture is the **square window** around the text (`windowRect`, `CARD_RATIO` 1),
   brightened where it needs it (`brightenBlob`, per-channel only when the channels are of a kind,
   v398/v418) and sharpened at the cut (v396).
@@ -482,7 +484,7 @@ CC BY-SA).
 ## Open / not yet field-checked
 Everything from **v597 to v674** is unconfirmed on the phone unless H has said otherwise; each version's entry in the archive
 names its own open question. The ones that decide what comes next:
-- **The Learn zoom** (v653–v683) — does it land on the character being written, and is 3.5× sharp enough? H's next Diagnostics
+- **The Learn zoom** (v653–v684) — does it land on the character being written, and is 3.5× sharp enough? H's next Diagnostics
   and Owner tools → Zoom check → Share and Data are the test (京城内外首善全图's 内: clamp or a second 内?).
 - **The phone's reader as the reading** (v641/v646/v652) — are sure cards fast and right, and does the check flag the right ones?
 - **Owner tools** — Re-read all (v645), Check texts (v650: false flags?), Rebuild all (v651: better cards, does Undo restore all?).
