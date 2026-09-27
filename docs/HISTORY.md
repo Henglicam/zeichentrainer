@@ -39,6 +39,20 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v680, 2026-09-27)
+- **The Learn zoom goes onto a line the reader read as fewer characters (v680, H: "He doesn't zoom the second line here",
+  电动车 over 禁止入园, with Diagnostics: the reader read `电动车 | 木木`, 电 动 车 zoomed at 50 % down, then 禁 止 入 园 all `the
+  reader's text, whole (reader: 3 of 7 characters read; odd shapes) · x1`).** The reader found the second line but decoded
+  two characters out of four, so v677's fallback, which needs as many characters on both sides, did not apply. `pdCharBoxes`
+  now pairs, in reading order, the card lines it matched nothing of (two characters or more, the whole line unplaced) with
+  the reader lines it matched nothing on that are of the text's size (at least 0.6 of the matched lines' median height, so
+  fine print is left out), when there are as many of the one as of the other; each line's characters then stand evenly
+  along the reader line's box (`boxOf`'s new pitch argument), unsure. Harness: `dian.js` (the field's reading stubbed,
+  木木's box over the second line) v679 FAIL (ink boxes, sure on the clean synthetic picture — on the phone they were odd
+  shapes), v680 PASS (禁 止 入 园 at 24 / 41 / 59 / 76 % across on the second line). az 13, ov 5, once 2, off 3, nf 2, pdc 4,
+  pdcache 3, hyph 2, est 1, quecao 3, chipeng 2, twoline 2, jin, glide and swapfast unchanged. **Limit:** evenly spread is a
+  guess at the pitch; a line whose characters are spaced unevenly lands off by part of a character. Not yet field-checked.
+
 ## Current state (PWA v679, 2026-09-27)
 - **One on-screen size for every character of a card, across its lines (v679, H: "Möglichst gleich groß", after v678 made
   one line one scale).** Each reader line's characters already filled the same share of the picture box (`AZ_INK`) unless

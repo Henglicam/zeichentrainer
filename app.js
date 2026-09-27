@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=679; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=680; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -686,6 +686,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["learn","v677","雀巢/脆脆鲨: 2nd line zoomed?"],
+  ["learn","v680","电动车/禁止入园: 2nd line?"],
   ["learn","v679","2 lines: chars one size?"],
   ["learn","v678","吃碰杠听胡: one zoom size?"],
   ["learn","v674","一汽-大众: zoom on each char?"],
@@ -4293,8 +4294,8 @@ async function pdCharBoxes(src,nw,nh,g,lines){
   let ax0=Infinity, ay0=Infinity, ax1=-Infinity, ay1=-Infinity; L.forEach(l=>{ ax0=Math.min(ax0,l.x); ay0=Math.min(ay0,l.y); ax1=Math.max(ax1,l.x+l.w); ay1=Math.max(ay1,l.y+l.h); });
   const area={x:(X0+ax0/k-TX)/TW,y:(Y0+ay0/k-TY)/TH,w:(ax1-ax0)/k/TW,h:(ay1-ay0)/k/TH};
   if(!hit.size) return {why:"the reader read other text",area};
-  const boxOf=(l,pos,ok)=>{ const lv=l.vert, len=lv?l.h:l.w, thick=lv?l.w:l.h, n2=l.at.length;
-    const pitch=n2>1?len*(l.at[n2-1]-l.at[0])/(n2-1):Math.min(len,thick), side=Math.min(thick,pitch||thick)*1.05, c=(lv?l.y:l.x)+pos*len;
+  const boxOf=(l,pos,ok,pt)=>{ const lv=l.vert, len=lv?l.h:l.w, thick=lv?l.w:l.h, n2=l.at.length;
+    const pitch=pt?len*pt:n2>1?len*(l.at[n2-1]-l.at[0])/(n2-1):Math.min(len,thick), side=Math.min(thick,pitch||thick)*1.05, c=(lv?l.y:l.x)+pos*len;
     let bx=lv?{x:l.x,y:c-side/2,w:l.w,h:side}:{x:c-side/2,y:l.y,w:side,h:l.h};
     const X=X0+bx.x/k, Y=Y0+bx.y/k; return {x:(X-TX)/TW,y:(Y-TY)/TH,w:bx.w/k/TW,h:bx.h/k/TH,ok,ln:L.indexOf(l)}; };
   const boxes=chars.map(()=>null);
@@ -4315,6 +4316,15 @@ async function pdCharBoxes(src,nw,nh,g,lines){
     const run=ci.slice(q,e), cand=freeL.map(l=>({l,ix:[...l.text].map((ch,i)=>CJK.test(ch)?i:-1).filter(i=>i>=0)})).filter(o=>o.ix.length===run.length);
     if(cand.length===1&&(run.length>1||ci.filter(j=>lnOf[j]===lnOf[run[0]]).length===1)){ const {l,ix}=cand[0]; run.forEach((j,t)=>{ boxes[j]=boxOf(l,l.at[ix[t]],false); }); freeL.splice(freeL.indexOf(l),1); }
     q=e; }
+  /* v680 (H: "He doesn't zoom the second line here", 电动车 over 禁止入园 — the reader read the second line as 木木, two characters
+     for four): a card line the reader matched nothing of, and a reader line of the text's size it matched nothing on, pair up in
+     reading order when there are as many of the one as of the other — the line's characters stand evenly along it, unsure. A
+     line of fine print (under 0.6 of the matched lines' height) is none of them */
+  const thk=l=>l.vert?l.w:l.h, big=median([...usedL].map(thk))*0.6;
+  const openLn=[...new Set(ci.map(j=>lnOf[j]))].filter(i=>{ const js=ci.filter(j=>lnOf[j]===i); return js.length>1&&js.every(j=>!boxes[j]); });
+  const bigL=freeL.filter(l=>thk(l)>=big);
+  if(openLn.length&&openLn.length===bigL.length) openLn.forEach((i,u)=>{ const js=ci.filter(j=>lnOf[j]===i), l=bigL[u], n=js.length;
+    js.forEach((j,t)=>{ boxes[j]=boxOf(l,(t+0.5)/n,false,1/n); }); });
   return {boxes,why:hit.size<ci.length?`${hit.size} of ${ci.length} characters read`:"",read:L.map(l=>l.text).join(" | "),area};
 }
 /* v671 (the code review, findings 2 and 3): the two maps are one cache and leave together — PDBOX dropped its oldest at 60 and
