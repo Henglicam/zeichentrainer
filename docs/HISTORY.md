@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v669
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v670
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,18 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v670, 2026-09-27)
+- **A card saved or recovered in the background no longer moves the Learn session (v670, finding 1 of H's code review, H: "Ok,
+  go").** Eight places — `rbRecover` (on every start, 1.5 s in, even when it recovered nothing), `rbRepair`, `rbRun`'s end, `rbUndo`,
+  `finishPending` (twice), `saveSign` and `addManual` — replaced `S.queue` with a fresh `buildQueue(false)` and kept `S.idx`. The
+  cards already graded have left the due set, so the place pointed past the card being written. Reproduced in headless Chromium:
+  four new cards, the first two graded, the learner on 三 at index 2 — `rbRecover` left `[三,四]` at 2 (past the end: the session
+  looked finished), and a card saved next took 三's place. Now `requeue()` keeps the running session — its order, its repeat
+  passes, its place — drops the ids of cards no longer in the deck (moving the place back by those before it) and adds newly due
+  cards at its end; an empty queue is built fresh as before. The places that reset a session on purpose (boot, Learn order, the
+  session-end and import paths, v487's migration) keep `buildQueue` with `S.idx=0`. Suite `rq` 3/3 new, 1/3 old (the `[control]`
+  checks that a new card joins the session on both); `az` 13/13, `ov` 5/5, `once` 2/2, `edit` 11/11. Not yet field-checked.
 
 ## Current state (PWA v669, 2026-09-27)
 - **No zoom on a guess: a character nobody is sure of shows the text whole (v669, H: "Hier ist er nicht auf den nächsten character
