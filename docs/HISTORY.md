@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v672
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v673
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,22 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v673, 2026-09-27)
+- **The reading really waits for the green character now, and a clamped meaning ends at its own last line (v673, H: "Ich glaube, der
+  grüne character und Pinyin überschneiden sich immer noch leicht. Oder irgendwas anderes ist da unsauber", then a screenshot of 阿:
+  "Und hier wird der Text abgeschnitten").** (1) v668's delay never ran on the phone. `charRecap` inserts the reading and adds `in`
+  on the next animation frame, which runs *before* that frame's style pass — so the first style the element ever got already had
+  `in`: no fade, no delay, the reading solid at once over the green ink still fading. v668's probe read `getComputedStyle(…).opacity`
+  every frame, which forced exactly the style pass the phone never had, and measured a transition that only existed under the probe
+  — the v555 lesson again ("a probe that reads the app's own model of an animation cannot see what the compositor paints"). Now the
+  start is resolved (`void getComputedStyle(rc).opacity`) before `in`. Judged this time by the painted frames only
+  (`Page.startScreencast`, pixels at the stroke ends of 十 outside the reading and at the foot of the reading beside the vertical
+  stroke): old tree 6 frames with the full character and the full reading, new tree 0, the reading painted from 943 to 1876 ms. The
+  whole card's recap was never affected (`recapFit` measures it, which forces the pass). (2) `.recap .rm` is clamped (two lines for a
+  character, four for the card) and clips at its padding box, and v554's `.22em` of bottom room showed the tops of the line the
+  clamp had cut — v593's rule. Its bottom padding and margin are 0 now: on 阿's "abbr. for country names that begin with 阿: …" the
+  meaning box is 2 × 25 px + the top room (was + 4.4 px of the third line), and the screenshot is clean. Not yet field-checked.
 
 ## Current state (PWA v672, 2026-09-27)
 - **A shared screenshot opens without the VPN and survives an update (v672, findings 4–6 of H's code review).** Three faults on the
