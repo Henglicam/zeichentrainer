@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=682; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=683; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -685,8 +685,8 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v683","More: zoom switch off and on?"],
   ["learn","v677","雀巢/脆脆鲨: 2nd line zoomed?"],
-  ["learn","v680","电动车/禁止入园: 2nd line?"],
   ["learn","v679","2 lines: chars one size?"],
   ["learn","v678","吃碰杠听胡: one zoom size?"],
   ["learn","v674","一汽-大众: zoom on each char?"],
@@ -3129,6 +3129,7 @@ function renderMore(main){
     <div class="listhead">${t("Learning")}</div> <!-- four sections since v547 (H: "Go for all five" on the described More); Learning stays first, the v275 decision -->
     <div class="mrow"><div style="flex:1"><div class="t">${t("Progress")}</div><div class="s">${progressHTML()}</div><div class="fieldacts"><button class="btn mini" id="usage-share">${t("Share report")}</button></div></div></div>
     <div class="mrow"><div><div class="t">${t("Card order")}</div><div class="s">${t("Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.",NEW_PER_SESSION)}</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${t(l)}</button>`).join("")}</div></div></div>
+    <div class="mrow"><div><label class="check" style="margin:0"><input type="checkbox" id="learn-zoom"${zoomOn()?" checked":""}> ${t("Zoom the photo onto the character you're writing.")}</label></div></div>
     ${recheckRowHTML()}
     ${undoRunHTML("check")}
     ${undoRunHTML("accept")}
@@ -3206,6 +3207,7 @@ function renderMore(main){
     if(!navigator.onLine){ st.textContent=t("No connection. Try again when online."); return; }
     b.disabled=true; st.textContent=t("Sending …");
     try{ const r=await sendFeedback(text,FB_SHOT&&FB_SHOT.b64); tx.value=""; fbShotDrop(); fbShotDraw(); st.textContent=r==="noshot"?t("Sent, but the screenshot could not be attached."):t("Thank you, sent."); }catch(err){ st.textContent=t("Could not send: {0}",err&&err.message||err); } b.disabled=false; };
+  $("#learn-zoom").onchange=async e=>{ await setSetting("learnZoom",!!e.target.checked); };
   $("#update-note").onchange=async e=>{ await setSetting("updateNote",!!e.target.checked); if(!e.target.checked) hideUpdated(); };
   $("#share-usage").onchange=async e=>{ await setSetting("shareUsage",!!e.target.checked); $("#share-status").textContent=shareNote(); sendReport(); };
   $("#import").onclick=()=>$("#imp").click();
@@ -3907,7 +3909,7 @@ function renderStudy(main){
   mountPad(card,d,c,tg,st,cur);
   if(pg&&!S.fullPic) fitPageCover(card); /* D5: the multicard's picture cover-fitted around the card's own text */
   attachPicZoom(card.querySelector(".zone1 .picbox")); /* v514: pinch to zoom, one finger to pan (§ 4) */
-  if(ZOOM_AUTO&&d.img) setTimeout(()=>{ if(card.isConnected) pdBoxesFor(card,d); },400); /* v653: the reader looks for the characters while the card is read, so the first touch rarely waits */
+  if(zoomOn()&&d.img) setTimeout(()=>{ if(card.isConnected) pdBoxesFor(card,d); },400); /* v653: the reader looks for the characters while the card is read, so the first touch rarely waits */
   if(cur) padLine(d,cur); /* the line under the pad, always, for the character the pad is on (v518) */
   wireScript(card); /* v604 */
   spotChar(card,d,cur); /* v520: the locked character lit on the photo; v533: the word being written marked on it */
@@ -3919,7 +3921,7 @@ function renderStudy(main){
   /* v665 (H: "it should be professional and user friendly", on the zoom going in on the ink's guess and then out to the reader's
      place): past AZ_OVERVIEW the zoom waits for the phone's reader, up to AZ_READER after the card came up, so it goes in once,
      to its final place. A reader slower than that (its first load) still gets the ink's guess first; a touch never waits */
-  if(ZOOM_AUTO&&!st.zoomGo&&!st._ovT){ const t0=performance.now();
+  if(zoomOn()&&!st.zoomGo&&!st._ovT){ const t0=performance.now();
     const go=()=>{ if(S.pad===st&&!st.zoomGo){ st.zoomGo=true; if(st._az) st._az(); } };
     st._ovT=setTimeout(()=>{ const cd=st._card;
       if(!d.img||!cd||!cd.isConnected||PDDONE.has(cbKey(d))) return go();
@@ -4416,7 +4418,7 @@ function spotIdx(d){ const text=[...String(d.c||"").replace(/\n/g,"")], flat=spo
   for(const ch of text){ let k=j; while(k<flat.length&&flat[k]!==ch) k++; if(k<flat.length){ map.push(k); j=k+1; } else map.push(-1); }
   return map; }
 async function autoZoom(card,d,c,tg,st,cur){
-  if(!ZOOM_AUTO||S.mode!=="study"||S.fullPic||S.peek) return;
+  if(!zoomOn()||S.mode!=="study"||S.fullPic||S.peek) return;
   await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))); /* after attachPicZoom's own restore of the zoom this picture had */
   const box=card.querySelector(".zone1 .picbox"), z=box&&box._zoom; if(!card.isConnected||!z) return;
   const key=handKey(); if(ZOOM_HAND&&ZOOM_HAND===key){ if(z.s<=1) return; } /* the hand has it: follow only, as v541 */
@@ -6322,6 +6324,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  683:"Don't want the photo to zoom while you write? Switch it off under More.",
   662:"A new card shows its whole photo for a moment, then zooms onto the first character by itself.",
   660:"The photo now zooms onto every character you write — the ones you know by heart too.",
   654:"Spot a mistake while learning? Open Whole card and tap Edit.",
@@ -6439,6 +6442,8 @@ const WHATS_NEW={
    koennen wir im menu ja ein haekchen fuer update notifications on/off setzen. Default on."): the timer of v408–v415 is gone, since
    a line nobody finished reading is the fault v413 spent a version on. Setting "updateNote", absent = on. */
 const updateNoteOn=()=>S.settings.updateNote!==false;
+/* v683 (H: "Mach das Zoomen unter More an- und ausschaltbar. Default ist an."): the Learn zoom is the learner's to switch off */
+const zoomOn=()=>ZOOM_AUTO&&S.settings.learnZoom!==false;
 const newsList=()=>Object.keys(WHATS_NEW).map(Number).sort((a,b)=>b-a);
 const newsSince=v=>newsList().filter(n=>n>v&&n<=APP_V).map(n=>({v:n,s:WHATS_NEW[n]})); /* what this phone has not been shown yet, newest first */
 /* v551: the notes no longer carry their build number. v225 took the version label off the header as "a developer's line,

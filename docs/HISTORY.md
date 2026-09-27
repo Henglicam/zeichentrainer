@@ -39,6 +39,17 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v683, 2026-09-27)
+- **The Learn zoom can be switched off under More (v683, H: "Mach das Zoomen unter More an- und ausschaltbar. Default ist an.").**
+  More → Learning, under Card order: one checkbox, "Zoom the photo onto the character you're writing.", in the style of the
+  update-note row, ten columns (a new key; ja, ko, ru, vi, th, id unchecked by a native speaker). `zoomOn()` = `ZOOM_AUTO` and
+  the setting `learnZoom` (IndexedDB settings, anything but `false` is on) replaces `ZOOM_AUTO` at its three users: the card's
+  early reader start, the overview timer and `autoZoom`. Switched off, the photo stays whole and the phone's reader is not
+  started for the zoom at all; a pinch still zooms by hand. A WHATS_NEW line; v680's Still-to-test line leaves (H: "Works
+  now", v682), v683's comes in. Harness `zsw.js`: the switch is there and on by default, off survives a reload, off reads
+  and zooms nothing, on zooms 禁止入园 as before — v682 fails the switch checks; az, ov, once, dian, dian3, glide unchanged.
+  Screenshot at 390 px, English. Not yet field-checked.
+
 ## Current state (PWA v682, 2026-09-27)
 - **The phone's reader reads the card's whole picture when the frame cuts a line off (v682, H's v681 dump for 电动车/禁止入园:
   `电动车 50,50 % h80 | 木木 13,120 % h31 · fallback: 1 card line(s) open, 1 reader line(s) free, 0 of the text's size`).**
