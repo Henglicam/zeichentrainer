@@ -58,7 +58,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v693, 2026-09-27)
+## Current state (PWA v694, 2026-09-27)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -336,8 +336,9 @@ theme-independent (white dashes with a dark outline). Body 17 px, labels 13–14
 no "OCR", no "·" shorthand, sentence case everywhere.
 
 **The browser's own behaviours stay off the app** (v248/v249/v272): one `contextmenu` listener
-cancels the long-press menu on pictures, canvases and controls; `user-select:none` on controls,
-badges and labels but **not** on prose, so a meaning can still be copied; `touch-action:
+cancels the long-press menu on pictures, canvases and controls; **no text is selectable** (`html{user-select:none}`,
+v694, H: "Bitte nicht diese Google popups zulassen" — Chrome's Touch to Search needs selectable text), only inputs and
+text areas are; `touch-action:
 manipulation` on body; autocorrect and spellcheck off on the fields that hold Chinese or pinyin.
 
 ## Didactics / SRS
