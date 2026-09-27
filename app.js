@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=706; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=707; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -686,6 +686,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["app","v694","No Google popup on text taps?"],
+  ["cards","v707","MC texts: swipe to the next?"],
   ["learn","v706","Pad: no jump after opening?"],
   ["cards","v705","Dish card: dish+name+price pic?"],
   ["cards","v703","Open card: buttons at the foot?"],
@@ -5966,9 +5967,10 @@ function backToCard(){ const cid=fromCard(); S.detailFrom=null; S.detailHide=fal
    takes the page's texts with it (one Undo). No Edit and no Share: the page is its photo, and its texts are edited one by one. */
 /* the page detail's own body (v460): the photo with its dots, the title, the line and the page's texts — factored out of
    renderPageDetail so the swipe's peer can draw a page neighbour with it, exactly as detailCardHTML draws an ordinary one */
+/* a multicard's texts in reading order — the order of its row list, and since v707 of the swipe through them */
+function pageOrder(pg,rs){ rs=rs||photoRegions({id:pg.shot}); const order=rs.map(r=>r.card); return pageItems(pg).slice().sort((a,b)=>{ const ia=order.indexOf(a.id), ib=order.indexOf(b.id); return (ia<0?1e9:ia)-(ib<0?1e9:ib); }); }
 function pageBodyHTML(d){
-  const rs=photoRegions({id:d.shot}), its=pageItems(d), full=fullPhoto(d);
-  const order=rs.map(r=>r.card), sorted=its.slice().sort((a,b)=>{ const ia=order.indexOf(a.id), ib=order.indexOf(b.id); return (ia<0?1e9:ia)-(ib<0?1e9:ib); });
+  const rs=photoRegions({id:d.shot}), its=pageItems(d), full=fullPhoto(d), sorted=pageOrder(d,rs);
   const made=its.filter(x=>madeFrom(x)).length;
   return `<div class="shot pagecard" data-page="${esc(d.id)}">
       <div class="shotwrap"><div class="zwrap">${full?`<img src="${urlOf(full)}" alt="${t("alt:photo")}">`:""}${rs.length?regionsHTML({id:d.shot},rs):""}</div></div>
@@ -6024,7 +6026,7 @@ function renderPageDetail(main,d){
    dispatches on the record and hands makePeer the class its body needs. Since v477 the two tabs mean a page's neighbours
    are pages and an ordinary card's are ordinary cards, so in practice each screen only ever sees its own kind — the
    dispatch stays because it is what makes that true by construction rather than by luck. */
-function detailSwipe(list,li,main){
+function detailSwipe(list,li,main,keepFrom){
   return {n:list.length, idx:li,
     peer:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return null; /* the deck is read live, never the captured list (v445) */
       const fp=S.fullPic; S.fullPic=false;
@@ -6033,7 +6035,7 @@ function detailSwipe(list,li,main){
     go:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return; if(LIST_CARD) LIST_CARD=nd.id;
       /* the card you swipe to is not the one you came into: its back button would otherwise claim a way back that
          belongs to another card (v492) — true of the page flag of v453 as well, which survived a swipe until now */
-      S.detail=nd.id; S.detailFrom=null; S.fullPic=false; render(); },
+      S.detail=nd.id; if(!keepFrom) S.detailFrom=null; S.fullPic=false; render(); },
     busy:on=>{ const pn=main.querySelector(".pane"); if(pn) pn.classList.toggle("swiping",on); },
     ready:p=>{ chrowFit(p); fitPageCover(p); } }; /* v596: the same fit as the card's, or a generated flashcard's neighbour slides its page in CONTAINED with a 16 px margin (the .picbox.page fallback) against the card's cover fit */
 }
@@ -6078,7 +6080,9 @@ function renderCardDetail(main,c){
      of "Bitte Cards auch swipebar machen"). The neighbours are the list's own order, so a search or a ticked filter
      decides who they are, exactly as the row tap did. */
   normaliseFilters(); /* an Accept or a star cleared on the open card must not strand it outside its own list (v308's rule, v445) */
-  const list=cardsList(), li=list.findIndex(x=>x.id===c), sw=li>=0&&list.length>1;
+  /* v707 (H: "Die Karten innerhalb einer Multicard bitte swipebar machen"): a multicard's own text swipes to the multicard's
+     next and previous text, in its row list's order, and its way back stays the multicard */
+  const mp=inPage(d)&&cardOf(d.page), list=mp&&isPage(mp)?pageOrder(mp):cardsList(), li=list.findIndex(x=>x.id===c), sw=li>=0&&list.length>1;
   main.innerHTML=`<div class="pane">
     <div class="topline"><button class="del" id="back">${S.detailFrom==="inbox"||S.detailFrom==="char"||fromPage()?t("← Back"):t("← Cards")}</button><span class="badge">${!d.c?(d.reading&&d.reading.failed?t("Nothing read yet"):t("Reading …")):d.reading&&!d.reading.failed?t("Reading …"):(x=>x?x[0].toUpperCase()+x.slice(1):"")([d.mt&&!d.mt.verified?t("unverified"):"",d.mt&&d.mt.pending?t("translation pending"):"",d.mt&&d.mt.suspect?t("reading uncertain"):""].filter(Boolean).join(", "))}</span></div>
     <div class="card study detail">${detailCardHTML(d,sw)}</div>
@@ -6116,7 +6120,7 @@ function renderCardDetail(main,c){
      the whole picture of this card" — so it is dropped at the commit, as every other path that changes the card drops
      it (the row tap, the linked hop, Learn's next card), and the peer is built with it already off, or the neighbour
      would slide in showing its whole photo and jump to the crop the moment it landed. */
-  wireSwipe(main.querySelector(".card"), sw?detailSwipe(list,li,main):null); /* v460: the same options the page detail uses, so a neighbour that is a page renders as one */
+  wireSwipe(main.querySelector(".card"), sw?detailSwipe(list,li,main,!!(mp&&isPage(mp))):null); /* v707: a multicard's text keeps its way back to the multicard. v460: the same options the page detail uses, so a neighbour that is a page renders as one */
 }
 function renderEdit(main,c){
   const d=cardOf(c); if(!d){ S.editing=null; S.editFrom=null; return render(); } const c0=d.c; /* v654: the text the form opened on, for the way back to Learn */
@@ -6460,6 +6464,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  707:"Swipe through the texts of a multicard: open one and swipe to the next.",
   704:"The fold with the pinyin, meaning and description is now simply called Details.",
   701:"On a menu with pictures, each dish now shows its own photo.",
   699:"A menu you photographed now reads like a menu: every dish with its price and a line about what it is.",

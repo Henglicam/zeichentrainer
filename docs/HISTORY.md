@@ -39,6 +39,15 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v707, 2026-09-27)
+- **A multicard's texts swipe (v707, H: "Die Karten innerhalb einer Multicard bitte swipebar machen").** The open card swipes
+  through the Cards list (v445), but a multicard's own text is not in that list, so its screen did not swipe at all. Now its
+  neighbours are the multicard's own texts in the row list's order (`pageOrder`, factored out of `pageBodyHTML`), and a swipe
+  keeps its way back (`detailSwipe(…, keepFrom)`): ← Back after any number of swipes leads to the multicard. Harness
+  `itemswipe.js` (a three-text multicard, a real touch swipe on the open text): left goes to the next text, right back and on
+  to the previous, ← Back to the multicard — 3 flips; on v706 the swipe had no handler (the page itself navigated away).
+  Not yet field-checked.
+
 ## Current state (PWA v706, 2026-09-27)
 - **The write pad no longer jumps when the app opens (v706, H: "Der Charakter auf dem schreibpad springt nach öffnen der
   App").** The first study card of a session is drawn before `strokes.txt.gz` is parsed (H's Diagnostics: parse strokes 449
