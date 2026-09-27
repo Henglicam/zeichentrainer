@@ -39,6 +39,15 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v693, 2026-09-27)
+- **"Delete card" fits its half of the row in every language (v693, H: "Ja, fix das Delete-Umbrechen auch").** Beside Flag
+  (v594's pair) and beside Edit on the Camera tab's finished card, "Supprimer la carte" and "Удалить карточку" broke onto
+  two lines at 390 px and "Eliminar tarjeta" at 360 px — measured the same on v691, so older than v692 that found it. The
+  three columns now say **Supprimer**, **Eliminar** and **Удалить**; the button stands on a card's own screen, so the
+  word card says nothing the place does not. Measured through `mcfit.js` (every action label of a multicard text's screen,
+  ten languages, 390 and 360 px, the rendered text's line count rather than the box): 5 labels broke on v692, none on v693.
+  Not yet field-checked.
+
 ## Current state (PWA v692, 2026-09-27)
 - **A multicard text's actions stand together on its own screen; the pop-up over the photo has none (v692, H: "Mach doch
   das Generate Flashcard und Edit und Delete und alles sowas in die Karte selber, wenn man die in einer Multicard öffnet,
