@@ -39,6 +39,25 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v676, 2026-09-27)
+- **The Learn zoom centres a character at the picture's edge and keeps its place when it moves on mid-glide (v676, H:
+  "Falsche Zoom-Position, nicht mittig", 禁止烟火 with two screenshots — 禁 low and left of the middle — and Diagnostics:
+  `禁 · reader · x2.61 · at 16,49 % · edge 48,17 px`).** Two causes, both reproduced at H's 360 px width on a rebuilt
+  禁止烟火 card. (1) A card's picture is cut as wide as its text (`windowRect`), so the first and last character of a line
+  stand near its edge, and at scale s the pan brings a point no nearer the edge than half a box divided by s: 禁 at 12.5 %
+  of the picture, zoomed 2.58×, stood at 32 % of the box. `autoZoom` now raises s just far enough for the character to stand
+  in the middle, capped at `AZ_MAX` 3.5 (`geom.pic()` gives the picture's rest rect): 禁 at 44 %. (2) When the zoom moved
+  on while its glide was still running — the ink's place, then the reader's 0.4 s later — `relayout` read the picture's
+  rendered rect mid-glide and divided it by the TARGET scale, so the zoom's rest rect (`r0`) came out wrong and every pan
+  after it on that card was off: in the harness r0 became 95 px wide in a 254 px box and 禁 stood at 70 % and then 137 %
+  down across runs. `rest()` now takes the rest rect from the rendered rect with the live computed transform taken back
+  out (transform-origin 0 0: scale a, move e, f), so it is exact at any moment of a glide. Harness: `jin.js` (禁止烟火,
+  real reader, 360 px) old 0.32/0.54 FAIL, new 0.44/0.55 PASS, stable over runs; `glide.js` (a second focus 90 ms into the
+  first glide) old r0 277 px wide at −19/−17 FAIL, new exact PASS. az 13, ov 5, once 2, off 3, nf 2, pdc 4, pdcache 3,
+  hyph 2, est 1, edit 11 unchanged. The field's `dy 17 px` fits (2); whether it was all of the vertical offset H saw is
+  not yet field-checked. A character further out than 1/7 of the picture (long lines) is still held by the edge at 3.5×;
+  zooming on the full photo instead of the cut would lift that, and is not built.
+
 ## Current state (PWA v675, 2026-09-27)
 - **Cleanup (v675, H: "Clean up old code as well", after the code review).** Removed what nothing uses: `pdNames` (the v637
   Paddle check's name matcher, orphaned when `pdMatch` took over), the `.gft` rule in styles.css, and the "⚑ Clear flag" key in

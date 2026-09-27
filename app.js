@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=675; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=676; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -685,6 +685,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v676","禁止烟火: 禁 in the middle?"],
   ["learn","v674","一汽-大众: zoom on each char?"],
   ["learn","v673","pinyin after green, truly?"],
   ["photo","v672","share w/o VPN opens fast?"],
@@ -4027,7 +4028,7 @@ async function spotGeom(card,d,opt){
   if(!measure()) return null;
   const layer=spotLayer(host); markWhy(d,bare?"noframe":"ok");
   const rectOf=sp=>({x:ix+iw*(tx+tw*sp.x),y:iy+ih*(ty+th*sp.y),w:iw*tw*sp.w,h:ih*th*sp.h});
-  return { host:layer, box:host, page, z, img, zoom:zm||null, tx, ty, tw, th, again:measure, rectOf,
+  return { host:layer, box:host, page, z, img, zoom:zm||null, tx, ty, tw, th, again:measure, rectOf, pic:()=>({x:ix,y:iy,w:iw,h:ih}),
     put:(e,sp)=>{ const r=rectOf(sp);
       e.style.left=r.x.toFixed(1)+"px"; e.style.top=r.y.toFixed(1)+"px"; e.style.width=r.w.toFixed(1)+"px"; e.style.height=r.h.toFixed(1)+"px"; return r; } };
 }
@@ -4407,6 +4408,12 @@ async function autoZoom(card,d,c,tg,st,cur){
   const cx=r.x+r.w/2, cy=r.y+r.h/2;
   if(ZOOM_HAND===key){ z.follow(cx,cy); zlog({c:d.c,ch:cur.ch,how:how+", hand"}); return; }
   let s=(off?0.9:found&&found.ok?AZ_INK:AZ_EST)*Math.min(bw/r.w,bh/r.h); s=Math.min(AZ_MAX,s); if(s<AZ_MIN) s=1;
+  /* v676 (H: "Falsche Zoom-Position, nicht mittig", 禁 of 禁止烟火 held 48 px off the middle by the picture's edge): a card's
+     picture is cut as wide as its text, so the first and last character of a line stand near its edge, and at scale s the
+     pan can bring a point no nearer the edge than half a box divided by s. A character there is zoomed in just far enough
+     to stand in the middle, up to AZ_MAX — never less than it would be anyway */
+  if(!off&&s>1){ const P=geom.pic(), ex=Math.min(cx-P.x,P.x+P.w-cx), ey=Math.min(cy-P.y,P.y+P.h-cy);
+    const need=Math.max(P.w*s>bw&&ex>0?bw/(2*ex):0, P.h*s>bh&&ey>0?bh/(2*ey):0); if(need>s) s=Math.min(AZ_MAX,need); }
   const held=z.focus(s,cx,cy)||{dx:0,dy:0};
   /* v666 (H: "Hier hat er ja gar nicht mittig reingezoomt", 内 of 京城内外首善全图 off-centre, and the record could not say why):
      where on the text the place was (per cent of the frame across and down), whether the picture's edge held the character off
@@ -4665,15 +4672,21 @@ function attachPicZoom(box){
   if(ZOOM_HAND&&ZOOM_HAND!==handKey()) ZOOM_HAND=null; /* v617: the hand's claim is on the picture on screen and this pass of the pad, like PIC_ZOOM */
   const hand=()=>{ if(v.auto){ v.auto=false; apply(); } ZOOM_HAND=handKey(); }; /* v617: a pinch or a wheel takes the zoom over from the pad for the rest of this picture */
   const rel=e=>{ const b=box.getBoundingClientRect(); return {x:e.clientX-b.left,y:e.clientY-b.top}; };
-  const measure=()=>{ if(v.s===1||!v.r0){ const b=box.getBoundingClientRect(), r=tg.getBoundingClientRect(); v.r0={x:r.left-b.left,y:r.top-b.top,w:r.width,h:r.height}; } };
+  /* v676: the picture's place in the box at rest, taken from its rendered rect with the transform it is rendered with taken
+     back out. Read mid-glide, the rect is the glide's, not v.s's: relayout divided it by the TARGET scale and the zoom lost
+     its place for the rest of the card (禁止烟火: the reader's place came 0.4 s after the ink's, r0 became 95 px wide in a
+     254 px box, and 禁 stood low and off-centre). transform-origin is 0 0, so the rendered rect is the rest rect scaled by
+     the matrix's a and moved by its e, f */
+  const rest=()=>{ const b=box.getBoundingClientRect(), r=tg.getBoundingClientRect(), t=getComputedStyle(tg).transform, m=t&&t!=="none"?new DOMMatrixReadOnly(t):null, k=m&&m.a>0?m.a:1;
+    return {x:r.left-b.left-(m?m.e:0), y:r.top-b.top-(m?m.f:0), w:r.width/k, h:r.height/k}; };
+  const measure=()=>{ if(v.s===1||!v.r0) v.r0=rest(); };
   /* v575: r0 is the picture's place in the box BEFORE the zoom, so measure() refuses to take it again while zoomed — the
      rendered rect is the transformed one. When the box itself changes height (the tap of v564 folds the half), r0 is stale
      all the same, and the marks placed against it land off the word. transform-origin is 0 0, so the picture's own
      top-left maps to r0 + t and nothing else: the offset comes back by SUBTRACTING t (not by dividing by s, which is only
      the size's inverse), and at rest the formula returns exactly what measure() would. apply() then re-clamps the pan to
      the box's new size. */
-  v.relayout=()=>{ if(v.s<=1||!v.r0) return; const b=box.getBoundingClientRect(), r=tg.getBoundingClientRect();
-    v.r0={x:r.left-b.left-v.tx, y:r.top-b.top-v.ty, w:r.width/v.s, h:r.height/v.s}; apply(); };
+  v.relayout=()=>{ if(v.s<=1||!v.r0) return; v.r0=rest(); apply(); };
   const apply=()=>{ const r=v.r0, bw=box.clientWidth, bh=box.clientHeight, cw=r.w*v.s, ch=r.h*v.s;
     v.tx=cw<=bw?(bw-cw)/2-r.x:Math.min(-r.x,Math.max(bw-cw-r.x,v.tx)); v.ty=ch<=bh?(bh-ch)/2-r.y:Math.min(-r.y,Math.max(bh-ch-r.y,v.ty));
     const own=v.s>1&&!v.auto; /* v617: a zoom the pad made leaves one finger to the card — the swipe and the page scroll behave as at rest */
