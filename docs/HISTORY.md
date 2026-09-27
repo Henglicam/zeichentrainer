@@ -39,6 +39,21 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v677, 2026-09-27)
+- **The Learn zoom goes onto a line the phone's reader read wrongly (v677, H: "Warum hat er hier nicht die zweite Zeile
+  gezoomt?", 雀巢 Nestlé over 脆脆鲨, with Diagnostics: the reader read `雀巢Nestle | 脏脏量 | 千售银件 | 一`, 雀 and 巢 zoomed
+  by the reader at 16,32 % and 29,32 %, then 脆 脆 鲨 all `the reader's text, whole (reader: 2 of 5 characters read; odd
+  shapes) · x1`).** The reader saw the second line and read it as 脏脏量. None of its three characters matched, the
+  in-between rule needs matched neighbours on the same line, and the ink cut was doubted for odd shapes, so v669's rule
+  showed the whole text. `pdCharBoxes` now adds a positional fallback: a run of one card line that the reader matched
+  nothing of goes onto a reader line the reader matched nothing on, if exactly one such line has as many Chinese
+  characters. Each character then takes that line's `at` positions in order, marked unsure (`AZ_EST`, logged "reader,
+  unsure"). A single character only counts when it is its card line's only one, so a stray `一` cannot take a lone
+  leftover. Harness: `quecao.js` (the field's reading stubbed as the reader's answer) fails on v676 (ink boxes, sure on
+  the clean synthetic picture) and passes on v677 (脆 at 25,66 %, 鲨 at 45,66 %, the second line). az 13, ov 5, once 2,
+  off 3, nf 2, pdc 4, pdcache 3, hyph 2 and est 1 are unchanged. Not yet field-checked. The `TO_TEST` line of v676 goes,
+  and v677's takes its place.
+
 ## Current state (PWA v676, 2026-09-27)
 - **Field-checked 2026-09-27 (H: "Looks good now"):** v676 on the phone — 禁 of 禁止烟火 centred, and photo → text → photo keeps the zoom's place (on v675 the same taps left it at `edge 87,621` / `0,-472 px`). The `TO_TEST` line "禁止烟火: 禁 in the middle?" goes with the next shell version.
 - **The Learn zoom centres a character at the picture's edge and keeps its place when it moves on mid-glide (v676, H:
