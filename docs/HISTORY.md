@@ -39,6 +39,19 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v696, 2026-09-27)
+- **A multicard's tags stand once in its overview card; its texts' rows carry their description instead (v696, H: "Die Tags
+  für eine Multicard bitte in der Multicard-Übersichtskarte anzeigen und nicht in jeder einzelnen Karte der Multicard. Den
+  gewonnenen Platz bitte für die Description zur Verfügung stellen").** Every text of a multicard carries the multicard's
+  kind as its tag, so on the multicard's screen the same "Appliance" pill stood in every row, and the multicard's own tags
+  only as a grey word at the right of the ← Multicards line. Now the tags — the multicard's with any its texts add — stand
+  as pills under its title in the overview card, the topline carries only the way back, and each text's row (`cardRowHTML`
+  with `dot`) shows no tag but its description (`descOf`, the app's language), three lines at most (`.ct .d`, 18 px lines,
+  clamped). A text with no description shows none — nothing is fetched for the rows. The Cards list's own rows (other
+  callers pass no `dot`) keep their tags. Harness `ptags.js` (a three-text panel with tags and descriptions): 5 flips
+  against v695 (no row tag, three descriptions, the tag once in the card, none in the topline, the clamp at 54 px).
+  Screenshots at 390 px, light and dark. Not yet field-checked.
+
 ## Current state (PWA v695, 2026-09-27)
 - **+ Flashcard and Edit share a row (v695, H: "Generate flashcard und Edit in eine Zeile bitte. Layout/Design polish").**
   v692 gave "Generate flashcard" a whole row because the label broke onto two lines beside Edit at 390 px. The label is now

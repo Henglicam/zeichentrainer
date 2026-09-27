@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=695; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=696; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -686,6 +686,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["app","v694","No Google popup on text taps?"],
+  ["cards","v696","Multicard: tags top, desc rows?"],
   ["cards","v695","+ Flashcard beside Edit, tidy?"],
   ["cards","v691","Character pages: useful?"],
   ["cards","v690","Search wendu finds 温度?"],
@@ -5802,10 +5803,10 @@ function cardsListHTML(){
   const empty=S.custom.length?t("No cards match."):t("No cards yet — take a photo under Camera, or tap + New.");
   return {html:rows||`<div class="badge" style="margin-top:20px;grid-column:1/-1">${empty}</div>`, n:list.length, ids:list.map(d=>d.id)};
 }
-function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page detail's item list carries the dot's own state before the status */
+function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page detail's item list carries the dot's own state before the status. v696 (H: "Die Tags für eine Multicard bitte in der Multicard-Übersichtskarte anzeigen und nicht in jeder einzelnen Karte der Multicard. Den gewonnenen Platz bitte für die Description"): there a text's tags are the multicard's own, shown once at its top, so the row carries its description instead, three lines at most */
   return `<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
-      <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${srcPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span></span>
+      <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${srcPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${dot?"":(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span>${dot&&descOf(d)?`<span class="d">${esc(descOf(d))}</span>`:""}</span>
       <span class="cs">${dot?stateMark(d.id):""}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
 }
 /* a filter whose row is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the
@@ -5919,6 +5920,7 @@ function pageBodyHTML(d){
   return `<div class="shot pagecard" data-page="${esc(d.id)}">
       <div class="shotwrap"><div class="zwrap">${full?`<img src="${urlOf(full)}" alt="${t("alt:photo")}">`:""}${rs.length?regionsHTML({id:d.shot},rs):""}</div></div>
       <div class="ptitle">${esc(d.c)}</div>
+      ${(tg=>tg.length?`<div class="ptags">${tg.map(x=>`<span class="pill tag">${esc(x)}</span>`).join("")}</div>`:"")([...new Set([...(d.tags||[]),...its.flatMap(x=>x.tags||[])])])} <!-- v696: the multicard's tags, with any its texts carry, once here and not on every row -->
       <div class="regline">${esc(t("Texts on this page: {0}, as flashcards: {1}.",its.length,made))}</div>
       <div class="taphint">${esc(t("Tap any text on the photo."))}</div>
     </div>
@@ -5942,7 +5944,7 @@ function renderPageDetail(main,d){
   normaliseFilters(); /* the same rule as the ordinary detail (v308/v445): a star cleared on the open page must not strand it outside its own list */
   const list=cardsList(), li=list.findIndex(x=>x.id===d.id), sw=li>=0&&list.length>1;
   main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">${fromCard()?t("← Back to the flashcard"):fromLearn()?t("← Back"):onPages()?"← "+t("Multicards"):t("← Cards")}</button><span class="badge">${esc((d.tags||[]).join(", "))}</span></div>
+    <div class="topline"><button class="del" id="back">${fromCard()?t("← Back to the flashcard"):fromLearn()?t("← Back"):onPages()?"← "+t("Multicards"):t("← Cards")}</button></div>
     <div class="card bare">${pageBodyHTML(d)}</div>
     <div class="detailacts">
       ${fullPhoto(d)?`<button class="btn" id="d-addtext" style="grid-column:1/-1">${t("Add a text")}</button>`:""}
