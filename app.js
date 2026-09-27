@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=691; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=692; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -685,9 +685,9 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v692","Multicard text: Generate there?"],
   ["cards","v691","Character pages: useful?"],
   ["cards","v690","Search wendu finds 温度?"],
-  ["cards","v689","Generate flashcard quiet enough?"],
   ["cards","v688","Multicard: big frame from start?"],
   ["cards","v687","2-line labels: frame both lines?"],
   ["learn","v686","邪不压正: last char not cut?"],
@@ -3357,7 +3357,7 @@ const GFIG={
 const GUIDE=()=>[
   {h:t("Take a photo"),fig:GFIG.photo(),p:[
     t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card for you; Crop frames it by hand when the app gets it wrong."),
-    t("A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up, and Generate flashcard makes a card of the ones you want to learn.")]},
+    t("A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up; to learn one, open it from the list under the photo and press Generate flashcard.")]},
   {h:t("Fix the characters"),fig:GFIG.chars(),p:[
     t("Every character under the photo is a button: tap one for other readings, or draw it with your finger. Pinyin and meaning follow by themselves and the AI checks them — flag a card when something still looks wrong.")]},
   {h:t("Learn"),fig:GFIG.learn(),p:[
@@ -5870,11 +5870,12 @@ function detailActsHTML(d){
   const star=!inPage(d);
   return `<div class="detailacts">
       ${d.c&&!inPage(d)?`<button class="btn primary" id="d-test">${t("Test this card")}</button>`:""}
+      ${inPage(d)&&d.c?(madeFrom(d)?`<button class="btn" id="d-openfc" style="grid-column:1/-1">${t("Open the flashcard")}</button>`:`<button class="btn" id="d-make" style="grid-column:1/-1">${t("Generate flashcard")}</button>`):""}
       <button class="btn" id="d-edit"${star?"":' style="grid-column:1/-1"'}>${t("Edit")}</button>
       ${star?`<button class="btn${d.star?" on":""}" id="d-star">${d.star?"\u2605 "+t("Starred"):"\u2606 "+t("Star")}</button>`:""}
       <button class="btn${d.flag?" on":""}" id="d-flag">${d.flag?t("card:\u2691 Flagged"):t("\u2691 Flag")}</button> <!-- v536: the Learn back's own two words (v431). Measured at 393 and 360 px, the long phrase broke across two lines in en, de, es, fr, id, ru and vi - three in id at 360 - and a grid row is as tall as its tallest cell. -->
       <button class="btn danger" id="d-del">${t("Delete card")}</button>
-    </div>`; } /* a multicard's own text offers Edit, Flag and Delete and nothing else (v498): Test would study a text that is never in Learn (v487), Share would send a row of the multicard as if it were a card, and the star left this screen at v493 */
+    </div>`; } /* v692 (H: "Mach doch das Generate Flashcard und Edit und Delete und alles sowas in die Karte selber, wenn man die in einer Multicard öffnet, zusammen rein", then "The text's own screen"): Generate flashcard — Open the flashcard once made — stands beside Edit, and the pop-up over the photo is a look-up with no button at all (v496's rule, now without exception). Before: a multicard's own text offers Edit, Flag and Delete and nothing else (v498): Test would study a text that is never in Learn (v487), Share would send a row of the multicard as if it were a card, and the star left this screen at v493 */
 function detailCardHTML(d,sw){
   const p=S.progress[d.id], pg=frontPage(d); /* v489: the multicard's own photo on a generated card's front, and its name as the pill — so the back drops the duplicate */
   if(!d.c) return `${tagsHTML(d,!p)}<div class="front tap" id="d-reveal">${frontHTML(d,{page:true,tap:true})}</div>
@@ -6047,6 +6048,8 @@ function renderCardDetail(main,c){
   $("#d-edit").onclick=()=>{ S.editing=c; render(); };
   if($("#d-star")) $("#d-star").onclick=async()=>{ await setStar(c,!d.star); render(); }; /* the learner's own mark (v425); a multicard's own text has no such button (v493) */
   $("#d-flag").onclick=async()=>{ await setFlag(c,!d.flag); render(); };
+  { const mk=$("#d-make"); if(mk) mk.onclick=async()=>{ mk.disabled=true; bump("regionCards"); await makeFlashcard(c); setStats(); render(); }; /* v692: the button turns into Open the flashcard */
+    const of=$("#d-openfc"); if(of) of.onclick=()=>{ const fc=madeFrom(cardOf(c)); if(!fc) return; S.cardsTab="cards"; S.detail=fc.id; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); }; }
   wireSay(); wireLinks(); wireSrc(); wireExplain(); if(!S.detailHide) explainAuto(d); else explainSoon(d); /* v585: the same on the open card, whose block stands open by default; v586: folded away, it is fetched a moment later all the same */ /* v536: nothing wires a parts row here - the open card passes noParts, so there is no .chars row on it; the camera's finished card is the one screen that still draws one and wires it itself (v589 removed the helper that had no caller left) */
   wireAi();
   const del=$("#d-del"); if(del) del.onclick=async()=>{ if(!await confirmDelCard(cardOf(c))) return; await delCustom(c); if(S.detailFrom==="inbox"){ backToPhoto(); return; } if(fromPage()){ backToPage(); return; } S.detail=null; render(); }; /* v594: only after the sheet, with Undo under it (v268) */
@@ -6400,6 +6403,9 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  692:"On a multicard, open a text from the list under the photo to turn it into a flashcard — the pop-up is just for looking up.",
+  691:"Tap a character on an open card, then Cards with …, to see its readings and every card that has it.",
+  690:"Search your cards in pinyin without the tones: wendu finds 温度.",
   683:"Don't want the photo to zoom while you write? Switch it off under More.",
   662:"A new card shows its whole photo for a moment, then zooms onto the first character by itself.",
   660:"The photo now zooms onto every character you write — the ones you know by heart too.",
@@ -10620,17 +10626,16 @@ function openLookup(shot,rid,silent){
   const r=regionOf(shot,rid), d=r&&r.card&&cardOf(r.card); if(!r||!d) return;
   if(!silent) bump("regionTaps"); /* silent: the sheet coming back with ← Back (v495) is the same look-up, not a second one */
   const pid=d.page&&cardOf(d.page)&&isPage(cardOf(d.page))?d.page:null;
-  const made=pid?madeFrom(d):null; /* the flashcard this text has already generated, if any */
   const html=`<div class="sheet lookup" role="dialog" aria-label="${esc(d.c)}">
     <button class="x" id="lk-close" aria-label="${t("Close")}">×</button>
     <div class="zh hanzi">${esc((d.trad||d.c).replace(/\n/g," / "))}</div>${d.trad?`<div class="script"><span class="pill trad">${t("Traditional")}</span></div>`:""}
     <div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}</div>
-    ${pid?`<div class="lkmake"><button class="lkbtn" id="${made?"lk-open":"lk-make"}">${t(made?"Open the flashcard":"Generate flashcard")}</button></div>`
+    ${pid?""
         :`<div class="grades">${[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>`<button class="grade" data-g="${g}" data-lg="${g}"><span class="lbl">${t(l)}</span></button>`).join("")}</div>`}
     ${pid?"":`<div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div>`}</div>`;
   /* a multicard's description is a look-up and nothing else (v496, H: "kein More und keine weiteren Funktionen in den Pop
      ups. Du kannst das doch alles über die Multicards steuern."): More opened the text's own screen, which the row list
-     under the photo already opens on a tap — Edit, Flag, Delete and the rest live there. On a MARKED PHOTO (v448) More
+     under the photo already opens on a tap — Edit, Flag, Delete and, since v692, Generate flashcard live there. On a MARKED PHOTO (v448) More
      stays: there is no row list, so it is the only way from the photo to the card's own screen. */
   let el=LOOKUP&&LOOKUP.el; const swap=!!el;
   if(!el){ el=document.createElement("div"); el.className="ask lookup"; document.body.appendChild(el); }
@@ -10644,12 +10649,6 @@ function openLookup(shot,rid,silent){
   el.querySelector("#lk-close").onclick=closeLookup;
   wireSay(el);
   el.querySelectorAll("[data-lg]").forEach(b=> b.onclick=()=>gradeRegion(b.dataset.lg));
-  const mk=el.querySelector("#lk-make");
-  if(mk) mk.onclick=async()=>{ mk.disabled=true; const cid=LOOKUP&&LOOKUP.card; if(!cid) return;
-    bump("regionCards"); await makeFlashcard(cid); afterMake(); };
-  const op=el.querySelector("#lk-open");
-  if(op) op.onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, it=cid&&cardOf(cid), fc=it&&madeFrom(it); if(!fc) return;
-    closeLookup(); INBOX_SCROLL=window.scrollY; S.mode="cards"; S.cardsTab="cards"; /* a flashcard lives on the Cards tab (v502): opened from the multicard's sheet its back read ← Multicards and landed in the multicard list, where the card is not */ S.detail=fc.id; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
   const mo=el.querySelector("#lk-more");
   if(mo) mo.onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, from=LOOKUP&&LOOKUP.from, shot=LOOKUP&&LOOKUP.shot, rid=LOOKUP&&LOOKUP.rid; closeLookup(); if(!cid||!cardOf(cid)) return; if(!from) INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom=from?"page:"+from:"inbox"; LOOK_BACK={shot,rid,card:cid,from:S.detailFrom}; /* v495: More is one step deeper into this look-up, so ← Back has to undo one step and not two */ S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
 }
@@ -10657,20 +10656,13 @@ function openLookup(shot,rid,silent){
    still is, and whose texts are ordinary flashcards — where the three grades of v421 stay, because there the tap really
    is a review. v487's red/green vote on a multicard lasted one version (v488, H: "Not yet und Got it machen eigentlich
    nur Sinn in der Flashcard. Kann aus Multicard raus."): grading a text you are not being asked to learn is a review of
-   nothing, and the sheet is a look-up with one action. */
+   nothing, and the sheet is a look-up (with no action at all since v692). */
 async function gradeRegion(g){
   const L=LOOKUP; if(!L) return; const d=cardOf(L.card); if(!d) return;
   bump("regionGrades");
   await recordGrade(L.card,g);
   closeLookup();
   if(S.mode==="inbox") renderShots(); else if(S.mode==="cards"&&S.detail) render(); setStats(); /* the page detail's dot takes the colour too (v453) */
-}
-/* generating a flashcard changes the deck and the Learn queue while the sheet stands — so the screen is drawn again and
-   the sheet rebuilt from the item as it now is, with Generate replaced by Open (the swap branch keeps it in place) */
-function afterMake(){
-  if(S.mode==="inbox") renderShots(); else if(S.mode==="cards") render();
-  setStats();
-  if(LOOKUP) openLookup(LOOKUP.shot,LOOKUP.rid);
 }
 function closeLookup(){ if(!LOOKUP) return; const L=LOOKUP; LOOKUP=null; markRegion(null); L.el.remove(); document.removeEventListener("pointerdown",L.onDown,true); document.removeEventListener("keydown",L.onKey); }
 /* the sheet the detail was opened from comes back with it (v495, H: "If I tap on a word on a multicard, then the

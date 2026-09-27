@@ -348,14 +348,6 @@ button,.tab,.chip,.chipset,.pill,.grade,.grades,.ck,.cstrip,.ckpick,.ckhead,.seg
 .lookup .pin{margin-top:8px} .lookup .mean{margin-top:4px}
 .lookup .grades{margin-top:16px} .lookup .grade{min-height:54px}
 .lookup .lkacts{display:flex;justify-content:center;margin-top:8px} .lookup .lkacts .del{padding:8px 14px}
-/* the lookup sheet grades nothing since v478: the one action that turns this text into a flashcard, or the state when it
-   already is one (H: "multi cards don't really need the got it or learn again buttons" · "I should also instantly get the
-   option to make it a flashcard") */
-.lookup .lkmake{margin-top:4px;display:flex;justify-content:flex-end}
-/* v689 (H: "In den Karten unter Multicards steht ziemlich prominent Generate Flashcard. Das ist aber die absolute Ausnahme"):
-   a quiet grey text button at the sheet's foot, not the full-width red one — looking up is the rule, a flashcard the exception */
-.lookup .lkmake .lkbtn{background:none;border:none;font:inherit;font-size:15px;color:var(--label2);padding:10px 2px;min-height:44px;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
-.lookup .lkmake .lkbtn:active{opacity:.6}
 .pill.multi{background:var(--fill);color:var(--label2)}
 button.pill.multi{border:0;font:inherit;cursor:pointer} /* the reference is a way back to the multicard, not only a label */
 /* under the picture the reference carries a whole headline ("Meituan — order confirmation, 颐堤港店"), where .pill was
