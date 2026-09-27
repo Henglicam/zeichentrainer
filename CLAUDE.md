@@ -58,7 +58,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v704, 2026-09-27)
+## Current state (PWA v705, 2026-09-27)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -189,7 +189,7 @@ the list keeps its place (v352/v445). The **open card** swipes through the list 
 Flag | Delete; its line under the character row ends in **Cards with 行 ›**, the character's page — its readings in your
 cards and every card that holds it (v691). A **multicard's own text**: its photo frames it alone (v700); + Flashcard (Flashcard › once made) | Edit, Flag |
 Delete (v692/v695); the pop-up over the photo carries **no action** (v496/v692). The multicard: **Add a text**, Delete card
-(v635); its tags once under its title, its texts' rows show a short one-sentence description (`dsh`, all texts in one AI call at creation, `pageShorts`) and no flashcard ring; the long one stays on the opened text (v696–v698). On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right, name/pinyin/meaning without it and whole, and a dish description (`priceOf`, `isMenuPage`, v699); a dish with its own photo on the menu takes it as its picture (the picture model's `photo` box, v701).
+(v635); its tags once under its title, its texts' rows show a short one-sentence description (`dsh`, all texts in one AI call at creation, `pageShorts`) and no flashcard ring; the long one stays on the opened text (v696–v698). On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right, name/pinyin/meaning without it and whole, and a dish description (`priceOf`, `isMenuPage`, v699); a dish with its own photo on the menu takes it, with its name and price, as its picture and shows it on its own screen (the picture model's `photo` box, `dish`, v701/v705).
 
 ### Camera — photo to card
 The Camera tab is the camera: the **shutter card** (Take photo, From album) centred, work under it (v466/v470); a photo that

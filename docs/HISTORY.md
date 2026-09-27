@@ -39,6 +39,19 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v705, 2026-09-27)
+- **A menu dish's card is its dish, with its name and price (v705, H: "Die Karte eines Menü-Items mit Bild sollte bitte als
+  Bild dann auch das Dish beinhalten und nicht die gesamte Karte mit einem kleinen Frame um das Dish", then "Vielleicht ein
+  bisschen großzügiger mit dem Bild und der Bezeichnung dazu, samt Preis, also zusammenhängend").** v701 cut the dish's
+  photo alone as the card's `img`, and the dish's own screen still showed the whole menu with v700's single frame. Now the
+  cut is the union of the dish photo's frame and the name's frame (which holds the price) with `DISH_ROOM` 6 % around it —
+  unless the name's frame is the whole-frame fallback of a label nobody placed (larger than three dish photos), then the
+  photo alone — and the card is marked `dish`. `frontPic` shows a dish's own picture (`dishOf`) instead of the menu with a
+  frame, on its screen and on a flashcard made from it (in Learn too). Existing menus get it through Rebuild all → Menus
+  (v702). Harness `dish.js` (the drawn menu, From album, the picture answer mocked): each dish card is marked, its picture
+  is wider than the square photo (photo, name and price: 880 × 435 against 340 × 340 on v704), and its screen shows its own
+  picture, not the menu — 3 flips; the dish colour as a control. Not yet field-checked.
+
 ## Current state (PWA v704, 2026-09-27)
 - **"Whole card" is called "Details" (v704, H: "Die Bezeichnung Whole Card ist irgendwie doof, oder? Wäre das nicht Karte mit
   Details oder so?", then on the proposal "Go, Details").** The fold at the foot of the study card and of the open card —
