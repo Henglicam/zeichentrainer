@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=669; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=670; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -151,7 +151,18 @@ function buildQueue(includeAhead){
     q = d.filter(x=>p[x.id]).sort((a,b)=>p[a.id].due-p[b.id].due).slice(0,8).map(x=>x.id);
   return q;
 }
-const cardOf = id => deck().find(d=>d.id===id); /* cards are addressed by id everywhere; the text is c */
+const cardOf = id => deck().find(d=>d.id===id);
+/* v670 (the code review: "the Learn session's list of cards is rebuilt in the background without resetting the position in it"):
+   a card saved, recovered or repaired while a session runs used to replace S.queue with a fresh buildQueue and keep S.idx —
+   the cards already graded had left the due set, so S.idx pointed past the card being written (measured: [一,二,三,四] at 3,
+   rbRecover at the start left [三,四] at 2 — the session looked finished; a new card then took the place of 三). The running
+   session keeps its order, its repeat passes and its place; cards gone from the deck leave it, cards newly due join at its end */
+function requeue(){ const fresh=buildQueue(false); if(!S.queue.length){ S.queue=fresh; return; }
+  const ids=new Set(deck().map(d=>d.id)), q=[]; let idx=S.idx;
+  S.queue.forEach((id,i)=>{ if(ids.has(id)) q.push(id); else if(i<S.idx) idx--; });
+  const seen=new Set(q); for(const id of fresh) if(!seen.has(id)){ q.push(id); seen.add(id); }
+  S.queue=q; S.idx=Math.max(0,Math.min(idx,q.length)); }
+ /* cards are addressed by id everywhere; the text is c */
 /* The page card (v453, H, 2026-09-13, on the nine cards his Meituan order screen made: "Ich hatte doch gesagt, bitte bei
    Screenshots nicht für jeden Wortstring eine einzelne Karte anlegen, sondern den Screenshot unter Cards und in learn
    speichern mit den Punkten drauf." — the D7 of SPEC-photo-mode.md, built): a screenshot, or a picture the model calls an
@@ -674,6 +685,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v670","session steady while saving?"],
   ["learn","v669","unsure place: text whole, ok?"],
   ["learn","v668","pinyin after green char: clean?"],
   ["learn","v667","star/flag by Whole card: ok?"],
@@ -1531,7 +1543,7 @@ async function rbRun(){
       const shot=R.list[R.i]; let res; try{ res=await rbOne(shot); }catch(e){ res={shot,err:String(e&&e.message||e)}; logErr("rebuild",e&&(e.stack||e.message)||e); }
       R.res.push(res); R.i++; await setSetting("rb",R); rbShow(); }
     if(R.i>=R.list.length){ R.done=Date.now(); await setSetting("rb",R); } }
-  finally{ RB_ON=false; RB_LOOP=false; await rbRecover().catch(()=>{}); S.queue=buildQueue(false); setStats(); rbShow(); if(S.mode==="cards"&&!S.editing) render(); } }
+  finally{ RB_ON=false; RB_LOOP=false; await rbRecover().catch(()=>{}); requeue(); setStats(); rbShow(); if(S.mode==="cards"&&!S.editing) render(); } }
 /* the app killed in the middle of a photo (MIUI does it): that photo's old cards are only in its "rb:" row and a placeholder or
    half-made cards stand under a "rb_" photo id that no longer exists — they go, and the old cards come back, so the photo is
    as it was and the next Go on rebuilds it again. Runs at the start and whenever no rebuild loop is running. */
@@ -1544,7 +1556,7 @@ async function rbRecover(){
     const bak=S.settings[k]; for(const d of (bak&&bak.cards)||[]){ S.custom=S.custom.filter(x=>x.id!==d.id); S.custom.push(d); try{ await idbPut("custom",d); }catch(e){} }
     for(const [id,pr] of Object.entries((bak&&bak.prog)||{})){ S.progress[id]=pr; try{ await idbPut("progress",{...pr,id}); }catch(e){} }
     delete S.settings[k]; await delRow(k); }
-  if(S.ready){ S.queue=buildQueue(false); setStats(); } }
+  if(S.ready){ requeue(); setStats(); } }
 /* v652: the flashcards v651 took off a multicard photo without a successor come back from the photo's "rb:" row, with their history —
    once, at the start after the update; the Rebuild row says how many */
 async function rbRepair(){
@@ -1553,7 +1565,7 @@ async function rbRepair(){
     for(const d of bak.cards){ if(d.kind==="page"||d.page||cardOf(d.id)) continue;
       S.custom.push(d); try{ await idbPut("custom",d); }catch(e){} n++;
       const pr=(bak.prog||{})[d.id]; if(pr&&!S.progress[d.id]){ S.progress[d.id]=pr; try{ await idbPut("progress",{...pr,id:d.id}); }catch(e){} } } }
-  R.repaired=n; await setSetting("rb",R); if(n&&S.ready){ S.queue=buildQueue(false); setStats(); } }
+  R.repaired=n; await setSetting("rb",R); if(n&&S.ready){ requeue(); setStats(); } }
 async function rbForget(){ for(const k of Object.keys(S.settings)) if(k.startsWith("rb:")){ delete S.settings[k]; await delRow(k); } }
 async function rbUndo(){
   const R=S.settings.rb; if(!R||RB_LOOP||!rbCanUndo()) return;
@@ -1566,7 +1578,7 @@ async function rbUndo(){
     for(const [id,pr] of Object.entries(bak.prog||{})){ S.progress[id]=pr; try{ await idbPut("progress",{...pr,id}); }catch(e){} }
     n++; if(st) st.textContent=`Undoing … ${n} photos back.`; }
   await rbForget(); R.undone=Date.now(); await setSetting("rb",R);
-  S.queue=buildQueue(false); setStats(); rbShow(); }
+  requeue(); setStats(); rbShow(); }
 function rbText(){ const R=S.settings.rb; if(!R) return "No rebuild yet.";
   const L=[`Rebuild v${R.v} (report v${APP_V}), started ${new Date(R.at).toISOString()}`,rbLine(),""];
   const was=o=>!o?"?":o.kind==="multi"?`multicard ${o.n} texts: ${o.texts||o.c}`:`card "${(o.c||"").replace(/\n/g," / ")}"`;
@@ -6172,7 +6184,7 @@ async function addManual(){
   S.pendingImg=null; S.pendingFull=null;
   S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
-  S.queue=buildQueue(false);
+  requeue();
   ["f-word","f-pin","f-mean","f-note","f-tags"].forEach(id=>$("#"+id).value=""); $("#f-flag").checked=false; $("#f-note").hidden=true;
   const fi=$("#f-imgfield"); if(fi) fi.remove();
   $("#f-pinhint").style.display="none";
@@ -9487,7 +9499,7 @@ async function finishPending(id){
     if(SPLIT[id]&&ph.reading.auto&&sg&&SIGN[id]===sg&&sg.ai&&sg.ai.ok&&!sg.ai.bad){
       const made=await splitCards(id,sg,ph);
       if(made){ delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; dropExtraShot(id); todoDone(id); /* before the row is drawn, or it shows the reading again */
-        S.queue=buildQueue(false); aiAutoSoon(); setStats();
+        requeue(); aiAutoSoon(); setStats();
         if(S.mode==="cards"&&!S.editing) render(); else renderShots();
         autoNext(); /* v454: the split leaves finishPending by its own return, so the batch's next photo has to be started here too — without it a batch from the album stopped dead at the first photo that made several cards (since v411, and every photo with several texts has been a split since v453) */
         return; } }
@@ -9514,7 +9526,7 @@ async function finishPending(id){
     if(!auto) QSNOTE[id]=`Card saved — ${esc(c.replace(/\n/g," / "))}.`+(mt.pending?" Translation pending.":"")+(ph.flag?" Flagged for review.":"");
   }catch(err){ logErr("savenow",err&&(err.stack||err.message)||err); return failPending(id,"the reading failed"); }
   finally{ delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; dropExtraShot(id); }
-  S.queue=buildQueue(false); aiAutoSoon(); setStats();
+  requeue(); aiAutoSoon(); setStats();
   if(S.mode==="cards"&&!S.editing) render(); else renderShots(); /* the list or the detail shows the filled card at once */
   autoNext(); /* the next photo of the batch (v411) */
 }
@@ -10281,7 +10293,7 @@ async function saveSign(id){
   bump("byPhoto"); S.custom.push(card);
   try{ await idbPut("custom",card); }catch(e){}
   todoDone(id); /* v509: the photo has its card */
-  S.queue=buildQueue(false); QSCARD[id]=card.id;
+  requeue(); QSCARD[id]=card.id;
   delete SIGN[id]; if(CROP&&CROP.id===id) CROP=null; /* saved — the frame has done its job */
   delete QSBAD[id]; QSNOTE[id]=t("Card saved — {0}.",esc(c.replace(/\n/g," / ")))+(mt.pending?t(" Translation pending."):"")+(card.flag?t(" Flagged for review."):""); /* no word about sources or the AI (H, v105) */
   aiAutoSoon();
