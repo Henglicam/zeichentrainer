@@ -39,6 +39,18 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v694, 2026-09-27)
+- **No text in the app is selectable, so Chrome's Google panel has nothing to search (v694, H with a screenshot of
+  Chrome's "京 — Tap to see search results" panel over an open card: "Bitte nicht diese Google popups zulassen").** Chrome
+  on Android raises its Google search panel (Touch to Search) on a tap or long press on any selectable word. v249/v272
+  took the browser's behaviours off controls, badges and labels but deliberately left prose selectable "so a meaning can
+  still be copied" — my rule, not H's ask — and that is what the panel needs. `html` is now `user-select:none` with the
+  touch callout off; inputs, text areas and editable fields stay selectable, so typing, correcting and pasting work as
+  before. **The cost, named:** a meaning, a description or a Diagnostics line can no longer be long-pressed and copied
+  (Diagnostics has its own Share). Harness `nosel.js`: the meaning, the character line and the big characters report
+  `none` (were `auto` on v693), the pinyin and search fields `text`. The panel itself cannot be raised in headless
+  Chromium — **only the phone shows it is gone**. Not yet field-checked.
+
 ## Current state (PWA v693, 2026-09-27)
 - **"Delete card" fits its half of the row in every language (v693, H: "Ja, fix das Delete-Umbrechen auch").** Beside Flag
   (v594's pair) and beside Edit on the Camera tab's finished card, "Supprimer la carte" and "Удалить карточку" broke onto
