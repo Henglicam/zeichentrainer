@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v667
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v668
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,17 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v668, 2026-09-26)
+- **The character's reading comes in after the green character has gone (v668, H: "Wenn ich einen Charakter ausgeschrieben habe,
+  wird er grün und danach wird das grüne Pinyin angezeigt. Der grün ausgeschriebene Charakter und das grüne Pinyin überlappen sich
+  leicht. Das sieht irgendwie unsauber aus und muss aufgeräumt werden.").** v555 made the pad fade out (.2 s) and the reading fade
+  in (.22 s) at the same moment, so they crossed: measured frame by frame in headless Chromium, 8 frames with both over 5 %, at the
+  worst both at ~55 %. Now `.recap.one.in` has a `.2 s` transition-delay on the way in only (the way out keeps none), and
+  `charRecap`'s timer waits `CHAR_MS + CHAR_IN` (200, named on both sides), so the reading stands fully shown as long as before —
+  783 ms old, 783 ms new — and 0 frames overlap. The whole card's recap is untouched (the pad is already gone when it starts). Each
+  character's pause is 200 ms longer in all; suite `az`'s fixed 1600 ms wait before its "finished card" check became 2000 ms (13/13
+  on both trees). No key, no note. Not yet field-checked.
 
 ## Current state (PWA v667, 2026-09-26)
 - **Star and Flag leave the Learn photo; the toolbar is Star · Flag · Edit again, and the fold row shows the marks (v667, H: "Ich

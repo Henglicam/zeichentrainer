@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=667; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=668; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -674,6 +674,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v668","pinyin after green char: clean?"],
   ["learn","v667","star/flag by Whole card: ok?"],
   ["learn","v665","zoom goes in once, no correction?"],
   ["learn","v664","tilted text: no zoom off it?"],
@@ -5487,7 +5488,7 @@ function cueGlyphHTML(d){ const tx=(d&&(learnTrad(d)||d.c))||""; return tx?`<div
 /* v523: the finished card, large, over the pad — the characters in the Hanzi font fitted to the pad's square (the pad is a
    size container, so the size is solved by CSS), the pinyin and the meaning under them. The same text the card carries;
    no key in any column. */
-const CHAR_MS=900, RECAP_OUT=200, RECAP_SLACK=120, RECAP_PY=58, RECAP_CP=44, RECAP_MIN=14, RECAP_WSYL=4; /* v600: RECAP_MIN is the floor recapFit searches down to, RECAP_WSYL the longest word the reading still keeps whole — 4, so 蜜雪冰城 and 社会主义 keep v555's rule exactly and only a five-syllable compound may break */
+const CHAR_MS=900, CHAR_IN=200 /* v668: styles.css .recap.one.in transition-delay — the same number */, RECAP_OUT=200, RECAP_SLACK=120, RECAP_PY=58, RECAP_CP=44, RECAP_MIN=14, RECAP_WSYL=4; /* v600: RECAP_MIN is the floor recapFit searches down to, RECAP_WSYL the longest word the reading still keeps whole — 4, so 蜜雪冰城 and 社会主义 keep v555's rule exactly and only a five-syllable compound may break */
 /* v553 (H: "Pinyin nach geschriebenem character vielleicht bissl länger stehenlassen zum einprägen. Und wirklich nach
    jedem Charakter, auch in Mehr-Charakter-worten."): the breath comes back to EVERY character, which reverses v550's own
    narrowing on H's word — 鸡蛋供应 pauses three times again, after 鸡, 蛋 and 供, where v550 paused once at 鸡蛋's end.
@@ -5524,7 +5525,7 @@ async function charRecap(card,cur,tg,st){
   const skipped=await new Promise(res=>{ let done=false, tm=0;
     const end=by=>{ if(done) return; done=true; clearTimeout(tm); document.removeEventListener("pointerdown",tap,true); res(by); };
     const tap=e=>{ if(e.target.closest&&e.target.closest("button,a,input,textarea,.chip")) return; end(true); };
-    document.addEventListener("pointerdown",tap,true); tm=setTimeout(()=>end(false),CHAR_MS); });
+    document.addEventListener("pointerdown",tap,true); tm=setTimeout(()=>end(false),CHAR_MS+CHAR_IN); }); /* v668: + the .2 s the reading waits for the pad to fade out, so it stands as long as before */
   /* v553 (H: "Die pinyin Darstellung polieren: In/Out"): the way out is a real one. Until v552 the element was simply
      removed, so the reading vanished in one frame while the pad faded back in behind nothing. `recapping` goes at the
      same moment the reading starts to lift, so the pad's own .28 s fade-in runs AGAINST the fade-out and the two cross.
