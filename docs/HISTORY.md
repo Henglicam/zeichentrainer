@@ -1,4 +1,4 @@
-# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v671
+# HISTORY.md — the full record of 识字 Shízì (识字 Zeichentrainer until v601, 街字 Jiēzì v601–v607), v1–v672
 
 This is **CLAUDE.md as it stood at v596**, archived verbatim on 2026-09-21 because it had
 grown to 1.55 MB (~400k tokens) and was loaded into every single turn — which is what made
@@ -38,6 +38,19 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - URL: `https://henglicam.github.io/zeichentrainer/`
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
+
+## Current state (PWA v672, 2026-09-27)
+- **A shared screenshot opens without the VPN and survives an update (v672, findings 4–6 of H's code review).** Three faults on the
+  share path (v163). (1) The share target's 303 to `./?share=1` missed the cached `./` — `caches.match` compared the query — so the
+  navigation went to github.io, which behind the wall answers nothing (v189), and the app opened only when Chrome gave up; answered,
+  it also cached index.html under `?share=1`. Now a navigation matches the shell whatever its query (`ignoreSearch` for
+  `mode:"navigate"`). (2) `activate` deleted every cache but the shell and the reader's, `zt-share` included, so an update landing
+  between the share and the page's `takeShared` lost the screenshot without a word; `zt-share` stays now. (3) `takeShared` runs on
+  `load`, which can come before `boot` has read the inbox, and boot's `S.inbox = …` then dropped the photo just added; it waits for
+  `S.ready` now — this one read from the code, not reproduced in the harness. Measured with a test server that never answers
+  `?share=1` (a silent origin) and can make `sw.js` differ: new tree — the update keeps the waiting file, `?share=1` opens in 32 ms
+  and the file lands in the inbox; old tree — `zt-share` gone after the update, `?share=1` still waiting at the 8 s limit. Not yet
+  field-checked.
 
 ## Current state (PWA v671, 2026-09-27)
 - **The reader's zoom cache is one cache (v671, findings 2 and 3 of H's code review).** `PDBOX` (the reads asked for) and `PDDONE`

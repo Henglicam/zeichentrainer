@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=671; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=672; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -685,6 +685,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["photo","v672","share w/o VPN opens fast?"],
   ["learn","v670","session steady while saving?"],
   ["learn","v669","unsure place: text whole, ok?"],
   ["learn","v668","pinyin after green char: clean?"],
@@ -10659,6 +10660,8 @@ async function takeShared(){
   try{
     const c=await caches.open("zt-share"), keys=await c.keys(), files=[];
     for(const k of keys){ const r=await c.match(k); if(r){ const b=await r.blob(); if(b.size) files.push(b); } await c.delete(k); }
+    /* v672: the page's load can come before boot has read the inbox, and boot's `S.inbox = …` then dropped the photo just added */
+    while(!S.ready) await new Promise(r=>setTimeout(r,100));
     if(files.length) await importPhotos(files,{shared:true}); /* v450: a screenshot shared to the app is read whole — see proposeFrame */
   }catch(err){ logErr("share",err&&(err.stack||err.message)||err); }
 }
@@ -10916,7 +10919,7 @@ if("serviceWorker" in navigator){
     /* a page the worker does not control while a worker is active (v335, H's phone: Diagnostics "SW no", the reader's files
        fetched straight from github.io): the worker takes it over now, no reload — ready resolves once an active worker is there */
     navigator.serviceWorker.ready.then(reg=>{ SW_REG="active"; if(!navigator.serviceWorker.controller&&reg.active) reg.active.postMessage({type:"claim"}); }).catch(()=>{});
-    takeShared(); /* photos shared to the app (v163) — after boot, S.inbox is loaded by then */
+    takeShared(); /* photos shared to the app (v163) — it waits for boot's S.ready before adding them (v672) */
     navigator.serviceWorker.addEventListener("message",e=>{
       const d=e.data||{};
       if(d.type==="refreshed"){ if(d.ok) reloadSoon(); return; }

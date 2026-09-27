@@ -1,4 +1,4 @@
-const CACHE = "zt-v671";
+const CACHE = "zt-v672";
 /* OCR assets (./vendor/, ~23 MB: the reader's eleven files at ~15 MB plus the 7.3 MB stroke outlines of v517, which are fetched through the same path but deliberately kept out of OCR_FILES) live in their own cache that survives shell
    updates — otherwise every cache version bump would re-download all of
    Tesseract. Only bump this when vendor files change. */
@@ -28,7 +28,8 @@ self.addEventListener("install", e => {
 
 self.addEventListener("activate", e => {
   e.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== OCR_CACHE).map(k => caches.delete(k))))
+    /* v672: "zt-share" stays — it holds screenshots shared to the app that the page has not picked up yet (takeShared) */
+    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== OCR_CACHE && k !== "zt-share").map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -105,7 +106,9 @@ self.addEventListener("fetch", e => {
   const isVendor = new URL(req.url).pathname.includes("/vendor/");
   const origin = () => (isVendor ? withTimeout(fetch(req), ORIGIN_WAIT) : fetch(req));
   e.respondWith(
-    caches.match(req).then(async hit => { if (hit) return hit;
+    /* v672: a navigation is the shell whatever its query — ./?share=1, the share target's redirect, missed the cached ./ and waited
+       on a silent github.io until Chrome gave up (and, answered, cached index.html under ?share=1) */
+    caches.match(req, { ignoreSearch: req.mode === "navigate" }).then(async hit => { if (hit) return hit;
       if (isVendor && Date.now() < originDownUntil) { /* the origin was silent a moment ago: the mirror first */
         try { const res = await fromMirror(req); try { const c = await caches.open(OCR_CACHE); await c.put(req, res.clone()); } catch (e3) {} return res; } catch (e2) {}
       }
