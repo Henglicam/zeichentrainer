@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=702; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=703; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -686,6 +686,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["app","v694","No Google popup on text taps?"],
+  ["cards","v703","Open card: buttons at the foot?"],
   ["more","v702","Rebuild Menus: menus only?"],
   ["photo","v701","Menu photo: dish photos in rows?"],
   ["cards","v700","MC text: only its frame?"],
@@ -5937,8 +5938,8 @@ function detailCardHTML(d,sw){
       <div class="padline" id="padline"${lit?"":" hidden"}></div>
       ${lit&&lit.w&&CJK.test(lit.ch)?`<button class="chlink" id="d-chpage" data-ch="${esc(lit.ch)}"><span>${esc(t("Cards with {0}",lit.ch))}</span><span class="n">${charCards(lit.ch).length}</span><i aria-hidden="true">›</i></button>`:""}
       ${d.reading&&!d.reading.failed?`<div class="hint">${t("The new frame is being read — the text follows when it is done.")}</div>`:""}
-      ${detailActsHTML(d)}
       <div class="fold${open?" open":""}"><button class="foldbtn" id="d-fold" aria-expanded="${open?"true":"false"}"><span>${t("Whole card")}</span><i aria-hidden="true">⌄</i></button><div class="ans" id="d-ans"${open?"":" hidden"}>${back}</div></div>
+      ${detailActsHTML(d)} <!-- v703 (H: "Macht doch mal Flag, Edit, Delete und so weiter ganz nach unten und Whole Card darüber"): the actions close the card, under Whole card -->
       ${sw&&showHints()?`<div class="hint">${t("Swipe left or right to pick another card.")}</div>`:""}`;
 }
 /* the character the detail's line reads: the tapped one, else the first writable one — so the line is always there, as in Learn (v531) */
@@ -6073,7 +6074,7 @@ function renderCardDetail(main,c){
     <div class="card study detail">${detailCardHTML(d,sw)}</div>
     ${inPage(d)||!stat?"":`<div class="badge" style="margin-top:14px">${esc(stat)}</div>`}
     ${linkedHTML(d)}
-  </div>`; /* the actions sit inside the card where the pad would stand (v518); the schedule line and the linked-photos row stay under it, on the pane */
+  </div>`; /* the actions close the card, under Whole card (v703; v518 had them where the pad would stand); the schedule line and the linked-photos row stay under it, on the pane */
   $("#back").onclick=S.detailFrom==="inbox"?backToPhoto:S.detailFrom==="char"?backToChar:fromPage()?backToPage:backToList; /* opened from a photo's sheet (v448): ← goes back to the photo; from a page's row or sheet (v453): back to the page */
   /* the preview behaves like the test: tap the photo for the whole picture, tap the character to hide and show the answer (H) */
   const rv=$("#d-reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); } }; /* v518: the answer folds by its own button now, not by a tap on the picture */
