@@ -39,6 +39,17 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v708, 2026-09-27)
+- **A pad whose stroke file cannot be loaded is the free pad again, not stuck (v708, found in H's review pass: "Jetzt App
+  bitte nochmal auf Logikfehler und Inkonsistenzen untersuchen").** v706's `waiting` pad — grid alone until `strokes.txt.gz`
+  is parsed — had no end when the load FAILED: offline on a first install, or a fetch error, `STROKES` stays null, the pad
+  ignored every stroke, `miss` never moved so neither Show me nor Skip ever appeared, and the card could not be finished
+  (v707 in the harness: `free:false`, no Done). Now a failed `loadStrokes` sets `STROKES_FAIL` and redraws the card, and a
+  pad waits only while the file is neither loaded nor failed — on failure it is the free pad with Done, as before v706.
+  Harness `padfail.js` (the stroke file blocked, the service worker off): v708 free pad with Done, v707 stuck — 1 flip.
+  Also checked in the same pass, no change: a flashcard made from a menu dish shows the dish picture in Learn and the zoom
+  takes it as a bare card's whole picture (`dishlearn.js`, the same on v707). Not yet field-checked.
+
 ## Current state (PWA v707, 2026-09-27)
 - **A multicard's texts swipe (v707, H: "Die Karten innerhalb einer Multicard bitte swipebar machen").** The open card swipes
   through the Cards list (v445), but a multicard's own text is not in that list, so its screen did not swipe at all. Now its

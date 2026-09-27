@@ -58,7 +58,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v707, 2026-09-27)
+## Current state (PWA v708, 2026-09-27)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -153,7 +153,7 @@ after the layout settles (v521/v532).
   template with the next stroke lit; a stroke that fits snaps into ink, one that does not
   **shakes and is gone** (v592). Three levels by `charWrites[ch]` (trace / faint template /
   empty pad). Two misses offer **Show me**, four offer **Skip**, which fills the character in and
-  grades the card `again`. The template is the real Kai outline (`outlines.txt.gz`, v517). Until the stroke file is parsed the pad shows its grid alone — no stand-in glyph (v706).
+  grades the card `again`. The template is the real Kai outline (`outlines.txt.gz`, v517). Until the stroke file is parsed the pad shows its grid alone — no stand-in glyph (v706); a failed load makes it the free pad (v708).
 - **The grade is the writing.** The last stroke of the last character writes the review through
   `recordGrade`, counts the points (**one point per character written without help**, v546),
   bumps `charWrites`, and queues the card **once more `REP_GAP` 3 cards on** (a repeat pass).
