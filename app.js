@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=680; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=681; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -563,7 +563,7 @@ function diagText(){
     `main thread · long tasks ${LONG.n}${LONG.n?` (${Math.round(LONG.total)} ms in all, longest ${Math.round(LONG.max)} ms, last ${ago(LONG.at)})`:""} · parse strokes ${PARSE_MS.strokes==null?"not yet":PARSE_MS.strokes+" ms"}, outlines ${PARSE_MS.outlines==null?"not yet":PARSE_MS.outlines+" ms"} · resizes ${RESIZES.length?RESIZES.map(r=>r.bfcache?"back from the cache "+ago(r.t):`${r.from.join("×")}→${r.to.join("×")} ${ago(r.t)}`).join("; "):"none"}`, /* v532: what a fold did to the page, for H's next dump */
     `learn zoom · ${ZLOG.length?ZLOG.length+" decisions, newest last":"no zoom yet"}${ZCHECK?` · zoom check ${ZCHECK.line} (${ago(ZCHECK.at)})`:""}`, /* v617/v618: every decision of the pad's zoom — the card, the character, how its place was found (ink, ink unsure, estimate) and why not better */
     ...ZLOG.flatMap((z,i)=>[`  ${ago(z.at)}  ${String(z.c||"").replace(/\n/g,"/").slice(0,12)} ${z.ch||""} · ${z.how}${z.why?" ("+z.why+")":""}${z.s!=null?" · x"+z.s:""}${z.lv!=null?" · level "+z.lv:""}${z.pos?" · at "+z.pos:""}${z.edge?" · "+z.edge:""}`,
-      ...(z.rd&&(i===0||ZLOG[i-1].rd!==z.rd||ZLOG[i-1].c!==z.c)?[`      the reader read: ${z.rd.slice(0,60)}`]:[])]), /* v666: at, edge and the reader's text */
+      ...(z.rd&&(i===0||ZLOG[i-1].rd!==z.rd||ZLOG[i-1].c!==z.c)?[`      the reader read: ${z.rd.slice(0,240)}`]:[])]), /* v666: at, edge and the reader's text */
     `learn fit · ${LAST_FIT?Object.entries(LAST_FIT).filter(([k])=>k!=="at").map(([k,v])=>k+" "+v).join(", ")+" ("+ago(LAST_FIT.at)+")":"no study card measured yet"}`, /* v521: the pad's last measurement — where the card ends against the tab bar, and what was counted under the pad */
     navigator.userAgent, `voices (${voiceList().length}): ${voiceList().join("; ")||"none reported"}`, ""];
   /* v479: every block is one photo's own. The steps used to be a single global list that the next reading wiped, so an album
@@ -4273,7 +4273,12 @@ async function pdCharBoxes(src,nw,nh,g,lines){
   const mg=Math.max(TW,TH)*0.15, X0=Math.max(0,TX-mg), X1=Math.min(nw,TX+TW+mg), Y0=Math.max(0,TY-mg), Y1=Math.min(nh,TY+TH+mg);
   const k=Math.min(2,PD_ZOOM_W/Math.max(X1-X0,Y1-Y0)), W=Math.max(8,Math.round((X1-X0)*k)), H=Math.max(8,Math.round((Y1-Y0)*k));
   const cv=document.createElement("canvas"); cv.width=W; cv.height=H; cv.getContext("2d").drawImage(src,X0,Y0,X1-X0,Y1-Y0,0,0,W,H);
-  const L=(await pdRead(cv)).filter(l=>Array.isArray(l.at)&&CJK.test(l.text||""));
+  /* v681 (H: "Geht immer noch nicht", 电动车/禁止入园 on v680, the reader again `电动车 | 木木` and the zoom whole): the record said what
+     the reader read, not where — every line the reader found, Chinese or not, now goes into it with its middle (per cent down the
+     frame) and its height (per cent of the frame), and why v680's fallback took no line, so the next dump shows what it saw */
+  const raw=await pdRead(cv), L=raw.filter(l=>Array.isArray(l.at)&&CJK.test(l.text||""));
+  const geo=l=>{ const cy=(Y0+(l.y+l.h/2)/k-TY)/TH, cx=(X0+(l.x+l.w/2)/k-TX)/TW; return `${(l.text||"").slice(0,12)||"∅"} ${Math.round(cx*100)},${Math.round(cy*100)} % h${Math.round((l.vert?l.w:l.h)/k/TH*100)}${l.vert?" v":""}`; };
+  const rawRead=raw.map(geo).join(" | ");
   if(!L.length) return {why:"the reader found no line"};
   const vert=L.filter(l=>l.vert).length>L.length/2;
   L.sort((a,b)=>vert?(b.x+b.w/2)-(a.x+a.w/2):(a.y+a.h/2)-(b.y+b.h/2)||a.x-b.x);
@@ -4323,9 +4328,10 @@ async function pdCharBoxes(src,nw,nh,g,lines){
   const thk=l=>l.vert?l.w:l.h, big=median([...usedL].map(thk))*0.6;
   const openLn=[...new Set(ci.map(j=>lnOf[j]))].filter(i=>{ const js=ci.filter(j=>lnOf[j]===i); return js.length>1&&js.every(j=>!boxes[j]); });
   const bigL=freeL.filter(l=>thk(l)>=big);
+  const fb=openLn.length?`fallback: ${openLn.length} card line(s) open, ${freeL.length} reader line(s) free, ${bigL.length} of the text's size`:"";
   if(openLn.length&&openLn.length===bigL.length) openLn.forEach((i,u)=>{ const js=ci.filter(j=>lnOf[j]===i), l=bigL[u], n=js.length;
     js.forEach((j,t)=>{ boxes[j]=boxOf(l,(t+0.5)/n,false,1/n); }); });
-  return {boxes,why:hit.size<ci.length?`${hit.size} of ${ci.length} characters read`:"",read:L.map(l=>l.text).join(" | "),area};
+  return {boxes,why:hit.size<ci.length?`${hit.size} of ${ci.length} characters read`:"",read:rawRead+(fb?" · "+fb:""),area};
 }
 /* v671 (the code review, findings 2 and 3): the two maps are one cache and leave together — PDBOX dropped its oldest at 60 and
    PDDONE its own oldest, and when their orders differed a card stood resolved in PDBOX and missing from PDDONE, so autoZoom saw
