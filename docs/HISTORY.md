@@ -39,6 +39,18 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v681, 2026-09-27)
+- **Diagnostics show where the phone's reader saw each line (v681, H: "Geht immer noch nicht", 电动车/禁止入园 on page 680:
+  the reader again `电动车 | 木木`, 禁 止 入 园 still `the reader's text, whole · x1 · at 50,72 %`).** v680's fallback took no
+  line, and the record could not say why. Its likeliest reason is its own height rule (a free reader line under 0.6 of the
+  matched lines' height is taken for fine print), and the text-whole view centred at 72 % down, with 电动车 at 50 %, hints
+  that 木木 may be a line lower than 禁止入园 (the English fine print). Neither is fitted to without the phone's numbers (the
+  v384 rule). The learn-zoom record's "the reader read" line now lists every line the reader found, Chinese or not, with
+  its middle (per cent across, down the frame), its height (per cent of the frame, `v` when vertical), and v680's count
+  (card lines open, reader lines free, of the text's size); it is printed up to 240 characters. No zoom behaviour changes.
+  Harness: `dian.js` prints `电动车 50,28 % h30 | 木木 50,65 % h30 · fallback: 1 card line(s) open, 1 reader line(s) free, 1
+  of the text's size`; az, pdc, quecao, chipeng, twoline, hyph and dian unchanged. Waiting for H's next dump of that card.
+
 ## Current state (PWA v680, 2026-09-27)
 - **The Learn zoom goes onto a line the reader read as fewer characters (v680, H: "He doesn't zoom the second line here",
   电动车 over 禁止入园, with Diagnostics: the reader read `电动车 | 木木`, 电 动 车 zoomed at 50 % down, then 禁 止 入 园 all `the
