@@ -39,6 +39,21 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v682, 2026-09-27)
+- **The phone's reader reads the card's whole picture when the frame cuts a line off (v682, H's v681 dump for 电动车/禁止入园:
+  `电动车 50,50 % h80 | 木木 13,120 % h31 · fallback: 1 card line(s) open, 1 reader line(s) free, 0 of the text's size`).**
+  The numbers settle it: 电动车 fills 80 % of the frame's height, so the card's frame holds 电动车 alone, and `pdCharBoxes` gave
+  the reader only the frame and 15 % around it — 禁止入园 was cut off at the bottom, and 木木 at 120 % down, 31 % high, left
+  of centre, is the top of 禁 at the crop's edge. v680's fallback was right to refuse it; v677/v680 could never have helped,
+  the line was not in the picture. Now a card line still open after every rule, while the crop was smaller than the card's
+  own picture (the square cut, which holds both lines), is read once more on the whole picture, and that reading is kept
+  when it places more of the card's characters; the record says `whole picture:` (or `whole picture placed no more`).
+  Cards whose lines all place on the first read are untouched and read once. Harness: `dian3.js` (frame around 电动车 only,
+  the crop read as `电动车 | 木木` at the edge, the whole picture as both lines) — v681 zooms 禁止入园 whole, v682 on each
+  character on the second line, left to right (2 checks flip, 1 control); az 13, ov 5, once 2, off 3, nf 2, pdc 4, pdcache
+  3, hyph 2, est 1, quecao 3, chipeng 2, twoline 2, dian 3, jin, glide, swapfast unchanged. Not yet field-checked: whether
+  the phone's reader reads 禁止入园 on the whole cut.
+
 ## Current state (PWA v681, 2026-09-27)
 - **Diagnostics show where the phone's reader saw each line (v681, H: "Geht immer noch nicht", 电动车/禁止入园 on page 680:
   the reader again `电动车 | 木木`, 禁 止 入 园 still `the reader's text, whole · x1 · at 50,72 %`).** v680's fallback took no

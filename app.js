@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=681; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=682; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -4267,10 +4267,10 @@ const ZLOG=[], ZLOG_MAX=30; const zlog=o=>{ ZLOG.push({at:Date.now(),...o}); whi
    unsure. The ink search stays for what the reader cannot place (digits, Latin letters, a line it did not read). Once per
    card and picture, started when the card comes up. */
 const PD_ZOOM_W=960, PDBOX=new Map(), PDDONE=new Map(); /* PDDONE: the reader's answer once it is in, read without waiting */
-async function pdCharBoxes(src,nw,nh,g,lines){
+async function pdCharBoxes(src,nw,nh,g,lines,whole){
   const TX=g.tx*nw, TY=g.ty*nh, TW=g.tw*nw, TH=g.th*nh; if(TW<8||TH<8) return {why:"tiny frame"};
   const chars=[]; lines.forEach(ln=>[...ln].forEach(ch=>chars.push(ch))); if(!chars.some(ch=>CJK.test(ch))) return {why:"no text"};
-  const mg=Math.max(TW,TH)*0.15, X0=Math.max(0,TX-mg), X1=Math.min(nw,TX+TW+mg), Y0=Math.max(0,TY-mg), Y1=Math.min(nh,TY+TH+mg);
+  const mg=Math.max(TW,TH)*0.15, X0=whole?0:Math.max(0,TX-mg), X1=whole?nw:Math.min(nw,TX+TW+mg), Y0=whole?0:Math.max(0,TY-mg), Y1=whole?nh:Math.min(nh,TY+TH+mg);
   const k=Math.min(2,PD_ZOOM_W/Math.max(X1-X0,Y1-Y0)), W=Math.max(8,Math.round((X1-X0)*k)), H=Math.max(8,Math.round((Y1-Y0)*k));
   const cv=document.createElement("canvas"); cv.width=W; cv.height=H; cv.getContext("2d").drawImage(src,X0,Y0,X1-X0,Y1-Y0,0,0,W,H);
   /* v681 (H: "Geht immer noch nicht", 电动车/禁止入园 on v680, the reader again `电动车 | 木木` and the zoom whole): the record said what
@@ -4331,7 +4331,16 @@ async function pdCharBoxes(src,nw,nh,g,lines){
   const fb=openLn.length?`fallback: ${openLn.length} card line(s) open, ${freeL.length} reader line(s) free, ${bigL.length} of the text's size`:"";
   if(openLn.length&&openLn.length===bigL.length) openLn.forEach((i,u)=>{ const js=ci.filter(j=>lnOf[j]===i), l=bigL[u], n=js.length;
     js.forEach((j,t)=>{ boxes[j]=boxOf(l,(t+0.5)/n,false,1/n); }); });
-  return {boxes,why:hit.size<ci.length?`${hit.size} of ${ci.length} characters read`:"",read:rawRead+(fb?" · "+fb:""),area};
+  const res={boxes,why:hit.size<ci.length?`${hit.size} of ${ci.length} characters read`:"",read:rawRead+(fb?" · "+fb:""),area};
+  /* v682 (H's v681 dump for 电动车/禁止入园: `电动车 50,50 % h80 | 木木 13,120 % h31` — the card's frame holds 电动车 alone, and the
+     reader was given the frame and 15 % around it, so 禁止入园 was cut off below and all it saw was the top of 禁): a card line
+     still open after everything above, while the crop was smaller than the card's own picture, is read again on the whole
+     picture, and that reading is kept when it places more of the card's characters */
+  const open=ci.some(j=>!boxes[j]), cut=X0>0||Y0>0||X1<nw||Y1<nh;
+  if(whole||!open||!cut) return res;
+  const again=await pdCharBoxes(src,nw,nh,g,lines,true), cnt=r=>r&&r.boxes?r.boxes.filter(Boolean).length:0;
+  if(cnt(again)>cnt(res)){ again.read="whole picture: "+(again.read||""); return again; }
+  res.read+=" · whole picture placed no more"; return res;
 }
 /* v671 (the code review, findings 2 and 3): the two maps are one cache and leave together — PDBOX dropped its oldest at 60 and
    PDDONE its own oldest, and when their orders differed a card stood resolved in PDBOX and missing from PDDONE, so autoZoom saw
