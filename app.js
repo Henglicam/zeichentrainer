@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=673; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=674; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -685,6 +685,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v674","一汽-大众: zoom on each char?"],
   ["learn","v673","pinyin after green, truly?"],
   ["photo","v672","share w/o VPN opens fast?"],
   ["learn","v670","session steady while saving?"],
@@ -4369,7 +4370,14 @@ async function refineShot(shot){
     document.querySelectorAll(`.region[data-region="c:${CSS.escape(d.id)}"],.region[data-rid="c:${CSS.escape(d.id)}"]`).forEach(e=>{ e.style.left=pc(b.x); e.style.top=pc(b.y); e.style.width=pc(b.w); e.style.height=pc(b.h); }); }
   document.querySelectorAll(".card.study").forEach(c=>{ if(c.querySelector(".picbox.page")) fitPageCover(c); }); /* the page front is centred on the card's own region */
 }
-const spotLines=d=>d.kind==="sign"?String(d.c||"").split("\n"):frontLines(d); /* wordSpan's own lines, so a box's position is the pad's */
+const spotLines=d=>d.kind==="sign"?String(d.c||"").split("\n"):frontLines(d); /* the lines the boxes are cut for; a box is indexed by its place in them */
+/* v674 (H: "Bug: it skips one character in the photo", 一汽-大众: 大 zoomed onto 众, 众 onto nothing): the pad counts a character by
+   its place in the card's text (padTargets' pos), the boxes by their place in spotLines — and a card's word breaks can leave out
+   what the text carries (the hyphen of 一汽-大众 is in no word), so every character after it took its right neighbour's box. The
+   text's place of each character in the lines, in order; -1 for one the lines do not carry */
+function spotIdx(d){ const text=[...String(d.c||"").replace(/\n/g,"")], flat=spotLines(d).flatMap(l=>[...l]), map=[]; let j=0;
+  for(const ch of text){ let k=j; while(k<flat.length&&flat[k]!==ch) k++; if(k<flat.length){ map.push(k); j=k+1; } else map.push(-1); }
+  return map; }
 async function autoZoom(card,d,c,tg,st,cur){
   if(!ZOOM_AUTO||S.mode!=="study"||S.fullPic||S.peek) return;
   await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))); /* after attachPicZoom's own restore of the zoom this picture had */
@@ -4380,17 +4388,16 @@ async function autoZoom(card,d,c,tg,st,cur){
   const level=cur&&cur.w?padLevel(c,cur,st):3, onChar=!!cur; /* v660 (H: "I'd rather have it, please change the rule so the photo still zooms onto a known character"): the zoom follows every character, level 3 included — v617 kept the photo whole at level 3 (H's "(b)": at recall a big sharp character makes it copying), and on the phone that read as the pan failing (车 of 减震单车 zoomed out) */
   if(allDone||!onChar||S.cueBig!=="pic"){ if(z.auto&&z.s>1&&S.cueBig==="pic"){ z.focus(1); zlog({c:d.c,ch:cur&&cur.ch,how:allDone?"out, card done":"out"}); } return; }
   const geom=await spotGeom(card,d,{whole:true}); if(!geom||!card.isConnected||S.pad!==st) { if(!geom) zlog({c:d.c,ch:cur.ch,how:"no place on the photo",why:MARKW.get(d.id)||""}); return; }
-  const est=wordSpan(d,{word:cur.ch,wstart:cur.pos}); if(!est) return;
   /* v653: the reader's place when it is there; while it is still reading (its first load on a phone takes seconds) the zoom goes
-     on the ink's guess at once and moves to the reader's place the moment it has one */
+     on a sure ink cut at once, or the text whole (v669), and moves to the reader's place the moment it has one. v674 (the code
+     review, finding 7): wordSpan's estimate left with v669 — it placed nothing any more, and its `if(!est) return` still stopped the
+     zoom before the reader's place was looked at, leaving the photo on the previous character */
   const pk=cbKey(d), pp=pdBoxesFor(card,d), pb=PDDONE.get(pk);
   if(pb===undefined&&!st._pdWait){ st._pdWait=true; pp.then(()=>{ st._pdWait=false; if(card.isConnected&&S.pad===st&&card._az) card._az(); }); } /* card._az is the card's current character */
-  const pf=pb&&pb.boxes&&pb.boxes[cur.pos];
+  const li=spotIdx(d)[cur.pos]??-1, pf=li>=0&&pb&&pb.boxes&&pb.boxes[li];
   const ck=cbKey(d); let cb=CBOX.get(ck);
   if(!pf&&!cb){ cb=charBoxes(geom.img,geom.img.naturalWidth,geom.img.naturalHeight,geom,spotLines(d)); CBOX.set(ck,cb); if(CBOX.size>60) CBOX.delete(CBOX.keys().next().value); }
-  const found=pf||(cb&&cb.boxes&&cb.boxes[cur.pos]); let sp=found||est, how=pf?(pf.ok?"reader":"reader, unsure"):found?(found.ok?"ink":"ink, unsure"):"estimate";
-  /* v664: a place nobody is sure of (the ink's guess or the estimate) that lies off every line the reader saw is off the text —
-     the zoom shows the reader's text whole instead (贵州茅台酒 at 20°: x3.5 onto the empty card beside the label) */
+  const found=pf||(li>=0&&cb&&cb.boxes&&cb.boxes[li])||null; let sp=found, how=pf?(pf.ok?"reader":"reader, unsure"):found?(found.ok?"ink":"ink, unsure"):"";
   /* v669 (H: "Hier ist er nicht auf den nächsten character gesprungen" on 电动车/禁止入园, "Und hier entspricht der Bildausschnitt
      überhaupt nicht dem character" on 无名, both logged "ink, unsure"; 贵州茅台酒 at v664 the same): a place only the ink search
      guessed, unsure, is wrong too often to zoom on — v664 caught it only when it lay off the reader's lines. Now any place neither
