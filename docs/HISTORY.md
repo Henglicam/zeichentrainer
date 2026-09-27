@@ -39,6 +39,22 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v691, 2026-09-27)
+- **Character pages (v691, H: "Mach dann C, die Zeichenseiten" — proposal C of the Cards-as-a-reference review).** On an
+  open card the line under the character row now ends in a row "Cards with 行 3 ›" for the character that is lit (the
+  tapped one, else the first). It opens the character's page: the character large; each reading it has in your own cards —
+  the syllable at its place in the card's own pinyin, counted, the most frequent first, so 行 shows háng (银行) and xíng
+  (行人) — each with the dictionary's sense for that reading (`bestSense`), pinyin-pro's reading when no card's pinyin lines
+  up; then "Cards with 行" and one row per card and multicard text that holds it, newest first — photo, the text with the
+  character in the tint, pinyin, meaning. A row opens its card, whose ← Back returns to the page; the page's ← Back returns
+  to the card it was opened from; any other way out (a tab tap, the list, a swipe) closes it, and it never comes back on a
+  later visit to the card (`S.charPage` is cleared by `renderCards`/`renderCardDetail`). Nothing on the page is studied or
+  graded. Two keys in nine columns ("Cards with {0}", the Cards guide's new sentence): **482 a column, ru 511**. The guide's
+  Cards section gains the sentence (v259 rule); no guide crop shows this screen. Harness `chpage.js`: the link's count, the
+  page, both readings of 行, the three rows in order with 行 marked, the row → card → back → page → back → card round trip,
+  and the tab tap as a guard — all new (no v690 counterpart to flip against). Screenshots at 390 px, light/en and dark/de.
+  Not yet field-checked.
+
 ## Current state (PWA v690, 2026-09-27)
 - **The Cards search finds pinyin typed without tones (v690, H: "Bitte auch noch mal das Design überdenken. Unter Cards sind
   die Karten ein Nachschlagewerk", then "Go B" of four proposals, and "Ship B, skip A").** The search matched a substring of
