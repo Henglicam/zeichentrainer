@@ -58,7 +58,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v687, 2026-09-27)
+## Current state (PWA v688, 2026-09-27)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -70,7 +70,7 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   (`sureCheck`, v646/v648) and a different answer flags the card and **takes the AI's reading**, the reader's kept in the note
   and `alts` (v652). `pdAsPass` keeps short Latin runs (D座, 24H), cuts fine print, drops strays (v646/v647). It places a
   multicard's labels at the split (`pdMatch`, `aiBoxCal`, v638–v644; single lines and two-line pairs compete in one list, v687) and on older multicards (`refineShot`); regions snap onto
-  their texts at display (`snapRegion`, v620/v628, memory only). Right-to-left signs are not turned round (v647, dropped).
+  their texts at display (`snapRegion`, v620/v628; kept in the `regfix` settings row since v688, so they start in place). Right-to-left signs are not turned round (v647, dropped).
 - **Owner tools** — Zoom check (Run, Share, Data, Paddle; v627), Re-read all (v645, changes no card, `RRPH`/`rrFinish`),
   Check texts (v650: which characters are not on the photo), Rebuild all (v651/v652: `rbOne`, old cards in `rb:<shot>` rows for
   Undo and `rbRecover`). Since v670 anything saved in the background rebuilds the Learn queue through `requeue()` (order,

@@ -39,6 +39,18 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v688, 2026-09-27)
+- **A multicard's measured regions are kept, so they are drawn in place from the start (v688, H on v687: "It starts now with
+  a small frame and extends to the big frame. That's better, but it should be the big frame from the beginning").** The
+  regions were measured at display and kept in memory only (`REGFIX`, v620): after every start of the app a multicard first
+  drew each text's stored frame (on the washing machine the split's one-line frame) and moved it once the phone's reader had
+  read the photo. `refineShot` now writes the whole map to one settings row (`regfix`, at most `REG_MAX` 600 regions) and
+  boot reads it back (`regLoad`), so a multicard shown once is drawn in its measured place from then on. The card, its frame
+  and Crop again are unchanged, and the export carries no settings. A row written under another `REG_V` (688) is dropped, so
+  every multicard is measured once more after this update — the first showing of each still moves once, then never again.
+  Harness `regkeep.js` (a two-text multicard, the reader stubbed): after a reload the region's first paint is the measured
+  box on v688, the stored frame on v687 (1 flip; the first showing's move as controls). Not yet field-checked.
+
 ## Current state (PWA v687, 2026-09-27)
 - **A multicard label printed on two lines takes both lines (v687, H: "Bei den zweizeiligen Feldern der Multicards sind die
   Rahmen nicht richtig gesetzt", screenshots of the washing machine panel: 温度长按联网, 时间长按远程 and +烘干长按单烘 each

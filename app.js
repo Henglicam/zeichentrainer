@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=687; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=688; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -685,6 +685,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v688","Multicard: big frame from start?"],
   ["cards","v687","2-line labels: frame both lines?"],
   ["learn","v686","邪不压正: last char not cut?"],
   ["photo","v684","4-line poster: last line in crop?"],
@@ -1613,7 +1614,7 @@ async function boot(){
   try{
     const [prog, cust, inb, sett] = await Promise.all([idbAll("progress"), idbAll("custom"), idbAll("inbox"), idbAll("settings").catch(()=>[])]);
     S.progress = {}; prog.forEach(r=>{ const {id,c,...s}=r; S.progress[id||c]=s; });
-    sett.forEach(r=>{ S.settings[r.k]=r.v; });
+    sett.forEach(r=>{ S.settings[r.k]=r.v; }); regLoad();
     if(Array.isArray(S.settings.errlog)) ERRLOG.unshift(...S.settings.errlog.slice(-ERR_KEEP));
     if(Array.isArray(S.settings.autoQueue)) AUTOQ.push(...S.settings.autoQueue.filter(id=>typeof id==="string")); /* v411: the batch goes on where it stopped */
     /* the readings survive the restart with their steps (v399/v267), one row each since v505 — and the one-row ring a
@@ -4384,8 +4385,14 @@ const cbKey=d=>d.id+"|"+(d.shot||"")+"|"+JSON.stringify(d.frame||0)+"|"+(d.c||""
    the search is sure of at least 60 % of them and the result stays on the frame (its centre inside it, its area between a
    seventh and 1.3 times the frame's), so a wrong line cannot pull a region onto the building beside the sign. Measured at
    display, kept in memory: nothing stored changes, Crop again still starts from the frame, and every multicard already in
-   the deck is snapped the first time it is shown. A turned frame is left as it is. */
-const REGFIX=new Map(), REGRUN=new Set();
+   the deck is snapped the first time it is shown. A turned frame is left as it is.
+   v688 (H: "It starts now with a small frame and extends to the big frame … it should be the big frame from the beginning"):
+   the measured regions are kept in one settings row (`regfix`) and read back at boot, so a multicard shown once is drawn
+   in its measured place from then on. The card and its frame still do not change. A row written under another REG_V is
+   dropped, so a change to how regions are measured measures every multicard again. */
+const REGFIX=new Map(), REGRUN=new Set(), REG_V=688, REG_MAX=600;
+function regLoad(){ const r=S.settings.regfix; if(!r||r.v!==REG_V||!Array.isArray(r.m)) return; r.m.forEach(([k,b])=>{ if(typeof k==="string") REGFIX.set(k,b||null); }); }
+function regSave(){ while(REGFIX.size>REG_MAX) REGFIX.delete(REGFIX.keys().next().value); setSetting("regfix",{v:REG_V,m:[...REGFIX]}); }
 /* the split's own fallback for a text it could not place: a frame over half the photo, or one another text of the same photo shares (v628) */
 const fallbackFrame=d=>{ const f=d.frame; if(!f) return true; if(f.w*f.h>0.5) return true; return !!(d.shot&&S.custom.some(x=>x!==d&&x.shot===d.shot&&x.kind!=="page"&&x.frame&&x.frame.x===f.x&&x.frame.y===f.y&&x.frame.w===f.w&&x.frame.h===f.h)); };
 function snapRegion(d,src,pw,ph){
@@ -4421,8 +4428,8 @@ async function refineShot(shot){
         if(own&&!(cx>f.x-f.w&&cx<f.x+2*f.w&&cy>f.y-f.h&&cy<f.y+2*f.h)) return null;
         const p=q.h*PD_ROOM; return {x:Math.max(0,q.x-p),y:Math.max(0,q.y-p),w:Math.min(1,q.x+q.w+p)-Math.max(0,q.x-p),h:Math.min(1,q.y+q.h+p)-Math.max(0,q.y-p)}; }); }
     catch(e){ pdAt=null; logErr("paddle",e&&e.message||String(e)); } }
-  for(let i=0;i<todo.length;i++){ const d=todo[i], b=(pdAt&&pdAt[i])||snapRegion(d,bm,bm.width,bm.height); REGFIX.set(cbKey(d),b); if(b) moved++; if(REGFIX.size>600) REGFIX.delete(REGFIX.keys().next().value); await yieldNow(); }
-  bm.close(); if(!moved) return;
+  for(let i=0;i<todo.length;i++){ const d=todo[i], b=(pdAt&&pdAt[i])||snapRegion(d,bm,bm.width,bm.height); REGFIX.set(cbKey(d),b); if(b) moved++; await yieldNow(); }
+  bm.close(); regSave(); if(!moved) return;
   /* the regions on screen move to their measured place; no render, so nothing the learner is doing is interrupted */
   for(const d of todo){ const b=REGFIX.get(cbKey(d)); if(!b) continue; const pc=x=>(x*100).toFixed(2)+"%";
     document.querySelectorAll(`.region[data-region="c:${CSS.escape(d.id)}"],.region[data-rid="c:${CSS.escape(d.id)}"]`).forEach(e=>{ e.style.left=pc(b.x); e.style.top=pc(b.y); e.style.width=pc(b.w); e.style.height=pc(b.h); }); }
