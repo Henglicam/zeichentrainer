@@ -39,6 +39,15 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v689, 2026-09-27)
+- **Generate flashcard is a quiet grey text button (v689, H: "In den Karten unter Multicards steht ziemlich prominent
+  Generate Flashcard. Das ist aber die absolute Ausnahme. Bitte weniger prominent darstellen").** The look-up sheet on a
+  multicard's text ended in a full-width red primary button (v478's "the one action" of the sheet); it is now a plain grey
+  text button at the sheet's foot, right-aligned, 15 px, 44 px tall (`.lkbtn`, its own class — `.del` would have brought the
+  tint red). "Open the flashcard" takes the same quiet style. Looking up is the rule on a multicard, a flashcard the
+  exception. Checked by screenshot at 390 px, light in English and dark in German (Karte erstellen): 148 × 44 and 114 × 44,
+  label2 grey, no background, where v688 had 338 × 50 in the tint. No guide crop shows this sheet. Not yet field-checked.
+
 ## Current state (PWA v688, 2026-09-27)
 - **A multicard's measured regions are kept, so they are drawn in place from the start (v688, H on v687: "It starts now with
   a small frame and extends to the big frame. That's better, but it should be the big frame from the beginning").** The
