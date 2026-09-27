@@ -39,6 +39,21 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v698, 2026-09-27)
+- **A multicard's rows show each text's short description, whole; the long one stays on the opened text (v698, H: "In the
+  list overview, show the full description, but not the extended AI details those only in the opened card. And load it during
+  creation of the Multicard").** v696's rows showed the text's description (`ds`, up to `DESC_MAX` 700 characters, written
+  by Explain only when a text was opened, v586) clamped to three lines, so most rows were empty and the rest cut off. Each
+  text now carries a short description of its own (`dsh`, per language like `ds`): one sentence, at most 15 words, what the
+  text is or does on this panel or menu — asked of the text model for **all of a multicard's texts in one call**
+  (`pageShorts`, `aiAsk` with a `short` why naming the multicard's title), fired when the split writes the multicard and,
+  for a multicard made before, the first time it is shown (once a session per language). `saneShort` keeps `saneDesc`'s
+  checks and cuts to the first sentence (160 characters at most). An answer counts only for its own text (`sureKey`). The
+  row shows it whole (the clamp is gone); the opened text still shows the long description through Explain. **The cost:**
+  one text-model call per multicard. Harness `shorts.js` (a three-text multicard, the relay mocked): one call, three whole
+  one-sentence rows, no long description written, the question names the multicard — 3 flips against v697, one guard. The
+  split's own trigger is checked by reading the code only (the harness does not run a split). Not yet field-checked.
+
 ## Current state (PWA v697, 2026-09-27)
 - **A multicard's text rows lose their ring (v697, H with a screenshot of a menu multicard's rows: "Wofür ist der Kreis über
   dem Review Tag?", then "Nicht in dieser Ansicht anzeigen. Sondern nur im geöffneten Zustand").** The ring (`stateMark`,
