@@ -63,35 +63,23 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
 
-**Recent state worth carrying in the head** (each version has its full entry in the archive — `grep -n "v6xx" docs/HISTORY.md`):
-- **The phone's reader (PaddleOCR PP-OCRv4, v637)** — `pdRead`, `vendor/paddle/` ~30 MB loaded on first use, in its own worker
-  since v642 (`pdWorkerMain`). It is one more pass of every reading (v639) and, when **sure** (≤ 2 lines, ≥ 2 characters, each
-  ≥ `PD_SURE` 95 %, raw detection ≤ 2 Chinese lines, v641), the reading itself — the picture goes to the AI beside it
-  (`sureCheck`, v646/v648) and a different answer flags the card and **takes the AI's reading**, the reader's kept in the note
-  and `alts` (v652). `pdAsPass` keeps short Latin runs (D座, 24H), cuts fine print, drops strays (v646/v647). It places a
-  multicard's labels at the split (`pdMatch`, `aiBoxCal`, v638–v644; single lines and two-line pairs compete in one list, v687) and on older multicards (`refineShot`); regions snap onto
-  their texts at display (`snapRegion`, v620/v628; kept in the `regfix` settings row since v688, so they start in place). Right-to-left signs are not turned round (v647, dropped).
-- **Owner tools** — Zoom check (Run, Share, Data, Paddle; v627), Re-read all (v645, changes no card, `RRPH`/`rrFinish`),
-  Check texts (v650: which characters are not on the photo), Rebuild all (v651/v652: `rbOne`, old cards in `rb:<shot>` rows for
-  Undo and `rbRecover`). Since v670 anything saved in the background rebuilds the Learn queue through `requeue()` (order,
-  repeats and place kept).
-- **The Learn zoom** (v617 on; see The app → Learn) — place from the phone's reader (`pdCharBoxes`, v653: characters matched
-  to its lines by LCS, v661 out-of-order match, v677 a wrongly read line of the same length taken
-  by position, v680 of another length spread evenly along it, v685 a partly matched line's other characters spread along it, since v686 stepped from the match's own place, unsure; each at its CTC position `at`; the reader gets the frame and 15 %, and
-  the whole cut when a card line is still open, v682 — field-checked by H on 电动车/禁止入园), else a **sure** ink cut (`charBoxes`, v619/v626);
-  an unsure place is never zoomed on — the text whole instead (v664/v669), nor an ink box on another character's reader place (v684). The pad's character is mapped to its box through
-  `spotIdx` (v674: a hyphen no word claims shifted every later character onto its neighbour). A character near the picture's
-  edge is zoomed in just far enough to stand in the middle (≤ 3.5×), and the zoom's rest rect is read with the live transform
-  taken out, so a move mid-glide keeps its place (`rest()`, v676 — field-checked by H on 禁止烟火). Whole photo for `AZ_OVERVIEW`
-  1.5 s, waiting for the reader up to `AZ_READER` 2.5 s (v662/v665); every level zooms (v660); frameless cards zoom on their
-  own picture (v663). `PDBOX`/`PDDONE` are one cache (`pdForget`, `PD_TRANSIENT`, v671). Diagnostics' learn-zoom lines carry
-  `at x,y %`, `edge` and what the reader read (v666), since v681 with every reader line's place and height and v680's fallback count.
-- **The Learn card** — Star · Flag · Edit in Whole card (v654/v655, again v667), a small star/flag beside "Whole card"
-  (`foldMarks`), **nothing on the photo** (H rejected marks there at v667). After a character the reading comes in only once
-  the green ink has faded (`CHAR_IN`, v668; the start style forced before `in`, v673).
+**Recent state worth carrying in the head** (full entries: `grep -n "v6xx" docs/HISTORY.md`):
+- **The phone's reader (PaddleOCR PP-OCRv4, v637)** — `pdRead`, `vendor/paddle/` ~30 MB on first use, own worker (v642). One
+  more pass of every reading (v639); when **sure** (≤ 2 lines, ≥ 2 characters, each ≥ `PD_SURE` 95 %, v641) it is the reading,
+  checked by the AI's picture beside it — a different answer flags the card and takes the AI's reading (`sureCheck`,
+  v646–v652). It places a multicard's labels (`pdMatch`, `aiBoxCal`, v638–v644; single lines and two-line pairs compete,
+  v687); regions snap onto their texts at display (`refineShot`/`snapRegion`, v620/v628), kept in the `regfix` settings row
+  so they start in place (v688).
+- **Owner tools** — Zoom check (v627), Re-read all (v645), Check texts (v650), Rebuild all with Undo (v651/v652). Background
+  saves rebuild the Learn queue through `requeue()` (v670).
+- **The Learn zoom's place** — the phone's reader first (`pdCharBoxes`, v653): characters matched to its lines by LCS, then
+  out of order (v661), a misread line by position (v677), spread along it (v680), a partly matched line stepped from its match
+  (v685/v686), each at its CTC place `at`, unsure; the reader gets the frame + 15 %, the whole cut when a line is still open
+  (v682, field-checked). Else a **sure** ink cut (`charBoxes`, v619); an unsure place shows the text whole (v669), never an ink
+  box on another character's place (v684). `spotIdx` maps the pad's character (v674); `rest()` keeps a mid-glide move in
+  place (v676, field-checked). Diagnostics' learn-zoom lines carry `at`, `edge` and every reader line (v666/v681).
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
-  was asked about (`run.zh`, `aiLate`, v657). Shared screenshots open from the cached shell (`ignoreSearch`, `zt-share` kept,
-  v672).
+  was asked about (`run.zh`, `aiLate`, v657).
 
 ## Files
 Shell: `index.html` · `styles.css` · `lang.js` · `app.js` · `manifest.webmanifest` (with `share_target`) · `sw.js` ·
@@ -193,13 +181,15 @@ after the layout settles (v521/v532).
   the picture's edge hands the stroke to the swipe (v606).
 
 ### Cards
-Square photo tiles, two a row, blurred fill behind, **nothing written under them** (v593); a text-only card draws its text in
-the picture (v506). On the picture: the star (v425, one tap, never a re-render), flag and AI marks; a multicard adds the stack of
-plates, the count chip and the progress bar as the picture's bottom edge, its title over a scrim clamped to two lines (v461/v465/
-v597). **Two tabs, Cards and Multicards** (v477); the filter is **one pill and a sheet** (v365/v366); the search also finds pinyin typed without tones or spaces (`toneless`, v690; H skipped proposal A, a dictionary-row list, the same day); a long press starts the
-marking (v354); the list keeps its place (v352/v445). The **open card** follows the study card's order (v531), swipes through the
-list (v445): Test this card · Edit | Star · Flag | Delete. Its line under the character row ends in **Cards with 行 ›**, the character's page: its readings in your cards with their senses and every card that holds it (v691, `renderCharPage`). A **multicard's own text**: + Flashcard (Flashcard › once made) | Edit, then Flag | Delete (v498/v692/v695); the look-up pop-up over the photo carries **no action at all** (v496, v692). The
-multicard itself: **Add a text** and Delete card (v635); its tags stand once under its title, and its texts' rows show their description, not the tag (v696).
+Square photo tiles, two a row, **nothing written under them** (v593); a text-only card draws its text in the picture (v506).
+On the picture: the star (v425, one tap), flag and AI marks; a multicard adds its plates, count chip, progress bar and a
+two-line title (v461–v597). **Two tabs, Cards and Multicards** (v477); the filter is **one pill and a sheet** (v365/v366);
+search also takes toneless pinyin (`toneless`, v690; H skipped a dictionary-row list, proposal A); a long press marks (v354);
+the list keeps its place (v352/v445). The **open card** swipes through the list (v445): Test this card · Edit | Star ·
+Flag | Delete; its line under the character row ends in **Cards with 行 ›**, the character's page — its readings in your
+cards and every card that holds it (v691). A **multicard's own text**: + Flashcard (Flashcard › once made) | Edit, Flag |
+Delete (v692/v695); the pop-up over the photo carries **no action** (v496/v692). The multicard: **Add a text**, Delete card
+(v635); its tags once under its title, its texts' rows show their description (v696).
 
 ### Camera — photo to card
 The Camera tab is the camera: the **shutter card** (Take photo, From album) centred, work under it (v466/v470); a photo that
@@ -441,12 +431,9 @@ The full list is in the archive; these are the ones that keep biting.
   supposed to set it** (v468).
 - **A second copy of one number drifts.** One rule, one reader; when a copy is unavoidable, name
   it on both sides (v401).
-- **A constant that holds only because something else is being cut stops holding the moment the cutting
-  stops** (v600): `LINE_H` 61 was the word line's true height only while a row that did not fit was sliced
-  sideways. The wrap made it a lie, and `.cue .padline`'s `overflow:hidden` would have cut the new third row
-  as silently as the flex row had cut the first. **A static estimate that must be safe for every card is
-  wrong on most of them** — the finished card's reading was estimated from a character count and stood at
-  12.7 px where 27 fits.
+- **A constant that holds only because something else is being cut stops holding the moment the cutting stops** (v600:
+  `LINE_H` 61 was the word line's height only while a row was sliced; the wrap made it a lie). **A static estimate that must
+  be safe for every card is wrong on most of them** — measure (`recapFit`).
 - **A dead constant or class leaves with its last user** (v307), and **a comment that states
   something false is a defect** (v404).
 - **An undefined CSS custom property takes its entire declaration with it** — the only way to find one is to
@@ -483,17 +470,15 @@ the listing exists; the AI review on by default is a GDPR opt-in question; PIPL 
 CC BY-SA).
 
 ## Open / not yet field-checked
-Everything from **v597 to v674** is unconfirmed on the phone unless H has said otherwise; each version's entry in the archive
-names its own open question. The ones that decide what comes next:
-- **The Learn zoom** (v653–v686) — does it land on the character being written, and is 3.5× sharp enough? H's next Diagnostics
-  and Owner tools → Zoom check → Share and Data are the test (京城内外首善全图's 内: clamp or a second 内?).
-- **The phone's reader as the reading** (v641/v646/v652) — are sure cards fast and right, and does the check flag the right ones?
-- **Owner tools** — Re-read all (v645), Check texts (v650: false flags?), Rebuild all (v651: better cards, does Undo restore all?).
-- **Speed** — the split picture call (v640), the reader's worker (v642), the share path without the VPN (v672).
-- **Learn screen** — v667's toolbar and fold-row marks, v673's hand-over from the green character to its reading and the meaning
-  clamp, v670's steady session while cards are saved, v602's trial without marks on the photo (`SPOT_ON`, H's word decides).
-- **Older** — v600's wrapped word line and bigger recap reading, v599's example card and guide figures, v603/v604's
-  Traditional chip, v606/v614's pull-past-the-edge swipe, v608's name and icon on the home screen.
+Everything from **v597 to v696** is unconfirmed on the phone unless H has said otherwise (field-checked: v676, v682, v685);
+each version's archive entry names its open question. The ones that decide what comes next:
+- **The Learn zoom** (v653–v686) — does it land on the character being written, is 3.5× sharp enough? Diagnostics and Owner
+  tools → Zoom check are the test.
+- **The phone's reader as the reading** (v641–v652) — are sure cards fast and right, does the check flag the right ones?
+- **Multicards and Cards as a reference** (v687–v696) — two-line labels framed whole and in place at once, the text's actions
+  on its own screen, character pages, toneless search, tags once with descriptions in the rows, no Google panel (v694).
+- **Owner tools** (v645–v651), **speed** (v640, v642, v672), **Learn screen** (v667–v673, v602's `SPOT_ON` trial) and the
+  older v599–v614 items — see their entries.
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the same PR as any change to the Crop view,
 the Edit form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's

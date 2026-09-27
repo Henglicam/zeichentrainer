@@ -39,6 +39,13 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Docs only (after PWA v696, 2026-09-27) — CLAUDE.md trimmed
+- H: "Ja, trim CLAUDE.md". At 42.5 KB it was past its ~40 KB limit. "Current state" keeps one short bullet per mechanism
+  (the reader, owner tools, the Learn zoom's place, Crop again) and drops the Learn-card bullet that repeated The app → Learn;
+  "Open / not yet field-checked" names the range v597–v696 and today's Cards/Multicards work in one line; the Cards section and
+  the v600 field lesson say the same in fewer words. 39.7 KB. Nothing dropped is lost: each version's full wording is here.
+  No version bump — no phone fetches CLAUDE.md.
+
 ## Current state (PWA v696, 2026-09-27)
 - **A multicard's tags stand once in its overview card; its texts' rows carry their description instead (v696, H: "Die Tags
   für eine Multicard bitte in der Multicard-Übersichtskarte anzeigen und nicht in jeder einzelnen Karte der Multicard. Den
