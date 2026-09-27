@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=707; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=708; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -5184,7 +5184,7 @@ function mountPad(card,d,c,tg,st,cur){
      stroke file is parsed (~0.5 s on H's phone). That pad counted as FREE — a character the stroke set lacks — and drew the
      character in the Hanzi font, bigger and centred, with Done and Clear, until the template replaced it at its own place.
      While the file is still loading the pad now shows its grid alone, takes no stroke, and draws the template once it is there. */
-  const tmpl=cur&&STROKE_OF.get(cur.glyph), waiting=!!cur&&!tmpl&&!STROKES; let free=!tmpl&&!waiting; const strokes=tmpl?tmpl.map(s=>s.map(padPt)):null; let drawing=null, anim=null, flash=0;
+  const tmpl=cur&&STROKE_OF.get(cur.glyph), waiting=!!cur&&!tmpl&&!STROKES&&!STROKES_FAIL; let free=!tmpl&&!waiting; const strokes=tmpl?tmpl.map(s=>s.map(padPt)):null; let drawing=null, anim=null, flash=0;
   const outl=tmpl&&cur?outlinesFor(cur.glyph,tmpl.length):null; /* the real Kai outlines when they have arrived (v517) */
   const kinds=strokes?strokes.map(strokeKind):null;
   const lvl=cur?padLevel(c,cur,st):1;
@@ -5348,7 +5348,7 @@ function mountPad(card,d,c,tg,st,cur){
       if(got.slice(0,3).includes(cur.glyph)){ charDone(false); } else { st.miss++; st.maxMiss=Math.max(st.maxMiss,st.miss); acts(); if(note) note.textContent=t("Not recognized — try cleaner, well-separated strokes."); } } /* v589: a refused Done is a try, so Skip arrives after four of them */
     catch(err){ if(note) note.textContent=t("Reading failed: {0}",err&&err.message||err); } };
   paint(); acts();
-  if(!STROKES) loadStrokes().then(()=>{ if(cv.isConnected&&S.pad===st) render(); }).catch(err=>{ logErr("strokes",err&&err.message||err); }); /* the first card of a session loads the medians; the pad redraws with the template once they are in */
+  if(!STROKES) loadStrokes().then(()=>{ if(cv.isConnected&&S.pad===st) render(); }).catch(err=>{ logErr("strokes",err&&err.message||err); if(cv.isConnected&&S.pad===st) render(); }); /* v708: a failed load redraws too — the waiting pad becomes the free pad with Done, as before v706 */ /* the first card of a session loads the medians; the pad redraws with the template once they are in */
   /* and then, behind it and without anything waiting for it, the real outlines — the brush draws until they land (v517) */
   if(!OUTLINES) loadOutlines().then(()=>{ if(cv.isConnected&&S.pad===st) paint(); }).catch(err=>{ logErr("outlines",err&&err.message||err); });
   card._pad={st,strokes,paint,lvl,free:()=>free}; /* used by the tests */
@@ -10077,7 +10077,7 @@ function openDrawSheet(id,k,i,apply,ins){
    best assignment of drawn strokes to its strokes — order-free, so H's own stroke order does not matter (he closes the
    box of 团 third, the standard order closes it last); a missing or extra stroke costs a fixed skip. The print model
    stays as the fallback and for characters the database lacks. */
-let STROKES=null, _strokesLoading=null;
+let STROKES=null, _strokesLoading=null, STROKES_FAIL=false; /* v708: the file could not be loaded — a pad waiting for it (v706) is a free pad then, never stuck */
 function loadStrokes(){
   if(STROKES) return Promise.resolve(STROKES);
   if(!_strokesLoading) _strokesLoading=(async()=>{
@@ -10090,8 +10090,8 @@ function loadStrokes(){
       if(Array.isArray(st)&&st.length) STROKE_OF.set(ch,st); /* the pad's templates (v512): the medians as the file has them */
       const prep=prepStrokes(st); if(!prep) return; const a=byCount.get(prep.length)||[]; a.push({ch,st:prep}); byCount.set(prep.length,a); });
     PARSE_MS.strokes=Math.round(performance.now()-t0); STROKES=byCount; return STROKES;
-  })().catch(err=>{ _strokesLoading=null; throw err; });
-  return _strokesLoading;
+  })().catch(err=>{ _strokesLoading=null; STROKES_FAIL=true; throw err; });
+  STROKES_FAIL=false; return _strokesLoading;
 }
 const STROKE_PTS=8, STROKE_SKIP=0.32;
 /* the strokes scaled into the unit square as a whole (aspect kept, centred) and resampled to STROKE_PTS points each */
