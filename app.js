@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=685; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=686; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -685,7 +685,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["learn","v685","邪不压正: zoom on each char?"],
+  ["learn","v686","邪不压正: last char not cut?"],
   ["photo","v684","4-line poster: last line in crop?"],
   ["learn","v684","Char off picture: no wrong zoom?"],
   ["learn","v683","More: zoom switch off and on?"],
@@ -4330,12 +4330,17 @@ async function pdCharBoxes(src,nw,nh,g,lines,whole){
      matched, so 邪, 不 and 正 had no place and the photo showed the whole text while 压 alone zoomed in): a card line whose
      matched characters all lie on one reader line, no other card line's on it, each where an even spread of the card line along
      that reader line puts it (its CTC place inside its own slot), is that line — its unplaced characters take their slots on
-     it, unsure */
+     it, unsure. v686 (H: "der letzte character ist leicht beschnitten" — the reader's line ran past the title into the poster's
+     edge, so the even slots drifted right and 正 stood at 83 % for ~77 %): the slots step one character from the nearest
+     matched character's own CTC place, not from the line's ends, by the reader's own spacing of the characters it read on that
+     line (its CTC places' median gap) when that is within half a slot of the even one */
   lines.forEach((_,i)=>{ const js=ci.filter(j=>lnOf[j]===i), n=js.length; if(n<2||js.every(j=>boxes[j])) return;
     const hs=js.map((j,t)=>({t,h:hit.get(j)})).filter(o=>o.h); if(!hs.length) return; const l=hs[0].h.l;
     if(hs.some(o=>o.h.l!==l)||[...hit].some(([j,h])=>h.l===l&&lnOf[j]!==i)) return;
     if(!hs.every(o=>Math.abs(l.at[o.h.i]-(o.t+0.5)/n)<=0.5/n)) return;
-    js.forEach((j,t)=>{ if(!boxes[j]) boxes[j]=boxOf(l,(t+0.5)/n,false,1/n); }); });
+    const gap=l.at.length>1?median(l.at.slice(1).map((a,k)=>a-l.at[k]).filter(x=>x>0)):0, step=gap>0.5/n&&gap<1.5/n?gap:1/n;
+    js.forEach((j,t)=>{ if(boxes[j]) return; const o=hs.reduce((a,b)=>Math.abs(b.t-t)<Math.abs(a.t-t)?b:a);
+      boxes[j]=boxOf(l,Math.min(1,Math.max(0,l.at[o.h.i]+(t-o.t)*step)),false,1/n); }); });
   /* v680 (H: "He doesn't zoom the second line here", 电动车 over 禁止入园 — the reader read the second line as 木木, two characters
      for four): a card line the reader matched nothing of, and a reader line of the text's size it matched nothing on, pair up in
      reading order when there are as many of the one as of the other — the line's characters stand evenly along it, unsure. A
