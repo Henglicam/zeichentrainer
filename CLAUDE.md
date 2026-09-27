@@ -80,7 +80,7 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   an unsure place is never zoomed on — the text whole instead (v664/v669). The pad's character is mapped to its box through
   `spotIdx` (v674: a hyphen no word claims shifted every later character onto its neighbour). A character near the picture's
   edge is zoomed in just far enough to stand in the middle (≤ 3.5×), and the zoom's rest rect is read with the live transform
-  taken out, so a move mid-glide keeps its place (`rest()`, v676). Whole photo for `AZ_OVERVIEW`
+  taken out, so a move mid-glide keeps its place (`rest()`, v676 — field-checked by H on 禁止烟火). Whole photo for `AZ_OVERVIEW`
   1.5 s, waiting for the reader up to `AZ_READER` 2.5 s (v662/v665); every level zooms (v660); frameless cards zoom on their
   own picture (v663). `PDBOX`/`PDDONE` are one cache (`pdForget`, `PD_TRANSIENT`, v671). Diagnostics' learn-zoom lines carry
   `at x,y %`, `edge` and what the reader read (v666).
