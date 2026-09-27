@@ -39,6 +39,20 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v674, 2026-09-27)
+- **The Learn zoom no longer skips a character after a hyphen (v674, H: "Bug: it skips one character in the photo", 一汽-大众 with
+  Diagnostics: 一 at 13 %, 汽 at 30 %, 大 at 80 % — 众's place — and no line for 众).** The pad names each character by its place
+  in the card's text (`padTargets`' `pos`, the hyphen counted), while `pdCharBoxes` and `charBoxes` index their boxes by the place
+  in `spotLines` — the card's word breaks, which leave out what no word claims. 一汽-大众's words are 一汽 and 大众, so from the
+  hyphen on every character took its right neighbour's box: 大 zoomed onto 众, 众 onto nothing (the text whole). The reader was
+  right all along — synthetic 一汽-大众 signs in six styles put every CTC centre within 13 px of a 120 px character. Fix:
+  `spotIdx(d)` maps each text place to its place in the lines, in order (-1 for one the lines do not carry), and `autoZoom` reads
+  both box sources through it. Harness (`hyph.js`, stubbed reader, 一汽-大众 with seg ["一汽","大众"]): old tree 大 at 74 % = 众's
+  place and 众 whole, new tree 汽 38 / 大 62 / 众 74 — 1 check flips; the control with the hyphen in the seg passes on both.
+  Also in this version, the code review's finding 7: `wordSpan`'s estimate left `autoZoom` (placed nothing since v669, and its
+  `if(!est) return` stopped the zoom before the reader's place was looked at — `est.js` flips). az 13, off 3, nf 2, pdc 4, ov 5,
+  once 2, pdcache 3 unchanged. Not yet field-checked.
+
 ## Current state (PWA v673, 2026-09-27)
 - **The reading really waits for the green character now, and a clamped meaning ends at its own last line (v673, H: "Ich glaube, der
   grüne character und Pinyin überschneiden sich immer noch leicht. Oder irgendwas anderes ist da unsauber", then a screenshot of 阿:
