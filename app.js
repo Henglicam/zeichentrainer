@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=710; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=711; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -685,6 +685,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["app","v711","44 px rows and chips: too heavy?"],
   ["learn","v710","Dish flashcard: zoom sane?"],
   ["cards","v710","Char page → back: right place?"],
   ["app","v694","No Google popup on text taps?"],
@@ -3323,7 +3324,7 @@ const gfBox=(x,y,w,h,r,fill,stroke)=>`<rect x="${x}" y="${y}" width="${w}" heigh
    are width-bound and their own aspect ratios decide. The first cut used margin:10px auto on the image and the guide
    came out TALLER (5 figures x 20 px of margin against the 78 px the shorter figures saved) — the margin is 5px auto,
    symmetric, and five heights were trimmed. */
-const GF_SHOT={photo:[1.954,144],chars:[3.276,96],learn:[1,140],cards:[1.958,150],lang:[2.574,130],
+const GF_SHOT={photo:[1.954,144],chars:[3.276,96],learn:[1,140],cards:[1.958,150],lang:[2.188,130],
   /* the two sample cards (v599). These two are not figures of their own: they are placed INSIDE a drawn figure
      by gfimg, so the second number is unused and only the aspect ratio is read — from here, so the generator's
      printed ratio and the layout have one source. */
@@ -3411,7 +3412,7 @@ function renderGuide(main){
 function tagsHTML(d,isNew){
   /* a multicard's own text carries no learning state (v487/v488), so neither "New" nor "Review" is true of it — the row keeps
      the review flag alone, and is not drawn at all when there is none (v498, the same reason the schedule line left that screen) */
-  const fl=d.flag?`<span class="f">${t("⚑ Review")}</span>`:""; /* v512 (H: "No 'studied yet' info"): the New / Review pill is gone for every card, as it went for a multicard's text at v498 */
+  const fl=d.flag?`<span class="f">${t("⚑ Flagged")}</span>`:""; /* v512 (H: "No 'studied yet' info"): the New / Review pill is gone for every card, as it went for a multicard's text at v498 */
   return fl?`<div class="tags">${fl}</div>`:""; /* no card type (H, v105) */
 }
 /* ---------- review flag ----------
@@ -3591,6 +3592,7 @@ function say(text){
 }
 function voiceList(){ try{ return ("speechSynthesis" in window)?speechSynthesis.getVoices().map(v=>v.lang+" "+v.name):[]; }catch(e){ return []; } }
 const SAY_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15 9.2a3.6 3.6 0 0 1 0 5.6"/><path d="M17.3 6.6a7 7 0 0 1 0 10.8"/></svg>';
+const pinSay=d=>{ const p=String(d.p||""), say=sayBtn(d); if(!say||!p.trim()) return esc(p)+say; const i=p.search(/\S+\s*$/); return esc(p.slice(0,i))+`<span class="nw">${esc(p.slice(i))}${say}</span>`; }; /* v711: the pinyin with its speaker on the last syllable */
 function sayBtn(d){ return ("speechSynthesis" in window)?`<button class="say" data-say="${esc(d.c)}" aria-label="${t("Pronounce")}">${SAY_SVG}</button>`:""; } /* shown whenever the phone can speak at all (v164) */
 const sayHint=()=>`<div class="badge" id="say-hint" hidden>${t("No Chinese voice on this phone — add one under Settings, Text-to-speech output.")}</div>`;
 function wireSay(root){ (root||document).querySelectorAll("[data-say]").forEach(b=> b.onclick=e=>{ e.stopPropagation(); say(b.dataset.say); }); }
@@ -3688,7 +3690,7 @@ function backHTML(d,o){ const srcHere=!(o&&o.noSrc); /* noSrc: the front of this
   /* the linked row is not part of the answer any more (v422, H: "Die 'also in another photo' Zeile nach unten schieben"): it
      stood between the parts row and the grades, so reference material sat in the middle of the answer-then-grade path. Each
      caller places it now, below its own actions. */
-  return `${simpRefHTML(d)}<div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}${srcHere?srcPill(d,true):""}</div>${descHTML(d,o)}${o&&o.noParts?"":charsHTML(d)}
+  return `${simpRefHTML(d)}<div class="pin">${pinSay(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}${srcHere?srcPill(d,true):""}</div>${descHTML(d,o)}${o&&o.noParts?"":charsHTML(d)}
     ${glossBlock}`;
 }
 /* the card's own description (v529): in the app's language when it has one. v585 (H: "Ich moechte, dass wenn ich auf Whole
@@ -5849,7 +5851,7 @@ function cardTileHTML(d,pk){
       ${pg?`<span class="tstack">`:""}<span class="tw${sv?" src":glyph?" glyph":""}">${sv?`<img class="tbg" src="${su}" alt="" aria-hidden="true" loading="lazy" decoding="async"><span class="tpw"><img class="tpi" src="${su}" alt="" loading="lazy" decoding="async">${regionsHTML({id:sv.shot},sv.rs,{learn:true,me:sv.me,span:true,only:true})}</span>`:pic?`<img class="tbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="tim" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async">`:glyphTileHTML((pg?(its[0]&&its[0].c):(learnTrad(d)||d.c))||"")}
         ${pk?`<span class="tick" aria-hidden="true"></span>`:pg?"":starHTML(d)}
         ${pg?`<span class="cnt">${its.length}</span>`:""}
-        ${trad?`<span class="tmarks ttrad"><i class="tm trad">${t("Traditional")}</i></span>`:""}${(flag||ai||nw)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Review")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}${nw?`<i class="tm new" title="${esc(t("Not yet checked"))}">${t("tile:New")}</i>`:""}</span>`:""}
+        ${trad?`<span class="tmarks ttrad"><i class="tm trad">${t("Traditional")}</i></span>`:""}${(flag||ai||nw)?`<span class="tmarks">${flag?`<i class="tm flag" title="${t("⚑ Flagged")}">⚑</i>`:""}${ai?`<i class="tm ai" title="${t("AI")}">${t("AI")}</i>`:""}${nw?`<i class="tm new" title="${esc(t("Not yet checked"))}">${t("tile:New")}</i>`:""}</span>`:""}
         ${pg?`<span class="tcap"><span class="th title">${head}</span></span><span class="prog" aria-hidden="true"><i style="width:${its.length?Math.round(made/its.length*100):0}%"></i></span>`:""}</span>${pg?`</span>`:""}</button>`;
 }
 function cardsListHTML(){
@@ -5863,7 +5865,7 @@ function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page d
   return `<button class="crow${dot?" inpage":""}${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
       <span class="ct"><span class="c">${d.c?esc((dot&&priceOf(d.c)?noPrice(d.trad||d.c):(d.trad||d.c)).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(dot&&priceOf(d.c)?noPricePy(d.p):d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${srcPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${dot?"":(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(dot&&priceOf(d.c)?noPriceM(d.m):d.m)}</span>${dot&&shortOf(d)?`<span class="d">${esc(shortOf(d))}</span>`:""}</span>
-      <span class="cs">${dot&&priceOf(d.c)?`<span class="price">${esc(priceOf(d.c))}</span>`:""}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
+      <span class="cs">${dot&&priceOf(d.c)?`<span class="price">${esc(priceOf(d.c))}</span>`:""}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Flagged")}</span>`:""}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
 }
 /* a filter whose row is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the
    list anymore" — the AI chip shows only while suggestions wait, so the filter had no chip left to switch it off and the
@@ -5978,7 +5980,7 @@ function pageBodyHTML(d){
       <div class="shotwrap"><div class="zwrap">${full?`<img src="${urlOf(full)}" alt="${t("alt:photo")}">`:""}${rs.length?regionsHTML({id:d.shot},rs):""}</div></div>
       <div class="ptitle">${esc(d.c)}</div>
       ${(tg=>tg.length?`<div class="ptags">${tg.map(x=>`<span class="pill tag">${esc(x)}</span>`).join("")}</div>`:"")([...new Set([...(d.tags||[]),...its.flatMap(x=>x.tags||[])])])} <!-- v696: the multicard's tags, with any its texts carry, once here and not on every row -->
-      <div class="regline">${esc(t("Texts on this page: {0}, as flashcards: {1}.",its.length,made))}</div>
+      <div class="regline">${esc(t("Texts on this multicard: {0}, as flashcards: {1}.",its.length,made))}</div>
       <div class="taphint">${esc(t("Tap any text on the photo."))}</div>
     </div>
     <div class="clist" id="pitems">${sorted.map(x=>cardRowHTML(x,false,new Map(),true)).join("")}</div>`;
@@ -6006,7 +6008,7 @@ function renderPageDetail(main,d){
     <div class="card bare">${pageBodyHTML(d)}</div>
     <div class="detailacts">
       ${fullPhoto(d)?`<button class="btn" id="d-addtext" style="grid-column:1/-1">${t("Add a text")}</button>`:""}
-      <button class="btn danger" id="d-del" style="grid-column:1/-1">${t("Delete card")}</button>
+      <button class="btn danger" id="d-del" style="grid-column:1/-1">${t("Delete multicard")}</button>
     </div>
   </div>`;
   $("#back").onclick=fromCard()?backToCard:fromLearn()?backToLearn:backToList; /* opened from a generated flashcard's reference pill (v492) or from the card being studied (v494): back to where the jump started */
@@ -10666,7 +10668,7 @@ function regionsHTML(rec,rs,o){
     return `<${tag} class="region${learn&&o.me===r.card?" me":""}" ${learn?"data-rid":"data-region"}="${esc(r.rid)}" style="left:${pc(b.x)};top:${pc(b.y)};width:${pc(b.w)};height:${pc(b.h)}${b.a?`;transform:rotate(${b.a}deg)`:""}"${learn?' aria-hidden="true"':` aria-label="${esc(r.zh.replace(/\n/g," "))}"`}><i class="ff" aria-hidden="true"></i></${tag}>`; }).join("")}</${wrap}>`;
 }
 function regionLine(rs,pg){ const n=rs.filter(r=>r.card).length; /* pg (v453): the photo's cards are one page's texts — and since v488 what a multicard counts is its flashcards, the only number on it that can move */
-  return pg?t("Texts on this page: {0}, as flashcards: {1}.",n,rs.filter(r=>{ const d=r.card&&cardOf(r.card); return !!(d&&d.page&&madeFrom(d)); }).length)
+  return pg?t("Texts on this multicard: {0}, as flashcards: {1}.",n,rs.filter(r=>{ const d=r.card&&cardOf(r.card); return !!(d&&d.page&&madeFrom(d)); }).length)
           :t("{0} cards from this photo, {1} learned.",n,rs.filter(r=>regionState(r)===2).length); }
 /* the photo gives nothing away until it is asked (v467, H: "Gerade chinesische Apps können ja extrem voll mit Text sein …
    Ich möchte, dass in der Default Ansicht nichts eingerahmt ist. Und wenn ich auf ein Textelement drauftippe, dann erscheint
@@ -10698,7 +10700,7 @@ function openLookup(shot,rid,silent){
   const html=`<div class="sheet lookup" role="dialog" aria-label="${esc(d.c)}">
     <button class="x" id="lk-close" aria-label="${t("Close")}">×</button>
     <div class="zh hanzi">${esc((d.trad||d.c).replace(/\n/g," / "))}</div>${d.trad?`<div class="script"><span class="pill trad">${t("Traditional")}</span></div>`:""}
-    <div class="pin">${esc(d.p)}${sayBtn(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}</div>
+    <div class="pin">${pinSay(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}</div>
     ${pid?""
         :`<div class="grades">${[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>`<button class="grade" data-g="${g}" data-lg="${g}"><span class="lbl">${t(l)}</span></button>`).join("")}</div>`}
     ${pid?"":`<div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div>`}</div>`;
