@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=698; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=699; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -686,6 +686,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["app","v694","No Google popup on text taps?"],
+  ["cards","v699","Menu: dish, desc, price shown?"],
   ["cards","v698","Multicard rows: short descs?"],
   ["cards","v697","Multicard rows: no ring, ok?"],
   ["cards","v695","+ Flashcard beside Edit, tidy?"],
@@ -2239,7 +2240,7 @@ function ocrDoubt(confs,meaning,unknown){
 let _aiSoon=null;
 function aiAutoSoon(){ if(!aiAutoOn()) return; clearTimeout(_aiSoon); _aiSoon=setTimeout(()=>{ _aiAutoRan=false; aiAuto(); },1500); }
 function aiCardPayload(d){
-  return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:d.short?`write "desc" as ONE short sentence of at most 15 words saying what this text is or does${d.shortCtx?" on this "+d.shortCtx:""} — no background, no history, no "you see it on"; nothing else; keep zh, p and m exactly as given`:d.fromPic?`read from the photo by a model that sees it${d.fromPic!==true?" (it shows: "+d.fromPic+")":""} — keep zh exactly as given, write p and m${d.label?", and \"desc\" \"\" (this is one element of a panel)":" and desc"}`:d.explain?"write \"desc\" for this card and nothing else; keep zh, p and m exactly as given":d.translate?"translate the meaning into "+meaningLangName()+" (it is in "+(LANG_NAME[d.ml||"en"]||"another language")+" now); keep zh and p unless clearly wrong":[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"the reading looks uncertain ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
+  return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:d.short?(d.dish?`write "desc" as ONE short sentence of at most 20 words describing this dish${d.shortCtx?" on the menu \""+d.shortCtx+"\"":""} — what it is, its main ingredients and how it is cooked; no price, no background; nothing else; keep zh, p and m exactly as given`:`write "desc" as ONE short sentence of at most 15 words saying what this text is or does${d.shortCtx?" on this "+d.shortCtx:""} — no background, no history, no "you see it on"; nothing else; keep zh, p and m exactly as given`):d.fromPic?`read from the photo by a model that sees it${d.fromPic!==true?" (it shows: "+d.fromPic+")":""} — keep zh exactly as given, write p and m${d.label?", and \"desc\" \"\" (this is one element of a panel)":" and desc"}`:d.explain?"write \"desc\" for this card and nothing else; keep zh, p and m exactly as given":d.translate?"translate the meaning into "+meaningLangName()+" (it is in "+(LANG_NAME[d.ml||"en"]||"another language")+" now); keep zh and p unless clearly wrong":[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"the reading looks uncertain ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
     gloss:d.kind==="sign"&&glossFits(d)?d.gloss.map(g=>g.w+" "+(g.m||"?")).join(" · "):undefined,
     alt:d.alts&&d.alts.length?d.alts:undefined, script:d.trad?"traditional":undefined };
 }
@@ -3723,11 +3724,22 @@ async function explainCard(id){
 const shortOf=d=>(d.dsh&&d.dsh[LANG])||"";
 const saneShort=(s,zh)=>{ s=saneDesc(s,zh); if(!s) return ""; const one=(s.match(/^.*?[.!?。！？](\s|$)/)||[s])[0].trim(); return one.length>160?one.slice(0,160).replace(/\s+\S*$/,"")+" …":one; };
 const SHORTRUN=new Set();
+/* v699 (H: "if the multicard is a menu … the full list of meals below it and not only the name of the meal but also the
+   description of the meal and the price of course"): a price printed with a dish — ¥16/份, ￥12, 28元 — is read off its text
+   and stands at the right of its row; the name, the pinyin and the meaning are shown without it and whole. A multicard is a
+   menu when its kind says so or half its texts carry a price; a dish's short description then says what the dish is. */
+const PRICE_RE=/(?:[¥￥]\s*\d+(?:\.\d+)?|\d+(?:\.\d+)?\s*元)(?:\s*\/\s*[\u4e00-\u9fff]{1,2})?/;
+const priceOf=s=>{ const m=String(s||"").match(PRICE_RE); return m?m[0].replace(/\s+/g,"").replace("￥","¥"):""; };
+const noPrice=s=>String(s||"").replace(PRICE_RE,"").replace(/\s+\/\s*$/,"").replace(/\s{2,}/g," ").trim();
+const noPricePy=p=>String(p||"").replace(/\s*[¥￥].*$/,"").replace(/\s+\d+(?:\.\d+)?\s*(?:yuán|yuan)?(?:\s*\/\s*\S+)?\s*$/i,"").trim();
+const noPriceM=m=>String(m||"").replace(/\s*[(\[]?\s*(?:[¥￥]|CNY|RMB)\s*\d+(?:\.\d+)?[^;,)\]]*[)\]]?/gi,"").replace(/\s*\d+(?:\.\d+)?\s*(?:yuan|元)\b.*$/i,"").trim();
+const isMenuPage=pg=>{ if((pg.tags||[]).includes(t("kind:Menu"))) return true; const its=pageItems(pg).filter(d=>d.c); return its.length>0&&its.filter(d=>priceOf(d.c)).length*2>=its.length; };
 async function pageShorts(pid){
   const pg=cardOf(pid); if(!pg||SHORTRUN.has(pid+"|"+LANG)||!aiAutoOn()||!navigator.onLine) return;
   const todo=pageItems(pg).filter(d=>d.c&&!shortOf(d)); if(!todo.length) return;
   SHORTRUN.add(pid+"|"+LANG);
-  let res; try{ res=await aiAsk(todo.map(d=>({...d,short:true,shortCtx:pg.c}))); }catch(e){ logErr("short descriptions",e&&e.message||String(e)); return; }
+  const menu=isMenuPage(pg);
+  let res; try{ res=await aiAsk(todo.map(d=>({...d,short:true,shortCtx:pg.c,dish:menu&&!!priceOf(d.c)}))); }catch(e){ logErr("short descriptions",e&&e.message||String(e)); return; }
   let n=0;
   for(let i=0;i<todo.length;i++){ const r=res[i], d=cardOf(todo[i].id); if(!r||r.bad||!d||sureKey(r.zh)!==sureKey(d.c)) continue; /* an answer is only its own text's */
     const s=saneShort(r.desc,d.c); if(!s) continue; await putCard({...d,dsh:{...(d.dsh||{}),[r.ml||LANG]:s}},d.id); n++; }
@@ -5822,10 +5834,10 @@ function cardsListHTML(){
   return {html:rows||`<div class="badge" style="margin-top:20px;grid-column:1/-1">${empty}</div>`, n:list.length, ids:list.map(d=>d.id)};
 }
 function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page detail's item list. v697 (H: "Nicht in dieser Ansicht anzeigen. Sondern nur im geöffneten Zustand"): its ring — has this text a flashcard — is gone from the row; the open text says it on its own button, + Flashcard or Flashcard ›. v696 (H: "Die Tags für eine Multicard bitte in der Multicard-Übersichtskarte anzeigen und nicht in jeder einzelnen Karte der Multicard. Den gewonnenen Platz bitte für die Description"): there a text's tags are the multicard's own, shown once at its top, so the row carries its description instead, three lines at most */
-  return `<button class="crow${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
+  return `<button class="crow${dot?" inpage":""}${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
-      <span class="ct"><span class="c">${d.c?esc((d.trad||d.c).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${srcPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${dot?"":(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(d.m)}</span>${dot&&shortOf(d)?`<span class="d">${esc(shortOf(d))}</span>`:""}</span>
-      <span class="cs">${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
+      <span class="ct"><span class="c">${d.c?esc((dot&&priceOf(d.c)?noPrice(d.trad||d.c):(d.trad||d.c)).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(dot&&priceOf(d.c)?noPricePy(d.p):d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${srcPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${dot?"":(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(dot&&priceOf(d.c)?noPriceM(d.m):d.m)}</span>${dot&&shortOf(d)?`<span class="d">${esc(shortOf(d))}</span>`:""}</span>
+      <span class="cs">${dot&&priceOf(d.c)?`<span class="price">${esc(priceOf(d.c))}</span>`:""}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Review")}</span>`:""}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
 }
 /* a filter whose row is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the
    list anymore" — the AI chip shows only while suggestions wait, so the filter had no chip left to switch it off and the
@@ -6425,6 +6437,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  699:"A menu you photographed now reads like a menu: every dish with its price and a line about what it is.",
   692:"On a multicard, open a text from the list under the photo to turn it into a flashcard — the pop-up is just for looking up.",
   691:"Tap a character on an open card, then Cards with …, to see its readings and every card that has it.",
   690:"Search your cards in pinyin without the tones: wendu finds 温度.",

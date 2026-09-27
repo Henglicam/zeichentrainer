@@ -39,6 +39,21 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v699, 2026-09-27)
+- **A menu multicard lists its dishes whole, with their prices and a dish description (v699, H: "if the multicard is a menu
+  to have the full list of meals below it and not only the name of the meal but also the description of the meal and the
+  price of course").** H's menu showed its rows cut at "砂锅刀…", the price inside the name, the pinyin and the meaning
+  ("shā guō dāo xiāo miàn ¥ 16 / fèn", "clay-pot k…"). Now a price printed with a text — ¥16/份, ￥12, 28元, with its unit —
+  is read off it (`PRICE_RE`, `priceOf`) and stands bold at the right of the row; the name, the pinyin (`noPricePy`) and the
+  meaning (`noPriceM`) are shown without it, and on every multicard the name and meaning wrap instead of being cut
+  (`.crow.inpage`); the picture column is the picture's own 83 px, not the list's 124. A multicard is a menu when its kind
+  tag says Menu or half its texts carry a price (`isMenuPage`); then a dish's short description (v698's `dsh`, one call per
+  multicard) is asked as a dish — what it is, its main ingredients, how it is cooked, at most 20 words, no price — and a
+  heading without a price keeps the ordinary question. Harness `menu.js` (H's noodle menu: 砂锅类 and three dishes with
+  prices, the relay mocked): price apart, name whole without it, pinyin and meaning without it, three prices, three dish
+  questions and the heading's ordinary one, three whole dish descriptions — 7 flips against v698, the heading as a guard.
+  Screenshots at 390 px, light and dark. Not yet field-checked.
+
 ## Current state (PWA v698, 2026-09-27)
 - **A multicard's rows show each text's short description, whole; the long one stays on the opened text (v698, H: "In the
   list overview, show the full description, but not the extended AI details those only in the opened card. And load it during
