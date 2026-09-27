@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=699; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=700; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -686,6 +686,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["app","v694","No Google popup on text taps?"],
+  ["cards","v700","MC text: only its frame?"],
   ["cards","v699","Menu: dish, desc, price shown?"],
   ["cards","v698","Multicard rows: short descs?"],
   ["cards","v697","Multicard rows: no ring, ok?"],
@@ -3503,7 +3504,7 @@ function srcView(d){
 const frontPage=d=>pageOf(d)||srcView(d); /* one page view for both: a card that IS one of several on a photo (v452), and one MADE from a multicard's text (v489) */
 function pageHTML(d,pg){
   const u=urlOf(pg.blob);
-  return `<div class="picbox page"${pg.src?"":` data-pic="1"`}><img class="picbg" src="${u}" alt="" aria-hidden="true"><div class="pagewrap"><img class="signimg" src="${u}" alt="${t("alt:photo")}">${regionsHTML({id:pg.shot},pg.rs,{learn:true,me:pg.me||d.id,only:!!pg.src})}</div></div>`; /* v589: the inline --ratio went with its last reader — the rule that read it was `.picbox.page{aspect-ratio:var(--ratio)}` and v517 replaced it with a fixed `.card.study .picbox.page{aspect-ratio:2}` (the v307 rule). v499: a generated card (src) frames its own text alone; a v452 page front still frames every text — the wrapper shrinks to the picture's rendered size, so the regions' percent coordinates land on it; the blurred fill shows beside a tall page */
+  return `<div class="picbox page"${pg.src?"":` data-pic="1"`}><img class="picbg" src="${u}" alt="" aria-hidden="true"><div class="pagewrap"><img class="signimg" src="${u}" alt="${t("alt:photo")}">${regionsHTML({id:pg.shot},pg.rs,{learn:true,me:pg.me||d.id,only:!!pg.src||inPage(d)})}</div></div>`; /* v700 (H: "Wenn ich eine Karte einer Multicard öffne, dann sollte in dem Bild bitte nur der Text eingerahmt sein, der dieser Karte zugeordnet ist"): a multicard's own text frames itself alone too, as a generated card has since v499. v589: the inline --ratio went with its last reader — the rule that read it was `.picbox.page{aspect-ratio:var(--ratio)}` and v517 replaced it with a fixed `.card.study .picbox.page{aspect-ratio:2}` (the v307 rule). v499: a generated card (src) frames its own text alone; a v452 page front still frames every text — the wrapper shrinks to the picture's rendered size, so the regions' percent coordinates land on it; the blurred fill shows beside a tall page */
 }
 function frontPic(d,o){
   const pk=S.peek&&S.peek!==d.id?cardOf(S.peek):null; /* Learn: a linked card's photo, tapped in the "Also on another photo" row (v155) */
