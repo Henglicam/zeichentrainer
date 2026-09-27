@@ -39,6 +39,23 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v709, 2026-09-27)
+- **The texts say what the app does again (v709, H: "Jetzt App bitte nochmal auf Logikfehler und Inkonsistenzen untersuchen"
+  — the consistency half of the review pass; the logic half found v708).** Found by rendering and grepping, all fixed here:
+  (1) `privacy.html` and More → "What is sent" did not cover v698 — a multicard's texts go out in ONE request together with
+  the multicard's title, when it is made and once when an older one is opened; both now say so (the "What is sent" key
+  grew a sentence in ten columns, still 482 a column, ru 511), and privacy.html said "Whole card" (v704: Details). (2) The
+  Learn guide's "The whole card — pinyin, meaning …" sentence now reads "Details — …" in all ten columns; rendered, no
+  column still names the old label (a Vietnamese "Tất cả thẻ" = "all your cards" is not one). (3) CLAUDE.md: the card
+  shape gains `dish` (v705), the page card's "never sent to the AI" is now "never reviewed; its title goes out as context
+  for its texts' short descriptions", `pageShorts` is named as running on an older multicard's opening too; trimmed to
+  40.1 KB (it had passed 40 KB again). (4) Nine comments in app.js that still said "Whole card", "Generate flashcard",
+  "Open the flashcard" or put the actions where the pad stands (v703 moved them) say what the code does. Also checked,
+  clean: every `t("…")` key has its de entry, no dead or duplicate key, `WHATS_NEW` 683–707 name no gone control, the
+  guide crops need no regeneration (the `pcard` crop ends above v691's link), the version markers agree. Harness `ptags.js`
+  updated to v698's short description (its long-description check was stale — a harness fault, not the app's); all of
+  today's suites green on this tree. Not yet field-checked (texts only).
+
 ## Current state (PWA v708, 2026-09-27)
 - **A pad whose stroke file cannot be loaded is the free pad again, not stuck (v708, found in H's review pass: "Jetzt App
   bitte nochmal auf Logikfehler und Inkonsistenzen untersuchen").** v706's `waiting` pad — grid alone until `strokes.txt.gz`
