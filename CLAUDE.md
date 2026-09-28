@@ -70,22 +70,8 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   stroke (`PAD_HAND`); one backup line on Cards from `BACKUP_AT` 25 flashcards until the first export; "Cards with 行 ›"
   only when another card holds the character; "Cards started", Storage, the search placeholder and the empty deck's third
   note reworded.
-- **The phone's reader (PaddleOCR PP-OCRv4, v637)** — `pdRead`, `vendor/paddle/` ~30 MB on first use, own worker (v642). One
-  more pass of every reading (v639); when **sure** (≤ 2 lines, ≥ 2 characters, each ≥ `PD_SURE` 95 %, v641) it is the reading,
-  checked by the AI's picture beside it — a different answer flags the card and takes the AI's reading (`sureCheck`,
-  v646–v652). It places a multicard's labels (`pdMatch`, `aiBoxCal`, v638–v644; single lines and two-line pairs compete,
-  v687); regions snap onto their texts at display (`refineShot`/`snapRegion`, v620/v628), kept in the `regfix` settings row
-  so they start in place (v688; a pass the reader could not join stores nothing, v710).
-- **Owner tools** — Zoom check (v627), Re-read all (v645), Check texts (v650), Rebuild all with Undo (v651/v652; Menus alone, v702). Background
-  saves rebuild the Learn queue through `requeue()` (v670).
-- **The Learn zoom's place** — the phone's reader first (`pdCharBoxes`, v653): characters matched to its lines by LCS, then
-  out of order (v661), a misread line by position (v677), spread along it (v680), a partly matched line stepped from its match
-  (v685/v686), each at its CTC place `at`, unsure; the reader gets the frame + 15 %, the whole cut when a line is still open
-  (v682, field-checked); a tie between reader lines goes to the one inside the card's frame (v714, field-checked); an unread character between two read places on its line — Latin ones too — stands between them, one before or after the read ones steps by their spacing (v716). Else a **sure** ink cut (`charBoxes`, v619); an unsure place shows the text whole (v669), never an ink
-  box on another character's place (v684). `spotIdx` maps the pad's character (v674); `rest()` keeps a mid-glide move in
-  place (v676, field-checked). Diagnostics' learn-zoom lines carry `at`, `edge` and every reader line (v666/v681).
-- **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
-  was asked about (`run.zh`, `aiLate`, v657).
+- **The v6xx state** — the phone's reader (v637–v710), the owner tools (v627–v702), the Learn zoom's place (v619–v716) and
+  Crop again with AI answers (v656/v657) — moved to `docs/HISTORY.md` on 2026-09-28 (H): `grep -n "Consolidated v6xx" docs/HISTORY.md`.
 
 ## Files
 Shell: `index.html` · `styles.css` · `lang.js` · `app.js` · `manifest.webmanifest` (with `share_target`) · `sw.js` ·
