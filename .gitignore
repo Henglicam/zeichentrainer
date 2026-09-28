@@ -9,3 +9,6 @@ pairdone.txt
 runs2.txt
 vendor/vendor
 supabase/supabase
+
+# Python bytecode from the tools (a .pyc was tracked from v670 to #801 by mistake)
+tools/__pycache__/
