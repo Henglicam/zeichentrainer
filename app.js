@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=711; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=712; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -685,6 +685,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v712","Dish screen: price apart?"],
   ["app","v711","44 px rows and chips: too heavy?"],
   ["learn","v710","Dish flashcard: zoom sane?"],
   ["cards","v710","Char page → back: right place?"],
@@ -3757,6 +3758,19 @@ const noPrice=s=>String(s||"").replace(PRICE_RE,"").replace(/\s+\/\s*$/,"").repl
 const noPricePy=p=>String(p||"").replace(/\s*[¥￥]\s*\d+(?:\.\d+)?(?:\s*\/\s*\S+)?/g,"").replace(/\s+\d+(?:\.\d+)?\s*(?:yuán|yuan)?(?:\s*\/\s*\S+)?\s*$/i,"").replace(/\s{2,}/g," ").trim(); /* v710: only the ¥ and its number go, wherever they stand — a price first (¥12 宫保鸡丁) took the whole pinyin line with it */
 const noPriceM=m=>String(m||"").replace(/\s*[(\[]?\s*(?:[¥￥]|CNY|RMB)\s*\d+(?:\.\d+)?[^;,)\]]*[)\]]?/gi,"").replace(/\s*\d+(?:\.\d+)?\s*(?:yuan|元)(?![\w一-鿿]).*$/i,"").trim(); /* v710: \b after 元 never matched at the end of a line ("… chicken 38元" kept its price) */
 const isMenuPage=pg=>{ if((pg.tags||[]).includes(t("kind:Menu"))) return true; const its=pageItems(pg).filter(d=>d.c); return its.length>0&&its.filter(d=>priceOf(d.c)).length*2>=its.length; };
+/* v712 (H: "Go, dish price on the text's own screen"): a multicard text that carries a price (the row shows it apart since
+   v699) is shown the same way on its own screen and in the look-up — the price on a line of its own under the characters,
+   the characters, pinyin and meaning without it, so ¥16/份 makes no tiles in the character strip. A VIEW of the record:
+   nothing stored changes, the id is the same, and every action still hits the record. */
+const priceView=d=>{ if(!d||!inPage(d)) return null; const price=priceOf(d.c); if(!price) return null;
+  const w=x=>x==="\n"?x:noPrice(x), keep=x=>x==="\n"||!!x;
+  const v={...d,c:noPrice(d.c),p:noPricePy(d.p),m:noPriceM(d.m)};
+  if(d.trad) v.trad=noPrice(d.trad);
+  if(Array.isArray(d.seg)) v.seg=d.seg.map(w).filter(keep);
+  if(Array.isArray(d.segs)) v.segs=d.segs.map(sg=>sg.map(w).filter(keep));
+  if(Array.isArray(d.gloss)) v.gloss=d.gloss.map(g=>({...g,w:noPrice(g.w)})).filter(g=>g.w);
+  return {d:v,price}; };
+const priceLine=pv=>pv?`<div class="dprice">${esc(pv.price)}</div>`:"";
 async function pageShorts(pid){
   const pg=cardOf(pid); if(!pg||SHORTRUN.has(pid+"|"+LANG)||!aiAutoOn()||!navigator.onLine) return;
   const todo=pageItems(pg).filter(d=>d.c&&!shortOf(d)); if(!todo.length) return;
@@ -5937,6 +5951,7 @@ function detailActsHTML(d){
       <button class="btn danger" id="d-del">${t("Delete card")}</button>
     </div>`; } /* v692 (H: "Mach doch das Generate Flashcard und Edit und Delete und alles sowas in die Karte selber, wenn man die in einer Multicard öffnet, zusammen rein", then "The text's own screen"): + Flashcard — Flashcard › once made — stands beside Edit, and the pop-up over the photo is a look-up with no button at all (v496's rule, now without exception). Before: a multicard's own text offers Edit, Flag and Delete and nothing else (v498): Test would study a text that is never in Learn (v487), Share would send a row of the multicard as if it were a card, and the star left this screen at v493 */
 function detailCardHTML(d,sw){
+  const pv=priceView(d); if(pv) d=pv.d; /* v712: a dish without its price; the price on its own line below */
   const p=S.progress[d.id], pg=frontPage(d); /* v489: the multicard's own photo on a generated card's front, and its name as the pill — so the back drops the duplicate */
   if(!d.c) return `${tagsHTML(d,!p)}<div class="front tap" id="d-reveal">${frontHTML(d,{page:true,tap:true})}</div>
       ${d.reading&&d.reading.failed?"":`<div class="hint">${t("The text, pinyin and meaning follow when the reading is done.")}</div>`}${flagNoteHTML(d)}${detailActsHTML(d)}`; /* a card still waiting for its reading has no back (v237) */
@@ -5947,7 +5962,7 @@ function detailCardHTML(d,sw){
      line showed only for a tapped character. The block stays open by default here — this is the screen for looking a card up. */
   const tg=padTargets(d), li=detailCh(d), lit=detailLit(d,tg), open=!S.detailHide;
   const btn=x=>`<button class="ch${x.w?"":" num"}${lit===x?" cur":""}" data-i="${tg.indexOf(x)}">${esc(x.glyph)}</button>`;
-  const back=`<div class="anshanzi hanzi">${(learnTrad(d)?learnTrad(d).split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}`;
+  const back=`<div class="anshanzi hanzi">${(learnTrad(d)?learnTrad(d).split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${priceLine(pv)}${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}`;
   return `${tagsHTML(d,!p)}<div class="zone1 front${d.flag?" flagged":""}" id="d-reveal">${frontPic(d,{page:true,fixed:true})||cueGlyphHTML(d)}${tradMark(d)}</div>
       ${chrowHTML(d,tg,btn,lit?lit.wi:null)}
       <div class="padline" id="padline"${lit?"":" hidden"}></div>
@@ -6097,14 +6112,14 @@ function renderCardDetail(main,c){
   /* the preview behaves like the test: tap the photo for the whole picture, tap the character to hide and show the answer (H) */
   const rv=$("#d-reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); } }; /* v518: the answer folds by its own button now, not by a tap on the picture */
   { const fo=$("#d-fold"); if(fo) fo.onclick=()=>{ S.detailHide=!S.detailHide; render(); if(!S.detailHide) revealBlock("#d-ans"); }; /* v531: the block at the foot scrolls into view when opened, as in Learn */
-    const dcard=main.querySelector(".card.study.detail"), tg=d.c?padTargets(d):[];
+    const dv=(priceView(d)||{d}).d, dcard=main.querySelector(".card.study.detail"), tg=dv.c?padTargets(dv):[]; /* v712: the strip is the view's, without the price */
     dcard.querySelectorAll(".chrow .ch").forEach(b=>{ const i=+b.dataset.i, x=tg[i]; if(!x) return; b.onclick=e=>{ e.stopPropagation(); S.detailCh=detailCh(d)===i?null:{c:d.id,i}; render(); }; }); /* a tap lights the word and reads it under the answer; the same character again puts it out — there is no pad here to keep it */
-    const lx=detailLit(d,tg); if(lx) padLine(d,lx); /* v531: the first word's line when nothing is tapped */
+    const lx=detailLit(d,tg); if(lx) padLine(dv,lx); /* v531: the first word's line when nothing is tapped */
     { const cl=$("#d-chpage"); if(cl) cl.onclick=e=>{ e.stopPropagation(); S.charPage={ch:cl.dataset.ch,from:d.id,back:S.detailFrom}; render(); window.scrollTo(0,0); }; } /* v691; v710: the card's own way back rides along */
     chrowFit(dcard);
     const pg=frontPage(d); if(pg&&!S.fullPic) fitPageCover(dcard); /* D5, as on the study card */
     wireScript(dcard); /* v604 */
-    spotWord(dcard,d,lx); /* v533: the word whose line is showing, marked on the photo as in Learn */
+    spotWord(dcard,dv,lx); /* v533: the word whose line is showing, marked on the photo as in Learn */
     attachPicZoom(dcard.querySelector(".zone1 .picbox")); }
   const test=$("#d-test"); if(test) test.onclick=()=>{
     S.saved={queue:S.queue,idx:S.idx,done:S.done,ahead:S.ahead};
@@ -10694,12 +10709,13 @@ function wireRegions(root){
 /* the sheet over the photo: the flashcard without the photo, since the photo is right there. Not modal on purpose — the
    page keeps scrolling and the next word can be tapped while it stands, which swaps its content in place. */
 function openLookup(shot,rid,silent){
-  const r=regionOf(shot,rid), d=r&&r.card&&cardOf(r.card); if(!r||!d) return;
+  const r=regionOf(shot,rid), d0=r&&r.card&&cardOf(r.card); if(!r||!d0) return;
+  const pv=priceView(d0), d=pv?pv.d:d0; /* v712: a dish without its price; the price on its own line */
   if(!silent) bump("regionTaps"); /* silent: the sheet coming back with ← Back (v495) is the same look-up, not a second one */
   const pid=d.page&&cardOf(d.page)&&isPage(cardOf(d.page))?d.page:null;
   const html=`<div class="sheet lookup" role="dialog" aria-label="${esc(d.c)}">
     <button class="x" id="lk-close" aria-label="${t("Close")}">×</button>
-    <div class="zh hanzi">${esc((d.trad||d.c).replace(/\n/g," / "))}</div>${d.trad?`<div class="script"><span class="pill trad">${t("Traditional")}</span></div>`:""}
+    <div class="zh hanzi">${esc((d.trad||d.c).replace(/\n/g," / "))}</div>${d.trad?`<div class="script"><span class="pill trad">${t("Traditional")}</span></div>`:""}${priceLine(pv)}
     <div class="pin">${pinSay(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}</div>
     ${pid?""
         :`<div class="grades">${[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>`<button class="grade" data-g="${g}" data-lg="${g}"><span class="lbl">${t(l)}</span></button>`).join("")}</div>`}

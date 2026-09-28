@@ -39,6 +39,22 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v712, 2026-09-28)
+- **A dish's price stands apart on the text's own screen and in the look-up (v712, H: "Go, dish price on the text's own
+  screen" — the one design finding of v711 held back for his word).** The row has shown the price at its right since v699,
+  but the text's own screen and the pop-up over the photo still showed 砂锅刀削面¥16/份 whole: 份 as a tile in the character
+  strip, "16" as a number tile, the pinyin "… ¥ 16 / fèn", the meaning "… ¥16/portion". Now a **view** of the record
+  (`priceView`: `c`, `p`, `m`, `trad` through the row's own `noPrice`/`noPricePy`/`noPriceM`, the word breaks `seg`/`segs`
+  and the gloss with the price word dropped) is what `detailCardHTML`, the strip (`padTargets`), the word line, `spotWord`
+  and `openLookup` render, and the price stands on its own line (`.dprice`, 17 px semibold) under the characters — centred
+  in the Details block, at the left in the sheet, as each block's lines are. The condition is the row's (`inPage` and a
+  price), not "menu": what the row shows apart, the screen shows apart. **Nothing stored changes**: the record keeps its
+  text, the Edit form edits it whole with the price, Delete/Flag/+ Flashcard hit the same id, and a flashcard with a price
+  in its text (not a multicard's) is shown as it is. **Named, not built:** + Flashcard still copies the text WITH the price
+  (`makeFlashcard`, v487), so a learner writes 份 and reads "16" on the pad — whether the flashcard should be the dish's name
+  alone is H's call. Harness `dishprice.js` (10 checks, 4 guards/controls): 5 FAIL on v711 → 10 PASS on v712; `menu`, `dish`,
+  `dishlearn`, `itemswipe`, `mcacts`, `actsbottom`, `lkshot`, `detchk`, `mcfit`, `v710` unchanged. Not yet field-checked.
+
 ## Current state (PWA v711, 2026-09-27)
 - **The design half of the review pass (v711, H: "Consistency also regarding layout and design please").** A reviewer
   rendered ten screens at 390/360, light/dark, en/de (88 shots, computed styles and boxes measured, contrast, overflow) and

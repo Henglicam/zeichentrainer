@@ -265,6 +265,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .ct .d{font-size:14px;line-height:19px;color:var(--label2);margin-top:3px;white-space:normal}
 /* v699: a multicard's rows show the name and the meaning whole, and a dish's price at the right */
 .crow.inpage{align-items:start;grid-template-columns:83px 1fr auto} /* the picture's own width, not the list's 124 px column */ .crow.inpage .ct .c,.crow.inpage .ct .m{white-space:normal;overflow:visible;text-overflow:clip}
+.dprice{font-size:17px;font-weight:600;color:var(--label);text-align:center;margin:2px 0 6px} .lookup .dprice{text-align:start;margin:0 0 4px} /* the sheet's own lines start at the left */ /* v712: a dish's price on its own line under the characters, on the text's own screen and in the look-up */
 .crow .price{display:block;font-size:17px;font-weight:600;color:var(--label);white-space:nowrap;text-align:end;margin-bottom:6px} /* v696: a multicard text's description in its row; since v698 its short one, shown whole */
 .cs{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
 /* the six buttons of the card detail. minmax(0,1fr) and a label that may wrap, since v472: `1fr` is minmax(auto,1fr),
