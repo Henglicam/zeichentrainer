@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=723; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=724; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -687,7 +687,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["cards","v723","面 noodles, 卡 card on cards?"],
+  ["cards","v724","入 enter, 水 water, 我 I?"],
   ["learn","v717","Stroke from Show me: a stroke?"],
   ["learn","v717","Fold count steady after Skip?"],
   ["learn","v717","Char meanings: 药 medicine?"],
@@ -1831,7 +1831,7 @@ async function fixNumberSegs(){
    glosses (慢, 停, 男, 女), a meaning the AI or a hand wrote or checked, a meaning in another language. Once per phone (the
    settings row glossFix, v 718); the row keeps what changed and Diagnostics prints it. A dictionary that does not load
    leaves the row unwritten, so the next start tries again. */
-const GLOSS_FIX_V=723, GLOSS_FIX_KEEP=300; /* 723: 面 and 卡 in OWN_SENSES */ /* 722: the v5 dictionary and the two chooser rules of docs/NMAX.md — the pass waits for the fresh file */ /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
+const GLOSS_FIX_V=724, GLOSS_FIX_KEEP=300; /* 724 (H's v723 dump): a bound form past the third sense is not the in-word sense (入 "to conform to", 水 "additional cost", 牌 "fixed pattern for lyrics"), "I" is a pronoun (我 → "me"), a capitalised word anywhere makes a proper noun (巴 "the east of Sichuan") */ /* 723: 面 and 卡 in OWN_SENSES */ /* 722: the v5 dictionary and the two chooser rules of docs/NMAX.md — the pass waits for the fresh file */ /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
 async function glossFix(){
   const done=S.settings.glossFix; if(done&&done.v>=GLOSS_FIX_V) return;
   try{ await loadDict(); if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); }catch(e){ return; } await loadSigns().catch(()=>{});
@@ -6590,6 +6590,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  724:"A character inside a word keeps its plain sense again: 入 to enter, 水 water, 牌 signboard.",
   723:"面 on a menu is noodles and 卡 on a sign a card.",
   722:"The dictionary now holds every meaning of a single character: 德 is virtue, 西 is west, 木 a tree.",
   721:"A place name no longer stands in for 美 or 河 beside another character, and 新 京 金 周 江 木 say new, capital, gold, week, river, wood.",
@@ -7703,7 +7704,8 @@ const OWN_SENSES={"只":{"zhī":"classifier for animals, birds and one of a pair
   /* v723 (H: "Nimm 面 und 卡 in die Tabelle"): on a menu 面 is noodles, on a shop sign 卡 a card — CEDICT's order (face; to stop)
      is right for the language and wrong for the street; 卡 qiǎ "to block" keeps the dictionary's */
   "面":{"miàn":"noodles"},"卡":{"kǎ":"card (or calorie)"}};
-const PROPER=x=>/^(\(bound form\)\s*)?(the\s+)?[A-Z]/.test(x)||/abbr\. (for|of)/i.test(x); /* a sense that names a place, a people, a dynasty or an abbreviation (v721: 美 beside 团 had become "the Americas", 河 "the Yellow River") */
+const BOUND_TOP=3; /* v724: the in-word bound form must stand among the first BOUND_TOP senses of its reading — the three the v4 file shipped and v717's rule was field-checked on. The v5 file appends the cut senses, and a bound form far down the line is a marginal one: 入 (5th) "to conform to (as in 入时)", 水 (7th) "additional cost", 牌 (10th) "fixed pattern for lyrics or set melody", 干 (14th) "to have to do with" — measured over every one-character line: 53 in-word answers change, 入 → to enter, 水 → water, 牌 → signboard, 干 → dry, 元 → currency unit, 国 → country, 和 → and, 多 → many, 座 → seat, 会 → can, 奖 → prize; 密 → "name of an ancient state" and 殊 → "to behead" are the cost */
+const PROPER=x=>/^(\(bound form\)\s*)?(the\s+)?[A-Z][A-Za-z]/.test(x)||/abbr\. (for|of)/i.test(x)||/(^|[\s,])[A-Z][a-z]/.test(x.replace(/\([^)]*\)/g,"")); /* v724 (H's v723 dump): a capitalised word anywhere outside a note names a place, a people, a dynasty or a person — 巴 had become "the east of Sichuan and Chongqing Municipality", 成 is "short name for Chengdu", 蓉 "short name for Chengdu" — and the lone capital "I" is a pronoun, not a name (我 had become "me"); measured over every one-character line: 121 answers change, 成 → to succeed, 晋 → to move forward, 申 → to extend, 卫 → to guard, 蓉 → paste, 翼 → wing */ /* a sense that names a place, a people, a dynasty or an abbreviation (v721: 美 beside 团 had become "the Americas", 河 "the Yellow River") */
 function bestSense(w,py,inWord){ /* inWord (v717): the character is being read INSIDE a word, so a sense CC-CEDICT marks "(bound form)" is the right one — 店 in 药店 is "shop", not the free word's "inn" */
   const own=OWN_SENSES[w]; if(own){ const k=pyKey(py), r=own[k]||(pyBare(k)===k?own[Object.keys(own).find(x=>pyBare(x)===k)]:undefined); if(r) return r; } /* a toned reading must match exactly (只 zhǐ is "only", not the zhī classifier); only a toneless one falls back */
   const v=(DICT&&DICT.get(w))||"";
@@ -7714,7 +7716,7 @@ function bestSense(w,py,inWord){ /* inWord (v717): the character is being read I
     body=g?g.s:gs.map(x=>x.s).join("; ");
   }
   const senses=body.split(";").map(x=>x.trim()).filter(Boolean);
-  if(inWord){ const b=senses.find(x=>/^\(bound form\)\s*[^(\s]/i.test(x)&&!PROPER(x)); if(b) return b.replace(/^\(bound form\)\s*/i,""); } /* v721: a bound form that is a proper noun is not the word's sense — 美 in 美团 is "beautiful", not "(bound form) the Americas (abbr. for 美洲)"; v722: nor one the dictionary narrows with a note of its own — 河's "(bound form) (on restaurant menus) rice noodles" is 河粉's, not 河沙's */
+  if(inWord){ const b=senses.slice(0,BOUND_TOP).find(x=>/^\(bound form\)\s*[^(\s]/i.test(x)&&!PROPER(x)); if(b) return b.replace(/^\(bound form\)\s*/i,""); } /* v721: a bound form that is a proper noun is not the word's sense — 美 in 美团 is "beautiful", not "(bound form) the Americas (abbr. for 美洲)"; v722: nor one the dictionary narrows with a note of its own — 河's "(bound form) (on restaurant menus) rice noodles" is 河粉's, not 河沙's */
   const hard=x=>/^(surname |old variant|variant of|\((archaic|old|literary|classical)\)|abbr\. (for|of) |Taiwan pr\.|CL:|used in |see )/i.test(x), cl=x=>/^(\([^)]*\)\s*)?classifier for /i.test(x), bare=x=>x.replace(/^\(bound form\)\s*/i,""); /* v722 (docs/NMAX.md): a "used in …" or "see …" note is not a sense; a classifier behind a note ("(on product packaging) classifier for flat items", 枚's fourth sense once the cut is gone) stands back like any other, and a dated sense — "(old)", "(literary)", "(classical)" — is hard like "(archaic)", or 枚 would end as "(old) stick used as a gag"; a bound form IS one for a character standing alone — with its marker off — so 木 is "tree", not "unresponsive" (v717 had skipped it, which left the second half of "(bound form) root; stem" as 本's sense) */
   const one=senses.find(x=>!hard(x)&&!cl(x)&&!PROPER(x))||senses.find(x=>!hard(x)); return one?bare(one):(senses[0]||""); /* v717: a classifier sense stands back when the word has another (岁 → "year", not "classifier for years (of age)") — but only then (v719: 枚 is "surname Mei; classifier for small objects", and v717 answered "surname Mei" on three of H's cards); v721: a proper noun stands back the same way (周 → "to make a circuit", not "Zhou Dynasty"; 德 → "virtue", not "Germany") */
 }
