@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=727; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=728; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -687,6 +687,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v728","jiā on the AI menu cards? 龙 胡?"],
   ["cards","v727","皮 skin, 瘦 lean on the cards?"],
   ["cards","v726","肉夹馍 one word on the cards?"],
   ["cards","v725","夹 jiā in 肉夹馍 on cards?"],
@@ -1834,7 +1835,7 @@ async function fixNumberSegs(){
    glosses (慢, 停, 男, 女), a meaning the AI or a hand wrote or checked, a meaning in another language. Once per phone (the
    settings row glossFix, v 718); the row keeps what changed and Diagnostics prints it. A dictionary that does not load
    leaves the row unwritten, so the next start tries again. */
-const GLOSS_FIX_V=727, GLOSS_FIX_KEEP=300; /* 727: 皮 and 瘦 in OWN_SENSES */ /* 726: the fewest-words split — an unverified sign card whose meaning is still the composed one takes the new split */ /* 725: OWN_PINYIN — 夹 reads jiā, the unverified cards' pinyin and glosses follow */ /* 724 (H's v723 dump): a bound form past the third sense is not the in-word sense (入 "to conform to", 水 "additional cost", 牌 "fixed pattern for lyrics"), "I" is a pronoun (我 → "me"), a capitalised word anywhere makes a proper noun (巴 "the east of Sichuan") */ /* 723: 面 and 卡 in OWN_SENSES */ /* 722: the v5 dictionary and the two chooser rules of docs/NMAX.md — the pass waits for the fresh file */ /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
+const GLOSS_FIX_V=728, GLOSS_FIX_KEEP=300; /* 728 (H's v727 dump): 龙 and 胡 in OWN_SENSES; the OWN_PINYIN reading and the fewest-words split reach the verified cards and the cards with an AI meaning too (gloss and segs only where the meaning is not the composed one) */ /* 727: 皮 and 瘦 in OWN_SENSES */ /* 726: the fewest-words split — an unverified sign card whose meaning is still the composed one takes the new split */ /* 725: OWN_PINYIN — 夹 reads jiā, the unverified cards' pinyin and glosses follow */ /* 724 (H's v723 dump): a bound form past the third sense is not the in-word sense (入 "to conform to", 水 "additional cost", 牌 "fixed pattern for lyrics"), "I" is a pronoun (我 → "me"), a capitalised word anywhere makes a proper noun (巴 "the east of Sichuan") */ /* 723: 面 and 卡 in OWN_SENSES */ /* 722: the v5 dictionary and the two chooser rules of docs/NMAX.md — the pass waits for the fresh file */ /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
 async function glossFix(){
   const done=S.settings.glossFix; if(done&&done.v>=GLOSS_FIX_V) return;
   try{ await loadDict(); if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); }catch(e){ return; } await loadSigns().catch(()=>{});
@@ -1857,18 +1858,23 @@ async function glossFix(){
        another pinyin keeps it) */
     /* v726: a sign card the line now splits into fewer words takes the new split — gloss, segs and the composed meaning —
        when its meaning is still the one composed from its gloss (H's own words, or the AI's accepted ones, stay) */
-    if(d.kind==="sign"&&d.mt&&d.mt.src==="gloss"&&!d.mt.verified&&Array.isArray(d.gloss)&&d.gloss.length&&mlOf(d)==="en"){
+    /* v728 (H's v727 dump: the verified menu texts kept 瘦肉|夹|馍): every sign card takes the new split into its word list and
+       segs; the meaning follows only where it is still the composed one (H's own words, or the AI's accepted ones, stay) */
+    if(d.kind==="sign"&&Array.isArray(d.gloss)&&d.gloss.length){
       const base=u||d, pairs=base.gloss.filter(g=>g&&CJK.test(g.w)&&g.m).map(g=>g.w+" "+g.m); let pos=0; /* machine-made: every "word meaning" pair of the gloss stands in the meaning, in order */
-      if(pairs.length&&pairs.every(t=>{ const i=String(base.m||"").indexOf(t,pos); if(i<0) return false; pos=i+t.length; return true; })){
-        const lines=String(d.c||"").split("\n").map(l=>l.trim()).filter(l=>CJK.test(l)), rs=lines.map(lineMeaning);
-        const gl=rs.flatMap(r=>r.gloss.map(g=>({w:g.w,p:g.p,m:g.m})));
-        if(gl.length<base.gloss.length){ const from=base.gloss.map(g=>g.w).join("|"), to=gl.map(g=>g.w).join("|"); changed.push({id:d.id,w:d.c,from,to}); k++;
-          u={...base,gloss:gl,segs:rs.map(r=>r.segs),m:rs.map(r=>r.en).join(" / ")}; setMl(u,"en"); } } }
-    if(d.kind!=="page"&&!(d.mt&&d.mt.verified)&&d.p&&OWN_PY_CHARS.some(ch=>String(d.c||"").includes(ch))){
+      const composed=mlOf(d)==="en"&&pairs.length&&pairs.every(t=>{ const i=String(base.m||"").indexOf(t,pos); if(i<0) return false; pos=i+t.length; return true; });
+      const lines=String(d.c||"").split("\n").map(l=>l.trim()).filter(l=>CJK.test(l)), rs=lines.map(lineMeaning);
+      const gl=rs.flatMap(r=>r.gloss.map(g=>({w:g.w,p:g.p,m:g.m})));
+      if(gl.length<base.gloss.length){ const from=base.gloss.map(g=>g.w).join("|"), to=gl.map(g=>g.w).join("|"); changed.push({id:d.id,w:d.c,from,to}); k++;
+        u={...base,gloss:gl,segs:rs.map(r=>r.segs)}; if(composed){ u.m=rs.map(r=>r.en).join(" / "); setMl(u,"en"); } } }
+    /* v728: the verified cards too (the AI had called jiá right on every menu text) — only the syllables that differ change,
+       a capital or a spacing of the card's own stays */
+    if(d.kind!=="page"&&d.p&&OWN_PY_CHARS.some(ch=>String(d.c||"").includes(ch))){
       const np=String(d.c||"").split("\n").filter(l=>CJK.test(l)).map(l=>pySpaced(l.replace(/\s+/g,""))).join(" / ");
       const a=String(d.p).normalize("NFC").split(/\s+/).filter(Boolean), b=np.normalize("NFC").split(/\s+/).filter(Boolean);
-      const fits=a.length===b.length&&a.some((x,i)=>x!==b[i])&&a.every((x,i)=>x===b[i]||OWN_PY_READ.has(b[i]));
-      if(fits){ const at=a.findIndex((x,i)=>x!==b[i]); changed.push({id:d.id,w:d.c,from:a[at],to:b[at]}); k++; u={...(u||d),p:np}; } }
+      const same=(x,i)=>x.toLowerCase()===b[i];
+      const fits=a.length===b.length&&a.some((x,i)=>!same(x,i))&&a.every((x,i)=>same(x,i)||OWN_PY_READ.has(b[i]));
+      if(fits){ const at=a.findIndex((x,i)=>!same(x,i)); changed.push({id:d.id,w:d.c,from:a[at],to:b[at]}); k++; u={...(u||d),p:a.map((x,i)=>same(x,i)?x:b[i]).join(" ")}; } }
     if(u) rows.push(u); }
   if(rows.length){ try{ await idbPutMany("custom",rows); }catch(e){ logErr("glossfix","write: "+(e&&e.message||e)); return; }
     for(const r of rows){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; } }
@@ -6610,6 +6616,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  728:"肉夹馍 reads jiā on every card, the checked ones too; 龙 is a dragon and 胡 on a mahjong sign is the winning call.",
   727:"皮 on a menu is skin and 瘦 is lean.",
   726:"A line splits into the fewest words: 肉夹馍 stays one word on the menu.",
   725:"肉夹馍 reads ròu jiā mó — 夹 is jiā, as on the mainland.",
@@ -7730,7 +7737,10 @@ const OWN_SENSES={"只":{"zhī":"classifier for animals, birds and one of a pair
   "面":{"miàn":"noodles"},"卡":{"kǎ":"card (or calorie)"},
   /* v727 (H: "Ok, go" on 皮 "leather" and 瘦 "thin" in 皮瘦肉夹馍): on a menu 皮 is skin and 瘦 lean; a wallet sign or a slim
      person keep their readings in the bracket */
-  "皮":{"pí":"skin (or leather)"},"瘦":{"shòu":"lean (or thin)"}};
+  "皮":{"pí":"skin (or leather)"},"瘦":{"shòu":"lean (or thin)"},
+  /* v728 (H's v727 dump): two side effects of v724's proper-noun rule — 龙 skipped "Chinese dragon" for "loong", 胡 skipped
+     "non-Han people, esp. from central Asia" for "reckless"; on the mahjong sign 吃碰杠听胡 the character is the winning call */
+  "龙":{"lóng":"dragon"},"胡":{"hú":"to win (at mahjong)"}};
 /* the app's own readings where pinyin-pro's default is not the mainland one (v725, H's v723 dump: every 肉夹馍 card read
    ròu jiá mó, its 夹 glossed "double-layered (quilt)" from the jiá group, and the AI's correct jiā was flagged as "does not
    match the dictionary"). 夹 is jiā on the mainland (to press, to sandwich) except in the double-layered clothes 夹袄 夹被

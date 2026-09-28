@@ -60,6 +60,29 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v728, 2026-09-28)
+- **The gloss fix reaches the verified cards; 龙 and 胡 in the table (v728, H's v727 dump, "Ok, go").** The dump showed the
+  v727 pass had run (87 cards, 93 words — 入 to enter, 牌 signboard, 巴 to long for, 我 I, 水 water, 瘦 lean: v724 and
+  v727 field-checked) and three things left: the 建国肉夹馍 menu texts still went to the AI as `瘦肉 lean meat · 夹 to press
+  from either side · 馍 …` with `ròu jiá mó` — the v725 gloss rewrite had reached them, the v725 pinyin and the v726 split
+  had not, because both skipped verified cards and cards with an AI meaning; and two side effects of v724's proper-noun
+  rule, 龙 "Chinese dragon" → "loong" and 胡 "non-Han people, esp. from central Asia" → "reckless" (on the mahjong sign
+  吃碰杠听胡 it is the winning call). Now: **every** sign card takes the fewest-words split into its gloss and segs (the
+  segs of a sign card are always machine-made — the Edit form writes `seg`, never `segs`), and the meaning follows only
+  where it is still the composed one; **every** card holding an `OWN_PINYIN` character takes the new reading, verified or
+  not, still only when nothing but that syllable differs (a toneless AI pinyin stays), and only the differing syllables
+  change, so a capital of the card's own (`Jiàn guó`) stays. `OWN_SENSES` gains 龙 lóng "dragon" and 胡 hú "to win (at
+  mahjong)". `GLOSS_FIX_V` 728. Harness (test728, nine seeded cards after a v727 row, 15 checks): the verified menu text
+  split to 优质|纯|瘦|肉夹馍 with segs, the AI's meaning and the verified mark kept, its pinyin jiā, the verified word card
+  `Jiàn guó ròu jiā mó`, H's own-meaning card split with meaning and pinyin kept, 龙 dragon on the dict card, 胡 on the
+  sign with the composed meaning, the row v728 / 5 cards / 7 words, the table's fourteen keys, `bestSense` and
+  `lineMeaning`, the open card; `[guard]` 夹袄 jiá ǎo and `rou jia mo` untouched, 龙虾 lobster, 入 to enter, 龙门/龙虾/胡同
+  words, second start no-op. On the v727 tree 11 of 15 fail. test724 17 and test725 14 pass; test726 loses three (the
+  own-meaning and verified cards now resplit, the counts) and test727 one (the table's twelve keys) — superseded. Seen,
+  not changed: 杠 on the mahjong sign reads "coffin-bearing pole (old)", 碰 "to touch", 吃 "to eat" — the whole line is
+  mahjong jargon (chow, pung, kong). Not field-checked: the Diagnostics line should list jiá → jiā on the 建国肉夹馍
+  texts, their split, 龙 loong → dragon, 胡 reckless → to win (at mahjong); the AI should stop flagging 夹.
+
 ## Current state (PWA v727, 2026-09-28)
 - **皮 and 瘦 in the app's own table (v727, H: "Ok, go" on 皮 "leather" and 瘦 "thin" in 皮瘦肉夹馍).** `OWN_SENSES` gains
   皮 pí "skin (or leather)" and 瘦 shòu "lean (or thin)": CC-CEDICT opens 皮 with "leather" and 瘦 with "thin" (lean is its
