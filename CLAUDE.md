@@ -56,14 +56,14 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v729, 2026-09-28)
+## Current state (PWA v730, 2026-09-28)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
 
 **Recent state worth carrying in the head** (full entries: `grep -n "v6xx" docs/HISTORY.md`):
-- **v717–v729 dictionary senses, the split and the gloss fix** (the v720, v723, v724 and v727 passes field-checked by
-  H's dumps, the rest not): `cedict.tsv.gz` is **v5** — every sense of every one-character line, appended to the shipped
+- **v717–v729 dictionary senses, the split and the gloss fix** (the v720 and v723–v729 passes field-checked by H's
+  dumps, v717–v719 not): `cedict.tsv.gz` is **v5** — every sense of every one-character line, appended to the shipped
   order by `tools/cedict-nmax.py --write` (v722, `docs/NMAX.md` is the record). `bestSense(w,py,inWord)`: **`OWN_SENSES`**
   first (只 本 新 京 金 周 江 木 面 卡 皮 瘦 龙 胡 吃 碰 杠 — H's street senses, v723–v729, the street sense first and the
   special one in a bracket; add there, with the reading); **`OWN_PINYIN`**
@@ -466,7 +466,7 @@ Everything from **v597 to v720** is unconfirmed on the phone unless H has said o
 each version's archive entry names its open question. The ones that decide what comes next: **the Learn zoom** (v653–v686 —
 does it land on the character, is 3.5× sharp enough? Owner tools → Zoom check), **the phone's reader as the reading**
 (v641–v652 — sure cards fast and right, the check flagging the right ones), **Multicards and Cards as a reference**
-(v687–v696), **the gloss fix and dictionary v5** (v718–v729 — the Diagnostics line after each pass), then Owner tools (v645–v651), speed (v640/v642/v672), the
+(v687–v696), **the gloss fix and dictionary v5** (v718–v729 — every pass since v723 confirmed by a dump; v717–v719 not), then Owner tools (v645–v651), speed (v640/v642/v672), the
 Learn screen (v667–v673, `SPOT_ON`) and the older v599–v614 items.
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit

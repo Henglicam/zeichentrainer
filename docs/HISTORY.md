@@ -60,6 +60,20 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v730, 2026-09-28)
+- **The six Still-to-test lines v724–v729 go (v730, H: "Ok, go — remove the six Still-to-test lines").** H's v729 dump
+  showed the v729 pass (38 cards, 69 words) with every item the six lines asked about: 入 enter, 水 water, 我 I (v724, seen
+  in the v727 dump), jiá → jiā and 瘦|肉夹馍 on the 建国肉夹馍 texts, verified ones included (v725/v726/v728), 皮 skin and 瘦
+  lean (v727), 龙 dragon, 胡 to win (v728), 吃 碰 杠 with their calls (v729), and two resplits the fewest-words rule reaches
+  on verified cards (儿童及行动不便者乘梯须有成年人陪同 → 有|成年人, Pic实景自拍照相馆 → 自拍|照相馆). `TO_TEST` loses the six rows;
+  `APP_V`/`PWA v730`/`zt-v730` bump for the cached file. Nothing else changes. Seen in the same dump, not this PR's: the
+  DeepSeek account is empty — the last two relay calls came back 402 "Insufficient Balance" after a Check-up run over the
+  whole deck (about 100 requests of 5 cards in six minutes; whether H pressed "Check all cards again" or an interrupted
+  run resumed at start is not in the dump); one batch of 5 is left and retries at every start. The five-fold reviews of
+  the v727 dump are five copies of the 建国肉夹馍 multicard (Sep 17 and four on Sep 25), three of 恩尼美甲, two of 江宁府 —
+  each copy's texts are reviewed on their own; a duplicate-multicard tool would be a new control and waits for H's word.
+  Harness (test730): the app boots, `TO_TEST` holds no v724–v729 row and leads with v717; on the v728 tree five rows (the v729 tree six).
+
 ## Current state (PWA v729, 2026-09-28)
 - **吃, 碰 and 杠 in the app's own table (v729, H: "Ok, go — 吃 碰 杠 in die Tabelle").** The rest of the mahjong sign
   吃碰杠听胡: CC-CEDICT gives 吃 "to eat", 碰 "to touch" and opens 杠 gàng with "coffin-bearing pole (old)". `OWN_SENSES`
