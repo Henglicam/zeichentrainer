@@ -60,6 +60,20 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v737, 2026-09-28)
+- **The character pages go (v737, H, right after v736's open card: "Remove \"Cards with 'single character'\"").** The
+  link "Cards with 行 3 ›" under the open card's word line (v691, the Cards tab as a reference; v710 its way back; v717 only
+  when another card holds the character) was the only way onto a character's page, so the page leaves with it — the v307
+  rule, a dead class leaves with its last user: `renderCharPage`, `charCards`, `charReadings`, `backToChar`, `S.charPage`,
+  `S.charBack`, the `"char"` way back, the `.chlink`/`.chhead`/`.chread`/`.chhd`/`.chcards`/`.chcard` rules (23 lines), the two
+  keys "Cards with {0}" and the guide's "Tap a character on an open card, then Cards with …" in nine columns (489 a column
+  now, ru 519), the guide sentence itself (the v259 rule) and WHATS_NEW 691 (the v534 rule: a note for a control that is
+  gone is a false instruction). The tap on a character still lights its word and reads it under the row. The code is in
+  git under v691–v717 should H want it back. Harness (test737, two cards sharing 行, 行 tapped on 银行; 3 checks): no link
+  and no "Cards with" on the card, the guide without the sentence and with its Cards section, `[guard]` the missing key
+  falls back to English. On the v736 tree the first two fail. test736 (11) and test734 (12) still pass. Not field-checked;
+  nothing to test but the absence.
+
 ## Current state (PWA v736, 2026-09-28)
 - **The open card: the block always stands, the actions go quiet, Delete moves into Edit (v736, H: "Bitte Details in Cards
   immer per Default anzeigen. Option zum Aufklappen und die Details-Überschrift dort bitte löschen. Ebenso löschen: die

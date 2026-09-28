@@ -991,26 +991,3 @@ body.noscroll{overflow:hidden}
 .wnlist li{position:relative;padding-left:16px;margin-top:6px;font-size:14px;color:var(--label2);line-height:1.4}
 .wnlist li::before{content:"";position:absolute;left:4px;top:.6em;width:5px;height:5px;border-radius:50%;background:var(--label3)} /* v610 (H: "die Bullet-Punkte bitte nicht in Rot. Das ist ja viel zu auffällig"): the quiet grey of the app's tertiary text */
 /* v691 the character pages: the open card's link under its line, and the page — the character, its readings in your cards, the cards that hold it */
-.chlink{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;margin:8px 0 0;padding:8px 12px;border:0;border-radius:var(--r);background:var(--card2);color:var(--label);font:inherit;font-size:15px;text-align:start;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
-.chlink span:first-child{flex:1;min-width:0}
-.chlink .n{color:var(--label2)}
-.chlink i{font-style:normal;color:var(--label3);font-size:20px;line-height:1}
-.chlink:active,.chcard:active{opacity:.6}
-.chhead{display:flex;gap:18px;align-items:center;padding:16px;background:var(--card);border-radius:var(--rc);box-shadow:var(--shadow)}
-.chbig{font-family:var(--hanzi);font-size:88px;line-height:1.1;color:var(--label);flex:none}
-.chreads{flex:1;min-width:0}
-.chread{display:flex;flex-direction:column;margin:4px 0}
-.chread .py{font-size:21px;font-weight:600;color:var(--label)}
-.chread .mn{font-size:18px;color:var(--label)} /* v711: .pin/.mean sizes */
-.chhd{display:flex;gap:6px;font-size:13px;font-weight:500;color:var(--label2);margin:26px 0 8px 4px;user-select:none} /* v711: .listhead's numbers */
-.chhd .n{color:var(--label2)}
-.chcards{background:var(--card);border-radius:var(--rc);overflow:hidden;box-shadow:var(--shadow)}
-.chcard{display:flex;gap:12px;align-items:center;width:100%;min-height:44px;padding:10px 12px;border:0;border-bottom:.5px solid var(--sep);background:none;font:inherit;color:inherit;text-align:start;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.chcard:last-child{border-bottom:0}
-.chcard img,.chcard .ph{width:83px;height:83px;border-radius:8px;object-fit:cover;flex:none} /* v711: the Cards list's thumbnail (.thumbbox) */
-.chcard .ph{display:flex;align-items:center;justify-content:center;background:var(--fill);color:var(--label3);font-family:var(--hanzi);font-size:26px}
-.chcard .tx{min-width:0;flex:1;display:flex;flex-direction:column}
-.chcard .zh{font-family:var(--hanzi);font-size:19px;line-height:1.25;color:var(--label);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chcard .zh b{color:var(--tint);font-weight:inherit}
-.chcard .py{font-size:13px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chcard .mn{font-size:14px;color:var(--label2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
