@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=712; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=713; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -220,8 +220,9 @@ const srcName=d=>{ const pg=srcPage(d); return pg?(pg.c||""):(d&&d.fromT||""); }
 const madeFrom=item=>item&&item.page&&item.c?deck().find(x=>x.from===item.page&&(x.of?x.of===item.id:x.c===item.c)):null; /* by the item's id since v503 (`of`), so an edit on either side keeps the tie; a card made before v503 carries no `of` and still matches by its text */
 /* Generate flashcard (H: "that flashcard is generated without image. It's just a text"). The item keeps everything it
    has; a new card is written beside it with its own id and its own progress, so the two never fight over one row. */
-async function makeFlashcard(id){ const d=cardOf(id); if(!d||!d.page||!d.c) return null;
-  const have=madeFrom(d); if(have) return have;
+async function makeFlashcard(id){ const d0=cardOf(id); if(!d0||!d0.page||!d0.c) return null;
+  const have=madeFrom(d0); if(have) return have;
+  const pv=priceView(d0), d=pv?pv.d:d0; /* v713 (H: "flashcard should be the dish name"): a dish's flashcard is its name — text, pinyin, meaning, word breaks and gloss without the price, as its own screen shows them (v712); `of` still names the text */
   const pg=cardOf(d.page), rec={ id:cardId(d.c), c:d.c, p:d.p||"", m:d.m||"", t:d.t||"Custom", at:Date.now(),
     from:d.page, of:d.id, fromT:(pg&&pg.c)||"", v:APP_V }; /* `of` (v503): WHICH text of the multicard, so a corrected character on either side does not strip the card of its picture and its reference */
   if(d.trad) rec.trad=d.trad;
@@ -231,8 +232,8 @@ async function makeFlashcard(id){ const d=cardOf(id); if(!d||!d.page||!d.c) retu
   if(d.flag){ rec.flag=true; if(d.flagNote) rec.flagNote=d.flagNote; }
   if(d.unchecked) rec.unchecked=true; /* v515: the text's own "not yet checked" travels with the card, as its flag does */
   if(d.alts&&d.alts.length) rec.alts=d.alts.slice();
-  if(d.ai) rec.ai={...d.ai};
-  if(d.ml) rec.ml=d.ml; if(d.ms) rec.ms={...d.ms};
+  if(d.ai) rec.ai=pv?{...d.ai,zh:noPrice(d.ai.zh),p:noPricePy(d.ai.p),m:noPriceM(d.ai.m)}:{...d.ai};
+  if(d.ml) rec.ml=d.ml; if(d.ms) rec.ms=pv?Object.fromEntries(Object.entries(d.ms).map(([k,v])=>[k,noPriceM(v)])):{...d.ms};
   if(d.seg) rec.seg=d.seg.slice(); if(d.segs) rec.segs=d.segs.slice(); if(d.gloss) rec.gloss=d.gloss.slice();
   if(d.kind==="sign") rec.kind="sign";
   if(d.tags&&d.tags.length) rec.tags=d.tags.slice();
@@ -685,6 +686,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v713","Dish + Flashcard: name only?"],
   ["cards","v712","Dish screen: price apart?"],
   ["app","v711","44 px rows and chips: too heavy?"],
   ["learn","v710","Dish flashcard: zoom sane?"],
