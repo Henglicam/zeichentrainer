@@ -62,18 +62,14 @@ every shared file (`shizi-…`). **Keep the old name where renaming breaks insta
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
 
 **Recent state worth carrying in the head** (full entries: `grep -n "v6xx" docs/HISTORY.md`):
-- **The v717 usability pass** (H: "go for your suggestions"; eleven items, each measured in its entry): the dictionary line
-  of a word no longer starts with a variant entry's gloss (`tools/cedict-variants.py`, `cedict.tsv.gz` **v4**, 64 lines;
-  药 "medicine", not "leaf of the iris"), a character read inside a word takes its **(bound form)** sense (`bestSense(w,py,
-  inWord)`: 店 in 药店 "shop") and a classifier sense stands back; More folds its long texts (`MORE_OPEN`/`moreFold`, in
-  place, session only); the fold count counts distinct cards; a moving touch on Show me or Skip is a stroke (`PAD_HAND`);
-  the Cards tab carries one backup line from `BACKUP_AT` 25 flashcards until the first export; "Cards started", the
-  Storage row, the search placeholder ("Characters or pinyin") and the empty deck's third note reworded; "Cards with 行 ›"
-  only when another card holds the character. Nothing of it field-checked yet.
-- **`glossFix()` (v718)**: once per phone at boot (settings row `glossFix`, `GLOSS_FIX_V`), every stored single-character
-  meaning that came from the dictionary — a sign card's word gloss, a one-character dict card's `m`/`ms.en` — is looked up
-  again under v717's rule; phrasebook words, verified meanings and other languages stay. Diagnostics prints the `gloss fix`
-  line. Not yet field-checked.
+- **v717 usability pass, v718 gloss fix** (neither field-checked): a word's dictionary line no longer starts with a
+  variant entry's gloss (`tools/cedict-variants.py`, `cedict.tsv.gz` **v4**; 药 "medicine"), a character inside a word
+  takes its (bound form) sense (`bestSense(w,py,inWord)`), a classifier sense stands back; `glossFix()` applies that once
+  per phone to stored single-character glosses and unverified dict cards (settings row `glossFix`; Diagnostics prints it).
+  More folds its long texts (`MORE_OPEN`); the fold count counts distinct cards; a moving touch on Show me or Skip is a
+  stroke (`PAD_HAND`); one backup line on Cards from `BACKUP_AT` 25 flashcards until the first export; "Cards with 行 ›"
+  only when another card holds the character; "Cards started", Storage, the search placeholder and the empty deck's third
+  note reworded.
 - **The phone's reader (PaddleOCR PP-OCRv4, v637)** — `pdRead`, `vendor/paddle/` ~30 MB on first use, own worker (v642). One
   more pass of every reading (v639); when **sure** (≤ 2 lines, ≥ 2 characters, each ≥ `PD_SURE` 95 %, v641) it is the reading,
   checked by the AI's picture beside it — a different answer flags the card and takes the AI's reading (`sureCheck`,
@@ -194,9 +190,8 @@ Square photo tiles, two a row, **nothing written under them** (v593); a text-onl
 On the picture: the star (v425, one tap), flag and AI marks; a multicard adds its plates, count chip, progress bar and a
 two-line title (v461–v597). **Two tabs, Cards and Multicards** (v477); the filter is **one pill and a sheet** (v365/v366);
 search also takes toneless pinyin (`toneless`, v690; H skipped a dictionary-row list, proposal A); a long press marks (v354);
-the list keeps its place (v352/v445); the search field's placeholder names what it finds ("Characters or pinyin", v717; it also
-finds meanings). From `BACKUP_AT` 25 flashcards on, a deck never exported shows **one backup line with an Export button** under
-the search bar, gone with the first export (v717). The **open card** swipes through the list (v445); Details, then its actions at the foot (v703): Test this card · Edit | Star ·
+the list keeps its place (v352/v445); the placeholder reads "Characters or pinyin" (v717; meanings are found too). From
+`BACKUP_AT` 25 flashcards a never-exported deck shows **one backup line with Export** under the search bar (v717). The **open card** swipes through the list (v445); Details, then its actions at the foot (v703): Test this card · Edit | Star ·
 Flag | Delete; its line under the character row ends in **Cards with 行 ›**, the character's page — its readings in your
 cards and every card that holds it (v691; the card under it keeps its own way back, v710) — only when another card holds the
 character (v717). A **multicard's own text**: it swipes to the multicard's next text (v707); its photo frames it alone (v700); + Flashcard (Flashcard › once made) | Edit, Flag |
@@ -218,10 +213,9 @@ Import, Flagged cards, Photos, Storage) · **The app** (Share the app, Feedback,
 app, Language, Meanings, AI review with the owner's setup form, Review queue, Usage sharing,
 Update notes, About, Open source licenses) · **Advanced settings**. The owner's tools fold behind
 one **Owner tools** row (Downloads, Mirror, Diagnostics, Still to test, All users, Feedback,
-Start over); unlocking lengthens More by one row instead of 1 574 px. **The long texts fold** (v717, `MORE_OPEN`/`moreFold`,
-closed at every start, toggled in place): AI review's and Usage sharing's paragraphs behind **What is sent ⌄**, About's
-behind **About the app ⌄** under the version line, the Feedback box behind **Write a message**; every word of them stays
-(v193), as do the checkboxes, the status lines and the update notes. Three-card deck at 390 px: 3 619 px, was 4 146.
+Start over); unlocking lengthens More by one row instead of 1 574 px. **The long texts fold** (v717, `moreFold`, closed at
+every start, toggled in place): What is sent ⌄ on AI review and Usage sharing, About the app ⌄, Write a message on Feedback;
+every word stays (v193), as do the checkboxes, status lines and update notes. Three-card deck: 3 619 px, was 4 146.
 
 **Owner's rows are English** (H uses English) and behind a password (`ADMIN_HASH`, SHA-256, a
 session-only unlock). **Diagnostics** keeps a hundred readings, a hundred AI exchanges and a
@@ -494,5 +488,4 @@ on a card of several words the tap shows the **first word's** pinyin and meaning
 the pad **prints** the character at levels 1 and 2, so "write the word" is "trace the word";
 the star counter and the review flag are under
 the 44 px rule; an offline weak reading still makes its flagged card; `SPLIT_MAX` 30 is a cap a
-real menu board will reach — **and a menu board has never been read in the field.** (The runaway
-session count and the swallowed corner stroke on the pad's helpers were on this list until v717 fixed both.)
+real menu board will reach — **and a menu board has never been read in the field.**
