@@ -60,6 +60,22 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## docs/NMAX.md (2026-09-28, no version — nothing a phone fetches changed)
+- **The NMAX list (H: "Bau die Liste für NMAX auf").** `tools/cedict-nmax.py` reads the full CC-CEDICT beside the shipped
+  `vendor/cedict.tsv.gz` and writes `docs/NMAX.md`: every one-character line the three-sense cut hurts, ranked by the number
+  of dictionary words holding the character (the only frequency the data has). **The finding is bigger than 本:** CC-CEDICT
+  lists a character's proper-noun entries before its word, so the shipped 新 is "abbr. for Xinjiang; abbr. for Singapore;
+  surname Xin" with "new" cut, 木 and 江 keep the surname and two bound forms, and `bestSense`, skipping all three, falls
+  back to "surname Mu" — 20 characters answer no meaning at all (table 1: 新 阿 江 木 宁 乌 剂 奥 伊 乳 甘 婆 储 …), 1 more
+  changes (枚), 141 lose a classifier sense behind a real one (table 3). **Cost:** one-character lines with all their
+  senses make the file 2,589 KB instead of 2,540 (gzip); the refetch once per phone is the real price. **Two rebuilds,
+  and only one is safe:** appending the cut senses to the shipped line keeps its order and v717's variant strip ("all");
+  rebuilding from the source in its order changes 6 rare rows (table 4). Two rules to settle in the PR that raises NMAX:
+  `bestSense` must skip "used in …" notes (the source puts 家's "used in 傢伙" entry before "home"), and a character truly
+  alone whose real senses are all bound forms (木 → "unresponsive" even with all senses) should strip the marker rather
+  than skip the sense. Rerun: `python3 tools/cedict-nmax.py package/cedict.json vendor/cedict.tsv.gz docs/NMAX.md` with the
+  cedict-json package unpacked as `cedict-readings.py` describes.
+
 ## Current state (PWA v720, 2026-09-28)
 - **只 and 本 say what they mean on the street, and a character beside another one takes its in-word sense (v720, H:
   "Handle them too" — the two v719 named).** Two causes. **The dictionary's order:** 只 zhī opens with "grain that has begun

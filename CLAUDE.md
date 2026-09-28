@@ -62,19 +62,20 @@ every shared file (`shizi-…`). **Keep the old name where renaming breaks insta
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
 
 **Recent state worth carrying in the head** (full entries: `grep -n "v6xx" docs/HISTORY.md`):
-- **v717 usability pass, v718–v720 gloss fix** (none field-checked): a word's dictionary line no longer starts with a
-  variant entry's gloss (`tools/cedict-variants.py`, `cedict.tsv.gz` **v4**; 药 "medicine"), a character inside a word
-  takes its (bound form) sense (`bestSense(w,py,inWord)`) — **and a one-character word beside another character is inside
-  a word** (v720, `besideCJK`; 店 in 本店 is "shop"); a classifier stands back only when another sense remains (v719: 枚);
-  **`OWN_SENSES` holds the app's own sense for a character CEDICT orders badly** (v720: 只 zhī, 本 běn — add there, with
-  the reading); **a one-character word takes its reading from its whole line** (v719, `lineMeaning`'s `ctx`: 卖完了 ends
-  in le; 一/不 keep their own tone, `SANDHI`); `glossFix()` applies all that once per phone (`GLOSS_FIX_V` 720) to stored
-  single-character glosses, the meanings composed from them and unverified dict cards (settings row `glossFix`; Diagnostics
-  prints it). More folds its long texts (`MORE_OPEN`); the fold count counts distinct cards; a moving touch on Show me or
-  Skip is a stroke (`PAD_HAND`); one backup line on Cards from `BACKUP_AT` 25 flashcards until the first export; "Cards
-  with 行 ›" only when another card holds the character; "Cards started", Storage and the search placeholder reworded.
-- **The v6xx state** — the phone's reader (v637–v710), the owner tools (v627–v702), the Learn zoom's place (v619–v716) and
-  Crop again with AI answers (v656/v657) — moved to `docs/HISTORY.md` on 2026-09-28 (H): `grep -n "Consolidated v6xx" docs/HISTORY.md`.
+- **v717–v720 dictionary senses and the gloss fix** (none field-checked): a variant entry's gloss no longer leads a word's
+  line (`tools/cedict-variants.py`, `cedict.tsv.gz` **v4**); `bestSense(w,py,inWord)` takes the (bound form) sense inside a
+  word — **and a one-character word beside another character is inside a word** (v720, `besideCJK`; 店 in 本店 is "shop");
+  a classifier stands back only when another sense remains (v719, 枚); **`OWN_SENSES`** holds the app's own sense for a
+  character CEDICT orders badly (v720: 只 zhī, 本 běn — add there, with the reading); **a one-character word takes its
+  reading from its whole line** (v719, `ctx`; 卖完了 ends in le; 一/不 keep their tone, `SANDHI`). `glossFix()` applies all
+  that once per phone (`GLOSS_FIX_V` 720) to stored single-character glosses, composed meanings and unverified dict cards
+  (settings row `glossFix`; Diagnostics prints it). **`docs/NMAX.md`** (`tools/cedict-nmax.py`): the one-character lines the
+  three-sense cut hurts — 新 ships without "new", 木 and 江 as surnames — with the cost and the two rules a larger cut needs;
+  not raised yet. v717 also: More folds its long texts (`MORE_OPEN`), a moving touch on Show me or Skip is a stroke
+  (`PAD_HAND`), one backup line on Cards from `BACKUP_AT` 25 flashcards, "Cards with 行 ›" only when another card holds
+  the character.
+- **The v6xx state** (reader, owner tools, Learn zoom, Crop again) moved to `docs/HISTORY.md` on 2026-09-28 (H):
+  `grep -n "Consolidated v6xx" docs/HISTORY.md`.
 
 ## Files
 Shell: `index.html` · `styles.css` · `lang.js` · `app.js` · `manifest.webmanifest` (with `share_target`) · `sw.js` ·
@@ -456,15 +457,12 @@ the listing exists; the AI review on by default is a GDPR opt-in question; PIPL 
 CC BY-SA).
 
 ## Open / not yet field-checked
-Everything from **v597 to v696** is unconfirmed on the phone unless H has said otherwise (field-checked: v676, v682, v685, v714);
-each version's archive entry names its open question. The ones that decide what comes next:
-- **The Learn zoom** (v653–v686) — does it land on the character being written, is 3.5× sharp enough? Diagnostics and Owner
-  tools → Zoom check are the test.
-- **The phone's reader as the reading** (v641–v652) — are sure cards fast and right, does the check flag the right ones?
-- **Multicards and Cards as a reference** (v687–v696) — two-line labels framed whole and in place at once, the text's actions
-  on its own screen, character pages, toneless search, tags once with descriptions in the rows, no Google panel (v694).
-- **Owner tools** (v645–v651), **speed** (v640, v642, v672), **Learn screen** (v667–v673, v602's `SPOT_ON` trial) and the
-  older v599–v614 items — see their entries.
+Everything from **v597 to v720** is unconfirmed on the phone unless H has said otherwise (field-checked: v676, v682, v685, v714);
+each version's archive entry names its open question. The ones that decide what comes next: **the Learn zoom** (v653–v686 —
+does it land on the character, is 3.5× sharp enough? Owner tools → Zoom check), **the phone's reader as the reading**
+(v641–v652 — sure cards fast and right, the check flagging the right ones), **Multicards and Cards as a reference**
+(v687–v696), **the gloss fix** (v718–v720 — the Diagnostics line), then Owner tools (v645–v651), speed (v640/v642/v672), the
+Learn screen (v667–v673, `SPOT_ON`) and the older v599–v614 items.
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's character
