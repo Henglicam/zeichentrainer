@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=735; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=736; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -86,7 +86,7 @@ const S = { mode:"study", progress:{}, custom:[], inbox:[],
   cueBig:"pic", /* which half of the cue is big — "pic" or "txt", NEVER neither: v580 (H: "nur 2 Stati: Karte komplett offen / Übersetzung komplett offen. Tippen toggelt zwischen beiden") took the halves away, so a tap swaps the two states rather than folding one back. A render must not change it — H writes a whole card off the enlarged half (v568). A fresh start is the photo (v572, H: "Start with the open image by default."), a reload the session's own state (v569). */
   admin:false, /* the owner's rows in More unlocked for this session (v162) */
   ownerOpen:false, /* v547: the owner's own block folded behind one row, so More is the same length unlocked as locked */
-  detail:null, detailHide:false, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterStar:false, filterNew:false, filterTags:[], settings:{}, single:null, saved:null, cardsTab:"cards",
+  detail:null, fullPic:false, query:"", filterUnv:false, filterFlag:false, filterAi:false, filterStar:false, filterNew:false, filterTags:[], settings:{}, single:null, saved:null, cardsTab:"cards",
   editing:null, editFrom:null, editSeq:0, draft:null, pendingShot:null,
   autoCard:window.AUTO_CARD!==false, editOpenFrame:false, openShot:null }; /* autoCard (v325): a photo that opens by itself becomes a card without a frame or a preview; the harness sets window.AUTO_CARD=false to keep the crop-mode flow its frame suites drive */
 
@@ -687,6 +687,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v736","Open card: layout right?"],
   ["cards","v734","Pop-up descriptions: right?"],
   ["more","v731","Duplicate multicards: sets right?"],
   ["learn","v717","Stroke from Show me: a stroke?"],
@@ -3532,12 +3533,6 @@ function renderGuide(main){
   </div>`;
   $("#back-more").onclick=()=>{ S.mode="more"; render(); };
 }
-function tagsHTML(d,isNew){
-  /* a multicard's own text carries no learning state (v487/v488), so neither "New" nor "Review" is true of it — the row keeps
-     the review flag alone, and is not drawn at all when there is none (v498, the same reason the schedule line left that screen) */
-  const fl=d.flag?`<span class="f">${t("⚑ Flagged")}</span>`:""; /* v512 (H: "No 'studied yet' info"): the New / Review pill is gone for every card, as it went for a multicard's text at v498 */
-  return fl?`<div class="tags">${fl}</div>`:""; /* no card type (H, v105) */
-}
 /* ---------- review flag ----------
    Any card can be flagged when the OCR text, pinyin or meaning looks odd and
    someone (a teacher, later maybe an online model) should check it. The flag
@@ -3926,12 +3921,12 @@ function wireSrc(root){ (root||document).querySelectorAll("[data-src]").forEach(
      start, and S.detail is the card it started from. */
   const from=S.mode==="cards"&&S.detail&&S.detail!==pg.id?S.detail:null;
   const learn=S.mode==="study"; /* the jump started on a card being studied (v494): the session stays as it is and the back button returns to it */
-  S.detail=pg.id; S.detailFrom=from?"card:"+from:learn?"learn":null; S.detailHide=false; S.fullPic=false; S.peek=null; S.mode="cards"; LIST_CARD=null; render(); window.scrollTo({top:0}); }); }
+  S.detail=pg.id; S.detailFrom=from?"card:"+from:learn?"learn":null; S.fullPic=false; S.peek=null; S.mode="cards"; LIST_CARD=null; render(); window.scrollTo({top:0}); }); }
 function wireLinks(root){ (root||document).querySelectorAll("[data-link]").forEach(b=> b.onclick=()=>{
   /* in Learn the tap shows that photo on the card in place, a second tap returns — the session goes on (v155, H: "I'm
      getting out of the learn mode. That should not happen"); in the Cards detail it opens the other card as before */
   if(S.mode==="study"){ S.peek=S.peek===b.dataset.link?null:b.dataset.link; S.fullPic=false; render(); return; }
-  S.mode="cards"; S.detail=b.dataset.link; S.detailFrom=null; /* the way back belongs to the card you came into, not to the one you hop to (v502; the v492 swipe rule one hop along) */ S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; /* not a row tap: ← Cards falls back to the remembered scroll, and a swipe from here does not move a row offset that belongs to another part of the list (v352, v445) */
+  S.mode="cards"; S.detail=b.dataset.link; S.detailFrom=null; /* the way back belongs to the card you came into, not to the one you hop to (v502; the v492 swipe rule one hop along) */ S.fullPic=false; S.editing=null; LIST_CARD=null; /* not a row tap: ← Cards falls back to the remembered scroll, and a swipe from here does not move a row offset that belongs to another part of the list (v352, v445) */
   render(); window.scrollTo({top:0}); }); }
 function endSingle(){
   /* leave single-card test mode and restore the session queue */
@@ -5759,7 +5754,7 @@ function dropThumb(id){ if(THUMB[id]){ URL.revokeObjectURL(THUMB[id]); delete TH
 let LIST_SCROLL=0, LIST_CARD=null, LIST_OFF=0;
 function backToList(){
   const id=LIST_CARD, off=LIST_OFF, y=LIST_SCROLL;
-  S.detail=null; S.detailHide=false; S.fullPic=false; render();
+  S.detail=null; S.fullPic=false; render();
   requestAnimationFrame(()=>{
     /* the row of the card the swipe ended on, put back where the tapped row sat (v445). With no swipe this lands on
        LIST_SCROLL to the pixel — the tapped row's own viewport offset is exactly what LIST_OFF holds — so v352 is
@@ -6078,7 +6073,7 @@ function renderCards(main){
     b.onclick=()=>{
       if(marking("cards")){ pickToggle(b.dataset.id); b.classList.toggle("on"); pickBar(()=>delPicked("cards")); return; } /* while marking a tap marks the row instead of opening it (v351) */
       LIST_SCROLL=window.scrollY; LIST_CARD=b.dataset.id; LIST_OFF=b.getBoundingClientRect().top; /* where the list stood and which row this is — ← Cards comes back to it (v352), to this row after a swipe (v445) */
-      S.detail=b.dataset.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); };
+      S.detail=b.dataset.id; S.fullPic=false; render(); window.scrollTo(0,0); };
     if(!marking("cards")&&S.custom.length>1) longPress(b,()=>{ PICK={kind:"cards",set:new Set([b.dataset.id])}; render(); }); /* press and hold to start marking (v354) */
   }); wireStars($("#clist")); };
   const refresh=()=>{ const r=cardsListHTML(); ids=r.ids; $("#clist").innerHTML=r.html; const ct=$("#cnt"); if(ct){ ct.textContent=t("{0} of {1}",r.n,tabCount()); ct.hidden=r.n===tabCount(); } /* the count shows only while a search or a chip narrows the list (v356) */ wire(); if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); } };
@@ -6104,50 +6099,47 @@ const detailCh=d=>(S.detailCh&&S.detailCh.c===d.id)?S.detailCh.i:null; /* the ch
    it made (cardImage). Share the app, Share report, Share flagged cards, Diagnostics and Feedback are other features and
    are untouched. */
 function detailActsHTML(d){
-  /* v594 (H: "Flag und Delete sollten nebeneinander in eine Reihe kommen"): Flag and Delete are ONE row, always — so
-     neither of them spans, and what stands above them pairs up by itself: Test this card takes the whole row as the
-     primary always has (.detailacts .primary), then Edit and Star. A multicard's own text has neither Test nor Star
-     (v498/v493); since v695 + Flashcard (Flashcard › once made) shares the row with Edit, and Edit spans the row only for a text with no characters yet. */
+  /* v736 (H: "Edit, Star, Flag und Delete bitte nicht so prominent anzeigen. Eher so wie in den Lernkarten. Delete könnte ja
+     theoretisch auch lediglich unter Edit zu finden sein"): the open card's one action stays a button — Test this card on a
+     flashcard, + Flashcard (Flashcard › once made) on a multicard's own text — and Star, Flag and Edit become the study
+     card's quiet toolbar (v655: equal columns under a hairline, a drawn icon over a small grey label, a set mark in the tint).
+     Delete lives in the Edit form only (its own button at the form's foot since long before, the same question, v594), so
+     no red button stands on a card any more. A multicard's own text has no Star (v493). */
   const star=!inPage(d);
-  return `<div class="detailacts">
-      ${d.c&&!inPage(d)?`<button class="btn primary" id="d-test">${t("Test this card")}</button>`:""}
-      ${inPage(d)&&d.c?(madeFrom(d)?`<button class="btn" id="d-openfc">${t("Flashcard ›")}</button>`:`<button class="btn" id="d-make">${t("+ Flashcard")}</button>`):""}
-      <button class="btn" id="d-edit"${star||inPage(d)&&d.c?"":' style="grid-column:1/-1"'}>${t("Edit")}</button>
-      ${star?`<button class="btn${d.star?" on":""}" id="d-star">${d.star?"\u2605 "+t("Starred"):"\u2606 "+t("Star")}</button>`:""}
-      <button class="btn${d.flag?" on":""}" id="d-flag">${d.flag?t("card:\u2691 Flagged"):t("\u2691 Flag")}</button> <!-- v536: the Learn back's own two words (v431). Measured at 393 and 360 px, the long phrase broke across two lines in en, de, es, fr, id, ru and vi - three in id at 360 - and a grid row is as tall as its tallest cell. -->
-      <button class="btn danger" id="d-del">${t("Delete card")}</button>
-    </div>`; } /* v692 (H: "Mach doch das Generate Flashcard und Edit und Delete und alles sowas in die Karte selber, wenn man die in einer Multicard öffnet, zusammen rein", then "The text's own screen"): + Flashcard — Flashcard › once made — stands beside Edit, and the pop-up over the photo is a look-up with no button at all (v496's rule, now without exception). Before: a multicard's own text offers Edit, Flag and Delete and nothing else (v498): Test would study a text that is never in Learn (v487), Share would send a row of the multicard as if it were a card, and the star left this screen at v493 */
+  const main=d.c&&!inPage(d)?`<button class="btn primary block" id="d-test">${t("Test this card")}</button>`
+    :inPage(d)&&d.c?(madeFrom(d)?`<button class="btn block" id="d-openfc">${t("Flashcard ›")}</button>`:`<button class="btn primary block" id="d-make">${t("+ Flashcard")}</button>`):"";
+  return `${main?`<div class="dmain">${main}</div>`:""}<div class="backacts dacts">${star?`<button class="tbtn${d.star?" on":""}" id="d-star" aria-pressed="${d.star?"true":"false"}">${starIcon}<span>${d.star?t("Starred"):t("Star")}</span></button>`:""}<button class="tbtn${d.flag?" on":""}" id="d-flag" aria-pressed="${d.flag?"true":"false"}">${flagIcon}<span>${(d.flag?t("card:⚑ Flagged"):t("⚑ Flag")).replace(/^⚑\s*/,"")}</span></button><button class="tbtn" id="d-edit">${TB_ICON.edit}<span>${t("Edit")}</span></button></div>`; } /* v692 (H: "Mach doch das Generate Flashcard und Edit und Delete und alles sowas in die Karte selber, wenn man die in einer Multicard öffnet, zusammen rein", then "The text's own screen"): + Flashcard — Flashcard › once made — stands beside Edit, and the pop-up over the photo is a look-up with no button at all (v496's rule, now without exception). Before: a multicard's own text offers Edit, Flag and Delete and nothing else (v498): Test would study a text that is never in Learn (v487), Share would send a row of the multicard as if it were a card, and the star left this screen at v493 */
 function detailCardHTML(d,sw){
   const pv=priceView(d); if(pv) d=pv.d; /* v712: a dish without its price; the price on its own line below */
-  const p=S.progress[d.id], pg=frontPage(d); /* v489: the multicard's own photo on a generated card's front, and its name as the pill — so the back drops the duplicate */
-  if(!d.c) return `${tagsHTML(d,!p)}<div class="front tap" id="d-reveal">${frontHTML(d,{page:true,tap:true})}</div>
+  const pg=frontPage(d); /* v489: the multicard's own photo on a generated card's front, and its name as the pill — so the back drops the duplicate */
+  if(!d.c) return `<div class="front tap" id="d-reveal">${frontHTML(d,{page:true,tap:true})}</div>
       ${d.reading&&d.reading.failed?"":`<div class="hint">${t("The text, pinyin and meaning follow when the reading is done.")}</div>`}${flagNoteHTML(d)}${detailActsHTML(d)}`; /* a card still waiting for its reading has no back (v237) */
   /* v531 (H: "Cards View dem Learn View nachziehen"): the open card is the study card's own order of v527 — the photo, the
      character row, the WORD's line under the row (the tapped character's word, else the first — always there, as the pad's
      line is in Learn), the fold "Details" (v704; "Whole card" until then) and, since v703, the actions at the foot under it, leading with the card's
      characters. Until v530 the fold stood above the line under its own label "Pinyin and meaning", the v518 shape, and the
      line showed only for a tapped character. The block stays open by default here — this is the screen for looking a card up. */
-  const tg=padTargets(d), li=detailCh(d), lit=detailLit(d,tg), open=!S.detailHide;
+  const tg=padTargets(d), li=detailCh(d), lit=detailLit(d,tg);
   const btn=x=>`<button class="ch${x.w?"":" num"}${lit===x?" cur":""}" data-i="${tg.indexOf(x)}">${esc(x.glyph)}</button>`;
-  const back=`<div class="anshanzi hanzi">${(learnTrad(d)?learnTrad(d).split("\n"):frontLines(d)).map(esc).join("<br>")}</div>${priceLine(pv)}${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}`;
-  return `${tagsHTML(d,!p)}<div class="zone1 front${d.flag?" flagged":""}" id="d-reveal">${frontPic(d,{page:true,fixed:true})||cueGlyphHTML(d)}${tradMark(d)}</div>
+  const back=`${priceLine(pv)}${backHTML(d,{noParts:true,explain:true})}${flagNoteHTML(d)}${aiBoxHTML(d)}`; /* v736 (H: "Ebenso löschen: die zweite Charakterzeile. Es reicht, wenn wir die auswählbaren Charakter haben"): the block no longer repeats the characters the row above already holds */
+  return `<div class="zone1 front" id="d-reveal">${frontPic(d,{page:true,fixed:true})||cueGlyphHTML(d)}${tradMark(d)}</div>
       ${chrowHTML(d,tg,btn,lit?lit.wi:null)}
       <div class="padline" id="padline"${lit?"":" hidden"}></div>
       ${lit&&lit.w&&CJK.test(lit.ch)&&charCards(lit.ch).length>1?/* v717: a page that would list only this card is no page */`<button class="chlink" id="d-chpage" data-ch="${esc(lit.ch)}"><span>${esc(t("Cards with {0}",lit.ch))}</span><span class="n">${charCards(lit.ch).length}</span><i aria-hidden="true">›</i></button>`:""}
       ${d.reading&&!d.reading.failed?`<div class="hint">${t("The new frame is being read — the text follows when it is done.")}</div>`:""}
-      <div class="fold${open?" open":""}"><button class="foldbtn" id="d-fold" aria-expanded="${open?"true":"false"}"><span>${t("Details")}</span><i aria-hidden="true">⌄</i></button><div class="ans" id="d-ans"${open?"":" hidden"}>${back}</div></div>
+      <div class="dback" id="d-ans">${back}</div> <!-- v736 (H: "Bitte Details in Cards immer per Default anzeigen. Option zum Aufklappen und die Details-Überschrift dort bitte löschen"): the block always stands, with no heading and no fold -->
       ${detailActsHTML(d)} <!-- v703 (H: "Macht doch mal Flag, Edit, Delete und so weiter ganz nach unten und Whole Card darüber"): the actions close the card, under Details (called Whole card until v704) -->
       ${sw&&showHints()?`<div class="hint">${t("Swipe left or right to pick another card.")}</div>`:""}`;
 }
 /* the character the detail's line reads: the tapped one, else the first writable one — so the line is always there, as in Learn (v531) */
 function detailLit(d,tg){ const li=detailCh(d); if(li!=null&&tg[li]&&tg[li].w) return tg[li]; return tg.find(x=>x.w)||null; }
 const fromPage=()=>typeof S.detailFrom==="string"&&S.detailFrom.startsWith("page:")?S.detailFrom.slice(5):null; /* v453: the item's detail was opened from its page */
-function backToPage(){ const pid=fromPage(), cid=S.detail, fr=S.detailFrom; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.detail=pid&&cardOf(pid)?pid:null; render(); window.scrollTo(0,0); reopenLookup(cid,fr); /* v495: back to the look-up sheet More was pressed on, not to the bare multicard */ }
+function backToPage(){ const pid=fromPage(), cid=S.detail, fr=S.detailFrom; S.detailFrom=null; S.fullPic=false; S.detail=pid&&cardOf(pid)?pid:null; render(); window.scrollTo(0,0); reopenLookup(cid,fr); /* v495: back to the look-up sheet More was pressed on, not to the bare multicard */ }
 const fromCard=()=>typeof S.detailFrom==="string"&&S.detailFrom.startsWith("card:")?S.detailFrom.slice(5):null; /* v492: the multicard was opened from a generated flashcard's reference pill */
 const fromLearn=()=>S.detailFrom==="learn";
 /* back into the session the jump started in (v494): nothing of it was touched, so the card comes back open at the same place */
 function backToLearn(){ S.detailFrom=null; S.detail=null; S.fullPic=false; S.mode="study"; render(); window.scrollTo(0,0); }
-function backToCard(){ const cid=fromCard(); S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.detail=cid&&cardOf(cid)?cid:null; render(); window.scrollTo(0,0); } /* the card deleted meanwhile falls back to the list, as backToPage does */
+function backToCard(){ const cid=fromCard(); S.detailFrom=null; S.fullPic=false; S.detail=cid&&cardOf(cid)?cid:null; render(); window.scrollTo(0,0); } /* the card deleted meanwhile falls back to the list, as backToPage does */
 /* the page's own detail (v453): the whole photo with the dots — a tap opens the sheet of v448 and grades right there —, the
    title and the line under it, then one row per text in reading order with the dot's state, the star and Delete card, which
    takes the page's texts with it (one Undo). No Edit and no Share: the page is its photo, and its texts are edited one by one. */
@@ -6200,7 +6192,7 @@ function renderPageDetail(main,d){
        region under it — the region is found from the point instead, the same nearest-region rule as a tap beside one */
     if(sw&&rb) sw.addEventListener("click",e=>{ if(e.target.closest("[data-regions]")) return; const b=regionAt(rb,e.clientX,e.clientY); if(b) openLookup(rb.dataset.regions,b.dataset.region); });
     attachPicZoom(sw); } /* v634 (H: "Zooming into a Multicard shall also be possible, just like normal cards"): the same pinch, pan and edge-to-swipe as the open card's photo, the regions riding along */
-  main.querySelectorAll("#pitems .crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.id; S.detailFrom="page:"+d.id; S.detailHide=false; S.fullPic=false; render(); window.scrollTo(0,0); });
+  main.querySelectorAll("#pitems .crow").forEach(b=> b.onclick=()=>{ S.detail=b.dataset.id; S.detailFrom="page:"+d.id; S.fullPic=false; render(); window.scrollTo(0,0); });
   { const ad=$("#d-addtext"); if(ad) ad.onclick=()=>{ ad.disabled=true; addPageText(d); }; } /* v635 */
   $("#d-del").onclick=async()=>{ if(!await confirmDelCard(d)) return; await delCustom(d.id); if(fromCard()){ backToCard(); return; } if(fromLearn()){ backToLearn(); return; } S.detail=null; render(); }; /* v594: only after the sheet, and with Undo under it (v268) — the texts go with it; a generated flashcard survives its multicard (v487), so the way back is still there and its pill becomes plain text */
   /* a page is swiped like any other open card (v460, H: "Multicards lassen sich nicht swipen"): v445 gave the Cards
@@ -6249,7 +6241,7 @@ function renderCharPage(main){
     <div class="chcards">${list.map(row).join("")}</div>
   </div>`;
   $("#back").onclick=()=>{ S.charPage=null; render(); window.scrollTo(0,0); };
-  main.querySelectorAll(".chcard").forEach(b=>b.onclick=()=>{ if(!cardOf(b.dataset.id)) return; S.charBack={...cp}; S.charPage=null; S.detail=b.dataset.id; S.detailFrom="char"; S.detailCh=null; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo(0,0); });
+  main.querySelectorAll(".chcard").forEach(b=>b.onclick=()=>{ if(!cardOf(b.dataset.id)) return; S.charBack={...cp}; S.charPage=null; S.detail=b.dataset.id; S.detailFrom="char"; S.detailCh=null; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo(0,0); });
   (async()=>{ const box=$("#chreads"); try{ if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); await loadDict().catch(()=>{}); }catch(e){}
     if(!box||!box.isConnected) return;
     let rs=charReadings(ch,list); if(!rs.length&&window.pinyinPro) rs=[pinyinPro.pinyin(ch,{toneType:"symbol"})];
@@ -6278,10 +6270,11 @@ function renderCardDetail(main,c){
   $("#back").onclick=S.detailFrom==="inbox"?backToPhoto:S.detailFrom==="char"?backToChar:fromPage()?backToPage:backToList; /* opened from a photo's sheet (v448): ← goes back to the photo; from a page's row or sheet (v453): back to the page */
   /* the preview behaves like the test: tap the photo for the whole picture, tap the character to hide and show the answer (H) */
   const rv=$("#d-reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); } }; /* v518: the answer folds by its own button now, not by a tap on the picture */
-  { const fo=$("#d-fold"); if(fo) fo.onclick=()=>{ S.detailHide=!S.detailHide; render(); if(!S.detailHide) revealBlock("#d-ans"); }; /* v531: the block at the foot scrolls into view when opened, as in Learn */
+  {
     const dv=(priceView(d)||{d}).d, dcard=main.querySelector(".card.study.detail"), tg=dv.c?padTargets(dv):[]; /* v712: the strip is the view's, without the price */
     dcard.querySelectorAll(".chrow .ch").forEach(b=>{ const i=+b.dataset.i, x=tg[i]; if(!x) return; b.onclick=e=>{ e.stopPropagation(); S.detailCh=detailCh(d)===i?null:{c:d.id,i}; render(); }; }); /* a tap lights the word and reads it under the answer; the same character again puts it out — there is no pad here to keep it */
     const lx=detailLit(d,tg); if(lx) padLine(dv,lx); /* v531: the first word's line when nothing is tapped */
+    { const pl=$("#padline"); if(pl&&lx) pl.classList.toggle("whole",(lx.word||lx.ch)===String(dv.c||"").replace(/\s+/g,"")); } /* v736: the word line's word row says what the block under it says when the word is the whole card, so it stands down there; the character's own row stays */
     { const cl=$("#d-chpage"); if(cl) cl.onclick=e=>{ e.stopPropagation(); S.charPage={ch:cl.dataset.ch,from:d.id,back:S.detailFrom}; render(); window.scrollTo(0,0); }; } /* v691; v710: the card's own way back rides along */
     chrowFit(dcard);
     const pg=frontPage(d); if(pg&&!S.fullPic) fitPageCover(dcard); /* D5, as on the study card */
@@ -6296,16 +6289,13 @@ function renderCardDetail(main,c){
   if($("#d-star")) $("#d-star").onclick=async()=>{ await setStar(c,!d.star); render(); }; /* the learner's own mark (v425); a multicard's own text has no such button (v493) */
   $("#d-flag").onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   { const mk=$("#d-make"); if(mk) mk.onclick=async()=>{ mk.disabled=true; bump("regionCards"); await makeFlashcard(c); setStats(); render(); }; /* v692: the button turns into Flashcard › */
-    const of=$("#d-openfc"); if(of) of.onclick=()=>{ const fc=madeFrom(cardOf(c)); if(!fc) return; S.cardsTab="cards"; S.detail=fc.id; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); }; }
-  wireSay(); wireLinks(); wireSrc(); wireExplain(); if(!S.detailHide) explainAuto(d); else explainSoon(d); /* v585: the same on the open card, whose block stands open by default; v586: folded away, it is fetched a moment later all the same */ /* v536: nothing wires a parts row here - the open card passes noParts, so there is no .chars row on it; the camera's finished card is the one screen that still draws one and wires it itself (v589 removed the helper that had no caller left) */
+    const of=$("#d-openfc"); if(of) of.onclick=()=>{ const fc=madeFrom(cardOf(c)); if(!fc) return; S.cardsTab="cards"; S.detail=fc.id; S.detailFrom=null; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); }; }
+  wireSay(); wireLinks(); wireSrc(); wireExplain(); explainAuto(d); /* v585: the same on the open card, whose block always stands (v736) */ /* v536: nothing wires a parts row here - the open card passes noParts, so there is no .chars row on it; the camera's finished card is the one screen that still draws one and wires it itself (v589 removed the helper that had no caller left) */
   wireAi();
-  const del=$("#d-del"); if(del) del.onclick=async()=>{ if(!await confirmDelCard(cardOf(c))) return; await delCustom(c); if(S.detailFrom==="inbox"){ backToPhoto(); return; } if(fromPage()){ backToPage(); return; } S.detail=null; render(); }; /* v594: only after the sheet, with Undo under it (v268) */
-  /* the swipe changes the card, and the two pieces of view state go opposite ways because they mean different things.
-     S.detailHide is a way of READING — "I am testing myself" — and survives the swipe: the detail is not a test that
-     must come closed, which is why Learn resets S.ansOpen and this does not. S.fullPic is about THIS photo — "show me
-     the whole picture of this card" — so it is dropped at the commit, as every other path that changes the card drops
-     it (the row tap, the linked hop, Learn's next card), and the peer is built with it already off, or the neighbour
-     would slide in showing its whole photo and jump to the crop the moment it landed. */
+  /* the swipe changes the card. S.fullPic is about THIS photo — "show me the whole picture of this card" — so it is dropped
+     at the commit, as every other path that changes the card drops it (the row tap, the linked hop, Learn's next card), and
+     the peer is built with it already off, or the neighbour would slide in showing its whole photo and jump to the crop the
+     moment it landed. (S.detailHide, the fold's state that survived the swipe, left with the fold at v736.) */
   wireSwipe(main.querySelector(".card"), sw?detailSwipe(list,li,main,!!(mp&&isPage(mp))):null); /* v707: a multicard's text keeps its way back to the multicard. v460: the same options the page detail uses, so a neighbour that is a page renders as one */
 }
 function renderEdit(main,c){
@@ -6355,7 +6345,7 @@ function renderEdit(main,c){
     const from=S.editFrom; S.editing=null; S.editFrom=null;
     if(from==="study"){ S.queue=S.queue.filter(x=>x!==c); if(S.single===c) S.single=null; S.fullPic=false; S.ansOpen=false; S.mode="study"; }
     else if(from==="camera"){ S.mode="inbox"; S.fullPic=false; }
-    else { S.mode="cards"; S.detail=null; }
+    else { S.mode="cards"; if(S.detailFrom==="inbox"){ backToPhoto(); return; } if(fromPage()){ backToPage(); return; } if(fromCard()){ backToCard(); return; } S.detail=null; } /* v736: Delete lives here only now — back where the open card came from, as its own Delete did (v594) */
     render();
   };
   /* the strip: rows like the Read preview, kept in sync with the hidden text field the save reads */
@@ -6651,6 +6641,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  736:"An open card shows everything at once, with Star, Flag and Edit as a quiet row; Delete is in Edit.",
   733:"Tap a text on a multicard's photo: the pop-up now says what it is, in a sentence or two.",
   731:"More → Your cards finds multicards you made twice and deletes the older copies.",
   729:"吃, 碰 and 杠 on a mahjong sign name their calls: chow, pung, kong.",
@@ -10980,7 +10971,7 @@ function openLookup(shot,rid,silent){
   if(pid) wireLkDesc(el,d.id);
   el.querySelectorAll("[data-lg]").forEach(b=> b.onclick=()=>gradeRegion(b.dataset.lg));
   const mo=el.querySelector("#lk-more");
-  if(mo) mo.onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, from=LOOKUP&&LOOKUP.from, shot=LOOKUP&&LOOKUP.shot, rid=LOOKUP&&LOOKUP.rid; closeLookup(); if(!cid||!cardOf(cid)) return; if(!from) INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom=from?"page:"+from:"inbox"; LOOK_BACK={shot,rid,card:cid,from:S.detailFrom}; /* v495: More is one step deeper into this look-up, so ← Back has to undo one step and not two */ S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
+  if(mo) mo.onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, from=LOOKUP&&LOOKUP.from, shot=LOOKUP&&LOOKUP.shot, rid=LOOKUP&&LOOKUP.rid; closeLookup(); if(!cid||!cardOf(cid)) return; if(!from) INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom=from?"page:"+from:"inbox"; LOOK_BACK={shot,rid,card:cid,from:S.detailFrom}; /* v495: More is one step deeper into this look-up, so ← Back has to undo one step and not two */ S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
 }
 /* v733 (H: "Kannst du bitte in den popups der multicards auch noch die Details anbieten, zum aufklappen?", then "Zeig die
    Details bitte per default an, ohne aufklappen zu müssen"; v734, H: "Die Überschrift \"Details\" nicht mehr anzeigen"): the
@@ -11013,7 +11004,7 @@ function reopenLookup(card,from){ const L=LOOK_BACK; LOOK_BACK=null;
   if(!L||L.card!==card||L.from!==from) return;
   if(![...document.querySelectorAll(".regions [data-region]")].some(e=>e.dataset.region===L.rid)) return;
   openLookup(L.shot,L.rid,true); }
-function backToPhoto(){ const y=INBOX_SCROLL, cid=S.detail, fr=S.detailFrom; S.detail=null; S.detailFrom=null; S.detailHide=false; S.fullPic=false; S.mode="inbox"; render(); requestAnimationFrame(()=>window.scrollTo(0,y)); reopenLookup(cid,fr); }
+function backToPhoto(){ const y=INBOX_SCROLL, cid=S.detail, fr=S.detailFrom; S.detail=null; S.detailFrom=null; S.fullPic=false; S.mode="inbox"; render(); requestAnimationFrame(()=>window.scrollTo(0,y)); reopenLookup(cid,fr); }
 function renderInbox(main){
   warmReader();
   /* the Camera tab opens on the shutter, not on a list of photos (v466, H: "Auf der Kameraseite dürften nach meiner Logik im

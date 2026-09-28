@@ -83,8 +83,6 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 /* the page detail's body lives in a .card so the swipe of v445 can find and move it, but it brings its own surfaces — the photo block and the list of texts — so the card's own box is taken off (v460) */
 .card.bare{background:none;padding:0;box-shadow:none;border-radius:0;text-align:start;max-width:none}
 .tags{display:flex;justify-content:center;gap:8px;margin-bottom:16px;font-size:13px;font-weight:500}
-.tags span{padding:3px 10px;border-radius:999px;background:var(--card2);color:var(--label2)}
-.tags .f{color:var(--tint);background:var(--tint-soft)}
 .reticle{position:relative;width:100%;height:150px;max-width:100%;margin:0 auto;background:var(--card2);border-radius:var(--rc);overflow:hidden} /* the size comes inline from frontBox (the wide box, FRONT_H per photo line); the 260 px square default of v82–v222 went in v233 */
 .reticle svg{position:absolute;inset:0}
 .reticle .glyph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -125,7 +123,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 /* the peer is a sibling of .pane and paints above it, so a taller neighbour slid over the detail's buttons, its SRS line
    and its linked row — none of which move with the gesture (measured: 527 px of overlap, the six buttons visibly sliced).
    Everything under the card steps aside while a card is being pushed and comes back with the render. (v445) */
-.pane.swiping>.detailacts,.pane.swiping>.badge,.pane.swiping>.linked{visibility:hidden}
+.pane.swiping>.detailacts,.pane.swiping>.dmain,.pane.swiping>.dacts,.pane.swiping>.badge,.pane.swiping>.linked{visibility:hidden}
 .card.sliding{transition:transform .22s cubic-bezier(.22,.61,.36,1)}
 @media (prefers-reduced-motion:reduce){.card.sliding{transition:none}}
 .hint{margin-top:18px;font-size:13px;color:var(--label3)}
@@ -933,6 +931,10 @@ body.noscroll{overflow:hidden}
 .chrow .ch .lockmark svg{width:10px;height:10px;fill:currentColor}
 /* the open card in the study card's layout (v518): the actions where the pad would stand */
 .card.study.detail .detailacts{margin-top:14px}
+.dback{margin-top:10px;padding-top:12px;border-top:.5px solid var(--sep);text-align:center} /* v736: the block the fold held, always open — a hairline under the word line instead of the "Details" bar */
+.dmain{margin-top:16px} .dmain .btn{font-size:16px;min-height:48px} /* v736: the open card's one action */
+.backacts.dacts{margin-top:12px}
+.detail .padline.whole .plrow:last-child{display:none} .detail .padline.whole:not(:has(.plrow+.plrow)){display:none} /* v736: the word row repeats the block when the word is the whole card; a one-character card's line goes altogether */ /* v736: the study card's toolbar under it — Star, Flag, Edit */
 /* the detail's line sits under the row at the study card's own 10 px since v531 (it stood under the fold at 12 until v530) */
 /* v596: the second copy of the page front's aspect-ratio stood here — the same selector list set to the same 1.5 as the
    rule above it (v518 added it for the carousel's neighbour, which the rule above already covered). One number written

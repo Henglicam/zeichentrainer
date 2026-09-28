@@ -60,6 +60,35 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v736, 2026-09-28)
+- **The open card: the block always stands, the actions go quiet, Delete moves into Edit (v736, H: "Bitte Details in Cards
+  immer per Default anzeigen. Option zum Aufklappen und die Details-Überschrift dort bitte löschen. Ebenso löschen: die
+  zweite Charakterzeile. Es reicht, wenn wir die auswählbaren Charakter haben. Edit, Star, Flag und Delete bitte nicht so
+  prominent anzeigen. Eher so wie in den Lernkarten. Delete könnte ja theoretisch auch lediglich unter Edit zu finden sein.
+  Bitte deine Einschätzung dazu. Insgesamt nochmal über das Layout rüber polieren").** The Cards tab's open card (flashcard
+  and a multicard's own text; Learn untouched): the "Details" fold goes — the block (pinyin with its speaker, meaning,
+  description, flag note, AI box) stands under a hairline, `.dback`; `S.detailHide`, the fold's state, leaves with it (it
+  survived the swipe, v531). The block's own line of characters (`.anshanzi`, v527) goes on this screen — the selectable row
+  above holds them. `detailActsHTML`: one button — Test this card, or + Flashcard / Flashcard › on a multicard's text — then
+  the study card's toolbar (`.backacts.dacts`, `.tbtn`, v655's drawn icons over grey labels, a set mark in the tint): Star ·
+  Flag · Edit, Flag · Edit on a multicard text. **Delete leaves the card** — the Edit form has had its own "Delete card" at
+  its foot since long before, with the same question (v594) and the Undo line; its way back now follows the card's own
+  (`backToPhoto`/`backToPage`/`backToCard`, as the card's Delete did) — it used to drop a multicard's text on the Cards list.
+  Polish, H's "insgesamt": the word row under the character row stands down when the word is the whole card
+  (`#padline.whole`, a one-character card's line altogether) — on 消防栓 it said "消防栓 xiāo fáng shuān fire hydrant" right
+  above the block's own xiāo fáng shuān / fire hydrant; a flagged card lost its "⚑ Flagged" pill above the photo — with the
+  flag note and the toolbar's Flagged it said so three times (v658's "doppelt gemoppelt"); `tagsHTML` and the `.tags
+  span`/`.tags .f` rules left with their last user (`.tags` itself stays — it also styles the tags input). The guide's
+  "tap one to test, edit or delete it" stays true (Delete is one screen further). My assessment for H, asked: Delete in Edit
+  is right — it is the rare, destructive action, the Edit form already had it, a Cards long press still deletes several at
+  once, and the card no longer carries a red button. Harness (test736, en 390 px: a one-word card with a photo and a
+  description, a two-word flagged card, a one-character card, a multicard text; 11 checks): no fold, bar or character line;
+  no Delete, Test then Star · Flag · Edit; the word row down on 消防栓, `[guard]` kept on 禁止停车; no pill on the flagged
+  card; the toolbar's Star and Flag set and clear; a multicard text shows + Flashcard then Flag · Edit; Edit holds Delete
+  `[control]`; Delete in Edit on a multicard text lands on its multicard with the Undo line; `[guard]` from the list back to
+  the list. On the v734 tree 8 of 11 fail. Screenshots en 390 light, de 360 dark, all four cards. `TO_TEST` "Open card:
+  layout right?"; WHATS_NEW 736. Not field-checked.
+
 ## Current state (PWA v735, 2026-09-28)
 - **The Zoom check's Data takes the multicard last looked up, with where each text's box came from (v735, H with a
   screenshot of 柴火饭 on the rice cooker framed together with 低卡饭's 饭: "Warum ist der Rahmen hier zu breit?", then
