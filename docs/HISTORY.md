@@ -39,6 +39,19 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v714, 2026-09-28)
+- **The Learn zoom prefers the card's own line (v714, H: "er ist auf das falsche Mei gesprungen, das außerhalb des Crops
+  war").** 美团黑金冠好店, cut again out of a sign with the small 美团金冠好店 above it: `pdCharBoxes` gives the reader the frame
+  and 15 % around it, the reader read both lines (`美团金冠好店 49,-25 % | 美团黑金冠好店 50,51 %`), and the order match (LCS)
+  took the first 美 and 团 it met — on the line above the frame — so 美 and 团 zoomed to −25 % while 黑… were right. The match
+  is now weighted: each matched character is worth 64, plus 1 when its reader line's middle lies inside the card's frame, so the
+  most characters matched still wins and ties go to the frame's own line; a line outside the frame is still used when the frame
+  holds no reading of it (v682's whole-picture case). Checked on the dump's own three reader lines with the matching code alone:
+  old → 美0 团0 黑1…, new → all seven on line 1; 有些时候/爸爸 with 爸爸 outside the frame still matches. Not run on the
+  phone's reader in the harness. Not yet field-checked. H's first point ("bei Edit zuerst nicht den neuen Crop angewendet") is
+  asked, not built: the dump shows one Crop again (recrop-edit2, read sure at 100 %) and the card's new text and frame in the
+  zoom log right after it.
+
 ## Current state (PWA v713, 2026-09-28)
 - **A dish's flashcard is its name (v713, H: "flashcard should be the dish name").** `makeFlashcard` copies the v712 view
   — text, pinyin, meaning, traditional form, word breaks and gloss without the price, the per-language meanings and a waiting

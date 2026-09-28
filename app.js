@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=713; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=714; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -686,6 +686,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v714","Zoom: stays on the card's line?"],
   ["cards","v713","Dish + Flashcard: name only?"],
   ["cards","v712","Dish screen: price apart?"],
   ["app","v711","44 px rows and chips: too heavy?"],
@@ -4366,9 +4367,16 @@ async function pdCharBoxes(src,nw,nh,g,lines,whole){
   L.sort((a,b)=>vert?(b.x+b.w/2)-(a.x+a.w/2):(a.y+a.h/2)-(b.y+b.h/2)||a.x-b.x);
   const seq=[]; L.forEach(l=>[...l.text].forEach((ch,i)=>{ if(CJK.test(ch)) seq.push({ch:t2s(ch),l,i}); }));
   const ci=chars.map((ch,j)=>CJK.test(ch)?j:-1).filter(j=>j>=0), A=ci.map(j=>t2s(chars[j])), n=A.length, m=seq.length;
-  const dp=Array.from({length:n+1},()=>new Int16Array(m+1));
-  for(let a=n-1;a>=0;a--) for(let b=m-1;b>=0;b--) dp[a][b]=A[a]===seq[b].ch?dp[a+1][b+1]+1:Math.max(dp[a+1][b],dp[a][b+1]);
-  const hit=new Map(); for(let a=0,b=0;a<n&&b<m;){ if(A[a]===seq[b].ch){ hit.set(ci[a],seq[b]); a++; b++; } else if(dp[a+1][b]>=dp[a][b+1]) a++; else b++; }
+  /* v714 (H: "er ist auf das falsche Mei gesprungen, das außerhalb des Crops war", 美团黑金冠好店 cut again out of a sign whose
+     small 美团金冠好店 stands above it: the reader got the frame and 15 % around it, read both lines, and the order match took the
+     first 美 and 团 it met — on the line above the frame — as the card's, so the zoom went off the card's own text): a match on a
+     reader line whose middle lies inside the card's frame counts a hair more than one outside it. The most characters matched still
+     wins (each match is worth IN_W), so a line outside the frame is still taken when the frame holds no reading of it (v682) */
+  const IN_W=64, inF=new Map(L.map(l=>{ const cx=(X0+(l.x+l.w/2)/k-TX)/TW, cy=(Y0+(l.y+l.h/2)/k-TY)/TH; return [l,cx>=0&&cx<=1&&cy>=0&&cy<=1]; }));
+  const gain=b=>IN_W+(inF.get(seq[b].l)?1:0);
+  const dp=Array.from({length:n+1},()=>new Int32Array(m+1));
+  for(let a=n-1;a>=0;a--) for(let b=m-1;b>=0;b--) dp[a][b]=Math.max(A[a]===seq[b].ch?dp[a+1][b+1]+gain(b):0,dp[a+1][b],dp[a][b+1]);
+  const hit=new Map(); for(let a=0,b=0;a<n&&b<m;){ if(A[a]===seq[b].ch&&dp[a][b]===dp[a+1][b+1]+gain(b)){ hit.set(ci[a],seq[b]); a++; b++; } else if(dp[a+1][b]>=dp[a][b+1]) a++; else b++; }
   /* v661 (H: "Und der 2. Character wird hier nicht gezoomt", on 幸福/北京): the reader reads rows where the sign stands in
      columns — 幸北 | 福京 — and the order match keeps only three of the four, the fourth placed between two neighbours it is
      not between. A character the order left over that the reader read exactly as often as the card has it, and nowhere
