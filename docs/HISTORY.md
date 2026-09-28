@@ -60,6 +60,28 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v738, 2026-09-28)
+- **A reader's line that swallowed the neighbour's character is cut back to the text (v738, H's Zoom data of the rice
+  cooker, sent for "Warum ist der Rahmen hier zu breit?" — 柴火饭 framed with 低卡饭's 饭; "Ok, go B", see first).** The
+  v735 data said which of the three placed it: not the AI's frame (0.305–0.436, right), not the ink snap (0.326–0.432,
+  right), but **the phone's own reader**, which read the line as "反柴火饭" — 低卡饭's last character beside it, misread —
+  with a box from 0.275 to 0.434; `pdMatch` named 柴火饭 by it (3 of 4, over `PD_MATCH` 0.66) and v638's rule gave the text
+  the whole line's box, plus `PD_ROOM`: shown 0.263–0.446. Now `pdTrim(z,l)`: a single line that carries Han characters
+  the text does not, at its start or its end, is cut to the matched run — the LCS walked back for the first and last
+  matched positions, the box divided evenly along the line as `pdAsPass` divides it (a vertical line on y); characters
+  that are not Han stay (优质纯瘦肉夹馍￥18/个 keeps its price; a price on its own line was never in the box), an unmatched
+  character inside the run stays, a stacked pair is not touched; `cut:true` on the line, and in the Zoom data's `match`.
+  One function, so the reading pipeline's placing of a split's texts (v638–v652) gets the same cut. **`REG_V` 688 → 738**:
+  the boxes stored on every phone are measured again once, multicard by multicard as each is shown (~1.6 s a photo, the
+  reader's own time). Harness (test738, H's own numbers — the 11 frames and the reader's 13 lines from the dump, `pdRead`
+  answered from them; 5 checks): `pdMatch` cuts 柴火饭 to x 0.315, w 0.120 (the second to fourth quarter of the line),
+  `[guard]` 低卡饭 whole, 保温/取消's pair whole, all 11 named, `[guard]` the menu's priced line and its unpriced twin not
+  cut; on the multicard the region starts at 0.303 (was 0.263 — the harness reproduces the phone's `shown` box to the
+  digit) and covers the AI's frame; the stored map carries 738. On the v737 tree 3 of 5 fail. test736 (11), test734
+  (12), test737 (3) pass. WHATS_NEW 738; `TO_TEST` "Rice cooker: 柴火饭 frame tight?". Not field-checked. Seen in the same
+  dump, not this PR's: the reader named all 11 texts in 1.6 s; `汤/粥` and `保温 / 取消` got no ink snap (`snap:null`) and
+  stand on the reader's boxes, which look right.
+
 ## Current state (PWA v737, 2026-09-28)
 - **The character pages go (v737, H, right after v736's open card: "Remove \"Cards with 'single character'\"").** The
   link "Cards with 行 3 ›" under the open card's word line (v691, the Cards tab as a reference; v710 its way back; v717 only
