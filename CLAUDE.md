@@ -67,9 +67,9 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   (v722, `docs/NMAX.md` is the record; a variant entry's gloss no longer leads a line, v717). `bestSense(w,py,inWord)`:
   **`OWN_SENSES`** first (只 本 新 京 金 周 江 木 面 卡 — H's street senses, v723; add there, with the reading); inside a word — **a one-character word
   beside another character is inside a word** (v720, `besideCJK`; 店 in 本店 is "shop") — the first bound form **among the first `BOUND_TOP` 3
-  senses** (v724: the v5 file's later bound forms are marginal — 入 "to conform to", 水 "additional cost") that is neither a
-  proper noun (v721, `PROPER`: 美 beside 团 had become "the Americas"; v724: any capitalised word outside a note, 巴 "the
-  east of Sichuan", and "I" is not one) nor narrowed by a note of its own (v722, 河's "rice noodles"); alone, the first sense that is not hard (surname, variant, dated, abbr., "used in", "see", CL) and
+  senses** (v724: later ones are marginal — 入 "to conform to", 水 "additional cost") that is neither a proper noun (v721,
+  `PROPER`: 美 beside 团 had become "the Americas"; v724: any capitalised word outside a note, 巴 "the east of Sichuan",
+  and "I" is not one) nor narrowed by a note of its own (v722, 河's "rice noodles"); alone, the first sense that is not hard (surname, variant, dated, abbr., "used in", "see", CL) and
   not a classifier or proper noun standing back, a bound form counting with its marker off (v722: 木 tree, 英 hero).
   **A one-character word takes its reading from its whole line** (v719, `ctx`; 卖完了 ends in le; 一/不 keep their tone,
   `SANDHI`). `glossFix()` applies all that once per phone (`GLOSS_FIX_V` 724) to stored single-character glosses, composed
