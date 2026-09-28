@@ -39,6 +39,12 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v715, 2026-09-28)
+- **v714 field-checked (H: "Zoom funktioniert jetzt, springt aufs richtige Mei").** Its Still-to-test line goes; nothing else
+  changes. H's first point of v714 is closed without a build: after Crop again the card's picture is still the square window
+  around the text (`CARD_RATIO` 1, v329), so a one-line crop keeps the neighbouring lines in view, and with the zoom on the upper
+  美 it looked uncropped. Offered: cut the picture to the crop's own shape — H: "Nein, lass es so wie es ist."
+
 ## Current state (PWA v714, 2026-09-28)
 - **The Learn zoom prefers the card's own line (v714, H: "er ist auf das falsche Mei gesprungen, das außerhalb des Crops
   war").** 美团黑金冠好店, cut again out of a sign with the small 美团金冠好店 above it: `pdCharBoxes` gives the reader the frame
