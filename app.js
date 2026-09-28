@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=728; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=729; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -687,6 +687,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v729","吃 碰 杠 on the mahjong sign?"],
   ["cards","v728","jiā on the AI menu cards? 龙 胡?"],
   ["cards","v727","皮 skin, 瘦 lean on the cards?"],
   ["cards","v726","肉夹馍 one word on the cards?"],
@@ -1835,7 +1836,7 @@ async function fixNumberSegs(){
    glosses (慢, 停, 男, 女), a meaning the AI or a hand wrote or checked, a meaning in another language. Once per phone (the
    settings row glossFix, v 718); the row keeps what changed and Diagnostics prints it. A dictionary that does not load
    leaves the row unwritten, so the next start tries again. */
-const GLOSS_FIX_V=728, GLOSS_FIX_KEEP=300; /* 728 (H's v727 dump): 龙 and 胡 in OWN_SENSES; the OWN_PINYIN reading and the fewest-words split reach the verified cards and the cards with an AI meaning too (gloss and segs only where the meaning is not the composed one) */ /* 727: 皮 and 瘦 in OWN_SENSES */ /* 726: the fewest-words split — an unverified sign card whose meaning is still the composed one takes the new split */ /* 725: OWN_PINYIN — 夹 reads jiā, the unverified cards' pinyin and glosses follow */ /* 724 (H's v723 dump): a bound form past the third sense is not the in-word sense (入 "to conform to", 水 "additional cost", 牌 "fixed pattern for lyrics"), "I" is a pronoun (我 → "me"), a capitalised word anywhere makes a proper noun (巴 "the east of Sichuan") */ /* 723: 面 and 卡 in OWN_SENSES */ /* 722: the v5 dictionary and the two chooser rules of docs/NMAX.md — the pass waits for the fresh file */ /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
+const GLOSS_FIX_V=729, GLOSS_FIX_KEEP=300; /* 729: 吃 碰 杠 in OWN_SENSES, the mahjong call in the bracket */ /* 728 (H's v727 dump): 龙 and 胡 in OWN_SENSES; the OWN_PINYIN reading and the fewest-words split reach the verified cards and the cards with an AI meaning too (gloss and segs only where the meaning is not the composed one) */ /* 727: 皮 and 瘦 in OWN_SENSES */ /* 726: the fewest-words split — an unverified sign card whose meaning is still the composed one takes the new split */ /* 725: OWN_PINYIN — 夹 reads jiā, the unverified cards' pinyin and glosses follow */ /* 724 (H's v723 dump): a bound form past the third sense is not the in-word sense (入 "to conform to", 水 "additional cost", 牌 "fixed pattern for lyrics"), "I" is a pronoun (我 → "me"), a capitalised word anywhere makes a proper noun (巴 "the east of Sichuan") */ /* 723: 面 and 卡 in OWN_SENSES */ /* 722: the v5 dictionary and the two chooser rules of docs/NMAX.md — the pass waits for the fresh file */ /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
 async function glossFix(){
   const done=S.settings.glossFix; if(done&&done.v>=GLOSS_FIX_V) return;
   try{ await loadDict(); if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); }catch(e){ return; } await loadSigns().catch(()=>{});
@@ -6616,6 +6617,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  729:"吃, 碰 and 杠 on a mahjong sign name their calls: chow, pung, kong.",
   728:"肉夹馍 reads jiā on every card, the checked ones too; 龙 is a dragon and 胡 on a mahjong sign is the winning call.",
   727:"皮 on a menu is skin and 瘦 is lean.",
   726:"A line splits into the fewest words: 肉夹馍 stays one word on the menu.",
@@ -7740,7 +7742,10 @@ const OWN_SENSES={"只":{"zhī":"classifier for animals, birds and one of a pair
   "皮":{"pí":"skin (or leather)"},"瘦":{"shòu":"lean (or thin)"},
   /* v728 (H's v727 dump): two side effects of v724's proper-noun rule — 龙 skipped "Chinese dragon" for "loong", 胡 skipped
      "non-Han people, esp. from central Asia" for "reckless"; on the mahjong sign 吃碰杠听胡 the character is the winning call */
-  "龙":{"lóng":"dragon"},"胡":{"hú":"to win (at mahjong)"}};
+  "龙":{"lóng":"dragon"},"胡":{"hú":"to win (at mahjong)"},
+  /* v729 (H: "吃 碰 杠 in die Tabelle"): the rest of the mahjong sign 吃碰杠听胡 — the street sense first, since 吃 on a food
+     sign is still eating, the call in the bracket; 杠's dictionary opened with "coffin-bearing pole (old)" */
+  "吃":{"chī":"to eat (or chow, at mahjong)"},"碰":{"pèng":"to touch (or pung, at mahjong)"},"杠":{"gàng":"pole (or kong, at mahjong)"}};
 /* the app's own readings where pinyin-pro's default is not the mainland one (v725, H's v723 dump: every 肉夹馍 card read
    ròu jiá mó, its 夹 glossed "double-layered (quilt)" from the jiá group, and the AI's correct jiā was flagged as "does not
    match the dictionary"). 夹 is jiā on the mainland (to press, to sandwich) except in the double-layered clothes 夹袄 夹被

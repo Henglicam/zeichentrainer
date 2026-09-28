@@ -60,6 +60,20 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v729, 2026-09-28)
+- **吃, 碰 and 杠 in the app's own table (v729, H: "Ok, go — 吃 碰 杠 in die Tabelle").** The rest of the mahjong sign
+  吃碰杠听胡: CC-CEDICT gives 吃 "to eat", 碰 "to touch" and opens 杠 gàng with "coffin-bearing pole (old)". `OWN_SENSES`
+  gains 吃 chī "to eat (or chow, at mahjong)", 碰 pèng "to touch (or pung, at mahjong)" and 杠 gàng "pole (or kong, at
+  mahjong)" — the street sense first, since 吃 on a food sign is still eating and a table entry serves every card, the
+  call in the bracket (my choice, the same shape as 皮 and 瘦); 杠 gāng "flagpole" keeps the dictionary's. The pass runs
+  once more (`GLOSS_FIX_V` 729). H could not say whether the five-fold reviews of 下筒/煮洗 in the v727 dump were his
+  own flags — left open. Harness (test729, five seeded cards after a v728 row, 11 checks): the three glosses and the
+  composed meaning in both fields, the dict card 杠, the row v729 / 2 cards / 4 words, the table's seventeen keys,
+  `lineMeaning` and `bestSense` (杠 gāng flagpole from the dictionary), the open card; `[guard]` the verified 碰, 小吃,
+  吃饭, 杠铃, 碰瓷 as words, 入 to enter, 胡, second start no-op. On the v728 tree 9 of 11 fail. test728 loses two (the
+  table's fourteen keys and the 7-word count, since 吃 and 杠 in its fixture are now rewritten) and test727 one — superseded.
+  Not field-checked: the Diagnostics line should list the three on the mahjong card.
+
 ## Current state (PWA v728, 2026-09-28)
 - **The gloss fix reaches the verified cards; 龙 and 胡 in the table (v728, H's v727 dump, "Ok, go").** The dump showed the
   v727 pass had run (87 cards, 93 words — 入 to enter, 牌 signboard, 巴 to long for, 我 I, 水 water, 瘦 lean: v724 and

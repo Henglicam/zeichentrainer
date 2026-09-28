@@ -56,16 +56,17 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v728, 2026-09-28)
+## Current state (PWA v729, 2026-09-28)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
 
 **Recent state worth carrying in the head** (full entries: `grep -n "v6xx" docs/HISTORY.md`):
-- **v717–v728 dictionary senses, the split and the gloss fix** (the v720, v723, v724 and v727 passes field-checked by
+- **v717–v729 dictionary senses, the split and the gloss fix** (the v720, v723, v724 and v727 passes field-checked by
   H's dumps, the rest not): `cedict.tsv.gz` is **v5** — every sense of every one-character line, appended to the shipped
   order by `tools/cedict-nmax.py --write` (v722, `docs/NMAX.md` is the record). `bestSense(w,py,inWord)`: **`OWN_SENSES`**
-  first (只 本 新 京 金 周 江 木 面 卡 皮 瘦 龙 胡 — H's street senses, v723–v728; add there, with the reading); **`OWN_PINYIN`**
+  first (只 本 新 京 金 周 江 木 面 卡 皮 瘦 龙 胡 吃 碰 杠 — H's street senses, v723–v729, the street sense first and the
+  special one in a bracket; add there, with the reading); **`OWN_PINYIN`**
   (v725: 夹 jiā and the words that keep jiá/gā or a neutral tone — a one-character entry overrides the library's words)
   goes into pinyin-pro in `loadScript`; **a line splits into the fewest words** (v726, `fewestFirst`; ties to the longer
   first word; 肥|瘦|肉夹馍, not 肥|瘦肉|夹|馍); inside a word — **a one-character word beside another character is inside a
@@ -75,7 +76,7 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   (surname, variant, dated, abbr., "used in", "see", CL) and not a classifier or proper noun standing back, a bound form
   counting with its marker off (v722: 木 tree, 英 hero). **A one-character word takes its reading from its whole line**
   (v719, `ctx`; 卖完了 ends in le; 一/不 keep their tone, `SANDHI`). `glossFix()` applies all that once per phone
-  (`GLOSS_FIX_V` 728) to stored single-character glosses, composed meanings, unverified dict cards, the pinyin of every
+  (`GLOSS_FIX_V` 729) to stored single-character glosses, composed meanings, unverified dict cards, the pinyin of every
   card holding an `OWN_PINYIN` character (only that syllable, v725/v728) and the split of every sign card's gloss and
   segs, its meaning only while still the composed one (v726/v728) — **only on the fresh dictionary** (`DICT_FRESH`);
   settings row `glossFix`, Diagnostics prints it. v717 also: `MORE_OPEN`, `PAD_HAND`, the backup line, "Cards with 行 ›"
@@ -465,7 +466,7 @@ Everything from **v597 to v720** is unconfirmed on the phone unless H has said o
 each version's archive entry names its open question. The ones that decide what comes next: **the Learn zoom** (v653–v686 —
 does it land on the character, is 3.5× sharp enough? Owner tools → Zoom check), **the phone's reader as the reading**
 (v641–v652 — sure cards fast and right, the check flagging the right ones), **Multicards and Cards as a reference**
-(v687–v696), **the gloss fix and dictionary v5** (v718–v728 — the Diagnostics line after each pass), then Owner tools (v645–v651), speed (v640/v642/v672), the
+(v687–v696), **the gloss fix and dictionary v5** (v718–v729 — the Diagnostics line after each pass), then Owner tools (v645–v651), speed (v640/v642/v672), the
 Learn screen (v667–v673, `SPOT_ON`) and the older v599–v614 items.
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
