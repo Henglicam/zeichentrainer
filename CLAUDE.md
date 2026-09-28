@@ -56,20 +56,21 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v720, 2026-09-28)
+## Current state (PWA v721, 2026-09-28)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
 
 **Recent state worth carrying in the head** (full entries: `grep -n "v6xx" docs/HISTORY.md`):
-- **v717–v720 dictionary senses and the gloss fix** (none field-checked): a variant entry's gloss no longer leads a word's
-  line (`tools/cedict-variants.py`, `cedict.tsv.gz` **v4**); `bestSense(w,py,inWord)` takes the (bound form) sense inside a
-  word — **and a one-character word beside another character is inside a word** (v720, `besideCJK`; 店 in 本店 is "shop");
-  a classifier stands back only when another sense remains (v719, 枚); **`OWN_SENSES`** holds the app's own sense for a
-  character CEDICT orders badly (v720: 只 zhī, 本 běn — add there, with the reading); **a one-character word takes its
-  reading from its whole line** (v719, `ctx`; 卖完了 ends in le; 一/不 keep their tone, `SANDHI`). `glossFix()` applies all
-  that once per phone (`GLOSS_FIX_V` 720) to stored single-character glosses, composed meanings and unverified dict cards
-  (settings row `glossFix`; Diagnostics prints it). **`docs/NMAX.md`** (`tools/cedict-nmax.py`): the one-character lines the
+- **v717–v721 dictionary senses and the gloss fix** (v720's pass field-checked by H's dump, the rest not): a variant entry's
+  gloss no longer leads a word's line (`tools/cedict-variants.py`, `cedict.tsv.gz` **v4**); `bestSense(w,py,inWord)` takes
+  the (bound form) sense inside a word — **and a one-character word beside another character is inside a word** (v720,
+  `besideCJK`; 店 in 本店 is "shop") — **unless that sense is a proper noun** (v721, `PROPER`: 美 beside 团 had become "the
+  Americas"); a classifier (v719, 枚) and a proper noun (v721, 周 "Zhou Dynasty", 德 "Germany") stand back when another sense
+  remains; **`OWN_SENSES`** holds the app's own sense for a character CEDICT orders badly (只 本, v721: 新 京 金 周 江 木 — add
+  there, with the reading); **a one-character word takes its reading from its whole line** (v719, `ctx`; 卖完了 ends in le;
+  一/不 keep their tone, `SANDHI`). `glossFix()` applies all that once per phone (`GLOSS_FIX_V` 721) to stored
+  single-character glosses, composed meanings and unverified dict cards (settings row `glossFix`; Diagnostics prints it). **`docs/NMAX.md`** (`tools/cedict-nmax.py`): the one-character lines the
   three-sense cut hurts — 新 ships without "new", 木 and 江 as surnames — with the cost and the two rules a larger cut needs;
   not raised yet. v717 also: More folds its long texts (`MORE_OPEN`), a moving touch on Show me or Skip is a stroke
   (`PAD_HAND`), one backup line on Cards from `BACKUP_AT` 25 flashcards, "Cards with 行 ›" only when another card holds

@@ -60,6 +60,27 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v721, 2026-09-28)
+- **H's dump of the v720 pass (101 cards, 120 words) showed three regressions of the beside-a-character rule and the
+  class the NMAX list names on his own cards (v721).** Most changes were right (店 shop, 林 woods, 乳 breast, 售 to sell);
+  but 美 beside 团 had become "the Americas (abbr. for 美洲)", 河 "the Yellow River", 江 "Yangtze River": the merged group
+  opens with proper-noun bound forms and v720 took the first bound form without asking what it names. **Fix:** `PROPER` — a
+  sense that opens with a capital (after "(bound form)" or "the"), or carries "abbr." — never wins the in-word slot, and
+  stands back in the general chooser the way a classifier does (中 → "within", not "Chinese"; 周 → "to make a circuit",
+  not "Zhou Dynasty"); "CL:" joined the hard set. **`OWN_SENSES` gains six** the dump showed wrong and the three-sense cut
+  leaves without a sense: 新 new, 京 capital city (Beijing), 金 gold, 周 week, 江 river, 木 wood. **`cleanSense`** now drops
+  a CL note whole — its brackets are gone by the time the CL rule ran, which had left "river (,道)" on the phone. The pass
+  runs once more (`GLOSS_FIX_V` 721). **Not fixable by a rule, the cut's victims:** 德 ships as "Germany; German; abbr."
+  (virtue cut), 西 as "the West; abbr. for Spain; Spanish" (west cut), 面 "face" (noodles cut), 卡 "to stop" (card cut) —
+  H's "Go" for the NMAX PR came in the same message. Harness (test721, seven seeded cards after a v720 row, 19 checks):
+  美团 → beautiful (gloss, composed meaning, open card), 河沙 → river, the 新 dict card → new, 京 beside 葱 → capital city
+  (Beijing), the row v721 / 4 cards / 4 words, `lineMeaning` of 美团, 河沙, 周周, 金, 江, 木门, `bestSense` of 美 in and out
+  of a word, 中/日/河 alone; `[guard]` 本店, 了 le, verified 美食, 店/岁/枚, 美食 a word, second start no-op. On the v720
+  tree 13 of 19 fail, the 6 guards pass. test720 23 of 23, test717 41 of 41 (its More-height threshold loosened from 450 to
+  400 px under 4 146 — About lists five longer notes now, 3 698 px). Not yet field-checked. The dump also shows H's
+  check-up re-asking ~500 unverified cards in 7 minutes, many of them the same photo read several times (建国肉夹馍 five
+  times) — his own action, the owner's phone is exempt from the cap; noted, not changed.
+
 ## docs/NMAX.md (2026-09-28, no version — nothing a phone fetches changed)
 - **The NMAX list (H: "Bau die Liste für NMAX auf").** `tools/cedict-nmax.py` reads the full CC-CEDICT beside the shipped
   `vendor/cedict.tsv.gz` and writes `docs/NMAX.md`: every one-character line the three-sense cut hurts, ranked by the number
