@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=734; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=735; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1171,6 +1171,12 @@ async function copyText(text,st){
    cards' own pictures as one sheet the share sheet can send — so the detector is judged on H's photos rather than on the
    harness's, and a failure comes back as a picture of where it went wrong (the v399 rule: the app says what happened). */
 let ZCHECK=null; const ZC_N=24, ZC_PAGES=8;
+/* v735 (H: "Warum ist der Rahmen hier zu breit?" — 柴火饭 on the rice cooker framed with 低卡饭's 饭 — then "Ok, go B"): the
+   multicard last looked up (or open in Cards) joins the Zoom check's newest ZC_PAGES, so an old photo can be sent too; and
+   its data says which box each text is shown in and where that box came from (the phone's reader, the ink snap, or the AI's
+   frame as it was). */
+let LAST_PAGE=null;
+const zcOpenPage=()=>{ const id=LAST_PAGE||(S.detail&&(isPage(cardOf(S.detail))?S.detail:(cardOf(S.detail)||{}).page)); const pg=id&&cardOf(id); return pg&&isPage(pg)&&pg.shot?pg:null; };
 /* v625 (H: "Ich drücke auf Share oder Data, der button wird ausgegraut und es tut sich erstmal nichts. In solchen Fällen
    einen Fortschrittsbalken oder ähnliches anzeigen."): every step of Run, Share and Data puts the reading's own moving bar
    (busyHTML) in the row's status with what it is doing, and waits one frame so the bar is painted BEFORE the work that
@@ -1192,12 +1198,14 @@ async function zoomCheck(st){
   }
   /* v620: the newest multicards too — each text's frame and the region its ink search snapped it to */
   const pages=deck().filter(d=>d.kind==="page"&&d.shot).slice(-ZC_PAGES).reverse(), pres=[]; let snapped=0, regions=0;
+  { const op=zcOpenPage(); if(op&&!pages.includes(op)) pages.unshift(op); } /* v735 */
   for(const pg of pages){ await zcBusy(st,`Checking multicard ${pres.length+1} of ${pages.length} …`);
     const items=S.custom.filter(d=>d.shot===pg.shot&&d.kind!=="page"&&d.frame&&d.c), full=items.length&&fullPhoto(items[0]);
     if(!full){ pres.push({pg,items,why:"no photo"}); continue; }
     let bm=null; try{ bm=await createImageBitmap(full); }catch(e){ pres.push({pg,items,why:"no photo"}); continue; }
+    const shown=items.map(d=>REGFIX.has(cbKey(d))?REGFIX.get(cbKey(d)):undefined); /* v735: the box each text is shown in, before this check measures it again */
     const snaps=items.map(d=>{ const b=snapRegion(d,bm,bm.width,bm.height); REGFIX.set(cbKey(d),b); return b; });
-    regions+=items.length; snapped+=snaps.filter(Boolean).length; pres.push({pg,items,bm,snaps}); await yieldNow(); }
+    regions+=items.length; snapped+=snaps.filter(Boolean).length; pres.push({pg,items,bm,snaps,shown}); await yieldNow(); }
   const all=ok+unsure+est;
   ZCHECK={at:Date.now(),res,pres,line:`${cards.length} cards: ${ok} of ${all} characters on the ink, ${unsure} unsure, ${est} by the estimate${none?`, ${none} cards without a place`:""}${pages.length?`; ${pages.length} multicards: ${snapped} of ${regions} regions snapped`:""}`};
   return ZCHECK;
@@ -1282,7 +1290,7 @@ async function shareZoomData(st){
      the model's own answer instead of guessing why 23 of 57 texts got the whole picture (v626's finding) */
   const aiNear=at=>AILOG.filter(e=>e&&e.t>=at-2000&&e.t<=at+ZD_AI_MS).map(e=>({t:e.t,model:e.model||"",status:e.status||"",ms:e.ms||0,req:e.req||"",res:e.res||"",err:e.err||""}));
   for(const r of z.pres||[]) if(r.bm){ const N=LAST_READ.ring.find(x=>x&&x.shot===r.pg.shot);
-    pics.push({src:r.bm,max:ZD_PAGE,meta:{kind:"page",c:r.pg.c,shot:r.pg.shot,pw:r.bm.width,ph:r.bm.height,items:r.items.map(d=>({c:d.c,lines:spotLines(d),frame:d.frame})),read:N?readRow(N):null,ai:N?aiNear(N.at||0):[],paddle:(z.paddle&&z.paddle.per.find(x=>x.shot===r.pg.shot))||null}}); }
+    pics.push({src:r.bm,max:ZD_PAGE,meta:{kind:"page",c:r.pg.c,shot:r.pg.shot,pw:r.bm.width,ph:r.bm.height,items:r.items.map((d,k)=>({c:d.c,lines:spotLines(d),frame:d.frame,shown:r.shown?(r.shown[k]===undefined?"not measured":r.shown[k]):undefined,snap:r.snaps?r.snaps[k]:undefined,fallback:fallbackFrame(d)})),open:r.pg===zcOpenPage(),read:N?readRow(N):null,ai:N?aiNear(N.at||0):[],paddle:(z.paddle&&z.paddle.per.find(x=>x.shot===r.pg.shot))||null}}); }
   const sheets=[]; let cur=null; const fresh=()=>{ cur={items:[],x:0,y:0,rowH:0}; sheets.push(cur); }; fresh();
   for(const p of pics){ const sc=Math.min(1,p.max/Math.max(p.src.width,p.src.height)), w=Math.max(1,Math.round(p.src.width*sc)), h=Math.max(1,Math.round(p.src.height*sc));
     if(cur.x+w>ZD_W){ cur.x=0; cur.y+=cur.rowH; cur.rowH=0; }
@@ -1337,10 +1345,11 @@ async function paddleCheck(st){
   for(let i=0;i<pres.length;i++){ const r=pres[i]; await zcBusy(st,`Reading multicard ${i+1} of ${pres.length} with the new reader …`);
     const cv=document.createElement("canvas"); cv.width=r.bm.width; cv.height=r.bm.height; cv.getContext("2d").drawImage(r.bm,0,0);
     const t1=performance.now(), lines=await pdRead(cv), ms=Math.round(performance.now()-t1);
-    const hits=pdMatch(r.items.map(d=>d.c),lines).map(Boolean);
+    const mt=pdMatch(r.items.map(d=>d.c),lines), hits=mt.map(Boolean);
     placed+=hits.filter(Boolean).length; labels+=r.items.length; msAll+=ms;
     per.push({shot:r.pg.shot,ms,det:lines.ms.det,rec:lines.ms.rec,placed:hits.filter(Boolean).length,labels:r.items.length,missing:r.items.filter((d,k)=>!hits[k]).map(d=>d.c),
-      lines:lines.map(l=>({x:+(l.x/cv.width).toFixed(4),y:+(l.y/cv.height).toFixed(4),w:+(l.w/cv.width).toFixed(4),h:+(l.h/cv.height).toFixed(4),text:l.text,conf:+l.conf.toFixed(2)}))}); }
+      lines:lines.map(l=>({x:+(l.x/cv.width).toFixed(4),y:+(l.y/cv.height).toFixed(4),w:+(l.w/cv.width).toFixed(4),h:+(l.h/cv.height).toFixed(4),text:l.text,conf:+l.conf.toFixed(2)})),
+      match:mt.map((l,k)=>l?{c:r.items[k].c,text:l.text,two:!!l.two,x:+(l.x/cv.width).toFixed(4),y:+(l.y/cv.height).toFixed(4),w:+(l.w/cv.width).toFixed(4),h:+(l.h/cv.height).toFixed(4)}:null)}); } /* v735: which line named which text */
   ZCHECK.paddle={at:Date.now(),load,per,line:`new reader: ${placed} of ${labels} texts named on ${per.length} multicards, ${per.length?(msAll/per.length/1000).toFixed(1):0} s a photo (first load ${(load/1000).toFixed(1)} s)`};
   if(st) st.textContent=ZCHECK.line+". "+ZCHECK.paddle.line[0].toUpperCase()+ZCHECK.paddle.line.slice(1)+".";
   logErr("paddle",ZCHECK.paddle.line); /* the line in Diagnostics too, beside the device facts */
@@ -3370,7 +3379,7 @@ function renderMore(main){
     { const zs=$("#zc-status"), zr=$("#zc-run"), zh=$("#zc-share"); /* v618 */
       if(zr) zr.onclick=async()=>{ zr.disabled=true; try{ await zoomCheck(zs); zs.textContent=ZCHECK.line+"."; }catch(e){ zs.textContent="The check failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zr.disabled=false; };
       { const zp=$("#zc-paddle"); if(zp) zp.onclick=async()=>{ zp.disabled=true; try{ await paddleCheck(zs); }catch(e){ zs.textContent="The new reader failed: "+(e&&e.message||e); logErr("paddle",e&&e.stack||e); } zp.disabled=false; }; } /* v637 */
-      { const zd=$("#zc-data"); if(zd) zd.onclick=async()=>{ zd.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); await shareZoomData(zs); }catch(e){ zs.textContent="The data failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zd.disabled=false; }; }
+      { const zd=$("#zc-data"); if(zd) zd.onclick=async()=>{ zd.disabled=true; try{ const op=zcOpenPage(); if(!ZCHECK||(op&&!(ZCHECK.pres||[]).some(r=>r.pg===op))) await zoomCheck(zs); if(PD_ON&&!ZCHECK.paddle) await paddleCheck(zs); await shareZoomData(zs); } /* v735: the open multicard is in it, with the reader's lines */catch(e){ zs.textContent="The data failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zd.disabled=false; }; }
       if(zh) zh.onclick=async()=>{ zh.disabled=true; try{ if(!ZCHECK) await zoomCheck(zs); await shareZoomSheet(zs); }catch(e){ zs.textContent="The sheet failed: "+(e&&e.message||e); logErr("zoomcheck",e); } zh.disabled=false; }; }
     $("#rr-run").onclick=()=>{ rrRun().catch(e=>logErr("reread",e&&(e.stack||e.message)||e)); }; $("#rr-share").onclick=rrShare; /* v645 */
     $("#ct-run").onclick=()=>{ ctRun().catch(e=>logErr("textcheck",e&&(e.stack||e.message)||e)); }; $("#ct-share").onclick=ctShare; /* v650 */
@@ -10944,7 +10953,7 @@ function wireRegions(root){
 function openLookup(shot,rid,silent){
   const r=regionOf(shot,rid), d0=r&&r.card&&cardOf(r.card); if(!r||!d0) return;
   const pv=priceView(d0), d=pv?pv.d:d0; /* v712: a dish without its price; the price on its own line */
-  if(!silent) bump("regionTaps"); /* silent: the sheet coming back with ← Back (v495) is the same look-up, not a second one */
+  if(!silent) bump("regionTaps"); LAST_PAGE=d.page||LAST_PAGE; /* v735: the Zoom check's data takes this multicard along */ /* silent: the sheet coming back with ← Back (v495) is the same look-up, not a second one */
   const pid=d.page&&cardOf(d.page)&&isPage(cardOf(d.page))?d.page:null;
   const html=`<div class="sheet lookup" role="dialog" aria-label="${esc(d.c)}">
     <button class="x" id="lk-close" aria-label="${t("Close")}">×</button>

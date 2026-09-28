@@ -60,6 +60,24 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v735, 2026-09-28)
+- **The Zoom check's Data takes the multicard last looked up, with where each text's box came from (v735, H with a
+  screenshot of 柴火饭 on the rice cooker framed together with 低卡饭's 饭: "Warum ist der Rahmen hier zu breit?", then
+  "Ok, go B" — see first, fix after).** A multicard text's region is the phone's reader's line (`pdMatch`, v638), else the
+  ink snap inside the AI's frame (`snapRegion`, v620), else the AI's frame as it was; the screenshot cannot say which drew
+  "饭 柴火饭", and the rice cooker (Sep 14) is not among the Zoom check's `ZC_PAGES` 8 newest multicards. Now `LAST_PAGE`
+  (set by every look-up; else the multicard open in Cards, `zcOpenPage`) joins the check's multicards; each text's data
+  carries `shown` (the box in `REGFIX` before the check measures again, or "not measured"), `snap` and `fallback`; the
+  reader's per-multicard record gains `match` — which line named which text, with its box. **Data** runs the check again
+  when the open multicard is not in it and the reader's test when it has not run, so one tap sends it all. Owner-only, no
+  learner change, no key. Known and left alone: the check writes its snap results into `REGFIX` in memory (since v620), so
+  the boxes shown can move until the app restarts. Harness (test735: an old multicard of five labels drawn on a JPEG, nine
+  newer ones, the look-up of 柴火饭, then Data with `navigator.share` captured and the PDF's data stream parsed; 4 checks): the PDF, the old multicard in it marked
+  open, each text's frame/shown/snap/fallback, the reader's lines and `match` — 4 of 4; on the v734 tree 3 of 4 fail (the
+  PDF is shared `[guard]`, the old multicard is not in it). `shown` read "not measured" in the harness (the seed never
+  showed the photo, so nothing was measured); on the phone it is the stored box.
+  Next: H sends the PDF, the fix goes at whichever of the three drew the box.
+
 ## Current state (PWA v734, 2026-09-28)
 - **The multicard look-up shows its descriptions with no "Details" heading (v734, H, a screenshot of 保温 / 取消 on the rice
   cooker with v733's open fold: "Die Überschrift \"Details\" nicht mehr anzeigen").** v733's fold goes: `lkDescHTML` puts
