@@ -39,6 +39,23 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v718, 2026-09-28)
+- **The stored meanings of single characters are looked up again under v717's rule, once (v718, H: "Bitte aktualisiere
+  alle Karten nach der neuen Regel für Single Characters").** v717 changed the dictionary and `bestSense`, but a card keeps
+  the sense it was given the day it was read: a sign card's word gloss (`gloss`, one `{w,p,m}` per word, read by the
+  character row, the pad line and the recap through `cardGloss` before the dictionary is asked) and the meaning of a
+  one-character card prefilled from the dictionary (`mt.src` "dict", unverified). `glossFix()` runs at boot after
+  `fixNumberSegs`, once per phone (settings row `glossFix`, `GLOSS_FIX_V` 718): every gloss entry whose word is one CJK
+  character and every such card's `m` (and `ms.en`) are set to `cleanSense(bestSense(w,p))` when that differs. Left alone
+  by rule: a word the phrasebook glosses (慢, 停, 男, 女 — the phrasebook wrote it, not the dictionary), a meaning the AI or
+  a hand wrote or checked (`verified`), a meaning in another language (a dictionary sense is English). The row keeps the
+  first 300 changes and Diagnostics prints a `gloss fix` line with the first twenty (药 leaf of the iris → medicine). No
+  Undo: the old value was the dictionary's wrong sense, and the row records it. A dictionary that does not load leaves the
+  row unwritten, so the next start tries again. Harness, five seeded cards: 药 in a sign gloss → medicine, 岁 (dict,
+  unverified) → year in `m` and `ms.en`; 房, verified 拉, phrasebook 停 and a German dict card unchanged `[guard]`; the row
+  says 2 cards, 2 words; a second start changes nothing; the open card's character row shows 药 medicine. Old tree: 6 of
+  the 11 checks fail, the guards pass on both. Not yet field-checked.
+
 ## Current state (PWA v717, 2026-09-28)
 - **A usability pass, H: "Ok, go for your suggestions" on the assessment of v716 (every screen walked headless at 390 and
   360 px, light and dark, empty and seeded, plus the HISTORY sweep of what H had already rejected).** One PR, one version;

@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v717, 2026-09-28)
+## Current state (PWA v718, 2026-09-28)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -70,6 +70,10 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   the Cards tab carries one backup line from `BACKUP_AT` 25 flashcards until the first export; "Cards started", the
   Storage row, the search placeholder ("Characters or pinyin") and the empty deck's third note reworded; "Cards with 行 ›"
   only when another card holds the character. Nothing of it field-checked yet.
+- **`glossFix()` (v718)**: once per phone at boot (settings row `glossFix`, `GLOSS_FIX_V`), every stored single-character
+  meaning that came from the dictionary — a sign card's word gloss, a one-character dict card's `m`/`ms.en` — is looked up
+  again under v717's rule; phrasebook words, verified meanings and other languages stay. Diagnostics prints the `gloss fix`
+  line. Not yet field-checked.
 - **The phone's reader (PaddleOCR PP-OCRv4, v637)** — `pdRead`, `vendor/paddle/` ~30 MB on first use, own worker (v642). One
   more pass of every reading (v639); when **sure** (≤ 2 lines, ≥ 2 characters, each ≥ `PD_SURE` 95 %, v641) it is the reading,
   checked by the AI's picture beside it — a different answer flags the card and takes the AI's reading (`sureCheck`,

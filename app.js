@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=717; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=718; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -560,6 +560,7 @@ function diagText(){
     /* the settings the same photo would be read differently under: the app's language goes into picSystem() through
        meaningLangName(), so a German phone gets another answer for the same picture */
     `settings · lang ${LANG} · picture to the AI ${S.settings.aiPicture===false?"off":"on"} · relay ${S.settings.aiRelay===false?"off":"on"} · auto check ${S.settings.aiAuto===false?"off":"on"} · offline model ${S.settings.nmt?"on":"off"} · mirror ${S.settings.mirror===undefined?"default":(S.settings.mirror||"off")} · brightening ${S.settings.brightPass?"done":"not yet"} · re-cut ${recutLine()}`,
+    (gf=>gf?`gloss fix · v${gf.v} ${ago(gf.at)} · ${gf.cards} cards, ${gf.words} words${gf.changed&&gf.changed.length?": "+gf.changed.slice(0,20).map(c=>`${c.w} ${c.from} → ${c.to}`).join(" · ")+(gf.changed.length>20?" …":""):""}`:"gloss fix · not run")(S.settings.glossFix), /* v718 */
     `marks on the photo · ${markLine()}`,
     `main thread · long tasks ${LONG.n}${LONG.n?` (${Math.round(LONG.total)} ms in all, longest ${Math.round(LONG.max)} ms, last ${ago(LONG.at)})`:""} · parse strokes ${PARSE_MS.strokes==null?"not yet":PARSE_MS.strokes+" ms"}, outlines ${PARSE_MS.outlines==null?"not yet":PARSE_MS.outlines+" ms"} · resizes ${RESIZES.length?RESIZES.map(r=>r.bfcache?"back from the cache "+ago(r.t):`${r.from.join("×")}→${r.to.join("×")} ${ago(r.t)}`).join("; "):"none"}`, /* v532: what a fold did to the page, for H's next dump */
     `learn zoom · ${ZLOG.length?ZLOG.length+" decisions, newest last":"no zoom yet"}${ZCHECK?` · zoom check ${ZCHECK.line} (${ago(ZCHECK.at)})`:""}`, /* v617/v618: every decision of the pad's zoom — the card, the character, how its place was found (ink, ink unsure, estimate) and why not better */
@@ -686,6 +687,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v718","Gloss fix: 药 cards updated?"],
   ["learn","v717","Stroke from Show me: a stroke?"],
   ["learn","v717","Fold count steady after Skip?"],
   ["learn","v717","Char meanings: 药 medicine?"],
@@ -1702,7 +1704,7 @@ async function boot(){
   wireChrome(); render();
   if(rv&&rv.scroll&&(rv.own!==false||navReload())) requestAnimationFrame(()=>window.scrollTo(0,rv.scroll));
   autoBreaks(); /* old cards get their photo lines estimated once */
-  fixNumberSegs(); /* word cards from before v338 get their numbers back into their lines */
+  fixNumberSegs().catch(()=>{}).then(()=>glossFix().catch(e=>logErr("glossfix",String(e&&e.message||e)))); /* word cards from before v338 get their numbers back into their lines; then (v718) the single characters' stored dictionary meanings under v717's rule, once */
   dedupePhotos(); /* cards from before v214 drop the whole photo they hold twice */
   setTimeout(()=>normalizeRaw().catch(()=>{}).then(()=>rbRecover().catch(()=>{})).then(()=>rbRepair().catch(()=>{})).then(resumeShots).then(resumePending).then(autoNext,autoNext),1500); /* v651: a rebuild killed mid-photo is put back first, before resumePending would read its placeholder */ /* a photo left as it came is downscaled and queued (v509), cards saved before their reading finished get it now (v237), then the batch goes on where it stopped (v411) */
   aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); resumeRecheck(); });
@@ -1820,6 +1822,33 @@ async function fixNumberSegs(){
   }
   try{ await idbPutMany("custom",todo); }catch(e){}
   if(S.mode==="study"||S.detail) render();
+}
+/* v718 (H: "Bitte aktualisiere alle Karten nach der neuen Regel für Single Characters"): the stored meanings of single
+   characters are looked up again, once, under v717's dictionary (cedict v4, the classifier rule) — the word glosses a sign
+   card keeps from its reading (one {w,p,m} per word, the dictionary's sense at the time: 药 stood as "leaf of the iris" in
+   its character row, pad line and recap since the day it was read) and the meaning of a one-character card that was
+   prefilled from the dictionary and never checked (mt.src "dict", unverified, in English). Left alone: a word the phrasebook
+   glosses (慢, 停, 男, 女), a meaning the AI or a hand wrote or checked, a meaning in another language. Once per phone (the
+   settings row glossFix, v 718); the row keeps what changed and Diagnostics prints it. A dictionary that does not load
+   leaves the row unwritten, so the next start tries again. */
+const GLOSS_FIX_V=718, GLOSS_FIX_KEEP=300;
+async function glossFix(){
+  const done=S.settings.glossFix; if(done&&done.v>=GLOSS_FIX_V) return;
+  try{ await loadDict(); }catch(e){ return; } await loadSigns().catch(()=>{});
+  const oneCJK=w=>[...String(w||"")].length===1&&CJK.test(w);
+  const inBook=w=>!!(SIGNS||[]).find(e=>e.zh===w);
+  const rows=[], changed=[]; let k=0;
+  for(const d of S.custom){ let u=null;
+    if(Array.isArray(d.gloss)&&d.gloss.length){
+      const gl=d.gloss.map(g=>{ if(!g||!oneCJK(g.w)||inBook(g.w)) return g; const m=cleanSense(bestSense(g.w,g.p)); if(!m||m===g.m) return g; changed.push({id:d.id,w:g.w,from:g.m||"",to:m}); k++; return {...g,m}; });
+      if(gl.some((g,i)=>g!==d.gloss[i])) u={...d,gloss:gl}; }
+    if(d.mt&&d.mt.src==="dict"&&!d.mt.verified&&oneCJK(d.c)&&mlOf(d)==="en"&&!inBook(d.c)){
+      const m=cleanSense(bestSense(d.c,d.p)); if(m&&m!==d.m){ changed.push({id:d.id,w:d.c,from:d.m||"",to:m}); k++; u={...(u||d),m}; setMl(u,"en"); } }
+    if(u) rows.push(u); }
+  if(rows.length){ try{ await idbPutMany("custom",rows); }catch(e){ logErr("glossfix","write: "+(e&&e.message||e)); return; }
+    for(const r of rows){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; } }
+  await setSetting("glossFix",{v:GLOSS_FIX_V,at:Date.now(),cards:rows.length,words:k,changed:changed.slice(0,GLOSS_FIX_KEEP)});
+  if(rows.length&&(S.mode==="study"||S.detail)) render();
 }
 /* the text keeps the photo's lines: a horizontal word stays on one line, so the box goes
    wide and the font shrinks to fit instead of wrapping (H: "the image is one line") */
@@ -6545,6 +6574,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  718:"Cards that got a character's meaning from the dictionary have it again under the new rule.",
   717:"More is shorter: what is sent, about the app and the feedback box fold open on a tap. A stroke that starts on Show me or Skip is a stroke now.",
   707:"Swipe through the texts of a multicard: open one and swipe to the next.",
   704:"The fold with the pinyin, meaning and description is now simply called Details.",
