@@ -56,29 +56,30 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v727, 2026-09-28)
+## Current state (PWA v728, 2026-09-28)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
 
 **Recent state worth carrying in the head** (full entries: `grep -n "v6xx" docs/HISTORY.md`):
-- **v717–v727 dictionary senses, the split and the gloss fix** (v720's and v723's passes field-checked by H's dumps, the rest not): `cedict.tsv.gz`
-  is **v5** — every sense of every one-character line, appended to the shipped order by `tools/cedict-nmax.py --write`
-  (v722, `docs/NMAX.md` is the record; a variant entry's gloss no longer leads a line, v717). `bestSense(w,py,inWord)`:
-  **`OWN_SENSES`** first (只 本 新 京 金 周 江 木 面 卡 皮 瘦 — H's street senses, v723/v727; add there, with the reading); **`OWN_PINYIN`** (v725: 夹 jiā with
-  the words that keep jiá/gā or a neutral tone — a one-character entry overrides the library's words) goes into pinyin-pro in `loadScript`; **a line splits into the fewest words** (v726, `fewestFirst`; ties to the
-  longer first word; 肥|瘦|肉夹馍, not 肥|瘦肉|夹|馍 — 4 of H's 264 dump lines changed); inside a word — **a one-character word
-  beside another character is inside a word** (v720, `besideCJK`; 店 in 本店 is "shop") — the first bound form **among the first `BOUND_TOP` 3
-  senses** (v724: later ones are marginal — 入 "to conform to", 水 "additional cost") that is neither a proper noun (v721,
-  `PROPER`: 美 beside 团 had become "the Americas"; v724: any capitalised word outside a note, 巴 "the east of Sichuan",
-  and "I" is not one) nor narrowed by a note of its own (v722, 河's "rice noodles"); alone, the first sense that is not hard (surname, variant, dated, abbr., "used in", "see", CL) and
-  not a classifier or proper noun standing back, a bound form counting with its marker off (v722: 木 tree, 英 hero).
-  **A one-character word takes its reading from its whole line** (v719, `ctx`; 卖完了 ends in le; 一/不 keep their tone,
-  `SANDHI`). `glossFix()` applies all that once per phone (`GLOSS_FIX_V` 727) to stored single-character glosses, composed
-  meanings, unverified dict cards, (v725) the pinyin of unverified cards holding an `OWN_PINYIN` character and (v726) the
-  split of unverified sign cards whose meaning is still the composed one — **only on the fresh dictionary** (`DICT_FRESH`; an old cached copy leaves the row
-  unwritten); settings row `glossFix`, Diagnostics prints it. v717 also: `MORE_OPEN`, `PAD_HAND`, the backup line, "Cards with 行 ›" only when another
-  card holds it (all in the sections below).
+- **v717–v728 dictionary senses, the split and the gloss fix** (the v720, v723, v724 and v727 passes field-checked by
+  H's dumps, the rest not): `cedict.tsv.gz` is **v5** — every sense of every one-character line, appended to the shipped
+  order by `tools/cedict-nmax.py --write` (v722, `docs/NMAX.md` is the record). `bestSense(w,py,inWord)`: **`OWN_SENSES`**
+  first (只 本 新 京 金 周 江 木 面 卡 皮 瘦 龙 胡 — H's street senses, v723–v728; add there, with the reading); **`OWN_PINYIN`**
+  (v725: 夹 jiā and the words that keep jiá/gā or a neutral tone — a one-character entry overrides the library's words)
+  goes into pinyin-pro in `loadScript`; **a line splits into the fewest words** (v726, `fewestFirst`; ties to the longer
+  first word; 肥|瘦|肉夹馍, not 肥|瘦肉|夹|馍); inside a word — **a one-character word beside another character is inside a
+  word** (v720, `besideCJK`; 店 in 本店 is "shop") — the first bound form **among the first `BOUND_TOP` 3 senses** (v724:
+  入 "to conform to", 水 "additional cost" stood later) that is neither a proper noun (`PROPER`, v721/v724: any capitalised
+  word outside a note, "I" is not one) nor narrowed by a note of its own (v722); alone, the first sense that is not hard
+  (surname, variant, dated, abbr., "used in", "see", CL) and not a classifier or proper noun standing back, a bound form
+  counting with its marker off (v722: 木 tree, 英 hero). **A one-character word takes its reading from its whole line**
+  (v719, `ctx`; 卖完了 ends in le; 一/不 keep their tone, `SANDHI`). `glossFix()` applies all that once per phone
+  (`GLOSS_FIX_V` 728) to stored single-character glosses, composed meanings, unverified dict cards, the pinyin of every
+  card holding an `OWN_PINYIN` character (only that syllable, v725/v728) and the split of every sign card's gloss and
+  segs, its meaning only while still the composed one (v726/v728) — **only on the fresh dictionary** (`DICT_FRESH`);
+  settings row `glossFix`, Diagnostics prints it. v717 also: `MORE_OPEN`, `PAD_HAND`, the backup line, "Cards with 行 ›"
+  only when another card holds it (all in the sections below).
 - **The v6xx state** (reader, owner tools, Learn zoom, Crop again) moved to `docs/HISTORY.md` on 2026-09-28 (H):
   `grep -n "Consolidated v6xx" docs/HISTORY.md`.
 
@@ -416,9 +417,8 @@ H says it works. Keep each entry inside **35 columns** or it wraps in the box.
 The full list is in the archive; these are the ones that keep biting.
 
 - **The frame never moves for the content; the content adapts to the frame** (v560).
-- **A class written for one shape is not a free ride for another** — `.undo` carried a button's
-  padding, width and `nowrap`, and cost the update note five versions of silence (v413); `.lbl`
-  greyed out a vote's labels (v487); `.btn.mini`'s `nowrap` pushed a whole sentence past the card
+- **A class written for one shape is not a free ride for another** — `.undo`'s padding and `nowrap` cost the update note
+  five versions of silence (v413); `.lbl` greyed out a vote's labels (v487); `.btn.mini` pushed a sentence past the card
   (v432). **Inheritance loses to any matching rule, however weak.**
 - **A clamped box wants a whole-pixel line box**, or the clamped line leaves its top edge behind (v593).
 - **Presence that costs width is not free in a ten-language app** — check the tightest language *before* (v474).
@@ -435,18 +435,17 @@ The full list is in the archive; these are the ones that keep biting.
   something false is a defect** (v404).
 - **An undefined CSS custom property takes its entire declaration with it** — the only way to find one is to
   grep every `var(--x)` against the `:root` list (v589).
-- **The app must say what actually happened** — a record that claims an answer was used when it
-  404'd, or prints "not round" where the code never looked, costs days (v384/v395/v399/v405/v447).
+- **The app must say what actually happened** — a record that claims an answer was used when it 404'd costs days
+  (v384/v395/v399/v405/v447).
 - Status text lives in state and is re-queried on every render (v47); a long-running action keeps its state **outside**
   the row it was started from (v257).
 - **`git checkout -B <branch> origin/main` uses the local ref** — `git fetch origin main` first, or you build on a
   stale tree (v458/v459, and again while writing this file). After a **squash** merge, reset the branch onto `origin/main`.
 - A tap on a scrollable layer is read from the **click** event, not `pointerup` — iOS sends `pointercancel` (v206).
 - The worker helps only while it **controls** the page; a page with no controller needs its own origin-then-mirror rule (v335).
-- **No VPN is needed to use the app.** Updates and vendor files come through the jsDelivr mirror
-  (`fastly.jsdelivr.net`, since `cdn.` is DNS-hijacked in China for about two fifths of users,
-  v483), purged on every push by `purge-mirror.yml`. A **first install** still needs github.io —
-  the only fix is a second origin, and **H chose Cloudflare Pages on his own domain, later.**
+- **No VPN is needed to use the app.** Updates and vendor files come through the jsDelivr mirror (`fastly.jsdelivr.net`;
+  `cdn.` is DNS-hijacked in China, v483), purged on every push by `purge-mirror.yml`. A **first install** still needs
+  github.io — the only fix is a second origin, and **H chose Cloudflare Pages on his own domain, later.**
 - The reload after an update waits for a pause (v279/v327), never while a photo is on its way
   from the camera (v316), and at most once in ten minutes (v563).
 
@@ -466,18 +465,15 @@ Everything from **v597 to v720** is unconfirmed on the phone unless H has said o
 each version's archive entry names its open question. The ones that decide what comes next: **the Learn zoom** (v653–v686 —
 does it land on the character, is 3.5× sharp enough? Owner tools → Zoom check), **the phone's reader as the reading**
 (v641–v652 — sure cards fast and right, the check flagging the right ones), **Multicards and Cards as a reference**
-(v687–v696), **the gloss fix and dictionary v5** (v718–v727 — the Diagnostics line after each pass), then Owner tools (v645–v651), speed (v640/v642/v672), the
+(v687–v696), **the gloss fix and dictionary v5** (v718–v728 — the Diagnostics line after each pass), then Owner tools (v645–v651), speed (v640/v642/v672), the
 Learn screen (v667–v673, `SPOT_ON`) and the older v599–v614 items.
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's character
 row; ratios must match `GF_SHOT`; restore the files the PR does not touch (the painted sign has random grain).
 
-**Named and waiting for H's word** (each changes how he handles the app, so each waits for a "Go"):
-re-cutting the deck square (`RECUT_V` 6, ~95 ms a card, no undo); after one tap the card is dealt
-face-up for the rest of the session (`S.cueBig` is session state — it reverses v568 on purpose);
-on a card of several words the tap shows the **first word's** pinyin and meaning, not the card's;
-the pad **prints** the character at levels 1 and 2, so "write the word" is "trace the word";
-the star counter and the review flag are under
-the 44 px rule; an offline weak reading still makes its flagged card; `SPLIT_MAX` 30 is a cap a
-real menu board will reach — **and a menu board has never been read in the field.**
+**Named and waiting for H's word** (each changes how he handles the app, so each waits for a "Go"): re-cutting the deck
+square (`RECUT_V` 6, ~95 ms a card, no undo); after one tap the card stays face-up for the session (`S.cueBig`, reverses
+v568 on purpose); on a card of several words the tap shows the **first word's** pinyin and meaning; the pad **prints** the
+character at levels 1 and 2; the star counter and the review flag are under the 44 px rule; an offline weak reading still
+makes its flagged card; `SPLIT_MAX` 30 is a cap a real menu board will reach (the first menus were read at v727).
