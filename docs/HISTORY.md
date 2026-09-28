@@ -60,6 +60,31 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v720, 2026-09-28)
+- **只 and 本 say what they mean on the street, and a character beside another one takes its in-word sense (v720, H:
+  "Handle them too" — the two v719 named).** Two causes. **The dictionary's order:** 只 zhī opens with "grain that has begun
+  to ripen" (the 只 entry) and only then the classifier (the 隻 entry), so v717's rule stood the classifier back behind
+  junk; 本's line holds only bound-form senses, and the build's ";"-split left the second half of "(bound form) root; stem"
+  unmarked, so "stem" was the one free sense. No rule reads that from the data — CEDICT carries no frequency and the
+  three-sense cut (`NMAX` 3 in `tools/cedict-readings.py`) is what the phone can hold — so the app keeps **its own sense
+  for a character CEDICT orders badly**: `OWN_SENSES`, by character and reading, two entries (只 zhī "classifier for
+  animals, birds and one of a pair", 本 běn "this (one's own)"), asked first in `bestSense`, a dictionary prefill like any
+  other (unverified). A toned reading must match exactly — the first draft's toneless fallback made 只 zhǐ the classifier
+  too and the `[guard]` caught it — only a toneless one falls back. **The neighbour:** `lineMeaning` reads a character
+  with no dictionary word around it as a lone word, but on a sign it is nearly always inside a compound the dictionary
+  lacks (本店), so a one-character word with a character on either side (`besideCJK`) is read `inWord` and takes its
+  bound-form sense when the line marks one: 店 in 本店 is "shop", not "inn"; 了, 的, 地 have none in their group and read
+  as before; a character truly alone keeps the dictionary's first free sense (店 → inn). 403 of the 9 725 one-character
+  lines carry a bound-form sense. **The pass runs once more** (`GLOSS_FIX_V` 720): `glossCtx` now returns `{p,inWord}`
+  per gloss word. Harness (test720, six seeded cards after a v719 row, 23 checks): 只 beside 三 → the classifier, 本店 →
+  "this (one's own) · shop" in the gloss and the composed meaning, the 本 dict card, the row v720 / 3 cards / 4 words,
+  Diagnostics, `lineMeaning` of 三只 and 本店, 本 alone and 店 alone, the character page's `bestSense` in and out of a
+  word, a toneless běn, the open card and its tapped 店; `[guard]` 只有 whole, 只 zhǐ "only", v719's 了 le, 一枚, 本地 a
+  word, 药房, 地 beside 走 "earth", second start no-op. On the v719 tree 13 of 23 fail, the 10 guards pass. test719 (its
+  version read from the page now, v413) 20 of 20 and test717 41 of 41 on the new tree. Not yet field-checked. Named and
+  not built: a larger `NMAX` for one-character lines (本's "this; the current" and its classifier are cut) — a dictionary
+  refetch on every phone, only worth it with a list of characters that need it.
+
 ## Current state (PWA v719, 2026-09-28)
 - **v718's pass gave 枚 "surname Mei" and a lone 了 "to finish"; both repaired, and the cause of each fixed (v719, from
   H's Diagnostics dump: `7 cards, 12 words: … 了 (completed action marker) → to finish · 枚 classifier for small objects
