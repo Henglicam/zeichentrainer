@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=737; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=738; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -687,6 +687,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v738","Rice cooker: 柴火饭 frame tight?"],
   ["cards","v736","Open card: layout right?"],
   ["cards","v734","Pop-up descriptions: right?"],
   ["more","v731","Duplicate multicards: sets right?"],
@@ -1350,7 +1351,7 @@ async function paddleCheck(st){
     placed+=hits.filter(Boolean).length; labels+=r.items.length; msAll+=ms;
     per.push({shot:r.pg.shot,ms,det:lines.ms.det,rec:lines.ms.rec,placed:hits.filter(Boolean).length,labels:r.items.length,missing:r.items.filter((d,k)=>!hits[k]).map(d=>d.c),
       lines:lines.map(l=>({x:+(l.x/cv.width).toFixed(4),y:+(l.y/cv.height).toFixed(4),w:+(l.w/cv.width).toFixed(4),h:+(l.h/cv.height).toFixed(4),text:l.text,conf:+l.conf.toFixed(2)})),
-      match:mt.map((l,k)=>l?{c:r.items[k].c,text:l.text,two:!!l.two,x:+(l.x/cv.width).toFixed(4),y:+(l.y/cv.height).toFixed(4),w:+(l.w/cv.width).toFixed(4),h:+(l.h/cv.height).toFixed(4)}:null)}); } /* v735: which line named which text */
+      match:mt.map((l,k)=>l?{c:r.items[k].c,text:l.text,two:!!l.two,cut:!!l.cut,x:+(l.x/cv.width).toFixed(4),y:+(l.y/cv.height).toFixed(4),w:+(l.w/cv.width).toFixed(4),h:+(l.h/cv.height).toFixed(4)}:null)}); } /* v735: which line named which text */
   ZCHECK.paddle={at:Date.now(),load,per,line:`new reader: ${placed} of ${labels} texts named on ${per.length} multicards, ${per.length?(msAll/per.length/1000).toFixed(1):0} s a photo (first load ${(load/1000).toFixed(1)} s)`};
   if(st) st.textContent=ZCHECK.line+". "+ZCHECK.paddle.line[0].toUpperCase()+ZCHECK.paddle.line.slice(1)+".";
   logErr("paddle",ZCHECK.paddle.line); /* the line in Diagnostics too, beside the device facts */
@@ -4612,7 +4613,7 @@ const cbKey=d=>d.id+"|"+(d.shot||"")+"|"+JSON.stringify(d.frame||0)+"|"+(d.c||""
    the measured regions are kept in one settings row (`regfix`) and read back at boot, so a multicard shown once is drawn
    in its measured place from then on. The card and its frame still do not change. A row written under another REG_V is
    dropped, so a change to how regions are measured measures every multicard again. */
-const REGFIX=new Map(), REGRUN=new Set(), REG_V=688, REG_MAX=600;
+const REGFIX=new Map(), REGRUN=new Set(), REG_V=738, REG_MAX=600; /* v738: the stored boxes are measured again once, with pdTrim */
 function regLoad(){ const r=S.settings.regfix; if(!r||r.v!==REG_V||!Array.isArray(r.m)) return; r.m.forEach(([k,b])=>{ if(typeof k==="string") REGFIX.set(k,b||null); }); }
 function regSave(){ while(REGFIX.size>REG_MAX) REGFIX.delete(REGFIX.keys().next().value); setSetting("regfix",{v:REG_V,m:[...REGFIX]}); }
 /* the split's own fallback for a text it could not place: a frame over half the photo, or one another text of the same photo shares (v628) */
@@ -6607,6 +6608,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  738:"A text's frame on a multicard no longer takes in the neighbour's last character.",
   736:"An open card shows everything at once, with Star, Flag and Edit as a quiet row; Delete is in Edit.",
   733:"Tap a text on a multicard's photo: the pop-up now says what it is, in a sentence or two.",
   731:"More → Your cards finds multicards you made twice and deletes the older copies.",
@@ -7058,6 +7060,20 @@ function pdAsPass(lines){
 const PD_ON_SURE=true, PD_SURE=95;
 const PD_ON=true, PD_MATCH=0.66, PD_ROOM=0.25, pdNorm=s=>String(s).replace(/[^\u4e00-\u9fff]/g,"");
 function pdLcs(a,b){ const A=[...a], B=[...b], dp=new Array(B.length+1).fill(0); for(let i=1;i<=A.length;i++){ let prev=0; for(let j=1;j<=B.length;j++){ const t=dp[j]; dp[j]=A[i-1]===B[j-1]?prev+1:Math.max(dp[j],dp[j-1]); prev=t; } } return dp[B.length]; }
+/* v738 (H's Zoom data of the rice cooker, sent for "Warum ist der Rahmen hier zu breit?"): the reader read 柴火饭's line as
+   "反柴火饭" — 低卡饭's last character beside it, misread — and the whole line's box became the region (v638), 3 of 4 matching.
+   A line that carries Han characters the text does not, at its start or end, is cut back to the matched characters: the box
+   is divided evenly along the line (pdAsPass's rule), so the matched run's share is its box. Characters that are not Han
+   (a price, a slash) stay — 肥瘦肉夹馍¥12/个 keeps its price; an unmatched character inside the run stays too. */
+function pdTrim(z,l){ const chars=[...l.text], han=[]; chars.forEach((ch,i)=>{ if(/[\u4e00-\u9fff]/.test(ch)) han.push(i); });
+  const A=[...z], B=han.map(i=>chars[i]); if(!A.length||!B.length) return l;
+  const dp=Array.from({length:A.length+1},()=>new Array(B.length+1).fill(0));
+  for(let i=1;i<=A.length;i++) for(let j=1;j<=B.length;j++) dp[i][j]=A[i-1]===B[j-1]?dp[i-1][j-1]+1:Math.max(dp[i-1][j],dp[i][j-1]);
+  let i=A.length, j=B.length, first=-1, last=-1; /* walk the table back for the matched positions in the line */
+  while(i>0&&j>0){ if(A[i-1]===B[j-1]){ if(last<0) last=j-1; first=j-1; i--; j--; } else if(dp[i-1][j]>=dp[i][j-1]) i--; else j--; }
+  if(first<0||(first===0&&last===B.length-1)) return l;
+  const a=first>0?han[first]:0, b=last<B.length-1?han[last]+1:chars.length, n=chars.length;
+  return l.vert?{...l,y:l.y+l.h*a/n,h:l.h*(b-a)/n,cut:true}:{...l,x:l.x+l.w*a/n,w:l.w*(b-a)/n,cut:true}; }
 function pdMatch(texts,lines){ const T=texts.map(pdNorm), L=lines.map(l=>pdNorm(l.text)), pairs=[];
   T.forEach((z,i)=>{ if(!z) return; L.forEach((lz,j)=>{ if(!lz) return; const sc=pdLcs(z,lz)/Math.max([...z].length,[...lz].length); if(sc>=PD_MATCH) pairs.push({i,j,sc}); }); });
   const out=texts.map(()=>null), usedL=new Set();
@@ -7080,7 +7096,7 @@ function pdMatch(texts,lines){ const T=texts.map(pdNorm), L=lines.map(l=>pdNorm(
     const lz=L[j]+L[k], n=pdLcs(z,lz), sc=n/Math.max([...z].length,[...lz].length); if(sc>=PD_MATCH) two.push({i,j,k,sc,n}); }); }); });
   pairs.forEach(p=>{ p.n=pdLcs(T[p.i],L[p.j]); }); const all=[...pairs,...two].sort((x,y)=>y.sc-x.sc||y.n-x.n);
   for(const p of all){ if(out[p.i]||usedL.has(p.j)||(p.k!=null&&usedL.has(p.k))) continue;
-    if(p.k==null){ out[p.i]=lines[p.j]; usedL.add(p.j); continue; }
+    if(p.k==null){ out[p.i]=pdTrim(T[p.i],lines[p.j]); usedL.add(p.j); continue; } /* v738: cut to the matched characters */
     const a=lines[p.j], b=lines[p.k], x=Math.min(a.x,b.x);
     const y0=Math.min(a.y,b.y); out[p.i]={...a,x,y:y0,w:Math.max(a.x+a.w,b.x+b.w)-x,h:Math.max(a.y+a.h,b.y+b.h)-y0,text:a.text+b.text,two:true}; usedL.add(p.j); usedL.add(p.k); }
   return out; }

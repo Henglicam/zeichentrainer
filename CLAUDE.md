@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v737, 2026-09-28)
+## Current state (PWA v738, 2026-09-28)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -73,6 +73,9 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   their texts (characters only, `dupKey`); Delete N keeps the newest of each set, the rest go through `delCustom` and the
   Undo line. Not field-checked.
 - **A dish's meaning is shown without its price** (`noPriceM`, v710/v712) and, since v732, without the comma that led into it.
+- **A multicard text's region** is the phone reader's line (v638), else the ink snap (v620), else the AI's frame; since v738 a
+  line carrying the neighbour's Han characters at its ends is **cut to the matched run** (`pdTrim`; H's rice cooker, "反柴火饭").
+  `REG_V` 738 re-measures every phone's stored boxes once.
 - **The v6xx state** (reader, owner tools, Learn zoom, Crop again) moved to `docs/HISTORY.md` on 2026-09-28 (H):
   `grep -n "Consolidated v6xx" docs/HISTORY.md`.
 
