@@ -39,6 +39,27 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Consolidated v6xx notes (moved out of CLAUDE.md on 2026-09-28, H: "Verschieb die v6xx-Bullets aus CLAUDE.md nach HISTORY")
+These four bullets stood under "Recent state worth carrying in the head" in CLAUDE.md from v637 to v718; each version named
+in them has its own entry below. Verbatim:
+
+- **The phone's reader (PaddleOCR PP-OCRv4, v637)** — `pdRead`, `vendor/paddle/` ~30 MB on first use, own worker (v642). One
+  more pass of every reading (v639); when **sure** (≤ 2 lines, ≥ 2 characters, each ≥ `PD_SURE` 95 %, v641) it is the reading,
+  checked by the AI's picture beside it — a different answer flags the card and takes the AI's reading (`sureCheck`,
+  v646–v652). It places a multicard's labels (`pdMatch`, `aiBoxCal`, v638–v644; single lines and two-line pairs compete,
+  v687); regions snap onto their texts at display (`refineShot`/`snapRegion`, v620/v628), kept in the `regfix` settings row
+  so they start in place (v688; a pass the reader could not join stores nothing, v710).
+- **Owner tools** — Zoom check (v627), Re-read all (v645), Check texts (v650), Rebuild all with Undo (v651/v652; Menus alone, v702). Background
+  saves rebuild the Learn queue through `requeue()` (v670).
+- **The Learn zoom's place** — the phone's reader first (`pdCharBoxes`, v653): characters matched to its lines by LCS, then
+  out of order (v661), a misread line by position (v677), spread along it (v680), a partly matched line stepped from its match
+  (v685/v686), each at its CTC place `at`, unsure; the reader gets the frame + 15 %, the whole cut when a line is still open
+  (v682, field-checked); a tie between reader lines goes to the one inside the card's frame (v714, field-checked); an unread character between two read places on its line — Latin ones too — stands between them, one before or after the read ones steps by their spacing (v716). Else a **sure** ink cut (`charBoxes`, v619); an unsure place shows the text whole (v669), never an ink
+  box on another character's place (v684). `spotIdx` maps the pad's character (v674); `rest()` keeps a mid-glide move in
+  place (v676, field-checked). Diagnostics' learn-zoom lines carry `at`, `edge` and every reader line (v666/v681).
+- **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
+  was asked about (`run.zh`, `aiLate`, v657).
+
 ## Current state (PWA v718, 2026-09-28)
 - **The stored meanings of single characters are looked up again under v717's rule, once (v718, H: "Bitte aktualisiere
   alle Karten nach der neuen Regel für Single Characters").** v717 changed the dictionary and `bestSense`, but a card keeps
