@@ -39,6 +39,26 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v716, 2026-09-28)
+- **The Learn zoom places unread characters beside Latin text and before or after the read ones (v716, H: "Hier hat er auch
+  nicht auf die richtigen Charakter gezoomt, zumindest an zwei Stellen").** 小嗷aoo over 万物可爱守则; the reader read `小ao0`
+  and `勿可爱则` (the dump: 4 of 8 characters read). Two faults. 嗷, unread between 小 and the Latin "aoo", went to v685's even
+  spread, which counts only the card line's Chinese characters — two slots over a line that also holds "aoo" — and stood at 35 %
+  on "aoo" (field: `嗷 · reader, unsure · at 35,25 %`). 万 and 物, unread before 可, had no rule: the "between" rule needs a match
+  on both sides, and v685's slot test failed because the reader's line began at 勿, so its 可 sat at 28 % of it where six even
+  slots want 33–50 %; the photo showed the text whole (`the reader's text, whole`). Now, in `pdCharBoxes`, per card line whose
+  matches all lie on one reader line: the card line is aligned against that reader line in full — its Chinese matches (weight
+  64) and its Latin letters and digits the reader read too (weight 1, case-blind) — and an unread Chinese character between two
+  such places stands between them by its place in the card's line. One before the first or after the last place, with no Latin
+  between it and the nearest Chinese match, steps from that match by the spacing of the line's own matched Chinese characters
+  (two at least, Δat over the Chinese count between them), only when no other card line's match is on that reader line and the
+  place stays on the picture the reader got. Both unsure. Runs before the old "between" rule, v677, v685 and v680, which keep
+  what it leaves. Verified by a standalone run of the real `pdCharBoxes` (pdRead stubbed with the dump's lines, CTC places
+  estimated from its centres): the old tree gives exactly the field's places (嗷 35 %, 万 and 物 none, 守 63 %), the new one 嗷
+  23 % (between 小 15 and "a" 30), 物 19 %, 万 5 %; a fully read line, 邪不压正 (v685) and two card lines read as one reader line
+  are unchanged `[guard]`; "AB万物可" read `AB可` moves 万/物 from v685's even 13/32 % to 30/40 % between B and 可. Not yet
+  field-checked — the CTC places of the fixture are my estimate, not the phone's.
+
 ## Current state (PWA v715, 2026-09-28)
 - **v714 field-checked (H: "Zoom funktioniert jetzt, springt aufs richtige Mei").** Its Still-to-test line goes; nothing else
   changes. H's first point of v714 is closed without a build: after Crop again the card's picture is still the square window
