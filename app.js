@@ -6642,7 +6642,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
-  733:"Tap a text on a multicard's photo and fold open Details to read what it is.",
+  733:"Tap a text on a multicard's photo: the pop-up now says what it is, in a sentence or two.",
   731:"More → Your cards finds multicards you made twice and deletes the older copies.",
   729:"吃, 碰 and 杠 on a mahjong sign name their calls: chow, pung, kong.",
   728:"肉夹馍 reads jiā on every card, the checked ones too; 龙 is a dragon and 胡 on a mahjong sign is the winning call.",
@@ -10977,9 +10977,10 @@ function openLookup(shot,rid,silent){
    multicard's text folds open "Details" — what the text's own screen has under its Details and the sheet does not already
    show: the short description (dsh, stored) and the long one (ds, asked of the AI the first time the fold is open on that
    text — explainAuto, so the AI switch, the network and a stored answer all stand it down, and a closed fold costs nothing).
-   No action inside: the sheet stays a look-up (v496/v692). LK_OPEN is the reader's, for the session: it stays open on the
-   next text tapped, so a whole menu is read that way, and is closed at every start. */
-let LK_OPEN=false;
+   No action inside: the sheet stays a look-up (v496/v692). Open by default (H, before it shipped: "Zeig die Details bitte
+   per default an, ohne aufklappen zu müssen") — so every text tapped asks for its long description the first time. LK_OPEN
+   is the reader's, for the session: folded by hand, it stays folded on the next text, and it is open again at every start. */
+let LK_OPEN=true;
 function lkFoldHTML(d){ const sh=shortOf(d);
   return `<div class="fold lkfold${LK_OPEN?" open":""}"><button class="foldbtn" id="lk-fold" aria-expanded="${LK_OPEN?"true":"false"}"><span>${t("Details")}</span><i aria-hidden="true">⌄</i></button><div class="ans" id="lk-ans"${LK_OPEN?"":" hidden"}>${sh?`<p class="desc dsh">${esc(sh)}</p>`:""}${descHTML(d,{explain:true})}</div></div>`; }
 function wireLkFold(el,id){ const b=el.querySelector("#lk-fold"), a=el.querySelector("#lk-ans"); if(!b||!a) return;
