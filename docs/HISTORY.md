@@ -60,6 +60,18 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v734, 2026-09-28)
+- **The multicard look-up shows its descriptions with no "Details" heading (v734, H, a screenshot of 保温 / 取消 on the rice
+  cooker with v733's open fold: "Die Überschrift \"Details\" nicht mehr anzeigen").** v733's fold goes: `lkDescHTML` puts
+  the short description (`dsh`, darker) and the long one (`ds`) straight under the meaning, and `wireLkDesc` asks for a
+  missing long one every time a text is looked up (`explainAuto` — the AI switch, the network and a stored answer stand it
+  down, as before). No way to hide them any more; `LK_OPEN`, `lkFoldHTML`, `wireLkFold` and the `.lkfold` rules leave with
+  their last user. Harness (test734, en 390 px light, de 360 px dark, the AI mocked at `aiAsk`, 6 checks each): both
+  descriptions under the meaning with no "Details", fold or button and no call for a stored one, one explain call with "…"
+  for a text without, the answer in the sheet and in `ds` with the page unscrolled, the same text again asks nothing, the AI
+  switch off asks nothing and shows the meaning alone. On the v733 tree 4 of 6 fail; the 78 % cap `[control]` and the
+  asks-nothing-again `[guard]` pass on both. `TO_TEST` becomes "Pop-up descriptions: right?". Not field-checked.
+
 ## Current state (PWA v733, 2026-09-28)
 - **The look-up of a multicard text folds open Details (v733, H: "Kannst du bitte in den popups der multicards auch noch
   die Details anbieten, zum aufklappen?"; described in three lines first, H: "Go").** The pop-up over a multicard's photo

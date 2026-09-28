@@ -362,8 +362,8 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .pin .nw{white-space:nowrap} /* v711: the speaker is bound to the pinyin's last syllable, so it never wraps onto a line of its own at the left */ .lookup .mean{margin-top:4px}
 .lookup .grades{margin-top:16px} .lookup .grade{min-height:54px}
 .lookup .lkacts{display:flex;justify-content:center;margin-top:8px} .lookup .lkacts .del{padding:8px 14px}
-.ask .sheet.lookup{max-height:78vh;overflow-y:auto;overscroll-behavior:contain} /* v733: an open Details fold scrolls inside the sheet, never the page under it */
-.lookup .lkfold{margin-top:12px} .lookup .lkfold .ans{padding-top:4px} .lookup .lkfold .desc{margin-top:8px;max-width:none} .lookup .lkfold .desc.dsh{color:var(--label)} /* v733: the short description reads first and darker; the long one in the grey of every description */
+.ask .sheet.lookup{max-height:78vh;overflow-y:auto;overscroll-behavior:contain} /* v733: a long description scrolls inside the sheet, never the page under it */
+.lookup .lkdesc{margin-top:6px} .lookup .lkdesc .desc{margin-top:8px;max-width:none} .lookup .lkdesc .desc.dsh{color:var(--label)} /* v733/v734: under the meaning, no heading — the short description reads first and darker, the long one in the grey of every description */
 .pill.multi{background:var(--fill);color:var(--label2)}
 button.pill.multi{border:0;font:inherit;cursor:pointer} /* the reference is a way back to the multicard, not only a label */
 /* under the picture the reference carries a whole headline ("Meituan — order confirmation, 颐堤港店"), where .pill was
