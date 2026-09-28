@@ -60,6 +60,20 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v727, 2026-09-28)
+- **皮 and 瘦 in the app's own table (v727, H: "Ok, go" on 皮 "leather" and 瘦 "thin" in 皮瘦肉夹馍).** `OWN_SENSES` gains
+  皮 pí "skin (or leather)" and 瘦 shòu "lean (or thin)": CC-CEDICT opens 皮 with "leather" and 瘦 with "thin" (lean is its
+  fourth sense, "(of meat) lean"), right for a wallet sign or a slim person and wrong on a menu, where H reads them; the
+  bracket keeps the other reading in view. The pass runs once more (`GLOSS_FIX_V` 727) and rewrites the two where they
+  stand alone in a gloss or on an unverified dict card; dictionary words (皮鞋, 瘦肉, 凉皮) are untouched. Harness
+  (test727, five seeded cards after a v726 row, 10 checks): 皮 and 瘦 in the split roujiamo line with the composed meaning,
+  the dict card 皮, the row v727 / 2 cards / 3 words, the table's twelve keys, `lineMeaning` of 皮瘦肉夹馍 and 纯皮肉夹馍,
+  `bestSense` alone and in a word, the open card; `[guard]` the verified 瘦 "thin", 小面 noodles, 皮鞋 and 瘦肉 words, 面
+  and 店, second start no-op. On the v726 tree 7 of 10 fail. test725 14, test724 17, test722 14, test721 19, test720 23,
+  test717 41 pass; test726 and test723 each lose the checks that pinned 瘦 "thin" and the table's ten keys — superseded
+  by this version, as test718's pinned line was. Not field-checked: the Diagnostics line should list 皮 leather → skin
+  (or leather) and 瘦 thin → lean (or thin) on the roujiamo cards.
+
 ## Current state (PWA v726, 2026-09-28)
 - **The line splits into the fewest words (v726, H: "Ok. Go" on the split named at v725).** `lineMeaning` took the longest
   dictionary word at hand, left to right, so 肥瘦肉夹馍 was 肥|瘦肉|夹|馍 — four words, the dish name torn apart, 夹 glossed
