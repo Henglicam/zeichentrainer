@@ -73,6 +73,15 @@ in them has its own entry below. Verbatim:
   and no "Cards with" on the card, the guide without the sentence and with its Cards section, `[guard]` the missing key
   falls back to English. On the v736 tree the first two fail. test736 (11) and test734 (12) still pass. Not field-checked;
   nothing to test but the absence.
+  **H's verdict after the merge (the record, no code):** "Ich fand, dass dieses 'Cards with' da irgendwie gestört hat. Das
+  hat den Lesefluss total unterbrochen. Die Idee war gut, aber die Ausführung war nicht gut. Falls dir noch irgendwas
+  Besseres einfällt, bitte sagen." Three ways back were offered — A a press-and-hold on the character's chip, B a quiet
+  grey line "行 also in 2 cards ›" under the toolbar (where reference material has sat since v422), C nothing, the Cards
+  search finding every card with a character already. H: "Ok, B" — built as v738 (the pages back from the v736 tree, the
+  line 13 px grey under Star · Flag · Edit, `nOf(n,"card")` rendered at 1/2/5 in ten columns, test738 15 checks), then
+  "Sorry, do A" — the hold wired through `longPress` with a buzz, the grey line out — then **"Stop. Remove it completely
+  from cards."** Both were discarded unmerged; the tree is v737's. **The character pages stay out of the Cards tab —
+  not as a row, a line or a hold — unless H asks for them.**
 
 ## Current state (PWA v736, 2026-09-28)
 - **The open card: the block always stands, the actions go quiet, Delete moves into Edit (v736, H: "Bitte Details in Cards
