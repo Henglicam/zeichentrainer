@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=715; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=716; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -686,6 +686,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["learn","v716","Zoom: unread char between/at end?"],
   ["cards","v713","Dish + Flashcard: name only?"],
   ["cards","v712","Dish screen: price apart?"],
   ["app","v711","44 px rows and chips: too heavy?"],
@@ -4394,6 +4395,30 @@ async function pdCharBoxes(src,nw,nh,g,lines,whole){
     const X=X0+bx.x/k, Y=Y0+bx.y/k; return {x:(X-TX)/TW,y:(Y-TY)/TH,w:bx.w/k/TW,h:bx.h/k/TH,ok,ln:L.indexOf(l)}; };
   const boxes=chars.map(()=>null);
   for(const [j,h] of hit) boxes[j]=boxOf(h.l,h.l.at[h.i],((h.l.cfs||[])[h.i]??h.l.conf)>=0.8);
+  /* v716 (H: "Hier hat er auch nicht auf die richtigen Charakter gezoomt, zumindest an zwei Stellen", 小嗷aoo over 万物可爱守则 — the
+     reader read `小ao0` and `勿可爱则`): 嗷, unread between 小 and the Latin "aoo", was spread over its line as if the line held two
+     characters, so the zoom stood on "aoo"; 万 and 物, unread before 可, had no place, and the photo showed the text whole. Per card
+     line whose matches all lie on one reader line: its Latin letters and digits the reader read too hold places as well as its
+     Chinese matches, and an unread character between two of them stands between them by its place in the card's line. One before
+     the first or after the last match, with no Latin between, steps from the nearest match by the spacing of the line's own
+     matched Chinese characters (two at least), as long as it stays on the picture the reader got. Unsure, both */
+  { let base=0; lines.forEach((ln,i)=>{ const cs=[...ln], b0=base; base+=cs.length;
+    const own=cs.map((_,t)=>hit.get(b0+t)), hs=own.filter(Boolean); if(!hs.length||cs.every((ch,t)=>!CJK.test(ch)||boxes[b0+t])) return;
+    const l=hs[0].l; if(hs.some(h=>h.l!==l)) return;
+    const rs=[...l.text], N=cs.length, M=rs.length, lat=ch=>/\S/.test(ch)&&!CJK.test(ch);
+    const w=(t,u)=>own[t]?(own[t].i===u?64:0):lat(cs[t])&&lat(rs[u])&&cs[t].toLowerCase()===rs[u].toLowerCase()?1:0;
+    const dq=Array.from({length:N+1},()=>new Int32Array(M+1));
+    for(let t=N-1;t>=0;t--) for(let u=M-1;u>=0;u--) dq[t][u]=Math.max(w(t,u)?dq[t+1][u+1]+w(t,u):0,dq[t+1][u],dq[t][u+1]);
+    const an=[]; for(let t=0,u=0;t<N&&u<M;){ if(w(t,u)&&dq[t][u]===dq[t+1][u+1]+w(t,u)){ an.push({t,u}); t++; u++; } else if(dq[t+1][u]>=dq[t][u+1]) t++; else u++; }
+    const cj=an.filter(o=>own[o.t]), ck=t=>cs.slice(0,t).filter(ch=>CJK.test(ch)).length;
+    const pit=cj.length>1?(l.at[cj[cj.length-1].u]-l.at[cj[0].u])/(ck(cj[cj.length-1].t)-ck(cj[0].t)):0;
+    const alone=![...hit].some(([j,h])=>h.l===l&&(j<b0||j>=b0+N)), lim=(l.vert?H-l.y:W-l.x)/(l.vert?l.h:l.w), lo=-(l.vert?l.y:l.x)/(l.vert?l.h:l.w);
+    cs.forEach((ch,t)=>{ if(!CJK.test(ch)||boxes[b0+t]) return;
+      const pa=[...an].reverse().find(o=>o.t<t), pb=an.find(o=>o.t>t);
+      if(pa&&pb){ boxes[b0+t]=boxOf(l,l.at[pa.u]+(l.at[pb.u]-l.at[pa.u])*(t-pa.t)/(pb.t-pa.t),false); return; }
+      if(!(pit>0)||!alone) return; const o=pa?cj[cj.length-1]:cj[0], s=Math.min(o.t,t), e=Math.max(o.t,t);
+      if(cs.slice(s+1,e).some(lat)) return; const pos=l.at[o.u]+(ck(t)-ck(o.t))*pit;
+      if(pos>=lo&&pos<=lim) boxes[b0+t]=boxOf(l,pos,false); }); }); }
   /* a character the reader read otherwise, between two matched ones on one line: its place is between them */
   for(let q=0;q<ci.length;q++){ const j=ci[q]; if(boxes[j]) continue;
     let a=q-1; while(a>=0&&!hit.has(ci[a])) a--; let b=q+1; while(b<ci.length&&!hit.has(ci[b])) b++;

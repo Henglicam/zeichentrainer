@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v715, 2026-09-28)
+## Current state (PWA v716, 2026-09-28)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -73,7 +73,7 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
 - **The Learn zoom's place** — the phone's reader first (`pdCharBoxes`, v653): characters matched to its lines by LCS, then
   out of order (v661), a misread line by position (v677), spread along it (v680), a partly matched line stepped from its match
   (v685/v686), each at its CTC place `at`, unsure; the reader gets the frame + 15 %, the whole cut when a line is still open
-  (v682, field-checked); a tie between reader lines goes to the one inside the card's frame (v714, field-checked). Else a **sure** ink cut (`charBoxes`, v619); an unsure place shows the text whole (v669), never an ink
+  (v682, field-checked); a tie between reader lines goes to the one inside the card's frame (v714, field-checked); an unread character between two read places on its line — Latin ones too — stands between them, one before or after the read ones steps by their spacing (v716). Else a **sure** ink cut (`charBoxes`, v619); an unsure place shows the text whole (v669), never an ink
   box on another character's place (v684). `spotIdx` maps the pad's character (v674); `rest()` keeps a mid-glide move in
   place (v676, field-checked). Diagnostics' learn-zoom lines carry `at`, `edge` and every reader line (v666/v681).
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
