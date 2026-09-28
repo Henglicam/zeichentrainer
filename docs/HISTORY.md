@@ -60,6 +60,21 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v723, 2026-09-28)
+- **面 and 卡 in the app's own table (v723, H: "Nimm 面 und 卡 in die Tabelle").** `OWN_SENSES` gains 面 miàn "noodles"
+  and 卡 kǎ "card (or calorie)": CC-CEDICT opens 面 with "face" and 卡 with "to stop", right for the language and wrong for
+  the menu and the shop sign, where H reads them; v722 had left both to the chooser on purpose and H chose the table. 卡
+  read qiǎ has no row, so it keeps the dictionary's "to block" (a toned reading matches the table exactly, v720). The
+  pass runs once more (`GLOSS_FIX_V` 723) and rewrites the two characters where they stand alone in a gloss or on an
+  unverified dict card; words the dictionary has (拌面, 牛肉面, 刷卡) are untouched, as every word is. Harness (test723,
+  six seeded cards after a v722 row, 15 checks): 面 beside 小 → noodles and 卡 beside 低 → card with their composed
+  meanings, the dict card 面 → noodles, the row v723 / 3 cards / 3 words, the table's ten keys, `lineMeaning` of 面 卡 小面,
+  `bestSense` alone and in a word, the open card's meaning; `[guard]` 卡 qiǎ → to block (dict card and `bestSense`), 美
+  and 拌面 untouched, 拌面/牛肉面 words, 周周 and 只 zhǐ, second start no-op. On the v722 tree 10 of 15 fail (the line
+  labelled `[guard] 卡 qiǎ` also carries the toneless fallback and flips on that half; its qiǎ half is the guard). test722
+  14, test721 19, test720 23, test717 41 — all pass on the new tree. Not field-checked: the Diagnostics line should list
+  面 face → noodles and 卡 to stop → card (or calorie) for H's menu and sign cards.
+
 ## Current state (PWA v722, 2026-09-28)
 - **The dictionary holds every sense of every one-character line (v722, H: "Go" on the NMAX list).** `tools/cedict-nmax.py
   --write` rebuilt `vendor/cedict.tsv.gz` as the list said a safe rebuild must: the senses the three-sense cut took are
