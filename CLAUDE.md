@@ -75,9 +75,8 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   **A one-character word takes its reading from its whole line** (v719, `ctx`; 卖完了 ends in le; 一/不 keep their tone,
   `SANDHI`). `glossFix()` applies all that once per phone (`GLOSS_FIX_V` 725) to stored single-character glosses, composed
   meanings, unverified dict cards and (v725) the pinyin of unverified cards holding an `OWN_PINYIN` character — **only on the fresh dictionary** (`DICT_FRESH`; an old cached copy leaves the row
-  unwritten); settings row `glossFix`, Diagnostics prints it. v717 also: More folds its long texts (`MORE_OPEN`), a moving
-  touch on Show me or Skip is a stroke (`PAD_HAND`), one backup line on Cards from `BACKUP_AT` 25 flashcards, "Cards with
-  行 ›" only when another card holds the character.
+  unwritten); settings row `glossFix`, Diagnostics prints it. v717 also: `MORE_OPEN`, `PAD_HAND`, the backup line, "Cards with 行 ›" only when another
+  card holds it (all in the sections below).
 - **The v6xx state** (reader, owner tools, Learn zoom, Crop again) moved to `docs/HISTORY.md` on 2026-09-28 (H):
   `grep -n "Consolidated v6xx" docs/HISTORY.md`.
 
