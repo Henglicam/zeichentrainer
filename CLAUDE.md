@@ -56,34 +56,23 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v731, 2026-09-28)
+## Current state (PWA v732, 2026-09-28)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
 
 **Recent state worth carrying in the head** (full entries: `grep -n "v6xx" docs/HISTORY.md`):
-- **v717–v729 dictionary senses, the split and the gloss fix** (the v720 and v723–v729 passes field-checked by H's
-  dumps, v717–v719 not): `cedict.tsv.gz` is **v5** — every sense of every one-character line, appended to the shipped
-  order by `tools/cedict-nmax.py --write` (v722, `docs/NMAX.md` is the record). `bestSense(w,py,inWord)`: **`OWN_SENSES`**
-  first (只 本 新 京 金 周 江 木 面 卡 皮 瘦 龙 胡 吃 碰 杠 — H's street senses, v723–v729, the street sense first and the
-  special one in a bracket; add there, with the reading); **`OWN_PINYIN`**
-  (v725: 夹 jiā and the words that keep jiá/gā or a neutral tone — a one-character entry overrides the library's words)
-  goes into pinyin-pro in `loadScript`; **a line splits into the fewest words** (v726, `fewestFirst`; ties to the longer
-  first word; 肥|瘦|肉夹馍, not 肥|瘦肉|夹|馍); inside a word — **a one-character word beside another character is inside a
-  word** (v720, `besideCJK`; 店 in 本店 is "shop") — the first bound form **among the first `BOUND_TOP` 3 senses** (v724:
-  入 "to conform to", 水 "additional cost" stood later) that is neither a proper noun (`PROPER`, v721/v724: any capitalised
-  word outside a note, "I" is not one) nor narrowed by a note of its own (v722); alone, the first sense that is not hard
-  (surname, variant, dated, abbr., "used in", "see", CL) and not a classifier or proper noun standing back, a bound form
-  counting with its marker off (v722: 木 tree, 英 hero). **A one-character word takes its reading from its whole line**
-  (v719, `ctx`; 卖完了 ends in le; 一/不 keep their tone, `SANDHI`). `glossFix()` applies all that once per phone
-  (`GLOSS_FIX_V` 729) to stored single-character glosses, composed meanings, unverified dict cards, the pinyin of every
-  card holding an `OWN_PINYIN` character (only that syllable, v725/v728) and the split of every sign card's gloss and
-  segs, its meaning only while still the composed one (v726/v728) — **only on the fresh dictionary** (`DICT_FRESH`);
-  settings row `glossFix`, Diagnostics prints it. v717 also: `MORE_OPEN`, `PAD_HAND`, the backup line, "Cards with 行 ›"
-  only when another card holds it (all in the sections below).
+- **Dictionary v5 and the gloss rules (v717–v729; v720 and v723–v729 field-checked by H's dumps).** `cedict.tsv.gz` v5
+  holds every sense of every one-character line (`tools/cedict-nmax.py --write`, `docs/NMAX.md`). `bestSense`: **`OWN_SENSES`**
+  first (H's street senses — add there, with the reading); **`OWN_PINYIN`** goes into pinyin-pro (夹 jiā); a line splits into
+  the **fewest words** (`fewestFirst`); a one-character word beside another character is inside a word (`besideCJK`) and takes
+  a bound form from the first `BOUND_TOP` 3 senses that is not `PROPER`; alone, the first sense that is not hard; its reading
+  comes from its whole line (`ctx`, `SANDHI`). `glossFix()` applies it once per phone (`GLOSS_FIX_V` 729, only on
+  `DICT_FRESH`). Full wording: `grep -n "Consolidated v717" docs/HISTORY.md`.
 - **Duplicate multicards (v731):** More → Your cards shows a row only while two multicards share at least `DUP_SHARE` 0.6 of
   their texts (characters only, `dupKey`); Delete N keeps the newest of each set, the rest go through `delCustom` and the
   Undo line. Not field-checked.
+- **A dish's meaning is shown without its price** (`noPriceM`, v710/v712) and, since v732, without the comma that led into it.
 - **The v6xx state** (reader, owner tools, Learn zoom, Crop again) moved to `docs/HISTORY.md` on 2026-09-28 (H):
   `grep -n "Consolidated v6xx" docs/HISTORY.md`.
 

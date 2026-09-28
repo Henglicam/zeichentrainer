@@ -60,6 +60,41 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Consolidated v717–v729 notes (moved out of CLAUDE.md on 2026-09-28 at v732, verbatim)
+- **v717–v729 dictionary senses, the split and the gloss fix** (the v720 and v723–v729 passes field-checked by H's
+  dumps, v717–v719 not): `cedict.tsv.gz` is **v5** — every sense of every one-character line, appended to the shipped
+  order by `tools/cedict-nmax.py --write` (v722, `docs/NMAX.md` is the record). `bestSense(w,py,inWord)`: **`OWN_SENSES`**
+  first (只 本 新 京 金 周 江 木 面 卡 皮 瘦 龙 胡 吃 碰 杠 — H's street senses, v723–v729, the street sense first and the
+  special one in a bracket; add there, with the reading); **`OWN_PINYIN`**
+  (v725: 夹 jiā and the words that keep jiá/gā or a neutral tone — a one-character entry overrides the library's words)
+  goes into pinyin-pro in `loadScript`; **a line splits into the fewest words** (v726, `fewestFirst`; ties to the longer
+  first word; 肥|瘦|肉夹馍, not 肥|瘦肉|夹|馍); inside a word — **a one-character word beside another character is inside a
+  word** (v720, `besideCJK`; 店 in 本店 is "shop") — the first bound form **among the first `BOUND_TOP` 3 senses** (v724:
+  入 "to conform to", 水 "additional cost" stood later) that is neither a proper noun (`PROPER`, v721/v724: any capitalised
+  word outside a note, "I" is not one) nor narrowed by a note of its own (v722); alone, the first sense that is not hard
+  (surname, variant, dated, abbr., "used in", "see", CL) and not a classifier or proper noun standing back, a bound form
+  counting with its marker off (v722: 木 tree, 英 hero). **A one-character word takes its reading from its whole line**
+  (v719, `ctx`; 卖完了 ends in le; 一/不 keep their tone, `SANDHI`). `glossFix()` applies all that once per phone
+  (`GLOSS_FIX_V` 729) to stored single-character glosses, composed meanings, unverified dict cards, the pinyin of every
+  card holding an `OWN_PINYIN` character (only that syllable, v725/v728) and the split of every sign card's gloss and
+  segs, its meaning only while still the composed one (v726/v728) — **only on the fresh dictionary** (`DICT_FRESH`);
+  settings row `glossFix`, Diagnostics prints it. v717 also: `MORE_OPEN`, `PAD_HAND`, the backup line, "Cards with 行 ›"
+  only when another card holds it (all in the sections below).
+
+## Current state (PWA v732, 2026-09-28)
+- **A dish's meaning no longer ends in the comma that led into its price (v732, H, a screenshot of the 砂锅面 look-up on
+  the 建国肉夹馍 board reading "Clay-pot noodles,": "Warum das Komma nach Clay-pot noodles?").** The stored meaning is the
+  AI's "Clay-pot noodles, ¥16 per portion"; since v712 `priceView` shows a dish without its price, and `noPriceM` cut from
+  the ¥ (or from "16 yuan") to the end but left the ", " before it. Now `noPriceM` trims a comma, semicolon, colon or dash
+  from both ends of what is left, **only when a price was cut** — a meaning with no price keeps its own punctuation
+  ("Chinese burger, meat in flatbread"). One function, so the multicard's row, the text's own screen, the look-up and the
+  dish's flashcard (v713, `m` and `ms`) all follow; the record keeps its meaning whole. Harness (test732, a menu with five
+  texts: ", ¥16 per portion", ", 16 yuan per portion", "; ¥22", "(¥14/portion)" and a meaning with a comma of its own; 8
+  checks): on the v731 tree 5 fail (the three rows, the own screen, the flashcard); the bracket case passes on both
+  `[control]` — the old code already took a bracketed price whole; the no-price row and the untouched record are guards.
+  Seen, not changed: a meaning that **starts** with its price ("¥12 – kung pao chicken") loses everything after the ¥ up to
+  the next comma — the first pattern runs to the next `;,)]`; not seen on H's phone. Not field-checked on the phone.
+
 ## Current state (PWA v731, 2026-09-28)
 - **Duplicate multicards: More → Your cards finds the copies and deletes all but the newest (v731, H: "Ok, go —
   Duplikat-Finder für Multicards").** His v727 and v729 dumps had the same dishes reviewed five times over: the deck held
