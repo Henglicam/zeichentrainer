@@ -70,11 +70,13 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   the reading); **a one-character word takes its reading from its whole line** (v719, `lineMeaning`'s `ctx`: 卖完了 ends
   in le; 一/不 keep their own tone, `SANDHI`); `glossFix()` applies all that once per phone (`GLOSS_FIX_V` 720) to stored
   single-character glosses, the meanings composed from them and unverified dict cards (settings row `glossFix`; Diagnostics
-  prints it). More folds its long texts (`MORE_OPEN`); the fold count counts distinct cards; a moving touch on Show me or
-  Skip is a stroke (`PAD_HAND`); one backup line on Cards from `BACKUP_AT` 25 flashcards until the first export; "Cards
-  with 行 ›" only when another card holds the character; "Cards started", Storage and the search placeholder reworded.
-- **The v6xx state** — the phone's reader (v637–v710), the owner tools (v627–v702), the Learn zoom's place (v619–v716) and
-  Crop again with AI answers (v656/v657) — moved to `docs/HISTORY.md` on 2026-09-28 (H): `grep -n "Consolidated v6xx" docs/HISTORY.md`.
+  prints it). **`docs/NMAX.md`** (`tools/cedict-nmax.py`) lists the one-character lines the three-sense cut hurts — 新 ships
+  without "new", 木 and 江 as surnames — with the cost and the two rules a larger cut needs; the cut is not raised yet.
+  More folds its long texts (`MORE_OPEN`); the fold count counts distinct cards; a moving touch on Show me or Skip is a
+  stroke (`PAD_HAND`); one backup line on Cards from `BACKUP_AT` 25 flashcards until the first export; "Cards with 行 ›"
+  only when another card holds the character; "Cards started", Storage and the search placeholder reworded.
+- **The v6xx state** (reader, owner tools, Learn zoom, Crop again) moved to `docs/HISTORY.md` on 2026-09-28 (H):
+  `grep -n "Consolidated v6xx" docs/HISTORY.md`.
 
 ## Files
 Shell: `index.html` · `styles.css` · `lang.js` · `app.js` · `manifest.webmanifest` (with `share_target`) · `sw.js` ·
