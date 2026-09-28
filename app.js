@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=716; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=718; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -560,6 +560,7 @@ function diagText(){
     /* the settings the same photo would be read differently under: the app's language goes into picSystem() through
        meaningLangName(), so a German phone gets another answer for the same picture */
     `settings · lang ${LANG} · picture to the AI ${S.settings.aiPicture===false?"off":"on"} · relay ${S.settings.aiRelay===false?"off":"on"} · auto check ${S.settings.aiAuto===false?"off":"on"} · offline model ${S.settings.nmt?"on":"off"} · mirror ${S.settings.mirror===undefined?"default":(S.settings.mirror||"off")} · brightening ${S.settings.brightPass?"done":"not yet"} · re-cut ${recutLine()}`,
+    (gf=>gf?`gloss fix · v${gf.v} ${ago(gf.at)} · ${gf.cards} cards, ${gf.words} words${gf.changed&&gf.changed.length?": "+gf.changed.slice(0,20).map(c=>`${c.w} ${c.from} → ${c.to}`).join(" · ")+(gf.changed.length>20?" …":""):""}`:"gloss fix · not run")(S.settings.glossFix), /* v718 */
     `marks on the photo · ${markLine()}`,
     `main thread · long tasks ${LONG.n}${LONG.n?` (${Math.round(LONG.total)} ms in all, longest ${Math.round(LONG.max)} ms, last ${ago(LONG.at)})`:""} · parse strokes ${PARSE_MS.strokes==null?"not yet":PARSE_MS.strokes+" ms"}, outlines ${PARSE_MS.outlines==null?"not yet":PARSE_MS.outlines+" ms"} · resizes ${RESIZES.length?RESIZES.map(r=>r.bfcache?"back from the cache "+ago(r.t):`${r.from.join("×")}→${r.to.join("×")} ${ago(r.t)}`).join("; "):"none"}`, /* v532: what a fold did to the page, for H's next dump */
     `learn zoom · ${ZLOG.length?ZLOG.length+" decisions, newest last":"no zoom yet"}${ZCHECK?` · zoom check ${ZCHECK.line} (${ago(ZCHECK.at)})`:""}`, /* v617/v618: every decision of the pad's zoom — the card, the character, how its place was found (ink, ink unsure, estimate) and why not better */
@@ -686,6 +687,12 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v718","Gloss fix: 药 cards updated?"],
+  ["learn","v717","Stroke from Show me: a stroke?"],
+  ["learn","v717","Fold count steady after Skip?"],
+  ["learn","v717","Char meanings: 药 medicine?"],
+  ["cards","v717","Backup line at 25 cards?"],
+  ["more","v717","More folds: still findable?"],
   ["learn","v716","Zoom: unread char between/at end?"],
   ["cards","v713","Dish + Flashcard: name only?"],
   ["cards","v712","Dish screen: price apart?"],
@@ -1697,7 +1704,7 @@ async function boot(){
   wireChrome(); render();
   if(rv&&rv.scroll&&(rv.own!==false||navReload())) requestAnimationFrame(()=>window.scrollTo(0,rv.scroll));
   autoBreaks(); /* old cards get their photo lines estimated once */
-  fixNumberSegs(); /* word cards from before v338 get their numbers back into their lines */
+  fixNumberSegs().catch(()=>{}).then(()=>glossFix().catch(e=>logErr("glossfix",String(e&&e.message||e)))); /* word cards from before v338 get their numbers back into their lines; then (v718) the single characters' stored dictionary meanings under v717's rule, once */
   dedupePhotos(); /* cards from before v214 drop the whole photo they hold twice */
   setTimeout(()=>normalizeRaw().catch(()=>{}).then(()=>rbRecover().catch(()=>{})).then(()=>rbRepair().catch(()=>{})).then(resumeShots).then(resumePending).then(autoNext,autoNext),1500); /* v651: a rebuild killed mid-photo is put back first, before resumePending would read its placeholder */ /* a photo left as it came is downscaled and queued (v509), cards saved before their reading finished get it now (v237), then the batch goes on where it stopped (v411) */
   aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); resumeRecheck(); });
@@ -1815,6 +1822,33 @@ async function fixNumberSegs(){
   }
   try{ await idbPutMany("custom",todo); }catch(e){}
   if(S.mode==="study"||S.detail) render();
+}
+/* v718 (H: "Bitte aktualisiere alle Karten nach der neuen Regel für Single Characters"): the stored meanings of single
+   characters are looked up again, once, under v717's dictionary (cedict v4, the classifier rule) — the word glosses a sign
+   card keeps from its reading (one {w,p,m} per word, the dictionary's sense at the time: 药 stood as "leaf of the iris" in
+   its character row, pad line and recap since the day it was read) and the meaning of a one-character card that was
+   prefilled from the dictionary and never checked (mt.src "dict", unverified, in English). Left alone: a word the phrasebook
+   glosses (慢, 停, 男, 女), a meaning the AI or a hand wrote or checked, a meaning in another language. Once per phone (the
+   settings row glossFix, v 718); the row keeps what changed and Diagnostics prints it. A dictionary that does not load
+   leaves the row unwritten, so the next start tries again. */
+const GLOSS_FIX_V=718, GLOSS_FIX_KEEP=300;
+async function glossFix(){
+  const done=S.settings.glossFix; if(done&&done.v>=GLOSS_FIX_V) return;
+  try{ await loadDict(); }catch(e){ return; } await loadSigns().catch(()=>{});
+  const oneCJK=w=>[...String(w||"")].length===1&&CJK.test(w);
+  const inBook=w=>!!(SIGNS||[]).find(e=>e.zh===w);
+  const rows=[], changed=[]; let k=0;
+  for(const d of S.custom){ let u=null;
+    if(Array.isArray(d.gloss)&&d.gloss.length){
+      const gl=d.gloss.map(g=>{ if(!g||!oneCJK(g.w)||inBook(g.w)) return g; const m=cleanSense(bestSense(g.w,g.p)); if(!m||m===g.m) return g; changed.push({id:d.id,w:g.w,from:g.m||"",to:m}); k++; return {...g,m}; });
+      if(gl.some((g,i)=>g!==d.gloss[i])) u={...d,gloss:gl}; }
+    if(d.mt&&d.mt.src==="dict"&&!d.mt.verified&&oneCJK(d.c)&&mlOf(d)==="en"&&!inBook(d.c)){
+      const m=cleanSense(bestSense(d.c,d.p)); if(m&&m!==d.m){ changed.push({id:d.id,w:d.c,from:d.m||"",to:m}); k++; u={...(u||d),m}; setMl(u,"en"); } }
+    if(u) rows.push(u); }
+  if(rows.length){ try{ await idbPutMany("custom",rows); }catch(e){ logErr("glossfix","write: "+(e&&e.message||e)); return; }
+    for(const r of rows){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; } }
+  await setSetting("glossFix",{v:GLOSS_FIX_V,at:Date.now(),cards:rows.length,words:k,changed:changed.slice(0,GLOSS_FIX_KEEP)});
+  if(rows.length&&(S.mode==="study"||S.detail)) render();
 }
 /* the text keeps the photo's lines: a horizontal word stays on one line, so the box goes
    wide and the font shrinks to fit instead of wrapping (H: "the image is one line") */
@@ -2544,11 +2578,12 @@ async function aiAuto(){
 }
 /* About: what leaves the phone, live with the AI settings (v173) */
 function aboutText(){ const ver=($(".ver")||{}).textContent||""; return `${ver}. ${t("Cards and photos stay on this phone, and studying works without a connection. Making a new card uses the AI: the card's text goes to the provider, and anonymous usage counts go to the app's owner.")}`+(pv=>pv?" "+t("When the reading is hard, a picture of the text — sometimes the whole photo — goes to {0}.",AI_PROVIDERS[pv].short):"")(pictureProvider())+" "+t("The AI can get a character, its pinyin or its meaning wrong. Check anything you rely on."); } /* names the AI (v216, H: "goes to your AI provider" is wrong — a friend's phone has no provider of its own); the relay stays out of About (v217, H) — the AI row's What-is-sent line and privacy.html describe it. v409 (H: "Works Offline under about is too prominent and somehow misleading", "add a disclaimer that the correct interpretations and translatios cannot be guaranteed"): the offline claim is scoped to studying and the AI sentence names the main outbound flow, since a fresh install checks every new card through the relay with no key and no tap; the picture clause no longer says "only when the reading is weak" (picOnBad fires at any score) nor "the framed area" (the v348/v393 re-ask sends the whole photo) */
+function aboutBody(){ return aboutText().replace(/^[^.]*\.\s*/,""); } /* v717: About without its leading version — the row shows the version on its own line and folds the rest */
 /* More → Online AI review row + inline setup form */
 function renderAiRow(){
   const st=$("#ai-status"), btn=$("#ai-btn"), run=$("#ai-run"), form=$("#ai-form"); if(!st) return;
   const all=aiQueue(), q=all.length, fl=all.filter(d=>d.flag).length, sp=all.filter(d=>!d.flag&&d.mt.suspect).length, pd=q-fl-sp;
-  const ppv=pictureProvider(); const ab=$("#about-s"); if(ab) ab.textContent=aboutText();
+  const ppv=pictureProvider(); const ab=$("#about-s"); if(ab) ab.textContent=aboutBody();
   const relayed=viaRelay()||(ppv&&viaRelay(ppv)); /* the first line names the models and says which one does what (v195, H: "I liked the previous text more — revert and polish the first paragraph") */
   const who=`${AI_PROVIDERS[textProvider()].short} (${aiModel(textProvider())})`, pic=ppv?`${AI_PROVIDERS[ppv].short} (${pictureModel(ppv)})`:"";
   st.textContent=!aiOn()?t("Off. The app's owner sets it up under Advanced settings.")
@@ -2635,7 +2670,7 @@ async function progressImage(){
   const H=PAD+92+648+44+48+68+56+(legendRows*48+22)+100+30+PAD; cv.width=W; cv.height=H; /* three rows of tiles since v512 */
   ctx.fillStyle="#FFFFFF"; ctx.fillRect(0,0,W,H); ctx.textBaseline="alphabetic";
   let y=PAD; ctx.fillStyle="#000000"; ctx.font=`700 60px ${sans}`; ctx.fillText(t("Progress"),PAD,y+56); y+=92;
-  const gap=24, tw=(inner-gap)/2, th=200, tiles=[[p.streak,t("Day streak")],[p.learned,t("Cards learned")],[p.dueToday,t("Due today")],[p.week,t("Reviews this week")],[p.written,t("Written today")]];
+  const gap=24, tw=(inner-gap)/2, th=200, tiles=[[p.streak,t("Day streak")],[p.learned,t("Cards started")],[p.dueToday,t("Due today")],[p.week,t("Reviews this week")],[p.written,t("Written today")]];
   tiles.forEach((tl,i)=>{ const x=PAD+(i%2)*(tw+gap), ty=y+Math.floor(i/2)*(th+gap), w=i===4?inner:tw; /* the fifth tile (v512) spans the row */ ctx.fillStyle="#F2F2F7"; rr(x,ty,w,th,28); ctx.fill();
     ctx.fillStyle="#000000"; ctx.font=`700 88px ${sans}`; ctx.fillText(String(tl[0]),x+32,ty+112); ctx.fillStyle="#6E6E73"; ctx.font=`32px ${sans}`; ctx.fillText(tl[1],x+32,ty+164); });
   y+=3*th+2*gap+44;
@@ -2652,7 +2687,7 @@ async function progressImage(){
 }
 async function shareProgress(){
   let blob; try{ blob=await progressImage(); }catch(err){ logErr("share",err); noteSheet(t("Sharing is not available here.")); return; }
-  const p=progressData(), file=new File([blob],"shizi-progress.png",{type:"image/png"}), text=`${t("Day streak")} ${p.streak}, ${t("Cards learned")} ${p.learned}`;
+  const p=progressData(), file=new File([blob],"shizi-progress.png",{type:"image/png"}), text=`${t("Day streak")} ${p.streak}, ${t("Cards started")} ${p.learned}`;
   if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:"识字 Shízì",text}); return; }catch(err){ if(err && err.name==="AbortError") return; logErr("share",err); } }
   noteSheet(t("Sharing is not available here."));
 }
@@ -3099,7 +3134,7 @@ function progressHTML(){
   const p=progressData(), max=Math.max(1,...p.dots.map(x=>x.n)), lvl=n=>!n?0:max<2?4:1+Math.round(3*(n-1)/(max-1)); /* four shades: the busiest day full tint, a single review the lightest */
   const tile=(n,l)=>`<div class="ptile"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   return `<div class="prog">
-    <div class="ptiles">${tile(p.streak,t("Day streak"))}${tile(p.learned,t("Cards learned"))}${tile(p.dueToday,t("Due today"))}${tile(p.week,t("Reviews this week"))}${tile(p.written,t("Written today"))}</div>
+    <div class="ptiles">${tile(p.streak,t("Day streak"))}${tile(p.learned,t("Cards started"))}${tile(p.dueToday,t("Due today"))}${tile(p.week,t("Reviews this week"))}${tile(p.written,t("Written today"))}</div>
     <div class="pl">${t("Last 30 days")}</div>
     <div class="pdots">${p.dots.map(x=>`<i class="d${lvl(x.n)}" title="${x.k}${x.n?": "+nOf(x.n,"review"):""}"></i>`).join("")}</div>
     <div class="pbar"><i class="new" style="flex:${p.nw}"></i><i class="learn" style="flex:${p.learning}"></i><i class="known" style="flex:${p.known}"></i></div>
@@ -3110,6 +3145,9 @@ function progressHTML(){
 function statsLine(){ const {total,week,streak}=learnStats(); return t("{0} learned, {1} reviewed this week, streak {2}",nOf(total,"card"),week,nOf(streak,"day")); }
 /* ---------- backup nudge + photo cleanup: everything lives on one phone ---------- */
 const OLD_DAYS=30;
+const BACKUP_AT=25; /* v717: from this many flashcards on, a deck that was never exported gets its one line on the Cards tab, gone with the first export */
+function backupNudge(){ if(S.settings.lastExport||deckCount()<BACKUP_AT||marking("cards")) return "";
+  return `<div class="nudge"><span>${t("Never exported.")} ${t("Export now — the cards exist only on this phone.")}</span><button class="btn mini" id="nudge-export">${t("Export")}</button></div>`; }
 function backupNote(){
   const last=S.settings.lastExport, days=last?Math.floor((Date.now()-last)/DAY):null;
   const txt=last?(days===0?t("Last export: today."):t("Last export: {0} ago.",nOf(days,"day"))):t("Never exported.");
@@ -3157,9 +3195,11 @@ async function renderNmtRow(){
   });
   else setBtn("Turn off",async()=>{ await setSetting("nmt",false); renderNmtRow(); });
 }
+const MORE_OPEN={}; /* v717: which of More's folds are open — What is sent (AI review, Usage sharing), About the app, the feedback box; session only, closed on every start */
+function moreFold(k,label,html){ return `<button class="del mofold" data-mo="${k}" aria-expanded="${MORE_OPEN[k]?"true":"false"}">${esc(label)} <i aria-hidden="true">${MORE_OPEN[k]?"⌃":"⌄"}</i></button><div data-mob="${k}"${MORE_OPEN[k]?"":" hidden"}>${html}</div>`; } /* the body is in the DOM either way and only shown or hidden — no re-render, so the page does not move under the tap */
 function renderMore(main){
   const ver=($(".ver")||{}).textContent||"";
-  const st=S.persist===true?t("Persistent on this phone."):S.persist===false?t("Not persistent yet. Install the app so the system keeps the data."):t("Checking …");
+  const st=S.persist===true?t("Persistent on this phone."):S.persist===false?t("Not safe yet. Add the app to your home screen, then the phone keeps your cards."):t("Checking …");
   main.innerHTML=`<div class="pane more">
     <div class="listhead">${t("Learning")}</div> <!-- four sections since v547 (H: "Go for all five" on the described More); Learning stays first, the v275 decision -->
     <div class="mrow"><div style="flex:1"><div class="t">${t("Progress")}</div><div class="s">${progressHTML()}</div><div class="fieldacts"><button class="btn mini" id="usage-share">${t("Share report")}</button></div></div></div>
@@ -3177,12 +3217,12 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">${t("Storage")}</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
     <div class="listhead">${t("The app")}</div>
     <div class="mrow"><div><div class="t">${t("Share the app")}</div><div class="s" id="app-share-status">${t("Send the link to a friend. The app installs from any browser, no store.")}</div></div><button class="btn mini" id="app-share">${t("Share")}</button></div>
-    <div class="mrow"><div style="flex:1"><div class="t">${t("Feedback")}</div><div class="s" id="fb-status">${t("Tell the app's owner what works and what does not.")}</div><textarea class="grow" id="fb-text" rows="2" placeholder="${t("Your message")}"></textarea><div id="fb-shot">${fbShotHTML()}</div><input type="file" id="fb-pick" accept="image/*" hidden><div class="fieldacts"><button class="btn mini" id="fb-add">${t("Add screenshot")}</button><button class="btn mini" id="fb-send">${t("Send")}</button></div></div></div>
+    <div class="mrow"><div style="flex:1"><div class="t">${t("Feedback")}</div><div class="s" id="fb-status">${t("Tell the app's owner what works and what does not.")}</div><div data-mob="fb"${MORE_OPEN.fb?"":" hidden"}><textarea class="grow" id="fb-text" rows="2" placeholder="${t("Your message")}"></textarea><div id="fb-shot">${fbShotHTML()}</div><input type="file" id="fb-pick" accept="image/*" hidden><div class="fieldacts"><button class="btn mini" id="fb-add">${t("Add screenshot")}</button><button class="btn mini" id="fb-send">${t("Send")}</button></div></div><div data-mob="fb-btn"${MORE_OPEN.fb?" hidden":""}><div class="fieldacts"><button class="btn mini" data-mo="fb">${t("Write a message")}</button></div></div></div></div> <!-- v717: the box and its two buttons come with Write a message; until then the row is a title and a sentence -->
     <div class="mrow"><div><div class="t">${t("How to use the app")}</div><div class="s">${t("Six short sections: photo, characters, learning, cards, language, what stays on the phone.")}</div></div><button class="btn mini" id="guide-open">${t("Open")}</button></div>
     <div class="mrow"><div style="flex:1"><div class="t">${t("Language")}</div><div class="s">${t("The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.")}</div><div class="chipset" id="lang-chips" style="margin-top:8px">${LANGS.map(([c,n])=>`<button class="chip${LANG===c?" on":""}" data-lang="${c}">${n}</button>`).join("")}</div></div></div>
     ${translateRowHTML()}
     ${undoRunHTML("meanings")}
-    <div class="mrow"><div><div class="t">${t("AI review")}</div><div class="s" id="ai-status"></div><div class="s" style="margin-top:6px">${t("What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count. On a multicard, all its texts go out in one request with the multicard's title, for a one-line description each — when it is made, and once when you open an older one.")}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> ${t("Check every new card with the AI automatically (when online)")}</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
+    <div class="mrow"><div><div class="t">${t("AI review")}</div><div class="s" id="ai-status"></div>${moreFold("ai",t("What is sent"),`<div class="s" style="margin-top:6px">${t("What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it has no description yet. When the reading is hard, a picture of the text goes to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay, which forwards to the provider and keeps only a count. On a multicard, all its texts go out in one request with the multicard's title, for a one-line description each — when it is made, and once when you open an older one.")}</div>`)}<label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> ${t("Check every new card with the AI automatically (when online)")}</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
     ${S.admin?`<div class="aiform" id="ai-form" hidden>
       <div class="field"><label>Provider</label><div class="chipset" id="ai-providers">${Object.entries(AI_PROVIDERS).map(([k,v])=>`<button class="chip" data-aipv="${k}">${esc(v.short)}</button>`).join("")}</div>
         <div class="badge" id="ai-acct" style="margin-top:8px"></div>
@@ -3195,9 +3235,9 @@ function renderMore(main){
       <div class="cropacts" style="margin-top:10px"><button class="btn mini primary" id="ai-save">Save</button><button class="del" id="ai-remove">Remove key</button></div>
     </div>`:""}
     <div class="mrow"><div style="flex:1"><div class="t">${t("Review queue")}</div><div class="s" id="ai-runstatus"></div><div class="fieldacts"><button class="btn mini" id="ai-run" hidden></button></div></div></div>
-    <div class="mrow"><div><div class="t">${t("Usage sharing")}</div><div class="s">${t("Sends anonymous usage counts to the app's owner once a day, and again when you leave the app after making a card: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.")} <span id="share-status">${esc(shareNote())}</span> ${t("Your id: {0}.",`<span id="share-id">${esc(installId())}</span>`)}<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> ${t("Send once a day")}</label></div></div></div>
+    <div class="mrow"><div><div class="t">${t("Usage sharing")}</div><div class="s"><span id="share-status">${esc(shareNote())}</span> ${t("Your id: {0}.",`<span id="share-id">${esc(installId())}</span>`)}</div>${moreFold("usage",t("What is sent"),`<div class="s" style="margin-top:6px">${t("Sends anonymous usage counts to the app's owner once a day, and again when you leave the app after making a card: days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.")}</div>`)}<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> ${t("Send once a day")}</label></div></div>
     <div class="mrow"><div><label class="check" style="margin:0"><input type="checkbox" id="update-note"${updateNoteOn()?" checked":""}> ${t("Tell me what is new after an update.")}</label></div></div>
-    <div class="mrow"><div><div class="t">识字 Shízì</div><div class="s" id="about-s">${esc(aboutText())}</div>${whatsNewHTML()}</div></div>
+    <div class="mrow"><div><div class="t">识字 Shízì</div><div class="s">${esc(ver)}</div>${moreFold("about",t("About the app"),`<div class="s" id="about-s" style="margin-top:6px">${esc(aboutBody())}</div>`)}${whatsNewHTML()}</div></div> <!-- v717: the version stands, the paragraph folds, the update notes stay in sight (v609) -->
     <div class="mrow"><div><div class="t">${t("Open source licenses")}</div><div class="s">${t("The software and data the app is built on, and who made them.")}</div></div><button class="btn mini" id="lic-open">${t("Open")}</button></div> <!-- the notices Apache-2.0, MPL-2.0 and CC BY-SA ask to be delivered with the work (v425); ./vendor/LICENSES.txt goes through the worker's vendor route, so it comes from the mirror behind the wall and is cached after the first look -->
     <div class="listhead">${t("Advanced settings")}</div>
     ${S.admin?`<div class="mrow"><div><div class="t">Logged in as admin</div><div class="s">The AI setup and the owner tools below are open until the app is closed.</div></div><button class="btn mini" id="admin-lock">Log out</button></div>`
@@ -3235,6 +3275,10 @@ function renderMore(main){
   $("#guide-open").onclick=()=>{ S.mode="guide"; render(); window.scrollTo({top:0}); };
   $("#lic-open").onclick=()=>{ window.open("./vendor/LICENSES.txt","_blank","noopener"); };
   wireGrow(main); /* the feedback box grows with its text like the forms' fields (v218, H: "looks a little bit old school") */
+  document.querySelectorAll("[data-mo]").forEach(b=>b.onclick=()=>{ const k=b.dataset.mo, on=MORE_OPEN[k]=!MORE_OPEN[k]; /* v717: the folds, toggled in place */
+    document.querySelectorAll(`[data-mob="${k}"]`).forEach(el=>{ el.hidden=!on; }); const bt=document.querySelector(`[data-mob="${k}-btn"]`); if(bt) bt.hidden=on;
+    b.setAttribute("aria-expanded",on?"true":"false"); const ch=b.querySelector("i"); if(ch) ch.textContent=on?"⌃":"⌄";
+    if(k==="fb"&&on){ const tx=$("#fb-text"); if(tx) tx.focus(); } });
   $("#fb-add").onclick=()=>$("#fb-pick").click(); /* the screenshot beside the message (v511) */
   $("#fb-pick").onchange=async e=>{ const f=(e.target.files||[])[0]; e.target.value=""; if(!f||!f.type.startsWith("image/")) return;
     const st=$("#fb-status"); try{ fbShotDrop(); FB_SHOT=await shrinkShot(f); }catch(err){ st.textContent=t("Could not send: {0}",err&&err.message||err); } fbShotDraw(); };
@@ -3671,7 +3715,7 @@ async function charInfo(w,btn,d){
     box.querySelectorAll("[data-sub]").forEach(b=> b.onclick=async e=>{ e.stopPropagation(); const ch=b.dataset.sub;
       box.querySelectorAll(".sub .ch").forEach(x=>x.classList.toggle("on",x===b));
       const cpy=pinyinPro.pinyin(ch,{toneType:"symbol"});
-      const line=box.querySelector(".chline"); line.innerHTML=`<span class="hanzi">${esc(ch)}</span><span class="mono">${esc(cpy)}</span><span>${esc(cleanSense(bestSense(ch,cpy))||t("not in the dictionary"))}</span>`; });
+      const line=box.querySelector(".chline"); line.innerHTML=`<span class="hanzi">${esc(ch)}</span><span class="mono">${esc(cpy)}</span><span>${esc(cleanSense(bestSense(ch,cpy,true))||t("not in the dictionary"))}</span>`; }); /* v717: a character of a word takes its bound-form sense */
   }catch(e){ box.innerHTML=`<span class="badge">${t("Dictionary not available.")}</span>`; }
 }
 /* the tap hints under the card ("Tap the character to reveal …") show only while the app is new — until the phone has
@@ -3866,7 +3910,7 @@ function introHTML(){
   return `<div class="intro">${mock}<div class="notes">
     <div class="note n1">${arrow("M52 22 C36 24 16 18 5 7 M5 7 l11 1 M5 7 l3 10")}<span>${esc(t("Tap it — what it means."))}</span></div>
     <div class="note n2">${arrow("M52 15 C38 13 20 14 5 15 M5 15 l10 -5 M5 15 l10 6")}<span>${esc(t("Trace the lit stroke."))}</span></div>
-    <div class="note n3">${arrow("M52 6 C38 10 17 17 5 26 M5 26 l3 -11 M5 26 l11 -2")}<span>${esc(t("Open it — the whole card."))}</span></div>
+    <div class="note n3">${arrow("M52 6 C38 10 17 17 5 26 M5 26 l3 -11 M5 26 l11 -2")}<span>${esc(t("Open it — the details."))}</span></div>
   </div></div>`; }
 function renderStudy(main){
   if(!S.ready){ main.innerHTML=`<div class="badge">${t("Loading …")}</div>`; return; }
@@ -3944,7 +3988,7 @@ function renderStudy(main){
     <div class="zone1 front${d.flag?" flagged":""}" id="reveal">${picHTML}${tradMark(d)}</div>
     <div class="txt" id="cuetxt">${tradMark(d)}${chrow}<div class="padline" id="padline"></div></div></div>
     <div class="padwrap"><canvas class="wpad" id="wpad" width="${DRAW_SIZE}" height="${DRAW_SIZE}"></canvas><div class="padacts" id="padacts"><button class="del" id="pad-undo" hidden>${t("pad:Undo")}</button><button class="del" id="pad-show" hidden>${t("Show me")}</button><button class="del" id="pad-skip" hidden>${t("Skip")}</button><button class="del" id="pad-done" hidden>${t("Done")}</button><button class="del" id="pad-clear" hidden>${t("Clear")}</button></div>${freePad?`<div class="hint" id="pad-note">${noTmpl?t("not in the stroke set — draw it and tap Done"):""}</div>`:""}</div>
-    <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Details")}</span>${foldMarks(d)}${rep?`<span class="pill again">${t("Again")}</span>`:""}<span class="tail">${!rep&&list.length>1&&!S.single?/* v522: the count in the fold row; on a repeat pass the Again pill takes the slot */`<span class="pos">${esc(t("{0} of {1}",li+1,list.length))}</span>`:""}<i aria-hidden="true">⌄</i></span></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
+    <div class="fold${ansOpen?" open":""}"><button class="foldbtn" id="fold" aria-expanded="${ansOpen?"true":"false"}"><span>${t("Details")}</span>${foldMarks(d)}${rep?`<span class="pill again">${t("Again")}</span>`:""}<span class="tail">${!rep&&new Set(list).size>1&&!S.single?/* v522: the count in the fold row; on a repeat pass the Again pill takes the slot */`<span class="pos">${esc(t("{0} of {1}",new Set(list.slice(0,li+1)).size,new Set(list).size))}</span>`:""}<i aria-hidden="true">⌄</i></span></button><div class="ans" id="ans"${ansOpen?"":" hidden"}>${back}</div></div>
     ${swipeHint(d)}</div>`; /* no linked-photos row on the study card (v518, H: "No 'also in other cards' in learn mode. Only on Cards mode.") — the detail keeps it */
   /* v536: no warmParts here. The block has carried backHTML(...{noParts:true}) since v512 ("backHTML without the parts
      row"), so opening it parsed cedict.tsv.gz - 2.5 MB - for a row this screen does not draw. The row lives on the camera's
@@ -4825,7 +4869,7 @@ async function padLineFill(box,d,x){ box.hidden=false;
     if(many){
       const syl=String(py||"").trim().split(/\s+/), k=x.pos-x.wstart;
       const cpy=syl.length===chars.length&&syl[k]?syl[k]:pinyinPro.pinyin(one,{toneType:"symbol"});
-      const cm=cleanSense(bestSense(one,cpy)); /* v573: cpy is the syllable this character has INSIDE this word, so 合 in 合同 reads hé and means "to close", not gě's "100 ml" */
+      const cm=cleanSense(bestSense(one,cpy,true)); /* v573: cpy is the syllable this character has INSIDE this word, so 合 in 合同 reads hé and means "to close", not gě's "100 ml" */
       sub=row(`<b${one===lk?' class="lock"':""}>${esc(one)}</b>`,cpy,cm||t("not in the dictionary"));
     }
     if(!box.isConnected) return;
@@ -4963,6 +5007,7 @@ async function checkCard(id){ const d=cardOf(id); if(!d||!d.unchecked) return; c
    learner's own stroke order, and the stroke matcher of v141 judges the whole character at Done. The matcher is
    order-free by construction (a Hungarian assignment over the strokes), so the order really is the learner's. Off by
    default — see § the entry for why the automatic trigger at level 3 was measured and not built. */
+const PAD_HAND=10; /* v717: a touch on a pad helper that moves this far (CSS px) is a stroke, not a tap */
 const PAD_FLOOR=160, PHOTO_MIN=120, LINE_H=61, CLIP_RATIO=0.65, TRACE_OK=0.18, NEXT_MS=3200, RECAP_SYL=230, RECAP_MAX=5300, REP_GAP=3, WRITES_MAX=3000, PAD_FIT=0.86, PAD_LW=22;
 const CARD_RATIO=1; /* v595 (H: "Fotos sollten in Zukunft generell quadratisch gespeichert werden. Deshalb soll die Detailseite unter Cards auch quadratisch sein, genauso wie die Lernkarten."): the one window and box shape on every card is the SQUARE now — the cut as well as the box, where v591 made only the box square (styles.css --photo-ar) and left the cut at v519's 3:2, so every picture sat in its square box between two bands of blur. A square cut fills them with the photo itself. Measured: on a frame wider than tall the square window is exactly as WIDE as the 3:2 one and only taller, so the text is the same size on screen and the bands become real surroundings; on a frame taller than wide the square is narrower, so the text comes out BIGGER (a vertical sign 0.36 → 0.53 of the box's width). Declared here, since FRONT_RATIO reads it at load time */
 let LAST_FIT=null; /* v521: the study card's last pad measurement, printed by Diagnostics */
@@ -5289,6 +5334,15 @@ function mountPad(card,d,c,tg,st,cur){
        the matcher gone there is nothing to keep it for, so nothing loose is ever pushed onto a pad that has a template.
        st.free is the FREE pad's own ink again (a character the stroke set lacks, v512), and only that. */
     else { miss(); notePadSoon(); } };
+  /* v717 (the waiting list: "the pad's helper buttons sit inside its square, so a stroke begun in a corner is swallowed"):
+     a touch that lands on Show me or Skip and then MOVES is a stroke — the button hands it to the pad from where it began
+     (the pad captures the pointer from then on), and its click is dropped; a touch that stays is the tap it always was. */
+  card.querySelectorAll(".padacts button").forEach(b=>{ let s=null;
+    b.onpointerdown=e=>{ s={x:e.clientX,y:e.clientY}; b._drag=false; };
+    b.onpointermove=e=>{ if(!s||b._drag||Math.hypot(e.clientX-s.x,e.clientY-s.y)<PAD_HAND) return; b._drag=true; const o=s; s=null;
+      cv.onpointerdown({pointerId:e.pointerId,clientX:o.x,clientY:o.y,preventDefault(){},stopPropagation(){}}); cv.onpointermove(e); };
+    b.onpointerup=b.onpointercancel=()=>{ s=null; };
+    b.addEventListener("click",e=>{ if(b._drag){ b._drag=false; e.stopImmediatePropagation(); e.preventDefault(); } },true); });
   const charDone=async helped=>{
     const i=tg.indexOf(cur); if(helped) st.helped.add(i); st.done.add(i);
     S.wroteAt=S.wroteAt||{}; S.wroteAt[c+":"+cur.pos]={lv:lvl,helped}; if(helped) bumpWrite(cur.glyph,-2); else bumpWrite(cur.glyph,1);
@@ -5934,7 +5988,8 @@ function renderCards(main){
   normaliseFilters();
   let {html,n,ids}=cardsListHTML();
   main.innerHTML=`<div class="pane">
-    <div class="cardsbar"><input id="q" type="search" placeholder="${t("Search")}" value="${esc(S.query)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="btn mini primary" id="newcard">${t("+ New")}</button></div>
+    <div class="cardsbar"><input id="q" type="search" placeholder="${t("Characters or pinyin")}" value="${esc(S.query)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="btn mini primary" id="newcard">${t("+ New")}</button></div>
+    ${backupNudge()}
     ${pagesInDeck()&&!marking("cards")?`<div class="seg scope" id="cardstabs" role="tablist"><button class="segbtn${onPages()?"":" on"}" data-ctab="cards" role="tab" aria-selected="${onPages()?"false":"true"}">${t("Cards")}</button><button class="segbtn${onPages()?" on":""}" data-ctab="pages" role="tab" aria-selected="${onPages()?"true":"false"}">${t("Multicards")}</button></div>`:""}
     ${nAi?`<div class="aibar"><span>${nOf(nAi,"bar:AI suggestion","bar:AI suggestions")}</span><span class="aiacts2"><button class="aibtn prim" id="ai-acceptall" title="${t("Accept all")}" aria-label="${t("Accept all")}">${MARK_TICK}</button><button class="aibtn" id="ai-dismissall" title="${t("Dismiss all")}" aria-label="${t("Dismiss all")}">${MARK_CROSS}</button></span></div>`:""}
     ${marking("cards")
@@ -5956,6 +6011,7 @@ function renderCards(main){
   const aa=$("#ai-acceptall"); if(aa) aa.onclick=async()=>{ aa.disabled=true; await aiAcceptAll(); render(); };
   const ad=$("#ai-dismissall"); if(ad) ad.onclick=async()=>{ ad.disabled=true; await aiDismissAll(); render(); };
   if(marking("cards")){ pickAllBtn(ids,refresh); pickBar(()=>delPicked("cards")); }
+  const nx=$("#nudge-export"); if(nx) nx.onclick=exportData; /* v717 */
   $("#newcard").onclick=()=>{ endPick(); S.pendingImg=null; S.pendingFull=null; S.pendingShot=null; S.mode="add"; render(); }; /* a card from scratch starts without a picture (v188); the photo path comes in through cropOk with its own pending image */
   wire();
 }
@@ -6000,7 +6056,7 @@ function detailCardHTML(d,sw){
   return `${tagsHTML(d,!p)}<div class="zone1 front${d.flag?" flagged":""}" id="d-reveal">${frontPic(d,{page:true,fixed:true})||cueGlyphHTML(d)}${tradMark(d)}</div>
       ${chrowHTML(d,tg,btn,lit?lit.wi:null)}
       <div class="padline" id="padline"${lit?"":" hidden"}></div>
-      ${lit&&lit.w&&CJK.test(lit.ch)?`<button class="chlink" id="d-chpage" data-ch="${esc(lit.ch)}"><span>${esc(t("Cards with {0}",lit.ch))}</span><span class="n">${charCards(lit.ch).length}</span><i aria-hidden="true">›</i></button>`:""}
+      ${lit&&lit.w&&CJK.test(lit.ch)&&charCards(lit.ch).length>1?/* v717: a page that would list only this card is no page */`<button class="chlink" id="d-chpage" data-ch="${esc(lit.ch)}"><span>${esc(t("Cards with {0}",lit.ch))}</span><span class="n">${charCards(lit.ch).length}</span><i aria-hidden="true">›</i></button>`:""}
       ${d.reading&&!d.reading.failed?`<div class="hint">${t("The new frame is being read — the text follows when it is done.")}</div>`:""}
       <div class="fold${open?" open":""}"><button class="foldbtn" id="d-fold" aria-expanded="${open?"true":"false"}"><span>${t("Details")}</span><i aria-hidden="true">⌄</i></button><div class="ans" id="d-ans"${open?"":" hidden"}>${back}</div></div>
       ${detailActsHTML(d)} <!-- v703 (H: "Macht doch mal Flag, Edit, Delete und so weiter ganz nach unten und Whole Card darüber"): the actions close the card, under Details (called Whole card until v704) -->
@@ -6518,6 +6574,8 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  718:"Cards that got a character's meaning from the dictionary have it again under the new rule.",
+  717:"More is shorter: what is sent, about the app and the feedback box fold open on a tap. A stroke that starts on Show me or Skip is a stroke now.",
   707:"Swipe through the texts of a multicard: open one and swipe to the next.",
   704:"The fold with the pinyin, meaning and description is now simply called Details.",
   701:"On a menu with pictures, each dish now shows its own photo.",
@@ -6995,7 +7053,7 @@ function aiBoxCal(labels,pl){
   const med=errs[errs.length>>1]; if(med>AI_CAL_ERR||errs[errs.length-1]>2*AI_CAL_ERR) return null;
   return {n:P.length,err:+med.toFixed(2),map:b=>{ const cx=fx.a*(b[0]+b[2])/2+fx.b, cy=fy.a*(b[1]+b[3])/2+fy.b, w=(b[2]-b[0])*fx.a, h=(b[3]-b[1])*fy.a; return {x0:cx-w/2,y0:cy-h/2,x1:cx+w/2,y1:cy+h/2}; }}; }
 /* CC-CEDICT (simplified -> English gloss), lazily loaded from ./vendor */
-const DICT_HEAD="#cedict v3"; /* the file's own first line, and the only way to tell a cached older copy from this one — v2 at v573 (a reading per sense), v3 at v605 (no gloss cut at 120 characters any more) */
+const DICT_HEAD="#cedict v4"; /* the file's own first line, and the only way to tell a cached older copy from this one — v2 at v573 (a reading per sense), v3 at v605 (no gloss cut at 120 characters any more), v4 at v717 (a variant entry's glosses no longer lead a word's line: 药 read "leaf of the iris") */
 /* gzip magic bytes — if a server or proxy already decompressed, treat the body as plain text */
 async function dictText(res){ const buf=new Uint8Array(await res.arrayBuffer());
   return (buf[0]===0x1f&&buf[1]===0x8b)
@@ -7611,7 +7669,7 @@ const pyBare=x=>pyKey(x).normalize("NFD").replace(/[\u0300-\u036f]/g,""); /* ton
    that one's group: 合 read hé means "to close", not gě's "100 ml". An exact match first, then the same syllable at
    another tone (乐 Le4 and le4 both romanise to "lè"), and with no match at all the groups are flattened, which is
    exactly what the file did before this version. */
-function bestSense(w,py){
+function bestSense(w,py,inWord){ /* inWord (v717): the character is being read INSIDE a word, so a sense CC-CEDICT marks "(bound form)" is the right one — 店 in 药店 is "shop", not the free word's "inn" */
   const v=(DICT&&DICT.get(w))||"";
   let body=v;
   if(v.indexOf(DICT_GRP)>=0){
@@ -7620,7 +7678,8 @@ function bestSense(w,py){
     body=g?g.s:gs.map(x=>x.s).join("; ");
   }
   const senses=body.split(";").map(x=>x.trim()).filter(Boolean);
-  return senses.find(x=>!/^(surname |\(bound form\)|old variant|variant of|\(archaic\)|abbr\. (for|of) |Taiwan pr\.)/i.test(x))||senses[0]||"";
+  if(inWord){ const b=senses.find(x=>/^\(bound form\)\s*\S/i.test(x)); if(b) return b.replace(/^\(bound form\)\s*/i,""); }
+  return senses.find(x=>!/^(surname |\(bound form\)|old variant|variant of|\(archaic\)|abbr\. (for|of) |Taiwan pr\.|classifier for )/i.test(x))||senses[0]||""; /* v717: a classifier sense stands back when the word has another (岁 → "year", not "classifier for years (of age)") */
 }
 /* meaning of one transcript line: longest phrasebook phrases first, dictionary
    words for the rest; punctuation kept as its own token for wrapping */
@@ -11351,7 +11410,7 @@ if(navigator.storage && navigator.storage.persist){
     .then(granted=>{
       S.persist=!!granted;
       const b=document.querySelector("#storage-status");
-      if(b) b.textContent=granted?"Persistent on this phone.":"Not persistent yet. Install the app so the system keeps the data.";
+      if(b) b.textContent=granted?t("Persistent on this phone."):t("Not safe yet. Add the app to your home screen, then the phone keeps your cards."); /* v717: through t() — the line was English in every language, and it names the home screen rather than "persistent" */
     }).catch(()=>{});
 }
 

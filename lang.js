@@ -76,11 +76,8 @@ de:{
   "Undo last run":"Letzten Durchlauf rückgängig",
   
   
-  
-  
   "Translated {0} at {1}.":"{0} um {1} übersetzt.","Checked {0} at {1}.":"{0} um {1} geprüft.","Done — {0} filled in.":"Fertig – {0} ergänzt.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Fertig – {0} ergänzt, es gibt {1} zu verbessern. Schau im Tab Karten nach.",
   "Undone — {0} put back.":"Rückgängig – {0} wiederhergestellt.",
-  
   
   "Filter":"Filter",
   "Status":"Status",
@@ -98,7 +95,6 @@ de:{
   "Take photo":"Foto aufnehmen",
   "From album":"Aus dem Album",
   "Processing photo …":"Foto wird verarbeitet …",
-  
   
   "Crop":"Ausschnitt",
   "Turn the frame":"Rahmen drehen",
@@ -228,7 +224,7 @@ de:{
   "All cards":"Alle Karten","Untagged":"Ohne Tag",
   "Nothing read":"Nichts gelesen","Reading …":"Wird gelesen …","AI":"KI","No cards match.":"Keine Karte passt.",
   "No cards yet — take a photo under Camera, or tap + New.":"Noch keine Karten – nimm ein Foto auf unter Kamera, oder tippe auf + Neu.",
-  "Search":"Suchen","+ New":"+ Neu","⚑ Flagged":"⚑ Markiert","Star":"Stern","Starred":"Mit Stern","Unverified":"Ungeprüft","{0} of {1}":"{0} von {1}",
+  "+ New":"+ Neu","⚑ Flagged":"⚑ Markiert","Star":"Stern","Starred":"Mit Stern","Unverified":"Ungeprüft","{0} of {1}":"{0} von {1}",
   "{0} so far, next on {1}.":"Bisher {0}, das nächste Mal am {1}.",
   "Nothing read yet":"Noch nichts gelesen","unverified":"ungeprüft","translation pending":"Übersetzung ausstehend","reading uncertain":"Lesung unsicher",
   "The new frame is being read — the text follows when it is done.":"Der neue Ausschnitt wird gelesen – der Text folgt, sobald es fertig ist.",
@@ -248,7 +244,7 @@ de:{
   "Off. Nothing is sent.":"Aus. Es wird nichts gesendet.","Last sent today.":"Zuletzt heute gesendet.","Last sent {0}.":"Zuletzt gesendet am {0}.","Not sent yet.":"Noch nicht gesendet.",
   "Last export: today.":"Letzter Export: heute.","Last export: {0} ago.":"Letzter Export: {0} her.","Never exported.":"Nie exportiert.","Export now — the cards exist only on this phone.":"Jetzt exportieren — die Karten gibt es nur auf diesem Telefon.",
   "{0} in the inbox":"{0} im Eingang",", {0} older than {1} days":", {0} davon älter als {1} Tage","Delete {0} old photos?":"{0} alte Fotos löschen?","Delete one old photo?":"Ein altes Foto löschen?",
-  "Cards made from them keep their own picture. A photo that never made a card is gone.":"Karten, die daraus entstanden sind, behalten ihr eigenes Bild. Ein Foto ohne Karte ist danach weg.","Persistent on this phone.":"Dauerhaft auf diesem Telefon gespeichert.","Not persistent yet. Install the app so the system keeps the data.":"Noch nicht dauerhaft. Installiere die App, damit das System die Daten behält.",
+  "Cards made from them keep their own picture. A photo that never made a card is gone.":"Karten, die daraus entstanden sind, behalten ihr eigenes Bild. Ein Foto ohne Karte ist danach weg.","Persistent on this phone.":"Dauerhaft auf diesem Telefon gespeichert.",
   "Checking …":"Prüfe …","Share":"Teilen","Share the app":"App teilen","Send the link to a friend. The app installs from any browser, no store.":"Schick den Link einem Freund. Die App installiert sich aus jedem Browser, ohne Store.",
   "Add screenshot":"Screenshot anhängen","Sent, but the screenshot could not be attached.":"Gesendet, aber der Screenshot konnte nicht mitgeschickt werden.","Feedback":"Feedback","Tell the app's owner what works and what does not.":"Sag dem Besitzer der App, was funktioniert und was nicht.","Your message":"Deine Nachricht","Send":"Senden",
   "Export":"Exportieren","Progress and cards as one file, via the share sheet.":"Fortschritt und Karten als eine Datei, über das Teilen-Menü.","Include photos (adds about {0} MB)":"Fotos einschließen (etwa {0} MB mehr)",
@@ -290,7 +286,6 @@ de:{
   "Fix the characters":"Zeichen korrigieren",
   "Swipe left or right to pick another card.":"Wisch nach links oder rechts, um eine andere Karte zu wählen.",
   "Tap it — what it means.": "Tippen – was es heißt.",
-  "Open it — the whole card.": "Aufklappen – die ganze Karte.",
   "Trace the lit stroke.": "Leuchtenden Strich nachziehen.",
   "Tap the photo for the pinyin and the meaning, and again for the photo.": "Tipp aufs Foto für Pinyin und Bedeutung, noch einmal fürs Foto.",
   "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "Eine Karte startet mit dem Foto – das ist die Frage. Ein Tipp deckt den Text mit Pinyin und Bedeutung auf, der nächste bringt das Foto zurück.",
@@ -307,7 +302,7 @@ de:{
   /* Undo after Delete (v268) */
   "Deleted “{0}”":"„{0}“ gelöscht","Card deleted":"Karte gelöscht","Updated — {0}":"Aktualisiert — {0}","More under About.":"Mehr unter Über.","What is new":"Was neu ist","Photo deleted":"Foto gelöscht","Deleted {0}":"{0} gelöscht","Deleted {0} and {1}":"{0} und {1} gelöscht","Undo":"Rückgängig",
   /* the Progress dashboard (v274) */
-  "Day streak":"Tage in Folge","Cards learned":"Karten gelernt","Due today":"Heute fällig","Reviews this week":"Wiederholungen diese Woche","Last 30 days":"Die letzten 30 Tage","Still learning":"Noch am Lernen","Known":"Sicher","Coming up: {0} due tomorrow, {1} this week.":"Demnächst: {0} morgen fällig, {1} diese Woche."
+  "Day streak":"Tage in Folge","Due today":"Heute fällig","Reviews this week":"Wiederholungen diese Woche","Last 30 days":"Die letzten 30 Tage","Still learning":"Noch am Lernen","Known":"Sicher","Coming up: {0} due tomorrow, {1} this week.":"Demnächst: {0} morgen fällig, {1} diese Woche."
 ,
   "Camera → Take photo, or From album. The app finds the text, reads it and makes the card for you; Crop frames it by hand when the app gets it wrong.":"Kamera → Foto aufnehmen, oder Aus dem Album. Die App findet den Text, liest ihn und macht die Karte für dich; mit Ausschnitt rahmst du ihn selbst, wenn sie danebenliegt.",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up; to learn one, open it from the list under the photo and press + Flashcard.":"Ein Foto mit mehreren Texten — ein App-Bildschirm, ein Bedienfeld, eine Speisekarte — wird stattdessen eine Multicard. Tippe einen Text darauf an, um ihn nachzuschlagen; willst du ihn lernen, öffne ihn in der Liste unter dem Foto und tippe auf „+ Karte“.",
@@ -324,6 +319,14 @@ de:{
   "Edit sits under Details too, for a card that needs fixing.":"Unter Details steht auch Bearbeiten, falls eine Karte nicht stimmt.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Einmal am Tag – und noch einmal, wenn du die App nach einer neuen Karte verlässt – gehen anonyme Nutzungszahlen und die Fehlermeldungen der App an den Besitzer der App; unter Mehr → Nutzungsdaten kannst du das abschalten. Fragen oder Ideen? Mehr → Feedback.",
 
+  /* v717 */
+  "Open it — the details.":"Aufklappen – die Details.",
+  "Cards started":"Karten begonnen",
+  "Not safe yet. Add the app to your home screen, then the phone keeps your cards.":"Noch nicht sicher. Leg die App auf den Startbildschirm, dann behält das Handy deine Karten.",
+  "Characters or pinyin":"Zeichen oder Pinyin",
+  "What is sent":"Was gesendet wird",
+  "About the app":"Über die App",
+  "Write a message":"Nachricht schreiben",
 },
 fr:{
   "reading confidence {0}%":"confiance de lecture {0} %","unknown {0}":"inconnus : {0}","no dictionary meaning":"aucun sens au dictionnaire","the text looks misread":"le texte semble mal lu","the framed area":"la zone encadrée","card image":"image de la carte","alt:photo":"photo",
@@ -368,11 +371,8 @@ fr:{
   "Undo last run":"Annuler la dernière passe",
   
   
-  
-  
   "Translated {0} at {1}.":"Traduction de {0} à {1}.","Checked {0} at {1}.":"Vérification de {0} à {1}.","Done — {0} filled in.":"Terminé – complété : {0}.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Terminé – complété : {0} ; il y a {1} à améliorer. Regarde dans l'onglet Cartes.",
   "Undone — {0} put back.":"Annulé – {0} de retour.",
-  
   
   "Filter":"Filtre",
   "Status":"Statut",
@@ -390,7 +390,6 @@ fr:{
   "Take photo":"Prendre une photo",
   "From album":"Depuis l'album",
   "Processing photo …":"Traitement de la photo …",
-  
   
   "Crop":"Cadrer",
   "Turn the frame":"Tourner le cadre",
@@ -519,7 +518,7 @@ fr:{
   "All cards":"Toutes les cartes","Untagged":"Sans étiquette",
   "Nothing read":"Rien de lu","Reading …":"Lecture …","AI":"IA","No cards match.":"Aucune carte ne correspond.",
   "No cards yet — take a photo under Camera, or tap + New.":"Pas encore de cartes – prends une photo sous Photo, ou touche + Nouvelle.",
-  "Search":"Rechercher","+ New":"+ Nouvelle","⚑ Flagged":"⚑ Signalées","Star":"Étoile","Starred":"Avec étoile","Unverified":"Non vérifiées","{0} of {1}":"{0} sur {1}",
+  "+ New":"+ Nouvelle","⚑ Flagged":"⚑ Signalées","Star":"Étoile","Starred":"Avec étoile","Unverified":"Non vérifiées","{0} of {1}":"{0} sur {1}",
   "{0} so far, next on {1}.":"{0} jusqu'ici, la prochaine le {1}.",
   "Nothing read yet":"Rien de lu encore","unverified":"non vérifié","translation pending":"traduction en attente","reading uncertain":"lecture incertaine",
   "The new frame is being read — the text follows when it is done.":"Le nouveau cadre est en cours de lecture – le texte suivra.",
@@ -539,7 +538,7 @@ fr:{
   "Off. Nothing is sent.":"Désactivé. Rien n'est envoyé.","Last sent today.":"Dernier envoi aujourd'hui.","Last sent {0}.":"Dernier envoi le {0}.","Not sent yet.":"Pas encore envoyé.",
   "Last export: today.":"Dernier export : aujourd'hui.","Last export: {0} ago.":"Dernier export : il y a {0}.","Never exported.":"Jamais exporté.","Export now — the cards exist only on this phone.":"Exporte maintenant — les cartes n'existent que sur ce téléphone.",
   "{0} in the inbox":"{0} dans la boîte",", {0} older than {1} days":", dont {0} de plus de {1} jours","Delete {0} old photos?":"Supprimer {0} anciennes photos ?","Delete one old photo?":"Supprimer une ancienne photo ?",
-  "Cards made from them keep their own picture. A photo that never made a card is gone.":"Les cartes qui en sont issues gardent leur propre image. Une photo qui n'a jamais donné de carte est perdue.","Persistent on this phone.":"Conservé durablement sur ce téléphone.","Not persistent yet. Install the app so the system keeps the data.":"Pas encore durable. Installe l'appli pour que le système garde les données.",
+  "Cards made from them keep their own picture. A photo that never made a card is gone.":"Les cartes qui en sont issues gardent leur propre image. Une photo qui n'a jamais donné de carte est perdue.","Persistent on this phone.":"Conservé durablement sur ce téléphone.",
   "Checking …":"Vérification …","Share":"Partager","Share the app":"Partager l'appli","Send the link to a friend. The app installs from any browser, no store.":"Envoie le lien à un ami. L'appli s'installe depuis n'importe quel navigateur, sans store.",
   "Add screenshot":"Ajouter une capture","Sent, but the screenshot could not be attached.":"Envoyé, mais la capture n'a pas pu être jointe.","Feedback":"Commentaires","Tell the app's owner what works and what does not.":"Dites au propriétaire de l'appli ce qui marche et ce qui ne marche pas.","Your message":"Ton message","Send":"Envoyer",
   "Export":"Exporter","Progress and cards as one file, via the share sheet.":"Progression et cartes en un seul fichier, via le menu de partage.","Include photos (adds about {0} MB)":"Inclure les photos (environ {0} Mo de plus)",
@@ -582,7 +581,6 @@ fr:{
   "Fix the characters":"Corriger les caractères",
   "Swipe left or right to pick another card.":"Balaie vers la gauche ou la droite pour choisir une autre carte.",
   "Tap it — what it means.": "Touche – ce que ça veut dire.",
-  "Open it — the whole card.": "Ouvre – toute la carte.",
   "Trace the lit stroke.": "Suis le trait allumé.",
   "Tap the photo for the pinyin and the meaning, and again for the photo.": "Touche la photo pour le pinyin et le sens, encore une fois pour la photo.",
   "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "Une carte s'ouvre sur la photo : c'est la question. Une touche découvre le texte avec son pinyin et son sens, la suivante ramène la photo.",
@@ -599,7 +597,7 @@ fr:{
   /* Undo after Delete (v268) */
   "Deleted “{0}”":"« {0} » supprimée","Card deleted":"Carte supprimée","Updated — {0}":"Mis à jour — {0}","More under About.":"Plus dans À propos.","What is new":"Quoi de neuf","Photo deleted":"Photo supprimée","Deleted {0}":"{0} supprimées","Deleted {0} and {1}":"{0} et {1} supprimées","Undo":"Annuler",
   /* the Progress dashboard (v274) */
-  "Day streak":"Jours d'affilée","Cards learned":"Cartes apprises","Due today":"À revoir aujourd'hui","Reviews this week":"Révisions cette semaine","Last 30 days":"Les 30 derniers jours","Still learning":"En cours","Known":"Acquises","Coming up: {0} due tomorrow, {1} this week.":"À venir : {0} demain, {1} cette semaine."
+  "Day streak":"Jours d'affilée","Due today":"À revoir aujourd'hui","Reviews this week":"Révisions cette semaine","Last 30 days":"Les 30 derniers jours","Still learning":"En cours","Known":"Acquises","Coming up: {0} due tomorrow, {1} this week.":"À venir : {0} demain, {1} cette semaine."
 ,
   "Camera → Take photo, or From album. The app finds the text, reads it and makes the card for you; Crop frames it by hand when the app gets it wrong.":"Photo → Prendre une photo, ou Depuis l'album. L'app trouve le texte, le lit et fabrique la carte pour toi ; avec Cadrer, tu l'encadres toi-même quand elle se trompe.",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up; to learn one, open it from the list under the photo and press + Flashcard.":"Une photo avec plusieurs textes — un écran d'appli, un panneau de commande, un menu — devient une multicarte. Touche un texte dessus pour le consulter ; pour l'apprendre, ouvre-le dans la liste sous la photo et touche « + Carte ».",
@@ -616,6 +614,14 @@ fr:{
   "Edit sits under Details too, for a card that needs fixing.":"Modifier se trouve aussi sous Détails, pour une carte à corriger.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Une fois par jour, et une fois de plus quand tu quittes l'appli après avoir fait une carte, des comptages anonymes et les messages d'erreur de l'appli vont au propriétaire de l'appli ; désactive-les sous Plus → Partage d'utilisation. Des questions ou des idées ? Plus → Commentaires.",
 
+  /* v717 */
+  "Open it — the details.":"Ouvre-le – les détails.",
+  "Cards started":"Cartes commencées",
+  "Not safe yet. Add the app to your home screen, then the phone keeps your cards.":"Pas encore à l'abri. Ajoute l'app à l'écran d'accueil, et le téléphone gardera tes cartes.",
+  "Characters or pinyin":"Caractères, pinyin",
+  "What is sent":"Ce qui est envoyé",
+  "About the app":"À propos de l'app",
+  "Write a message":"Écrire un message",
 },
 es:{
   "reading confidence {0}%":"confianza de lectura {0} %","unknown {0}":"desconocidos: {0}","no dictionary meaning":"sin significado en el diccionario","the text looks misread":"el texto parece mal leído","the framed area":"el área enmarcada","card image":"imagen de la tarjeta","alt:photo":"foto",
@@ -660,11 +666,8 @@ es:{
   "Undo last run":"Deshacer la última pasada",
   
   
-  
-  
   "Translated {0} at {1}.":"Traducción de {0} a las {1}.","Checked {0} at {1}.":"Revisión de {0} a las {1}.","Done — {0} filled in.":"Listo: completado en {0}.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Listo: completado en {0}; hay {1} que mejorar. Mira la pestaña Tarjetas.",
   "Undone — {0} put back.":"Deshecho: {0} de vuelta.",
-  
   
   "Filter":"Filtro",
   "Status":"Estado",
@@ -682,7 +685,6 @@ es:{
   "Take photo":"Hacer foto",
   "From album":"Del álbum",
   "Processing photo …":"Procesando la foto …",
-  
   
   "Crop":"Recortar",
   "Turn the frame":"Girar el marco",
@@ -811,7 +813,7 @@ es:{
   "All cards":"Todas las tarjetas","Untagged":"Sin etiqueta",
   "Nothing read":"Nada leído","Reading …":"Leyendo …","AI":"IA","No cards match.":"Ninguna tarjeta coincide.",
   "No cards yet — take a photo under Camera, or tap + New.":"Aún no hay tarjetas: haz una foto en Cámara o toca + Nueva.",
-  "Search":"Buscar","+ New":"+ Nueva","⚑ Flagged":"⚑ Marcadas","Star":"Estrella","Starred":"Con estrella","Unverified":"Sin verificar","{0} of {1}":"{0} de {1}",
+  "+ New":"+ Nueva","⚑ Flagged":"⚑ Marcadas","Star":"Estrella","Starred":"Con estrella","Unverified":"Sin verificar","{0} of {1}":"{0} de {1}",
   "{0} so far, next on {1}.":"{0} hasta ahora, la próxima el {1}.",
   "Nothing read yet":"Aún nada leído","unverified":"sin verificar","translation pending":"traducción pendiente","reading uncertain":"lectura dudosa",
   "The new frame is being read — the text follows when it is done.":"Se está leyendo el nuevo recorte: el texto llegará cuando termine.",
@@ -831,7 +833,7 @@ es:{
   "Off. Nothing is sent.":"Desactivado. No se envía nada.","Last sent today.":"Último envío hoy.","Last sent {0}.":"Último envío el {0}.","Not sent yet.":"Aún no enviado.",
   "Last export: today.":"Última exportación: hoy.","Last export: {0} ago.":"Última exportación: hace {0}.","Never exported.":"Nunca exportado.","Export now — the cards exist only on this phone.":"Exporta ahora — las tarjetas solo existen en este teléfono.",
   "{0} in the inbox":"{0} en la bandeja",", {0} older than {1} days":", {0} de más de {1} días","Delete {0} old photos?":"¿Eliminar {0} fotos antiguas?","Delete one old photo?":"¿Eliminar una foto antigua?",
-  "Cards made from them keep their own picture. A photo that never made a card is gone.":"Las tarjetas hechas con ellas conservan su propia imagen. Una foto que nunca dio una tarjeta se pierde.","Persistent on this phone.":"Guardado de forma permanente en este teléfono.","Not persistent yet. Install the app so the system keeps the data.":"Aún no es permanente. Instala la app para que el sistema conserve los datos.",
+  "Cards made from them keep their own picture. A photo that never made a card is gone.":"Las tarjetas hechas con ellas conservan su propia imagen. Una foto que nunca dio una tarjeta se pierde.","Persistent on this phone.":"Guardado de forma permanente en este teléfono.",
   "Checking …":"Comprobando …","Share":"Compartir","Share the app":"Compartir la app","Send the link to a friend. The app installs from any browser, no store.":"Envía el enlace a un amigo. La app se instala desde cualquier navegador, sin tienda.",
   "Add screenshot":"Añadir captura","Sent, but the screenshot could not be attached.":"Enviado, pero la captura no se pudo adjuntar.","Feedback":"Comentarios","Tell the app's owner what works and what does not.":"Cuéntale al propietario de la app qué funciona y qué no.","Your message":"Tu mensaje","Send":"Enviar",
   "Export":"Exportar","Progress and cards as one file, via the share sheet.":"Progreso y tarjetas en un solo archivo, mediante el menú de compartir.","Include photos (adds about {0} MB)":"Incluir fotos (añade unos {0} MB)",
@@ -874,7 +876,6 @@ es:{
   "Fix the characters":"Corregir los caracteres",
   "Swipe left or right to pick another card.":"Desliza a izquierda o derecha para elegir otra tarjeta.",
   "Tap it — what it means.": "Tócala – qué significa.",
-  "Open it — the whole card.": "Ábrela – toda la tarjeta.",
   "Trace the lit stroke.": "Sigue el trazo encendido.",
   "Tap the photo for the pinyin and the meaning, and again for the photo.": "Toca la foto para el pinyin y el significado, otra vez para la foto.",
   "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "Una tarjeta empieza con la foto: esa es la pregunta. Un toque descubre el texto con su pinyin y su significado, y el siguiente devuelve la foto.",
@@ -891,7 +892,7 @@ es:{
   /* Undo after Delete (v268) */
   "Deleted “{0}”":"«{0}» eliminada","Card deleted":"Tarjeta eliminada","Updated — {0}":"Actualizado — {0}","More under About.":"Más en Acerca de.","What is new":"Novedades","Photo deleted":"Foto eliminada","Deleted {0}":"{0} eliminadas","Deleted {0} and {1}":"{0} y {1} eliminadas","Undo":"Deshacer",
   /* the Progress dashboard (v274) */
-  "Day streak":"Días seguidos","Cards learned":"Tarjetas aprendidas","Due today":"Para hoy","Reviews this week":"Repasos esta semana","Last 30 days":"Últimos 30 días","Still learning":"En curso","Known":"Dominadas","Coming up: {0} due tomorrow, {1} this week.":"Próximamente: {0} mañana, {1} esta semana."
+  "Day streak":"Días seguidos","Due today":"Para hoy","Reviews this week":"Repasos esta semana","Last 30 days":"Últimos 30 días","Still learning":"En curso","Known":"Dominadas","Coming up: {0} due tomorrow, {1} this week.":"Próximamente: {0} mañana, {1} esta semana."
 ,
   "Camera → Take photo, or From album. The app finds the text, reads it and makes the card for you; Crop frames it by hand when the app gets it wrong.":"Cámara → Hacer foto, o Del álbum. La app encuentra el texto, lo lee y te hace la tarjeta; con Recortar lo encuadras tú cuando se equivoca.",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up; to learn one, open it from the list under the photo and press + Flashcard.":"Una foto con varios textos — una pantalla de app, un panel de mandos, una carta — se convierte en una multitarjeta. Toca cualquier texto para consultarlo; para aprenderlo, ábrelo en la lista bajo la foto y toca «+ Tarjeta».",
@@ -908,6 +909,14 @@ es:{
   "Edit sits under Details too, for a card that needs fixing.":"Editar también está en Detalles, por si una tarjeta necesita arreglo.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Una vez al día, y otra vez cuando sales de la app tras crear una tarjeta, van recuentos de uso anónimos y los mensajes de error de la app al propietario de la app; desactívalo en Más → Datos de uso. ¿Preguntas o ideas? Más → Comentarios.",
 
+  /* v717 */
+  "Open it — the details.":"Ábrelo – los detalles.",
+  "Cards started":"Tarjetas empezadas",
+  "Not safe yet. Add the app to your home screen, then the phone keeps your cards.":"Aún no está a salvo. Añade la app a la pantalla de inicio y el teléfono conservará tus tarjetas.",
+  "Characters or pinyin":"Caracteres o pinyin",
+  "What is sent":"Qué se envía",
+  "About the app":"Sobre la app",
+  "Write a message":"Escribir un mensaje",
 },
 ja:{
   "reading confidence {0}%":"読み取りの確からしさ {0}%","unknown {0}":"不明な文字：{0}","no dictionary meaning":"辞書に意味がありません","the text looks misread":"テキストの読み取りが誤っているようです","the framed area":"枠で囲んだ範囲","card image":"カードの画像","alt:photo":"写真",
@@ -952,11 +961,8 @@ ja:{
   "Undo last run":"前回の実行を取り消す",
   
   
-  
-  
   "Translated {0} at {1}.":"{1}に{0}を翻訳しました。","Checked {0} at {1}.":"{1}に{0}を確認しました。","Done — {0} filled in.":"完了 — {0}を補いました。","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"完了 — {0}を補いました。{1}はもっとよくなりそうです。カードタブで見てみましょう。",
   "Undone — {0} put back.":"取り消しました — {0}を元に戻しました。",
-  
   
   "Filter":"フィルター",
   "Status":"状態",
@@ -974,7 +980,6 @@ ja:{
   "Take photo":"写真を撮る",
   "From album":"アルバムから",
   "Processing photo …":"写真を処理中 …",
-  
   
   "Crop":"切り抜き",
   "Turn the frame":"枠を回す",
@@ -1103,7 +1108,7 @@ ja:{
   "All cards":"すべてのカード","Untagged":"タグなし",
   "Nothing read":"読み取れず","Reading …":"読み取り中 …","AI":"AI","No cards match.":"該当するカードがありません。",
   "No cards yet — take a photo under Camera, or tap + New.":"カードはまだありません。カメラで撮影するか、+ 新規をタップしてください。",
-  "Search":"検索","+ New":"+ 新規","⚑ Flagged":"⚑ 要確認","Star":"スター","Starred":"スター付き","Unverified":"未確認","{0} of {1}":"{0} / {1}",
+  "+ New":"+ 新規","⚑ Flagged":"⚑ 要確認","Star":"スター","Starred":"スター付き","Unverified":"未確認","{0} of {1}":"{0} / {1}",
   "{0} so far, next on {1}.":"これまで{0}、次は{1}。",
   "Nothing read yet":"まだ読み取れていません","unverified":"未確認","translation pending":"翻訳待ち","reading uncertain":"読み取りが不確か",
   "The new frame is being read — the text follows when it is done.":"新しい範囲を読み取り中です。終わると文字が入ります。",
@@ -1123,7 +1128,7 @@ ja:{
   "Off. Nothing is sent.":"オフ。何も送信されません。","Last sent today.":"最終送信：今日","Last sent {0}.":"最終送信：{0}","Not sent yet.":"まだ送信していません。",
   "Last export: today.":"最終エクスポート：今日","Last export: {0} ago.":"最終エクスポート：{0}前","Never exported.":"エクスポートしたことがありません。","Export now — the cards exist only on this phone.":"今すぐエクスポートしてください。カードはこの端末にしかありません。",
   "{0} in the inbox":"受信箱に{0}",", {0} older than {1} days":"、うち{0}枚は{1}日より古いもの","Delete {0} old photos?":"古い写真{0}枚を削除しますか？","Delete one old photo?":"古い写真1枚を削除しますか？",
-  "Cards made from them keep their own picture. A photo that never made a card is gone.":"そこから作ったカードの画像はそのまま残ります。カードにならなかった写真はなくなります。","Persistent on this phone.":"この端末に永続的に保存されています。","Not persistent yet. Install the app so the system keeps the data.":"まだ永続的ではありません。データを保持するにはアプリをインストールしてください。",
+  "Cards made from them keep their own picture. A photo that never made a card is gone.":"そこから作ったカードの画像はそのまま残ります。カードにならなかった写真はなくなります。","Persistent on this phone.":"この端末に永続的に保存されています。",
   "Checking …":"確認中…","Share":"共有","Share the app":"アプリを共有","Send the link to a friend. The app installs from any browser, no store.":"友だちにリンクを送ってください。アプリはどのブラウザからでもインストールできます。ストアは不要です。",
   "Add screenshot":"スクリーンショットを追加","Sent, but the screenshot could not be attached.":"送信しましたが、スクリーンショットは添付できませんでした。","Feedback":"フィードバック","Tell the app's owner what works and what does not.":"アプリの所有者に、うまくいくこと・いかないことを伝えてください。","Your message":"メッセージ","Send":"送信",
   "Export":"エクスポート","Progress and cards as one file, via the share sheet.":"学習記録とカードを1つのファイルにして、共有メニューから送ります。","Include photos (adds about {0} MB)":"写真を含める（約{0} MB増）",
@@ -1166,7 +1171,6 @@ ja:{
   "Fix the characters":"文字を直す",
   "Swipe left or right to pick another card.":"左右にスワイプすると別のカードを選べます。",
   "Tap it — what it means.": "タップ – 意味が出る。",
-  "Open it — the whole card.": "開く – カード全体。",
   "Trace the lit stroke.": "光った線をなぞる",
   "Tap the photo for the pinyin and the meaning, and again for the photo.": "写真をタップするとピンインと意味、もう一度タップすると写真に戻ります。",
   "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "カードは写真から始まります。それが問いです。タップすると文字がピンインと意味つきで現れ、もう一度タップすると写真に戻ります。",
@@ -1183,7 +1187,7 @@ ja:{
   /* Undo after Delete (v268) */
   "Deleted “{0}”":"「{0}」を削除しました","Card deleted":"カードを削除しました","Updated — {0}":"アップデート — {0}","More under About.":"詳しくはアプリについてへ。","What is new":"新着","Photo deleted":"写真を削除しました","Deleted {0}":"{0}を削除しました","Deleted {0} and {1}":"{0}と{1}を削除しました","Undo":"元に戻す",
   /* the Progress dashboard (v274) */
-  "Day streak":"連続日数","Cards learned":"学んだカード","Due today":"今日の復習","Reviews this week":"今週の復習回数","Last 30 days":"過去30日","Still learning":"学習中","Known":"定着","Coming up: {0} due tomorrow, {1} this week.":"この先：明日{0}枚、今週{1}枚。"
+  "Day streak":"連続日数","Due today":"今日の復習","Reviews this week":"今週の復習回数","Last 30 days":"過去30日","Still learning":"学習中","Known":"定着","Coming up: {0} due tomorrow, {1} this week.":"この先：明日{0}枚、今週{1}枚。"
 ,
   "Camera → Take photo, or From album. The app finds the text, reads it and makes the card for you; Crop frames it by hand when the app gets it wrong.":"カメラ →「写真を撮る」か「アルバムから」。アプリが文字を見つけて読み取り、カードを作ります。うまくいかないときは「切り抜き」で自分で囲みましょう。",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up; to learn one, open it from the list under the photo and press + Flashcard.":"文字がいくつもある写真 — アプリの画面、操作パネル、メニュー表 — は「マルチカード」になります。写真の文字をタップすれば意味が出ます。覚えたいものは、写真の下のリストから開いて「＋ カード」を押してください。",
@@ -1200,6 +1204,14 @@ ja:{
   "Edit sits under Details too, for a card that needs fixing.":"詳細の中には編集もあるよ。直したいカードがあったらどうぞ。",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"1日1回、そしてカードを作ってアプリを離れるときにもう一度、匿名の利用回数とアプリのエラーメッセージがアプリの所有者に送られます。「その他 → 利用状況の送信」でオフにできます。質問やアイデアは「その他 → フィードバック」へ。",
 
+  /* v717 */
+  "Open it — the details.":"開くと詳細。",
+  "Cards started":"始めたカード",
+  "Not safe yet. Add the app to your home screen, then the phone keeps your cards.":"まだ安全ではありません。アプリをホーム画面に追加すると、カードが消えずに残ります。",
+  "Characters or pinyin":"漢字かピンイン",
+  "What is sent":"送信される内容",
+  "About the app":"このアプリについて",
+  "Write a message":"メッセージを書く",
 },
 ko:{
   "reading confidence {0}%":"읽기 신뢰도 {0}%","unknown {0}":"모르는 글자: {0}","no dictionary meaning":"사전에 뜻이 없어요","the text looks misread":"글자를 잘못 읽은 것 같아요","the framed area":"틀로 감싼 부분","card image":"카드 이미지","alt:photo":"사진",
@@ -1244,11 +1256,8 @@ ko:{
   "Undo last run":"지난 실행 되돌리기",
   
   
-  
-  
   "Translated {0} at {1}.":"{1}에 {0} 번역했어요.","Checked {0} at {1}.":"{1}에 {0} 점검했어요.","Done — {0} filled in.":"완료 — {0} 채웠어요.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"완료 — {0} 채웠어요. {1}을 더 좋게 만들 수 있어요. 카드 탭에서 확인해요.",
   "Undone — {0} put back.":"되돌렸어요 — {0} 복구했어요.",
-  
   
   "Filter":"필터",
   "Status":"상태",
@@ -1266,7 +1275,6 @@ ko:{
   "Take photo":"사진 찍기",
   "From album":"앨범에서",
   "Processing photo …":"사진 처리 중 …",
-  
   
   "Crop":"자르기",
   "Turn the frame":"틀 돌리기",
@@ -1395,7 +1403,7 @@ ko:{
   "All cards":"모든 카드","Untagged":"태그 없음",
   "Nothing read":"읽지 못함","Reading …":"읽는 중 …","AI":"AI","No cards match.":"일치하는 카드가 없어요.",
   "No cards yet — take a photo under Camera, or tap + New.":"아직 카드가 없어요. 카메라에서 사진을 찍거나 + 새로 만들기를 누르세요.",
-  "Search":"검색","+ New":"+ 새로 만들기","⚑ Flagged":"⚑ 표시됨","Star":"별표","Starred":"별표 있음","Unverified":"미확인","{0} of {1}":"{0} / {1}",
+  "+ New":"+ 새로 만들기","⚑ Flagged":"⚑ 표시됨","Star":"별표","Starred":"별표 있음","Unverified":"미확인","{0} of {1}":"{0} / {1}",
   "{0} so far, next on {1}.":"지금까지 {0}, 다음은 {1}.",
   "Nothing read yet":"아직 읽지 못함","unverified":"미확인","translation pending":"번역 대기","reading uncertain":"읽기 불확실",
   "The new frame is being read — the text follows when it is done.":"새 영역을 읽는 중이에요. 끝나면 글자가 채워져요.",
@@ -1415,7 +1423,7 @@ ko:{
   "Off. Nothing is sent.":"꺼짐. 아무것도 전송되지 않아요.","Last sent today.":"마지막 전송: 오늘.","Last sent {0}.":"마지막 전송: {0}.","Not sent yet.":"아직 전송되지 않았어요.",
   "Last export: today.":"마지막 내보내기: 오늘.","Last export: {0} ago.":"마지막 내보내기: {0} 전.","Never exported.":"내보낸 적이 없어요.","Export now — the cards exist only on this phone.":"지금 내보내세요. 카드는 이 휴대폰에만 있어요.",
   "{0} in the inbox":"받은 사진함에 {0}",", {0} older than {1} days":", 그중 {0}장은 {1}일이 지났어요","Delete {0} old photos?":"오래된 사진 {0}장을 삭제할까요?","Delete one old photo?":"오래된 사진 1장을 삭제할까요?",
-  "Cards made from them keep their own picture. A photo that never made a card is gone.":"거기서 만든 카드의 사진은 그대로 남아요. 카드가 되지 않은 사진은 사라져요.","Persistent on this phone.":"이 휴대폰에 영구 저장돼요.","Not persistent yet. Install the app so the system keeps the data.":"아직 영구 저장이 아니에요. 데이터를 유지하려면 앱을 설치하세요.",
+  "Cards made from them keep their own picture. A photo that never made a card is gone.":"거기서 만든 카드의 사진은 그대로 남아요. 카드가 되지 않은 사진은 사라져요.","Persistent on this phone.":"이 휴대폰에 영구 저장돼요.",
   "Checking …":"확인 중…","Share":"공유","Share the app":"앱 공유","Send the link to a friend. The app installs from any browser, no store.":"친구에게 링크를 보내세요. 앱은 어떤 브라우저에서든 스토어 없이 설치돼요.",
   "Add screenshot":"스크린샷 첨부","Sent, but the screenshot could not be attached.":"보냈어요. 다만 스크린샷은 첨부하지 못했어요.","Feedback":"피드백","Tell the app's owner what works and what does not.":"앱 소유자에게 잘 되는 점과 안 되는 점을 알려주세요.","Your message":"메시지","Send":"보내기",
   "Export":"내보내기","Progress and cards as one file, via the share sheet.":"진행 상황과 카드를 한 파일로, 공유 메뉴를 통해 내보내요.","Include photos (adds about {0} MB)":"사진 포함 (약 {0} MB 추가)",
@@ -1458,7 +1466,6 @@ ko:{
   "Fix the characters":"글자 고치기",
   "Swipe left or right to pick another card.":"좌우로 밀면 다른 카드를 고를 수 있어요.",
   "Tap it — what it means.": "누르면 – 무슨 뜻인지.",
-  "Open it — the whole card.": "열면 – 카드 전체.",
   "Trace the lit stroke.": "켜진 획을 따라 긋기",
   "Tap the photo for the pinyin and the meaning, and again for the photo.": "사진을 누르면 병음과 뜻, 한 번 더 누르면 사진으로 돌아가요.",
   "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "카드는 사진으로 시작해요. 그게 문제예요. 한 번 누르면 병음과 뜻이 있는 글자가 나오고, 다시 누르면 사진으로 돌아가요.",
@@ -1475,7 +1482,7 @@ ko:{
   /* Undo after Delete (v268) */
   "Deleted “{0}”":"“{0}” 삭제했어요","Card deleted":"카드를 삭제했어요","Updated — {0}":"업데이트 — {0}","More under About.":"자세한 내용은 앱 정보에.","What is new":"새로운 기능","Photo deleted":"사진을 삭제했어요","Deleted {0}":"{0} 삭제했어요","Deleted {0} and {1}":"{0}과 {1} 삭제했어요","Undo":"실행 취소",
   /* the Progress dashboard (v274) */
-  "Day streak":"연속 일수","Cards learned":"배운 카드","Due today":"오늘 복습","Reviews this week":"이번 주 복습","Last 30 days":"지난 30일","Still learning":"학습 중","Known":"익힘","Coming up: {0} due tomorrow, {1} this week.":"다음: 내일 {0}장, 이번 주 {1}장."
+  "Day streak":"연속 일수","Due today":"오늘 복습","Reviews this week":"이번 주 복습","Last 30 days":"지난 30일","Still learning":"학습 중","Known":"익힘","Coming up: {0} due tomorrow, {1} this week.":"다음: 내일 {0}장, 이번 주 {1}장."
 ,
   "Camera → Take photo, or From album. The app finds the text, reads it and makes the card for you; Crop frames it by hand when the app gets it wrong.":"카메라 → 사진 찍기, 또는 앨범에서. 앱이 글자를 찾아 읽고 카드를 만들어요. 잘못 잡으면 자르기로 직접 범위를 정하면 돼요.",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up; to learn one, open it from the list under the photo and press + Flashcard.":"글자가 여러 개인 사진 — 앱 화면, 조작 패널, 메뉴판 — 은 멀티카드가 돼요. 사진 위의 글자를 누르면 뜻이 나와요. 배우고 싶은 건 사진 아래 목록에서 열고 + 카드를 누르면 돼요.",
@@ -1492,6 +1499,14 @@ ko:{
   "Edit sits under Details too, for a card that needs fixing.":"상세 정보 안에 편집도 있어요. 고칠 카드가 있으면 써 보세요.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"하루 한 번, 그리고 카드를 만든 뒤 앱을 나갈 때 한 번 더 익명의 사용 횟수와 앱의 오류 메시지가 앱 소유자에게 가요. 더보기 → 사용 정보 공유에서 끌 수 있어요. 질문이나 아이디어가 있으면 더보기 → 피드백.",
 
+  /* v717 */
+  "Open it — the details.":"열면 자세한 내용이 나와요.",
+  "Cards started":"시작한 카드",
+  "Not safe yet. Add the app to your home screen, then the phone keeps your cards.":"아직 안전하지 않아요. 앱을 홈 화면에 추가하면 폰이 카드를 지켜 줘요.",
+  "Characters or pinyin":"한자나 병음",
+  "What is sent":"전송되는 내용",
+  "About the app":"앱 정보",
+  "Write a message":"메시지 쓰기",
 },
 /* Russian (v401, H: "Ergaenze russisch als sprache") — "ты" throughout, as every column since v255. Three forms per count
    word, so every plural key carries a "#many" twin (5 карточек, 11 карточек, 111 карточек) that only PLURAL.ru ever looks
@@ -1539,11 +1554,8 @@ ru:{
   "Undo last run":"Отменить последние изменения",
   
   
-  
-  
   "Translated {0} at {1}.":"{0} — перевод сделан: {1}.","Checked {0} at {1}.":"{0} — проверка сделана: {1}.","Done — {0} filled in.":"Готово — дополнено: {0}.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Готово — дополнено: {0}; можно улучшить: {1}. Ищи во вкладке «Карточки».",
   "Undone — {0} put back.":"Отменено: {0} на месте.",
-  
   
   "Filter":"Фильтр",
   "Status":"Статус",
@@ -1561,7 +1573,6 @@ ru:{
   "Take photo":"Сделать фото",
   "From album":"Из галереи",
   "Processing photo …":"Обрабатываю фото …",
-  
   
   "Crop":"Обрезать",
   "Turn the frame":"Повернуть рамку",
@@ -1691,7 +1702,7 @@ ru:{
   "All cards":"Все карточки","Untagged":"Без тегов",
   "Nothing read":"Ничего не прочитано","Reading …":"Читаю …","AI":"ИИ","No cards match.":"Ничего не нашлось.",
   "No cards yet — take a photo under Camera, or tap + New.":"Карточек пока нет — сделай фото во вкладке «Камера» или нажми + Новая.",
-  "Search":"Поиск","+ New":"+ Новая","⚑ Flagged":"⚑ С меткой","Star":"Звезда","Starred":"Со звездой","Unverified":"Не проверено","{0} of {1}":"{0} из {1}",
+  "+ New":"+ Новая","⚑ Flagged":"⚑ С меткой","Star":"Звезда","Starred":"Со звездой","Unverified":"Не проверено","{0} of {1}":"{0} из {1}",
   "{0} so far, next on {1}.":"Пока {0}, следующее {1}.",
   "Nothing read yet":"Пока ничего не прочитано","unverified":"не проверено","translation pending":"перевод ещё не готов","reading uncertain":"чтение неточное",
   "The new frame is being read — the text follows when it is done.":"Читаю новую рамку — текст появится, когда закончу.",
@@ -1711,7 +1722,7 @@ ru:{
   "Off. Nothing is sent.":"Выключено. Ничего не отправляется.","Last sent today.":"Последняя отправка сегодня.","Last sent {0}.":"Последняя отправка: {0}.","Not sent yet.":"Пока не отправлялось.",
   "Last export: today.":"Последний экспорт: сегодня.","Last export: {0} ago.":"Последний экспорт: {0} назад.","Never exported.":"Экспорта ещё не было.","Export now — the cards exist only on this phone.":"Сделай экспорт — карточки есть только на этом телефоне.",
   "{0} in the inbox":"Во входящих {0}",", {0} older than {1} days":", из них {0} старше {1} дней","Delete {0} old photos?":"Удалить старые фото: {0}?","Delete one old photo?":"Удалить одно старое фото?",
-  "Cards made from them keep their own picture. A photo that never made a card is gone.":"У карточек, сделанных из них, остаётся своя картинка. Фото, из которого карточки не вышло, пропадёт.","Persistent on this phone.":"Хранится надёжно на этом телефоне.","Not persistent yet. Install the app so the system keeps the data.":"Пока ненадёжно. Установи приложение, чтобы система не удаляла данные.",
+  "Cards made from them keep their own picture. A photo that never made a card is gone.":"У карточек, сделанных из них, остаётся своя картинка. Фото, из которого карточки не вышло, пропадёт.","Persistent on this phone.":"Хранится надёжно на этом телефоне.",
   "Checking …":"Проверяю …","Share":"Поделиться","Share the app":"Поделиться приложением","Send the link to a friend. The app installs from any browser, no store.":"Отправь ссылку другу. Приложение ставится из любого браузера, без магазина.",
   "Add screenshot":"Добавить скриншот","Sent, but the screenshot could not be attached.":"Отправлено, но скриншот приложить не удалось.","Feedback":"Отзыв","Tell the app's owner what works and what does not.":"Расскажи владельцу приложения, что работает, а что нет.","Your message":"Твоё сообщение","Send":"Отправить",
   "Export":"Экспорт","Progress and cards as one file, via the share sheet.":"Прогресс и карточки одним файлом, через меню «Поделиться».","Include photos (adds about {0} MB)":"Вместе с фото (примерно +{0} МБ)",
@@ -1753,7 +1764,6 @@ ru:{
   "Fix the characters":"Поправить иероглифы",
   "Swipe left or right to pick another card.":"Проведи влево или вправо, чтобы выбрать другую карточку.",
   "Tap it — what it means.": "Нажми – что это значит.",
-  "Open it — the whole card.": "Открой – вся карточка.",
   "Trace the lit stroke.": "Обведи подсвеченную черту.",
   "Tap the photo for the pinyin and the meaning, and again for the photo.": "Нажми на фото — пиньинь и значение, ещё раз — снова фото.",
   "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "Карточка начинается с фотографии — это вопрос. Одно касание открывает текст с пиньинем и значением, следующее возвращает фото.",
@@ -1770,7 +1780,7 @@ ru:{
   /* Undo after Delete (v268) */
   "Deleted “{0}”":"Удалено «{0}»","Card deleted":"Карточка удалена","Updated — {0}":"Обновлено — {0}","More under About.":"Подробнее в разделе «О приложении».","What is new":"Что нового","Photo deleted":"Фото удалено","Deleted {0}":"Удалено: {0}","Deleted {0} and {1}":"Удалено: {0} и {1}","Undo":"Отменить",
   /* the Progress dashboard (v274) */
-  "Day streak":"Дней подряд","Cards learned":"Выучено карточек","Due today":"Сегодня к повтору","Reviews this week":"Повторов за неделю","Last 30 days":"Последние 30 дней","Still learning":"В процессе","Known":"Освоено","Coming up: {0} due tomorrow, {1} this week.":"Впереди: завтра {0}, на этой неделе {1}."
+  "Day streak":"Дней подряд","Due today":"Сегодня к повтору","Reviews this week":"Повторов за неделю","Last 30 days":"Последние 30 дней","Still learning":"В процессе","Known":"Освоено","Coming up: {0} due tomorrow, {1} this week.":"Впереди: завтра {0}, на этой неделе {1}."
 ,
   "Camera → Take photo, or From album. The app finds the text, reads it and makes the card for you; Crop frames it by hand when the app gets it wrong.":"Камера → «Сделать фото» или «Из галереи». Приложение находит текст, читает его и делает карточку за тебя; если промахнулось — обведи сам через «Обрезать».",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up; to learn one, open it from the list under the photo and press + Flashcard.":"Фото с несколькими надписями — экран приложения, панель управления, меню — становится мультикарточкой. Нажми любую надпись на нём, чтобы посмотреть её; чтобы выучить, открой её в списке под фото и нажми «+ Карточка».",
@@ -1787,6 +1797,14 @@ ru:{
   "Edit sits under Details too, for a card that needs fixing.":"В «Подробности» есть и «Изменить» — если карточку нужно поправить.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Раз в день — и ещё раз, когда ты выходишь из приложения после новой карточки, — владельцу приложения уходят обезличенные счётчики и сообщения об ошибках приложения; в «Ещё → Статистика использования» это можно выключить. Вопросы или идеи? «Ещё» → «Отзыв».",
 
+  /* v717 */
+  "Open it — the details.":"Открой – подробности.",
+  "Cards started":"Карточек начато",
+  "Not safe yet. Add the app to your home screen, then the phone keeps your cards.":"Пока не защищено. Добавь приложение на главный экран, и телефон сохранит твои карточки.",
+  "Characters or pinyin":"Знаки или пиньинь",
+  "What is sent":"Что отправляется",
+  "About the app":"О приложении",
+  "Write a message":"Написать сообщение",
 },
 vi:{
   "reading confidence {0}%":"độ chắc chắn khi đọc {0}%","unknown {0}":"không nhận ra: {0}","no dictionary meaning":"không có nghĩa trong từ điển","the text looks misread":"văn bản có vẻ bị đọc sai","the framed area":"vùng trong khung","card image":"ảnh của thẻ","alt:photo":"ảnh",
@@ -1831,11 +1849,8 @@ vi:{
   "Undo last run":"Hoàn tác lần chạy trước",
   
   
-  
-  
   "Translated {0} at {1}.":"Đã dịch {0} lúc {1}.","Checked {0} at {1}.":"Đã kiểm tra {0} lúc {1}.","Done — {0} filled in.":"Xong — đã bổ sung {0}.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Xong — đã bổ sung {0}, {1} có thể tốt hơn. Xem ở tab Thẻ.",
   "Undone — {0} put back.":"Đã hoàn tác — {0} trở lại như cũ.",
-  
   
   "Filter":"Bộ lọc",
   "Status":"Trạng thái",
@@ -1853,7 +1868,6 @@ vi:{
   "Take photo":"Chụp ảnh",
   "From album":"Từ thư viện",
   "Processing photo …":"Đang xử lý ảnh …",
-  
   
   "Crop":"Cắt ảnh",
   "Turn the frame":"Xoay khung",
@@ -1983,7 +1997,7 @@ vi:{
   "All cards":"Tất cả thẻ","Untagged":"Chưa có nhãn",
   "Nothing read":"Chưa đọc được","Reading …":"Đang đọc …","AI":"AI","No cards match.":"Không có thẻ nào khớp.",
   "No cards yet — take a photo under Camera, or tap + New.":"Chưa có thẻ nào — chụp một tấm ảnh ở tab Máy ảnh, hoặc chạm + Mới.",
-  "Search":"Tìm","+ New":"+ Mới","⚑ Flagged":"⚑ Đã đánh dấu","Star":"Sao","Starred":"Có sao","Unverified":"Chưa kiểm tra","{0} of {1}":"{0}/{1}",
+  "+ New":"+ Mới","⚑ Flagged":"⚑ Đã đánh dấu","Star":"Sao","Starred":"Có sao","Unverified":"Chưa kiểm tra","{0} of {1}":"{0}/{1}",
   "{0} so far, next on {1}.":"Đến giờ {0}, lần tới {1}.",
   "Nothing read yet":"Chưa đọc được gì","unverified":"chưa kiểm tra","translation pending":"đang chờ dịch","reading uncertain":"bản đọc chưa chắc",
   "The new frame is being read — the text follows when it is done.":"Đang đọc khung mới — chữ sẽ có khi xong.",
@@ -2003,7 +2017,7 @@ vi:{
   "Off. Nothing is sent.":"Tắt. Không gửi gì cả.","Last sent today.":"Gửi lần cuối hôm nay.","Last sent {0}.":"Gửi lần cuối {0}.","Not sent yet.":"Chưa gửi lần nào.",
   "Last export: today.":"Xuất lần cuối: hôm nay.","Last export: {0} ago.":"Xuất lần cuối: {0} trước.","Never exported.":"Chưa xuất bao giờ.","Export now — the cards exist only on this phone.":"Xuất ngay đi — thẻ chỉ có trên máy này thôi.",
   "{0} in the inbox":"{0} đang chờ",", {0} older than {1} days":", {0} tấm cũ hơn {1} ngày","Delete {0} old photos?":"Xóa {0} ảnh cũ?","Delete one old photo?":"Xóa một ảnh cũ?",
-  "Cards made from them keep their own picture. A photo that never made a card is gone.":"Những thẻ làm từ chúng vẫn giữ ảnh riêng. Ảnh chưa từng thành thẻ thì mất luôn.","Persistent on this phone.":"Đã lưu chắc chắn trên máy này.","Not persistent yet. Install the app so the system keeps the data.":"Chưa lưu chắc chắn. Cài app để hệ thống giữ lại dữ liệu.",
+  "Cards made from them keep their own picture. A photo that never made a card is gone.":"Những thẻ làm từ chúng vẫn giữ ảnh riêng. Ảnh chưa từng thành thẻ thì mất luôn.","Persistent on this phone.":"Đã lưu chắc chắn trên máy này.",
   "Checking …":"Đang kiểm tra …","Share":"Chia sẻ","Share the app":"Chia sẻ app","Send the link to a friend. The app installs from any browser, no store.":"Gửi liên kết cho bạn bè. App cài được từ mọi trình duyệt, không cần cửa hàng.",
   "Add screenshot":"Thêm ảnh chụp màn hình","Sent, but the screenshot could not be attached.":"Đã gửi, nhưng không đính kèm được ảnh chụp màn hình.","Feedback":"Góp ý","Tell the app's owner what works and what does not.":"Nói cho chủ app biết cái gì chạy tốt, cái gì chưa.","Your message":"Lời nhắn của bạn","Send":"Gửi",
   "Export":"Xuất","Progress and cards as one file, via the share sheet.":"Tiến độ và thẻ gộp thành một tệp, gửi qua menu chia sẻ.","Include photos (adds about {0} MB)":"Kèm cả ảnh (thêm khoảng {0} MB)",
@@ -2045,7 +2059,6 @@ vi:{
   "Fix the characters":"Sửa chữ",
   "Swipe left or right to pick another card.":"Vuốt sang trái hoặc phải để chọn thẻ khác.",
   "Tap it — what it means.": "Chạm – nghĩa là gì.",
-  "Open it — the whole card.": "Mở ra – cả thẻ.",
   "Trace the lit stroke.": "Tô theo nét sáng.",
   "Tap the photo for the pinyin and the meaning, and again for the photo.": "Chạm vào ảnh để xem pinyin và nghĩa, chạm nữa để quay lại ảnh.",
   "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "Thẻ bắt đầu bằng ảnh — đó là câu hỏi. Một lần chạm mở ra chữ kèm pinyin và nghĩa, lần tiếp theo đưa ảnh trở lại.",
@@ -2062,7 +2075,7 @@ vi:{
   /* Undo after Delete (v268) */
   "Deleted “{0}”":"Đã xóa “{0}”","Card deleted":"Đã xóa thẻ","Updated — {0}":"Đã cập nhật — {0}","More under About.":"Xem thêm ở Giới thiệu.","What is new":"Có gì mới","Photo deleted":"Đã xóa ảnh","Deleted {0}":"Đã xóa {0}","Deleted {0} and {1}":"Đã xóa {0} và {1}","Undo":"Hoàn tác",
   /* the Progress dashboard (v274) */
-  "Day streak":"Chuỗi ngày","Cards learned":"Thẻ đã học","Due today":"Đến hạn hôm nay","Reviews this week":"Lượt ôn tuần này","Last 30 days":"30 ngày qua","Still learning":"Đang học","Known":"Đã thuộc","Coming up: {0} due tomorrow, {1} this week.":"Sắp tới: {0} đến hạn ngày mai, {1} trong tuần."
+  "Day streak":"Chuỗi ngày","Due today":"Đến hạn hôm nay","Reviews this week":"Lượt ôn tuần này","Last 30 days":"30 ngày qua","Still learning":"Đang học","Known":"Đã thuộc","Coming up: {0} due tomorrow, {1} this week.":"Sắp tới: {0} đến hạn ngày mai, {1} trong tuần."
 ,
   "Camera → Take photo, or From album. The app finds the text, reads it and makes the card for you; Crop frames it by hand when the app gets it wrong.":"Máy ảnh → Chụp ảnh, hoặc Từ thư viện. Ứng dụng tìm chữ, đọc và tạo thẻ cho bạn; nếu nó lấy sai thì dùng Cắt ảnh để tự khoanh.",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up; to learn one, open it from the list under the photo and press + Flashcard.":"Ảnh có nhiều đoạn chữ — màn hình ứng dụng, bảng điều khiển, thực đơn — sẽ thành một thẻ gộp. Chạm vào chữ nào trên ảnh để tra; muốn học chữ nào thì mở nó trong danh sách dưới ảnh rồi chạm + Thẻ.",
@@ -2079,6 +2092,14 @@ vi:{
   "Edit sits under Details too, for a card that needs fixing.":"Trong Chi tiết còn có Sửa, khi một thẻ cần chỉnh lại.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Mỗi ngày một lần, và thêm một lần khi bạn rời app sau khi tạo thẻ, vài số liệu sử dụng ẩn danh và các thông báo lỗi của app được gửi cho chủ app; bạn tắt chuyện đó ở Thêm → Chia sẻ số liệu sử dụng. Có thắc mắc hay ý tưởng gì không? Thêm → Góp ý.",
 
+  /* v717 */
+  "Open it — the details.":"Mở ra – chi tiết.",
+  "Cards started":"Thẻ đã bắt đầu",
+  "Not safe yet. Add the app to your home screen, then the phone keeps your cards.":"Chưa an toàn. Thêm ứng dụng vào màn hình chính, điện thoại sẽ giữ thẻ của bạn.",
+  "Characters or pinyin":"Chữ hoặc pinyin",
+  "What is sent":"Những gì được gửi",
+  "About the app":"Về ứng dụng",
+  "Write a message":"Viết tin nhắn",
 },
 th:{
   "reading confidence {0}%":"ความมั่นใจในการอ่าน {0}%","unknown {0}":"ไม่รู้จัก: {0}","no dictionary meaning":"ไม่มีความหมายในพจนานุกรม","the text looks misread":"ข้อความน่าจะอ่านผิด","the framed area":"บริเวณในกรอบ","card image":"รูปของการ์ด","alt:photo":"รูป",
@@ -2123,11 +2144,8 @@ th:{
   "Undo last run":"เลิกทำรอบล่าสุด",
   
   
-  
-  
   "Translated {0} at {1}.":"แปล{0} เมื่อ {1}","Checked {0} at {1}.":"ตรวจ{0} เมื่อ {1}","Done — {0} filled in.":"เสร็จแล้ว — เติมให้{0}","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"เสร็จแล้ว — เติมให้{0} และ{1} น่าจะดีขึ้นได้ ดูได้ที่แท็บการ์ด",
   "Undone — {0} put back.":"เลิกทำแล้ว — คืน{0}กลับมา",
-  
   
   "Filter":"ตัวกรอง",
   "Status":"สถานะ",
@@ -2145,7 +2163,6 @@ th:{
   "Take photo":"ถ่ายรูป",
   "From album":"จากอัลบั้ม",
   "Processing photo …":"กำลังเตรียมรูป …",
-  
   
   "Crop":"ครอบตัด",
   "Turn the frame":"หมุนกรอบ",
@@ -2275,7 +2292,7 @@ th:{
   "All cards":"การ์ดทั้งหมด","Untagged":"ไม่มีแท็ก",
   "Nothing read":"อ่านไม่ได้","Reading …":"กำลังอ่าน …","AI":"AI","No cards match.":"ไม่มีการ์ดที่ตรงกัน",
   "No cards yet — take a photo under Camera, or tap + New.":"ยังไม่มีการ์ด — ถ่ายรูปที่แท็บกล้อง หรือแตะ + ใหม่",
-  "Search":"ค้นหา","+ New":"+ ใหม่","⚑ Flagged":"⚑ ติดธง","Star":"ดาว","Starred":"ติดดาว","Unverified":"ยังไม่ได้ตรวจ","{0} of {1}":"{0} จาก {1}",
+  "+ New":"+ ใหม่","⚑ Flagged":"⚑ ติดธง","Star":"ดาว","Starred":"ติดดาว","Unverified":"ยังไม่ได้ตรวจ","{0} of {1}":"{0} จาก {1}",
   "{0} so far, next on {1}.":"จนถึงตอนนี้ {0} ครั้งถัดไป {1}",
   "Nothing read yet":"ยังอ่านไม่ได้","unverified":"ยังไม่ได้ตรวจสอบ","translation pending":"รอคำแปล","reading uncertain":"การอ่านไม่แน่",
   "The new frame is being read — the text follows when it is done.":"กำลังอ่านกรอบใหม่ ตัวอักษรจะตามมาเมื่อเสร็จ",
@@ -2295,7 +2312,7 @@ th:{
   "Off. Nothing is sent.":"ปิดอยู่ ไม่ส่งอะไรเลย","Last sent today.":"ส่งล่าสุดวันนี้","Last sent {0}.":"ส่งล่าสุด {0}","Not sent yet.":"ยังไม่เคยส่ง",
   "Last export: today.":"ส่งออกล่าสุด: วันนี้","Last export: {0} ago.":"ส่งออกล่าสุด: {0}ที่แล้ว","Never exported.":"ยังไม่เคยส่งออก","Export now — the cards exist only on this phone.":"ส่งออกเลย — การ์ดมีอยู่แค่ในเครื่องนี้",
   "{0} in the inbox":"{0} รออยู่",", {0} older than {1} days":" ในจำนวนนี้ {0} ใบเก่ากว่า {1} วัน","Delete {0} old photos?":"ลบรูปเก่า {0} ใบไหม","Delete one old photo?":"ลบรูปเก่า 1 ใบไหม",
-  "Cards made from them keep their own picture. A photo that never made a card is gone.":"การ์ดที่ทำจากรูปเหล่านี้ยังเก็บรูปของตัวเองไว้ ส่วนรูปที่ไม่เคยกลายเป็นการ์ดจะหายไป","Persistent on this phone.":"เก็บถาวรในเครื่องนี้แล้ว","Not persistent yet. Install the app so the system keeps the data.":"ยังไม่ถาวร ติดตั้งแอปเพื่อให้ระบบเก็บข้อมูลไว้",
+  "Cards made from them keep their own picture. A photo that never made a card is gone.":"การ์ดที่ทำจากรูปเหล่านี้ยังเก็บรูปของตัวเองไว้ ส่วนรูปที่ไม่เคยกลายเป็นการ์ดจะหายไป","Persistent on this phone.":"เก็บถาวรในเครื่องนี้แล้ว",
   "Checking …":"กำลังตรวจ …","Share":"แชร์","Share the app":"แชร์แอปนี้","Send the link to a friend. The app installs from any browser, no store.":"ส่งลิงก์ให้เพื่อน ติดตั้งได้จากเบราว์เซอร์ไหนก็ได้ ไม่ต้องผ่านสโตร์",
   "Add screenshot":"แนบภาพหน้าจอ","Sent, but the screenshot could not be attached.":"ส่งแล้ว แต่แนบภาพหน้าจอไม่ได้","Feedback":"ส่งความเห็น","Tell the app's owner what works and what does not.":"บอกเจ้าของแอปว่าอะไรใช้ดี อะไรยังไม่ดี","Your message":"ข้อความของคุณ","Send":"ส่ง",
   "Export":"ส่งออก","Progress and cards as one file, via the share sheet.":"ความคืบหน้าและการ์ดรวมเป็นไฟล์เดียว ผ่านเมนูแชร์","Include photos (adds about {0} MB)":"รวมรูปด้วย (เพิ่มราว {0} MB)",
@@ -2337,7 +2354,6 @@ th:{
   "Fix the characters":"แก้ตัวอักษร",
   "Swipe left or right to pick another card.":"ปัดซ้ายหรือขวาเพื่อเลือกการ์ดใบอื่น",
   "Tap it — what it means.": "แตะ – แปลว่าอะไร",
-  "Open it — the whole card.": "กดเปิด – ทั้งการ์ด",
   "Trace the lit stroke.": "ลากตามเส้นที่สว่าง",
   "Tap the photo for the pinyin and the meaning, and again for the photo.": "แตะรูปเพื่อดูพินอินกับความหมาย แตะอีกทีเพื่อกลับไปที่รูป",
   "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "การ์ดเริ่มด้วยรูป นั่นคือคำถาม แตะหนึ่งครั้งจะเปิดตัวอักษรพร้อมพินอินและความหมาย แตะอีกครั้งรูปก็กลับมา",
@@ -2354,7 +2370,7 @@ th:{
   /* Undo after Delete (v268) */
   "Deleted “{0}”":"ลบ “{0}” แล้ว","Card deleted":"ลบการ์ดแล้ว","Updated — {0}":"อัปเดตแล้ว — {0}","More under About.":"ดูเพิ่มที่ เกี่ยวกับ","What is new":"มีอะไรใหม่","Photo deleted":"ลบรูปแล้ว","Deleted {0}":"ลบ{0}แล้ว","Deleted {0} and {1}":"ลบ{0}และ{1}แล้ว","Undo":"เลิกทำ",
   /* the Progress dashboard (v274) */
-  "Day streak":"วันต่อเนื่อง","Cards learned":"การ์ดที่เรียนแล้ว","Due today":"ถึงกำหนดวันนี้","Reviews this week":"ทบทวนสัปดาห์นี้","Last 30 days":"30 วันล่าสุด","Still learning":"กำลังเรียน","Known":"จำได้แล้ว","Coming up: {0} due tomorrow, {1} this week.":"ที่กำลังจะมา: พรุ่งนี้ {0} ใบ · สัปดาห์นี้ {1} ใบ"
+  "Day streak":"วันต่อเนื่อง","Due today":"ถึงกำหนดวันนี้","Reviews this week":"ทบทวนสัปดาห์นี้","Last 30 days":"30 วันล่าสุด","Still learning":"กำลังเรียน","Known":"จำได้แล้ว","Coming up: {0} due tomorrow, {1} this week.":"ที่กำลังจะมา: พรุ่งนี้ {0} ใบ · สัปดาห์นี้ {1} ใบ"
 ,
   "Camera → Take photo, or From album. The app finds the text, reads it and makes the card for you; Crop frames it by hand when the app gets it wrong.":"กล้อง → ถ่ายรูป หรือ จากอัลบั้ม แอปจะหาตัวอักษร อ่าน แล้วสร้างการ์ดให้ ถ้าจับผิดที่ ใช้ครอบตัดเพื่อเลือกกรอบเอง",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up; to learn one, open it from the list under the photo and press + Flashcard.":"รูปที่มีข้อความหลายชุด — หน้าจอแอป แผงปุ่ม ป้ายเมนู — จะกลายเป็นการ์ดรวมแทน แตะข้อความไหนบนรูปก็ดูความหมายได้ ถ้าอยากจำอันไหน ให้เปิดจากรายการใต้รูปแล้วกด + การ์ด",
@@ -2371,6 +2387,14 @@ th:{
   "Edit sits under Details too, for a card that needs fixing.":"ใน รายละเอียด มี แก้ไข ด้วย ถ้าการ์ดไหนต้องแก้",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"วันละครั้ง และอีกครั้งตอนออกจากแอปหลังสร้างการ์ด สถิติการใช้งานแบบไม่ระบุตัวตนและข้อความแจ้งข้อผิดพลาดจะถูกส่งให้เจ้าของแอป ปิดได้ที่ อื่นๆ → ส่งสถิติการใช้งาน มีคำถามหรือไอเดีย? อื่นๆ → ส่งความเห็น",
 
+  /* v717 */
+  "Open it — the details.":"เปิดดู – รายละเอียด",
+  "Cards started":"การ์ดที่เริ่มแล้ว",
+  "Not safe yet. Add the app to your home screen, then the phone keeps your cards.":"ยังไม่ปลอดภัย เพิ่มแอปไว้ที่หน้าจอหลัก แล้วเครื่องจะเก็บการ์ดของคุณไว้",
+  "Characters or pinyin":"ตัวอักษรหรือพินอิน",
+  "What is sent":"สิ่งที่ส่งไป",
+  "About the app":"เกี่ยวกับแอป",
+  "Write a message":"เขียนข้อความ",
 },
 id:{
   "reading confidence {0}%":"keyakinan pembacaan {0}%","unknown {0}":"tidak dikenal: {0}","no dictionary meaning":"tidak ada arti di kamus","the text looks misread":"teks sepertinya salah dibaca","the framed area":"area dalam bingkai","card image":"gambar kartu","alt:photo":"foto",
@@ -2415,11 +2439,8 @@ id:{
   "Undo last run":"Urungkan proses terakhir",
   
   
-  
-  
   "Translated {0} at {1}.":"{0} diterjemahkan pada {1}.","Checked {0} at {1}.":"{0} dicek pada {1}.","Done — {0} filled in.":"Selesai — {0} dilengkapi.","Done — {0} filled in, {1} could be better. Look under the Cards tab.":"Selesai — {0} dilengkapi, {1} bisa lebih baik. Lihat di tab Kartu.",
   "Undone — {0} put back.":"Diurungkan — {0} dikembalikan.",
-  
   
   "Filter":"Filter",
   "Status":"Status",
@@ -2437,7 +2458,6 @@ id:{
   "Take photo":"Ambil foto",
   "From album":"Dari album",
   "Processing photo …":"Memproses foto …",
-  
   
   "Crop":"Pangkas",
   "Turn the frame":"Putar bingkai",
@@ -2567,7 +2587,7 @@ id:{
   "All cards":"Semua kartu","Untagged":"Tanpa tag",
   "Nothing read":"Tidak terbaca","Reading …":"Membaca …","AI":"AI","No cards match.":"Tidak ada kartu yang cocok.",
   "No cards yet — take a photo under Camera, or tap + New.":"Belum ada kartu — ambil foto lewat Kamera, atau ketuk + Baru.",
-  "Search":"Cari","+ New":"+ Baru","⚑ Flagged":"⚑ Ditandai","Star":"Bintang","Starred":"Berbintang","Unverified":"Belum diperiksa","{0} of {1}":"{0} dari {1}",
+  "+ New":"+ Baru","⚑ Flagged":"⚑ Ditandai","Star":"Bintang","Starred":"Berbintang","Unverified":"Belum diperiksa","{0} of {1}":"{0} dari {1}",
   "{0} so far, next on {1}.":"Sejauh ini {0}, berikutnya {1}.",
   "Nothing read yet":"Belum ada yang terbaca","unverified":"belum diperiksa","translation pending":"menunggu terjemahan","reading uncertain":"hasil baca meragukan",
   "The new frame is being read — the text follows when it is done.":"Bingkai baru sedang dibaca — teksnya menyusul setelah selesai.",
@@ -2587,7 +2607,7 @@ id:{
   "Off. Nothing is sent.":"Mati. Tidak ada yang dikirim.","Last sent today.":"Terakhir dikirim hari ini.","Last sent {0}.":"Terakhir dikirim {0}.","Not sent yet.":"Belum pernah dikirim.",
   "Last export: today.":"Ekspor terakhir: hari ini.","Last export: {0} ago.":"Ekspor terakhir: {0} lalu.","Never exported.":"Belum pernah diekspor.","Export now — the cards exist only on this phone.":"Ekspor sekarang — kartunya cuma ada di ponsel ini.",
   "{0} in the inbox":"{0} di kotak masuk",", {0} older than {1} days":", {0} di antaranya lebih dari {1} hari","Delete {0} old photos?":"Hapus {0} foto lama?","Delete one old photo?":"Hapus satu foto lama?",
-  "Cards made from them keep their own picture. A photo that never made a card is gone.":"Kartu yang dibuat dari foto itu tetap punya gambarnya sendiri. Foto yang belum pernah jadi kartu akan hilang.","Persistent on this phone.":"Tersimpan permanen di ponsel ini.","Not persistent yet. Install the app so the system keeps the data.":"Belum permanen. Pasang aplikasinya supaya sistem menyimpan datanya.",
+  "Cards made from them keep their own picture. A photo that never made a card is gone.":"Kartu yang dibuat dari foto itu tetap punya gambarnya sendiri. Foto yang belum pernah jadi kartu akan hilang.","Persistent on this phone.":"Tersimpan permanen di ponsel ini.",
   "Checking …":"Memeriksa …","Share":"Bagikan","Share the app":"Bagikan aplikasinya","Send the link to a friend. The app installs from any browser, no store.":"Kirim tautannya ke teman. Aplikasinya bisa dipasang dari browser apa saja, tanpa toko aplikasi.",
   "Add screenshot":"Tambah tangkapan layar","Sent, but the screenshot could not be attached.":"Terkirim, tapi tangkapan layar tidak bisa dilampirkan.","Feedback":"Masukan","Tell the app's owner what works and what does not.":"Beri tahu pemilik aplikasi apa yang jalan dan apa yang tidak.","Your message":"Pesanmu","Send":"Kirim",
   "Export":"Ekspor","Progress and cards as one file, via the share sheet.":"Kemajuan dan kartu jadi satu berkas, lewat menu bagikan.","Include photos (adds about {0} MB)":"Sertakan foto (menambah sekitar {0} MB)",
@@ -2629,7 +2649,6 @@ id:{
   "Fix the characters":"Perbaiki karakternya",
   "Swipe left or right to pick another card.":"Geser ke kiri atau kanan untuk memilih kartu lain.",
   "Tap it — what it means.": "Ketuk – artinya apa.",
-  "Open it — the whole card.": "Buka – seluruh kartu.",
   "Trace the lit stroke.": "Ikuti garis yang menyala.",
   "Tap the photo for the pinyin and the meaning, and again for the photo.": "Ketuk fotonya untuk pinyin dan artinya, ketuk lagi untuk kembali ke foto.",
   "A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back.": "Kartu dimulai dengan foto — itu pertanyaannya. Satu ketukan membuka teksnya lengkap dengan pinyin dan arti, ketukan berikutnya mengembalikan fotonya.",
@@ -2646,7 +2665,7 @@ id:{
   /* Undo after Delete (v268) */
   "Deleted “{0}”":"“{0}” dihapus","Card deleted":"Kartu dihapus","Updated — {0}":"Diperbarui — {0}","More under About.":"Selengkapnya di Tentang.","What is new":"Yang baru","Photo deleted":"Foto dihapus","Deleted {0}":"{0} dihapus","Deleted {0} and {1}":"{0} dan {1} dihapus","Undo":"Urungkan",
   /* the Progress dashboard (v274) */
-  "Day streak":"Hari beruntun","Cards learned":"Kartu dipelajari","Due today":"Hari ini","Reviews this week":"Ulangan minggu ini","Last 30 days":"30 hari terakhir","Still learning":"Masih dipelajari","Known":"Sudah hafal","Coming up: {0} due tomorrow, {1} this week.":"Berikutnya: {0} besok, {1} minggu ini."
+  "Day streak":"Hari beruntun","Due today":"Hari ini","Reviews this week":"Ulangan minggu ini","Last 30 days":"30 hari terakhir","Still learning":"Masih dipelajari","Known":"Sudah hafal","Coming up: {0} due tomorrow, {1} this week.":"Berikutnya: {0} besok, {1} minggu ini."
 ,
   "Camera → Take photo, or From album. The app finds the text, reads it and makes the card for you; Crop frames it by hand when the app gets it wrong.":"Kamera → Ambil foto, atau Dari album. Aplikasi mencari teksnya, membacanya, dan membuatkan kartunya; kalau meleset, pakai Pangkas untuk membingkai sendiri.",
   "A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up; to learn one, open it from the list under the photo and press + Flashcard.":"Foto dengan beberapa teks — layar aplikasi, panel tombol, papan menu — jadi satu multikartu. Ketuk teks mana pun di situ untuk melihat artinya; untuk mempelajarinya, buka dari daftar di bawah foto lalu ketuk + Kartu.",
@@ -2662,5 +2681,13 @@ id:{
   "Tap the star counter at the top to see how your points are counted.":"Ketuk penghitung bintang di atas untuk melihat cara poin dihitung.",
   "Edit sits under Details too, for a card that needs fixing.":"Di Detail ada Edit juga, kalau ada kartu yang perlu dibetulkan.",
   "Anonymous usage counts and the app's error messages go to the app's owner once a day, and again when you leave the app after making a card; switch that off under More → Usage sharing. Questions or ideas? More → Feedback.":"Sekali sehari, dan sekali lagi saat kamu keluar dari aplikasi setelah membuat kartu, hitungan pemakaian yang anonim dan pesan error aplikasi dikirim ke pemilik aplikasi; matikan itu di Lainnya → Berbagi data pemakaian. Ada pertanyaan atau ide? Lainnya → Masukan.",
+  /* v717 */
+  "Open it — the details.":"Buka – detailnya.",
+  "Cards started":"Kartu dimulai",
+  "Not safe yet. Add the app to your home screen, then the phone keeps your cards.":"Belum aman. Tambahkan aplikasi ke layar utama, maka ponsel akan menyimpan kartumu.",
+  "Characters or pinyin":"Aksara atau pinyin",
+  "What is sent":"Apa yang dikirim",
+  "About the app":"Tentang aplikasi",
+  "Write a message":"Tulis pesan",
 }
 };

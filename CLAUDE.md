@@ -56,12 +56,20 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v716, 2026-09-28)
+## Current state (PWA v718, 2026-09-28)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
 
 **Recent state worth carrying in the head** (full entries: `grep -n "v6xx" docs/HISTORY.md`):
+- **v717 usability pass, v718 gloss fix** (neither field-checked): a word's dictionary line no longer starts with a
+  variant entry's gloss (`tools/cedict-variants.py`, `cedict.tsv.gz` **v4**; 药 "medicine"), a character inside a word
+  takes its (bound form) sense (`bestSense(w,py,inWord)`), a classifier sense stands back; `glossFix()` applies that once
+  per phone to stored single-character glosses and unverified dict cards (settings row `glossFix`; Diagnostics prints it).
+  More folds its long texts (`MORE_OPEN`); the fold count counts distinct cards; a moving touch on Show me or Skip is a
+  stroke (`PAD_HAND`); one backup line on Cards from `BACKUP_AT` 25 flashcards until the first export; "Cards with 行 ›"
+  only when another card holds the character; "Cards started", Storage, the search placeholder and the empty deck's third
+  note reworded.
 - **The phone's reader (PaddleOCR PP-OCRv4, v637)** — `pdRead`, `vendor/paddle/` ~30 MB on first use, own worker (v642). One
   more pass of every reading (v639); when **sure** (≤ 2 lines, ≥ 2 characters, each ≥ `PD_SURE` 95 %, v641) it is the reading,
   checked by the AI's picture beside it — a different answer flags the card and takes the AI's reading (`sureCheck`,
@@ -182,9 +190,11 @@ Square photo tiles, two a row, **nothing written under them** (v593); a text-onl
 On the picture: the star (v425, one tap), flag and AI marks; a multicard adds its plates, count chip, progress bar and a
 two-line title (v461–v597). **Two tabs, Cards and Multicards** (v477); the filter is **one pill and a sheet** (v365/v366);
 search also takes toneless pinyin (`toneless`, v690; H skipped a dictionary-row list, proposal A); a long press marks (v354);
-the list keeps its place (v352/v445). The **open card** swipes through the list (v445); Details, then its actions at the foot (v703): Test this card · Edit | Star ·
+the list keeps its place (v352/v445); the placeholder reads "Characters or pinyin" (v717; meanings are found too). From
+`BACKUP_AT` 25 flashcards a never-exported deck shows **one backup line with Export** under the search bar (v717). The **open card** swipes through the list (v445); Details, then its actions at the foot (v703): Test this card · Edit | Star ·
 Flag | Delete; its line under the character row ends in **Cards with 行 ›**, the character's page — its readings in your
-cards and every card that holds it (v691; the card under it keeps its own way back, v710). A **multicard's own text**: it swipes to the multicard's next text (v707); its photo frames it alone (v700); + Flashcard (Flashcard › once made) | Edit, Flag |
+cards and every card that holds it (v691; the card under it keeps its own way back, v710) — only when another card holds the
+character (v717). A **multicard's own text**: it swipes to the multicard's next text (v707); its photo frames it alone (v700); + Flashcard (Flashcard › once made) | Edit, Flag |
 Delete (v692/v695); the pop-up over the photo carries **no action** (v496/v692). The multicard: **Add a text**, Delete multicard
 (v635/v711); its tags once under its title, its texts' rows show a short one-sentence description (`dsh`, all texts in one AI call at creation and once when an older multicard is opened, `pageShorts`; a failed call is asked again on the next visit, v710) and no flashcard ring; the long one stays on the opened text (v696–v698). On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right, name/pinyin/meaning without it and whole, and a dish description (`priceOf`, `isMenuPage`, v699) — its own screen and the look-up show the same, the price on its own line (`priceView`, a view, the record untouched, v712), and its flashcard is the name alone (v713); a dish with its own photo on the menu takes it, with its name and price, as its picture and shows it on its own screen (the picture model's `photo` box, `dish`, v701/v705).
 
@@ -203,7 +213,9 @@ Import, Flagged cards, Photos, Storage) · **The app** (Share the app, Feedback,
 app, Language, Meanings, AI review with the owner's setup form, Review queue, Usage sharing,
 Update notes, About, Open source licenses) · **Advanced settings**. The owner's tools fold behind
 one **Owner tools** row (Downloads, Mirror, Diagnostics, Still to test, All users, Feedback,
-Start over); unlocking lengthens More by one row instead of 1 574 px.
+Start over); unlocking lengthens More by one row instead of 1 574 px. **The long texts fold** (v717, `moreFold`, closed at
+every start, toggled in place): What is sent ⌄ on AI review and Usage sharing, About the app ⌄, Write a message on Feedback;
+every word stays (v193), as do the checkboxes, status lines and update notes. Three-card deck: 3 619 px, was 4 146.
 
 **Owner's rows are English** (H uses English) and behind a password (`ADMIN_HASH`, SHA-256, a
 session-only unlock). **Diagnostics** keeps a hundred readings, a hundred AI exchanges and a
@@ -273,7 +285,7 @@ no key**, so a fresh install sends every new card's text from its first card.
 
 ## Languages
 Ten columns in `lang.js`: en, de, fr, es, ja, ko, ru, vi, th, id. **English is the key**; a
-missing key falls back to the English text, never to the key. **482 keys a column, ru 511 (three
+missing key falls back to the English text, never to the key. **485 keys a column, ru 514 (three
 plural forms), en 15.** `nOf`/`wordOf`/`PLURAL` carry the counts.
 
 - **The v412 rule: a pronoun or a count-agreeing verb must never cross a key boundary.** Render
@@ -474,7 +486,6 @@ re-cutting the deck square (`RECUT_V` 6, ~95 ms a card, no undo); after one tap 
 face-up for the rest of the session (`S.cueBig` is session state — it reverses v568 on purpose);
 on a card of several words the tap shows the **first word's** pinyin and meaning, not the card's;
 the pad **prints** the character at levels 1 and 2, so "write the word" is "trace the word";
-the session count runs away as the repeat pass appends; the pad's helper buttons sit inside its
-square, so a stroke begun in a corner is swallowed; the star counter and the review flag are under
+the star counter and the review flag are under
 the 44 px rule; an offline weak reading still makes its flagged card; `SPLIT_MAX` 30 is a cap a
 real menu board will reach — **and a menu board has never been read in the field.**
