@@ -39,6 +39,14 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v713, 2026-09-28)
+- **A dish's flashcard is its name (v713, H: "flashcard should be the dish name").** `makeFlashcard` copies the v712 view
+  — text, pinyin, meaning, traditional form, word breaks and gloss without the price, the per-language meanings and a waiting
+  AI suggestion through the same helpers — so 砂锅刀削面¥16/份 makes the flashcard 砂锅刀削面 (id from the name), and the pad
+  never asks for 份 or shows "16". `of` still names the text, so "Flashcard ›" and the picture tie hold. A flashcard made
+  before v713 keeps its text. Harness `dishprice.js` + 2 checks: 1 FAIL on v712 → PASS on v713; `mcacts`, `fclink`, `onlyme`
+  unchanged. Not yet field-checked.
+
 ## Current state (PWA v712, 2026-09-28)
 - **A dish's price stands apart on the text's own screen and in the look-up (v712, H: "Go, dish price on the text's own
   screen" — the one design finding of v711 held back for his word).** The row has shown the price at its right since v699,
