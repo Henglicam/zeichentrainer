@@ -60,6 +60,29 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v725, 2026-09-28)
+- **夹 reads jiā (v725, H: "Ok. Next." on the 肉夹馍 line of his v723 dump).** pinyin-pro's default for 夹 is jiá — alone,
+  in 肉夹馍, in 文件夹 — so every 肉夹馍 card read ròu jiá mó, its lone 夹 (the line splits 肥|瘦肉|夹|馍) was glossed from
+  the jiá group ("double-layered (quilt)"), and `pyDictOff` measured the AI's correct jiā against the library and flagged
+  the card "does not match the dictionary (夹 jiā)". The shipped dictionary has no reading for words (only one-character
+  groups), so the library is the only source of a word's pinyin. **`OWN_PINYIN`** beside `OWN_SENSES`: the app's own
+  readings where the library's default is not the mainland one, applied by `customPinyin` the moment `loadScript` brings
+  the library in (`pinyinPro.ownApplied`, whichever of the eleven callers loads it). A one-character entry overrides the
+  library's own words too (measured: 夹子 became jiā zǐ, 夹袄 jiā ǎo), so the words that keep another reading or a neutral
+  tone stand in the table beside it: 夹子 皮夹子 jiā zi, 夹袄 夹被 夹衣 jiá, 夹肢窝 gā zhi wō. Measured and not chosen: the
+  word-only table {肉夹馍} — it fixes the menu line but leaves 夹 alone and 文件夹 at jiá. **The pass** (`GLOSS_FIX_V` 725):
+  the glosses follow through `glossCtx` as before, and an **unverified card whose text holds an `OWN_PINYIN` character takes
+  the new reading into its own pinyin**, only when the old and the new pinyin differ in nothing but that reading
+  (`OWN_PY_READ`; a toneless or AI-given pinyin stays, a verified card stays). Harness (test725, seven seeded cards after
+  a v724 row, 14 checks): the sign card's pinyin and its 夹 gloss with the composed meaning, the dict card 肉夹馍, the row
+  v725 / 2 cards / 3 words, the table, `pySpaced` of 肉夹馍, the menu line, 文件夹, 夹 alone and the four exceptions,
+  `lineMeaning` of the menu line, `pyDictOff` agreeing with jiā and flagging jiá, the open card; `[guard]` verified 夹袄
+  and 建国肉夹馍, 夹子, the toneless AI pinyin, v724's 入, 鸭血粉丝汤 / 银行 / 卖完了 unchanged, second start no-op. On the
+  v724 tree 10 of 14 fail. test724 17, test723 15, test722 14, test721 19, test720 23, test717 41 — all pass on the new
+  tree. Not field-checked: the Diagnostics line should list 夹 jiá → jiā on the roujiamo cards, and the AI review should
+  stop flagging them. Named, not built: the line still splits 肥瘦肉夹馍 as 肥|瘦肉|夹|馍 (greedy from the left); a split
+  that prefers fewer words would give 肥|瘦|肉夹馍 — it changes every card's segmentation and waits for H's word.
+
 ## Current state (PWA v724, 2026-09-28)
 - **The v5 dictionary's marginal bound forms stand back in a word, "I" is a pronoun, a capitalised word inside a sense is a
   proper noun (v724, H's v723 dump).** The v723 pass ran on the phone with the fresh v5 file (175 cards, 222 words — it
