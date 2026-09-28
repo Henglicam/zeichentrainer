@@ -56,20 +56,22 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v718, 2026-09-28)
+## Current state (PWA v719, 2026-09-28)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
 
 **Recent state worth carrying in the head** (full entries: `grep -n "v6xx" docs/HISTORY.md`):
-- **v717 usability pass, v718 gloss fix** (neither field-checked): a word's dictionary line no longer starts with a
+- **v717 usability pass, v718/v719 gloss fix** (none field-checked): a word's dictionary line no longer starts with a
   variant entry's gloss (`tools/cedict-variants.py`, `cedict.tsv.gz` **v4**; 药 "medicine"), a character inside a word
-  takes its (bound form) sense (`bestSense(w,py,inWord)`), a classifier sense stands back; `glossFix()` applies that once
-  per phone to stored single-character glosses and unverified dict cards (settings row `glossFix`; Diagnostics prints it).
-  More folds its long texts (`MORE_OPEN`); the fold count counts distinct cards; a moving touch on Show me or Skip is a
-  stroke (`PAD_HAND`); one backup line on Cards from `BACKUP_AT` 25 flashcards until the first export; "Cards with 行 ›"
-  only when another card holds the character; "Cards started", Storage, the search placeholder and the empty deck's third
-  note reworded.
+  takes its (bound form) sense (`bestSense(w,py,inWord)`), a classifier sense stands back only when another sense remains
+  (v719: 枚 had become "surname Mei"); **a one-character word takes its reading from its whole line** (v719, `lineMeaning`'s
+  `ctx`: 卖完了 ends in le, not liǎo "to finish"; 一/不 keep their own tone, `SANDHI`); `glossFix()` applies that once per
+  phone (`GLOSS_FIX_V` 719) to stored single-character glosses, the meanings composed from them and unverified dict cards
+  (settings row `glossFix`; Diagnostics prints it). More folds its long texts (`MORE_OPEN`); the fold count counts distinct
+  cards; a moving touch on Show me or Skip is a stroke (`PAD_HAND`); one backup line on Cards from `BACKUP_AT` 25 flashcards
+  until the first export; "Cards with 行 ›" only when another card holds the character; "Cards started", Storage and the
+  search placeholder reworded.
 - **The v6xx state** — the phone's reader (v637–v710), the owner tools (v627–v702), the Learn zoom's place (v619–v716) and
   Crop again with AI answers (v656/v657) — moved to `docs/HISTORY.md` on 2026-09-28 (H): `grep -n "Consolidated v6xx" docs/HISTORY.md`.
 
