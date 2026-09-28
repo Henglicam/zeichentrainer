@@ -39,6 +39,68 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
 - Push to `main` → Pages rebuilds automatically (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public** (free plan). User data lives exclusively on the device (IndexedDB), never in the repo; what the app sends on its own is **the text of every new card** (the AI review is on by default and works through the owner's relay without a key, v191/v193 — and when the reading is hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170); each can be switched off under More, and `privacy.html` is the authoritative list (corrected at v403 and v534 — this line said "the only thing the app sends on its own is the usage row" until v539, which was false for 348 versions).
 
+## Current state (PWA v717, 2026-09-28)
+- **A usability pass, H: "Ok, go for your suggestions" on the assessment of v716 (every screen walked headless at 390 and
+  360 px, light and dark, empty and seeded, plus the HISTORY sweep of what H had already rejected).** One PR, one version;
+  the eleven items and what each measured:
+  1. **Character meanings: a variant entry's gloss no longer leads a word's dictionary line** (`tools/cedict-variants.py`,
+     `cedict.tsv.gz` header v3 → v4, every phone fetches the 2.5 MB once more, as at v605). CC-CEDICT lists 葯 before 藥, so the
+     merged line of 药 read "leaf of the iris; medicine; drug" and `bestSense` showed "leaf of the iris" after every character
+     written on the pad, above it and on the open card (harness: 药 in 药店). The tool drops the leading senses of an entry
+     of at most two senses, one of them "variant of …", unless the word's own entry carries the sense too (铺 keeps "store");
+     64 lines change, every other byte as it was (证 "certificate", 愿 "hope", 帘 "hanging screen or curtain", 壳 "shell").
+     Two rules in `bestSense` beside it: a character read INSIDE a word (`inWord`: the pad line's character row, the
+     look-up's sub-characters) takes the sense CC-CEDICT marks "(bound form)" — 店 in 药店 is "shop", not the free word's
+     "inn" — and a "classifier for …" sense stands back when the word has another (岁 → "year"). Measured in the harness
+     against the old tree: 药 medicine, 店 shop, 岁 year; 出 and 铺 unchanged `[control]`.
+  2. **The empty deck's third note reads "Open it — the details."** — it said "the whole card" while the row has been called
+     Details since v704 (the v259 rule: the sentence changes with the screen).
+  3. **"Cards learned" is "Cards started"** on the Progress tiles, the shared report and the picture: the tile counts cards
+     reviewed once, and stood beside "Known 0" in the same box.
+  4. **The Storage row speaks plainly**: "Not safe yet. Add the app to your home screen, then the phone keeps your cards."
+     ("Not persistent yet. Install the app so the system keeps the data."); the line `persist()` writes later went through
+     `t()` too — it had been English in every language.
+  5. **The Cards search placeholder is "Characters or pinyin"** ("Search"): the field has found toneless pinyin and
+     meanings since v690 and said nothing of it. Measured at 360 px in all nine translated columns against the input's
+     inner width: the first draft "Characters, pinyin, meaning" overflowed in German (234 of 213 px) and Russian (284 of
+     194); the shipped one fits in every column (widest: Russian 173 of 194, French 155 of 172).
+  6. **"Cards with 行 ›" only when another card holds the character**: on a card whose character is in no other card the
+     row led to a page listing the card you came from. The character page itself is unchanged.
+  7. **More folds its long texts** (`MORE_OPEN`, `moreFold`, session only, all closed at start): the AI review's "What is
+     sent" paragraph and Usage sharing's stand behind a **What is sent ⌄** link each, About's paragraph behind **About the
+     app ⌄** under the version line, and the Feedback box with Add screenshot and Send behind **Write a message** (the
+     box is focused when it opens). Every word stays (v193: H reverted a shortened AI text); the checkboxes, the status
+     lines, the id and the update notes (v609) stay in sight. The fold toggles `hidden` in place — no re-render, so the page
+     does not move under the tap (measured: scrollY unchanged; the first draft re-rendered and the harness's own
+     `page.click` scroll made that look like a jump). Measured on a three-card deck at 390 px: 4 146 → 3 619 px, 527 px
+     (13 %) less — well short of the "about 40 %" the assessment guessed, which had counted whole rows; the rows that
+     remain long are Progress (456), About with its five notes (422), Language (243) and Check-up (201).
+  8. **The fold count stays with the cards**: "1 of 2" became "1 of 3" the moment a Skip queued the card's repeat pass (the
+     waiting-list item "the session count runs away as the repeat pass appends", measured at v716). Both numbers now count
+     distinct cards (`new Set(list.slice(0,li+1)).size` of `new Set(list).size`); the repeat pass itself still shows the
+     Again pill in that slot (v522).
+  9. **A stroke that starts on Show me or Skip is a stroke** (`PAD_HAND` 10 px; the waiting-list item "the pad's helper
+     buttons sit inside its square, so a stroke begun in a corner is swallowed", v612's placement kept): the button watches
+     its own pointer, and when it moves past the slop it hands the pad a pointerdown at the touch's origin and the move —
+     the pad captures the pointer from then on — and drops its own click; a touch that stays is the tap it was. Harness,
+     after four misses: a drag from Show me is miss 5 with no click; a plain tap on Show me clicks and adds no miss
+     `[control]` (the old tree: miss stays 4, the stroke is lost). `.padacts button{touch-action:none}` so Chrome does not
+     take the moving touch for a scroll — not yet field-checked.
+  10. **The Cards tab carries one backup line** (`BACKUP_AT` 25, `backupNudge`) from 25 flashcards on while the deck was
+     never exported: "Never exported. Export now — the cards exist only on this phone." with an Export button (the plain
+     export, no photos, as More's button without the box ticked); gone with the first export, hidden while marking. Until
+     now the only warning was the red line in More → Export, which a learner who never opens More never sees, and MIUI
+     evicts non-installed sites. Harness: absent at 3 cards `[control]`, present at 26, gone once `lastExport` is set.
+  11. **Dropped from the assessment's list: the Camera's offline note.** The assessment read "The AI could not check this
+     photo … Tap Crop" as the offline message; in the harness with the connection off the photo makes its flagged card
+     (v649: offline, the card is still made), so that note never shows offline — it shows when the phone is online and
+     the call fails, where it is right. The key and the branch were written and taken out again before the merge.
+  Not in this PR: nothing a learner sees changed on a screen the guide's crops show (the pad's buttons stay where v612 put
+  them), so no crop was regenerated. WHATS_NEW 717 (More folds, the stroke from Show me); TO_TEST: the stroke from Show
+  me, the fold count after Skip, 药 on the pad, the backup line, the folds' findability. Suite: 41 checks on the new tree
+  against the old one, 19 flip, the rest `[control]`; 360 px German and Russian screenshots of Cards and More checked by
+  eye. Not yet field-checked.
+
 ## Current state (PWA v716, 2026-09-28)
 - **The Learn zoom places unread characters beside Latin text and before or after the read ones (v716, H: "Hier hat er auch
   nicht auf die richtigen Charakter gezoomt, zumindest an zwei Stellen").** 小嗷aoo over 万物可爱守则; the reader read `小ao0`

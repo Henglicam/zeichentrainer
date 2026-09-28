@@ -192,6 +192,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .more .listhead{margin-left:16px} /* v551: the head sat at x=20 over rows whose titles sit at 32 — the one text on More that lined up with nothing. Scoped to More, since the Camera tab's marking head stands over photo tiles at 16, not over a card's inner padding. */
 .del{background:none;border:none;cursor:pointer;font-size:15px;font-weight:500;color:var(--tint);padding:10px 6px;min-height:44px;border-radius:8px}
 .del:active{opacity:.6}
+.more .mofold{display:block;padding:6px 0;min-height:36px;text-align:left} .more .mofold i{font-style:normal;color:var(--label3)} /* v717: the fold under a More row — What is sent, About the app — a link with a chevron, the text under it only while open */
 .more .mrow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--sep)} /* v589 flex-wrap: at 360 px the German Import button hung 8.6 px out of its own card and the Russian Flagged-cards row
    ran 11.6 px past it, "Поделиться" sliced by the screen edge — the text div cannot shrink below its longest word and pushed
    the .btnrow (flex:none) out. Wrapping drops the buttons onto their own line only when both cannot fit, so a row that
@@ -222,6 +223,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
    own content and ← stacked over "Карточки" — the way out of a card rendering as a mistake, 41.8 → 63.5 px tall. The badge
    is prose and wraps; the button does not. */
 .cardsbar{display:flex;gap:8px;margin-bottom:10px}
+.nudge{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 10px;padding:10px 14px;background:var(--card);border-radius:var(--r);font-size:14px;line-height:1.35;color:var(--label2)} .nudge .btn.mini{flex:none} /* v717: the one backup line on the Cards tab, from BACKUP_AT flashcards until the first export */
 .cardsbar input{flex:1;min-width:0;background:var(--fill);border:none;border-radius:10px;color:var(--label);
   font-family:var(--sans);font-size:17px;padding:10px 14px;outline:none;-webkit-appearance:none}
 .cardsbar input:focus{box-shadow:inset 0 0 0 2px var(--tint)}
@@ -973,6 +975,7 @@ body.noscroll{overflow:hidden}
 .card.study.bigtxt .cue .padline .hanzi{font-size:calc(20px*var(--plz,1))}
 .padwrap .padacts{position:absolute;left:0;right:0;bottom:8px;margin:0;display:flex;justify-content:space-between;padding:0 10px;pointer-events:none} .padwrap .padacts>*{pointer-events:auto}
 .padwrap .padacts:not(:has(:not([hidden]))){display:none} /* an empty row takes no taps */
+.padwrap .padacts button{touch-action:none} /* v717: a touch that starts on Show me or Skip and moves becomes a stroke on the pad, so the browser must not take it for a scroll */
 .padwrap .hint#pad-note{position:absolute;left:12px;right:12px;top:8px;margin:0;text-align:center;pointer-events:none}
 /* v603: a card in traditional characters, named in the picture's top-left corner (the review flag has the right) — on the study card, its neighbour and the open card. Over any photo, so it carries its own fill; pointer-events off, so a tap on it is still the tap on the picture */
 .tradmark{position:absolute;left:8px;top:8px;z-index:3;height:24px;line-height:24px;padding:0 10px;border:none;border-radius:999px;background:var(--lock);color:#fff;font-family:var(--sans);font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none;-webkit-user-select:none;box-shadow:0 1px 3px rgba(0,0,0,.25)}
