@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=721; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=722; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -687,7 +687,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["cards","v721","Gloss fix: 美 河 新 京 right?"],
+  ["cards","v722","Dictionary v5: 德 西 木 right?"],
   ["learn","v717","Stroke from Show me: a stroke?"],
   ["learn","v717","Fold count steady after Skip?"],
   ["learn","v717","Char meanings: 药 medicine?"],
@@ -1831,10 +1831,11 @@ async function fixNumberSegs(){
    glosses (慢, 停, 男, 女), a meaning the AI or a hand wrote or checked, a meaning in another language. Once per phone (the
    settings row glossFix, v 718); the row keeps what changed and Diagnostics prints it. A dictionary that does not load
    leaves the row unwritten, so the next start tries again. */
-const GLOSS_FIX_V=721, GLOSS_FIX_KEEP=300; /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
+const GLOSS_FIX_V=722, GLOSS_FIX_KEEP=300; /* 722: the v5 dictionary and the two chooser rules of docs/NMAX.md — the pass waits for the fresh file */ /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
 async function glossFix(){
   const done=S.settings.glossFix; if(done&&done.v>=GLOSS_FIX_V) return;
   try{ await loadDict(); if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); }catch(e){ return; } await loadSigns().catch(()=>{});
+  if(!DICT_FRESH) return; /* v722: an old cached dictionary would write the row and the new senses would never reach the cards — the next start tries again */
   const oneCJK=w=>[...String(w||"")].length===1&&CJK.test(w);
   const inBook=w=>!!(SIGNS||[]).find(e=>e.zh===w);
   const rows=[], changed=[]; let k=0;
@@ -6589,6 +6590,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  722:"The dictionary now holds every meaning of a single character: 德 is virtue, 西 is west, 木 a tree.",
   721:"A place name no longer stands in for 美 or 河 beside another character, and 新 京 金 周 江 木 say new, capital, gold, week, river, wood.",
   720:"A character beside another one in a text says what it means there: 店 in 本店 is a shop, 本 is this one.",
   719:"A character standing alone in a text reads as its line reads it — 了 at the end is le — and 枚 has its meaning back.",
@@ -7071,7 +7073,8 @@ function aiBoxCal(labels,pl){
   const med=errs[errs.length>>1]; if(med>AI_CAL_ERR||errs[errs.length-1]>2*AI_CAL_ERR) return null;
   return {n:P.length,err:+med.toFixed(2),map:b=>{ const cx=fx.a*(b[0]+b[2])/2+fx.b, cy=fy.a*(b[1]+b[3])/2+fy.b, w=(b[2]-b[0])*fx.a, h=(b[3]-b[1])*fy.a; return {x0:cx-w/2,y0:cy-h/2,x1:cx+w/2,y1:cy+h/2}; }}; }
 /* CC-CEDICT (simplified -> English gloss), lazily loaded from ./vendor */
-const DICT_HEAD="#cedict v4"; /* the file's own first line, and the only way to tell a cached older copy from this one — v2 at v573 (a reading per sense), v3 at v605 (no gloss cut at 120 characters any more), v4 at v717 (a variant entry's glosses no longer lead a word's line: 药 read "leaf of the iris") */
+const DICT_HEAD="#cedict v5"; /* the file's own first line, and the only way to tell a cached older copy from this one — v2 at v573 (a reading per sense), v3 at v605 (no gloss cut at 120 characters any more), v4 at v717 (a variant entry's glosses no longer lead a word's line: 药 read "leaf of the iris"), v5 at v722 (a one-character line holds every sense: 新 had shipped without "new", 德 without "virtue" — docs/NMAX.md) */
+let DICT_FRESH=false; /* v722: the file in DICT carries DICT_HEAD — a phone that could not fetch the new one keeps working on the old, but the gloss pass waits */
 /* gzip magic bytes — if a server or proxy already decompressed, treat the body as plain text */
 async function dictText(res){ const buf=new Uint8Array(await res.arrayBuffer());
   return (buf[0]===0x1f&&buf[1]===0x8b)
@@ -7096,11 +7099,12 @@ function loadDict(){
          15 MB instead of this one file's 2.5 MB. The header line says which file this is; without it the entry is
          dropped and fetched once more past the HTTP cache. Once only, and what comes back is used either way, so a
          mirror that is still serving the old file costs one extra fetch a session and never a loop. */
-      if(text.slice(0,DICT_HEAD.length)!==DICT_HEAD){
+      DICT_FRESH=text.slice(0,DICT_HEAD.length)===DICT_HEAD;
+      if(!DICT_FRESH){
         try{ const c=await caches.open("zt-ocr-v1"); await c.delete(url); }catch(e){}
         try{ const r2=await fetch(url,{cache:"reload"});
           if(r2.ok){ const keep=swControls()?null:r2.clone(), t2=await dictText(r2); /* the worker caches what it fetched; without one the page has to (v335) */
-            if(t2.slice(0,DICT_HEAD.length)===DICT_HEAD){ text=t2;
+            if(t2.slice(0,DICT_HEAD.length)===DICT_HEAD){ text=t2; DICT_FRESH=true;
               if(keep){ try{ const c=await caches.open("zt-ocr-v1"); await c.put(new Request(url),keep); }catch(e){} } } } }catch(e){}
       }
       DICT=new Map();
@@ -7706,9 +7710,9 @@ function bestSense(w,py,inWord){ /* inWord (v717): the character is being read I
     body=g?g.s:gs.map(x=>x.s).join("; ");
   }
   const senses=body.split(";").map(x=>x.trim()).filter(Boolean);
-  if(inWord){ const b=senses.find(x=>/^\(bound form\)\s*\S/i.test(x)&&!PROPER(x)); if(b) return b.replace(/^\(bound form\)\s*/i,""); } /* v721: a bound form that is a proper noun is not the word's sense — 美 in 美团 is "beautiful", not "(bound form) the Americas (abbr. for 美洲)" */
-  const hard=x=>/^(surname |\(bound form\)|old variant|variant of|\(archaic\)|abbr\. (for|of) |Taiwan pr\.|CL:)/i.test(x), cl=x=>/^classifier for /i.test(x);
-  return senses.find(x=>!hard(x)&&!cl(x)&&!PROPER(x))||senses.find(x=>!hard(x))||senses[0]||""; /* v717: a classifier sense stands back when the word has another (岁 → "year", not "classifier for years (of age)") — but only then (v719: 枚 is "surname Mei; classifier for small objects", and v717 answered "surname Mei" on three of H's cards); v721: a proper noun stands back the same way (周 → "to make a circuit", not "Zhou Dynasty"; 德 → "virtue", not "Germany") */
+  if(inWord){ const b=senses.find(x=>/^\(bound form\)\s*[^(\s]/i.test(x)&&!PROPER(x)); if(b) return b.replace(/^\(bound form\)\s*/i,""); } /* v721: a bound form that is a proper noun is not the word's sense — 美 in 美团 is "beautiful", not "(bound form) the Americas (abbr. for 美洲)"; v722: nor one the dictionary narrows with a note of its own — 河's "(bound form) (on restaurant menus) rice noodles" is 河粉's, not 河沙's */
+  const hard=x=>/^(surname |old variant|variant of|\((archaic|old|literary|classical)\)|abbr\. (for|of) |Taiwan pr\.|CL:|used in |see )/i.test(x), cl=x=>/^(\([^)]*\)\s*)?classifier for /i.test(x), bare=x=>x.replace(/^\(bound form\)\s*/i,""); /* v722 (docs/NMAX.md): a "used in …" or "see …" note is not a sense; a classifier behind a note ("(on product packaging) classifier for flat items", 枚's fourth sense once the cut is gone) stands back like any other, and a dated sense — "(old)", "(literary)", "(classical)" — is hard like "(archaic)", or 枚 would end as "(old) stick used as a gag"; a bound form IS one for a character standing alone — with its marker off — so 木 is "tree", not "unresponsive" (v717 had skipped it, which left the second half of "(bound form) root; stem" as 本's sense) */
+  const one=senses.find(x=>!hard(x)&&!cl(x)&&!PROPER(x))||senses.find(x=>!hard(x)); return one?bare(one):(senses[0]||""); /* v717: a classifier sense stands back when the word has another (岁 → "year", not "classifier for years (of age)") — but only then (v719: 枚 is "surname Mei; classifier for small objects", and v717 answered "surname Mei" on three of H's cards); v721: a proper noun stands back the same way (周 → "to make a circuit", not "Zhou Dynasty"; 德 → "virtue", not "Germany") */
 }
 /* meaning of one transcript line: longest phrasebook phrases first, dictionary
    words for the rest; punctuation kept as its own token for wrapping */
