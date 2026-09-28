@@ -60,6 +60,36 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v724, 2026-09-28)
+- **The v5 dictionary's marginal bound forms stand back in a word, "I" is a pronoun, a capitalised word inside a sense is a
+  proper noun (v724, H's v723 dump).** The v723 pass ran on the phone with the fresh v5 file (175 cards, 222 words — it
+  also carried the v721/v722 repairs, so that phone had not run a pass since v720) and its line showed what the fuller
+  lines do to v717's in-word rule: 入 → "to conform to (as in 入时)" (the 5th sense), 水 → "additional cost" (7th), 牌 →
+  "fixed pattern for lyrics or set melody in classical poetry or music" (10th), 干 "to have to do with" (14th, in every
+  笋干 and 干拌面 gloss); and two holes in `PROPER`: 我 → "me" ("I" is a capital), 巴 → "the east of Sichuan and Chongqing
+  Municipality" (the capital is inside). **Three rules:** (1) `BOUND_TOP` 3 — the in-word bound form must stand among the
+  first three senses of its reading, the three the v4 file shipped and v717's rule was field-checked on (店 "shop" is the
+  3rd, 木 "tree" the 2nd, 乳 the 1st); past that the character falls to the alone rule. Measured over every one-character
+  line: 53 in-word answers change — 入 to enter, 水 water, 牌 signboard, 干 dry, 元 currency unit (a price!), 国 country, 和
+  and, 多 many, 座 seat, 从 from, 会 can, 奖 prize, 用 to use, 眼 eye, 笔 writing brush, 等 to wait for; the cost is 密 →
+  "name of an ancient state", 殊 → "to behead", 戚 → "grief". (2) `PROPER` wants a second letter after the capital, so the
+  lone "I" is not a name (我 → I; 卬, 咱 likewise). (3) `PROPER` also fires on a capitalised word anywhere in the sense
+  outside a note (`(^|[\s,])[A-Z][a-z]` on the sense with its parentheses stripped): 121 answers change — 巴 → to long
+  for, 成 → to succeed (was "short name for Chengdu"), 蓉 → paste (芙蓉!), 晋 → to move forward, 申 → to extend, 卫 → to
+  guard, 越 → to exceed, 微 → tiny, 凉 → cool, 隆 → grand, 察 → to examine, 翼 → wing, 甬 → path; the heavenly stems become
+  "second in order", 淦 (a Jiangxi river) falls to its slang sense. **Measured and dropped:** a note-only sense
+  (`^\([^)]*\)$`) as hard — it would have turned 斯 "(phonetic)" into "this", but CC-CEDICT writes real senses that way
+  ("(tree)", "(bamboo)", "(exclamation)", 之 "(possessive particle…)") and 80 characters alone lost their meaning to a
+  later sense; 斯 keeps "(phonetic)". `GLOSS_FIX_V` 724, the pass runs once more on the fresh file. Harness (test724, nine
+  seeded cards after a v723 row, 17 checks): 入 beside 内 → to enter, 水 beside 供 → water, 牌 beside 号 → signboard with
+  their composed meanings, the dict card 我 → I, 巴 beside 奴 → to long for, the row v724 / 5 cards / 5 words (供 "to
+  supply" → "to provide" and 号 "number" → "ordinal number" are the pass's own, not v724's), `BOUND_TOP`, `lineMeaning` of
+  入内 笋干 巴奴, `bestSense` of 入 水 牌 干 元 国 in a word, 我 alone and in a word, 巴 成 蓉, the open card's meaning; `[guard]`
+  店 乳 木 河 美 in a word, 中 英 斯, 面 美 店 and verified 水煮鱼 untouched, 水煮鱼/供水 words, second start no-op. On the v723
+  tree 12 of 17 fail. test723 15, test722 14, test721 19, test720 23, test717 41 — all pass on the new tree. Not
+  field-checked: H's dump after the update should list 入 → to enter, 水 → water (four cards), 牌 → signboard, 我 → I, 巴 →
+  to long for, and no new place names or dynasties.
+
 ## Current state (PWA v723, 2026-09-28)
 - **面 and 卡 in the app's own table (v723, H: "Nimm 面 und 卡 in die Tabelle").** `OWN_SENSES` gains 面 miàn "noodles"
   and 卡 kǎ "card (or calorie)": CC-CEDICT opens 面 with "face" and 卡 with "to stop", right for the language and wrong for
