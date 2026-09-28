@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=725; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=726; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -687,6 +687,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v726","肉夹馍 one word on the cards?"],
   ["cards","v725","夹 jiā in 肉夹馍 on cards?"],
   ["cards","v724","入 enter, 水 water, 我 I?"],
   ["learn","v717","Stroke from Show me: a stroke?"],
@@ -1832,7 +1833,7 @@ async function fixNumberSegs(){
    glosses (慢, 停, 男, 女), a meaning the AI or a hand wrote or checked, a meaning in another language. Once per phone (the
    settings row glossFix, v 718); the row keeps what changed and Diagnostics prints it. A dictionary that does not load
    leaves the row unwritten, so the next start tries again. */
-const GLOSS_FIX_V=725, GLOSS_FIX_KEEP=300; /* 725: OWN_PINYIN — 夹 reads jiā, the unverified cards' pinyin and glosses follow */ /* 724 (H's v723 dump): a bound form past the third sense is not the in-word sense (入 "to conform to", 水 "additional cost", 牌 "fixed pattern for lyrics"), "I" is a pronoun (我 → "me"), a capitalised word anywhere makes a proper noun (巴 "the east of Sichuan") */ /* 723: 面 and 卡 in OWN_SENSES */ /* 722: the v5 dictionary and the two chooser rules of docs/NMAX.md — the pass waits for the fresh file */ /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
+const GLOSS_FIX_V=726, GLOSS_FIX_KEEP=300; /* 726: the fewest-words split — an unverified sign card whose meaning is still the composed one takes the new split */ /* 725: OWN_PINYIN — 夹 reads jiā, the unverified cards' pinyin and glosses follow */ /* 724 (H's v723 dump): a bound form past the third sense is not the in-word sense (入 "to conform to", 水 "additional cost", 牌 "fixed pattern for lyrics"), "I" is a pronoun (我 → "me"), a capitalised word anywhere makes a proper noun (巴 "the east of Sichuan") */ /* 723: 面 and 卡 in OWN_SENSES */ /* 722: the v5 dictionary and the two chooser rules of docs/NMAX.md — the pass waits for the fresh file */ /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
 async function glossFix(){
   const done=S.settings.glossFix; if(done&&done.v>=GLOSS_FIX_V) return;
   try{ await loadDict(); if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); }catch(e){ return; } await loadSigns().catch(()=>{});
@@ -1853,6 +1854,15 @@ async function glossFix(){
     /* v725: a card whose text holds a character of OWN_PINYIN takes the library's new reading into its own pinyin — only an
        unverified card, and only when the old and new pinyin differ in nothing but that reading (a card the AI or H gave
        another pinyin keeps it) */
+    /* v726: a sign card the line now splits into fewer words takes the new split — gloss, segs and the composed meaning —
+       when its meaning is still the one composed from its gloss (H's own words, or the AI's accepted ones, stay) */
+    if(d.kind==="sign"&&d.mt&&d.mt.src==="gloss"&&!d.mt.verified&&Array.isArray(d.gloss)&&d.gloss.length&&mlOf(d)==="en"){
+      const base=u||d, pairs=base.gloss.filter(g=>g&&CJK.test(g.w)&&g.m).map(g=>g.w+" "+g.m); let pos=0; /* machine-made: every "word meaning" pair of the gloss stands in the meaning, in order */
+      if(pairs.length&&pairs.every(t=>{ const i=String(base.m||"").indexOf(t,pos); if(i<0) return false; pos=i+t.length; return true; })){
+        const lines=String(d.c||"").split("\n").map(l=>l.trim()).filter(l=>CJK.test(l)), rs=lines.map(lineMeaning);
+        const gl=rs.flatMap(r=>r.gloss.map(g=>({w:g.w,p:g.p,m:g.m})));
+        if(gl.length<base.gloss.length){ const from=base.gloss.map(g=>g.w).join("|"), to=gl.map(g=>g.w).join("|"); changed.push({id:d.id,w:d.c,from,to}); k++;
+          u={...base,gloss:gl,segs:rs.map(r=>r.segs),m:rs.map(r=>r.en).join(" / ")}; setMl(u,"en"); } } }
     if(d.kind!=="page"&&!(d.mt&&d.mt.verified)&&d.p&&OWN_PY_CHARS.some(ch=>String(d.c||"").includes(ch))){
       const np=String(d.c||"").split("\n").filter(l=>CJK.test(l)).map(l=>pySpaced(l.replace(/\s+/g,""))).join(" / ");
       const a=String(d.p).normalize("NFC").split(/\s+/).filter(Boolean), b=np.normalize("NFC").split(/\s+/).filter(Boolean);
@@ -6599,6 +6609,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  726:"A line splits into the fewest words: 肉夹馍 stays one word on the menu.",
   725:"肉夹馍 reads ròu jiā mó — 夹 is jiā, as on the mainland.",
   724:"A character inside a word keeps its plain sense again: 入 to enter, 水 water, 牌 signboard.",
   723:"面 on a menu is noodles and 卡 on a sign a card.",
@@ -7741,6 +7752,28 @@ function bestSense(w,py,inWord){ /* inWord (v717): the character is being read I
 }
 /* meaning of one transcript line: longest phrasebook phrases first, dictionary
    words for the rest; punctuation kept as its own token for wrapping */
+/* v726 (H: "Ok. Go" on the split named at v725): the line splits into the FEWEST dictionary words, not greedily into the
+   longest word at hand — 肥瘦肉夹馍 was 肥|瘦肉|夹|馍 (four, the dish name torn apart, 夹 glossed alone) and is 肥|瘦|肉夹馍
+   (three). Over the run up to the next punctuation: a token is a phrasebook phrase, a dictionary word of up to eight
+   characters, a number with its unit, or one character; the count of tokens is minimised from the end, and among equal
+   counts the longer first token wins, so a line the greedy split already had right keeps it (中国|人, not 中|国人).
+   Returns the length of the first token; lineMeaning calls it again from the next position, which gives the same split
+   (an optimal split's tail is optimal). Measured on the texts of H's v723 dump: see docs/HISTORY.md v726. */
+function fewestFirst(rest){
+  const n=rest.length; if(!n) return 1;
+  const best=new Array(n+1).fill(0), len=new Array(n+1).fill(1); /* best[i]: fewest tokens for rest.slice(i); len[i]: its first token */
+  for(let i=n-1;i>=0;i--){
+    let bc=Infinity, bl=1;
+    const num=rest.slice(i).match(/^[0-9]+(?:\.[0-9]+)?[a-zA-Z%]{0,3}/); const cands=[];
+    if(num) cands.push(num[0].length);
+    for(const e of (SIGNS||[])) if(rest.startsWith(e.zh,i)) cands.push(e.zh.length);
+    for(let l=Math.min(8,n-i);l>=2;l--) if(DICT&&DICT.has(rest.slice(i,i+l))) cands.push(l);
+    cands.push(1);
+    for(const l of cands){ const c=1+best[i+l]; if(c<bc||(c===bc&&l>bl)){ bc=c; bl=l; } }
+    best[i]=bc; len[i]=bl;
+  }
+  return len[0];
+}
 const SANDHI=/^[一不]$/; /* the two characters pinyin-pro re-tones by their neighbour */
 const besideCJK=(line,k)=>CJK.test(line[k-1]||"")||CJK.test(line[k+1]||""); /* a one-character word at k with a character on either side (v720) */
 function lineMeaning(line){
@@ -7753,9 +7786,8 @@ function lineMeaning(line){
     const num=raw.slice(k).match(/^[0-9]+(?:\.[0-9]+)?[a-zA-Z%]{0,3}/); if(num){ /* a number with its Latin unit as one part (380ml, 20% — v323, H's bottle: "wenn du net content erwähnst, musst du die 380ml auch noch mitnehmen"); a CJK unit joins below */ parts.push({w:num[0],p:num[0],m:num[0],num:true}); k+=num[0].length; continue; } /* a number reads as itself — and takes the unit after it below (mergeUnits, v309) */
     const hit=(SIGNS||[]).find(e=>raw.startsWith(e.zh,k));
     if(hit){ parts.push({w:hit.zh,p:hit.py,m:hit.en,ph:true}); k+=hit.zh.length; continue; }
-    const rest=raw.slice(k).split(SIGN_PUNCT)[0]; let len=Math.min(8,rest.length)||1;
-    while(len>1 && !(DICT&&DICT.has(rest.slice(0,len)))) len--;
-    const w=rest.slice(0,len)||ch;
+    const rest=raw.slice(k).split(SIGN_PUNCT)[0];
+    const w=rest.slice(0,fewestFirst(rest))||ch; /* v726: the split with the fewest words, not the longest word at hand */
     const wp=w.length===1&&inCtx&&CJK.test(w)&&!SANDHI.test(w)?ctx[k]:pySpaced(w); /* 一 and 不 keep their own tone: the line's reading carries the sandhi (yì méi), the gloss shows the character's */
     parts.push({w,p:wp,m:cleanSense(bestSense(w,wp,w.length===1&&besideCJK(raw,k))),ph:false}); /* v720: a character beside another one outside a dictionary word is inside a word the dictionary lacks — its bound-form sense (店 in 本店 is "shop", not "inn") */ /* no dictionary clutter in the composed meaning (v134); the word's own reading picks the sense group (v573) */
     k+=w.length;
