@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=720; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=721; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -687,7 +687,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["cards","v720","Gloss fix: 只, 本, 店 as meant?"],
+  ["cards","v721","Gloss fix: 美 河 新 京 right?"],
   ["learn","v717","Stroke from Show me: a stroke?"],
   ["learn","v717","Fold count steady after Skip?"],
   ["learn","v717","Char meanings: 药 medicine?"],
@@ -1831,7 +1831,7 @@ async function fixNumberSegs(){
    glosses (慢, 停, 男, 女), a meaning the AI or a hand wrote or checked, a meaning in another language. Once per phone (the
    settings row glossFix, v 718); the row keeps what changed and Diagnostics prints it. A dictionary that does not load
    leaves the row unwritten, so the next start tries again. */
-const GLOSS_FIX_V=720, GLOSS_FIX_KEEP=300; /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character */
+const GLOSS_FIX_V=721, GLOSS_FIX_KEEP=300; /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
 async function glossFix(){
   const done=S.settings.glossFix; if(done&&done.v>=GLOSS_FIX_V) return;
   try{ await loadDict(); if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); }catch(e){ return; } await loadSigns().catch(()=>{});
@@ -3663,7 +3663,8 @@ function wireSay(root){ (root||document).querySelectorAll("[data-say]").forEach(
    horse", and the card, the recap and the parts row were all printing the notation. 1,146 entries carry the marker, and on
    many of them (CP值, K书, OK绷) the whole entry is Taiwan usage, so the marker is stripped rather than the SENSE skipped:
    skipping would only pick another sense of the same Taiwan entry, and on those it would leave nothing at all. */
-function cleanSense(m){ return String(m||"").replace(/\(Taiwan pr\.[^)]*\)/g,"").replace(/\(Tw\)\s*/g,"").replace(/\[[^\]]*\]/g,"").replace(/\s*CL:[^;,)]*/g,"").replace(/\(\s*\)/g,"").replace(/\s{2,}/g," ").trim(); }
+/* v721: the CL note goes whole — its brackets are gone by then, so "river (CL:條|条[tiao2],道[dao4])" had left "river (,道)" on H's cards */
+function cleanSense(m){ return String(m||"").replace(/\(Taiwan pr\.[^)]*\)/g,"").replace(/\(Tw\)\s*/g,"").replace(/\[[^\]]*\]/g,"").replace(/\s*\(?CL:[^;)]*\)?/g,"").replace(/\(\s*\)/g,"").replace(/\s{2,}/g," ").trim(); }
 /* the line under the pad carries the translation alone (v540, H on a 电动车 card whose line read "electric vehicle (commonly
    refers to e-bikes" with both ends sliced off: "Vielleicht hilft es, wirklich nur die Übersetzung dort anzuzeigen und
    sämtliche Erläuterungen unter Whole Card > Explain"). A parenthetical is an explanation, not a translation, so it leaves
@@ -6588,6 +6589,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  721:"A place name no longer stands in for 美 or 河 beside another character, and 新 京 金 周 江 木 say new, capital, gold, week, river, wood.",
   720:"A character beside another one in a text says what it means there: 店 in 本店 is a shop, 本 is this one.",
   719:"A character standing alone in a text reads as its line reads it — 了 at the end is le — and 枚 has its meaning back.",
   718:"Cards that got a character's meaning from the dictionary have it again under the new rule.",
@@ -7688,7 +7690,12 @@ const pyBare=x=>pyKey(x).normalize("NFD").replace(/[\u0300-\u036f]/g,""); /* ton
 /* the app's own sense for a character CC-CEDICT orders badly on the street (v720, H: "Handle them too"), by reading; a
    dictionary prefill like any other (unverified). 只 zhī opens with "grain that has begun to ripen" (the classifier is the
    second sense, so v717's rule stood it back); 本 keeps only bound-form senses and the split left "stem" unmarked. */
-const OWN_SENSES={"只":{"zhī":"classifier for animals, birds and one of a pair"},"本":{"běn":"this (one's own)"}};
+const OWN_SENSES={"只":{"zhī":"classifier for animals, birds and one of a pair"},"本":{"běn":"this (one's own)"},
+  /* v721, H's dump: CC-CEDICT lists these characters' proper-noun entries first and the three-sense cut leaves nothing else
+     (docs/NMAX.md, table 1) — 新 shipped as "abbr. for Xinjiang", 京 "Jing ethnic minority", 金 "Jurchen Jin dynasty", 周
+     "Zhou Dynasty", 江 "surname Jiang", 木 "surname Mu" */
+  "新":{"xīn":"new"},"京":{"jīng":"capital city (Beijing)"},"金":{"jīn":"gold"},"周":{"zhōu":"week"},"江":{"jiāng":"river"},"木":{"mù":"wood"}};
+const PROPER=x=>/^(\(bound form\)\s*)?(the\s+)?[A-Z]/.test(x)||/abbr\. (for|of)/i.test(x); /* a sense that names a place, a people, a dynasty or an abbreviation (v721: 美 beside 团 had become "the Americas", 河 "the Yellow River") */
 function bestSense(w,py,inWord){ /* inWord (v717): the character is being read INSIDE a word, so a sense CC-CEDICT marks "(bound form)" is the right one — 店 in 药店 is "shop", not the free word's "inn" */
   const own=OWN_SENSES[w]; if(own){ const k=pyKey(py), r=own[k]||(pyBare(k)===k?own[Object.keys(own).find(x=>pyBare(x)===k)]:undefined); if(r) return r; } /* a toned reading must match exactly (只 zhǐ is "only", not the zhī classifier); only a toneless one falls back */
   const v=(DICT&&DICT.get(w))||"";
@@ -7699,9 +7706,9 @@ function bestSense(w,py,inWord){ /* inWord (v717): the character is being read I
     body=g?g.s:gs.map(x=>x.s).join("; ");
   }
   const senses=body.split(";").map(x=>x.trim()).filter(Boolean);
-  if(inWord){ const b=senses.find(x=>/^\(bound form\)\s*\S/i.test(x)); if(b) return b.replace(/^\(bound form\)\s*/i,""); }
-  const hard=x=>/^(surname |\(bound form\)|old variant|variant of|\(archaic\)|abbr\. (for|of) |Taiwan pr\.)/i.test(x), cl=x=>/^classifier for /i.test(x);
-  return senses.find(x=>!hard(x)&&!cl(x))||senses.find(x=>!hard(x))||senses[0]||""; /* v717: a classifier sense stands back when the word has another (岁 → "year", not "classifier for years (of age)") — but only then (v719: 枚 is "surname Mei; classifier for small objects", and v717 answered "surname Mei" on three of H's cards) */
+  if(inWord){ const b=senses.find(x=>/^\(bound form\)\s*\S/i.test(x)&&!PROPER(x)); if(b) return b.replace(/^\(bound form\)\s*/i,""); } /* v721: a bound form that is a proper noun is not the word's sense — 美 in 美团 is "beautiful", not "(bound form) the Americas (abbr. for 美洲)" */
+  const hard=x=>/^(surname |\(bound form\)|old variant|variant of|\(archaic\)|abbr\. (for|of) |Taiwan pr\.|CL:)/i.test(x), cl=x=>/^classifier for /i.test(x);
+  return senses.find(x=>!hard(x)&&!cl(x)&&!PROPER(x))||senses.find(x=>!hard(x))||senses[0]||""; /* v717: a classifier sense stands back when the word has another (岁 → "year", not "classifier for years (of age)") — but only then (v719: 枚 is "surname Mei; classifier for small objects", and v717 answered "surname Mei" on three of H's cards); v721: a proper noun stands back the same way (周 → "to make a circuit", not "Zhou Dynasty"; 德 → "virtue", not "Germany") */
 }
 /* meaning of one transcript line: longest phrasebook phrases first, dictionary
    words for the rest; punctuation kept as its own token for wrapping */
