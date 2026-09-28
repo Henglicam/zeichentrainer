@@ -97,9 +97,11 @@ UI language: English. Learning content: Chinese + pinyin + English meaning.
      the call fails, where it is right. The key and the branch were written and taken out again before the merge.
   Not in this PR: nothing a learner sees changed on a screen the guide's crops show (the pad's buttons stay where v612 put
   them), so no crop was regenerated. WHATS_NEW 717 (More folds, the stroke from Show me); TO_TEST: the stroke from Show
-  me, the fold count after Skip, 药 on the pad, the backup line, the folds' findability. Suite: 41 checks on the new tree
-  against the old one, 19 flip, the rest `[control]`; 360 px German and Russian screenshots of Cards and More checked by
-  eye. Not yet field-checked.
+  me, the fold count after Skip, 药 on the pad, the backup line, the folds' findability. Suite: 41 checks pass on the new tree;
+  on the old tree 17 of them fail and 5 cannot run (the folds are not there), the other 15 pass on both and are guards
+  (the count before a Skip, the checkbox and the update notes staying, the row on a character two cards hold, no line
+  under 25 cards, the placeholder widths); 360 px German and Russian screenshots of Cards and More checked by eye. Not
+  yet field-checked.
 
 ## Current state (PWA v716, 2026-09-28)
 - **The Learn zoom places unread characters beside Latin text and before or after the read ones (v716, H: "Hier hat er auch
