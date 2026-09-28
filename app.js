@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=736; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=737; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1987,7 +1987,7 @@ function render(){
   if(S.mode==="inbox") return renderInbox(main);
   if(S.mode==="more")  return renderMore(main);
   if(S.mode==="guide") return renderGuide(main); /* How to use the app (v259) */
-  if(S.mode==="cards") return S.charPage&&S.charPage.from===S.detail?renderCharPage(main):S.detail?renderCardDetail(main,S.detail):renderCards(main); /* v691: a character page stands over the card it was opened from */
+  if(S.mode==="cards") return S.detail?renderCardDetail(main,S.detail):renderCards(main); /* v691: a character page stands over the card it was opened from */
 }
 /* ---------- online AI review (T3, opt-in) ----------
    Flagged cards, uncertain readings and pending translations can be checked by an
@@ -3516,8 +3516,7 @@ const GUIDE=()=>[
     .concat(lockOn()?[t("Press and hold a character to walk through every card that has it; press and hold it again to come back.")]:[])}, /* v531: only while the lock is on */
   {h:t("Cards"),fig:GFIG.cards(),p:[
     t("All your cards, newest first, with a tab of their own for multicards. Search them, filter them, and tap one to test, edit or delete it."),
-    t("Tap a card's star for the ones that matter to you, and Learn can study those alone. Tags group the rest, and a card from a photo gets one for what it is."),
-    t("Tap a character on an open card, then Cards with …, to see its readings and every card that holds it.")]},
+    t("Tap a card's star for the ones that matter to you, and Learn can study those alone. Tags group the rest, and a card from a photo gets one for what it is.")]},
   {h:t("Language and meanings"),fig:GFIG.lang(),p:[
     t("More → Language switches the app's own texts, and new cards get their meaning in that language. Translate all cards does it for the ones you already have.")]},
   {h:t("What stays on the phone"),fig:GFIG.privacy(),p:[
@@ -6055,7 +6054,6 @@ function normaliseFilters(){
   S.filterTags=S.filterTags.filter(g=>g===UNTAGGED?allTags().length&&untaggedCount():allTags().includes(g));
 }
 function renderCards(main){
-  S.charPage=null;
   const nAi=deck().filter(d=>d.ai).length;
   normaliseFilters();
   let {html,n,ids}=cardsListHTML();
@@ -6125,7 +6123,6 @@ function detailCardHTML(d,sw){
   return `<div class="zone1 front" id="d-reveal">${frontPic(d,{page:true,fixed:true})||cueGlyphHTML(d)}${tradMark(d)}</div>
       ${chrowHTML(d,tg,btn,lit?lit.wi:null)}
       <div class="padline" id="padline"${lit?"":" hidden"}></div>
-      ${lit&&lit.w&&CJK.test(lit.ch)&&charCards(lit.ch).length>1?/* v717: a page that would list only this card is no page */`<button class="chlink" id="d-chpage" data-ch="${esc(lit.ch)}"><span>${esc(t("Cards with {0}",lit.ch))}</span><span class="n">${charCards(lit.ch).length}</span><i aria-hidden="true">›</i></button>`:""}
       ${d.reading&&!d.reading.failed?`<div class="hint">${t("The new frame is being read — the text follows when it is done.")}</div>`:""}
       <div class="dback" id="d-ans">${back}</div> <!-- v736 (H: "Bitte Details in Cards immer per Default anzeigen. Option zum Aufklappen und die Details-Überschrift dort bitte löschen"): the block always stands, with no heading and no fold -->
       ${detailActsHTML(d)} <!-- v703 (H: "Macht doch mal Flag, Edit, Delete und so weiter ganz nach unten und Whole Card darüber"): the actions close the card, under Details (called Whole card until v704) -->
@@ -6217,38 +6214,8 @@ function detailSwipe(list,li,main,keepFrom){
     busy:on=>{ const pn=main.querySelector(".pane"); if(pn) pn.classList.toggle("swiping",on); },
     ready:p=>{ chrowFit(p); fitPageCover(p); } }; /* v596: the same fit as the card's, or a generated flashcard's neighbour slides its page in CONTAINED with a 16 px margin (the .picbox.page fallback) against the card's cover fit */
 }
-/* CHARACTER PAGES (v691, H: "Mach dann C, die Zeichenseiten" — the Cards tab as a reference: "Unter Cards sind die Karten
-   ein Nachschlagewerk"). The open card's line under the character row ends in "Cards with 温 3 ›"; it opens the page of
-   that one character: the character big, each reading it has in your own cards (the syllable at its place in the card's
-   own pinyin, so 行 in 银行 is háng and in 行人 xíng) with the dictionary's sense for that reading, then every card and
-   every multicard text that holds it, newest first. A row opens its card, and that card's ← Back returns here; the page's
-   own ← Back returns to the card it was opened from. Nothing on it is studied or graded — it only looks up. */
-const charCards=ch=>deck().filter(d=>!isPage(d)&&d.c&&([...d.c].includes(ch)||(d.trad&&[...d.trad].includes(ch)))).reverse();
-function charReadings(ch,list){ const n=new Map();
-  for(const d of list){ const cj=[...d.c].filter(x=>CJK.test(x)), toks=String(d.p||"").toLowerCase().split(/[\s\/·,;]+/).filter(Boolean);
-    if(toks.length!==cj.length) continue; cj.forEach((x,k)=>{ if(x===ch) n.set(toks[k],(n.get(toks[k])||0)+1); }); }
-  return [...n].sort((a,b)=>b[1]-a[1]).map(([p])=>p); }
-function backToChar(){ const cb=S.charBack; S.detailFrom=cb&&cb.back||null; S.charBack=null; /* v710: the card under the page keeps its own way back (its multicard, the photo, the session) — v691 set it to the list */ S.fullPic=false; if(cb&&cardOf(cb.from)){ S.detail=cb.from; S.charPage=cb; } else S.detail=null; render(); window.scrollTo(0,0); }
-function renderCharPage(main){
-  const cp=S.charPage, ch=cp.ch, list=charCards(ch);
-  const row=d=>{ const pic=d.img?`<img src="${urlOf(d.img)}" alt="">`:`<span class="ph hanzi">${esc([...d.c].find(x=>CJK.test(x))||"")}</span>`;
-    const zh=[...d.c.replace(/\n/g," / ")].map(x=>x===ch?`<b>${esc(x)}</b>`:esc(x)).join("");
-    return `<button class="chcard" data-id="${esc(d.id)}">${pic}<span class="tx"><span class="zh hanzi">${zh}</span><span class="py">${esc(d.p||"")}</span><span class="mn">${esc(d.m||"")}</span></span></button>`; };
-  main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">${t("← Back")}</button></div>
-    <div class="chhead"><div class="chbig hanzi">${esc(ch)}</div><div class="chreads" id="chreads"><span class="badge">…</span></div></div>
-    <div class="chhd">${esc(t("Cards with {0}",ch))}<span class="n">${list.length}</span></div>
-    <div class="chcards">${list.map(row).join("")}</div>
-  </div>`;
-  $("#back").onclick=()=>{ S.charPage=null; render(); window.scrollTo(0,0); };
-  main.querySelectorAll(".chcard").forEach(b=>b.onclick=()=>{ if(!cardOf(b.dataset.id)) return; S.charBack={...cp}; S.charPage=null; S.detail=b.dataset.id; S.detailFrom="char"; S.detailCh=null; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo(0,0); });
-  (async()=>{ const box=$("#chreads"); try{ if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); await loadDict().catch(()=>{}); }catch(e){}
-    if(!box||!box.isConnected) return;
-    let rs=charReadings(ch,list); if(!rs.length&&window.pinyinPro) rs=[pinyinPro.pinyin(ch,{toneType:"symbol"})];
-    box.innerHTML=rs.map(p=>`<div class="chread"><span class="py">${esc(p)}</span><span class="mn">${esc(shortSense(cleanSense(DICT?bestSense(ch,p):""))||t("not in the dictionary"))}</span></div>`).join(""); })();
-}
+/* the character pages of v691–v717 ("Cards with 温 3 ›" under the open card's word line) left at v737 (H: "Remove Cards with …"): grep -n "v691" docs/HISTORY.md */
 function renderCardDetail(main,c){
-  S.charPage=null; /* v691: the card itself is on screen, so a character page opened over it is closed — it cannot come back by a later visit */
   const d=cardOf(c); if(!d){ S.detail=null; return renderCards(main); }
   if(isPage(d)) return renderPageDetail(main,d); /* v453 */
   if(d.unchecked){ checkCard(c); d.unchecked=false; } /* v515: opening the card is looking at it — the write lands behind the render (putCard keeps the record's identity, so the row below reads the same object) */
@@ -6262,12 +6229,12 @@ function renderCardDetail(main,c){
      next and previous text, in its row list's order, and its way back stays the multicard */
   const mp=inPage(d)&&cardOf(d.page), list=mp&&isPage(mp)?pageOrder(mp):cardsList(), li=list.findIndex(x=>x.id===c), sw=li>=0&&list.length>1;
   main.innerHTML=`<div class="pane">
-    <div class="topline"><button class="del" id="back">${S.detailFrom==="inbox"||S.detailFrom==="char"||fromPage()?t("← Back"):t("← Cards")}</button><span class="badge">${!d.c?(d.reading&&d.reading.failed?t("Nothing read yet"):t("Reading …")):d.reading&&!d.reading.failed?t("Reading …"):(x=>x?x[0].toUpperCase()+x.slice(1):"")([d.mt&&!d.mt.verified?t("unverified"):"",d.mt&&d.mt.pending?t("translation pending"):"",d.mt&&d.mt.suspect?t("reading uncertain"):""].filter(Boolean).join(", "))}</span></div>
+    <div class="topline"><button class="del" id="back">${S.detailFrom==="inbox"||fromPage()?t("← Back"):t("← Cards")}</button><span class="badge">${!d.c?(d.reading&&d.reading.failed?t("Nothing read yet"):t("Reading …")):d.reading&&!d.reading.failed?t("Reading …"):(x=>x?x[0].toUpperCase()+x.slice(1):"")([d.mt&&!d.mt.verified?t("unverified"):"",d.mt&&d.mt.pending?t("translation pending"):"",d.mt&&d.mt.suspect?t("reading uncertain"):""].filter(Boolean).join(", "))}</span></div>
     <div class="card study detail">${detailCardHTML(d,sw)}</div>
     ${inPage(d)||!stat?"":`<div class="badge" style="margin-top:14px">${esc(stat)}</div>`}
     ${linkedHTML(d)}
   </div>`; /* the actions close the card, under Details (v703/v704; v518 had them where the pad would stand); the schedule line and the linked-photos row stay under it, on the pane */
-  $("#back").onclick=S.detailFrom==="inbox"?backToPhoto:S.detailFrom==="char"?backToChar:fromPage()?backToPage:backToList; /* opened from a photo's sheet (v448): ← goes back to the photo; from a page's row or sheet (v453): back to the page */
+  $("#back").onclick=S.detailFrom==="inbox"?backToPhoto:fromPage()?backToPage:backToList; /* opened from a photo's sheet (v448): ← goes back to the photo; from a page's row or sheet (v453): back to the page */
   /* the preview behaves like the test: tap the photo for the whole picture, tap the character to hide and show the answer (H) */
   const rv=$("#d-reveal"); if(rv) rv.onclick=e=>{ if(e.target.closest("[data-pic]")){ S.fullPic=!S.fullPic; render(); } }; /* v518: the answer folds by its own button now, not by a tap on the picture */
   {
@@ -6275,7 +6242,6 @@ function renderCardDetail(main,c){
     dcard.querySelectorAll(".chrow .ch").forEach(b=>{ const i=+b.dataset.i, x=tg[i]; if(!x) return; b.onclick=e=>{ e.stopPropagation(); S.detailCh=detailCh(d)===i?null:{c:d.id,i}; render(); }; }); /* a tap lights the word and reads it under the answer; the same character again puts it out — there is no pad here to keep it */
     const lx=detailLit(d,tg); if(lx) padLine(dv,lx); /* v531: the first word's line when nothing is tapped */
     { const pl=$("#padline"); if(pl&&lx) pl.classList.toggle("whole",(lx.word||lx.ch)===String(dv.c||"").replace(/\s+/g,"")); } /* v736: the word line's word row says what the block under it says when the word is the whole card, so it stands down there; the character's own row stays */
-    { const cl=$("#d-chpage"); if(cl) cl.onclick=e=>{ e.stopPropagation(); S.charPage={ch:cl.dataset.ch,from:d.id,back:S.detailFrom}; render(); window.scrollTo(0,0); }; } /* v691; v710: the card's own way back rides along */
     chrowFit(dcard);
     const pg=frontPage(d); if(pg&&!S.fullPic) fitPageCover(dcard); /* D5, as on the study card */
     wireScript(dcard); /* v604 */
@@ -6662,7 +6628,6 @@ const WHATS_NEW={
   701:"On a menu with pictures, each dish now shows its own photo.",
   699:"A menu you photographed now reads like a menu: every dish with its price and a line about what it is.",
   692:"On a multicard, open a text from the list under the photo to turn it into a flashcard — the pop-up is just for looking up.",
-  691:"Tap a character on an open card, then Cards with …, to see its readings and every card that has it.",
   690:"Search your cards in pinyin without the tones: wendu finds 温度.",
   683:"Don't want the photo to zoom while you write? Switch it off under More.",
   662:"A new card shows its whole photo for a moment, then zooms onto the first character by itself.",
