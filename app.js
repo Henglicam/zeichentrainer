@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=732; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=733; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -687,6 +687,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v733","Pop-up Details: long text right?"],
   ["more","v731","Duplicate multicards: sets right?"],
   ["learn","v717","Stroke from Show me: a stroke?"],
   ["learn","v717","Fold count steady after Skip?"],
@@ -3841,7 +3842,7 @@ function explainSoon(d){
   if(!d||EXPLAIN_AT===d.id||!d.c||descOf(d)||EXPLAIN[d.id]||!aiAutoOn()||!navigator.onLine) return;
   const id=d.id; EXPLAIN_AT=id;
   EXPLAIN_T=setTimeout(()=>{ EXPLAIN_AT=null; const c=cardOf(id); if(c&&document.querySelector(`[data-desc="${CSS.escape(id)}"]`)) explainAuto(c); },EXPLAIN_LEAD); }
-function refreshDesc(id){ const d=cardOf(id); if(!d) return; document.querySelectorAll(`[data-desc="${CSS.escape(id)}"]`).forEach(el=>{ const tmp=document.createElement("div"); tmp.innerHTML=descHTML(d,{explain:true}); const n=tmp.firstElementChild; if(n){ el.replaceWith(n); wireExplain(n.parentElement||document); if(n.tagName==="P") revealEl(n); } else el.remove(); }); }
+function refreshDesc(id){ const d=cardOf(id); if(!d) return; document.querySelectorAll(`[data-desc="${CSS.escape(id)}"]`).forEach(el=>{ const tmp=document.createElement("div"); tmp.innerHTML=descHTML(d,{explain:true}); const n=tmp.firstElementChild; if(n){ el.replaceWith(n); wireExplain(n.parentElement||document); if(n.tagName==="P"&&!n.closest(".sheet.lookup")) revealEl(n); } else el.remove(); }); }
 function revealEl(el){ const nav=$("#tabs"), r=el.getBoundingClientRect(), navTop=nav?nav.getBoundingClientRect().top:innerHeight, d=r.bottom+18-navTop; if(d>0) window.scrollBy({top:d,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"}); } /* the paragraph that just landed is read whole above the tab bar (the v527 rule), never scrolled past its head */
 function wireExplain(root){ (root||document).querySelectorAll("[data-explain]").forEach(b=> b.onclick=e=>{ e.stopPropagation(); explainCard(b.dataset.explain); }); }
 async function explainCard(id){
@@ -6641,6 +6642,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  733:"Tap a text on a multicard's photo: the pop-up now says what it is, in a sentence or two.",
   731:"More → Your cards finds multicards you made twice and deletes the older copies.",
   729:"吃, 碰 and 杠 on a mahjong sign name their calls: chow, pung, kong.",
   728:"肉夹馍 reads jiā on every card, the checked ones too; 龙 is a dragon and 胡 on a mahjong sign is the winning call.",
@@ -10950,7 +10952,7 @@ function openLookup(shot,rid,silent){
     <div class="pin">${pinSay(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}</div>
     ${pid?""
         :`<div class="grades">${[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>`<button class="grade" data-g="${g}" data-lg="${g}"><span class="lbl">${t(l)}</span></button>`).join("")}</div>`}
-    ${pid?"":`<div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div>`}</div>`;
+    ${pid?"":`<div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div>`}${pid?lkFoldHTML(d):""}</div>`;
   /* a multicard's description is a look-up and nothing else (v496, H: "kein More und keine weiteren Funktionen in den Pop
      ups. Du kannst das doch alles über die Multicards steuern."): More opened the text's own screen, which the row list
      under the photo already opens on a tap — Edit, Flag, Delete and, since v692, + Flashcard live there. On a MARKED PHOTO (v448) More
@@ -10966,10 +10968,26 @@ function openLookup(shot,rid,silent){
   markRegion(rid); /* the frame appears on the text that was tapped, and only there (v467) */
   el.querySelector("#lk-close").onclick=closeLookup;
   wireSay(el);
+  if(pid) wireLkFold(el,d.id);
   el.querySelectorAll("[data-lg]").forEach(b=> b.onclick=()=>gradeRegion(b.dataset.lg));
   const mo=el.querySelector("#lk-more");
   if(mo) mo.onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, from=LOOKUP&&LOOKUP.from, shot=LOOKUP&&LOOKUP.shot, rid=LOOKUP&&LOOKUP.rid; closeLookup(); if(!cid||!cardOf(cid)) return; if(!from) INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom=from?"page:"+from:"inbox"; LOOK_BACK={shot,rid,card:cid,from:S.detailFrom}; /* v495: More is one step deeper into this look-up, so ← Back has to undo one step and not two */ S.detailHide=false; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
 }
+/* v733 (H: "Kannst du bitte in den popups der multicards auch noch die Details anbieten, zum aufklappen?"): the look-up of a
+   multicard's text folds open "Details" — what the text's own screen has under its Details and the sheet does not already
+   show: the short description (dsh, stored) and the long one (ds, asked of the AI the first time the fold is open on that
+   text — explainAuto, so the AI switch, the network and a stored answer all stand it down, and a closed fold costs nothing).
+   No action inside: the sheet stays a look-up (v496/v692). Open by default (H, before it shipped: "Zeig die Details bitte
+   per default an, ohne aufklappen zu müssen") — so every text tapped asks for its long description the first time. LK_OPEN
+   is the reader's, for the session: folded by hand, it stays folded on the next text, and it is open again at every start. */
+let LK_OPEN=true;
+function lkFoldHTML(d){ const sh=shortOf(d);
+  return `<div class="fold lkfold${LK_OPEN?" open":""}"><button class="foldbtn" id="lk-fold" aria-expanded="${LK_OPEN?"true":"false"}"><span>${t("Details")}</span><i aria-hidden="true">⌄</i></button><div class="ans" id="lk-ans"${LK_OPEN?"":" hidden"}>${sh?`<p class="desc dsh">${esc(sh)}</p>`:""}${descHTML(d,{explain:true})}</div></div>`; }
+function wireLkFold(el,id){ const b=el.querySelector("#lk-fold"), a=el.querySelector("#lk-ans"); if(!b||!a) return;
+  wireExplain(a);
+  const want=()=>{ const c=cardOf(id); if(c) explainAuto(c); };
+  b.onclick=()=>{ LK_OPEN=!LK_OPEN; a.hidden=!LK_OPEN; b.setAttribute("aria-expanded",LK_OPEN?"true":"false"); b.parentElement.classList.toggle("open",LK_OPEN); if(LK_OPEN) want(); };
+  if(LK_OPEN) want(); }
 /* the grade. Only on a MARKED PHOTO that is not a multicard — v448's own screen, which every photo from before v453
    still is, and whose texts are ordinary flashcards — where the three grades of v421 stay, because there the tap really
    is a review. v487's red/green vote on a multicard lasted one version (v488, H: "Not yet und Got it machen eigentlich

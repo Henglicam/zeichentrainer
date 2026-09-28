@@ -60,6 +60,29 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v733, 2026-09-28)
+- **The look-up of a multicard text folds open Details (v733, H: "Kannst du bitte in den popups der multicards auch noch
+  die Details anbieten, zum aufklappen?"; described in three lines first, H: "Go").** The pop-up over a multicard's photo
+  showed the characters, the price, the pinyin and the meaning; the descriptions lived only on the text's own screen and
+  (the short one) in the row list. Now `lkFoldHTML`/`wireLkFold`: a **Details ⌄** row at the sheet's foot (the `.fold`/
+  `.foldbtn` of Learn and the open card), **open by default** (H, before it merged: "Zeig die Details bitte per default an,
+  ohne aufklappen zu müssen" — the first cut was closed); it shows what the sheet does not already show —
+  the short description (`dsh`, stored, set darker) and the long one (`ds`, `descHTML(d,{explain:true})`), which a text
+  without one asks for through `explainAuto` the moment the fold is open on it, so the AI switch, the network and a stored
+  answer stand it down and a closed fold costs nothing; "Explaining …" while it comes, the answer lands in place through
+  `refreshDesc`, which no longer scrolls the page when the paragraph is inside the sheet (`revealEl` skipped). `LK_OPEN` is
+  the session's, open at every start: every text tapped costs one call the first time (about ¥0.001), and a fold closed
+  by hand stays closed on the next text until the app starts again. **No action inside** — the sheet stays a look-up (v496/v692); a
+  marked photo's sheet (grades, More) gets no fold. The sheet is capped at 78vh and scrolls inside itself. `Details` is an
+  existing key; the guide's sentence ("Tap any text on it to look it up") stays true. Harness (test733, en 390 px light and
+  de 360 px dark, a menu of three texts — stored short and long, short only, neither; the AI mocked at `aiAsk`; the sheet
+  opened through `openLookup` rather than a tap on a photo region, the seed carries no photo; 7 checks each): open at once
+  with both descriptions, no call for a stored one and no button, the next text keeps it open and asks once with
+  "…", the answer lands in the sheet and in `ds` with the page unscrolled, within 78 %, the same text again asks nothing,
+  closed by hand stays closed, the AI switch off asks nothing. On the v732 tree 4 of the first 5 fail — the 78 % check passes
+  on both `[control]`, the old sheet is short — and the script stops at the missing fold. `TO_TEST` "Pop-up Details: long text right?"; WHATS_NEW 733. Not field-checked: how tall the sheet gets
+  over a real menu photo, and whether the long description is worth its place there.
+
 ## Consolidated v717–v729 notes (moved out of CLAUDE.md on 2026-09-28 at v732, verbatim)
 - **v717–v729 dictionary senses, the split and the gloss fix** (the v720 and v723–v729 passes field-checked by H's
   dumps, v717–v719 not): `cedict.tsv.gz` is **v5** — every sense of every one-character line, appended to the shipped

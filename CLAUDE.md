@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v732, 2026-09-28)
+## Current state (PWA v733, 2026-09-28)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -184,7 +184,8 @@ the list keeps its place (v352/v445); the placeholder reads "Characters or pinyi
 Flag | Delete; its line under the character row ends in **Cards with 行 ›**, the character's page — its readings in your
 cards and every card that holds it (v691; the card under it keeps its own way back, v710) — only when another card holds the
 character (v717). A **multicard's own text**: it swipes to the multicard's next text (v707); its photo frames it alone (v700); + Flashcard (Flashcard › once made) | Edit, Flag |
-Delete (v692/v695); the pop-up over the photo carries **no action** (v496/v692). The multicard: **Add a text**, Delete multicard
+Delete (v692/v695); the pop-up over the photo carries **no action** (v496/v692) — only a **Details** fold, open by default, with the
+short and long description, the long one asked the first time a text is shown (`LK_OPEN`, v733). The multicard: **Add a text**, Delete multicard
 (v635/v711); its tags once under its title, its texts' rows show a short one-sentence description (`dsh`, all texts in one AI call at creation and once when an older multicard is opened, `pageShorts`; a failed call is asked again on the next visit, v710) and no flashcard ring; the long one stays on the opened text (v696–v698). On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right, name/pinyin/meaning without it and whole, and a dish description (`priceOf`, `isMenuPage`, v699) — its own screen and the look-up show the same, the price on its own line (`priceView`, a view, the record untouched, v712), and its flashcard is the name alone (v713); a dish with its own photo takes it as its picture (`dish`, v701/v705).
 
 ### Camera — photo to card
