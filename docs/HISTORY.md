@@ -60,6 +60,29 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v726, 2026-09-28)
+- **The line splits into the fewest words (v726, H: "Ok. Go" on the split named at v725).** `lineMeaning` took the longest
+  dictionary word at hand, left to right, so 肥瘦肉夹馍 was 肥|瘦肉|夹|馍 — four words, the dish name torn apart, 夹 glossed
+  alone, and the AI review fed "夹 to press from either side · 馍 small loaf". `fewestFirst(rest)`: over the run up to the
+  next punctuation, the split with the fewest tokens (a phrasebook phrase, a dictionary word of up to eight characters, a
+  number with its unit, or one character), counted from the end; among equal counts the longer first token wins, so a
+  line the greedy split had right keeps it (中国|人). `lineMeaning` asks it again from the next position — an optimal
+  split's tail is optimal, so the answers agree. **Measured on the 264 texts of H's v723 dump: 4 lines change, the four
+  roujiamo lines, nothing else** (肥|瘦|肉夹馍, 优质|纯|瘦|肉夹馍, 纯|皮|肉夹馍, 皮|瘦|肉夹馍). **The pass** (`GLOSS_FIX_V`
+  726): an unverified sign card whose meaning is still the one composed from its gloss (every "word meaning" pair of
+  the gloss stands in the meaning, in order — H's own words and the AI's accepted ones fail that test and stay) and whose
+  lines now split into fewer words takes the new gloss, segs and composed meaning; the pinyin is untouched (the split does
+  not change it). Harness (test726, five seeded cards after a v725 row, 11 checks): the sign card's gloss, segs and
+  meaning after the pass, the row v726 / 2 cards / 2 words, the four menu lines split anew, 肉夹馍 one gloss with its
+  reading, the open card; `[guard]` a card with H's own meaning, a verified card and a well-split two-line card untouched,
+  v724's 入内, the tie rule on 甲乙丙 (乙丙 made a word for the check), six lines the greedy split had right, the phrasebook
+  leading (安全出口 whole), second start no-op. On the v725 tree 6 of 11 fail. test725 14 (two checks reworded for the
+  whole dish), test724 17 (供水 and 号牌 are dictionary words the pass now rightly merges — fixtures 水房 and 木牌), test723
+  15, test722 14, test721 19, test720 23, test717 41 — all pass on the new tree. Not field-checked: H's roujiamo cards
+  should show 肉夹馍 as one word after the update, and the AI review should get the dish whole. Seen in the same run, not
+  changed: 皮 in 皮瘦肉夹馍 reads "leather" (pork skin on a menu) and 瘦 "thin" — dictionary senses, a table entry if H
+  wants them.
+
 ## Current state (PWA v725, 2026-09-28)
 - **夹 reads jiā (v725, H: "Ok. Next." on the 肉夹馍 line of his v723 dump).** pinyin-pro's default for 夹 is jiá — alone,
   in 肉夹馍, in 文件夹 — so every 肉夹馍 card read ròu jiá mó, its lone 夹 (the line splits 肥|瘦肉|夹|馍) was glossed from
