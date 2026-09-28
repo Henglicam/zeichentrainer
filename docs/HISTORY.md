@@ -60,6 +60,33 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v722, 2026-09-28)
+- **The dictionary holds every sense of every one-character line (v722, H: "Go" on the NMAX list).** `tools/cedict-nmax.py
+  --write` rebuilt `vendor/cedict.tsv.gz` as the list said a safe rebuild must: the senses the three-sense cut took are
+  **appended** to each shipped group, the shipped order and v717's variant strip kept, the source's order never imposed —
+  2 674 one-character lines grew, no group lost a prefix, 115 312 lines as before, 2 586 KB instead of 2 526; header
+  **v5**, `DICT_HEAD` follows, every phone fetches the file once. **The two rules the list named, and two the fuller lines
+  forced:** a "used in …" or "see …" note is not a sense (hard); **a bound form is a sense for a character standing alone**,
+  marker off (木 → "tree", 英 → "hero", 翅 → "wing"), so the v717 skip that had left 本 "stem" is gone; the classifier
+  stand-back also sees one behind a note ("(on product packaging) classifier for flat items", 枚's fourth sense now); a
+  dated sense — "(old)", "(literary)", "(classical)" — is hard like "(archaic)" (枚 would have ended as "(old) stick used
+  as a gag to prevent soldiers from talking"); and the in-word slot passes a bound form the dictionary narrows with a note
+  of its own (河's "(bound form) (on restaurant menus) rice noodles" is 河粉's, not 河沙's — 河 beside 沙 is "river").
+  **The pass waits for the fresh file:** `DICT_FRESH` is set by `loadDict` from the header it ends up with; on an old cached
+  copy (the refetch failed) `glossFix` returns without writing its row, so the next start tries again — otherwise the new
+  senses would never reach the cards. `GLOSS_FIX_V` 722. 德 → virtue, 西 → west, 中 → within; 面 stays "face" and 卡
+  "to stop" (the noodle and card senses are later, and CEDICT's order is right for the language if not for the menu).
+  `OWN_SENSES` kept as it is (新 金 江 now agree with the chooser; 京 周 木 本 只 still say more). Harness (test722,
+  seven seeded cards after a v721 row, 14 checks): `DICT_FRESH` and the v5 header, 德 → virtue, 西 beside 货 → west with
+  its composed meaning, 翅 → wing, the row v722 / 3 cards / 3 words, `bestSense` of 德 西 英 金, 乳 中 and 美/河 in a
+  word, the two notes on a synthetic line, `[guard]` 美 本 店 了 美食, 家 日 店 岁 枚, `OWN_SENSES` first, 德国 a word,
+  second start no-op; **a second context with the worker blocked and the old file served twice** (the fetch and the
+  refetch past the cache): `DICT_FRESH` false, the row stays v721, 德 stays Germany. On the v721 tree 10 of 14 fail, the
+  4 guards pass. test721 19, test720 23, test719 20, test717 41 — all pass on the new tree (test718 fails only its pinned
+  "v718" in the Diagnostics line). `docs/NMAX.md` regenerated: zero rows, and says what zero means. Not yet field-checked:
+  the phone must download 2.6 MB once (through the mirror, no VPN) before the pass runs — Diagnostics shows the v722 line
+  only after that.
+
 ## Current state (PWA v721, 2026-09-28)
 - **H's dump of the v720 pass (101 cards, 120 words) showed three regressions of the beside-a-character rule and the
   class the NMAX list names on his own cards (v721).** Most changes were right (店 shop, 林 woods, 乳 breast, 售 to sell);

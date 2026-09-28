@@ -13,6 +13,12 @@ cedict-readings.py for the download) beside the shipped file and writes docs/NMA
   - the size of the shipped file with NMAX 5, 8 and unlimited for one-character lines, so the cost is a number.
 
     python3 tools/cedict-nmax.py package/cedict.json vendor/cedict.tsv.gz docs/NMAX.md
+
+With --write (v722, H: "Go") it also rewrites vendor/cedict.tsv.gz: every one-character line gets the senses the cut took,
+appended after the shipped ones — the shipped order and v717's variant strip kept, the source's order never imposed —
+and the header goes to v5, which makes every phone fetch the file once (DICT_HEAD in app.js must match).
+
+    python3 tools/cedict-nmax.py package/cedict.json vendor/cedict.tsv.gz docs/NMAX.md --write
 """
 import sys, json, gzip, re, collections, io
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
@@ -41,7 +47,9 @@ def groups_of(value):
         out[m.group(1) if m else ""] = p[m.end():] if m else p
     return out
 
-def main(src, path, dst):
+HEADER5 = "#cedict v5 — a value with \\x1f carries one group per reading, each opening with [pinyin]; one-character lines hold every sense"
+
+def main(src, path, dst, write=False):
     data = json.load(open(src, encoding="utf-8"))
     by = collections.OrderedDict()
     for e in data: by.setdefault(e["simplified"], []).append(e)
@@ -69,10 +77,10 @@ def main(src, path, dst):
             allS = senses("; ".join(items))
             kept = senses(sg.get(r, sg.get("", ""))) if (r in sg or len(sg) == 1) else None
             if kept is None or len(allS) <= len(kept): continue
-            cut = [x for x in allS if x not in kept]         # the senses the shipped line lacks
+            srcv = cv.strip_line(w, "[%s] %s" % (r, "; ".join(items)), by)[0]   # the source's senses after v717's variant strip
+            cut = [x for x in senses(re.sub(r"^\s*\[[^\]]*\]\s*", "", srcv)) if x not in kept]   # the senses the shipped line lacks
             if not cut: continue
             now, best = choose(kept), choose(kept + cut)     # appended to the shipped line, its order and the v717 strip kept
-            srcv = cv.strip_line(w, "[%s] %s" % (r, "; ".join(items)), by)[0]   # rebuilt from the source in its order
             src = choose(senses(re.sub(r"^\s*\[[^\]]*\]\s*", "", srcv)))
             rows.append(dict(w=w, r=r, n=words[w], kept=len(kept), all=len(allS), now=now, best=best, src=src, cut=cut,
                              cl=any(CL.search(x) for x in cut), diff=now != best))
@@ -107,7 +115,8 @@ def main(src, path, dst):
          "reading group). **Words** = dictionary words holding the character, the only frequency the data offers; read the top of",
          "the list as the street, the bottom as the classics. **Now** is what `bestSense` answers from the shipped three senses,",
          "**all** what it would answer with every sense (its own rule, `OWN_SENSES` left out); a row is listed only where the two",
-         "differ. The cut senses stand in the last column, `⟂` between them.", "",
+         "differ. The cut senses stand in the last column, `⟂` between them. **Zero rows** means the shipped file holds every",
+         "sense of every one-character line — the state since v722 (`--write`), kept here for the next dictionary rebuild.", "",
          "| one-character lines with a cut | the shipped answer is a surname, an abbreviation, a bound form or a note | the answer changes otherwise | only a classifier cut, same answer |", "|---:|---:|---:|---:|",
          "| %d | %d | %d | %d |" % (len(rows), len(junk), len(diff), len(clcut)), "",
          "**Why:** CC-CEDICT lists a character's proper-noun entries (surname, abbreviation) before its word, and the cut takes the",
@@ -144,7 +153,27 @@ def main(src, path, dst):
     o.append("")
     o.append("%d rows in all." % len(regress))
     open(dst, "w", encoding="utf-8").write("\n".join(o) + "\n")
+    if write:
+        out, grown, skipped = [], 0, 0
+        for line in lines:
+            if not line or line.startswith("#"): out.append(HEADER5 if line.startswith("#") else line); continue
+            w, _, v = line.partition("\t")
+            if len(w) == 1 and w in full:
+                gs = full[w]; sg = groups_of(v); parts = []; changed = False
+                for r, body in sg.items():
+                    items = gs.get(r) if r else (list(gs.values())[0] if len(gs) == 1 else None)
+                    if items is None: skipped += 1; parts.append(("[%s] " % r if r else "") + body); continue
+                    kept = senses(body)
+                    srcv = cv.strip_line(w, "[%s] %s" % (r or list(gs)[0], "; ".join(items)), by)[0]
+                    add = [x for x in senses(re.sub(r"^\s*\[[^\]]*\]\s*", "", srcv)) if x not in kept]
+                    if add: changed = True
+                    parts.append(("[%s] " % r if r else "") + "; ".join(kept + add))
+                if changed: grown += 1
+                v = US.join(parts)
+            out.append(w + "\t" + v)
+        with gzip.open(path, "wt", encoding="utf-8", compresslevel=9) as f: f.write("\n".join(out) + "\n")
+        print("written: %d one-character lines grew, %d groups left as they were (reading not in the source)" % (grown, skipped))
     print("%d rows, %d junk answers, %d differ, %d classifier-only, %d source-order differ; sizes %s" % (len(rows), len(junk), len(diff), len(clcut), len(regress), sizes))
 
 if __name__ == "__main__":
-    main(*sys.argv[1:4])
+    main(*sys.argv[1:4], write="--write" in sys.argv[4:])
