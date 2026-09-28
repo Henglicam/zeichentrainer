@@ -60,6 +60,35 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v719, 2026-09-28)
+- **v718's pass gave 枚 "surname Mei" and a lone 了 "to finish"; both repaired, and the cause of each fixed (v719, from
+  H's Diagnostics dump: `7 cards, 12 words: … 了 (completed action marker) → to finish · 枚 classifier for small objects
+  … → surname Mei` three times).** The dictionary lines were the same in v3 and v4 — the faults were the app's.
+  **枚:** v717's `bestSense` skipped "classifier for …" in the same breath as "surname …", and 枚's line is exactly those
+  two senses, so the fallback `senses[0]` answered the surname. Now the classifier stands back only when a sense that is
+  neither remains (`hard`/`cl`): 岁 still says "year", 枚 says its classifier, 个's "(classifier used before …)" was never
+  matched and is not now. **了:** `lineMeaning` read a character standing alone with `pySpaced(w)`, which reads a lone 了
+  as liǎo (pinyin-pro's choice), and v573's rule then picked the liǎo group — "to finish" — for the 了 that ends 卖完了.
+  Read whole, pinyin-pro gives the line's reading (卖完了 → mài wán le), so a one-character word now takes its syllable from
+  the line (`ctx`, one array entry per character, used only when the lengths agree) — the pinyin and the sense group both.
+  一 and 不 are excepted (`SANDHI`): read whole, pinyin-pro re-tones them by their neighbour (一枚 yì méi), the line's `py`
+  carries that already and the gloss shows the character's own tone, as before. A lone 了 after a number (380ml了) keeps
+  the lone reading `[guard]`. **The pass runs once more** (`GLOSS_FIX_V` 719 supersedes the v718 row): `glossCtx(d)` walks
+  the card's own text line by line, finds each gloss word in order (the second 了 of 了解了 past the first) and gives a
+  one-character word its line reading; a gloss changes when its reading or its sense does, and the record names both
+  (`了 liǎo to finish → le (completed action marker)`). **A meaning composed word by word** (`mt.src` "gloss", unverified,
+  English — the sign cards the AI never answered, of which H's dump lists many) carried the old gloss too ("卖完 to be sold
+  out · 了 to finish"); v718 left it, v719 replaces each changed `w m` pair in `m` and `ms.en`; an AI or hand meaning is
+  not touched. Harness (test719, seven seeded cards after a v718 row): 枚 → its classifier sense, the lone 了 of 卖完了,
+  了解了 and 关门了 → le and the particle, the two composed meanings rewritten, the AI meaning of 关门了 kept while its
+  gloss changed, the row says v719 / 4 cards / 4 words, Diagnostics prints the reading change, `lineMeaning` of a new
+  sign gives le and the classifier, punctuation on the line does not break the count, the open card's composed meaning and
+  its tapped 了 read le; `[guard]` 了解 whole, 一 yī, 药/房, verified 拉, phrasebook 停, 岁 year, 个, second start no-op.
+  On the v718 tree 12 of 20 fail and the 8 guards pass. test717: 41 of 41 on the new tree. **Not fixed, named:** 只 alone
+  still says "grain that has begun to ripen" (its first non-classifier sense) and 本 "stem" (the bound-form senses stand
+  back outside a word) — the same fallback, not touched unasked. Not yet field-checked; a dump after the update shows
+  the v719 line.
+
 ## Current state (PWA v718, 2026-09-28)
 - **The stored meanings of single characters are looked up again under v717's rule, once (v718, H: "Bitte aktualisiere
   alle Karten nach der neuen Regel für Single Characters").** v717 changed the dictionary and `bestSense`, but a card keeps

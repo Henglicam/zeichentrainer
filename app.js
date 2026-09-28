@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=718; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=719; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -687,7 +687,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
-  ["cards","v718","Gloss fix: 药 cards updated?"],
+  ["cards","v719","Gloss fix: 枚, 了 repaired?"],
   ["learn","v717","Stroke from Show me: a stroke?"],
   ["learn","v717","Fold count steady after Skip?"],
   ["learn","v717","Char meanings: 药 medicine?"],
@@ -1831,17 +1831,21 @@ async function fixNumberSegs(){
    glosses (慢, 停, 男, 女), a meaning the AI or a hand wrote or checked, a meaning in another language. Once per phone (the
    settings row glossFix, v 718); the row keeps what changed and Diagnostics prints it. A dictionary that does not load
    leaves the row unwritten, so the next start tries again. */
-const GLOSS_FIX_V=718, GLOSS_FIX_KEEP=300;
+const GLOSS_FIX_V=719, GLOSS_FIX_KEEP=300; /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more */
 async function glossFix(){
   const done=S.settings.glossFix; if(done&&done.v>=GLOSS_FIX_V) return;
-  try{ await loadDict(); }catch(e){ return; } await loadSigns().catch(()=>{});
+  try{ await loadDict(); if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); }catch(e){ return; } await loadSigns().catch(()=>{});
   const oneCJK=w=>[...String(w||"")].length===1&&CJK.test(w);
   const inBook=w=>!!(SIGNS||[]).find(e=>e.zh===w);
   const rows=[], changed=[]; let k=0;
   for(const d of S.custom){ let u=null;
     if(Array.isArray(d.gloss)&&d.gloss.length){
-      const gl=d.gloss.map(g=>{ if(!g||!oneCJK(g.w)||inBook(g.w)) return g; const m=cleanSense(bestSense(g.w,g.p)); if(!m||m===g.m) return g; changed.push({id:d.id,w:g.w,from:g.m||"",to:m}); k++; return {...g,m}; });
-      if(gl.some((g,i)=>g!==d.gloss[i])) u={...d,gloss:gl}; }
+      const ctxP=glossCtx(d);
+      const gl=d.gloss.map((g,i)=>{ if(!g||!oneCJK(g.w)||inBook(g.w)) return g; const p=ctxP[i]||g.p, m=cleanSense(bestSense(g.w,p)); if(!m||(m===g.m&&p===g.p)) return g; changed.push({id:d.id,w:g.w,from:(p!==g.p?(g.p||"")+" ":"")+(g.m||""),to:(p!==g.p?p+" ":"")+m}); k++; return {...g,p,m}; });
+      if(gl.some((g,i)=>g!==d.gloss[i])){ u={...d,gloss:gl};
+        if(d.mt&&d.mt.src==="gloss"&&!d.mt.verified&&mlOf(d)==="en"&&d.m){ /* the meaning composed word by word carries the old gloss too ("卖完 to be sold out · 了 to finish") */
+          let m=d.m; gl.forEach((g,i)=>{ const o=d.gloss[i]; if(g!==o&&o.m) m=m.split(o.w+" "+o.m).join(g.w+" "+g.m); });
+          if(m!==d.m){ u.m=m; setMl(u,"en"); } } } }
     if(d.mt&&d.mt.src==="dict"&&!d.mt.verified&&oneCJK(d.c)&&mlOf(d)==="en"&&!inBook(d.c)){
       const m=cleanSense(bestSense(d.c,d.p)); if(m&&m!==d.m){ changed.push({id:d.id,w:d.c,from:d.m||"",to:m}); k++; u={...(u||d),m}; setMl(u,"en"); } }
     if(u) rows.push(u); }
@@ -1849,6 +1853,15 @@ async function glossFix(){
     for(const r of rows){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; } }
   await setSetting("glossFix",{v:GLOSS_FIX_V,at:Date.now(),cards:rows.length,words:k,changed:changed.slice(0,GLOSS_FIX_KEEP)});
   if(rows.length&&(S.mode==="study"||S.detail)) render();
+}
+/* the reading of each gloss word inside its own line (v719), aligned with d.gloss; "" where the word is not found or is
+   not one character — the card's text is what lineMeaning read, so the words are searched in order along it */
+function glossCtx(d){
+  const lines=String(d.c||"").split("\n").map(l=>l.replace(/\s+/g,"")), py=lines.map(l=>pinyinPro.pinyin(l,{type:"array",toneType:"symbol"}));
+  let li=0, off=0;
+  return d.gloss.map(g=>{ const w=g&&g.w||""; if(!w) return "";
+    for(let j=li;j<lines.length;j++){ const i=lines[j].indexOf(w,j===li?off:0); if(i>=0){ li=j; off=i+w.length; return w.length===1&&!SANDHI.test(w)&&py[j].length===lines[j].length?py[j][i]:""; } }
+    return ""; });
 }
 /* the text keeps the photo's lines: a horizontal word stays on one line, so the box goes
    wide and the font shrinks to fit instead of wrapping (H: "the image is one line") */
@@ -6574,6 +6587,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  719:"A character standing alone in a text reads as its line reads it — 了 at the end is le — and 枚 has its meaning back.",
   718:"Cards that got a character's meaning from the dictionary have it again under the new rule.",
   717:"More is shorter: what is sent, about the app and the feedback box fold open on a tap. A stroke that starts on Show me or Skip is a stroke now.",
   707:"Swipe through the texts of a multicard: open one and swipe to the next.",
@@ -7679,12 +7693,15 @@ function bestSense(w,py,inWord){ /* inWord (v717): the character is being read I
   }
   const senses=body.split(";").map(x=>x.trim()).filter(Boolean);
   if(inWord){ const b=senses.find(x=>/^\(bound form\)\s*\S/i.test(x)); if(b) return b.replace(/^\(bound form\)\s*/i,""); }
-  return senses.find(x=>!/^(surname |\(bound form\)|old variant|variant of|\(archaic\)|abbr\. (for|of) |Taiwan pr\.|classifier for )/i.test(x))||senses[0]||""; /* v717: a classifier sense stands back when the word has another (岁 → "year", not "classifier for years (of age)") */
+  const hard=x=>/^(surname |\(bound form\)|old variant|variant of|\(archaic\)|abbr\. (for|of) |Taiwan pr\.)/i.test(x), cl=x=>/^classifier for /i.test(x);
+  return senses.find(x=>!hard(x)&&!cl(x))||senses.find(x=>!hard(x))||senses[0]||""; /* v717: a classifier sense stands back when the word has another (岁 → "year", not "classifier for years (of age)") — but only then (v719: 枚 is "surname Mei; classifier for small objects", and v717 answered "surname Mei" on three of H's cards) */
 }
 /* meaning of one transcript line: longest phrasebook phrases first, dictionary
    words for the rest; punctuation kept as its own token for wrapping */
+const SANDHI=/^[一不]$/; /* the two characters pinyin-pro re-tones by their neighbour */
 function lineMeaning(line){
   const raw=line.replace(/\s+/g,"");
+  const ctx=pinyinPro.pinyin(raw,{type:"array",toneType:"symbol"}), inCtx=ctx.length===raw.length; /* v719: the line read whole — a character standing alone takes the reading its line gives it (卖完了 ends in le, not the lone 了's liǎo, which made it "to finish") */
   const parts=[]; let k=0;
   while(k<raw.length){
     const ch=raw[k];
@@ -7695,7 +7712,7 @@ function lineMeaning(line){
     const rest=raw.slice(k).split(SIGN_PUNCT)[0]; let len=Math.min(8,rest.length)||1;
     while(len>1 && !(DICT&&DICT.has(rest.slice(0,len)))) len--;
     const w=rest.slice(0,len)||ch;
-    const wp=pySpaced(w);
+    const wp=w.length===1&&inCtx&&CJK.test(w)&&!SANDHI.test(w)?ctx[k]:pySpaced(w); /* 一 and 不 keep their own tone: the line's reading carries the sandhi (yì méi), the gloss shows the character's */
     parts.push({w,p:wp,m:cleanSense(bestSense(w,wp)),ph:false}); /* no dictionary clutter in the composed meaning (v134); the word's own reading picks the sense group (v573) */
     k+=w.length;
   }
