@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v730, 2026-09-28)
+## Current state (PWA v731, 2026-09-28)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -81,6 +81,9 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   segs, its meaning only while still the composed one (v726/v728) — **only on the fresh dictionary** (`DICT_FRESH`);
   settings row `glossFix`, Diagnostics prints it. v717 also: `MORE_OPEN`, `PAD_HAND`, the backup line, "Cards with 行 ›"
   only when another card holds it (all in the sections below).
+- **Duplicate multicards (v731):** More → Your cards shows a row only while two multicards share at least `DUP_SHARE` 0.6 of
+  their texts (characters only, `dupKey`); Delete N keeps the newest of each set, the rest go through `delCustom` and the
+  Undo line. Not field-checked.
 - **The v6xx state** (reader, owner tools, Learn zoom, Crop again) moved to `docs/HISTORY.md` on 2026-09-28 (H):
   `grep -n "Consolidated v6xx" docs/HISTORY.md`.
 
@@ -206,7 +209,7 @@ Crop again; a blank never read is dropped on Cancel, a tab tap or a restart.
 
 ### More — four sections (v547)
 **Learning** (Progress, Card order, Tags, Check-up and the undo rows) · **Your cards** (Export,
-Import, Flagged cards, Photos, Storage) · **The app** (Share the app, Feedback, How to use the
+Import, Flagged cards, Photos, Duplicate multicards when there are any (v731), Storage) · **The app** (Share the app, Feedback, How to use the
 app, Language, Meanings, AI review with the owner's setup form, Review queue, Usage sharing,
 Update notes, About, Open source licenses) · **Advanced settings**. The owner's tools fold behind
 one **Owner tools** row (Downloads, Mirror, Diagnostics, Still to test, All users, Feedback,

@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=730; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=731; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -687,6 +687,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["more","v731","Duplicate multicards: sets right?"],
   ["learn","v717","Stroke from Show me: a stroke?"],
   ["learn","v717","Fold count steady after Skip?"],
   ["learn","v717","Char meanings: 药 medicine?"],
@@ -3196,6 +3197,32 @@ function backupNote(){
    card-less photo costs nothing to delete: keepPhoto finds no card to hand a copy to, so no bytes are written. */
 function oldShots(){ const cut=Date.now()-OLD_DAYS*DAY; return S.inbox.filter(sh=>sh.ts<cut); }
 function shotsNote(){ const n=S.inbox.length, o=oldShots().length; return t("{0} in the inbox",nOf(n,"photo"))+(o?t(", {0} older than {1} days",o,OLD_DAYS):"")+"."; }
+/* v731 (H: "Ok, go — Duplikat-Finder für Multicards"; his v727/v729 dumps: five 建国肉夹馍 multicards, three 恩尼美甲, two 江宁府, made
+   on different days, every copy's texts reviewed by the AI on their own): two multicards are copies of one another when at
+   least DUP_SHARE of the shorter one's texts stand in the other, with everything but the characters stripped (凉皮¥14/份 and
+   凉皮¥10/份 are one dish); a set keeps its newest copy, the others go through delCustom, so the Undo line covers them. The
+   row stands under More → Your cards only while a set exists; no undo of its own, the five-second Undo is the undo. */
+const DUP_SHARE=0.6;
+const dupKey=x=>String(x||"").replace(/[^\p{Script=Han}]/gu,"");
+const dupName=p=>(p.name&&p.name.name)||String(p.c||"").replace(/\n/g," / ");
+function dupSets(){
+  const pages=deck().filter(isPage).map(p=>({p,keys:new Set(pageItems(p).map(it=>dupKey(it.c)).filter(Boolean))})).filter(x=>x.keys.size>=2);
+  const sets=[], used=new Set();
+  for(let i=0;i<pages.length;i++){ if(used.has(i)) continue; const set=[pages[i]];
+    for(let j=i+1;j<pages.length;j++){ if(used.has(j)) continue; const a=pages[i].keys, b=pages[j].keys; let hit=0; for(const k of a) if(b.has(k)) hit++;
+      if(hit/Math.min(a.size,b.size)>=DUP_SHARE){ set.push(pages[j]); used.add(j); } }
+    if(set.length>1){ set.sort((x,y)=>(y.p.at||0)-(x.p.at||0)); sets.push(set.map(x=>x.p)); } }
+  return sets; }
+function dupRowHTML(){
+  const sets=dupSets(); if(!sets.length) return ""; const extra=sets.reduce((k,st)=>k+st.length-1,0);
+  const lines=sets.map(st=>`<div>${esc(dupName(st[0]))}: ${esc(nOf(st.length,"copy","copies"))}</div>`).join("");
+  return `<div class="mrow"><div style="flex:1"><div class="t">${t("Duplicate multicards")}</div><div class="s" id="dup-status">${t("The newest of each set stays, the others go with all their texts.")}${lines}</div></div><button class="btn mini" id="dup-del">${t("Delete {0}",extra)}</button></div>`; }
+async function dupDelete(){
+  const gone=dupSets().flatMap(st=>st.slice(1)); if(!gone.length) return;
+  if(!await askSheet({title:gone.length>1?t("Delete {0} duplicate multicards?",gone.length):t("Delete one duplicate multicard?"),text:t("The newest of each set stays, the others go with all their texts."),ok:t("Delete")})) return;
+  for(const pg of gone) await delCustom(pg.id); /* each one shows its Undo item, so the line reads "Deleted 4 cards" and Undo puts every copy back with its texts */
+  const row=$("#dup-del"); if(row&&row.closest(".mrow")) row.closest(".mrow").remove();
+}
 async function cleanupShots(){
   const list=oldShots(); if(!list.length) return;
   if(!await askSheet({title:list.length>1?t("Delete {0} old photos?",list.length):t("Delete one old photo?"),text:t("Cards made from them keep their own picture. A photo that never made a card is gone."),ok:t("Delete")})) return;
@@ -3250,6 +3277,7 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">${t("Import")}</div><div class="s">${t("A shizi-….json.txt file. Existing cards are overwritten.")}</div></div><button class="btn mini" id="import">${t("Import")}</button></div>
     <div class="mrow"><div><div class="t">${t("Flagged cards")}</div><div class="s">${t("{0} flagged for review. Share the list as text, for a teacher.",deck().filter(d=>d.flag).length)}</div></div><span class="btnrow"><button class="btn mini" id="show-flag">${t("Show")}</button><button class="btn mini" id="share-flag">${t("Share")}</button></span></div>
     <div class="mrow"><div><div class="t">${t("Photos")}</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">${t("Delete {0}",oldShots().length)}</button>`:""}</div>
+    ${dupRowHTML()}
     <div class="mrow"><div><div class="t">${t("Storage")}</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
     <div class="listhead">${t("The app")}</div>
     <div class="mrow"><div><div class="t">${t("Share the app")}</div><div class="s" id="app-share-status">${t("Send the link to a friend. The app installs from any browser, no store.")}</div></div><button class="btn mini" id="app-share">${t("Share")}</button></div>
@@ -3329,6 +3357,7 @@ function renderMore(main){
   $("#share-flag").onclick=shareFlagged;
   $("#show-flag").onclick=()=>{ S.mode="cards"; S.detail=null; S.editing=null; S.query=""; S.filterUnv=false; S.filterAi=false; S.filterTags=[]; S.filterFlag=true; render(); };
   const cs=$("#cleanshots"); if(cs) cs.onclick=cleanupShots;
+  const dd=$("#dup-del"); if(dd) dd.onclick=dupDelete; /* v731 */
   if(S.admin){
     storageFacts(); /* v399: fresh numbers for the head line while More is open */
     $("#owner-toggle").onclick=()=>{ S.ownerOpen=!S.ownerOpen; render(); }; /* v547: one row instead of five sections of the owner's own */
@@ -6611,6 +6640,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  731:"More → Your cards finds multicards you made twice and deletes the older copies.",
   729:"吃, 碰 and 杠 on a mahjong sign name their calls: chow, pung, kong.",
   728:"肉夹馍 reads jiā on every card, the checked ones too; 龙 is a dragon and 胡 on a mahjong sign is the winning call.",
   727:"皮 on a menu is skin and 瘦 is lean.",

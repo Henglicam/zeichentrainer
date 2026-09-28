@@ -60,6 +60,31 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v731, 2026-09-28)
+- **Duplicate multicards: More → Your cards finds the copies and deletes all but the newest (v731, H: "Ok, go —
+  Duplikat-Finder für Multicards").** His v727 and v729 dumps had the same dishes reviewed five times over: the deck held
+  five 建国肉夹馍 multicards (Sep 17 and four on Sep 25), three 恩尼美甲, two 江宁府, each made on its own day, each copy's
+  texts reviewed on their own. Now `dupSets()`: two multicards are copies when at least `DUP_SHARE` 0.6 of the shorter one's
+  texts stand in the other with everything but the characters stripped (`dupKey`; 凉皮¥14/份 and 凉皮¥10/份 are one dish, the
+  five menus read their prices differently); a set is sorted newest first. The row "Duplicate multicards" stands between
+  Photos and Storage only while a set exists: the sentence "The newest of each set stays, the others go with all their
+  texts.", one line per set (`dupName`: the multicard's own name, else its title, with the count through `nOf(n,"copy",
+  "copies")` — the plural key is irregular, `"copys"` was the first run's lesson), and a **Delete N** button. The button
+  asks first ("Delete 3 duplicate multicards?", one key for one), then deletes the older copies through `delCustom`, so
+  every copy takes its texts with it and joins the Undo line ("Deleted 3 cards", five seconds put every copy and text back);
+  the row removes itself. No undo of its own — the Undo line is the undo, as for every delete since v268. Ten columns: the
+  row title, the sentence, the two questions, copy/copies (ru копия/копии/копий); rendered at 1, 2, 3 and 5 in every column
+  (the v412 rule), no duplicate key. Harness (test731, H's deck shape: three 建国肉夹馍 with prices read differently, two
+  恩尼美甲, 江宁府 and 杭州小笼包 alone, a flashcard; 13 checks): the two sets newest first, the row with its lines and Delete 3
+  between Photos and Storage, the sheet, Cancel deletes nothing, Delete leaves 4 multicards and 33 of 72 texts and the
+  flashcard in IndexedDB and memory, the Undo line and the row gone, Undo brings 80 rows back and the row with them, no
+  column falls back to English, the button on one line at 360 px in German and Russian (a Range's client rects, not the
+  box height — the box's padding read as two lines first); screenshots en 390 px, de and ru 360 px. On the v730 tree 5 of 6
+  fail (the seed guard passes, the row is not there). `TO_TEST` "Duplicate multicards: sets right?"; WHATS_NEW 731. Not
+  field-checked: whether the five 建国肉夹馍 fall into one set on H's phone (the AI read one copy's prices as ¥? and one
+  copy's 凉皮 without a price — the characters alone decide, so they should), and whether 0.6 ever joins two menus of one
+  chain photographed at two shops (it would; H deletes what he wants, the row only proposes).
+
 ## Current state (PWA v730, 2026-09-28)
 - **The six Still-to-test lines v724–v729 go (v730, H: "Ok, go — remove the six Still-to-test lines").** H's v729 dump
   showed the v729 pass (38 cards, 69 words) with every item the six lines asked about: 入 enter, 水 water, 我 I (v724, seen
