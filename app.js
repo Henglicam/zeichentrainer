@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=724; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=725; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -687,6 +687,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v725","夹 jiā in 肉夹馍 on cards?"],
   ["cards","v724","入 enter, 水 water, 我 I?"],
   ["learn","v717","Stroke from Show me: a stroke?"],
   ["learn","v717","Fold count steady after Skip?"],
@@ -1831,7 +1832,7 @@ async function fixNumberSegs(){
    glosses (慢, 停, 男, 女), a meaning the AI or a hand wrote or checked, a meaning in another language. Once per phone (the
    settings row glossFix, v 718); the row keeps what changed and Diagnostics prints it. A dictionary that does not load
    leaves the row unwritten, so the next start tries again. */
-const GLOSS_FIX_V=724, GLOSS_FIX_KEEP=300; /* 724 (H's v723 dump): a bound form past the third sense is not the in-word sense (入 "to conform to", 水 "additional cost", 牌 "fixed pattern for lyrics"), "I" is a pronoun (我 → "me"), a capitalised word anywhere makes a proper noun (巴 "the east of Sichuan") */ /* 723: 面 and 卡 in OWN_SENSES */ /* 722: the v5 dictionary and the two chooser rules of docs/NMAX.md — the pass waits for the fresh file */ /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
+const GLOSS_FIX_V=725, GLOSS_FIX_KEEP=300; /* 725: OWN_PINYIN — 夹 reads jiā, the unverified cards' pinyin and glosses follow */ /* 724 (H's v723 dump): a bound form past the third sense is not the in-word sense (入 "to conform to", 水 "additional cost", 牌 "fixed pattern for lyrics"), "I" is a pronoun (我 → "me"), a capitalised word anywhere makes a proper noun (巴 "the east of Sichuan") */ /* 723: 面 and 卡 in OWN_SENSES */ /* 722: the v5 dictionary and the two chooser rules of docs/NMAX.md — the pass waits for the fresh file */ /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
 async function glossFix(){
   const done=S.settings.glossFix; if(done&&done.v>=GLOSS_FIX_V) return;
   try{ await loadDict(); if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); }catch(e){ return; } await loadSigns().catch(()=>{});
@@ -1849,6 +1850,14 @@ async function glossFix(){
           if(m!==d.m){ u.m=m; setMl(u,"en"); } } } }
     if(d.mt&&d.mt.src==="dict"&&!d.mt.verified&&oneCJK(d.c)&&mlOf(d)==="en"&&!inBook(d.c)){
       const m=cleanSense(bestSense(d.c,d.p)); if(m&&m!==d.m){ changed.push({id:d.id,w:d.c,from:d.m||"",to:m}); k++; u={...(u||d),m}; setMl(u,"en"); } }
+    /* v725: a card whose text holds a character of OWN_PINYIN takes the library's new reading into its own pinyin — only an
+       unverified card, and only when the old and new pinyin differ in nothing but that reading (a card the AI or H gave
+       another pinyin keeps it) */
+    if(d.kind!=="page"&&!(d.mt&&d.mt.verified)&&d.p&&OWN_PY_CHARS.some(ch=>String(d.c||"").includes(ch))){
+      const np=String(d.c||"").split("\n").filter(l=>CJK.test(l)).map(l=>pySpaced(l.replace(/\s+/g,""))).join(" / ");
+      const a=String(d.p).normalize("NFC").split(/\s+/).filter(Boolean), b=np.normalize("NFC").split(/\s+/).filter(Boolean);
+      const fits=a.length===b.length&&a.some((x,i)=>x!==b[i])&&a.every((x,i)=>x===b[i]||OWN_PY_READ.has(b[i]));
+      if(fits){ const at=a.findIndex((x,i)=>x!==b[i]); changed.push({id:d.id,w:d.c,from:a[at],to:b[at]}); k++; u={...(u||d),p:np}; } }
     if(u) rows.push(u); }
   if(rows.length){ try{ await idbPutMany("custom",rows); }catch(e){ logErr("glossfix","write: "+(e&&e.message||e)); return; }
     for(const r of rows){ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; } }
@@ -6590,6 +6599,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  725:"肉夹馍 reads ròu jiā mó — 夹 is jiā, as on the mainland.",
   724:"A character inside a word keeps its plain sense again: 入 to enter, 水 water, 牌 signboard.",
   723:"面 on a menu is noodles and 卡 on a sign a card.",
   722:"The dictionary now holds every meaning of a single character: 德 is virtue, 西 is west, 木 a tree.",
@@ -6918,10 +6928,11 @@ const STALL=new Set(); function readerTick(){ for(const f of STALL) f(); }
 function withStall(p,ms,what){ return new Promise((res,rej)=>{ let tm; const arm=()=>{ clearTimeout(tm); tm=setTimeout(()=>{ STALL.delete(arm); rej(new Error(what)); },ms); }; STALL.add(arm); arm(); p.then(v=>{ clearTimeout(tm); STALL.delete(arm); res(v); },e=>{ clearTimeout(tm); STALL.delete(arm); rej(e); }); }); }
 const STALL_TEXT=()=>"the reader did not load within "+Math.round(READER_STALL/1000)+" s — no answer from github.io or the mirror";
 async function loadScript(src){
+  const isPy=/pinyin-pro/.test(src);
   if(src.startsWith("./vendor/")){ const r=await vendorFetch(src.slice(9)); src=URL.createObjectURL(await r.blob()); } /* v335: through vendorFetch, so the mirror and the stall rule hold for scripts too */
   return new Promise((res,rej)=>{
     const s=document.createElement("script");
-    s.src=src; s.onload=res; s.onerror=()=>rej(new Error("script failed to load"));
+    s.src=src; s.onload=()=>{ if(isPy&&window.pinyinPro&&!pinyinPro.ownApplied){ try{ pinyinPro.customPinyin(OWN_PINYIN); }catch(e){ logErr("pinyin","own readings: "+(e&&e.message||e)); } pinyinPro.ownApplied=true; } res(); }; /* v725: the app's own readings go in the moment the library is here, whichever caller loaded it */ s.onerror=()=>rej(new Error("script failed to load"));
     document.head.appendChild(s);
   });
 }
@@ -7704,6 +7715,14 @@ const OWN_SENSES={"只":{"zhī":"classifier for animals, birds and one of a pair
   /* v723 (H: "Nimm 面 und 卡 in die Tabelle"): on a menu 面 is noodles, on a shop sign 卡 a card — CEDICT's order (face; to stop)
      is right for the language and wrong for the street; 卡 qiǎ "to block" keeps the dictionary's */
   "面":{"miàn":"noodles"},"卡":{"kǎ":"card (or calorie)"}};
+/* the app's own readings where pinyin-pro's default is not the mainland one (v725, H's v723 dump: every 肉夹馍 card read
+   ròu jiá mó, its 夹 glossed "double-layered (quilt)" from the jiá group, and the AI's correct jiā was flagged as "does not
+   match the dictionary"). 夹 is jiā on the mainland (to press, to sandwich) except in the double-layered clothes 夹袄 夹被
+   夹衣 (jiá) and 夹肢窝 (gā); a one-character entry in customPinyin overrides the library's words too, so the words that keep
+   another reading or a neutral tone are listed beside it (夹子 had become jiā zǐ). Applied once when the library loads
+   (loadScript). Add a character here with the words that must not follow it. */
+const OWN_PINYIN={"夹":"jiā","夹子":"jiā zi","皮夹子":"pí jiā zi","夹袄":"jiá ǎo","夹被":"jiá bèi","夹衣":"jiá yī","夹肢窝":"gā zhi wō"};
+const OWN_PY_CHARS=Object.keys(OWN_PINYIN).filter(k=>k.length===1), OWN_PY_READ=new Set(OWN_PY_CHARS.map(k=>OWN_PINYIN[k]));
 const BOUND_TOP=3; /* v724: the in-word bound form must stand among the first BOUND_TOP senses of its reading — the three the v4 file shipped and v717's rule was field-checked on. The v5 file appends the cut senses, and a bound form far down the line is a marginal one: 入 (5th) "to conform to (as in 入时)", 水 (7th) "additional cost", 牌 (10th) "fixed pattern for lyrics or set melody", 干 (14th) "to have to do with" — measured over every one-character line: 53 in-word answers change, 入 → to enter, 水 → water, 牌 → signboard, 干 → dry, 元 → currency unit, 国 → country, 和 → and, 多 → many, 座 → seat, 会 → can, 奖 → prize; 密 → "name of an ancient state" and 殊 → "to behead" are the cost */
 const PROPER=x=>/^(\(bound form\)\s*)?(the\s+)?[A-Z][A-Za-z]/.test(x)||/abbr\. (for|of)/i.test(x)||/(^|[\s,])[A-Z][a-z]/.test(x.replace(/\([^)]*\)/g,"")); /* v724 (H's v723 dump): a capitalised word anywhere outside a note names a place, a people, a dynasty or a person — 巴 had become "the east of Sichuan and Chongqing Municipality", 成 is "short name for Chengdu", 蓉 "short name for Chengdu" — and the lone capital "I" is a pronoun, not a name (我 had become "me"); measured over every one-character line: 121 answers change, 成 → to succeed, 晋 → to move forward, 申 → to extend, 卫 → to guard, 蓉 → paste, 翼 → wing */ /* a sense that names a place, a people, a dynasty or an abbreviation (v721: 美 beside 团 had become "the Americas", 河 "the Yellow River") */
 function bestSense(w,py,inWord){ /* inWord (v717): the character is being read INSIDE a word, so a sense CC-CEDICT marks "(bound form)" is the right one — 店 in 药店 is "shop", not the free word's "inn" */
