@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=755; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=756; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -689,7 +689,7 @@ async function sendFeedback(text,shot){
 const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde ich ja lange wieder darauf bestehen, dass wir es
   noch fixen"): the 340 rows back to v141 went in one go. A row goes the moment H's report or his own use settles it, unasked;
   a row older than the screen it names is dead. The parked lock rows went too — the lock's code stays, the archive has them. */
-  ["again","v755","A board: reader path, texts right?"],
+  ["again","v756","Priced board: reader path ok?"],
 ];
 const TO_TEST_GROUPS=[["photo","Take any photo"],["again","Take one of these again"],["app","In the app"],["update","After an update"],["lock","Parked — the lock is off (v531)"]];
 /* What the app claims it can read, and what a photo has actually confirmed (v434, H after the untested menu
@@ -1887,14 +1887,19 @@ async function picWords(zh,labels,kind,shot){
    tallest line, BOARD_TITLE times the median, is the page's name. The answer has the shape of a picture answer, so every
    path after it — the split, the regions, the page card, the descriptions — is the one the picture answer takes. Cost: no
    dish photos and no place on such a board; the reader's lines are its texts as read. */
-const BOARD_CF=94, BOARD_MEAN=90, BOARD_SURE=0.7, BOARD_LINE_MIN=0.7, BOARD_TITLE=1.6, BOARD_CUT_RE=/(?<=(?:[¥￥]\d+(?:\.\d+)?(?:\/[份个元位杯碗斤两]|[元份个])?|\d+(?:\.\d+)?[元份个]))(?=[\u4e00-\u9fff])/, BOARD_PRICE_RE=/[¥￥]\s*\d|\d+(?:\.\d+)?\s*(?:元|份|个)/;
-function boardLines(raw,W,H){ const out=[];
-  for(const l of raw){ const t=String(l.text||"").replace(/\s+/g,""); const name=[...t.replace(/[¥￥]?\d+(?:\.\d+)?\/?[份个元位杯碗斤两]?/g,"")].filter(ch=>CJK.test(ch)).length; if(name<2||l.vert||(+l.conf||0)<BOARD_LINE_MIN) continue; /* a price alone, or one character beside it, is no text of the board; a line under BOARD_LINE_MIN is a stray (a neighbour board's edge at 54 %) */
+const BOARD_CF=94, BOARD_MEAN=90, BOARD_SURE=0.7, BOARD_LINE_MIN=0.7, BOARD_MIN=10, BOARD_TITLE=1.6, BOARD_CUT_RE=/(?<=(?:[¥￥]\d+(?:\.\d+)?(?:\/[份个元位杯碗斤两]|[元份个])?|\d+(?:\.\d+)?[元份个]))(?![份个元位杯碗斤两])(?=[\u4e00-\u9fff])/, BOARD_PRICE_RE=/[¥￥]\s*\d|\d+(?:\.\d+)?\s*(?:元|份|个)/;
+const boardName=t=>[...t.replace(/[¥￥]?\d+(?:\.\d+)?\/?[份个元位杯碗斤两]?/g,"")].filter(ch=>CJK.test(ch)).length; /* the characters of a text once its price is taken off */
+function boardLines(raw,W,H){ const out=[], prices=[];
+  for(const l of raw){ const t=String(l.text||"").replace(/\s+/g,""); if(l.vert||(+l.conf||0)<BOARD_LINE_MIN) continue; /* a line under BOARD_LINE_MIN is a stray (a neighbour board's edge at 54 %) */
     const parts=t.split(BOARD_CUT_RE).filter(Boolean), tot=[...t].length; let at=0;
-    for(const p of parts){ const len=[...p].length; if([...p].some(ch=>CJK.test(ch))) out.push({zh:p,x0:(l.x+l.w*at/tot)/W,y0:l.y/H,x1:(l.x+l.w*(at+len)/tot)/W,y1:(l.y+l.h)/H,h:l.h,conf:+l.conf||0,cfs:(l.cfs||[]).slice(),cut:parts.length>1}); at+=len; } }
+    for(const p of parts){ const len=[...p].length, box={x0:(l.x+l.w*at/tot)/W,y0:l.y/H,x1:(l.x+l.w*(at+len)/tot)/W,y1:(l.y+l.h)/H}; at+=len;
+      if(boardName(p)>=2) out.push({zh:p,...box,h:l.h,conf:+l.conf||0,cfs:(l.cfs||[]).slice(),cut:parts.length>1});
+      else if(BOARD_PRICE_RE.test(p)&&!/[\u4e00-\u9fff]/.test(p.replace(/[份个元位杯碗斤两]/g,""))) prices.push({zh:p,...box,h:l.h}); } } /* a price alone, or one character beside it, is no text of the board (v755) — but a price printed apart from its name (江宁府's first row, larger; a price column) joins the name on its row (v756) */
+  for(const pr of prices){ const cand=out.filter(o=>!BOARD_PRICE_RE.test(o.zh)&&o.x1<=pr.x0+0.02&&Math.min(o.y1,pr.y1)-Math.max(o.y0,pr.y0)>=0.5*Math.min(o.y1-o.y0,pr.y1-pr.y0)).sort((a,b)=>(pr.x0-a.x1)-(pr.x0-b.x1))[0];
+    if(cand){ cand.zh+=pr.zh; cand.x1=Math.max(cand.x1,pr.x1); cand.joined=true; } }
   return out; }
 function boardStats(lines){ const n=lines.length; if(!n) return {n:0,cf:0,med:0,sure:0,priced:0}; const cs=lines.map(l=>l.conf).sort((a,b)=>a-b), cf=Math.round(cs.reduce((a,v)=>a+v,0)/n*100), med=Math.round(cs[n>>1]*100), cfs=lines.flatMap(l=>l.cfs.length?l.cfs:[l.conf]), sure=+(cfs.filter(c=>c>=PD_SURE/100).length/Math.max(1,cfs.length)).toFixed(2), priced=lines.filter(l=>BOARD_PRICE_RE.test(l.zh)).length; return {n,cf,med,sure,priced}; }
-const boardSure=st=>st.n>=NOPIC_LINES&&st.med>=BOARD_CF&&st.cf>=BOARD_MEAN&&st.sure>=BOARD_SURE;
+const boardSure=st=>st.n>=BOARD_MIN&&st.priced*2>=st.n&&st.med>=BOARD_CF&&st.cf>=BOARD_MEAN&&st.sure>=BOARD_SURE; /* v756 (H's Menus rebuild on v755: 江宁府 clean in 71 s, five of eight boards worse — slogans, disclaimers and a logo four times as texts, 129元 read 1298): only a priced board of BOARD_MIN lines or more, where the reader's lines are dishes with their prices; the rest keep the picture model's judgement of what is a text */
 async function readerPicture(cvp,raw,shot){
   const W=cvp.width,H=cvp.height; let lines=boardLines(raw,W,H), st=boardStats(lines), det=PD_DET_MAX, ms2=0;
   if(Math.max(W,H)>PD_DET_MAX){ const t0=Date.now(); try{ const raw2=await pdRead(cvp,{detMax:PD_DET_MAX2}), l2=boardLines(raw2,W,H), s2=boardStats(l2); ms2=Date.now()-t0;
@@ -1907,7 +1912,7 @@ async function readerPicture(cvp,raw,shot){
   const kinds=(w&&w.kinds||[]).filter(k=>KINDS.includes(k)), top=kinds.length?[...new Set(kinds)].map(k=>[k,kinds.filter(x=>x===k).length]).sort((a,b)=>b[1]-a[1])[0][0]:"";
   const kind=st.priced*2>=st.n?"Menu":(top||"Notice"), name=tall&&hmed&&tall.h>=BOARD_TITLE*hmed?tall.zh:"";
   const box=[Math.min(...labels.map(l=>l.box[0])),Math.min(...labels.map(l=>l.box[1])),Math.max(...labels.map(l=>l.box[2])),Math.max(...labels.map(l=>l.box[3]))];
-  logRead(shot,`the board's ${labels.length} texts are the phone's reader's own lines (${st.cf} %, ${Math.round(st.sure*100)} % of the characters sure${lines.some(l=>l.cut)?", "+lines.filter(l=>l.cut).length+" cut at a price":""}) — kind ${kind}${name?", named "+name:""}; no picture call (v755)`);
+  logRead(shot,`the board's ${labels.length} texts are the phone's reader's own lines (${st.cf} %, ${Math.round(st.sure*100)} % of the characters sure${lines.some(l=>l.cut)?", "+lines.filter(l=>l.cut).length+" cut at a price":""}${lines.some(l=>l.joined)?", "+lines.filter(l=>l.joined).length+" with a price read apart joined":""}) — kind ${kind}${name?", named "+name:""}; no picture call (v755)`);
   return {zh:labels.map(l=>l.zh).join("\n"),zht:"",p:w?w.p:"",m:w?w.m:"",desc:"",ml:LANG,note:"",unsure:w?w.unsure:"",bad:false,model:"reader",pv:"reader",box,boxAlt:null,droppedBoxesAlt:null,boxes:labels.map(l=>l.box),dropped:[],droppedBoxes:[],outside:[],oneScale:true,cut:"",kind,keptAll:"apart",pageInfo:name||kind==="Menu"?{name,what:kind==="Menu"?"menu":"",place:""}:null,apart:true,labels,picW:W,picH:H,boxScale:"px",reader:{det,n:st.n,cf:st.cf,sure:st.sure,priced:st.priced,ms2}}; }
 /* the main text only (v312, H's 青春无烟 / 未来无限 poster: the card carried the poster's small print — the line 第39个世界无烟日 above the title and the date 2026年5月31日 世界无烟日 below it, half of it outside the frame — "wieder die Sachen ausserhalb des Crops und das Kleingedruckte mitgelesen. Bitte beides vermeiden"): the prompt asks for the main text and leaves fine print and lines the picture's edge cuts off to the model; this is the safety net from the model's own line boxes — a line whose box is under FINE_PRINT of the tallest line's height is fine print and goes, with its pinyin and meaning parts when they come one per line; the box for the frame is then the union of the lines kept */
 const FINE_PRINT=1/3;
