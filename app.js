@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=742; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=743; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -513,7 +513,7 @@ const numPic=p=>p?{pw:p.picW,ph:p.picH,box:numFrac(p.box),alt:numFrac(p.boxAlt),
   boxes:Array.isArray(p.boxes)?p.boxes.map(numFrac):null,drop:(p.dropped||[]).map(x=>String(x).slice(0,24)),dropB:(p.droppedBoxes||[]).map(numFrac),
   out:(p.outside||[]).map(x=>String(x).slice(0,24)),
   cut:p.cut||"",bad:!!p.bad,apart:!!p.apart,kind:p.kind||"",keptAll:p.keptAll||"",page:p.pageInfo||null,zh:String(p.zh||"").slice(0,200),
-  labels:(p.labels||[]).map(l=>({zh:l.zh,box:numFrac(l.box),sc:l.scale}))}:null;
+  labels:(p.labels||[]).map(l=>({zh:l.zh,box:numFrac(l.box),sc:l.scale,raw:l.raw?numFrac(l.raw):undefined}))}:null;
 /* NUMS_KEEP was 3 from v405 to v504 ("three covers a photo taken, looked at and taken again") and is 100 since v505, declared with AI_KEEP above */
 const LOG_MAX=40, LOG_PRE_KEEP=4, LOG_OLD_HEAD=5, LOG_OLD_TAIL=10; /* v479: steps kept per reading (the 40 the one global list used to hold), the frame's own lines carried into the reading that follows, and how much of an earlier reading is printed — head and tail, so the proposal and the quick look stand at one end and the outcome at the other */
 const NUMS_OLD=6000; /* the older two are trimmed harder than the newest: a 19-label panel measures 6.1 KB whole, so this
@@ -688,6 +688,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["again","v742","QR panel: 启用… frame on its line?"],
+  ["again","v743","江宁府: the 5 congees made?"],
   ["cards","v741","Pop-up: Details fold, long text?"],
   ["again","v740","江宁府 board: Read again makes it?"],
   ["camera","v739","Read again on a left photo: reads?"],
@@ -2173,11 +2174,13 @@ async function aiReadPicture(blob,alts,status,rec){
     const uni=picScale(x.box,pic.w,pic.h), how=Object.keys(tally).sort((a,b)=>tally[b]-tally[a]||(a===uni?-1:b===uni?1:0))[0]||null;
     const odd=Object.keys(tally).length-1;
     if(odd>0) logRead(rec&&rec.shot,`${Object.keys(tally).map(k=>tally[k]+" "+k).join(", ")} — the labels are all read as ${how}`);
-    const seen=new Set();
-    labels=x.labels.map(l=>{ const lz=t2s(String(l&&l.zh||"").trim().replace(/\s+/g,"")), bx=picBox(l&&l.box,pic.w,pic.h,LABEL_MIN,how);
+    const seen=new Set(), off=[];
+    labels=x.labels.map(l=>{ const lz=t2s(String(l&&l.zh||"").trim().replace(/\s+/g,"")); let bx=picBox(l&&l.box,pic.w,pic.h,LABEL_MIN,how), raw=null;
+      if(lz&&!bx){ const sl=picSlide(l&&l.box,pic.w,pic.h,LABEL_MIN,how); if(sl){ bx=sl.box; raw=sl.raw; off.push(lz); } } /* v743: drawn past the edge, kept */
       if(!lz||!CJK.test(lz)||!bx||seen.has(lz+"|"+bx.join())) return null; seen.add(lz+"|"+bx.join());
       const ph=picBox(l&&l.photo,pic.w,pic.h,DISH_MIN,how); /* v701: a dish's own photo on a menu, never the label's own box over again */
-      return {zh:lz,p:String(l.p||"").trim(),m:String(l.m||"").trim(),box:bx,scale:how,photo:ph&&!(Math.abs(ph[0]-bx[0])<0.02&&Math.abs(ph[1]-bx[1])<0.02&&Math.abs(ph[2]-bx[2])<0.02&&Math.abs(ph[3]-bx[3])<0.02)?ph:null}; }).filter(Boolean);
+      return {zh:lz,p:String(l.p||"").trim(),m:String(l.m||"").trim(),box:bx,raw,scale:how,photo:ph&&!(Math.abs(ph[0]-bx[0])<0.02&&Math.abs(ph[1]-bx[1])<0.02&&Math.abs(ph[2]-bx[2])<0.02&&Math.abs(ph[3]-bx[3])<0.02)?ph:null}; }).filter(Boolean);
+    if(off.length) logRead(rec&&rec.shot,`${off.length===1?"one label is":off.length+" labels are"} drawn past the picture's edge (${off.join(", ")}) — kept: the phone's reader places ${off.length===1?"it":"them"}, or the corrected box does`);
     /* every label's pinyin is checked against its own characters (v389, H's 洗衣液 card read "x yī yè" — Qwen dropped the ǐ
        of xǐ, and the v187 check ran on the answer's own "p" alone, never on the labels' own): a broken syllable is replaced
        by the app's own pinyin, label by label */
@@ -2284,6 +2287,19 @@ function picBox(b,w,h,min,force){ /* force (v379): read the numbers this way —
   const cl=v=>Math.max(0,Math.min(1,v)); x0=cl(x0); y0=cl(y0); x1=cl(x1); y1=cl(y1); /* clamped before the size test (v379): forced onto another scale a box may lie wholly outside the picture, and what is left of it must still be a box */
   if(!(x1-x0>=(min||PIC_MIN)&&y1-y0>=(min||PIC_MIN))) return null;
   return [x0,y0,x1,y1];
+}
+/* a label's box drawn past the picture's edge (v743, H's 江宁府 board: the model's grid put the bottom row, the five congees, at
+   y 830–850 of an 800 px picture — picBox clamped each to nothing and the labels went with them, although the phone's reader had
+   read all five at 98 %). The label is kept: `raw` is the box as the model drew it, on the panel's scale, for aiBoxCal's fit and
+   its map (a fit fed the slid box would kink at the edge); `box` is the same box slid onto the picture so every piece of code
+   that wants a box inside it has one. A box that is no box even unclamped stays dropped. */
+function picSlide(b,w,h,min,how){
+  if(!Array.isArray(b)||b.length!==4||!b.every(v=>typeof v==="number"&&isFinite(v)&&v>=0)) return null;
+  let [x0,y0,x1,y1]=b; if(how==="px"){ x0/=w; x1/=w; y0/=h; y1/=h; } else if(how==="grid"){ x0/=1000; x1/=1000; y0/=1000; y1/=1000; }
+  const bw=x1-x0, bh=y1-y0; if(!(bw>=(min||PIC_MIN)&&bh>=(min||PIC_MIN)&&bw<=1&&bh<=1)) return null;
+  if(x0>=0&&y0>=0&&x1<=1&&y1<=1) return null; /* inside: picBox already has it */
+  const raw=[x0,y0,x1,y1]; if(x1>1){ x0-=x1-1; x1=1; } if(y1>1){ y0-=y1-1; y1=1; } if(x0<0){ x1-=x0; x0=0; } if(y0<0){ y1-=y0; y0=0; }
+  return {box:[x0,y0,x1,y1],raw};
 }
 function mendJSON(txt){ /* an answer the model's token budget cut in the middle (v360, H's washing machine: 26 buttons, and the answer
   stopped inside its "boxes" array): close what is open and keep the fields that came whole — the app then has the text even when
@@ -6624,6 +6640,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  743:"A menu's bottom row is no longer lost when the AI draws its boxes past the picture's edge.",
   739:"A photo left on the Camera tab has a Read again button.",
   738:"A text's frame on a multicard no longer takes in the neighbour's last character.",
   736:"An open card shows everything at once, with Star, Flag and Edit as a quiet row; Delete is in Edit.",
@@ -7124,7 +7141,7 @@ function pdMatch(texts,lines){ const T=texts.map(pdNorm), L=lines.map(l=>pdNorm(
    through the same fit. On a photo where the boxes are a drawing (v386) the fit fails and nothing changes. */
 const AI_CAL_ERR=0.5;
 function aiBoxCal(labels,pl){
-  const P=[]; labels.forEach((l,k)=>{ const q=pl[k]; if(!q||!l.box) return; const b=l.box; P.push({ax:(b[0]+b[2])/2,ay:(b[1]+b[3])/2,aw:b[2]-b[0],ah:b[3]-b[1],px:(q.x0+q.x1)/2,py:(q.y0+q.y1)/2,pw:q.x1-q.x0,ph:q.y1-q.y0}); });
+  const P=[]; labels.forEach((l,k)=>{ const q=pl[k]; if(!q||!l.box||l.raw) return; const b=l.box; /* v743: a label drawn past the edge is not a point of the fit — there the model's grid had run out of picture (the 江宁府 congees: its rows 0.36…0.88 map to 0.35…0.72, the row past the edge to 0.95 — one line cannot hold both, and with them in the fit the unread dishes landed a row too low) */ P.push({ax:(b[0]+b[2])/2,ay:(b[1]+b[3])/2,aw:b[2]-b[0],ah:b[3]-b[1],px:(q.x0+q.x1)/2,py:(q.y0+q.y1)/2,pw:q.x1-q.x0,ph:q.y1-q.y0}); });
   if(P.length<3) return null;
   const fit=(xs,ys)=>{ const n=xs.length, mx=xs.reduce((a,v)=>a+v,0)/n, my=ys.reduce((a,v)=>a+v,0)/n; let sxy=0,sxx=0; xs.forEach((x,i)=>{ sxy+=(x-mx)*(ys[i]-my); sxx+=(x-mx)*(x-mx); }); const a=sxx>1e-9?sxy/sxx:1; return {a,b:my-a*mx}; };
   const fx=fit(P.map(p=>p.ax),P.map(p=>p.px)), fy=fit(P.map(p=>p.ay),P.map(p=>p.py));
@@ -9621,7 +9638,7 @@ async function cropSign(id,opts){
             const cal=aiBoxCal(pic.labels,pdPl);
             if(cal){ let took=0, rows=0; const placed=()=>labelRects.filter(Boolean).map(rc=>({x0:rc.x0/W,y0:rc.y0/Hh,x1:rc.x1/W,y1:rc.y1/Hh}));
               let gyc; const grey=async()=>{ if(gyc!==undefined) return gyc; try{ const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen; const sb=src===seen?b:await createImageBitmap(src); gyc=labelGrey(sb,pic.box); if(sb!==b) sb.close(); }catch(e){ gyc=null; logErr("split",e&&e.message||String(e)); } return gyc; }; /* v742: the picture in grey once, only when a label needs it */
-              for(let k=0;k<pic.labels.length;k++){ const l=pic.labels[k]; if(labelRects[k]||!l.box) continue; /* only a label with no place at all: what the reader or the old search placed stays */ const q0=cal.map(l.box);
+              for(let k=0;k<pic.labels.length;k++){ const l=pic.labels[k]; if(labelRects[k]||!l.box||l.raw) continue; /* only a label with no place at all: what the reader or the old search placed stays; a label drawn past the edge that the reader did not name keeps the whole picture (v743: the fit does not reach past the edge, and anchored on the slid box it took its neighbour's run in the harness — a card on the neighbour is the one price not paid, v391) */ const q0=cal.map(l.box);
                 if(!(q0.x1>q0.x0&&q0.y1>q0.y0)||q0.x0<-0.02||q0.y0<-0.02||q0.x1>1.02||q0.y1>1.02) continue;
                 let row=null; try{ const gy=await grey(); row=gy?labelRow(gy,q0):null; }catch(e){ row=null; logErr("split",e&&e.message||String(e)); } /* v742: the corrected box is an anchor — the row of ink under it is the label */
                 const q=row||q0; if(stale()) return;
