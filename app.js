@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=748; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=749; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -689,6 +689,7 @@ async function sendFeedback(text,shot){
 const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde ich ja lange wieder darauf bestehen, dass wir es
   noch fixen"): the 340 rows back to v141 went in one go. A row goes the moment H's report or his own use settles it, unasked;
   a row older than the screen it names is dead. The parked lock rows went too — the lock's code stays, the archive has them. */
+  ["learn","v749","回收 寄卖: zoom on 回 and 收?"],
 ];
 const TO_TEST_GROUPS=[["photo","Take any photo"],["again","Take one of these again"],["app","In the app"],["update","After an update"],["lock","Parked — the lock is off (v531)"]];
 /* What the app claims it can read, and what a photo has actually confirmed (v434, H after the untested menu
@@ -4204,6 +4205,7 @@ async function pdCharBoxes(src,nw,nh,g,lines,whole){
      Chinese matches, and an unread character between two of them stands between them by its place in the card's line. One before
      the first or after the last match, with no Latin between, steps from the nearest match by the spacing of the line's own
      matched Chinese characters (two at least), as long as it stays on the picture the reader got. Unsure, both */
+  const takenL=new Set(), side=[]; /* v749: reader lines a run took as the line beside its matches, and the record's note */
   { let base=0; lines.forEach((ln,i)=>{ const cs=[...ln], b0=base; base+=cs.length;
     const own=cs.map((_,t)=>hit.get(b0+t)), hs=own.filter(Boolean); if(!hs.length||cs.every((ch,t)=>!CJK.test(ch)||boxes[b0+t])) return;
     const l=hs[0].l; if(hs.some(h=>h.l!==l)) return;
@@ -4215,6 +4217,18 @@ async function pdCharBoxes(src,nw,nh,g,lines,whole){
     const cj=an.filter(o=>own[o.t]), ck=t=>cs.slice(0,t).filter(ch=>CJK.test(ch)).length;
     const pit=cj.length>1?(l.at[cj[cj.length-1].u]-l.at[cj[0].u])/(ck(cj[cj.length-1].t)-ck(cj[0].t)):0;
     const alone=![...hit].some(([j,h])=>h.l===l&&(j<b0||j>=b0+N)), lim=(l.vert?H-l.y:W-l.x)/(l.vert?l.h:l.w), lo=-(l.vert?l.y:l.x)/(l.vert?l.h:l.w);
+    /* v749 (H: "Hier hat er jetzt leider wieder die ersten beiden Charakter falsch gecroppt", 回收 寄卖 on a shop window — the
+       reader read `寄卖 73,53 % h38 | 闽妆 22,57 % h31`, 回收 misread as 闽妆 on its own line, a window bar between the words): the
+       step above from 寄 by 寄卖's own spacing put 收 at 47 % and 回 at 30 % — on 收 and on the bar — and the free line at 22 % that
+       is 回收 never came into it, because the step had filled the boxes before v677 (below) could give the run that line. A run of
+       unread characters before the first match or after the last one takes, before any step, the one free reader line beside the
+       matched line on that side — on the same row (overlapping it by half the thinner line), of the text's size (0.6 of the matched
+       line's thickness), with exactly as many Chinese characters — each character in order on it, unsure */
+    const hitL=new Set([...hit.values()].map(h=>h.l)), vt=l.vert, tk=q=>vt?q.w:q.h, c0=q=>vt?q.y:q.x, len=q=>vt?q.h:q.w, ov=(a,b)=>vt?Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x):Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y);
+    const beside=(nRun,before)=>{ const c=L.filter(q=>q!==l&&!hitL.has(q)&&!takenL.has(q)&&tk(q)>=0.6*tk(l)&&ov(q,l)>=0.5*Math.min(tk(q),tk(l))&&(before?c0(q)+len(q)/2<c0(l):c0(q)+len(q)/2>c0(l)+len(l))&&[...q.text].filter(ch=>CJK.test(ch)).length===nRun); return c.length===1?c[0]:null; };
+    if(cj.length){ [[0,cj[0].t,true],[cj[cj.length-1].t+1,N,false]].forEach(([s0,e0,before])=>{ const ts=[]; for(let t=s0;t<e0;t++) if(CJK.test(cs[t])&&!boxes[b0+t]) ts.push(t); if(!ts.length||cs.slice(s0,e0).some(lat)) return;
+      const q=beside(ts.length,before); if(!q) return; const ix=[...q.text].map((ch,i)=>CJK.test(ch)?i:-1).filter(i=>i>=0);
+      ts.forEach((t,u)=>{ boxes[b0+t]=boxOf(q,q.at[ix[u]],false); }); takenL.add(q); side.push(`${ts.map(t=>cs[t]).join("")} on ${q.text.slice(0,12)} beside`); }); }
     cs.forEach((ch,t)=>{ if(!CJK.test(ch)||boxes[b0+t]) return;
       const pa=[...an].reverse().find(o=>o.t<t), pb=an.find(o=>o.t>t);
       if(pa&&pb){ boxes[b0+t]=boxOf(l,l.at[pa.u]+(l.at[pb.u]-l.at[pa.u])*(t-pa.t)/(pb.t-pa.t),false); return; }
@@ -4231,7 +4245,7 @@ async function pdCharBoxes(src,nw,nh,g,lines,whole){
      nothing of, and exactly one reader line it matched nothing on with as many Chinese characters, is that line read wrongly —
      each character takes its place on it in order, unsure */
   const lnOf=[]; lines.forEach((ln,i)=>[...ln].forEach(()=>lnOf.push(i)));
-  const usedL=new Set([...hit.values()].map(h=>h.l)), freeL=L.filter(l=>!usedL.has(l));
+  const usedL=new Set([...hit.values()].map(h=>h.l)), freeL=L.filter(l=>!usedL.has(l)&&!takenL.has(l));
   for(let q=0;q<ci.length;){ if(boxes[ci[q]]){ q++; continue; }
     let e=q; while(e<ci.length&&!boxes[ci[e]]&&lnOf[ci[e]]===lnOf[ci[q]]) e++;
     const run=ci.slice(q,e), cand=freeL.map(l=>({l,ix:[...l.text].map((ch,i)=>CJK.test(ch)?i:-1).filter(i=>i>=0)})).filter(o=>o.ix.length===run.length);
@@ -4262,7 +4276,7 @@ async function pdCharBoxes(src,nw,nh,g,lines,whole){
   const fb=openLn.length?`fallback: ${openLn.length} card line(s) open, ${freeL.length} reader line(s) free, ${bigL.length} of the text's size`:"";
   if(openLn.length&&openLn.length===bigL.length) openLn.forEach((i,u)=>{ const js=ci.filter(j=>lnOf[j]===i), l=bigL[u], n=js.length;
     js.forEach((j,t)=>{ boxes[j]=boxOf(l,(t+0.5)/n,false,1/n); }); });
-  const res={boxes,why:hit.size<ci.length?`${hit.size} of ${ci.length} characters read`:"",read:rawRead+(fb?" · "+fb:""),area};
+  const res={boxes,why:hit.size<ci.length?`${hit.size} of ${ci.length} characters read`:"",read:rawRead+(side.length?" · "+side.join(", "):"")+(fb?" · "+fb:""),area};
   /* v682 (H's v681 dump for 电动车/禁止入园: `电动车 50,50 % h80 | 木木 13,120 % h31` — the card's frame holds 电动车 alone, and the
      reader was given the frame and 15 % around it, so 禁止入园 was cut off below and all it saw was the top of 禁): a card line
      still open after everything above, while the crop was smaller than the card's own picture, is read again on the whole
@@ -6301,6 +6315,7 @@ async function delCustom(id){
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
   743:"A menu's bottom row is no longer lost when the AI draws its boxes past the picture's edge.",
+  749:"The zoom finds a word the reader misread beside the one it read.",
   747:"A dish the reader read in one line with its neighbours now gets its own frame.",
   746:"A text the reader found on a band wider than itself now gets its own frame.",
   745:"A menu dish's picture now stands where its name is, and the multicard no longer counts its flashcards.",

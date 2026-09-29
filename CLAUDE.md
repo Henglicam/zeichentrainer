@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v748, 2026-09-29)
+## Current state (PWA v749, 2026-09-29)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -175,7 +175,8 @@ after the layout settles (v521/v532).
   first touch, on to each next character on a glide, out for the recap — on every character, level 3 included (v660, H's
   choice over v617's recall rule). `AZ_INK` on a sure ink box; the reader's boxes of one line share one scale (v678) and every
   line shows its characters at the card's largest share of the box (v679); the text whole on an unsure ink guess (v669); cap
-  `AZ_MAX` 3.5. **The learner can switch it off** (More → Learning, `learnZoom`, `zoomOn()`, on by default, v683). A pinch makes
+  `AZ_MAX` 3.5; an unread run before or after the matches takes the free reader line beside them (v749, 回收 read as 闽妆). **The
+  learner can switch it off** (More → Learning, `learnZoom`, `zoomOn()`, on by default, v683). A pinch makes
   the zoom the hand's (`ZOOM_HAND`) and it then only follows; one finger still swipes.
 - **Swipe** = the carousel of v417: the neighbour rides in beside the card and snaps; it grades
   nothing, and a skipped card stays due for next time. On a **zoomed** picture the one-finger drag pans, and pulling on past
@@ -466,7 +467,7 @@ CC BY-SA).
 ## Open / not yet field-checked
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
 as field-checked; only a question he is still raising is open, and each version's archive entry names its own. Open now:
-nothing H has named.
+the Learn zoom on 回收 寄卖 (v749).
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's character
