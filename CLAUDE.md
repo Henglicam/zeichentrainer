@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v746, 2026-09-29)
+## Current state (PWA v747, 2026-09-29)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -67,9 +67,9 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   the reading), **`OWN_PINYIN`** into pinyin-pro (夹 jiā), the fewest words per line, a bound form inside a word (`besideCJK`,
   `BOUND_TOP` 3, never `PROPER`), the reading from the whole line (`ctx`, `SANDHI`); `glossFix()` once per phone (`GLOSS_FIX_V`
   729). Full wording: `grep -n "Consolidated v717" docs/HISTORY.md`.
-- **Duplicate multicards (v731):** More → Your cards shows a row while two multicards share `DUP_SHARE` 0.6 of their texts
+- **Duplicate multicards (v731):** a row under More → Your cards while two multicards share `DUP_SHARE` 0.6 of their texts
   (`dupKey`); Delete N keeps the newest of each set, the rest go through `delCustom` and Undo.
-- **A dish's meaning is shown without its price** (`noPriceM`, v710/v712) nor the comma before it (v732).
+- **A dish's meaning shows without its price** (`noPriceM`, v710/v712) or the comma before it (v732).
 - **A multicard text's region**: the reader's line (v638), else the ink snap (v620), else the row of ink under the frame
   (`labelRow`, v742: one line, no join — H's QR panel), else the frame; a line carrying the neighbour's characters at its ends
   is cut to the matched run (`pdTrim`, v738). The split places an unplaced label the same way (v644 + v742). `REG_V` 742.
@@ -77,8 +77,10 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   calibration's fit; the reader places it by its text, else it keeps the whole picture — never a cut on the neighbour). **A place
   from the model's uncorrected box is no place once the fit says the boxes are off** (`rawPlaced`, v744), **and a dish's
   `photo` box is mapped by the fit too** (`picCal`, v745). **A search run taller than `RUN_TALL` 2.5 or wider than `RUN_WIDE` 1.8
-  of the reader's texts is a band, not a label** — given up for the corrected box (v746, the 江宁府 board's third path).
-- **The v6xx state** (reader, owner tools, Learn zoom, Crop again): `grep -n "Consolidated v6xx" docs/HISTORY.md` (H, 2026-09-28).
+  of the reader's texts is a band, not a label** — given up for the corrected box (v746, the 江宁府 board's third path). **A reader line
+  holding two or more labels' texts is shared among them**, each run's share of the line (`pdMatch`, `share`, v747: the phone
+  reads 江宁府's row 4 as one line every time).
+- **The v6xx state** (reader, owner tools, Learn zoom, Crop again): `grep -n "Consolidated v6xx" docs/HISTORY.md`.
 
 ## Files
 Shell: `index.html` · `styles.css` · `lang.js` · `app.js` · `manifest.webmanifest` (with `share_target`) · `sw.js` ·
@@ -427,8 +429,7 @@ The full list is in the archive; these are the ones that keep biting.
 - **A guard whose lifetime is a timer from the moment it was armed does not cover the gesture it
   guards — end it on the event that ends the gesture** (v589).
 - **A guard asserted by setting its own state by hand is not tested — drive the button that sets it** (v468).
-- **A second copy of one number drifts.** One rule, one reader; when a copy is unavoidable, name
-  it on both sides (v401).
+- **A second copy of one number drifts.** One rule, one reader; an unavoidable copy is named on both sides (v401).
 - **A constant that holds only because something else is being cut stops holding the moment the cutting stops** (v600:
   `LINE_H` 61 was the word line's height only while a row was sliced; the wrap made it a lie). **A static estimate that must
   be safe for every card is wrong on most of them** — measure (`recapFit`).
@@ -462,9 +463,9 @@ CC BY-SA).
 
 ## Open / not yet field-checked
 Everything from **v597 on** is unconfirmed on the phone unless H said otherwise (field-checked: v676, v682, v685, v714, v720,
-v723–v729, v743); each version's archive entry names its open question. First in line: **the Learn zoom** (v653–v686, Owner
-tools → Zoom check), **the phone's reader as the reading** (v641–v652), **Multicards and Cards as a reference** (v687–v696),
-then Owner tools (v645–v651), speed (v640/v642/v672) and the Learn screen (v667–v673, `SPOT_ON`).
+v723–v729, v743); each version's archive entry names its open question. First in line: **the Learn zoom** (v653–v686),
+**the phone's reader as the reading** (v641–v652), **Multicards and Cards as a reference** (v687–v696), then Owner tools,
+speed and the Learn screen (`SPOT_ON`).
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's character

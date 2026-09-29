@@ -60,6 +60,40 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v747, 2026-09-29)
+- **A reader line that holds several labels' texts is shared among them (v747, H on the 江宁府 board read on v746: "Rahmen
+  sind immer noch off.", with the screenshot of 鸡汤阳春面's frame over the lower half of its name and the dump of
+  shot_1790678202968_198).** The v746 rule did not fire (`aiCal.wide 0`); the dump's fourth path: Qwen's boxes on round
+  pixels (`tmpl.tell:"round"`), the search hit the three congees only, the reader named 21 of 24 and the fit stood (`n 21,
+  err 0.25, took 3, rows 0`). The three row-4 middle dishes took the corrected box "at 34–47 % across, 72–74 % down — nothing
+  of a character's shape near it, the box stays": `split.f` 15–17 at y 71.8–75 % of the layer while their reader-placed
+  neighbours 红烧肥肠小面 and 飘香肉沫小面 stand at 70.3–73.4 % — the corrected boxes are a quarter of a row too low, which is
+  the screenshot. The root, the same in all four dumps since v743: the phone's reader reads the row's three middle texts as
+  **one line**, `pd.t` "…鸡汤阳春面16份招牌油豆腐粉丝汤12份重庆豌杂小面18份…", so no one text holds `PD_MATCH` 0.66 of it and
+  none is ever named; `pdTrim` (v738) only cuts a neighbour's characters off a line's ends. **Now** `pdMatch` ends with a
+  third pass: a line still free whose Han characters hold two or more still-unplaced texts, each as a run in order with
+  `PD_MATCH` of its characters in place (the best window, runs not overlapping, the better run first), is shared — each text
+  takes its run's share of the line's box, divided evenly along the line as `pdTrim` and `pdAsPass` do (`cut:true`,
+  `share:n`), and the line is spent. One text alone inside a longer line is not shared (that is `pdTrim`'s case, and a
+  share is sure only where the neighbours stand around it); a line under four Han characters is skipped. The shared places
+  enter `aiBoxCal`'s fit like any other (n 24 in the harness, err 0.22). Log: "鸡汤阳春面¥16/份: the phone's reader read it
+  inside one line with its neighbours (鸡汤阳春面16份…) — its own characters' share of that line is at 32–43 % across,
+  71–73 % down"; the summary line adds "3 of them on a line it read as one with its neighbours"; `numbers.paddle` gains
+  `shared`. The share by character count is even, so a name beside its price comes out a little narrow (the price's digits
+  are narrower than Han characters); the ink snap of v620 then widens it to its own ink where there is any. Harness
+  (`test747`: the v746 dump's exact Qwen boxes, the 21 named lines rebuilt from `lrects` with `PD_ROOM` taken off, the merged
+  row-4 line between its neighbours at their height — its own extent is not in the dump — the search as `found.rects`, and
+  `labelRow` answering null as the phone's did, `rows 0`): **12/12 on v747, 5/12 on v746** — on v746 the three frames stand
+  at y 71.8–75 % (the dump's numbers) and named 21; on v747 they stand on the row's line at 70.3–73.3 %, side by side in
+  their own columns, named 24, shared 3, and their dish pictures show the whole plate. Without the `labelRow` stub the drawn
+  board hands the old tree an ink row the phone's photo did not, and the frame checks cannot flip — the v419 rule. test743
+  7/7, test745 16/16 still; test744 7/8 and test746 11/13 now, the three checks that flip pinned the corrected-box and
+  band mechanisms on that fixture's merged line, which v747 names instead (`took 0, wide 0`) — the frames those suites
+  check are unchanged. Screenshots at 390 px light English and 360 px dark German of 鸡汤阳春面's own screen. `WHATS_NEW`
+  747; `TO_TEST` "江宁府: row 4 frames on the row?" replaces v746's line (the count line H has not confirmed either — it
+  stays inside that one line's question). Not yet field-checked; open: whether the phone's reader reads the row as one line
+  every time (four of four so far), and the line's true extent on the photo.
+
 ## Current state (PWA v746, 2026-09-29)
 - **A search run far taller or wider than the reader's texts is a band, not a label, and the multicard's count line leaves the
   Camera tab too (v746, H on the 江宁府 board read on v745: "As Flashcards ist immer noch drin und die Frames sind immer noch

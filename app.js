@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=746; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=747; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -688,7 +688,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["again","v742","QR panel: 启用… frame on its line?"],
-  ["again","v746","江宁府: row 4 frames, no count line?"],
+  ["again","v747","江宁府: row 4 frames on the row?"],
   ["cards","v741","Pop-up: Details fold, long text?"],
   ["again","v740","江宁府 board: Read again makes it?"],
   ["camera","v739","Read again on a left photo: reads?"],
@@ -6640,6 +6640,7 @@ async function delCustom(id){
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
   743:"A menu's bottom row is no longer lost when the AI draws its boxes past the picture's edge.",
+  747:"A dish the reader read in one line with its neighbours now gets its own frame.",
   746:"A text the reader found on a band wider than itself now gets its own frame.",
   745:"A menu dish's picture now stands where its name is, and the multicard no longer counts its flashcards.",
   744:"A dish the phone's reader ran together with its neighbours now gets its own picture.",
@@ -7135,6 +7136,19 @@ function pdMatch(texts,lines){ const T=texts.map(pdNorm), L=lines.map(l=>pdNorm(
     if(p.k==null){ out[p.i]=pdTrim(T[p.i],lines[p.j]); usedL.add(p.j); continue; } /* v738: cut to the matched characters */
     const a=lines[p.j], b=lines[p.k], x=Math.min(a.x,b.x);
     const y0=Math.min(a.y,b.y); out[p.i]={...a,x,y:y0,w:Math.max(a.x+a.w,b.x+b.w)-x,h:Math.max(a.y+a.h,b.y+b.h)-y0,text:a.text+b.text,two:true}; usedL.add(p.j); usedL.add(p.k); }
+  /* v747 (H, 2026-09-29, the 江宁府 board's row 4 after four readings: "Rahmen sind immer noch off."): the phone's reader read the
+     row's three middle dishes as ONE line — 鸡汤阳春面16份招牌油豆腐粉丝汤12份重庆豌杂小面18份 — so no one text held PD_MATCH of
+     it and none of the three was named; each took the corrected box, a quarter of a row too low, while their neighbours on
+     the same row stood on the reader's line. A line still free that holds two or more texts still unplaced, each as a run of
+     its own characters in order (PD_MATCH of them in place, the runs not overlapping), is shared among them: each takes its
+     run's share of the line's box, divided evenly along the line (pdTrim's rule), and the line is spent. One text alone
+     inside a longer line stays pdTrim's case — a share is only sure where the neighbours stand around it. */
+  lines.forEach((l,j)=>{ if(usedL.has(j)||!L[j]) return; const chars=[...l.text], han=[]; chars.forEach((ch,i)=>{ if(/[\u4e00-\u9fff]/.test(ch)) han.push(i); }); const B=han.map(i=>chars[i]); if(B.length<4) return;
+    const runs=[]; T.forEach((z,i)=>{ if(!z||out[i]) return; const A=[...z], n=A.length; if(n<2||n>B.length) return; let best=null;
+      for(let s=0;s+n<=B.length;s++){ let hit=0; for(let q=0;q<n;q++) if(A[q]===B[s+q]) hit++; if(!best||hit>best.hit) best={s,hit}; }
+      if(best&&best.hit>=PD_MATCH*n) runs.push({i,s:best.s,e:best.s+n,hit:best.hit}); });
+    if(runs.length<2) return; runs.sort((a,b)=>b.hit-a.hit||a.s-b.s); const keep=[]; runs.forEach(r=>{ if(!keep.some(t=>r.s<t.e&&t.s<r.e)) keep.push(r); }); if(keep.length<2) return;
+    const nc=chars.length; keep.forEach(r=>{ const a=han[r.s], b=han[r.e-1]+1; out[r.i]=l.vert?{...l,y:l.y+l.h*a/nc,h:l.h*(b-a)/nc,cut:true,share:keep.length}:{...l,x:l.x+l.w*a/nc,w:l.w*(b-a)/nc,cut:true,share:keep.length}; }); usedL.add(j); });
   return out; }
 /* v644: how far the AI's label boxes are off on this photo, measured on the labels the phone's reader placed — the centres
    fitted per axis by one scale and one shift (least squares), the error of each in its own box's size. Trusted only with
@@ -9596,9 +9610,9 @@ async function cropSign(id,opts){
             if(!why&&PD_ON){ try{ const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen, sb=src===seen?b:await createImageBitmap(src);
                 const cv=document.createElement("canvas"); cv.width=sb.width; cv.height=sb.height; cv.getContext("2d").drawImage(sb,0,0); if(sb!==b) sb.close();
                 const t0=Date.now(), lines=await pdRead(cv), m=pdMatch(lab.map(l=>l.zh),lines); if(stale()) return;
-                pdPl=m.map(l=>l?{x0:l.x/cv.width,y0:l.y/cv.height,x1:(l.x+l.w)/cv.width,y1:(l.y+l.h)/cv.height,read:l.text}:null);
-                N.paddle={ms:Date.now()-t0,lines:lines.length,named:pdPl.filter(Boolean).length};
-                logRead(id,`the phone's reader found ${lines.length} lines in ${((Date.now()-t0)/1000).toFixed(1)} s and named ${pdPl.filter(Boolean).length} of the ${lab.length} labels on them`); }
+                pdPl=m.map(l=>l?{x0:l.x/cv.width,y0:l.y/cv.height,x1:(l.x+l.w)/cv.width,y1:(l.y+l.h)/cv.height,read:l.text,...(l.share?{share:l.share}:{})}:null);
+                const shared=pdPl.filter(q=>q&&q.share).length; N.paddle={ms:Date.now()-t0,lines:lines.length,named:pdPl.filter(Boolean).length,shared};
+                logRead(id,`the phone's reader found ${lines.length} lines in ${((Date.now()-t0)/1000).toFixed(1)} s and named ${pdPl.filter(Boolean).length} of the ${lab.length} labels on them${shared?`, ${shared} of them on a line it read as one with its neighbours — each takes its own characters' share of the line (v747)`:""}`); }
               catch(e){ pdPl=null; logErr("paddle",e&&e.message||String(e)); logRead(id,"the phone's reader could not run ("+(e&&e.message||e)+") — the labels are placed without it"); } }
             if(why){ logRead(id,`the AI calls these ${lab.length} texts separate labels, but ${why} — one card`); }
             else if(tmpl){ /* the boxes are a drawing, not a measurement (v380): the model cannot say where anything is, so the reader looks (v386) */
@@ -9636,7 +9650,7 @@ async function cropSign(id,opts){
             if(!labelRects){ labelRects=pic.labels.map(()=>null); labelWhole=true; splitWhole=false; } /* the ones the phone's reader could not name keep the frame's own picture, as a label the old search missed does */
             const pcv=v=>Math.round(v*100);
             pdPl.forEach((q,k)=>{ if(!q) return; const Hk=q.y1-q.y0; labelRects[k]={x0:Math.max(0,q.x0-Hk*PD_ROOM)*W,y0:Math.max(0,q.y0-Hk*PD_ROOM)*Hh,x1:Math.min(1,q.x1+Hk*PD_ROOM)*W,y1:Math.min(1,q.y1+Hk*PD_ROOM)*Hh};
-              logRead(id,`${pic.labels[k].zh}: the phone's reader read ${q.read} at ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`); });
+              logRead(id,`${pic.labels[k].zh}: the phone's reader read ${q.share?`it inside one line with ${q.share-1===1?"its neighbour":"its neighbours"} (${q.read}) — its own characters' share of that line is`:q.read} at ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`); });
             const cal=aiBoxCal(pic.labels,pdPl); picCal=cal; /* v745: the dishes' photo boxes take the same correction, below */
             /* v744 (H's 江宁府 board read on v743, 2026-09-29: the reader read row 4's three middle dishes as ONE line —
                鸡汤阳春面16份招牌油豆腐粉丝汤12份重庆豌杂小面18份 — so it named none of them; the model's boxes had passed the drawing
