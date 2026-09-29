@@ -60,6 +60,28 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v740, 2026-09-29)
+- **A picture's second try waits 120 s (v740, H with the 江宁府 board after Read again: "Warum kann AI diese Karte nicht lesen?"
+  and a full v739 Diagnostics dump).** The dump said what happened: the phone's reader read the board's 22 lines at 98 %, the
+  picture went to `qwen3.7-plus` (715×800 JPEG, 137 KB) and came back "no connection: no answer within 60 s (tried twice)",
+  so v649's rule made no card ("the AI could not check the photo and the reading has 22 lines — a board only the picture
+  can split"). Not the network and not the VPN this time: a minute later a 343×800 picture of 51 KB answered in 15.6 s and
+  DeepSeek in 2–3 s on the same 4G, and the day before the same board was read whole twice (20 and 21 texts). The board's
+  answer did not come inside `PIC_TIMEOUT_MS` 60 s, twice — how long Qwen needs for it is **not known** (a 26-element panel
+  answered in 22.6 s at v485; the dump after the next Read again will carry the number). Now `aiFetch(url,opts,ms,ms2)`: the
+  first try keeps its 60 s, which covers the hiccup the retry of v201 was built for, and the second waits `PIC_TIMEOUT2_MS`
+  120 s, so an answer that needs longer than a minute lands on it; `relayFetch` passes both, the four picture calls
+  (`aiReadPicture`, the owner's text check) hand them in, a text call keeps one limit for both tries. The log names both
+  waits when they differ ("no answer within 60 s, then no answer within 120 s (tried twice)") — the app says what happened.
+  What it costs: a server that never answers holds a picture 180 s instead of 120 before the reading goes on without it;
+  nothing on a sign that answers in 10 s. Harness (test740: the app booted on the relay with no key, `PIC_TIMEOUT_MS` 0.6 s
+  and `PIC_TIMEOUT2_MS` 2.5 s, the relay mocked at `page.route`, the DeepSeek call after the answer not counted as a try;
+  5 checks): an answer after 1.5 s is aborted on the first try and lands on the second (two picture calls, 江宁府 read); a
+  relay that never answers fails after both tries with both waits in the log; the run takes the two waits and the 1.5 s
+  between; `[control]` a text call is tried twice with one limit; `[guard]` the harness talks to Qwen through the relay.
+  On the v739 tree 3 of 5 fail. `TO_TEST`: "江宁府 board: Read again makes it?". Not field-checked — the next Read again on
+  the board is the check, and its dump the measurement.
+
 ## Current state (PWA v739, 2026-09-29)
 - **Read again on a photo left on the Camera tab (v739, H with the 江宁府 board left there under "The AI could not check this
   photo …": "Zum einen muss ich Karten, die unter Camera geblieben sind, sagen, dass sie nochmal gelesen werden sollen" —
