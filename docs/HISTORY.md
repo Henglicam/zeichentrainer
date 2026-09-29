@@ -60,6 +60,27 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v758, 2026-09-29)
+- **113 more Meituan fields, from the web, and the five screenshots matched against the book (v758, H: "Kannst du dir alle
+  Standardfelder aus dem Internet ziehen und Meituan Screenshots darauf abgleichen?").** What the web gives from here, honestly:
+  the session's egress proxy blocks every page fetch (meituan.com, sj.qq.com, app.mi.com, zh.wikipedia.org, apps.apple.com all
+  refused), so the sources are the search tool's summaries of thirteen searches — Meituan's rules centre and help pages, the
+  carrier and order APIs (the order and delivery states), the app-store listings, product analyses (woshipm, jianshu, 163), the
+  membership press (six levels 普通/白银/黄金/铂金/黑金/黑钻, 神会员, 神券), the coupon rules (代金券, 随时退, 过期自动退, 验券,
+  券码), the hotel booking steps (入住, 离店, 房型, 含早餐, 免费取消, 查找酒店), the outlets' channels (天天神券, 品质外卖, 神抢手,
+  天天津贴) and the foreigners' guides (去结算, 提交订单, Me › Settings › Language). They name features and steps, not every
+  label on every screen; batch 2 is the labels those sources name plus the screens they describe (checkout, order progress,
+  after-sales, vouchers, hotels, services, shops, settings, messages), each one a label I am sure stands in the app — what I
+  was not sure of stayed out. 115 written, 营业时间 and 通知 already in the book: **113 added, 329 Meituan fields, 696 phrasebook
+  entries**. Pinyin as at v757, hand-fixed 黑钻 zuàn, 部分 bù fen, 切换 qiē. **The match:** the five screenshots through the
+  v757 harness again — cards 44/40/30/28/29 as before, fields from the book 30/36/21/14/21 (batch 2 adds none on these five
+  screens: their fields were already batch 1, which was written from them), and what is NOT a field is exactly what no book
+  can hold: the place (北京, 博雅园, 汉堡, 德国|汉堡), the search word 麦片, shop and product names (德南面包房, 星巴克, 汉堡大学,
+  三元北京鲜牛奶72°C, 椰香咖喱牛肉饭3件套, 每日鲜酪), numbers with their words (23分钟, 月售100万+, 成长值4417/5000, 查看11项权益,
+  好评榜第2名, 2件失效商品, 4.0分), riders' names, and the message previews (以上为系统自动发送的2张照片, [优惠券]您收到一张…) — 49 of
+  171 texts, all glossed by the text model with the page named. No code change beyond the version and the comment's count.
+  Not field-checked: as v757.
+
 ## Current state (PWA v757, 2026-09-29)
 - **The app knows Meituan's standard fields, and a 44-text screen makes its multicard (v757, H with five Meituan screenshots —
   the home screen in Beijing, the home screen in Hamburg, Messages, the cart, Me: "Jetzt fangen wir an die Meituan App zu

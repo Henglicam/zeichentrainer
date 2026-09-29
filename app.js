@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=757; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=758; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1869,7 +1869,8 @@ async function aiReadPicture(blob,alts,status,rec){
 /* v757 (H, with five Meituan screenshots: "Jetzt fangen wir an die Meituan App zu lernen. Ich möchte, dass du alle
    Standard-Felder kennst und perfekte Multikarten daraus baust."): the phrasebook holds Meituan's standard fields
    (signs.json, category meituan — the tab bar, the home screen's grid at home and abroad, Messages, the cart, Me,
-   ordering and paying, shops, lists and coupons: 216 labels, pinyin checked by hand where pinyin-pro misreads (排行 háng),
+   ordering and paying, shops, lists and coupons: 216 labels, and 113 more at v758 from the web sources (checkout, order progress,
+   vouchers, membership levels, hotels, services, settings), pinyin checked by hand where pinyin-pro misreads (排行 háng),
    the meaning each has IN THE APP). A text of a picture answer that is one of them, whole, takes the book's pinyin and
    meaning and is not asked of the text model: 闪购 is Meituan's fast delivery of goods, not a "flash sale", 团购 its
    vouchers, 我的 the Me tab, and the model's guess was all that stood between the learner and the app's own word. The
