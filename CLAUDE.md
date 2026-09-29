@@ -36,6 +36,11 @@ text can do is generate a separate flashcard (v487). Every control, label, count
 judged against that one sentence; **a later change that puts a learning word or a learning
 control on a multicard, or a look-up-only surface on a flashcard, is wrong by construction.**
 
+**App screens (H, 2026-09-29): "Sinn der Sache ist es, als Ausländer schnell und einfach mit diesen Apps zurecht zu kommen."**
+A multicard of a Meituan or Taobao screen exists so that a foreigner can use the app at once: a field's meaning is **what the
+button does in the app** (闪购 "goods delivered fast from nearby shops", 待收货 "To receive"), never the dictionary's word; the
+standard fields are the point, and clutter beyond them costs the reader the screen.
+
 User: H, product manager, Beijing, **phone-only (Android/Xiaomi, Chrome, VPN), no computer**.
 UI language: English (ten languages shipped). Learning content: Chinese + pinyin + meaning.
 
