@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=750; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=751; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -689,8 +689,7 @@ async function sendFeedback(text,shot){
 const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde ich ja lange wieder darauf bestehen, dass wir es
   noch fixen"): the 340 rows back to v141 went in one go. A row goes the moment H's report or his own use settles it, unasked;
   a row older than the screen it names is dead. The parked lock rows went too — the lock's code stays, the archive has them. */
-  ["learn","v749","回收 寄卖: zoom on 回 and 收?"],
-  ["again","v750","江宁府: 2nd reading, rows apart?"],
+  ["again","v751","江宁府: dish pictures over names?"],
 ];
 const TO_TEST_GROUPS=[["photo","Take any photo"],["again","Take one of these again"],["app","In the app"],["update","After an update"],["lock","Parked — the lock is off (v531)"]];
 /* What the app claims it can read, and what a photo has actually confirmed (v434, H after the untested menu
@@ -6316,6 +6315,7 @@ async function delCustom(id){
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
   743:"A menu's bottom row is no longer lost when the AI draws its boxes past the picture's edge.",
+  751:"A dish's picture stands over its own name even when the AI's grid is off.",
   750:"On a board the reader looks a second time, sharper, when a text is missing.",
   749:"The zoom finds a word the reader misread beside the one it read.",
   747:"A dish the reader read in one line with its neighbours now gets its own frame.",
@@ -6835,14 +6835,23 @@ function pdMatch(texts,lines){ const T=texts.map(pdNorm), L=lines.map(l=>pdNorm(
    through the same fit. On a photo where the boxes are a drawing (v386) the fit fails and nothing changes. */
 const AI_CAL_ERR=0.5;
 function aiBoxCal(labels,pl){
-  const P=[]; labels.forEach((l,k)=>{ const q=pl[k]; if(!q||!l.box||l.raw) return; const b=l.box; /* v743: a label drawn past the edge is not a point of the fit — there the model's grid had run out of picture (the 江宁府 congees: its rows 0.36…0.88 map to 0.35…0.72, the row past the edge to 0.95 — one line cannot hold both, and with them in the fit the unread dishes landed a row too low) */ P.push({ax:(b[0]+b[2])/2,ay:(b[1]+b[3])/2,aw:b[2]-b[0],ah:b[3]-b[1],px:(q.x0+q.x1)/2,py:(q.y0+q.y1)/2,pw:q.x1-q.x0,ph:q.y1-q.y0}); });
+  const P=[]; labels.forEach((l,k)=>{ const q=pl[k]; if(!q||!l.box||l.raw) return; const b=l.box; /* v743: a label drawn past the edge is not a point of the fit — there the model's grid had run out of picture (the 江宁府 congees: its rows 0.36…0.88 map to 0.35…0.72, the row past the edge to 0.95 — one line cannot hold both, and with them in the fit the unread dishes landed a row too low) */ P.push({zh:l.zh,ax:(b[0]+b[2])/2,ay:(b[1]+b[3])/2,aw:b[2]-b[0],ah:b[3]-b[1],px:(q.x0+q.x1)/2,py:(q.y0+q.y1)/2,pw:q.x1-q.x0,ph:q.y1-q.y0}); });
   if(P.length<3) return null;
   const fit=(xs,ys)=>{ const n=xs.length, mx=xs.reduce((a,v)=>a+v,0)/n, my=ys.reduce((a,v)=>a+v,0)/n; let sxy=0,sxx=0; xs.forEach((x,i)=>{ sxy+=(x-mx)*(ys[i]-my); sxx+=(x-mx)*(x-mx); }); const a=sxx>1e-9?sxy/sxx:1; return {a,b:my-a*mx}; };
-  const fx=fit(P.map(p=>p.ax),P.map(p=>p.px)), fy=fit(P.map(p=>p.ay),P.map(p=>p.py));
-  if(!(fx.a>0.5&&fx.a<2&&fy.a>0.5&&fy.a<2)) return null;
-  const errs=P.map(p=>Math.max(Math.abs(fx.a*p.ax+fx.b-p.px)/Math.max(p.pw,p.ph),Math.abs(fy.a*p.ay+fy.b-p.py)/Math.max(p.pw,p.ph))).sort((a,b)=>a-b);
-  const med=errs[errs.length>>1]; if(med>AI_CAL_ERR||errs[errs.length-1]>2*AI_CAL_ERR) return null;
-  return {n:P.length,err:+med.toFixed(2),map:b=>{ const cx=fx.a*(b[0]+b[2])/2+fx.b, cy=fy.a*(b[1]+b[3])/2+fy.b, w=(b[2]-b[0])*fx.a, h=(b[3]-b[1])*fy.a; return {x0:cx-w/2,y0:cy-h/2,x1:cx+w/2,y1:cy+h/2}; }}; }
+  /* v751 (H's 江宁府 dump on v750: the reader named all 24, and the fit refused — Qwen had drawn the congee row squeezed to
+     0.18…0.81 where the reader has it at 0.19…0.87, 紫米粥 1.1 and 红枣黑麦粥 1.3 of a text's size off while the median was
+     0.36 — so no dish's photo box was corrected and every dish's picture was a row too low again): a fit refused for its
+     worst points alone is fitted once more without them — the points over 2·AI_CAL_ERR, at most a quarter of them, three
+     left at least — and stands on the rest; `dropped` names them, and a dropped label's own box still maps through it */
+  const solve=Q=>{ const fx=fit(Q.map(p=>p.ax),Q.map(p=>p.px)), fy=fit(Q.map(p=>p.ay),Q.map(p=>p.py));
+    if(!(fx.a>0.5&&fx.a<2&&fy.a>0.5&&fy.a<2)) return null;
+    const err=p=>Math.max(Math.abs(fx.a*p.ax+fx.b-p.px)/Math.max(p.pw,p.ph),Math.abs(fy.a*p.ay+fy.b-p.py)/Math.max(p.pw,p.ph));
+    const errs=Q.map(err).sort((a,b)=>a-b); return {fx,fy,err,med:errs[errs.length>>1],max:errs[errs.length-1]}; };
+  let f=solve(P), dropped=[]; if(!f) return null;
+  if(f.med<=AI_CAL_ERR&&f.max>2*AI_CAL_ERR){ const bad=P.filter(p=>f.err(p)>2*AI_CAL_ERR).sort((a,b)=>f.err(b)-f.err(a)).slice(0,Math.floor(P.length/4));
+    if(bad.length&&P.length-bad.length>=3){ const g=solve(P.filter(p=>!bad.includes(p))); if(g){ f=g; dropped=P.filter(p=>bad.includes(p)).map(p=>p.zh); } } } /* dropped: in the labels' own order */
+  if(f.med>AI_CAL_ERR||f.max>2*AI_CAL_ERR) return null; const {fx,fy}=f;
+  return {n:P.length-dropped.length,err:+f.med.toFixed(2),dropped,map:b=>{ const cx=fx.a*(b[0]+b[2])/2+fx.b, cy=fy.a*(b[1]+b[3])/2+fy.b, w=(b[2]-b[0])*fx.a, h=(b[3]-b[1])*fy.a; return {x0:cx-w/2,y0:cy-h/2,x1:cx+w/2,y1:cy+h/2}; }}; }
 /* CC-CEDICT (simplified -> English gloss), lazily loaded from ./vendor */
 const DICT_HEAD="#cedict v5"; /* the file's own first line, and the only way to tell a cached older copy from this one — v2 at v573 (a reading per sense), v3 at v605 (no gloss cut at 120 characters any more), v4 at v717 (a variant entry's glosses no longer lead a word's line: 药 read "leaf of the iris"), v5 at v722 (a one-character line holds every sense: 新 had shipped without "new", 德 without "virtue" — docs/NMAX.md) */
 let DICT_FRESH=false; /* v722: the file in DICT carries DICT_HEAD — a phone that could not fetch the new one keeps working on the old, but the gloss pass waits */
@@ -9341,6 +9350,7 @@ async function cropSign(id,opts){
             pdPl.forEach((q,k)=>{ if(!q) return; const Hk=q.y1-q.y0; labelRects[k]={x0:Math.max(0,q.x0-Hk*PD_ROOM)*W,y0:Math.max(0,q.y0-Hk*PD_ROOM)*Hh,x1:Math.min(1,q.x1+Hk*PD_ROOM)*W,y1:Math.min(1,q.y1+Hk*PD_ROOM)*Hh};
               logRead(id,`${pic.labels[k].zh}: the phone's reader read ${q.share?`it inside one line with ${q.share-1===1?"its neighbour":"its neighbours"} (${q.read}) — its own characters' share of that line is`:q.read} at ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`); });
             const cal=aiBoxCal(pic.labels,pdPl); picCal=cal; /* v745: the dishes' photo boxes take the same correction, below */
+            if(cal&&cal.dropped&&cal.dropped.length) logRead(id,`the fit of the AI's boxes stands on ${cal.n} texts without ${cal.dropped.join(", ")} — drawn more than ${2*AI_CAL_ERR} of a text's size from where the reader read ${cal.dropped.length===1?"it":"them"} (v751)`);
             /* v744 (H's 江宁府 board read on v743, 2026-09-29: the reader read row 4's three middle dishes as ONE line —
                鸡汤阳春面16份招牌油豆腐粉丝汤12份重庆豌杂小面18份 — so it named none of them; the model's boxes had passed the drawing
                test this time, so the old search of v359/v376 had already placed all 24 labels on the model's boxes, which on
@@ -9448,10 +9458,16 @@ async function cropSign(id,opts){
                text boxes, which the fit had just found a whole row too low on this photo. The text boxes were corrected;
                the photo boxes went into the pictures as drawn, so each card showed its name with the dish below it.)
                Once the fit stands, the photo box is mapped by it too; one mapped past the picture is no photo. */
-            let dishes=0; pic.labels.forEach(l=>{ const p=l.photo; let q=p?{x0:p[0],y0:p[1],x1:p[2],y1:p[3]}:null;
-              if(q&&picCal){ const m=picCal.map(p); q={x0:Math.max(0,m.x0),y0:Math.max(0,m.y0),x1:Math.min(1,m.x1),y1:Math.min(1,m.y1)}; if(!(q.x1-q.x0>0.01&&q.y1-q.y0>0.01)) q=null; else dishes++; }
+            /* v751 (the same dump): a dish whose name the reader placed has its photo box moved by its own name's residual — the
+               name's reader place against the name's box as the fit maps it (as the model drew it when no fit stands) — so the
+               dish stands over its own name whatever the fit's remaining error, and even where the fit refused */
+            let dishes=0, own=0; pic.labels.forEach((l,i)=>{ const p=l.photo, k=keep[i], r=pdPl&&pdPl[k]; let q=p?{x0:p[0],y0:p[1],x1:p[2],y1:p[3]}:null, m=q;
+              if(q&&picCal){ m=picCal.map(p); dishes++; }
+              if(q&&r&&l.box){ const a=picCal?picCal.map(l.box):{x0:l.box[0],y0:l.box[1],x1:l.box[2],y1:l.box[3]}, dx=(r.x0+r.x1)/2-(a.x0+a.x1)/2, dy=(r.y0+r.y1)/2-(a.y0+a.y1)/2; m={x0:m.x0+dx,y0:m.y0+dy,x1:m.x1+dx,y1:m.y1+dy}; own++; }
+              if(q&&m!==q){ q={x0:Math.max(0,m.x0),y0:Math.max(0,m.y0),x1:Math.min(1,m.x1),y1:Math.min(1,m.y1)}; if(!(q.x1-q.x0>0.01&&q.y1-q.y0>0.01)) q=null; }
               l.dishFrame=q?photoFrameOf(seenBase,W,Hh,{x0:q.x0*W,y0:q.y0*Hh,x1:q.x1*W,y1:q.y1*Hh},seenAngle):null; }); /* v701 */
             if(dishes) logRead(id,`${dishes===1?"one dish's photo box takes":dishes+" dishes' photo boxes take"} the correction of the ${picCal.n} texts both placed too (off by ${picCal.err} of a text's size)`);
+            if(own) logRead(id,`${own===1?"one dish's photo box stands":own+" dishes' photo boxes stand"} over the name's own place as the phone's reader read it (v751)`);
             N.dish=pic.labels.some(l=>l.dishFrame)?numFrames(pic.labels.map(l=>l.dishFrame||null)):null; /* v745: the dishes' photo frames as they go to the pictures */
             N.split=numFrames(SPLIT[id]); N.splitZh=pic.labels.map(l=>l.zh); /* v399: the frames as they go to the cards, and which label each belongs to */
             const where=SPLIT[id].map((f,k)=>pic.labels[k].zh+" "+pc(f.x/f.lw)+"–"+pc((f.x+f.w)/f.lw)+" %").join(", ");

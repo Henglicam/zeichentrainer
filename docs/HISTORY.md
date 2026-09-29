@@ -60,6 +60,34 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v751, 2026-09-29)
+- **v749 field-checked (H: "V749 works"); v750 read on the phone (H: "V750 siehe Anhang", the dump of shot_1790687526542_511):**
+  first reading 4.9 s, 34 lines, 24 named, 3 shared; the second with the detector on 1600 px 6.7 s, 24 named, 2 shared —
+  taken: 鸡汤阳春面 came apart, 招牌油豆腐粉丝汤 and 重庆豌杂小面 still one line, split by v747. Row 4's five frames all at 71–73 %
+  down in their own columns. The cost on this board: 7 s, on boards only and only when the first reading fell short. Both
+  lines leave the Still-to-test box.
+- **The fit of the AI's boxes drops its worst points, and a dish's picture stands over its own name (v751, the same dump).**
+  Qwen drew the congee row squeezed this time (0.18…0.81 where the reader has it at 0.19…0.87, not past the edge, so v743's
+  `raw` did not apply): the fit's median error was 0.36 but 紫米粥 1.1 and 红枣黑麦粥 1.3 of a text's size, so `aiBoxCal`
+  refused (`aiCal null`), and with no fit every dish's `photo` box went into its picture as drawn — a row too low, the name
+  with the dish below it again (the log: "鸡汤阳春面: the dish's own photo … 70–84 % down" against v747's 62–74 %). Two rules:
+  **(1)** a fit refused for its worst points alone is fitted once more without them — the points over 2·`AI_CAL_ERR`, at most
+  a quarter of them, three left at least — and stands on the rest (`dropped`, the log: "the fit of the AI's boxes stands on
+  22 texts without 紫米粥¥8/份, 红枣黑麦粥¥8/份 — drawn more than 1 of a text's size from where the reader read them"); a
+  dropped label's own box still maps through it. **(2)** a dish whose name the reader placed has its photo box moved by the
+  name's own residual — the reader's place against the name's box as the fit maps it, or as drawn when no fit stands — so the
+  dish sits over its own name whatever the fit's remaining error, `own` counted ("23 dishes' photo boxes stand over the
+  name's own place as the phone's reader read it"). Harness (`test751`: the v750 dump's Qwen boxes and reader lines from
+  `lrects`, 招牌油豆腐粉丝汤 and 重庆豌杂小面 as one line; the photo boxes one row above each name in the model's own grid, at
+  least `DISH_MIN` tall and inside the answer's box — the dump keeps only the fitted frames, not the boxes as answered):
+  **9/9 on v751, 3/9 on v750** — on v750 the fit is null and row 4's pictures show row 5's blue plates at 76 % down; on v751
+  the fit stands on 22 (err 0.28), row 4's pictures show its red plates at 64 %, and the two dropped congees still get their
+  own blue plate over their own names. test743 7/7, 745 16/16, 747 12/12, 749 5/5, 750 8/8; 744 7/8 and 746 11/13 as since
+  v747. `WHATS_NEW` 751; `TO_TEST` "江宁府: dish pictures over names?". Not yet field-checked. H asked whether the reading is
+  now significantly slower, and the pros and cons (answered from the dump: 7 s on this board, none elsewhere; on the phone,
+  offline, no call; the detector's memory at 1600 untested on a small phone) — and wished for a setup that other AIs can run
+  easily, since new ones keep coming (answered: see the archive of this conversation's close, and CLAUDE.md's AI section).
+
 ## Current state (PWA v750, 2026-09-29)
 - **The phone's reader reads a board a second time with the detector on the picture's own size (v750, H: "Dann bau mal die
   zweite Variante, Reader auf zweiter Skala" — after his question whether the trouble came from two AIs being synchronised;
