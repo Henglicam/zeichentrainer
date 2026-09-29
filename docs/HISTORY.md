@@ -60,6 +60,28 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v744, 2026-09-29)
+- **A label the reader did not name gives up the place the model's own box gave it once the fit says the boxes are off
+  (v744, H's screenshot of the 江宁府 multicard read on v743: "in der vorletzten Reihe ist nur das erste Gericht quasi
+  angezeigt. Die anderen hat er irgendwie nicht erkannt").** The v743 reading itself worked — 24 cards, the five congees
+  included (v743 field-checked). What the numbers said about row 4: the phone's reader read its three middle dishes as ONE
+  line, `鸡汤阳春面16份招牌油豆腐粉丝汤12份重庆豌杂小面18份`, so `pdMatch` named none of them (5 of 19 Han characters is 0.26,
+  under `PD_MATCH`); Qwen's boxes passed the drawing test this time (`round:false`, the x values 115/235/275… are not tens),
+  so the old search of v359/v376 (`labelPlan` + `labelRect`) placed all 24 labels on the model's own boxes first — and on
+  this photo those stand a whole row too low (row 4 drawn at 0.88–0.91, printed at 0.71–0.73) and stretched across; the
+  three landed on the board's frame under the congees (y 0.91–0.94). The v644/v742 loop, which would have corrected them
+  (`aiCal` n 16, err 0.19), skipped them as already placed: `took:0`. **Now `rawPlaced`** marks the places that came from
+  the model's uncorrected boxes, and when the fit is trusted every label the reader did not name gives such a place up and
+  takes the corrected box through `labelRow`, else the whole picture (`labelWhole`, v391's price — never a card on the
+  neighbour); the reader's own lines and the old search's *readings* stay. The log says "3 labels the phone's reader did
+  not name leave the model's own boxes — the 16 texts both placed say the boxes are off by 0.19 …"; `numbers.aiCal` gains
+  `gave`. Harness (`test744`, the board drawn from this dump's own reader places, Qwen's boxes as it answered them, the three
+  read as one line): 8/8 on v744, 3/8 on v743 — on v743 the three sat on the congee row with `took:0`, the phone's numbers
+  exactly; on v744 each stands in row 4 on its own run (32–43, 44–59, 61–72 % across), `took:3, rows:3, gave:3`; test743
+  7/7, test742 9/9, test741 18/18 on v744. Not field-checked; Still to test: "江宁府: row 4's 3 middle dishes?". Open, not
+  built: `pdMatch` could cut a line holding several labels into them (each label as a run inside the line, `pdTrim`'s
+  division) — the reader's own place is better than a corrected box, but the ask was the three cards, and they are made.
+
 ## Current state (PWA v743, 2026-09-29)
 - **A label the model draws past the picture's edge is kept, and the phone's reader places it (v743, H: "Fix it" — the 江宁府
   board's fifth try, the one that read: Qwen answered 24 lines in 123 s, the app made 19 cards).** What the numbers said: the
