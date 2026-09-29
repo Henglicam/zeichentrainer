@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=741; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=742; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -687,6 +687,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["again","v742","QR panel: 启用… frame on its line?"],
   ["cards","v741","Pop-up: Details fold, long text?"],
   ["again","v740","江宁府 board: Read again makes it?"],
   ["camera","v739","Read again on a left photo: reads?"],
@@ -4621,7 +4622,7 @@ const cbKey=d=>d.id+"|"+(d.shot||"")+"|"+JSON.stringify(d.frame||0)+"|"+(d.c||""
    the measured regions are kept in one settings row (`regfix`) and read back at boot, so a multicard shown once is drawn
    in its measured place from then on. The card and its frame still do not change. A row written under another REG_V is
    dropped, so a change to how regions are measured measures every multicard again. */
-const REGFIX=new Map(), REGRUN=new Set(), REG_V=738, REG_MAX=600; /* v738: the stored boxes are measured again once, with pdTrim */
+const REGFIX=new Map(), REGRUN=new Set(), REG_V=742, REG_MAX=600; /* v742: the stored boxes are measured again once, with the ink row (labelRow) as the third placing */
 function regLoad(){ const r=S.settings.regfix; if(!r||r.v!==REG_V||!Array.isArray(r.m)) return; r.m.forEach(([k,b])=>{ if(typeof k==="string") REGFIX.set(k,b||null); }); }
 function regSave(){ while(REGFIX.size>REG_MAX) REGFIX.delete(REGFIX.keys().next().value); setSetting("regfix",{v:REG_V,m:[...REGFIX]}); }
 /* the split's own fallback for a text it could not place: a frame over half the photo, or one another text of the same photo shares (v628) */
@@ -4659,7 +4660,14 @@ async function refineShot(shot){
         if(own&&!(cx>f.x-f.w&&cx<f.x+2*f.w&&cy>f.y-f.h&&cy<f.y+2*f.h)) return null;
         const p=q.h*PD_ROOM; return {x:Math.max(0,q.x-p),y:Math.max(0,q.y-p),w:Math.min(1,q.x+q.w+p)-Math.max(0,q.x-p),h:Math.min(1,q.y+q.h+p)-Math.max(0,q.y-p)}; }); }
     catch(e){ pdAt=null; pdFail=true; logErr("paddle",e&&e.message||String(e)); } }
-  for(let i=0;i<todo.length;i++){ const d=todo[i], b=(pdAt&&pdAt[i])||snapRegion(d,bm,bm.width,bm.height); if(b||!pdFail) REGFIX.set(cbKey(d),b); if(b) moved++; await yieldNow(); } /* v710: a text the reader could not be asked about (its files not yet downloaded, offline) is not stored as "no snap" — v688 kept that null for good, and the multicard stayed at the AI's loose boxes with the reader installed; it is measured again next time */
+  /* v742: a text the reader could not name and the ink search could not snap takes the row of ink under its frame (labelRow
+     on the photo in grey, made once per photo) — the frame is the model's box, often a third of a line off. The frame the
+     split gave as a fallback (fallbackFrame) says nothing about where the text is and is left alone, as snapRegion leaves it. */
+  let gyf; const inkRow=d=>{ const f=d.frame; if(!f||f.a||!(f.w>0&&f.h>0)||fallbackFrame(d)) return null;
+    try{ if(gyf===undefined) gyf=labelGrey(bm,null); const r=labelRow(gyf,{x0:f.x,y0:f.y,x1:f.x+f.w,y1:f.y+f.h}); if(!r) return null;
+      const pad=Math.min(r.x1-r.x0,r.y1-r.y0)*0.12, x0=Math.max(0,r.x0-pad), y0=Math.max(0,r.y0-pad); return {x:x0,y:y0,w:Math.min(1,r.x1+pad)-x0,h:Math.min(1,r.y1+pad)-y0,row:true}; }
+    catch(e){ logErr("regions",e&&e.message||String(e)); return null; } };
+  for(let i=0;i<todo.length;i++){ const d=todo[i], b=(pdAt&&pdAt[i])||snapRegion(d,bm,bm.width,bm.height)||inkRow(d); if(b||!pdFail) REGFIX.set(cbKey(d),b); if(b) moved++; await yieldNow(); } /* v710: a text the reader could not be asked about (its files not yet downloaded, offline) is not stored as "no snap" — v688 kept that null for good, and the multicard stayed at the AI's loose boxes with the reader installed; it is measured again next time */
   bm.close(); regSave(); if(!moved) return;
   /* the regions on screen move to their measured place; no render, so nothing the learner is doing is interrupted */
   for(const d of todo){ const b=REGFIX.get(cbKey(d)); if(!b) continue; const pc=x=>(x*100).toFixed(2)+"%";
@@ -8677,6 +8685,21 @@ function labelRect(gy,box,pin){ /* box in fractions of the picture; pin (v376): 
     if(gp<=LB_GAP*(take.y1-take.y0)&&ov>=LB_OVER) take={x0:Math.min(take.x0,r.x0),y0:Math.min(take.y0,r.y0),x1:Math.max(take.x1,r.x1),y1:Math.max(take.y1,r.y1),v:take.v}; }
   return {x0:take.x0/W,y0:take.y0/Hh,x1:take.x1/W,y1:take.y1/Hh}; /* fractions of the picture */
 }
+/* v742 (H's QR door panel: the phone's reader read 7 of the 9 texts, and the two under the code — the address and
+   启用蓝牙摇一摇或将二维码靠近扫描器 — took the model's box through the fit of v644 with nothing looking at the pixels; the
+   fit moved the instruction's box up by a third of a line, PD_ROOM grew it, and the frame stood over the address's lower
+   half and the instruction — "der eine frame ist korrekt, aber er ist falsch platziert"): the corrected box is an anchor,
+   as the v359 rule wants (each label's frame comes from the pixels). labelScan looks LB_UP heights up and down for the
+   rows of ink and the run over the anchor wins, the row nearest it as the tiebreaker; the model drew this box as ONE line,
+   so no second line joins as labelRect's would (the address stands right over the instruction and would have joined).
+   Nothing near the anchor of a character's shape, or a row whose centre lies more than the box's height outside it:
+   null, and the box stays as it was. Used at the split and, on a stored multicard, at display (refineShot). */
+function labelRow(gy,box){ const sc=labelScan(gy,box); if(!sc||!sc.spots.length) return null;
+  const {W,Hh,bh,bcy,spots}=sc; let take=null, tv=-1e9;
+  for(const r of spots){ const v=r.v-LB_NEAR*Math.abs((r.y0+r.y1)/2-bcy)/bh; if(v>tv){ tv=v; take=r; } }
+  if(!take) return null;
+  const cy=(take.y0+take.y1)/2/Hh, bhf=box.y1-box.y0; if(cy<box.y0-bhf||cy>box.y1+bhf) return null;
+  return {x0:take.x0/W,y0:take.y0/Hh,x1:take.x1/W,y1:take.y1/Hh}; }
 /* The labels are placed row by row, in the order the model read them (v376, H's washing machine at v375: the split
    worked and every card showed a neighbour's label — "beim 2. Anlauf hat es geklappt, aber leider fehlerhaft"). The
    answer's boxes for that panel are an evenly spaced grid — 130,200,270,340 across and 255,300,345 down, every box
@@ -9596,14 +9619,17 @@ async function cropSign(id,opts){
             pdPl.forEach((q,k)=>{ if(!q) return; const Hk=q.y1-q.y0; labelRects[k]={x0:Math.max(0,q.x0-Hk*PD_ROOM)*W,y0:Math.max(0,q.y0-Hk*PD_ROOM)*Hh,x1:Math.min(1,q.x1+Hk*PD_ROOM)*W,y1:Math.min(1,q.y1+Hk*PD_ROOM)*Hh};
               logRead(id,`${pic.labels[k].zh}: the phone's reader read ${q.read} at ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`); });
             const cal=aiBoxCal(pic.labels,pdPl);
-            if(cal){ let took=0; const placed=()=>labelRects.filter(Boolean).map(rc=>({x0:rc.x0/W,y0:rc.y0/Hh,x1:rc.x1/W,y1:rc.y1/Hh}));
-              pic.labels.forEach((l,k)=>{ if(labelRects[k]||!l.box) return; /* only a label with no place at all: what the reader or the old search placed stays */ const q=cal.map(l.box);
-                if(!(q.x1>q.x0&&q.y1>q.y0)||q.x0<-0.02||q.y0<-0.02||q.x1>1.02||q.y1>1.02) return;
-                if(placed().some(o=>{ const ix=Math.min(o.x1,q.x1)-Math.max(o.x0,q.x0), iy=Math.min(o.y1,q.y1)-Math.max(o.y0,q.y0); return ix>0&&iy>0&&ix*iy>0.25*Math.min((o.x1-o.x0)*(o.y1-o.y0),(q.x1-q.x0)*(q.y1-q.y0)); })) { logRead(id,`${l.zh}: the AI's box, corrected, would lie on another text — no place`); return; }
-                took++; const Hk=Math.min(q.y1-q.y0,q.x1-q.x0);
+            if(cal){ let took=0, rows=0; const placed=()=>labelRects.filter(Boolean).map(rc=>({x0:rc.x0/W,y0:rc.y0/Hh,x1:rc.x1/W,y1:rc.y1/Hh}));
+              let gyc; const grey=async()=>{ if(gyc!==undefined) return gyc; try{ const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen; const sb=src===seen?b:await createImageBitmap(src); gyc=labelGrey(sb,pic.box); if(sb!==b) sb.close(); }catch(e){ gyc=null; logErr("split",e&&e.message||String(e)); } return gyc; }; /* v742: the picture in grey once, only when a label needs it */
+              for(let k=0;k<pic.labels.length;k++){ const l=pic.labels[k]; if(labelRects[k]||!l.box) continue; /* only a label with no place at all: what the reader or the old search placed stays */ const q0=cal.map(l.box);
+                if(!(q0.x1>q0.x0&&q0.y1>q0.y0)||q0.x0<-0.02||q0.y0<-0.02||q0.x1>1.02||q0.y1>1.02) continue;
+                let row=null; try{ const gy=await grey(); row=gy?labelRow(gy,q0):null; }catch(e){ row=null; logErr("split",e&&e.message||String(e)); } /* v742: the corrected box is an anchor — the row of ink under it is the label */
+                const q=row||q0; if(stale()) return;
+                if(placed().some(o=>{ const ix=Math.min(o.x1,q.x1)-Math.max(o.x0,q.x0), iy=Math.min(o.y1,q.y1)-Math.max(o.y0,q.y0); return ix>0&&iy>0&&ix*iy>0.25*Math.min((o.x1-o.x0)*(o.y1-o.y0),(q.x1-q.x0)*(q.y1-q.y0)); })) { logRead(id,`${l.zh}: the AI's box, corrected, would lie on another text — no place`); continue; }
+                took++; if(row) rows++; const Hk=Math.min(q.y1-q.y0,q.x1-q.x0);
                 labelRects[k]={x0:Math.max(0,q.x0-Hk*PD_ROOM)*W,y0:Math.max(0,q.y0-Hk*PD_ROOM)*Hh,x1:Math.min(1,q.x1+Hk*PD_ROOM)*W,y1:Math.min(1,q.y1+Hk*PD_ROOM)*Hh};
-                logRead(id,`${l.zh}: the phone's reader did not find it — the AI's box, corrected by the ${cal.n} texts both placed (off by ${cal.err} of a text's size), at ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`); });
-              N.aiCal={n:cal.n,err:cal.err,took}; }
+                logRead(id,`${l.zh}: the phone's reader did not find it — the AI's box, corrected by the ${cal.n} texts both placed (off by ${cal.err} of a text's size), at ${pcv(q0.x0)}–${pcv(q0.x1)} % across, ${pcv(q0.y0)}–${pcv(q0.y1)} % down${row?`; its characters at ${pcv(q.x0)}–${pcv(q.x1)} %, ${pcv(q.y0)}–${pcv(q.y1)} %`:" — nothing of a character's shape near it, the box stays"}`); }
+              N.aiCal={n:cal.n,err:cal.err,took,rows}; }
             else if(pic.labels.some((l,k)=>!pdPl[k])) logRead(id,"the AI's boxes do not agree with where the phone's reader found the texts — the texts it did not find keep the whole picture"); }
           if(labelRects) N.lrects=labelRects.map(rc=>rc?numBox(rc):null); /* v399: in the picture's own pixels, the input photoFrameOf maps onto the photo */
           b.close();

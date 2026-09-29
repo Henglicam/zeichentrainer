@@ -60,6 +60,45 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v742, 2026-09-29)
+- **A text the reader could not place takes the row of ink under the model's box (v742, H's QR door panel — a screenshot
+  of the 博雅园小区 access-control app: "Hier hätten aus dem einen feld/frame glaub ich 2 gemacht werden müssen", then "Oh, ich
+  sehe gerade der eine frame ist korrekt, aber er ist falsch platziert"; the Zoom data PDF and the v741 dump).** The data
+  said what happened: the phone's reader read 7 of the 9 texts and not the two under the QR code (no line of its between
+  25 and 42 % down at all); those two took the model's box through the fit of v644 ("the AI's box, corrected by the 7 texts
+  both placed (off by 0.26 of a text's size)") with nothing looking at the pixels — the fit, right on average, moved 启用蓝牙
+  摇一摇或将二维码靠近扫描器 up by a third of a line (the model's own box was on the line), `PD_ROOM` grew the frame to 0.04 of the
+  photo, and it stood over the address's lower half and the whole instruction. At display neither the reader (the same two
+  lines unread) nor the ink snap (a frame that cuts a row leaves `charBoxes` unsure) could move it, so the frame stood.
+  Now **`labelRow(gy,box)`**: the corrected box is an anchor, as the v359 rule wants — `labelScan` looks `LB_UP` heights up
+  and down for the rows of ink, the run over the anchor wins with the nearest row as the tiebreaker, and **no second line
+  joins** (the model drew this box as one line; labelRect's join for 保温 above 取消 would have glued the address on); a row
+  whose centre lies more than the box's height outside it, or nothing of a character's shape, leaves the box as it was.
+  Used twice: **at the split**, in the v644 branch, the picture in grey once (`labelGrey`, only when a label needs it) and
+  the log line gains "; its characters at 20–80 %, 32–34 %" or " — nothing of a character's shape near it, the box stays"
+  (`N.aiCal.rows`); **at display**, `refineShot` takes the ink row as the third placing after the reader's line and the snap
+  (`inkRow`, the photo in grey once per photo, the frame the anchor, the result padded 12 % as the snap's is, `row:true`), a
+  fallback frame (`fallbackFrame`) left alone as the snap leaves it. `REG_V` 742 measures every phone's stored boxes again
+  once, so H's panel is right at its next opening without a re-read. Harness (test742, the photo cut from the Zoom data
+  sheet — the phone's own pixels —, the reader's 10 lines from the dump stubbed on `pdRead`, the AI's own answer and the
+  text model's words served on the relay route; 9 checks): at display the two texts stand on their lines (启用… 35.2–37.1 %
+  down, the address 31.9–34.0 %) with `row`, the reader's own line keeps its box `[control]`, a whole-photo frame gets no
+  row `[guard]`; read again from the Camera tab as a screenshot the split makes 9 cards and the page, 启用…'s frame is
+  35.0–37.3 % down and the address's 31.6–34.2 %, the log names both rows, 二维码门禁 keeps the reader's line `[control]`.
+  On the v741 tree 5 of 9 fail, and its split gives exactly the phone's frames (0.0904/0.3244/0.8367/0.04 for 启用…) — the
+  harness carries the field case. test738's REG_V pin is the suite's, not a regression (the v413 rule). test739 and test741
+  pass. `TO_TEST` "QR panel: 启用… frame on its line?". Not field-checked. **Seen on the way, not changed:** the Zoom check
+  writes `snapRegion`'s result over `REGFIX` for every text of the last eight multicards, null included, for the session —
+  after a check the reader's and the row's boxes are gone until the next start.
+- **The 江宁府 board after v740/v741 (H: "Still can't read", the v741 dump):** "no connection: no answer within 60 s, then
+  no answer within 120 s (tried again after the app came back to the foreground)" — 180 s and nothing, while a 51 KB
+  picture answered in 15.6 s an hour before and the same board was read whole three times on Sep 27 (two 江宁府 multicards
+  are in the deck). So it is not the wait. The relay passes the call through with no limit of its own (`ai-relay`: count,
+  forward, return the text); whether Qwen never answered this picture or the edge runtime cut the function is not in the
+  phone's log. What tells them apart: the relay's own log (Supabase → Edge Functions → ai-relay → Logs, the two calls at
+  08:29 and 08:31 with their status and time), or the phone's own Qwen key under More → AI review, which sends the call
+  straight to Qwen. Not resolved.
+
 ## Current state (PWA v741, 2026-09-29)
 - **The multicard look-up folds its Details again, closed, and a long text wraps (v741, H, a screenshot of the QR panel's
   pop-up — 启用蓝牙摇一摇或将二维码靠近扫描器 cut at the sheet's edge after 二维, both descriptions standing under the meaning:
