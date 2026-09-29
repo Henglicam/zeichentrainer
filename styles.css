@@ -354,14 +354,14 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .ask.lookup{background:none;pointer-events:none}
 .ask .sheet.lookup{pointer-events:auto;position:relative;padding:18px 16px 14px;box-shadow:0 -2px 24px rgba(0,0,0,.28),0 0 0 1px var(--sep)}
 .lookup .x{position:absolute;right:3px;top:1px;width:44px;height:44px;border:none;background:none;color:var(--label2);font-size:24px;line-height:44px;cursor:pointer;padding:0}
-.lookup .zh{font-family:var(--hanzi);font-size:40px;line-height:1.25;color:var(--label);padding-right:36px;word-break:keep-all}
+.lookup .zh{font-family:var(--hanzi);font-size:40px;line-height:1.25;color:var(--label);padding-right:36px;word-break:keep-all;overflow-wrap:anywhere} .lookup .zh.long{font-size:30px} /* v741: a text longer than the line wraps (keep-all alone cut 启用蓝牙摇一摇或将二维码靠近扫描器 at the sheet's edge) and, past 8 characters, stands a size smaller — two lines, not three */
 .lookup .script{margin:4px 0 0}
 .lookup .pin{margin-top:8px}
 .pin .nw{white-space:nowrap} /* v711: the speaker is bound to the pinyin's last syllable, so it never wraps onto a line of its own at the left */ .lookup .mean{margin-top:4px}
 .lookup .grades{margin-top:16px} .lookup .grade{min-height:54px}
 .lookup .lkacts{display:flex;justify-content:center;margin-top:8px} .lookup .lkacts .del{padding:8px 14px}
-.ask .sheet.lookup{max-height:78vh;overflow-y:auto;overscroll-behavior:contain} /* v733: a long description scrolls inside the sheet, never the page under it */
-.lookup .lkdesc{margin-top:6px} .lookup .lkdesc .desc{margin-top:8px;max-width:none} .lookup .lkdesc .desc.dsh{color:var(--label)} /* v733/v734: under the meaning, no heading — the short description reads first and darker, the long one in the grey of every description */
+.ask .sheet.lookup{max-height:78vh;overflow-y:auto;overscroll-behavior:contain} /* v733: an open Details fold scrolls inside the sheet, never the page under it */
+.lookup .lkfold{margin-top:12px} .lookup .lkfold .ans{padding-top:4px;text-align:start} .lookup .lkfold .desc{margin-top:8px;max-width:none} .lookup .lkfold .desc.dsh{color:var(--label)} /* v733/v741: the Details fold, closed by default — the short description reads first and darker, the long one in the grey of every description */
 .pill.multi{background:var(--fill);color:var(--label2)}
 button.pill.multi{border:0;font:inherit;cursor:pointer} /* the reference is a way back to the multicard, not only a label */
 /* under the picture the reference carries a whole headline ("Meituan — order confirmation, 颐堤港店"), where .pill was

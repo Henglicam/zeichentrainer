@@ -60,6 +60,25 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v741, 2026-09-29)
+- **The multicard look-up folds its Details again, closed, and a long text wraps (v741, H, a screenshot of the QR panel's
+  pop-up — 启用蓝牙摇一摇或将二维码靠近扫描器 cut at the sheet's edge after 二维, both descriptions standing under the meaning:
+  "Darüber hinaus wird der Text abgeschnitten. Bitte auch Details zum aufklappen im Multicard popup wieder einführen. Sonst
+  wird's zu viel und unübersichtlich").** v733's fold is back — `lkFoldHTML`/`wireLkFold`, the `.fold`/`.foldbtn` row
+  "Details ⌄" at the sheet's foot — and **closed by default** (`LK_OPEN` false): a tap opens it onto the short description
+  (`dsh`, darker) and the long one (`ds`), which is asked of the AI the first time the fold is open on that text
+  (`explainAuto`; a closed fold costs no call, where v734 asked on every look-up); folded open by hand it stays open on the
+  next text tapped, for the session, and is closed again at every start. v734's `lkDescHTML`/`wireLkDesc` and the `.lkdesc`
+  rules leave with their last user; the v733 note reads "Details in the pop-up say what it is". **The text line:** `.lookup
+  .zh` had `word-break:keep-all` and nothing to wrap on, so a text longer than the line ran under the × and off the sheet;
+  now `overflow-wrap:anywhere` (the study card's own pair, line 90) and, past 8 characters, `.long` at 30 px — 17 characters
+  stand on two lines at 390 and at 360 px, not three. Harness (test741, en 390 light, de 360 dark, the AI mocked at `aiAsk`,
+  9 checks each): the fold closed with no description and no call; the 17-character text at 30 px on two lines, not cut;
+  a tap opens it onto both stored descriptions with no call; the next text keeps it open and asks once for its missing long
+  one, with "…"; the answer lands and is stored in `ds`; a tap closes it; the next text opens closed and asks nothing;
+  `[control]` the 78 % cap and a five-character text at 40 px on one line. On the v740 tree 14 of 18 fail. Screenshots
+  light/dark, open and closed. `TO_TEST` "Pop-up: Details fold, long text?" replaces v734's line. Not field-checked.
+
 ## Current state (PWA v740, 2026-09-29)
 - **A picture's second try waits 120 s (v740, H with the 江宁府 board after Read again: "Warum kann AI diese Karte nicht lesen?"
   and a full v739 Diagnostics dump).** The dump said what happened: the phone's reader read the board's 22 lines at 98 %, the

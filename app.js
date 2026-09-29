@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=740; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=741; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -687,11 +687,11 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["cards","v741","Pop-up: Details fold, long text?"],
   ["again","v740","江宁府 board: Read again makes it?"],
   ["camera","v739","Read again on a left photo: reads?"],
   ["cards","v738","Rice cooker: 柴火饭 frame tight?"],
   ["cards","v736","Open card: layout right?"],
-  ["cards","v734","Pop-up descriptions: right?"],
   ["more","v731","Duplicate multicards: sets right?"],
   ["learn","v717","Stroke from Show me: a stroke?"],
   ["learn","v717","Fold count steady after Skip?"],
@@ -6619,7 +6619,7 @@ const WHATS_NEW={
   739:"A photo left on the Camera tab has a Read again button.",
   738:"A text's frame on a multicard no longer takes in the neighbour's last character.",
   736:"An open card shows everything at once, with Star, Flag and Edit as a quiet row; Delete is in Edit.",
-  733:"Tap a text on a multicard's photo: the pop-up now says what it is, in a sentence or two.",
+  733:"Tap a text on a multicard's photo: Details in the pop-up say what it is, in a sentence or two.", /* v741: behind the fold again */
   731:"More → Your cards finds multicards you made twice and deletes the older copies.",
   729:"吃, 碰 and 杠 on a mahjong sign name their calls: chow, pung, kong.",
   728:"肉夹馍 reads jiā on every card, the checked ones too; 龙 is a dragon and 胡 on a mahjong sign is the winning call.",
@@ -10938,11 +10938,11 @@ function openLookup(shot,rid,silent){
   const pid=d.page&&cardOf(d.page)&&isPage(cardOf(d.page))?d.page:null;
   const html=`<div class="sheet lookup" role="dialog" aria-label="${esc(d.c)}">
     <button class="x" id="lk-close" aria-label="${t("Close")}">×</button>
-    <div class="zh hanzi">${esc((d.trad||d.c).replace(/\n/g," / "))}</div>${d.trad?`<div class="script"><span class="pill trad">${t("Traditional")}</span></div>`:""}${priceLine(pv)}
+    <div class="zh hanzi${glyphs(d.c)>8?" long":""}">${esc((d.trad||d.c).replace(/\n/g," / "))}</div>${d.trad?`<div class="script"><span class="pill trad">${t("Traditional")}</span></div>`:""}${priceLine(pv)}
     <div class="pin">${pinSay(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}</div>
     ${pid?""
         :`<div class="grades">${[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>`<button class="grade" data-g="${g}" data-lg="${g}"><span class="lbl">${t(l)}</span></button>`).join("")}</div>`}
-    ${pid?"":`<div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div>`}${pid?lkDescHTML(d):""}</div>`;
+    ${pid?"":`<div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div>`}${pid?lkFoldHTML(d):""}</div>`;
   /* a multicard's description is a look-up and nothing else (v496, H: "kein More und keine weiteren Funktionen in den Pop
      ups. Du kannst das doch alles über die Multicards steuern."): More opened the text's own screen, which the row list
      under the photo already opens on a tap — Edit, Flag, Delete and, since v692, + Flashcard live there. On a MARKED PHOTO (v448) More
@@ -10958,19 +10958,28 @@ function openLookup(shot,rid,silent){
   markRegion(rid); /* the frame appears on the text that was tapped, and only there (v467) */
   el.querySelector("#lk-close").onclick=closeLookup;
   wireSay(el);
-  if(pid) wireLkDesc(el,d.id);
+  if(pid) wireLkFold(el,d.id);
   el.querySelectorAll("[data-lg]").forEach(b=> b.onclick=()=>gradeRegion(b.dataset.lg));
   const mo=el.querySelector("#lk-more");
   if(mo) mo.onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, from=LOOKUP&&LOOKUP.from, shot=LOOKUP&&LOOKUP.shot, rid=LOOKUP&&LOOKUP.rid; closeLookup(); if(!cid||!cardOf(cid)) return; if(!from) INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom=from?"page:"+from:"inbox"; LOOK_BACK={shot,rid,card:cid,from:S.detailFrom}; /* v495: More is one step deeper into this look-up, so ← Back has to undo one step and not two */ S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
 }
-/* v733 (H: "Kannst du bitte in den popups der multicards auch noch die Details anbieten, zum aufklappen?", then "Zeig die
-   Details bitte per default an, ohne aufklappen zu müssen"; v734, H: "Die Überschrift \"Details\" nicht mehr anzeigen"): the
-   look-up of a multicard's text shows, under its meaning, what the text's own screen has under its Details and the sheet
-   does not already show — the short description (dsh, stored) and the long one (ds, asked of the AI the first time the text
-   is looked up: explainAuto, so the AI switch, the network and a stored answer all stand it down). No heading and no fold
-   since v734, and no action: the sheet stays a look-up (v496/v692). */
-function lkDescHTML(d){ const sh=shortOf(d); return `<div class="lkdesc">${sh?`<p class="desc dsh">${esc(sh)}</p>`:""}${descHTML(d,{explain:true})}</div>`; }
-function wireLkDesc(el,id){ const a=el.querySelector(".lkdesc"); if(!a) return; wireExplain(a); const c=cardOf(id); if(c) explainAuto(c); }
+/* v733 (H: "Kannst du bitte in den popups der multicards auch noch die Details anbieten, zum aufklappen?"), open by default
+   and then with no heading at v733/v734, folded again at v741 (H, a screenshot of the QR-panel's pop-up with both
+   descriptions standing under the meaning: "Bitte auch Details zum aufklappen im Multicard popup wieder einführen. Sonst
+   wird's zu viel und unübersichtlich"): the look-up of a multicard's text folds open "Details" — what the text's own screen
+   has under its Details and the sheet does not already show: the short description (dsh, stored) and the long one (ds, asked
+   of the AI the first time the fold is open on that text — explainAuto, so the AI switch, the network and a stored answer all
+   stand it down, and a closed fold costs nothing). No action inside: the sheet stays a look-up (v496/v692). CLOSED by default
+   (v741); LK_OPEN is the reader's for the session: folded open by hand, it stays open on the next text tapped, and it is
+   closed again at every start. */
+let LK_OPEN=false;
+function lkFoldHTML(d){ const sh=shortOf(d);
+  return `<div class="fold lkfold${LK_OPEN?" open":""}"><button class="foldbtn" id="lk-fold" aria-expanded="${LK_OPEN?"true":"false"}"><span>${t("Details")}</span><i aria-hidden="true">⌄</i></button><div class="ans" id="lk-ans"${LK_OPEN?"":" hidden"}>${sh?`<p class="desc dsh">${esc(sh)}</p>`:""}${descHTML(d,{explain:true})}</div></div>`; }
+function wireLkFold(el,id){ const b=el.querySelector("#lk-fold"), a=el.querySelector("#lk-ans"); if(!b||!a) return;
+  wireExplain(a);
+  const want=()=>{ const c=cardOf(id); if(c) explainAuto(c); };
+  b.onclick=()=>{ LK_OPEN=!LK_OPEN; a.hidden=!LK_OPEN; b.setAttribute("aria-expanded",LK_OPEN?"true":"false"); b.parentElement.classList.toggle("open",LK_OPEN); if(LK_OPEN) want(); };
+  if(LK_OPEN) want(); }
 /* the grade. Only on a MARKED PHOTO that is not a multicard — v448's own screen, which every photo from before v453
    still is, and whose texts are ordinary flashcards — where the three grades of v421 stay, because there the tap really
    is a review. v487's red/green vote on a multicard lasted one version (v488, H: "Not yet und Got it machen eigentlich
