@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v744, 2026-09-29)
+## Current state (PWA v745, 2026-09-29)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -75,8 +75,8 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   is cut to the matched run (`pdTrim`, v738). The split places an unplaced label the same way (v644 + v742). `REG_V` 742.
   **A label box drawn past the picture's edge is kept** (`picSlide`, v743: `raw` as drawn, `box` slid inside; no point of the
   calibration's fit; the reader places it by its text, else it keeps the whole picture — never a cut on the neighbour). **A place
-  from the model's uncorrected box is no place once the fit says the boxes are off** (`rawPlaced`, v744: an unnamed label takes
-  the corrected box, else the whole picture — the 江宁府 row the reader read as one line).
+  from the model's uncorrected box is no place once the fit says the boxes are off** (`rawPlaced`, v744), **and a dish's
+  `photo` box is mapped by the fit too** (`picCal`, v745: every dish on the 江宁府 board had shown the row below's photo).
 - **The v6xx state** (reader, owner tools, Learn zoom, Crop again): `grep -n "Consolidated v6xx" docs/HISTORY.md` (H, 2026-09-28).
 
 ## Files
@@ -191,7 +191,7 @@ The character pages ("Cards with 行 ›", v691–v717) **left at v737** (H) —
 (v692/v695/v736); the pop-up over the photo carries **no action** (v496/v692) — a **Details** fold, closed by default (v733/v741; open by
 default and headless v733–v740, H: "zu viel und unübersichtlich"), holds the short and long description, the long one asked
 the first time the fold is open on a text; a long text wraps at 30 px (v741). The multicard: **Add a text**, Delete multicard
-(v635/v711); its tags once under its title, its texts' rows show a short one-sentence description (`dsh`, all texts in one AI call at creation and once when an older multicard is opened, `pageShorts`; a failed call is asked again next visit, v710) and no flashcard ring; the long one stays on the opened text (v696–v698). On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right, name/pinyin/meaning without it and whole, and a dish description (`priceOf`, `isMenuPage`, v699); its own screen and the look-up show the same, the price on its own line (`priceView`, a view, the record untouched, v712); its flashcard is the name alone (v713); a dish with its own photo takes it as its picture (`dish`, v701/v705).
+(v635/v711); its tags once under its title, its texts' rows show a short one-sentence description (`dsh`, all texts in one AI call at creation and once when an older multicard is opened, `pageShorts`; a failed call is asked again next visit, v710) and no flashcard ring; the long one stays on the opened text (v696–v698). On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right, name/pinyin/meaning without it and whole, and a dish description (`priceOf`, `isMenuPage`, v699); its own screen and the look-up show the same, the price on its own line (`priceView`, a view, the record untouched, v712); its flashcard is the name alone (v713); a dish with its own photo takes it as its picture (`dish`, v701/v705); no count line on the multicard's screen (v745).
 
 ### Camera — photo to card
 The Camera tab is the camera: the **shutter card** (Take photo, From album) centred, work under it (v466/v470); a photo that
@@ -384,7 +384,7 @@ Rules that came out of the harness and cost real versions:
 - Layout is checked by screenshot at 390 px (and 360 px for the narrow phones), light and dark,
   in German and in the widest language for the row in question.
 
-## Working with H — the how-to rules (v128, agreed after the four-corner episode)
+## Working with H — the how-to rules (v128)
 **What H sends.** One request per message: a sentence, and a screenshot when it is about a screen; when the reader is
 wrong, More → Diagnostics → Share with it. "Leave it as it was" means: revert, no discussion.
 
@@ -420,8 +420,7 @@ The full list is in the archive; these are the ones that keep biting.
 
 - **The frame never moves for the content; the content adapts to the frame** (v560).
 - **A class written for one shape is not a free ride for another** — `.undo`'s padding and `nowrap` cost the update note
-  five versions of silence (v413); `.lbl` greyed out a vote's labels (v487); `.btn.mini` pushed a sentence past the card
-  (v432). **Inheritance loses to any matching rule, however weak.**
+  five versions of silence (v413; again v432, v487). **Inheritance loses to any matching rule, however weak.**
 - **A clamped box wants a whole-pixel line box**, or the clamped line leaves its top edge behind (v593).
 - **Presence that costs width is not free in a ten-language app** — check the tightest language *before* (v474).
 - **A guard whose lifetime is a timer from the moment it was armed does not cover the gesture it
