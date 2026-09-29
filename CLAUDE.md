@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v750, 2026-09-29)
+## Current state (PWA v751, 2026-09-29)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -80,8 +80,9 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   of the reader's texts is a band, not a label** — given up for the corrected box (v746, the 江宁府 board's third path). **A reader line
   holding two or more labels' texts is shared among them**, each run's share of the line (`pdMatch`, `share`, v747, field-checked:
   the phone reads 江宁府's row 4 as one line every time). **A board whose first reading leaves a label unnamed or shared is read
-  again with the detector on the photo's own size** (`PD_DET_MAX2` 1600 against `PD_DET_MAX` 960, `paddle.again`, v750: ~3× the
-  detector's time, taken only when it names more).
+  again with the detector on the photo's own size** (`PD_DET_MAX2` 1600 against `PD_DET_MAX` 960, `paddle.again`, v750, field-checked: 7 s
+  more on the 江宁府 board, 鸡汤阳春面 came apart). **The fit drops its worst points** (over 2·`AI_CAL_ERR`, a quarter at most,
+  `dropped`) **and a dish's picture is moved by its own name's residual onto the reader's place** (v751).
 - **The v6xx state** (reader, owner tools, Learn zoom, Crop again): `grep -n "Consolidated v6xx" docs/HISTORY.md`.
 
 ## Files
@@ -469,7 +470,7 @@ CC BY-SA).
 ## Open / not yet field-checked
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
 as field-checked; only a question he is still raising is open, and each version's archive entry names its own. Open now:
-the Learn zoom on 回收 寄卖 (v749) and the second reading on 江宁府 (v750).
+the dish pictures on 江宁府 (v751).
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's character
