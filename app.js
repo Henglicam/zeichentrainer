@@ -1869,8 +1869,9 @@ async function aiReadPicture(blob,alts,status,rec){
 /* v757 (H, with five Meituan screenshots: "Jetzt fangen wir an die Meituan App zu lernen. Ich möchte, dass du alle
    Standard-Felder kennst und perfekte Multikarten daraus baust."): the phrasebook holds Meituan's standard fields
    (signs.json, category meituan — the tab bar, the home screen's grid at home and abroad, Messages, the cart, Me,
-   ordering and paying, shops, lists and coupons: 216 labels, and 113 more at v758 from the web sources (checkout, order progress,
-   vouchers, membership levels, hotels, services, settings), pinyin checked by hand where pinyin-pro misreads (排行 háng),
+   ordering and paying, shops, lists and coupons: 216 labels, and 440 more at v758 from the web sources and the app's other pages
+   (the shop page and its options, checkout, order progress, reviews, vouchers, membership, hotels, tickets, rides, medicine,
+   the wallet, the supermarket, search, address, account, settings), pinyin checked by hand where pinyin-pro misreads (排行 háng),
    the meaning each has IN THE APP). A text of a picture answer that is one of them, whole, takes the book's pinyin and
    meaning and is not asked of the text model: 闪购 is Meituan's fast delivery of goods, not a "flash sale", 团购 its
    vouchers, 我的 the Me tab, and the model's guess was all that stood between the learner and the app's own word. The

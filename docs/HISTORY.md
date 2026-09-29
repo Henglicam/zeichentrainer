@@ -61,7 +61,7 @@ in them has its own entry below. Verbatim:
   was asked about (`run.zh`, `aiLate`, v657).
 
 ## Current state (PWA v758, 2026-09-29)
-- **113 more Meituan fields, from the web, and the five screenshots matched against the book (v758, H: "Kannst du dir alle
+- **440 more Meituan fields, from the web and page by page, and the five screenshots matched against the book (v758, H: "Kannst du dir alle
   Standardfelder aus dem Internet ziehen und Meituan Screenshots darauf abgleichen?").** What the web gives from here, honestly:
   the session's egress proxy blocks every page fetch (meituan.com, sj.qq.com, app.mi.com, zh.wikipedia.org, apps.apple.com all
   refused), so the sources are the search tool's summaries of thirteen searches — Meituan's rules centre and help pages, the
@@ -71,11 +71,20 @@ in them has its own entry below. Verbatim:
   天天津贴) and the foreigners' guides (去结算, 提交订单, Me › Settings › Language). They name features and steps, not every
   label on every screen; batch 2 is the labels those sources name plus the screens they describe (checkout, order progress,
   after-sales, vouchers, hotels, services, shops, settings, messages), each one a label I am sure stands in the app — what I
-  was not sure of stayed out. 115 written, 营业时间 and 通知 already in the book: **113 added, 329 Meituan fields, 696 phrasebook
-  entries**. Pinyin as at v757, hand-fixed 黑钻 zuàn, 部分 bù fen, 切换 qiē. **The match:** the five screenshots through the
-  v757 harness again — cards 44/40/30/28/29 as before, fields from the book 30/36/21/14/21 (batch 2 adds none on these five
-  screens: their fields were already batch 1, which was written from them), and what is NOT a field is exactly what no book
-  can hold: the place (北京, 博雅园, 汉堡, 德国|汉堡), the search word 麦片, shop and product names (德南面包房, 星巴克, 汉堡大学,
+  was not sure of stayed out. 115 written, 营业时间 and 通知 already in the book: 113 added. **Batch 3, the other pages (H: "Can
+  you do it for all Meituan pages, not only the 5 I showed?"):** eight more searches (the shop page's 点菜/评价/商家 and its
+  option sheet, the deal page's 购买须知/有效期/立即抢购, cinema and attraction tickets, 打车/骑车/跑腿, flights and trains,
+  the wallet and 月付, 看病买药's four tabs 买药/自营药房/问医生/我的, the review form) and the app's known screens, page by
+  page: the 外卖 home's categories and sort chips, the shop page and its options (规格, 少辣, 去冰, 大杯 …), checkout and the
+  order form, the order's progress, reviews, the deal page, hotels (房型, 大床房, 无早 …), tickets (单程, 二等座, 硬卧, 改签 …),
+  films and shows, rides and errands (立即叫车, 扫码开锁, 帮我买 …), medicine, the wallet, the supermarket's categories and
+  product tags, search, the address form, the account and settings, the assistant and video. 337 written, 10 already in the
+  book: 327 added. **656 Meituan fields, 1023 phrasebook entries.** Pinyin as at v757, hand-fixed 黑钻 zuàn, 部分 bù fen, 切换
+  qiē, 还款 huán, 应付 yīng. **No screenshot of those pages exists here, so none of batch 3 is matched against a screen** — the
+  five screens H sent are matched; every other page's list is the web's word and mine, to be settled by his screenshots. **The
+  match:** the five screenshots through the v757 harness again — cards 44/40/30/28/29 as before, fields from the book
+  30/36/21/14/21 (batches 2 and 3 add none on these five screens: their fields were already batch 1, which was written from
+  them; 我的家 and 美食广场 still compose from the dictionary), and what is NOT a field is exactly what no book can hold: the place (北京, 博雅园, 汉堡, 德国|汉堡), the search word 麦片, shop and product names (德南面包房, 星巴克, 汉堡大学,
   三元北京鲜牛奶72°C, 椰香咖喱牛肉饭3件套, 每日鲜酪), numbers with their words (23分钟, 月售100万+, 成长值4417/5000, 查看11项权益,
   好评榜第2名, 2件失效商品, 4.0分), riders' names, and the message previews (以上为系统自动发送的2张照片, [优惠券]您收到一张…) — 49 of
   171 texts, all glossed by the text model with the page named. No code change beyond the version and the comment's count.
