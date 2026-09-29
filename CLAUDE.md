@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v754, 2026-09-29)
+## Current state (PWA v755, 2026-09-29)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -252,7 +252,10 @@ merged by line band and scored by `readingScore`/`effScore` → the editor.
   picture — **a card short of its own crop is the price, a card on the neighbour's button is
   not.**
 - **No picture answer and five lines or more → no card** (v649, `NOPIC_LINES`): only the picture can split a board; the photo
-  stays on the Camera tab for Crop. Offline (picture never asked) the card is still made.
+  stays on the Camera tab for Crop. Offline (picture never asked) the card is still made. **A board the phone's reader reads
+  surely is split by its own lines with no picture call** (v755, `boardSure`: five lines, median 94, mean 90, 0.7 of the
+  characters sure; `readerPicture` reads again at 1600 and asks the text model for the words in one call; no dish photos,
+  a price printed apart from its name is dropped — calibrated on `tools/field/`).
 - **A strong winning reading with a sure line outside the placed frame places it again around it** (v684: the close look's
   band had cut 爸爸 off a 4-line poster the phone's reader read whole).
 - The card's picture is the **square window** around the text (`windowRect`, `CARD_RATIO` 1),
@@ -473,7 +476,7 @@ CC BY-SA).
 ## Open / not yet field-checked
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
 as field-checked; only a question he is still raising is open, and each version's archive entry names its own. Open now:
-the dish pictures on 江宁府 (v751).
+the reader's board path (v755).
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's character
