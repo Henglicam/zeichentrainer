@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v756, 2026-09-29)
+## Current state (PWA v757, 2026-09-29)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -83,11 +83,19 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   again with the detector on the photo's own size** (`PD_DET_MAX2` 1600 against `PD_DET_MAX` 960, `paddle.again`, v750, field-checked: 7 s
   more on the 江宁府 board, 鸡汤阳春面 came apart). **The fit drops its worst points** (over 2·`AI_CAL_ERR`, a quarter at most,
   `dropped`) **and a dish's picture is moved by its own name's residual onto the reader's place** (v751).
+- **Meituan's standard fields (v757):** `signs.json` category `meituan`, 216 labels (tab bar, home grid at home and abroad,
+  Messages, cart, Me, ordering, shops, coupons), pinyin checked, the meaning each has **in the app**. A picture answer's text
+  that is one of them whole (`fieldEntry`; a bracketed count, chevron or badge digit stripped) takes the book's words and is
+  **not asked of the text model**; its card is `mt.src` "phrasebook" (unverified, pending nothing, no doubt). The rest go to
+  the model **with the page named** ("App, Meituan, home screen"). A field matches a **whole label only** (`field`): 我的 in
+  我的家 stays the dictionary's. `SPLIT_MAX` **60** (home 44 texts, Me 40); a reader line with one Chinese character or none (a
+  price) no longer blocks the split (`panelCovers`). Harness on the five screenshots with the phone's reader and a mocked
+  picture answer — **not yet field-checked with the real picture model.**
 - **The v6xx state** (reader, owner tools, Learn zoom, Crop again): `grep -n "Consolidated v6xx" docs/HISTORY.md`.
 
 ## Files
 Shell: `index.html` · `styles.css` · `lang.js` · `app.js` · `manifest.webmanifest` (with `share_target`) · `sw.js` ·
-`signs.json` (phrasebook) · `nmt-model.json` · the three icons · `guide/` (seven real crops, light and dark, 113 KB WebP,
+`signs.json` (phrasebook; Meituan's fields since v757) · `nmt-model.json` · the three icons · `guide/` (seven real crops, light and dark, 113 KB WebP,
 made by `tools/guide-shots.js`). `vendor/`: Tesseract and its readers, dictionaries, OpenCC, `strokes.txt.gz`, `outlines.txt.gz`
 (~23 MB); `vendor/paddle/` (~30 MB, v637) and `vendor/nmt/` (55 MB) load on use; licences in `vendor/LICENSES.txt` and
 `vendor/ARPHICPL.TXT`. Not in the shell: `privacy.html`, `README.md`, the three `SPEC-*.md` (pre-build designs, contradicted in
@@ -250,7 +258,8 @@ merged by line band and scored by `readingScore`/`effScore` → the editor.
   every x a multiple of ten — `templateBoxes`/`roundGrid`), the app looks for the labels in the
   picture itself with the reader (v386–v391); a label it cannot place keeps the frame's own
   picture — **a card short of its own crop is the price, a card on the neighbour's button is
-  not.**
+  not.** A surely read line the answer does not hold refuses the split (`panelCovers`, `PANEL_COVER` 0.8) — except a line
+  with one Chinese character or none, a price the prompt tells the model to leave out (v757). At most `SPLIT_MAX` 60 labels.
 - **No picture answer and five lines or more → no card** (v649, `NOPIC_LINES`): only the picture can split a board; the photo
   stays on the Camera tab for Crop. Offline (picture never asked) the card is still made. **A priced board the phone's reader reads
   surely is split by its own lines with no picture call** (v755/v756, `boardSure`: `BOARD_MIN` 10 lines, half of them priced,
@@ -374,7 +383,8 @@ loads, then scripts drive the UI and read state (`S`, `SIGN`, `DICT` are globals
 in the session scratchpad and are gone afterwards — rebuild what you need.** A serving root is
 built by **copying**, never as a symlink into the repo. **`tools/field/` holds H's own thirteen board and panel photos at the
 app's 1600 px** (v751, its README names each): a reader change is replayed on them with the real reader model before it is
-judged — the 江宁府 board gives the phone's dump numbers to the digit there, where the drawn board never did.
+judged — the 江宁府 board gives the phone's dump numbers to the digit there, where the drawn board never did. **H's five Meituan
+screenshots (v757) are not in the repo** — they carry his account and address; the harness took them from the session's uploads.
 
 Rules that came out of the harness and cost real versions:
 
@@ -477,7 +487,7 @@ CC BY-SA).
 ## Open / not yet field-checked
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
 as field-checked; only a question he is still raising is open, and each version's archive entry names its own. Open now:
-the reader's path on priced boards (v756).
+the reader's path on priced boards (v756); Meituan's fields and the split of a 40-text screen (v757).
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's character
@@ -487,4 +497,4 @@ row; ratios must match `GF_SHOT`; restore the files the PR does not touch (the p
 square (`RECUT_V` 6, ~95 ms a card, no undo); after one tap the card stays face-up for the session (`S.cueBig`, reverses
 v568 on purpose); on a card of several words the tap shows the **first word's** pinyin and meaning; the pad **prints** the
 character at levels 1 and 2; the star counter and the review flag are under the 44 px rule; an offline weak reading still
-makes its flagged card; `SPLIT_MAX` 30 is a cap a real menu board will reach (the first menus were read at v727).
+makes its flagged card.

@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=756; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=757; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -519,7 +519,7 @@ const LOG_MAX=40, LOG_PRE_KEEP=4, LOG_OLD_HEAD=5, LOG_OLD_TAIL=10; /* v479: step
 const NUMS_OLD=6000; /* the older two are trimmed harder than the newest: a 19-label panel measures 6.1 KB whole, so this
    keeps a panel intact and costs at most 12 KB of the diagnostics H pastes into a chat */
 const NUMS_MAX=12000; /* one reading's numbers, measured on this build: an ordinary sign 1.9 KB, H's 19-label washing machine
-   6.1 KB, and about 180 bytes a label after that — so SPLIT_MAX 30 labels come to roughly 8 KB and fit whole. Past the cap
+   6.1 KB, and about 180 bytes a label after that — so 30 labels come to roughly 8 KB and fit whole, and a screen at SPLIT_MAX 60 (v757) to ~13 KB, which trims. Past the cap
    the blocks go in the order they are worth least: the quick look's boxes first (the reader path does not use them), then
    each label's rectangle in the copy, and the run search's own result last, since that is the one the panel work needs. */
 function numsTrim(o,cap){ const max=cap||NUMS_MAX; if(!o) return o;
@@ -690,6 +690,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   noch fixen"): the 340 rows back to v141 went in one go. A row goes the moment H's report or his own use settles it, unasked;
   a row older than the screen it names is dead. The parked lock rows went too — the lock's code stays, the archive has them. */
   ["again","v756","Priced board: reader path ok?"],
+  ["again","v757","Meituan screenshots: fields right?"],
 ];
 const TO_TEST_GROUPS=[["photo","Take any photo"],["again","Take one of these again"],["app","In the app"],["update","After an update"],["lock","Parked — the lock is off (v531)"]];
 /* What the app claims it can read, and what a photo has actually confirmed (v434, H after the untested menu
@@ -1853,9 +1854,9 @@ async function aiReadPicture(blob,alts,status,rec){
   const pageInfo=(()=>{ const g=x.page; if(!g||typeof g!=="object") return null; const f=k=>String(g[k]||"").trim().replace(/\s+/g," ").slice(0,60); const o={name:f("name"),what:f("what"),place:f("place")}; return o.name||o.what||o.place?o:null; })(); /* v453: the page's own title, for the page card */
   if(keepAll&&lineBoxes) logRead(rec&&rec.shot,`the small lines of this answer are elements, not fine print (${apart?"the texts stand apart":"kind "+kindRaw}) — none of them is left out`); /* v456: the v312 rule stood down, and the record says why (the v399 rule) */
   logRead(rec&&rec.shot,`the AI's answer: ${lines0.length} ${lines0.length===1?"line":"lines"}, apart ${apart?"yes":"no"}, ${Array.isArray(x.labels)?x.labels.length:0} labels${Array.isArray(x.labels)&&x.labels.length?" ("+(labels?labels.length:0)+" usable)":""}, ${Array.isArray(x.boxes)?x.boxes.length:0} boxes, meaning ${String(x.m||"").length} characters`);
-  const bad=!!x.bad||!CJK.test(zh), w=bad?null:await picWords(zh,labels,kindRaw,rec&&rec.shot); /* v640: pinyin, meaning and description from the text model */
+  const bad=!!x.bad||!CJK.test(zh), w=bad?null:await picWords(zh,labels,kindRaw,rec&&rec.shot,pageInfo); /* v640: pinyin, meaning and description from the text model */
   if(labels) for(const l of labels) l.p=await saneP(l.p,l.zh); /* every label's pinyin is checked against its own characters (v389) */
-  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(w?w.p:"",zh),m:w?w.m:"",desc:w?w.desc:"",ml:LANG,note:w?w.note:"",unsure:[saneUnsure(x.unsure),w?w.unsure:""].filter(Boolean).join(" "),bad,model,pv,box:main.box,boxAlt:mainAlt?mainAlt.box:null,droppedBoxesAlt:mainAlt?mainAlt.droppedBoxes:null,boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,outside:[],oneScale,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,""),kind:kindRaw,keptAll:keepAll?(apart?"apart":"kind "+kindRaw):"",pageInfo,apart,labels,picW:pic.w,picH:pic.h,boxScale:picScale(x.box,pic.w,pic.h)}; /* cut (v314): the edges that cut off a line the model left out */
+  return {zh,zht:zh!==zhRaw?zhRaw:"",p:await saneP(w?w.p:"",zh),m:w?w.m:"",desc:w?w.desc:"",ml:w&&w.ml||LANG,src:w&&w.src||"llm",note:w?w.note:"",unsure:[saneUnsure(x.unsure),w?w.unsure:""].filter(Boolean).join(" "),bad,model,pv,box:main.box,boxAlt:mainAlt?mainAlt.box:null,droppedBoxesAlt:mainAlt?mainAlt.droppedBoxes:null,boxes:main.boxes,dropped:main.dropped,droppedBoxes:main.droppedBoxes,outside:[],oneScale,cut:String(x.cut||"").toLowerCase().replace(/[^a-z,]/g,""),kind:kindRaw,keptAll:keepAll?(apart?"apart":"kind "+kindRaw):"",pageInfo,apart,labels,picW:pic.w,picH:pic.h,boxScale:picScale(x.box,pic.w,pic.h)}; /* cut (v314): the edges that cut off a line the model left out */
 }
 /* v640 (H: "Wie machen wir es jetzt schneller?", then "Go A"): the picture model writes only what needs the picture — the
    characters, their boxes, board or not — and the text model writes the pinyin, meaning and description from its text.
@@ -1865,15 +1866,39 @@ async function aiReadPicture(blob,alts,status,rec){
    A label gets p and m only (its description is asked for later, v529). A zh the text model changed is not taken — the
    picture's own reading stands, and a pinyin that no longer fits it falls to saneP. Failed or offline: no words, and the
    card's meaning stays the reader's gloss, pending (readingCard) */
-async function picWords(zh,labels,kind,shot){
+/* v757 (H, with five Meituan screenshots: "Jetzt fangen wir an die Meituan App zu lernen. Ich möchte, dass du alle
+   Standard-Felder kennst und perfekte Multikarten daraus baust."): the phrasebook holds Meituan's standard fields
+   (signs.json, category meituan — the tab bar, the home screen's grid at home and abroad, Messages, the cart, Me,
+   ordering and paying, shops, lists and coupons: 216 labels, pinyin checked by hand where pinyin-pro misreads (排行 háng),
+   the meaning each has IN THE APP). A text of a picture answer that is one of them, whole, takes the book's pinyin and
+   meaning and is not asked of the text model: 闪购 is Meituan's fast delivery of goods, not a "flash sale", 团购 its
+   vouchers, 我的 the Me tab, and the model's guess was all that stood between the learner and the app's own word. The
+   rest go to the model as before, now with the page named ("App, Meituan, home screen" — the picture's own "page" answer,
+   which until now only titled the multicard). A field's meaning is English, the book's language as every phrasebook
+   meaning is, and its card reads mt.src "phrasebook": unverified like every phrasebook card, pending nothing, no
+   reading doubt — the review queue leaves it alone (readingCard). A field entry matches a WHOLE label only, so
+   lineMeaning never glosses 我的 inside 我的家 with the tab's meaning. Offline, or when the words do not come, the
+   fields still carry the book's words — they were written on the labels before the call. */
+const fieldEntry=c=>{ const s=String(c||"").replace(/\s+/g,""), s2=s.replace(/[（(]\d+[)）]$|[>›＞]$|\d{1,2}$/,""); return s&&((SIGNS||[]).find(e=>e.zh===s)||(s2!==s&&(SIGNS||[]).find(e=>e.zh===s2)))||null; }; /* the label as written first (惊喜多选1 is a field); then without a count in brackets, a chevron or a badge count after it (全部(2), 待付款1) — those are the screen's, not the field's */
+const FIELD_KIND={meituan:"App"}; /* what a board of such fields is, for readerPicture's vote */
+async function picWords(zh,labels,kind,shot,page){
   const items=labels&&labels.length?labels.map(l=>l.zh):[zh], t0=Date.now();
-  let out; try{ out=await aiAsk(items.map(c=>({c,kind:"sign",fromPic:kind||true,label:!!(labels&&labels.length)}))); }
-  catch(e){ logRead(shot,`the words for the picture's text did not come: ${e&&e.message||e}`); return null; }
-  if(!Array.isArray(out)||out.length!==items.length){ logRead(shot,`the words for the picture's text came for ${out?out.length:0} of ${items.length} texts — not used`); return null; }
-  const changed=items.filter((c,i)=>out[i].zh&&out[i].zh.replace(/\s/g,"")!==c.replace(/\s/g,"")).length;
-  logRead(shot,`the words for the picture's text from ${out[0].model||"the text model"} in ${((Date.now()-t0)/1000).toFixed(1)} s${changed?` — it would change ${changed} of ${items.length} texts, the picture's reading stands`:""}`);
-  if(labels&&labels.length){ labels.forEach((l,i)=>{ l.p=out[i].bad?"":out[i].p; l.m=out[i].bad?"":out[i].m; });
-    return {p:labels.map(l=>l.p).join(" / "),m:labels.map(l=>l.m).join(" / "),desc:"",note:"",unsure:out.map(o=>o.unsure).filter(Boolean).join(" "),kinds:out.map(o=>o.kind||"")}; } /* kinds (v755): the reader's board takes its kind from them */
+  await loadSigns().catch(()=>{});
+  const book=items.map(fieldEntry), nb=book.filter(Boolean).length;
+  if(labels&&labels.length) labels.forEach((l,i)=>{ if(book[i]){ l.p=book[i].py; l.m=book[i].en; l.src="book"; } });
+  if(nb) logRead(shot,`${nb} of ${items.length} texts are in the phrasebook (${[...new Set(book.filter(Boolean).map(e=>e.cat))].join(", ")}) — their pinyin and meaning are the book's`);
+  const ctx=[kind||"",page&&page.name||"",page&&page.what||""].filter(Boolean).join(", "), ask=items.map((c,i)=>i).filter(i=>!book[i]);
+  let out=[];
+  if(ask.length){
+    try{ out=await aiAsk(ask.map(i=>({c:items[i],kind:"sign",fromPic:ctx||true,label:!!(labels&&labels.length)}))); }
+    catch(e){ logRead(shot,`the words for the picture's text did not come: ${e&&e.message||e}`); return null; }
+    if(!Array.isArray(out)||out.length!==ask.length){ logRead(shot,`the words for the picture's text came for ${out?out.length:0} of ${ask.length} texts — not used`); return null; }
+    const changed=ask.filter((i,j)=>out[j].zh&&out[j].zh.replace(/\s/g,"")!==items[i].replace(/\s/g,"")).length;
+    logRead(shot,`the words for the picture's text from ${out[0].model||"the text model"} in ${((Date.now()-t0)/1000).toFixed(1)} s${ctx?" (it shows: "+ctx+")":""}${changed?` — it would change ${changed} of ${ask.length} texts, the picture's reading stands`:""}`); }
+  const at=i=>{ const j=ask.indexOf(i); return j<0?null:out[j]; };
+  if(labels&&labels.length){ labels.forEach((l,i)=>{ const o=at(i); if(o){ l.p=o.bad?"":o.p; l.m=o.bad?"":o.m; } });
+    return {p:labels.map(l=>l.p).join(" / "),m:labels.map(l=>l.m).join(" / "),desc:"",note:"",unsure:out.map(o=>o.unsure).filter(Boolean).join(" "),kinds:items.map((c,i)=>book[i]?FIELD_KIND[book[i].cat]||"":(at(i)||{}).kind||"")}; } /* kinds (v755): the reader's board takes its kind from them */
+  if(book[0]) return {p:book[0].py,m:book[0].en,desc:"",note:"",unsure:"",src:"book",ml:"en"};
   const o=out[0]; return o.bad?null:{p:o.p,m:o.m,desc:o.desc||"",note:o.note&&o.note!=="ok"?o.note:"",unsure:o.unsure||""}; }
 /* v755 (H: "Go for 1" — the phone's reader as the reading on boards): on the 江宁府 board the reader read 22 lines at 97 % and
    the picture model still had to answer — two minutes, seven calls dead at 75 s — for boxes that were a drawing anyway.
@@ -6379,6 +6404,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  757:"The app knows Meituan's standard fields: on a screenshot, each one gets its Meituan meaning and pinyin.",
   743:"A menu's bottom row is no longer lost when the AI draws its boxes past the picture's edge.",
   755:"A board the phone reads surely is split without the picture model: seconds, not minutes.",
   754:"牌 after a name now reads \"brand\", on your old cards too.",
@@ -7517,7 +7543,7 @@ function loadSigns(){
     _signsLoading=fetch("./signs.json")
       .then(r=>{ if(!r.ok) throw new Error("phrasebook not available"); return r.json(); })
       .then(list=>{
-        SIGNS=list.map(e=>Array.isArray(e)?{zh:e[0],py:e[1],en:e[2],cat:e[3]||""}:e)
+        SIGNS=list.map(e=>Array.isArray(e)?{zh:e[0],py:e[1],en:e[2],cat:e[3]||"",field:e[3]==="meituan"}:e) /* v757: an app's field matches a whole label only (fieldEntry) */
           .filter(e=>e.zh&&e.en).sort((a,b)=>b.zh.length-a.zh.length); /* longest first */
         return SIGNS;
       })
@@ -7605,7 +7631,7 @@ function fewestFirst(rest){
     let bc=Infinity, bl=1;
     const num=rest.slice(i).match(/^[0-9]+(?:\.[0-9]+)?[a-zA-Z%]{0,3}/); const cands=[];
     if(num) cands.push(num[0].length);
-    for(const e of (SIGNS||[])) if(rest.startsWith(e.zh,i)) cands.push(e.zh.length);
+    for(const e of (SIGNS||[])) if(!e.field&&rest.startsWith(e.zh,i)) cands.push(e.zh.length); /* v757: a field is a whole label, never a word inside a line */
     for(let l=Math.min(8,n-i);l>=2;l--) if(DICT&&DICT.has(rest.slice(i,i+l))) cands.push(l);
     cands.push(1);
     for(const l of cands){ const c=1+best[i+l]; if(c<bc||(c===bc&&l>bl)){ bc=c; bl=l; } }
@@ -7623,7 +7649,7 @@ function lineMeaning(line){
     const ch=raw[k];
     if(SIGN_PUNCT.test(ch)){ parts.push({w:ch,p:"",m:"",punct:true}); k++; continue; }
     const num=raw.slice(k).match(/^[0-9]+(?:\.[0-9]+)?[a-zA-Z%]{0,3}/); if(num){ /* a number with its Latin unit as one part (380ml, 20% — v323, H's bottle: "wenn du net content erwähnst, musst du die 380ml auch noch mitnehmen"); a CJK unit joins below */ parts.push({w:num[0],p:num[0],m:num[0],num:true}); k+=num[0].length; continue; } /* a number reads as itself — and takes the unit after it below (mergeUnits, v309) */
-    const hit=(SIGNS||[]).find(e=>raw.startsWith(e.zh,k));
+    const hit=(SIGNS||[]).find(e=>raw.startsWith(e.zh,k)&&(!e.field||(k===0&&e.zh.length===raw.length))); /* v757: 我的 inside 我的家 is not the Me tab */
     if(hit){ parts.push({w:hit.zh,p:hit.py,m:hit.en,ph:true}); k+=hit.zh.length; continue; }
     const rest=raw.slice(k).split(SIGN_PUNCT)[0];
     const w=rest.slice(0,fewestFirst(rest))||ch; /* v726: the split with the fewest words, not the longest word at hand */
@@ -8331,7 +8357,7 @@ const SNAP_REACH=0.85; /* how much of the AI's box the coloured ink must reach a
    own, v297) and not the v340 pixel reading of the box (the labels are never rescaled with it). v357 also asked whether two boxes
    stood side by side and whether any box was taller than twice its width — a panel whose labels sit in one column would have
    failed both, and the geometry was the app's invention; it is gone. */
-const SPLIT_MIN=2, SPLIT_MAX=30, SPLIT_PX=8, CROP_MIN=8.5; /* SPLIT_PX: in the copy's own pixels, the smallest label a frame is made from · CROP_MIN: the smallest frame cropBlob cuts, in the layer's pixels */
+const SPLIT_MIN=2, SPLIT_MAX=60, SPLIT_PX=8, CROP_MIN=8.5; /* SPLIT_MAX 60 since v757: H's Meituan home screen carries 44 texts and his account page 40 — at 30 neither made a multicard */ /* SPLIT_PX: in the copy's own pixels, the smallest label a frame is made from · CROP_MIN: the smallest frame cropBlob cuts, in the layer's pixels */
 /* v457: this many separated blocks of text (textBlocks, above) make a board, a directory, a menu, a panel or a screen, and
    the model has to be asked about it even when the text read cleanly. Until v456 a page card needed a picture answer, a
    picture answer needed the reader to STRUGGLE, and a clean directory board therefore never reached the model at all
@@ -9761,7 +9787,7 @@ async function splitCards(id,sg,ph){
   try{
     for(let k=0;k<lab.length;k++){
       const sgK={...sg,lines:[lab[k].zh],orig:[lab[k].zh],conf:[],boxes:[[]],res:null,mean:"",full:false,nmt:null,cardImg:null,
-        ai:{...sg.ai,zh:lab[k].zh,p:lab[k].p,m:lab[k].m,desc:"",labels:null}}; /* the panel's description is not one label's (v529): Explain asks for a label's own */
+        ai:{...sg.ai,zh:lab[k].zh,p:lab[k].p,m:lab[k].m,desc:"",labels:null,src:lab[k].src||"llm",ml:lab[k].src==="book"?"en":sg.ai.ml}}; /* the panel's description is not one label's (v529): Explain asks for a label's own */
       SIGN[id]=sgK;
       let b=null; try{ b=await readingCard(id,sgK); }catch(e){ logErr("split",e&&e.message||String(e)); b=null; }
       if(!b||!b.card||!b.card.c) continue;
@@ -10532,7 +10558,7 @@ const inBag=c=>CJK.test(c)||/[0-9]/.test(c);
 function panelCovers(pic,lines){
   const pool=new Map();
   for(const c of [pic.zh||"",...(pic.labels||[]).map(l=>l.zh||"")].join("")) if(inBag(c)) pool.set(c,(pool.get(c)||0)+1);
-  return lines.every(l=>{ const a=[...String(l||"")].filter(inBag); if(!a.length) return true;
+  return lines.every(l=>{ const a=[...String(l||"")].filter(inBag); if(!a.length||[...String(l||"")].filter(c=>CJK.test(c)).length<2) return true; /* v757: a line with one Chinese character or none is a price or a decoration (¥43.15 ¥117 3.7折 on H's Meituan home screen), which the prompt tells the model to leave out — the split loses no text with it; v646's rule for a reader line */
     const p=new Map(pool); let hit=0;
     for(const c of a){ const n=p.get(c)||0; if(n){ p.set(c,n-1); hit++; } }
     return hit>=PANEL_COVER*a.length; });
@@ -10623,7 +10649,7 @@ async function readingCard(id,sg){
   /* meaning: AI check (if done here) → phrasebook → offline translation (if enabled) → word gloss (then pending) */
   let mt={src:sg.full?"phrasebook":"gloss",verified:false,pending:!sg.full}, mean=sg.mean||"", pin=keep.map(x=>x.r.py).join(" / ");
   let ml="en", desc="", descMl="en"; /* the meaning's language (v256): the AI answers in the app's language, a typed meaning counts as the app's language, the dictionary and the offline model are English */
-  if(sg.ai && c===sg.ai.zh && !sg.ai.bad && !sg.ai.kept){ mean=sg.ai.m||mean; pin=sg.ai.p||pin; if(sg.ai.m) mt={src:"llm",verified:true,pending:false}; /* v640: a picture answer whose words never came has no meaning of its own */ if(sg.ai.m) ml=sg.ai.ml||"en"; desc=sg.ai.desc||""; descMl=sg.ai.ml||"en"; } /* the description comes with the check (v529) */
+  if(sg.ai && c===sg.ai.zh && !sg.ai.bad && !sg.ai.kept){ mean=sg.ai.m||mean; pin=sg.ai.p||pin; if(sg.ai.m) mt=sg.ai.src==="book"?{src:"phrasebook",verified:false,pending:false}:{src:"llm",verified:true,pending:false}; /* v757: a field of the phrasebook is the book's card, as a fully matched line is */ /* v640: a picture answer whose words never came has no meaning of its own */ if(sg.ai.m) ml=sg.ai.ml||"en"; desc=sg.ai.desc||""; descMl=sg.ai.ml||"en"; } /* the description comes with the check (v529) */
   const pinHand=sg.pinTouched&&(sg.pinEdit||"").replace(/\s+/g," ").trim(), meanHand=sg.meanTouched&&(sg.meanEdit||"").replace(/\s+/g," ").trim();
   if(pinHand) pin=pinHand;
   if(meanHand){ mean=meanHand; mt={...mt,verified:true,pending:false}; ml=LANG; } /* H wrote the meaning: no offline model, no pending */
@@ -10636,7 +10662,7 @@ async function readingCard(id,sg){
   /* doubtful OCR: low confidence on a line H did not correct, or words the dictionary does not know */
   const cfs=sg.lines.flatMap((l,k)=>(sg.orig&&sg.orig[k]===l.trim()&&sg.conf&&sg.conf[k])||[]);
   const unknown=keep.flatMap(x=>x.r.gloss.filter(g=>!g.ph&&!g.m).map(g=>g.w));
-  const why=mt.src==="llm"?"":ocrDoubt(cfs,null,unknown); if(why) mt.suspect=why;
+  const why=mt.src==="llm"||(sg.ai&&sg.ai.src==="book")?"":ocrDoubt(cfs,null,unknown); /* v757: no reading doubt on a field the book named */ if(why) mt.suspect=why;
   if(sg.ai&&sg.ai.bad) mt.suspect="the text looks misread";
   /* a short single line is a word card (reticle front); anything longer is a sign card */
   const word=keep.length===1 && glyphs(c)<=4;
