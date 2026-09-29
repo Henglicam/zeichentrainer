@@ -60,6 +60,26 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v753, 2026-09-29)
+- **The swipe's neighbour carries its word line, and a multicard's texts get their descriptions in one call when the
+  multicard is made (v753, H: "Beim Swipen springen die Multicard-Karten auch immer noch, weil irgendwie Pinyin und so weiter
+  auch noch eingefügt wird. Mach doch mal so, dass das schon alles beim Kreieren der Multicard-Einzelkarten geladen wird und
+  nicht erst, wenn man swipet.").** A DOM probe on the real 江宁府 multicard (`tools/field/f03`, the swipe as a touch gesture
+  through CDP, a MutationObserver over the three seconds after): at the snap `#padline` got its two rows (肉 ròu meat / 肉沫 ròu
+  mò minced pork) — `detailCardHTML` leaves the line empty and only `renderCardDetail`'s `padLine` fills it, after `go()`'s
+  render — and `.dback` got "Explaining …", one description request a swipe (`explainAuto` on every text screen since
+  v585/v736), whose paragraph landed a second later. The neighbour that slid in was 158 px shorter than the card that landed
+  (717 against 876 at 390 px): the word line and the description. **Now (1)** `padLine(d,x,el)` fills a given element, and
+  `detailSwipe`'s `ready` fills the neighbour's own line (`peerLine`, from the same `padTargets`/`detailLit`) as it is built,
+  so the neighbour rides in as tall as the card that lands; **(2)** `pageDescs(pid)`: the descriptions of all of a multicard's
+  texts in ONE `aiAsk` call (`explain:true` each, `saneDesc`, `setDesc`), started with `pageShorts` when the multicard is made
+  and once for a multicard from before when its screen is shown (`DESCRUN`, a failed call tried again next visit as v710); a
+  text whose description did not come still asks by itself. Cost: one text call with every text of the board (24 on 江宁府),
+  instead of one a swipe. Harness (`test753`, the real board, the reader real, Qwen and the text model mocked): **6/6 on v753,
+  2/6 on v752** — on v752 the neighbour has no word line and no description and is 158 px shorter, and the swipe asks
+  "Explaining …"; on v753 all 24 texts carry a description before any is opened, the neighbour's line reads as the landed
+  card's and the heights are equal, and no request goes out. test752 4/4 still. `WHATS_NEW` 753. Not yet field-checked.
+
 ## Current state (PWA v752, 2026-09-29)
 - **A description the card fetched by itself lands without a scroll (v752, H on the open dish cards of 江宁府: "Darüber
   hinaus laden die Details, nachdem man die Karte aufgemacht hat. Und wenn sie geladen sind, rutscht die Karte nach oben. Das

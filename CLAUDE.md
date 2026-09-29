@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v752, 2026-09-29)
+## Current state (PWA v753, 2026-09-29)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -195,11 +195,11 @@ the list keeps its place (v352/v445); the placeholder reads "Characters or pinyi
 character line, the word row gone when the word is the whole card, no Flagged pill — then one button (Test this card) and the
 study card's quiet toolbar Star · Flag · Edit; **Delete lives in the Edit form only**, which returns where the card came from.
 A description the card fetches by itself lands **without a scroll** (v752); only a tapped Explain reveals its paragraph (v527).
-The character pages ("Cards with 行 ›", v691–v717) **left at v737** (H) — do not bring them back unasked. A **multicard's own text**: it swipes to the multicard's next text (v707); its photo frames it alone (v700); + Flashcard (Flashcard › once made), then Flag · Edit
+The character pages ("Cards with 行 ›", v691–v717) **left at v737** (H) — do not bring them back unasked. A **multicard's own text**: it swipes to the multicard's next text (v707; the neighbour rides in with its word line, v753); its photo frames it alone (v700); + Flashcard (Flashcard › once made), then Flag · Edit
 (v692/v695/v736); the pop-up over the photo carries **no action** (v496/v692) — a **Details** fold, closed by default (v733/v741; open by
 default and headless v733–v740, H: "zu viel und unübersichtlich"), holds the short and long description, the long one asked
 the first time the fold is open on a text; a long text wraps at 30 px (v741). The multicard: **Add a text**, Delete multicard
-(v635/v711); its tags once under its title, its texts' rows show a short one-sentence description (`dsh`, all texts in one AI call at creation and once when an older multicard is opened, `pageShorts`; a failed call is asked again next visit, v710) and no flashcard ring; the long one stays on the opened text (v696–v698). On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right, name/pinyin/meaning without it and whole, and a dish description (`priceOf`, `isMenuPage`, v699); its own screen and the look-up show the same, the price on its own line (`priceView`, a view, the record untouched, v712); its flashcard is the name alone (v713); a dish with its own photo takes it as its picture (`dish`, v701/v705); no count line on the multicard's screen nor on the Camera tab (v745/v746).
+(v635/v711); its tags once under its title, its texts' rows show a short one-sentence description (`dsh`, all texts in one AI call at creation and once when an older multicard is opened, `pageShorts`; a failed call is asked again next visit, v710; **their descriptions the same way, `pageDescs`, v753**) and no flashcard ring; the long one stays on the opened text (v696–v698). On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right, name/pinyin/meaning without it and whole, and a dish description (`priceOf`, `isMenuPage`, v699); its own screen and the look-up show the same, the price on its own line (`priceView`, a view, the record untouched, v712); its flashcard is the name alone (v713); a dish with its own photo takes it as its picture (`dish`, v701/v705); no count line on the multicard's screen nor on the Camera tab (v745/v746).
 
 ### Camera — photo to card
 The Camera tab is the camera: the **shutter card** (Take photo, From album) centred, work under it (v466/v470); a photo that

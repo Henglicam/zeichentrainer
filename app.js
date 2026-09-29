@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=752; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=753; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3592,6 +3592,21 @@ async function pageShorts(pid){
   for(let i=0;i<todo.length;i++){ const r=res[i], d=cardOf(todo[i].id); if(!r||r.bad||!d||sureKey(r.zh)!==sureKey(d.c)) continue; /* an answer is only its own text's */
     const s=saneShort(r.desc,d.c); if(!s) continue; await putCard({...d,dsh:{...(d.dsh||{}),[r.ml||LANG]:s}},d.id); n++; }
   if(n&&S.mode==="cards"&&S.detail===pid&&!LOOKUP) render(); }
+/* v753 (the same request: "Mach doch mal so, dass das schon alles beim Kreieren der Multicard-Einzelkarten geladen wird und nicht
+   erst, wenn man swipet"): every text of a multicard asked for its description by itself the moment its screen came up
+   (explainAuto, v585/v736), one call a swipe, and the paragraph landed a second later under the learner's eyes. Now the
+   descriptions of all of a multicard's texts come in ONE call when the multicard is made (with pageShorts), and once for a
+   multicard from before when it is shown; a text whose description did not come still asks by itself, as before */
+const DESCRUN=new Set();
+async function pageDescs(pid){
+  const pg=cardOf(pid); if(!pg||DESCRUN.has(pid+"|"+LANG)||!aiAutoOn()||!navigator.onLine) return;
+  const todo=pageItems(pg).filter(d=>d.c&&!descOf(d)&&!EXPLAIN[d.id]); if(!todo.length) return;
+  DESCRUN.add(pid+"|"+LANG);
+  let res; try{ res=await aiAsk(todo.map(d=>({...d,explain:true}))); }catch(e){ DESCRUN.delete(pid+"|"+LANG); logErr("descriptions",e&&e.message||String(e)); return; }
+  let n=0;
+  for(let i=0;i<todo.length;i++){ const r=res[i], d=cardOf(todo[i].id); if(!r||r.bad||!d||d.c!==todo[i].c||descOf(d)) continue; /* an answer is only its own text's, and one the text fetched itself meanwhile stands */
+    const s=saneDesc(r.desc,d.c); if(!s) continue; await putCard(setDesc({...d},s,r.ml||LANG),d.id); n++; }
+  if(n&&S.mode==="cards"&&!LOOKUP&&(S.detail===pid||todo.some(d=>d.id===S.detail))){ const id=S.detail; if(id!==pid) refreshDesc(id); else render(); } } /* the open text's paragraph lands in place (v752: no scroll); the multicard's own screen shows nothing of it */
 /* the other cards with the same text (v122, H: "if one character connects to various photos, then link them"): their
    crops in a row on the back and in the card detail; a tap opens that card.
    A card generated from a multicard (v487) has no photo of its own — it carries no img, no shot and no frame —, so the
@@ -4628,7 +4643,7 @@ function padLevel(c,x,st){ const key=c+":"+x.pos; if(st.lv[key]) return st.lv[ke
 function peerRowHTML(nd){ const tg=padTargets(nd), lk=S.lockChar; return chrowHTML(nd,tg,x=>`<button class="ch${x.w?"":" num"}${lk&&x.ch===lk?" lock":""}">${esc(x.glyph)}${lk&&x.ch===lk?`<i class="lockmark" aria-hidden="true">${MARK_LOCK}</i>`:""}</button>`,null,lk); } /* v526: the neighbour shows the lock as the card will, so the swipe's snap changes nothing */
 /* the line under the pad (zone 5): the WORD the current character belongs to, its pinyin and meaning as the parts row gives
    them, the current character marked — always there since v518, and the single character's own reading under it (v517) */
-async function padLine(d,x){ const box=$("#padline"); if(!box) return; const c=box.closest(".card.study"); try{ await padLineFill(box,d,x); } finally{ if(c&&c._fitPad&&box.isConnected) c._fitPad(); } } /* v521: the pad is measured again once the line has its content */
+async function padLine(d,x,el){ const box=el||$("#padline"); if(!box) return; const c=box.closest(".card.study"); try{ await padLineFill(box,d,x); } finally{ if(c&&c._fitPad&&box.isConnected) c._fitPad(); } } /* el (v753): the swipe's neighbour fills its own line, not the card's */ /* v521: the pad is measured again once the line has its content */
 async function padLineFill(box,d,x){ box.hidden=false;
   const lk=S.lockChar&&x.w?S.lockChar:null; /* v526: the locked character is green in the line as on its tile (H: "ah, das ist character xx, wie er auch im wort yy vorkommt") */
   const w=x.word||x.ch, mark=(lk&&[...w].includes(lk)?`<i class="plock" aria-hidden="true">${MARK_LOCK}</i>`:"")+[...w].map((ch,i)=>ch===lk?`<b class="lock">${esc(ch)}</b>`:x.w&&i===x.pos-x.wstart?`<b>${esc(ch)}</b>`:esc(ch)).join(""); /* the word with the current character marked, the locked one green */
@@ -5841,6 +5856,11 @@ function detailCardHTML(d,sw){
       ${detailActsHTML(d)} <!-- v703 (H: "Macht doch mal Flag, Edit, Delete und so weiter ganz nach unten und Whole Card darüber"): the actions close the card, under Details (called Whole card until v704) -->
       ${sw&&showHints()?`<div class="hint">${t("Swipe left or right to pick another card.")}</div>`:""}`;
 }
+/* v753 (H, swiping a multicard's texts: "Beim Swipen springen die Multicard-Karten auch immer noch, weil irgendwie Pinyin und so
+   weiter auch noch eingefügt wird"): the neighbour rode in without its word line — detailCardHTML leaves #padline empty and only
+   renderCardDetail's padLine fills it, after the snap — so the card that landed was 61 px taller than the one that slid in, and
+   everything under the character row hopped down. The neighbour fills its own line as it is built, from the same targets */
+function peerLine(p,nd){ if(!nd||isPage(nd)) return; const box=p.querySelector(".padline"); if(!box) return; const dv=(priceView(nd)||{d:nd}).d, tg=dv.c?padTargets(dv):[], lx=detailLit(nd,tg); if(lx) padLine(dv,lx,box); }
 /* the character the detail's line reads: the tapped one, else the first writable one — so the line is always there, as in Learn (v531) */
 function detailLit(d,tg){ const li=detailCh(d); if(li!=null&&tg[li]&&tg[li].w) return tg[li]; return tg.find(x=>x.w)||null; }
 const fromPage=()=>typeof S.detailFrom==="string"&&S.detailFrom.startsWith("page:")?S.detailFrom.slice(5):null; /* v453: the item's detail was opened from its page */
@@ -5883,7 +5903,7 @@ async function dropAddedText(id){
   S.custom=S.custom.filter(x=>x!==d); try{ await idbDel("custom",id); }catch(e){} dropThumb(id);
   const pg=d.page&&cardOf(d.page); if(pg&&(pg.items||[]).includes(id)) await putCard({...pg,items:pg.items.filter(x=>x!==id)},pg.id); }
 function renderPageDetail(main,d){
-  pageShorts(d.id); /* v698: a multicard from before gets its texts' short descriptions once */
+  pageShorts(d.id); pageDescs(d.id); /* v698: a multicard from before gets its texts' short descriptions once; v753: and their descriptions */
   normaliseFilters(); /* the same rule as the ordinary detail (v308/v445): a star cleared on the open page must not strand it outside its own list */
   const list=cardsList(), li=list.findIndex(x=>x.id===d.id), sw=li>=0&&list.length>1;
   main.innerHTML=`<div class="pane">
@@ -5914,8 +5934,9 @@ function renderPageDetail(main,d){
    are pages and an ordinary card's are ordinary cards, so in practice each screen only ever sees its own kind — the
    dispatch stays because it is what makes that true by construction rather than by luck. */
 function detailSwipe(list,li,main,keepFrom){
+  let next=null; /* v753: the card whose neighbour is being built, for its word line */
   return {n:list.length, idx:li,
-    peer:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return null; /* the deck is read live, never the captured list (v445) */
+    peer:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return null; next=nd; /* the deck is read live, never the captured list (v445) */
       const fp=S.fullPic; S.fullPic=false;
       const h=isPage(nd)?{html:pageBodyHTML(nd),cls:"bare"}:{html:detailCardHTML(nd,true),cls:"study detail"}; /* v615 (H: "Jetzt springen die Karten in der vertikalen beim swipe (Cards View)"): the neighbour wears the open card's own classes — as a bare .card it took the plain card's padding, and its photo rode in 10 px lower than where it lands, then hopped up at the snap (measured the same on v600) */ /* no swipe hint on a page: its line is a count, and the ordinary detail's hint already teaches the gesture (v226 takes hints away after 20 reviews anyway) */
       S.fullPic=fp; return h; },
@@ -5924,7 +5945,7 @@ function detailSwipe(list,li,main,keepFrom){
          belongs to another card (v492) — true of the page flag of v453 as well, which survived a swipe until now */
       S.detail=nd.id; if(!keepFrom) S.detailFrom=null; S.fullPic=false; render(); },
     busy:on=>{ const pn=main.querySelector(".pane"); if(pn) pn.classList.toggle("swiping",on); },
-    ready:p=>{ chrowFit(p); fitPageCover(p); } }; /* v596: the same fit as the card's, or a generated flashcard's neighbour slides its page in CONTAINED with a 16 px margin (the .picbox.page fallback) against the card's cover fit */
+    ready:p=>{ chrowFit(p); fitPageCover(p); peerLine(p,next); } }; /* v596: the same fit as the card's, or a generated flashcard's neighbour slides its page in CONTAINED with a 16 px margin (the .picbox.page fallback) against the card's cover fit */
 }
 /* the character pages of v691–v717 ("Cards with 温 3 ›" under the open card's word line) left at v737 (H: "Remove Cards with …"): grep -n "v691" docs/HISTORY.md */
 function renderCardDetail(main,c){
@@ -6320,6 +6341,7 @@ async function delCustom(id){
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
   743:"A menu's bottom row is no longer lost when the AI draws its boxes past the picture's edge.",
+  753:"Swiping through a multicard's texts no longer hops, and their descriptions come with the multicard.",
   752:"An open card stays put while its description loads.",
   751:"A dish's picture stands over its own name even when the AI's grid is off.",
   750:"On a board the reader looks a second time, sharper, when a text is missing.",
@@ -9734,7 +9756,7 @@ async function splitCards(id,sg,ph){
   numCards(id,rows.map(d=>d.id)); numsFile(id); /* v399 */
   try{ await idbPutMany("custom",rows); }catch(e){ logErr("split",e&&e.message||String(e)); return null; } /* all the labels together or none (v264's rule): half of them saved while the placeholder still carries its reading would be read again at the next start and doubled */
   for(let k=0;k<rest.length;k++){ bump("byPhoto"); S.custom.push(rows[k+1]); }
-  if(pg){ S.custom.push(pg); setTimeout(()=>pageShorts(pg.id),0); /* v698 */ numSet(id,"page",{id:pg.id,title:pg.c,why:screen?(shotRec.shared?"shared":"screenshot"):kindApp?"kind App":"split",n}); logRead(id,`one page card for the ${screen?"screenshot":kindApp?"app screen":"picture"}: ${pg.c} — its ${n} texts are its dots`); }
+  if(pg){ S.custom.push(pg); setTimeout(()=>{ pageShorts(pg.id); pageDescs(pg.id); },0); /* v698; v753: the descriptions in one call too */ numSet(id,"page",{id:pg.id,title:pg.c,why:screen?(shotRec.shared?"shared":"screenshot"):kindApp?"kind App":"split",n}); logRead(id,`one page card for the ${screen?"screenshot":kindApp?"app screen":"picture"}: ${pg.c} — its ${n} texts are its dots`); }
   QSMORE[id]=more; QSCARD[id]=ph.id;
   logRead(id,`${n} cards from this photo: ${rows.slice(0,n).map(c=>c.c).join(", ")}`);
   return n;
