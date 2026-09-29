@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v739, 2026-09-29)
+## Current state (PWA v740, 2026-09-29)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -64,11 +64,9 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
 **Recent state worth carrying in the head** (full entries: `grep -n "v6xx" docs/HISTORY.md`):
 - **Dictionary v5 and the gloss rules (v717–v729; v720 and v723–v729 field-checked by H's dumps).** `cedict.tsv.gz` v5
   holds every sense of every one-character line (`tools/cedict-nmax.py --write`, `docs/NMAX.md`). `bestSense`: **`OWN_SENSES`**
-  first (H's street senses — add there, with the reading); **`OWN_PINYIN`** goes into pinyin-pro (夹 jiā); a line splits into
-  the **fewest words** (`fewestFirst`); a one-character word beside another character is inside a word (`besideCJK`) and takes
-  a bound form from the first `BOUND_TOP` 3 senses that is not `PROPER`; alone, the first sense that is not hard; its reading
-  comes from its whole line (`ctx`, `SANDHI`). `glossFix()` applies it once per phone (`GLOSS_FIX_V` 729, only on
-  `DICT_FRESH`). Full wording: `grep -n "Consolidated v717" docs/HISTORY.md`.
+  first (H's street senses — add there, with the reading), **`OWN_PINYIN`** into pinyin-pro (夹 jiā), the fewest words per
+  line, a bound form for a character inside a word (`besideCJK`, `BOUND_TOP` 3, never `PROPER`), the reading from the whole
+  line (`ctx`, `SANDHI`); `glossFix()` once per phone (`GLOSS_FIX_V` 729). Full wording: `grep -n "Consolidated v717" docs/HISTORY.md`.
 - **Duplicate multicards (v731):** More → Your cards shows a row only while two multicards share at least `DUP_SHARE` 0.6 of
   their texts (characters only, `dupKey`); Delete N keeps the newest of each set, the rest go through `delCustom` and the
   Undo line. Not field-checked.
@@ -76,8 +74,7 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
 - **A multicard text's region** is the phone reader's line (v638), else the ink snap (v620), else the AI's frame; since v738 a
   line carrying the neighbour's Han characters at its ends is **cut to the matched run** (`pdTrim`; H's rice cooker, "反柴火饭").
   `REG_V` 738 re-measures every phone's stored boxes once.
-- **The v6xx state** (reader, owner tools, Learn zoom, Crop again) moved to `docs/HISTORY.md` on 2026-09-28 (H):
-  `grep -n "Consolidated v6xx" docs/HISTORY.md`.
+- **The v6xx state** (reader, owner tools, Learn zoom, Crop again): `grep -n "Consolidated v6xx" docs/HISTORY.md` (H, 2026-09-28).
 
 ## Files
 Shell: `index.html` · `styles.css` · `lang.js` · `app.js` · `manifest.webmanifest` (with `share_target`) · `sw.js` ·
@@ -254,8 +251,9 @@ merged by line band and scored by `readingScore`/`effScore` → the editor.
 **must be called without the VPN**), GLM, Claude, custom. One account per provider
 (`aiAccounts`); the phone's own key always wins. Text goes to DeepSeek where possible
 (`textProvider()`), pictures to `pictureProvider()`. Qwen's thinking is switched off on every
-request. Every request is tried **twice** (v201) and aborted after `AI_TIMEOUT_MS` 25 s
-(pictures `PIC_TIMEOUT_MS` 60 s).
+request. Every request is tried **twice** (v201) and aborted after `AI_TIMEOUT_MS` 25 s; a picture's first try after
+`PIC_TIMEOUT_MS` 60 s, its second after `PIC_TIMEOUT2_MS` 120 s (v740, H's 22-line board: the answer did not come in 60 s twice
+while smaller calls answered — how long it needs is unknown until the next dump).
 
 **The owner's relay** (v191): a phone with no key posts to H's Supabase edge function, which adds
 the key, counts the call and refuses past the cap — **per provider since 2026-09-14: qwen 80,

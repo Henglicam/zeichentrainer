@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=739; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=740; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -687,6 +687,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["again","v740","江宁府 board: Read again makes it?"],
   ["camera","v739","Read again on a left photo: reads?"],
   ["cards","v738","Rice cooker: 柴火饭 frame tight?"],
   ["cards","v736","Open card: layout right?"],
@@ -1476,9 +1477,9 @@ async function ctAsk(blob,texts){
   const req=`[picture ${pic.w}×${pic.h} JPEG, ${pic.kb} KB, text check] ${text}`; let r; const t0=Date.now();
   try{
     if(pv==="claude") r=await aiFetch(aiBase(pv),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-      body:JSON.stringify({model,max_tokens:1000,system:sys,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:pic.b64}},{type:"text",text}]}]})},PIC_TIMEOUT_MS);
+      body:JSON.stringify({model,max_tokens:1000,system:sys,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:pic.b64}},{type:"text",text}]}]})},PIC_TIMEOUT_MS,PIC_TIMEOUT2_MS);
     else { const body={model,max_tokens:1000,temperature:0,messages:[{role:"system",content:sys},{role:"user",content:[{type:"text",text},{type:"image_url",image_url:{url:"data:image/jpeg;base64,"+pic.b64}}]}]};
-      noThinking(pv,model,body); r=relay?await relayFetch(pv,body,PIC_TIMEOUT_MS):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)},PIC_TIMEOUT_MS); }
+      noThinking(pv,model,body); r=relay?await relayFetch(pv,body,PIC_TIMEOUT_MS,PIC_TIMEOUT2_MS):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)},PIC_TIMEOUT_MS,PIC_TIMEOUT2_MS); }
   }catch(err){ logAi({model,req,err:"no connection: "+(err&&err.message||err)}); throw new Error(AI_NET_ERR); }
   if(!r.ok){ const t=await apiErrText(r); logAi({model,status:r.status,req,err:t}); throw new Error(relay?relayError(r,t):"API error "+r.status+(t?": "+t:"")); }
   const data=await r.json(); countTokens(pv,data); bump("pics"); bumpModel(model);
@@ -2037,25 +2038,31 @@ function textProvider(){ const pv=aiProvider(); if(pv==="deepseek"||!AI_PROVIDER
    a second failure is reported as AI_NET_ERR, the detail (and the retry) goes to the AI log only. A try that has not
    answered within AI_TIMEOUT_MS is dropped and counts as a failure (v331, H: "he was reading quite long" — a hanging
    connection held the reading for as long as the browser waits, a minute or more, before the retry even started; Qwen's
-   picture answers take 3–10 s on H's phone). */
+   picture answers take 3–10 s on H's phone). A PICTURE'S SECOND TRY WAITS TWICE AS LONG (v740, H's 江宁府 board, 22 lines,
+   read whole twice on Sep 27, on Sep 29 "no answer within 60 s (tried twice)" while a 51 KB picture answered in 15.6 s and
+   DeepSeek in 2 s beside it — the network was up, the board's answer did not come in 60 s): the first try keeps its 60 s,
+   which covers the hiccup the retry was built for; the second gets PIC_TIMEOUT2_MS 120 s, so an answer that needs longer
+   than a minute — how long this board needs is not known; the dump after Read again will say — lands on it. What it costs:
+   a server that never answers holds a picture 180 s instead of 120 before the reading goes on without it. The error names
+   both waits ("no answer within 60 s, then no answer within 120 s (tried twice)"). */
 let HIDDEN_AT=0; document.addEventListener("visibilitychange",()=>{ if(document.hidden) HIDDEN_AT=Date.now(); });
 const whenVisible=()=>document.hidden?new Promise(res=>document.addEventListener("visibilitychange",function f(){ if(!document.hidden){ document.removeEventListener("visibilitychange",f); res(); } })):Promise.resolve();
-const AI_NET_ERR="The AI could not be reached", AI_RETRY_MS=1500, PIC_TOKENS=4000; let AI_TIMEOUT_MS=25000, PIC_TIMEOUT_MS=60000; /* let: the harness shortens them */
+const AI_NET_ERR="The AI could not be reached", AI_RETRY_MS=1500, PIC_TOKENS=4000; let AI_TIMEOUT_MS=25000, PIC_TIMEOUT_MS=60000, PIC_TIMEOUT2_MS=120000; /* let: the harness shortens them */
 /* the picture gets its own budget (v360, H's washing machine: 26 buttons, and Qwen's answer at 1000 tokens already took 22 s —
    a full one passes 25 s, and the abort would throw away an answer that was on its way) */
 const timedFetch=(url,opts,ms)=>{ const ac=new AbortController(), lim=ms||AI_TIMEOUT_MS, t=setTimeout(()=>ac.abort(),lim); return fetch(url,{...opts,signal:ac.signal}).catch(err=>{ throw ac.signal.aborted?new Error("no answer within "+Math.round(lim/1000)+" s"):err; }).finally(()=>clearTimeout(t)); };
-async function aiFetch(url,opts,ms){
+async function aiFetch(url,opts,ms,ms2){ /* ms2: the second try's own limit (v740, the picture's 120 s); else the first's */
   const t0=Date.now();
   try{ return await timedFetch(url,opts,ms); }
   catch(err){
     const bg=document.hidden||HIDDEN_AT>=t0;
     if(bg) await whenVisible(); else await new Promise(r=>setTimeout(r,AI_RETRY_MS));
-    try{ return await timedFetch(url,opts,ms); }
-    catch(err2){ throw new Error((err2&&err2.message||err2)+(bg?" (tried again after the app came back to the foreground)":" (tried twice)")); }
+    try{ return await timedFetch(url,opts,ms2||ms); }
+    catch(err2){ const m1=err&&err.message||String(err), m2=err2&&err2.message||String(err2); throw new Error((m1!==m2?m1+", then ":"")+m2+(bg?" (tried again after the app came back to the foreground)":" (tried twice)")); } /* both waits named when they differ — the log says what happened */
   }
 }
-async function relayFetch(pv,body,ms){
-  return aiFetch(relayUrl(),{method:"POST",headers:{"content-type":"application/json","apikey":SHARE_KEY,"authorization":"Bearer "+SHARE_KEY,"x-install":installId()},body:JSON.stringify({provider:pv,body})},ms);
+async function relayFetch(pv,body,ms,ms2){
+  return aiFetch(relayUrl(),{method:"POST",headers:{"content-type":"application/json","apikey":SHARE_KEY,"authorization":"Bearer "+SHARE_KEY,"x-install":installId()},body:JSON.stringify({provider:pv,body})},ms,ms2);
 }
 /* the provider's or the relay's error text from a failed answer's JSON body ("" when there is none) */
 async function apiErrText(r){ try{ const j=await r.json(); return String((j.error&&(j.error.message||j.error))||j.message||""); }catch(e){ return ""; } }
@@ -2115,10 +2122,10 @@ async function aiReadPicture(blob,alts,status,rec){
   try{
     if(pv==="claude")
       r=await aiFetch(aiBase(pv),{method:"POST",headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-        body:JSON.stringify({model,max_tokens:PIC_TOKENS,system:sys,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:pic.b64}},{type:"text",text}]}]})},PIC_TIMEOUT_MS);
+        body:JSON.stringify({model,max_tokens:PIC_TOKENS,system:sys,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:pic.b64}},{type:"text",text}]}]})},PIC_TIMEOUT_MS,PIC_TIMEOUT2_MS);
     else { const body={model,max_tokens:PIC_TOKENS,temperature:0,messages:[{role:"system",content:sys},{role:"user",content:[{type:"text",text},{type:"image_url",image_url:{url:"data:image/jpeg;base64,"+pic.b64}}]}]};
       noThinking(pv,model,body);
-      r=relay?await relayFetch(pv,body,PIC_TIMEOUT_MS):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)},PIC_TIMEOUT_MS); }
+      r=relay?await relayFetch(pv,body,PIC_TIMEOUT_MS,PIC_TIMEOUT2_MS):await aiFetch(aiBase(pv)+"/chat/completions",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+key},body:JSON.stringify(body)},PIC_TIMEOUT_MS,PIC_TIMEOUT2_MS); }
   }catch(err){ logAi({model,req,err:"no connection: "+(err&&err.message||err)}); throw new Error(AI_NET_ERR); }
   if(!r.ok){ const t=await apiErrText(r); logAi({model,status:r.status,req,err:t}); const e=new Error(relay?relayError(r,t):"API error "+r.status+(t?": "+t:"")); e.status=r.status; throw e; }
   const data=await r.json(); countTokens(pv,data); bump("pics"); bumpModel(model); /* the usage counters and the daily row count the picture readings (v178, H) and the model (v179) */
