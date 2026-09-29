@@ -415,8 +415,9 @@ sentence keyed by its version; More → About lists the last five **as a bullete
 up after an update. **Most versions get no note — that is correct, not an oversight.** A note describing a
 control that no longer exists is not a record but a false instruction, so it goes with the
 control (v534). The owner's twin is **`TO_TEST`**, the Still-to-test list under Advanced settings
-(v435): a PR that ships something only the phone can judge adds its line, and the line goes when
-H says it works. Keep each entry inside **35 columns** or it wraps in the box.
+(v435): a PR that ships something only the phone can judge adds its line, and **the line goes, unasked, the moment H's
+report or his own use settles it** (v748, H: "Ich sagte ja oft genug, dass es passt, sonst würde ich ja lange wieder darauf
+bestehen") — a row older than the screen it names is dead. Keep each entry inside **35 columns** or it wraps in the box.
 
 ## Field lessons that shaped the app (keep)
 The full list is in the archive; these are the ones that keep biting.
@@ -462,10 +463,9 @@ the listing exists; the AI review on by default is a GDPR opt-in question; PIPL 
 CC BY-SA).
 
 ## Open / not yet field-checked
-Everything from **v597 on** is unconfirmed on the phone unless H said otherwise (field-checked: v676, v682, v685, v714, v720,
-v723–v729, v743, v746–v747); each version's archive entry names its open question. First in line: **the Learn zoom** (v653–v686),
-**the phone's reader as the reading** (v641–v652), **Multicards and Cards as a reference** (v687–v696), then Owner tools,
-speed and the Learn screen (`SPOT_ON`).
+**H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
+as field-checked; only a question he is still raising is open, and each version's archive entry names its own. Open now:
+nothing H has named.
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's character

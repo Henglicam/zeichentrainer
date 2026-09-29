@@ -65,8 +65,13 @@ in them has its own entry below. Verbatim:
   shot_1790679653606_691 agrees with the harness: the reader read row 4's three middle dishes as one line again, the app
   shared it (`paddle {named:24, shared:3}`, `aiCal {n:24, err:0.19, took:0, rows:0, wide:0}`), the three frames at 32–44,
   44–60 and 60–73 % across on the row's own 71–73 % down, the dish pictures at 62–75 %. The `TO_TEST` line "江宁府: row 4
-  frames on the row?" goes (v748, markers only besides it); v746's count-line question went with it, unremarked by H on the
-  same board. No `WHATS_NEW`.
+  frames on the row?" goes; v746's count-line question went with it, unremarked by H on the same board. **Then H: "Bitte
+  auch die uralt To-Test-Sachen löschen. Ich sagte ja oft genug, dass es passt, sonst würde ich ja lange wieder darauf
+  bestehen, dass wir es noch fixen. Bitte in Zukunft immer automatisch die Testfälle löschen, wenn du siehst, dass wir sie
+  gelöst haben."** The whole list — 340 rows back to v141, the six parked lock rows too (their code stays) — and the "66
+  older in daily use" counter (`TO_TEST_OLD`) went in one go; the Still-to-test box says "Nothing waiting on the phone" and
+  lists no empty group. The rule, in CLAUDE.md: a row goes unasked the moment H's report or his own use settles it, and
+  what H does not come back to is settled — the "everything from v597 is unconfirmed" paragraph went with it. No `WHATS_NEW`.
 
 ## Current state (PWA v747, 2026-09-29)
 - **A reader line that holds several labels' texts is shared among them (v747, H on the 江宁府 board read on v746: "Rahmen
