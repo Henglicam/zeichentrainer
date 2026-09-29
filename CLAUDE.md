@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v745, 2026-09-29)
+## Current state (PWA v746, 2026-09-29)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -68,7 +68,7 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   `BOUND_TOP` 3, never `PROPER`), the reading from the whole line (`ctx`, `SANDHI`); `glossFix()` once per phone (`GLOSS_FIX_V`
   729). Full wording: `grep -n "Consolidated v717" docs/HISTORY.md`.
 - **Duplicate multicards (v731):** More → Your cards shows a row while two multicards share `DUP_SHARE` 0.6 of their texts
-  (`dupKey`); Delete N keeps the newest of each set, the rest go through `delCustom` and Undo. Not field-checked.
+  (`dupKey`); Delete N keeps the newest of each set, the rest go through `delCustom` and Undo.
 - **A dish's meaning is shown without its price** (`noPriceM`, v710/v712) nor the comma before it (v732).
 - **A multicard text's region**: the reader's line (v638), else the ink snap (v620), else the row of ink under the frame
   (`labelRow`, v742: one line, no join — H's QR panel), else the frame; a line carrying the neighbour's characters at its ends
@@ -76,7 +76,8 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   **A label box drawn past the picture's edge is kept** (`picSlide`, v743: `raw` as drawn, `box` slid inside; no point of the
   calibration's fit; the reader places it by its text, else it keeps the whole picture — never a cut on the neighbour). **A place
   from the model's uncorrected box is no place once the fit says the boxes are off** (`rawPlaced`, v744), **and a dish's
-  `photo` box is mapped by the fit too** (`picCal`, v745: every dish on the 江宁府 board had shown the row below's photo).
+  `photo` box is mapped by the fit too** (`picCal`, v745). **A search run taller than `RUN_TALL` 2.5 or wider than `RUN_WIDE` 1.8
+  of the reader's texts is a band, not a label** — given up for the corrected box (v746, the 江宁府 board's third path).
 - **The v6xx state** (reader, owner tools, Learn zoom, Crop again): `grep -n "Consolidated v6xx" docs/HISTORY.md` (H, 2026-09-28).
 
 ## Files
@@ -191,7 +192,7 @@ The character pages ("Cards with 行 ›", v691–v717) **left at v737** (H) —
 (v692/v695/v736); the pop-up over the photo carries **no action** (v496/v692) — a **Details** fold, closed by default (v733/v741; open by
 default and headless v733–v740, H: "zu viel und unübersichtlich"), holds the short and long description, the long one asked
 the first time the fold is open on a text; a long text wraps at 30 px (v741). The multicard: **Add a text**, Delete multicard
-(v635/v711); its tags once under its title, its texts' rows show a short one-sentence description (`dsh`, all texts in one AI call at creation and once when an older multicard is opened, `pageShorts`; a failed call is asked again next visit, v710) and no flashcard ring; the long one stays on the opened text (v696–v698). On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right, name/pinyin/meaning without it and whole, and a dish description (`priceOf`, `isMenuPage`, v699); its own screen and the look-up show the same, the price on its own line (`priceView`, a view, the record untouched, v712); its flashcard is the name alone (v713); a dish with its own photo takes it as its picture (`dish`, v701/v705); no count line on the multicard's screen (v745).
+(v635/v711); its tags once under its title, its texts' rows show a short one-sentence description (`dsh`, all texts in one AI call at creation and once when an older multicard is opened, `pageShorts`; a failed call is asked again next visit, v710) and no flashcard ring; the long one stays on the opened text (v696–v698). On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right, name/pinyin/meaning without it and whole, and a dish description (`priceOf`, `isMenuPage`, v699); its own screen and the look-up show the same, the price on its own line (`priceView`, a view, the record untouched, v712); its flashcard is the name alone (v713); a dish with its own photo takes it as its picture (`dish`, v701/v705); no count line on the multicard's screen nor on the Camera tab (v745/v746).
 
 ### Camera — photo to card
 The Camera tab is the camera: the **shutter card** (Take photo, From album) centred, work under it (v466/v470); a photo that
@@ -284,7 +285,7 @@ no key**, so a fresh install sends every new card's text from its first card.
 
 ## Languages
 Ten columns in `lang.js`: en, de, fr, es, ja, ko, ru, vi, th, id. **English is the key**; a
-missing key falls back to the English text, never to the key. **491 keys a column, ru 521 (three
+missing key falls back to the English text, never to the key. **490 keys a column, ru 520 (three
 plural forms), en 15.** `nOf`/`wordOf`/`PLURAL` carry the counts.
 
 - **The v412 rule: a pronoun or a count-agreeing verb must never cross a key boundary.** Render
@@ -424,16 +425,14 @@ The full list is in the archive; these are the ones that keep biting.
 - **A clamped box wants a whole-pixel line box**, or the clamped line leaves its top edge behind (v593).
 - **Presence that costs width is not free in a ten-language app** — check the tightest language *before* (v474).
 - **A guard whose lifetime is a timer from the moment it was armed does not cover the gesture it
-  guards — end it on the event that ends the gesture** (v589: a long press held a moment longer
-  deleted the card it had just marked).
+  guards — end it on the event that ends the gesture** (v589).
 - **A guard asserted by setting its own state by hand is not tested — drive the button that sets it** (v468).
 - **A second copy of one number drifts.** One rule, one reader; when a copy is unavoidable, name
   it on both sides (v401).
 - **A constant that holds only because something else is being cut stops holding the moment the cutting stops** (v600:
   `LINE_H` 61 was the word line's height only while a row was sliced; the wrap made it a lie). **A static estimate that must
   be safe for every card is wrong on most of them** — measure (`recapFit`).
-- **A dead constant or class leaves with its last user** (v307), and **a comment that states
-  something false is a defect** (v404).
+- **A dead constant or class leaves with its last user** (v307); **a false comment is a defect** (v404).
 - **An undefined CSS custom property takes its entire declaration with it** — the only way to find one is to
   grep every `var(--x)` against the `:root` list (v589).
 - **The app must say what actually happened** — a record that claims an answer was used when it 404'd costs days

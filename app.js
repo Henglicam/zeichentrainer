@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=745; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=746; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -688,7 +688,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["again","v742","QR panel: 启用… frame on its line?"],
-  ["again","v745","江宁府: every dish's own picture?"],
+  ["again","v746","江宁府: row 4 frames, no count line?"],
   ["cards","v741","Pop-up: Details fold, long text?"],
   ["again","v740","江宁府 board: Read again makes it?"],
   ["camera","v739","Read again on a left photo: reads?"],
@@ -6179,7 +6179,7 @@ function backToCard(){ const cid=fromCard(); S.detailFrom=null; S.fullPic=false;
 function pageOrder(pg,rs){ rs=rs||photoRegions({id:pg.shot}); const order=rs.map(r=>r.card); return pageItems(pg).slice().sort((a,b)=>{ const ia=order.indexOf(a.id), ib=order.indexOf(b.id); return (ia<0?1e9:ia)-(ib<0?1e9:ib); }); }
 function pageBodyHTML(d){
   const rs=photoRegions({id:d.shot}), its=pageItems(d), full=fullPhoto(d), sorted=pageOrder(d,rs);
-  /* v745 (H: "Saved as Flashcards muss da nicht mehr angezeigt werden in dieser Ansicht"): the line "Texts on this multicard: 24, as flashcards: 0." is gone from the multicard's own screen; the Camera tab's regionLine keeps the key */
+  /* v745 (H: "Saved as Flashcards muss da nicht mehr angezeigt werden in dieser Ansicht"): the line "Texts on this multicard: 24, as flashcards: 0." is gone from the multicard's own screen, and since v746 from the Camera tab too */
   return `<div class="shot pagecard" data-page="${esc(d.id)}">
       <div class="shotwrap"><div class="zwrap">${full?`<img src="${urlOf(full)}" alt="${t("alt:photo")}">`:""}${rs.length?regionsHTML({id:d.shot},rs):""}</div></div>
       <div class="ptitle">${esc(d.c)}</div>
@@ -6640,6 +6640,7 @@ async function delCustom(id){
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
   743:"A menu's bottom row is no longer lost when the AI draws its boxes past the picture's edge.",
+  746:"A text the reader found on a band wider than itself now gets its own frame.",
   745:"A menu dish's picture now stands where its name is, and the multicard no longer counts its flashcards.",
   744:"A dish the phone's reader ran together with its neighbours now gets its own picture.",
   739:"A photo left on the Camera tab has a Read again button.",
@@ -7093,7 +7094,7 @@ function pdAsPass(lines){
    address; 消防栓|火119警 has its digits out of order; 景东街 lacks a 西 set apart); 93 would have let 幸北|福京 (北京幸福
    read across two columns) through, 91 招商银行 without its 信用卡. Three lines or more may be a board's plates (v457). */
 const PD_ON_SURE=true, PD_SURE=95;
-const PD_ON=true, PD_MATCH=0.66, PD_ROOM=0.25, pdNorm=s=>String(s).replace(/[^\u4e00-\u9fff]/g,"");
+const PD_ON=true, PD_MATCH=0.66, PD_ROOM=0.25, RUN_TALL=2.5, RUN_WIDE=1.8, /* v746: a search run taller or wider than this, in the reader's texts, is a band */ pdNorm=s=>String(s).replace(/[^\u4e00-\u9fff]/g,"");
 function pdLcs(a,b){ const A=[...a], B=[...b], dp=new Array(B.length+1).fill(0); for(let i=1;i<=A.length;i++){ let prev=0; for(let j=1;j<=B.length;j++){ const t=dp[j]; dp[j]=A[i-1]===B[j-1]?prev+1:Math.max(dp[j],dp[j-1]); prev=t; } } return dp[B.length]; }
 /* v738 (H's Zoom data of the rice cooker, sent for "Warum ist der Rahmen hier zu breit?"): the reader read 柴火饭's line as
    "反柴火饭" — 低卡饭's last character beside it, misread — and the whole line's box became the region (v638), 3 of 4 matching.
@@ -9616,7 +9617,7 @@ async function cropSign(id,opts){
                   logRead(id,q?(q.read?`${l.zh}: read as ${q.read} at ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`
         :`${l.zh}: no reading, its row's order gives it ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`):`${l.zh}: no run of the picture reads as it — the whole picture`);
                   if(!q) return null; /* no FRAME_ROOM here: the run was already grown as far as its neighbours allow (v388) */
-                  return {x0:Math.max(0,q.x0)*W,y0:Math.max(0,q.y0)*Hh,x1:Math.min(1,q.x1)*W,y1:Math.min(1,q.y1)*Hh}; }); }
+                  return {x0:Math.max(0,q.x0)*W,y0:Math.max(0,q.y0)*Hh,x1:Math.min(1,q.x1)*W,y1:Math.min(1,q.y1)*Hh,run:true}; }); } /* run (v746): the search's own rectangle, measured against the reader's texts below */
               else { N.found={bands:found?found.bands:0,runs:found?found.runs:0,hit:found?found.hit:0,filled:found?found.filled:0,ordered:found?found.ordered:0,whole:true}; /* v399 */
                 logRead(id,`the reader found ${found?found.hit:0} of the ${lab.length} labels in the picture — every card gets the whole picture`); splitWhole=true; } }
             else { const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen; /* the frame at its own pixels when nothing was straightened: a panel's labels are small in the 800 px picture the AI saw */
@@ -9646,6 +9647,19 @@ async function cropSign(id,opts){
                the labels the reader did not name give it up and take the corrected box below, else the whole picture (v391's
                price). The reader's own lines and the old search's readings (labelWhole) stay as they are. */
             let gave=0; if(cal&&rawPlaced){ pic.labels.forEach((l,k)=>{ if(!pdPl[k]&&labelRects[k]){ labelRects[k]=null; gave++; } }); if(gave){ labelWhole=true; logRead(id,`${gave===1?"one label the phone's reader did not name leaves the model's own box":gave+" labels the phone's reader did not name leave the model's own boxes"} — the ${cal.n} texts both placed say the boxes are off by ${cal.err} of a text's size on this photo, so each takes the corrected box, or the whole picture`); } }
+            /* v746 (H's 江宁府 board on v745, 2026-09-29, "die Frames sind immer noch nicht ganz richtig gesetzt": this time the
+               model's boxes were all one width, so the search of v386 ran and named 重庆豌杂小面 on a run 47–75 % across and
+               61–72 % down — two columns and the photo row above, 2.2 characters' width a character and five texts tall,
+               where the reader's own texts of that row stand 2 % tall; the frame took the run as it was, and the corrected
+               box of 招牌油豆腐粉丝汤 then "would lie on another text — no place", so that card kept the whole picture.)
+               A run far taller or wider than the texts the reader placed is a band, not a label: once the fit stands, it is
+               given up and takes the corrected box and its row of ink below, as an unplaced label does. */
+            let wide=0; if(cal){ const nCh=z=>[...String(z)].filter(c=>CJK.test(c)||/[0-9]/.test(c)).length;
+              const hs=[], pws=[]; pdPl.forEach((q,k)=>{ if(!q) return; hs.push((q.y1-q.y0)*Hh); const n=nCh(pic.labels[k].zh); if(n) pws.push((q.x1-q.x0)*W/n); });
+              const Hm=median(hs)||0, pw=median(pws)||0;
+              if(Hm&&pw) pic.labels.forEach((l,k)=>{ const rc=labelRects[k]; if(pdPl[k]||!rc||!rc.run) return; const n=Math.max(1,nCh(l.zh));
+                const tall=(rc.y1-rc.y0)/Hm, wd=(rc.x1-rc.x0)/(pw*n); if(tall<=RUN_TALL&&wd<=RUN_WIDE) return;
+                labelRects[k]=null; wide++; logRead(id,`${l.zh}: the run the search named it on is ${tall>RUN_TALL?`${tall.toFixed(1)} texts tall`:""}${tall>RUN_TALL&&wd>RUN_WIDE?" and ":""}${wd>RUN_WIDE?`${wd.toFixed(1)} times as wide as its characters`:""} against the reader's texts — a band, not a label; it takes the corrected box`); }); }
             if(cal){ let took=0, rows=0; const placed=()=>labelRects.filter(Boolean).map(rc=>({x0:rc.x0/W,y0:rc.y0/Hh,x1:rc.x1/W,y1:rc.y1/Hh}));
               let gyc; const grey=async()=>{ if(gyc!==undefined) return gyc; try{ const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen; const sb=src===seen?b:await createImageBitmap(src); gyc=labelGrey(sb,pic.box); if(sb!==b) sb.close(); }catch(e){ gyc=null; logErr("split",e&&e.message||String(e)); } return gyc; }; /* v742: the picture in grey once, only when a label needs it */
               for(let k=0;k<pic.labels.length;k++){ const l=pic.labels[k]; if(labelRects[k]||!l.box||l.raw) continue; /* only a label with no place at all: what the reader or the old search placed stays; a label drawn past the edge that the reader did not name keeps the whole picture (v743: the fit does not reach past the edge, and anchored on the slid box it took its neighbour's run in the harness — a card on the neighbour is the one price not paid, v391) */ const q0=cal.map(l.box);
@@ -9656,7 +9670,7 @@ async function cropSign(id,opts){
                 took++; if(row) rows++; const Hk=Math.min(q.y1-q.y0,q.x1-q.x0);
                 labelRects[k]={x0:Math.max(0,q.x0-Hk*PD_ROOM)*W,y0:Math.max(0,q.y0-Hk*PD_ROOM)*Hh,x1:Math.min(1,q.x1+Hk*PD_ROOM)*W,y1:Math.min(1,q.y1+Hk*PD_ROOM)*Hh};
                 logRead(id,`${l.zh}: the phone's reader did not find it — the AI's box, corrected by the ${cal.n} texts both placed (off by ${cal.err} of a text's size), at ${pcv(q0.x0)}–${pcv(q0.x1)} % across, ${pcv(q0.y0)}–${pcv(q0.y1)} % down${row?`; its characters at ${pcv(q.x0)}–${pcv(q.x1)} %, ${pcv(q.y0)}–${pcv(q.y1)} %`:" — nothing of a character's shape near it, the box stays"}`); }
-              N.aiCal={n:cal.n,err:cal.err,took,rows,gave}; } /* gave (v744): how many left the model's own box for this */
+              N.aiCal={n:cal.n,err:cal.err,took,rows,gave,wide}; } /* gave (v744): how many left the model's own box for this; wide (v746): how many left the search's run */
             else if(pic.labels.some((l,k)=>!pdPl[k])) logRead(id,"the AI's boxes do not agree with where the phone's reader found the texts — the texts it did not find keep the whole picture"); }
           if(labelRects) N.lrects=labelRects.map(rc=>rc?numBox(rc):null); /* v399: in the picture's own pixels, the input photoFrameOf maps onto the photo */
           b.close();
@@ -10968,9 +10982,8 @@ function regionsHTML(rec,rs,o){
   return `<${wrap} class="regions${learn?" learn":""}${only?" only":""}"${learn?"":` data-regions="${rec.id}"`}>${rs.map(r=>{ const b=r.box, pc=x=>(x*100).toFixed(2)+"%";
     return `<${tag} class="region${learn&&o.me===r.card?" me":""}" ${learn?"data-rid":"data-region"}="${esc(r.rid)}" style="left:${pc(b.x)};top:${pc(b.y)};width:${pc(b.w)};height:${pc(b.h)}${b.a?`;transform:rotate(${b.a}deg)`:""}"${learn?' aria-hidden="true"':` aria-label="${esc(r.zh.replace(/\n/g," "))}"`}><i class="ff" aria-hidden="true"></i></${tag}>`; }).join("")}</${wrap}>`;
 }
-function regionLine(rs,pg){ const n=rs.filter(r=>r.card).length; /* pg (v453): the photo's cards are one page's texts — and since v488 what a multicard counts is its flashcards, the only number on it that can move */
-  return pg?t("Texts on this multicard: {0}, as flashcards: {1}.",n,rs.filter(r=>{ const d=r.card&&cardOf(r.card); return !!(d&&d.page&&madeFrom(d)); }).length)
-          :t("{0} cards from this photo, {1} learned.",n,rs.filter(r=>regionState(r)===2).length); }
+function regionLine(rs){ const n=rs.filter(r=>r.card).length; /* v746 (H: "As Flashcards ist immer noch drin"): a multicard's photo shows no count line on the Camera tab either — the "Texts on this multicard: N, as flashcards: M." of v453/v488 is gone with its key; a plain photo keeps its line */
+  return t("{0} cards from this photo, {1} learned.",n,rs.filter(r=>regionState(r)===2).length); }
 /* the photo gives nothing away until it is asked (v467, H: "Gerade chinesische Apps können ja extrem voll mit Text sein …
    Ich möchte, dass in der Default Ansicht nichts eingerahmt ist. Und wenn ich auf ein Textelement drauftippe, dann erscheint
    der Rahmen."). A Chinese app screen carries thirty texts, and thirty permanent frames are a wall of ink over the picture
@@ -11156,7 +11169,7 @@ function renderShots(){
           ${zoomed?`<div class="shotzoom" style="${zoomStyle(s)}" role="img" aria-label="${t("the framed area")}"></div>`:`<img src="${shotURL(s)}" alt="${t("alt:photo")}">`}${working?`<div class="scan" aria-hidden="true"></div>`:""}${rs.length?regionsHTML(s,rs):""}
           ${cropping?`<div class="croplayer${shown?" framed":""}${zoomed?" zoomed":""}" data-id="${s.id}">${zoomed?"":`<div class="croprect${READING[s.id]&&!READ_FAIL.test(READING[s.id])?" working":""}"${cropRectStyle()}>${READING[s.id]&&!READ_FAIL.test(READING[s.id])?`<div class="work" aria-hidden="true"><svg><rect/></svg></div>`:""}<div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="${t("Turn the frame")}"></div></div>`}</div>`:""}
         </div>
-        ${rs.length?(pg=>`${pg?`<div class="ptitle">${esc(pg.c)}</div>`:""}<div class="regline">${esc(regionLine(rs,pg))}</div><div class="taphint">${esc(t("Tap any text on the photo."))}</div>`)(pageOfShot(s.id)):""}
+        ${rs.length?(pg=>`${pg?`<div class="ptitle">${esc(pg.c)}</div>`:""}${pg?"":`<div class="regline">${esc(regionLine(rs))}</div>`}<div class="taphint">${esc(t("Tap any text on the photo."))}</div>`)(pageOfShot(s.id)):""}
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">${t("Cancel")}</button>`
           :AUTO[s.id]&&PENDING[s.id]?`<button class="ocr-btn" data-autoedit="${s.id}">${t("Crop")}</button><button class="del" data-autocancel="${s.id}">${t("Cancel")}</button>`
