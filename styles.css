@@ -321,9 +321,9 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 @keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
 .shot{border-radius:var(--rc);padding:10px;margin-bottom:14px;background:var(--card);box-shadow:var(--shadow)}
 .shot img{width:100%;border-radius:10px;display:block;margin-bottom:8px}
-.shot .meta{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.shot .meta{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px} /* v739: three buttons beside the timestamp do not fit at 360 px in German or Russian — the row wraps and the buttons stand under the time, at the right */
 .shot .ts{font-family:var(--mono);font-size:12px;color:var(--label3)}
-.shot .acts{display:flex;gap:6px}
+.shot .ts{flex:1 1 auto;min-width:0} .shot .acts{display:flex;gap:6px;margin-left:auto;white-space:nowrap} .shot .acts button{white-space:nowrap} /* v739: a button never breaks inside */
 .ocr-btn{background:var(--tint-soft);border:none;border-radius:999px;cursor:pointer;font-size:13px;font-weight:600;color:var(--tint);padding:9px 14px;min-height:38px}
 .ocr-btn:active{opacity:.6}
 .ocr:not(:empty){margin-top:10px}

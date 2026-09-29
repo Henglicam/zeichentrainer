@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=738; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=739; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -687,6 +687,7 @@ async function sendFeedback(text,shot){
    as untested. THE RULE, the owner's twin of WHATS_NEW (v408): a PR that ships something only the phone can judge
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
+  ["camera","v739","Read again on a left photo: reads?"],
   ["cards","v738","Rice cooker: 柴火饭 frame tight?"],
   ["cards","v736","Open card: layout right?"],
   ["cards","v734","Pop-up descriptions: right?"],
@@ -6608,6 +6609,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  739:"A photo left on the Camera tab has a Read again button.",
   738:"A text's frame on a multicard no longer takes in the neighbour's last character.",
   736:"An open card shows everything at once, with Star, Flag and Edit as a quiet row; Delete is in Edit.",
   733:"Tap a text on a multicard's photo: the pop-up now says what it is, in a sentence or two.",
@@ -10029,7 +10031,7 @@ async function failPending(id,why,msg){
   if(RRPH[PENDING[id]]) return rrEnd(id,{kind:"none",why:String(why||msg||"")});
   const ph=pendingCard(id); delete PENDING[id]; delete SIGN[id]; delete PLACED[id]; delete PICSEEN[id]; delete SPLIT[id]; delete PROV[id]; if(!ph) return; if(!ph.reading){ todoDone(id); return; } /* the card is there with a text of H's own: the photo has its card (v509) */
   dropExtraShot(id);
-  if(ph.reading.auto&&!ph.c){ await dropAuto(id,ph.id); delete READING[id]; const note=/^the reader did not load/.test(msg||"")?failText("Reading failed: "+msg):/^the AI could not check the photo/.test(why||"")?"The AI could not check this photo, and the reading alone was not good enough for a card. Tap Crop to read the photo again.":"Nothing could be read. Tap Crop to frame the text by hand."; /* a reader that never loaded is not a photo without text (v335) */
+  if(ph.reading.auto&&!ph.c){ await dropAuto(id,ph.id); delete READING[id]; const note=/^the reader did not load/.test(msg||"")?failText("Reading failed: "+msg):/^the AI could not check the photo/.test(why||"")?"The AI could not check this photo, and the reading alone was not good enough for a card. Tap Read again, or Crop to frame the text by hand.":"Nothing could be read. Tap Crop to frame the text by hand."; /* a reader that never loaded is not a photo without text (v335) */
     QSNOTE[id]=t(note); QSBAD[id]=true; shotTried(id,note); /* v509 (H: "Wenn eine Karte nicht gelesen werden kann: bitte unter Camera belassen und als solche benennen. Nicht einfach löschen."): the note is on the record, so the photo stays on the Camera tab with it across a restart, until it makes a card or is deleted */
     if(S.mode==="cards"&&!S.editing) render(); else renderShots(); autoNext(); return; } /* a card made by itself with nothing to show is no card (v325): the photo stays with Crop */
   todoDone(id); /* the card stays, flagged: the photo has its card */
@@ -11079,7 +11081,7 @@ function renderShots(){
         <div class="meta"><span class="ts">${dt}</span><span class="acts">${cropping
           ?`<button class="del" data-cropcancel="${s.id}">${t("Cancel")}</button>`
           :AUTO[s.id]&&PENDING[s.id]?`<button class="ocr-btn" data-autoedit="${s.id}">${t("Crop")}</button><button class="del" data-autocancel="${s.id}">${t("Cancel")}</button>`
-          :`${PENDING[s.id]?"":`<button class="ocr-btn" data-crop="${s.id}">${t("Crop")}</button>`}<button class="del" data-del="${s.id}">${t("Delete")}</button>`}</span></div>
+          :`${!PENDING[s.id]&&!AUTOQ.includes(s.id)&&!(byShot.get(s.id)||[]).some(d=>d.c)?`<button class="ocr-btn" data-reread="${s.id}">${t("Read again")}</button>`:""}${PENDING[s.id]?"":`<button class="ocr-btn" data-crop="${s.id}">${t("Crop")}</button>`}<button class="del" data-del="${s.id}">${t("Delete")}</button>`}</span></div>
         <div class="ocr" id="ocr-${s.id}">${PENDING[s.id]?readingHTML(READING[s.id]||AI_BUSY_TEXT,s.id):SIGN[s.id]?signEditorHTML(s.id):READING[s.id]?readingHTML(READING[s.id],s.id):cropping
           ?CROP.auto?busyHTML(t("Finding the text …")):`<span class="badge">${t("Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.")}</span>`
           :AUTOQ.includes(s.id)?`<span class="badge">${t("Waiting for its turn …")}</span>` /* a photo of the batch still in the queue says so (v454, H: "sonst denkt man, dass sich die App verschluckt hat") — a plain line, no bar: nothing is happening to this photo yet, and the batch line above says the work goes on */
@@ -11092,6 +11094,7 @@ function renderShots(){
   wireRegions(box); /* the dots on a marked photo (v448) */
   box.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>delShot(b.dataset.del,true));
   box.querySelectorAll("[data-crop]").forEach(b=> b.onclick=()=>{ CROP={id:b.dataset.crop,rect:null}; renderShots(); });
+  box.querySelectorAll("[data-reread]").forEach(b=> b.onclick=()=>readAgain(b.dataset.reread)); /* v739 */
   box.onclick=e=>{ const b=e.target.closest("[data-savenow]"); if(b){ b.disabled=true; saveNow(b.dataset.savenow); } }; /* the button is inside the reading box, which every status re-renders (v237) */
   box.querySelectorAll("[data-cropcancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.cropcancel; abandonReading(id); CROP=null; S.openShot=id; renderShots(); }); /* v468: the photo has no card and nothing busy the instant this returns — without the pin it vanishes under the thumb, which is the moment the hand means to tap Crop */
   box.querySelectorAll("[data-autoedit]").forEach(b=> b.onclick=()=>editAuto(b.dataset.autoedit)); /* the frame right after the shutter (v437) */
@@ -11242,6 +11245,16 @@ function resumeShots(){ /* v509: the photos the app still owes a card, back into
     if(!s.tried&&!AUTOQ.includes(s.id)) ids.push(s.id); } /* a photo tried and failed, or taken back by hand, stays listed and is not read again by itself */
   if(ids.length) autoQueueAdd(ids,true);
 }
+/* v739 (H, a menu board left on the tab with "The AI could not check this photo …": "muss ich Karten, die unter Camera geblieben
+   sind, sagen, dass sie nochmal gelesen werden sollen"): Read again, on a photo with no card of its own, reads the whole photo
+   again exactly as the shutter did — the note goes, the photo takes the front of the queue when something else is in hand,
+   else the automatic reading starts now (autoNext's own rule). The photo keeps `tried`, so a restart still leaves it alone. */
+function readAgain(id){ const s=S.inbox.find(x=>x.id===id); if(!s||PENDING[id]) return;
+  delete QSNOTE[id]; delete QSBAD[id]; if(s.note){ delete s.note; idbPut("inbox",s).catch(()=>{}); }
+  S.openShot=id;
+  if(!S.autoCard){ CROP={id,rect:null}; renderShots(); return; } /* the harness's switch: no automatic reading, so the frame is offered as Crop does */
+  if(CROP||Object.keys(PENDING).length){ autoQueueAdd([id],true); renderShots(); autoNext(); return; }
+  autoDrop(id); CROP={id,rect:null,auto:true}; renderShots(); } /* the render starts proposeFrame for an automatic frame, as it does after the shutter */
 function todoDone(id){ const s=S.inbox.find(x=>x.id===id); if(s&&(s.todo||s.tried||s.note)){ delete s.todo; delete s.tried; delete s.note; idbPut("inbox",s).catch(()=>{}); } } /* v509: the photo has made its card, or its record is going — nothing is owed any more */
 function shotTried(id,note){ const s=S.inbox.find(x=>x.id===id); if(!s) return; s.todo=true; s.tried=true; /* the mark is set here too, not only kept: a photo the automatic card failed on has to stay on the tab whatever cleared the mark before */ if(note) s.note=note; else delete s.note; idbPut("inbox",s).catch(()=>{}); } /* v509: the automatic card was tried and failed, or the hand took the photo back — the photo stays on the Camera tab, named by its note, until it makes a card or is deleted, and is not read again by itself (tried once, v411) */
 function shotNote(s){ return QSNOTE[s.id]||(s.note?t(s.note):""); } /* the note under a photo: this session's, else the one its record carries across a restart (v509) */
