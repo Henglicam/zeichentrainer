@@ -60,6 +60,26 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## The relay logs every call (no version — `supabase/` only, 2026-09-29)
+- **The relay writes what the provider did into its own log (H: "Go 2", after the 江宁府 board's fourth failure).** The
+  facts before it: v739's dump said "no answer within 60 s (tried twice)", v740 lengthened the second try to 120 s and v741's
+  dump said "no answer within 60 s, then no answer within 120 s"; H then pulled the relay's own log (Edge Functions → ai-relay
+  → Logs): **seven invocations between 08:26:01 and 08:28:15 his time, in pairs 0.3 s apart, every one shut down at exactly
+  75.0 s, none with a line of its own** — while DeepSeek calls through the same function answered in 3–4 s minutes before,
+  and the same board had answered in 22.6 s on Sep 27. 75 s is no documented Supabase limit (150 s wall clock and idle;
+  one troubleshooting page says 60 s on the free plan); whether Qwen answered late, closed the line, or the worker was
+  retired cannot be told from boot and shutdown alone, and the phone saw nothing at 120 s either — Supabase does not tell
+  the client when the worker dies. Why the calls come in pairs is not known either; the app makes one picture call per
+  reading (`EARLY` and `SURECHK` exclude each other). So the function now logs, never the text: `qwen <- 187654 bytes` at
+  the start, `qwen -> 200 in 22.6 s, 4120 chars` at the end, and `qwen closed after 75.0 s: <reason>` when the fetch or
+  the body read throws before an answer — that case answers the phone with **502** `{error:"qwen closed the line after
+  75.0 s: …"}` instead of dying in silence, so Diagnostics on the phone say it too (`apiErrText` reads `error`). The next
+  failed board then reads one of three ways: a `->` line after 75 s (Qwen answered, the answer was lost on the way), a
+  `closed` line (Qwen or its gateway cut the line), or no line at all after `<-` (Supabase retired the worker). **Deploy is
+  H's:** Supabase → Edge Functions → ai-relay → Code, paste the file, Deploy; "Verify JWT" stays off. Not run here — no Deno
+  in the harness; the file passes Node's type-stripping syntax check. v740's 120 s second wait stays: harmless, and it
+  only helps once the relay lives longer than 75 s.
+
 ## Current state (PWA v742, 2026-09-29)
 - **A text the reader could not place takes the row of ink under the model's box (v742, H's QR door panel — a screenshot
   of the 博雅园小区 access-control app: "Hier hätten aus dem einen feld/frame glaub ich 2 gemacht werden müssen", then "Oh, ich

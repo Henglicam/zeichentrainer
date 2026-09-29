@@ -56,7 +56,22 @@ Deno.serve(async (req) => {
     const cap = (OWNER_INSTALL && install === OWNER_INSTALL) ? Infinity : pv.cap;
     if (c.phone > cap || c.all > CAP_ALL) return json({ error: "daily limit reached" }, 429);
   } catch (e) { return json({ error: "counter failed" }, 500); }
-  const up = await fetch(pv.url(pv.key), { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${pv.key}` }, body: JSON.stringify(payload.body || {}) });
-  const text = await up.text();
+  // What the provider did, in this function's own log (2026-09-29, H's 22-line board: seven relay calls each ended at
+  // 75.0 s with nothing in the log, and whether Qwen answered late, closed the line or the worker was retired could not
+  // be told apart). Never the text: provider, request bytes, status, seconds, answer length. A call that is cut before
+  // its answer logs "closed" with the reason and answers the phone with 502 instead of crashing the worker in silence.
+  const bodyText = JSON.stringify(payload.body || {}), t0 = Date.now();
+  const secs = () => ((Date.now() - t0) / 1000).toFixed(1);
+  console.log(`${name} <- ${bodyText.length} bytes`);
+  let up: Response, text: string;
+  try {
+    up = await fetch(pv.url(pv.key), { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${pv.key}` }, body: bodyText });
+    text = await up.text();
+  } catch (e) {
+    const why = String((e as Error)?.message || e).slice(0, 200);
+    console.log(`${name} closed after ${secs()} s: ${why}`);
+    return json({ error: `${name} closed the line after ${secs()} s: ${why}` }, 502);
+  }
+  console.log(`${name} -> ${up.status} in ${secs()} s, ${text.length} chars`);
   return new Response(text, { status: up.status, headers: { ...CORS, "content-type": up.headers.get("content-type") || "application/json" } });
 });
