@@ -60,6 +60,19 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v754, 2026-09-29)
+- **牌 after a name is "brand" (v754, H: "Gerade ist ein Papiertaschentuch als Signboard übersetzt worden (pai). Not good." —
+  then "Mach 牌 einfach als 'brand' wenn es nach einem Namen steht").** CC-CEDICT's line for 牌 reads "signboard; plaque;
+  plate; tablet; brand; trademark; mahjong tile; …" and `bestSense` takes the first plain sense, so 牌 was "signboard" on
+  a tissue pack after its brand name. **Now** `AFTER_SENSES` (`{"牌":"brand"}`) — a one-character token with a character
+  before it on the line takes its after-sense before anything else (`bestSense(w,py,inWord,after)`, the flag from
+  `lineMeaning` and from `glossCtx` for the fix pass); alone, 牌 keeps the dictionary's "signboard", and the dictionary word
+  品牌 stays "brand name". `GLOSS_FIX_V` 754 re-glosses the cards from before once per phone, the word-by-word meaning with
+  them. Harness (`test754`, a 洁柔牌 sign card glossed on v729 and a one-character 牌 card): **5/5 on v754, 3/5 on v753** — on
+  v753 洁柔牌 glosses 牌 "signboard" and the fix pass stays at 729; on v754 it glosses "brand" and the card from before reads
+  "洁柔 Jierou · 牌 brand" after the fix, while 牌 alone and 品牌 are unchanged on both. `WHATS_NEW` 754. Not yet field-checked
+  (the pack's own text is unknown — H sent the word, not the card).
+
 ## Current state (PWA v753, 2026-09-29)
 - **The swipe's neighbour carries its word line, and a multicard's texts get their descriptions in one call when the
   multicard is made (v753, H: "Beim Swipen springen die Multicard-Karten auch immer noch, weil irgendwie Pinyin und so weiter
