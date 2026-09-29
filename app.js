@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=758; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=759; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -691,6 +691,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   a row older than the screen it names is dead. The parked lock rows went too — the lock's code stays, the archive has them. */
   ["again","v756","Priced board: reader path ok?"],
   ["again","v757","Meituan screenshots: fields right?"],
+  ["again","v759","Taobao screenshots: fields right?"],
 ];
 const TO_TEST_GROUPS=[["photo","Take any photo"],["again","Take one of these again"],["app","In the app"],["update","After an update"],["lock","Parked — the lock is off (v531)"]];
 /* What the app claims it can read, and what a photo has actually confirmed (v434, H after the untested menu
@@ -1882,7 +1883,7 @@ async function aiReadPicture(blob,alts,status,rec){
    lineMeaning never glosses 我的 inside 我的家 with the tab's meaning. Offline, or when the words do not come, the
    fields still carry the book's words — they were written on the labels before the call. */
 const fieldEntry=c=>{ const s=String(c||"").replace(/\s+/g,""), s2=s.replace(/[（(]\d+[)）]$|[>›＞]$|\d{1,2}$/,""); return s&&((SIGNS||[]).find(e=>e.zh===s)||(s2!==s&&(SIGNS||[]).find(e=>e.zh===s2)))||null; }; /* the label as written first (惊喜多选1 is a field); then without a count in brackets, a chevron or a badge count after it (全部(2), 待付款1) — those are the screen's, not the field's */
-const FIELD_KIND={meituan:"App"}; /* what a board of such fields is, for readerPicture's vote */
+const FIELD_CATS=new Set(["meituan","taobao"]), FIELD_KIND={meituan:"App",taobao:"App"}; /* the phrasebook's app categories (v759: Taobao — H's home, cart and Me screens, then the product page, search, the shop page, the order's way and the settings from the web); what a board of such fields is, for readerPicture's vote */
 async function picWords(zh,labels,kind,shot,page){
   const items=labels&&labels.length?labels.map(l=>l.zh):[zh], t0=Date.now();
   await loadSigns().catch(()=>{});
@@ -6406,6 +6407,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  759:"The app knows Taobao's standard fields too.",
   757:"The app knows Meituan's standard fields: on a screenshot, each one gets its Meituan meaning and pinyin.",
   743:"A menu's bottom row is no longer lost when the AI draws its boxes past the picture's edge.",
   755:"A board the phone reads surely is split without the picture model: seconds, not minutes.",
@@ -7545,7 +7547,7 @@ function loadSigns(){
     _signsLoading=fetch("./signs.json")
       .then(r=>{ if(!r.ok) throw new Error("phrasebook not available"); return r.json(); })
       .then(list=>{
-        SIGNS=list.map(e=>Array.isArray(e)?{zh:e[0],py:e[1],en:e[2],cat:e[3]||"",field:e[3]==="meituan"}:e) /* v757: an app's field matches a whole label only (fieldEntry) */
+        SIGNS=list.map(e=>Array.isArray(e)?{zh:e[0],py:e[1],en:e[2],cat:e[3]||"",field:FIELD_CATS.has(e[3])}:e) /* v757: an app's field matches a whole label only (fieldEntry); v759: Taobao too */
           .filter(e=>e.zh&&e.en).sort((a,b)=>b.zh.length-a.zh.length); /* longest first */
         return SIGNS;
       })
