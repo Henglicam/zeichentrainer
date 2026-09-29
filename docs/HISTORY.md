@@ -60,6 +60,33 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v759, 2026-09-29)
+- **The app knows Taobao's standard fields too (v759, H with three Taobao screenshots — the home screen, the cart, 我的淘宝:
+  "Do the same for the Taobao app").** The same mechanism, a second category: `signs.json` gains `taobao`, and the field
+  rule now reads `FIELD_CATS` (meituan, taobao) with `FIELD_KIND` "App" for both. **The list:** the three screens first —
+  the tab bar (视频, 消息, 购物车, 我的淘宝), the home's tabs and grid (关注, 推荐, 闪购, 外卖, 国补, 飞猪, 国庆狂欢, 海外集运,
+  天猫国际, 领淘金币, 淘工厂, 芭芭农场, 淘宝直播, 百亿补贴, 补贴价, 淘宝秒杀, 秒杀价, 立即领取, 天猫甄选, 全网热销, 优惠后, 全款展示),
+  the cart (对比, 降价, 分组, 常购, 88VIP, 立即开通, 超级立减, 礼金直降, 退货宝, 平台加补后, 比加购降, 款式缺货, 到货帮我买, 专营店),
+  Me (铂金会员, 关注店铺, 官方客服, 累计省钱, 点击有惊喜, 省钱卡, 天猫积分, 一键查额, 更多权益, 待发货, 快递, 暂无在途包裹,
+  去寄/查快递, 收藏宝贝, 足迹, 领券中心, 红包签到, 连连消, 淘宝人生, 试用领取) — then the other pages from six web searches (the
+  product page's 立即购买/加入购物车 and its guarantees, the order's way 买家已付款 → 卖家已发货 → 运输中 → 派送中 → 已签收 →
+  交易成功 with 确认收货, 查看物流, 延长收货, the after-sales pair 仅退款/退货退款, the search sorts 综合/人气/销量/价格, the shop
+  page 全部宝贝/上新/动态/进店逛逛, the Me page's 88VIP/淘金币/省钱卡/天猫积分/领券中心, the message channels 交易物流/通知消息/
+  互动消息/客服消息, the settings) and the app's known screens (the product page's 参数/规格/颜色分类/尺码/现货/预售/定金/尾款,
+  7天无理由退换, 假一赔十, 运费险, the checkout's 配送方式/花呗/分期, 菜鸟驿站/取件码). 264 written, **76 already in the book from
+  the Meituan category** (视频 … 清除缓存: the shared words of Chinese apps, and the first entry wins — 闪购 keeps Meituan's
+  wording, which holds for Taobao's 闪购 too), **188 added: 1211 phrasebook entries.** Pinyin hand-fixed: 88VIP "88 VIP",
+  48小时发货, 一键查额 yī, 花呗 huā bei. **Harness, the three screens** (the v757 harness with Taobao's labels; the
+  screenshots not committed — H's nickname, his cart, his footprints): reader lines 70/89/70, labels 47/38/54, cards
+  **46/37/51**, page "Taobao — home screen / shopping cart / account page"; fields from the book **32/25/43**, every one with
+  the book's words; the model asked for 14/11/8 with the page named ("App, Taobao, shopping cart"); the rest are the search
+  term 广东广州十三行连衣裙, shop names (福贵家具, 苏宏模玩专营店, 乔威动漫行), product names (万代全新正版拓麻歌子 and its
+  styles), promo sentences (您有运动加补券限时可领, 开88VIP全年得730红包，本店可用, 点击领取今日红包，限时发放错过可惜) and numbers
+  (累计省钱642元, 0元领vip, 领¥120, 8件收藏宝贝, 100+人收藏). **Seen, not fixed (not this ask):** on the cart three labels that
+  stand several times on the screen (天猫 twice, 国庆狂欢 five times, 淘宝 twice) kept the whole picture as their frame —
+  the reader's placement of a repeated label; the Meituan cart's twice-standing 小象超市 placed. Not field-checked: as v757.
+  WHATS_NEW 759, TO_TEST "Taobao screenshots: fields right?".
+
 ## Current state (PWA v758, 2026-09-29)
 - **440 more Meituan fields, from the web and page by page, and the five screenshots matched against the book (v758, H: "Kannst du dir alle
   Standardfelder aus dem Internet ziehen und Meituan Screenshots darauf abgleichen?").** What the web gives from here, honestly:
