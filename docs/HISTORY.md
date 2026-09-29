@@ -60,6 +60,25 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v756, 2026-09-29)
+- **The reader's board path narrowed to priced boards (v756, H's Menus rebuild on v755, 18:22 UTC, the report pasted).**
+  The field verdict on v755: 江宁府 clean in 71 s (against 166 s), 24 texts, row 1's three names without their prices; the
+  建国肉夹馍 board 20 texts with "建国内夹馍", "全丝肉美馍", "砂锅刀削面￥18 · 份" cut apart, the 肉夹馍 column without its
+  price column; 恩尼美甲 "美睫1298 · 卸甲99元" (129元 and 9.9元 misread, 79元 and 20元 dropped as prices alone); 杭州小笼包 from
+  3 texts to 11 with the disclaimer 图片仅供参考，请以实物为准 in pieces and 打包; the three 虞西苏面馆 boards with the logo as a
+  text four times, "踩脚）", "辣椒", "新疆", "小炒牛", "元/份" — five of eight boards worse. What the picture model's two minutes
+  bought on those boards was its judgement of what is a text of the board; the reader has none. **Now** `boardSure` also
+  wants `BOARD_MIN` 10 lines with half of them priced — a menu grid, where the reader's lines are dishes with their prices —
+  and every other board keeps the picture model; a price the reader read on its own (a larger price beside the name, a price
+  column) is joined to the nearest name on its row to the left (`boardLines`, `joined`), so 江宁府's first row and 建国's
+  肉夹馍 column carry their prices; the cut at a price never falls before a unit character (`BOARD_CUT_RE`'s lookahead —
+  "砂锅刀削面￥18份" is one text), and every part of a cut line needs a name of its own. On `tools/field/`: 江宁府 (f03) and
+  the 建国 board (f04) take the reader path, the other 建国 shot (f02, 11 of 23 lines priced) and every appliance panel keep
+  the picture model. Harness: `test756` (f03) **7/7 on v756, 6/7 on v755** (row 1 with prices); `test756b` f05 the washer dial
+  back on the picture path (`priced 0`), f01 unchanged. Not yet field-checked: the v755 rebuild's boards other than 江宁府
+  come back to the picture model's texts with a second Rebuild → Menus, or with Undo on the v755 rebuild. `TO_TEST` "Priced
+  board: reader path ok?". No `WHATS_NEW`.
+
 ## Current state (PWA v755, 2026-09-29)
 - **v751, v753 and v754 field-checked (H: "#1-3 are ok now"): the dish pictures after the Menus rebuild, the swipe through a
   multicard's texts, 牌 as "brand".** The Menus rebuild ran clean this time (8 of 8, 江宁府 22 → 24 texts, the 建国肉夹馍 board
