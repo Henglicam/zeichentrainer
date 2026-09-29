@@ -83,6 +83,10 @@ in them has its own entry below. Verbatim:
   (`CROP.auto`, `proposeFrame` called once with the id); with a reading in hand the photo goes to the front of the queue;
   `[guard]` a photo with a card shows no button; ten columns render the note and the word. On the v738 tree the button is
   not there. WHATS_NEW 739; `TO_TEST` "Read again on a left photo: reads?". Not field-checked.
+  **2a declined (H, after v739): "Ich zögere bei Make a Multicard, da der Fall sehr selten eintritt und dafür aber immer ein
+  recht prominenter, dann unnötiger Knopf da ist."** Agreed: a board read as one card is Edit → Delete card (the photo
+  returns to the Camera tab) → Read again; all 2a added was a hint to the AI that the photo is a board. A board that still
+  comes back as one card is a reader rule to fix from its dump. Neither 2a nor 2b is built.
 
 ## Current state (PWA v738, 2026-09-28)
 - **A reader's line that swallowed the neighbour's character is cut back to the text (v738, H's Zoom data of the rice
