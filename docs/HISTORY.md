@@ -60,6 +60,29 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v750, 2026-09-29)
+- **The phone's reader reads a board a second time with the detector on the picture's own size (v750, H: "Dann bau mal die
+  zweite Variante, Reader auf zweiter Skala" — after his question whether the trouble came from two AIs being synchronised;
+  answer: no, the placement is Qwen's drawn boxes against the phone's reader, and DeepSeek only writes the text fields).**
+  The detector (`pdWorkerMain.detect`) sees every picture at `PD_DET_MAX` 960 on its longer side: the 1429×1600 江宁府 photo at
+  960, where row 4's ~50 px characters are 30 and the gaps between three dishes close up — four readings in a row read the row
+  as one line (v747 shares it; this is the cure at the source). **Now** the worker takes a detector size per call (`detMax`,
+  `pdRead(cv,{detMax})`); on the split path, when the first reading leaves a label unnamed or names one on a shared line and the
+  picture is larger than 960, the reader reads once more with the detector on `PD_DET_MAX2` 1600 (the photo's own size, never
+  more), and that reading is taken when it names more labels, or as many with fewer on shared lines; else the first stays. The
+  record: "the phone's reader read again with the detector on the whole 1600 px (v750): 24 lines in 3.7 s, 24 of 24 named —
+  taken" / "— the first reading stays"; `numbers.paddle.again {ms, lines, named, shared, took, det}` beside the first reading's
+  numbers. The zoom's reader (`pdCharBoxes`, `PD_ZOOM_W` 960) and the reading's own pd pass are untouched. Harness (`test750`,
+  the v746 fixture with `pdRead` answering the merged line at 960 and the three dishes apart at 1600): **8/8 on v750, 3/8 on
+  v749** — the second reading is asked, taken, and the three stand on their own lines with no share; with the second reading
+  worse (`WORSE=1`: 12 lines) 7/7 — the first stays and v747's share still places the three. **Cost, measured in headless
+  Chromium on the synthetic board (`time750`, single-thread wasm):** detector 0.7–1.5 s at 960, 2.0–3.0 s at 1600 (about three
+  times), recognition 1.5–2.0 s either way; so the second reading costs about one more first reading plus its detector, on
+  boards only, and only when the first reading fell short. **Not field-checked, and the harness cannot say the one thing that
+  matters:** the synthetic board reads row 4 as three lines at 960 already, so whether the phone's detector separates the real
+  row at 1600 is the phone's to show — the next 江宁府 dump prints both readings. Memory at 1600 (a 3×1600×1440 float input,
+  27 MB) held in the harness; the phone has 8 GB. `WHATS_NEW` 750; `TO_TEST` "江宁府: 2nd reading, rows apart?".
+
 ## Current state (PWA v749, 2026-09-29)
 - **The Learn zoom: a run of unread characters takes the free reader line beside its matches (v749, H, 2026-09-29: "Hier hat
   er jetzt leider wieder die ersten beiden Charakter falsch gecroppt", two screenshots of 回收 寄卖 on a shop window — the pad
