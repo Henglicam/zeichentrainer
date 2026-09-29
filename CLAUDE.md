@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v747, 2026-09-29)
+## Current state (PWA v748, 2026-09-29)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -78,8 +78,8 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   from the model's uncorrected box is no place once the fit says the boxes are off** (`rawPlaced`, v744), **and a dish's
   `photo` box is mapped by the fit too** (`picCal`, v745). **A search run taller than `RUN_TALL` 2.5 or wider than `RUN_WIDE` 1.8
   of the reader's texts is a band, not a label** — given up for the corrected box (v746, the 江宁府 board's third path). **A reader line
-  holding two or more labels' texts is shared among them**, each run's share of the line (`pdMatch`, `share`, v747: the phone
-  reads 江宁府's row 4 as one line every time).
+  holding two or more labels' texts is shared among them**, each run's share of the line (`pdMatch`, `share`, v747, field-checked:
+  the phone reads 江宁府's row 4 as one line every time).
 - **The v6xx state** (reader, owner tools, Learn zoom, Crop again): `grep -n "Consolidated v6xx" docs/HISTORY.md`.
 
 ## Files
@@ -463,7 +463,7 @@ CC BY-SA).
 
 ## Open / not yet field-checked
 Everything from **v597 on** is unconfirmed on the phone unless H said otherwise (field-checked: v676, v682, v685, v714, v720,
-v723–v729, v743); each version's archive entry names its open question. First in line: **the Learn zoom** (v653–v686),
+v723–v729, v743, v746–v747); each version's archive entry names its open question. First in line: **the Learn zoom** (v653–v686),
 **the phone's reader as the reading** (v641–v652), **Multicards and Cards as a reference** (v687–v696), then Owner tools,
 speed and the Learn screen (`SPOT_ON`).
 

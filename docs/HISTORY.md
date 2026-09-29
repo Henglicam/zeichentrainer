@@ -60,6 +60,14 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v748, 2026-09-29)
+- **v747 field-checked (H, 2026-09-29, after the 江宁府 board read on v747: "Passt, Rahmen sitzen jetzt.").** The dump of
+  shot_1790679653606_691 agrees with the harness: the reader read row 4's three middle dishes as one line again, the app
+  shared it (`paddle {named:24, shared:3}`, `aiCal {n:24, err:0.19, took:0, rows:0, wide:0}`), the three frames at 32–44,
+  44–60 and 60–73 % across on the row's own 71–73 % down, the dish pictures at 62–75 %. The `TO_TEST` line "江宁府: row 4
+  frames on the row?" goes (v748, markers only besides it); v746's count-line question went with it, unremarked by H on the
+  same board. No `WHATS_NEW`.
+
 ## Current state (PWA v747, 2026-09-29)
 - **A reader line that holds several labels' texts is shared among them (v747, H on the 江宁府 board read on v746: "Rahmen
   sind immer noch off.", with the screenshot of 鸡汤阳春面's frame over the lower half of its name and the dump of
