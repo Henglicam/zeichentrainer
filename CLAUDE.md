@@ -97,7 +97,8 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
 
 ## Files
 Shell: `index.html` · `styles.css` · `lang.js` · `app.js` · `manifest.webmanifest` (with `share_target`) · `sw.js` ·
-`signs.json` (phrasebook; Meituan's fields since v757, 1023 entries) · `nmt-model.json` · the three icons · `guide/` (seven real crops, light and dark, 113 KB WebP,
+`signs.json` (phrasebook, 1023 entries; **Meituan's fields live here, category `meituan`** — H, 2026-09-29: a new field goes in with its
+reading and its meaning in the app, and matches a whole label only, never a word inside a line) · `nmt-model.json` · the three icons · `guide/` (seven real crops, light and dark, 113 KB WebP,
 made by `tools/guide-shots.js`). `vendor/`: Tesseract and its readers, dictionaries, OpenCC, `strokes.txt.gz`, `outlines.txt.gz`
 (~23 MB); `vendor/paddle/` (~30 MB, v637) and `vendor/nmt/` (55 MB) load on use; licences in `vendor/LICENSES.txt` and
 `vendor/ARPHICPL.TXT`. Not in the shell: `privacy.html`, `README.md`, the three `SPEC-*.md` (pre-build designs, contradicted in
