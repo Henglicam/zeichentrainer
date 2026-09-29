@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=749; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=750; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -690,6 +690,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   noch fixen"): the 340 rows back to v141 went in one go. A row goes the moment H's report or his own use settles it, unasked;
   a row older than the screen it names is dead. The parked lock rows went too — the lock's code stays, the archive has them. */
   ["learn","v749","回收 寄卖: zoom on 回 and 收?"],
+  ["again","v750","江宁府: 2nd reading, rows apart?"],
 ];
 const TO_TEST_GROUPS=[["photo","Take any photo"],["again","Take one of these again"],["app","In the app"],["update","After an update"],["lock","Parked — the lock is off (v531)"]];
 /* What the app claims it can read, and what a photo has actually confirmed (v434, H after the untested menu
@@ -6315,6 +6316,7 @@ async function delCustom(id){
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
   743:"A menu's bottom row is no longer lost when the AI draws its boxes past the picture's edge.",
+  750:"On a board the reader looks a second time, sharper, when a text is missing.",
   749:"The zoom finds a word the reader misread beside the one it read.",
   747:"A dish the reader read in one line with its neighbours now gets its own frame.",
   746:"A text the reader found on a band wider than itself now gets its own frame.",
@@ -6672,7 +6674,7 @@ async function loadScript(src){
    multicards of 2026-09-25 in the harness it placed 68 of 74 labels at 1–2.7 s a photo (5–13 s with the CPU slowed 4×),
    where today's reader named about half. v637 ships it as the owner's test only (Zoom check → Paddle), to measure it on the
    phone before anything depends on it. pdRead(canvas) → lines [{x,y,w,h,text,conf,vert}] in the canvas's pixels. */
-const PD="paddle/", PD_DET_MAX=960, PD_DET_THR=0.3, PD_BOX_THR=0.6, PD_UNCLIP=1.6, PD_REC_H=48, PD_REC_MAXW=960;
+const PD="paddle/", PD_DET_MAX=960, PD_DET_MAX2=1600, PD_DET_THR=0.3, PD_BOX_THR=0.6, PD_UNCLIP=1.6, PD_REC_H=48, PD_REC_MAXW=960; /* PD_DET_MAX2 (v750): the detector's picture on the second reading of a board — the photo's own size, 1600 at most */
 /* v642 (H: "Swiping Multicards hakt manchmal ein bissle"): the reader runs in a worker of its own. Until v641 it ran on the
    page, and every multicard shown for the first time in a session was re-read by it 60 ms later (refineShot, v638) — in the
    harness with the CPU slowed 4× that is 3–3.5 s of work after every swipe, and the first one of a session also compiled
@@ -6682,8 +6684,8 @@ function pdWorkerMain(){
   let det=null, rec=null, keys=null, C=null, queue=Promise.resolve();
   const ctx2d=(w,h)=>{ const c=new OffscreenCanvas(w,h); return [c,c.getContext("2d",{willReadFrequently:true})]; };
   /* the probability map thresholded, cut into connected parts, each part's box grown by the unclip ratio (DB's own rule) */
-  async function detect(bm){
-    const W0=bm.width, H0=bm.height, k=Math.min(1,C.DET_MAX/Math.max(W0,H0));
+  async function detect(bm,detMax){
+    const W0=bm.width, H0=bm.height, k=Math.min(1,(detMax||C.DET_MAX)/Math.max(W0,H0)); /* v750: a call may ask for a larger detector picture */
     const W=Math.max(32,Math.round(W0*k/32)*32), H=Math.max(32,Math.round(H0*k/32)*32);
     const [,g]=ctx2d(W,H); g.drawImage(bm,0,0,W,H);
     const px=g.getImageData(0,0,W,H).data, n=W*H, data=new Float32Array(3*n), mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225];
@@ -6719,7 +6721,7 @@ function pdWorkerMain(){
         det=await ort.InferenceSession.create(m.det,opt); rec=await ort.InferenceSession.create(m.rec,opt);
         keys=["",...m.keys.replace(/\r/g,"").split("\n").filter((l,i,a)=>!(i===a.length-1&&l==="")),"  ".slice(1)]; /* index 0 is the CTC blank; the space closes the list */
         postMessage({id:m.id}); return; }
-      const t0=performance.now(), bs=await detect(m.bm), t1=performance.now(), lines=[];
+      const t0=performance.now(), bs=await detect(m.bm,m.detMax), t1=performance.now(), lines=[];
       for(const b of bs){ const r=await recognize(m.bm,b); if(r.text) lines.push({...b,...r}); }
       m.bm.close(); postMessage({id:m.id,lines,ms:{det:Math.round(t1-t0),rec:Math.round(performance.now()-t1)}}); }
     catch(e){ postMessage({id:m.id,err:String(e&&e.message||e)}); } }
@@ -6740,7 +6742,7 @@ async function pdLoad(){
       det,rec,keys:await (await vendorFetch(PD+"ppocr_keys_v1.txt")).text(),C:{DET_MAX:PD_DET_MAX,DET_THR:PD_DET_THR,BOX_THR:PD_BOX_THR,UNCLIP:PD_UNCLIP,REC_H:PD_REC_H,REC_MAXW:PD_REC_MAXW}},[det.buffer,rec.buffer]);
     return call; })().catch(e=>{ PDM=null; throw e; });
   return PDM; }
-async function pdRead(cv){ const call=await pdLoad(), bm=await createImageBitmap(cv), r=await call({bm},[bm]), out=r.lines; out.ms=r.ms; return out; }
+async function pdRead(cv,o){ const call=await pdLoad(), bm=await createImageBitmap(cv), r=await call({bm,detMax:o&&o.detMax||0},[bm]), out=r.lines; out.ms=r.ms; return out; }
 /* v639: the phone's reader as one more pass of the reading — its lines in the reader's own shape: the characters, sign
    punctuation and digits Tesseract's pass keeps (letters stay out), a confidence per Chinese character on Tesseract's
    0–100 scale (the recognizer's own probability), a box per character cut evenly along the line, and the fine print
@@ -9285,10 +9287,21 @@ async function cropSign(id,opts){
             pdPl=null;
             if(!why&&PD_ON){ try{ const src=picSeen&&!picSeen.dk&&picSeen.orig?picSeen.orig:seen, sb=src===seen?b:await createImageBitmap(src);
                 const cv=document.createElement("canvas"); cv.width=sb.width; cv.height=sb.height; cv.getContext("2d").drawImage(sb,0,0); if(sb!==b) sb.close();
-                const t0=Date.now(), lines=await pdRead(cv), m=pdMatch(lab.map(l=>l.zh),lines); if(stale()) return;
+                const t0=Date.now(); let lines=await pdRead(cv), m=pdMatch(lab.map(l=>l.zh),lines); if(stale()) return;
+                const cnt=mm=>({named:mm.filter(Boolean).length,shared:mm.filter(l=>l&&l.share).length}); let c1=cnt(m); const ms1=Date.now()-t0, first=c1; let again=null;
+                logRead(id,`the phone's reader found ${lines.length} lines in ${(ms1/1000).toFixed(1)} s and named ${c1.named} of the ${lab.length} labels on them${c1.shared?`, ${c1.shared} of them on a line it read as one with its neighbours — each takes its own characters' share of the line (v747)`:""}`);
+                /* v750 (H: "Dann bau mal die zweite Variante, Reader auf zweiter Skala", after the 江宁府 board's row 4 was read as one line
+                   on four readings — the detector sees the 1429×1600 photo at 960, where a row's 50 px characters are 30 and the gaps
+                   between three dishes close up): when the first reading leaves a label unnamed or names one on a shared line, and the
+                   picture is larger than the detector's 960, the reader reads once more with the detector on the picture's own size
+                   (PD_DET_MAX2). The second reading is taken when it names more labels, or as many with fewer on shared lines; else
+                   the first stays. The cost is the second reading's time, on the phone only — the record prints both. */
+                if((c1.named<lab.length||c1.shared)&&Math.max(cv.width,cv.height)>PD_DET_MAX){ const t1=Date.now(), lines2=await pdRead(cv,{detMax:PD_DET_MAX2}), m2=pdMatch(lab.map(l=>l.zh),lines2); if(stale()) return;
+                  const c2=cnt(m2), took=c2.named>c1.named||(c2.named===c1.named&&c2.shared<c1.shared); again={ms:Date.now()-t1,lines:lines2.length,named:c2.named,shared:c2.shared,took,det:PD_DET_MAX2};
+                  logRead(id,`the phone's reader read again with the detector on the whole ${Math.max(cv.width,cv.height)} px (v750): ${lines2.length} lines in ${((Date.now()-t1)/1000).toFixed(1)} s, ${c2.named} of ${lab.length} named${c2.shared?`, ${c2.shared} on a shared line`:""} — ${took?"taken":"the first reading stays"}`);
+                  if(took){ lines=lines2; m=m2; c1=c2; } }
                 pdPl=m.map(l=>l?{x0:l.x/cv.width,y0:l.y/cv.height,x1:(l.x+l.w)/cv.width,y1:(l.y+l.h)/cv.height,read:l.text,...(l.share?{share:l.share}:{})}:null);
-                const shared=pdPl.filter(q=>q&&q.share).length; N.paddle={ms:Date.now()-t0,lines:lines.length,named:pdPl.filter(Boolean).length,shared};
-                logRead(id,`the phone's reader found ${lines.length} lines in ${((Date.now()-t0)/1000).toFixed(1)} s and named ${pdPl.filter(Boolean).length} of the ${lab.length} labels on them${shared?`, ${shared} of them on a line it read as one with its neighbours — each takes its own characters' share of the line (v747)`:""}`); }
+                N.paddle={ms:ms1,lines:lines.length,named:first.named,shared:first.shared,...(again?{again}:{})}; /* named/shared: the first reading's; again: the second's, and whether it was taken */ }
               catch(e){ pdPl=null; logErr("paddle",e&&e.message||String(e)); logRead(id,"the phone's reader could not run ("+(e&&e.message||e)+") — the labels are placed without it"); } }
             if(why){ logRead(id,`the AI calls these ${lab.length} texts separate labels, but ${why} — one card`); }
             else if(tmpl){ /* the boxes are a drawing, not a measurement (v380): the model cannot say where anything is, so the reader looks (v386) */
