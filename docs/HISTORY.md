@@ -60,6 +60,23 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v752, 2026-09-29)
+- **A description the card fetched by itself lands without a scroll (v752, H on the open dish cards of 江宁府: "Darüber
+  hinaus laden die Details, nachdem man die Karte aufgemacht hat. Und wenn sie geladen sind, rutscht die Karte nach oben. Das
+  soll nicht passieren. Die Karte soll bitte da bleiben, wo sie ist, auch wenn die Details nachgeladen werden.").**
+  `refreshDesc` scrolled the page for every paragraph that landed (`revealEl`: the paragraph read whole above the tab bar) —
+  written for the Explain tap at v527/v529, when a description came only on a tap; since v585 the Learn card and since v736
+  the open card ask by themselves (`explainAuto`, `explainSoon`), so the page moved a second after the card opened: 119 px on
+  a seven-character dish card at 390×800 in the harness. **Now** `explainCard(id, auto)` carries who asked, and only a
+  description the learner tapped for is revealed (`refreshDesc(id, !auto)`); one the card fetched on its own lands where it
+  is. The failure states (busy, no answer, the AI down) never scrolled and still do not. Harness (`test752`, the text model
+  answering a 130 px paragraph 1.2 s after the open card asks): **4/4 on v752, 3/4 on v751** — on v751 the page scrolls 119 px
+  when the paragraph lands, on v752 it stays at 0; after a failed fetch the Explain button stands and a tap on it still scrolls
+  the paragraph above the tab bar (51 px), both trees. `WHATS_NEW` 752, no `TO_TEST` line (the harness judges a scroll).
+  The same request named the dish pictures of the 江宁府 multicard made on v750 as wrong — the model's photo boxes as drawn, a
+  row too low, which v751 corrects at reading time and cannot reach in an existing card: More → Owner tools → Rebuild → Menus
+  re-reads the board on v751 (one picture call), Undo kept.
+
 ## Current state (PWA v751, 2026-09-29)
 - **v749 field-checked (H: "V749 works"); v750 read on the phone (H: "V750 siehe Anhang", the dump of shot_1790687526542_511):**
   first reading 4.9 s, 34 lines, 24 named, 3 shared; the second with the detector on 1600 px 6.7 s, 24 named, 2 shared —

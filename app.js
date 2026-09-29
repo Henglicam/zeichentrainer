@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=751; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=752; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3521,7 +3521,7 @@ function descHTML(d,o){ const s=descOf(d); if(s) return `<p class="desc" data-de
    call the AI on its own (v193), so a phone with the AI review unticked shows nothing there and costs nothing. Once per
    card: a stored answer, a running call and a failure all stand it down, so a dead network is not tried again on every
    render - the button in the failure state is the way to try again. */
-function explainAuto(d){ if(!d||!d.c||descOf(d)||EXPLAIN[d.id]||!aiAutoOn()||!navigator.onLine) return; explainCard(d.id); }
+function explainAuto(d){ if(!d||!d.c||descOf(d)||EXPLAIN[d.id]||!aiAutoOn()||!navigator.onLine) return; explainCard(d.id,true); }
 /* v586: the same, a moment after the card comes up, for a card whose block is still folded. The wait is what keeps a card
    merely swiped past from costing a call - a swipe is well under EXPLAIN_LEAD, a card being written is ten or twenty
    seconds (v512). One timer for the app: another card cancels it, and a render of the SAME card does not restart it, so a
@@ -3533,16 +3533,21 @@ function explainSoon(d){
   if(!d||EXPLAIN_AT===d.id||!d.c||descOf(d)||EXPLAIN[d.id]||!aiAutoOn()||!navigator.onLine) return;
   const id=d.id; EXPLAIN_AT=id;
   EXPLAIN_T=setTimeout(()=>{ EXPLAIN_AT=null; const c=cardOf(id); if(c&&document.querySelector(`[data-desc="${CSS.escape(id)}"]`)) explainAuto(c); },EXPLAIN_LEAD); }
-function refreshDesc(id){ const d=cardOf(id); if(!d) return; document.querySelectorAll(`[data-desc="${CSS.escape(id)}"]`).forEach(el=>{ const tmp=document.createElement("div"); tmp.innerHTML=descHTML(d,{explain:true}); const n=tmp.firstElementChild; if(n){ el.replaceWith(n); wireExplain(n.parentElement||document); if(n.tagName==="P"&&!n.closest(".sheet.lookup")) revealEl(n); } else el.remove(); }); }
+function refreshDesc(id,reveal){ const d=cardOf(id); if(!d) return; document.querySelectorAll(`[data-desc="${CSS.escape(id)}"]`).forEach(el=>{ const tmp=document.createElement("div"); tmp.innerHTML=descHTML(d,{explain:true}); const n=tmp.firstElementChild; if(n){ el.replaceWith(n); wireExplain(n.parentElement||document); if(reveal&&n.tagName==="P"&&!n.closest(".sheet.lookup")) revealEl(n); } else el.remove(); }); }
+/* v752 (H, on the open dish cards of 江宁府: "die Details laden, nachdem man die Karte aufgemacht hat. Und wenn sie geladen sind,
+   rutscht die Karte nach oben. Das soll nicht passieren"): the page scrolled for every description that landed, asked or not —
+   revealEl was written for the Explain tap (v527: the paragraph the learner asked for is read whole above the tab bar), and
+   since v585/v736 the open card asks by itself, so the card moved under the learner's eyes a second after it opened. Only a
+   description the learner tapped for is revealed; one the card fetched on its own lands where it is. */
 function revealEl(el){ const nav=$("#tabs"), r=el.getBoundingClientRect(), navTop=nav?nav.getBoundingClientRect().top:innerHeight, d=r.bottom+18-navTop; if(d>0) window.scrollBy({top:d,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"}); } /* the paragraph that just landed is read whole above the tab bar (the v527 rule), never scrolled past its head */
 function wireExplain(root){ (root||document).querySelectorAll("[data-explain]").forEach(b=> b.onclick=e=>{ e.stopPropagation(); explainCard(b.dataset.explain); }); }
-async function explainCard(id){
+async function explainCard(id,auto){ /* auto (v752): the card asked by itself — the answer lands without a scroll */
   const d=cardOf(id); if(!d||EXPLAIN[id]==="busy") return;
   if(!navigator.onLine){ EXPLAIN[id]=t("No connection. Try again when online."); refreshDesc(id); return; }
   EXPLAIN[id]="busy"; refreshDesc(id);
   try{ const [r]=await aiAsk([{...d,explain:true}]); const s=r&&!r.bad?saneDesc(r.desc,d.c):"";
     if(!s){ EXPLAIN[id]=t("No description came back. Try again."); refreshDesc(id); return; }
-    const d2=cardOf(id); if(!d2) return; if(d2.c!==d.c||Object.values(PENDING).includes(id)){ delete EXPLAIN[id]; refreshDesc(id); return; } /* v656: the text changed while the description was asked for (a Crop again saved before its reading was done) — it describes the old text, and a card still being read is filled by the reading */ await putCard(setDesc({...d2},s,r.ml||LANG),id); delete EXPLAIN[id]; refreshDesc(id); }
+    const d2=cardOf(id); if(!d2) return; if(d2.c!==d.c||Object.values(PENDING).includes(id)){ delete EXPLAIN[id]; refreshDesc(id); return; } /* v656: the text changed while the description was asked for (a Crop again saved before its reading was done) — it describes the old text, and a card still being read is filled by the reading */ await putCard(setDesc({...d2},s,r.ml||LANG),id); delete EXPLAIN[id]; refreshDesc(id,!auto); }
   catch(err){ const m=err&&err.message||String(err); EXPLAIN[id]=m===AI_NET_ERR?t(m)+".":t("The AI check failed: {0}",m); refreshDesc(id); }
 }
 /* v698 (H: "In the list overview, show the full description, but not the extended AI details those only in the opened card.
@@ -6315,6 +6320,7 @@ async function delCustom(id){
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
   743:"A menu's bottom row is no longer lost when the AI draws its boxes past the picture's edge.",
+  752:"An open card stays put while its description loads.",
   751:"A dish's picture stands over its own name even when the AI's grid is off.",
   750:"On a board the reader looks a second time, sharper, when a text is missing.",
   749:"The zoom finds a word the reader misread beside the one it read.",
