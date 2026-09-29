@@ -60,6 +60,26 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v749, 2026-09-29)
+- **The Learn zoom: a run of unread characters takes the free reader line beside its matches (v749, H, 2026-09-29: "Hier hat
+  er jetzt leider wieder die ersten beiden Charakter falsch gecroppt", two screenshots of 回收 寄卖 on a shop window — the pad
+  asking 回 while the photo shows 收, then 收 while it shows the window bar — and the dump).** The zoom record: `寄卖 73,53 % h38 |
+  闽妆 22,57 % h31`, 回 "reader, unsure (2 of 4 characters read)" at 30 %, 收 at 47 %, 寄 at 63 %, 卖 at 80 %. The reader read
+  回收 as 闽妆 on its own line, left of 寄卖, with the window bar between the words; the v716 step from 寄 by 寄卖's own spacing
+  put 收 on 收's right neighbour and 回 on the bar, and the free line at 22 % — the run's own reading — never came into it, since
+  the step filled the boxes before v677 (a run matched nothing, one free line of its size) could give the run that line. **Now**,
+  in `pdCharBoxes`, before the step: a run of unread characters before the first match or after the last one on a card line
+  (no Latin in it) takes the one free reader line beside the matched line on that side — on the same row (overlapping it by half
+  the thinner line), of the text's size (0.6 of the matched line's thickness), with exactly as many Chinese characters — each
+  character in order on it, unsure (`beside`, `takenL`, the record's " · 回收 on 闽妆 beside"). v677's free lines exclude a line
+  taken this way. Harness (`test749`: `pdCharBoxes` on a blank picture with `pdRead` answering the dump's two lines at their
+  places): **5/5 on v749, 2/5 on v748** — on v748 回 and 收 step right of 寄's side, on v749 they stand at 18 % and 26 % on the
+  闽妆 line, 寄 and 卖 unchanged. Replay of H's zoom data (`zoom2.json`, 23 cards on 6 sheets, the real reader, `corpus749`):
+  **23 of 23 unchanged** between the trees, so nothing the rule touched was placed differently on any of them. `WHATS_NEW` 749;
+  `TO_TEST` "回收 寄卖: zoom on 回 and 收?". Not yet field-checked; open: the line's width in the field is unknown (the record
+  prints the middle and the height, not the width), and a word gap wider than the matched line's own spacing is the shape this
+  covers — a misread line that overlaps the matched one is not "beside" and still steps.
+
 ## Current state (PWA v748, 2026-09-29)
 - **v747 field-checked (H, 2026-09-29, after the 江宁府 board read on v747: "Passt, Rahmen sitzen jetzt.").** The dump of
   shot_1790679653606_691 agrees with the harness: the reader read row 4's three middle dishes as one line again, the app
