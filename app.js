@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=759; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=760; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -692,6 +692,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["again","v756","Priced board: reader path ok?"],
   ["again","v757","Meituan screenshots: fields right?"],
   ["again","v759","Taobao screenshots: fields right?"],
+  ["again","v760","Taobao cart: 天猫 framed right?"],
 ];
 const TO_TEST_GROUPS=[["photo","Take any photo"],["again","Take one of these again"],["app","In the app"],["update","After an update"],["lock","Parked — the lock is off (v531)"]];
 /* What the app claims it can read, and what a photo has actually confirmed (v434, H after the untested menu
@@ -6407,6 +6408,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  760:"A label standing beside another one on one line of a screen now gets its own frame, not the whole picture.",
   759:"The app knows Taobao's standard fields too.",
   757:"The app knows Meituan's standard fields: on a screenshot, each one gets its Meituan meaning and pinyin.",
   743:"A menu's bottom row is no longer lost when the AI draws its boxes past the picture's edge.",
@@ -6885,9 +6887,9 @@ function pdTrim(z,l){ const chars=[...l.text], han=[]; chars.forEach((ch,i)=>{ i
   for(let i=1;i<=A.length;i++) for(let j=1;j<=B.length;j++) dp[i][j]=A[i-1]===B[j-1]?dp[i-1][j-1]+1:Math.max(dp[i-1][j],dp[i][j-1]);
   let i=A.length, j=B.length, first=-1, last=-1; /* walk the table back for the matched positions in the line */
   while(i>0&&j>0){ if(A[i-1]===B[j-1]){ if(last<0) last=j-1; first=j-1; i--; j--; } else if(dp[i-1][j]>=dp[i][j-1]) i--; else j--; }
-  if(first<0||(first===0&&last===B.length-1)) return l;
+  if(first<0||(first===0&&last===B.length-1)) return first<0?l:{...l,run:[0,B.length]}; /* run (v760): the matched characters' places among the line's Han characters */
   const a=first>0?han[first]:0, b=last<B.length-1?han[last]+1:chars.length, n=chars.length;
-  return l.vert?{...l,y:l.y+l.h*a/n,h:l.h*(b-a)/n,cut:true}:{...l,x:l.x+l.w*a/n,w:l.w*(b-a)/n,cut:true}; }
+  return l.vert?{...l,y:l.y+l.h*a/n,h:l.h*(b-a)/n,cut:true,run:[first,last+1]}:{...l,x:l.x+l.w*a/n,w:l.w*(b-a)/n,cut:true,run:[first,last+1]}; }
 function pdMatch(texts,lines){ const T=texts.map(pdNorm), L=lines.map(l=>pdNorm(l.text)), pairs=[];
   T.forEach((z,i)=>{ if(!z) return; L.forEach((lz,j)=>{ if(!lz) return; const sc=pdLcs(z,lz)/Math.max([...z].length,[...lz].length); if(sc>=PD_MATCH) pairs.push({i,j,sc}); }); });
   const out=texts.map(()=>null), usedL=new Set();
@@ -6908,9 +6910,9 @@ function pdMatch(texts,lines){ const T=texts.map(pdNorm), L=lines.map(l=>pdNorm(
     const stacked=b.y>a.y&&gap<=h&&over>=0.5*Math.min(a.w,b.w), row=b.x>a.x&&gapX<=1.5*h&&overY>=0.5*h;
     if(!stacked&&!row) return;
     const lz=L[j]+L[k], n=pdLcs(z,lz), sc=n/Math.max([...z].length,[...lz].length); if(sc>=PD_MATCH) two.push({i,j,k,sc,n}); }); }); });
-  pairs.forEach(p=>{ p.n=pdLcs(T[p.i],L[p.j]); }); const all=[...pairs,...two].sort((x,y)=>y.sc-x.sc||y.n-x.n);
+  pairs.forEach(p=>{ p.n=pdLcs(T[p.i],L[p.j]); }); const all=[...pairs,...two].sort((x,y)=>y.sc-x.sc||y.n-x.n), tookLine=new Map(); /* v760: which text took a line alone */
   for(const p of all){ if(out[p.i]||usedL.has(p.j)||(p.k!=null&&usedL.has(p.k))) continue;
-    if(p.k==null){ out[p.i]=pdTrim(T[p.i],lines[p.j]); usedL.add(p.j); continue; } /* v738: cut to the matched characters */
+    if(p.k==null){ out[p.i]=pdTrim(T[p.i],lines[p.j]); usedL.add(p.j); tookLine.set(p.j,p.i); continue; } /* v738: cut to the matched characters */
     const a=lines[p.j], b=lines[p.k], x=Math.min(a.x,b.x);
     const y0=Math.min(a.y,b.y); out[p.i]={...a,x,y:y0,w:Math.max(a.x+a.w,b.x+b.w)-x,h:Math.max(a.y+a.h,b.y+b.h)-y0,text:a.text+b.text,two:true}; usedL.add(p.j); usedL.add(p.k); }
   /* v747 (H, 2026-09-29, the 江宁府 board's row 4 after four readings: "Rahmen sind immer noch off."): the phone's reader read the
@@ -6926,6 +6928,20 @@ function pdMatch(texts,lines){ const T=texts.map(pdNorm), L=lines.map(l=>pdNorm(
       if(best&&best.hit>=PD_MATCH*n) runs.push({i,s:best.s,e:best.s+n,hit:best.hit}); });
     if(runs.length<2) return; runs.sort((a,b)=>b.hit-a.hit||a.s-b.s); const keep=[]; runs.forEach(r=>{ if(!keep.some(t=>r.s<t.e&&t.s<r.e)) keep.push(r); }); if(keep.length<2) return;
     const nc=chars.length; keep.forEach(r=>{ const a=han[r.s], b=han[r.e-1]+1; out[r.i]=l.vert?{...l,y:l.y+l.h*a/nc,h:l.h*(b-a)/nc,cut:true,share:keep.length}:{...l,x:l.x+l.w*a/nc,w:l.w*(b-a)/nc,cut:true,share:keep.length}; }); usedL.add(j); });
+  /* v760 (H, his Taobao cart: "Bitte für Multicard 天猫 den ganzen Screen nicht als Frame nehmen"): the reader read the shop's
+     row as one line, 天猫苏宏模玩专营店, and the shop's name held 7 of its 9 characters — over PD_MATCH — so it took the line alone
+     (pdTrim cut it to its run) and 天猫 beside it was named by nothing; its corrected box then lay on the shop's place and it
+     kept the whole picture. v747's share is only tried on a line still free. Now a line one text took by a cut has its
+     leftover — the Han characters before and after that text's run — offered to the texts still unplaced: a text whose
+     characters ARE the leftover, in place (PD_MATCH of them, the same count), takes the leftover's share of the line's box,
+     divided evenly along the line as pdTrim does; the placed text keeps its own cut. Only a leftover the text fills whole,
+     so a two-character word that merely occurs inside a longer neighbour (天猫 in 天猫积分) places nothing. 国庆狂欢 before
+     万代全新正版拓麻歌子 and 淘宝 before 乔威动漫行 are the same case. */
+  lines.forEach((l,j)=>{ const pi=tookLine.get(j); if(pi==null) return; const o=out[pi]; if(!o||!o.run||o.share) return;
+    const chars=[...l.text], han=[]; chars.forEach((ch,i)=>{ if(/[\u4e00-\u9fff]/.test(ch)) han.push(i); }); const B=han.map(i=>chars[i]), nc=chars.length;
+    for(const [s0,e0] of [[0,o.run[0]],[o.run[1],B.length]]){ const n=e0-s0; if(n<2) continue; let took=false;
+      T.forEach((z,i)=>{ if(took||!z||out[i]) return; const A=[...z]; if(A.length!==n) return; let hit=0; for(let q=0;q<n;q++) if(A[q]===B[s0+q]) hit++; if(hit<PD_MATCH*n) return;
+        const a=han[s0], b=han[e0-1]+1; out[i]=l.vert?{...l,y:l.y+l.h*a/nc,h:l.h*(b-a)/nc,cut:true,share:2,beside:true}:{...l,x:l.x+l.w*a/nc,w:l.w*(b-a)/nc,cut:true,share:2,beside:true}; took=true; }); } });
   return out; }
 /* v644: how far the AI's label boxes are off on this photo, measured on the labels the phone's reader placed — the centres
    fitted per axis by one scale and one shift (least squares), the error of each in its own box's size. Trusted only with
