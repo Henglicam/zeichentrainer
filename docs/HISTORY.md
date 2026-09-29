@@ -60,6 +60,30 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v739, 2026-09-29)
+- **Read again on a photo left on the Camera tab (v739, H with the 江宁府 board left there under "The AI could not check this
+  photo …": "Zum einen muss ich Karten, die unter Camera geblieben sind, sagen, dass sie nochmal gelesen werden sollen" —
+  described in three lines, "Go 1 only"; 2a, a card re-read as a multicard, and 2b, a multicard joined into one card, wait —
+  H on 2b: "Macht 2b Sinn? Vielleicht eher nicht", my advice: skip it, Add a text + + Flashcard already cover the one case).**
+  A photo the automatic card failed on carries `tried` and its note and is never queued again by itself (v411/v509); the only
+  way was Crop, which reads the framed part. Now a **Read again** button stands before Crop on every photo with no card of its
+  own, not pending and not in the queue: `readAgain` drops the note (`QSNOTE`, `QSBAD`, the record's `note`), pins the
+  photo (`S.openShot`) and starts the shutter's own automatic reading — `CROP={id,auto:true}` and the render, which starts `proposeFrame`
+  for every automatic frame, when nothing is in hand, else the front of the queue (`autoQueueAdd(…,true)`, "Waiting for its turn …"); `tried` stays, so a restart
+  still leaves the photo alone. The note itself now says "Tap Read again, or Crop to frame the text by hand." and is in
+  nine columns for the first time (it had fallen back to English); "Read again" nine columns (de Neu lesen, fr Relire, es
+  Releer, ru Ещё раз, ja もう一度読む …). 491 keys a column, ru 521. **The row:** three buttons beside a two-line timestamp
+  do not fit at 360 px — the first cut's probe said `over:false` while "Nochmal lesen" wrapped and Löschen/Удалить stood
+  off the card (the v427 lesson, again: the probe measured the buttons' own box, not whether they broke). `.shot .meta`
+  wraps now: the time on one line, the buttons under it at the right, none breaking inside (`white-space:nowrap`); de
+  "Nochmal lesen", ru "Прочитать снова" and es "Leer de nuevo" were still too wide alone on the line and became Neu lesen,
+  Ещё раз, Releer. Measured in all ten columns at 360 px (every button on one line, inside the card) and en at 390. H's photo: the picture call failed because the VPN was on (Qwen refuses through it, v483) —
+  said to him; Read again with the VPN on ends the same way. Harness (test739): a photo seeded with `tried` and the note,
+  no card; the row shows Read again before Crop and Delete; a tap clears the note and starts the automatic reading
+  (`CROP.auto`, `proposeFrame` called once with the id); with a reading in hand the photo goes to the front of the queue;
+  `[guard]` a photo with a card shows no button; ten columns render the note and the word. On the v738 tree the button is
+  not there. WHATS_NEW 739; `TO_TEST` "Read again on a left photo: reads?". Not field-checked.
+
 ## Current state (PWA v738, 2026-09-28)
 - **A reader's line that swallowed the neighbour's character is cut back to the text (v738, H's Zoom data of the rice
   cooker, sent for "Warum ist der Rahmen hier zu breit?" — 柴火饭 framed with 低卡饭's 饭; "Ok, go B", see first).** The

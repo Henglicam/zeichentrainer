@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v738, 2026-09-28)
+## Current state (PWA v739, 2026-09-29)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -198,7 +198,8 @@ made its card **leaves the tab** (v471). From album works through the batch one 
 (v237) makes the card before the reading is done; Crop (v437) and Crop again (v239) hand the app's frame to the hand. A photo
 whose texts stand apart becomes **one multicard** with a dot on every text (v448/v453/v457), regions snapped onto the ink when
 shown (v620); its photo pinches and pans like a card's (v634, `regionAt`). **Add a text** (v635) frames a missing text through
-Crop again; a blank never read is dropped on Cancel, a tab tap or a restart.
+Crop again; a blank never read is dropped on Cancel, a tab tap or a restart. A photo left on the tab with no card has **Read again**
+(v739) — the shutter's own reading once more; Crop reads the framed part.
 
 ### More — four sections (v547)
 **Learning** (Progress, Card order, Tags, Check-up and the undo rows) · **Your cards** (Export,
@@ -278,7 +279,7 @@ no key**, so a fresh install sends every new card's text from its first card.
 
 ## Languages
 Ten columns in `lang.js`: en, de, fr, es, ja, ko, ru, vi, th, id. **English is the key**; a
-missing key falls back to the English text, never to the key. **489 keys a column, ru 519 (three
+missing key falls back to the English text, never to the key. **491 keys a column, ru 521 (three
 plural forms), en 15.** `nOf`/`wordOf`/`PLURAL` carry the counts.
 
 - **The v412 rule: a pronoun or a count-agreeing verb must never cross a key boundary.** Render
