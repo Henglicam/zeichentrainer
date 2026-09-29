@@ -60,6 +60,32 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v745, 2026-09-29)
+- **A menu dish's photo box takes the fit's correction too, and the multicard's own screen drops its count line (v745, H
+  on the 江宁府 multicard read on v744: "Immer noch gleich. Und Saved as Flashcards muss da nicht mehr angezeigt werden in
+  dieser Ansicht").** The v744 dump showed the mechanism of v744 had run — this reading took the other path (Qwen's boxes
+  on tens, `round:true`, so `readLabels` ran, `rawPlaced` false, `aiCal {n:21, err:0.25, took:3, rows:1, gave:0}`), and the
+  three unnamed dishes' own frames stood in row 4 (72–74 % down; `split.f` idx 15–17 at y 0.70–0.72). What H looks at is
+  not that frame: since v701/v705 a dish's picture is the union of its name's frame and the model's `photo` box, and that
+  box was taken as drawn (`l.dishFrame=photoFrameOf(…p[0]*W…)`, no correction), though it comes from the same 715×800 grid
+  as the text boxes the fit had just found a whole row too low on this photo (row 4's photos drawn at 590–670 of 800, i.e.
+  74–84 % down, where row 5's photos are; the true ones sit at ~62–70 %). So every one of the 23 dishes showed its name
+  with the row below's photo under it — row 1 nearly right (the grid's error grows downward, the fit's slope is 0.75), row 4
+  a full row off, which is the one H saw. **Now `picCal`** keeps the fit and each `photo` box is mapped by it before
+  `photoFrameOf` (clamped inside the picture; a box mapped off it is no photo); the log says "23 dishes' photo boxes take
+  the correction of the 21 texts both placed too (off by 0.25 of a text's size)" and each dish's line carries its
+  picture's place ("… is its picture, 30–48 % across, 62–74 % down"); `numbers.dish` holds the photo frames. Without a fit
+  the box goes in as drawn, as before. Harness (`test745`, the board drawn from this dump's reader places with the exact
+  Qwen answer of the dump, and row 4's plates painted red, row 5's blue): 16/16 on v745, 5/16 on v744 — on v744 the cards
+  of 鸡汤阳春面, 招牌油豆腐粉丝汤, 重庆豌杂小面 and the reader-named 红烧肥肠小面 hold 9 000–13 000 blue pixels and no red, the
+  row below exactly; on v745 6 500–8 400 red and no blue. The harness's own search names the three the phone's did not
+  (hit 9 against the phone's 3), so the guard checks the fit and the path, not `took`. test743 7/7 and test744 8/8 still.
+  **The line "Texts on this multicard: 24, as flashcards: 0." is gone from the multicard's own screen** (`pageBodyHTML`);
+  title, tags and "Tap any text on the photo." stay, and the Camera tab's `regionLine` keeps the key — no language column
+  changes. Screenshots at 390 px light English and 360 px dark German. `WHATS_NEW` 745; `TO_TEST` "江宁府: every dish's
+  own picture?". Not yet field-checked: the fit's mapped box sits ~3 % low on the fixture (a box height of 80 on the grid
+  maps to 7.5 % where the plate is 10 %) — on the phone the pictures may want `DISH_ROOM` a little larger.
+
 ## Current state (PWA v744, 2026-09-29)
 - **A label the reader did not name gives up the place the model's own box gave it once the fit says the boxes are off
   (v744, H's screenshot of the 江宁府 multicard read on v743: "in der vorletzten Reihe ist nur das erste Gericht quasi

@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=744; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=745; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -688,7 +688,7 @@ async function sendFeedback(text,shot){
    adds its line here, and the line goes when H says it works. Owner's, English, no key in any language. */
 const TO_TEST=[
   ["again","v742","QR panel: 启用… frame on its line?"],
-  ["again","v744","江宁府: row 4's 3 middle dishes?"],
+  ["again","v745","江宁府: every dish's own picture?"],
   ["cards","v741","Pop-up: Details fold, long text?"],
   ["again","v740","江宁府 board: Read again makes it?"],
   ["camera","v739","Read again on a left photo: reads?"],
@@ -6179,12 +6179,11 @@ function backToCard(){ const cid=fromCard(); S.detailFrom=null; S.fullPic=false;
 function pageOrder(pg,rs){ rs=rs||photoRegions({id:pg.shot}); const order=rs.map(r=>r.card); return pageItems(pg).slice().sort((a,b)=>{ const ia=order.indexOf(a.id), ib=order.indexOf(b.id); return (ia<0?1e9:ia)-(ib<0?1e9:ib); }); }
 function pageBodyHTML(d){
   const rs=photoRegions({id:d.shot}), its=pageItems(d), full=fullPhoto(d), sorted=pageOrder(d,rs);
-  const made=its.filter(x=>madeFrom(x)).length;
+  /* v745 (H: "Saved as Flashcards muss da nicht mehr angezeigt werden in dieser Ansicht"): the line "Texts on this multicard: 24, as flashcards: 0." is gone from the multicard's own screen; the Camera tab's regionLine keeps the key */
   return `<div class="shot pagecard" data-page="${esc(d.id)}">
       <div class="shotwrap"><div class="zwrap">${full?`<img src="${urlOf(full)}" alt="${t("alt:photo")}">`:""}${rs.length?regionsHTML({id:d.shot},rs):""}</div></div>
       <div class="ptitle">${esc(d.c)}</div>
       ${(tg=>tg.length?`<div class="ptags">${tg.map(x=>`<span class="pill tag">${esc(x)}</span>`).join("")}</div>`:"")([...new Set([...(d.tags||[]),...its.flatMap(x=>x.tags||[])])])} <!-- v696: the multicard's tags, with any its texts carry, once here and not on every row -->
-      <div class="regline">${esc(t("Texts on this multicard: {0}, as flashcards: {1}.",its.length,made))}</div>
       <div class="taphint">${esc(t("Tap any text on the photo."))}</div>
     </div>
     <div class="clist" id="pitems">${sorted.map(x=>cardRowHTML(x,false,new Map(),true)).join("")}</div>`;
@@ -6641,6 +6640,7 @@ async function delCustom(id){
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
   743:"A menu's bottom row is no longer lost when the AI draws its boxes past the picture's edge.",
+  745:"A menu dish's picture now stands where its name is, and the multicard no longer counts its flashcards.",
   744:"A dish the phone's reader ran together with its neighbours now gets its own picture.",
   739:"A photo left on the Camera tab has a Read again button.",
   738:"A text's frame on a multicard no longer takes in the neighbour's last character.",
@@ -9534,7 +9534,7 @@ async function cropSign(id,opts){
         const zh=pic.zh.split("\n");
       if(pic.box&&picSeen&&(PENDING[id]&&!RECROP[id]?READ_APP[id]:CROP&&CROP.id===id&&CROP.proposed)){ /* the reader could not read this font (v293 — H's 邪不压正 poster: the ink rows and the reader's garbage boxes put the frame around the whole photo): the AI's box places the frame, once, as fractions of the straightened picture it saw — the proposal's crop, or the cut of the frame the quick look had placed from that same garbage; on the placed frame's own cut (v301) the box centres the frame on the characters inside it (v303, H's 绿皮书: "should be more centered") */
         const seen=picSeen.dk?picSeen.dk.blob:picSeen.orig, seenAngle=picSeen.dk?picSeen.dk.angle||0:0, seenBase=picSeen.base||PLACED[id]||(CROP&&CROP.id===id?CROP.rect:null); /* the placed cut is upright, and its frame is the placed one */
-        let W=0,Hh=0,box=null,rect=null,grow=null,altWon=false,labelRects=null,labelWhole=false,splitWhole=false,pdPl=null,rawPlaced=false; try{ const b=await createImageBitmap(seen); W=b.width; Hh=b.height; const [bx0,by0,bx1,by1]=pic.box, n=Math.max(1,zh.length);
+        let W=0,Hh=0,box=null,rect=null,grow=null,altWon=false,labelRects=null,labelWhole=false,splitWhole=false,pdPl=null,rawPlaced=false,picCal=null; try{ const b=await createImageBitmap(seen); W=b.width; Hh=b.height; const [bx0,by0,bx1,by1]=pic.box, n=Math.max(1,zh.length);
           box={x0:bx0*W,y0:by0*Hh,x1:bx1*W,y1:by1*Hh}; let [fx0,fy0,fx1,fy1]=pic.box; /* the box as read, for the log (v340) */ const lens=zh.map(l=>l.replace(/[\s\/／·・,，。.、()（）]/g,"").length); let snap=snapBox(b,box,n,lens,pic.droppedBoxes);
           N.seen=[W,Hh]; N.seenBase=numRect(seenBase); N.seenAng=n4(seenAngle); N.lens=lens;
           PICSEEN[id]={base:seenBase,W,Hh,angle:seenAngle}; /* v400: here and nowhere earlier — the v314/v318/v348 re-ask reassigns picSeen above (the frame grew, the AI read again), and a check that mapped the second answer's boxes through the first proposal would be wrong by the whole regrow */
@@ -9636,7 +9636,7 @@ async function cropSign(id,opts){
             const pcv=v=>Math.round(v*100);
             pdPl.forEach((q,k)=>{ if(!q) return; const Hk=q.y1-q.y0; labelRects[k]={x0:Math.max(0,q.x0-Hk*PD_ROOM)*W,y0:Math.max(0,q.y0-Hk*PD_ROOM)*Hh,x1:Math.min(1,q.x1+Hk*PD_ROOM)*W,y1:Math.min(1,q.y1+Hk*PD_ROOM)*Hh};
               logRead(id,`${pic.labels[k].zh}: the phone's reader read ${q.read} at ${pcv(q.x0)}–${pcv(q.x1)} % across, ${pcv(q.y0)}–${pcv(q.y1)} % down`); });
-            const cal=aiBoxCal(pic.labels,pdPl);
+            const cal=aiBoxCal(pic.labels,pdPl); picCal=cal; /* v745: the dishes' photo boxes take the same correction, below */
             /* v744 (H's 江宁府 board read on v743, 2026-09-29: the reader read row 4's three middle dishes as ONE line —
                鸡汤阳春面16份招牌油豆腐粉丝汤12份重庆豌杂小面18份 — so it named none of them; the model's boxes had passed the drawing
                test this time, so the old search of v359/v376 had already placed all 24 labels on the model's boxes, which on
@@ -9725,7 +9725,17 @@ async function cropSign(id,opts){
             logRead(id,"no frame for "+lost.join(", ")+" on the photo (copy "+W+"×"+Hh+") — "+rest); }
           if(keep.length>=SPLIT_MIN){
             pic.labels=keep.map(k=>pic.labels[k]); SPLIT[id]=keep.map(k=>fr[k]);
-            pic.labels.forEach(l=>{ const p=l.photo; l.dishFrame=p?photoFrameOf(seenBase,W,Hh,{x0:p[0]*W,y0:p[1]*Hh,x1:p[2]*W,y1:p[3]*Hh},seenAngle):null; }); /* v701 */
+            /* v745 (H's 江宁府 board on v744, 2026-09-29, "Immer noch gleich": v744 had moved the three unnamed labels' frames
+               onto row 4, and every one of the 23 dishes still showed the wrong picture — a dish's picture is the union of
+               its name's frame and the model's `photo` box (v705), and that box comes from the same grid as the model's
+               text boxes, which the fit had just found a whole row too low on this photo. The text boxes were corrected;
+               the photo boxes went into the pictures as drawn, so each card showed its name with the dish below it.)
+               Once the fit stands, the photo box is mapped by it too; one mapped past the picture is no photo. */
+            let dishes=0; pic.labels.forEach(l=>{ const p=l.photo; let q=p?{x0:p[0],y0:p[1],x1:p[2],y1:p[3]}:null;
+              if(q&&picCal){ const m=picCal.map(p); q={x0:Math.max(0,m.x0),y0:Math.max(0,m.y0),x1:Math.min(1,m.x1),y1:Math.min(1,m.y1)}; if(!(q.x1-q.x0>0.01&&q.y1-q.y0>0.01)) q=null; else dishes++; }
+              l.dishFrame=q?photoFrameOf(seenBase,W,Hh,{x0:q.x0*W,y0:q.y0*Hh,x1:q.x1*W,y1:q.y1*Hh},seenAngle):null; }); /* v701 */
+            if(dishes) logRead(id,`${dishes===1?"one dish's photo box takes":dishes+" dishes' photo boxes take"} the correction of the ${picCal.n} texts both placed too (off by ${picCal.err} of a text's size)`);
+            N.dish=pic.labels.some(l=>l.dishFrame)?numFrames(pic.labels.map(l=>l.dishFrame||null)):null; /* v745: the dishes' photo frames as they go to the pictures */
             N.split=numFrames(SPLIT[id]); N.splitZh=pic.labels.map(l=>l.zh); /* v399: the frames as they go to the cards, and which label each belongs to */
             const where=SPLIT[id].map((f,k)=>pic.labels[k].zh+" "+pc(f.x/f.lw)+"–"+pc((f.x+f.w)/f.lw)+" %").join(", ");
             logRead(id,"the AI calls these "+pic.labels.length+" texts separate labels — one card each: "+where); } } }
@@ -9951,7 +9961,7 @@ async function splitCards(id,sg,ph){
            name's frame is the whole-frame fallback of a label nobody placed, which would take the menu along */
         if(lf&&lf.lw===df.lw&&lf.w*lf.h<=df.w*df.h*3){ const x0=Math.min(df.x,lf.x), y0=Math.min(df.y,lf.y), x1=Math.max(df.x+df.w,lf.x+lf.w), y1=Math.max(df.y+df.h,lf.y+lf.h), m=Math.max(x1-x0,y1-y0)*DISH_ROOM;
           u={...df,x:Math.max(0,x0-m),y:Math.max(0,y0-m)}; u.w=Math.min(df.lw,x1+m)-u.x; u.h=Math.min(df.lh,y1+m)-u.y; }
-        let dc=null; try{ dc=await cropBlob(id,u); }catch(e){ dc=null; } if(dc&&dc.blob){ cut=dc; b.card.dish=true; logRead(id,`${lab[k].zh}: the dish's own photo${u!==df?" with its name and price":""} is its picture`); } } /* v701 */
+        let dc=null; try{ dc=await cropBlob(id,u); }catch(e){ dc=null; } if(dc&&dc.blob){ const pc=v=>Math.round(v*100); cut=dc; b.card.dish=true; logRead(id,`${lab[k].zh}: the dish's own photo${u!==df?" with its name and price":""} is its picture, ${pc(u.x/u.lw)}–${pc((u.x+u.w)/u.lw)} % across, ${pc(u.y/u.lh)}–${pc((u.y+u.h)/u.lh)} % down`); } } /* v701; the place since v745 */
       out.push({card:b.card,img:cut&&cut.blob?await cardJpeg(cut.blob):null,frame:fr[k]});
     }
   } finally{ SIGN[id]=prev; }
