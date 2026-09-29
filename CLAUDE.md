@@ -67,14 +67,12 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   first (H's street senses — add there, with the reading), **`OWN_PINYIN`** into pinyin-pro (夹 jiā), the fewest words per
   line, a bound form for a character inside a word (`besideCJK`, `BOUND_TOP` 3, never `PROPER`), the reading from the whole
   line (`ctx`, `SANDHI`); `glossFix()` once per phone (`GLOSS_FIX_V` 729). Full wording: `grep -n "Consolidated v717" docs/HISTORY.md`.
-- **Duplicate multicards (v731):** More → Your cards shows a row only while two multicards share at least `DUP_SHARE` 0.6 of
-  their texts (characters only, `dupKey`); Delete N keeps the newest of each set, the rest go through `delCustom` and the
-  Undo line. Not field-checked.
-- **A dish's meaning is shown without its price** (`noPriceM`, v710/v712) and, since v732, without the comma that led into it.
-- **A multicard text's region** is the phone reader's line (v638), else the ink snap (v620), else the **row of ink under
-  the frame** (`labelRow`, v742: the model's box as an anchor, one line, no join — H's QR panel), else the frame; since v738 a
-  line carrying the neighbour's Han characters at its ends is **cut to the matched run** (`pdTrim`). At the split a label the
-  reader could not place takes the same row under its corrected box (v644 + v742). `REG_V` 742 re-measures stored boxes once.
+- **Duplicate multicards (v731):** More → Your cards shows a row while two multicards share `DUP_SHARE` 0.6 of their texts
+  (`dupKey`); Delete N keeps the newest of each set, the rest go through `delCustom` and Undo. Not field-checked.
+- **A dish's meaning is shown without its price** (`noPriceM`, v710/v712) nor the comma before it (v732).
+- **A multicard text's region**: the reader's line (v638), else the ink snap (v620), else the row of ink under the frame
+  (`labelRow`, v742: one line, no join — H's QR panel), else the frame; a line carrying the neighbour's characters at its ends
+  is cut to the matched run (`pdTrim`, v738). The split places an unplaced label the same way (v644 + v742). `REG_V` 742.
 - **The v6xx state** (reader, owner tools, Learn zoom, Crop again): `grep -n "Consolidated v6xx" docs/HISTORY.md` (H, 2026-09-28).
 
 ## Files
@@ -168,9 +166,10 @@ after the layout settles (v521/v532).
 - **The word being written is marked on the photo** (v533) — **switched off by `SPOT_ON` since v602**, code intact.
 - **The photo zooms onto the character being written** (v617, `ZOOM_AUTO`): whole first, in after `AZ_OVERVIEW` or the pad's
   first touch, on to each next character on a glide, out for the recap — on every character, level 3 included (v660, H's
-  choice over v617's recall rule). `AZ_INK` on a sure ink box; the reader's boxes of one line share one scale, the largest any of them
-  needs (v678), and every line shows its characters at the card's largest share of the box, as far as `AZ_MAX` allows (v679); the text whole on an unsure ink guess (v669); cap `AZ_MAX` 3.5. **The learner can switch it off** (More → Learning, `learnZoom`, `zoomOn()`, on by default, v683). How the place is found: Current state. A pinch makes the zoom the hand's
-  (`ZOOM_HAND`) and it then only follows; one finger still swipes.
+  choice over v617's recall rule). `AZ_INK` on a sure ink box; the reader's boxes of one line share one scale (v678) and every
+  line shows its characters at the card's largest share of the box (v679); the text whole on an unsure ink guess (v669); cap
+  `AZ_MAX` 3.5. **The learner can switch it off** (More → Learning, `learnZoom`, `zoomOn()`, on by default, v683). A pinch makes
+  the zoom the hand's (`ZOOM_HAND`) and it then only follows; one finger still swipes.
 - **Swipe** = the carousel of v417: the neighbour rides in beside the card and snaps; it grades
   nothing, and a skipped card stays due for next time. On a **zoomed** picture the one-finger drag pans, and pulling on past
   the picture's edge hands the stroke to the swipe (v606).
@@ -261,7 +260,9 @@ while smaller calls answered — how long it needs is unknown until the next dum
 the key, counts the call and refuses past the cap — **per provider since 2026-09-14: qwen 80,
 deepseek 400, `CAP_ALL` 6000**; the owner's phone is exempt through the `OWNER_INSTALL` secret.
 The Qwen endpoint follows the key's own prefix (`sk-ws-` pay-as-you-go, `sk-sp-` Token Plan), and
-both keys are trimmed — a newline from a phone paste produced a 401 that read like a dead key.
+both keys are trimmed — a newline from a phone paste produced a 401 that read like a dead key. **The function logs every
+call** (provider, bytes, status, seconds, never the text; a line cut before its answer logs `closed` and answers 502) —
+read it under Edge Functions → ai-relay → Logs (2026-09-29, the 江宁府 board: seven calls all dead at exactly 75.0 s, cause open).
 
 **The picture model writes only what needs the picture** (v640, `picWords`): characters, boxes, board or not, kind, page; the pinyin, meaning and description come from the text model in the same `aiReadPicture` call — the picture's answer time is ~5 s + 7.5 ms per character it writes, and those fields were two thirds of it. Words that do not come leave the gloss, pending.
 
