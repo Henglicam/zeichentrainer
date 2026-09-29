@@ -60,6 +60,62 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v757, 2026-09-29)
+- **The app knows Meituan's standard fields, and a 44-text screen makes its multicard (v757, H with five Meituan screenshots —
+  the home screen in Beijing, the home screen in Hamburg, Messages, the cart, Me: "Jetzt fangen wir an die Meituan App zu
+  lernen. Ich möchte, dass du alle Standard-Felder kennst und perfekte Multikarten daraus baust.").** Read as: the app learns
+  the fields; H is phone-only and the app makes the multicards from what he shares. **(1) The book.** `signs.json` gains the
+  category `meituan`: 216 labels (220 written, four already in the shops book — 外卖 Takeout, 堂食 Dine In, 营业中 Open, 休息中
+  Closed — keep the old line) — the tab bar (首页, 视频, 小团, 购物车, 我的, 消息), the home screen's grid at home (外卖 … 机票火车票)
+  and abroad (购物/商场 … 西餐), the rankings, Messages (订单动态, 服务提醒, 粉丝福利, 骑手/司机历史聊天), the cart (失效商品, 全选, 合计,
+  结算), Me (黄金会员, 成长值, 会员神券包, 一键领取, 待付款 … 更多工具), ordering, paying and delivery (确认下单, 继续加菜, 联系骑手,
+  配送费, 准时宝, 配送中 …), shops and lists (综合排序, 好评率, 人均, 猜你喜欢 …) and coupons (满减, 新客立减, 红包 …). Pinyin from
+  pinyin-pro in citation tones as the book writes them (yī, bù), hand-corrected where the library misreads (排行 pái háng, not
+  xíng; 热门去处 chù; 消息 xiāo xi; a slash as the app writes it, "dài shōu huò / shǐ yòng"); the meaning is what the label means
+  **in Meituan**, sentence case, the literal word first where it differs (闪购 "Flash shopping (goods delivered fast from nearby
+  shops)", 团购 "Group deals (vouchers to use in the shop)", 我的 "Me (your own page: account, orders, coupons)", 自营 "Sold by
+  Meituan itself"). **(2) The split takes the book first** (`picWords`): every text of a picture answer — a label, or the one
+  text — is looked up whole (`fieldEntry`: as written, else without a bracketed count, a chevron or a badge digit after it:
+  全部(2), 待付款1; 惊喜多选1 is a field as written), a hit gets the book's pinyin and meaning on the label itself (so it survives a
+  words call that never comes) and is **not sent to the text model**; the rest go in one call as before, and that call now
+  names the page — `fromPic` "App, Meituan, home screen" from the picture's own `page` answer, which until now only titled the
+  multicard. The label carries `src:"book"` into `splitCards` → `readingCard`, where its card is `mt {src:"phrasebook",
+  verified:false, pending:false}` with `ml` "en", no `ocrDoubt`, no `aiDoubt` — unverified as 慢 and 停 from the book have
+  always been (the rule: a phrasebook prefill is verified by a human or the AI, not by being in the book), and pending nothing,
+  so the review queue leaves it alone. A `kinds` vote of "App" for `readerPicture`. **(3) A field is a whole label.** The book
+  is greedy inside a line (`lineMeaning` takes the longest phrase at hand before the fewest-words split), so 216 short app
+  words would have glossed every sign that contains one — 我的 in 我的家 as the Me tab, 美食 in 美食广场 as the app's section.
+  An entry of the category carries `field:true` and matches only when it IS the line (`lineMeaning`), and never as a split
+  candidate (`fewestFirst`); measured: 我的家 → 我 I · 的 of · 家 home, 我的 → the book, 美食广场 → 美食 culinary delicacy ·
+  广场 public square, on v757 as on v756. **(4) Two rules that stood between these screens and any multicard at all.** The
+  harness (below) ran H's home screen through v756 with a perfect answer of 46 labels and got ONE card twice over. First
+  `panelCovers`: the phone's reader read the screen surely, and one of its 42 checked lines, `43.151173.7折` (the offer's
+  ¥43.15 ¥117 3.7折), had 0.50 of its characters among the answer's elements — a price line the prompt tells the model to leave
+  out ("a price or an amount is never an element of its own"), so no answer could ever hold it. A line with one Chinese
+  character or none is now not a line the split could lose (v646's rule for a reader line: a lone character is a decoration or
+  a neighbour's edge). Second the cap: `SPLIT_MAX` 30 — the home screen carries 44 texts, Me 40 ("the AI calls these 44 texts
+  separate labels, but there are 44 of them — one card"). CLAUDE.md listed the cap as waiting for H's word; the ask settles it
+  for these screens: **60**. The record's own arithmetic moved with it (`NUMS_MAX`: 60 labels ~13 KB, the quick look's boxes
+  trim first, as designed). **Harness** (session scratchpad; the five screenshots from the session's uploads, NOT committed —
+  they carry H's account id, his address and riders' names): a served copy of the tree, the screenshot shared to the app
+  (`importPhotos`, shared:true → read whole), the phone's own reader from `vendor/paddle/` at the app's 1600 px for the boxes
+  of a mocked picture answer (every Chinese text of the screen in reading order, each box the reader's line by LCS; 晴 on the
+  Hamburg screen had no reader line), the relay mocked at `page.route` (the picture request answered with those labels,
+  `kind` App and the page; a text request answered with pinyin-pro and "model: <text>", so a book meaning and a model meaning
+  cannot be confused), the old tree as control. Reader lines 65/56/42/47/48 (home/Me/cart/Messages/Hamburg, 686×1600), labels
+  46/40/31/29/30, cards **44/40/30/28/29** with the page titled "Meituan — home screen / account page / shopping cart /
+  messages / home screen abroad"; fields from the book **30/36/21/14/21**, every one with the book's pinyin and meaning,
+  `mt.src` phrasebook, unverified, not pending, no suspect, `ml` en; the model asked for **14/3/9/14/8** texts, the page
+  named in every ask; no frame the whole picture, nothing flagged, short descriptions came. **v756 on the same runs:** cart,
+  Messages and Hamburg split too, but 0 fields from the book and 30/28/29 texts asked of the model (the flips); home and Me
+  one card each (the guard, then the cap). Reading time 15–19 s a screen in headless Chromium with the answer mocked. **Not
+  field-checked:** the real picture model's own label list on these screens (the prompt has asked for every text since v450
+  — v453 was H's last report on it), whether the phone's reader reads them "surely" as the harness did, and the words call for
+  14 texts through the relay. Cost: `signs.json` 28.5 → 42 KB, one shell re-download for the bump. WHATS_NEW 757; TO_TEST
+  "Meituan screenshots: fields right?". Rejected: the list inside the picture prompt (7 200 characters already, and the picture
+  model reads the screen, it does not gloss it) and a file of its own (the book's whole-line match is exactly what a label
+  needs, offline too).
+
 ## Current state (PWA v756, 2026-09-29)
 - **The reader's board path narrowed to priced boards (v756, H's Menus rebuild on v755, 18:22 UTC, the report pasted).**
   The field verdict on v755: 江宁府 clean in 71 s (against 166 s), 24 texts, row 1's three names without their prices; the
