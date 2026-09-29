@@ -60,6 +60,38 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v746, 2026-09-29)
+- **A search run far taller or wider than the reader's texts is a band, not a label, and the multicard's count line leaves the
+  Camera tab too (v746, H on the 江宁府 board read on v745: "As Flashcards ist immer noch drin und die Frames sind immer noch
+  nicht ganz richtig gesetzt", with the Camera-tab screenshot).** The v745 dump took a third path through the same board:
+  Qwen's boxes all 120 wide (`tmpl.tell:"width"`, `round:false`), so the search of v386 ran (`found` hit 5, filled 0), the
+  reader named 21, the fit stood (`aiCal {n:16, err:0.26, took:1, rows:0}`) and the dish pictures took the correction
+  (鸡汤阳春面 61–75 % down — v745 works). Two frames were still wrong: the search had named 重庆豌杂小面 on a run
+  `[0.467,0.6065,0.7542,0.7178]` — 47–75 % across and 61–72 % down, two columns and the photo row above, 2.0 characters'
+  width a character and 5.6 texts tall against the reader's texts of that row (2 % tall) — and the frame took the run as it
+  came (v388: "no FRAME_ROOM here"); the corrected box of 招牌油豆腐粉丝汤 then lay on that run ("would lie on another text —
+  no place") and its card kept the whole picture. The greedy `hit` pairing of `readLabels` has no size test (only the weak
+  fill checks `RL_WIDE`). **Now** a search rect is marked `run`, and once the fit stands each run of a label the reader did
+  not name is measured against the reader's own texts: `median` height and per-character width of the `pdPl` places; taller
+  than `RUN_TALL` 2.5 texts or wider than `RUN_WIDE` 1.8 of its characters' width, it is given up (`labelRects[k]=null`,
+  `wide++`) and the v742 loop places it by the corrected box and its row of ink, as an unplaced label. The log names it
+  ("重庆豌杂小面¥18/份: the run the search named it on is 5.6 texts tall and 2.0 times as wide as its characters against the
+  reader's texts — a band, not a label; it takes the corrected box"), `numbers.aiCal` gains `wide`. Runs of labels the reader
+  named are untouched (the reader's place overwrites them anyway); a legit run of a bigger-font label the reader did not name
+  will be re-placed the same way, which is the v742 mechanism and not a loss. Harness (`test746`: the v745 dump's exact
+  Qwen answer — row 1 spaced 150, rows 2–5 120 — on the fx-jnf3 board, and `readLabels` replaced by the phone's own
+  `found.rects` so the run is the field's): **13/13 on v746, 7/13 on v745** — on v745 重庆豌杂小面's frame is 47–75 % across
+  and 11 % tall and 招牌油豆腐粉丝汤's the whole picture; on v746 both stand in row 4 in their own columns (61–72 % and
+  44–59 %), `took 3, rows 3, wide 1`. test743 7/7, test744 8/8, test745 16/16 still. Guard: the fit needs the dump's row-one
+  spacing — with rows 2–5's spacing on row 1 the max error is 1.03 and `aiBoxCal` refuses (2·`AI_CAL_ERR`); the phone's answer
+  had 150. **The count line:** H's "in dieser Ansicht" of v745 was the Camera tab (the finished multicard with Crop and
+  Delete), not the multicard's own screen; now `regionLine` shows no line for a page there either, a plain photo keeps
+  "{0} cards from this photo, {1} learned.", and the key "Texts on this multicard: {0}, as flashcards: {1}." is gone from
+  the nine translated columns with its last user (**490 keys a column, ru 520**, evaluated). Checked by screenshot at 390 px
+  light English (Camera tab and multicard screen) and 360 px dark German. `WHATS_NEW` 746; `TO_TEST` "江宁府: row 4 frames,
+  no count line?". Not yet field-checked; the open question is whether the corrected box of 招牌油豆腐粉丝汤 finds its row of
+  ink on the phone's picture as it did on v745 for 鸡汤阳春面's neighbour.
+
 ## Current state (PWA v745, 2026-09-29)
 - **A menu dish's photo box takes the fit's correction too, and the multicard's own screen drops its count line (v745, H
   on the 江宁府 multicard read on v744: "Immer noch gleich. Und Saved as Flashcards muss da nicht mehr angezeigt werden in
