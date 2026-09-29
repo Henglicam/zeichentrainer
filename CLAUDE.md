@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v757, 2026-09-29)
+## Current state (PWA v758, 2026-09-29)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -83,8 +83,10 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   again with the detector on the photo's own size** (`PD_DET_MAX2` 1600 against `PD_DET_MAX` 960, `paddle.again`, v750, field-checked: 7 s
   more on the 江宁府 board, 鸡汤阳春面 came apart). **The fit drops its worst points** (over 2·`AI_CAL_ERR`, a quarter at most,
   `dropped`) **and a dish's picture is moved by its own name's residual onto the reader's place** (v751).
-- **Meituan's standard fields (v757):** `signs.json` category `meituan`, 216 labels (tab bar, home grid at home and abroad,
-  Messages, cart, Me, ordering, shops, coupons), pinyin checked, the meaning each has **in the app**. A picture answer's text
+- **Meituan's standard fields (v757/v758):** `signs.json` category `meituan`, 656 labels, page by page (tab bar, home, the shop
+  page and its options, checkout, order progress, reviews, deals, hotels, tickets, rides, medicine, wallet, supermarket, search,
+  address, account, settings — v758's 440 from the web's search summaries and the app's known screens; page fetches are blocked
+  from the session; **only the five screens H sent are matched against a screenshot**), pinyin checked, the meaning each has **in the app**. A picture answer's text
   that is one of them whole (`fieldEntry`; a bracketed count, chevron or badge digit stripped) takes the book's words and is
   **not asked of the text model**; its card is `mt.src` "phrasebook" (unverified, pending nothing, no doubt). The rest go to
   the model **with the page named** ("App, Meituan, home screen"). A field matches a **whole label only** (`field`): 我的 in
@@ -95,7 +97,7 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
 
 ## Files
 Shell: `index.html` · `styles.css` · `lang.js` · `app.js` · `manifest.webmanifest` (with `share_target`) · `sw.js` ·
-`signs.json` (phrasebook; Meituan's fields since v757) · `nmt-model.json` · the three icons · `guide/` (seven real crops, light and dark, 113 KB WebP,
+`signs.json` (phrasebook; Meituan's fields since v757, 1023 entries) · `nmt-model.json` · the three icons · `guide/` (seven real crops, light and dark, 113 KB WebP,
 made by `tools/guide-shots.js`). `vendor/`: Tesseract and its readers, dictionaries, OpenCC, `strokes.txt.gz`, `outlines.txt.gz`
 (~23 MB); `vendor/paddle/` (~30 MB, v637) and `vendor/nmt/` (55 MB) load on use; licences in `vendor/LICENSES.txt` and
 `vendor/ARPHICPL.TXT`. Not in the shell: `privacy.html`, `README.md`, the three `SPEC-*.md` (pre-build designs, contradicted in
@@ -487,7 +489,7 @@ CC BY-SA).
 ## Open / not yet field-checked
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
 as field-checked; only a question he is still raising is open, and each version's archive entry names its own. Open now:
-the reader's path on priced boards (v756); Meituan's fields and the split of a 40-text screen (v757).
+the reader's path on priced boards (v756); Meituan's fields and the split of a 40-text screen (v757/v758).
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's character
