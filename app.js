@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=753; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=754; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1509,7 +1509,7 @@ async function fixNumberSegs(){
    glosses (慢, 停, 男, 女), a meaning the AI or a hand wrote or checked, a meaning in another language. Once per phone (the
    settings row glossFix, v 718); the row keeps what changed and Diagnostics prints it. A dictionary that does not load
    leaves the row unwritten, so the next start tries again. */
-const GLOSS_FIX_V=729, GLOSS_FIX_KEEP=300; /* 729: 吃 碰 杠 in OWN_SENSES, the mahjong call in the bracket */ /* 728 (H's v727 dump): 龙 and 胡 in OWN_SENSES; the OWN_PINYIN reading and the fewest-words split reach the verified cards and the cards with an AI meaning too (gloss and segs only where the meaning is not the composed one) */ /* 727: 皮 and 瘦 in OWN_SENSES */ /* 726: the fewest-words split — an unverified sign card whose meaning is still the composed one takes the new split */ /* 725: OWN_PINYIN — 夹 reads jiā, the unverified cards' pinyin and glosses follow */ /* 724 (H's v723 dump): a bound form past the third sense is not the in-word sense (入 "to conform to", 水 "additional cost", 牌 "fixed pattern for lyrics"), "I" is a pronoun (我 → "me"), a capitalised word anywhere makes a proper noun (巴 "the east of Sichuan") */ /* 723: 面 and 卡 in OWN_SENSES */ /* 722: the v5 dictionary and the two chooser rules of docs/NMAX.md — the pass waits for the fresh file */ /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
+const GLOSS_FIX_V=754, GLOSS_FIX_KEEP=300; /* 754: 牌 after a name is "brand" (AFTER_SENSES) */ /* 729: 吃 碰 杠 in OWN_SENSES, the mahjong call in the bracket */ /* 728 (H's v727 dump): 龙 and 胡 in OWN_SENSES; the OWN_PINYIN reading and the fewest-words split reach the verified cards and the cards with an AI meaning too (gloss and segs only where the meaning is not the composed one) */ /* 727: 皮 and 瘦 in OWN_SENSES */ /* 726: the fewest-words split — an unverified sign card whose meaning is still the composed one takes the new split */ /* 725: OWN_PINYIN — 夹 reads jiā, the unverified cards' pinyin and glosses follow */ /* 724 (H's v723 dump): a bound form past the third sense is not the in-word sense (入 "to conform to", 水 "additional cost", 牌 "fixed pattern for lyrics"), "I" is a pronoun (我 → "me"), a capitalised word anywhere makes a proper noun (巴 "the east of Sichuan") */ /* 723: 面 and 卡 in OWN_SENSES */ /* 722: the v5 dictionary and the two chooser rules of docs/NMAX.md — the pass waits for the fresh file */ /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
 async function glossFix(){
   const done=S.settings.glossFix; if(done&&done.v>=GLOSS_FIX_V) return;
   try{ await loadDict(); if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); }catch(e){ return; } await loadSigns().catch(()=>{});
@@ -1520,7 +1520,7 @@ async function glossFix(){
   for(const d of S.custom){ let u=null;
     if(Array.isArray(d.gloss)&&d.gloss.length){
       const ctxP=glossCtx(d);
-      const gl=d.gloss.map((g,i)=>{ if(!g||!oneCJK(g.w)||inBook(g.w)) return g; const p=ctxP[i].p||g.p, m=cleanSense(bestSense(g.w,p,ctxP[i].inWord)); if(!m||(m===g.m&&p===g.p)) return g; changed.push({id:d.id,w:g.w,from:(p!==g.p?(g.p||"")+" ":"")+(g.m||""),to:(p!==g.p?p+" ":"")+m}); k++; return {...g,p,m}; });
+      const gl=d.gloss.map((g,i)=>{ if(!g||!oneCJK(g.w)||inBook(g.w)) return g; const p=ctxP[i].p||g.p, m=cleanSense(bestSense(g.w,p,ctxP[i].inWord,ctxP[i].after)); if(!m||(m===g.m&&p===g.p)) return g; changed.push({id:d.id,w:g.w,from:(p!==g.p?(g.p||"")+" ":"")+(g.m||""),to:(p!==g.p?p+" ":"")+m}); k++; return {...g,p,m}; });
       if(gl.some((g,i)=>g!==d.gloss[i])){ u={...d,gloss:gl};
         if(d.mt&&d.mt.src==="gloss"&&!d.mt.verified&&mlOf(d)==="en"&&d.m){ /* the meaning composed word by word carries the old gloss too ("卖完 to be sold out · 了 to finish") */
           let m=d.m; gl.forEach((g,i)=>{ const o=d.gloss[i]; if(g!==o&&o.m) m=m.split(o.w+" "+o.m).join(g.w+" "+g.m); });
@@ -1562,8 +1562,8 @@ function glossCtx(d){
   const lines=String(d.c||"").split("\n").map(l=>l.replace(/\s+/g,"")), py=lines.map(l=>pinyinPro.pinyin(l,{type:"array",toneType:"symbol"}));
   let li=0, off=0;
   return d.gloss.map(g=>{ const w=g&&g.w||""; if(!w) return {p:"",inWord:false};
-    for(let j=li;j<lines.length;j++){ const i=lines[j].indexOf(w,j===li?off:0); if(i>=0){ li=j; off=i+w.length; return {p:w.length===1&&!SANDHI.test(w)&&py[j].length===lines[j].length?py[j][i]:"",inWord:w.length===1&&besideCJK(lines[j],i)}; } }
-    return {p:"",inWord:false}; });
+    for(let j=li;j<lines.length;j++){ const i=lines[j].indexOf(w,j===li?off:0); if(i>=0){ li=j; off=i+w.length; return {p:w.length===1&&!SANDHI.test(w)&&py[j].length===lines[j].length?py[j][i]:"",inWord:w.length===1&&besideCJK(lines[j],i),after:w.length===1&&CJK.test(lines[j][i-1]||"")}; } } /* after (v754): a character before it */
+    return {p:"",inWord:false,after:false}; });
 }
 /* the text keeps the photo's lines: a horizontal word stays on one line, so the box goes
    wide and the font shrinks to fit instead of wrapping (H: "the image is one line") */
@@ -6341,6 +6341,7 @@ async function delCustom(id){
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
   743:"A menu's bottom row is no longer lost when the AI draws its boxes past the picture's edge.",
+  754:"牌 after a name now reads \"brand\", on your old cards too.",
   753:"Swiping through a multicard's texts no longer hops, and their descriptions come with the multicard.",
   752:"An open card stays put while its description loads.",
   751:"A dish's picture stands over its own name even when the AI's grid is off.",
@@ -7529,7 +7530,12 @@ const OWN_PINYIN={"夹":"jiā","夹子":"jiā zi","皮夹子":"pí jiā zi","夹
 const OWN_PY_CHARS=Object.keys(OWN_PINYIN).filter(k=>k.length===1), OWN_PY_READ=new Set(OWN_PY_CHARS.map(k=>OWN_PINYIN[k]));
 const BOUND_TOP=3; /* v724: the in-word bound form must stand among the first BOUND_TOP senses of its reading — the three the v4 file shipped and v717's rule was field-checked on. The v5 file appends the cut senses, and a bound form far down the line is a marginal one: 入 (5th) "to conform to (as in 入时)", 水 (7th) "additional cost", 牌 (10th) "fixed pattern for lyrics or set melody", 干 (14th) "to have to do with" — measured over every one-character line: 53 in-word answers change, 入 → to enter, 水 → water, 牌 → signboard, 干 → dry, 元 → currency unit, 国 → country, 和 → and, 多 → many, 座 → seat, 会 → can, 奖 → prize; 密 → "name of an ancient state" and 殊 → "to behead" are the cost */
 const PROPER=x=>/^(\(bound form\)\s*)?(the\s+)?[A-Z][A-Za-z]/.test(x)||/abbr\. (for|of)/i.test(x)||/(^|[\s,])[A-Z][a-z]/.test(x.replace(/\([^)]*\)/g,"")); /* v724 (H's v723 dump): a capitalised word anywhere outside a note names a place, a people, a dynasty or a person — 巴 had become "the east of Sichuan and Chongqing Municipality", 成 is "short name for Chengdu", 蓉 "short name for Chengdu" — and the lone capital "I" is a pronoun, not a name (我 had become "me"); measured over every one-character line: 121 answers change, 成 → to succeed, 晋 → to move forward, 申 → to extend, 卫 → to guard, 蓉 → paste, 翼 → wing */ /* a sense that names a place, a people, a dynasty or an abbreviation (v721: 美 beside 团 had become "the Americas", 河 "the Yellow River") */
-function bestSense(w,py,inWord){ /* inWord (v717): the character is being read INSIDE a word, so a sense CC-CEDICT marks "(bound form)" is the right one — 店 in 药店 is "shop", not the free word's "inn" */
+/* v754 (H, a tissue pack glossed "signboard": "Mach 牌 einfach als 'brand' wenn es nach einem Namen steht"): a character that
+   follows another one on the line and means something else there than on its own — 牌 after a name is the brand, alone the
+   signboard CC-CEDICT lists first */
+const AFTER_SENSES={"牌":"brand"};
+function bestSense(w,py,inWord,after){ /* inWord (v717): the character is being read INSIDE a word, so a sense CC-CEDICT marks "(bound form)" is the right one — 店 in 药店 is "shop", not the free word's "inn"; after (v754): a character stands before it on the line */
+  if(after&&AFTER_SENSES[w]) return AFTER_SENSES[w];
   const own=OWN_SENSES[w]; if(own){ const k=pyKey(py), r=own[k]||(pyBare(k)===k?own[Object.keys(own).find(x=>pyBare(x)===k)]:undefined); if(r) return r; } /* a toned reading must match exactly (只 zhǐ is "only", not the zhī classifier); only a toneless one falls back */
   const v=(DICT&&DICT.get(w))||"";
   let body=v;
@@ -7582,7 +7588,7 @@ function lineMeaning(line){
     const rest=raw.slice(k).split(SIGN_PUNCT)[0];
     const w=rest.slice(0,fewestFirst(rest))||ch; /* v726: the split with the fewest words, not the longest word at hand */
     const wp=w.length===1&&inCtx&&CJK.test(w)&&!SANDHI.test(w)?ctx[k]:pySpaced(w); /* 一 and 不 keep their own tone: the line's reading carries the sandhi (yì méi), the gloss shows the character's */
-    parts.push({w,p:wp,m:cleanSense(bestSense(w,wp,w.length===1&&besideCJK(raw,k))),ph:false}); /* v720: a character beside another one outside a dictionary word is inside a word the dictionary lacks — its bound-form sense (店 in 本店 is "shop", not "inn") */ /* no dictionary clutter in the composed meaning (v134); the word's own reading picks the sense group (v573) */
+    parts.push({w,p:wp,m:cleanSense(bestSense(w,wp,w.length===1&&besideCJK(raw,k),w.length===1&&CJK.test(raw[k-1]||""))),ph:false}); /* v720: a character beside another one outside a dictionary word is inside a word the dictionary lacks — its bound-form sense (店 in 本店 is "shop", not "inn") */ /* no dictionary clutter in the composed meaning (v134); the word's own reading picks the sense group (v573) */
     k+=w.length;
   }
   const words=mergeUnits(parts).filter(x=>!x.punct);

@@ -56,7 +56,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v753, 2026-09-29)
+## Current state (PWA v754, 2026-09-29)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -65,8 +65,8 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
 - **Dictionary v5 and the gloss rules (v717–v729, field-checked).** `cedict.tsv.gz` v5 holds every sense of every one-character
   line (`tools/cedict-nmax.py --write`, `docs/NMAX.md`). `bestSense`: **`OWN_SENSES`** first (H's street senses — add there, with
   the reading), **`OWN_PINYIN`** into pinyin-pro (夹 jiā), the fewest words per line, a bound form inside a word (`besideCJK`,
-  `BOUND_TOP` 3, never `PROPER`), the reading from the whole line (`ctx`, `SANDHI`); `glossFix()` once per phone (`GLOSS_FIX_V`
-  729). Full wording: `grep -n "Consolidated v717" docs/HISTORY.md`.
+  `BOUND_TOP` 3, never `PROPER`), the reading from the whole line (`ctx`, `SANDHI`); **`AFTER_SENSES`** for a character after another one (牌 "brand",
+  v754); `glossFix()` once per phone (`GLOSS_FIX_V` 754). Full wording: `grep -n "Consolidated v717" docs/HISTORY.md`.
 - **Duplicate multicards (v731):** a row under More → Your cards while two multicards share `DUP_SHARE` 0.6 of their texts
   (`dupKey`); Delete N keeps the newest of each set, the rest go through `delCustom` and Undo.
 - **A dish's meaning shows without its price** (`noPriceM`, v710/v712) or the comma before it (v732).
