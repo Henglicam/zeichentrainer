@@ -60,6 +60,29 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v743, 2026-09-29)
+- **A label the model draws past the picture's edge is kept, and the phone's reader places it (v743, H: "Fix it" — the 江宁府
+  board's fifth try, the one that read: Qwen answered 24 lines in 123 s, the app made 19 cards).** What the numbers said: the
+  model's grid put the bottom row, the five congees, at y 830–850 of an 800 px picture (and the last column at x 660–780 of
+  715); `picBox` on the panel's scale ("px", the majority) clamped each congee box to nothing and the v379 map dropped the
+  label with it — "24 labels (19 usable)" — although the phone's reader had read all five at 98 % and would have placed them by
+  their text as it placed the other fifteen. The Sep 27 multicards of the same board have them. Now **`picSlide`**: a label box
+  that is a box unclamped but lies past the edge is kept with `raw` (as drawn, on the panel's scale) and `box` (the same box slid
+  onto the picture, so every piece of code that wants a box inside it has one); the log says "5 labels are drawn past the
+  picture's edge (…) — kept". Two rules around it, both measured in the harness: **a raw label is no point of `aiBoxCal`'s
+  fit** — the grid is linear over the rows inside (0.36…0.88 → 0.35…0.72) and breaks at the edge (1.05 → 0.95), and with the
+  five in the fit the three dishes the reader had not named landed a row too low (0.75 instead of 0.71); and **a raw label the
+  reader did not name keeps the whole picture** — tried first: the slid box as `labelRow`'s anchor with a longer reach found
+  the row, but the fit-corrected x covered the neighbour's run more than its own and the label took the neighbour's cut, or
+  "no place"; a card on the neighbour is the one price the v391 rule does not pay, the whole picture is. Harness (`test743`,
+  the board drawn from the dump's reader lines, Qwen's 24 labels on its overshooting grid, 紫米粥 left out of the reader on
+  purpose): 7/7 on v743, 2/7 on v742 — 24 cards and the page, the four read congees on the bottom row in their columns, the
+  unread one the whole picture, 鸡汤阳春面's corrected box unchanged; test742 9/9 and test741 18/18 on v743. `numbers:` carries
+  `raw` on such a label. Not field-checked; Still to test: "江宁府: the 5 congees made?".
+- **The relay log, read (same day, before this fix).** With the function's own lines deployed, the board's fifth try read:
+  Qwen 200 in 123.4 s at the phone — the first try cut at 60 s, the second answered in ~61 s, which v740's 120 s wait was for.
+  The 75.0 s deaths of the morning are still unexplained; H sends the `qwen <-`/`->`/`closed` rows of that reading next.
+
 ## The relay logs every call (no version — `supabase/` only, 2026-09-29)
 - **The relay writes what the provider did into its own log (H: "Go 2", after the 江宁府 board's fourth failure).** The
   facts before it: v739's dump said "no answer within 60 s (tried twice)", v740 lengthened the second try to 120 s and v741's
