@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=754; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=755; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -689,7 +689,7 @@ async function sendFeedback(text,shot){
 const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde ich ja lange wieder darauf bestehen, dass wir es
   noch fixen"): the 340 rows back to v141 went in one go. A row goes the moment H's report or his own use settles it, unasked;
   a row older than the screen it names is dead. The parked lock rows went too — the lock's code stays, the archive has them. */
-  ["again","v751","江宁府: dish pictures over names?"],
+  ["again","v755","A board: reader path, texts right?"],
 ];
 const TO_TEST_GROUPS=[["photo","Take any photo"],["again","Take one of these again"],["app","In the app"],["update","After an update"],["lock","Parked — the lock is off (v531)"]];
 /* What the app claims it can read, and what a photo has actually confirmed (v434, H after the untested menu
@@ -1873,8 +1873,42 @@ async function picWords(zh,labels,kind,shot){
   const changed=items.filter((c,i)=>out[i].zh&&out[i].zh.replace(/\s/g,"")!==c.replace(/\s/g,"")).length;
   logRead(shot,`the words for the picture's text from ${out[0].model||"the text model"} in ${((Date.now()-t0)/1000).toFixed(1)} s${changed?` — it would change ${changed} of ${items.length} texts, the picture's reading stands`:""}`);
   if(labels&&labels.length){ labels.forEach((l,i)=>{ l.p=out[i].bad?"":out[i].p; l.m=out[i].bad?"":out[i].m; });
-    return {p:labels.map(l=>l.p).join(" / "),m:labels.map(l=>l.m).join(" / "),desc:"",note:"",unsure:out.map(o=>o.unsure).filter(Boolean).join(" ")}; }
+    return {p:labels.map(l=>l.p).join(" / "),m:labels.map(l=>l.m).join(" / "),desc:"",note:"",unsure:out.map(o=>o.unsure).filter(Boolean).join(" "),kinds:out.map(o=>o.kind||"")}; } /* kinds (v755): the reader's board takes its kind from them */
   const o=out[0]; return o.bad?null:{p:o.p,m:o.m,desc:o.desc||"",note:o.note&&o.note!=="ok"?o.note:"",unsure:o.unsure||""}; }
+/* v755 (H: "Go for 1" — the phone's reader as the reading on boards): on the 江宁府 board the reader read 22 lines at 97 % and
+   the picture model still had to answer — two minutes, seven calls dead at 75 s — for boxes that were a drawing anyway.
+   A board the reader reads surely is split by the reader's own lines: at least NOPIC_LINES kept lines (Chinese, two
+   characters or more beside a price — a lone character is a decoration or a neighbour's edge, v646; a line under
+   BOARD_LINE_MIN a stray), the median line at BOARD_CF, the mean at BOARD_MEAN, BOARD_SURE of the characters at PD_SURE
+   (calibrated on tools/field: the three menu boards read at a median of 94–100, the angled 江宁府 shot at 78–84); read once more with the detector on the photo's own size (v750)
+   and the sharper reading taken when it keeps as many lines; a line carrying two prices is two texts, cut after the first
+   price (v747's share rule at the source: 招牌油豆腐粉丝汤￥12/份重庆豌杂小面￥18/份). The text model writes pinyin and meaning
+   for all of them in one call (picWords) and its kinds name the board's kind, a menu when half the lines carry a price; the
+   tallest line, BOARD_TITLE times the median, is the page's name. The answer has the shape of a picture answer, so every
+   path after it — the split, the regions, the page card, the descriptions — is the one the picture answer takes. Cost: no
+   dish photos and no place on such a board; the reader's lines are its texts as read. */
+const BOARD_CF=94, BOARD_MEAN=90, BOARD_SURE=0.7, BOARD_LINE_MIN=0.7, BOARD_TITLE=1.6, BOARD_CUT_RE=/(?<=(?:[¥￥]\d+(?:\.\d+)?(?:\/[份个元位杯碗斤两]|[元份个])?|\d+(?:\.\d+)?[元份个]))(?=[\u4e00-\u9fff])/, BOARD_PRICE_RE=/[¥￥]\s*\d|\d+(?:\.\d+)?\s*(?:元|份|个)/;
+function boardLines(raw,W,H){ const out=[];
+  for(const l of raw){ const t=String(l.text||"").replace(/\s+/g,""); const name=[...t.replace(/[¥￥]?\d+(?:\.\d+)?\/?[份个元位杯碗斤两]?/g,"")].filter(ch=>CJK.test(ch)).length; if(name<2||l.vert||(+l.conf||0)<BOARD_LINE_MIN) continue; /* a price alone, or one character beside it, is no text of the board; a line under BOARD_LINE_MIN is a stray (a neighbour board's edge at 54 %) */
+    const parts=t.split(BOARD_CUT_RE).filter(Boolean), tot=[...t].length; let at=0;
+    for(const p of parts){ const len=[...p].length; if([...p].some(ch=>CJK.test(ch))) out.push({zh:p,x0:(l.x+l.w*at/tot)/W,y0:l.y/H,x1:(l.x+l.w*(at+len)/tot)/W,y1:(l.y+l.h)/H,h:l.h,conf:+l.conf||0,cfs:(l.cfs||[]).slice(),cut:parts.length>1}); at+=len; } }
+  return out; }
+function boardStats(lines){ const n=lines.length; if(!n) return {n:0,cf:0,med:0,sure:0,priced:0}; const cs=lines.map(l=>l.conf).sort((a,b)=>a-b), cf=Math.round(cs.reduce((a,v)=>a+v,0)/n*100), med=Math.round(cs[n>>1]*100), cfs=lines.flatMap(l=>l.cfs.length?l.cfs:[l.conf]), sure=+(cfs.filter(c=>c>=PD_SURE/100).length/Math.max(1,cfs.length)).toFixed(2), priced=lines.filter(l=>BOARD_PRICE_RE.test(l.zh)).length; return {n,cf,med,sure,priced}; }
+const boardSure=st=>st.n>=NOPIC_LINES&&st.med>=BOARD_CF&&st.cf>=BOARD_MEAN&&st.sure>=BOARD_SURE;
+async function readerPicture(cvp,raw,shot){
+  const W=cvp.width,H=cvp.height; let lines=boardLines(raw,W,H), st=boardStats(lines), det=PD_DET_MAX, ms2=0;
+  if(Math.max(W,H)>PD_DET_MAX){ const t0=Date.now(); try{ const raw2=await pdRead(cvp,{detMax:PD_DET_MAX2}), l2=boardLines(raw2,W,H), s2=boardStats(l2); ms2=Date.now()-t0;
+      if(l2.length>=lines.length&&s2.cf>=BOARD_CF){ lines=l2; st=s2; det=PD_DET_MAX2; } logRead(shot,`the phone's reader read the board again with the detector on ${Math.max(W,H)} px: ${l2.length} texts at ${s2.cf} % in ${(ms2/1000).toFixed(1)} s — ${det===PD_DET_MAX2?"taken":"the first reading's "+lines.length+" texts stay"}`); }
+    catch(e){ logErr("paddle",e&&e.message||String(e)); } }
+  const hs=lines.map(l=>l.h).sort((a,b)=>a-b), hmed=hs[hs.length>>1]||0, tall=lines.reduce((a,l)=>l.h>a.h?l:a,lines[0]);
+  const labels=lines.map(l=>({zh:l.zh,p:"",m:"",box:[+l.x0.toFixed(4),+l.y0.toFixed(4),+l.x1.toFixed(4),+l.y1.toFixed(4)],raw:null,scale:"px",photo:null}));
+  const w=await picWords(labels.map(l=>l.zh).join("\n"),labels,"",shot); /* pinyin and meaning from the text model, one call; offline: none, pending */
+  for(const l of labels) l.p=await saneP(l.p,l.zh);
+  const kinds=(w&&w.kinds||[]).filter(k=>KINDS.includes(k)), top=kinds.length?[...new Set(kinds)].map(k=>[k,kinds.filter(x=>x===k).length]).sort((a,b)=>b[1]-a[1])[0][0]:"";
+  const kind=st.priced*2>=st.n?"Menu":(top||"Notice"), name=tall&&hmed&&tall.h>=BOARD_TITLE*hmed?tall.zh:"";
+  const box=[Math.min(...labels.map(l=>l.box[0])),Math.min(...labels.map(l=>l.box[1])),Math.max(...labels.map(l=>l.box[2])),Math.max(...labels.map(l=>l.box[3]))];
+  logRead(shot,`the board's ${labels.length} texts are the phone's reader's own lines (${st.cf} %, ${Math.round(st.sure*100)} % of the characters sure${lines.some(l=>l.cut)?", "+lines.filter(l=>l.cut).length+" cut at a price":""}) — kind ${kind}${name?", named "+name:""}; no picture call (v755)`);
+  return {zh:labels.map(l=>l.zh).join("\n"),zht:"",p:w?w.p:"",m:w?w.m:"",desc:"",ml:LANG,note:"",unsure:w?w.unsure:"",bad:false,model:"reader",pv:"reader",box,boxAlt:null,droppedBoxesAlt:null,boxes:labels.map(l=>l.box),dropped:[],droppedBoxes:[],outside:[],oneScale:true,cut:"",kind,keptAll:"apart",pageInfo:name||kind==="Menu"?{name,what:kind==="Menu"?"menu":"",place:""}:null,apart:true,labels,picW:W,picH:H,boxScale:"px",reader:{det,n:st.n,cf:st.cf,sure:st.sure,priced:st.priced,ms2}}; }
 /* the main text only (v312, H's 青春无烟 / 未来无限 poster: the card carried the poster's small print — the line 第39个世界无烟日 above the title and the date 2026年5月31日 世界无烟日 below it, half of it outside the frame — "wieder die Sachen ausserhalb des Crops und das Kleingedruckte mitgelesen. Bitte beides vermeiden"): the prompt asks for the main text and leaves fine print and lines the picture's edge cuts off to the model; this is the safety net from the model's own line boxes — a line whose box is under FINE_PRINT of the tallest line's height is fine print and goes, with its pinyin and meaning parts when they come one per line; the box for the frame is then the union of the lines kept */
 const FINE_PRINT=1/3;
 /* the kinds on which a smaller line under a bigger one is an element of its own, not fine print (v456): the prompt's own
@@ -6341,6 +6375,7 @@ async function delCustom(id){
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
   743:"A menu's bottom row is no longer lost when the AI draws its boxes past the picture's edge.",
+  755:"A board the phone reads surely is split without the picture model: seconds, not minutes.",
   754:"牌 after a name now reads \"brand\", on your old cards too.",
   753:"Swiping through a multicard's texts no longer hops, and their descriptions come with the multicard.",
   752:"An open card stays put while its description loads.",
@@ -9139,8 +9174,8 @@ async function cropSign(id,opts){
        surely (PD_SURE, v641) on a photo that is not a board, it is the reading: no picture call, no close look. The whole frame, not the close look's crop: that crop is cut
        around the first pass's boxes, and where those were garbage it cut the text in half (恩尼美甲, 招商银行) */
     const pdP=PD_ON?(async()=>{ const t0=Date.now(); try{ const b=await createImageBitmap(dk.blob), cvp=document.createElement("canvas"); cvp.width=b.width; cvp.height=b.height; cvp.getContext("2d").drawImage(b,0,0); b.close();
-        const raw=await pdRead(cvp), rawCjk=raw.filter(l=>CJK.test(l.text)).length, pl=pdAsPass(raw), good=pl.length>0&&effScore(pl,Hink)>=WEAK_READ, cfs=pl.flatMap(l=>l.cf), sure=PD_ON_SURE&&pl.length>=1&&pl.length<=2&&cfs.length>=2&&Math.min(...cfs)>=PD_SURE, clear=meanCf(pl)>=95&&dictCover(pl)>=1&&pl.map(l=>l.t).join("").replace(/[^\u4e00-\u9fff]/g,"").length>=2;
-        return {pl,good,sure,clear,rawCjk,ms:Date.now()-t0}; }
+        const raw=await pdRead(cvp), rawCjk=raw.filter(l=>CJK.test(l.text)).length, pl=pdAsPass(raw), good=pl.length>0&&effScore(pl,Hink)>=WEAK_READ, cfs=pl.flatMap(l=>l.cf), sure=PD_ON_SURE&&pl.length>=1&&pl.length<=2&&cfs.length>=2&&Math.min(...cfs)>=PD_SURE, bst=boardStats(boardLines(raw,cvp.width,cvp.height)), board=boardSure(bst), clear=meanCf(pl)>=95&&dictCover(pl)>=1&&pl.map(l=>l.t).join("").replace(/[^\u4e00-\u9fff]/g,"").length>=2;
+        return {pl,good,sure,clear,rawCjk,ms:Date.now()-t0,board,bst,raw,cvp}; } /* board, bst, raw, cvp (v755): a sure board's lines and the canvas to read again */
       catch(e){ logErr("paddle",e&&e.message||String(e)); return {pl:[],good:false,sure:false,clear:false,ms:Date.now()-t0}; } })():null;
     let placedCut=null, placedRect=null; /* the frame placed on the text (v288): its cut is the card image and what the AI gets; placedRect: the rectangle it was placed on, in the straightened copy's pixels (v684) */
     let placedText=""; /* v486: the text the reader placed that frame on, when the placement came from one definite reading (rectOfLines) */
@@ -9158,7 +9193,12 @@ async function cropSign(id,opts){
            sent are byte for byte what the weak path would send below. Measured: 2 of 40 photos are excluded by it. */
         const pdR=(!ok||several)&&pdP?await pdP:null, pdSkip=!!(pdR&&pdR.sure&&(!several||pdR.rawCjk<=2)); if(stale()) return; /* v641: waited for — a sure reading saves the whole picture call (20–45 s), the wait is Paddle's time past the quick look's (~0–2 s). A board still gets the picture answer, since only it makes a multicard (v457) — but the ink's bands call many a single sign "several" (H's 良品, 韵达, 消防栓 cards), so the phone's reader's own detection decides: two lines of Chinese at most, the small ones counted too. The cost: a real board's picture call leaves up to ~2 s later */
         if(pdSkip) logRead(id,`${ok?"the quick look found separated blocks":"the quick look found no readable text"}, but the phone's reader read ${pdR.rawCjk===1?"one line":pdR.rawCjk+" lines"} surely — the reading does not wait for the AI, which checks it beside the card`);
-        if((!ok||several)&&!pdSkip&&!EARLY[id]&&Math.abs(dk.angle||0)<SKEW_TRUST&&pictureUp()){
+        if((!ok||several)&&!pdSkip&&!EARLY[id]&&pdR&&pdR.board&&Math.abs(dk.angle||0)<SKEW_TRUST){ /* v755: the reader's board, no picture call */
+          const eb={orig:r.blob,dk,base};
+          EARLY[id]={run,base:eb,guesses:[],at:Date.now(),reader:true,p:readerPicture(pdR.cvp,pdR.raw,id).then(x=>({pic:x}),e=>{ logErr("reader board",e&&e.message||String(e)); return {err:e&&e.message||String(e)}; })};
+          logRead(id,`${ok?"the quick look found separated blocks":"the quick look found no readable text"}, and the phone's reader read ${pdR.bst.n} texts at ${pdR.bst.cf} % — a board it read surely: its lines are the texts, the AI is asked for the words only (v755)`);
+          EARLY[id].p.then(e=>{ if(stale()||ok||r.done||r.stop||r.passesDone||!e||!e.pic||e.pic.bad||Math.abs(dk.angle||0)>=SKEW_STOP) return; r.stop=Date.now(); }); }
+        else if((!ok||several)&&!pdSkip&&!EARLY[id]&&Math.abs(dk.angle||0)<SKEW_TRUST&&pictureUp()){
           const eb={orig:r.blob,dk,base}, eg=[...new Set(read.map(l=>l.t).filter(Boolean))].slice(0,6);
           EARLY[id]={run,base:eb,guesses:eg,at:Date.now(),p:aiReadPicture(eb.dk.blob,eg,()=>{},N).then(x=>{picOk();return{pic:x};},e=>{picRefused(e);return{err:e&&e.message||String(e)};})};
           logRead(id,`${ok?`the quick look read the text but found it in ${blocks} separated blocks — a board, not one sign`:"the quick look found no readable text"} — the AI gets the picture now, beside the reading (${eg.length} guesses)`);
@@ -9185,7 +9225,7 @@ async function cropSign(id,opts){
       if(pd.sure&&!EARLY[id]&&!SURECHK[id]&&Math.abs(dk.angle||0)<SKEW_TRUST&&pictureUp()){
         SURECHK[id]={run,at:Date.now(),p:aiReadPicture(dk.blob,[],()=>{},N).then(x=>{ picOk(); return {pic:x}; },e=>{ picRefused(e); return {err:e&&e.message||String(e)}; })};
         logRead(id,"the phone's reader is sure — the card is made from it, and the AI checks the picture beside it"); }
-      N.pd={ms:pd.ms,t:pd.pl.map(l=>l.t).join("|").slice(0,160),cf:Math.round(meanCf(pd.pl)),good:pd.good,sure:pd.sure,clear:pd.clear};
+      N.pd={ms:pd.ms,t:pd.pl.map(l=>l.t).join("|").slice(0,160),cf:Math.round(meanCf(pd.pl)),good:pd.good,sure:pd.sure,clear:pd.clear,board:pd.board,bst:pd.bst||null}; /* board, bst (v755): a sure board's numbers */
       logRead(id,`the phone's reader: ${pd.pl.length?pd.pl.map(l=>l.t).join(" | ")+` at ${Math.round(meanCf(pd.pl))} %`:"nothing"} in ${(pd.ms/1000).toFixed(1)} s${pd.sure?" — sure: it is the reading, the other passes are left out":pd.clear?" — clear":pd.good?" — good":""}`); }
     const place=async band=>{ /* nothing placed yet (the first pass had no usable box): the tight passes so far — after the close look's colour passes, again after the whole close look */
       if(stale()||!(PENDING[id]&&!RECROP[id]?READ_APP[id]&&!PLACED[id]:CROP&&CROP.id===id&&(CROP.hidden||(CROP.proposed&&!CROP.followed)))) return; /* the frame still the app's — hidden, or shown by the 2 s fallback and untouched (v310); a card made by itself while nothing was placed (v325) */
@@ -9521,7 +9561,7 @@ async function cropSign(id,opts){
       if(early){ picSeen=picBase=early.base; const t0=Date.now(), e=await early.p; if(stale()) return;
         const wait=Date.now()-t0, ahead=t0-early.at; /* ahead: the overlap this won — the picture was already that long on its way when the reading arrived here */
         N.early={ahead,wait,guesses:early.guesses.length,ok:!!e.pic}; /* v399: the field's own numbers for the saving, which is min(ahead, the call's duration) */
-        logRead(id,`the AI got the picture at the quick look, ${(ahead/1000).toFixed(1)} s before this point — waited ${(wait/1000).toFixed(1)} s for the answer`);
+        logRead(id,early.reader?`the phone's reader's board answer was started at the quick look, ${(ahead/1000).toFixed(1)} s before this point — waited ${(wait/1000).toFixed(1)} s for it (v755)`:`the AI got the picture at the quick look, ${(ahead/1000).toFixed(1)} s before this point — waited ${(wait/1000).toFixed(1)} s for the answer`);
         if(e.pic) pic=e.pic; else { r.picErr=e.err; logErr("picture",r.picErr); } }
       else try{ pic=await aiReadPicture(picBase.dk?picBase.dk.blob:picBase.orig,guesses,status,N); picOk(); }catch(err){ picRefused(err); r.picErr=err&&err.message||String(err); logErr("picture",r.picErr); }
       if(stale()) return; r.pic=pic?{zh:pic.zh,bad:pic.bad,model:pic.model,box:pic.box,boxes:pic.boxes,dropped:pic.dropped}:null;

@@ -60,6 +60,38 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v755, 2026-09-29)
+- **v751, v753 and v754 field-checked (H: "#1-3 are ok now"): the dish pictures after the Menus rebuild, the swipe through a
+  multicard's texts, 牌 as "brand".** The Menus rebuild ran clean this time (8 of 8, 江宁府 22 → 24 texts, the 建国肉夹馍 board
+  8 → 17: the earlier reading had only the 砂锅 column); why the first tap did nothing stays unknown. The v751 line leaves
+  the Still-to-test box.
+- **A board the phone's reader reads surely is split by its own lines, no picture call (v755, H: "Go for 1" on the list of
+  2026-09-29).** On 江宁府 the reader read 22 lines at 97 % and the picture model still had to answer — two minutes, seven
+  calls dead at 75 s — for boxes that were a drawing anyway. **Now**, at the quick look, where the picture used to go out
+  (v439): the reader pass (`pdP`) also keeps its raw lines and canvas and says whether this is a sure board — `boardLines`
+  (lines with two Chinese characters or more beside a price; a price alone, a lone character, a vertical line or a line
+  under `BOARD_LINE_MIN` 0.7 left out; a line carrying two prices cut after the first, `BOARD_CUT_RE`) and `boardStats`
+  (n, mean, median line confidence, the share of characters at `PD_SURE`, priced lines); `boardSure`: n ≥ `NOPIC_LINES` 5,
+  median ≥ `BOARD_CF` 94, mean ≥ `BOARD_MEAN` 90, sure share ≥ `BOARD_SURE` 0.7. Then `readerPicture` reads once more with
+  the detector on the photo's own size (v750) and takes that reading when it keeps as many lines at the same confidence,
+  asks the text model for pinyin and meaning of all texts in one call (`picWords`, whose answers' `kinds` now come back),
+  names the kind (Menu when half the lines carry a price, else the text model's majority kind, else Notice) and the page
+  (the tallest line at `BOARD_TITLE` 1.6 times the median height), and returns an answer of the picture answer's shape
+  (`model:"reader"`, `apart`, `labels` with measured boxes, `reader:{det,n,cf,sure,priced,ms2}`), parked in `EARLY[id]`
+  as the picture answer is — so the split, the regions, the page card and the descriptions are the same code. The record:
+  "…the phone's reader read 22 texts at 94 % — a board it read surely: its lines are the texts, the AI is asked for the
+  words only (v755)", `numbers.pd.board/bst`. **Calibrated on `tools/field/`** (`boardstats`): the three menu boards read at a
+  median of 95–100 and a mean of 93–95, every appliance panel at 98–100, the angled 江宁府 shot at 84/81 (refused, the
+  picture path stays), the dishwasher's row at 1 to 4 lines (under NOPIC_LINES, the picture path). **Harness** (`test755`, the
+  real f03, the real reader, Qwen and the text model mocked and the picture calls counted): **6/6 on v755, 4/6 on v754** — on
+  v755 no picture call, 24 texts that are the reader's lines with 招牌油豆腐粉丝汤 and 重庆豌杂小面 cut apart at the price, a
+  menu named 江宁府·生煎, row 4's frames on the row, the reading done in 13 s against 26 s with the mocked (instant) picture
+  answer; on v754 one picture call and the picture's texts. Controls: f01 (angled) still one picture call and a multicard
+  from it (`bst {n:7, med:86}`); f05 (the washer dial) the reader's board, nine labels, kind Appliance from the text model,
+  no title. test753 6/6 still. **Costs, as named before the go:** no dish photos and no place on such a board; a price the
+  board prints apart from its name (江宁府's first row, larger) stays a line of its own and is dropped as a price alone, so
+  those three names come without a price — open. Not yet field-checked; `TO_TEST` "A board: reader path, texts right?".
+
 ## Current state (PWA v754, 2026-09-29)
 - **牌 after a name is "brand" (v754, H: "Gerade ist ein Papiertaschentuch als Signboard übersetzt worden (pai). Not good." —
   then "Mach 牌 einfach als 'brand' wenn es nach einem Namen steht").** CC-CEDICT's line for 牌 reads "signboard; plaque;
