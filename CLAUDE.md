@@ -415,9 +415,10 @@ sentence keyed by its version; More → About lists the last five **as a bullete
 up after an update. **Most versions get no note — that is correct, not an oversight.** A note describing a
 control that no longer exists is not a record but a false instruction, so it goes with the
 control (v534). The owner's twin is **`TO_TEST`**, the Still-to-test list under Advanced settings
-(v435): a PR that ships something only the phone can judge adds its line, and **the line goes, unasked, the moment H's
-report or his own use settles it** (v748, H: "Ich sagte ja oft genug, dass es passt, sonst würde ich ja lange wieder darauf
-bestehen") — a row older than the screen it names is dead. Keep each entry inside **35 columns** or it wraps in the box.
+(v435): **a reminder of what still has to be corrected and checked, nothing else** (v748, H: "Das To Test soll ja dafür da
+sein, dass ich nicht vergesse, Sachen zu korrigieren und abzutesten … wenn sie schon gemacht worden sind, dann brauchen wir
+sie auch nicht notieren"). A PR that ships something only the phone can judge adds its line; **the line goes, unasked, the
+moment H's report or his own use settles it**. Keep each entry inside **35 columns** or it wraps in the box.
 
 ## Field lessons that shaped the app (keep)
 The full list is in the archive; these are the ones that keep biting.
