@@ -60,6 +60,34 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v760, 2026-09-29)
+- **A label beside another one on one reader line gets its own place (v760, H on the Taobao cart multicard of v759: "Bitte
+  für Multicard 天猫 den ganzen Screen nicht als Frame nehmen").** v759's record had named it: 天猫, 国庆狂欢 and 淘宝 kept the
+  whole picture as their frame. **The mechanism, from the harness log:** the phone's reader read the shop's row as ONE line,
+  天猫苏宏模玩专营店 (nine Han characters), and 苏宏模玩专营店 held seven of them — 0.78, over PD_MATCH 0.66 — so it took the line
+  alone by v738's cut (pdTrim, 20–53 % across) and the line was spent; 天猫 held two of nine, 0.22, and no line named it.
+  v747's share (a line holding two or more texts as runs) is tried only on a line still free. So 天猫 went the way of the
+  unnamed: "the AI's box, corrected, would lie on another text — no place", the whole picture. 国庆狂欢 before 万代全新正版拓麻歌子
+  (10 of 14) and 淘宝 before 乔威动漫行 are the same case. **The rule:** pdTrim now returns the matched run's place among the
+  line's Han characters (`run`), pdMatch remembers which text took a line alone (`tookLine`), and after the single and pair
+  matches each such line's **leftover** — the Han characters before and after the placed run — is offered to the texts still
+  unplaced: a text whose characters ARE the leftover, in place (the same count, PD_MATCH of them matching), takes the
+  leftover's share of the line's box, divided evenly along the line as pdTrim does (`beside`, `share` 2); the placed text
+  keeps its cut. **Only a leftover the text fills whole** — 天猫 inside 天猫积分 or 淘宝 inside 我的淘宝 places nothing, since
+  the leftover there is longer than the text; that is the difference from v747's run search and the reason the rule is safe
+  on a screen where a short word recurs. **Measured — pdMatch alone on the phone's reader lines, old against new** (`pdm.js`:
+  the reader at 960 and at 1600 on the two boards of `tools/field` with their real label lists from H's dump — 江宁府 f01/f03,
+  建国肉夹馍 f02/f04 — and on the eight screens): **the boards place identically, to the digit; 10 placements are new and none
+  changed** — 天猫 12–20 % across at 16 % down (the model's own box: 12–20 %, 16–18 %), 国庆狂欢 38–52 % at 23 %, 淘宝 12–20 % at
+  82 %, and, unasked but the same case, 冷藏 beside 配料干净 (Meituan home, 960 only), 自营 beside 小象超市 (Meituan cart, 960),
+  飞猪 (Taobao home, 960), 地址 (Taobao Me, 960). The whole harness on the eight screens: cards 44/40/30/28/29 and 46/37/51 as at
+  v759, **no frame the whole picture any more** — 天猫 framed 11–21 % across, 15–19 % down; the cart's log reads "37 of the 37
+  labels named, 3 of them on a line it read as one with its neighbours". The appliance photos f05–f13 have no label list
+  here and were not replayed. Not field-checked. WHATS_NEW 760; TO_TEST "Taobao cart: 天猫 framed right?". Also in this
+  version: H's v758 dump (the Hamburg screen through the real picture model: 35 labels, 30 usable, 16 of 30 from the book)
+  is the first field sight of v757's mechanism — his word on v757–v759 was "Du hast das schon sehr gut gemacht", so the v757
+  and v759 TO_TEST lines stay only until his own use settles them.
+
 ## Current state (PWA v759, 2026-09-29)
 - **The app knows Taobao's standard fields too (v759, H with three Taobao screenshots — the home screen, the cart, 我的淘宝:
   "Do the same for the Taobao app").** The same mechanism, a second category: `signs.json` gains `taobao`, and the field
