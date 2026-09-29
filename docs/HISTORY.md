@@ -87,6 +87,14 @@ in them has its own entry below. Verbatim:
   now significantly slower, and the pros and cons (answered from the dump: 7 s on this board, none elsewhere; on the phone,
   offline, no call; the detector's memory at 1600 untested on a small phone) — and wished for a setup that other AIs can run
   easily, since new ones keep coming (answered: see the archive of this conversation's close, and CLAUDE.md's AI section).
+  **Then H, to "Any other ideas for improvement?", chose the first — the board photos — and sent thirteen (2026-09-29,
+  "Commit them"): `tools/field/`, scaled to 1600 as the app scales them, with a README naming each.** The reader model on
+  all thirteen at 960 and 1600 (harness, `field750`): the straight 江宁府 photo gives the phone's numbers to the digit — row
+  4 one line at 960, 鸡汤阳春面 apart at 1600, the second reading taken (24 named, 3 then 2 shared); the angled 江宁府 shot 25
+  lines at 960 against 41 at 1600; the dishwasher's five program labels ONE line at 960, four at 1600; every appliance panel
+  the same at both sizes (detector 0.7–0.8 s at 960, 2.0–2.6 s at 1600 in the harness). **test751 replayed on the real
+  photo with the real reader and the real search, only Qwen's answer from the dump: 9/9 on v751, 3/9 on v750** — the first
+  time the harness and the phone agreed on this board without a mock of the reader.
 
 ## Current state (PWA v750, 2026-09-29)
 - **The phone's reader reads a board a second time with the detector on the picture's own size (v750, H: "Dann bau mal die

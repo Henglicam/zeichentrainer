@@ -367,7 +367,9 @@ pre-installed browser, a local static server under `/zeichentrainer/`, vendor fi
 `vendor/`, AI endpoints mocked with `page.route`); a seed script fills IndexedDB before the app
 loads, then scripts drive the UI and read state (`S`, `SIGN`, `DICT` are globals). **Suites live
 in the session scratchpad and are gone afterwards — rebuild what you need.** A serving root is
-built by **copying**, never as a symlink into the repo.
+built by **copying**, never as a symlink into the repo. **`tools/field/` holds H's own thirteen board and panel photos at the
+app's 1600 px** (v751, its README names each): a reader change is replayed on them with the real reader model before it is
+judged — the 江宁府 board gives the phone's dump numbers to the digit there, where the drawn board never did.
 
 Rules that came out of the harness and cost real versions:
 
