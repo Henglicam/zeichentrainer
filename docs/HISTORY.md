@@ -60,6 +60,27 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v763, 2026-09-30)
+- **The app knows Alipay's and Xianyu's standard fields too (v763, H: "After that, do the same for Ali pay and xianyu").**
+  Two more categories in `FIELD_CATS`, `alipay` and `xianyu`, one version for the one request. No screenshots from H; four
+  web searches for the corners (Alipay's home 扫一扫/付钱/收钱/出行/卡包 and its "我" page's 账单/余额/银行卡/芝麻信用/我的订单;
+  Xianyu's tabs 首页/鱼塘/消息/我的 with 发布 in the middle, its item page's 我想要/留言/包邮/自提, the seller's 芝麻信用 and
+  降价 notice) and the apps' known screens. **Alipay** (198 written, 94 already the book's — 余额宝 and 花呗 stay Taobao's
+  entries, the same words —, **104 added**): the tabs, the home's grid, Ant Forest and its 收取能量/浇水/种树, 芝麻信用, 市民中心
+  and its 电子社保卡/医保/健康码/公积金/个税, transport (乘车码, 公交, 地铁, 高速ETC), Wealth (总资产, 基金, 黄金, 昨日收益, 转入/转出,
+  笔笔攒, 工资理财), Huabei's 本月待还/立即还款/提前还款/最低还款/账单日/还款日, 借呗 and 备用金, 亲情卡, transfers (转账到银行卡,
+  收款人, 转账理由, 亲友代付), bills (收入/支出/月账单/年账单), the security and payment settings. **Xianyu** (189 written, 83
+  already the book's, **104 added**): the tabs and 鱼塘/会玩, the item page (我想要, 留言, 想要, 浏览, 已售, 在售, 已下架, 包邮,
+  自提, 面交, 支持验货, 验货宝), the conditions 全新/几乎全新/轻微使用痕迹/明显使用痕迹, the seller's tools (擦亮, 降价, 改价, 下架,
+  鱼小铺, 一键转卖, 回收, 估价), the chat's words (聊一聊, 小刀, 能刀吗, 还在吗, 拍下, 议价/不议价, 到手价), Me (我发布的, 我卖出的,
+  我买到的, 我想要的, 保证金), the orders' way, the pond (塘主, 塘友, 帖子), the sort chips (离我最近, 只看包邮, 只看同城, 个人闲置).
+  **1663 phrasebook entries.** Pinyin by the citation-tone generator (`gen-app.js`, session scratchpad), hand-fixed 花呗 huā
+  bei, 借呗 jiè bei, and every 还款 to huán — which caught v762's own slip, 信用卡还款 written hái kuǎn; corrected in the same
+  file. **Checked in the page:** 蚂蚁森林 → alipay, 我想要 → xianyu, 余额宝 and 花呗 → Taobao's entries as before; 收取能量 full
+  from the book, 鱼塘边 composed from the dictionary. **The eight Meituan and Taobao screens replay identically** (cards
+  44/40/30/28/29, 46/37/51; fields 30/36/21/14/21, 32/25/43). Nothing is matched against an Alipay or Xianyu screenshot.
+  WHATS_NEW 763; TO_TEST "Alipay/Xianyu shots: fields right?".
+
 ## Current state (PWA v762, 2026-09-30)
 - **The app knows WeChat's standard fields too (v762, H: "Do the same for the WeChat app").** The third app category,
   `wechat`, in `FIELD_CATS`. No screenshot from H this time; the list is WeChat's own screens as they stand — the four tabs
