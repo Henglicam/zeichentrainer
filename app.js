@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=760; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=761; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -6408,6 +6408,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  761:"The Camera tab's count of photos still to go now includes the one being read.",
   760:"A label standing beside another one on one line of a screen now gets its own frame, not the whole picture.",
   759:"The app knows Taobao's standard fields too.",
   757:"The app knows Meituan's standard fields: on a screenshot, each one gets its Meituan meaning and pinyin.",
@@ -7173,7 +7174,7 @@ const shotRec=id=>S.inbox.find(s=>s.id===id)||SHOTS_EXTRA[id]||null;
    card already waiting holds it, so the hand always has the floor. It survives a restart in setting `autoQueue`, and a photo is
    taken off the queue before it is read, so a photo that fails is tried once and not for ever. A reading that never ends would hold
    the queue for the session, so the foreground hook and the next start both call autoNext again. */
-const AUTOQ=[];
+const AUTOQ=[], BATCH=new Set(); /* BATCH (v761): the ids of an album batch, the one in hand included — the batch line counts what is left of it */
 const autoSave=()=>setSetting("autoQueue",AUTOQ.slice()).catch(()=>{});
 function autoQueueAdd(ids,front){ let n=0; const add=[]; for(const id of ids) if(!AUTOQ.includes(id)&&!add.includes(id)){ add.push(id); n++; } if(front) AUTOQ.unshift(...add); else AUTOQ.push(...add); if(n) autoSave(); } /* front (v509): a photo whose reading was cut short by a close goes before the batch it was ahead of */
 function autoDrop(id){ const i=AUTOQ.indexOf(id); if(i>=0){ AUTOQ.splice(i,1); autoSave(); } }
@@ -7183,7 +7184,7 @@ function autoNext(){
     const id=AUTOQ[0];
     if(!S.inbox.some(x=>x.id===id)||QSCARD[id]||PENDING[id]){ autoDrop(id); continue; } /* gone, already a card, or already reading */
     if(CROP||Object.keys(PENDING).length) return; /* a frame stands, or a card is still waiting for its reading */
-    autoDrop(id); CROP={id,rect:null,auto:true}; proposeFrame(id); return; }
+    autoDrop(id); BATCH.add(id); CROP={id,rect:null,auto:true}; proposeFrame(id); return; }
 }
 const QSNOTE={}, QSBAD={}, QSCARD={}, READING={}, AUTO={}, SPLIT={}, QSMORE={}; /* QSBAD: the ids whose note says the reading failed - the same line, in the ordinary label colour rather than the success green (v535) */ /* SPLIT[id]: one frame per element when the AI called the photo a user interface (v357–v358) · QSMORE[id]: the cards after the first, for the photo's row */ /* AUTO[id]: the photo became a card by itself (v325) — the row shows the shimmer while it reads and the finished card after */ /* READING[id]: status text while the photo is being read · QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) · QSNOTE[id] = the note under the photo after saving */
 const PROV={}; /* photo id → {card,at}: the card as the reader read it, shown in the row while the text check runs (v440, H: "erst mal ein OCR Ergebnis zeigen … work in progress"); only when the reading is strong — a weak reading's text is the garbage the picture call exists for — and never written to the card: the record stays the placeholder until finishPending fills it, so every rule that reads an empty c (v438's gate, Learn's queue, the list's "Reading …") is untouched */
@@ -10965,7 +10966,12 @@ function renderShots(){
      has to be open to process the images, but please don't make it sound stupid. Make it sound somehow acceptable."): the line
      says what the app is doing for you and what keeps it doing it, and names the recovery in the same breath — nothing is lost,
      it is only deferred, which is what makes the constraint acceptable rather than a shrug */
-  const waiting=AUTOQ.filter(id=>S.inbox.some(x=>x.id===id)).length; /* what is left of the batch, not of the inbox — H's holds 237 photos */
+  /* v761 (H: "Ich hatte noch 2 Fotos am Laden und er hat 1 geschrieben"): the count was the queue alone, and the photo in
+     hand leaves the queue the moment its reading starts (autoNext), so a batch of two read "1 to go" from its first second.
+     Now the line counts every photo of the batch still to be finished — the one being read, the ones waiting — and goes
+     when the last is done. What is left of the batch, not of the inbox — H's holds 237 photos. */
+  const inHand=id=>!!(PENDING[id]||READING[id]||(CROP&&CROP.id===id)||AUTOQ.includes(id));
+  const waiting=[...new Set([...AUTOQ,...BATCH])].filter(id=>S.inbox.some(x=>x.id===id)&&inHand(id)).length;
   const byShot=new Map(); for(const d of S.custom) if(d.shot){ const a=byShot.get(d.shot); if(a) a.push(d); else byShot.set(d.shot,[d]); } /* the cards by photo, once per render (v448) */
   const batch=waiting?`<div class="batchline"><span>${esc(t("{0} to go, while the app is open.",nOf(waiting,"photo")))}</span></div>`:"";
   const rest=S.inbox.filter(s=>!shotDone(s));
@@ -11090,7 +11096,7 @@ async function importPhotos(files,opts){
   for(const file of files){ const rec=await addRaw(file,opts.shared,opts.album); if(rec) recs.push(rec); } /* v509: every file is on the phone before the first is downscaled — a batch cut short by a close keeps all of its photos */
   for(const rec of recs){ await normalizeShot(rec); S.inbox.unshift(rec); added.push(rec.id); if(!first) first=rec.id; }
   CROP=first?{id:first,rect:null,auto:true}:null; PENDING_SHOT=false; /* the frame is proposed by the app (v203) */
-  if(S.autoCard&&added.length>1) autoQueueAdd(added.slice(1)); /* the rest follow one after the other (v411) — the first is already in hand */
+  if(S.autoCard&&added.length>1){ added.forEach(id=>BATCH.add(id)); autoQueueAdd(added.slice(1)); } /* the rest follow one after the other (v411) — the first is already in hand, and counted (v761) */
   if(S.mode!=="inbox"){ S.mode="inbox"; render(); } else renderShots();
   window.scrollTo({top:0});
 }
