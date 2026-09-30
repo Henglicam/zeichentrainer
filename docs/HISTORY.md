@@ -116,6 +116,22 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v770, 2026-09-30)
+- **A multicard's texts stand in the photo's reading order — row by row, left to right (v770, H on the Meituan account
+  page: "kann die Reihenfolge der Multicard karten bitte der der Worte auf dem Foto entsprechen?").** `photoRegions`
+  sorted the regions by the box's top edge and then x, so two texts on one row swapped whenever the right one's box sat a
+  pixel higher — the phone's own frames from the dump: 堂食神券 at 320.7 before 外卖大额神券 at 321.3 and 堂食膨胀神券,
+  惊喜多选1 before 专属升星礼, 浏览记录 · 红包卡券 · 收藏, 待评价 · 退款售后 · 全部订单 · 待收货 — seven of the page's rows
+  wrong, and the two-line box on the right (会员中心 › / 查看11项权益) before the row it stands in. Now `readingOrder`:
+  rows first — a box joins the row it overlaps by half its own height or the row's; boxes taller than 1.5 × the median
+  (a two-line block, a button under its label) are attached last to the row they overlap most and never widen a row's
+  band, so 会员中心 follows 黄金会员 and 每日领券 · 一键领取 closes the coupons' row; rows top to bottom, inside a row left to
+  right. `pageOrder` reads it, so the multicard's rows and the swipe through its texts (v707) follow together; the record
+  (`items`) is untouched. Replayed on the account page's 37 frames and the 江宁府 board's 24 (`nums746`): every row as the
+  photo has it, where the old sort jumbled both. Harness: the seeded account page with the phone's frames — five rows and
+  the swipe's previous text flip on main, the first and last row and the swipe's next text are guards (they held by
+  chance) — 10 of 10 on v770, 4 of 11 on v769. Not yet field-checked. WHATS_NEW 770.
+
 ## Current state (PWA v769, 2026-09-30)
 - **A text whose meaning began with its price shows its meaning again (v769, H's Meituan account page, three coupon
   texts: "Hier fehlt die Übersetzung").** The dump had the text model's answer whole — `¥12外卖大额神券` → m "¥12 large
