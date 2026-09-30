@@ -61,7 +61,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v763, 2026-09-30)
+## Current state (PWA v764, 2026-09-30)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -89,9 +89,10 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   again with the detector on the photo's own size** (`PD_DET_MAX2` 1600 against `PD_DET_MAX` 960, `paddle.again`, v750, field-checked: 7 s
   more on the 江宁府 board, 鸡汤阳春面 came apart). **The fit drops its worst points** (over 2·`AI_CAL_ERR`, a quarter at most,
   `dropped`) **and a dish's picture is moved by its own name's residual onto the reader's place** (v751).
-- **The apps' standard fields (v757–v763):** `signs.json` categories `meituan` (656), `taobao` (188, v759: H's home, cart and
-  Me screens, then the product page, search, the shop page, the order's way and the settings), `wechat` (244, v762), `alipay` (104)
-  and `xianyu` (104, v763) — the last three with no screenshot yet (`FIELD_CATS`; a word shared by two apps is the first app's entry), page by page (tab bar, home, the shop
+- **The apps' standard fields (v757–v764):** `signs.json` categories `meituan` (656), `taobao` (188, v759: H's home, cart and
+  Me screens, then the product page, search, the shop page, the order's way and the settings), `wechat` (244, v762), `alipay` (104),
+  `xianyu` (104, v763), `didi` (98), `amap` (117), `jd` (83) and `12306` (107, v764) — all but the first two with no screenshot yet
+  (`FIELD_CATS`; a word shared by two apps is the first app's entry), page by page (tab bar, home, the shop
   page and its options, checkout, order progress, reviews, deals, hotels, tickets, rides, medicine, wallet, supermarket, search,
   address, account, settings — v758's 440 from the web's search summaries and the app's known screens; page fetches are blocked
   from the session; **only the five Meituan and three Taobao screens H sent are matched against a screenshot**), pinyin checked, the meaning each has **in the app**. A picture answer's text
@@ -105,7 +106,7 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
 
 ## Files
 Shell: `index.html` · `styles.css` · `lang.js` · `app.js` · `manifest.webmanifest` (with `share_target`) · `sw.js` ·
-`signs.json` (phrasebook, 1663 entries; **Meituan's fields live here, category `meituan`, Taobao's in `taobao`, WeChat's in `wechat`, Alipay's in `alipay`, Xianyu's in `xianyu`** — H, 2026-09-29: a new
+`signs.json` (phrasebook, 2068 entries; **Meituan's fields live here, category `meituan`, Taobao's in `taobao`, WeChat's in `wechat`, Alipay's in `alipay`, Xianyu's in `xianyu`, DiDi's, Amap's, JD's and 12306's in `didi`, `amap`, `jd`, `12306`** — H, 2026-09-29: a new
 field goes in with its reading and its meaning in the app, and matches a whole label only, never a word inside a line; `FIELD_CATS`) · `nmt-model.json` · the three icons · `guide/` (seven real crops, light and dark, 113 KB WebP,
 made by `tools/guide-shots.js`). `vendor/`: Tesseract and its readers, dictionaries, OpenCC, `strokes.txt.gz`, `outlines.txt.gz`
 (~23 MB); `vendor/paddle/` (~30 MB, v637) and `vendor/nmt/` (55 MB) load on use; licences in `vendor/LICENSES.txt` and
@@ -499,7 +500,7 @@ CC BY-SA).
 ## Open / not yet field-checked
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
 as field-checked; only a question he is still raising is open, and each version's archive entry names its own. Open now:
-the reader's path on priced boards (v756); the apps' fields (Meituan, Taobao, WeChat, Alipay, Xianyu) and the split of a 40-text screen (v757–v763); a label beside its neighbour on one reader line (v760).
+the reader's path on priced boards (v756); the apps' fields (Meituan, Taobao, WeChat, Alipay, Xianyu, DiDi, Amap, JD, 12306) and the split of a 40-text screen (v757–v764); a label beside its neighbour on one reader line (v760).
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's character
