@@ -79,6 +79,10 @@ in them has its own entry below. Verbatim:
   status holds nothing, hidden then visible releases and asks again — 5 of 6 flip on v766. **Not field-checked:** whether
   Xiaomi's Chrome honours the lock through a whole batch. WHATS_NEW 767; TO_TEST "Album batch: screen stays on?".
 
+- **CLAUDE.md trimmed from 46.9 KB to 40.8 KB (same day, no version — no phone fetches it; H: "Go, trim CLAUDE.md").** No
+  rule dropped: the v7xx region and app-field bullets, Learn, Cards, the pipeline, the AI section, Testing, the field lessons
+  and the how-to rules are the same rules in fewer words; every wording they lost is in the entries above and below.
+
 ## Current state (PWA v766, 2026-09-30)
 - **Sixteen more apps in one version (v766, H: "Any other Chinese apps commonly used by foreigners in China?", the list
   answered, then "Ok, do all of them").** Categories `bank` (中国银行, 工商银行, 招商银行 and the others as one: 70 added —
