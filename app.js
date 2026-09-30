@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=768; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=769; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3642,7 +3642,7 @@ const PRICE_RE=/(?:[¥￥]\s*\d+(?:\.\d+)?|\d+(?:\.\d+)?\s*元(?![一-鿿]))(?:\
 const priceOf=s=>{ const m=String(s||"").match(PRICE_RE); return m?m[0].replace(/\s+/g,"").replace("￥","¥"):""; };
 const noPrice=s=>String(s||"").replace(PRICE_RE,"").replace(/\s+\/\s*$/,"").replace(/\s{2,}/g," ").trim();
 const noPricePy=p=>String(p||"").replace(/\s*[¥￥]\s*\d+(?:\.\d+)?(?:\s*\/\s*\S+)?/g,"").replace(/\s+\d+(?:\.\d+)?\s*(?:yuán|yuan)?(?:\s*\/\s*\S+)?\s*$/i,"").replace(/\s{2,}/g," ").trim(); /* v710: only the ¥ and its number go, wherever they stand — a price first (¥12 宫保鸡丁) took the whole pinyin line with it */
-const noPriceM=m=>{ const s=String(m||""), r=s.replace(/\s*[(\[]?\s*(?:[¥￥]|CNY|RMB)\s*\d+(?:\.\d+)?[^;,)\]]*[)\]]?/gi,"").replace(/\s*\d+(?:\.\d+)?\s*(?:yuan|元)(?![\w一-鿿]).*$/i,"").trim(); /* v710: \b after 元 never matched at the end of a line ("… chicken 38元" kept its price) */
+const noPriceM=m=>{ const s=String(m||""), r=s.replace(/^\s*[(\[]?\s*(?:[¥￥]|CNY|RMB)\s*\d+(?:\.\d+)?(?:\s*\/\s*\S+)?[)\]]?/i,"").replace(/\s*[(\[]?\s*(?:[¥￥]|CNY|RMB)\s*\d+(?:\.\d+)?[^;,)\]]*[)\]]?/gi,"").replace(/\s*\d+(?:\.\d+)?\s*(?:yuan|元)(?![\w一-鿿]).*$/i,"").trim(); /* v710: \b after 元 never matched at the end of a line ("… chicken 38元" kept its price). v769 (H's Meituan coupons, "Hier fehlt die Übersetzung"): a price at the HEAD of the meaning takes only its own token — "¥12 large delivery coupon" is "large delivery coupon"; the rule after it eats everything up to a comma or bracket, which is right for a price at the tail ("… ¥38 per portion") and emptied the whole meaning when the price led it */
   return r===s.trim()?r:r.replace(/^[\s,;:–—-]+|[\s,;:–—-]+$/g,""); }; /* v732 (H: "Warum das Komma nach Clay-pot noodles?"): the comma or semicolon that led into the price goes with it — only when a price was cut */
 const isMenuPage=pg=>{ if((pg.tags||[]).includes(t("kind:Menu"))) return true; const its=pageItems(pg).filter(d=>d.c); return its.length>0&&its.filter(d=>priceOf(d.c)).length*2>=its.length; };
 /* v712 (H: "Go, dish price on the text's own screen"): a multicard text that carries a price (the row shows it apart since
@@ -6416,6 +6416,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  769:"A text whose meaning began with its price shows its meaning again.",
   768:"The screen stays on while the app is working — reading photos, translating, checking or rebuilding cards, downloading — so a long run finishes on its own.",
   767:"The screen stays on while your photos are being read, so a batch from the album finishes on its own.",
   766:"The app knows the standard fields of sixteen more apps: banks, Ele.me, Pinduoduo, Ctrip, hospitals, government services, Baidu Maps, bikes, parcels, airlines, utilities, carriers, housing, Weibo and Zhihu, Keep and music, event tickets.",

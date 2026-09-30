@@ -116,6 +116,20 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v769, 2026-09-30)
+- **A text whose meaning began with its price shows its meaning again (v769, H's Meituan account page, three coupon
+  texts: "Hier fehlt die Übersetzung").** The dump had the text model's answer whole — `¥12外卖大额神券` → m "¥12 large
+  delivery coupon" — and the look-up, the text's own screen and the multicard's row all showed the price line and the
+  pinyin with no meaning. `noPriceM`'s first rule (v710) cut `¥12` **and everything after it up to a comma or bracket**,
+  which is right for a price at the tail ("… ¥38 per portion") and emptied the whole meaning when the price led it — the
+  pinyin twin of v710's own bug ("a price first took the whole pinyin line with it"), which `noPricePy` had fixed for
+  pinyin only. Now a price at the head of the meaning takes its own token alone (`¥12`, `¥16/份`, with brackets), and the
+  tail rule runs on the rest. A record untouched, as `priceView` always was: the stored m keeps its price; the three
+  callers (the view, the multicard's row, the flashcard made from a text and its `ms`) all read the new function. Harness:
+  nine strings through the page's own `noPriceM` (three flip, six are v710/v732 controls), the multicard's row and the
+  text's screen on a seeded page (two flip), a tail-priced dish as control — 16 of 16 on v769, 11 of 17 on v768. Not yet
+  field-checked. WHATS_NEW 769.
+
 ## Current state (PWA v768, 2026-09-30)
 - **The screen stays on while the app works — every long run, not only a reading (v768, H: "Bitte Wake Lock während aller
   Prozesse, nicht nur Bildverarbeitung, sondern auch irgendwelche Sachen in den Owner Tools").** v767's `wakeSync` now polls
