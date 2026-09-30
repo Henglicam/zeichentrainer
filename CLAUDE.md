@@ -50,14 +50,14 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v767, 2026-09-30)
+## Current state (PWA v768, 2026-09-30)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
 
 **Recent state worth carrying in the head** (full entries by version below in the archive):
 - **The v7xx state** (dictionary v5 and the gloss rules, duplicate multicards, a multicard text's region, the apps' standard
-  fields — thirty categories in `APP_CATS`, a field matches a whole label only —, the wake lock while a photo is read):
+  fields — thirty categories in `APP_CATS`, a field matches a whole label only —, the wake lock):
   `grep -n "Consolidated v7xx" docs/HISTORY.md`. Where a rule there must be known before a change, the one that bites most:
   **a field's meaning is what the button does in the app, and a picture answer's text that is a whole field takes the
   book's words and is not asked of the text model** (`fieldEntry`, v757).
@@ -185,8 +185,8 @@ made its card **leaves the tab** (v471). From album works through the batch one 
 light band sweeps the photo, then the finished card with Edit and Delete. Save now (v237) makes the card before the reading
 is done; Crop (v437) and Crop again (v239) hand the app's frame to the hand. A photo whose texts stand apart becomes **one
 multicard** with a dot on every text (v453/v457), regions snapped onto the ink (v620); its photo pinches and pans like a
-card's (v634). **Add a text** (v635) frames a missing text through Crop again; **the screen stays on while a photo is read**
-(v767); a blank never read is dropped on Cancel, a tab tap or a restart. A photo left on the tab with no card has **Read
+card's (v634). **Add a text** (v635) frames a missing text through Crop again; **the screen stays on while the app works**
+(`appBusy`, v767/v768: a reading, Translate all, Check-up, the owner's loops and Zoom check, a download, an import); a blank never read is dropped on Cancel, a tab tap or a restart. A photo left on the tab with no card has **Read
 again** (v739) — the shutter's own reading once more; Crop reads the framed part.
 
 ### More — four sections (v547)
@@ -417,7 +417,7 @@ CC BY-SA).
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
 as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); the
 apps' fields and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760); the wake
-lock through a whole batch on Xiaomi's Chrome (v767).
+lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768).
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's
