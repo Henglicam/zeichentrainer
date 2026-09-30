@@ -60,6 +60,27 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v762, 2026-09-30)
+- **The app knows WeChat's standard fields too (v762, H: "Do the same for the WeChat app").** The third app category,
+  `wechat`, in `FIELD_CATS`. No screenshot from H this time; the list is WeChat's own screens as they stand — the four tabs
+  (微信, 通讯录, 发现, 我), Chats and the message sheet (置顶聊天, 消息免打扰, 标为未读, 撤回, 转发, 引用, 拍一拍, 查找聊天记录),
+  Contacts (新的朋友, 群聊, 标签, 公众号, 朋友权限, 不看他/不让他看, 仅聊天), groups (群公告, 群管理, 群待办, 我在本群的昵称, 删除并退出),
+  Discover (朋友圈, 视频号, 直播, 扫一扫, 摇一摇, 看一看, 搜一搜, 附近, 小程序), Moments (发朋友圈, 谁可以看, 公开/私密/部分可见/不给谁看,
+  提醒谁看, 最近三天), Channels' tabs, Me (服务, 收藏, 卡包, 表情, 设置), Services and Pay (钱包, 零钱, 零钱通, 银行卡, 亲属卡, 支付分,
+  分付, 付款码, 收款码, 乘车码, 手机充值, 生活缴费, 城市服务, 转账's 待收款/已收款/退还, the red packet's 塞钱进红包, 拼手气红包,
+  恭喜发财，大吉大利, 群收款, AA收款) and Settings (账号与安全, 新消息通知, 青少年模式, 关怀模式, 聊天记录迁移与备份, 存储空间, 深色模式,
+  听筒模式 …) — with four web searches for the corners (WeChat's own "我" page list with its English UI names, Pay's
+  我 › 服务 › 钱包 › 支付分 path, the settings path 我-设置-账号与安全, the group's 群公告 and 群聊邀请确认). English meanings follow
+  WeChat's own English UI where it has one (Moments, Channels, WeRun, Top stories, Nudge, Sticker gallery, Cards and offers,
+  Chats only), since that is the word a foreigner sees when he switches the language. 302 written, 5 doubled, 52 already in
+  the book from Meituan and Taobao (the shared words again — 搜索, 红包, 转发, 设置, 钱包, 银行卡, 账号与安全 …): **244 added,
+  1455 phrasebook entries.** Pinyin in citation tones by rule this time (一 yī, 不 bù set by character, not by pinyin-pro's
+  sandhi), 消息 xiāo xi by hand. **Checked in the page:** `fieldEntry("朋友圈")` → the wechat entry, 零钱通 likewise, 待收货1
+  still Meituan's; `lineMeaning("发朋友圈")` full from the book, `lineMeaning("朋友圈里")` composed from the dictionary (the
+  whole-label rule holds for the new category). **The eight Meituan and Taobao screens replayed: cards and fields identical
+  to v761** (44/40/30/28/29, 46/37/51; 30/36/21/14/21, 32/25/43). **Nothing is matched against a WeChat screenshot** — the
+  list is WeChat's screens as I know them and the web's word; H's first WeChat screenshot settles it (TO_TEST). WHATS_NEW 762.
+
 ## Current state (PWA v761, 2026-09-30)
 - **The Camera tab's "to go" line counts the photo in hand (v761, H: "Ich glaube, die 'noch x photos to go, while the app is
   open' Anzeige ist ungenau. Ich hatte noch 2 Fotos am Laden und er hat 1 geschrieben").** He was right, by construction:
