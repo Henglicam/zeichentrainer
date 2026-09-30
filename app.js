@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=769; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=770; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -6416,6 +6416,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  770:"A multicard's texts are listed as they stand on the photo — row by row, left to right — and the swipe follows the same order.",
   769:"A text whose meaning began with its price shows its meaning again.",
   768:"The screen stays on while the app is working — reading photos, translating, checking or rebuilding cards, downloading — so a long run finishes on its own.",
   767:"The screen stays on while your photos are being read, so a batch from the album finishes on its own.",
@@ -10838,8 +10839,28 @@ function photoRegions(rec,byShot){
   const cards=byShot?(byShot.get(rec.id)||[]):S.custom.filter(d=>d.shot===rec.id), rs=[];
   for(const d of cards){ const f=d.frame; if(!d.c||!f||!isFinite(f.x)||!isFinite(f.y)||!isFinite(f.w)||!isFinite(f.h)||f.w<=0||f.h<=0) continue;
     rs.push({rid:"c:"+d.id,zh:d.c,box:REGFIX.get(cbKey(d))||f,placed:"card",card:d.id}); } /* v620: the region snapped onto its text's ink, once it has been measured */
-  rs.sort((a,b)=>(a.box.y-b.box.y)||(a.box.x-b.box.x)); /* reading order: top to bottom, left to right */
-  return rs.length>=REGION_MIN?rs:[];
+  const out=readingOrder(rs); /* reading order: row by row, left to right (v770) */
+  return out.length>=REGION_MIN?out:[];
+}
+/* the reading order of a photo's texts (v770, H's Meituan account page: "kann die Reihenfolge der Multicard karten bitte
+   der der Worte auf dem Foto entsprechen?"): until v769 the regions were sorted by the box's top edge and then x, so two
+   texts on one row swapped whenever the right one's box sat a pixel higher (the phone's own frames: 堂食神券 at 320.7 came
+   before 外卖大额神券 at 321.3, 惊喜多选1 before 专属升星礼 — seven rows of the 37 in the wrong order), and a two-line box
+   on the right (会员中心 › / 查看11项权益) stood before the row it belongs to. Now: ROWS first — a box joins the row it
+   overlaps by half its height or the row's, the boxes taller than 1.5 × the median (a two-line block, a button with its
+   label) are attached last to the row they overlap most and do not widen a row's band — rows top to bottom, inside a row
+   left to right. Replayed on the account page's 37 frames and the 江宁府 board's 24: every row reads as the photo does. */
+function readingOrder(rs){
+  const hs=rs.map(r=>r.box.h).sort((a,b)=>a-b), hm=hs.length?hs[hs.length>>1]:0, tall=r=>hm>0&&r.box.h>1.5*hm;
+  const rows=[], ov=(r,row)=>Math.max(0,Math.min(r.box.y+r.box.h,row.y1)-Math.max(r.box.y,row.y0));
+  for(const r of rs.filter(r=>!tall(r)).sort((a,b)=>a.box.y-b.box.y)){
+    let best=null, bo=0; for(const row of rows){ const o=ov(r,row)/Math.max(1e-6,Math.min(r.box.h,row.y1-row.y0)); if(o>=0.5&&o>bo){ bo=o; best=row; } }
+    if(best){ best.items.push(r); best.y0=Math.min(best.y0,r.box.y); best.y1=Math.max(best.y1,r.box.y+r.box.h); } else rows.push({y0:r.box.y,y1:r.box.y+r.box.h,items:[r]}); }
+  for(const r of rs.filter(tall).sort((a,b)=>a.box.y-b.box.y)){
+    let best=null, bo=0; for(const row of rows){ const o=ov(r,row); if(o>bo){ bo=o; best=row; } }
+    if(best) best.items.push(r); else rows.push({y0:r.box.y,y1:r.box.y+r.box.h,items:[r]}); }
+  rows.sort((a,b)=>a.y0-b.y0);
+  return rows.flatMap(row=>row.items.sort((a,b)=>a.box.x-b.box.x));
 }
 function regionOf(shot,rid){ return photoRegions({id:shot}).find(r=>r.rid===rid)||null; } /* the regions are the cards' (v448), so a page whose inbox photo is gone still has them (v453) */
 /* 0 no card · 1 still to learn · 2 known — read by a MARKED PHOTO's count line, where the three grades still write the

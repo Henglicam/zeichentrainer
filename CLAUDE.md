@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v769, 2026-09-30)
+## Current state (PWA v770, 2026-09-30)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -172,7 +172,8 @@ A **multicard's own text** swipes to the multicard's next text (v707/v753); its 
 (Flashcard › once made), then Flag · Edit (v736); the pop-up over the photo carries **no action** (v496/v692); a **Details**
 fold, **closed by default** (v741; open and headless v733–v740, H: "zu viel und unübersichtlich"), holds the short and long
 description, the long one asked the first time the fold is open. The multicard: **Add a text**, Delete multicard (v635/v711);
-its texts' rows show a short one-sentence description (`dsh`, one AI call for all texts at creation and once when an older
+its texts' rows (and the swipe through them) stand in the photo's reading order — rows by overlap, tall boxes attached
+last, left to right inside a row (`readingOrder`, `pageOrder`, v770) — and show a short one-sentence description (`dsh`, one AI call for all texts at creation and once when an older
 multicard is opened, `pageShorts`; the descriptions the same way, `pageDescs`, v753); the long one stays on the opened text.
 On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right and name/pinyin/meaning without it
 (`priceOf`, `isMenuPage`, `priceView` — a view, the record untouched, v699/v712; a price at the head of the meaning
