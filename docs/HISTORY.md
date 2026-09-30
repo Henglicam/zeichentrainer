@@ -60,6 +60,32 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v764, 2026-09-30)
+- **The app knows the standard fields of DiDi, Amap, JD and Railway 12306 too (v764, H: "Do the same for Didi, Amap, JD and
+  12306" — from the list of apps a foreigner in Beijing needs that he asked for).** Four more categories in `FIELD_CATS`
+  (`didi`, `amap`, `jd`, `12306`), `FIELD_KIND` built from the list; one version for the one request; no screenshots. Four web
+  searches for the corners (DiDi's 快车/专车/出租车/拼车, 预估价, 一口价, 呼叫, 确认上车, 联系司机; Amap's 驾车/打车/公交/骑行/步行/货车/
+  摩托车, 开始导航, 实时路况, 避开拥堵; JD's 211限时达/次日达/极速达/夜间配 and 京东秒送; 12306's 候补购票, 在线选座, 改签, 变更到站, 退票)
+  and the apps' known screens. **DiDi** (153 written, **98 added**): the destination box (你要去哪儿, 上车点, 常用地址), the car
+  types, 预约用车, the ride's way (正在为您呼叫 → 已有司机接单 → 司机正在赶来 → 司机已到达 → 请上车 → 行程中 → 行程已结束), the
+  safety row (分享行程, 紧急联系人, 一键报警, 行程录音), the fare's parts (起步价, 里程费, 时长费, 远途费, 高速费, 等待费, 动态调价,
+  费用明细), 待支付, 评价司机, 打赏, 失物找回, the queue (排队中, 预计等待, 加价). **Amap** (170 written, **117 added**): the
+  modes, the route options (时间短, 距离短, 少收费, 高速优先, 不走高速, 避开拥堵), the transit words (换乘, 首末班车, 号线, 方向,
+  出口, 站台, 即将到站), the navigation voice (直行, 左转, 右转, 掉头, 靠左, 靠右, 辅路, 主路, 匝道, 环岛, 限速, 区间测速, 您已超速,
+  前方拥堵, 重新规划, 到达目的地), the map layers and the place page (到这去, 从这出发, 搜周边, 收藏该点). **JD** (196 written,
+  **83 added** — the shopping words are Taobao's already): 京东自营, 京东物流, 京东秒送, 白条, 京豆, 京享值, PLUS会员, the delivery
+  promises (次日达, 211限时达, 当日达, 极速达, 夜间配, 送货上门), 京东价/到手价/券后价, 价保, 全国联保, 货到付款, the order's way
+  (已出库 → 运输中 → 派送中 → 已签收), 退换/售后, 维修, 配送员. **12306** (178 written, **107 added**): the search form, the train
+  types (高铁 G, 动车 D, 城际 C, 直达 Z, 特快 T, 快速 K), the seat classes from 商务座 to 无座 and the berths 上铺/中铺/下铺, 靠窗/过道,
+  候补 and its 截止兑现时间, 余票/票价/历时/经停站/正晚点, the passenger form (乘车人, 证件类型, 居民身份证, 护照, 外国人永久居留身份证,
+  核验/已通过/待核验), the order's way (出票中, 出票成功, 改签, 变更到站, 退票费), the station words (电子客票, 检票口, 候车室, 站台,
+  车厢号, 座位号, 刷身份证进站, 安检), Beijing's stations. **2068 phrasebook entries.** Pinyin by the generator; hand-fixed 收藏夹
+  jiā (OWN_PINYIN's own rule for 夹) and 排行榜 háng — pinyin-pro's two known misreadings again. **Checked in the page:** 一口价 →
+  didi, 避开拥堵 → amap, 京东自营 → jd, 二等座 → Meituan's earlier entry (the same word); 候补购票 full from the book, 出发地点
+  composed from the dictionary. **The eight Meituan and Taobao screens replay identically** (44/40/30/28/29, 46/37/51;
+  30/36/21/14/21, 32/25/43). Nothing is matched against a screenshot of these four apps. WHATS_NEW 764; TO_TEST
+  "DiDi/Amap/JD/12306: fields right?".
+
 ## Current state (PWA v763, 2026-09-30)
 - **The app knows Alipay's and Xianyu's standard fields too (v763, H: "After that, do the same for Ali pay and xianyu").**
   Two more categories in `FIELD_CATS`, `alipay` and `xianyu`, one version for the one request. No screenshots from H; four
