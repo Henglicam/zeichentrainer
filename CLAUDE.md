@@ -402,16 +402,23 @@ The full list is in the archive; these are the ones that keep biting.
 - The reload after an update waits for a pause (v279/v327), never while a photo is on its way from the camera (v316), and
   at most once in ten minutes (v563).
 
-## Play Store
-**Since 2026-09-23 the store app is a Capacitor shell** showing the live Pages URL with native payments; its code, credit rules,
-prices and accounts live in the **private repo `henglicam/zeichentrainer-app`** (its own `CLAUDE.md`). Taking the public site
-down would break every installed copy. H's account: passport as identity, **China as the account country** (fixed forever);
-a personal account needs a **closed test, 12 testers, 14 days**. Play does not reach mainland China. The keystore never enters
-this repo; `assetlinks.json` needs the origin root (`henglicam/henglicam.github.io`). **Data Safety form = `privacy.html` =
-the code.** The paid/free choice is irreversible and settled with H first. Law (an assessment): Impressum once money flows or
-the listing exists; the AI review on by default is a GDPR opt-in question; PIPL wants consent for the installation id abroad.
-**`strokes.txt.gz` and `cedict.tsv.gz` stay freely available under their own licences even after a sale** (Arphic §2b,
-CC BY-SA).
+## Play Store and the Android shell
+**Decided 2026-09-23: a shell around the web app, not a native rewrite; payments native, credits on the server.** The
+record from that day said the shell lived in the private repo `henglicam/zeichentrainer-app`; **that repo did not exist
+until 2026-09-30** (H: "never built, go") and nothing from 2026-09-23 was ever pushed. Since 2026-09-30 the shell is a
+**plain Kotlin WebView app** in that private repo (its own `CLAUDE.md`): the live Pages URL, a `navigator.share`
+polyfill, the camera and album pickers, and the **Quick Settings tile "识字"** that captures the screen (MediaProjection,
+a foreground service) and hands the picture to the page as a shared screenshot (`importPhotos(…, {shared:true})`, the
+web app untouched). The APK is built by GitHub Actions and installed from a release; no Play listing yet. Taking the
+public site down would break every installed copy. **The shell's deck is its own storage, not Chrome's.**
+
+H's account: passport as identity, **China as the account country** (fixed forever); a personal account needs a **closed
+test, 12 testers, 14 days**. Play does not reach mainland China. The store's keystore never enters a repo;
+`assetlinks.json` needs the origin root (`henglicam/henglicam.github.io`). **Data Safety form = `privacy.html` = the
+code.** The paid/free choice is irreversible and settled with H first. Law (an assessment): Impressum once money flows
+or the listing exists; the AI review on by default is a GDPR opt-in question; PIPL wants consent for the installation
+id abroad. **`strokes.txt.gz` and `cedict.tsv.gz` stay freely available under their own licences even after a sale**
+(Arphic §2b, CC BY-SA).
 
 ## Open / not yet field-checked
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
