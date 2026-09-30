@@ -97,6 +97,25 @@ below. Verbatim as they last stood:
   reading and a live overlay over another app are impossible on the web** (the v411 note in `app.js`) and possible in the
   Capacitor shell only — foreground service, MediaProjection plus on-device OCR; assessed for H at v767, nothing built.
 
+## The Android shell, for real this time (2026-09-30, no PWA version)
+- **H: "So. Geht die overlay Sache auch? Ich glaub das ist ein widget?"** — answered: not a widget (a home-screen tile
+  cannot float over an app or see it); the translation apps use "Display over other apps" plus screen capture
+  (MediaProjection) plus on-device OCR; none of it is possible in the PWA; the cheap first step is a one-tap capture from
+  a Quick Settings tile that opens 识字 on the screenshot. H: "Go".
+- **The private repo did not exist.** The 2026-09-23 record said the shell lived in `henglicam/zeichentrainer-app`;
+  H's account held only `zeichentrainer` and `KB35`, and the Claude app already covered all repositories. So nothing
+  from 2026-09-23 was ever pushed. H: "never built, go". The GitHub App cannot create repositories (403), so H created
+  it from the phone.
+- **What was written (in the private repo, its own `CLAUDE.md`):** a plain Kotlin WebView app rather than Capacitor —
+  nothing can be compiled in the session (no Android SDK reachable) and the APK comes from GitHub Actions only, so the
+  fewest moving parts won; Play Billing is a Kotlin library either way. `MainActivity` (the WebView, `navigator.share`
+  through a bridge to the share sheet, camera and album pickers, a screenshot handed to the page as `importPhotos(…,
+  {shared:true})` — this repo untouched), `ShotTileService`, `CaptureActivity` (notification permission, capture
+  consent), `CaptureService` (foreground service of type mediaProjection, one frame, black frames retried, JPEG in
+  the cache, the app opened on it, and a "Picture taken" notification as the way in when MIUI blocks the start from
+  the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
+  field-checked, and it was never compiled before the first Actions run.**
+
 ## Current state (PWA v768, 2026-09-30)
 - **The screen stays on while the app works — every long run, not only a reading (v768, H: "Bitte Wake Lock während aller
   Prozesse, nicht nur Bildverarbeitung, sondern auch irgendwelche Sachen in den Owner Tools").** v767's `wakeSync` now polls
