@@ -60,6 +60,34 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v766, 2026-09-30)
+- **Sixteen more apps in one version (v766, H: "Any other Chinese apps commonly used by foreigners in China?", the list
+  answered, then "Ok, do all of them").** Categories `bank` (中国银行, 工商银行, 招商银行 and the others as one: 70 added —
+  账户, 明细, 转账汇款, 跨境汇款, 结汇/购汇, 收款人/开户行, 实时到账, 挂失, U盾, 限额, 理财, 房贷, 还款, 网点), `eleme` (13 —
+  吃货豆, 超级吃货卡, 蓝骑士, 骑士已取餐; the rest Meituan's), `pinduoduo` (28 — 砍一刀, 拼单/单独购买/免拼, 多多果园, 天天领现金,
+  待分享, 退货包运费), `ctrip` (34 — 自由行/跟团游, 钻石会员, 多程, 公务舱/头等舱, 直飞, 行李额, 退改签, 行程单, 报销凭证, 待出行),
+  `health` (63 — 挂号/专家号/普通号/号源/余号/约满, 就诊人/就诊卡/医保卡/自费, 建档, 取号/候诊/叫号, 门诊缴费, 报告查询, 处方/取药,
+  在线问诊, the departments, 国际部/特需), `gov` (52 — 办事/办理进度/受理/审核中/补正, 签证/居留许可/住宿登记/出入境记录, 电子证照,
+  社保/公积金/个税, 交管12123, 12345), `baidumap` (7 — 全景, 熟路导航, 小度; Amap's words cover the rest), `bikes` (33 — 哈啰/青桔/
+  美团单车 as one: 临时锁车/关锁/还车, 骑行卡/月卡/畅骑卡, 免押金, 调度费, 禁停区/运营区/超区, 寻车), `express` (51 — 菜鸟/顺丰/
+  the couriers as one: 寄件/查件/取件, 上门取件, 到付/寄付, 保价, 已揽收 → 派件中 → 已签收, 快递柜/驿站, 放门口, 改派, 催件),
+  `airline` (36 — 值机, 登机牌, 登机口, 航站楼, 托运行李, 升舱, 里程, 凤凰知音/东方万里行/明珠会员, 边检), `utilities` (39 — 网上国网,
+  北京燃气: 户号, 电量, 阶梯电价, 欠费, 预付费, 停电通知, 报修, 抄表), `carrier` (45 — 套餐, 流量/定向流量/加油包, 话费, 详单, 国际漫游,
+  换套餐, 宽带, 停机/复机, 补卡, 10086/10010/10000), `housing` (54 — 贝壳/链家/自如: 整租/合租, 户型, 朝向, 押一付三, 中介费,
+  预约看房, 经纪人, 签约/续租/退租, 交租, 近地铁, 通勤找房), `social` (23 — Weibo's 热搜/超话/转发/特别关注, Zhihu's 提问/回答/邀请回答/
+  赞同/反对/盐选/等你来答), `lifestyle` (36 — Keep's 训练/计划/配速/心率, WeChat Read's 书架/划线/听书/无限卡, the music apps' 歌单/
+  每日推荐/私人FM/歌词), `tickets` (33 — 猫眼/大麦: 场次, 票档, 取票码, 观演人, 开售提醒, 缺货登记, 想看/已看, 原版/国语). Left out on
+  purpose: Pleco and the translators — they are the tool, not the obstacle; Hema and Sam's — the supermarket words are in the
+  Meituan and JD lists. No web searches this time: the apps' screens as known, the sources of v758–v765 having given features,
+  not labels. 1102 written, **617 added** (the shared words — 首页, 我的, 设置, 待付款, 确认收货 … — stay their first apps'),
+  **3007 phrasebook entries, thirty app categories**, `signs.json` 183 KB (28 KB at v756; one shell download a version, gzip
+  on the wire). Pinyin by the generator; hand-fixed by rule the 行 of a bank (háng), 还款/还车 huán, 划线 huà, 朝向/朝南 cháo,
+  处方 chǔ, 行李 xíng li. **Checked in the page:** 跨境汇款 → bank, 砍一刀 → pinduoduo, 居留许可 → gov, 押一付三 → housing,
+  预约挂号 → Meituan's entry, 取件码 → the old book's payment entry ("Pickup Code" — the same word); 购汇 full from the book,
+  汇率表 composed from the dictionary; 40 categories in `SIGNS` (the ten old ones and thirty apps). **The eight Meituan and
+  Taobao screens replay identically.** No screenshot of any of the sixteen. WHATS_NEW 766; TO_TEST "Bank/12 more apps: fields
+  right?".
+
 ## Current state (PWA v765, 2026-09-30)
 - **Five more apps in one version: Dianping, the Beijing transit apps, Bilibili, Xiaohongshu and Douyin (v765, H: "Do the same
   for Dianping and Beijing transit card", then, mid-build, "Bitte auch Bilibili, Xiaohongshu, Douyin").** Two requests, one
