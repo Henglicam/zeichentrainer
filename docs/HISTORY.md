@@ -97,6 +97,21 @@ below. Verbatim as they last stood:
   reading and a live overlay over another app are impossible on the web** (the v411 note in `app.js`) and possible in the
   Capacitor shell only — foreground service, MediaProjection plus on-device OCR; assessed for H at v767, nothing built.
 
+## Current state (PWA v768, 2026-09-30)
+- **The screen stays on while the app works — every long run, not only a reading (v768, H: "Bitte Wake Lock während aller
+  Prozesse, nicht nur Bildverarbeitung, sondern auch irgendwelche Sachen in den Owner Tools").** v767's `wakeSync` now polls
+  `appBusy`: a fresh `READING` entry as before; Translate all and Check-up (`TRANSLATE`/`RECHECK.running`); the owner's
+  Re-read all, Check texts and Rebuild all loops (`RR_LOOP`/`CT_LOOP`/`RB_LOOP`, which their `finally` blocks clear); the
+  boot's brighten and re-cut passes (`BRIGHT`/`RECUT`, nulled on their end and on an error); and a name held in `WAKE_JOBS`
+  (`wakeHold`/`wakeDrop`, each called with its `wakeSync`): the Zoom check's four buttons (Run, the new reader, the data, the
+  sheet — hold on tap, drop when the handler ends), the two downloads under More (offline translation, text recognition —
+  `finally`), and an import (`importData` wraps `importData0`). A request that lands after the run ended is released on the
+  spot (`wakeSync` after the promise), not at the next tick. The same rule as v767 for what does not count: the queue, the
+  pending cards, a reading older than five minutes. Harness (the API mocked): v767's six checks pass on both trees now
+  (controls); Translate all and the Rebuild loop set by hand ask and release; **the OCR Download button driven** (v468's rule)
+  with its first file held 4 s and refused asks at once and releases on the failure path — 6 of 12 flip on v767. **Not
+  field-checked:** the Rebuild all run with the phone put down. WHATS_NEW 768; TO_TEST "Rebuild/Translate: screen on?".
+
 ## Current state (PWA v767, 2026-09-30)
 - **The v7xx bullets moved out of CLAUDE.md (same day, no version).** Five bullets, dictionary v5 to the wake lock, are the
   "Consolidated v7xx notes" section above, verbatim; CLAUDE.md keeps one pointer line and the one rule that bites most
