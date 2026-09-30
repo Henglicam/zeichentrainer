@@ -61,7 +61,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v766, 2026-09-30)
+## Current state (PWA v767, 2026-09-30)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -103,6 +103,10 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
   我的家 stays the dictionary's. `SPLIT_MAX` **60** (home 44 texts, Me 40); a reader line with one Chinese character or none (a
   price) no longer blocks the split (`panelCovers`). Harness on the five screenshots with the phone's reader and a mocked
   picture answer — **not yet field-checked with the real picture model.**
+- **The screen stays on while a photo is read (v767, `wakeSync`):** the Screen Wake Lock is held while a `READING` entry is
+  fresher than `WAKE_STALE` 5 min and let go when none is, so an album batch finishes without a tap; no setting. **Background
+  reading and a live overlay over another app are impossible on the web** (the v411 note in `app.js`) and possible in the
+  Capacitor shell only — foreground service, MediaProjection plus on-device OCR; assessed for H at v767, nothing built.
 - **The v6xx state** (reader, owner tools, Learn zoom, Crop again): `grep -n "Consolidated v6xx" docs/HISTORY.md`.
 
 ## Files
@@ -230,7 +234,7 @@ made its card **leaves the tab** (v471). From album works through the batch one 
 (v237) makes the card before the reading is done; Crop (v437) and Crop again (v239) hand the app's frame to the hand. A photo
 whose texts stand apart becomes **one multicard** with a dot on every text (v448/v453/v457), regions snapped onto the ink when
 shown (v620); its photo pinches and pans like a card's (v634, `regionAt`). **Add a text** (v635) frames a missing text through
-Crop again; a blank never read is dropped on Cancel, a tab tap or a restart. A photo left on the tab with no card has **Read again**
+Crop again; **the screen stays on while a photo is read** (v767); a blank never read is dropped on Cancel, a tab tap or a restart. A photo left on the tab with no card has **Read again**
 (v739) — the shutter's own reading once more; Crop reads the framed part.
 
 ### More — four sections (v547)
@@ -501,7 +505,7 @@ CC BY-SA).
 ## Open / not yet field-checked
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
 as field-checked; only a question he is still raising is open, and each version's archive entry names its own. Open now:
-the reader's path on priced boards (v756); the apps' fields (thirty apps, `APP_CATS`) and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760).
+the reader's path on priced boards (v756); the apps' fields (thirty apps, `APP_CATS`) and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760); the wake lock through a whole batch on Xiaomi's Chrome (v767).
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's character

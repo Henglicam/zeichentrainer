@@ -60,6 +60,25 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v767, 2026-09-30)
+- **The screen stays on while a photo is read (v767, H: "Go für den Wake Lock").** H asked for two things: readings that go on
+  with the app in the background or closed, and a live overlay of 识字 over another app, as the translation apps do. The answer
+  given (assessment, nothing built): the web can do neither — the v411 note stands, a hidden page is throttled, frozen and
+  discarded, and no web API draws over another app or sees its screen. Both are possible in the Capacitor shell only: the
+  background reading through an Android foreground service (whether the shell pauses the WebView's timers is unknown and the
+  first thing to test; MIUI's battery settings are the user's; a closed app would need a second pipeline in Kotlin — advised
+  against, v401's drift), the overlay through "Display over other apps" plus MediaProjection and on-device OCR (a second app
+  inside the shell, weeks, in the private repo, and the gloss rules would have to be reached from Kotlin). Offered as steps: the
+  wake lock here now, a foreground-service test build, then a one-tap "read this screen" bubble before any live overlay. H:
+  "Go für den Wake Lock". What it is: while a reading is under way the Screen Wake Lock is held (`wakeSync`, polled every
+  `WAKE_MS` 2.5 s and on visibility, not hooked into the dozen places the state changes), so an album batch finishes without a
+  tap and the phone does not go dark on it; released the moment no reading runs. "Under way" = a `READING` entry whose `READ_AT`
+  is within `WAKE_STALE` 5 min — not the queue and not the pending cards, since v411 itself says a reading may never end, and
+  the screen must not be held for the session. No setting (the cost is the screen's battery for those minutes); no API, no
+  effect. Harness (Playwright, the API mocked): idle asks nothing [guard], a reading asks once, done releases, a 6-minute-old
+  status holds nothing, hidden then visible releases and asks again — 5 of 6 flip on v766. **Not field-checked:** whether
+  Xiaomi's Chrome honours the lock through a whole batch. WHATS_NEW 767; TO_TEST "Album batch: screen stays on?".
+
 ## Current state (PWA v766, 2026-09-30)
 - **Sixteen more apps in one version (v766, H: "Any other Chinese apps commonly used by foreigners in China?", the list
   answered, then "Ok, do all of them").** Categories `bank` (中国银行, 工商银行, 招商银行 and the others as one: 70 added —

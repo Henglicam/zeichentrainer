@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=766; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=767; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -698,6 +698,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["again","v764","DiDi/Amap/JD/12306: fields right?"],
   ["again","v765","Dianping/transit/B站/小红书/抖音 ok?"],
   ["again","v766","Bank/12 more apps: fields right?"],
+  ["photo","v767","Album batch: screen stays on?"],
 ];
 const TO_TEST_GROUPS=[["photo","Take any photo"],["again","Take one of these again"],["app","In the app"],["update","After an update"],["lock","Parked — the lock is off (v531)"]];
 /* What the app claims it can read, and what a photo has actually confirmed (v434, H after the untested menu
@@ -6413,6 +6414,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  767:"The screen stays on while your photos are being read, so a batch from the album finishes on its own.",
   766:"The app knows the standard fields of sixteen more apps: banks, Ele.me, Pinduoduo, Ctrip, hospitals, government services, Baidu Maps, bikes, parcels, airlines, utilities, carriers, housing, Weibo and Zhihu, Keep and music, event tickets.",
   765:"The app knows the standard fields of Dianping, the Beijing transit apps, Bilibili, Xiaohongshu and Douyin too.",
   764:"The app knows the standard fields of DiDi, Amap, JD and Railway 12306 too.",
@@ -7197,6 +7199,23 @@ function autoNext(){
     autoDrop(id); BATCH.add(id); CROP={id,rect:null,auto:true}; proposeFrame(id); return; }
 }
 const QSNOTE={}, QSBAD={}, QSCARD={}, READING={}, AUTO={}, SPLIT={}, QSMORE={}; /* QSBAD: the ids whose note says the reading failed - the same line, in the ordinary label colour rather than the success green (v535) */ /* SPLIT[id]: one frame per element when the AI called the photo a user interface (v357–v358) · QSMORE[id]: the cards after the first, for the photo's row */ /* AUTO[id]: the photo became a card by itself (v325) — the row shows the shimmer while it reads and the finished card after */ /* READING[id]: status text while the photo is being read · QSCARD[id] = card saved from this shot (AI suggestion shows under the photo) · QSNOTE[id] = the note under the photo after saving */
+/* THE SCREEN STAYS ON WHILE A PHOTO IS READ (v767, H: "Go für den Wake Lock", after asking for readings that go on in
+   the background — which the web cannot give, see the v411 note above; the screen kept on is the one thing it can). The
+   Screen Wake Lock is asked while a reading is under way and let go the moment none is, so a batch from the album finishes
+   without a tap and without the phone going dark on it. "Under way" is a READING entry stamped within WAKE_STALE — not the
+   queue, not the pending cards: a reading that never ends must not hold the screen for the session, and READ_AT is stamped
+   on every status line. Polled every WAKE_MS instead of being hooked into the dozen places the reading state changes; the
+   browser drops the lock by itself when the page is hidden and the next tick asks again once it is visible. No setting: it
+   costs the screen's battery for those minutes and nothing else. Without the API (an older Chrome) it is a silent no-op. */
+const WAKE_MS=2500, WAKE_STALE=5*60*1000; let WAKE=null, WAKE_ASKING=false;
+const readingBusy=()=>Object.keys(READING).some(id=>READ_AT[id]&&Date.now()-READ_AT[id]<WAKE_STALE);
+function wakeSync(){
+  if(!navigator.wakeLock) return;
+  const want=readingBusy()&&!document.hidden;
+  if(want&&!WAKE&&!WAKE_ASKING){ WAKE_ASKING=true; navigator.wakeLock.request("screen").then(l=>{ WAKE=l; l.addEventListener("release",()=>{ if(WAKE===l) WAKE=null; }); }).catch(()=>{}).then(()=>{ WAKE_ASKING=false; }); }
+  else if(!want&&WAKE){ const l=WAKE; WAKE=null; l.release().catch(()=>{}); }
+}
+setInterval(wakeSync,WAKE_MS); document.addEventListener("visibilitychange",wakeSync);
 const PROV={}; /* photo id → {card,at}: the card as the reader read it, shown in the row while the text check runs (v440, H: "erst mal ein OCR Ergebnis zeigen … work in progress"); only when the reading is strong — a weak reading's text is the garbage the picture call exists for — and never written to the card: the record stays the placeholder until finishPending fills it, so every rule that reads an empty c (v438's gate, Learn's queue, the list's "Reading …") is untouched */
 /* greedy longest-match segmentation against CC-CEDICT (max word length 8) */
 function segmentChars(chars){
