@@ -4,12 +4,10 @@ Working language: **English.** Reply to H in English. Short, direct, no excessiv
 
 ## Where the history is — read it before you change a rule
 
-This file is the **consolidated current state and the binding rules**. The full record of how
-we got here — every version from v1 to v598, with the measurements, the rejected alternatives
-and H's own words — is in **`docs/HISTORY.md`** (1.5 MB, not loaded automatically).
-
-It was `CLAUDE.md` until 2026-09-21, when at ~400k tokens it broke every session ("Prompt is too long"); it was archived
-verbatim. **Grep it for the reason behind anything:**
+This file is the **consolidated current state and the binding rules**. The full record — every version from v1 on, with
+the measurements, the rejected alternatives and H's own words — is in **`docs/HISTORY.md`** (1.5 MB, not loaded
+automatically; it was `CLAUDE.md` until 2026-09-21, when at ~400k tokens it broke every session). **Grep it for the reason
+behind anything:**
 
     grep -n "v487" docs/HISTORY.md          # one version's reason      grep -n "snapBox" docs/HISTORY.md   # one mechanism
     grep -n "Measured and dropped" docs/HISTORY.md   # tried, must not come back      grep -n "Rejected" docs/HISTORY.md
@@ -17,49 +15,40 @@ verbatim. **Grep it for the reason behind anything:**
 **Much of what looks like an obvious improvement was already built, measured and reverted, with H's verdict
 recorded next to it.** Check before you propose it again.
 
-**Keeping the record (the rule that replaces the old one):** every PR appends its entry to the
-**top of the version log** in `docs/HISTORY.md` — the same prose as before, the reason and the
-measurement — and updates **this file's "Current state" and the affected section** in the same
-PR. This file is consolidated state, **never a version log**; it must not grow past ~40 KB.
-When a section here goes stale, rewrite it; the old wording lives in the archive.
+**Keeping the record:** every PR appends its entry to the **top of the version log** in `docs/HISTORY.md` — the reason and
+the measurement — and updates **this file's "Current state" and the affected section** in the same PR. This file is
+consolidated state, **never a version log**; it must not grow past ~40 KB. When a section here goes stale, rewrite it; the
+old wording lives in the archive.
 
 ## What this is
 Chinese character trainer for adults (spaced repetition), a reinterpretation of 悟空识字 — **识字 Shízì** (识字 Zeichentrainer
-until v601, 街字 Jiēzì v601–v607),
-without the kids' aesthetic.
+until v601, 街字 Jiēzì v601–v607), without the kids' aesthetic.
 
-**The rule (H, 2026-09-14): "Flash cards are for learning and multi cards are for looking up
-stuff."** A flashcard is studied — it has a progress row, a due date, a grade, a star, a place
-in Learn and in the Deck count. A multicard (a page card, v453) and its own texts are looked
-up — nothing on them is studied, counted, scheduled or graded, and the only thing a multicard
-text can do is generate a separate flashcard (v487). Every control, label, count and filter is
-judged against that one sentence; **a later change that puts a learning word or a learning
+**The rule (H, 2026-09-14): "Flash cards are for learning and multi cards are for looking up stuff."** A flashcard is
+studied — a progress row, a due date, a grade, a star, a place in Learn and in the Deck count. A multicard (a page card,
+v453) and its own texts are looked up — nothing on them is studied, counted, scheduled or graded, and the only thing a
+multicard text can do is generate a separate flashcard (v487). **A later change that puts a learning word or a learning
 control on a multicard, or a look-up-only surface on a flashcard, is wrong by construction.**
 
 **App screens (H, 2026-09-29): "Sinn der Sache ist es, als Ausländer schnell und einfach mit diesen Apps zurecht zu kommen."**
-A multicard of a Meituan or Taobao screen exists so that a foreigner can use the app at once: a field's meaning is **what the
-button does in the app** (闪购 "goods delivered fast from nearby shops", 待收货 "To receive"), never the dictionary's word; the
-standard fields are the point, and clutter beyond them costs the reader the screen.
+A multicard of a Meituan or Taobao screen exists so that a foreigner can use the app at once: a field's meaning is **what
+the button does in the app** (待收货 "To receive"), never the dictionary's word; the standard fields are the point, and
+clutter beyond them costs the reader the screen.
 
-User: H, product manager, Beijing, **phone-only (Android/Xiaomi, Chrome, VPN), no computer**.
-UI language: English (ten languages shipped). Learning content: Chinese + pinyin + meaning.
+User: H, product manager, Beijing, **phone-only (Android/Xiaomi, Chrome, VPN), no computer**. UI language: English (ten
+languages shipped). Learning content: Chinese + pinyin + meaning.
 
 ## Live deployment
-- Repo `henglicam/zeichentrainer` · GitHub Pages, branch `main`, folder `/ (root)`.
-- `https://henglicam.github.io/zeichentrainer/` · push to `main` → Pages rebuilds (~1–2 min).
-  `index.html` must stay in the repo root.
-- The site is **public**. User data lives only on the device (IndexedDB), never in the repo.
-  What the app sends on its own: **the text of every new card** (the AI review is on by default
-  and works through the owner's relay with no key, v191/v193 — and when the reading is hard, a
-  picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage
-  row (v170). Each is switchable under More; **`privacy.html` is the authoritative list.**
-- **Deploy discipline (broken twice, cost a reload storm at v563):** `APP_V` in `app.js`,
-  `PWA vN` in `index.html` and `zt-vN` in `sw.js` are **one number**, bumped on every change to
-  a cached file. Check all three with grep before merging. **One version number per deploy, not
-  per feature** (v426: three PRs on one number left two undeployed — the worker only installs
-  when `sw.js` differs byte for byte). Leave **more than ten minutes** between merges (Pages
-  sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
-  need **no** bump; bumping costs every phone a shell re-download for nothing.
+- Repo `henglicam/zeichentrainer` · GitHub Pages, branch `main`, root · `https://henglicam.github.io/zeichentrainer/` ·
+  push to `main` → Pages rebuilds (~1–2 min). `index.html` must stay in the repo root.
+- The site is **public**. User data lives only on the device (IndexedDB). What the app sends on its own: **the text of every
+  new card** (the AI review is on by default, through the owner's relay with no key, v191/v193 — and when the reading is
+  hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170). Each is
+  switchable under More; **`privacy.html` is the authoritative list.**
+- **Deploy discipline (broken twice, cost a reload storm at v563):** `APP_V` in `app.js`, `PWA vN` in `index.html` and
+  `zt-vN` in `sw.js` are **one number**, bumped on every change to a cached file; grep all three before merging. **One
+  version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
+  `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
 ## Current state (PWA v767, 2026-09-30)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
@@ -67,42 +56,33 @@ every shared file (`shizi-…`). **Keep the old name where renaming breaks insta
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
 
 **Recent state worth carrying in the head** (full entries: `grep -n "v6xx" docs/HISTORY.md`):
-- **Dictionary v5 and the gloss rules (v717–v729, field-checked).** `cedict.tsv.gz` v5 holds every sense of every one-character
+- **Dictionary v5 and the gloss rules (v717–v729, field-checked):** `cedict.tsv.gz` v5 holds every sense of every one-character
   line (`tools/cedict-nmax.py --write`, `docs/NMAX.md`). `bestSense`: **`OWN_SENSES`** first (H's street senses — add there, with
-  the reading), **`OWN_PINYIN`** into pinyin-pro (夹 jiā), the fewest words per line, a bound form inside a word (`besideCJK`,
-  `BOUND_TOP` 3, never `PROPER`), the reading from the whole line (`ctx`, `SANDHI`); **`AFTER_SENSES`** for a character after another one (牌 "brand",
-  v754); `glossFix()` once per phone (`GLOSS_FIX_V` 754). Full wording: `grep -n "Consolidated v717" docs/HISTORY.md`.
+  the reading), **`OWN_PINYIN`** into pinyin-pro, the fewest words per line, a bound form inside a word (`besideCJK`, `BOUND_TOP` 3,
+  never `PROPER`), the reading from the whole line (`ctx`, `SANDHI`); **`AFTER_SENSES`** for a character after another (牌 "brand",
+  v754); `glossFix()` once per phone (`GLOSS_FIX_V` 754). Wording: `grep -n "Consolidated v717" docs/HISTORY.md`.
 - **Duplicate multicards (v731):** a row under More → Your cards while two multicards share `DUP_SHARE` 0.6 of their texts
-  (`dupKey`); Delete N keeps the newest of each set, the rest go through `delCustom` and Undo.
-- **A dish's meaning shows without its price** (`noPriceM`, v710/v712) or the comma before it (v732).
-- **A multicard text's region**: the reader's line (v638), else the ink snap (v620), else the row of ink under the frame
-  (`labelRow`, v742: one line, no join — H's QR panel), else the frame; a line carrying the neighbour's characters at its ends
-  is cut to the matched run (`pdTrim`, v738). The split places an unplaced label the same way (v644 + v742). `REG_V` 742.
-  **A label box drawn past the picture's edge is kept** (`picSlide`, v743: `raw` as drawn, `box` slid inside; no point of the
-  calibration's fit; the reader places it by its text, else it keeps the whole picture — never a cut on the neighbour). **A place
-  from the model's uncorrected box is no place once the fit says the boxes are off** (`rawPlaced`, v744), **and a dish's
-  `photo` box is mapped by the fit too** (`picCal`, v745). **A search run taller than `RUN_TALL` 2.5 or wider than `RUN_WIDE` 1.8
-  of the reader's texts is a band, not a label** — given up for the corrected box (v746, the 江宁府 board's third path). **A reader line
-  holding two or more labels' texts is shared among them**, each run's share of the line (`pdMatch`, `share`, v747, field-checked:
-  the phone reads 江宁府's row 4 as one line every time); **a line one text took by a cut offers its leftover to a text that fills it
-  whole** (`tookLine`, `beside`, v760: 天猫 before 苏宏模玩专营店 on H's Taobao cart — never 天猫 inside 天猫积分). **A board whose first reading leaves a label unnamed or shared is read
-  again with the detector on the photo's own size** (`PD_DET_MAX2` 1600 against `PD_DET_MAX` 960, `paddle.again`, v750, field-checked: 7 s
-  more on the 江宁府 board, 鸡汤阳春面 came apart). **The fit drops its worst points** (over 2·`AI_CAL_ERR`, a quarter at most,
-  `dropped`) **and a dish's picture is moved by its own name's residual onto the reader's place** (v751).
-- **The apps' standard fields (v757–v766):** `signs.json`, **thirty app categories in `APP_CATS`** (`meituan` 656, `taobao` 188 — H's
-  screens —, then `wechat`, `alipay`, `xianyu`, `didi`, `amap`, `jd`, `12306`, `dianping`, `bjtransit`, `bilibili`, `xiaohongshu`, `douyin`,
-  and v766's `bank`, `eleme`, `pinduoduo`, `ctrip`, `health`, `gov`, `baidumap`, `bikes`, `express`, `airline`, `utilities`, `carrier`,
-  `housing`, `social`, `lifestyle`, `tickets` — all but the first two with no screenshot yet; a word shared by two apps is the first
-  app's entry; `signs.json` 183 KB), page by page (tab bar, home, the shop
-  page and its options, checkout, order progress, reviews, deals, hotels, tickets, rides, medicine, wallet, supermarket, search,
-  address, account, settings — v758's 440 from the web's search summaries and the app's known screens; page fetches are blocked
-  from the session; **only the five Meituan and three Taobao screens H sent are matched against a screenshot**), pinyin checked, the meaning each has **in the app**. A picture answer's text
-  that is one of them whole (`fieldEntry`; a bracketed count, chevron or badge digit stripped) takes the book's words and is
-  **not asked of the text model**; its card is `mt.src` "phrasebook" (unverified, pending nothing, no doubt). The rest go to
-  the model **with the page named** ("App, Meituan, home screen"). A field matches a **whole label only** (`field`): 我的 in
-  我的家 stays the dictionary's. `SPLIT_MAX` **60** (home 44 texts, Me 40); a reader line with one Chinese character or none (a
-  price) no longer blocks the split (`panelCovers`). Harness on the five screenshots with the phone's reader and a mocked
-  picture answer — **not yet field-checked with the real picture model.**
+  (`dupKey`); Delete N keeps the newest of each set, the rest go through `delCustom` and Undo. **A dish's meaning shows without
+  its price** (`noPriceM`, v710/v712/v732).
+- **A multicard text's region (v620–v760, `REG_V` 742):** the reader's line, else the ink snap, else the row of ink under the
+  frame (`labelRow`), else the frame; a line carrying the neighbour's characters at its ends is cut to the matched run (`pdTrim`);
+  a box drawn past the picture's edge is kept and slid inside (`picSlide`, never a cut on the neighbour); a place from the
+  model's uncorrected box is no place once the fit says the boxes are off (`rawPlaced`, `picCal`); a run taller than `RUN_TALL`
+  2.5 or wider than `RUN_WIDE` 1.8 of the reader's texts is a band, not a label; a reader line holding two labels is shared
+  (`pdMatch`, `share`) and its leftover offered to a text that fills it whole (`tookLine`, `beside`, v760: 天猫 before
+  苏宏模玩专营店, never inside 天猫积分); a board with a label unnamed is read again at `PD_DET_MAX2` 1600 (`paddle.again`); the
+  fit drops its worst points (`dropped`) and moves a dish's picture by its name's residual (v751). Field-checked on the 江宁府
+  board and H's Taobao cart; every rule's reason: `grep -n "v74[2-9]\|v75[01]\|v760" docs/HISTORY.md`.
+- **The apps' standard fields (v757–v766):** `signs.json`, **thirty app categories in `APP_CATS`** (`meituan` 656, `taobao` 188 —
+  H's screens —, then `wechat`, `alipay`, `xianyu`, `didi`, `amap`, `jd`, `12306`, `dianping`, `bjtransit`, `bilibili`,
+  `xiaohongshu`, `douyin`, `bank`, `eleme`, `pinduoduo`, `ctrip`, `health`, `gov`, `baidumap`, `bikes`, `express`, `airline`,
+  `utilities`, `carrier`, `housing`, `social`, `lifestyle`, `tickets`; a word shared by two apps is the first app's entry;
+  183 KB), page by page, pinyin checked, the meaning each has **in the app**. **Only the five Meituan and three Taobao screens H
+  sent are matched against a screenshot**; page fetches are blocked from the session. A picture answer's text that is one of
+  them whole (`fieldEntry`; a bracketed count, chevron or badge digit stripped) takes the book's words and is **not asked of the
+  text model** (`mt.src` "phrasebook"); the rest go to the model **with the page named**. A field matches a **whole label
+  only** (`field`): 我的 in 我的家 stays the dictionary's. `SPLIT_MAX` 60; a reader line with one Chinese character or none no
+  longer blocks the split (`panelCovers`). **Not yet field-checked with the real picture model.**
 - **The screen stays on while a photo is read (v767, `wakeSync`):** the Screen Wake Lock is held while a `READING` entry is
   fresher than `WAKE_STALE` 5 min and let go when none is, so an album batch finishes without a tap; no setting. **Background
   reading and a live overlay over another app are impossible on the web** (the v411 note in `app.js`) and possible in the
@@ -111,19 +91,19 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
 
 ## Files
 Shell: `index.html` · `styles.css` · `lang.js` · `app.js` · `manifest.webmanifest` (with `share_target`) · `sw.js` ·
-`signs.json` (phrasebook, 3007 entries; **the apps' fields live here, one category an app — `meituan`, `taobao`, `wechat` … thirty in `APP_CATS`** — H, 2026-09-29: a new
-field goes in with its reading and its meaning in the app, and matches a whole label only, never a word inside a line; `FIELD_CATS`) · `nmt-model.json` · the three icons · `guide/` (seven real crops, light and dark, 113 KB WebP,
-made by `tools/guide-shots.js`). `vendor/`: Tesseract and its readers, dictionaries, OpenCC, `strokes.txt.gz`, `outlines.txt.gz`
-(~23 MB); `vendor/paddle/` (~30 MB, v637) and `vendor/nmt/` (55 MB) load on use; licences in `vendor/LICENSES.txt` and
-`vendor/ARPHICPL.TXT`. Not in the shell: `privacy.html`, `README.md`, the three `SPEC-*.md` (pre-build designs, contradicted in
-places), `tools/`, `docs/HISTORY.md`, `.github/workflows/` (nmt fetch, mirror purge), `supabase/` (the relay and usage
-functions and the SQL H ran once).
+`signs.json` (phrasebook, 3007 entries; **the apps' fields live here, one category an app, thirty in `APP_CATS`** — a new
+field goes in with its reading and its meaning in the app, and matches a whole label only; `FIELD_CATS`) · `nmt-model.json` ·
+the three icons · `guide/` (seven real crops, light and dark, made by `tools/guide-shots.js`). `vendor/`: Tesseract and its
+readers, dictionaries, OpenCC, `strokes.txt.gz`, `outlines.txt.gz` (~23 MB); `vendor/paddle/` (~30 MB) and `vendor/nmt/`
+(55 MB) load on use; licences in `vendor/LICENSES.txt` and `vendor/ARPHICPL.TXT`. Not in the shell: `privacy.html`,
+`README.md`, the three `SPEC-*.md` (pre-build designs, contradicted in places), `tools/`, `docs/HISTORY.md`,
+`.github/workflows/` (nmt fetch, mirror purge), `supabase/` (the relay and usage functions and the SQL H ran once).
 
 Vanilla JS, no frameworks, **no build step**. `app.js` in reading order: helpers and state → IndexedDB → online AI →
 study screen → cards, detail, edit form → More → camera and inbox → reading pipeline → character picker and drawing
-sheet → sign editor and save → service worker, mirror, shell check, shared screenshots. Shared helpers: `askSheet`, `putCard`, `pySpaced`,
-`eachLine`, `slineHTML`/`wireSlines`, `urlOf`, `fullPhoto`, `median`, `readingStatus`,
-`logErr`/`diagText`, `busyHTML`, `apiErrText`.
+sheet → sign editor and save → service worker, mirror, shell check, shared screenshots. Shared helpers: `askSheet`, `putCard`,
+`pySpaced`, `eachLine`, `slineHTML`/`wireSlines`, `urlOf`, `fullPhoto`, `median`, `readingStatus`, `logErr`/`diagText`,
+`busyHTML`, `apiErrText`.
 
 ## Persistence and deck format
 IndexedDB `zeichentrainer` v3 — `progress` (key `id`), `custom` (all cards, key `id`), `inbox`
@@ -137,30 +117,29 @@ timestamp. A card:
 
 ```
 { id, c:"坚果", p:"jiānguǒ", m:"nuts", t:"Custom"|"Sign", at, v:<build that made it>,
-  seg:["坚果","\n","供应"],   lb:"photo"|"auto",       // word breaks + the photo's line breaks
+  seg:["坚果","\n","供应"], lb:"photo"|"auto",            // word breaks + the photo's line breaks
   kind:"sign", segs, gloss:[{w,p,m}],                  // sign cards
   shot:"shot_…", img:<crop Blob>, imgFull:<only when the inbox photo is gone>,
   frame:{x,y,w,h,a},                                   // fractions of the photo; Crop again starts here
   tags:[…], star:true, flag:true, flagNote, unchecked:true,
-  trad:"養樂多", simp:true, ml:"de", ms:{en,de}, ds:{en,de}, dsh,  // script (simp, v604), meaning language, meanings, descriptions (dsh: a multicard text's short one, v698)
+  trad:"養樂多", simp:true, ml:"de", ms:{en,de}, ds:{en,de}, dsh,  // script (v604), meaning language, meanings, descriptions, a multicard text's short one (v698)
   alts:[…], ai:{zh,p,m,note,ok,bad,at,model}, aiNo:"<fingerprint of a dismissed suggestion>",
   mt:{src:"llm"|"dict"|"phrasebook"|"nmt"|"gloss", verified, pending, suspect},
   reading:{rect,at,failed},                            // saved before its reading finished
-  page:"page#…", dish:true,                            // one text of a multicard; a menu dish whose picture is its photo (v705; a new cut clears it, v710)
+  page:"page#…", dish:true,                            // one text of a multicard; a menu dish whose picture is its photo (v705/v710)
   from, fromT, of }                                    // a flashcard generated from a multicard text
 ```
 
-A **page card / multicard** (v453): `{id:"page#<at>", kind:"page", t:"Page", c:<title>,
-name:{name,what,place}, ml, at, shot, items:[ids], tags:[kind], mt llm-verified, v}` — no `img`,
-no progress row, never reviewed by the AI (its title goes out as context for its texts' short descriptions, v698), **not in the Deck count** (v504).
+A **page card / multicard** (v453): `{id:"page#<at>", kind:"page", t:"Page", c:<title>, name:{name,what,place}, ml, at,
+shot, items:[ids], tags:[kind], mt llm-verified, v}` — no `img`, no progress row, never reviewed by the AI (its title goes
+out as context for its texts' short descriptions, v698), **not in the Deck count** (v504).
 
-**Pinyin only verified, with correct tones — never guess.** Meanings in the app's language.
-Dictionary/phrasebook prefills stay `verified:false` until a human or the AI checked them; when
-unsure, flag rather than invent. New words come from photos.
+**Pinyin only verified, with correct tones — never guess.** Meanings in the app's language. Dictionary/phrasebook prefills
+stay `verified:false` until a human or the AI checked them; when unsure, flag rather than invent.
 
-Export/import: progress + cards as JSON, `shizi-YYYY-MM-DD.json.txt` (older names until v607; the filename is never read) through the share
-sheet; import upserts by `id`. Photos ride along as base64 behind a checkbox (v166). **The export
-duplicates a shared photo once per card** — named, not fixed.
+Export/import: progress + cards as JSON, `shizi-YYYY-MM-DD.json.txt` (the filename is never read) through the share sheet;
+import upserts by `id`. Photos ride along as base64 behind a checkbox (v166). **The export duplicates a shared photo once per
+card** — named, not fixed.
 
 ## The app
 
@@ -168,178 +147,158 @@ duplicates a shared photo once per card** — named, not fixed.
 v181 and reverted at v183 — do not bring it back unasked). The Camera tab always opens at the top.
 
 ### Learn — the write pad (v512 replaced tap-to-reveal and the grade buttons)
-The study card is a CSS grid whose **frame never moves for the content** (v560 — the rule that
-makes it read as professional): the cue and the pad are **two equal squares** (v561; the photo is as wide as the pad since v607), then the
-fold row. `fit()` computes the frame per device, not per card, and re-fits on every resize and
-after the layout settles (v521/v532).
+The study card is a CSS grid whose **frame never moves for the content** (v560): the cue and the pad are **two equal
+squares** (v561/v607), then the fold row. `fit()` computes the frame per device, not per card, and re-fits on every resize
+and after the layout settles (v521/v532).
 
-- **The cue has two states and a tap swaps them** (v580): the photo big, or the whole text big.
-  `S.cueBig` is `"pic"` or `"txt"` and never null; a card opens on the photo (v572) and the state
-  survives every stroke and every swipe (v568's rule: what the learner made big stays big).
-  A card with no photo of its own draws its own word where the photo would be (v578).
-- **The pad is Duolingo-style tracing** (`mountPad`): the character's medians stand as a grey
-  template with the next stroke lit; a stroke that fits snaps into ink, one that does not
-  **shakes and is gone** (v592). Three levels by `charWrites[ch]` (trace / faint template /
-  empty pad). Two misses offer **Show me**, four offer **Skip**, which fills the character in and
-  grades the card `again`. The template is the real Kai outline (`outlines.txt.gz`, v517). Until the stroke file is parsed the pad shows its grid alone — no stand-in glyph (v706); a failed load makes it the free pad (v708), once — later tries are silent (v710).
-- **The grade is the writing.** The last stroke of the last character writes the review through
-  `recordGrade`, counts the points (**one point per character written without help**, v546),
-  bumps `charWrites`, and queues the card **once more `REP_GAP` 3 cards on** (a repeat pass).
-  A swipe, a chevron or a tab tap grades nothing.
-- **After each character** the pad fades out, then (`CHAR_IN` 200 ms later, v668/v673) its reading and meaning stand over
-  the pad for `CHAR_MS` 900 ms (v553/v571); after the last, the card's recap — its own `d.p` grouped by word (v616) and the
-  meaning, no characters (v577) — for `recapMs(d)` (`NEXT_MS` 3200 + `RECAP_SYL` 230 a syllable past the second, cap
-  `RECAP_MAX` 5300), the reading as large as `recapFit` measures it fits (v600). A tap skips. The star flies into the counter
-  at `recapMs − POP1`; a milestone (50/100/250/500/1000 points, 7/30/100-day streak) bursts (v545).
-- **The word line** (text state only; in the photo state `--th` is 0, v580) reads the character being written with its
-  in-word reading, then its word (v518/v540), and wraps onto as many lines as it needs (v600); `shortSense` strips a
-  parenthetical from that line only.
-- **"Details"** (called "Whole card" until v704) folds open at the card's foot — the characters, pinyin, meaning **and the
-  description** (v585), fetched by itself 1.2 s after the card appears (v586, `explainSoon`); then a grey toolbar
-  **Star · Flag · Edit** (v654/v655, again since v667) — Edit opens the Edit form and comes back to the same card. The fold row
-  shows a small star/flag beside "Details" when the card has them; **nothing sits on the photo** (v667).
+- **The cue has two states and a tap swaps them** (v580): the photo big, or the whole text big. `S.cueBig` is `"pic"` or
+  `"txt"`, never null; a card opens on the photo (v572) and the state survives every stroke and swipe (v568). A card with no
+  photo draws its own word where the photo would be (v578).
+- **The pad is Duolingo-style tracing** (`mountPad`): the character's medians stand as a grey template with the next stroke
+  lit; a stroke that fits snaps into ink, one that does not **shakes and is gone** (v592). Three levels by `charWrites[ch]`
+  (trace / faint template / empty pad). Two misses offer **Show me**, four offer **Skip**, which fills the character in and
+  grades `again`. The template is the real Kai outline (`outlines.txt.gz`, v517). Until the stroke file is parsed the pad
+  shows its grid alone (v706); a failed load makes it the free pad once, silently after (v708/v710).
+- **The grade is the writing.** The last stroke of the last character writes the review through `recordGrade`, counts the
+  points (**one per character written without help**, v546), bumps `charWrites`, and queues the card **once more `REP_GAP` 3
+  cards on**. A swipe, a chevron or a tab tap grades nothing.
+- **After each character** the pad fades, then (`CHAR_IN` 200 ms) its reading and meaning stand over the pad for `CHAR_MS`
+  900 ms; after the last, the recap — `d.p` grouped by word and the meaning, no characters (v577/v616) — for `recapMs(d)`
+  (`NEXT_MS` 3200 + `RECAP_SYL` 230 a syllable past the second, cap `RECAP_MAX` 5300), as large as `recapFit` measures (v600).
+  A tap skips. The star flies into the counter at `recapMs − POP1`; a milestone (50/100/250/500/1000 points, 7/30/100-day
+  streak) bursts (v545).
+- **The word line** (text state only; in the photo state `--th` is 0) reads the character being written with its in-word
+  reading, then its word (v518/v540), and wraps as it needs (v600); `shortSense` strips a parenthetical from that line only.
+- **"Details"** folds open at the card's foot — characters, pinyin, meaning **and the description** (v585, fetched by itself
+  1.2 s after the card appears, `explainSoon`); then a grey toolbar **Star · Flag · Edit** (v667) — Edit comes back to the same
+  card. The fold row shows a small star/flag when the card has them; **nothing sits on the photo** (v667).
 - **The word being written is marked on the photo** (v533) — **switched off by `SPOT_ON` since v602**, code intact.
 - **The photo zooms onto the character being written** (v617, `ZOOM_AUTO`): whole first, in after `AZ_OVERVIEW` or the pad's
   first touch, on to each next character on a glide, out for the recap — on every character, level 3 included (v660, H's
-  choice over v617's recall rule). `AZ_INK` on a sure ink box; the reader's boxes of one line share one scale (v678) and every
-  line shows its characters at the card's largest share of the box (v679); the text whole on an unsure ink guess (v669); cap
-  `AZ_MAX` 3.5; an unread run before or after the matches takes the free reader line beside them (v749, 回收 read as 闽妆). **The
-  learner can switch it off** (More → Learning, `learnZoom`, `zoomOn()`, on by default, v683). A pinch makes
-  the zoom the hand's (`ZOOM_HAND`) and it then only follows; one finger still swipes.
-- **Swipe** = the carousel of v417: the neighbour rides in beside the card and snaps; it grades
-  nothing, and a skipped card stays due for next time. On a **zoomed** picture the one-finger drag pans, and pulling on past
-  the picture's edge hands the stroke to the swipe (v606).
+  choice). `AZ_INK` on a sure ink box; a line's reader boxes share one scale (v678/v679); the text whole on an unsure ink
+  guess (v669); cap `AZ_MAX` 3.5; an unread run before or after the matches takes the free reader line beside them (v749).
+  **The learner can switch it off** (More → Learning, `learnZoom`, on by default, v683). A pinch makes the zoom the hand's
+  (`ZOOM_HAND`) and it then only follows; one finger still swipes.
+- **Swipe** = the carousel of v417: the neighbour rides in and snaps; it grades nothing, a skipped card stays due. On a
+  **zoomed** picture the one-finger drag pans, and pulling on past the picture's edge hands the stroke to the swipe (v606).
 
 ### Cards
 Square photo tiles, two a row, **nothing written under them** (v593); a text-only card draws its text in the picture (v506).
 On the picture: the star (v425, one tap), flag and AI marks; a multicard adds its plates, count chip, progress bar and a
-two-line title (v461–v597). **Two tabs, Cards and Multicards** (v477); the filter is **one pill and a sheet** (v365/v366);
-search also takes toneless pinyin (`toneless`, v690; H skipped a dictionary-row list, proposal A); a long press marks (v354);
-the list keeps its place (v352/v445); the placeholder reads "Characters or pinyin" (v717). From
-`BACKUP_AT` 25 flashcards a never-exported deck shows **one backup line with Export** under the search bar (v717). The **open card** swipes through the list (v445); since v736 its block always stands — no "Details" bar, no second
-character line, the word row gone when the word is the whole card, no Flagged pill — then one button (Test this card) and the
-study card's quiet toolbar Star · Flag · Edit; **Delete lives in the Edit form only**, which returns where the card came from.
-A description the card fetches by itself lands **without a scroll** (v752); only a tapped Explain reveals its paragraph (v527).
-The character pages ("Cards with 行 ›", v691–v717) **left at v737** (H) — do not bring them back unasked. A **multicard's own text**: it swipes to the multicard's next text (v707; the neighbour rides in with its word line, v753); its photo frames it alone (v700); + Flashcard (Flashcard › once made), then Flag · Edit
-(v692/v695/v736); the pop-up over the photo carries **no action** (v496/v692) — a **Details** fold, closed by default (v733/v741; open by
-default and headless v733–v740, H: "zu viel und unübersichtlich"), holds the short and long description, the long one asked
-the first time the fold is open on a text; a long text wraps at 30 px (v741). The multicard: **Add a text**, Delete multicard
-(v635/v711); its tags once under its title, its texts' rows show a short one-sentence description (`dsh`, all texts in one AI call at creation and once when an older multicard is opened, `pageShorts`; a failed call is asked again next visit, v710; **their descriptions the same way, `pageDescs`, v753**) and no flashcard ring; the long one stays on the opened text (v696–v698). On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right, name/pinyin/meaning without it and whole, and a dish description (`priceOf`, `isMenuPage`, v699); its own screen and the look-up show the same, the price on its own line (`priceView`, a view, the record untouched, v712); its flashcard is the name alone (v713); a dish with its own photo takes it as its picture (`dish`, v701/v705); no count line on the multicard's screen nor on the Camera tab (v745/v746).
+two-line title. **Two tabs, Cards and Multicards** (v477); the filter is **one pill and a sheet** (v365); search also takes
+toneless pinyin (`toneless`, v690); a long press marks (v354); the list keeps its place (v352/v445); the placeholder reads
+"Characters or pinyin". From `BACKUP_AT` 25 flashcards a never-exported deck shows **one backup line with Export** under the
+search bar (v717). The **open card** swipes through the list (v445); since v736 its block always stands — no "Details" bar,
+no second character line, no Flagged pill — then one button (Test this card) and the study card's toolbar Star · Flag · Edit;
+**Delete lives in the Edit form only**, which returns where the card came from. A description the card fetches by itself
+lands **without a scroll** (v752); only a tapped Explain reveals its paragraph (v527). The character pages ("Cards with 行 ›",
+v691–v717) **left at v737** (H) — do not bring them back unasked.
+
+A **multicard's own text** swipes to the multicard's next text (v707/v753); its photo frames it alone (v700); + Flashcard
+(Flashcard › once made), then Flag · Edit (v736); the pop-up over the photo carries **no action** (v496/v692); a **Details**
+fold, **closed by default** (v741; open and headless v733–v740, H: "zu viel und unübersichtlich"), holds the short and long
+description, the long one asked the first time the fold is open. The multicard: **Add a text**, Delete multicard (v635/v711);
+its texts' rows show a short one-sentence description (`dsh`, one AI call for all texts at creation and once when an older
+multicard is opened, `pageShorts`; the descriptions the same way, `pageDescs`, v753); the long one stays on the opened text.
+On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right and name/pinyin/meaning without it
+(`priceOf`, `isMenuPage`, `priceView` — a view, the record untouched, v699/v712); its flashcard is the name alone (v713); a dish
+with its own photo takes it as its picture (`dish`, v705); no count line on the multicard's screen nor on the Camera tab (v746).
 
 ### Camera — photo to card
 The Camera tab is the camera: the **shutter card** (Take photo, From album) centred, work under it (v466/v470); a photo that
 made its card **leaves the tab** (v471). From album works through the batch one at a time while the app is open (v411); the
-"to go" line counts the batch's photos still to be finished, the one in hand included (`BATCH`, v761).
-**A photo becomes a card by itself** (v325): a light band sweeps the photo, then the finished card with Edit and Delete. Save now
-(v237) makes the card before the reading is done; Crop (v437) and Crop again (v239) hand the app's frame to the hand. A photo
-whose texts stand apart becomes **one multicard** with a dot on every text (v448/v453/v457), regions snapped onto the ink when
-shown (v620); its photo pinches and pans like a card's (v634, `regionAt`). **Add a text** (v635) frames a missing text through
-Crop again; **the screen stays on while a photo is read** (v767); a blank never read is dropped on Cancel, a tab tap or a restart. A photo left on the tab with no card has **Read again**
-(v739) — the shutter's own reading once more; Crop reads the framed part.
+"to go" line counts the batch's photos still to be finished (`BATCH`, v761). **A photo becomes a card by itself** (v325): a
+light band sweeps the photo, then the finished card with Edit and Delete. Save now (v237) makes the card before the reading
+is done; Crop (v437) and Crop again (v239) hand the app's frame to the hand. A photo whose texts stand apart becomes **one
+multicard** with a dot on every text (v453/v457), regions snapped onto the ink (v620); its photo pinches and pans like a
+card's (v634). **Add a text** (v635) frames a missing text through Crop again; **the screen stays on while a photo is read**
+(v767); a blank never read is dropped on Cancel, a tab tap or a restart. A photo left on the tab with no card has **Read
+again** (v739) — the shutter's own reading once more; Crop reads the framed part.
 
 ### More — four sections (v547)
-**Learning** (Progress, Card order, Tags, Check-up and the undo rows) · **Your cards** (Export,
-Import, Flagged cards, Photos, Duplicate multicards when there are any (v731), Storage) · **The app** (Share the app, Feedback, How to use the
-app, Language, Meanings, AI review with the owner's setup form, Review queue, Usage sharing,
-Update notes, About, Open source licenses) · **Advanced settings**. The owner's tools fold behind
-one **Owner tools** row (Downloads, Mirror, Diagnostics, Still to test, All users, Feedback,
-Start over); unlocking lengthens More by one row instead of 1 574 px. **The long texts fold** (v717, `moreFold`, closed at
-every start, toggled in place): What is sent ⌄ on AI review and Usage sharing, About the app ⌄, Write a message on Feedback;
-every word stays (v193), as do the checkboxes, status lines and update notes.
+**Learning** (Progress, Card order, Tags, Check-up and the undo rows) · **Your cards** (Export, Import, Flagged cards, Photos,
+Duplicate multicards when there are any, Storage) · **The app** (Share the app, Feedback, How to use the app, Language,
+Meanings, AI review with the owner's setup form, Review queue, Usage sharing, Update notes, About, Open source licenses) ·
+**Advanced settings**. The owner's tools fold behind one **Owner tools** row (Downloads, Mirror, Diagnostics, Still to test,
+All users, Feedback, Start over). **The long texts fold** (v717, `moreFold`, closed at every start): What is sent ⌄ on AI
+review and Usage sharing, About the app ⌄, Write a message on Feedback; every word stays (v193).
 
-**Owner's rows are English** (H uses English) and behind a password (`ADMIN_HASH`, SHA-256, a
-session-only unlock). **Diagnostics** keeps a hundred readings, a hundred AI exchanges and a
-hundred errors, each on its own settings row, and survives restarts (v505) — it is the only
-window into the phone, and every reader fix since v93 came out of a shared dump. Each reading
-carries a `numbers:` line with every value the frame chain decided on (v399).
+**Owner's rows are English** and behind a password (`ADMIN_HASH`, SHA-256, a session-only unlock). **Diagnostics** keeps a
+hundred readings, a hundred AI exchanges and a hundred errors, and survives restarts (v505) — it is the only window into the
+phone, and every reader fix since v93 came out of a shared dump. Each reading carries a `numbers:` line with every value the
+frame chain decided on (v399).
 
 ## The reading pipeline
-Photo (≤1600 px, EXIF baked in) → `proposeFrame` (ink rows on a chromaticity copy; a **shared
-screenshot is read whole**, v450) → **quick look** (one pass ≤1000 px; its confident boxes place
-the frame through `rectOfLines`, but only when at least three characters read at `PLACE_CF` 95 %,
-v319) → the reading proper: deskew, then competing passes at several scales in a **pool of
-readers**, in colour, black-and-white and chromaticity copies, simplified and traditional models,
-merged by line band and scored by `readingScore`/`effScore` → the editor.
+Photo (≤1600 px, EXIF baked in) → `proposeFrame` (ink rows on a chromaticity copy; a **shared screenshot is read whole**,
+v450) → **quick look** (one pass ≤1000 px; its confident boxes place the frame through `rectOfLines`, only when at least
+three characters read at `PLACE_CF` 95 %, v319) → the reading proper: deskew, then competing passes at several scales in a
+**pool of readers**, in colour, black-and-white and chromaticity copies, simplified and traditional models, merged by line
+band and scored by `readingScore`/`effScore` → the editor.
 
-- **What the reader sees must be a JPEG** (this build misreads large canvas PNGs).
-- **The reader is chaotic on large text** — the same crop reads perfectly at one scale and as
-  garbage at another, so read at several scales and let them compete.
-- **A weak reading (`effScore` < `WEAK_READ` 180) sends the picture to the AI** (v173), at most
-  `PIC_MAX` 800 px, **at the quick look rather than after the whole reading** (v439) — over half
-  of H's photos read weak, and on a panel the whole call disappears inside the reader's time. The
-  reading **stops once a good answer lands** (v442), unless the frame was straightened.
-- The AI's box is **snapped to the ink** (`snapBox`, v297 and twelve versions after it) and the
-  frame is placed on the text; a box the model drew around exactly the text it read does not
+- **What the reader sees must be a JPEG** (large canvas PNGs misread). **The reader is chaotic on large text** — read at
+  several scales and let them compete.
+- **A weak reading (`effScore` < `WEAK_READ` 180) sends the picture to the AI** (v173), at most `PIC_MAX` 800 px, **at the
+  quick look** (v439 — over half of H's photos read weak). The reading **stops once a good answer lands** (v442), unless the
+  frame was straightened.
+- The AI's box is **snapped to the ink** (`snapBox`, v297 ff.); a box the model drew around exactly the text it read does not
   overrule the reader's own measurement (v449).
-- A **panel or screen** answers `apart:true` with one entry per element; `splitCards` makes one
-  card each. If the model's boxes are **a drawing rather than a measurement** (all one width, or
-  every x a multiple of ten — `templateBoxes`/`roundGrid`), the app looks for the labels in the
-  picture itself with the reader (v386–v391); a label it cannot place keeps the frame's own
-  picture — **a card short of its own crop is the price, a card on the neighbour's button is
-  not.** A surely read line the answer does not hold refuses the split (`panelCovers`, `PANEL_COVER` 0.8) — except a line
-  with one Chinese character or none, a price the prompt tells the model to leave out (v757). At most `SPLIT_MAX` 60 labels.
-- **No picture answer and five lines or more → no card** (v649, `NOPIC_LINES`): only the picture can split a board; the photo
-  stays on the Camera tab for Crop. Offline (picture never asked) the card is still made. **A priced board the phone's reader reads
-  surely is split by its own lines with no picture call** (v755/v756, `boardSure`: `BOARD_MIN` 10 lines, half of them priced,
-  median 94, mean 90, 0.7 of the characters sure; `readerPicture` reads again at 1600, joins a price read apart to its name's
-  row and asks the text model for the words in one call; no dish photos). **Any other board keeps the picture model** — its
-  judgement of what is a text is what its two minutes buy (v756: five of eight boards worse on the wide rule).
-- **A strong winning reading with a sure line outside the placed frame places it again around it** (v684: the close look's
-  band had cut 爸爸 off a 4-line poster the phone's reader read whole).
-- The card's picture is the **square window** around the text (`windowRect`, `CARD_RATIO` 1),
-  brightened where it needs it (`brightenBlob`, per-channel only when the channels are of a kind,
-  v398/v418) and sharpened at the cut (v396).
+- A **panel or screen** answers `apart:true` with one entry per element; `splitCards` makes one card each. Boxes that are
+  **a drawing rather than a measurement** (`templateBoxes`/`roundGrid`) send the app looking for the labels with the reader
+  (v386–v391); a label it cannot place keeps the frame's own picture — **a card short of its own crop is the price, a card on
+  the neighbour's button is not.** A surely read line the answer does not hold refuses the split (`panelCovers`,
+  `PANEL_COVER` 0.8), except a line with one Chinese character or none (v757). At most `SPLIT_MAX` 60 labels.
+- **No picture answer and five lines or more → no card** (v649, `NOPIC_LINES`); the photo stays on the Camera tab for Crop.
+  Offline the card is still made. **A priced board the phone's reader reads surely is split by its own lines with no picture
+  call** (v755/v756, `boardSure`: `BOARD_MIN` 10 lines, half priced, median 94, mean 90, 0.7 of the characters sure;
+  `readerPicture` reads again at 1600 and asks the text model for the words in one call). **Any other board keeps the picture
+  model** (v756: five of eight boards worse on the wide rule).
+- **A strong winning reading with a sure line outside the placed frame places it again around it** (v684).
+- The card's picture is the **square window** around the text (`windowRect`, `CARD_RATIO` 1), brightened where it needs it
+  (`brightenBlob`, v398/v418) and sharpened at the cut (v396).
 
 ## Online AI review, the relay, and what leaves the phone
-`AI_PROVIDERS`: DeepSeek (default, reachable from China without a VPN), Qwen/Bailian (pictures;
-**must be called without the VPN**), GLM, Claude, custom. One account per provider
-(`aiAccounts`); the phone's own key always wins. Text goes to DeepSeek where possible
-(`textProvider()`), pictures to `pictureProvider()`. Qwen's thinking is switched off on every
-request. Every request is tried **twice** (v201) and aborted after `AI_TIMEOUT_MS` 25 s; a picture's first try after
-`PIC_TIMEOUT_MS` 60 s, its second after `PIC_TIMEOUT2_MS` 120 s (v740, H's 22-line board: the answer did not come in 60 s twice
-while smaller calls answered — how long it needs is unknown until the next dump).
+`AI_PROVIDERS`: DeepSeek (default, reachable from China without a VPN), Qwen/Bailian (pictures; **must be called without
+the VPN**), GLM, Claude, custom. One account per provider (`aiAccounts`); the phone's own key always wins. Text goes to
+DeepSeek where possible (`textProvider()`), pictures to `pictureProvider()`; Qwen's thinking is off. Every request is tried
+**twice** (v201) and aborted after `AI_TIMEOUT_MS` 25 s; a picture's first try after `PIC_TIMEOUT_MS` 60 s, its second after
+`PIC_TIMEOUT2_MS` 120 s (v740 — how long a 22-line board needs is unknown until the next dump).
 
-**The owner's relay** (v191): a phone with no key posts to H's Supabase edge function, which adds
-the key, counts the call and refuses past the cap — **per provider since 2026-09-14: qwen 80,
-deepseek 400, `CAP_ALL` 6000**; the owner's phone is exempt through the `OWNER_INSTALL` secret.
-The Qwen endpoint follows the key's own prefix (`sk-ws-` pay-as-you-go, `sk-sp-` Token Plan), and
-both keys are trimmed — a newline from a phone paste produced a 401 that read like a dead key. **The function logs every
-call** (provider, bytes, status, seconds, never the text; a line cut before its answer logs `closed` and answers 502) —
-read it under Edge Functions → ai-relay → Logs (2026-09-29, the 江宁府 board: seven calls all dead at exactly 75.0 s, cause open).
+**The owner's relay** (v191): a phone with no key posts to H's Supabase edge function, which adds the key, counts the call
+and refuses past the cap — **per provider: qwen 80, deepseek 400, `CAP_ALL` 6000**; the owner's phone is exempt through the
+`OWNER_INSTALL` secret. The Qwen endpoint follows the key's prefix (`sk-ws-` pay-as-you-go, `sk-sp-` Token Plan); both keys
+are trimmed (a pasted newline once read as a dead key). **The function logs every call** (provider, bytes, status, seconds,
+never the text) — Edge Functions → ai-relay → Logs (2026-09-29, the 江宁府 board: seven calls dead at exactly 75.0 s, cause open).
 
-**The picture model writes only what needs the picture** (v640, `picWords`): characters, boxes, board or not, kind, page; pinyin, meaning and description come from the text model in the same `aiReadPicture` call (the picture's answer time is ~5 s + 7.5 ms a character, and those fields were two thirds of it). Words that do not come leave the gloss, pending.
+**The picture model writes only what needs the picture** (v640, `picWords`): characters, boxes, board or not, kind, page;
+pinyin, meaning and description come from the text model in the same `aiReadPicture` call. Words that do not come leave the
+gloss, pending.
 
-**Answers are checked, never trusted:** `zh` normalised to simplified; `saneM` drops a meaning
-that echoes the text or is Han-only outside Japanese; `saneP` takes the model's pinyin only when
-**every token is a real Mandarin syllable** (`PY_SYLLABLES`, v507); `aiSettled` refuses to change
-a character every pass read clearly (**the v143 rule**); **the AI's pinyin is checked against pinyin-pro's in-word reading and a mismatch, or
-the model's own `unsure`, flags the card** (v611, `aiDoubt`); `mainLines` drops fine print, except on a
-board, menu, panel or screen, where the small plates are elements (v456).
+**Answers are checked, never trusted:** `zh` normalised to simplified; `saneM` drops a meaning that echoes the text or is
+Han-only outside Japanese; `saneP` takes the model's pinyin only when **every token is a real Mandarin syllable**
+(`PY_SYLLABLES`, v507); `aiSettled` refuses to change a character every pass read clearly (**the v143 rule**); **the AI's
+pinyin is checked against pinyin-pro's in-word reading, and a mismatch or the model's own `unsure` flags the card** (v611,
+`aiDoubt`); `mainLines` drops fine print, except on a board, menu, panel or screen (v456).
 
-**What the app sends on its own is the whole of the privacy question** — `privacy.html`, More →
-"What is sent" and the guide must say the same thing, and correcting one without the others has
-gone wrong four times (v403, v459, v534, v539). The AI review is **on by default and works with
-no key**, so a fresh install sends every new card's text from its first card.
+**What the app sends on its own is the whole of the privacy question** — `privacy.html`, More → "What is sent" and the guide
+must say the same thing; correcting one without the others has gone wrong four times (v403, v459, v534, v539). The AI review
+is **on by default and works with no key**, so a fresh install sends every new card's text from its first card.
 
 ## Languages
-Ten columns in `lang.js`: en, de, fr, es, ja, ko, ru, vi, th, id. **English is the key**; a
-missing key falls back to the English text, never to the key. **490 keys a column, ru 520 (three
-plural forms), en 15.** `nOf`/`wordOf`/`PLURAL` carry the counts.
+Ten columns in `lang.js`: en, de, fr, es, ja, ko, ru, vi, th, id. **English is the key**; a missing key falls back to the
+English text, never to the key. **490 keys a column, ru 520 (three plural forms), en 15.** `nOf`/`wordOf`/`PLURAL` carry the
+counts.
 
-- **The v412 rule: a pronoun or a count-agreeing verb must never cross a key boundary.** Render
-  every count sentence at **1** in all ten columns before shipping it — n=1 is the state every run
-  passes through, and it has been wrong in seven columns at once.
-- **Tone (v255):** relaxed, the learner as a friend — du, tu, tú, 해요체, bạn, kamu; Thai with no
-  sentence-final politeness particle (the app cannot know the user's gender). No formal register.
-- Check for a **duplicate key** with a string-aware scan of the source that agrees with the
-  evaluated count — a duplicate key in a JS object literal is silent and the later one wins
-  (v371 cost the drawing pad its French label).
-- **The v259 rule: a screen that changes takes the guide's sentence with it, in the same PR** —
-  and that is checked by rendering, not by grepping for one word (v589).
-- The guide is six sections, five led by a **real crop of one part of one screen** (v598) and the
-  sixth by a drawn figure whose card is a crop too (v599, `gfimg`) — as is the empty deck's example
-  card. A crop must carry **no UI prose**, or it stops serving all ten languages; it is regenerated
-  with the screen it shows (below); and a whole screen is still banned (v549's arithmetic: six of them are 4600 px).
+- **The v412 rule: a pronoun or a count-agreeing verb must never cross a key boundary.** Render every count sentence at
+  **1** in all ten columns before shipping it — it has been wrong in seven columns at once.
+- **Tone (v255):** relaxed, the learner as a friend — du, tu, tú, 해요체, bạn, kamu; Thai with no sentence-final politeness
+  particle. No formal register.
+- Check for a **duplicate key** with a string-aware scan of the source that agrees with the evaluated count — a duplicate
+  key in a JS object literal is silent and the later one wins (v371).
+- **The v259 rule: a screen that changes takes the guide's sentence with it, in the same PR** — checked by rendering, not by
+  grepping for one word (v589).
+- The guide is six sections, five led by a **real crop of one part of one screen** (v598) and the sixth by a drawn figure
+  (v599, `gfimg`). A crop must carry **no UI prose**, or it stops serving all ten languages; it is regenerated with the
+  screen it shows (below); a whole screen is banned (v549: six of them are 4600 px).
 - ja, ko, ru, vi, th and id are mine and **unchecked by a native speaker**.
 
 ## Hard constraints (learned in the field — do not violate)
@@ -365,131 +324,109 @@ box a photo is shown small in, never of the cut). Radii: cards 16 (`--rc`), butt
 (`--r`). Fonts: UI = Apple system stack; Hanzi = Songti/STSong/Noto Serif CJK for the big
 characters; `--mono` only for timestamps and Diagnostics. **Pinyin is set in the UI font.**
 
-The script draws nothing in fixed colours — inline SVG uses `style="stroke:var(--…)"` and
-canvases read the tokens at paint time (`cssVar`). The crop frame is deliberately
-theme-independent (white dashes with a dark outline). Body 17 px, labels 13–14 px, meanings
-18 px, **touch targets ≥ 44 px**, inputs ≥ 16 px, safe-area padding, plain words — no jargon,
-no "OCR", no "·" shorthand, sentence case everywhere.
+The script draws nothing in fixed colours — inline SVG uses `style="stroke:var(--…)"` and canvases read the tokens at
+paint time (`cssVar`). The crop frame is deliberately theme-independent (white dashes with a dark outline). Body 17 px,
+labels 13–14 px, meanings 18 px, **touch targets ≥ 44 px**, inputs ≥ 16 px, safe-area padding, plain words — no jargon, no
+"OCR", no "·" shorthand, sentence case everywhere.
 
-**The browser's own behaviours stay off the app** (v248/v249/v272): one `contextmenu` listener
-cancels the long-press menu on pictures, canvases and controls; **no text is selectable** (`html{user-select:none}`,
-v694, H: "Bitte nicht diese Google popups zulassen" — Chrome's Touch to Search needs selectable text), only inputs and
-text areas are; `touch-action:
-manipulation` on body; autocorrect and spellcheck off on the fields that hold Chinese or pinyin.
+**The browser's own behaviours stay off the app** (v248/v249/v272): one `contextmenu` listener cancels the long-press menu on
+pictures, canvases and controls; **no text is selectable** (`html{user-select:none}`, v694, H: "Bitte nicht diese Google
+popups zulassen"), only inputs and text areas are; `touch-action: manipulation` on body; autocorrect and spellcheck off on
+the fields that hold Chinese or pinyin.
 
 ## Didactics / SRS
-SM-2 light. Progress rows `{c, interval, ease, due, reps, fails, last}`; every review day is
-appended to `days` for the streak, and `daily{day:{r,w}}` counts reviews and writes.
-`fails` counts consecutive `again`, and at `LEECH_FAILS` 4 the card is **flagged automatically**
-— a leech is usually a bad card, not a bad memory. `KNOWN_DAYS` 21 is "known".
+SM-2 light. Progress rows `{c, interval, ease, due, reps, fails, last}`; every review day is appended to `days` for the
+streak, `daily{day:{r,w}}` counts reviews and writes. `fails` counts consecutive `again`, and at `LEECH_FAILS` 4 the card is
+**flagged automatically** — a leech is usually a bad card, not a bad memory. `KNOWN_DAYS` 21 is "known".
 
-**Learn writes the review from the pad** (v512): "good", or "again" when a Skip helped. The three
-grades — Hard (`again`) / Medium (`good`) / Easy in the traffic light's colours (v421/v497) —
-survive only on a **marked photo's** sheet, where the tap really is a review; `hard` is kept in
-`schedule()` for the rows written by it and is unreachable from any screen.
+**Learn writes the review from the pad** (v512): "good", or "again" when a Skip helped. The three grades — Hard (`again`) /
+Medium (`good`) / Easy in the traffic light's colours — survive only on a **marked photo's** sheet; `hard` is kept in
+`schedule()` and is unreachable from any screen.
 
-Session = due cards + up to `NEW_PER_SESSION` 8 new ones, **from short cards to long ones inside
-each group** (v524), with unchecked cards first (v515). A **starred** session holds **every**
-starred card, due or not, with the cap lifted (v429) — a star is a hand-picked list, not a
-category. Card order (Oldest / Newest / Random) is H's own setting.
+Session = due cards + up to `NEW_PER_SESSION` 8 new ones, **from short cards to long ones inside each group** (v524),
+unchecked cards first (v515). A **starred** session holds **every** starred card, due or not, with the cap lifted (v429) —
+a star is a hand-picked list, not a category. Card order (Oldest / Newest / Random) is H's own setting.
 
 ## Testing
-No test files in the repo. Each session verifies in headless Chromium (Playwright with the
-pre-installed browser, a local static server under `/zeichentrainer/`, vendor files from
-`vendor/`, AI endpoints mocked with `page.route`); a seed script fills IndexedDB before the app
-loads, then scripts drive the UI and read state (`S`, `SIGN`, `DICT` are globals). **Suites live
-in the session scratchpad and are gone afterwards — rebuild what you need.** A serving root is
-built by **copying**, never as a symlink into the repo. **`tools/field/` holds H's own thirteen board and panel photos at the
-app's 1600 px** (v751, its README names each): a reader change is replayed on them with the real reader model before it is
-judged — the 江宁府 board gives the phone's dump numbers to the digit there, where the drawn board never did. **H's five Meituan and three Taobao
-screenshots (v757/v759) are not in the repo** — they carry his account and address; the harness took them from the session's uploads.
+No test files in the repo. Each session verifies in headless Chromium (Playwright with the pre-installed browser, a local
+static server under `/zeichentrainer/`, vendor files from `vendor/`, AI endpoints mocked with `page.route`); a seed script
+fills IndexedDB before the app loads, then scripts drive the UI and read state (`S`, `SIGN`, `DICT` are globals). **Suites
+live in the session scratchpad and are gone afterwards — rebuild what you need.** A serving root is built by **copying**,
+never as a symlink into the repo. **`tools/field/` holds H's own thirteen board and panel photos at the app's 1600 px**
+(v751, its README names each): a reader change is replayed on them with the real reader model before it is judged. **H's
+five Meituan and three Taobao screenshots are not in the repo** — they carry his account and address.
 
 Rules that came out of the harness and cost real versions:
 
-- **A suite that pins a number breaks on every change to it — read the number from the page**
-  (v413).
-- **A check that cannot fail on the old tree is not a test** (v419). Run the suite against the
-  previous version and say how many checks flip; label the ones that pass on both `[control]` or
-  `[guard]`, with the reason written beside them.
-- **A green result whose mechanism is not the one claimed is worthless** (v439/v447): a case
-  passed because a stale log line from the previous case happened to be there.
-- **A fit check must ask whether the text broke, not whether the box overflowed** — a flex item wraps inside its
-  button rather than overflowing (v427).
+- **A suite that pins a number breaks on every change to it — read the number from the page** (v413).
+- **A check that cannot fail on the old tree is not a test** (v419). Run the suite against the previous version and say how
+  many checks flip; label the ones that pass on both `[control]` or `[guard]`, with the reason beside them.
+- **A green result whose mechanism is not the one claimed is worthless** (v439/v447).
+- **A fit check must ask whether the text broke, not whether the box overflowed** (v427).
 - **A gesture fixture must use the gesture the phone uses** — v606 passed on wheel zooms and a real pinch broke it (v614).
 - **A probe that reads the app's own model of an animation cannot see what the compositor paints** — use
   `Page.startScreencast` for a fade (v555).
-- **When the harness and the phone disagree, the harness is wrong and that is what gets fixed
-  first.** No heuristic is tuned against numbers the phone did not actually send (v384): five
-  versions were fitted to a rounded log and every one failed in the field.
+- **When the harness and the phone disagree, the harness is wrong and that is what gets fixed first.** No heuristic is
+  tuned against numbers the phone did not actually send (v384).
 - **A suite that freezes a copy of the build stops being a test the moment the build moves** (v419).
 - A fixture must carry the field case's own shape — its angle, its own photo, its own answer (v446/v552).
-- Layout is checked by screenshot at 390 px (and 360 px for the narrow phones), light and dark,
-  in German and in the widest language for the row in question.
+- Layout is checked by screenshot at 390 px (and 360 px), light and dark, in German and in the widest language for the row.
 
 ## Working with H — the how-to rules (v128)
 **What H sends.** One request per message: a sentence, and a screenshot when it is about a screen; when the reader is
 wrong, More → Diagnostics → Share with it. "Leave it as it was" means: revert, no discussion.
 
-1. **Restate before building.** One sentence: what changes for H on the phone. Two readings that
-   lead to different work → one question, not five. Otherwise no questions.
-2. **Size gate.** Wording, layout, a rule in the reader, a bug: build at once. **Anything that
-   changes how H handles the app** (a new gesture, field, control, screen or flow) is described
-   first in three lines — what H does, what he sees, what it costs — and waits for "go".
+1. **Restate before building.** One sentence: what changes for H on the phone. Two readings that lead to different work →
+   one question, not five. Otherwise no questions.
+2. **Size gate.** Wording, layout, a rule in the reader, a bug: build at once. **Anything that changes how H handles the
+   app** (a new gesture, field, control, screen or flow) is described first in three lines — what H does, what he sees,
+   what it costs — and waits for "go".
 3. **Only the ask.** No "while I'm at it" changes. Cleanups only when H asks for them.
-4. **Field first.** A reader change is judged by the phone, not by the harness. Every claim about
-   the phone is either seen on the phone or marked "not yet field-checked".
-5. **One request, one PR, one version.** Three version markers bumped, the suites that touch the
-   change run, the record updated in the same PR, merged by Claude, branch reset onto main.
-6. **The record is the memory.** Decisions, rejected features and field lessons go in with the
-   reason. What H rejected is not brought back unasked.
-7. **Report short, in English.** What changed, what was verified and where, what is open.
-   **Honesty over confidence:** "I don't know" beats a guess; limits are named, costs are stated
-   plainly rather than dressed up.
+4. **Field first.** A reader change is judged by the phone, not by the harness. Every claim about the phone is either seen
+   on the phone or marked "not yet field-checked".
+5. **One request, one PR, one version.** Three version markers bumped, the suites that touch the change run, the record
+   updated in the same PR, merged by Claude, branch reset onto main.
+6. **The record is the memory.** Decisions, rejected features and field lessons go in with the reason. What H rejected is
+   not brought back unasked.
+7. **Report short, in English.** What changed, what was verified and where, what is open. **Honesty over confidence:**
+   "I don't know" beats a guess; limits and costs are stated plainly.
 8. **Wording and design** follow the rules above — they are not up for interpretation.
-9. **Tone: relaxed.** "This is a fun app. No formal, boring translations within the app.
-   Customers are passionate language learners. Same for the design and layout."
+9. **Tone: relaxed.** "This is a fun app. No formal, boring translations within the app. Customers are passionate language
+   learners. Same for the design and layout."
 
-**`WHATS_NEW` (v408):** every PR that changes something a learner would notice adds one English
-sentence keyed by its version; More → About lists the last five **as a bulleted list** (v609; grey dots, not red — v610, H: "viel zu auffällig") and a line slides
-up after an update. **Most versions get no note — that is correct, not an oversight.** A note describing a
-control that no longer exists is not a record but a false instruction, so it goes with the
-control (v534). The owner's twin is **`TO_TEST`**, the Still-to-test list under Advanced settings
-(v435): **a reminder of what still has to be corrected and checked, nothing else** (v748, H: "Das To Test soll ja dafür da
-sein, dass ich nicht vergesse, Sachen zu korrigieren und abzutesten … wenn sie schon gemacht worden sind, dann brauchen wir
-sie auch nicht notieren"). A PR that ships something only the phone can judge adds its line; **the line goes, unasked, the
-moment H's report or his own use settles it**. Keep each entry inside **35 columns** or it wraps in the box.
+**`WHATS_NEW` (v408):** every PR that changes something a learner would notice adds one English sentence keyed by its
+version; More → About lists the last five as a bulleted list (grey dots, v610) and a line slides up after an update. **Most
+versions get no note — that is correct.** A note describing a control that no longer exists goes with the control (v534).
+The owner's twin is **`TO_TEST`**, the Still-to-test list under Advanced settings: **a reminder of what still has to be
+corrected and checked, nothing else** (v748, H). A PR that ships something only the phone can judge adds its line; **the line
+goes, unasked, the moment H's report or his own use settles it**. Keep each entry inside **35 columns**.
 
 ## Field lessons that shaped the app (keep)
 The full list is in the archive; these are the ones that keep biting.
 
 - **The frame never moves for the content; the content adapts to the frame** (v560).
-- **A class written for one shape is not a free ride for another** — `.undo`'s padding and `nowrap` cost the update note
-  five versions of silence (v413; again v432, v487). **Inheritance loses to any matching rule, however weak.**
-- **A clamped box wants a whole-pixel line box**, or the clamped line leaves its top edge behind (v593).
+- **A class written for one shape is not a free ride for another** (v413/v432/v487). **Inheritance loses to any matching
+  rule, however weak.** **A clamped box wants a whole-pixel line box** (v593).
 - **Presence that costs width is not free in a ten-language app** — check the tightest language *before* (v474).
-- **A guard whose lifetime is a timer from the moment it was armed does not cover the gesture it
-  guards — end it on the event that ends the gesture** (v589).
-- **A guard asserted by setting its own state by hand is not tested — drive the button that sets it** (v468).
+- **A guard whose lifetime is a timer does not cover the gesture it guards — end it on the event that ends the gesture**
+  (v589). **A guard asserted by setting its own state by hand is not tested — drive the button that sets it** (v468).
 - **A second copy of one number drifts.** One rule, one reader; an unavoidable copy is named on both sides (v401).
-- **A constant that holds only because something else is being cut stops holding the moment the cutting stops** (v600:
-  `LINE_H` 61 was the word line's height only while a row was sliced; the wrap made it a lie). **A static estimate that must
-  be safe for every card is wrong on most of them** — measure (`recapFit`).
+- **A constant that holds only because something else is being cut stops holding the moment the cutting stops** (v600).
+  **A static estimate that must be safe for every card is wrong on most of them** — measure (`recapFit`).
 - **A dead constant or class leaves with its last user** (v307); **a false comment is a defect** (v404).
-- **An undefined CSS custom property takes its entire declaration with it** — the only way to find one is to
-  grep every `var(--x)` against the `:root` list (v589).
-- **The app must say what actually happened** — a record that claims an answer was used when it 404'd costs days
-  (v384/v395/v399/v405/v447).
+- **An undefined CSS custom property takes its entire declaration with it** — grep every `var(--x)` against `:root` (v589).
+- **The app must say what actually happened** — a record that claims an answer was used when it 404'd costs days (v384 ff.).
 - Status text lives in state and is re-queried on every render (v47); a long-running action keeps its state **outside**
   the row it was started from (v257).
-- **`git checkout -B <branch> origin/main` uses the local ref** — `git fetch origin main` first, or you build on a
-  stale tree (v458/v459, and again while writing this file). After a **squash** merge, reset the branch onto `origin/main`.
+- **`git checkout -B <branch> origin/main` uses the local ref** — `git fetch origin main` first (v458/v459). After a
+  **squash** merge, reset the branch onto `origin/main`.
 - A tap on a scrollable layer is read from the **click** event, not `pointerup` — iOS sends `pointercancel` (v206).
 - The worker helps only while it **controls** the page; a page with no controller needs its own origin-then-mirror rule (v335).
 - **No VPN is needed to use the app.** Updates and vendor files come through the jsDelivr mirror (`fastly.jsdelivr.net`;
   `cdn.` is DNS-hijacked in China, v483), purged on every push by `purge-mirror.yml`. A **first install** still needs
   github.io — the only fix is a second origin, and **H chose Cloudflare Pages on his own domain, later.**
-- The reload after an update waits for a pause (v279/v327), never while a photo is on its way
-  from the camera (v316), and at most once in ten minutes (v563).
+- The reload after an update waits for a pause (v279/v327), never while a photo is on its way from the camera (v316), and
+  at most once in ten minutes (v563).
 
 ## Play Store
 **Since 2026-09-23 the store app is a Capacitor shell** showing the live Pages URL with native payments; its code, credit rules,
@@ -504,12 +441,13 @@ CC BY-SA).
 
 ## Open / not yet field-checked
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
-as field-checked; only a question he is still raising is open, and each version's archive entry names its own. Open now:
-the reader's path on priced boards (v756); the apps' fields (thirty apps, `APP_CATS`) and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760); the wake lock through a whole batch on Xiaomi's Chrome (v767).
+as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); the
+apps' fields and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760); the wake
+lock through a whole batch on Xiaomi's Chrome (v767).
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
-form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's character
-row; ratios must match `GF_SHOT`; restore the files the PR does not touch (the painted sign has random grain).
+form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's
+character row; ratios must match `GF_SHOT`; restore the files the PR does not touch (the painted sign has random grain).
 
 **Named and waiting for H's word** (each changes how he handles the app, so each waits for a "Go"): re-cutting the deck
 square (`RECUT_V` 6, ~95 ms a card, no undo); after one tap the card stays face-up for the session (`S.cueBig`, reverses
