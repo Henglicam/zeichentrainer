@@ -60,6 +60,20 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v761, 2026-09-30)
+- **The Camera tab's "to go" line counts the photo in hand (v761, H: "Ich glaube, die 'noch x photos to go, while the app is
+  open' Anzeige ist ungenau. Ich hatte noch 2 Fotos am Laden und er hat 1 geschrieben").** He was right, by construction:
+  v411's line counted `AUTOQ`, the queue behind the photo in hand, and the first photo of an album batch never enters the
+  queue ("the first is already in hand") while every later one leaves it the moment `autoNext` starts its reading. So a
+  batch of two read "1 to go" from its first second and nothing at all while the second was being read. Now `BATCH` (a
+  set, memory only) holds the ids of an album batch — `importPhotos` adds them all, `autoNext` adds the one it takes from the
+  queue after a reload — and the line counts the batch's photos still in the inbox and still in hand (`PENDING`, `READING`,
+  the auto `CROP`) or waiting (`AUTOQ`); it goes when the last is done. **Harness** (`batch.js`: two screenshots through
+  `importPhotos` as an album batch, the relay mocked, the line read after 2 s, after the first card, after both): **v760 "1
+  photo to go" → "(no line)" → "(no line)"; v761 "2 photos to go" → "1 photo to go" → "(no line)"** — every check flips.
+  Rendered at n=1 in the ten columns before (v412's rule holds: the key is unchanged, "{0} to go, while the app is open."
+  with `nOf`). WHATS_NEW 761. Not field-checked.
+
 ## Current state (PWA v760, 2026-09-29)
 - **A label beside another one on one reader line gets its own place (v760, H on the Taobao cart multicard of v759: "Bitte
   für Multicard 天猫 den ganzen Screen nicht als Frame nehmen").** v759's record had named it: 天猫, 国庆狂欢 and 淘宝 kept the

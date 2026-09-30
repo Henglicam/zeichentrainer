@@ -61,7 +61,7 @@ UI language: English (ten languages shipped). Learning content: Chinese + pinyin
   sends `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` —
   need **no** bump; bumping costs every phone a shell re-download for nothing.
 
-## Current state (PWA v760, 2026-09-29)
+## Current state (PWA v761, 2026-09-30)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -221,7 +221,8 @@ the first time the fold is open on a text; a long text wraps at 30 px (v741). Th
 
 ### Camera — photo to card
 The Camera tab is the camera: the **shutter card** (Take photo, From album) centred, work under it (v466/v470); a photo that
-made its card **leaves the tab** (v471). From album works through the batch one at a time while the app is open (v411).
+made its card **leaves the tab** (v471). From album works through the batch one at a time while the app is open (v411); the
+"to go" line counts the batch's photos still to be finished, the one in hand included (`BATCH`, v761).
 **A photo becomes a card by itself** (v325): a light band sweeps the photo, then the finished card with Edit and Delete. Save now
 (v237) makes the card before the reading is done; Crop (v437) and Crop again (v239) hand the app's frame to the hand. A photo
 whose texts stand apart becomes **one multicard** with a dot on every text (v448/v453/v457), regions snapped onto the ink when
