@@ -55,38 +55,12 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
 
-**Recent state worth carrying in the head** (full entries: `grep -n "v6xx" docs/HISTORY.md`):
-- **Dictionary v5 and the gloss rules (v717–v729, field-checked):** `cedict.tsv.gz` v5 holds every sense of every one-character
-  line (`tools/cedict-nmax.py --write`, `docs/NMAX.md`). `bestSense`: **`OWN_SENSES`** first (H's street senses — add there, with
-  the reading), **`OWN_PINYIN`** into pinyin-pro, the fewest words per line, a bound form inside a word (`besideCJK`, `BOUND_TOP` 3,
-  never `PROPER`), the reading from the whole line (`ctx`, `SANDHI`); **`AFTER_SENSES`** for a character after another (牌 "brand",
-  v754); `glossFix()` once per phone (`GLOSS_FIX_V` 754). Wording: `grep -n "Consolidated v717" docs/HISTORY.md`.
-- **Duplicate multicards (v731):** a row under More → Your cards while two multicards share `DUP_SHARE` 0.6 of their texts
-  (`dupKey`); Delete N keeps the newest of each set, the rest go through `delCustom` and Undo. **A dish's meaning shows without
-  its price** (`noPriceM`, v710/v712/v732).
-- **A multicard text's region (v620–v760, `REG_V` 742):** the reader's line, else the ink snap, else the row of ink under the
-  frame (`labelRow`), else the frame; a line carrying the neighbour's characters at its ends is cut to the matched run (`pdTrim`);
-  a box drawn past the picture's edge is kept and slid inside (`picSlide`, never a cut on the neighbour); a place from the
-  model's uncorrected box is no place once the fit says the boxes are off (`rawPlaced`, `picCal`); a run taller than `RUN_TALL`
-  2.5 or wider than `RUN_WIDE` 1.8 of the reader's texts is a band, not a label; a reader line holding two labels is shared
-  (`pdMatch`, `share`) and its leftover offered to a text that fills it whole (`tookLine`, `beside`, v760: 天猫 before
-  苏宏模玩专营店, never inside 天猫积分); a board with a label unnamed is read again at `PD_DET_MAX2` 1600 (`paddle.again`); the
-  fit drops its worst points (`dropped`) and moves a dish's picture by its name's residual (v751). Field-checked on the 江宁府
-  board and H's Taobao cart; every rule's reason: `grep -n "v74[2-9]\|v75[01]\|v760" docs/HISTORY.md`.
-- **The apps' standard fields (v757–v766):** `signs.json`, **thirty app categories in `APP_CATS`** (`meituan` 656, `taobao` 188 —
-  H's screens —, then `wechat`, `alipay`, `xianyu`, `didi`, `amap`, `jd`, `12306`, `dianping`, `bjtransit`, `bilibili`,
-  `xiaohongshu`, `douyin`, `bank`, `eleme`, `pinduoduo`, `ctrip`, `health`, `gov`, `baidumap`, `bikes`, `express`, `airline`,
-  `utilities`, `carrier`, `housing`, `social`, `lifestyle`, `tickets`; a word shared by two apps is the first app's entry;
-  183 KB), page by page, pinyin checked, the meaning each has **in the app**. **Only the five Meituan and three Taobao screens H
-  sent are matched against a screenshot**; page fetches are blocked from the session. A picture answer's text that is one of
-  them whole (`fieldEntry`; a bracketed count, chevron or badge digit stripped) takes the book's words and is **not asked of the
-  text model** (`mt.src` "phrasebook"); the rest go to the model **with the page named**. A field matches a **whole label
-  only** (`field`): 我的 in 我的家 stays the dictionary's. `SPLIT_MAX` 60; a reader line with one Chinese character or none no
-  longer blocks the split (`panelCovers`). **Not yet field-checked with the real picture model.**
-- **The screen stays on while a photo is read (v767, `wakeSync`):** the Screen Wake Lock is held while a `READING` entry is
-  fresher than `WAKE_STALE` 5 min and let go when none is, so an album batch finishes without a tap; no setting. **Background
-  reading and a live overlay over another app are impossible on the web** (the v411 note in `app.js`) and possible in the
-  Capacitor shell only — foreground service, MediaProjection plus on-device OCR; assessed for H at v767, nothing built.
+**Recent state worth carrying in the head** (full entries by version below in the archive):
+- **The v7xx state** (dictionary v5 and the gloss rules, duplicate multicards, a multicard text's region, the apps' standard
+  fields — thirty categories in `APP_CATS`, a field matches a whole label only —, the wake lock while a photo is read):
+  `grep -n "Consolidated v7xx" docs/HISTORY.md`. Where a rule there must be known before a change, the one that bites most:
+  **a field's meaning is what the button does in the app, and a picture answer's text that is a whole field takes the
+  book's words and is not asked of the text model** (`fieldEntry`, v757).
 - **The v6xx state** (reader, owner tools, Learn zoom, Crop again): `grep -n "Consolidated v6xx" docs/HISTORY.md`.
 
 ## Files
