@@ -60,6 +60,29 @@ in them has its own entry below. Verbatim:
 - **Crop again and AI answers** — a Crop again saved early keeps its reading (v656); an AI answer counts only for the text it
   was asked about (`run.zh`, `aiLate`, v657).
 
+## Current state (PWA v765, 2026-09-30)
+- **Five more apps in one version: Dianping, the Beijing transit apps, Bilibili, Xiaohongshu and Douyin (v765, H: "Do the same
+  for Dianping and Beijing transit card", then, mid-build, "Bitte auch Bilibili, Xiaohongshu, Douyin").** Two requests, one
+  version: the first was not merged when the second came, and one bump spares every phone a shell download. Categories
+  `dianping`, `bjtransit` (亿通行, 北京一卡通, 北京公交 — one category, the same screens), `bilibili`, `xiaohongshu`, `douyin`;
+  `APP_CATS` is now the one list `FIELD_CATS` and `FIELD_KIND` are built from. Two web searches (Dianping's four tabs
+  首页/团购/发现/我的 and its 商户/团购 list with 评分/人均; 亿通行's 乘车 button, 二维码乘车, 在线购票, 电子计次票, the three apps
+  that share the code) and the apps' known screens. **Dianping** (171 written, **72 added** — the rest are Meituan's words):
+  the categories, 必吃榜/必玩榜/必住榜, 黑珍珠, the sort chips, 口味/环境/服务, 写点评, 打卡, 想去/去过, 排队 with 取号/在线取号/
+  前面还有, 订座, 优惠买单, 霸王餐, 推荐菜/招牌菜, 笔记, 攻略, 贡献值. **Beijing transit** (127 written, **71 added**): 乘车码 (WeChat's
+  entry, the same word), 扫码乘车, 对准闸机, 刷码成功/失败, 刷新二维码, 补缴/欠费, 先乘后付, 开卡/退卡/押金, 电子卡/实体卡/手机一卡通,
+  贴卡/请贴卡/读卡中/写卡, 定期票/计次票/一日票, 机场线, 市郊铁路, 首班车/末班车, 拥挤度, 累计优惠. **Bilibili** (133 written, **91
+  added**): the tabs 首页/动态/会员购/我的, 番剧/追番/国创, 弹幕 and its settings, 投币, 一键三连, 硬币, 充电, UP主, 稿件/投稿, 合集,
+  倍速/清晰度, 缓存, 稍后再看, 大会员, B币, 创作中心, 舰长/电池, 每周必看/入站必刷. **Xiaohongshu** (129 written, **53 added**):
+  笔记/发布笔记, 种草/拔草/避雷/避坑/干货/探店, 小红薯/薯条/薯队长, 标记, 话题, the sort chips, 专辑, 笔记灵感, 小红书号. **Douyin**
+  (121 written, **35 added** — the feed words are shared): 推荐/朋友/同城, 合拍/抢镜/拍同款/原声, 发日常, 抖音号, 抖币/音浪, 小黄车,
+  讲解中, 时间锁, 连线/PK. **2390 phrasebook entries, fourteen apps.** Pinyin by the generator; hand-fixed 弹幕 dàn (pinyin-pro
+  reads tán), 长文/长按 cháng, 舰长 zhǎng, 种草 zhòng, 收藏夹 jiā again. **Checked in the page:** 必吃榜 → dianping, 电子定期票 →
+  bjtransit, 一键三连 and 稍后再看 → bilibili, 种草 → xiaohongshu, 合拍 → douyin, 乘车码 and 点赞 keep their earlier apps' entries;
+  优惠买单 and 发弹幕 full from the book, 排队区 and 弹幕墙 composed from the dictionary. **The eight Meituan and Taobao screens
+  replay identically** (44/40/30/28/29, 46/37/51; 30/36/21/14/21, 32/25/43). No screenshot of these five apps. WHATS_NEW 765;
+  TO_TEST "Dianping/transit/B站/小红书/抖音 ok?".
+
 ## Current state (PWA v764, 2026-09-30)
 - **The app knows the standard fields of DiDi, Amap, JD and Railway 12306 too (v764, H: "Do the same for Didi, Amap, JD and
   12306" — from the list of apps a foreigner in Beijing needs that he asked for).** Four more categories in `FIELD_CATS`
