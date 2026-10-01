@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v791, 2026-10-01)
+## Current state (PWA v792, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -193,14 +193,19 @@ no second character line, no Flagged pill — then one button (Test this card) a
 lands **without a scroll** (v752); only a tapped Explain reveals its paragraph (v527). The character pages ("Cards with 行 ›",
 v691–v717) **left at v737** (H) — do not bring them back unasked.
 
-A **multicard's own text** swipes to the multicard's next text (v707/v753); its photo frames it alone (v700); + Flashcard
-(Flashcard › once made), then Flag · Edit (v736); **the pop-up over the photo carries one quiet action, + Flashcard / Flashcard ›**
-(grey text at its foot, v790 — H's reversal of v496/v692's "no action"); a **Details**
-fold, **closed by default** (v741; open and headless v733–v740, H: "zu viel und unübersichtlich"), holds the short and long
-description, the long one asked the first time the fold is open. The multicard: **Add a text**, Delete multicard (v635/v711);
-its texts' rows (and the swipe through them) stand in the photo's reading order — rows by overlap, tall boxes attached
-last, left to right inside a row (`readingOrder`, `pageOrder`, v770) — and show a short one-sentence description (`dsh`, one AI call for all texts at creation and once when an older
-multicard is opened, `pageShorts`; the descriptions the same way, `pageDescs`, v753); the long one stays on the opened text.
+A **multicard's text is handled in its pop-up** (v792, H: "Ich mag die Wörterliste unter den Multicards nicht. Bitte bringe in
+den Multicard-Pop-Ups Edit, Flag und so weiter unter"): characters, pinyin, meaning, price, the flag note and the AI suggestion
+box, a **Details** fold **closed by default** (v741; open and headless v733–v740, H: "zu viel und unübersichtlich") with the short
+and long description (the long one asked the first time the fold is open), then the open card's quiet toolbar **+ Flashcard
+(Flashcard › once made) · Flag · Edit** (v790's lone text button stands in the toolbar now; no Star, v493). Flag redraws the sheet
+in place; Edit opens the Edit form and comes back to the sheet (`editFrom:"lookup"`, `relookAfterEdit`, by the new id when the
+characters changed); Delete lives in the Edit form. **The row list under the photo is gone** (v792): one plain row under "Not on
+the photo" stays only for a text no dot reaches (still being read after Add a text, an unusable frame, fewer than `REGION_MIN`
+placed texts) and opens the text's own screen — which nothing else on the multicard leads to any more; it still frames its text
+alone (v700) and swipes to the next text (v707/v753). The multicard: **Add a text**, Delete multicard (v635/v711); its dots and
+the swipe stand in the photo's reading order — rows by overlap, tall boxes attached last, left to right inside a row
+(`readingOrder`, `pageOrder`, v770); the short descriptions (`dsh`, one AI call for all texts at creation and once when an older
+multicard is opened, `pageShorts`; the descriptions the same way, `pageDescs`, v753) are read in the fold.
 On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right and name/pinyin/meaning without it
 (`priceOf`, `isMenuPage`, `priceView` — a view, the record untouched, v699/v712; a price at the head of the meaning
 takes its own token alone, v769); its flashcard is the name alone (v713); a dish
@@ -455,7 +460,7 @@ id abroad. **`strokes.txt.gz` and `cedict.tsv.gz` stay freely available under th
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
 as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the model's character senses (v772); the voice from the pad on the Xiaomi (v773), its reading of the stand-ins (v778) and its pace (v781); the zoom by layout on LED signs (v782); the
 apps' fields and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760); the wake
-lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768); whether DeepSeek sends the senses now (v783); the last character read through on the Xiaomi (v784); the zoom on a flashcard made from a multicard text (v789); its tile's cut in Cards (v791).
+lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768); whether DeepSeek sends the senses now (v783); the last character read through on the Xiaomi (v784); the zoom on a flashcard made from a multicard text (v789); its tile's cut in Cards (v791); the multicard's pop-up toolbar and the list's going (v792).
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's

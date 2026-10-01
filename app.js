@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=791; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=792; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3397,6 +3397,7 @@ async function setStar(id,on){
   await putCard(upd,id);
 }
 const TB_ICON={ /* v655: the study card's toolbar, drawn rather than typed — ☆ ⚑ ✎ are font glyphs, and a phone's font decides their size, weight and whether one comes as an emoji */
+  card:`<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M12 9v6M9 12h6"/></svg>`, /* v792: a card with a plus — the pop-up's + Flashcard in the toolbar */
   edit:`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.2 5.3l3.5 3.5M4.5 19.5l.9-4.3L16.6 4a1.6 1.6 0 0 1 2.3 0l1.1 1.1a1.6 1.6 0 0 1 0 2.3L8.8 18.6z"/></svg>`};
 const flagIcon=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4M6 4.5h11.5l-2.6 4.25 2.6 4.25H6"/></svg>`; /* v658: the flag, drawn like the star; the study card's toolbar and fold row since v667 */
 const starIcon=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.63 5.33 5.87.86-4.25 4.14 1 5.85L12 17.02l-5.25 2.76 1-5.85L3.5 9.79l5.87-.86z"/></svg>`;
@@ -6133,7 +6134,13 @@ function pageBodyHTML(d){
       ${(tg=>tg.length?`<div class="ptags">${tg.map(x=>`<span class="pill tag">${esc(x)}</span>`).join("")}</div>`:"")([...new Set([...(d.tags||[]),...its.flatMap(x=>x.tags||[])])])} <!-- v696: the multicard's tags, with any its texts carry, once here and not on every row -->
       <div class="taphint">${esc(t("Tap any text on the photo."))}</div>
     </div>
-    <div class="clist" id="pitems">${sorted.map(x=>cardRowHTML(x,false,new Map(),true)).join("")}</div>`;
+    ${(nd=>nd.length?`<div class="lbl pnodot">${t("Not on the photo")}</div><div class="clist" id="pitems">${nd.map(x=>cardRowHTML(x,false,new Map(),true)).join("")}</div>`:"")(sorted.filter(x=>!rs.some(r=>r.card===x.id)))}`;
+  /* v792 (H: "Ich mag die Wörterliste unter den Multicards nicht. Bitte bringe in den Multicard-Pop-Ups Edit, Flag und so
+     weiter unter"): the row list under the photo is gone — the pop-up over the photo carries the text's actions now
+     (openLookup). What stays is one plain row for a text NO DOT REACHES, under its own small label: a text still being read
+     after Add a text (no characters yet, so photoRegions skips it), a text whose frame is unusable, and every text of a
+     multicard with fewer than REGION_MIN placed ones (then photoRegions is empty and the photo has no dots at all). Without
+     this row such a text could neither be opened nor deleted. Its tap opens the text's own screen, as every row did. */
 }
 /* Add a text (v635, H: "It shall be possible to add a text field to a Multicard by adding another crop", "All go"): a
    blank text joins the page and opens in the Edit form with its Crop again already running on the page's photo — the
@@ -6260,6 +6267,7 @@ function renderEdit(main,c){
     endRecrop(); delete SIGN[eid]; if(cropURL) URL.revokeObjectURL(cropURL);
     const from=S.editFrom; S.editing=null; S.editFrom=null;
     if(typeof from==="string"&&from.startsWith("addtext:")){ const pid=from.slice(8); S.mode="cards"; S.detail=cardOf(pid)?pid:null; dropAddedText(c).then(()=>render()); return; } /* v635: back to the multicard; a blank never read goes */
+    if(from==="lookup"){ S.mode="cards"; S.fullPic=false; render(); relookAfterEdit(newC||c); return; } /* v792: back to the multicard with the text's pop-up open again */
     if(from==="study"){ S.mode="study"; S.ansOpen=true; const n=cardOf(newC||c); if(!n||n.c!==c0) S.pad=null; } /* v512: back to the card with its answer block open. v654: a changed text starts the pad afresh — its strokes belonged to the old characters */ else if(from==="camera"){ S.mode="inbox"; S.fullPic=false; } else { S.mode="cards"; if(newC) S.detail=newC; } /* from the finished card in the Camera tab (v325): back to it */
     render();
   };
@@ -6291,6 +6299,7 @@ function renderEdit(main,c){
     const from=S.editFrom; S.editing=null; S.editFrom=null;
     if(from==="study"){ S.queue=S.queue.filter(x=>x!==c); if(S.single===c) S.single=null; S.fullPic=false; S.ansOpen=false; S.mode="study"; }
     else if(from==="camera"){ S.mode="inbox"; S.fullPic=false; }
+    else if(from==="lookup"){ S.mode="cards"; S.fullPic=false; LOOK_BACK=null; } /* v792: the text is gone, the multicard stays open, no sheet to come back to */
     else { S.mode="cards"; if(S.detailFrom==="inbox"){ backToPhoto(); return; } if(fromPage()){ backToPage(); return; } if(fromCard()){ backToCard(); return; } S.detail=null; } /* v736: Delete lives here only now — back where the open card came from, as its own Delete did (v594) */
     render();
   };
@@ -6587,6 +6596,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  792:"A multicard's text is handled in its pop-up now: + Flashcard, Flag and Edit. The list under the photo is gone.",
   791:"In Cards, a flashcard made from a multicard shows its own part of the picture.",
   790:"A multicard text's pop-up has a quiet + Flashcard button.",
   782:"On a sign the reader cannot read, the photo still zooms onto the character you are writing, by the lines' layout.",
@@ -11134,7 +11144,15 @@ function openLookup(shot,rid,silent){
     <div class="pin">${pinSay(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}</div>
     ${pid?""
         :`<div class="grades">${[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>`<button class="grade" data-g="${g}" data-lg="${g}"><span class="lbl">${t(l)}</span></button>`).join("")}</div>`}
-    ${pid?"":`<div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div>`}${pid?lkFoldHTML(d):""}${pid?`<div class="lkmake"><button class="lkbtn" id="${made?"lk-open":"lk-make"}">${t(made?"Flashcard ›":"+ Flashcard")}</button></div>`:""}</div>`;
+    ${pid?"":`<div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div>`}${pid?`${flagNoteHTML(d0)}${aiBoxHTML(d0)}${lkFoldHTML(d)}<div class="backacts dacts lkbar"><button class="tbtn" id="${made?"lk-open":"lk-make"}">${TB_ICON.card}<span>${t(made?"Flashcard ›":"+ Flashcard")}</span></button><button class="tbtn${d0.flag?" on":""}" id="lk-flag" aria-pressed="${d0.flag?"true":"false"}">${flagIcon}<span>${(d0.flag?t("card:⚑ Flagged"):t("⚑ Flag")).replace(/^⚑\s*/,"")}</span></button><button class="tbtn" id="lk-edit">${TB_ICON.edit}<span>${t("Edit")}</span></button></div>`:""}</div>`;
+  /* v792 (H: "Ich mag die Wörterliste unter den Multicards nicht. Bitte bringe in den Multicard-Pop-Ups Edit, Flag und so weiter
+     unter, so ähnlich wie du das bei den normalen Lernkarten auch drin hast"): the row list under the multicard is gone
+     (pageBodyHTML), so the pop-up is where a text is handled. It ends in the open card's quiet toolbar (v736's shape, equal
+     columns under a hairline): + Flashcard (Flashcard › once made — v790's button, in the toolbar now), Flag and Edit; no Star
+     (a multicard's text is not learned, v493), Delete in the Edit form as on every card. Above the fold stand the flag note and
+     the AI suggestion box the text's own screen had, so nothing a row led to is lost. Edit opens the form and comes back to
+     this sheet (editFrom "lookup"); Flag draws the sheet again in place. The text's own screen still renders (a flagged
+     list, the fallback row), but nothing on the multicard leads there any more. */
   /* a multicard's description is a look-up and nothing else (v496, H: "kein More und keine weiteren Funktionen in den Pop
      ups. Du kannst das doch alles über die Multicards steuern."): More opened the text's own screen, which the row list
      under the photo already opens on a tap — Edit, Flag, Delete and, since v692, + Flashcard live there. On a MARKED PHOTO (v448) More
@@ -11153,6 +11171,9 @@ function openLookup(shot,rid,silent){
   if(pid) wireLkFold(el,d.id);
   el.querySelectorAll("[data-lg]").forEach(b=> b.onclick=()=>gradeRegion(b.dataset.lg));
   const mk=el.querySelector("#lk-make"); if(mk) mk.onclick=async()=>{ const L=LOOKUP; if(!L) return; mk.disabled=true; bump("regionCards"); const fc=await makeFlashcard(L.card); setStats(); if(LOOKUP===L&&fc) openLookup(L.shot,L.rid,true); }; /* v790: the sheet is drawn again with Flashcard › */
+  const fl=el.querySelector("#lk-flag"); if(fl) fl.onclick=async()=>{ const L=LOOKUP; if(!L) return; fl.disabled=true; const c=cardOf(L.card); if(!c) return; await setFlag(L.card,!c.flag); if(LOOKUP===L) openLookup(L.shot,L.rid,true); }; /* v792: the sheet is drawn again with the mark */
+  const ed=el.querySelector("#lk-edit"); if(ed) ed.onclick=()=>{ const L=LOOKUP; if(!L||!cardOf(L.card)) return; closeLookup(); LOOK_BACK={shot:L.shot,rid:L.rid,card:L.card,from:"lookup"}; S.editing=L.card; S.editFrom="lookup"; S.fullPic=false; render(); window.scrollTo({top:0}); }; /* v792: the Edit form, and back to this sheet (relookAfterEdit) */
+  el.querySelectorAll("[data-aiok],[data-aino],[data-aiflag]").forEach(b=> b.onclick=async()=>{ const L=LOOKUP; if(!L) return; b.disabled=true; const c=cardOf(L.card), zh=c&&c.ai&&c.ai.zh; if(b.dataset.aiok) await aiAccept(L.card); else if(b.dataset.aino) await aiDismiss(L.card); else await aiFlag(L.card); if(LOOKUP!==L) return; closeLookup(); render(); relook(L.shot,L.card,zh); }); /* v792: the AI box's buttons as on the open card (wireAi), then the sheet again — on the text's new id when an accepted answer changed the characters */
   const op=el.querySelector("#lk-open"); if(op) op.onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, fc=cid&&madeFrom(cardOf(cid)); closeLookup(); if(!fc) return; S.mode="cards"; S.cardsTab="cards"; S.detail=fc.id; S.detailFrom=null; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); }; /* v790: the flashcard's own screen, as the text's screen opens it (d-openfc) */
   const mo=el.querySelector("#lk-more");
   if(mo) mo.onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, from=LOOKUP&&LOOKUP.from, shot=LOOKUP&&LOOKUP.shot, rid=LOOKUP&&LOOKUP.rid; closeLookup(); if(!cid||!cardOf(cid)) return; if(!from) INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom=from?"page:"+from:"inbox"; LOOK_BACK={shot,rid,card:cid,from:S.detailFrom}; /* v495: More is one step deeper into this look-up, so ← Back has to undo one step and not two */ S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
@@ -11193,6 +11214,10 @@ function closeLookup(){ if(!LOOKUP) return; const L=LOOKUP; LOOKUP=null; markReg
    honoured only for the very card and the very flag it was taken on, so every other way out of the detail — a tab tap, a
    swipe, a delete — leaves it stale and inert; and only while the text is really on the screen that was just drawn, so a
    photo the Camera tab no longer lists (v470) cannot raise a sheet over the shutter. */
+/* v792: the sheet again on the same text after something changed it — by its id, or by the characters an accepted AI
+   answer or a Save gave it (then the id moved with the text, v118); nothing when the text no longer has a dot */
+function relook(shot,cid,c){ const rs=photoRegions({id:shot}); const r=rs.find(r=>r.card===cid)||(c&&rs.find(r=>{ const d=cardOf(r.card); return d&&d.c===c; })); if(r) openLookup(shot,r.rid,true); }
+function relookAfterEdit(id){ const L=LOOK_BACK; if(!L||L.from!=="lookup") return; LOOK_BACK=null; const d=cardOf(id); if(!d||S.mode!=="cards"||!S.detail||!isPage(cardOf(S.detail))) return; relook(L.shot,id,d.c); }
 function reopenLookup(card,from){ const L=LOOK_BACK; LOOK_BACK=null;
   if(!L||L.card!==card||L.from!==from) return;
   if(![...document.querySelectorAll(".regions [data-region]")].some(e=>e.dataset.region===L.rid)) return;
