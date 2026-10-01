@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v779, 2026-10-01)
+## Current state (PWA v780, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -85,7 +85,7 @@ IndexedDB `zeichentrainer` v3 — `progress` (key `id`), `custom` (all cards, ke
 .persist()` is requested (MIUI evicts non-installed sites). The SW must **never cache a non-OK
 response** (a cached 404 poisoned the dictionary permanently once).
 
-`deck()` is `S.custom` sorted by `at` (oldest first; the Cards list shows newest first).
+`deck()` is `S.custom` sorted by `at` (oldest first; the Cards list shows newest first unless sorted, v780).
 **The key is an id, not the text** (v118): `cardId(c)` = the text while free, else text + `#` +
 timestamp. A card:
 
@@ -169,7 +169,9 @@ and after the layout settles (v521/v532).
 ### Cards
 Square photo tiles, two a row, **nothing written under them** (v593); a text-only card draws its text in the picture (v506).
 On the picture: the star (v425, one tap), flag and AI marks; a multicard adds its plates, count chip, progress bar and a
-two-line title. **Two tabs, Cards and Multicards** (v477); the filter is **one pill and a sheet** (v365); search also takes
+two-line title. **Two tabs, Cards and Multicards** (v477); the filter is **one pill and a sheet** (v365), **whose Sort by group orders
+the list** (newest, oldest, pinyin, due soonest, most often forgotten; a multicard by time or title — `cardsSort`,
+`sortCards`, v780, the open card's swipe follows); search also takes
 toneless pinyin (`toneless`, v690); a long press marks (v354); the list keeps its place (v352/v445); the placeholder reads
 "Characters or pinyin". From `BACKUP_AT` 25 flashcards a never-exported deck shows **one backup line with Export** under the
 search bar (v717). The **open card** swipes through the list (v445); since v736 its block always stands — no "Details" bar,

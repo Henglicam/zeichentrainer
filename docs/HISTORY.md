@@ -116,6 +116,23 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v780, 2026-10-01)
+- **The Cards list can be sorted (v780, H: "Bitte Sortierung der Karten unter Cards ermöglichen." — described, "Go").** The
+  filter pill's sheet (v365) gets a **Sort by** group under the filter rows: on Cards Newest first (the default, as the
+  list has been since the tiles) · Oldest first · Pinyin A–Z · Due soonest · Most often forgotten; on Multicards Newest ·
+  Oldest · Title A–Z. One row ticked, no counts (`n:null`, the row shows none); the choice is kept across restarts
+  (`cardsSort`); an order the open tab has no row for reads as newest there. The default never lights the pill or counts as
+  a filter (`def`, `filterOn` skips it); any other order reads on the pill as a single filter does, and Clear puts it back.
+  `sortCards`: oldest by `at`; pinyin and title by the toneless, spaceless pinyin (a multicard by its title); due by the
+  progress row's `due`, never-studied last; forgotten by consecutive misses (`fails`), then the lowest ease, never-studied
+  last; ties keep newest first. `cardsList` reads it, so the tiles, the search and the open card's swipe (v445) follow
+  together. The guide's Cards sentence changes with the screen (v259): "newest first" goes, "filter and sort them" comes,
+  nine columns. Seven labels in nine columns, all on one line at 360 px in ru, de, th and fr ("Newest first" and "Oldest
+  first" already existed for the Learning Card order and are shared — a first pass duplicated them, caught by the key scan).
+  Harness (four cards with progress rows, two multicards): each order's list, the tick, the pill's reading, the swipe
+  neighbours, a restart, the Multicards rows and Clear — 16 of 16 on v780, 4 of 17 on v779 (the default order and the pill
+  on it are controls). Screenshot at 390 px light checked. Not yet field-checked. WHATS_NEW 780.
+
 ## Current state (PWA v779, 2026-10-01)
 - **No update reload while a photo is being processed (v779, H: "Habe neues photo aufgenommen und während es verarbeitet
   wurde, kam ein Update. Das photo ist lost. Darf nicht passieren.").** v316's guard (`picking()`) ended at the input's

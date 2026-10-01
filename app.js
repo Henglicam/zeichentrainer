@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=779; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=780; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -326,9 +326,29 @@ function filterGroups(scope){
     ...(nAi?[{k:"ai", label:t("AI"), n:cnt(d=>d.ai), on:S.filterAi}]:[]),
     ...(nUnv||S.filterUnv?[{k:"unv", label:t("Unverified"), n:cnt(d=>d.mt&&!d.mt.verified), on:S.filterUnv}]:[])];
   const tabRows=tagRows.map(r=>r.k==="tag:"+UNTAGGED?{...r,n:pool.filter(d=>anyOf(d,x=>!(x.tags||[]).length)).length}:{...r,n:cnt(d=>hasTag(d,r.label))});
-  return [...(st.length?[{head:t("Status"), rows:st}]:[]),...(tabRows.length?[{head:t("Tags"), rows:tabRows}]:[])]; /* v551: a head over no rows is the same empty control one level up */
+  /* v780 (H: "Bitte Sortierung der Karten unter Cards ermöglichen." — "Go"): a Sort by group under the filter rows, one row
+     per order, the current one ticked; the rows carry no count. Newest first is the default and never lights the pill or
+     counts as a filter (`def`); any other order reads on the pill as a filter does, and Clear puts it back. Multicards sort by
+     time or title — they have no pinyin, no due date and no reviews. */
+  const sortRows=cardsSortRows(pool);
+  return [...(st.length?[{head:t("Status"), rows:st}]:[]),...(tabRows.length?[{head:t("Tags"), rows:tabRows}]:[]),{head:t("Sort by"), rows:sortRows}]; /* v551: a head over no rows is the same empty control one level up */
 }
-const filterOn=scope=>filterGroups(scope).flatMap(g=>g.rows).filter(r=>r.on&&r.k);
+const CARD_SORTS=["newest","oldest","pinyin","due","fails"], PAGE_SORTS=["newest","oldest","title"];
+const SORT_LABEL={newest:"Newest first",oldest:"Oldest first",pinyin:"Pinyin A–Z",due:"Due soonest",fails:"Most often forgotten",title:"Title A–Z"};
+const cardsSort=()=>{ const v=S.settings.cardsSort||"newest"; return (onPages()?PAGE_SORTS:CARD_SORTS).includes(v)?v:"newest"; }; /* an order the open tab has no row for reads as the default there */
+function cardsSortRows(){ const cur=cardsSort(); return (onPages()?PAGE_SORTS:CARD_SORTS).map(k=>({k:"sort:"+k, label:t(SORT_LABEL[k]), n:null, on:cur===k, def:k==="newest"})); }
+function sortCards(list,how){
+  const by=(f,dir)=>list.slice().sort((a,b)=>{ const x=f(a), y=f(b); return x<y?-dir:x>y?dir:(b.at||0)-(a.at||0); }); /* ties keep newest first */
+  const key=d=>toneless(isPage(d)?d.c:(d.p||d.c||"")).replace(/[\s'’]/g,"");
+  const pr=d=>S.progress[d.id];
+  switch(how){
+    case "oldest": return list.slice().sort((a,b)=>(a.at||0)-(b.at||0));
+    case "pinyin": case "title": return by(key,1);
+    case "due": return by(d=>{ const r=pr(d); return r&&r.due?+new Date(r.due)||Infinity:Infinity; },1); /* never studied last */
+    case "fails": return by(d=>{ const r=pr(d); return r?-((r.fails||0)*1000+(10-(r.ease||2.5))):Infinity; },1); /* most consecutive misses, then the lowest ease; never studied last */
+    default: return list.slice().sort((a,b)=>(b.at||0)-(a.at||0)); }
+}
+const filterOn=scope=>filterGroups(scope).flatMap(g=>g.rows).filter(r=>r.on&&r.k&&!r.def); /* v780: the default order is no filter */
 /* the pill: the filter's own name while one is set, "All cards" while none is */
 function filterPillHTML(scope){
   /* v551: no row that actually filters anything, no pill — the v308 rule, in the one place both tabs pass through. Learn has
@@ -346,7 +366,7 @@ function openFilterSheet(scope,after){
   const el=document.createElement("div"); el.className="ask"; el.setAttribute("role","dialog"); el.setAttribute("aria-modal","true");
   el.innerHTML=`<div class="sheet filter"><div class="fhead"><span class="t">${t("Filter")}</span>${filterOn(scope).length?`<button class="del" id="f-clear">${t("Clear")}</button>`:""}</div>
     <div class="flist">${groups.map(g=>`<div class="fgroup"><div class="fgh">${esc(g.head)}</div>${g.rows.map(r=>
-      `<button class="frow${r.on?" on":""}" data-frow="${esc(r.k)}"><span class="fl">${esc(r.label)}</span><span class="fn">${r.n}</span><span class="fc" aria-hidden="true"></span></button>`).join("")}</div>`).join("")}</div>
+      `<button class="frow${r.on?" on":""}" data-frow="${esc(r.k)}"><span class="fl">${esc(r.label)}</span><span class="fn">${r.n==null?"":r.n}</span><span class="fc" aria-hidden="true"></span></button>`).join("")}</div>`).join("")}</div>
     <div class="row"><button class="btn plain" id="f-done">${t("Done")}</button></div></div>`;
   const onKey=e=>{ if(e.key==="Escape") close(); };
   const close=()=>{ el.remove(); document.removeEventListener("keydown",onKey); };
@@ -355,7 +375,7 @@ function openFilterSheet(scope,after){
   /* several rows at once (v366, H: "Bitte beim filtern multiple choice zulassen"): a tap ticks or unticks its row, the list
      behind follows at once and the sheet stays open — its rows are refreshed in place, so nothing slides or scrolls away */
   const sync=()=>{ const by=new Map(filterGroups(scope).flatMap(g=>g.rows).map(r=>[r.k,r]));
-    el.querySelectorAll("[data-frow]").forEach(b=>{ const r=by.get(b.dataset.frow); if(!r) return; b.classList.toggle("on",!!r.on); b.querySelector(".fn").textContent=r.n; });
+    el.querySelectorAll("[data-frow]").forEach(b=>{ const r=by.get(b.dataset.frow); if(!r) return; b.classList.toggle("on",!!r.on); b.querySelector(".fn").textContent=r.n==null?"":r.n; });
     const head=el.querySelector(".fhead"); let cl=el.querySelector("#f-clear");
     if(filterOn(scope).length&&!cl){ cl=document.createElement("button"); cl.className="del"; cl.id="f-clear"; cl.textContent=t("Clear"); cl.onclick=()=>pick(""); head.appendChild(cl); }
     else if(!filterOn(scope).length&&cl) cl.remove(); };
@@ -373,7 +393,8 @@ async function setFilter(scope,k){
     else { const x=k.slice(4); v=v.includes(x)?v.filter(y=>y!==x):[...v,x]; }
     await setSetting("learnTag",v);
     S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false; S.single=null; S.saved=null; setStats(); return; }
-  if(!k){ S.filterStar=false; S.filterFlag=false; S.filterAi=false; S.filterUnv=false; S.filterNew=false; S.filterTags=[]; return; }
+  if(k.startsWith("sort:")){ await setSetting("cardsSort",k.slice(5)); return; } /* v780: one order at a time, kept across restarts */
+  if(!k){ S.filterStar=false; S.filterFlag=false; S.filterAi=false; S.filterUnv=false; S.filterNew=false; S.filterTags=[]; if(S.settings.cardsSort&&S.settings.cardsSort!=="newest") await setSetting("cardsSort","newest"); return; }
   if(k==="star") S.filterStar=!S.filterStar;
   else if(k==="new") S.filterNew=!S.filterNew;
   else if(k==="flag") S.filterFlag=!S.filterFlag;
@@ -5629,7 +5650,7 @@ const anyOf=(d,f)=>isPage(d)?(!!f(d)||pageItems(d).some(f)):!!f(d); /* a page ma
 const toneless=s=>String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 function cardsList(){
   const q=S.query.trim().toLowerCase();
-  let list=tabPool().sort((a,b)=>(b.at||0)-(a.at||0)); /* newest first; a page's texts sit inside its row (v453) */
+  let list=sortCards(tabPool(),cardsSort()); /* newest first unless the sheet says otherwise (v780); a page's texts sit inside its row (v453) */
   const any=anyOf;
   const fieldsOf=d=>isPage(d)?[d.c,...(d.tags||[]),...pageItems(d).flatMap(fieldsOf)]:[d.c,d.trad,d.p,d.m,...Object.values(d.ms||{}),d.flagNote,...(d.tags||[])];
   /* several rows may be ticked at once (v366): a card must match one of the ticked status rows and one of the ticked tags */
@@ -6470,6 +6491,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  780:"Cards can be sorted — newest, oldest, by pinyin, due soonest or most often forgotten — from the filter pill.",
   778:"The voice says each character with the reading it has in its word — 行 in 银行 is heard as háng.",
   777:"After each character you write, the character itself stands over its meaning and reading for a moment.",
   775:"After writing, the meaning stands large over the pad and the pinyin small under it.",
