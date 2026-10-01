@@ -116,7 +116,24 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v800, 2026-10-01)
+## Current state (PWA v801, 2026-10-01)
+- **A vertical line's character size is its width (v801, H's 青芥辣 tube: "Wo kommt denn der ganze Text her???? Halluziniert??",
+  then "Yeah, rule verticals by width").** Not hallucinated: the storage line 开封后请放入冰箱冷藏 runs down the pack's right edge
+  in characters a third the size of the title, Qwen read it as a second line with its own box (and noted the last two
+  characters lost in the glare), and it stayed on the card because `mainLines` judged a line by its box's HEIGHT: the
+  vertical strip was 410 of 800 px tall against the title's 650, over `FINE_PRINT`. Now a box more than `FINE_VERT` 2.5
+  times taller than wide is a vertical line and its character size is its width — 70 px against the title's 240, fine print,
+  dropped with its pinyin and meaning parts as v312's rule drops a poster's credits. A single big character is as wide as
+  tall and keeps its height; a vertical title keeps its width as its size, which is still the largest. Boards, menus,
+  panels and screens keep everything as before (`keepAll`, v456). Harness (`test801`, `mainLines` alone with Qwen's own
+  boxes from the dump): the tube keeps 青芥辣 alone — flips; v312's horizontal poster, a couplet of two vertical columns of
+  one size, a big single character over a small line, and a vertical title beside a small horizontal line are guards:
+  **5 of 5, v800 4 of 5**. Not field-checked: the card H has keeps its two lines until the photo is read again (Edit → Crop
+  again → Read now), since the rule runs at the reading.
+  **Open from the same message:** H saw a flashcard made from a multicard text come up in Learn and the app move straight
+  on to the next card. The dump carries no Learn navigation record, and a from-card at the head of a session stands still in
+  the harness (probe801, 12 s, the description and the senses arriving). The next version adds a Learn log to Diagnostics
+  so the next occurrence names its cause.
 - **The search placeholder names the meaning (v800, H: "Suchfeld nur characters und Pinyin oder auch Translation?", then
   "Ok for 'Characters, pinyin or meaning'").** The search has read the meaning in every language, the flag note and the
   tags since v690; only the placeholder said "Characters or pinyin". H's wording did not fit: measured in the harness,
