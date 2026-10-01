@@ -116,7 +116,13 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v798, 2026-10-01)
+## Current state (PWA v799, 2026-10-01)
+- **The Camera tab's hint names the screenshot (v799, H with the tab's screenshot: "Hier bitte noch Screenshots für
+  Multicards ergänzen").** The lead over the shutter card reads "Photograph a sign, a poster or a package — the card is made
+  for you. A screenshot of an app becomes a multicard." — the key replaced in nine columns (499 a column, ru 529, as
+  before), the guide's own sentence ("Photograph … under Camera — or add a word by hand") untouched, since that screen did
+  not change. Rendered in all ten languages at 360 px (English at 390): three or four lines, no overflow (`test799`,
+  10 of 10; v798 0 of 10). Screenshots English 390 light and German 360 dark.
 - **The brightening keeps a picture's colours (v798, H on the seal's card at v797: "Allerdings wirken die Farben unnatürlich",
   the yellow paper poster orange, the blue gone).** Until v797 `brightenBlob` ran the one curve of `brightLut` over red,
   green and blue alike; a curve that takes the black point off and stretches the rest multiplies a colour's saturation — on
