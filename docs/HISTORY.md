@@ -116,7 +116,35 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v806, 2026-10-01)
+## Current state (PWA v807, 2026-10-01)
+- **Learn under the learner's hands (v807, the audit's second fix — the works sweep, driven with real touch on the pad).**
+  **(1) The dwell holds when the finished card is taken in hand — the likeliest cause of H's 2026-10-01 jump.** Details, Star,
+  Flag or Edit tapped during the recap re-rendered the card: the recap was gone at once and the dwell's timer moved the session
+  on three seconds later; with Edit open the form was rebuilt (the typing lost) and Cancel landed on the next card, not the one
+  edited (v654/v667's "Edit comes back to the same card"). A made flashcard carries a description, so opening Details on its
+  recap is the natural thing to do — and the move logged as "written", which is why v802's log could not tell it from the
+  learner's own. Now a control on the study card holds the dwell (`DWELL`): no timer, the star lands at once, the recap stays
+  on the pad through every redraw and the next tap on the card that is not a control moves on — the recap's own tap, so the
+  finished pad is never v588's dead end; a tab tap still moves the session on (v589); a text edited in that Edit form ends the
+  dwell (its pad starts afresh). **(2) A swipe begun during the recap is a swipe.** The recap skipped on the PRESS, so a right
+  swipe moved forward; a tap is now a press that ends where it began (`SW_SLOP`), or a click (iOS, v206), and another card drops
+  the dwell without moving anything. **(3) The session's eight new cards stay eight.** Each new card written freed a place
+  among buildQueue's first `NEW_PER_SESSION`, and `requeue` appended whatever the session lacked, so every reload, every card
+  saved and every recovery topped the session up with unwritten older new cards (13 new, one written, + New: 出口 joined); a
+  never-reviewed card now joins a running session only when it was made after the session began (`S.sessionAt`), and a starred
+  or not-yet-checked session takes its cards as before. **(4) The move log names the moves** (v802's purpose): filter, order,
+  pulled forward, test this card, test: next, test ended, deleted, undo, new session — until v806 each was "moved, no note",
+  and `requeue` wrote "queue built again" on every start even when it changed nothing. **(5) Test this card walks the list as it
+  stands** — sort, filter, search (v780 made the open card's swipe follow the sort; the walk stayed newest-first). **(6) One card
+  twice is not two cards:** a one-card session's recap no longer added "Swipe left or right to pick another card", which grew
+  the hint and shrank the frame by 9 px mid-recap (v560). **(7) Found in review, older than the audit:** a tap on the PHOTO during
+  the recap moved on and its own click then reached the photo it had left, so the next card opened on its text (`S.cueBig`
+  flipped); the tap that ends a recap now swallows its click. Harness: `test807` (Details and Edit during the recap, a right
+  swipe in it, the new-card cap through + New with a guard that a card made now still joins, the move log, the one-card hint,
+  the walk, a tap on the photo; real touch through CDP) **12 of 12, v806 3 of 12** — the second check ("a tap then moves on")
+  and the two guards pass on v806 too, the first because the old card had already moved on by itself. `test806` 14/14 and
+  `test806b` 4/4 still. TO_TEST +1.
+
 - **The audit, first of a short series (v806, H: "Nach den vielen Änderungen bitte komplett audit, mit allem drum und dran wie
   vorher auch schon").** Seven sweeps ran in parallel as at v534–v539 — code hygiene, layout in ten languages, wording and
   translations, does-everything-still-work, contradictions and privacy, first impression, the record against the code — each

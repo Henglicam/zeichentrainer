@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v806, 2026-10-01)
+## Current state (PWA v807, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -137,13 +137,14 @@ and after the layout settles (v521/v532).
   shows its grid alone (v706); a failed load makes it the free pad once, silently after (v708/v710).
 - **The grade is the writing.** The last stroke of the last character writes the review through `recordGrade`, counts the
   points (**one per character written without help**, v546), bumps `charWrites`, and queues the card **once more `REP_GAP` 3
-  cards on**. A swipe, a chevron or a tab tap grades nothing.
+  cards on**. A swipe or a tab tap grades nothing.
 - **After each character** the pad fades, then (`CHAR_IN` 200 ms) its reading and meaning stand over the pad for `CHAR_MS`
   900 ms; after the last, the recap — the meaning and `d.p` grouped by word, no characters (v577/v616) — for `recapMs(d)`
   (`NEXT_MS` 3200 + `RECAP_SYL` 230 a syllable past the second, cap `RECAP_MAX` 5300). **In both readings the meaning is the
   big line, as large as `recapFit` measures (v600/v775), and the pinyin stands small and green under it** (v775, H); **the
   character's own reading carries the character itself, printed large at its head** (`.rg`, v777, H) — the card's recap does not (v577).
-  A tap skips. The star flies into the counter at `recapMs − POP1`; a milestone (50/100/250/500/1000 points, 7/30/100-day
+  A tap skips; **a control tapped during the recap holds it** — Details, Star, Flag or Edit: no timer, the recap stays on the pad
+  through every redraw (`DWELL`), the next tap on the card moves on; a swipe begun in the recap is a swipe (v807). The star flies into the counter at `recapMs − POP1`; a milestone (50/100/250/500/1000 points, 7/30/100-day
   streak) bursts (v545).
 - **The word line** (text state only; in the photo state `--th` is 0) reads the character being written with its in-word
   reading, then its word (v518/v540), and wraps as it needs (v600); `shortSense` strips a parenthetical from that line only.
@@ -190,7 +191,7 @@ the list** (newest, oldest, pinyin, due soonest, most often forgotten; a multica
 `sortCards`, v780, the open card's swipe follows); search also takes
 toneless pinyin (`toneless`, v690); a long press marks (v354); the list keeps its place (v352/v445); the placeholder reads
 "Text, pinyin or meaning" (v800, H: the search has read the meaning since v690, the placeholder said so only now; "Characters, pinyin or meaning" was 258 px of text in a 240 px field, and the Russian field under its "+ Новая" is 194 px wide — the placeholder is set at 15 px, `#q::placeholder`, so every column fits at 360 px). From `BACKUP_AT` 25 flashcards a never-exported deck shows **one backup line with Export** under the
-search bar (v717). The **open card** swipes through the list (v445); since v736 its block always stands — no "Details" bar,
+search bar (v717). The **open card** swipes through the list (v445) and Test this card walks it as shown (v807); since v736 its block always stands — no "Details" bar,
 no second character line, no Flagged pill — then one button (Test this card) and the study card's toolbar Star · Flag · Edit;
 **Delete lives in the Edit form only**, which returns where the card came from. A description the card fetches by itself
 lands **without a scroll** (v752); only a tapped Explain reveals its paragraph (v527). The character pages ("Cards with 行 ›",
@@ -243,7 +244,8 @@ phone, and every reader fix since v93 came out of a shared dump. Each reading ca
 frame chain decided on (v399). **The dump prints the newest 8 readings and 20 exchanges whole and the rest one line each**
 (`DIAG_READ_FULL`, `DIAG_AI_FULL`, v788: 779 KB became ~110); its head carries the reader's first answer, the screen lock, the
 Learn session, the last 12 utterances of the voice (`SAYLOG`) and **every move of the session's place with its reason**
-(`LLOG`, v802: written, swipe, walk, pruned, queue built again, restored — and "moved, no note" for a move no site named);
+(`LLOG`, v802/v807: written, swipe, walk, filter, order, pulled forward, test this card, deleted, undo, pruned, queue built
+again, restored — and "moved, no note" for a move no site named);
 **the learn line names the card's id, its photo and crop, a peek, and what the study card's picture actually is**
 (`LAST_FRONT`, v803: own crop, peek, page, dish, whole photo), and each zoom decision its time into the card and its screen.
 
@@ -370,7 +372,8 @@ streak, `daily{day:{r,w}}` counts reviews and writes. `fails` counts consecutive
 Medium (`good`) / Easy in the traffic light's colours — survive only on a **marked photo's** sheet; `hard` is kept in
 `schedule()` and is unreachable from any screen.
 
-Session = due cards + up to `NEW_PER_SESSION` 8 new ones, **from short cards to long ones inside each group** (v524),
+Session = due cards + up to `NEW_PER_SESSION` 8 new ones (a running session takes in a never-reviewed card only when it was made
+after the session began, `S.sessionAt`, v807), **from short cards to long ones inside each group** (v524),
 unchecked cards first (v515). A **starred** session holds **every** starred card, due or not, with the cap lifted (v429) —
 a star is a hand-picked list, not a category. Card order (Oldest / Newest / Random) is H's own setting.
 
@@ -476,7 +479,7 @@ id abroad. **`strokes.txt.gz` and `cedict.tsv.gz` stay freely available under th
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
 as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the model's character senses (v772); the voice from the pad on the Xiaomi (v773), its reading of the stand-ins (v778) and its pace (v781); the zoom by layout on LED signs (v782); the
 apps' fields and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760); the wake
-lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768); whether DeepSeek sends the senses now (v783); the last character read through on the Xiaomi (v784); the zoom on a flashcard made from a multicard text (v789); its tile's cut in Cards (v791); the multicard's pop-up toolbar and the list's going (v792); the room under the page while a pop-up is open (v793); the made line after + Flashcard (v794); the seal's colours after the luminance-only brightening (v798); **the Learn jump off a flashcard made from a multicard text** (H, 2026-10-01 evening, cause unknown — the next dump carries the Learn moves, v802); **a photo card carrying another photo's text** (H, 2026-10-01: two 全家 cards, both from photos, one a FamilyMart and one a noodle-shop sign the reader reads as 三碗面; both readings lie outside the dump's window — candidates: a picture answer landing on the other photo's card in one album batch, or a hand edit; the dump names the record and the picture's source since v803).
+lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768); whether DeepSeek sends the senses now (v783); the last character read through on the Xiaomi (v784); the zoom on a flashcard made from a multicard text (v789); its tile's cut in Cards (v791); the multicard's pop-up toolbar and the list's going (v792); the room under the page while a pop-up is open (v793); the made line after + Flashcard (v794); the seal's colours after the luminance-only brightening (v798); **the Learn jump off a flashcard made from a multicard text** (H, 2026-10-01 evening — v807 fixed the likeliest cause, a control tapped during the recap; the next dump names every move, v802/v807); **a photo card carrying another photo's text** (H, 2026-10-01: two 全家 cards, both from photos, one a FamilyMart and one a noodle-shop sign the reader reads as 三碗面; both readings lie outside the dump's window — candidates: a picture answer landing on the other photo's card in one album batch, or a hand edit; the dump names the record and the picture's source since v803).
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's
