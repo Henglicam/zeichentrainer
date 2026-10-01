@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=794; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=795; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -734,6 +734,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["again","v781","Voice: pace .7 and the voice ok?"],
   ["again","v782","Zoom by layout on LED signs ok?"],
   ["again","v789","Multicard flashcard: zoom on text?"],
+  ["again","v795","Seal 天禾: the crop whole now?"],
   ["again","v783","Char senses: do they land now?"],
   ["again","v784","Last character read alone now?"],
   ["again","v757","Meituan screenshots: fields right?"],
@@ -9308,7 +9309,9 @@ async function readLabels(bmp,gy,labels,uni,status){ /* one rectangle per label,
   const two=labels.filter((l,j)=>pick[j]>=0&&linesOf(j,pick[j])===2).length; /* v443: how many placed runs held a label and its sub-line, for the record */
   return {rects,bands,runs:runs.length,hit,filled,ordered,two};
 }
+let SNAP_WHY=null; /* v795: why the last snap found no text, for the log — snapBox has no reading id of its own */
 function snapBox(bmp,box,n,lens,skip){ /* lens: the answer's lines' character counts (v305); skip: the fine print's boxes as fractions (v328) — a blob whose centre lies in one is not the text */
+  SNAP_WHY=null;
   const k=Math.min(1,800/Math.max(bmp.width,bmp.height)), W=Math.max(1,Math.round(bmp.width*k)), Hh=Math.max(1,Math.round(bmp.height*k));
   const cv=document.createElement("canvas"); cv.width=W; cv.height=Hh; const ctx=cv.getContext("2d",{alpha:false,willReadFrequently:true}); ctx.drawImage(bmp,0,0,W,Hh);
   const d=ctx.getImageData(0,0,W,Hh).data, g=new Uint8Array(W*Hh); for(let i=0,j=0;i<d.length;i+=4,j++) g[j]=(d[i]*77+d[i+1]*151+d[i+2]*28)>>8;
@@ -9403,7 +9406,7 @@ function snapBox(bmp,box,n,lens,skip){ /* lens: the answer's lines' character co
   bands.forEach((b,i)=>{ const k=bands.length===lns.length?lns[i]:kmax, Hl=Math.max(...b.cs.map(c=>c.y1-c.y0)), budget=k*Hl*SNAP_WIDE, cs=b.cs.slice().sort((a,c)=>a.x0-c.x0);
     if(Math.max(...cs.map(c=>c.x1))-cs[0].x0<=budget) return;
     const runs=[]; let run=null, xe=-1; for(const c of cs){ if(run&&c.x0-xe<SNAP_GAP*Hl) run.cs.push(c); else { run={cs:[c]}; runs.push(run); } xe=Math.max(xe,c.x1); }
-    if(runs.length<2) return;
+    if(runs.length<2){ const ux0=cs[0].x0, ux1=Math.max(...cs.map(c=>c.x1)), wmax=Math.max(...cs.map(c=>c.x1-c.x0)); if(ux1-ux0<=1.2*wmax){ for(const c of cs){ const j=taken.indexOf(c); if(j>=0) taken.splice(j,1); } SNAP_WHY=`one blob ${((ux1-ux0)/Math.max(1,Hl)).toFixed(1)} times wider than tall where the answer's line has ${k} character${k===1?"":"s"}`; } return; } /* v795 (H's 天禾 seal, 2026-10-01: Qwen boxed the two red characters 34–95 % across, 56–84 % down, and the snap kept one blob of 375 × 79 px — the seal's red border line, 4.7 times wider than tall — so the card's square was cut around the border and showed the top of 天 alone): a band that is ONE blob wider than its line's character count allows is a bar, a border or an edge, not the line — it leaves, and with nothing else taken the snap returns null and the model's box stands (v449's own fallback: a crop with room around the text, never one that cuts it). "One blob" is one extent — the plain pass and the eroded pass each take the bar, so the band holds it twice (count 2 in H's dump), and the union may be a fifth wider than the widest blob; several distinct blobs without a gap keep v305's rule: nothing to cut, nothing dropped. */
     for(const r of runs){ r.x0=Math.min(...r.cs.map(c=>c.x0)); r.x1=Math.max(...r.cs.map(c=>c.x1)); r.size=r.cs.reduce((a,c)=>a+(c.x1-c.x0)*(c.y1-c.y0),0); }
     let lo=runs.indexOf(runs.reduce((a,r)=>r.size>a.size?r:a)), hi=lo;
     for(;;){ const left=lo>0&&runs[hi].x1-runs[lo-1].x0<=budget, right=hi<runs.length-1&&runs[hi+1].x1-runs[lo].x0<=budget; if(left&&(!right||runs[lo-1].size>=runs[hi+1].size)) lo--; else if(right) hi++; else break; }
@@ -9622,6 +9625,7 @@ async function cropSign(id,opts){
         const seen=picSeen.dk?picSeen.dk.blob:picSeen.orig, seenAngle=picSeen.dk?picSeen.dk.angle||0:0, seenBase=picSeen.base||PLACED[id]||(CROP&&CROP.id===id?CROP.rect:null); /* the placed cut is upright, and its frame is the placed one */
         let W=0,Hh=0,box=null,rect=null,grow=null,altWon=false,labelRects=null,labelWhole=false,splitWhole=false,pdPl=null,rawPlaced=false,picCal=null; try{ const b=await createImageBitmap(seen); W=b.width; Hh=b.height; const [bx0,by0,bx1,by1]=pic.box, n=Math.max(1,zh.length);
           box={x0:bx0*W,y0:by0*Hh,x1:bx1*W,y1:by1*Hh}; let [fx0,fy0,fx1,fy1]=pic.box; /* the box as read, for the log (v340) */ const lens=zh.map(l=>l.replace(/[\s\/／·・,，。.、()（）]/g,"").length); let snap=snapBox(b,box,n,lens,pic.droppedBoxes);
+          if(!snap&&SNAP_WHY){ N.snapWhy=SNAP_WHY; logRead(id,`the ink inside the AI's box is ${SNAP_WHY} — a border or a bar, not the text: the AI's box stays as drawn`); } /* v795 */
           N.seen=[W,Hh]; N.seenBase=numRect(seenBase); N.seenAng=n4(seenAngle); N.lens=lens;
           PICSEEN[id]={base:seenBase,W,Hh,angle:seenAngle}; /* v400: here and nowhere earlier — the v314/v318/v348 re-ask reassigns picSeen above (the frame grew, the AI read again), and a check that mapped the second answer's boxes through the first proposal would be wrong by the whole regrow */
           N.snap=snap?{box:numBox(snap),count:snap.count,beyond:(snap.beyond||[]).map(c=>[n1(c.x0),n1(c.y0),n1(c.x1),n1(c.y1),c.side,n1(c.near)])}:null; /* v399: null is the record H's ARRI poster never had — snapBox returns null when it finds no characters or under a fifth of the box, and cropSign's `if(snap)` has no else, so the log said nothing at all and the frame was placed on blank blue */
