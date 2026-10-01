@@ -116,6 +116,20 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v775, 2026-10-01)
+- **After writing, the meaning is the headline and the pinyin the small line under it (v775, H: "Und die Übersetzung muss
+  prominent dastehen. Das Pinyin nur als kleine Zusatzinformation.").** Both readings over the pad — the one after each
+  character (`charRecapHTML`) and the card's recap (`recapHTML`) — stood the pinyin large and green (v550/v553, up to 58
+  and 44 px) with the meaning at 18–20 px grey under it. Now the MEANING stands first, in the label colour, as large as
+  `recapFit` measures it fits (the same binary search of v600, now on `.rm`; the one-character reading is measured too,
+  where v553 sized its syllable by a formula), and the reading stands small (18 px) and green under it — the green stays
+  the colour of the written character's reading (v553/v555). A card or character without a meaning keeps its reading large
+  (`.rp.alone`, sized as before). CSS: the big line at line-height 1.25 holds its descenders without bottom padding, so the
+  clamp cannot show the top of a cut line (the v554/v673 pair, now on both lines). Harness, the hand of v774 on 洗手液 with
+  a recording voice: after 洗 "to wash" at 44 px over "xǐ" at 18, meaning first; the card's recap "hand wash" 44 over
+  "xǐ shǒu yè" 18, both inside their box; the green kept — 7 of 7 on v775, 4 of 8 on v774 (the two fits and the colour are
+  controls). Screenshot at 390 px light checked by eye. Not yet field-checked. WHATS_NEW 775.
+
 ## Current state (PWA v774, 2026-10-01)
 - **The voice starts at the stroke that completes the character (v774, H on v773: "Das Reading muss früher kommen. Das
   kommt jetzt gerade, wenn das schon alles weg ist. Das muss eigentlich beim letzten Stroke schon fast kommen.").** v773
