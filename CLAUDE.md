@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v793, 2026-10-01)
+## Current state (PWA v794, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -197,7 +197,7 @@ A **multicard's text is handled in its pop-up** (v792, H: "Ich mag die Wörterli
 den Multicard-Pop-Ups Edit, Flag und so weiter unter"): characters, pinyin, meaning, price, the flag note and the AI suggestion
 box, a **Details** fold **closed by default** (v741; open and headless v733–v740, H: "zu viel und unübersichtlich") with the short
 and long description (the long one asked the first time the fold is open), then the open card's quiet toolbar **+ Flashcard
-(Flashcard › once made) · Flag · Edit** (v790's lone text button stands in the toolbar now; no Star, v493). **While a sheet is open the page carries a spacer as tall as the sheet's reach** (`lkRoom`, `.lkspace`, v793), so the dots at
+(Flashcard › once made) · Flag · Edit** (v790's lone text button stands in the toolbar now; no Star, v493). **After + Flashcard the sheet says "✓ Flashcard made" for `LK_NOTE_MS` 3 s and Flashcard › stands in the tint from then on** (v794, H: the label's change alone was not seen). **While a sheet is open the page carries a spacer as tall as the sheet's reach** (`lkRoom`, `.lkspace`, v793), so the dots at
 the photo's foot can always be scrolled above it — the row list used to give that room. Flag redraws the sheet
 in place; Edit opens the Edit form and comes back to the sheet (`editFrom:"lookup"`, `relookAfterEdit`, by the new id when the
 characters changed); Delete lives in the Edit form. **The row list under the photo is gone** (v792): one plain row under "Not on
@@ -461,7 +461,7 @@ id abroad. **`strokes.txt.gz` and `cedict.tsv.gz` stay freely available under th
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
 as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the model's character senses (v772); the voice from the pad on the Xiaomi (v773), its reading of the stand-ins (v778) and its pace (v781); the zoom by layout on LED signs (v782); the
 apps' fields and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760); the wake
-lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768); whether DeepSeek sends the senses now (v783); the last character read through on the Xiaomi (v784); the zoom on a flashcard made from a multicard text (v789); its tile's cut in Cards (v791); the multicard's pop-up toolbar and the list's going (v792); the room under the page while a pop-up is open (v793).
+lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768); whether DeepSeek sends the senses now (v783); the last character read through on the Xiaomi (v784); the zoom on a flashcard made from a multicard text (v789); its tile's cut in Cards (v791); the multicard's pop-up toolbar and the list's going (v792); the room under the page while a pop-up is open (v793); the made line after + Flashcard (v794).
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's

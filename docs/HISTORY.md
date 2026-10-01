@@ -116,7 +116,20 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v793, 2026-10-01)
+## Current state (PWA v794, 2026-10-01)
+- **The pop-up says the flashcard was made (v794, H: "Bei +Flashcard kommt zunächst keine Bestätigung, so dass unklar ist, ob
+  die flashcard erzeugt wurde. Beim zweiten mal ist man dann in der flashcard. Sieht nach bug aus").** Not a bug in the
+  mechanism — `makeFlashcard` writes the card at once and the sheet is drawn again — but the only sign of it was the toolbar
+  label turning from "+ Flashcard" into "Flashcard ›" in the same grey, which H did not see; the second tap then opened the
+  card, as Flashcard › does. Now the redrawn sheet carries one green line over the toolbar, "✓ Flashcard made" (new key, ten
+  columns; `.lknote`, `LK_NOTE_MS` 3 s, cleared with the sheet), and Flashcard › stands in the tint from then on (`.tbtn.on`,
+  the toolbar's own "set" look; the card icon keeps its outline, `.lkbar .tbtn.on svg{fill:none}`). `openLookup` takes a
+  fourth argument `{made:true}` for that one redraw. The text's own screen's + Flashcard (a primary button that turns into a
+  plain one, v692) is untouched. Harness (`test794`, the account-page multicard; English 390 light, German 360 dark): the
+  sheet opens on + Flashcard with no note; right after the tap the card exists, the note stands in the ok green on one line
+  and Flashcard › is in the tint; after 3 s the note is gone and the button stays; the text tapped again opens on Flashcard ›
+  with no note: **10 of 10, v793 4 of 10** (the control and the guard pass on both). `test792` still 28 of 28. Not yet
+  field-checked.
 - **The page keeps room under it while a multicard's pop-up is open (v793, H: "Bitte darauf achten, dass alle Felder der
   Multikarte immer erreichbar sein müssen, auch wenn ein Pop-up bereits offen ist. Also mit diesen Texten unter der Multikarte
   konnte ich immer so weit hochschieben, dass ich alles in der Multikarte erreichen konnte mit Pop-up").** The sheet stands
