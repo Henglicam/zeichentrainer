@@ -116,7 +116,24 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v809, 2026-10-01)
+## Current state (PWA v810, 2026-10-01)
+- **The learner's own data: a backup that is one, a save that fails says so, an import that lands whole or not at all (v810,
+  the audit's hygiene and works sweeps).** **(1) Export:** any share error but a cancel fell to the anchor download, which MIUI
+  blocks silently (hard constraint 6), and `lastExport` was written anyway — no file, the backup line gone, More saying "Last
+  export: today". A photo export of ~110 cards took over 5 s to build at 4× CPU, past the tap's permission, so the share
+  itself was refused (the v622 lesson, applied to Zoom data and never to Export). Now a refused share says "The share sheet did
+  not open — tap Export again." (one key, nine columns), logs it, and keeps the file `EXPORT_KEEP` 10 min so the next tap shares
+  it at once; the anchor serves only a browser with no share sheet; the deck counts as exported only after the share or the
+  download, and the backup line and the row update at once (they kept "Never exported" until the next render). The file and
+  the flagged list are named by the phone's day (`dayKey`; `toISOString` gave yesterday before 08:00 in Beijing). **(2) A
+  failed write is logged** — 49 writes of cards, progress and photos swallowed their error (Add card, every photo card,
+  `finishPending`, Undo, Crop again's early save, `addRaw`), so a phone at its quota showed a card as saved and lost it at the
+  next start with an empty error log; `idbSave`/`idbGone` log "save: <store>: <error>", never the card (its id can carry its
+  text). `setSetting` stays as v539 left it (it would recurse). **(3) The import is one transaction** (`idbPutStores`): a write
+  failing part-way said "Import failed" and left 4 of 5 cards on disk, one existing card overwritten. Harness: `test810`
+  (a refused then accepted share under Asia/Shanghai at 01:30; Add card under a quota error; an import whose third card fails;
+  a normal import as guard) **6 of 6, v809 1 of 6**; `test806` 14/14, `test806b` 4/4, `test809` 12/12 on v810. Keys: 506, ru 537.
+
 - **Cards and multicards do what they say (v809, the audit's fourth fix — the works, hygiene, wording and first-impression
   sweeps).** **(1) A swipe to the next multicard closes the open pop-up** — it stood over the next one, its + Flashcard, Flag and
   Edit acting on the first one's text (`detailSwipe`'s `go` calls `closeLookup`). **(2) A pop-up that swapped dots kept its

@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=809; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=810; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -65,6 +65,17 @@ function idbPut(store,val){ return _os(store,"readwrite").then(os=>new Promise((
 function idbDel(store,key){ return _os(store,"readwrite").then(os=>new Promise((res,rej)=>{const r=os.delete(key);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);})); }
 function idbAll(store){ return _os(store,"readonly").then(os=>new Promise((res,rej)=>{const r=os.getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error);})); }
 function idbPutMany(store,rows){ return _os(store,"readwrite").then(os=>new Promise((res,rej)=>{ const tx=os.transaction; rows.forEach(r=>os.put(r)); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); tx.onabort=()=>rej(tx.error); })); } /* all rows in one transaction: all or nothing (v264, the translation applied together) */
+/* v810 (the audit, the hygiene sweep — the v539 class one store along): a write of the learner's cards, progress or photos that
+   fails is logged, so a phone at its storage quota leaves a trace in Diagnostics and the daily row instead of a card shown as
+   saved and gone at the next start; 58 writes swallowed their error until v809 (Add card, every photo card, Undo, Crop again).
+   The message names the store and the error, never the card (its id can carry its text). */
+const idbFail=(s,e)=>logErr("save",s+": "+(e&&(e.name||e.message)||e));
+const idbSave=(s,v)=>idbPut(s,v).catch(e=>idbFail(s,e)), idbGone=(s,k)=>idbDel(s,k).catch(e=>idbFail(s,e));
+/* several stores in ONE transaction — all or nothing (the import, v810: a write failing part-way left part of the file on disk
+   while the sheet said "Import failed") */
+function idbPutStores(map){ return openDB().then(db=>new Promise((res,rej)=>{ const names=Object.keys(map), tx=db.transaction(names,"readwrite");
+  tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); tx.onabort=()=>rej(tx.error||new Error("aborted"));
+  try{ for(const n of names){ const os=tx.objectStore(n); for(const r of map[n]) os.put(r); } }catch(e){ try{ tx.abort(); }catch(_){} rej(e); } })); }
 function idbClear(store){ return _os(store,"readwrite").then(os=>new Promise((res,rej)=>{const r=os.clear();r.onsuccess=()=>res();r.onerror=()=>rej(r.error);})); }
 
 /* a card into the deck and the store: replace by key or append; storage errors are swallowed like everywhere else */
@@ -1229,7 +1240,7 @@ async function ctOne(shot){
     if(!miss[i]) continue;
     const note=`Not on the photo: ${miss[i]}`; if(d.flag&&String(d.flagNote||"").includes(note)) continue;
     const old=d.flag?String(d.flagNote||""):""; d.flag=true; d.flagNote=old?note+" — "+old:note; /* a note already on the card stays behind the new one; "unchecked" stays — this flag is the AI's, not a verdict by hand (v515) */
-    try{ await idbPut("custom",d); }catch(e){} }
+    await idbSave("custom",d); }
   return {shot,cards:out}; }
 function ctLine(){ const R=S.settings.ct; if(!R) return `Asks the AI, photo by photo, which characters of each card are not on its photo, and flags those cards. About ${ctShots().length} photos, one picture call each.`;
   const res=R.res||[], cs=res.flatMap(r=>r.cards||[]), bad=cs.filter(c=>c.miss).length, err=res.filter(r=>r.err).length;
@@ -1284,12 +1295,12 @@ async function rbOne(shot){
   const hadFull=old.some(d=>d.imgFull), u0=usage(), by0=[u0.byPhoto||0,(u0.m||{}).byPhoto||0], t0=Date.now();
   const prog={}; for(const d of old) if(S.progress[d.id]) prog[d.id]=S.progress[d.id];
   await setSetting("rb:"+shot,{cards:old,prog});
-  S.custom=S.custom.filter(d=>!old.includes(d)); for(const d of old){ try{ await idbDel("custom",d.id); }catch(e){} dropThumb(d.id); } /* only the cards being replaced — a flashcard of its own on a multicard photo stays (v652) */
-  const restore=async why=>{ for(const d of S.custom.filter(x=>x.shot===id)){ S.custom=S.custom.filter(x=>x!==d); try{ await idbDel("custom",d.id); }catch(e){} }
-    for(const d of old){ S.custom.push(d); try{ await idbPut("custom",d); }catch(e){} } await delRow("rb:"+shot); delete S.settings["rb:"+shot]; return {shot,kept:why,old:rbSum(old),ms:Date.now()-t0}; };
+  S.custom=S.custom.filter(d=>!old.includes(d)); for(const d of old){ await idbGone("custom",d.id); dropThumb(d.id); } /* only the cards being replaced — a flashcard of its own on a multicard photo stays (v652) */
+  const restore=async why=>{ for(const d of S.custom.filter(x=>x.shot===id)){ S.custom=S.custom.filter(x=>x!==d); await idbGone("custom",d.id); }
+    for(const d of old){ S.custom.push(d); await idbSave("custom",d); } await delRow("rb:"+shot); delete S.settings["rb:"+shot]; return {shot,kept:why,old:rbSum(old),ms:Date.now()-t0}; };
   const cid="reading#"+Date.now(); let img=null; try{ const r=await cropBlob(id,windowRect(rect)); if(r) img=await cardJpeg(r.blob); }catch(e){}
   const card={id:cid,c:"",p:"",m:"",t:"Custom",at:old[0].at,v:APP_V,shot:id,lb:"photo",img,mt:{src:"gloss",verified:false,pending:true},frame:frameOf(rect),reading:{rect,at:Date.now(),app:true,auto:true}};
-  S.custom.push(card); try{ await idbPut("custom",card); }catch(e){} PENDING[id]=cid; AUTO[id]=true; QSCARD[id]=cid;
+  S.custom.push(card); await idbSave("custom",card); PENDING[id]=cid; AUTO[id]=true; QSCARD[id]=cid;
   cropSign(id,{rect,app:true});
   while((PENDING[id]||READING[id])&&Date.now()-t0<RB_MAX_MS) await rrSleep(500);
   const u=usage(); u.byPhoto=by0[0]; if(u.m) u.m.byPhoto=by0[1]; S.settings.usage=u;
@@ -1303,8 +1314,8 @@ async function rbOne(shot){
   const used=new Set();
   for(const n of nF){ const o=oF.find(x=>!used.has(x)&&x.c===n.c)||(oF.length===1&&nF.length===1&&!used.has(oF[0])?oF[0]:null); if(!o) continue; used.add(o); /* the same text, else the one card a one-card photo had */
     if(o.star) n.star=true; if(o.tags&&o.tags.length) n.tags=[...new Set([...(n.tags||[]),...o.tags])]; if(!o.unchecked&&o.c===n.c) delete n.unchecked;
-    if(o.id!==n.id&&S.progress[o.id]&&!S.progress[n.id]){ const pr={...S.progress[o.id],id:n.id}; S.progress[n.id]=pr; try{ await idbPut("progress",pr); }catch(e){} moved.push([o.id,n.id]); } }
-  for(const d of now){ try{ await idbPut("custom",d); }catch(e){} }
+    if(o.id!==n.id&&S.progress[o.id]&&!S.progress[n.id]){ const pr={...S.progress[o.id],id:n.id}; S.progress[n.id]=pr; await idbSave("progress",pr); moved.push([o.id,n.id]); } }
+  for(const d of now){ await idbSave("custom",d); }
   return {shot,rid:id,old:rbSum(old),now:rbSum(now),ids:now.map(d=>d.id),moved,ms:Date.now()-t0}; }
 const RB_WHY={}; /* failPending's reason for a rebuilt photo, for the report */
 function rbLine(){ const R=S.settings.rb; if(!R) return `Makes the cards of every photo again with today's reading and replaces the old ones, one photo after the other while the app is open. Your edits and crops on those cards are replaced; review history, stars and tags stay. Undo puts everything back. About ${rrShots().length} photos.`;
@@ -1338,11 +1349,11 @@ async function rbRun(menus){
 async function rbRecover(){
   if(RB_LOOP) return; const R=S.settings.rb, done=new Set(((R&&R.res)||[]).map(r=>r.shot));
   for(const d of S.custom.filter(x=>/^rb_/.test(x.shot||""))){ const r=((R&&R.res)||[]).find(x=>x.rid===d.shot); /* a finished photo's card that a late write took back to its temporary id gets the photo's own id again; anything else is a half-made card of the photo in hand */
-    if(r){ d.shot=r.shot; try{ await idbPut("custom",d); }catch(e){} continue; }
-    S.custom=S.custom.filter(x=>x!==d); try{ await idbDel("custom",d.id); }catch(e){} }
+    if(r){ d.shot=r.shot; await idbSave("custom",d); continue; }
+    S.custom=S.custom.filter(x=>x!==d); await idbGone("custom",d.id); }
   for(const k of Object.keys(S.settings)){ if(!k.startsWith("rb:")) continue; const shot=k.slice(3); if(done.has(shot)) continue;
-    const bak=S.settings[k]; for(const d of (bak&&bak.cards)||[]){ S.custom=S.custom.filter(x=>x.id!==d.id); S.custom.push(d); try{ await idbPut("custom",d); }catch(e){} }
-    for(const [id,pr] of Object.entries((bak&&bak.prog)||{})){ S.progress[id]=pr; try{ await idbPut("progress",{...pr,id}); }catch(e){} }
+    const bak=S.settings[k]; for(const d of (bak&&bak.cards)||[]){ S.custom=S.custom.filter(x=>x.id!==d.id); S.custom.push(d); await idbSave("custom",d); }
+    for(const [id,pr] of Object.entries((bak&&bak.prog)||{})){ S.progress[id]=pr; await idbSave("progress",{...pr,id}); }
     delete S.settings[k]; await delRow(k); }
   if(S.ready){ requeue(); setStats(); } }
 /* v652: the flashcards v651 took off a multicard photo without a successor come back from the photo's "rb:" row, with their history —
@@ -1351,8 +1362,8 @@ async function rbRepair(){
   const R=S.settings.rb; if(!R||R.repaired!==undefined||RB_LOOP) return; let n=0;
   for(const k of Object.keys(S.settings)){ if(!k.startsWith("rb:")) continue; const bak=S.settings[k]; if(!bak||!(bak.cards||[]).some(d=>d.kind==="page")) continue;
     for(const d of bak.cards){ if(d.kind==="page"||d.page||cardOf(d.id)) continue;
-      S.custom.push(d); try{ await idbPut("custom",d); }catch(e){} n++;
-      const pr=(bak.prog||{})[d.id]; if(pr&&!S.progress[d.id]){ S.progress[d.id]=pr; try{ await idbPut("progress",{...pr,id:d.id}); }catch(e){} } } }
+      S.custom.push(d); await idbSave("custom",d); n++;
+      const pr=(bak.prog||{})[d.id]; if(pr&&!S.progress[d.id]){ S.progress[d.id]=pr; await idbSave("progress",{...pr,id:d.id}); } } }
   R.repaired=n; await setSetting("rb",R); if(n&&S.ready){ requeue(); setStats(); } }
 async function rbForget(){ for(const k of Object.keys(S.settings)) if(k.startsWith("rb:")){ delete S.settings[k]; await delRow(k); } }
 async function rbUndo(){
@@ -1360,10 +1371,10 @@ async function rbUndo(){
   if(!await askSheet({title:"Undo rebuild?",text:"Every rebuilt photo gets its old cards back, as they were before the rebuild.",ok:"Undo rebuild",danger:true})) return;
   const st=$("#rb-status"); let n=0;
   for(const r of (R.res||[]).slice().reverse()){ if(!r.ids) continue; const bak=S.settings["rb:"+r.shot]; if(!bak) continue;
-    for(const id of r.ids){ const d=S.custom.find(x=>x.id===id); if(d&&d.shot===r.shot){ S.custom=S.custom.filter(x=>x!==d); try{ await idbDel("custom",id); }catch(e){} dropThumb(id); } }
-    for(const [o,nw] of r.moved||[]){ if(!bak.prog[nw]){ delete S.progress[nw]; try{ await idbDel("progress",nw); }catch(e){} } }
-    for(const d of bak.cards){ S.custom=S.custom.filter(x=>x.id!==d.id); S.custom.push(d); try{ await idbPut("custom",d); }catch(e){} }
-    for(const [id,pr] of Object.entries(bak.prog||{})){ S.progress[id]=pr; try{ await idbPut("progress",{...pr,id}); }catch(e){} }
+    for(const id of r.ids){ const d=S.custom.find(x=>x.id===id); if(d&&d.shot===r.shot){ S.custom=S.custom.filter(x=>x!==d); await idbGone("custom",id); dropThumb(id); } }
+    for(const [o,nw] of r.moved||[]){ if(!bak.prog[nw]){ delete S.progress[nw]; await idbGone("progress",nw); } }
+    for(const d of bak.cards){ S.custom=S.custom.filter(x=>x.id!==d.id); S.custom.push(d); await idbSave("custom",d); }
+    for(const [id,pr] of Object.entries(bak.prog||{})){ S.progress[id]=pr; await idbSave("progress",{...pr,id}); }
     n++; if(st) st.textContent=`Undoing … ${n} photos back.`; }
   await rbForget(); R.undone=Date.now(); await setSetting("rb",R);
   requeue(); setStats(); rbShow(); }
@@ -1422,10 +1433,10 @@ async function boot(){
     bump("opens");
     /* progress of cards that no longer exist (the built-in deck of v1–v32) is dropped */
     cust.forEach(d=>{ if(!d.id) d.id=d.c; });
-    for(let i=cust.length-1;i>=0;i--){ const d=cust[i]; if(d.adding&&!d.c&&!d.reading){ cust.splice(i,1); idbDel("custom",d.id).catch(()=>{}); const pg=cust.find(x=>x.id===d.page); if(pg&&(pg.items||[]).includes(d.id)){ pg.items=pg.items.filter(x=>x!==d.id); idbPut("custom",pg).catch(()=>{}); } } } /* v635: a text being added when the app closed, never read */
+    for(let i=cust.length-1;i>=0;i--){ const d=cust[i]; if(d.adding&&!d.c&&!d.reading){ cust.splice(i,1); idbGone("custom",d.id); const pg=cust.find(x=>x.id===d.page); if(pg&&(pg.items||[]).includes(d.id)){ pg.items=pg.items.filter(x=>x!==d.id); idbSave("custom",pg); } } } /* v635: a text being added when the app closed, never read */
     const have=new Set(cust.map(d=>d.id));
     for(const k of Object.keys(S.settings)) if(k.startsWith("rb:")) for(const d of (S.settings[k]&&S.settings[k].cards)||[]) have.add(d.id); /* v651: a card out for a rebuild, or kept for its undo, keeps its history */
-    for(const id of Object.keys(S.progress)) if(!have.has(id)){ delete S.progress[id]; idbDel("progress",id).catch(()=>{}); }
+    for(const id of Object.keys(S.progress)) if(!have.has(id)){ delete S.progress[id]; idbGone("progress",id); }
     /* creation order (cards without a timestamp, from before v33, come first in key order) */
     S.custom = cust.sort((a,b)=>(a.at||0)-(b.at||0));
     S.inbox = inb.sort((a,b)=>b.ts-a.ts);
@@ -1677,7 +1688,7 @@ async function autoBreaks(){
       const segs=L>1?splitByLines(base,L):base;
       if(segs.length>1) d.seg=segs; else delete d.seg;
     }catch(e){}
-    d.lb="auto"; try{ await idbPut("custom",d); }catch(e){}
+    d.lb="auto"; await idbSave("custom",d);
   }
   if(todo.length && S.mode==="study") render();
 }
@@ -3466,7 +3477,7 @@ async function shareFlagged(){
   const n=deck().filter(d=>d.flag).length;
   if(!n){ noteSheet(t("No flagged cards.")); return; }
   const text=flaggedText();
-  const name="shizi-review-"+new Date().toISOString().slice(0,10)+".txt";
+  const name="shizi-review-"+dayKey()+".txt"; /* v810: the phone's own day */
   const file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){
     try{ await navigator.share({files:[file],title:name,text:"Cards flagged for review"}); return; }
@@ -3488,11 +3499,11 @@ const fullPhoto=d=>d.imgFull||(d.shot&&(S.inbox.find(x=>x.id===d.shot)||{}).blob
    IndexedDB stored it twice — half of a phone's photo bytes. */
 async function keepPhoto(id){
   const sh=S.inbox.find(x=>x.id===id); if(!sh||!sh.blob) return;
-  for(const d of S.custom) if(d.shot===id&&!d.imgFull){ d.imgFull=sh.blob; try{ await idbPut("custom",d); }catch(e){} }
+  for(const d of S.custom) if(d.shot===id&&!d.imgFull){ d.imgFull=sh.blob; await idbSave("custom",d); }
 }
 async function dedupePhotos(){
   const dup=S.custom.filter(d=>d.imgFull&&d.shot&&S.inbox.some(x=>x.id===d.shot&&x.blob));
-  for(const d of dup){ delete d.imgFull; try{ await idbPut("custom",d); }catch(e){} }
+  for(const d of dup){ delete d.imgFull; await idbSave("custom",d); }
   return dup.length;
 }
 /* the photo on the front: the crop, or — after a tap on it — the whole photo (S.fullPic) */
@@ -6231,7 +6242,7 @@ async function addPageText(pg){
   S.editing=id; S.editFrom="addtext:"+pg.id; S.editOpenFrame=true; S.fullPic=false; render(); window.scrollTo(0,0); }
 async function dropAddedText(id){
   const d=cardOf(id); if(!d||!d.adding||d.c||d.reading||Object.values(PENDING).includes(id)) return;
-  S.custom=S.custom.filter(x=>x!==d); try{ await idbDel("custom",id); }catch(e){} dropThumb(id);
+  S.custom=S.custom.filter(x=>x!==d); await idbGone("custom",id); dropThumb(id);
   const pg=d.page&&cardOf(d.page); if(pg&&(pg.items||[]).includes(id)) await putCard({...pg,items:pg.items.filter(x=>x!==id)},pg.id); }
 function renderPageDetail(main,d){
   pageShorts(d.id); pageDescs(d.id); /* v698: a multicard from before gets its texts' short descriptions once; v753: and their descriptions */
@@ -6511,7 +6522,7 @@ function renderEdit(main,c){
     if(d.frame&&d.frame.w){ CROP={id:rid,rect:null}; drawRecrop(); openFrame(d.frame); }
     else if(d.img&&!removeImg){ CROP={id:rid,rect:null,locating:true}; drawRecrop();
       findFrame(full,d.img,rid).then(async f=>{ if(!CROP||CROP.id!==rid||!CROP.locating) return; delete CROP.locating;
-        if(f){ d.frame=f; try{ await idbPut("custom",d); }catch(e){} openFrame(f); }
+        if(f){ d.frame=f; await idbSave("custom",d); openFrame(f); }
         else { CROP.auto=true; drawRecrop(); proposeFrame(rid); } }); }
     else { CROP={id:rid,rect:null,auto:true}; drawRecrop(); proposeFrame(rid); } };
   showPimg();
@@ -6553,19 +6564,19 @@ function renderEdit(main,c){
     if(formCheck&&!handoff&&newC&&sureKey(newC)===sureKey(formCheck.c0)){ const sc=formCheck; formCheck=null; sureCheck(c,cardOf(c)&&cardOf(c).c,sc,rid); } /* v657: saved before the picture check answered — the card takes its answer as a card from the camera does (v652); a text typed by hand is not the reader's and is left alone */
     formCheck=null;
     if(handoff){ const rect=win?photoRect(handoff.rect):handoff.rect; if(win) leaveWindow(frameOf(handoff.rect)); /* the reading rect on the whole photo's pixels, and the record back to the whole photo, so the reading, resume and the fill see the photo (v247) */
-      const d2=cardOf(c); if(d2){ d2.reading={rect,at:Date.now(),edit:true}; try{ await idbPut("custom",d2); }catch(e){} } /* edit: saved early from Crop again — flagged only when the reading is doubtful (v342) */
+      const d2=cardOf(c); if(d2){ d2.reading={rect,at:Date.now(),edit:true}; await idbSave("custom",d2); } /* edit: saved early from Crop again — flagged only when the reading is doubtful (v342) */
       delete RECROP[rid]; PENDING[rid]=c; CROP=null; /* the form's hooks go, the photo record stays for the reading */
       clearTimeout(READ_TIMER[rid]); if(!READING[rid]) cropSign(rid,{rect}); }
     if(aiLate&&!handoff){ const lines0=sg.lines.slice(); /* the AI's answer lands on the card when it comes (v341): text, pinyin and meaning as the form would have taken them, the card verified by the AI; a failed call leaves the card pending for the auto run */
       aiLate.then(async r=>{ const d2=cardOf(c); if(!d2) return;
-        if(!r||r.bad||sureKey(aiLate.zh||"")!==sureKey(lines0.join(""))){ d2.mt={...(d2.mt||{}),verified:false,pending:true}; try{ await idbPut("custom",d2); }catch(e){} aiAutoSoon(); return; } /* v657: a check asked about another text than the one saved (typed while it ran — the button is disabled then, so no new check starts) must not write its text over the typed one; the card goes to the auto run instead */
+        if(!r||r.bad||sureKey(aiLate.zh||"")!==sureKey(lines0.join(""))){ d2.mt={...(d2.mt||{}),verified:false,pending:true}; await idbSave("custom",d2); aiAutoSoon(); return; } /* v657: a check asked about another text than the one saved (typed while it ran — the button is disabled then, so no new check starts) must not write its text over the typed one; the card goes to the auto run instead */
         const upd2={...d2}; let newC2=d2.c, lines2;
         if(r.zh&&CJK.test(r.zh)){ const zh=r.zh.replace(/\r/g,""); lines2=(isSign?zh:recutLines(zh.replace(/\s+/g,""),lines0)).split("\n").map(l=>l.trim()).filter(Boolean); newC2=isSign?lines2.join("\n"):lines2.join(""); }
         if(r.p) upd2.p=r.p; if(r.m){ upd2.m=r.m; setMl(upd2,r.ml||"en"); } if(r.desc) setDesc(upd2,r.desc,r.ml||"en");
         upd2.mt={...(upd2.mt||{}),src:"llm",verified:true,pending:false}; delete upd2.mt.suspect;
         await applyCardUpdate(c,upd2,newC2,!!r.p,isSign?undefined:lines2);
         if(S.mode==="cards"&&!S.editing) render(); else renderShots(); },
-      async()=>{ const d2=cardOf(c); if(!d2) return; d2.mt={...(d2.mt||{}),verified:false,pending:true}; try{ await idbPut("custom",d2); }catch(e){} aiAutoSoon(); }); }
+      async()=>{ const d2=cardOf(c); if(!d2) return; d2.mt={...(d2.mt||{}),verified:false,pending:true}; await idbSave("custom",d2); aiAutoSoon(); }); }
     leave(c);
   };
 }
@@ -6616,7 +6627,7 @@ async function addManual(){
   if(chosenImg){ card.img=await cardJpeg(chosenImg); }
   S.pendingImg=null; S.pendingFull=null;
   S.custom.push(card);
-  try{ await idbPut("custom",card); }catch(e){}
+  await idbSave("custom",card);
   requeue();
   ["f-word","f-pin","f-mean","f-note","f-tags"].forEach(id=>$("#"+id).value=""); $("#f-flag").checked=false; $("#f-note").hidden=true;
   const fi=$("#f-imgfield"); if(fi) fi.remove();
@@ -6640,7 +6651,7 @@ async function delCustom(id){
   try{ await idbDel("custom",id); await idbDel("progress",id); }catch(e){}
   delete S.progress[id]; dropThumb(id);
   /* a text deleted out of its page leaves the page (v453); the last one takes the page with it — an Undo then brings the text back as a card of its own */
-  if(d&&d.page){ const pg=cardOf(d.page); if(pg&&(pg.items||[]).includes(id)){ const u={...pg,items:pg.items.filter(x=>x!==id)}; if(u.items.length) await putCard(u,pg.id); else { S.custom=S.custom.filter(x=>x.id!==pg.id); try{ await idbDel("custom",pg.id); }catch(e){} dropThumb(pg.id); } } }
+  if(d&&d.page){ const pg=cardOf(d.page); if(pg&&(pg.items||[]).includes(id)){ const u={...pg,items:pg.items.filter(x=>x!==id)}; if(u.items.length) await putCard(u,pg.id); else { S.custom=S.custom.filter(x=>x.id!==pg.id); await idbGone("custom",pg.id); dropThumb(pg.id); } } }
   /* the photo goes with its last card (v464, H: "And if I remove the card, then the photo also goes, which is good."):
      only when NO card references it any more — a text deleted out of a page leaves its siblings behind, and they still
      need the picture. keepPhoto is deliberately not called: by the test above there is nobody left to hand a copy to,
@@ -6650,7 +6661,7 @@ async function delCustom(id){
     const si=S.inbox.findIndex(x=>x.id===d.shot);
     if(si>=0){ shot={rec:S.inbox[si],idx:si};
       S.inbox=S.inbox.filter(x=>x.id!==d.shot);
-      try{ await idbDel("inbox",d.shot); }catch(e){}
+      await idbGone("inbox",d.shot);
       if(IMGURL[d.shot]){ URL.revokeObjectURL(IMGURL[d.shot]); delete IMGURL[d.shot]; }
       if(CROP&&CROP.id===d.shot) CROP=null; }
   }
@@ -7009,17 +7020,17 @@ async function undoDelete(){
   for(const it of items){
     if(it.kind==="card"){
       const d=it.d; if(S.custom.some(x=>x.id===d.id)) continue;
-      S.custom.splice(Math.min(it.idx,S.custom.length),0,d); try{ await idbPut("custom",d); }catch(e){}
-      if(it.prog){ S.progress[d.id]=it.prog; try{ await idbPut("progress",{id:d.id,...it.prog}); }catch(e){} }
+      S.custom.splice(Math.min(it.idx,S.custom.length),0,d); await idbSave("custom",d);
+      if(it.prog){ S.progress[d.id]=it.prog; await idbSave("progress",{id:d.id,...it.prog}); }
       bump("deleted",-1);
-      for(const x of it.items||[]){ if(S.custom.some(y=>y.id===x.d.id)) continue; S.custom.splice(Math.min(x.idx,S.custom.length),0,x.d); try{ await idbPut("custom",x.d); }catch(e){} if(x.prog){ S.progress[x.d.id]=x.prog; try{ await idbPut("progress",{id:x.d.id,...x.prog}); }catch(e){} } bump("deleted",-1); } /* the page's texts with it (v453) */
+      for(const x of it.items||[]){ if(S.custom.some(y=>y.id===x.d.id)) continue; S.custom.splice(Math.min(x.idx,S.custom.length),0,x.d); await idbSave("custom",x.d); if(x.prog){ S.progress[x.d.id]=x.prog; await idbSave("progress",{id:x.d.id,...x.prog}); } bump("deleted",-1); } /* the page's texts with it (v453) */
       if(d.page){ const pg=cardOf(d.page); if(pg&&pg.items&&!pg.items.includes(d.id)) await putCard({...pg,items:[...pg.items,d.id]},pg.id); } /* a text back into its page (v453) */
-      if(it.shot&&!S.inbox.some(x=>x.id===it.shot.rec.id)){ S.inbox.splice(Math.min(it.shot.idx,S.inbox.length),0,it.shot.rec); try{ await idbPut("inbox",it.shot.rec); }catch(e){} } /* the photo that went with its last card (v464) */
+      if(it.shot&&!S.inbox.some(x=>x.id===it.shot.rec.id)){ S.inbox.splice(Math.min(it.shot.idx,S.inbox.length),0,it.shot.rec); await idbSave("inbox",it.shot.rec); } /* the photo that went with its last card (v464) */
       if(S.mode==="study"&&!S.queue.includes(d.id)&&d.c&&!isPage(d)){ S.queue.splice(S.idx,0,d.id); S.fullPic=false; S.ansOpen=false; llog("undo"); } /* deleted from the study back: the card comes next again */
     } else {
       const rec=it.rec; if(S.inbox.some(x=>x.id===rec.id)) continue;
-      S.inbox.splice(Math.min(it.idx,S.inbox.length),0,rec); try{ await idbPut("inbox",rec); }catch(e){}
-      for(const d of S.custom) if(d.shot===rec.id&&d.imgFull){ delete d.imgFull; try{ await idbPut("custom",d); }catch(e){} } /* the photo is stored once again (v214) */
+      S.inbox.splice(Math.min(it.idx,S.inbox.length),0,rec); await idbSave("inbox",rec);
+      for(const d of S.custom) if(d.shot===rec.id&&d.imgFull){ delete d.imgFull; await idbSave("custom",d); } /* the photo is stored once again (v214) */
     }
   }
   setStats(); render();
@@ -7890,7 +7901,7 @@ async function translatePending(status){
   let n=0;
   for(const d of list){
     const r=await signMeaning(d.c.split("\n"),status);
-    if(r.src==="nmt"){ d.m=r.m; setMl(d,"en"); d.mt={...d.mt,src:"nmt",pending:r.pending,verified:false}; try{ await idbPut("custom",d); }catch(e){} n++; } /* the offline model speaks English (v265: recorded under en) */
+    if(r.src==="nmt"){ d.m=r.m; setMl(d,"en"); d.mt={...d.mt,src:"nmt",pending:r.pending,verified:false}; await idbSave("custom",d); n++; } /* the offline model speaks English (v265: recorded under en) */
   }
   return n;
 }
@@ -9556,7 +9567,7 @@ async function cropSign(id,opts){
     if(!r){ delete READING[id]; renderShots(); if(PENDING[id]) failPending(id,"no frame"); return; } /* no frame yet — nothing to do */
     const rec=shotRec(id);
     cardImg=r.blob; if(!PENDING[id]&&!RECROP[id]){ S.pendingImg=r.blob; S.pendingFull=rec?rec.blob:null; }
-    delete SIGN[id]; if(!PENDING[id]){ delete QSNOTE[id]; delete QSBAD[id]; const sh=S.inbox.find(x=>x.id===id); if(sh&&sh.note){ delete sh.note; idbPut("inbox",sh).catch(()=>{}); } } /* the frame stays visible while reading; a failed reading's note goes when the hand reads the photo again (v509) */
+    delete SIGN[id]; if(!PENDING[id]){ delete QSNOTE[id]; delete QSBAD[id]; const sh=S.inbox.find(x=>x.id===id); if(sh&&sh.note){ delete sh.note; idbSave("inbox",sh); } } /* the frame stays visible while reading; a failed reading's note goes when the hand reads the photo again (v509) */
     if(!(CROP&&CROP.id===id&&CROP.hidden)) renderShots(); /* the hidden proposal's box was drawn by proposeFrame — no re-render under a finger that may be framing by hand (v288) */
     const box=$("#ocr-"+id); if(!box&&!PENDING[id]) return; /* a photo not on screen is not read — unless a saved card waits for it */
     status("loading the reader …");
@@ -10117,7 +10128,7 @@ async function saveNow(id,auto){ /* auto (v325): the card made by itself from a 
   if(!CROP||CROP.id!==id){ if(auto){ delete PENDING[id]; delete AUTO[id]; delete QSCARD[id]; } return; }
   const followed=!!CROP.followed, placed=followed?{...CROP.rect}:null; /* a frame the reader placed while the cut was made (v325: read after the awaits) */
   const card={id:cid, c:"", p:"", m:"", t:"Custom", at:Date.now(), v:APP_V, shot:id, lb:"photo", img, mt:{src:"gloss",verified:false,pending:true}, frame:frameOf(rect), reading:{rect,at:Date.now(),app,...(auto?{auto:true}:{})}}; /* app: the frame was the app's own, so the reader or the AI may still tighten it while the card waits (v304) */
-  bump("byPhoto"); S.custom.push(card); try{ await idbPut("custom",card); }catch(e){}
+  bump("byPhoto"); S.custom.push(card); await idbSave("custom",card);
   PENDING[id]=card.id; QSCARD[id]=card.id; CROP=null; delete SIGN[id]; if(followed) PLACED[id]=placed; /* a frame the reader had already placed on the text: the running reading goes on as if it stood (the AI gets its cut and centres it, v304) */
   if(!auto){ QSNOTE[id]=t("Card saved — the text follows when the reading is done."); delete QSBAD[id]; }
   clearTimeout(READ_TIMER[id]); if(!READING[id]) cropSign(id,{rect,app}); /* the reading had not started yet (the 1.2 s wait) — start it with the frame it was saved with */
@@ -10147,7 +10158,7 @@ async function provisionalCard(id,sg){
   }catch(err){ logErr("provisional",err&&err.message||String(err)); }
 }
 /* the card made by itself (v325, H: "no frame is seen during the first scan at all, just the magic wobbling over the image, and then the result is the finished card … if I want to edit something, I get a frame which I can adjust"; saved by itself on my recommendation, "Go"): Cancel while it reads drops the placeholder, nothing readable drops it too (dropAuto), and the row shows the finished card with Edit and Delete (resultHTML) */
-async function dropAuto(id,cid){ delete AUTO[id]; delete QSCARD[id]; delete QSMORE[id]; delete PROV[id]; if(!cid) return; const d=cardOf(cid); if(!d||d.c) return; S.custom=S.custom.filter(x=>x.id!==cid); try{ await idbDel("custom",cid); }catch(e){} bump("byPhoto",-1); dropThumb(cid); setStats(); }
+async function dropAuto(id,cid){ delete AUTO[id]; delete QSCARD[id]; delete QSMORE[id]; delete PROV[id]; if(!cid) return; const d=cardOf(cid); if(!d||d.c) return; S.custom=S.custom.filter(x=>x.id!==cid); await idbGone("custom",cid); bump("byPhoto",-1); dropThumb(cid); setStats(); }
 async function cancelAuto(id){ const cid=PENDING[id]; abandonReading(id); delete PENDING[id]; autoDrop(id); shotTried(id); await dropAuto(id,cid); renderShots(); autoNext(); } /* Cancel drops this photo from the batch, not the batch (v411); the hand has it now — the photo stays on the tab across a restart and is not read again by itself (v509) */
 /* The frame right after the shutter (v437, H: "Ich moechte ein Foto direkt nach der Aufnahme bearbeiten koennen, inklusive
    Drehen, Schieben und Croppen"). Turning, moving and cropping have existed since v185 — they were simply two taps away, since
@@ -10312,7 +10323,7 @@ async function finishPending(id){
     else { ph.flag=true; ph.flagNote=weak?t("saved before the reading was done, and the reading is weak — check text, pinyin and meaning"):t("saved before the reading was done — check text, pinyin and meaning"); } /* nobody saw the preview (v245, H: "flag cards that were saved before the final stage, with an appropriate comment") */
     if(!ph.flag&&cropDisagrees(ph.frame,sg.region&&sg.region.pic,sg.ai&&sg.ai.labels,PICSEEN[id])){ ph.flag=true; ph.flagNote=t("the picture may not show this text — check the photo"); logRead(id,"the card's frame lies outside everything the AI named — flagged"); } /* v400: the picture is not touched — v380's wide fallback measured 0 of 75 usable cards (6.1 CSS px a character) and H rejected exactly that picture in the field at v382 ("Die Bild crops sind noch falsch"), so this only says so */ /* the card made by itself (v325) and the card saved early from Crop again (v342, H's "Go" on the recommendation — the analysis counts): only a doubtful reading carries the flag */ /* the card made by itself (v325): the row shows it, so only a doubtful reading carries the flag — a weak reader score the AI check then confirmed is no doubt */
     { const i=S.custom.findIndex(x=>x.id===ph.id); if(i>=0&&S.custom[i]!==ph){ if(S.custom[i].star) ph.star=true; S.custom[i]=ph; } } /* v656 (H: "Edit > crop again > save before AI is ready: doesn't actually save"): ph is filled in place across the awaits above, and anything that saved the card meanwhile through putCard — the description fetched for the card back on Learn, a star — put a COPY of the old card into the deck, so the reading landed on an object no screen showed and the deck kept the old text. The reading's card goes back in; a star tapped meanwhile stays */
-    try{ await idbPut("custom",ph); }catch(e){}
+    await idbSave("custom",ph);
     if(SURECHK[id]){ const sc=SURECHK[id]; delete SURECHK[id]; sureCheck(ph.id,ph.c,sc,id); } /* v646 */
     else if(sg&&sg.picEarly&&!sg.picAsked&&(numsFor(id)||{}).pdSure) sureCheck(ph.id,ph.c,{at:sg.picEarly.at,p:sg.picEarly.p},id); /* v648: the picture went out at the quick look, before the reading turned sure — that answer is the check (H's third Re-read: 良品 read 一品, unchecked, since the parked answer was kept only for a panel) */
     todoDone(id); /* v509: the card is written — the next start owes this photo nothing */
@@ -10336,7 +10347,7 @@ async function failPending(id,why,msg){
   todoDone(id); /* the card stays, flagged: the photo has its card */
   if(ph.c) delete ph.reading; else ph.reading.failed=why; /* a card framed again in the Edit form keeps its text and forgets the frame (v241, v243); an empty card keeps the failure for "Nothing read yet" */
   ph.flag=true; ph.flagNote=ph.c?t("the new frame could not be read — the old text stays"):t("the reading failed — edit the card or frame the photo again");
-  try{ await idbPut("custom",ph); }catch(e){}
+  await idbSave("custom",ph);
   QSNOTE[id]="Card saved, but nothing could be read — edit the card or frame the photo again."; QSBAD[id]=true; setStats();
   if(S.mode==="cards"&&!S.editing) render(); else renderShots(); /* the list or the detail shows the filled card at once */
   autoNext(); /* v411 */
@@ -11085,7 +11096,7 @@ async function saveSign(id){
   if(CROP&&CROP.id===id&&CROP.rect) card.frame=frameOf(CROP.rect); /* the frame, for Crop again (v244) */
   numSet(id,"cardFrame",card.frame||null); numSet(id,"win",CROP&&CROP.id===id&&CROP.rect?numRect(windowRect(CROP.rect,ratioOf(card))):null); numCards(id,[card.id]); numsFile(id); /* v399 */
   bump("byPhoto"); S.custom.push(card);
-  try{ await idbPut("custom",card); }catch(e){}
+  await idbSave("custom",card);
   todoDone(id); /* v509: the photo has its card */
   requeue(); QSCARD[id]=card.id;
   delete SIGN[id]; if(CROP&&CROP.id===id) CROP=null; /* saved — the frame has done its job */
@@ -11619,20 +11630,20 @@ function resumeShots(){ /* v509: the photos the app still owes a card, back into
    again exactly as the shutter did — the note goes, the photo takes the front of the queue when something else is in hand,
    else the automatic reading starts now (autoNext's own rule). The photo keeps `tried`, so a restart still leaves it alone. */
 function readAgain(id){ const s=S.inbox.find(x=>x.id===id); if(!s||PENDING[id]) return;
-  delete QSNOTE[id]; delete QSBAD[id]; if(s.note){ delete s.note; idbPut("inbox",s).catch(()=>{}); }
+  delete QSNOTE[id]; delete QSBAD[id]; if(s.note){ delete s.note; idbSave("inbox",s); }
   S.openShot=id;
   if(!S.autoCard){ CROP={id,rect:null}; renderShots(); return; } /* the harness's switch: no automatic reading, so the frame is offered as Crop does */
   if(CROP||Object.keys(PENDING).length){ autoQueueAdd([id],true); renderShots(); autoNext(); return; }
   autoDrop(id); CROP={id,rect:null,auto:true}; renderShots(); } /* the render starts proposeFrame for an automatic frame, as it does after the shutter */
-function todoDone(id){ const s=S.inbox.find(x=>x.id===id); if(s&&(s.todo||s.tried||s.note)){ delete s.todo; delete s.tried; delete s.note; idbPut("inbox",s).catch(()=>{}); } } /* v509: the photo has made its card, or its record is going — nothing is owed any more */
-function shotTried(id,note){ const s=S.inbox.find(x=>x.id===id); if(!s) return; s.todo=true; s.tried=true; /* the mark is set here too, not only kept: a photo the automatic card failed on has to stay on the tab whatever cleared the mark before */ if(note) s.note=note; else delete s.note; idbPut("inbox",s).catch(()=>{}); } /* v509: the automatic card was tried and failed, or the hand took the photo back — the photo stays on the Camera tab, named by its note, until it makes a card or is deleted, and is not read again by itself (tried once, v411) */
+function todoDone(id){ const s=S.inbox.find(x=>x.id===id); if(s&&(s.todo||s.tried||s.note)){ delete s.todo; delete s.tried; delete s.note; idbSave("inbox",s); } } /* v509: the photo has made its card, or its record is going — nothing is owed any more */
+function shotTried(id,note){ const s=S.inbox.find(x=>x.id===id); if(!s) return; s.todo=true; s.tried=true; /* the mark is set here too, not only kept: a photo the automatic card failed on has to stay on the tab whatever cleared the mark before */ if(note) s.note=note; else delete s.note; idbSave("inbox",s); } /* v509: the automatic card was tried and failed, or the hand took the photo back — the photo stays on the Camera tab, named by its note, until it makes a card or is deleted, and is not read again by itself (tried once, v411) */
 function shotNote(s){ return QSNOTE[s.id]||(s.note?t(s.note):""); } /* the note under a photo: this session's, else the one its record carries across a restart (v509) */
 async function delShot(id,undo){
   await keepPhoto(id); /* the cards made from it keep the whole photo (v214) */
   const idx=S.inbox.findIndex(s=>s.id===id), rec=idx>=0?S.inbox[idx]:null;
   if(undo&&rec) showUndo({kind:"photo",rec,idx});
   S.inbox=S.inbox.filter(s=>s.id!==id);
-  try{ await idbDel("inbox",id); }catch(e){}
+  await idbGone("inbox",id);
   if(IMGURL[id]){ URL.revokeObjectURL(IMGURL[id]); delete IMGURL[id]; }
   if(CROP && CROP.id===id) CROP=null;
   renderShots(); setStats();
@@ -11646,8 +11657,19 @@ const exportPhotos=()=>!!S.settings.exportPhotos;
 function photoBytes(){ return S.custom.reduce((a,d)=>a+((d.img&&d.img.size)||0)+((fullPhoto(d)||{}).size||0),0); }
 const blobToB64=blob=>new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res({t:blob.type||"image/jpeg",d:String(fr.result).split(",")[1]||""}); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(blob); });
 async function b64ToBlob(x){ try{ return await (await fetch(`data:${x.t||"image/jpeg"};base64,${x.d}`)).blob(); }catch(e){ return null; } }
+/* v810 (the audit, the hygiene sweep): a refused share is said, not hidden. Until v809 any error but AbortError fell to the
+   anchor download, which MIUI blocks silently (hard constraint 6), and lastExport was written anyway — no file, the backup line
+   gone, "Last export: today". With photos a deck of ~110 cards took over 5 s to build (4× CPU), past the tap's permission, so
+   the share itself was refused. Now the file is kept for EXPORT_KEEP and the next tap on Export shares it at once; the anchor
+   serves only a browser with no share sheet; the deck counts as exported only when the share or the download went through. */
+const EXPORT_KEEP=10*60000; let EXPORT_READY=null;
 async function exportData(){
-  const withPhotos=exportPhotos(), custom=[];
+  const withPhotos=exportPhotos(), sig=[withPhotos,S.custom.length,Object.keys(S.progress).length,Math.max(0,...S.custom.map(d=>d.at||0))].join("|");
+  const done=async()=>{ EXPORT_READY=null; await setSetting("lastExport",Date.now()); if(S.mode==="cards"||S.mode==="more") render(); }; /* the backup line and the row say so at once */
+  const shareIt=async file=>{ try{ await navigator.share({files:[file],title:file.name}); await done(); }
+    catch(err){ if(err&&err.name==="AbortError"){ EXPORT_READY=null; return; } EXPORT_READY={file,sig,at:Date.now()}; logErr("export",(err&&err.name)||String(err)); noteSheet(t("The share sheet did not open — tap Export again.")); } };
+  if(EXPORT_READY&&EXPORT_READY.sig===sig&&Date.now()-EXPORT_READY.at<EXPORT_KEEP&&navigator.canShare&&navigator.canShare({files:[EXPORT_READY.file]})){ await shareIt(EXPORT_READY.file); return; }
+  const custom=[];
   for(const d of S.custom){ const {img,imgFull,...rest}=d, r={...rest}, full=fullPhoto(d); if(withPhotos){ if(img) r.imgB64=await blobToB64(img); if(full) r.imgFullB64=await blobToB64(full); } custom.push(r); } /* the whole photo from the inbox when the card holds none (v214) */
   const data={ app:"zeichentrainer", version:1, /* the format's own marker, not the app's name — kept at the v601 rename so every export imports both ways */ exported:new Date().toISOString(), photos:withPhotos,
     progress:Object.entries(S.progress).map(([id,s])=>({id,...s})),
@@ -11657,17 +11679,14 @@ async function exportData(){
      sheet is the reliable path, download link only as fallback.
      Chrome/Android only shares whitelisted file types (.txt yes, .json no),
      hence .json.txt with text/plain */
-  const name="shizi-"+new Date().toISOString().slice(0,10)+".json.txt";
+  const name="shizi-"+dayKey()+".json.txt"; /* v810: the phone's own day — toISOString gave yesterday before 08:00 in Beijing */
   const file=new File([json],name,{type:"text/plain"});
-  if(navigator.canShare && navigator.canShare({files:[file]})){
-    try{ await navigator.share({files:[file],title:name}); await setSetting("lastExport",Date.now()); return; }
-    catch(err){ if(err && err.name==="AbortError") return; }
-  }
+  if(navigator.canShare && navigator.canShare({files:[file]})){ await shareIt(file); return; }
   try{
     const url=URL.createObjectURL(new Blob([json],{type:"text/plain"}));
     const a=document.createElement("a");
     a.href=url; a.download=name;
-    document.body.appendChild(a); a.click(); a.remove(); await setSetting("lastExport",Date.now());
+    document.body.appendChild(a); a.click(); a.remove(); await done();
     setTimeout(()=>URL.revokeObjectURL(url),60000);
   }catch(err){ noteSheet(t("Export failed: {0}",err)); }
 }
@@ -11697,7 +11716,7 @@ async function importData0(e){
     if(img){ dropThumb(r.id); nPhotos++; }
     merged.push(r); }
   try{
-    await Promise.all([...prog.map(r=>idbPut("progress",r)), ...merged.map(r=>idbPut("custom",r))]);
+    await idbPutStores({progress:prog,custom:merged}); /* v810: all or nothing */
   }catch(err){ noteSheet(t("Import failed ({0})",err)); return; }
   prog.forEach(r=>{ const {id,...s}=r; S.progress[id]=s; });
   merged.forEach(r=>{ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; else S.custom.push(r); });

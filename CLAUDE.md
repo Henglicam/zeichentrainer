@@ -52,7 +52,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v809, 2026-10-01)
+## Current state (PWA v810, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -116,7 +116,8 @@ stay `verified:false` until a human or the AI checked them; when unsure, flag ra
 reads its parts' meanings, "three · bowl · noodles" — no characters in it (`lineMeaning`, v805).
 
 Export/import: progress + cards as JSON, `shizi-YYYY-MM-DD.json.txt` (the filename is never read) through the share sheet;
-import upserts by `id`. Photos ride along as base64 behind a checkbox (v166). **The export duplicates a shared photo once per
+import upserts by `id` in one transaction (v810). A refused share is said and not counted as a backup; the file is kept
+10 min for the next tap (`EXPORT_KEEP`, v810). A failed write of a card, progress or photo is logged (`idbSave`, v810). Photos ride along as base64 behind a checkbox (v166). **The export duplicates a shared photo once per
 card** — named, not fixed.
 
 ## The app
@@ -317,7 +318,7 @@ is **on by default and works with no key**, so a fresh install sends every new c
 
 ## Languages
 Ten columns in `lang.js`: en, de, fr, es, ja, ko, ru, vi, th, id. **English is the key**; a missing key falls back to the
-English text, never to the key. **505 keys a column, ru 536 (three plural forms), en 15** (v809 — count by evaluating `lang.js`). `nOf`/`wordOf`/`PLURAL` carry the
+English text, never to the key. **506 keys a column, ru 537 (three plural forms), en 15** (v810 — count by evaluating `lang.js`). `nOf`/`wordOf`/`PLURAL` carry the
 counts.
 
 - **The v412 rule: a pronoun or a count-agreeing verb must never cross a key boundary.** Render every count sentence at
