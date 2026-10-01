@@ -116,6 +116,27 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v783, 2026-10-01)
+- **A card whose answer brings no character senses is asked once a session, and the reply schema names "chars" (v783,
+  from the dump H sent with "Warum konnte ich gerade nicht swipen?").** The AI exchanges in it: 便民/超市 asked for its senses
+  **eight times in a minute**, 公主卧室 five, 富士山 three, 浩天洋 three — every answer `desc:""` and no `chars`. Two defects.
+  (1) `charsSoon` (v772) cleared the card's busy mark in `finally` whatever came back, so every render of the study card
+  (a swipe, a fold, a stroke's re-render) asked again — the relay cap paid for each. Now the mark stays as
+  `"asked:"+text` when `takeChars` stored nothing or the call failed: once a session for that text; an edited text is asked
+  again; the explain path (a card with no description yet) is untouched. (2) `aiSystem`'s JSON template listed every key
+  but `chars`, so DeepSeek honoured the per-card instruction on some cards (全家, 浩天洋, 一次性手套, 千万两) and dropped
+  the key on others, consistently per card (便民/超市 0 of 8). The template carries
+  `"chars":[["字","…"],…]` with "only on a card whose instruction asks for it, left out otherwise". Harness (`test783`,
+  relay mocked, an answer without `chars`, then one with): one ask after the card appears and the schema names the key; five
+  renders → still one ask; the next card asked once and its senses stored; back on the first card no call; an edited text
+  asked once more — **9 of 9 on v783, 5 of 9 on v782** (there five renders → five asks, and the schema without the key).
+  Whether DeepSeek now answers 便民/超市 with `chars` only the phone can show. No WHATS_NEW (nothing a learner sees);
+  TO_TEST "Char senses: do they land now?". **The swipe question itself:** "Testing from the list" is the single-card test
+  from Cards → open card → Test this card (`S.single`, v445/v502/v613); the study card's swipe is wired only for a session
+  of two or more (`wireSwipe(card, list.length<2||S.single?null:…)`), so in that mode a finished write walks to the next
+  card of the list (`nextSingle`) and ← Cards or a tab tap ends it. By design since v445; H asked why, a swipe through the
+  list in that mode was proposed and waits for his word.
+
 ## Current state (PWA v782, 2026-10-01)
 - **A sign the reader cannot read still zooms onto the character, by the lines' layout (v782, H: "Hier hat er nicht
   gezoomt", 便民/超市 on an LED board).** The dump: the phone's reader found one line, "复" at 35,38 %, h24 — a quarter of a
