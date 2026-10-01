@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=785; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=786; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -718,7 +718,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["again","v782","Zoom by layout on LED signs ok?"],
   ["again","v783","Char senses: do they land now?"],
   ["again","v784","Last character read alone now?"],
-  ["again","v785","First card: one zoom, no jerk?"],
+  ["again","v786","First card: one zoom, no jerk?"],
   ["again","v757","Meituan screenshots: fields right?"],
   ["again","v759","Taobao screenshots: fields right?"],
   ["again","v760","Taobao cart: 天猫 framed right?"],
@@ -3970,12 +3970,17 @@ function renderStudy(main){
   st._card=card;
   /* v665 (H: "it should be professional and user friendly", on the zoom going in on the ink's guess and then out to the reader's
      place): past AZ_OVERVIEW the zoom waits for the phone's reader, up to AZ_READER after the card came up, so it goes in once,
-     to its final place. A reader slower than that (its first load) still gets the ink's guess first; a touch never waits */
+     to its final place. A reader slower than that still gets the ink's guess first; a touch never waits.
+     v786 (H: "Immernoch leicht holprig", 雀巢/脆脆鲨 on the first card after a start: "estimate x1.5 at 25,25 %" and "reader x3.5
+     at 16,32 %" in the same second — the reader's FIRST LOAD, the two models and the worker, ends just past AZ_READER on the
+     Xiaomi, 3 to 3.5 s after the card on both dumps, 5.8 s measured once by a Rebuild all; in the harness the models load in
+     half a second and the first inference takes three more): until the reader has answered once in this page (PD_READY) the
+     timer waits for it up to AZ_LOAD, so the first card too zooms once; from the second answer on AZ_READER holds */
   if(zoomOn()&&!st.zoomGo&&!st._ovT){ const t0=performance.now();
     const go=()=>{ if(S.pad===st&&!st.zoomGo){ st.zoomGo=true; if(st._az) st._az(); } };
     st._ovT=setTimeout(()=>{ const cd=st._card;
       if(!d.img||!cd||!cd.isConnected||PDDONE.has(cbKey(d))) return go();
-      const cap=setTimeout(go,Math.max(0,AZ_READER-(performance.now()-t0)));
+      const cap=setTimeout(go,Math.max(0,(PD_READY?AZ_READER:AZ_LOAD)-(performance.now()-t0)));
       pdBoxesFor(cd,d).then(()=>{ clearTimeout(cap); go(); }); },AZ_OVERVIEW); }
 }
 /* v527: the block sits under the pad, so opening it scrolls the card until the block stands above the tab bar (or, when it is
@@ -4148,7 +4153,7 @@ function wordSpan(d,x){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):
    little off still shows the character. It rides on v541's glide and v575's geometry, not on the marks, so SPOT_ON stays off. The
    finger always wins: a pinch or a wheel on the picture hands the zoom to the hand for the rest of that picture (ZOOM_HAND),
    and from then on it only follows, as v541 did. */
-const AZ_OVERVIEW=1500, AZ_READER=2500; /* v662: how long a card shows its whole picture before the zoom goes in by itself; v665: how long past the card's start it may wait for the phone's reader, so the zoom goes in once */
+const AZ_OVERVIEW=1500, AZ_READER=2500, AZ_LOAD=6000; /* v786: how long the first card of a session may wait for the reader's first load */ /* v662: how long a card shows its whole picture before the zoom goes in by itself; v665: how long past the card's start it may wait for the phone's reader, so the zoom goes in once */
 const ZOOM_AUTO=true, AZ_INK=0.68, AZ_MAX=3.5, AZ_MIN=1.15, AZ_GUESS=0.75, AZ_GUESS_MAX=2.2; /* v782: the estimate's share of the box and its cap — .75 so a character of a 2×2 sign, already half the box, still comes nearer (×1.5), a four-character line ×2.2 */ /* the character's larger side as a share of the box, and the scale's cap and floor (v678: AZ_EST's looser share for an unsure place left — the reader's boxes of one line take one scale) */
 let LAST_AZ=null; /* the last decision, for Diagnostics' head line */
 /* EVERY CHARACTER'S OWN BOX, FOUND ON THE INK (v618, H on v617 with a Diagnostics dump: "Er erkennt vieles noch nicht. Die
@@ -6993,6 +6998,7 @@ function pdWorkerMain(){
   self.onmessage=e=>{ queue=queue.then(()=>handle(e.data)); }; /* one reading at a time: a session runs one inference at once */
 }
 let PDM=null;
+let PD_READY=false; /* v786: the reader has answered once in this page — its models loaded and its first, slow inference done; until then the Learn zoom waits for it longer (AZ_LOAD) */
 async function pdLoad(){
   if(PDM) return PDM;
   PDM=(async()=>{ const blobURL=async(n,type)=>URL.createObjectURL(new Blob([await (await vendorFetch(PD+n)).arrayBuffer()],{type})); /* the type set here, not taken from the answer: the mirror hands every file out as octet-stream, and a module or a wasm of that type is refused */
@@ -7007,7 +7013,7 @@ async function pdLoad(){
       det,rec,keys:await (await vendorFetch(PD+"ppocr_keys_v1.txt")).text(),C:{DET_MAX:PD_DET_MAX,DET_THR:PD_DET_THR,BOX_THR:PD_BOX_THR,UNCLIP:PD_UNCLIP,REC_H:PD_REC_H,REC_MAXW:PD_REC_MAXW}},[det.buffer,rec.buffer]);
     return call; })().catch(e=>{ PDM=null; throw e; });
   return PDM; }
-async function pdRead(cv,o){ const call=await pdLoad(), bm=await createImageBitmap(cv), r=await call({bm,detMax:o&&o.detMax||0},[bm]), out=r.lines; out.ms=r.ms; return out; }
+async function pdRead(cv,o){ const call=await pdLoad(), bm=await createImageBitmap(cv), r=await call({bm,detMax:o&&o.detMax||0},[bm]), out=r.lines; out.ms=r.ms; PD_READY=true; return out; }
 /* v639: the phone's reader as one more pass of the reading — its lines in the reader's own shape: the characters, sign
    punctuation and digits Tesseract's pass keeps (letters stay out), a confidence per Chinese character on Tesseract's
    0–100 scale (the recognizer's own probability), a box per character cut evenly along the line, and the fine print
