@@ -116,7 +116,28 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v812, 2026-10-01)
+## Current state (PWA v813, 2026-10-01)
+- **The audit's last fix: the code says what it does, and the record says what the code does (v813, the hygiene and record
+  sweeps).** **Code:** `LAST_AZ` (write-only since v670, its comment false) and `handMiss` (never called) leave, with an unused
+  `saneM` local; `"zt-ocr-v1"` written six times in app.js is one `OCR_CACHE`, named beside sw.js's (a bump of one would have
+  split the cache); the second copies of one number are named on both sides (`SW_MS` ↔ `.card.sliding` .22s, `GLIDE_MS` ↔
+  `.picbox.zgl` .38s, cueBig's 320 ms ↔ `.cue.gl`); false comments corrected (v571's recap layout, a ".28 s" fade that is .2 s,
+  FRAME_RATIO's thumbnails, `saveAiLog`, "at least NOPIC_LINES" on the board gate that is `BOARD_MIN`, v773's "whole word", the AI
+  head's "opt-in" and "never the whole photo", "works offline" on a voice that may be online); the reading status says the
+  reader is ~40 MB once (Paddle since v639), sw.js ~52 MB; the owner's field lists name the boards and screenshots that were read
+  (frozen since v670); Still to test gains the six open checks CLAUDE.md named without a row, and the one 36-column row is cut.
+  **Record (CLAUDE.md against the code, 26 findings):** 55 of the record sweep's 65 cuts applied — the others met passages
+  rewritten this series — and the corrections: key counts, More → Learning (no Tags row since v588), progress rows
+  (`{id,…}`, `days` and `daily` are settings rows), app.js's real reading order, the cue sentence, the relay caps (per phone a
+  day; `CAP_ALL` across all phones, the owner exempt from the provider cap only), `RECUT_V` 5 → 6, the review flag off the
+  photo since v667, the chevrons gone since v520, the phone's reader (PaddleOCR) named in the pipeline, album screenshots read
+  whole, the schema's `adding` and `reading.{app,auto,edit}`, `docs/NMAX.md`, the owner's reading tools, the New and
+  Traditional tile marks, milestones counting the day's points; the Open list points at `TO_TEST`. **48.3 → 42.1 KB** — over
+  the ~40 KB line still; what remains is rules and current facts, so the next consolidation has to choose. README's file list
+  (guide/, docs/, tools/), and the two SPECs' status notes (square cut since v595, "Details" since v704, "+ Flashcard"). Harness:
+  `test813` (dead names gone, one cache name and the worker's unchanged, a photo still read through it, Still to test within 35
+  columns, the field lists) **6 of 6, v812 3 of 6** (the three guards).
+
 - **Layout over ten languages (v812, the audit's layout sweep — 700 screen states measured at 360 and 390 px).** **Show me and
   Skip stacked over the template** on 360-wide phones (de, ru at 360×740: the row grew 40 → 82 px across the lower 40 % of the
   pad, exactly when the learner is stuck) — `fit()` writes the pad's side (`--padw`) and the labels size to it, one row in every

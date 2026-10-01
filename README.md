@@ -18,4 +18,4 @@ alle Karten liegen auf dem Gerät (IndexedDB) und werden über More → Export g
 ## Dateien
 `index.html` · `styles.css` · `app.js` · `lang.js` · `manifest.webmanifest` · `sw.js` · `privacy.html` ·
 `signs.json` · `nmt-model.json` · `icon-*.png` · `vendor/` (Texterkennung, Wörterbücher, Strichdaten) ·
-`supabase/` (Relay und Report) · `tools/` (Skripte für die Vendor-Daten) · `.github/workflows/` — die letzten drei werden nicht aufs Handy geladen
+`guide/` (die Bilder der Anleitung) · `supabase/` (Relay und Report) · `tools/` (Skripte für die Vendor-Daten, `guide-shots.js`, `standin.js`, `field/` mit H's Testfotos) · `docs/` (`HISTORY.md`, das Protokoll) · `.github/workflows/` — `supabase/`, `tools/`, `docs/` und die Workflows werden nicht aufs Handy geladen

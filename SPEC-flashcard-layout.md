@@ -6,7 +6,7 @@
 > as v515 ("not yet checked"). **What has changed since, so read the spec against CLAUDE.md's Current state and not the
 > other way round:** § 7's **lock is switched off** (v531, H: "Deaktiviere die lock Funktion erstmal wieder, aber
 > verwirf sie nicht" — `LOCK_ON=false`, everything kept); § 4's **D1 ratio by line count ended at v519**, which made
-> **one 3:2 window on every card**; the answer block moved **to the foot of the card** as "Whole card" (v527) and the
+> **one 3:2 window on every card** (square since v595, `CARD_RATIO` 1); the answer block moved **to the foot of the card** as "Whole card" (v527; "Details" since v704) and the
 > word's line **above the pad** with it; the four grades of § 5 are two screens away — Learn has written the review
 > from the pad since v512, and the three grades of v421 survive only on a marked photo's sheet.
 >

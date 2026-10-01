@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=812; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=813; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -568,7 +568,7 @@ function numsTrim(o,cap){ const max=cap||NUMS_MAX; if(!o) return o;
    answer cannot be attributed to a prompt without one — the version says which code, this says which words it actually sent */
 const strHash=s=>{ let h=5381; for(let i=0;i<s.length;i++) h=(h*33^s.charCodeAt(i))>>>0; return h.toString(36); };
 /* navigator.storage.estimate() is async and diagText is not, so the numbers are taken at boot and whenever More is drawn.
-   They matter more than they look: setSetting swallows every write error and saveReadLog, saveAiLog and logErr each end in
+   They matter more than they look: setSetting swallows every write error and saveReadLog, logAi (saveAiLog until v505) and logErr each end in
    .catch(()=>{}), so a phone at its quota stops persisting the diagnostics and says nothing about it — the v384 failure
    mode with no signal at all. */
 const STORAGE={};
@@ -762,11 +762,17 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["again","v762","WeChat screenshot: fields right?"],
   ["again","v763","Alipay/Xianyu shots: fields right?"],
   ["again","v764","DiDi/Amap/JD/12306: fields right?"],
-  ["again","v765","Dianping/transit/B站/小红书/抖音 ok?"],
+  ["again","v765","Dianping, B站, 小红书, 抖音 ok?"],
   ["again","v766","Bank/12 more apps: fields right?"],
   ["photo","v767","Album batch: screen stays on?"],
   ["app","v768","Rebuild/Translate: screen on?"],
   ["again","v807","Recap: Details/Edit hold it?"],
+  ["again","v778","Voice: 行 in 银行 heard as háng?"],
+  ["app","v791","Cards tile: multicard card's cut?"],
+  ["app","v792","Multicard pop-up: Flag/Edit ok?"],
+  ["app","v793","Pop-up open: every dot reachable?"],
+  ["app","v794","+ Flashcard: made line seen?"],
+  ["photo","v803","Photo with another's text: dump"],
 ];
 const TO_TEST_GROUPS=[["photo","Take any photo"],["again","Take one of these again"],["app","In the app"],["update","After an update"],["lock","Parked — the lock is off (v531)"]];
 /* What the app claims it can read, and what a photo has actually confirmed (v434, H after the untested menu
@@ -790,10 +796,10 @@ const FIELD_TRIED=[ /* a photo exists; the fix after it is not field-checked */
   ["car badge","北京现代, 九号, 长安铃木"],
   ["carton, calligraphy","椰子水, 志在千里"],
   ["vending machine","农夫山泉, never split"],
-  ["phone app screen","Meituan — harness only"],
-  ["menu board","one try, went wrong"]];
+  ["phone app screen","Meituan, Taobao screenshots (v757–v759)"],
+  ["menu board","江宁府, 建国肉夹馍 (v743–v756)"]];
 const FIELD_NEVER=[ /* no photo has ever been taken of these */
-  "dish list, price list of food","shelf of price labels","wall of notices",
+  "shelf of price labels","wall of notices",
   "building directory","bus stop board","row of shopfronts",
   "care label of clothing","section headings on a package",
   "form or receipt","timetable or price list",
@@ -835,7 +841,7 @@ function fieldText(){
   for(const [n,e] of FIELD_TRIED) L.push("    "+n+" \u00b7 "+e);
   L.push("","  never tried \u2014 the list to work through");
   for(const n of FIELD_NEVER) L.push("    "+n);
-  L.push("","A line goes when you say it works.","The counts come from this phone; the lists","are kept in app.js against CLAUDE.md.");
+  L.push("","A line goes when you say it works.","The counts come from this phone; the lists","are kept in app.js against docs/HISTORY.md.");
   return L.map(x=>x.replace(/\s+$/,"")).join("\n");
 }
 function feedbackText(rows){ /* laid out like the All users report since v251 (H: "Same for feedback"): a head with the count, one block per message with a blank line between, the sender's id under the time */
@@ -1747,7 +1753,7 @@ function render(){
   if(S.mode==="guide") return renderGuide(main); /* How to use the app (v259) */
   if(S.mode==="cards") return S.detail?renderCardDetail(main,S.detail):renderCards(main); /* v691: a character page stands over the card it was opened from */
 }
-/* ---------- online AI review (T3, opt-in) ----------
+/* ---------- online AI review (on by default since v190s; v813: the head below is the T3 design — what leaves the phone today is privacy.html's list) ----------
    Flagged cards, uncertain readings and pending translations can be checked by an
    online model (DeepSeek / Qwen / GLM via the OpenAI-style API, or Claude).
    What leaves the phone: hanzi, pinyin, meaning and the note — and, when the reading
@@ -1831,7 +1837,7 @@ async function migrateAi(){
 /* ---------- the framed area to the AI when the reading is weak (v173, H: "Send the crop to the AI when the reading is
    weak" — the one exception to "photos never leave the phone", under H's own switch) ----------
    A provider that takes pictures (vision: Qwen with its multimodal model, GLM with glm-4v-flash, Claude) reads the
-   straightened reading crop — a JPEG of at most 800 px, never the whole photo — when the reader's best pass scores under
+   straightened reading crop — a JPEG of at most 800 px, the whole photo when the answer asks for it (v348/v393) — when the reader's best pass scores under
    WEAK_READ or found nothing. The active provider is used when it takes pictures, else the first one with a key that
    does. Setting "aiPicture" (absent = on). */
 const pictureOn=()=>S.settings.aiPicture!==false;
@@ -1910,7 +1916,7 @@ async function aiReadPicture(blob,alts,status,rec){
   const main=mainLines(lines0,x.p,x.m,lineBoxes?lineBoxes.map(b=>picBox(b,pic.w,pic.h)):null,picBox(x.box,pic.w,pic.h),keepAll);
   const oneScale=!lineBoxes||lineBoxes.every(b=>{ const sc=picScale(b,pic.w,pic.h); return !sc||sc===picScale(x.box,pic.w,pic.h); }); /* v410: every line box read the way the union box is read, or the comparison below means nothing (the v379 trap) */
   const altBox=picBoxPix(x.box,pic.w,pic.h), mainAlt=altBox?mainLines(lines0,x.p,x.m,lineBoxes?lineBoxes.map(b=>picBoxPix(b,pic.w,pic.h)||picBox(b,pic.w,pic.h)):null,altBox,keepAll):null; /* the second reading of a box that passes the picture's edge (v340), through the fine-print rule like the first (v343 polish): its box is the kept lines' union too, and its dropped boxes are its own */
-  const zhRaw=main.lines.join("\n"), zh=t2s(zhRaw), m=saneM(main.m,zh);
+  const zhRaw=main.lines.join("\n"), zh=t2s(zhRaw);
   /* the elements of a user interface, and of any picture of separate signs or labels (v358, H: "you have to find out if the image is
      a user interface and then put a card for each and every single element of it", then "Also for all kinds of signs and labels"): one question — "ui" — and the answer's own list of elements. Data, not one joined string: the
      pinyin of 汤/粥 is "tāng / zhōu" and its meaning "soup / congee", so splitting the joined "p" and "m" on " / " gives more parts
@@ -1999,7 +2005,7 @@ async function picWords(zh,labels,kind,shot,page){
   const o=out[0]; return !o||o.bad?null:{p:o.p,m:o.m,desc:o.desc||"",note:o.note&&o.note!=="ok"?o.note:"",unsure:o.unsure||""}; }
 /* v755 (H: "Go for 1" — the phone's reader as the reading on boards): on the 江宁府 board the reader read 22 lines at 97 % and
    the picture model still had to answer — two minutes, seven calls dead at 75 s — for boxes that were a drawing anyway.
-   A board the reader reads surely is split by the reader's own lines: at least NOPIC_LINES kept lines (Chinese, two
+   A board the reader reads surely is split by the reader's own lines: at least BOARD_MIN kept lines (Chinese, two
    characters or more beside a price — a lone character is a decoration or a neighbour's edge, v646; a line under
    BOARD_LINE_MIN a stray), the median line at BOARD_CF, the mean at BOARD_MEAN, BOARD_SURE of the characters at PD_SURE
    (calibrated on tools/field: the three menu boards read at a median of 94–100, the angled 江宁府 shot at 78–84); read once more with the detector on the photo's own size (v750)
@@ -3573,7 +3579,7 @@ function frontHTML(d,o){
   const lines0=d.trad?d.trad.split("\n"):frontLines(d), {W,H,fs,lines}=frontBox(lines0,headFont(d.c),frontWords(d)); /* the front shows the photo's script; the card's key stays simplified */
   return `${pic}<div class="reticle" style="width:${W}px;height:${H}px">${reticleSVG(single,W,H)}<div class="glyph" style="font-size:${fs}px">${d.c?lines.map(esc).join("<br>"):waitingHTML(d)}</div></div>${scriptNote}`;
 }
-/* ---------- pronunciation: the phone's own Chinese voice (nothing downloaded, works offline) ---------- */
+/* ---------- pronunciation: the phone's own Chinese voice — nothing downloaded; a browser's online voice speaks on its maker's servers (privacy.html, v808) ---------- */
 let TTS_VOICE=null;
 /* the phone's Chinese voice: looked up afresh whenever none was found yet — Android hands the voice list over late and
    sometimes in two parts, and a "no voice" answer must not stick for the session (v164, H: "the speaker icon doesn't
@@ -4234,7 +4240,6 @@ function wordSpan(d,x){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):
    and from then on it only follows, as v541 did. */
 const AZ_OVERVIEW=1500, AZ_READER=2500, AZ_LOAD=6000; /* v786: how long the first card of a session may wait for the reader's first load */ /* v662: how long a card shows its whole picture before the zoom goes in by itself; v665: how long past the card's start it may wait for the phone's reader, so the zoom goes in once */
 const ZOOM_AUTO=true, AZ_INK=0.68, AZ_MAX=3.5, AZ_MAX_PAGE=5, AZ_MIN=1.15, AZ_GUESS=0.75, AZ_GUESS_MAX=2.2; /* v789: AZ_MAX_PAGE is the cap on a page front — a flashcard made from a multicard text stands on the whole screenshot, cover-fitted, so its two characters are a few pixels at rest and 3.5 leaves them small; 5 is ZOOM_MAX, the hand's own, a second copy named here and there */ /* v782: the estimate's share of the box and its cap — .75 so a character of a 2×2 sign, already half the box, still comes nearer (×1.5), a four-character line ×2.2 */ /* the character's larger side as a share of the box, and the scale's cap and floor (v678: AZ_EST's looser share for an unsure place left — the reader's boxes of one line take one scale) */
-let LAST_AZ=null; /* the last decision, for Diagnostics' head line */
 /* EVERY CHARACTER'S OWN BOX, FOUND ON THE INK (v618, H on v617 with a Diagnostics dump: "Er erkennt vieles noch nicht. Die
    Erkennung der Position der characters im Bild funktioniert noch unzureichend."). v617 took the frame's even split as
    the truth and let each edge move to a gap within 0.4 of a character — which only works on a TIGHT frame whose line
@@ -4402,7 +4407,7 @@ function charBoxes(src,nw,nh,g,lines){
 const LLOG=[], LLOG_MAX=30; let LLAST=null;
 const lkey=()=>(walking()?"w":"q")+curIdx()+"|"+(curList()[curIdx()]||"");
 function llog(why,o){ const id=curList()[curIdx()], d=id?cardOf(id):null; LLOG.push({at:Date.now(),why,i:curIdx(),n:curList().length,c:d?String(d.c||"").replace(/\n/g,"/").slice(0,12):(id?"?":"end"),mode:S.mode,to:lkey(),...(o||{})}); while(LLOG.length>LLOG_MAX) LLOG.shift(); LLAST=lkey(); }
-const ZLOG=[], ZLOG_MAX=30; const zlog=o=>{ ZLOG.push({at:Date.now(),where:S.mode,t:S.pad&&S.pad._at?Date.now()-S.pad._at:null,...o}); /* v788: the screen the decision was made on and how long the card had stood — v787's open card in Cards wore the pad's zoom and the dump could not say on which screen the decision fell */ while(ZLOG.length>ZLOG_MAX) ZLOG.shift(); LAST_AZ=ZLOG[ZLOG.length-1]; };
+const ZLOG=[], ZLOG_MAX=30; const zlog=o=>{ ZLOG.push({at:Date.now(),where:S.mode,t:S.pad&&S.pad._at?Date.now()-S.pad._at:null,...o}); /* v788: the screen the decision was made on and how long the card had stood — v787's open card in Cards wore the pad's zoom and the dump could not say on which screen the decision fell */ while(ZLOG.length>ZLOG_MAX) ZLOG.shift();  };
 /* THE PHONE'S READER FINDS THE CHARACTERS (v653, H: "Dieses automatische Reinzoomen und weiter Zoomen auf den aktuellen Charakter
    funktioniert leider fast nie", with a Diagnostics dump: 18 of 21 decisions "ink, unsure (odd shapes)", the zoom then loose or
    none at all — v626's shape test, which had to be strict because the ink search puts a tight box on the wrong spot, trusts
@@ -4841,7 +4846,7 @@ const SLIDE_MS=340; /* v575: the .22 s slide of the cue's rows plus a frame or t
 function cueBigCls(){ return S.cueBig==="txt"?" bigtxt":" bigpic"; }
 function cueBig(card){ const to=S.cueBig==="txt"?"pic":"txt"; S.cueBig=to; /* v580: the tap swaps the two states — there is no third to fold back to */
   if(!S.settings.bigTapped){ S.settings.bigTapped=1; setSetting("bigTapped",1).catch(()=>{}); } /* v568: the hint that names this tap costs the pad 18 px while it stands (measured 300 -> 282 at 393 x 869), so it goes the moment the tap has been used once; showHints() takes it away after twenty reviews either way */
-  const cue=card.querySelector(".cue"); if(cue){ cue.classList.add("gl"); clearTimeout(card._glT); card._glT=setTimeout(()=>cue.classList.remove("gl"),320); } /* v565: the slide runs on a tap only — a render must never animate the halves into place */
+  const cue=card.querySelector(".cue"); if(cue){ cue.classList.add("gl"); clearTimeout(card._glT); card._glT=setTimeout(()=>cue.classList.remove("gl"),320); } /* 320 ms outlasts .cue.gl's .22s in styles.css */ /* v565: the slide runs on a tap only — a render must never animate the halves into place */
   card.classList.toggle("bigpic",to==="pic"); card.classList.toggle("bigtxt",to==="txt"); splitFit(card); noteViewSoon();
   /* v575 (H: "Wenn Foto geöffnet und geschlossen wird, muss der Highlight Bereich mitgezogen werden"): the cue's rows
      animate for .22 s and the picture travels 82 px inside its box on the way (measured at 393 px), so one placement at
@@ -4978,7 +4983,7 @@ function fitTileCovers(root){
    the DOM is rebuilt. While enlarged the box carries touch-action none and its pointer events stop at the box, so neither the
    page's scroll nor the carousel (v417) takes the pan. On a page front (D5) the pagewrap moves as one, so the regions stay on
    their texts. The v65 sheet's attachRefView does the same on a canvas; this is the element itself, transformed. */
-const ZOOM_MAX=5, GLIDE_MS=380;
+const ZOOM_MAX=5, GLIDE_MS=380; /* GLIDE_MS is .picbox.zgl's .38s in styles.css — change both */
 /* THE ZOOM SURVIVES A RE-RENDER OF THE SAME PICTURE (v541). Until v540 it did not, and that is the defect under H's
    "das gezoomte Bild muss mit auf den nächsten character fahren": charDone calls render() to move the pad to the next
    character, which rebuilds the card, and a fresh attachPicZoom started at scale 1 — so zooming in and writing one
@@ -5170,7 +5175,7 @@ function loadOutlines(){
   if(!_outLoading) _outLoading=(async()=>{
     const url=new URL("./vendor/outlines.txt.gz",location.href).href;
     let r=await vendorFetch("outlines.txt.gz").catch(err=>{ if(!swControls()) throw err; return {ok:false,status:err.message}; });
-    if(!r.ok){ try{ const c=await caches.open("zt-ocr-v1"); await c.delete(url); }catch(e){} r=await fetch(url,{cache:"reload"}); if(!r.ok) throw new Error("outline data not available ("+r.status+")"); }
+    if(!r.ok){ try{ const c=await caches.open(OCR_CACHE); await c.delete(url); }catch(e){} r=await fetch(url,{cache:"reload"}); if(!r.ok) throw new Error("outline data not available ("+r.status+")"); }
     const t0=performance.now();
     await eachLineOf(r,line=>{ /* v532: decoded and parsed chunk by chunk, the main thread free between chunks */
       const i=line.indexOf("\t"); if(i<1) return; let st; try{ st=JSON.parse(line.slice(i+1)); }catch(e){ return; }
@@ -5555,8 +5560,6 @@ function mountPad(card,d,c,tg,st,cur){
   };
   /* Undo and Clear are drawn only for a character the app has no strokes for, where the learner really is drawing freehand
      (v517, H: "You also don't need clear and undo at the bottom") */
-  const handMiss=()=>{ st.miss++; st.maxMiss=Math.max(st.maxMiss,st.miss); cv.classList.remove("shake"); void cv.offsetWidth; cv.classList.add("shake"); acts();
-    const note=$("#pad-note"); if(note) note.textContent=t("Not recognized — try cleaner, well-separated strokes."); };
   { const un=$("#pad-undo"); if(un) un.onclick=()=>{ if(free){ st.free.pop(); } else if(st.k>0){ st.k--; st.miss=0; } anim=null; paint(); acts(); }; }
   { const cl2=$("#pad-clear"); if(cl2) cl2.onclick=()=>{ if(free) st.free.length=0; /* v582: the freehand branch went with the buttons that reached it — a pad with a template shows neither, and since v592 never holds loose ink at all */
     else { st.k=0; st.miss=0; st.hint=false; } anim=null; paint(); acts(); }; }
@@ -5586,7 +5589,8 @@ function logPadStroke(x,k,ok,dist){ DRAWLOG.push({t:Date.now(),pad:x?x.glyph:"",
    not after opening the card"): a horizontal stroke moves through the queue and grades nothing — only S.idx moves, so the schedule and the
    progress rows are untouched. A card swiped past sits behind the index and does not come back in this session (v417 measured that; it is
    still due, so the next session's queue picks it up). Only while the back is closed; once it is open the grades own the screen. */
-const SW_SLOP=12, SW_MIN=60, SW_GAP=16, SW_MS=220;
+const OCR_CACHE="zt-ocr-v1"; /* the reader's files' cache — sw.js names the same cache OCR_CACHE; bump both together or the cache splits (v813) */
+const SW_SLOP=12, SW_MIN=60, SW_GAP=16, SW_MS=220; /* SW_MS waits for .card.sliding's .22s in styles.css — change both */
 /* the closed card is pushed sideways and the next one slides in from the other side and snaps into place (v414, the carousel of v417 — H: "Ich moechte die Karten quasi nach links schieben und die naechste Karte kommt von rechts rein und rastet geschmeidig ein … Die muessen nicht so zur Seite wegkippen wie bei Tinder"). Nothing is graded: only S.idx moves; a card swiped past returns in the next session, not in this one (v417). */
 function swipeHint(d){ return showHints()?`<div class="hint">${t("Trace the lit stroke; the pad moves on by itself.")}${S.settings.bigTapped?"":" "+t("Tap the photo for the pinyin and the meaning, and again for the photo.")}${new Set(curList()).size>1?" "+t("Swipe left or right to pick another card."):""}${lockOn()?" "+t("Press and hold a character to walk through every card that has it; press and hold it again to come back."):""}</div>`:""; } /* v512: the reveal hint went with the reveal */
 function wireSwipe(card,o){
@@ -5927,7 +5931,7 @@ const CHAR_MS=900, CHAR_IN=200 /* v668: styles.css .recap.one.in transition-dela
    from v553 to v556, because cardDone's own recap (v523) followed at once and the two must never stack — since v557 it has
    one too, and the whole card's recap waits for it (charDone). */
 /* v571 (H: "Bitte bei der pinyin Anzeige nach dem Schreiben auch noch kleine Übersetzungen darunter anzeigen."): the
-   reading gets the character's own MEANING under it, small, in the whole card's recap's own `.rm` look (18 px, --label2,
+   reading gets the character's own MEANING under it — v571's layout; since v775 the meaning is the BIG line above the reading (21 px, --label, the comment inside) — then small, in the whole card's recap's own `.rm` look (18 px, --label2,
    the v554 room against clipped ink) so the two recaps speak one language. It is the same source as the reading — the
    FIRST row of the line under the pad, the character's row since v540, already shortened by shortSense — so nothing is
    looked up a second time (v553's rule), and a row whose meaning is "not in the dictionary" shows the reading alone,
@@ -5961,7 +5965,7 @@ async function charRecap(card,cur,tg,st){
     document.addEventListener("pointerdown",tap,true); tm=setTimeout(()=>end(false),CHAR_MS+CHAR_IN); }); /* v668: + the .2 s the reading waits for the pad to fade out, so it stands as long as before */
   /* v553 (H: "Die pinyin Darstellung polieren: In/Out"): the way out is a real one. Until v552 the element was simply
      removed, so the reading vanished in one frame while the pad faded back in behind nothing. `recapping` goes at the
-     same moment the reading starts to lift, so the pad's own .28 s fade-in runs AGAINST the fade-out and the two cross.
+     same moment the reading starts to lift, so the pad's own .2 s fade-in runs AGAINST the fade-out and the two cross.
      A TAP takes it away at once instead: the learner is saying "move on", so an unhurried exit would be the opposite of
      the answer — and waiting out the fade would also let that tap's own click re-render the card underneath, which
      disconnects the canvas charDone tests and would leave the pad standing on the character just written. */
@@ -5988,7 +5992,7 @@ function gone(el){
 }
 /* v555: the next character comes up out of a dark pad rather than popping onto a bright one. The padwrap is brand new
    (render() has just rewritten #main), so the pad is put to 0 with the transition off, the reflow commits that, and
-   giving both back makes the canvas fade up over .28 s with the new character already drawn on it. */
+   giving both back makes the canvas fade up over .2 s with the new character already drawn on it. */
 function padFadeIn(){
   const cv=document.querySelector(".card.study .padwrap .wpad"); if(!cv) return;
   cv.style.transition="none"; cv.style.opacity="0"; void cv.offsetWidth; /* the 0 has to be COMMITTED WITHOUT a transition first — with one, getComputedStyle already reports the animated value and adding then removing the class is simply a fade out and straight back in, i.e. nothing (measured) */
@@ -6864,7 +6868,7 @@ const updateNoteOn=()=>S.settings.updateNote!==false;
 const zoomOn=()=>ZOOM_AUTO&&S.settings.learnZoom!==false;
 /* v773 (H: "enable automatic Chinese reading then the translation after writing is shown. With an option to switch it
    off" — "Go for the automatic Chinese reading, with the switch"): the phone's Chinese voice reads what was just written
-   while its reading and meaning stand over the pad — after each character the character itself, or its whole word when
+   while its reading and meaning stand over the pad — after each character the character itself (v776: always the character alone, v778 its stand-in), or — v773 only — its whole word when
    the character alone would be read differently (多音字: 行 alone is xíng, in 银行 it is háng — `sayChar`), and after the
    last one the card's whole text with the recap. The same `say` as the speaker button (v164/v165: H's Xiaomi reports no
    voices through getVoices() and still speaks through the system engine). More → Learning switches it off (`learnSay`).
@@ -7071,7 +7075,7 @@ async function vendorFetch(name){
   const chunks=[], rd=r.body&&r.body.getReader();
   if(rd){ for(;;){ const {done,value}=await rd.read(); if(done) break; chunks.push(value); readerTick(); } } else chunks.push(await r.arrayBuffer());
   const res=new Response(new Blob(chunks),{headers:{"Content-Type":r.headers.get("Content-Type")||vendorType(name)}});
-  if(put){ try{ const c=await caches.open("zt-ocr-v1"); await c.put(new Request(url),res.clone()); }catch(e){} }
+  if(put){ try{ const c=await caches.open(OCR_CACHE); await c.put(new Request(url),res.clone()); }catch(e){} }
   return res;
 }
 /* a load that moves no byte and reports no step for READER_STALL is a stalled connection, not a slow one */
@@ -7304,7 +7308,7 @@ function loadDict(){
       let r=await vendorFetch("cedict.tsv.gz").catch(err=>{ if(!swControls()) throw err; return {ok:false,status:err.message}; });
       if(!r.ok){
         /* heal a poisoned cache entry (e.g. a 404 cached before the file was deployed) */
-        try{ const c=await caches.open("zt-ocr-v1"); await c.delete(url); }catch(e){}
+        try{ const c=await caches.open(OCR_CACHE); await c.delete(url); }catch(e){}
         r=await fetch(url,{cache:"reload"});
         if(!r.ok) throw new Error("dictionary not available ("+r.status+")");
       }
@@ -7316,11 +7320,11 @@ function loadDict(){
          mirror that is still serving the old file costs one extra fetch a session and never a loop. */
       DICT_FRESH=text.slice(0,DICT_HEAD.length)===DICT_HEAD;
       if(!DICT_FRESH){
-        try{ const c=await caches.open("zt-ocr-v1"); await c.delete(url); }catch(e){}
+        try{ const c=await caches.open(OCR_CACHE); await c.delete(url); }catch(e){}
         try{ const r2=await fetch(url,{cache:"reload"});
           if(r2.ok){ const keep=swControls()?null:r2.clone(), t2=await dictText(r2); /* the worker caches what it fetched; without one the page has to (v335) */
             if(t2.slice(0,DICT_HEAD.length)===DICT_HEAD){ text=t2; DICT_FRESH=true;
-              if(keep){ try{ const c=await caches.open("zt-ocr-v1"); await c.put(new Request(url),keep); }catch(e){} } } } }catch(e){}
+              if(keep){ try{ const c=await caches.open(OCR_CACHE); await c.put(new Request(url),keep); }catch(e){} } } } }catch(e){}
       }
       DICT=new Map();
       for(const line of text.split("\n")){
@@ -7337,7 +7341,7 @@ async function ocrWorker(status){
   if(_ocrWorker) return _ocrWorker;
   if(!_ocrLoading){
     _ocrLoading=(async()=>{
-      status("Loading the reader … (one-time ~15 MB, works offline afterwards)");
+      status("Loading the reader … (one-time ~40 MB, works offline afterwards)"); /* v813: the eleven files of ~15 MB and, since v639, Paddle's ~29 MB */
       await withStall((async()=>{ if(!window.Tesseract) await loadScript("./vendor/tesseract.min.js"); if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); })(),READER_STALL,STALL_TEXT());
       await loadDict().catch(()=>{}); /* meanings are optional — OCR works without */
       /* paths derived from the page URL at runtime — stays relative to the subpath */
@@ -7696,7 +7700,7 @@ function textRegion(bmp){
   return {x:Math.max(0,x0-pad)/W, y:Math.max(0,y0-pad)/Hh, x1:Math.min(W,x1+pad)/W, y1:Math.min(Hh,y1+pad)/Hh, lineH:lineH/k, blocks};
 }
 /* the proposed frame's shape (v207, H: "propose a certain aspect ratio that fits for most images — uniformity across image
-   previews"): the padded text box is widened, never narrowed, to FRAME_RATIO 16:9 — the Cards list's 124×70 thumbnails —
+   previews"): the padded text box is widened, never narrowed, to FRAME_RATIO 16:9 — the Cards list's 124×70 thumbnails of the time (square tiles since v591/v593) —
    centred on the text and kept inside the photo; a text the photo cannot hold at that shape keeps its own box */
 const FRAME_RATIO=16/9;
 const FIRST_MAX=1000; /* the quick look that places the frame reads a copy of at most this many pixels on the long side (v290) */
@@ -10624,7 +10628,7 @@ function loadStrokes(){
   if(!_strokesLoading) _strokesLoading=(async()=>{
     const url=new URL("./vendor/strokes.txt.gz",location.href).href;
     let r=await vendorFetch("strokes.txt.gz").catch(err=>{ if(!swControls()) throw err; return {ok:false,status:err.message}; });
-    if(!r.ok){ try{ const c=await caches.open("zt-ocr-v1"); await c.delete(url); }catch(e){} r=await fetch(url,{cache:"reload"}); if(!r.ok) throw new Error("stroke data not available ("+r.status+")"); }
+    if(!r.ok){ try{ const c=await caches.open(OCR_CACHE); await c.delete(url); }catch(e){} r=await fetch(url,{cache:"reload"}); if(!r.ok) throw new Error("stroke data not available ("+r.status+")"); }
     const byCount=new Map(), t0=performance.now();
     await eachLineOf(r,line=>{ /* v532: decoded and parsed chunk by chunk, the main thread free between chunks */
       const i=line.indexOf("\t"); if(i<1) return; const ch=line.slice(0,i); let st; try{ st=JSON.parse(line.slice(i+1)); }catch(e){ return; }
