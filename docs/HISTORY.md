@@ -116,7 +116,28 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v795, 2026-10-01)
+## Current state (PWA v796, 2026-10-01)
+- **A deep snap is checked against the phone's reader (v796, H's 天禾 seal taken again on v795: "Geht immer noch nicht", the
+  card holding 天 and cutting 禾).** The second dump shows a different failure from v795's: Qwen boxed the two characters
+  right (13–68 % across, 57–72 % down) and the snap kept 13–44 % — 天 together with a piece of the seal's left edge, which
+  spent v305's width budget (`SNAP_WIDE` × 2 × the line height), so 禾 beyond the gap fell out of the line and the frame
+  (9–47 % across) cut it. The same cut had been read by the phone's reader as 天禾 at 78 %, a second measurement the snap
+  never saw. Now, after the snap and the v449 guard: when the answer is one line of Chinese, there are no labels (the
+  labels have their own reader pass, v638) and the snap kept less than `SNAP_ASK` 0.7 of the model's box's width or height,
+  the reader reads the picture the model saw (`pdRead` on the seen bitmap, one pass, about a second on the phone) and
+  `pdMatch` looks for the answer's text on its lines; a line found under the model's box (half its area inside) joins the
+  box by plain union — the frame's own room is added below as for every snap — and the record says what was read, where,
+  and whether it was taken (`N.rdLine` {box, read, ov, kw, kh, took}; "the phone's reader reads 天禾 at … and the snap had
+  kept 38 % of the AI's box's width and 73 % of its height — the frame takes the reader's line too"). A line already inside
+  the snap, a line elsewhere, or no line leaves the snap as it was, each with its own log line. SNAP_ASK was 0.8 for one
+  run and came down to 0.7: a snap that keeps 78 % of the height is a normal one with the model's margin taken off, and
+  it must not pay a reader pass. Harness (`test796`, the full reading on a 1600 px yellow photo read whole with 天 in red,
+  Qwen stubbed with the dump's answer and box, the reader stubbed with the dump's own line 天禾 at 78 %; 禾 itself not
+  drawn, because the harness's snap finds any ink the shadow pass can cut — one unit off the ground was enough — so the
+  symptom the fixture needs, a snap that keeps 天 alone, is made by a 禾 the cuts cannot see): the snap keeps 19–37 % on
+  both trees [guard]; the frame reaches past 禾 and the record says the reader's line was taken on v796 only: **4 of 4,
+  v795 2 of 4**. `test795` 5 of 5, `test756` (the board, its own reader pass untouched) 7 of 7. Not field-checked: the
+  fixture is the dump's numbers, not H's ink; the TO_TEST line moves to v796.
 - **The snap no longer takes a lone bar for the text (v795, H's 天禾 seal, 2026-10-01: "Au weia, warum hat er denn hier so
   falsch gecroppt?", the card showing the top of 天 and the seal's red border).** The dump: the reader read nothing
   (天来 at 61 %), Qwen boxed 天禾 at 34–95 % across, 56–84 % down of the frame — right —, and the snap kept one blob of

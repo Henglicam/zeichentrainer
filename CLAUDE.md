@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v795, 2026-10-01)
+## Current state (PWA v796, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -255,7 +255,10 @@ band and scored by `readingScore`/`effScore` → the editor.
 - The AI's box is **snapped to the ink** (`snapBox`, v297 ff.); a box the model drew around exactly the text it read does not
   overrule the reader's own measurement (v449); **a band that is one blob wider than its line's character count allows
   (`SNAP_WIDE` 1.6 × k × its height) is a border or a bar, not the text — it leaves, and the model's box stands, the dump
-  saying why** (`SNAP_WHY`, v795, H's 天禾 seal: the snap had kept the seal's red border line).
+  saying why** (`SNAP_WHY`, v795, H's 天禾 seal: the snap had kept the seal's red border line). **A snap that keeps less than `SNAP_ASK` 0.7
+  of the model's box's width or height is checked against the phone's reader: it reads the picture the model saw, and its line
+  for the answer's text, under the model's box, joins the frame** (one-line answers, no labels; `N.rdLine`, v796 — the seal's
+  second photo, where the snap kept 天 and the seal's edge and lost 禾).
 - A **panel or screen** answers `apart:true` with one entry per element; `splitCards` makes one card each. Boxes that are
   **a drawing rather than a measurement** (`templateBoxes`/`roundGrid`) send the app looking for the labels with the reader
   (v386–v391); a label it cannot place keeps the frame's own picture — **a card short of its own crop is the price, a card on
@@ -463,7 +466,7 @@ id abroad. **`strokes.txt.gz` and `cedict.tsv.gz` stay freely available under th
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
 as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the model's character senses (v772); the voice from the pad on the Xiaomi (v773), its reading of the stand-ins (v778) and its pace (v781); the zoom by layout on LED signs (v782); the
 apps' fields and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760); the wake
-lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768); whether DeepSeek sends the senses now (v783); the last character read through on the Xiaomi (v784); the zoom on a flashcard made from a multicard text (v789); its tile's cut in Cards (v791); the multicard's pop-up toolbar and the list's going (v792); the room under the page while a pop-up is open (v793); the made line after + Flashcard (v794); the seal's crop (v795).
+lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768); whether DeepSeek sends the senses now (v783); the last character read through on the Xiaomi (v784); the zoom on a flashcard made from a multicard text (v789); its tile's cut in Cards (v791); the multicard's pop-up toolbar and the list's going (v792); the room under the page while a pop-up is open (v793); the made line after + Flashcard (v794); the seal's crop (v795/v796).
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's
