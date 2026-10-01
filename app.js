@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=795; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=796; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -734,7 +734,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["again","v781","Voice: pace .7 and the voice ok?"],
   ["again","v782","Zoom by layout on LED signs ok?"],
   ["again","v789","Multicard flashcard: zoom on text?"],
-  ["again","v795","Seal 天禾: the crop whole now?"],
+  ["again","v796","Seal 天禾: the crop whole now?"],
   ["again","v783","Char senses: do they land now?"],
   ["again","v784","Last character read alone now?"],
   ["again","v757","Meituan screenshots: fields right?"],
@@ -8618,6 +8618,7 @@ const EARLY={}; /* photo id -> {run, base, guesses, at, p} — the picture call 
 const SURECHK={}; /* v646: photo id -> {run, at, p} — the picture check beside a sure reading of the phone's reader */
 const SKEW_STOP=1.5; /* the reading stops for a good early answer only where the reader did not straighten the frame (v442): deskewBlob leaves anything under 1.5° alone, so this is "no straightening" — a turned frame keeps every pass, since sureAngle (the v333/v334 trim of a turned frame that leaves the photo) needs them, and the field-confirmed posters at −8° and 18° stay on the path that confirmed them */
 const SNAP_ROOM=1, SNAP_MIN=0.15, SNAP_MAX=0.95, SNAP_COL=0.15, SNAP_WIDE=1.6, SNAP_GAP=0.8, SNAP_BAR=1.6, SNAP_STACK=0.5; /* BAR: how much wider than tall a blob must be to be read as one stroke of a character written in bars · STACK: how far apart two of them may stand */
+const SNAP_ASK=0.7; /* v796: a snap that keeps less than this of the model's box's width or height is checked against the phone's reader */
 const SNAP_SQUARE=0.25, SNAP_KEEP=0.65; /* SQUARE: how far the model's own box may be from "its character count of squares" and still count as a measurement · KEEP: how much of such a box's height the snap must keep, or it found something other than the line (v449, H's shopfront 江苏淮扬菜代表品牌) */
 const SNAP_REACH=0.85; /* how much of the AI's box the coloured ink must reach across beside the grey pick's (v349, H's vending machine at v347 "Vending machine works not yet": the red text on glass reaches 77 % of the box against the grey cut's 89 %, so v347's "at least as much" blocked the switch on the phone's own pixels; H's 流浪地球 poster, the case the guard is for, reaches 56 against 92) */
 /* A photo of a user interface, one card per element (v357–v358, H's rice cooker panel — eleven buttons, 低卡饭 柴火饭 快煮
@@ -9659,6 +9660,26 @@ async function cropSign(id,opts){
             const kb=lens.length===1?(lens[0]|0):0, mw=mb.x1-mb.x0, mh=mb.y1-mb.y0, kept=mh>0?(box.y1-box.y0)/mh:1;
             if(kb>=2&&mh>0&&Math.abs(mw/mh-kb)<=SNAP_SQUARE*kb&&kept<SNAP_KEEP){
               N.snapKept=n4(kept); logRead(id,`the AI's box is ${kb} characters wide and one character tall, so it was measured, not guessed — the snap kept ${Math.round(kept*100)} % of its height: the AI's box stays`); box=mb; } }
+          /* v796 (H's 天禾 seal, second photo, 2026-10-01: Qwen boxed the two characters right, 13–68 % across, and the snap kept
+             13–44 % — 天 with a piece of the seal's edge, which spent v305's width budget, so 禾 fell out and the card cut it;
+             the phone's reader had read 天禾 on the same cut, at 78 %): a snap that keeps much less of the model's box than
+             drawn (under SNAP_ASK of its width or its height) is checked against a second measurement — the phone's reader reads
+             the picture the model saw, and when it finds the answer's text there (pdMatch, the labels' own rule) under the
+             model's box, its line joins the frame. The reader's line can only add: a snap that already
+             holds it stands. One line, no labels (the labels have their own reader pass, v638), only when the snap cut deep,
+             so the cost — one reader pass, about a second on the phone — falls on the risky cases alone. The record says
+             what the reader read and whether it was taken (N.rdLine). */
+          if(snap&&lens.length===1&&PD_ON&&!pic.labels&&zh[0]&&CJK.test(zh[0])){ const m0={x0:fx0*W,y0:fy0*Hh,x1:fx1*W,y1:fy1*Hh}, kw=(box.x1-box.x0)/Math.max(1,m0.x1-m0.x0), kh=(box.y1-box.y0)/Math.max(1,m0.y1-m0.y0), pc=v=>Math.round(v*100);
+            if(kw<SNAP_ASK||kh<SNAP_ASK){ try{ const cv=document.createElement("canvas"); cv.width=W; cv.height=Hh; cv.getContext("2d",{alpha:false}).drawImage(b,0,0); const lines=await pdRead(cv); if(stale()) return;
+              const m=pdMatch([zh[0]],lines)[0];
+              if(m){ const rb={x0:m.x,y0:m.y,x1:m.x+m.w,y1:m.y+m.h}, ov=Math.max(0,Math.min(rb.x1,m0.x1)-Math.max(rb.x0,m0.x0))*Math.max(0,Math.min(rb.y1,m0.y1)-Math.max(rb.y0,m0.y0)), ra=Math.max(1,(rb.x1-rb.x0)*(rb.y1-rb.y0));
+                N.rdLine={box:numBox(rb),read:m.text,ov:n4(ov/ra),kw:n4(kw),kh:n4(kh),took:false};
+                if(ov>=0.5*ra){ const u={x0:Math.max(0,Math.min(box.x0,rb.x0)),y0:Math.max(0,Math.min(box.y0,rb.y0)),x1:Math.min(W,Math.max(box.x1,rb.x1)),y1:Math.min(Hh,Math.max(box.y1,rb.y1))}; /* the union itself: the frame's own room around the box is added below, as for every snap */
+                  if(u.x0<box.x0-1||u.y0<box.y0-1||u.x1>box.x1+1||u.y1>box.y1+1){ logRead(id,`the phone's reader reads ${m.text} at ${pc(rb.x0/W)}–${pc(rb.x1/W)} % across, ${pc(rb.y0/Hh)}–${pc(rb.y1/Hh)} % down, and the snap had kept ${pc(kw)} % of the AI's box's width and ${pc(kh)} % of its height — the frame takes the reader's line too: ${pc(u.x0/W)}–${pc(u.x1/W)} % across, ${pc(u.y0/Hh)}–${pc(u.y1/Hh)} % down`); box=u; N.rdLine.took=true; }
+                  else logRead(id,`the phone's reader reads ${m.text} inside the snap's box — the snap stands`); }
+                else logRead(id,`the phone's reader reads ${m.text} elsewhere on the picture, ${pc(rb.x0/W)}–${pc(rb.x1/W)} % across, ${pc(rb.y0/Hh)}–${pc(rb.y1/Hh)} % down, not under the AI's box — the snap stands`); }
+              else logRead(id,`the snap kept ${pc(kw)} % of the AI's box's width and ${pc(kh)} % of its height, and the phone's reader does not find ${zh[0]} on the picture to check it — the snap stands`); }
+            catch(e){ logErr("snapRead",e&&e.message||String(e)); } } }
           /* one card per element of a user interface (v358): the model called the picture an interface and listed its elements —
              each box is snapped on its own (n=1, its own character count for the width budget) and gets the same room the union
              frame gets; the auto-card path only, where no frame is ever drawn, so the placement above is untouched */
