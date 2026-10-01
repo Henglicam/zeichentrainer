@@ -116,6 +116,26 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v788, 2026-10-01)
+- **The Diagnostics dump prints a seventh of what it did and says four things it could not (v788, H: "Bitte optimiere das
+  Diagnostics Log. Zu lang? Fehlt was?").** Measured on the dump H sent at v786: 779 KB, 4 019 lines — 99 earlier readings
+  574 KB (five days back, 5.8 KB each: the picture answer 4.6 KB of it), 100 AI exchanges 197 KB (32 h back), the head 1.3 KB,
+  the last reading 3.8 KB, errors 3.4 KB. What is kept is unchanged (`NUMS_KEEP`, `AI_KEEP` 100, in IndexedDB since v505); what
+  is printed is two new numbers: the newest `DIAG_READ_FULL` 8 earlier readings whole (steps head and tail, numbers to
+  `NUMS_OLD`), every older one as one line (when, the shot, its cards, its last step), and the newest `DIAG_AI_FULL` 20 exchanges
+  whole, the older ones one line with the request's first 70 characters. A record H needs later is still in the store; the
+  dump says how many stand behind the lines. **Missing, now in:** the reader's first answer in the page (`PD_FIRST` — when, how
+  long after the start, how long it took: v786's open question on the Xiaomi's first load); the screen lock (held or
+  released, how often asked, the last refusal, busy or not: v767/v768); the Learn session (how many, at which, the card, the
+  cue state, the zoom and read-aloud switches, the screen); **the voice** (`SAYLOG`, the last 12 utterances: the text, the
+  voice or "system", fresh or queued, started and ended in ms, or the error — v773/v778/v781/v784 have had only "voices (0)"
+  to go on); and every zoom decision carries how long the card had stood and, when it was not Learn's, the screen (v787's
+  open card in Cards would have read "on cards"). Harness (`test788`, a hundred readings and exchanges of the field dump's
+  size seeded into the ring, the engine stubbed as the Xiaomi's — no voices, speaks): the dump 112 KB and 418 lines against
+  824 KB and 2 121 on v787; 8 readings whole and 91 one-liners; 20 exchanges whole and 80 one-liners; the last reading as
+  before (`[guard]`); the voice line "新 · fresh · system · started 57 ms, ended 121 ms"; the reader, lock and session lines;
+  the zoom decision "1.5 s into the card": **10 of 10 on v788, 2 of 10 on v787**. Owner's rows, English only. No WHATS_NEW.
+
 ## Current state (PWA v787, 2026-10-01)
 - **The open card in Cards shows its whole picture again after Learn had zoomed the same card (v787, H: "Funktioniert jetzt.
   Aber wenn ich wieder zurück gehe zu cards stimmt der Zoomausschnitt nicht. Sollte so wie ursprünglich sein").** The
