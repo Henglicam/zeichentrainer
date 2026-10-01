@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v786, 2026-10-01)
+## Current state (PWA v787, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -170,6 +170,8 @@ and after the layout settles (v521/v532).
   **It goes in once** (v665, `AZ_READER` 2.5 s; **`AZ_LOAD` 6 s until the reader has answered once in the page**, `PD_READY`,
   v786 — its first load and first inference end past 2.5 s on the Xiaomi): a reader slower than that gets the ink's sure cut
   first, and its own place, landing later on that cut, **moves nothing** (`st._azInk`, v785); a box elsewhere corrects it.
+  **The zoom is the screen's** (v787): `PIC_ZOOM` is keyed by the mode and the card, so the open card in Cards shows its whole
+  picture after Learn zoomed the same card, and the study card starts at rest after a pinch in Cards.
   **The learner can switch it off** (More → Learning, `learnZoom`, on by default, v683). A pinch makes the zoom the hand's
   (`ZOOM_HAND`) and it then only follows; one finger still swipes.
 - **Swipe** = the carousel of v417: the neighbour rides in and snaps; it grades nothing, a skipped card stays due. On a
@@ -446,7 +448,7 @@ id abroad. **`strokes.txt.gz` and `cedict.tsv.gz` stay freely available under th
 
 ## Open / not yet field-checked
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
-as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the model's character senses (v772); the voice from the pad on the Xiaomi (v773), its reading of the stand-ins (v778) and its pace (v781); the zoom by layout on LED signs (v782); one zoom on the first card after a start (v785/v786); the
+as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the model's character senses (v772); the voice from the pad on the Xiaomi (v773), its reading of the stand-ins (v778) and its pace (v781); the zoom by layout on LED signs (v782); the
 apps' fields and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760); the wake
 lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768); whether DeepSeek sends the senses now (v783); the last character read through on the Xiaomi (v784).
 

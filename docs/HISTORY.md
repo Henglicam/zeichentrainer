@@ -116,6 +116,21 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v787, 2026-10-01)
+- **The open card in Cards shows its whole picture again after Learn had zoomed the same card (v787, H: "Funktioniert jetzt.
+  Aber wenn ich wieder zurück gehe zu cards stimmt der Zoomausschnitt nicht. Sollte so wie ursprünglich sein").** The
+  screenshot: 雀巢/脆脆鲨 open in Cards with only the pad's ×3.5 cut on 雀 in its picture. The cause is v541's memory of the
+  zoom: `PIC_ZOOM` is kept per picture so that a stroke's re-render of the study card does not throw the zoom away, and its
+  key (`zoomKey`) was the card's id alone — the open card in Cards and the study card in Learn are the same picture to it, so
+  the Cards picture restored the pad's auto zoom. The key now carries the screen (`S.mode`): the study card's zoom is the
+  pad's, the open card's is the hand's, and each starts at rest when the other had it. Nothing else changed — the tab tap
+  clears nothing, and back in Learn the card zooms onto its character again by itself (`zoomGo` stands). Harness
+  (`test787`, the reader stubbed at 0.3 s, `PD_READY` set): the pad's zoom goes in on 新 (×1.72); a re-render keeps it
+  (`[guard]`, v541); Cards tab → the tile → the open card's picture whole (scale 1, no transform); Learn tab → the zoom
+  again by itself (`[guard]`); Cards tab again (the tab comes back to the open card itself) → whole: **7 of 7 on v787, 5 of
+  7 on v786** (the open card at ×1.72 both times). The first-card zoom (v785/v786) is settled by H's "Funktioniert jetzt":
+  its TO_TEST line goes. No WHATS_NEW.
+
 ## Current state (PWA v786, 2026-10-01)
 - **The first card of a session waits for the reader's first answer before the zoom goes in (v786, H on 雀巢/脆脆鲨 at v785:
   "Immernoch leicht holprig").** The dump: "雀 · estimate (odd shapes) · x1.5 · at 25,25 %" and "雀 · reader · x3.5 · at
