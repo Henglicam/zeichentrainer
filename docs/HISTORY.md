@@ -116,7 +116,10 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v796, 2026-10-01)
+## Current state (PWA v797, 2026-10-01)
+- **The seal's crop is settled (v797, H on v796: "Jetzt ist gut").** Field-checked on the Xiaomi: the 天禾 seal crops whole.
+  The TO_TEST line "Seal 天禾: the crop whole now?" goes, as v748's rule says, and the open list drops v795/v796. Nothing
+  else changes; the three markers move to 797 because `app.js` is a cached file.
 - **A deep snap is checked against the phone's reader (v796, H's 天禾 seal taken again on v795: "Geht immer noch nicht", the
   card holding 天 and cutting 禾).** The second dump shows a different failure from v795's: Qwen boxed the two characters
   right (13–68 % across, 57–72 % down) and the snap kept 13–44 % — 天 together with a piece of the seal's left edge, which
