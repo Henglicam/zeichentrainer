@@ -116,7 +116,32 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v791, 2026-10-01)
+## Current state (PWA v792, 2026-10-01)
+- **The multicard's row list is gone; the text's pop-up carries its actions (v792, H: "Ich mag die Wörterliste unter den
+  Multicards nicht. Bitte bringe in den Multicard-Pop-Ups Edit, Flag und so weiter unter, so ähnlich wie du das bei den
+  normalen Lernkarten auch drin hast. Bitte beachte, dass keine wichtige Funktion vergessen werden darf", then "Go" on the plan
+  with its two recommendations).** The plan H approved: the pop-up over the photo ends in the open card's quiet toolbar
+  (v736's shape) — **+ Flashcard / Flashcard › · Flag · Edit** — and shows the flag note and the AI suggestion box the text's
+  own screen had; Edit opens the Edit form (`editFrom:"lookup"`, `LOOK_BACK`) and Back, Save and Delete come back to the
+  multicard, the sheet open again on the text (`relookAfterEdit` → `relook`, which finds the text by its new id or its new
+  characters when a Save or an accepted answer moved the id, v118); Flag redraws the sheet in place; the AI box's Accept,
+  Dismiss and Flag redraw it too. v790's lone grey text button went into the toolbar (`.lkmake`/`.lkbtn` left with it, v307;
+  a new `TB_ICON.card`). The row list under the photo (`#pitems`, v453) is gone with its at-a-glance short descriptions (v753 —
+  they stay in the fold); **one plain row under "Not on the photo" (new key, ten columns) stays only for a text no dot reaches**
+  — still being read after Add a text, an unusable frame, or a multicard with fewer than `REGION_MIN` placed texts — and opens
+  the text's own screen as every row did. That screen still renders (the fallback row, a flagged list) but nothing else on the
+  multicard leads to it: H chose to drop it rather than keep an "Open ›" (recommendation 1, v496's "kein More" kept). Star
+  and Test this card never existed on a multicard's text and still do not. The guide's multicard sentence follows the screen
+  (v259): "its pop-up has + Flashcard, Flag and Edit", ten columns (498 a column, ru 528). Harness (`test792`, the account-page
+  multicard of four placed texts, one with an AI suggestion, and a fifth text with no frame; English 390 light, German 360
+  dark): the list reduced to the one fallback row under its label; the toolbar's three columns one line each, no More, no
+  Star; Flag on and off redraws the sheet with the mark and the note; Edit → Back returns to the open sheet; Edit → Save with
+  a new meaning returns to the sheet showing it; + Flashcard makes the card and the toolbar reads Flashcard ›; the AI box
+  shows in the sheet and Accept takes it and redraws the sheet without it; the fallback row opens the text's own screen; Delete
+  card in the form opened from the sheet leaves the multicard open with one dot fewer and no sheet; the guide sentence
+  rendered: **28 of 28; v791 passes 2 of 8 and stops at the first missing control** (the toolbar does not exist there).
+  `test791` still 16 of 16; `test790`'s two shape checks on the quiet text button fail by design (the button is in the
+  toolbar now), its five flow checks pass. Not yet field-checked.
 - **The Cards tile of a flashcard made from a multicard text shows the card's own cut (v791, H, with the Cards list of his
   Meituan account page's flashcards: "In der Kartenübersicht sollte bitte der Ausschnitt, der auch in der Karte gezeigt
   wird, angezeigt werden und nicht die gesamte Multikarte").** Since v490 the tile fitted the multicard's whole photo
