@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=772; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=773; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -692,6 +692,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["again","v756","Priced board: reader path ok?"],
   ["again","v771","Crop again: save, then read ok?"],
   ["again","v772","Char senses in context: good?"],
+  ["again","v773","Read aloud after writing: ok?"],
   ["again","v757","Meituan screenshots: fields right?"],
   ["again","v759","Taobao screenshots: fields right?"],
   ["again","v760","Taobao cart: 天猫 framed right?"],
@@ -3076,6 +3077,7 @@ function renderMore(main){
     <div class="mrow"><div style="flex:1"><div class="t">${t("Progress")}</div><div class="s">${progressHTML()}</div><div class="fieldacts"><button class="btn mini" id="usage-share">${t("Share report")}</button></div></div></div>
     <div class="mrow"><div><div class="t">${t("Card order")}</div><div class="s">${t("Due cards come first, then up to {0} new ones, each group from short to long. This sets the order among cards of the same length.",NEW_PER_SESSION)}</div><div class="chipset orderchips">${LEARN_ORDERS.map(([v,l])=>`<button class="chip${learnOrder()===v?" on":""}" data-learnorder="${v}">${t(l)}</button>`).join("")}</div></div></div>
     <div class="mrow"><div><label class="check" style="margin:0"><input type="checkbox" id="learn-zoom"${zoomOn()?" checked":""}> ${t("Zoom the photo onto the character you're writing.")}</label></div></div>
+    <div class="mrow"><div><label class="check" style="margin:0"><input type="checkbox" id="learn-say"${sayOn()?" checked":""}> ${t("Read the Chinese aloud after you write it.")}</label></div></div>
     ${recheckRowHTML()}
     ${undoRunHTML("check")}
     ${undoRunHTML("accept")}
@@ -3159,6 +3161,7 @@ function renderMore(main){
     b.disabled=true; st.textContent=t("Sending …");
     try{ const r=await sendFeedback(text,FB_SHOT&&FB_SHOT.b64); tx.value=""; fbShotDrop(); fbShotDraw(); st.textContent=r==="noshot"?t("Sent, but the screenshot could not be attached."):t("Thank you, sent."); }catch(err){ st.textContent=t("Could not send: {0}",err&&err.message||err); } b.disabled=false; };
   $("#learn-zoom").onchange=async e=>{ await setSetting("learnZoom",!!e.target.checked); };
+  $("#learn-say").onchange=async e=>{ await setSetting("learnSay",!!e.target.checked); if(!e.target.checked) sayStop(); }; /* v773 */
   $("#update-note").onchange=async e=>{ await setSetting("updateNote",!!e.target.checked); if(!e.target.checked) hideUpdated(); };
   $("#share-usage").onchange=async e=>{ await setSetting("shareUsage",!!e.target.checked); $("#share-status").textContent=shareNote(); sendReport(); };
   $("#import").onclick=()=>$("#imp").click();
@@ -4726,7 +4729,7 @@ const curList=()=>walking()?S.walk:S.queue;
 const curIdx=()=>walking()?S.walkIdx:S.idx;
 const setCurIdx=i=>{ if(walking()) S.walkIdx=i; else S.idx=i; };
 /* to another card of the list, grading nothing (v414's rule): the swipe's commit, and the harness's way now that the chevrons are gone (v520) */
-function stepCard(i){ if(i<0||i>=curList().length) return; setCurIdx(i); S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0}); }
+function stepCard(i){ if(i<0||i>=curList().length) return; sayStop(); setCurIdx(i); S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0}); }
 function walkOf(ch){ const has=d=>!!(d&&d.c&&[...String(d.c)].includes(ch)), seen=new Set(), out=[];
   for(const id of S.queue){ const d=cardOf(id); if(has(d)){ seen.add(id); out.push(id); } } /* every occurrence: a second one is the card's repeat pass (§ 8.1) */
   for(const d of learnDeck().cards){ if(has(d)&&!seen.has(d.id)){ seen.add(d.id); out.push(d.id); } }
@@ -5330,7 +5333,7 @@ function mountPad(card,d,c,tg,st,cur){
        is already on the pad. */
     const pw=document.querySelector(".card.study .padwrap"); let rc=null;
     if(pw){ if(dark){ const cvn=pw.querySelector(".wpad"); if(cvn){ cvn.style.transition="none"; pw.classList.add("recapping"); void cvn.offsetWidth; cvn.style.transition=""; } } /* v558: dark from its first frame */
-      pw.insertAdjacentHTML("beforeend",recapHTML(d)); rc=pw.lastElementChild; recapFit(rc); /* v600: the reading is sized against the real layout before the first frame */ pw.classList.add("recapping"); requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); }); }
+      pw.insertAdjacentHTML("beforeend",recapHTML(d)); rc=pw.lastElementChild; recapFit(rc); if(sayOn()&&d.c) say(d.c); /* v773: the whole text is heard with the recap */ /* v600: the reading is sized against the real layout before the first frame */ pw.classList.add("recapping"); requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); }); }
     let pr=null, fired=false, tm=0;
     const go=()=>{ if(fired) return; fired=true; clearTimeout(tm); document.removeEventListener("pointerdown",onTap,true);
       if(pr) pr.finish(); else if(PRAISE_N){ PRAISE_N=null; setStats(); } /* v543: skipped before the star flew — the counter goes straight to the day's own total rather than keeping the held number */
@@ -5734,12 +5737,13 @@ async function charRecap(card,cur,tg,st){
   let mn=rows.length?((rows[0].querySelector(".mn")||{}).textContent||"").trim():""; /* v571: the same row's meaning */
   if(mn===t("not in the dictionary")) mn="";
   pw.insertAdjacentHTML("beforeend",charRecapHTML(py,mn));
+  sayChar(cur,py); /* v773: the character is heard as its reading appears */
   const rc=pw.lastElementChild; pw.classList.add("recapping");
   void getComputedStyle(rc).opacity; /* v673: the hidden start is resolved before "in" — without it the first style pass already saw "in", so the reading had no fade and no delay and stood at once over the fading green character (screencast: 752 ms, the reading solid, 十 at half); v668's probe read the opacity every frame and so forced the very pass it was testing */
   requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); });
   const skipped=await new Promise(res=>{ let done=false, tm=0;
     const end=by=>{ if(done) return; done=true; clearTimeout(tm); document.removeEventListener("pointerdown",tap,true); res(by); };
-    const tap=e=>{ if(e.target.closest&&e.target.closest("button,a,input,textarea,.chip")) return; end(true); };
+    const tap=e=>{ if(e.target.closest&&e.target.closest("button,a,input,textarea,.chip")) return; sayStop(); end(true); }; /* v773: the tap that skips the reading stops the voice */
     document.addEventListener("pointerdown",tap,true); tm=setTimeout(()=>end(false),CHAR_MS+CHAR_IN); }); /* v668: + the .2 s the reading waits for the pad to fade out, so it stands as long as before */
   /* v553 (H: "Die pinyin Darstellung polieren: In/Out"): the way out is a real one. Until v552 the element was simply
      removed, so the reading vanished in one frame while the pad faded back in behind nothing. `recapping` goes at the
@@ -6451,6 +6455,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  773:"The Chinese is read aloud after you write it — each character with its reading, the whole text with the recap. Switch it off under More → Learning.",
   772:"After each character you write, its meaning is the one it has in that word — not the dictionary's first sense.",
   771:"Crop again in the Edit form: move the frame and save — the new cut is kept and its text read in the background, no waiting.",
   770:"A multicard's texts are listed as they stand on the photo — row by row, left to right — and the swipe follows the same order.",
@@ -6622,6 +6627,16 @@ const WHATS_NEW={
 const updateNoteOn=()=>S.settings.updateNote!==false;
 /* v683 (H: "Mach das Zoomen unter More an- und ausschaltbar. Default ist an."): the Learn zoom is the learner's to switch off */
 const zoomOn=()=>ZOOM_AUTO&&S.settings.learnZoom!==false;
+/* v773 (H: "enable automatic Chinese reading then the translation after writing is shown. With an option to switch it
+   off" — "Go for the automatic Chinese reading, with the switch"): the phone's Chinese voice reads what was just written
+   while its reading and meaning stand over the pad — after each character the character itself, or its whole word when
+   the character alone would be read differently (多音字: 行 alone is xíng, in 银行 it is háng — `sayChar`), and after the
+   last one the card's whole text with the recap. The same `say` as the speaker button (v164/v165: H's Xiaomi reports no
+   voices through getVoices() and still speaks through the system engine). More → Learning switches it off (`learnSay`).
+   A tap that skips the reading, and a swipe, stop the voice. */
+const sayOn=()=>S.settings.learnSay!==false;
+function sayChar(cur,py){ if(!sayOn()||!cur||!CJK.test(cur.ch||"")) return; let alone=""; try{ alone=window.pinyinPro?pinyinPro.pinyin(cur.ch,{toneType:"symbol"}):""; }catch(e){} say(alone&&py&&alone.trim()===py.trim()?cur.ch:(cur.word||cur.ch)); }
+function sayStop(){ try{ if("speechSynthesis" in window) speechSynthesis.cancel(); }catch(e){} clearTimeout(SAY_TIMER); }
 const newsList=()=>Object.keys(WHATS_NEW).map(Number).sort((a,b)=>b-a);
 const newsSince=v=>newsList().filter(n=>n>v&&n<=APP_V).map(n=>({v:n,s:WHATS_NEW[n]})); /* what this phone has not been shown yet, newest first */
 /* v551: the notes no longer carry their build number. v225 took the version label off the header as "a developer's line,

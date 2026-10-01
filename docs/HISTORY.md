@@ -116,6 +116,23 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v773, 2026-10-01)
+- **The Chinese is read aloud after writing, with a switch (v773, H: "enable automatic Chinese reading then the translation
+  after writing is shown. With an option to switch it off" — "Go for the automatic Chinese reading, with the switch").**
+  The phone's Chinese voice — the same `say` as the speaker button (v164; v165: H's Xiaomi reports no voices through
+  `getVoices()` and still speaks through the system engine, so "voices (0)" in the dump is no reason to expect silence) —
+  speaks as the reading appears: after each character the character itself, or **its whole word when the character alone
+  would be read differently** (`sayChar`: pinyin-pro's reading of the lone character against the syllable the line shows —
+  行 alone is xíng, in 银行 it is háng, so 银行 is spoken; 洗 in 洗手液 is xǐ both ways, so 洗 alone), and with the card's
+  recap the whole text (`say(d.c)`, lines joined by a pause). The tap that skips a reading and a swipe stop the voice
+  (`sayStop`). **More → Learning: "Read the Chinese aloud after you write it."**, on by default (`learnSay`, `sayOn`), beside
+  the zoom switch of v683; switching it off stops a voice mid-word. One string in nine columns. Harness (the voice replaced
+  by a recorder): 银行's 行 speaks the word, 洗手液's 洗 the character, the skip tap cancels, the card's recap line speaks the
+  text (checked in the source: the stroke path needs a hand), the switch exists, writes the setting and silences the reading
+  — 11 of 11 on v773, 4 of 13 on v772 (the silence check is a guard). Not yet field-checked: whether the Xiaomi engine
+  speaks from the pad, and how the two voices sit over the last character's reading and the recap. WHATS_NEW 773; TO_TEST
+  "Read aloud after writing: ok?".
+
 ## Current state (PWA v772, 2026-10-01)
 - **The character's meaning after writing is its sense in this word (v772, H: "The single character translations after
   writing are still out of context. Could you please ensure translation within the context of the word/picture?").** The
