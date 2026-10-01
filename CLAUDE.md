@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v798, 2026-10-01)
+## Current state (PWA v799, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -213,7 +213,8 @@ takes its own token alone, v769); its flashcard is the name alone (v713); a dish
 with its own photo takes it as its picture (`dish`, v705); no count line on the multicard's screen nor on the Camera tab (v746).
 
 ### Camera — photo to card
-The Camera tab is the camera: the **shutter card** (Take photo, From album) centred, work under it (v466/v470); a photo that
+The Camera tab is the camera: the hint over it names the screenshot too ("A screenshot of an app becomes a multicard", v799,
+H), the **shutter card** (Take photo, From album) centred, work under it (v466/v470); a photo that
 made its card **leaves the tab** (v471). From album works through the batch one at a time while the app is open (v411; the
 "to go" line counts the photos still to be finished, `BATCH`, v761). **A photo becomes a card by itself** (v325): a
 light band sweeps the photo, then the finished card with Edit and Delete. Save now (v237) makes the card before the reading
