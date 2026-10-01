@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=783; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=784; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -717,6 +717,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["again","v781","Voice: pace .7 and the voice ok?"],
   ["again","v782","Zoom by layout on LED signs ok?"],
   ["again","v783","Char senses: do they land now?"],
+  ["again","v784","Last character read alone now?"],
   ["again","v757","Meituan screenshots: fields right?"],
   ["again","v759","Taobao screenshots: fields right?"],
   ["again","v760","Taobao cart: 天猫 framed right?"],
@@ -3524,17 +3525,17 @@ function ttsVoice(){
   return TTS_VOICE;
 }
 let SAY_TIMER=null; const SAY_RATE=0.7; /* v781: the pace of the voice, 1 is the engine's own; .7 reads a character and a word unhurried, as a teacher would (not yet field-checked on the Xiaomi engine) */
-function say(text){
+function say(text,after){ /* after (v784): queued behind what is speaking, nothing cancelled — the card's recap speaks the whole text this way, so the last character's own reading is heard whole; a fresh say() cancels what came before it */
   const v=ttsVoice(), hint=on=>{ const h=$("#say-hint"); if(h) h.hidden=!on; };
   /* the hint comes only when speaking fails, never from the voice list: H's Xiaomi reports no voices at all through
      getVoices() and still speaks Chinese through the system engine (v165, diagnostics "voices (0)"); an utterance that
      neither starts nor errors within three seconds counts as failed too */
   try{
-    speechSynthesis.cancel(); clearTimeout(SAY_TIMER);
+    if(!after){ speechSynthesis.cancel(); clearTimeout(SAY_TIMER); }
     const u=new SpeechSynthesisUtterance(text.replace(/\n/g,"，")); if(v){ u.voice=v; u.lang=v.lang; } else u.lang="zh-CN"; u.rate=SAY_RATE; u.pitch=1; /* v781: a teacher's pace, SAY_RATE — .85 until v780 */
     u.onstart=()=>{ clearTimeout(SAY_TIMER); hint(false); };
     u.onerror=e=>{ clearTimeout(SAY_TIMER); if(!e||e.error!=="interrupted"&&e.error!=="canceled") hint(true); };
-    SAY_TIMER=setTimeout(()=>hint(true),3000);
+    if(!after) SAY_TIMER=setTimeout(()=>hint(true),3000); /* a queued utterance waits for the one before it by design — the hint is the first one's */
     speechSynthesis.speak(u);
   }catch(e){ hint(true); }
 }
@@ -5385,7 +5386,7 @@ function mountPad(card,d,c,tg,st,cur){
        is already on the pad. */
     const pw=document.querySelector(".card.study .padwrap"); let rc=null;
     if(pw){ if(dark){ const cvn=pw.querySelector(".wpad"); if(cvn){ cvn.style.transition="none"; pw.classList.add("recapping"); void cvn.offsetWidth; cvn.style.transition=""; } } /* v558: dark from its first frame */
-      pw.insertAdjacentHTML("beforeend",recapHTML(d)); rc=pw.lastElementChild; recapFit(rc); if(sayOn()&&d.c) say(d.c); /* v776: the whole text with the recap — v774 spoke it at the last stroke, v776 gives that stroke its own character (H) */ /* v600: the reading is sized against the real layout before the first frame */ pw.classList.add("recapping"); requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); }); }
+      pw.insertAdjacentHTML("beforeend",recapHTML(d)); rc=pw.lastElementChild; recapFit(rc); if(sayOn()&&d.c&&n>1) say(d.c,true); /* v776: the whole text with the recap — v774 spoke it at the last stroke, v776 gives that stroke its own character (H) */ /* v784 (H, 首都铁骑: "Hier hat er den letzten Charakter qi nicht einzeln gesagt"): QUEUED behind the last character's own reading, not in its place — say() cancelled whatever was speaking, and on the Xiaomi's engine 骑 was still on its way 1.6 s after its stroke; a one-character card says nothing more, its character was the whole text */ /* v600: the reading is sized against the real layout before the first frame */ pw.classList.add("recapping"); requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); }); }
     let pr=null, fired=false, tm=0;
     const go=()=>{ if(fired) return; fired=true; clearTimeout(tm); document.removeEventListener("pointerdown",onTap,true);
       if(pr) pr.finish(); else if(PRAISE_N){ PRAISE_N=null; setStats(); } /* v543: skipped before the star flew — the counter goes straight to the day's own total rather than keeping the held number */
