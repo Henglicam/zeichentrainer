@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v800, 2026-10-01)
+## Current state (PWA v801, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -296,7 +296,9 @@ gloss, pending.
 Han-only outside Japanese; `saneP` takes the model's pinyin only when **every token is a real Mandarin syllable**
 (`PY_SYLLABLES`, v507); `aiSettled` refuses to change a character every pass read clearly (**the v143 rule**); **the AI's
 pinyin is checked against pinyin-pro's in-word reading, and a mismatch or the model's own `unsure` flags the card** (v611,
-`aiDoubt`); `mainLines` drops fine print, except on a board, menu, panel or screen (v456).
+`aiDoubt`); `mainLines` drops fine print, except on a board, menu, panel or screen (v456) — **a line's character size is its
+box's height, and a vertical line's (taller than `FINE_VERT` 2.5 × its width) its width** (v801, the storage line down a
+tube's edge).
 
 **What the app sends on its own is the whole of the privacy question** — `privacy.html`, More → "What is sent" and the guide
 must say the same thing; correcting one without the others has gone wrong four times (v403, v459, v534, v539). The AI review

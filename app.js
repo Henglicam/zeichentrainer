@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=800; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=801; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1998,7 +1998,7 @@ async function readerPicture(cvp,raw,shot){
   logRead(shot,`the board's ${labels.length} texts are the phone's reader's own lines (${st.cf} %, ${Math.round(st.sure*100)} % of the characters sure${lines.some(l=>l.cut)?", "+lines.filter(l=>l.cut).length+" cut at a price":""}${lines.some(l=>l.joined)?", "+lines.filter(l=>l.joined).length+" with a price read apart joined":""}) — kind ${kind}${name?", named "+name:""}; no picture call (v755)`);
   return {zh:labels.map(l=>l.zh).join("\n"),zht:"",p:w?w.p:"",m:w?w.m:"",desc:"",ml:LANG,note:"",unsure:w?w.unsure:"",bad:false,model:"reader",pv:"reader",box,boxAlt:null,droppedBoxesAlt:null,boxes:labels.map(l=>l.box),dropped:[],droppedBoxes:[],outside:[],oneScale:true,cut:"",kind,keptAll:"apart",pageInfo:name||kind==="Menu"?{name,what:kind==="Menu"?"menu":"",place:""}:null,apart:true,labels,picW:W,picH:H,boxScale:"px",reader:{det,n:st.n,cf:st.cf,sure:st.sure,priced:st.priced,ms2}}; }
 /* the main text only (v312, H's 青春无烟 / 未来无限 poster: the card carried the poster's small print — the line 第39个世界无烟日 above the title and the date 2026年5月31日 世界无烟日 below it, half of it outside the frame — "wieder die Sachen ausserhalb des Crops und das Kleingedruckte mitgelesen. Bitte beides vermeiden"): the prompt asks for the main text and leaves fine print and lines the picture's edge cuts off to the model; this is the safety net from the model's own line boxes — a line whose box is under FINE_PRINT of the tallest line's height is fine print and goes, with its pinyin and meaning parts when they come one per line; the box for the frame is then the union of the lines kept */
-const FINE_PRINT=1/3;
+const FINE_PRINT=1/3, FINE_VERT=2.5; /* v801 (H's 青芥辣 tube, 2026-10-01, "Wo kommt denn der ganze Text her?" — then "Yeah, rule verticals by width"): the storage line 开封后请放入冰箱冷藏 runs down the pack's edge in characters a third the size of the title, and it stayed on the card because a vertical strip is TALL: the box was 410 of 800 px high against the title's 650, over FINE_PRINT. A box more than FINE_VERT times taller than wide is a vertical line, and its character size is its width — 70 px against the title's 240, fine print, gone. A single big character is as wide as tall and keeps its height. */
 /* the kinds on which a smaller line under a bigger one is an element of its own, not fine print (v456): the prompt's own
    "zh" clause names them — "on a board, a directory, a menu, a panel or a screen the small plates, rows, brand names and
    buttons under a big headline ... belong in the answer, every one of them" — and these five of the nine KINDS are exactly
@@ -2009,7 +2009,7 @@ function mainLines(lines,p,m,boxes,box,keepAll){
   const out={lines,p:String(p||""),m:String(m||""),box,boxes:null,dropped:[],droppedBoxes:[]};
   if(!boxes||boxes.length!==lines.length||boxes.some(b=>!b)||lines.length<2) return out;
   if(keepAll) return {...out,boxes}; /* v456: on a board the small plates ARE the answer — the prompt says so since v455 and this rule deleted them again (H's 龙人居 notice board: seven lines answered, five dropped). The box stays the model's own union, so the frame spans the whole board and no plate lands in snapBox's skip list. */
-  const hs=boxes.map(b=>b[3]-b[1]), hmax=Math.max(...hs), keep=hs.map(h=>h>=FINE_PRINT*hmax);
+  const hs=boxes.map(b=>{ const w=b[2]-b[0], h=b[3]-b[1]; return h>FINE_VERT*w?w:h; }), hmax=Math.max(...hs), keep=hs.map(h=>h>=FINE_PRINT*hmax); /* v801: a line's character size is its height — and a VERTICAL line's its width */
   if(keep.every(Boolean)) return {...out,boxes};
   const pp=out.p.split(/\s*\/\s*/), mp=out.m.split(/\s*\/\s*/);
   out.dropped=lines.filter((l,i)=>!keep[i]); out.droppedBoxes=boxes.filter((b,i)=>!keep[i]); out.lines=lines.filter((l,i)=>keep[i]); out.boxes=boxes.filter((b,i)=>keep[i]); /* the fine print's boxes stay out of the snap (v328) */
