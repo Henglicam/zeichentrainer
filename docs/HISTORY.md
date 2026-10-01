@@ -129,6 +129,11 @@ below. Verbatim as they last stood:
   photo <shot>, no picture), with its age. Harness (`test803`, two records of one text with two photos): the line names
   the first record and "own crop", and after a step the second record by its own id, photo and crop: **2 of 2, v802 0 of 2**.
   Open: how a record with the text 全家 came to carry a noodle sign's crop — H is asked for the Cards search's second tile.
+  H's answer (2026-10-01, 21:40): "Both made by photos" — two 全家 cards, one a FamilyMart, one a noodle-shop sign whose crop the
+  phone's reader reads as 三碗面. Both readings lie outside the dump's window (the rebuild runs of four days ago fill the 99
+  slots), so the cause is not reconstructible; candidates: the picture model's answer landing on the other photo's card in
+  one album batch, or a hand edit. H is asked to re-read the card (Edit → Crop again → Read now) and to send the dump at
+  once if a photo ever gets another photo's text again. Nothing built on a guess.
 - **Diagnostics notes every move of the Learn session's place (v802, after H's report with the v801 message: "hier war gerade
   eine aus Multicard generierte Flashcard dran und die app ist direkt zur nächsten karte weiter gesprungen").** The dump
   had nothing on it — "learn · 27 in the session, at 1" and the zoom's decisions —, and the harness could not make a
