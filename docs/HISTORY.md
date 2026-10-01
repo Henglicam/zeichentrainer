@@ -116,7 +116,24 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v790, 2026-10-01)
+## Current state (PWA v791, 2026-10-01)
+- **The Cards tile of a flashcard made from a multicard text shows the card's own cut (v791, H, with the Cards list of his
+  Meituan account page's flashcards: "In der Kartenübersicht sollte bitte der Ausschnitt, der auch in der Karte gezeigt
+  wird, angezeigt werden und nicht die gesamte Multikarte").** Since v490 the tile fitted the multicard's whole photo
+  INSIDE the square with the card's text framed on it — the Learn front of that day in miniature, which on a phone
+  screenshot is a 2.3:1 strip between two blurred bands with a frame the size of a grain of rice. Now the tile takes the
+  same placement as the open card and the study card: the photo cover-fitted into the square and centred on the card's own
+  region, clamped to the picture's edge (`coverOn`, the body of `fitPageCover` since v478, shared now so the two cannot
+  drift — v401; `fitTileCovers` runs in the Cards list's `wire()`, so a search or a filter places the tiles again, after
+  `refineSoon`'s measured regions and on a resize). The wrap is placed when its picture has decoded (the tiles are lazy)
+  and takes `.tpw.cov` then, which frees it from the contain fit's cqw/cqh cap; a plain photo card's tile, a multicard's
+  stack and the Camera tab's tiles are untouched. The cut is the open card's at the tile's size — half the card's width,
+  so the text is half as large as on the card; a closer zoom would be a different ask. Harness (`test791`, the account-page
+  multicard of four texts with flashcards of 首页 at the screenshot's foot and 客服 at its head, a plain 新日 card as the
+  guard; English 390 light, German 360 dark): the from-card's tile as wide as the square and 2.3× as tall, 首页's frame in
+  the lower part and 客服's in the upper, both inside the square and twice the width they had, the two tiles different
+  cuts of the one photo, the cut kept through a search; the plain card's tile and the open card unchanged: **16 of 16,
+  8 flip against v790** (the two "[control]" and the guard pass on both). Not yet field-checked.
 - **A multicard text's pop-up has a quiet + Flashcard button again (v790, H: "In einem Multicard Pop-up muss es möglich sein,
   direkt eine Flashkarte rauszuerzeugen, aber bitte nicht zu prominent darstellen").** H's own reversal of v496/v692's "no
   action in the pop-up": the look-up sheet over a multicard's photo ends in v689's quiet shape — a grey text button at its

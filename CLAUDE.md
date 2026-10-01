@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v790, 2026-10-01)
+## Current state (PWA v791, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -180,7 +180,7 @@ and after the layout settles (v521/v532).
   **zoomed** picture the one-finger drag pans, and pulling on past the picture's edge hands the stroke to the swipe (v606).
 
 ### Cards
-Square photo tiles, two a row, **nothing written under them** (v593); a text-only card draws its text in the picture (v506).
+Square photo tiles, two a row, **nothing written under them** (v593); a text-only card draws its text in the picture (v506); **a flashcard made from a multicard text shows the open card's cut** — the page cover-fitted into the square around its own region (`fitTileCovers`/`coverOn`, v791), not the whole page.
 On the picture: the star (v425, one tap), flag and AI marks; a multicard adds its plates, count chip, progress bar and a
 two-line title. **Two tabs, Cards and Multicards** (v477); the filter is **one pill and a sheet** (v365), **whose Sort by group orders
 the list** (newest, oldest, pinyin, due soonest, most often forgotten; a multicard by time or title — `cardsSort`,
@@ -455,7 +455,7 @@ id abroad. **`strokes.txt.gz` and `cedict.tsv.gz` stay freely available under th
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
 as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the model's character senses (v772); the voice from the pad on the Xiaomi (v773), its reading of the stand-ins (v778) and its pace (v781); the zoom by layout on LED signs (v782); the
 apps' fields and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760); the wake
-lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768); whether DeepSeek sends the senses now (v783); the last character read through on the Xiaomi (v784); the zoom on a flashcard made from a multicard text (v789).
+lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768); whether DeepSeek sends the senses now (v783); the last character read through on the Xiaomi (v784); the zoom on a flashcard made from a multicard text (v789); its tile's cut in Cards (v791).
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's

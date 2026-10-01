@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=790; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=791; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -4569,6 +4569,7 @@ async function refineShot(shot){
   for(const d of todo){ const b=REGFIX.get(cbKey(d)); if(!b) continue; const pc=x=>(x*100).toFixed(2)+"%";
     document.querySelectorAll(`.region[data-region="c:${CSS.escape(d.id)}"],.region[data-rid="c:${CSS.escape(d.id)}"]`).forEach(e=>{ e.style.left=pc(b.x); e.style.top=pc(b.y); e.style.width=pc(b.w); e.style.height=pc(b.h); }); }
   document.querySelectorAll(".card.study").forEach(c=>{ if(c.querySelector(".picbox.page")) fitPageCover(c); }); /* the page front is centred on the card's own region */
+  fitTileCovers(); /* v791: a tile's cut follows its region too */
 }
 const spotLines=d=>d.kind==="sign"?String(d.c||"").split("\n"):frontLines(d); /* the lines the boxes are cut for; a box is indexed by its place in them */
 /* v674 (H: "Bug: it skips one character in the photo", 一汽-大众: 大 zoomed onto 众, 众 onto nothing): the pad counts a character by
@@ -4886,13 +4887,30 @@ async function padLineFill(box,d,x){ box.hidden=false;
    scaled picture and offset so the region's centre is centred, clamped to the picture; the regions keep their percent place */
 function fitPageCover(card){ /* v596: the page argument went — it was never read, and dropping it lets the carousel's two ready hooks, which have the element and not the card, call this at all */
   const box=card.querySelector(".zone1 .picbox.page"); if(!box) return; const wrap=box.querySelector(".pagewrap"), img=wrap&&wrap.querySelector(".signimg"); if(!img) return;
-  const me=box.querySelector(".region.me");
+  coverOn(box,wrap,img,box.querySelector(".region.me"));
+}
+/* the one cover fit (v791): the picture scaled to fill the box, the wrap moved so the region's centre is the box's centre, never
+   past the picture's edge. fitPageCover's body since v478; the Cards tile of a flashcard made from a multicard text takes the
+   same placement now (fitTileCovers), so the two cannot drift apart (v401) */
+function coverOn(box,wrap,img,me,done){
   const place=()=>{ const nw=img.naturalWidth, nh=img.naturalHeight; if(!nw||!nh||!box.isConnected) return;
     const bw=box.clientWidth, bh=box.clientHeight, sc=Math.max(bw/nw,bh/nh), sw=nw*sc, sh=nh*sc;
     let cx=0.5, cy=0.5; if(me){ cx=(parseFloat(me.style.left)||0)/100+(parseFloat(me.style.width)||0)/200; cy=(parseFloat(me.style.top)||0)/100+(parseFloat(me.style.height)||0)/200; }
     const left=Math.min(0,Math.max(bw-sw,bw/2-cx*sw)), top=Math.min(0,Math.max(bh-sh,bh/2-cy*sh));
-    wrap.style.width=sw+"px"; wrap.style.height=sh+"px"; wrap.style.left=left+"px"; wrap.style.top=top+"px"; img.style.width=sw+"px"; img.style.height=sh+"px"; };
+    wrap.style.width=sw+"px"; wrap.style.height=sh+"px"; wrap.style.left=left+"px"; wrap.style.top=top+"px"; img.style.width=sw+"px"; img.style.height=sh+"px"; if(done) done(); };
   if(img.complete) place(); else img.addEventListener("load",place,{once:true});
+}
+/* v791 (H, the Cards list with two flashcards made from his Meituan account page showing the whole tall screenshot, a frame
+   the size of a grain of rice on each: "In der Kartenübersicht sollte bitte der Ausschnitt, der auch in der Karte gezeigt
+   wird, angezeigt werden und nicht die gesamte Multikarte"): the tile shows the open card's cut — the multicard's photo
+   cover-fitted into the square and centred on the card's own text, the same placement as fitPageCover. Until v790 the tile
+   fitted the whole photo INSIDE the square (v490, the Learn front of that day in miniature), which on a phone screenshot is
+   a 2.3:1 strip with the blurred fill beside it and the text unreadable. The wrap is placed once its picture has decoded
+   (lazy, so a tile far down the list is placed when it comes into view) and takes .cov then, which frees it from the
+   contain fit's cqw/cqh cap; until then the square stays the fill's colour, as any tile whose picture is not yet in. */
+function fitTileCovers(root){
+  (root||document).querySelectorAll(".ctile .tw.src").forEach(tw=>{ const wrap=tw.querySelector(".tpw"), img=wrap&&wrap.querySelector(".tpi"); if(!img) return;
+    coverOn(tw,wrap,img,wrap.querySelector(".region.me"),()=>wrap.classList.add("cov")); });
 }
 /* pinch and pan on the study card's picture (v514, § 4 — H: "Reinzoomen und verschieben im Bild ermöglichen"): two pointers
    pinch around their midpoint, one pointer pans once the picture is enlarged, the view clamped so no gap opens that was not
@@ -5043,6 +5061,7 @@ const yieldNow=()=>new Promise(r=>{ if(window.scheduler&&scheduler.yield) schedu
 try{ new PerformanceObserver(l=>{ for(const e of l.getEntries()){ LONG.n++; LONG.total+=e.duration; LONG.max=Math.max(LONG.max,e.duration); LONG.at=Date.now(); } }).observe({entryTypes:["longtask"]}); }catch(e){} /* not every browser reports long tasks; Diagnostics then says so */
 let _rsz=0, _rszFrom=[window.innerWidth,window.innerHeight];
 window.addEventListener("resize",()=>{ if(_rsz) return; _rsz=requestAnimationFrame(()=>{ _rsz=0; const to=[window.innerWidth,window.innerHeight]; if(to[0]!==_rszFrom[0]||to[1]!==_rszFrom[1]){ RESIZES.push({t:Date.now(),from:_rszFrom,to}); _rszFrom=to; while(RESIZES.length>6) RESIZES.shift(); }
+  fitTileCovers(); /* v791: the tiles' cut is in pixels of the square, so a width change places it again */
   const c=document.querySelector(".card.study"); if(!c) return; chrowFit(c); if(c._fitPad) c._fitPad(); }); }); /* v521: every resize re-fits the pad of the card on screen (a fold, the system bars); v532: once per frame, and the row with it */
 window.addEventListener("pageshow",e=>{ if(e.persisted){ RESIZES.push({t:Date.now(),bfcache:true}); while(RESIZES.length>6) RESIZES.shift(); const c=document.querySelector(".card.study"); if(c){ chrowFit(c); if(c._fitPad) c._fitPad(); } } }); /* a page Chrome froze and brought back is measured again */
 const FRONT_RATIO=CARD_RATIO, BRUSH_W=PAD_LW*1.6, OUT_GRID=256, OUT_Y0=900*OUT_GRID/1024;
@@ -6022,7 +6041,8 @@ function renderCards(main){
       :`<div class="chips"><span class="chipset">${filterPillHTML("cards")}</span><span class="cend"><span class="badge" id="cnt"${n===tabCount()?" hidden":""}>${t("{0} of {1}",n,tabCount())}</span></span></div>`}
     <div class="clist tiles" id="clist">${html}</div>
   </div>`;
-  const wire=()=>{ document.querySelectorAll("#clist .ctile").forEach(b=>{ /* the list is tiles since v465; #pitems keeps its rows */
+  const wire=()=>{ fitTileCovers($("#clist")); /* v791: the tile of a flashcard made from a multicard text shows the card's own cut */
+    document.querySelectorAll("#clist .ctile").forEach(b=>{ /* the list is tiles since v465; #pitems keeps its rows */
     b.onclick=()=>{
       if(marking("cards")){ pickToggle(b.dataset.id); b.classList.toggle("on"); pickBar(()=>delPicked("cards")); return; } /* while marking a tap marks the row instead of opening it (v351) */
       LIST_SCROLL=window.scrollY; LIST_CARD=b.dataset.id; LIST_OFF=b.getBoundingClientRect().top; /* where the list stood and which row this is — ← Cards comes back to it (v352), to this row after a swipe (v445) */
@@ -6567,6 +6587,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  791:"In Cards, a flashcard made from a multicard shows its own part of the picture.",
   790:"A multicard text's pop-up has a quiet + Flashcard button.",
   782:"On a sign the reader cannot read, the photo still zooms onto the character you are writing, by the lines' layout.",
   781:"The voice reads more slowly, and takes the phone's natural Mandarin voice when it has one.",
