@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=778; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=779; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -11520,7 +11520,14 @@ if("serviceWorker" in navigator){
    worker took over meanwhile and the page reloaded at once; the camera handed the photo to a page that was gone): while
    picking() or CROP the reload is deferred, and the return to the foreground reloads only once both are over. */
 const LOAD_AT=Date.now(), RELOAD_GRACE=3000; let RELOAD_DUE=false, RELOAD_TIMER=null;
-const reloadBusy=()=>picking()||!!CROP; /* a photo on its way from the camera, or a photo open with its frame */
+const reloadBusy=()=>picking()||!!CROP||PENDING_SHOT; /* a photo on its way from the camera, or a photo open with its frame — or being processed (v779) */
+/* v779 (H: "Habe neues photo aufgenommen und während es verarbeitet wurde, kam ein Update. Das photo ist lost. Darf nicht
+   passieren."): v316's guard ended at the input's change event — the file in hand, nothing of it on disk yet. From there the
+   photo lived in memory for the seconds addRaw and normalizeShot need, PICKING was 0, no frame stood and no reading had
+   begun, so an update already due found the app idle at its next 2 s poll (or at the return to the foreground) and reloaded
+   the page under the photo. PENDING_SHOT is set in importPhotos before its first await, i.e. inside the change event, and
+   stays until the frame stands (CROP) — the one flag that spans exactly the gap. reloadNow checks once more at the last
+   moment, so a reload decided a tick earlier cannot land on a photo that arrived since (a user's own Check now is not held). */
 /* The reload comes at the next pause, on the same screen (v327, H: "make sure that new software versions always load
    automatically without the need for manual refresh" — until v326 a deferred reload waited for the next return to the
    foreground, so an update taken while the app was open showed only after the app had been left and reopened):
@@ -11539,7 +11546,8 @@ const reloadIdle=()=>!reloadBusy()&&!document.hidden&&Date.now()-LAST_TOUCH>=IDL
    next boot. RELOAD_COOL is the cool-down between the app's own reloads, on disk (lastReload), so a reload storm of this kind
    is at most one reload per window; a reload the user asked for (the mirror row's Check now) is never held. */
 const RELOAD_COOL=600000;
-async function reloadNow(user){ if(!user&&Date.now()-(+S.settings.lastReload||0)<RELOAD_COOL){ RELOAD_DUE=true; if(!RELOAD_TIMER) RELOAD_TIMER=setInterval(()=>{ if(RELOAD_DUE&&reloadIdle()) reloadNow(); },RELOAD_POLL); return; } /* cooling: wait it out, then the poll reloads at the next pause */
+async function reloadNow(user){ if(!user&&reloadBusy()){ RELOAD_DUE=true; if(!RELOAD_TIMER) RELOAD_TIMER=setInterval(()=>{ if(RELOAD_DUE&&reloadIdle()) reloadNow(); },RELOAD_POLL); return; } /* v779: a photo arrived since the reload was decided */
+  if(!user&&Date.now()-(+S.settings.lastReload||0)<RELOAD_COOL){ RELOAD_DUE=true; if(!RELOAD_TIMER) RELOAD_TIMER=setInterval(()=>{ if(RELOAD_DUE&&reloadIdle()) reloadNow(); },RELOAD_POLL); return; } /* cooling: wait it out, then the poll reloads at the next pause */
   RELOAD_DUE=false; clearInterval(RELOAD_TIMER); RELOAD_TIMER=null; RELOADING=true; try{ await setSetting("lastReload",Date.now()); await setSetting("resumeView",viewNow(true)); }catch(e){} location.reload(); }
 function reloadSoon(){ if(!reloadBusy()&&(Date.now()-LOAD_AT<RELOAD_GRACE||document.hidden)){ reloadNow(); return; } RELOAD_DUE=true; if(!RELOAD_TIMER) RELOAD_TIMER=setInterval(()=>{ if(RELOAD_DUE&&reloadIdle()) reloadNow(); },RELOAD_POLL); }
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&RELOAD_DUE&&!reloadBusy()) reloadNow(); });

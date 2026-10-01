@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v778, 2026-10-01)
+## Current state (PWA v779, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -413,8 +413,9 @@ The full list is in the archive; these are the ones that keep biting.
 - **No VPN is needed to use the app.** Updates and vendor files come through the jsDelivr mirror (`fastly.jsdelivr.net`;
   `cdn.` is DNS-hijacked in China, v483), purged on every push by `purge-mirror.yml`. A **first install** still needs
   github.io — the only fix is a second origin, and **H chose Cloudflare Pages on his own domain, later.**
-- The reload after an update waits for a pause (v279/v327), never while a photo is on its way from the camera (v316), and
-  at most once in ten minutes (v563).
+- The reload after an update waits for a pause (v279/v327), never while a photo is on its way from the camera (v316) **or
+  being processed** (`PENDING_SHOT`, v779 — v316's guard ended at the change event and a 12 MP photo was lost in the seconds
+  before it reached the inbox), and at most once in ten minutes (v563).
 
 ## Play Store and the Android shell
 **Decided 2026-09-23: a shell around the web app, not a native rewrite; payments native, credits on the server.** The

@@ -116,6 +116,22 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v779, 2026-10-01)
+- **No update reload while a photo is being processed (v779, H: "Habe neues photo aufgenommen und während es verarbeitet
+  wurde, kam ein Update. Das photo ist lost. Darf nicht passieren.").** v316's guard (`picking()`) ended at the input's
+  change event — the file in hand, nothing of it on disk. From there the photo lived in memory for the seconds `addRaw` and
+  `normalizeShot` take on a 12 MP file; PICKING was 0, no frame stood, no reading had begun, and an update already due found
+  the app idle — at the return to the foreground (`visibilitychange` → `reloadNow`) or at the next 2 s poll — and reloaded
+  the page under the photo. The dump shows no reading at all for it: the last ones are 16 h old. Now `reloadBusy` includes
+  `PENDING_SHOT`, set in `importPhotos` before its first await (inside the change event, as `onPhoto` calls it) and cleared
+  only when the frame stands (`CROP`, which holds the reload itself) — the one flag that spans exactly the gap; and
+  `reloadNow` checks `reloadBusy` once more at the last moment, so a reload decided a tick earlier cannot land on a photo
+  that arrived since (a user's own Check now is not held). Harness: an update made due past the grace, the app idle, then a
+  12 MP photo through the camera input — 150 ms after the change the reload is held; `reloadNow` called as the foreground
+  return would defers; the photo lands normalised with a reading and no reload (loads 0) — 4 of 4 on v779, 1 of 6 on v778,
+  where `reloadNow` reloaded the page mid-processing and left the photo raw and unread (`raw:1, reading:0`, the field case).
+  Not yet field-checked. No note.
+
 ## Current state (PWA v778, 2026-10-01)
 - **The voice says each character with the reading it has in its word (v778, H on v776: "Naja, die readings müssen schon
   Sinn machen. Bitte konstruktive Vorschläge" — of three, A: "A, go").** A character spoken alone takes the engine's own
