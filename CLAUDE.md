@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v781, 2026-10-01)
+## Current state (PWA v782, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -162,7 +162,9 @@ and after the layout settles (v521/v532).
 - **The photo zooms onto the character being written** (v617, `ZOOM_AUTO`): whole first, in after `AZ_OVERVIEW` or the pad's
   first touch, on to each next character on a glide, out for the recap — on every character, level 3 included (v660, H's
   choice). `AZ_INK` on a sure ink box; a line's reader boxes share one scale (v678/v679); the text whole on an unsure ink
-  guess (v669); cap `AZ_MAX` 3.5; an unread run before or after the matches takes the free reader line beside them (v749).
+  guess (v669); cap `AZ_MAX` 3.5; an unread run before or after the matches takes the free reader line beside them (v749);
+  the reader's lines count as where the text is only when they hold half the characters (v782); **a character no measurement
+  places, on a text the reader did not find, zooms by the lines' layout** (`charSpanAt`, `AZ_GUESS` .75, cap 2.2, v782).
   **The learner can switch it off** (More → Learning, `learnZoom`, on by default, v683). A pinch makes the zoom the hand's
   (`ZOOM_HAND`) and it then only follows; one finger still swipes.
 - **Swipe** = the carousel of v417: the neighbour rides in and snaps; it grades nothing, a skipped card stays due. On a
@@ -441,7 +443,7 @@ id abroad. **`strokes.txt.gz` and `cedict.tsv.gz` stay freely available under th
 
 ## Open / not yet field-checked
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
-as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the model's character senses (v772); the voice from the pad on the Xiaomi (v773), its reading of the stand-ins (v778) and its pace (v781); the
+as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the model's character senses (v772); the voice from the pad on the Xiaomi (v773), its reading of the stand-ins (v778) and its pace (v781); the zoom by layout on LED signs (v782); the
 apps' fields and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760); the wake
 lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768).
 

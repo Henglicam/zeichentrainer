@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=781; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=782; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -715,6 +715,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["again","v772","Char senses in context: good?"],
   ["again","v773","Read aloud after writing: ok?"],
   ["again","v781","Voice: pace .7 and the voice ok?"],
+  ["again","v782","Zoom by layout on LED signs ok?"],
   ["again","v757","Meituan screenshots: fields right?"],
   ["again","v759","Taobao screenshots: fields right?"],
   ["again","v760","Taobao cart: 天猫 framed right?"],
@@ -3993,6 +3994,9 @@ function revealBlock(sel){ const a=$(sel), nav=$("#tabs"), hd=document.querySele
    word's mark no longer moves the picture (v541's follow rode on it); since v617 autoZoom moves it instead, per character. */
 const SPOT_ON=false;
 const spotRatios=()=>[CARD_RATIO,1.5,16/9,2,4/3], SPOT_MS=320; /* v595: 1.5 joins the list by name, or every card cut before v595 would lose the mark on its photo (v533/v552) the moment CARD_RATIO stopped being 3:2. A function, not an array: CARD_RATIO is declared 150 lines further down, and a top-level array literal would read it before its declaration (the v519 lesson) */
+function charSpanAt(d,pos){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):frontLines(d), n=lines.length||1; let k=0; /* v782: the estimate for the character at a pad position (padTargets counts the text without its newlines, as this does) */
+  for(let li=0;li<lines.length;li++){ const ln=lines[li], U=Math.max(0.01,lineUnits(ln)); let u=0; for(const c of [...ln]){ const w=lineUnits(c); if(k===pos) return {x:u/U,y:li/n,w:w/U,h:1/n}; u+=w; k++; } }
+  return null; }
 function charSpans(d,ch){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):frontLines(d), n=lines.length||1, out=[];
   lines.forEach((ln,li)=>{ const U=Math.max(0.01,lineUnits(ln)); let u=0; for(const c of [...ln]){ const w=lineUnits(c); if(c===ch) out.push({x:u/U,y:li/n,w:w/U,h:1/n}); u+=w; } });
   return out; }
@@ -4141,7 +4145,7 @@ function wordSpan(d,x){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):
    finger always wins: a pinch or a wheel on the picture hands the zoom to the hand for the rest of that picture (ZOOM_HAND),
    and from then on it only follows, as v541 did. */
 const AZ_OVERVIEW=1500, AZ_READER=2500; /* v662: how long a card shows its whole picture before the zoom goes in by itself; v665: how long past the card's start it may wait for the phone's reader, so the zoom goes in once */
-const ZOOM_AUTO=true, AZ_INK=0.68, AZ_MAX=3.5, AZ_MIN=1.15; /* the character's larger side as a share of the box, and the scale's cap and floor (v678: AZ_EST's looser share for an unsure place left — the reader's boxes of one line take one scale) */
+const ZOOM_AUTO=true, AZ_INK=0.68, AZ_MAX=3.5, AZ_MIN=1.15, AZ_GUESS=0.75, AZ_GUESS_MAX=2.2; /* v782: the estimate's share of the box and its cap — .75 so a character of a 2×2 sign, already half the box, still comes nearer (×1.5), a four-character line ×2.2 */ /* the character's larger side as a share of the box, and the scale's cap and floor (v678: AZ_EST's looser share for an unsure place left — the reader's boxes of one line take one scale) */
 let LAST_AZ=null; /* the last decision, for Diagnostics' head line */
 /* EVERY CHARACTER'S OWN BOX, FOUND ON THE INK (v618, H on v617 with a Diagnostics dump: "Er erkennt vieles noch nicht. Die
    Erkennung der Position der characters im Bild funktioniert noch unzureichend."). v617 took the frame's even split as
@@ -4352,7 +4356,11 @@ async function pdCharBoxes(src,nw,nh,g,lines,whole){
      lines is where the text is, even when it read them wrong. autoZoom keeps an unsure place only when it lies on them */
   let ax0=Infinity, ay0=Infinity, ax1=-Infinity, ay1=-Infinity; L.forEach(l=>{ ax0=Math.min(ax0,l.x); ay0=Math.min(ay0,l.y); ax1=Math.max(ax1,l.x+l.w); ay1=Math.max(ay1,l.y+l.h); });
   const area={x:(X0+ax0/k-TX)/TW,y:(Y0+ay0/k-TY)/TH,w:(ax1-ax0)/k/TW,h:(ay1-ay0)/k/TH};
-  if(!hit.size) return {why:"the reader read other text",area,read:rawRead}; /* v685: what it read, and where, goes into the record here too */
+  /* v782 (H: "Hier hat er nicht gezoomt", 便民/超市 on an LED board the reader cannot read: one line "复" at 35,38 %, h24 — a
+     quarter of a two-line sign — and v664's rule made that quarter "where the text is", zoomed x3 onto it for all four
+     characters): the reader's lines say where the text is only when they hold at least half of the card's characters;
+     a fragment says nothing, and the zoom falls to the frame's own layout (the estimate, autoZoom) */
+  if(!hit.size) return {why:m*2>=n?"the reader read other text":`the reader read other text (a fragment: ${m} of ${n} characters)`,area:m*2>=n?area:undefined,read:rawRead}; /* v685: what it read, and where, goes into the record here too */
   const boxOf=(l,pos,ok,pt)=>{ const lv=l.vert, len=lv?l.h:l.w, thick=lv?l.w:l.h, n2=l.at.length;
     const pitch=pt?len*pt:n2>1?len*(l.at[n2-1]-l.at[0])/(n2-1):Math.min(len,thick), side=Math.min(thick,pitch||thick)*1.05, c=(lv?l.y:l.x)+pos*len;
     let bx=lv?{x:l.x,y:c-side/2,w:l.w,h:side}:{x:c-side/2,y:l.y,w:side,h:l.h};
@@ -4565,7 +4573,15 @@ async function autoZoom(card,d,c,tg,st,cur){
      character is that character, not this one — the card's text whole instead */
   const taken=!pf&&found&&found.ok&&pb&&pb.boxes&&pb.boxes.some((b,j)=>b&&j!==li&&found.x+found.w/2>=b.x&&found.x+found.w/2<=b.x+b.w&&found.y+found.h/2>=b.y&&found.y+found.h/2<=b.y+b.h);
   const off=!pf&&(!(found&&found.ok)||taken);
+  /* v782: a card whose character neither the reader nor a sure ink cut can place, and whose text the reader did not even find
+     (no area), zooms on the FRAME'S OWN LAYOUT — the photo's lines share the frame's height, a line's characters its width by
+     their units (charSpans' estimate, v62/v339, the spotlight's own) — at a gentler scale (AZ_GUESS of the box, cap AZ_GUESS_MAX),
+     so the character stands in the middle with its neighbours around it. Until v781 such a card showed the text whole, which
+     on a two-line sign is no zoom at all (H). v669's reason for dropping unsure places — a tight zoom on the wrong spot — is met
+     by the looser scale: the guess is the layout's, not a search's, and the whole line stays in view. */
+  const est=!taken&&off&&!area?charSpanAt(d,cur.pos):null;
   if(taken){ sp={x:0,y:0,w:1,h:1}; how="ink on another character, the text whole"; }
+  else if(est){ sp=est; how="estimate"; }
   else if(off){ sp=area||{x:0,y:0,w:1,h:1}; how=area?"the reader's text, whole":"the text, whole"; }
   if(!cb) cb={why:""};
   const r=geom.rectOf(sp), bw=box.clientWidth, bh=box.clientHeight; if(!r.w||!r.h||!bw||!bh) return;
@@ -4579,7 +4595,7 @@ async function autoZoom(card,d,c,tg,st,cur){
     if(t>1){ const ex=Math.min(qx-P.x,P.x+P.w-qx), ey=Math.min(qy-P.y,P.y+P.h-qy);
       const need=Math.max(P.w*t>bw&&ex>0?bw/(2*ex):0, P.h*t>bh&&ey>0?bh/(2*ey):0); if(need>t) t=Math.min(AZ_MAX,need); }
     return t; };
-  let s=off?0.9*Math.min(bw/r.w,bh/r.h):scaleOf(found);
+  let s=est?Math.min(AZ_GUESS_MAX,AZ_GUESS*Math.min(bw/r.w,bh/r.h)):off?0.9*Math.min(bw/r.w,bh/r.h):scaleOf(found); /* v782: the estimate's own, gentler scale */
   /* v678 (H: "Warum wird hier auf verschiedene Größen gezoomt? sollte immer gleich sein", 吃碰杠听胡 at x3.5, x2.43, x2.43): the
      reader's boxes on one line are all as tall as the line and as wide as its pitch, but a character it read unsurely (碰 read as
      雄, 杠 at 64 %) was zoomed looser than one it was sure of, and an edge character further in. Every character on one reader
@@ -6498,6 +6514,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  782:"On a sign the reader cannot read, the photo still zooms onto the character you are writing, by the lines' layout.",
   781:"The voice reads more slowly, and takes the phone's natural Mandarin voice when it has one.",
   780:"Cards can be sorted — newest, oldest, by pinyin, due soonest or most often forgotten — from the filter pill.",
   778:"The voice says each character with the reading it has in its word — 行 in 银行 is heard as háng.",

@@ -116,6 +116,24 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v782, 2026-10-01)
+- **A sign the reader cannot read still zooms onto the character, by the lines' layout (v782, H: "Hier hat er nicht
+  gezoomt", 便民/超市 on an LED board).** The dump: the phone's reader found one line, "复" at 35,38 %, h24 — a quarter of a
+  two-line sign — and the ink search "odd shapes"; v664's rule then made that quarter "where the text is" and the zoom went
+  ×3.06 onto it for all four characters, and before the reader answered the text stood whole at ×1 ("the text, whole"). Two
+  changes. (1) `pdCharBoxes`: the reader's lines say where the text is only when they hold at least half of the card's
+  Chinese characters (`m*2>=n`); a fragment carries no `area` and the record says so ("a fragment: 1 of 4 characters").
+  (2) `autoZoom`: a character that neither the reader nor a sure ink cut can place, on a card whose text the reader did not
+  find either, zooms on the frame's own layout — the photo's lines share the frame's height, a line's characters its width by
+  their units (`charSpanAt`, the spotlight's estimate of v62/v339) — at a gentler scale (`AZ_GUESS` .75 of the box, cap
+  `AZ_GUESS_MAX` 2.2: a character of a 2×2 sign ×1.5, one of a four-character line ×2.2), logged "estimate". v669 dropped
+  unsure places because a tight zoom on the wrong spot is worse than none; the layout's guess is looser by construction and
+  keeps the line in view, and it comes only after every measured place has failed. Harness (the fixture carries the field
+  case's own answers, v446/v552: an LED dot-matrix 便民/超市 as the card's picture, the reader's "复 35,38 % h24" and the ink
+  search's "odd shapes"): 便 and 市 zoom "estimate" at ×1.5 on their own quarters, the record names the fragment — 5 of 5 on
+  v782, 1 of 6 on v781 (there "the reader's text, whole" ×3.5 at 35,38 % for both). Screenshot checked: 市 centred in its
+  quarter. Not yet field-checked. WHATS_NEW 782; TO_TEST "Zoom by layout on LED signs ok?".
+
 ## Current state (PWA v781, 2026-10-01)
 - **The voice reads at a teacher's pace and takes the phone's natural Mandarin voice when it has one (v781, H: "Kannst du
   bitte eine angenehmere Stimme zum Vorlesen verwenden? Eine die sich natürlich anhört und langsam spricht, wie ein guter
