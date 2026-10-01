@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=776; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=777; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -5730,10 +5730,14 @@ const CHAR_MS=900, CHAR_IN=200 /* v668: styles.css .recap.one.in transition-dela
    since an empty phrase there is worse than none. It is the CHARACTER's meaning and not the word's: the reading above it
    is the character's, so the two say one thing, and the word is on the line under the pad throughout. Clamped to two
    lines, where the card's recap allows three — this one is a 900 ms breath, not a card. */
-function charRecapHTML(py,mn){
+function charRecapHTML(py,mn,ch){
   const n=Math.max(4,[...py].length); /* a semibold syllable runs about 0.7 em a character, so 143/n cqw is the one-line fit; the clamp under it is the safety net */
   /* v775: the meaning first and large (measured by recapFit once the block is in the page), the syllable small under it; with no meaning the syllable stands large alone, sized as before */
-  return `<div class="recap one py" aria-live="polite">${mn?`<div class="rm">${esc(mn)}</div><div class="rp">${esc(py)}</div>`:`<div class="rp alone" style="font-size:min(${RECAP_PY}px,84cqw,${(143/n).toFixed(2)}cqw)">${esc(py)}</div>`}</div>`;
+  /* v777 (H: "Der User soll sich nach dem Schreiben den jeweiligen character einprägen können"): the CHARACTER stands at the
+     head of its reading, printed large in the Hanzi face — the pad with its green ink has faded out under the reading since
+     v668 (the two overlapped), so until now the learner looked at the meaning of a character that was no longer on screen. */
+  const g=ch?`<div class="rg hanzi">${esc(ch)}</div>`:"";
+  return `<div class="recap one py" aria-live="polite">${g}${mn?`<div class="rm">${esc(mn)}</div><div class="rp">${esc(py)}</div>`:`<div class="rp alone" style="font-size:min(${RECAP_PY}px,84cqw,${(143/n).toFixed(2)}cqw)">${esc(py)}</div>`}</div>`;
 }
 async function charRecap(card,cur,tg,st){
   const pause=()=>new Promise(r=>setTimeout(r,250));
@@ -5743,7 +5747,7 @@ async function charRecap(card,cur,tg,st){
   if(!py) return pause();
   let mn=rows.length?((rows[0].querySelector(".mn")||{}).textContent||"").trim():""; /* v571: the same row's meaning */
   if(mn===t("not in the dictionary")) mn="";
-  pw.insertAdjacentHTML("beforeend",charRecapHTML(py,mn)); /* v773/v774: the voice started at the stroke (charDone), not here */
+  pw.insertAdjacentHTML("beforeend",charRecapHTML(py,mn,cur.glyph)); /* v773/v774: the voice started at the stroke (charDone), not here; v777: the character stands over its reading */
   const rc=pw.lastElementChild; recapFit(rc); pw.classList.add("recapping"); /* v775: the meaning measured to its largest fit, as the card's recap is */
   void getComputedStyle(rc).opacity; /* v673: the hidden start is resolved before "in" — without it the first style pass already saw "in", so the reading had no fade and no delay and stood at once over the fading green character (screencast: 752 ms, the reading solid, 十 at half); v668's probe read the opacity every frame and so forced the very pass it was testing */
   requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); });
@@ -5844,8 +5848,8 @@ function recapHTML(d){
 function recapFit(rc){
   /* v775: the BIG line is the meaning (.rm), or the reading when the card has no meaning (.rp.alone); the small line under it keeps its own height */
   const rp=rc&&(rc.querySelector(".rm")||rc.querySelector(".rp.alone")); if(!rp||!rc.clientHeight) return;
-  const rm=rc.querySelector(".rp:not(.alone)");
-  const room=rc.clientHeight-16-(rm?4:0); /* the square less .recap's own padding and the gap to the small line */
+  const rm=rc.querySelector(".rp:not(.alone)"), rg=rc.querySelector(".rg");
+  const room=rc.clientHeight-16-(rm?4:0)-(rg?rg.offsetHeight+4:0); /* the square less .recap's own padding, the gap to the small line and, since v777, the character at the head */
   const mh=rm?rm.offsetHeight:0;
   /* WIDTH FIRST, and this is the one that bit: a word set nowrap (v555) can be wider than the square, and the block
      then overflows SIDEWAYS while its line count is still 1 — a height test alone calls that a fit. `.rp` is capped at
@@ -6466,6 +6470,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  777:"After each character you write, the character itself stands over its meaning and reading for a moment.",
   775:"After writing, the meaning stands large over the pad and the pinyin small under it.",
   773:"The Chinese is read aloud after you write it — each character with its reading, the whole text with the recap. Switch it off under More → Learning.",
   772:"After each character you write, its meaning is the one it has in that word — not the dictionary's first sense.",
