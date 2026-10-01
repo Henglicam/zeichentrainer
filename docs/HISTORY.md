@@ -116,6 +116,17 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v776, 2026-10-01)
+- **Every character is spoken alone (v776, H on 一次性手套: "Bitte jeden character einzeln lesen, nicht bei einem character
+  das gesamte Wort, wie hier passiert.").** Two rules spoke more than the character: v773's — the whole word when the
+  character alone would read differently (一 alone is yī, in 一次 yí, so 一's stroke spoke 一次性手套) — and v774's — the
+  last character's stroke spoke the whole text. Both go: `sayChar` says the character, always, at every stroke that
+  completes one, the last one included; the whole text is heard with the card's recap, where its translation stands
+  (`cardDone`, as v773 had it). A 多音字 read alone takes the engine's own reading (行 alone xíng, in 银行 háng) — H's
+  choice, made with the 一 case in his ear. Harness (the hand of v774, a recording voice, 银行): 行's stroke speaks 行, not
+  银行; the recap speaks 银行 once — 2 flip on v775, 银's stroke a control (银 reads alike alone). Not yet field-checked. No
+  note: v773's stands.
+
 ## Current state (PWA v775, 2026-10-01)
 - **After writing, the meaning is the headline and the pinyin the small line under it (v775, H: "Und die Übersetzung muss
   prominent dastehen. Das Pinyin nur als kleine Zusatzinformation.").** Both readings over the pad — the one after each
