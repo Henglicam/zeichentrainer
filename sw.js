@@ -1,8 +1,8 @@
-const CACHE = "zt-v812";
-/* OCR assets (./vendor/, ~23 MB: the reader's eleven files at ~15 MB plus the 7.3 MB stroke outlines of v517, which are fetched through the same path but deliberately kept out of OCR_FILES) live in their own cache that survives shell
+const CACHE = "zt-v813";
+/* OCR assets (./vendor/, ~52 MB since v639 — Paddle's ~29 MB beside these: the reader's eleven files at ~15 MB plus the 7.3 MB stroke outlines of v517, which are fetched through the same path but deliberately kept out of OCR_FILES) live in their own cache that survives shell
    updates — otherwise every cache version bump would re-download all of
    Tesseract. Only bump this when vendor files change. */
-const OCR_CACHE = "zt-ocr-v1";
+const OCR_CACHE = "zt-ocr-v1"; // app.js names the same cache OCR_CACHE — bump both together (v813)
 const ASSETS = [
   "./", "./index.html", "./styles.css", "./lang.js", "./app.js", "./manifest.webmanifest", "./signs.json", "./nmt-model.json",
   "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png",

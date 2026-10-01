@@ -124,7 +124,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
    and its linked row — none of which move with the gesture (measured: 527 px of overlap, the six buttons visibly sliced).
    Everything under the card steps aside while a card is being pushed and comes back with the render. (v445) */
 .pane.swiping>.detailacts,.pane.swiping>.dmain,.pane.swiping>.dacts,.pane.swiping>.badge,.pane.swiping>.linked{visibility:hidden}
-.card.sliding{transition:transform .22s cubic-bezier(.22,.61,.36,1)}
+.card.sliding{transition:transform .22s cubic-bezier(.22,.61,.36,1)} /* app.js SW_MS waits for this .22s */
 @media (prefers-reduced-motion:reduce){.card.sliding{transition:none}}
 .hint{margin-top:18px;font-size:13px;color:var(--label3)}
 .btn.block{width:100%}
@@ -856,7 +856,7 @@ body.noscroll{overflow:hidden}
 /* everything drawn ON the photo lives in one layer the zoom transforms beside the picture (v541), so a mark travels with a
    pinch or a pan. --wz is 1/scale, so a ring keeps its width instead of growing fivefold when the picture is enlarged. */
 .spotlayer{position:absolute;inset:0;pointer-events:none;transform-origin:0 0;z-index:2}
-.picbox.zgl>.spotlayer,.picbox.zgl .signimg,.picbox.zgl .pagewrap{transition:transform .38s cubic-bezier(.22,.61,.36,1)} /* v541: the picture follows the pad onto the next word on a glide, never a jump; the finger's own pan is never on a transition */
+.picbox.zgl>.spotlayer,.picbox.zgl .signimg,.picbox.zgl .pagewrap{transition:transform .38s cubic-bezier(.22,.61,.36,1)} /* = app.js GLIDE_MS 380 */ /* v541: the picture follows the pad onto the next word on a glide, never a jump; the finger's own pan is never on a transition */
 @media(prefers-reduced-motion:reduce){.picbox.zgl>.spotlayer,.picbox.zgl .signimg,.picbox.zgl .pagewrap{transition:none}}
 /* v541 (H: "Highlight character auf rotem Hintergrund muss besser sichtbar sein"): the ring was a tint line, which a red
    shop front swallows. It is a white core between two dark flanks now — v461's own finding, that the boundary is carried by
@@ -968,7 +968,7 @@ body.noscroll{overflow:hidden}
 .card.study:not(.detail)>*{margin-top:0}
 /* v564 (H: "den oberen Teil nochmal in zwei Hälften trennt ... eine Hälfte ist das Bild ... Die zweite Hälfte ist der ganze Text"): the cue — as tall as the pad, on no panel of its own since v563 — is two halves, the picture over the whole text; --ph, --th and --cg are written by splitFit (app.js), and a tap anywhere in the upper zone swaps the two, on a slide. v580 left only these two states — the halves, where both stood on screen at once, are gone, so there is no "other half" to close */
 .cue{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:var(--ph,minmax(0,1fr)) var(--th,auto);row-gap:var(--cg,8px);min-height:0;box-sizing:border-box}
-.cue.gl{transition:grid-template-rows .22s cubic-bezier(.22,.61,.36,1),row-gap .22s cubic-bezier(.22,.61,.36,1)} /* v565: the slide only on a tap (cueBig sets .gl for its duration) — a render never animates the halves into place */
+/* app.js cueBig removes .gl after 320 ms, past this .22s */ .cue.gl{transition:grid-template-rows .22s cubic-bezier(.22,.61,.36,1),row-gap .22s cubic-bezier(.22,.61,.36,1)} /* v565: the slide only on a tap (cueBig sets .gl for its duration) — a render never animates the halves into place */
 .cue .zone1 .picbox:not(.page):not(.sized) .signimg{opacity:0} /* v565: the picture shows only once splitFit knows its shape — fitted or clipped — so a picture that decodes late never appears in the wrong one and jumps (the carousel's neighbour did) */
 .cue .txt{position:relative;min-height:0;display:flex;flex-direction:column;justify-content:center;align-items:stretch;overflow:hidden;cursor:pointer} /* the text half: the tiles' rows over the word line, centred in the half */
 .cue .zone1{min-height:0;width:min(100%,var(--ph,100%));justify-self:center;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:var(--rc);cursor:pointer} /* v580: the whole upper zone takes the tap that swaps the two states, as the text half already did */
