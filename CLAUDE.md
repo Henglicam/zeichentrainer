@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v801, 2026-10-01)
+## Current state (PWA v802, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -239,7 +239,9 @@ hundred readings, a hundred AI exchanges and a hundred errors, and survives rest
 phone, and every reader fix since v93 came out of a shared dump. Each reading carries a `numbers:` line with every value the
 frame chain decided on (v399). **The dump prints the newest 8 readings and 20 exchanges whole and the rest one line each**
 (`DIAG_READ_FULL`, `DIAG_AI_FULL`, v788: 779 KB became ~110); its head carries the reader's first answer, the screen lock, the
-Learn session and the last 12 utterances of the voice (`SAYLOG`), and each zoom decision its time into the card and its screen.
+Learn session, the last 12 utterances of the voice (`SAYLOG`) and **every move of the session's place with its reason**
+(`LLOG`, v802: written, swipe, walk, pruned, queue built again, restored — and "moved, no note" for a move no site named),
+and each zoom decision its time into the card and its screen.
 
 ## The reading pipeline
 Photo (≤1600 px, EXIF baked in) → `proposeFrame` (ink rows on a chromaticity copy; a **shared screenshot is read whole**,
@@ -470,7 +472,7 @@ id abroad. **`strokes.txt.gz` and `cedict.tsv.gz` stay freely available under th
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
 as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the model's character senses (v772); the voice from the pad on the Xiaomi (v773), its reading of the stand-ins (v778) and its pace (v781); the zoom by layout on LED signs (v782); the
 apps' fields and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760); the wake
-lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768); whether DeepSeek sends the senses now (v783); the last character read through on the Xiaomi (v784); the zoom on a flashcard made from a multicard text (v789); its tile's cut in Cards (v791); the multicard's pop-up toolbar and the list's going (v792); the room under the page while a pop-up is open (v793); the made line after + Flashcard (v794); the seal's colours after the luminance-only brightening (v798).
+lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768); whether DeepSeek sends the senses now (v783); the last character read through on the Xiaomi (v784); the zoom on a flashcard made from a multicard text (v789); its tile's cut in Cards (v791); the multicard's pop-up toolbar and the list's going (v792); the room under the page while a pop-up is open (v793); the made line after + Flashcard (v794); the seal's colours after the luminance-only brightening (v798); **the Learn jump off a flashcard made from a multicard text** (H, 2026-10-01 evening, cause unknown — the next dump carries the Learn moves, v802).
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's

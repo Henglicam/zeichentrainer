@@ -116,7 +116,22 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v801, 2026-10-01)
+## Current state (PWA v802, 2026-10-01)
+- **Diagnostics notes every move of the Learn session's place (v802, after H's report with the v801 message: "hier war gerade
+  eine aus Multicard generierte Flashcard dran und die app ist direkt zur nächsten karte weiter gesprungen").** The dump
+  had nothing on it — "learn · 27 in the session, at 1" and the zoom's decisions —, and the harness could not make a
+  from-card at the head of a session move on its own (probe801: 12 s, the description and the senses arriving, the pad
+  standing). So the record first: `LLOG` (30 entries) notes each move with its reason and the card it landed on — the
+  written card's advance (`adv`, "written" / "written, session done"), a swipe (`stepCard`), a walk's lock and release, a
+  queue pruned of a deleted card in `renderStudy` (with the ids that went), the queue built again (`requeue`), the place
+  restored after a reload (with how many ids the restore dropped) — and `renderStudy` compares the place it draws with the
+  last one noted: a move no site named is noted as **"moved, no note"** with where it came from, which is the line that
+  would have named H's jump. The dump prints them under "learn moves" after the zoom decisions. Suspects for the jump, each
+  of which the log now tells apart: a from-card's id changed under the queue (an AI answer that changed its text, v118 —
+  then "pruned" names it), a recap's advance landing late (then "written" with the previous card), a swipe the hand did not
+  mean (then "swipe"), or something else ("moved, no note"). Harness (`test802`, a three-card session): a swipe, a card
+  deleted under the session, an index set by hand, each noted with its reason, and the dump's section with all of them:
+  **5 of 5, v801 1 of 5**. Waiting on the next occurrence on the phone.
 - **A vertical line's character size is its width (v801, H's 青芥辣 tube: "Wo kommt denn der ganze Text her???? Halluziniert??",
   then "Yeah, rule verticals by width").** Not hallucinated: the storage line 开封后请放入冰箱冷藏 runs down the pack's right edge
   in characters a third the size of the title, Qwen read it as a second line with its own box (and noted the last two
