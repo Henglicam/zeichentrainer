@@ -116,6 +116,22 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v781, 2026-10-01)
+- **The voice reads at a teacher's pace and takes the phone's natural Mandarin voice when it has one (v781, H: "Kannst du
+  bitte eine angenehmere Stimme zum Vorlesen verwenden? Eine die sich natürlich anhört und langsam spricht, wie ein guter
+  Lehrer/in?").** What the app can do: among the voices the phone lists, prefer a neural one — engines name them Natural,
+  Neural, Premium, Enhanced, WaveNet, Google's cmn-CN "-x-" voices — then any zh-CN, then any Mandarin (`ttsVoice`; until
+  v780 the first zh-CN voice, whatever it was); and set the pace: `SAY_RATE` .7 of the engine's own (`say`, .85 since v164)
+  with pitch 1. What it cannot do: ship a voice — a voice is the phone's engine, and H's Xiaomi lists none through
+  `getVoices()` (v165: it speaks through the system engine all the same), so there the engine chosen under Settings →
+  Text-to-speech output IS the voice, and the app's part is the pace. The honest options were put to H: the engine on the
+  phone (Xiaomi's own or Google's, with a natural Mandarin voice installed), or an offline neural voice vendored like the
+  translation model (tens of MB, a download on use, a build of its own) — the latter waits for a go. Harness (a recorder in
+  place of the engine, three voice lists): the natural voice taken among three Mandarin ones, the plain zh-CN when there is
+  none (control), no voice at all speaks zh-CN by itself (control, the Xiaomi case); the pace .7 and pitch 1 on every
+  utterance — 5 of 5 on v781, 2 of 5 on v780. Not yet field-checked: the pace on the Xiaomi engine. WHATS_NEW 781; TO_TEST
+  "Voice: pace .7 and the voice ok?".
+
 ## Current state (PWA v780, 2026-10-01)
 - **The Cards list can be sorted (v780, H: "Bitte Sortierung der Karten unter Cards ermöglichen." — described, "Go").** The
   filter pill's sheet (v365) gets a **Sort by** group under the filter rows: on Cards Newest first (the default, as the
