@@ -155,7 +155,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .btn.on{background:var(--tint);color:#fff}
 
 /* done screen */
-.done{text-align:center;max-width:380px;background:var(--card);border-radius:var(--rc);padding:30px 22px;box-shadow:var(--shadow)}
+.done{text-align:center;max-width:380px;background:var(--card);border-radius:var(--rc);padding:30px 16px;box-shadow:var(--shadow)}
 .done .mark{font-family:var(--hanzi);font-size:64px;color:var(--ok);margin-bottom:14px}
 .done h2{font-size:22px;margin:0 0 8px;font-weight:700;letter-spacing:-.2px}
 .done p{color:var(--label2);font-size:15px;line-height:1.55;margin:0 0 22px}
@@ -190,7 +190,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .more .listhead{margin-left:16px} /* v551: the head sat at x=20 over rows whose titles sit at 32 — the one text on More that lined up with nothing. Scoped to More, since the Camera tab's marking head stands over photo tiles at 16, not over a card's inner padding. */
 .del{background:none;border:none;cursor:pointer;font-size:15px;font-weight:500;color:var(--tint);padding:10px 6px;min-height:44px;border-radius:8px}
 .del:active{opacity:.6}
-.more .mofold{display:block;padding:6px 0;min-height:36px;text-align:left} .more .mofold i{font-style:normal;color:var(--label3)} /* v717: the fold under a More row — What is sent, About the app — a link with a chevron, the text under it only while open */
+.more .mofold{display:block;padding:6px 0;min-height:44px;text-align:left} .more .mofold i{font-style:normal;color:var(--label3)} /* v717: the fold under a More row — What is sent, About the app — a link with a chevron, the text under it only while open */
 .more .mrow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--sep)} /* v589 flex-wrap: at 360 px the German Import button hung 8.6 px out of its own card and the Russian Flagged-cards row
    ran 11.6 px past it, "Поделиться" sliced by the screen edge — the text div cannot shrink below its longest word and pushed
    the .btnrow (flex:none) out. Wrapping drops the buttons onto their own line only when both cannot fit, so a row that
@@ -233,7 +233,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .btnrow{display:flex;gap:6px;flex:none}
 .chip{background:var(--fill);border:none;border-radius:999px;color:var(--label);font-size:13px;font-weight:500;padding:8px 14px;min-height:44px;cursor:pointer}
 .chip.on{background:var(--tint);color:#fff}
-.tagchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px} .tagchips .chip{min-height:32px;padding:6px 11px;font-size:13px}
+.tagchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px} .tagchips .chip{min-height:44px;padding:6px 11px;font-size:13px}
 .pill.tag{background:var(--tint-soft);color:var(--tint)}
 .say{position:relative;background:var(--fill);border:none;border-radius:999px;width:38px;height:38px;margin-left:10px;vertical-align:middle;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center} .say::before{content:"";position:absolute;inset:-3px} /* v711: a 44 px hit area around the 38 px disc */
 .say svg{width:20px;height:20px;fill:none;stroke:var(--tint);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round} .say:active{opacity:.6}
@@ -506,6 +506,7 @@ body.noscroll{overflow:hidden}
 .mrow .inrow{display:flex;gap:8px;align-items:center;margin-top:10px;min-width:0}
 #mirror-status{overflow-wrap:anywhere} /* the mirror address is one unbreakable token, and its min-content pushed the owner's row 6 px past a 360 px screen (v472) */ /* an input with its button inside a More row, in the Feedback box's field look (v282) */
 .mrow .inrow input{flex:1;min-width:0;background:var(--card2);border:none;border-radius:10px;color:var(--label);font-family:var(--sans);font-size:17px;padding:10px 14px;outline:none;box-shadow:none}
+.mrow .inrow.admin{flex-wrap:wrap} .mrow .inrow.admin input{flex:1 1 120px;min-width:120px} /* v812: the password field wraps under its label rather than shrinking to 25 px in Spanish */
 .mrow .inrow input.mono{font-family:var(--mono);font-size:14px} .mrow .inrow input:focus{box-shadow:inset 0 0 0 2px var(--tint)} .mrow .inrow input::placeholder{color:var(--label3)}
 .mrow .err{margin:8px 0 0}
 .mrow .inrow.admin{margin-top:0;gap:10px;flex-wrap:wrap} .mrow .inrow.admin .s.quiet{flex:0 1 auto;min-width:0;margin:0;font-size:13px} /* v537: the label may shrink and the row may wrap. With flex:none on the label the German row ran to x=428 on a 393 px screen and 42 % of "Anmelden" was off the right edge - the button, not just the row, and scrolling to it shifted the whole page sideways and cut every section head. CLAUDE.md recorded the row overflow as structural and accepted; a clipped BUTTON is not. */ .mrow .inrow.admin input{padding:8px 12px;font-size:15px;min-height:36px} .mrow .inrow.admin .del{flex:none;padding:6px 4px;min-height:36px} /* the admin log-in row: label, field and a plain Log in on one line, nothing prominent (v283–v284) */
@@ -554,7 +555,7 @@ body.noscroll{overflow:hidden}
 
 /* the Undo line after a deletion (v268): above the tab bar, the card's surface with the hairline and a shadow, the text and a tint Undo */
 .undo{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav) + 14px + env(safe-area-inset-bottom));z-index:20;display:flex;align-items:center;gap:12px;width:calc(100% - 32px);max-width:408px;padding:6px 6px 6px 16px;border-radius:var(--r);background:var(--card);color:var(--label);font-size:15px;line-height:1.35;box-shadow:0 0 0 1px var(--sep),0 8px 24px rgba(0,0,0,.18);animation:undoup .18s ease-out}
-.undo .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.undo .t{flex:1;min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3} /* v812: two lines, so the verb that ends the sentence in de, fr, es, ja, ko and id is not cut off */
 /* the update note (v408) is a toast, not an action bar: it has no button, so it hugs its text, wraps instead of
    clipping it, and pads evenly. Until v412 it borrowed .undo whole and every note was cut at about half (v413). */
 #updated{display:flex;align-items:center;gap:8px;left:0;right:0;margin-inline:auto;transform:none;width:fit-content;max-width:min(calc(100% - 32px),408px);padding:8px 8px 8px 16px;animation:noteup .18s ease-out;cursor:pointer}
@@ -575,7 +576,7 @@ body.noscroll{overflow:hidden}
 .pickbar #pick-del[disabled]{color:var(--label3)}
 .pickbar #pick-done{color:var(--label2)}
 .cend{display:flex;align-items:center;gap:10px;flex:none}
-.chips .del{padding:6px 2px;min-height:0;font-size:14px}
+.chips .del{padding:6px 8px;min-height:44px;min-width:44px;font-size:14px} /* v812: All / None were 21 × 32 */
 /* the inbox as tiles, two photos a row (v462): the grid is on #shots, and anything that is not a plain tile — the head,
    the batch line, the placeholder, and every photo that is busy or was opened from the grid — spans both columns, so one
    photo being read sits full width among the tiles without a second layout. */
@@ -607,7 +608,7 @@ body.noscroll{overflow:hidden}
 .ctile .tglyph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:46px;color:var(--label3);text-align:center;line-height:1.15;white-space:nowrap;padding:0 6px}
 /* the glyph tile carries the card's whole text (v506): .tw is a size container so the font can be fitted to the tile's
    own width and height with cqw/cqh (the inline style on .tglyph), capped at the 46 px a single character always had */
-.ctile .tw.glyph{container-type:size}
+.ctile .tw.glyph{container-type:size} .ctile .tw.glyph .tglyph{color:var(--label2)} /* v812: the tile's only identification since v593 took the headings away — label3 read at 2:1 */
 /* the tile of a flashcard generated from a multicard (v490): the multicard's whole photo with this card's own text
    framed and lit on it, the Learn front in miniature. .tw becomes a size container so the photo can be fitted with
    cqw/cqh — a percentage max-height would resolve against an auto height and collapse — and .tpw shrink-wraps the
@@ -636,14 +637,14 @@ body.noscroll{overflow:hidden}
    top:2px to -4px, and .ctile is overflow:hidden — three pixels of the glyph were cut off every tile. Placed so the
    glyph lands exactly where .ctile.pick .tick does, 6 px in, and nothing moves when the marking starts. */
 .ctile .star{position:absolute;right:0;top:0;margin:0;z-index:3;width:44px;height:44px;display:grid;place-items:center;filter:drop-shadow(0 1px 2px rgba(0,0,0,.55))}
-.ctile .star svg{stroke:#fff} .ctile .star.on svg{stroke:var(--tint);fill:var(--tint)}
+.ctile .star svg{stroke:#fff} .ctile .star.on svg{stroke:#fff;fill:var(--tint)} /* v812: a white edge, so a starred red sign shows its star */ .ctile:has(.tw.glyph) .star:not(.on) svg{stroke:var(--label2)} /* a text-only tile is light: a white outline was invisible */
 .ctile .cnt{position:absolute;right:6px;bottom:6px;z-index:3;min-width:20px;height:19px;padding:0 6px;border-radius:999px;background:rgba(0,0,0,.62);color:#fff;font-family:var(--sans);font-size:11px;font-weight:600;line-height:19px;text-align:center}
 .ctile .tmarks{position:absolute;left:6px;bottom:6px;z-index:3;display:flex;gap:4px}
 .ctile .tm{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;font-family:var(--sans);font-size:10px;font-weight:700;font-style:normal;color:#fff}
 .ctile .tm.flag{background:var(--tint)} .ctile .tm.ai{background:var(--ok)}
 .ctile .tm.trad{background:var(--lock)} .ctile .tmarks.ttrad{top:6px;bottom:auto;right:40px} /* v603: the card is in traditional characters — the tile's top-left corner, clear of the star */
 .tradmark.simp{background:var(--fill);color:var(--label)} /* v604: switched to simplified — the same chip, quieter, since simplified is the app's default script */
-.ctile .tm.new{background:var(--tint-soft);color:var(--tint)} /* v515: a page whose text is not yet checked */
+.ctile .tm.new{background:rgba(0,0,0,.62);color:#fff} /* v812: on the photo, the overlay look of .cnt — the tint on tint-soft vanished on a red sign */ /* v515: a page whose text is not yet checked */
 /* the marking's tick, on a tile (v490, H: "Im markiermodus sind an der Sternposition nun kreise. Das scheint falsch."):
    the filled state has been scoped to .crow and .shot.pick since v355, so on a tile — the Cards list since v465 — a
    marked card's ring never filled and every tile carried a grey circle that could not change. It fills like the row's
@@ -993,6 +994,7 @@ body.noscroll{overflow:hidden}
 .card.study.bigtxt .cue .padline .hanzi{font-size:calc(20px*var(--plz,1))}
 .padwrap .padacts{position:absolute;left:0;right:0;bottom:8px;margin:0;display:flex;justify-content:space-between;padding:0 10px;pointer-events:none} .padwrap .padacts>*{pointer-events:auto}
 .padwrap .padacts:not(:has(:not([hidden]))){display:none} /* an empty row takes no taps */
+.padwrap .padacts{gap:2px 6px} .padwrap .padacts .del{white-space:nowrap;font-size:clamp(12px,calc(var(--padw,300px)*.068),15px);padding-inline:4px} /* v812: one row at 360 px in every language — the pair stacked over the template in de and ru */
 .padwrap .padacts button{touch-action:none} /* v717: a touch that starts on Show me or Skip and moves becomes a stroke on the pad, so the browser must not take it for a scroll */
 .padwrap .hint#pad-note{position:absolute;left:12px;right:12px;top:8px;margin:0;text-align:center;pointer-events:none}
 /* v603: a card in traditional characters, named in the picture's top-left corner (the review flag has the right) — on the study card, its neighbour and the open card. Over any photo, so it carries its own fill; pointer-events off, so a tap on it is still the tap on the picture */
@@ -1005,3 +1007,12 @@ body.noscroll{overflow:hidden}
 .wnlist li{position:relative;padding-left:16px;margin-top:6px;font-size:14px;color:var(--label2);line-height:1.4}
 .wnlist li::before{content:"";position:absolute;left:4px;top:.6em;width:5px;height:5px;border-radius:50%;background:var(--label3)} /* v610 (H: "die Bullet-Punkte bitte nicht in Rot. Das ist ja viel zu auffällig"): the quiet grey of the app's tertiary text */
 /* v691 the character pages: the open card's link under its line, and the page — the character, its readings in your cards, the cards that hold it */
+
+/* v812 (the audit's layout sweep): Korean breaks at spaces, as Korean UIs do — Chrome broke between Hangul syllables 150 times
+   over the screens ("넘어가/요"); Chinese text keeps breaking between characters */
+html:lang(ko) body{word-break:keep-all;overflow-wrap:break-word}
+html:lang(ko) :is(.hanzi,.zh,.anshanzi,.chrow,.tglyph,.padline,.c){word-break:normal}
+/* v812: a More row's text column keeps 9em before its buttons wrap under it — "Markierte / Karten" stood beside its buttons over five lines */
+.more .mrow>div:first-child{min-width:min(100%,9em)}
+/* v812: the add form's "filled in automatically, unverified" is a caution, not an error */
+#f-pinhint{color:var(--warn)}

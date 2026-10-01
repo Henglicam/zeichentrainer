@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=811; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=812; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -5356,7 +5356,7 @@ function mountPad(card,d,c,tg,st,cur){
     const cueMin=Math.max(PHOTO_MIN,CH_MAX+6+LINE_H); /* v580: the cue holds ONE of the two — the picture at its floor, or one row of tiles over the word line — where v564 needed room for both at once (PHOTO_MIN plus a whole text half), so a short screen breaks the symmetry later and the pad keeps more of it */
     let side=Math.min(inner,Math.floor(avail/2)), cueH=side;
     if(side<cueMin){ cueH=cueMin; side=Math.max(PAD_FLOOR,Math.min(inner,avail-cueH)); } /* too short for two equal panels: the photo keeps its floor, the pad gives way */
-    cv.style.width=side+"px"; cv.style.height=side+"px"; card.style.setProperty("--cueh",cueH+"px");
+    cv.style.width=side+"px"; cv.style.height=side+"px"; card.style.setProperty("--cueh",cueH+"px"); card.style.setProperty("--padw",side+"px"); /* v812: Show me and Skip size their labels to the pad, so the pair stays one row on a small phone */
     card._fit=LAST_FIT={at:Date.now(),vw:window.innerWidth,vh:window.innerHeight,navH,top:+top.toFixed(1),cardH,avail,inner,side,cueH,end:0,navTop:+navTop.toFixed(1),scrollY:window.scrollY,fits:card._fit?card._fit.fits+1:1};
     splitFit(card); /* v564: which of the two the cue holds, and the clip test on the picture */
     const grow=card._split?card._split.cueH-cueH:0; /* a text that needs more than the cue grew it (splitFit): the pad moves down while the card still ends 16 px above the bar, and gives way — never under PAD_FLOOR — when it would not */

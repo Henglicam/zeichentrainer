@@ -52,7 +52,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v811, 2026-10-01)
+## Current state (PWA v812, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -332,6 +332,7 @@ counts.
 - The guide is six sections, five led by a **real crop of one part of one screen** (v598) and the sixth by a drawn figure
   (v599, `gfimg`). A crop must carry **no UI prose**, or it stops serving all ten languages; it is regenerated with the
   screen it shows (below); a whole screen is banned (v549: six of them are 4600 px).
+- Korean breaks at spaces (`html:lang(ko) body{word-break:keep-all}`, Chinese text excepted, v812).
 - ja, ko, ru, vi, th and id are mine and **unchecked by a native speaker**.
 
 ## Hard constraints (learned in the field — do not violate)
