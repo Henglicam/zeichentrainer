@@ -116,6 +116,18 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v774, 2026-10-01)
+- **The voice starts at the stroke that completes the character (v774, H on v773: "Das Reading muss früher kommen. Das
+  kommt jetzt gerade, wenn das schon alles weg ist. Das muss eigentlich beim letzten Stroke schon fast kommen.").** v773
+  spoke from `charRecap` — after the .3 s flash, the pad's fade and the reading's .2 s lead — and the Xiaomi engine's own
+  start-up on top of that put the sound where the reading was already leaving. Now `charDone` speaks before anything
+  else happens: the character (or its word, `sayChar`) at the stroke, and for the LAST character of the card the whole
+  text at that stroke — its own reading and the recap follow under the voice, and the recap speaks nothing a second time.
+  Harness, with a hand that traces the medians on the pad (`STROKE_OF`, `padPt`, page.mouse on `#wpad`) and the voice
+  replaced by a recorder: 洗, 手 spoken the moment their last stroke lands, nothing standing over the pad yet; 液's last
+  stroke speaks 洗手液; nothing with the recap — 5 of 5 on v774, 1 of 6 on v773 (there the voice came after the reading and
+  the last character spoke twice). Not yet field-checked. No note: v773's stands.
+
 ## Current state (PWA v773, 2026-10-01)
 - **The Chinese is read aloud after writing, with a switch (v773, H: "enable automatic Chinese reading then the translation
   after writing is shown. With an option to switch it off" — "Go for the automatic Chinese reading, with the switch").**

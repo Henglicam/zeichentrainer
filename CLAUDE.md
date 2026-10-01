@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v773, 2026-10-01)
+## Current state (PWA v774, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -146,8 +146,9 @@ and after the layout settles (v521/v532).
   reading, then its word (v518/v540), and wraps as it needs (v600); `shortSense` strips a parenthetical from that line only.
   **The character's meaning is its sense in this word** (`cg`, written by the text model once per card beside the description,
   v772); the dictionary's best sense for the in-word reading (`bestSense`, v573) stands until it arrives.
-- **The Chinese is read aloud as its reading appears** (v773): after each character the character, or its whole word when the
-  character alone reads differently (`sayChar`), with the recap the whole text; a skip tap or a swipe stops it (`sayStop`).
+- **The Chinese is read aloud at the stroke that completes a character** (v773/v774): the character, or its whole word when
+  the character alone reads differently (`sayChar`); the last character's stroke speaks the whole text; a skip tap or a swipe
+  stops it (`sayStop`).
   **More → Learning switches it off** (`learnSay`, `sayOn`, on by default).
 - **"Details"** folds open at the card's foot — characters, pinyin, meaning **and the description** (v585, fetched by itself
   1.2 s after the card appears, `explainSoon`); then a grey toolbar **Star · Flag · Edit** (v667) — Edit comes back to the same

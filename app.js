@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=773; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=774; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -5260,6 +5260,12 @@ function mountPad(card,d,c,tg,st,cur){
     const i=tg.indexOf(cur); if(helped) st.helped.add(i); st.done.add(i);
     S.wroteAt=S.wroteAt||{}; S.wroteAt[c+":"+cur.pos]={lv:lvl,helped}; if(helped) bumpWrite(cur.glyph,-2); else bumpWrite(cur.glyph,1);
     flash=1; paint(); buzz(20);
+    /* v774 (H on v773: "Das Reading muss früher kommen. Das kommt jetzt gerade, wenn das schon alles weg ist. Das muss
+       eigentlich beim letzten Stroke schon fast kommen."): the voice starts HERE, at the stroke that completes the character —
+       v773 spoke from charRecap, after the .3 s flash, the pad's fade and the reading's own .2 s lead, and the Xiaomi engine's
+       start-up on top of that put the sound where the reading was already leaving. The last character of the card speaks the
+       whole text at once (its own reading and the recap follow under it); every other one its character or word (sayChar). */
+    if(!tg.some((x,j)=>x.w&&!st.done.has(j))){ if(sayOn()&&d.c) say(d.c); } else sayChar(cur,((document.querySelector("#padline .plrow .mono")||{}).textContent||""));
     const b=card.querySelector(`.chrow .ch[data-i="${i}"]`); if(b){ b.classList.add("done"); b.classList.remove("cur"); } /* v525: the written character is the green glyph alone, no badge */
     await new Promise(r=>setTimeout(r,reduced?150:300)); if(!cv.isConnected) return; flash=0;
     /* v535 (H: "Bitte immer erst ein Wort ausschreiben und dann die anderen Characters"): the pad finishes the word it
@@ -5333,7 +5339,7 @@ function mountPad(card,d,c,tg,st,cur){
        is already on the pad. */
     const pw=document.querySelector(".card.study .padwrap"); let rc=null;
     if(pw){ if(dark){ const cvn=pw.querySelector(".wpad"); if(cvn){ cvn.style.transition="none"; pw.classList.add("recapping"); void cvn.offsetWidth; cvn.style.transition=""; } } /* v558: dark from its first frame */
-      pw.insertAdjacentHTML("beforeend",recapHTML(d)); rc=pw.lastElementChild; recapFit(rc); if(sayOn()&&d.c) say(d.c); /* v773: the whole text is heard with the recap */ /* v600: the reading is sized against the real layout before the first frame */ pw.classList.add("recapping"); requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); }); }
+      pw.insertAdjacentHTML("beforeend",recapHTML(d)); rc=pw.lastElementChild; recapFit(rc); /* v773/v774: the whole text was spoken at the last stroke (charDone) */ /* v600: the reading is sized against the real layout before the first frame */ pw.classList.add("recapping"); requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); }); }
     let pr=null, fired=false, tm=0;
     const go=()=>{ if(fired) return; fired=true; clearTimeout(tm); document.removeEventListener("pointerdown",onTap,true);
       if(pr) pr.finish(); else if(PRAISE_N){ PRAISE_N=null; setStats(); } /* v543: skipped before the star flew — the counter goes straight to the day's own total rather than keeping the held number */
@@ -5736,8 +5742,7 @@ async function charRecap(card,cur,tg,st){
   if(!py) return pause();
   let mn=rows.length?((rows[0].querySelector(".mn")||{}).textContent||"").trim():""; /* v571: the same row's meaning */
   if(mn===t("not in the dictionary")) mn="";
-  pw.insertAdjacentHTML("beforeend",charRecapHTML(py,mn));
-  sayChar(cur,py); /* v773: the character is heard as its reading appears */
+  pw.insertAdjacentHTML("beforeend",charRecapHTML(py,mn)); /* v773/v774: the voice started at the stroke (charDone), not here */
   const rc=pw.lastElementChild; pw.classList.add("recapping");
   void getComputedStyle(rc).opacity; /* v673: the hidden start is resolved before "in" — without it the first style pass already saw "in", so the reading had no fade and no delay and stood at once over the fading green character (screencast: 752 ms, the reading solid, 十 at half); v668's probe read the opacity every frame and so forced the very pass it was testing */
   requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); });
