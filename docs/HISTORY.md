@@ -116,7 +116,22 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v803, 2026-10-01)
+## Current state (PWA v804, 2026-10-01)
+- **A character's sense counts only for the text it was written for (v804, H on the noodle-sign card he had just re-read with
+  Crop again, its text now 三碗面: "Und wie kann 碗 auf einer Karte 2 verschiedene Übersetzungen haben: Family und bowl??").**
+  The card was the wrongly texted 全家 of the evening; its senses (`cg`, v772) were 全家's own, [whole, family], and nothing
+  dropped them when the text changed: `applyCardUpdate` dropped the other languages' meanings and the description (v265/v529)
+  but not the senses, and the reading's own write never touched them. So 碗, the second character, read "family" on the line
+  under the character row (the open card's and the pad's), while the gloss meaning said bowl. Now `setChars` stores the text
+  the senses were written for (`cgc`) and `charSenses` gives them only for that text; a card from before v804 has no `cgc`,
+  so its senses count only while their number matches its Chinese characters (the noodle card's two for three fail — a
+  same-length change on an old card is the case this cannot catch); `applyCardUpdate` drops `cg` and `cgc` with the
+  description. Senses that do not count are as good as none: the dictionary's sense stands (`bestSense`) and the card is
+  asked again (`charsSoon`). Harness (`test804`): H's noodle card as it stands — 碗 reads bowl; the 全家 card keeps "family"
+  on 家 [control]; a text changed through the save path drops the senses; senses written now carry their text and stop
+  counting at a same-length change: **4 of 4, v803 1 of 4**. In the same message: "Explain geht nicht" — "The AI could not
+  be reached": DeepSeek answered the evening's calls with a 500 and then with no answer within 25 s (twice each), Qwen
+  meanwhile answered; a provider outage, not the app.
 - **The dump names the study card's record and what its picture is (v803, H: "Das Bild passt nicht zur karte ?!?" — the
   Learn card 全家 with a noodle-shop sign 三碗面 as its picture, and under Cards a 全家 card whose crop is FamilyMart).** What
   the dump could say: the zoom's reader read 三碗面 off the picture the study card showed, the picture URL is keyed by the

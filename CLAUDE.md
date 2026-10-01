@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v803, 2026-10-01)
+## Current state (PWA v804, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -97,7 +97,7 @@ timestamp. A card:
   frame:{x,y,w,h,a},                                   // fractions of the photo; Crop again starts here
   tags:[…], star:true, flag:true, flagNote, unchecked:true,
   trad:"養樂多", simp:true, ml:"de", ms:{en,de}, ds:{en,de}, dsh,  // script (v604), meaning language, meanings, descriptions, a multicard text's short one (v698)
-  cg:{en:["sense",…]},                                 // each character's sense in this word, by language, one entry per Chinese character (v772)
+  cg:{en:["sense",…]}, cgc:"三碗面",                    // each character's sense in this word, by language, one entry per Chinese character (v772); cgc the text they were written for (v804)
   alts:[…], ai:{zh,p,m,note,ok,bad,at,model}, aiNo:"<fingerprint of a dismissed suggestion>",
   mt:{src:"llm"|"dict"|"phrasebook"|"nmt"|"gloss", verified, pending, suspect},
   reading:{rect,at,failed},                            // saved before its reading finished
@@ -149,6 +149,8 @@ and after the layout settles (v521/v532).
   **The character's meaning is its sense in this word** (`cg`, written by the text model once per card beside the description,
   v772); the dictionary's best sense for the in-word reading (`bestSense`, v573) stands until it arrives. **A card whose answer
   brought no senses is asked once a session** (`charsSoon`, v783: the busy mark stays as `"asked:"+text`; the reply schema names `chars`).
+  **Senses count only for the text they were written for** (`cgc`; a card from before v804 only while their number matches its
+  characters) and a text change drops them (v804 — 全家's "whole, family" stood on 三碗面 after Crop again, so 碗 read "family").
 - **The Chinese is read aloud at the stroke that completes a character** (v773/v774/v776/v778): the character alone,
   always (`sayChar`; H, v776: never its word), **with the reading it has in this word** — when that is not its lone reading,
   the engine gets a stand-in character with only that reading (`STANDIN`, 行 in 银行 → 航, built by `tools/standin.js`,
