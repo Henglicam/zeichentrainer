@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=808; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=809; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -361,7 +361,7 @@ function filterPillHTML(scope){
      applied it since v425 through a predicate of its own (no tag, no star, no unchecked card); with the Status rows of the Cards
      tab conditional too, a clean deck can reach the same state there, and two copies of one test would have drifted (the v401
      lesson). "All cards" carries no key, so a sheet of nothing but that row is exactly what this refuses. */
-  if(!filterGroups(scope).some(g=>g.rows.some(r=>r.k))) return "";
+  if(!filterGroups(scope).some(g=>g.rows.some(r=>r.k&&!String(r.k).startsWith("sort:")))&&!(scope==="cards"&&tabPool().length>1)) return ""; /* v809: v780's sort rows carry keys, so the pill stood over an empty deck; sorting needs two cards */
   const on=filterOn(scope), lit=on.length>0;
   const label=!lit?t("All cards"):on.length===1?(on[0].n!=null?t("{0} ({1})",on[0].label,on[0].n):on[0].label):t("Filters ({0})",on.length);
   return `<button class="chip fpill${lit?" on":""}" data-filter="${scope}">${filterIcon}<span>${esc(label)}</span></button>`;
@@ -1501,7 +1501,7 @@ function setStats(){
       if(on){ ss.setAttribute("aria-label",t("Written today")+": "+v); ss.innerHTML=`<i class="prs" aria-hidden="true">${MARK_STAR}</i><span class="v">${v}</span>`; ss.onclick=pointsSheet; } } } /* v546: the counter is the only place the points are shown, so it is where they are explained */
   $("#stat-deck").style.display=inStudy?"none":"";
   $("#stat-deck .v").textContent=deckCount(); /* flashcards only (v504): a multicard and its texts are looked up, not counted */
-  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.mode===S.mode||(b.dataset.mode==="cards"&&S.mode==="add")||(b.dataset.mode==="more"&&S.mode==="guide")));
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.mode===S.mode||(b.dataset.mode==="cards"&&S.mode==="add")||(S.mode==="guide"&&b.dataset.mode===(S.guideFrom==="study"?"study":"more"))));
 }
 
 /* colours the script draws itself come from the stylesheet's tokens, so canvases and inline SVG follow light and dark */
@@ -2238,6 +2238,7 @@ function charsSoon(d){ /* the senses alone, for a card that has its description 
 async function takeChars(id,c0,r){ const arr=r&&!r.bad?r.chars:null; const d2=cardOf(id); if(!arr||!d2||d2.c!==c0) return false;
   await putCard(setChars({...d2},arr,r.ml||LANG),id);
   const st=S.pad; if(S.mode==="study"&&st&&String(st.key||"").endsWith(":"+id)&&$("#padline")){ const tg=padTargets(cardOf(id)), cur=tg[st.i]; if(cur) padLine(cardOf(id),cur); } /* the line under the pad takes the senses the moment they land (v772) */
+  else if(S.mode==="cards"&&S.detail===id&&!S.editing&&$("#padline")){ const d3=cardOf(id), dv=(priceView(d3)||{d:d3}).d, lx=detailLit(d3,padTargets(dv)); if(lx) padLine(dv,lx); } /* v809: and the open card's line */
   return true; }
 const descOf=d=>(d.ds&&d.ds[LANG])||"";
 const setDesc=(card,s,ml)=>{ s=String(s||"").trim(); if(!s) return card; card.ds={...(card.ds||{}),[ml||"en"]:s}; return card; };
@@ -3165,7 +3166,7 @@ function renderMore(main){
     <div class="listhead">${t("Your cards")}</div>
     <div class="mrow"><div><div class="t">${t("Export")}</div><div class="s">${t("Progress and cards as one file, via the share sheet.")} ${backupNote()}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="export-photos"${exportPhotos()?" checked":""}> ${t("Include photos (adds about {0} MB)",(photoBytes()*1.37/1048576).toFixed(1))}</label></div><button class="btn mini" id="export">${t("Export")}</button></div>
     <div class="mrow"><div><div class="t">${t("Import")}</div><div class="s">${t("A shizi-….json.txt file. Existing cards are overwritten.")}</div></div><button class="btn mini" id="import">${t("Import")}</button></div>
-    <div class="mrow"><div><div class="t">${t("Flagged cards")}</div><div class="s">${t("{0} flagged for review. Share the list as text, for a teacher.",deck().filter(d=>d.flag).length)}</div></div><span class="btnrow"><button class="btn mini" id="show-flag">${t("Show")}</button><button class="btn mini" id="share-flag">${t("Share")}</button></span></div>
+    <div class="mrow"><div><div class="t">${t("Flagged cards")}</div><div class="s">${t("{0} flagged for review. Share the list as text, for a teacher.",deck().filter(d=>d.flag).length)}</div></div>${deck().some(d=>d.flag)?`<span class="btnrow"><button class="btn mini" id="show-flag">${t("Show")}</button><button class="btn mini" id="share-flag">${t("Share")}</button></span>`:""}</div>
     <div class="mrow"><div><div class="t">${t("Photos")}</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">${t("Delete {0}",oldShots().length)}</button>`:""}</div>
     ${dupRowHTML()}
     <div class="mrow"><div><div class="t">${t("Storage")}</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
@@ -3226,7 +3227,7 @@ function renderMore(main){
   const tr=$("#translate-all"); if(tr) tr.onclick=translateAll;
   const ur=$("#undo-run"); if(ur) ur.onclick=undoLastRun; /* Undo last run (v369) */
   const rc=$("#recheck-all"); if(rc) rc.onclick=recheckAll; /* Check all cards again (v370) */
-  $("#guide-open").onclick=()=>{ S.mode="guide"; render(); window.scrollTo({top:0}); };
+  $("#guide-open").onclick=()=>{ S.mode="guide"; S.guideFrom="more"; render(); window.scrollTo({top:0}); };
   $("#lic-open").onclick=()=>{ window.open("./vendor/LICENSES.txt","_blank","noopener"); };
   wireGrow(main); /* the feedback box grows with its text like the forms' fields (v218, H: "looks a little bit old school") */
   document.querySelectorAll("[data-mo]").forEach(b=>b.onclick=()=>{ const k=b.dataset.mo, on=MORE_OPEN[k]=!MORE_OPEN[k]; /* v717: the folds, toggled in place */
@@ -3245,8 +3246,8 @@ function renderMore(main){
   $("#update-note").onchange=async e=>{ await setSetting("updateNote",!!e.target.checked); if(!e.target.checked) hideUpdated(); };
   $("#share-usage").onchange=async e=>{ await setSetting("shareUsage",!!e.target.checked); $("#share-status").textContent=shareNote(); sendReport(); };
   $("#import").onclick=()=>$("#imp").click();
-  $("#share-flag").onclick=shareFlagged;
-  $("#show-flag").onclick=()=>{ S.mode="cards"; S.detail=null; S.editing=null; S.query=""; S.filterUnv=false; S.filterAi=false; S.filterTags=[]; S.filterFlag=true; render(); };
+  const shf=$("#share-flag"); if(shf) shf.onclick=shareFlagged;
+  const sfl=$("#show-flag"); if(sfl) sfl.onclick=()=>{ S.mode="cards"; S.cardsTab="cards"; /* v809: a multicard text is never flagged on the Multicards tab — the list was empty there */ S.detail=null; S.editing=null; S.query=""; S.filterUnv=false; S.filterAi=false; S.filterTags=[]; S.filterFlag=true; render(); };
   const cs=$("#cleanshots"); if(cs) cs.onclick=cleanupShots;
   const dd=$("#dup-del"); if(dd) dd.onclick=dupDelete; /* v731 */
   if(S.admin){
@@ -3410,7 +3411,7 @@ function renderGuide(main){
     <div class="topline"><button class="del" id="back-more">${t("← Back")}</button><span class="badge">${t("How to use the app")}</span></div>
     <div class="guide">${GUIDE().map(sec=>`<section><h2>${esc(sec.h)}</h2><figure class="gfig">${sec.fig}</figure>${sec.p.map(x=>`<p>${esc(x)}</p>`).join("")}</section>`).join("")}</div>
   </div>`;
-  $("#back-more").onclick=()=>{ S.mode="more"; render(); };
+  $("#back-more").onclick=()=>{ S.mode=S.guideFrom==="study"?"study":"more"; S.guideFrom=null; render(); }; /* v809: back where the guide was opened — Learn's empty deck opens it too */
 }
 /* ---------- review flag ----------
    Any card can be flagged when the OCR text, pinyin or meaning looks odd and
@@ -3916,7 +3917,7 @@ function renderStudy(main){
       <p class="hint">${t("New here? The guide explains the app in six short sections.")}</p>
       <button class="del" id="go-guide">${t("How to use the app")}</button>
     </div>`;
-    $("#go-cam").onclick=()=>{ S.mode="inbox"; render(); }; $("#go-guide").onclick=()=>{ S.mode="guide"; render(); window.scrollTo({top:0}); }; /* the pointer to the guide (v266, idea 5) — a friend who installs the app never sees More → Help unless told */
+    $("#go-cam").onclick=()=>{ S.mode="inbox"; render(); }; $("#go-guide").onclick=()=>{ S.mode="guide"; S.guideFrom="study"; render(); window.scrollTo({top:0}); }; /* the pointer to the guide (v266, idea 5) — a friend who installs the app never sees More → Help unless told */
     return;
   }
   const finished = !walking()&&S.idx>=S.queue.length; /* a walk never runs out: its last card stays (v513) */
@@ -6202,13 +6203,13 @@ function backToCard(){ const cid=fromCard(); S.detailFrom=null; S.fullPic=false;
 /* a multicard's texts in reading order — the order of its row list, and since v707 of the swipe through them */
 function pageOrder(pg,rs){ rs=rs||photoRegions({id:pg.shot}); const order=rs.map(r=>r.card); return pageItems(pg).slice().sort((a,b)=>{ const ia=order.indexOf(a.id), ib=order.indexOf(b.id); return (ia<0?1e9:ia)-(ib<0?1e9:ib); }); }
 function pageBodyHTML(d){
-  const rs=photoRegions({id:d.shot}), its=pageItems(d), full=fullPhoto(d), sorted=pageOrder(d,rs);
+  const full=fullPhoto(d), rs=full?photoRegions({id:d.shot}):[], its=pageItems(d), sorted=pageOrder(d,rs); /* v809: no photo on the phone (an export without photos, imported), no dots — every text is a row, or none could be reached */
   /* v745 (H: "Saved as Flashcards muss da nicht mehr angezeigt werden in dieser Ansicht"): the line "Texts on this multicard: 24, as flashcards: 0." is gone from the multicard's own screen, and since v746 from the Camera tab too */
   return `<div class="shot pagecard" data-page="${esc(d.id)}">
       <div class="shotwrap"><div class="zwrap">${full?`<img src="${urlOf(full)}" alt="${t("alt:photo")}">`:""}${rs.length?regionsHTML({id:d.shot},rs):""}</div></div>
       <div class="ptitle">${esc(d.c)}</div>
       ${(tg=>tg.length?`<div class="ptags">${tg.map(x=>`<span class="pill tag">${esc(x)}</span>`).join("")}</div>`:"")([...new Set([...(d.tags||[]),...its.flatMap(x=>x.tags||[])])])} <!-- v696: the multicard's tags, with any its texts carry, once here and not on every row -->
-      <div class="taphint">${esc(t("Tap any text on the photo."))}</div>
+      ${rs.length?`<div class="taphint">${esc(t("Tap any text on the photo."))}</div>`:""}
     </div>
     ${(nd=>nd.length?`<div class="lbl pnodot">${t("Not on the photo")}</div><div class="clist" id="pitems">${nd.map(x=>cardRowHTML(x,false,new Map(),true)).join("")}</div>`:"")(sorted.filter(x=>!rs.some(r=>r.card===x.id)))}`;
   /* v792 (H: "Ich mag die Wörterliste unter den Multicards nicht. Bitte bringe in den Multicard-Pop-Ups Edit, Flag und so
@@ -6270,7 +6271,7 @@ function detailSwipe(list,li,main,keepFrom){
       const fp=S.fullPic; S.fullPic=false;
       const h=isPage(nd)?{html:pageBodyHTML(nd),cls:"bare"}:{html:detailCardHTML(nd,true),cls:"study detail"}; /* v615 (H: "Jetzt springen die Karten in der vertikalen beim swipe (Cards View)"): the neighbour wears the open card's own classes — as a bare .card it took the plain card's padding, and its photo rode in 10 px lower than where it lands, then hopped up at the snap (measured the same on v600) */ /* no swipe hint on a page: its line is a count, and the ordinary detail's hint already teaches the gesture (v226 takes hints away after 20 reviews anyway) */
       S.fullPic=fp; return h; },
-    go:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return; if(LIST_CARD&&!keepFrom) LIST_CARD=nd.id; /* v710: a swipe between a multicard's texts (v707) leaves the Multicards list's remembered tile alone — a text's id is no tile there */
+    go:j=>{ const nd=list[j]&&cardOf(list[j].id); if(!nd) return; closeLookup(); /* v809: the pop-up belongs to the card swiped away — its toolbar would act on that card's text */ if(LIST_CARD&&!keepFrom) LIST_CARD=nd.id; /* v710: a swipe between a multicard's texts (v707) leaves the Multicards list's remembered tile alone — a text's id is no tile there */
       /* the card you swipe to is not the one you came into: its back button would otherwise claim a way back that
          belongs to another card (v492) — true of the page flag of v453 as well, which survived a swipe until now */
       S.detail=nd.id; if(!keepFrom) S.detailFrom=null; S.fullPic=false; render(); },
@@ -6319,7 +6320,7 @@ function renderCardDetail(main,c){
   $("#d-flag").onclick=async()=>{ await setFlag(c,!d.flag); render(); };
   { const mk=$("#d-make"); if(mk) mk.onclick=async()=>{ mk.disabled=true; bump("regionCards"); await makeFlashcard(c); setStats(); render(); }; /* v692: the button turns into Flashcard › */
     const of=$("#d-openfc"); if(of) of.onclick=()=>{ const fc=madeFrom(cardOf(c)); if(!fc) return; S.cardsTab="cards"; S.detail=fc.id; S.detailFrom=null; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); }; }
-  wireSay(); wireLinks(); wireSrc(); wireExplain(); explainAuto(d); /* v585: the same on the open card, whose block always stands (v736) */ /* v536: nothing wires a parts row here - the open card passes noParts, so there is no .chars row on it; the camera's finished card is the one screen that still draws one and wires it itself (v589 removed the helper that had no caller left) */
+  wireSay(); wireLinks(); wireSrc(); wireExplain(); explainAuto(d); charsSoon(d); /* v809: the characters' senses too, so a German card's line is not the dictionary's English */ /* v585: the same on the open card, whose block always stands (v736) */ /* v536: nothing wires a parts row here - the open card passes noParts, so there is no .chars row on it; the camera's finished card is the one screen that still draws one and wires it itself (v589 removed the helper that had no caller left) */
   wireAi();
   /* the swipe changes the card. S.fullPic is about THIS photo — "show me the whole picture of this card" — so it is dropped
      at the commit, as every other path that changes the card drops it (the row tap, the linked hop, Learn's next card), and
@@ -6621,7 +6622,7 @@ async function addManual(){
   const fi=$("#f-imgfield"); if(fi) fi.remove();
   $("#f-pinhint").style.display="none";
   S.draft=null;
-  ok.textContent=t("“{0}” added.",word); ok.style.display="";
+  ok.textContent=t("“{0}” added.",word); ok.style.display=""; const fas=$("#f-aistatus"); if(fas) fas.textContent=""; revealEl(ok); /* v809: on a 360 px phone the line stood under the tab bar and the cleared form looked as before the tap */
   bump("byHand"); setStats();
 }
 /* the shared image's own width and padding — the progress report's since v277, and the card's until v593, when H
@@ -6997,7 +6998,8 @@ async function delPicked(kind){
   if(!PICK) return; const ids=[...PICK.set];
   /* v594: the bulk delete asks too — it is the most destructive tap in the app, and the question comes before endPick,
      so a Cancel leaves the marking exactly as it was. The photos keep their one tap: a photo is not a card. */
-  if(kind==="cards"&&!await askSheet({title:t("Delete {0}?",nOf(ids.length,"card")),text:t("Your progress on this card goes with it."),ok:t("Delete")})) return;
+  const n=ids.length, pages=n>0&&ids.every(id=>isPage(cardOf(id))); /* v809: marked on the Multicards tab, they are multicards, which carry no progress; several cards are "these cards" (the v412 rule — the sentence is chosen by the count, never joined to it) */
+  if(kind==="cards"&&!await askSheet({title:t("Delete {0}?",nOf(n,pages?"multicard":"card")),text:pages?(n>1?t("The multicards and all their texts go with them."):t("The multicard and all its texts go with it.")):(n>1?t("Your progress on these cards goes with them."):t("Your progress on this card goes with it.")),ok:t("Delete")})) return;
   endPick();
   for(const id of ids){ if(kind==="cards") await delCustom(id); else await delShot(id,true); } /* each one shows its Undo item, so the line reads "Deleted 12 cards" */
   render();
@@ -11272,7 +11274,8 @@ function openLookup(shot,rid,silent,o){
   if(!el){ el=document.createElement("div"); el.className="ask lookup"; document.body.appendChild(el); }
   const from=S.mode==="cards"&&S.detail&&isPage(cardOf(S.detail))?S.detail:null; /* v453: opened on a page's detail — More and ← Back come back to it */
   if(LOOKUP&&LOOKUP.ro) LOOKUP.ro.disconnect(); /* v793: the sheet drawn again gets its own observer */
-  el.innerHTML=html; LOOKUP={shot,rid,el,card:d.id,from};
+  const prev=LOOKUP; el.innerHTML=html; LOOKUP={shot,rid,el,card:d.id,from};
+  if(swap&&prev){ LOOKUP.onDown=prev.onDown; LOOKUP.onKey=prev.onKey; if(prev.noteT) LOOKUP.noteT=prev.noteT; } /* v809: the sheet drawn again keeps the listeners it was opened with, so closeLookup removes them — until v808 each swap left one document pointerdown and one keydown listener behind */
   if(!swap){ /* the sheet stands until it is closed: a tap anywhere outside it that is not on a region, or Escape */
     LOOKUP.onDown=e=>{ if(!LOOKUP||e.target.closest(".sheet.lookup")||e.target.closest("[data-region]")||e.target.closest("[data-regions]")) return; closeLookup(); };
     LOOKUP.onKey=e=>{ if(e.key==="Escape") closeLookup(); };
