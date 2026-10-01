@@ -116,6 +116,27 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v785, 2026-10-01)
+- **The Learn zoom no longer moves a second time when the reader confirms the ink's place (v785, H on 新日, the first card
+  after a start: "Bei der Nestle karte wird ruckelig an den ersten character ran gezoomt").** The dump: "新 · ink · x2.44 · at
+  36,53 %", a second later "新 · reader · x1.9 · at 38,51 %" — the reader's first load (paddle, ~30 MB, "readers 0/4") outran
+  `AZ_READER` 2.5 s, the overview timer zoomed on the ink's sure cut, and the reader's answer then moved the picture again onto
+  the same character, two per cent off and a step out: v665's known open case ("a reader slower than that still gets the ink's
+  guess first and the correction after"). `autoZoom` now notes the ink zoom a character went in on (`st._azInk`: position, card
+  key, box) and, when the reader's box for that character lands and holds the cut's middle, keeps the ink's box as the
+  character's place (log "ink, the reader agrees", same scale, nothing moves) — on the reader's landing and on every stroke's
+  re-render after it; the next character takes the reader's places and the one scale a line of v678/v679 on the glide that
+  moves the picture anyway. A reader's box that does not hold the ink's middle still corrects the guess (log "reader", moves),
+  and a reader that answers before the zoom goes in (the common case) is untouched — `st._azInk` is never set. Not done:
+  waiting longer for a loading reader (a touch on the pad would zoom on the ink anyway and meet the same jerk), and matching
+  the first character's scale to the reader's (the ink's cut is tighter — on the dump's card the first character stands
+  ×2.44, the second ×1.9; whether that reads as "verschiedene Größen" (v678) is the phone's to say). Harness (`test785`, a
+  clean 新日 sign, `pdRead` stubbed with a 4 s delay, no touch): the overview timer zooms on the ink at 2.6 s (`[control]`,
+  "ink" x1.7); the reader's agreeing box at 5.0 s leaves s, tx, ty unchanged and logs "ink, the reader agrees" — **6 of 6 on
+  v785, 3 of 6 on v784** (there "reader" x1.72, the picture 29 px down); a stroke's re-render keeps it; `[guard]` 日 takes
+  the reader's place on both; mode `off` (the reader's line on an empty row below the glyphs) `[guard]` moves to "reader"
+  on both, 3 of 3. TO_TEST "First card: one zoom, no jerk?". No WHATS_NEW.
+
 ## Current state (PWA v784, 2026-10-01)
 - **The card's recap queues the whole text behind the last character's own reading instead of cancelling it (v784, H on
   首都铁骑: "Hier hat er den letzten Charakter qi nicht einzeln gesagt").** The dump: 骑's last stroke snapped, "out, card
