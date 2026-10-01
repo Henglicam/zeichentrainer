@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=771; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=772; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -691,6 +691,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   a row older than the screen it names is dead. The parked lock rows went too — the lock's code stays, the archive has them. */
   ["again","v756","Priced board: reader path ok?"],
   ["again","v771","Crop again: save, then read ok?"],
+  ["again","v772","Char senses in context: good?"],
   ["again","v757","Meituan screenshots: fields right?"],
   ["again","v759","Taobao screenshots: fields right?"],
   ["again","v760","Taobao cart: 天猫 framed right?"],
@@ -2109,7 +2110,7 @@ function ocrDoubt(confs,meaning,unknown){
 let _aiSoon=null;
 function aiAutoSoon(){ if(!aiAutoOn()) return; clearTimeout(_aiSoon); _aiSoon=setTimeout(()=>{ _aiAutoRan=false; aiAuto(); },1500); }
 function aiCardPayload(d){
-  return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:d.short?(d.dish?`write "desc" as ONE short sentence of at most 20 words describing this dish${d.shortCtx?" on the menu \""+d.shortCtx+"\"":""} — what it is, its main ingredients and how it is cooked; no price, no background; nothing else; keep zh, p and m exactly as given`:`write "desc" as ONE short sentence of at most 15 words saying what this text is or does${d.shortCtx?" on this "+d.shortCtx:""} — no background, no history, no "you see it on"; nothing else; keep zh, p and m exactly as given`):d.fromPic?`read from the photo by a model that sees it${d.fromPic!==true?" (it shows: "+d.fromPic+")":""} — keep zh exactly as given, write p and m${d.label?", and \"desc\" \"\" (this is one element of a panel)":" and desc"}`:d.explain?"write \"desc\" for this card and nothing else; keep zh, p and m exactly as given":d.translate?"translate the meaning into "+meaningLangName()+" (it is in "+(LANG_NAME[d.ml||"en"]||"another language")+" now); keep zh and p unless clearly wrong":[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"the reading looks uncertain ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
+  return { c:d.c, p:d.p, m:d.m, kind:d.kind||"word", note:d.flagNote||"", why:d.short?(d.dish?`write "desc" as ONE short sentence of at most 20 words describing this dish${d.shortCtx?" on the menu \""+d.shortCtx+"\"":""} — what it is, its main ingredients and how it is cooked; no price, no background; nothing else; keep zh, p and m exactly as given`:`write "desc" as ONE short sentence of at most 15 words saying what this text is or does${d.shortCtx?" on this "+d.shortCtx:""} — no background, no history, no "you see it on"; nothing else; keep zh, p and m exactly as given`):d.fromPic?`read from the photo by a model that sees it${d.fromPic!==true?" (it shows: "+d.fromPic+")":""} — keep zh exactly as given, write p and m${d.label?", and \"desc\" \"\" (this is one element of a panel)":" and desc"}`:d.chars?(d.explain?"write \"desc\" for this card, and ":"write \"desc\" \"\", and ")+charsWhy():d.explain?"write \"desc\" for this card and nothing else; keep zh, p and m exactly as given":d.translate?"translate the meaning into "+meaningLangName()+" (it is in "+(LANG_NAME[d.ml||"en"]||"another language")+" now); keep zh and p unless clearly wrong":[d.flag?"flagged by the learner":"", d.mt&&d.mt.suspect?"the reading looks uncertain ("+d.mt.suspect+"), check the characters":"", d.mt&&d.mt.pending?"meaning is only a word-by-word gloss, needs a real translation":""].filter(Boolean).join("; "),
     gloss:d.kind==="sign"&&glossFits(d)?d.gloss.map(g=>g.w+" "+(g.m||"?")).join(" · "):undefined,
     alt:d.alts&&d.alts.length?d.alts:undefined, script:d.trad?"traditional":undefined };
 }
@@ -2126,6 +2127,37 @@ const setMl=(card,ml)=>{ if(ml&&ml!=="en") card.ml=ml; else delete card.ml; if(c
    shows the one it has and Explain asks for the one it lacks. It rides on the text check every new card gets, on Accept, on the Edit
    form's Ask AI, on the Add form's fill and on Translate all; a card without one shows the Explain button under its meaning. */
 const DESC_MAX=700;
+/* v772 (H: "The single character translations after writing are still out of context. Could you please ensure translation
+   within the context of the word/picture?"): the sense of each CHARACTER as it is used in this card's word, written by the
+   text model once per card and language — `cg = {en:["fragrance","scent","to wash","hand","liquid"], de:[…]}`, one entry per
+   Chinese character of the text in order (newlines and non-Chinese characters skipped), "" where the model gave none. The
+   word line under the pad and the reading after each written character show it (`padLineFill`); until it arrives, and
+   wherever an entry is empty, the dictionary's best sense for the in-word reading (v573, `bestSense`) stands as before.
+   Asked beside the description the study card fetches by itself (`explainCard`, one call for both), and on its own for a
+   card that has its description but no senses yet (`charsSoon`, the same 1.2 s lead and the same AI-review switch). */
+const SENSE_MAX=40, CHARS={}; let CHARS_AT=null, CHARS_T=0;
+const cjkOf=zh=>[...String(zh||"").replace(/\n/g,"")].filter(ch=>CJK.test(ch));
+const charSenses=d=>(d&&d.cg&&d.cg[LANG])||null;
+const setChars=(card,arr,ml)=>{ if(!arr||!arr.some(Boolean)) return card; card.cg={...(card.cg||{}),[ml||"en"]:arr}; return card; };
+const charsWhy=()=>`write "chars": one entry per Chinese character of the text in order, [["字","meaning"],…], each meaning the sense this character has IN THIS WORD on this card (not its commonest dictionary sense), one to three words in ${meaningLangName()}; keep zh, p and m exactly as given`;
+function saneChars(raw,zh){ const want=cjkOf(zh); if(!want.length||!raw) return null;
+  let list=[]; if(Array.isArray(raw)) list=raw.map(x=>Array.isArray(x)?{c:String(x[0]||""),m:String(x[1]||"")}:x&&typeof x==="object"?{c:String(x.c||x.zh||x.ch||""),m:String(x.m||x.meaning||"")}:{c:"",m:String(x||"")});
+  else if(typeof raw==="object") list=Object.entries(raw).map(([c,m])=>({c,m:String(m||"")}));
+  else return null;
+  const clean=m=>{ m=String(m||"").replace(/^[\s一-鿿（(：:·,，、]+/,"").trim(); if(!m||/^[一-鿿\s]+$/.test(m)||m.length>SENSE_MAX) return ""; return m.replace(/[.。]+$/,""); };
+  const out=want.map(()=>""); let k=0;
+  for(const [i,ch] of want.entries()){ const at=list.findIndex((x,j)=>j>=k&&t2s(x.c)===ch); if(at>=0){ out[i]=clean(list[at].m); k=at+1; } else if(!list.some(x=>x.c)&&list[i]) out[i]=clean(list[i].m); } /* pairs are matched to the characters in order; a bare list of meanings is taken by position */
+  return out.some(Boolean)?out:null; }
+function charsSoon(d){ /* the senses alone, for a card that has its description already (a card without one gets both in explainCard's call) */
+  if(CHARS_AT&&(!d||CHARS_AT!==d.id)){ clearTimeout(CHARS_T); CHARS_AT=null; }
+  if(!d||CHARS_AT===d.id||!d.c||!cjkOf(d.c).length||charSenses(d)||!descOf(d)||CHARS[d.id]||!aiAutoOn()||!navigator.onLine) return;
+  const id=d.id; CHARS_AT=id;
+  CHARS_T=setTimeout(async()=>{ CHARS_AT=null; const c=cardOf(id); if(!c||charSenses(c)||CHARS[id]||!$("#padline")) return;
+    CHARS[id]=true; try{ const [r]=await aiAsk([{...c,chars:true}]); await takeChars(id,c.c,r); }catch(e){ logErr("chars",e&&e.message||String(e)); } finally{ delete CHARS[id]; } },EXPLAIN_LEAD); }
+async function takeChars(id,c0,r){ const arr=r&&!r.bad?r.chars:null; const d2=cardOf(id); if(!arr||!d2||d2.c!==c0) return false;
+  await putCard(setChars({...d2},arr,r.ml||LANG),id);
+  const st=S.pad; if(S.mode==="study"&&st&&String(st.key||"").endsWith(":"+id)&&$("#padline")){ const tg=padTargets(cardOf(id)), cur=tg[st.i]; if(cur) padLine(cardOf(id),cur); } /* the line under the pad takes the senses the moment they land (v772) */
+  return true; }
 const descOf=d=>(d.ds&&d.ds[LANG])||"";
 const setDesc=(card,s,ml)=>{ s=String(s||"").trim(); if(!s) return card; card.ds={...(card.ds||{}),[ml||"en"]:s}; return card; };
 const saneDesc=(s,zh)=>{ s=saneM(s,zh); if(!s||s.length<12) return ""; return s.length>DESC_MAX?s.slice(0,DESC_MAX).replace(/\s+\S*$/,"")+" …":s; }; /* saneM: never the text itself, never all-Han outside Japanese */ /* English is the absent default; ms keeps every meaning the card got, by language (v265) */
@@ -2277,7 +2309,7 @@ async function aiAsk(cards,status){
   if(!Array.isArray(arr)) throw new Error("unexpected answer");
   const out=[]; for(const x of arr){
     const zhRaw=String(x.zh||"").trim(), zh=t2s(zhRaw), zht=String(x.zht||"").trim()||(zh!==zhRaw?zhRaw:""), m=saneM(x.m,zh);
-    out.push({zh,zht,p:x.bad?String(x.p||"").trim():await saneP(x.p,zh),m,desc:x.bad?"":saneDesc(x.desc,zh),ml:LANG,note:String(x.note||"").trim(),unsure:saneUnsure(x.unsure),kind:String(x.kind||"").trim(),ok:!!x.ok,bad:!!x.bad,at:Date.now(),model}); }
+    out.push({zh,zht,p:x.bad?String(x.p||"").trim():await saneP(x.p,zh),m,desc:x.bad?"":saneDesc(x.desc,zh),chars:x.bad?null:saneChars(x.chars,zh),ml:LANG,note:String(x.note||"").trim(),unsure:saneUnsure(x.unsure),kind:String(x.kind||"").trim(),ok:!!x.ok,bad:!!x.bad,at:Date.now(),model}); }
   return out;
 }
 /* What an AI answer adds to a card by itself (v588, H in three messages: "Wenn alle Karten oder auch eine Karte mit AI
@@ -3622,7 +3654,8 @@ async function explainCard(id,auto){ /* auto (v752): the card asked by itself �
   const d=cardOf(id); if(!d||EXPLAIN[id]==="busy") return;
   if(!navigator.onLine){ EXPLAIN[id]=t("No connection. Try again when online."); refreshDesc(id); return; }
   EXPLAIN[id]="busy"; refreshDesc(id);
-  try{ const [r]=await aiAsk([{...d,explain:true}]); const s=r&&!r.bad?saneDesc(r.desc,d.c):"";
+  try{ const [r]=await aiAsk([{...d,explain:true,chars:!charSenses(d)}]); const s=r&&!r.bad?saneDesc(r.desc,d.c):""; /* v772: the characters' senses ride on the same call */
+    if(!charSenses(d)) await takeChars(id,d.c,r);
     if(!s){ EXPLAIN[id]=t("No description came back. Try again."); refreshDesc(id); return; }
     const d2=cardOf(id); if(!d2) return; if(d2.c!==d.c||Object.values(PENDING).includes(id)){ delete EXPLAIN[id]; refreshDesc(id); return; } /* v656: the text changed while the description was asked for (a Crop again saved before its reading was done) — it describes the old text, and a card still being read is filled by the reading */ await putCard(setDesc({...d2},s,r.ml||LANG),id); delete EXPLAIN[id]; refreshDesc(id,!auto); }
   catch(err){ const m=err&&err.message||String(err); EXPLAIN[id]=m===AI_NET_ERR?t(m)+".":t("The AI check failed: {0}",m); refreshDesc(id); }
@@ -3886,7 +3919,7 @@ function renderStudy(main){
        corner sliding in and jumping to the cover fit centred on the card's own button at the snap. The v418/v565 class of
        defect on the one card kind nobody re-measured. */ /* v560/v561: the neighbour takes the card's own cue height, so its frame is the card's; v564/v580: and rides in in the state the card is in */
   wireSay(); wireLinks(); wireSrc(); wireAi(); wireExplain();
-  if(ansOpen) explainAuto(d); else explainSoon(d); /* v585: the block is open, so what the card is about is fetched now; v586: and folded, a moment after the card comes up, so it is there by the time the fold is tapped */
+  if(ansOpen) explainAuto(d); else explainSoon(d); charsSoon(d); /* v772: a card with its description but no senses yet */ /* v585: the block is open, so what the card is about is fetched now; v586: and folded, a moment after the card comes up, so it is there by the time the fold is tapped */
   mountPad(card,d,c,tg,st,cur);
   if(pg&&!S.fullPic) fitPageCover(card); /* D5: the multicard's picture cover-fitted around the card's own text */
   attachPicZoom(card.querySelector(".zone1 .picbox")); /* v514: pinch to zoom, one finger to pan (§ 4) */
@@ -4736,7 +4769,8 @@ async function padLineFill(box,d,x){ box.hidden=false;
     await loadDict().catch(()=>{});
     const known=cardGloss(d).find(g=>g.w===w);
     const py=known&&known.p?known.p:pinyinPro.pinyin(w,{toneType:"symbol"});
-    const m=cleanSense((known&&known.m)||bestSense(w,py));
+    const cs=charSenses(d), ci=cs?[...String(d.c||"").replace(/\n/g,"")].slice(0,x.pos).filter(ch=>CJK.test(ch)).length:-1, ctx=cs&&cs[ci]||""; /* v772: this character's sense in this word, as the model wrote it; the index counts the Chinese characters before it */
+    const m=cleanSense((!many&&ctx)||(known&&known.m)||bestSense(w,py));
     /* v517 (H: "Pinyin und Bedeutung für einzelne Charaktere aus einem längeren Wort"): a word of several characters gets a
        second line for the one character the pad is on. Its syllable is taken out of the word's own pinyin rather than
        looked up on its own, so a character that reads differently inside this word keeps the word's reading. */
@@ -4745,7 +4779,7 @@ async function padLineFill(box,d,x){ box.hidden=false;
     if(many){
       const syl=String(py||"").trim().split(/\s+/), k=x.pos-x.wstart;
       const cpy=syl.length===chars.length&&syl[k]?syl[k]:pinyinPro.pinyin(one,{toneType:"symbol"});
-      const cm=cleanSense(bestSense(one,cpy,true)); /* v573: cpy is the syllable this character has INSIDE this word, so 合 in 合同 reads hé and means "to close", not gě's "100 ml" */
+      const cm=cleanSense(ctx||bestSense(one,cpy,true)); /* v772: the sense in this word first */ /* v573: cpy is the syllable this character has INSIDE this word, so 合 in 合同 reads hé and means "to close", not gě's "100 ml" */
       sub=row(`<b${one===lk?' class="lock"':""}>${esc(one)}</b>`,cpy,cm||t("not in the dictionary"));
     }
     if(!box.isConnected) return;
@@ -6417,6 +6451,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  772:"After each character you write, its meaning is the one it has in that word — not the dictionary's first sense.",
   771:"Crop again in the Edit form: move the frame and save — the new cut is kept and its text read in the background, no waiting.",
   770:"A multicard's texts are listed as they stand on the photo — row by row, left to right — and the swipe follows the same order.",
   769:"A text whose meaning began with its price shows its meaning again.",

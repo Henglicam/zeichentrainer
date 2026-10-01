@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v771, 2026-10-01)
+## Current state (PWA v772, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -97,6 +97,7 @@ timestamp. A card:
   frame:{x,y,w,h,a},                                   // fractions of the photo; Crop again starts here
   tags:[…], star:true, flag:true, flagNote, unchecked:true,
   trad:"養樂多", simp:true, ml:"de", ms:{en,de}, ds:{en,de}, dsh,  // script (v604), meaning language, meanings, descriptions, a multicard text's short one (v698)
+  cg:{en:["sense",…]},                                 // each character's sense in this word, by language, one entry per Chinese character (v772)
   alts:[…], ai:{zh,p,m,note,ok,bad,at,model}, aiNo:"<fingerprint of a dismissed suggestion>",
   mt:{src:"llm"|"dict"|"phrasebook"|"nmt"|"gloss", verified, pending, suspect},
   reading:{rect,at,failed},                            // saved before its reading finished
@@ -143,6 +144,8 @@ and after the layout settles (v521/v532).
   streak) bursts (v545).
 - **The word line** (text state only; in the photo state `--th` is 0) reads the character being written with its in-word
   reading, then its word (v518/v540), and wraps as it needs (v600); `shortSense` strips a parenthetical from that line only.
+  **The character's meaning is its sense in this word** (`cg`, written by the text model once per card beside the description,
+  v772); the dictionary's best sense for the in-word reading (`bestSense`, v573) stands until it arrives.
 - **"Details"** folds open at the card's foot — characters, pinyin, meaning **and the description** (v585, fetched by itself
   1.2 s after the card appears, `explainSoon`); then a grey toolbar **Star · Flag · Edit** (v667) — Edit comes back to the same
   card. The fold row shows a small star/flag when the card has them; **nothing sits on the photo** (v667).
@@ -426,7 +429,7 @@ id abroad. **`strokes.txt.gz` and `cedict.tsv.gz` stay freely available under th
 
 ## Open / not yet field-checked
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
-as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the
+as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the model's character senses (v772); the
 apps' fields and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760); the wake
 lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768).
 
