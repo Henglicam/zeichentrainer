@@ -116,7 +116,31 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v805, 2026-10-01)
+## Current state (PWA v806, 2026-10-01)
+- **The audit, first of a short series (v806, H: "Nach den vielen Änderungen bitte komplett audit, mit allem drum und dran wie
+  vorher auch schon").** Seven sweeps ran in parallel as at v534–v539 — code hygiene, layout in ten languages, wording and
+  translations, does-everything-still-work, contradictions and privacy, first impression, the record against the code — each
+  finding verified before it ships; this version is the half where a translated screen showed English, plus v805's own
+  regression. **(1) The guide never got v780's and v792's sentences.** Both versions put the new English key into lang.js and
+  left app.js's `t()` on the old one, so the guide told every learner to "open it from the list under the photo" (gone since
+  v792) and that Cards are "newest first", and in nine languages both paragraphs were English, since the old keys had no
+  translation any more. **The record said the opposite** — v792's "the guide sentence rendered: 28 of 28", v780's "'newest
+  first' goes" — a green result whose mechanism was not the one claimed (v439/v447): the check read lang.js's columns, not the
+  guide on screen. app.js now asks for the keys lang.js has. **(2) English inside translated screens:** the Edit form's Crop
+  again → a reading wrote "Characters (traditional, as on the photo)" and "Meaning … , unverified" without `t()` although the
+  keys exist; the photo card's Save read "Checking …" while the AI check ran; the relay's two refusals ("the daily limit of the
+  owner's relay is reached — try again tomorrow", "the owner's relay is not set up") stood English inside "Die KI-Prüfung ist
+  fehlgeschlagen: …" — they stay English in Diagnostics and are translated where a learner reads them (two keys, nine
+  columns); two image alt texts. **(3) v805 flattened two-line meanings:** its sense swap split a composed meaning on " / " as
+  well and joined every part with " · ", so a sign card of two lines whose one-character gloss word changed lost its line
+  break, once on every phone at v805's start ("welcome · presence / to ask · take care" → one line). The swap now works line
+  by line, and `GLOSS_FIX_V` 806 puts the line breaks back by the card's own word breaks (`segs`, punctuation aside) — only
+  on an unverified gloss card in English and only when the parts add up; today's split is not used, since it can differ from
+  the one the meaning was composed with. Harness: `test806` (the guide in de, ja and en; the relay's 429 in de and ja; Crop
+  again's label and status in de; a guard) **14 of 14, v805 1 of 14**; `test806b` (the repair, v804's path through the swap,
+  two guards: a checked meaning, parts that do not add up) **4 of 4, v805 2 of 4**; `test805` 9 of 9. Keys: **501 a column,
+  ru 531, en 15** (CLAUDE.md's 490/520 had been stale since v771). No `WHATS_NEW` line — corrected sentences (v473).
+
 - **A meaning composed word by word lists the parts' meanings alone (v805, H on the noodle card's "三 three · 碗 bowl · 面
   noodles": "Was ist denn das bitte für ein ungewöhnliches format …?"; of two offers — "three · bowl · noodles" or
   "three bowl noodles" — H took the first).** It is the stand-in meaning of a text the dictionary does not hold whole
