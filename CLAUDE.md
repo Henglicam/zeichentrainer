@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v772, 2026-10-01)
+## Current state (PWA v773, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -146,6 +146,9 @@ and after the layout settles (v521/v532).
   reading, then its word (v518/v540), and wraps as it needs (v600); `shortSense` strips a parenthetical from that line only.
   **The character's meaning is its sense in this word** (`cg`, written by the text model once per card beside the description,
   v772); the dictionary's best sense for the in-word reading (`bestSense`, v573) stands until it arrives.
+- **The Chinese is read aloud as its reading appears** (v773): after each character the character, or its whole word when the
+  character alone reads differently (`sayChar`), with the recap the whole text; a skip tap or a swipe stops it (`sayStop`).
+  **More → Learning switches it off** (`learnSay`, `sayOn`, on by default).
 - **"Details"** folds open at the card's foot — characters, pinyin, meaning **and the description** (v585, fetched by itself
   1.2 s after the card appears, `explainSoon`); then a grey toolbar **Star · Flag · Edit** (v667) — Edit comes back to the same
   card. The fold row shows a small star/flag when the card has them; **nothing sits on the photo** (v667).
@@ -197,7 +200,7 @@ card's (v634). **Add a text** (v635) frames a missing text through Crop again; *
 again** (v739) — the shutter's own reading once more; Crop reads the framed part.
 
 ### More — four sections (v547)
-**Learning** (Progress, Card order, Tags, Check-up and the undo rows) · **Your cards** (Export, Import, Flagged cards, Photos,
+**Learning** (Progress, Card order, the zoom and read-aloud switches, Tags, Check-up and the undo rows) · **Your cards** (Export, Import, Flagged cards, Photos,
 Duplicate multicards when there are any, Storage) · **The app** (Share the app, Feedback, How to use the app, Language,
 Meanings, AI review with the owner's setup form, Review queue, Usage sharing, Update notes, About, Open source licenses) ·
 **Advanced settings**. The owner's tools fold behind one **Owner tools** row (Downloads, Mirror, Diagnostics, Still to test,
@@ -429,7 +432,7 @@ id abroad. **`strokes.txt.gz` and `cedict.tsv.gz` stay freely available under th
 
 ## Open / not yet field-checked
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
-as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the model's character senses (v772); the
+as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the model's character senses (v772); the voice from the pad on the Xiaomi (v773); the
 apps' fields and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760); the wake
 lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768).
 
