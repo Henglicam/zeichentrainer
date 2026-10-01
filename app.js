@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=793; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=794; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -6596,6 +6596,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  794:"After + Flashcard in a multicard's pop-up, the pop-up says the card was made.",
   792:"A multicard's text is handled in its pop-up now: + Flashcard, Flag and Edit. The list under the photo is gone.",
   791:"In Cards, a flashcard made from a multicard shows its own part of the picture.",
   790:"A multicard text's pop-up has a quiet + Flashcard button.",
@@ -11129,7 +11130,7 @@ function wireRegions(root){
 }
 /* the sheet over the photo: the flashcard without the photo, since the photo is right there. Not modal on purpose — the
    page keeps scrolling and the next word can be tapped while it stands, which swaps its content in place. */
-function openLookup(shot,rid,silent){
+function openLookup(shot,rid,silent,o){
   const r=regionOf(shot,rid), d0=r&&r.card&&cardOf(r.card); if(!r||!d0) return;
   const pv=priceView(d0), d=pv?pv.d:d0; /* v712: a dish without its price; the price on its own line */
   if(!silent) bump("regionTaps"); LAST_PAGE=d.page||LAST_PAGE; /* v735: the Zoom check's data takes this multicard along */ /* silent: the sheet coming back with ← Back (v495) is the same look-up, not a second one */
@@ -11144,7 +11145,7 @@ function openLookup(shot,rid,silent){
     <div class="pin">${pinSay(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}</div>
     ${pid?""
         :`<div class="grades">${[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>`<button class="grade" data-g="${g}" data-lg="${g}"><span class="lbl">${t(l)}</span></button>`).join("")}</div>`}
-    ${pid?"":`<div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div>`}${pid?`${flagNoteHTML(d0)}${aiBoxHTML(d0)}${lkFoldHTML(d)}<div class="backacts dacts lkbar"><button class="tbtn" id="${made?"lk-open":"lk-make"}">${TB_ICON.card}<span>${t(made?"Flashcard ›":"+ Flashcard")}</span></button><button class="tbtn${d0.flag?" on":""}" id="lk-flag" aria-pressed="${d0.flag?"true":"false"}">${flagIcon}<span>${(d0.flag?t("card:⚑ Flagged"):t("⚑ Flag")).replace(/^⚑\s*/,"")}</span></button><button class="tbtn" id="lk-edit">${TB_ICON.edit}<span>${t("Edit")}</span></button></div>`:""}</div>`;
+    ${pid?"":`<div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div>`}${pid?`${flagNoteHTML(d0)}${aiBoxHTML(d0)}${lkFoldHTML(d)}${o&&o.made?`<div class="lknote" role="status">${t("✓ Flashcard made")}</div>`:""}<div class="backacts dacts lkbar"><button class="tbtn${made?" on":""}" id="${made?"lk-open":"lk-make"}">${TB_ICON.card}<span>${t(made?"Flashcard ›":"+ Flashcard")}</span></button><button class="tbtn${d0.flag?" on":""}" id="lk-flag" aria-pressed="${d0.flag?"true":"false"}">${flagIcon}<span>${(d0.flag?t("card:⚑ Flagged"):t("⚑ Flag")).replace(/^⚑\s*/,"")}</span></button><button class="tbtn" id="lk-edit">${TB_ICON.edit}<span>${t("Edit")}</span></button></div>`:""}</div>`;
   /* v792 (H: "Ich mag die Wörterliste unter den Multicards nicht. Bitte bringe in den Multicard-Pop-Ups Edit, Flag und so weiter
      unter, so ähnlich wie du das bei den normalen Lernkarten auch drin hast"): the row list under the multicard is gone
      (pageBodyHTML), so the pop-up is where a text is handled. It ends in the open card's quiet toolbar (v736's shape, equal
@@ -11172,7 +11173,8 @@ function openLookup(shot,rid,silent){
   wireSay(el);
   if(pid) wireLkFold(el,d.id);
   el.querySelectorAll("[data-lg]").forEach(b=> b.onclick=()=>gradeRegion(b.dataset.lg));
-  const mk=el.querySelector("#lk-make"); if(mk) mk.onclick=async()=>{ const L=LOOKUP; if(!L) return; mk.disabled=true; bump("regionCards"); const fc=await makeFlashcard(L.card); setStats(); if(LOOKUP===L&&fc) openLookup(L.shot,L.rid,true); }; /* v790: the sheet is drawn again with Flashcard › */
+  const mk=el.querySelector("#lk-make"); if(mk) mk.onclick=async()=>{ const L=LOOKUP; if(!L) return; mk.disabled=true; bump("regionCards"); const fc=await makeFlashcard(L.card); setStats(); if(LOOKUP===L&&fc) openLookup(L.shot,L.rid,true,{made:true}); }; /* v790: the sheet is drawn again with Flashcard › — v794 (H: "Bei +Flashcard kommt zunächst keine Bestätigung, so dass unklar ist, ob die flashcard erzeugt wurde"): with a line that says so, for LK_NOTE_MS, and the button in the tint from then on — the label's change alone was not seen */
+  { const nt=el.querySelector(".lknote"); if(nt){ if(LOOKUP.noteT) clearTimeout(LOOKUP.noteT); LOOKUP.noteT=setTimeout(()=>{ if(nt.isConnected) nt.remove(); },LK_NOTE_MS); } }
   const fl=el.querySelector("#lk-flag"); if(fl) fl.onclick=async()=>{ const L=LOOKUP; if(!L) return; fl.disabled=true; const c=cardOf(L.card); if(!c) return; await setFlag(L.card,!c.flag); if(LOOKUP===L) openLookup(L.shot,L.rid,true); }; /* v792: the sheet is drawn again with the mark */
   const ed=el.querySelector("#lk-edit"); if(ed) ed.onclick=()=>{ const L=LOOKUP; if(!L||!cardOf(L.card)) return; closeLookup(); LOOK_BACK={shot:L.shot,rid:L.rid,card:L.card,from:"lookup"}; S.editing=L.card; S.editFrom="lookup"; S.fullPic=false; render(); window.scrollTo({top:0}); }; /* v792: the Edit form, and back to this sheet (relookAfterEdit) */
   el.querySelectorAll("[data-aiok],[data-aino],[data-aiflag]").forEach(b=> b.onclick=async()=>{ const L=LOOKUP; if(!L) return; b.disabled=true; const c=cardOf(L.card), zh=c&&c.ai&&c.ai.zh; if(b.dataset.aiok) await aiAccept(L.card); else if(b.dataset.aino) await aiDismiss(L.card); else await aiFlag(L.card); if(LOOKUP!==L) return; closeLookup(); render(); relook(L.shot,L.card,zh); }); /* v792: the AI box's buttons as on the open card (wireAi), then the sheet again — on the text's new id when an accepted answer changed the characters */
@@ -11189,7 +11191,7 @@ function openLookup(shot,rid,silent){
    stand it down, and a closed fold costs nothing). No action inside: the sheet stays a look-up (v496/v692). CLOSED by default
    (v741); LK_OPEN is the reader's for the session: folded open by hand, it stays open on the next text tapped, and it is
    closed again at every start. */
-let LK_OPEN=false;
+let LK_OPEN=false; const LK_NOTE_MS=3000; /* v794: how long "✓ Flashcard made" stands in the sheet */
 function lkFoldHTML(d){ const sh=shortOf(d);
   return `<div class="fold lkfold${LK_OPEN?" open":""}"><button class="foldbtn" id="lk-fold" aria-expanded="${LK_OPEN?"true":"false"}"><span>${t("Details")}</span><i aria-hidden="true">⌄</i></button><div class="ans" id="lk-ans"${LK_OPEN?"":" hidden"}>${sh?`<p class="desc dsh">${esc(sh)}</p>`:""}${descHTML(d,{explain:true})}</div></div>`; }
 function wireLkFold(el,id){ const b=el.querySelector("#lk-fold"), a=el.querySelector("#lk-ans"); if(!b||!a) return;
@@ -11221,7 +11223,7 @@ function lkRoom(el){ const sh=el.querySelector(".sheet"), main=$("#main"); if(!s
   const fit=()=>{ if(!LOOKUP||LOOKUP.el!==el||!sh.isConnected) return; let sp=main.querySelector(".lkspace"); if(!sp){ sp=document.createElement("div"); sp.className="lkspace"; sp.setAttribute("aria-hidden","true"); main.appendChild(sp); }
     sp.style.height=Math.max(0,Math.round(window.innerHeight-sh.getBoundingClientRect().top))+"px"; };
   fit(); if(window.ResizeObserver){ const ro=new ResizeObserver(fit); ro.observe(sh); LOOKUP.ro=ro; } }
-function closeLookup(){ if(!LOOKUP) return; const L=LOOKUP; LOOKUP=null; markRegion(null); if(L.ro) L.ro.disconnect(); document.querySelectorAll("#main .lkspace").forEach(e=>e.remove()); L.el.remove(); document.removeEventListener("pointerdown",L.onDown,true); document.removeEventListener("keydown",L.onKey); }
+function closeLookup(){ if(!LOOKUP) return; const L=LOOKUP; LOOKUP=null; markRegion(null); if(L.ro) L.ro.disconnect(); if(L.noteT) clearTimeout(L.noteT); document.querySelectorAll("#main .lkspace").forEach(e=>e.remove()); L.el.remove(); document.removeEventListener("pointerdown",L.onDown,true); document.removeEventListener("keydown",L.onKey); }
 /* the sheet the detail was opened from comes back with it (v495, H: "If I tap on a word on a multicard, then the
    description for that word opens and I go to more … Now if I go back, I should land where I came from (description) and
    not at the multicard"): More is one step deeper into the same look-up, so ← Back undoes that step, not two. The note is
