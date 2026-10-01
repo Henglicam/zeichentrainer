@@ -615,6 +615,10 @@ body.noscroll{overflow:hidden}
 .ctile .tpw{position:relative;display:block;line-height:0}
 .ctile .tpw .tpi{display:block;width:auto;height:auto;max-width:100cqw;max-height:100cqh}
 .ctile .tpw .regions{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+/* v791: once fitTileCovers has placed it, the wrap is the cover-fitted photo pinned by its own left/top, free of the contain
+   fit's cap — the open card's cut, centred on the card's own text, in the square */
+.ctile .tpw.cov{position:absolute;max-width:none;max-height:none}
+.ctile .tpw.cov .tpi{max-width:none;max-height:none}
 /* v593 (H: "Cards preview bitte als quadratische Foto Tiles ohne text", then "Two lines are okay for Multicards"):
    an ordinary tile carries no text at all, so .th is the multicard's title alone and .ts2 is gone with cardStatus —
    and with it the three .st rules, whose only producer it was (the v307 rule). The title is clamped to two lines
