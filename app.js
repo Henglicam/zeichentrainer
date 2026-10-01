@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=799; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=800; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -6034,7 +6034,7 @@ function renderCards(main){
   normaliseFilters();
   let {html,n,ids}=cardsListHTML();
   main.innerHTML=`<div class="pane">
-    <div class="cardsbar"><input id="q" type="search" placeholder="${t("Characters or pinyin")}" value="${esc(S.query)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="btn mini primary" id="newcard">${t("+ New")}</button></div>
+    <div class="cardsbar"><input id="q" type="search" placeholder="${t("Text, pinyin or meaning")}" value="${esc(S.query)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button class="btn mini primary" id="newcard">${t("+ New")}</button></div>
     ${backupNudge()}
     ${pagesInDeck()&&!marking("cards")?`<div class="seg scope" id="cardstabs" role="tablist"><button class="segbtn${onPages()?"":" on"}" data-ctab="cards" role="tab" aria-selected="${onPages()?"false":"true"}">${t("Cards")}</button><button class="segbtn${onPages()?" on":""}" data-ctab="pages" role="tab" aria-selected="${onPages()?"true":"false"}">${t("Multicards")}</button></div>`:""}
     ${nAi?`<div class="aibar"><span>${nOf(nAi,"bar:AI suggestion","bar:AI suggestions")}</span><span class="aiacts2"><button class="aibtn prim" id="ai-acceptall" title="${t("Accept all")}" aria-label="${t("Accept all")}">${MARK_TICK}</button><button class="aibtn" id="ai-dismissall" title="${t("Dismiss all")}" aria-label="${t("Dismiss all")}">${MARK_CROSS}</button></span></div>`:""}
