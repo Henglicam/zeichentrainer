@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=810; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=811; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2669,7 +2669,7 @@ async function confirmDelCard(d){
                     ok:t("Delete") }); }
 const inWeChat=()=>/MicroMessenger/i.test(navigator.userAgent);
 const isInstalled=()=>{ try{ return matchMedia("(display-mode: standalone)").matches||navigator.standalone===true; }catch(e){ return false; } }; /* runs from the home screen — the strongest sign of a real user (v221) */
-const WX_NOTE="You are inside WeChat. Open this page in your browser to install the app and keep your cards.";
+const WX_NOTE="You are inside WeChat. Tap ⋯ at the top right and open this page in your browser to install the app and keep your cards."; /* v811: the step, not only the goal */
 function wxNoteHTML(){ return inWeChat()?`<div class="wxnote">${t(WX_NOTE)}</div>`:""; }
 /* the app's language (v253, H: "Multi language UI and translations" — English, German, French, Spanish, Japanese, Korean; the
    strings live in lang.js with English as the key): More → Language switches at once and keeps the choice (setting "lang");
@@ -3096,7 +3096,7 @@ function backupNote(){
    population the Camera tab no longer lists — a photo that made nothing — was reachable by no bulk tool at all. A
    card-less photo costs nothing to delete: keepPhoto finds no card to hand a copy to, so no bytes are written. */
 function oldShots(){ const cut=Date.now()-OLD_DAYS*DAY; return S.inbox.filter(sh=>sh.ts<cut); }
-function shotsNote(){ const n=S.inbox.length, o=oldShots().length; return t("{0} in the inbox",nOf(n,"photo"))+(o?t(", {0} older than {1} days",o,OLD_DAYS):"")+"."; }
+function shotsNote(){ const n=S.inbox.length, o=oldShots().length; return t("{0} kept on this phone",nOf(n,"photo"))+(o?t(", {0} older than {1} days",o,OLD_DAYS):"")+"."; }
 /* v731 (H: "Ok, go — Duplikat-Finder für Multicards"; his v727/v729 dumps: five 建国肉夹馍 multicards, three 恩尼美甲, two 江宁府, made
    on different days, every copy's texts reviewed by the AI on their own): two multicards are copies of one another when at
    least DUP_SHARE of the shorter one's texts stand in the other, with everything but the characters stripped (凉皮¥14/份 and
@@ -3162,7 +3162,6 @@ async function renderNmtRow(){
 const MORE_OPEN={}; /* v717: which of More's folds are open — What is sent (AI review, Usage sharing), About the app, the feedback box; session only, closed on every start */
 function moreFold(k,label,html){ return `<button class="del mofold" data-mo="${k}" aria-expanded="${MORE_OPEN[k]?"true":"false"}">${esc(label)} <i aria-hidden="true">${MORE_OPEN[k]?"⌃":"⌄"}</i></button><div data-mob="${k}"${MORE_OPEN[k]?"":" hidden"}>${html}</div>`; } /* the body is in the DOM either way and only shown or hidden — no re-render, so the page does not move under the tap */
 function renderMore(main){
-  const ver=($(".ver")||{}).textContent||"";
   const st=S.persist===true?t("Persistent on this phone."):S.persist===false?t("Not safe yet. Add the app to your home screen, then the phone keeps your cards."):t("Checking …");
   main.innerHTML=`<div class="pane more">
     <div class="listhead">${t("Learning")}</div> <!-- four sections since v547 (H: "Go for all five" on the described More); Learning stays first, the v275 decision -->
@@ -3175,14 +3174,14 @@ function renderMore(main){
     ${undoRunHTML("accept")}
     ${undoRunHTML("dismiss")}
     <div class="listhead">${t("Your cards")}</div>
-    <div class="mrow"><div><div class="t">${t("Export")}</div><div class="s">${t("Progress and cards as one file, via the share sheet.")} ${backupNote()}</div><label class="check" style="margin:8px 0 0"><input type="checkbox" id="export-photos"${exportPhotos()?" checked":""}> ${t("Include photos (adds about {0} MB)",(photoBytes()*1.37/1048576).toFixed(1))}</label></div><button class="btn mini" id="export">${t("Export")}</button></div>
+    <div class="mrow"><div><div class="t">${t("Export")}</div><div class="s">${t("Progress and cards as one file, via the share sheet.")} ${backupNote()}</div>${photoBytes()?`<label class="check" style="margin:8px 0 0"><input type="checkbox" id="export-photos"${exportPhotos()?" checked":""}> ${t("Include photos (adds about {0} MB)",(photoBytes()*1.37/1048576).toLocaleString(LANG_LOCALE[LANG],{minimumFractionDigits:1,maximumFractionDigits:1}))}</label>`:""}</div><button class="btn mini" id="export">${t("Export")}</button></div>
     <div class="mrow"><div><div class="t">${t("Import")}</div><div class="s">${t("A shizi-….json.txt file. Existing cards are overwritten.")}</div></div><button class="btn mini" id="import">${t("Import")}</button></div>
     <div class="mrow"><div><div class="t">${t("Flagged cards")}</div><div class="s">${t("{0} flagged for review. Share the list as text, for a teacher.",deck().filter(d=>d.flag).length)}</div></div>${deck().some(d=>d.flag)?`<span class="btnrow"><button class="btn mini" id="show-flag">${t("Show")}</button><button class="btn mini" id="share-flag">${t("Share")}</button></span>`:""}</div>
     <div class="mrow"><div><div class="t">${t("Photos")}</div><div class="s" id="shots-status">${esc(shotsNote())}</div></div>${oldShots().length?`<button class="btn mini" id="cleanshots">${t("Delete {0}",oldShots().length)}</button>`:""}</div>
     ${dupRowHTML()}
     <div class="mrow"><div><div class="t">${t("Storage")}</div><div class="s" id="storage-status">${esc(st)}</div></div></div>
     <div class="listhead">${t("The app")}</div>
-    <div class="mrow"><div><div class="t">${t("Share the app")}</div><div class="s" id="app-share-status">${t("Send the link to a friend. The app installs from any browser, no store.")}</div></div><button class="btn mini" id="app-share">${t("Share")}</button></div>
+    <div class="mrow"><div><div class="t">${t("Share the app")}</div><div class="s" id="app-share-status">${t("Send the link to a friend. It installs from the phone's browser — not from inside WeChat — with no store.")}</div></div><button class="btn mini" id="app-share">${t("Share")}</button></div>
     <div class="mrow"><div style="flex:1"><div class="t">${t("Feedback")}</div><div class="s" id="fb-status">${t("Tell the app's owner what works and what does not.")}</div><div data-mob="fb"${MORE_OPEN.fb?"":" hidden"}><textarea class="grow" id="fb-text" rows="2" placeholder="${t("Your message")}"></textarea><div id="fb-shot">${fbShotHTML()}</div><input type="file" id="fb-pick" accept="image/*" hidden><div class="fieldacts"><button class="btn mini" id="fb-add">${t("Add screenshot")}</button><button class="btn mini" id="fb-send">${t("Send")}</button></div></div><div data-mob="fb-btn"${MORE_OPEN.fb?" hidden":""}><div class="fieldacts"><button class="btn mini" data-mo="fb">${t("Write a message")}</button></div></div></div></div> <!-- v717: the box and its two buttons come with Write a message; until then the row is a title and a sentence -->
     <div class="mrow"><div><div class="t">${t("How to use the app")}</div><div class="s">${t("Six short sections: photo, characters, learning, cards, language, what stays on the phone.")}</div></div><button class="btn mini" id="guide-open">${t("Open")}</button></div>
     <div class="mrow"><div style="flex:1"><div class="t">${t("Language")}</div><div class="s">${t("The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.")}</div><div class="chipset" id="lang-chips" style="margin-top:8px">${LANGS.map(([c,n])=>`<button class="chip${LANG===c?" on":""}" data-lang="${c}">${n}</button>`).join("")}</div></div></div>
@@ -3203,12 +3202,12 @@ function renderMore(main){
     <div class="mrow"><div style="flex:1"><div class="t">${t("Review queue")}</div><div class="s" id="ai-runstatus"></div><div class="fieldacts"><button class="btn mini" id="ai-run" hidden></button></div></div></div>
     <div class="mrow"><div><div class="t">${t("Usage sharing")}</div><div class="s"><span id="share-status">${esc(shareNote())}</span> ${t("Your id: {0}.",`<span id="share-id">${esc(installId())}</span>`)}</div>${moreFold("usage",t("What is sent"),`<div class="s" style="margin-top:6px">${t("Sends anonymous usage counts to the app's owner once a day, and again when you leave the app after making or deleting a card: your random id, the phone model, days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.")}</div>`)}<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> ${t("Send once a day")}</label></div></div>
     <div class="mrow"><div><label class="check" style="margin:0"><input type="checkbox" id="update-note"${updateNoteOn()?" checked":""}> ${t("Tell me what is new after an update.")}</label></div></div>
-    <div class="mrow"><div><div class="t">识字 Shízì</div><div class="s">${esc(ver)}</div>${moreFold("about",t("About the app"),`<div class="s" id="about-s" style="margin-top:6px">${esc(aboutBody())}</div>`)}${whatsNewHTML()}</div></div> <!-- v717: the version stands, the paragraph folds, the update notes stay in sight (v609) -->
+    <div class="mrow"><div><div class="t">识字 Shízì</div><div class="s">${esc(t("Version {0}",APP_V))}</div>${moreFold("about",t("About the app"),`<div class="s" id="about-s" style="margin-top:6px">${esc(aboutBody())}</div>`)}${whatsNewHTML()}</div></div> <!-- v717: the version stands, the paragraph folds, the update notes stay in sight (v609) -->
     <div class="mrow"><div><div class="t">${t("Open source licenses")}</div><div class="s">${t("The software and data the app is built on, and who made them.")}</div></div><button class="btn mini" id="lic-open">${t("Open")}</button></div> <!-- the notices Apache-2.0, MPL-2.0 and CC BY-SA ask to be delivered with the work (v425); ./vendor/LICENSES.txt goes through the worker's vendor route, so it comes from the mirror behind the wall and is cached after the first look -->
     <div class="listhead">${t("Advanced settings")}</div>
     ${S.admin?`<div class="mrow"><div><div class="t">Logged in as admin</div><div class="s">The AI setup and the owner tools below are open until the app is closed.</div></div><button class="btn mini" id="admin-lock">Log out</button></div>`
     :`<div class="mrow"><div style="flex:1"><div class="inrow admin"><span class="s quiet">${t("Admin log in")}</span><input id="admin-pw" type="password" placeholder="${t("Password")}" autocomplete="off"><button class="del" id="admin-unlock">${t("Log in")}</button></div><div class="err" id="admin-err" style="display:none">${t("Wrong password.")}</div></div></div>`} <!-- one quiet line (v283, H: "remove the description for the locked area, just call it admin log in … not very prominent"; v284 "polish": label, field and a plain Log in on one line) --> <!-- the field inside the row (v282, H: the box's bottom corners were square — a .field after the last row took its rounding, and the field stood outside the white surface); the Mirror address the same -->
-    ${S.admin?`<div class="mrow"><div><div class="t">Owner tools</div><div class="s">Downloads, Mirror, Diagnostics, Still to test, All users, Feedback and Reset — ${S.ownerOpen?"shown below":"hidden until you open them"}.</div></div><button class="btn mini" id="owner-toggle">${S.ownerOpen?"Hide":"Show"}</button></div>`:""}
+    ${S.admin?`<div class="mrow"><div><div class="t">Owner tools</div><div class="s">Downloads, Mirror, Diagnostics, the reading tools, Still to test, All users, Feedback and Start over — ${S.ownerOpen?"shown below":"hidden until you open them"}.</div></div><button class="btn mini" id="owner-toggle">${S.ownerOpen?"Hide":"Show"}</button></div>`:""}
     ${S.admin&&S.ownerOpen?`<div class="listhead">Downloads</div>
     <div class="mrow"><div><div class="t">Offline translation</div><div class="s" id="nmt-status">Checking …</div></div><button class="btn mini" id="nmt-btn" hidden></button></div>
     <div class="mrow"><div><div class="t">Text recognition</div><div class="s" id="ocr-status">Checking …</div></div><button class="btn mini" id="ocr-btn" hidden></button></div>
@@ -3229,10 +3228,10 @@ function renderMore(main){
     <pre class="diag" id="fb-out" hidden></pre>
     <div class="fbpics" id="fb-pics" hidden></div>
     <div class="listhead">Start over</div>
-    <div class="mrow"><div><div class="t">Reset</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Reset</button></div>`:""}
+    <div class="mrow"><div><div class="t">Start over</div><div class="s">Deletes progress, cards and photos.</div></div><button class="btn mini danger" id="reset">Start over</button></div>`:""}
   </div>`;
   $("#export").onclick=exportData;
-  $("#export-photos").onchange=e=>setSetting("exportPhotos",!!e.target.checked);
+  { const ep=$("#export-photos"); if(ep) ep.onchange=e=>setSetting("exportPhotos",!!e.target.checked); }
   $("#usage-share").onclick=shareProgress; $("#app-share").onclick=shareApp;
   document.querySelectorAll("[data-lang]").forEach(b=> b.onclick=()=>setLang(b.dataset.lang));
   const tr=$("#translate-all"); if(tr) tr.onclick=translateAll;
@@ -6745,7 +6744,6 @@ const WHATS_NEW={
   704:"The fold with the pinyin, meaning and description is now simply called Details.",
   701:"On a menu with pictures, each dish now shows its own photo.",
   699:"A menu you photographed now reads like a menu: every dish with its price and a line about what it is.",
-  692:"On a multicard, open a text from the list under the photo to turn it into a flashcard — the pop-up is just for looking up.",
   690:"Search your cards in pinyin without the tones: wendu finds 温度.",
   683:"Don't want the photo to zoom while you write? Switch it off under More.",
   662:"A new card shows its whole photo for a moment, then zooms onto the first character by itself.",
@@ -6808,7 +6806,6 @@ const WHATS_NEW={
   492:"Open a multicard from a flashcard and the button at the top left takes you straight back to that card.",
   490:"In the Cards list, a flashcard made from a multicard now shows that multicard's photo with its own text lit up on it — and a card you mark for deletion is ticked again.",
   489:"A flashcard made from a multicard shows that multicard's photo again, with its own text framed on it and the multicard's name under the picture.",
-  487:"A multicard is a reference now: tap any text on it and press Generate flashcard to make a text-only card that names where it came from.", /* v488 corrected this line rather than adding its own: 487 and 488 reach every phone in the same update, and the note a learner reads has to be true of what is on it */
   486:"A sign the reader read clearly keeps the picture the reader measured, instead of one the AI guessed at.",
   485:"A photo of a control panel makes one card per button again, even when the reader misread a character or two on the way.",
   480:"A whole batch of AI suggestions can be cleared in one tap: Dismiss all sits beside Accept all, and More offers one Undo in case you did not mean it.",
@@ -6837,7 +6834,6 @@ const WHATS_NEW={
   451:"When the text check cannot be reached, a screenshot or panel still gets its cards from the picture the AI already read.",
   450:"A screenshot shared to the app is now read whole, so its title and headings get their dots too.",
   449:"A photo of an app screen or a board now gets a card for its headings and buttons too, not only its main items — and a card's picture no longer cuts off the end of a wide sign.",
-  448:"A photo that made several cards — a control panel, an app screen — now shows a dot on each of its texts. Tap one to see it, hear it and grade it right on the photo.",
   447:"A photo of a control panel now makes one card per button far more often — and no card shows a sliver of the panel instead of its own button.",
   446:"A photo of a control panel taken straight-on no longer loses cards — every label the AI reads gets one.",
   445:"Open a card from the list and push it sideways — the next card of the list slides in, as in Learn.",
@@ -6849,7 +6845,6 @@ const WHATS_NEW={
   429:"Picking Starred now studies all your starred cards, not only the ones due today.",
   427:"Tap the star on a card — in the list or while learning — to mark it, and study your starred cards from the filter.",
   423:"An update no longer sends you to another card in the middle of a session.",
-  421:"Three grades instead of four — Hard, Medium, Easy, in the traffic light's colours.",
   416:"The update note now waits until you tap it away — and More lets you switch it off.",
   415:"Pulling the page down no longer reloads the app and throws you back to Learn.",
   414:"Swipe a card left or right, before you open it, to pick another one from the session.",

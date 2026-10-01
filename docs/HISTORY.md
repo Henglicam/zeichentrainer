@@ -116,7 +116,26 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v810, 2026-10-01)
+## Current state (PWA v811, 2026-10-01)
+- **The words in ten columns (v811, the audit's wording sweep, with the layout and first-impression sweeps' wording finds).**
+  **Cut off or doubled:** the Edit form's "Save changes" ran past its red button in de, fr, es and id ("Änderungen spei") — now
+  Speichern, Enregistrer, Guardar, Simpan (ru already said Сохранить), with a flex guard so the next long label takes the row
+  (`.form>.cropacts`); vi, th and id gave "Unverified" and "Not yet checked" one word, two identical rows in the filter sheet.
+  **Wrong:** fr Feedback's "Dites" (the one vous of ten columns, v255); "Translate all cards into {0}" with the language's own
+  capitalised name mid-sentence in fr, es, ru, vi, a template particle in ko and an odd th; ko 을(를)/과(와) on count phrases whose
+  ending is known; ko's guide "그게 문제예요" ("that's the problem") → "그 사진이 질문이에요"; "·" as a separator in fr, es and th;
+  four ja strings in casual speech in a polite column; vi/th's Export row reading "multicards in one file"; "Mark verified"
+  worded as Flag's verb in de, es, ko, vi, id; es/vi pointing at an About label that does not exist; ru "следующее" for a
+  masculine повтор; id's missing "pada"; vi's "previous round". **Said truly:** Share the app's "installs from any browser" beside
+  its own shared text's "not inside WeChat"; the WeChat note now gives the step (⋯ at the top right); More → Photos' "inbox",
+  a word no screen uses ("Auf diesem Handy: 2 Fotos"); About's "PWA v810" (jargon since v225) → "Version 811"; "Include photos
+  (adds about 0.0 MB)" on an empty deck, and "0.5 MB" with a decimal point in German — the checkbox shows only with photos, the
+  number in the language's format; the owner's "Reset" row and button → "Start over", as privacy.html and the sheet say; four
+  update notes about controls that are gone (692, 487, 448, 421 — the v534 rule). **Left:** the ASCII full stop after translated
+  sentences in ja and th (needs whole-sentence keys at seven call sites), and the share texts and update notes being English
+  in every column (H's call). Harness: `test811` (the Save button measured at 360 in four languages; every changed text rendered
+  through `t()` in its column; More, the owner's row, an empty deck) **14 of 14, v810 0 of 14**. Keys: 507, ru 538.
+
 - **The learner's own data: a backup that is one, a save that fails says so, an import that lands whole or not at all (v810,
   the audit's hygiene and works sweeps).** **(1) Export:** any share error but a cancel fell to the anchor download, which MIUI
   blocks silently (hard constraint 6), and `lastExport` was written anyway — no file, the backup line gone, More saying "Last

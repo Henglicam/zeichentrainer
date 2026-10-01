@@ -52,7 +52,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v810, 2026-10-01)
+## Current state (PWA v811, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -238,7 +238,7 @@ again** (v739) — the shutter's own reading once more; Crop reads the framed pa
 Duplicate multicards when there are any, Storage) · **The app** (Share the app, Feedback, How to use the app, Language,
 Meanings, AI review with the owner's setup form, Review queue, Usage sharing, Update notes, About, Open source licenses) ·
 **Advanced settings**. The owner's tools fold behind one **Owner tools** row (Downloads, Mirror, Diagnostics, Still to test,
-All users, Feedback, Start over). **The long texts fold** (v717, `moreFold`, closed at every start): What is sent ⌄ on AI
+All users, Feedback, Start over — the row and its button say "Start over" since v811). **The long texts fold** (v717, `moreFold`, closed at every start): What is sent ⌄ on AI
 review and Usage sharing, About the app ⌄, Write a message on Feedback; every word stays (v193).
 
 **Owner's rows are English** and behind a password (`ADMIN_HASH`, SHA-256, a session-only unlock). **Diagnostics** keeps a
@@ -318,7 +318,7 @@ is **on by default and works with no key**, so a fresh install sends every new c
 
 ## Languages
 Ten columns in `lang.js`: en, de, fr, es, ja, ko, ru, vi, th, id. **English is the key**; a missing key falls back to the
-English text, never to the key. **506 keys a column, ru 537 (three plural forms), en 15** (v810 — count by evaluating `lang.js`). `nOf`/`wordOf`/`PLURAL` carry the
+English text, never to the key. **507 keys a column, ru 538 (three plural forms), en 15** (v811 — count by evaluating `lang.js`). `nOf`/`wordOf`/`PLURAL` carry the
 counts.
 
 - **The v412 rule: a pronoun or a count-agreeing verb must never cross a key boundary.** Render every count sentence at
