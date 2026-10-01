@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v776, 2026-10-01)
+## Current state (PWA v777, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -140,7 +140,8 @@ and after the layout settles (v521/v532).
 - **After each character** the pad fades, then (`CHAR_IN` 200 ms) its reading and meaning stand over the pad for `CHAR_MS`
   900 ms; after the last, the recap — the meaning and `d.p` grouped by word, no characters (v577/v616) — for `recapMs(d)`
   (`NEXT_MS` 3200 + `RECAP_SYL` 230 a syllable past the second, cap `RECAP_MAX` 5300). **In both readings the meaning is the
-  big line, as large as `recapFit` measures (v600/v775), and the pinyin stands small and green under it** (v775, H).
+  big line, as large as `recapFit` measures (v600/v775), and the pinyin stands small and green under it** (v775, H); **the
+  character's own reading carries the character itself, printed large at its head** (`.rg`, v777, H) — the card's recap does not (v577).
   A tap skips. The star flies into the counter at `recapMs − POP1`; a milestone (50/100/250/500/1000 points, 7/30/100-day
   streak) bursts (v545).
 - **The word line** (text state only; in the photo state `--th` is 0) reads the character being written with its in-word

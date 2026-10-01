@@ -116,6 +116,18 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v777, 2026-10-01)
+- **The character just written stands at the head of its reading (v777, H: "Der User soll sich nach dem Schreiben den
+  jeweiligen character einprägen können").** Since v668 the pad — green ink and all — fades out before the character's
+  reading comes in (the two overlapped), so the learner read the meaning of a character no longer on screen. Now
+  `charRecapHTML` takes the character (`cur.glyph`, the traditional form where the card is traditional) and prints it
+  large in the Hanzi face at the top of the reading — `.rg`, two fifths of the square (`min(40cqw,120px)`) — with the
+  meaning measured into what is left (`recapFit` subtracts the glyph) and the syllable small under it. The card's recap
+  keeps no character (v577, H). Harness (the hand of v774 on 洗手液): after 洗 the glyph 洗 at 91 px in Songti, then "to
+  wash" at 44 px, then "xǐ" at 18, all inside the square; the card's recap unchanged — 5 of 5 on v777, 3 of 6 on v776 (the
+  fit and the recap are controls). Screenshot at 390 px light checked by eye. Not yet field-checked; `CHAR_MS` 900 ms is
+  the dwell, unchanged — H did not ask for more time. WHATS_NEW 777.
+
 ## Current state (PWA v776, 2026-10-01)
 - **Every character is spoken alone (v776, H on 一次性手套: "Bitte jeden character einzeln lesen, nicht bei einem character
   das gesamte Wort, wie hier passiert.").** Two rules spoke more than the character: v773's — the whole word when the

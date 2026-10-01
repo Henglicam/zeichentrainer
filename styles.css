@@ -804,6 +804,7 @@ body.noscroll{overflow:hidden}
 .recap .rm{font-size:21px;font-weight:600;color:var(--label);line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .recap .rp{font-size:18px;font-weight:600;color:var(--ok);letter-spacing:.4px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .recap .rp.alone{font-size:21px;-webkit-line-clamp:3}
+.recap .rg{font-family:var(--hanzi);font-size:min(40cqw,120px);line-height:1.08;color:var(--label);flex:none;padding:0;margin:0} /* v777: the character just written, printed at the head of its reading — large enough to be looked at, two fifths of the square, the meaning and the syllable measured into what is left (recapFit) */
 /* v550: with the glyph gone the reading is the one thing on the pad, so it is set large and given its own line height.
    v553 (H: "Die pinyin Darstellung polieren: In/Out, Größe, Font, Farbe, etc."): it is GREEN, not the tint. The app's
    own scheme since v528 is red = in the pad, blue = locked, green = written — and this reading stands there at the very
