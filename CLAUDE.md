@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v787, 2026-10-01)
+## Current state (PWA v788, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -227,7 +227,9 @@ review and Usage sharing, About the app ⌄, Write a message on Feedback; every 
 **Owner's rows are English** and behind a password (`ADMIN_HASH`, SHA-256, a session-only unlock). **Diagnostics** keeps a
 hundred readings, a hundred AI exchanges and a hundred errors, and survives restarts (v505) — it is the only window into the
 phone, and every reader fix since v93 came out of a shared dump. Each reading carries a `numbers:` line with every value the
-frame chain decided on (v399).
+frame chain decided on (v399). **The dump prints the newest 8 readings and 20 exchanges whole and the rest one line each**
+(`DIAG_READ_FULL`, `DIAG_AI_FULL`, v788: 779 KB became ~110); its head carries the reader's first answer, the screen lock, the
+Learn session and the last 12 utterances of the voice (`SAYLOG`), and each zoom decision its time into the card and its screen.
 
 ## The reading pipeline
 Photo (≤1600 px, EXIF baked in) → `proposeFrame` (ink rows on a chromaticity copy; a **shared screenshot is read whole**,

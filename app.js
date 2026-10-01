@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=787; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=788; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -439,7 +439,7 @@ const AI_LOG_REQ=4000;
    record in place, v405), and the oldest row is deleted the moment the ring pushes its record out. Diagnostics prints all
    of them as before — the newest reading whole, the older ones trimmed head and tail (v405/v479) — so the shared text
    grows with the history; Copy and Share carry it whole, and a chat paste is H's to cut. */
-const NUMS_KEEP=100, AI_KEEP=100, ERR_KEEP=100;
+const NUMS_KEEP=100, AI_KEEP=100, ERR_KEEP=100; const DIAG_READ_FULL=8, DIAG_AI_FULL=20; /* v788: how many of the kept readings and exchanges the dump prints whole; the rest are one line each */
 const putRow=(k,v)=>idbPut("settings",{k,v}).catch(()=>{}); /* a row that stays out of S.settings: the ring and AILOG are their own memory */
 const delRow=k=>idbDel("settings",k).catch(()=>{});
 let _aiSeq=0;
@@ -584,8 +584,15 @@ function diagText(){
     (gf=>gf?`gloss fix · v${gf.v} ${ago(gf.at)} · ${gf.cards} cards, ${gf.words} words${gf.changed&&gf.changed.length?": "+gf.changed.slice(0,20).map(c=>`${c.w} ${c.from} → ${c.to}`).join(" · ")+(gf.changed.length>20?" …":""):""}`:"gloss fix · not run")(S.settings.glossFix), /* v718 */
     `marks on the photo · ${markLine()}`,
     `main thread · long tasks ${LONG.n}${LONG.n?` (${Math.round(LONG.total)} ms in all, longest ${Math.round(LONG.max)} ms, last ${ago(LONG.at)})`:""} · parse strokes ${PARSE_MS.strokes==null?"not yet":PARSE_MS.strokes+" ms"}, outlines ${PARSE_MS.outlines==null?"not yet":PARSE_MS.outlines+" ms"} · resizes ${RESIZES.length?RESIZES.map(r=>r.bfcache?"back from the cache "+ago(r.t):`${r.from.join("×")}→${r.to.join("×")} ${ago(r.t)}`).join("; "):"none"}`, /* v532: what a fold did to the page, for H's next dump */
+    /* v788: the reader's first load, the screen lock and the voice — each an open question on the Xiaomi (v786, v767/v768, v773–v784) that
+       the dump could not answer; and the session Learn stands in, so a complaint about a card can be read against its place in the queue */
+    `reader · ${PD_FIRST?`first answer ${ago(PD_FIRST.at)}, ${(PD_FIRST.since/1000).toFixed(1)} s after the start, ${PD_FIRST.ms} ms`:"no answer yet in this page"}`,
+    `screen lock · ${navigator.wakeLock?`${WAKE?"held":"released"} · asked ${WAKE_LOG.n}×${WAKE_LOG.err?` · last refusal "${WAKE_LOG.err}"`:""}${WAKE_LOG.at?` (${ago(WAKE_LOG.at)})`:""} · busy ${appBusy()?"yes":"no"}`:"not supported"}`,
+    (cur=>`learn · ${S.queue?S.queue.length:0} in the session, at ${(S.idx|0)+1}${cur?" · "+String(cur.c||"").replace(/\n/g,"/").slice(0,12):""} · cue ${S.cueBig} · zoom ${zoomOn()?"on":"off"} · read aloud ${sayOn()?"on":"off"} · screen ${S.mode}`)(S.queue&&cardOf(S.queue[S.idx])),
+    `read aloud · voice ${(v=>v?v.lang+" "+v.name:"none listed, the system engine")(ttsVoice())} · rate ${SAY_RATE} · ${SAYLOG.length?SAYLOG.length+" utterance"+(SAYLOG.length===1?"":"s")+", newest last":"nothing said yet"}`,
+    ...SAYLOG.map(x=>`  ${ago(x.t)}  "${x.text}" · ${x.after?"queued":"fresh"} · ${x.voice}${x.err?" · "+x.err:x.end!=null?` · started ${x.start==null?"?":x.start+" ms"}, ended ${x.end} ms`:x.start!=null?` · started ${x.start} ms, no end`:" · never started"}`),
     `learn zoom · ${ZLOG.length?ZLOG.length+" decisions, newest last":"no zoom yet"}${ZCHECK?` · zoom check ${ZCHECK.line} (${ago(ZCHECK.at)})`:""}`, /* v617/v618: every decision of the pad's zoom — the card, the character, how its place was found (ink, ink unsure, estimate) and why not better */
-    ...ZLOG.flatMap((z,i)=>[`  ${ago(z.at)}  ${String(z.c||"").replace(/\n/g,"/").slice(0,12)} ${z.ch||""} · ${z.how}${z.why?" ("+z.why+")":""}${z.s!=null?" · x"+z.s:""}${z.lv!=null?" · level "+z.lv:""}${z.pos?" · at "+z.pos:""}${z.edge?" · "+z.edge:""}`,
+    ...ZLOG.flatMap((z,i)=>[`  ${ago(z.at)}  ${String(z.c||"").replace(/\n/g,"/").slice(0,12)} ${z.ch||""} · ${z.how}${z.why?" ("+z.why+")":""}${z.s!=null?" · x"+z.s:""}${z.lv!=null?" · level "+z.lv:""}${z.pos?" · at "+z.pos:""}${z.edge?" · "+z.edge:""}${z.t!=null?" · "+(z.t/1000).toFixed(1)+" s into the card":""}${z.where&&z.where!=="study"?" · on "+z.where:""}`,
       ...(z.rd&&(i===0||ZLOG[i-1].rd!==z.rd||ZLOG[i-1].c!==z.c)?[`      the reader read: ${z.rd.slice(0,240)}`]:[])]), /* v666: at, edge and the reader's text */
     `learn fit · ${LAST_FIT?Object.entries(LAST_FIT).filter(([k])=>k!=="at").map(([k,v])=>k+" "+v).join(", ")+" ("+ago(LAST_FIT.at)+")":"no study card measured yet"}`, /* v521: the pad's last measurement — where the card ends against the tab bar, and what was counted under the pad */
     navigator.userAgent, `voices (${voiceList().length}): ${voiceList().join("; ")||"none reported"}`, ""];
@@ -603,9 +610,15 @@ function diagText(){
   /* the two readings before it (v405): a card that came out wrong is rarely from the last photo taken. Their steps are
      trimmed head and tail, which keeps the frame's proposal and the quick look at one end and the outcome at the other;
      their passes are left out, since three competitions would be some 12 KB of a text H pastes into a chat by hand. */
-  const older=LAST_READ.ring.filter(N=>N&&N!==now);
-  if(older.length){ out.push("", `Earlier readings (${older.length}, newest last):`);
-    older.forEach(N=>{ out.push(`  ${ago(N.at)}  ${N.shot||"?"}${Array.isArray(N.cards)?` \u00b7 ${N.cards.length} card${N.cards.length===1?"":"s"}`:""}`);
+  /* v788 (H: "Zu lang?"): the ring keeps NUMS_KEEP 100 readings and the dump printed every one — 99 readings, 574 KB of a 779 KB
+     text going back five days, pasted into a chat by hand. The newest DIAG_READ_FULL are printed as before; each older one is one
+     line — when, the shot, its cards and its last step — enough to see the batch and to ask for the record if it matters. The
+     store is untouched: what is kept and what is printed are two numbers now. */
+  const older=LAST_READ.ring.filter(N=>N&&N!==now), full=older.slice(-DIAG_READ_FULL), brief=older.slice(0,Math.max(0,older.length-DIAG_READ_FULL));
+  const headOf=N=>`  ${ago(N.at)}  ${N.shot||"?"}${Array.isArray(N.cards)?` \u00b7 ${N.cards.length} card${N.cards.length===1?"":"s"}`:""}`;
+  if(older.length){ out.push("", `Earlier readings (${older.length}, newest last${brief.length?`; the oldest ${brief.length} as one line each`:""}):`);
+    brief.forEach(N=>{ const last=N.log&&N.log.length?N.log[N.log.length-1].text:""; out.push(headOf(N)+(last?` \u00b7 ${String(last).slice(0,90)}`:"")); });
+    full.forEach(N=>{ out.push(headOf(N));
       if(N.log&&N.log.length){ out.push(`    steps (${N.log.length}):`); out.push(...stepLines(N,"      ",LOG_OLD_HEAD,LOG_OLD_TAIL)); }
       out.push("    numbers: "+JSON.stringify(numsTrim(N,NUMS_OLD))); }); }
   /* DRAWLOG holds two shapes since v512: the drawing sheet's {strokes,alts,…} (v140) and the write pad's {pad,k,ok,dist} — one
@@ -617,8 +630,12 @@ function diagText(){
   drawn.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.strokes.length} stroke${x.strokes.length===1?"":"s"} → ${(x.alts||[]).join(" ")||"nothing"}${x.strokes_best?` · strokes ${x.strokes_best.join(" ")} · print ${(x.ocr||[]).join(" ")||"nothing"}`:""}`); out.push("    strokes: "+JSON.stringify(x.strokes)); });
   out.push(`Traced strokes on the pad (${traced.length}, newest last):`);
   traced.forEach(x=>out.push( `  ${ago(x.t)}  ${x.pad||"?"} stroke ${(x.k|0)+1} ${x.ok?"snapped":"missed"}${x.dist==null?"":" at "+x.dist}`)); /* the distance is against TRACE_OK 0.18 of the pad (§ 14) */
-  out.push("", `AI exchanges (${AILOG.length}, newest last):`);
-  AILOG.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.model||""} → ${x.status||""}${x.ms?` in ${(x.ms/1000).toFixed(1)} s`:""}`); out.push("    request: "+x.req); out.push("    reply: "+(x.res||x.err||"")); });
+  /* v788: the same for the hundred exchanges (197 KB): the newest DIAG_AI_FULL whole, the older ones one line each with the request's head */
+  const aiBrief=AILOG.slice(0,Math.max(0,AILOG.length-DIAG_AI_FULL)), aiFull=AILOG.slice(-DIAG_AI_FULL);
+  const aiHead=x=>`  ${ago(x.t)}  ${x.model||""} → ${x.status||""}${x.ms?` in ${(x.ms/1000).toFixed(1)} s`:""}`;
+  out.push("", `AI exchanges (${AILOG.length}, newest last${aiBrief.length?`; the oldest ${aiBrief.length} as one line each`:""}):`);
+  aiBrief.forEach(x=>out.push(aiHead(x)+(x.err?` \u00b7 ${String(x.err).slice(0,60)}`:"")+` \u00b7 ${String(x.req||"").replace(/\s+/g," ").slice(0,70)}`));
+  aiFull.forEach(x=>{ out.push(aiHead(x)); out.push("    request: "+x.req); out.push("    reply: "+(x.res||x.err||"")); });
   out.push("", `Errors (${ERRLOG.length}):`);
   ERRLOG.forEach(x=>out.push(`  ${ago(x.t)}  [${x.kind}] ${x.msg}`));
   return out.join("\n")+"\n";
@@ -3524,6 +3541,7 @@ function ttsVoice(){
   TTS_VOICE=cn.find(nat)||zh.find(nat)||cn[0]||zh[0]||null;
   return TTS_VOICE;
 }
+const SAYLOG=[], SAY_KEEP=12; /* v788: the last utterances for Diagnostics — what was asked of the engine, with which voice, and whether it started, ended or failed; the open questions on the Xiaomi (v773, v778, v781, v784) have had nothing but "voices (0)" to go on */
 let SAY_TIMER=null; const SAY_RATE=0.7; /* v781: the pace of the voice, 1 is the engine's own; .7 reads a character and a word unhurried, as a teacher would (not yet field-checked on the Xiaomi engine) */
 function say(text,after){ /* after (v784): queued behind what is speaking, nothing cancelled — the card's recap speaks the whole text this way, so the last character's own reading is heard whole; a fresh say() cancels what came before it */
   const v=ttsVoice(), hint=on=>{ const h=$("#say-hint"); if(h) h.hidden=!on; };
@@ -3533,11 +3551,13 @@ function say(text,after){ /* after (v784): queued behind what is speaking, nothi
   try{
     if(!after){ speechSynthesis.cancel(); clearTimeout(SAY_TIMER); }
     const u=new SpeechSynthesisUtterance(text.replace(/\n/g,"，")); if(v){ u.voice=v; u.lang=v.lang; } else u.lang="zh-CN"; u.rate=SAY_RATE; u.pitch=1; /* v781: a teacher's pace, SAY_RATE — .85 until v780 */
-    u.onstart=()=>{ clearTimeout(SAY_TIMER); hint(false); };
-    u.onerror=e=>{ clearTimeout(SAY_TIMER); if(!e||e.error!=="interrupted"&&e.error!=="canceled") hint(true); };
+    const rec={t:Date.now(),text:text.slice(0,24),voice:v?v.name:"system",after:!!after}; SAYLOG.push(rec); while(SAYLOG.length>SAY_KEEP) SAYLOG.shift(); /* v788 */
+    u.onstart=()=>{ clearTimeout(SAY_TIMER); hint(false); rec.start=Date.now()-rec.t; };
+    u.onend=()=>{ rec.end=Date.now()-rec.t; };
+    u.onerror=e=>{ clearTimeout(SAY_TIMER); rec.err=e&&e.error||"error"; if(!e||e.error!=="interrupted"&&e.error!=="canceled") hint(true); };
     if(!after) SAY_TIMER=setTimeout(()=>hint(true),3000); /* a queued utterance waits for the one before it by design — the hint is the first one's */
     speechSynthesis.speak(u);
-  }catch(e){ hint(true); }
+  }catch(e){ hint(true); SAYLOG.push({t:Date.now(),text:text.slice(0,24),voice:"-",err:"threw: "+(e&&e.message||e)}); }
 }
 function voiceList(){ try{ return ("speechSynthesis" in window)?speechSynthesis.getVoices().map(v=>v.lang+" "+v.name):[]; }catch(e){ return []; } }
 const SAY_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15 9.2a3.6 3.6 0 0 1 0 5.6"/><path d="M17.3 6.6a7 7 0 0 1 0 10.8"/></svg>';
@@ -3966,7 +3986,7 @@ function renderStudy(main){
   /* v662 (H: "die rausgezoomte Karte kurz zur Übersicht anzeigen und dann automatisch auf den ersten Character zoomen", "Go 1.5 s"):
      the whole picture stands AZ_OVERVIEW, then the zoom goes in by itself as the pad's first touch would; a touch before that
      goes in at once. st._az is the card's latest render, so a stroke's re-render in between does not zoom a detached card */
-  st._card=card;
+  st._card=card; if(!st._at) st._at=Date.now(); /* v788: when this card came up, for the zoom's record */
   /* v665 (H: "it should be professional and user friendly", on the zoom going in on the ink's guess and then out to the reader's
      place): past AZ_OVERVIEW the zoom waits for the phone's reader, up to AZ_READER after the card came up, so it goes in once,
      to its final place. A reader slower than that still gets the ink's guess first; a touch never waits.
@@ -4314,7 +4334,7 @@ function charBoxes(src,nw,nh,g,lines){
   }catch(e){ return {why:"error "+(e&&e.message||e)}; } }
 /* the zoom's own record (v618): the last ZLOG_MAX decisions, each with the character, how its place was found and why
    not better — Diagnostics prints them, since v617 kept only the last one and the dump that came back said nothing */
-const ZLOG=[], ZLOG_MAX=30; const zlog=o=>{ ZLOG.push({at:Date.now(),...o}); while(ZLOG.length>ZLOG_MAX) ZLOG.shift(); LAST_AZ=ZLOG[ZLOG.length-1]; };
+const ZLOG=[], ZLOG_MAX=30; const zlog=o=>{ ZLOG.push({at:Date.now(),where:S.mode,t:S.pad&&S.pad._at?Date.now()-S.pad._at:null,...o}); /* v788: the screen the decision was made on and how long the card had stood — v787's open card in Cards wore the pad's zoom and the dump could not say on which screen the decision fell */ while(ZLOG.length>ZLOG_MAX) ZLOG.shift(); LAST_AZ=ZLOG[ZLOG.length-1]; };
 /* THE PHONE'S READER FINDS THE CHARACTERS (v653, H: "Dieses automatische Reinzoomen und weiter Zoomen auf den aktuellen Charakter
    funktioniert leider fast nie", with a Diagnostics dump: 18 of 21 decisions "ink, unsure (odd shapes)", the zoom then loose or
    none at all — v626's shape test, which had to be strict because the ink search puts a tight box on the wrong spot, trusts
@@ -7001,7 +7021,7 @@ function pdWorkerMain(){
   self.onmessage=e=>{ queue=queue.then(()=>handle(e.data)); }; /* one reading at a time: a session runs one inference at once */
 }
 let PDM=null;
-let PD_READY=false; /* v786: the reader has answered once in this page — its models loaded and its first, slow inference done; until then the Learn zoom waits for it longer (AZ_LOAD) */
+let PD_READY=false, PD_FIRST=null; /* v788: the reader's first answer in this page — when, how long after the start, how long it took — for Diagnostics' head */ /* v786: the reader has answered once in this page — its models loaded and its first, slow inference done; until then the Learn zoom waits for it longer (AZ_LOAD) */
 async function pdLoad(){
   if(PDM) return PDM;
   PDM=(async()=>{ const blobURL=async(n,type)=>URL.createObjectURL(new Blob([await (await vendorFetch(PD+n)).arrayBuffer()],{type})); /* the type set here, not taken from the answer: the mirror hands every file out as octet-stream, and a module or a wasm of that type is refused */
@@ -7016,7 +7036,7 @@ async function pdLoad(){
       det,rec,keys:await (await vendorFetch(PD+"ppocr_keys_v1.txt")).text(),C:{DET_MAX:PD_DET_MAX,DET_THR:PD_DET_THR,BOX_THR:PD_BOX_THR,UNCLIP:PD_UNCLIP,REC_H:PD_REC_H,REC_MAXW:PD_REC_MAXW}},[det.buffer,rec.buffer]);
     return call; })().catch(e=>{ PDM=null; throw e; });
   return PDM; }
-async function pdRead(cv,o){ const call=await pdLoad(), bm=await createImageBitmap(cv), r=await call({bm,detMax:o&&o.detMax||0},[bm]), out=r.lines; out.ms=r.ms; PD_READY=true; return out; }
+async function pdRead(cv,o){ const call=await pdLoad(), bm=await createImageBitmap(cv), r=await call({bm,detMax:o&&o.detMax||0},[bm]), out=r.lines; out.ms=r.ms; if(!PD_READY){ PD_READY=true; PD_FIRST={at:Date.now(),since:Math.round(performance.now()),ms:Math.round(r.ms||0)}; } return out; }
 /* v639: the phone's reader as one more pass of the reading — its lines in the reader's own shape: the characters, sign
    punctuation and digits Tesseract's pass keeps (letters stay out), a confidence per Chinese character on Tesseract's
    0–100 scale (the recognizer's own probability), a box per character cut evenly along the line, and the fine print
@@ -7371,14 +7391,14 @@ const QSNOTE={}, QSBAD={}, QSCARD={}, READING={}, AUTO={}, SPLIT={}, QSMORE={}; 
    changes; the browser drops the lock by itself when the page is hidden and the next tick asks again once it is visible.
    No setting: it costs the screen's battery for those minutes and nothing else. Without the API (an older Chrome) it is a
    silent no-op. Background work — the app hidden or closed — is not what this buys: see the v411 note above. */
-const WAKE_MS=2500, WAKE_STALE=5*60*1000, WAKE_JOBS=new Set(); let WAKE=null, WAKE_ASKING=false;
+const WAKE_MS=2500, WAKE_STALE=5*60*1000, WAKE_JOBS=new Set(); let WAKE=null, WAKE_ASKING=false; const WAKE_LOG={n:0,err:"",at:0}; /* v788: how often the lock was asked for, the last refusal, when — for Diagnostics (v767/v768 are open on the Xiaomi) */
 const wakeHold=name=>{ WAKE_JOBS.add(name); wakeSync(); }, wakeDrop=name=>{ WAKE_JOBS.delete(name); wakeSync(); };
 const readingBusy=()=>Object.keys(READING).some(id=>READ_AT[id]&&Date.now()-READ_AT[id]<WAKE_STALE);
 const appBusy=()=>readingBusy()||!!(TRANSLATE&&TRANSLATE.running)||!!(RECHECK&&RECHECK.running)||RR_LOOP||CT_LOOP||RB_LOOP||!!BRIGHT||!!RECUT||WAKE_JOBS.size>0;
 function wakeSync(){
   if(!navigator.wakeLock) return;
   const want=appBusy()&&!document.hidden;
-  if(want&&!WAKE&&!WAKE_ASKING){ WAKE_ASKING=true; navigator.wakeLock.request("screen").then(l=>{ WAKE=l; l.addEventListener("release",()=>{ if(WAKE===l) WAKE=null; }); }).catch(()=>{}).then(()=>{ WAKE_ASKING=false; wakeSync(); }); }
+  if(want&&!WAKE&&!WAKE_ASKING){ WAKE_ASKING=true; navigator.wakeLock.request("screen").then(l=>{ WAKE=l; WAKE_LOG.n++; WAKE_LOG.at=Date.now(); l.addEventListener("release",()=>{ if(WAKE===l) WAKE=null; }); }).catch(e=>{ WAKE_LOG.err=String(e&&e.message||e).slice(0,80); WAKE_LOG.at=Date.now(); }).then(()=>{ WAKE_ASKING=false; wakeSync(); }); }
   else if(!want&&WAKE){ const l=WAKE; WAKE=null; l.release().catch(()=>{}); }
 }
 setInterval(wakeSync,WAKE_MS); document.addEventListener("visibilitychange",wakeSync);
