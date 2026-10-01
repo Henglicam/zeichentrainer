@@ -116,7 +116,32 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v807, 2026-10-01)
+## Current state (PWA v808, 2026-10-01)
+- **What leaves the phone, said truly in every place (v808, the audit's privacy sweep — `privacy.html` is what the Play Data
+  Safety form will be filled from).** **(1) One defect: a priced board's text left with the AI review switched off.** v755's
+  board path reaches `picWords` from the phone's own reading, with no picture and therefore no `pictureUp()` gate, and `aiAsk`
+  only checks that the relay exists — so H's 江宁府 board (`tools/field/f03.jpg`) sent all 24 texts to DeepSeek with the box
+  unticked, the v193 case ("the one switch covers text and pictures"; v754 sent nothing on the same photo). `picWords` now asks
+  only while `aiLive()`; the phrasebook's words stand, the rest stay pending, and the reading's log says why. **(2) The texts
+  had fallen behind the code** — the v403/v459/v534/v539 class, a fifth time: "a picture when the reading is hard" (since v646 a
+  SURE reading sends its picture too, to be checked, and since v457 a photo of separate texts does — 23 of 23 photos at v646) in
+  privacy.html three times, both "What is sent" folds, the status line, About, the guide and the owner's form; "once per card"
+  (v772/v783 ask the senses, and an unanswered card is asked again each session); "all its texts go out in one request" (two
+  since v753); the relay "keeps only a count" (it logs every call since 2026-09-29 and receives the installation id with each);
+  privacy.html's "no server of its own … We cannot see, collect, or access any of your data … cannot be linked to you" beside
+  the relay, the usage table and the feedback table keyed by the same id; the usage row's second send after a DELETED card;
+  "the phone model" (the user agent's system string); "If you enter an API key of your own" (only the owner can); the buttons
+  and automatic asks it did not name (Review queue → Ask AI, the picker and the card form asking by themselves, pending cards
+  at start); the guide's "Your cards and photos stay on this phone and nowhere else" two sentences above the whole photo going
+  out; read aloud not named at all (a browser's online voice speaks on its maker's servers); the date. Rewritten from the
+  sweep's inventory of every network path — More → AI review → What is sent, the status line, About, the guide's two
+  privacy sentences and its usage sentence, More → Usage sharing, in ten columns; privacy.html dated 1 October 2026; the
+  owner's form and CLAUDE.md's line. **Left for H** (each a decision, not a correction): a Privacy row inside the app (Play
+  asks for the policy there), a way to have the owner's rows deleted, where the providers and Supabase process data, a
+  first-run notice, and whether read aloud should prefer a local voice. Harness: `test808` (the board with the switch off
+  and on through the real reader; every changed text rendered in en and de; privacy.html) **16 of 16, v807 3 of 16** — the
+  board-path control, the "on" guard and "the board still becomes cards" pass on both. No `WHATS_NEW` line.
+
 - **Learn under the learner's hands (v807, the audit's second fix — the works sweep, driven with real touch on the pad).**
   **(1) The dwell holds when the finished card is taken in hand — the likeliest cause of H's 2026-10-01 jump.** Details, Star,
   Flag or Edit tapped during the recap re-rendered the card: the recap was gone at once and the dwell's timer moved the session

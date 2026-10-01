@@ -42,15 +42,17 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
 - Repo `henglicam/zeichentrainer` · GitHub Pages, branch `main`, root · `https://henglicam.github.io/zeichentrainer/` ·
   push to `main` → Pages rebuilds (~1–2 min). `index.html` must stay in the repo root.
 - The site is **public**. User data lives only on the device (IndexedDB). What the app sends on its own: **the text of every
-  new card** (the AI review is on by default, through the owner's relay with no key, v191/v193 — and when the reading is
-  hard, a picture of the text, sometimes the whole photo, v173/v348/v393) and the daily anonymous usage row (v170). Each is
-  switchable under More; **`privacy.html` is the authoritative list.**
+  new card** (the AI review is on by default, through the owner's relay with no key, v191/v193), **a picture of most photos'
+  text** (to read it when the reading is weak or several texts stand apart, to check it when the phone's reader is sure —
+  v173/v457/v646; sometimes the whole photo), the descriptions and character senses a card lacks (v586/v772) and the daily
+  usage row (v170). Each is switchable under More, and **the one AI switch stops every text and picture the app would send
+  by itself** (v193; the board path's words too since v808); **`privacy.html` is the authoritative list.**
 - **Deploy discipline (broken twice, cost a reload storm at v563):** `APP_V` in `app.js`, `PWA vN` in `index.html` and
   `zt-vN` in `sw.js` are **one number**, bumped on every change to a cached file; grep all three before merging. **One
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v807, 2026-10-01)
+## Current state (PWA v808, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -276,7 +278,8 @@ band and scored by `readingScore`/`effScore` → the editor.
 - **No picture answer and five lines or more → no card** (v649, `NOPIC_LINES`); the photo stays on the Camera tab for Crop.
   Offline the card is still made. **A priced board the phone's reader reads surely is split by its own lines with no picture
   call** (v755/v756, `boardSure`: `BOARD_MIN` 10 lines, half priced, median 94, mean 90, 0.7 of the characters sure;
-  `readerPicture` reads again at 1600 and asks the text model for the words in one call). **Any other board keeps the picture
+  `readerPicture` reads again at 1600 and asks the text model for the words in one call — only while the AI review is on,
+  v808). **Any other board keeps the picture
   model** (v756: five of eight boards worse on the wide rule).
 - **A strong winning reading with a sure line outside the placed frame places it again around it** (v684).
 - The card's picture is the **square window** around the text (`windowRect`, `CARD_RATIO` 1), brightened where it needs it
