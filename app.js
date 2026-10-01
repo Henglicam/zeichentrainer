@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=788; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=789; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -733,6 +733,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["again","v773","Read aloud after writing: ok?"],
   ["again","v781","Voice: pace .7 and the voice ok?"],
   ["again","v782","Zoom by layout on LED signs ok?"],
+  ["again","v789","Multicard flashcard: zoom on text?"],
   ["again","v783","Char senses: do they land now?"],
   ["again","v784","Last character read alone now?"],
   ["again","v757","Meituan screenshots: fields right?"],
@@ -3978,7 +3979,7 @@ function renderStudy(main){
   mountPad(card,d,c,tg,st,cur);
   if(pg&&!S.fullPic) fitPageCover(card); /* D5: the multicard's picture cover-fitted around the card's own text */
   attachPicZoom(card.querySelector(".zone1 .picbox")); /* v514: pinch to zoom, one finger to pan (§ 4) */
-  if(zoomOn()&&d.img) setTimeout(()=>{ if(card.isConnected) pdBoxesFor(card,d); },400); /* v653: the reader looks for the characters while the card is read, so the first touch rarely waits */
+  if(zoomOn()&&(d.img||pg)) setTimeout(()=>{ if(card.isConnected) pdBoxesFor(card,d); },400); /* v789: a page front's region is read too */ /* v653: the reader looks for the characters while the card is read, so the first touch rarely waits */
   if(cur) padLine(d,cur); /* the line under the pad, always, for the character the pad is on (v518) */
   wireScript(card); /* v604 */
   spotChar(card,d,cur); /* v520: the locked character lit on the photo; v533: the word being written marked on it */
@@ -3998,7 +3999,7 @@ function renderStudy(main){
   if(zoomOn()&&!st.zoomGo&&!st._ovT){ const t0=performance.now();
     const go=()=>{ if(S.pad===st&&!st.zoomGo){ st.zoomGo=true; if(st._az) st._az(); } };
     st._ovT=setTimeout(()=>{ const cd=st._card;
-      if(!d.img||!cd||!cd.isConnected||PDDONE.has(cbKey(d))) return go();
+      if(!(d.img||pg)||!cd||!cd.isConnected||PDDONE.has(cbKey(d))) return go(); /* v789: a page front has a picture to read */
       const cap=setTimeout(go,Math.max(0,(PD_READY?AZ_READER:AZ_LOAD)-(performance.now()-t0)));
       pdBoxesFor(cd,d).then(()=>{ clearTimeout(cap); go(); }); },AZ_OVERVIEW); }
 }
@@ -4077,11 +4078,18 @@ async function spotGeom(card,d,opt){
      for the Learn zoom that cut is where the text is — the reader and the ink search look for the characters in the whole
      picture. Only the zoom asks for it (opt.whole); the marks still want a frame */
   const bare=!framed&&!page&&!!(opt&&opt.whole);
-  if(!framed&&!bare){ markWhy(d,"noframe"); return null; }
-  const img=z.querySelector(".signimg"), full=bare?null:fullPhoto(d); if(!img||(!bare&&!full)){ if(!bare&&!full) markWhy(d,"nophoto"); return null; }
+  /* v789 (H: "Bei einer solchen Flashcard muss im Lernmodus dann bitte direkt auf diesen Textteil reingezoomt werden, sonst ist
+     das viel zu klein im Bild", 我的 on the Meituan account page — "no place on the photo (noframe)"): a flashcard made from a
+     multicard text carries no frame of its own; its picture is the page front, the multicard's photo with the card's own region
+     drawn on it (pageHTML, v489/v499). That region IS the text's place on this picture — the measured one when there is one
+     (REGFIX, v620) — so the zoom and the ink search take it as the frame, as fitPageCover already does for the cover */
+  const reg=page&&box&&box.querySelector(".region.me"), rf=reg?(k=>{ const pc=x=>(parseFloat(reg.style[x])||0)/100; const o={tx:pc("left"),ty:pc("top"),tw:pc("width"),th:pc("height")}; return o.tw>0&&o.th>0?o:null; })():null;
+  if(!framed&&!bare&&!rf){ markWhy(d,"noframe"); return null; }
+  const img=z.querySelector(".signimg"), full=(bare||rf)?null:fullPhoto(d); if(!img||(!bare&&!rf&&!full)){ if(!bare&&!rf&&!full) markWhy(d,"nophoto"); return null; }
   if(!img.complete||!img.naturalWidth) await new Promise(r=>{ img.addEventListener("load",r,{once:true}); img.addEventListener("error",r,{once:true}); });
   let tf;
   if(bare){ if(!img.isConnected||!img.naturalWidth||!img.naturalHeight) return null; tf={tx:0,ty:0,tw:1,th:1}; }
+  else if(rf){ if(!img.isConnected||!img.naturalWidth||!img.naturalHeight) return null; tf=rf; } /* v789: the page front's own region */
   else {
   const key=d.shot||d.id; let ps=PICSIZE.get(key);
   if(!ps){ try{ const bm=await createImageBitmap(full); ps={w:bm.width,h:bm.height}; bm.close(); }catch(e){ return null; } if(ps.w&&ps.h){ PICSIZE.set(key,ps); if(PICSIZE.size>40) PICSIZE.delete(PICSIZE.keys().next().value); } }
@@ -4173,7 +4181,7 @@ function wordSpan(d,x){ const lines=d.kind==="sign"?String(d.c||"").split("\n"):
    finger always wins: a pinch or a wheel on the picture hands the zoom to the hand for the rest of that picture (ZOOM_HAND),
    and from then on it only follows, as v541 did. */
 const AZ_OVERVIEW=1500, AZ_READER=2500, AZ_LOAD=6000; /* v786: how long the first card of a session may wait for the reader's first load */ /* v662: how long a card shows its whole picture before the zoom goes in by itself; v665: how long past the card's start it may wait for the phone's reader, so the zoom goes in once */
-const ZOOM_AUTO=true, AZ_INK=0.68, AZ_MAX=3.5, AZ_MIN=1.15, AZ_GUESS=0.75, AZ_GUESS_MAX=2.2; /* v782: the estimate's share of the box and its cap — .75 so a character of a 2×2 sign, already half the box, still comes nearer (×1.5), a four-character line ×2.2 */ /* the character's larger side as a share of the box, and the scale's cap and floor (v678: AZ_EST's looser share for an unsure place left — the reader's boxes of one line take one scale) */
+const ZOOM_AUTO=true, AZ_INK=0.68, AZ_MAX=3.5, AZ_MAX_PAGE=5, AZ_MIN=1.15, AZ_GUESS=0.75, AZ_GUESS_MAX=2.2; /* v789: AZ_MAX_PAGE is the cap on a page front — a flashcard made from a multicard text stands on the whole screenshot, cover-fitted, so its two characters are a few pixels at rest and 3.5 leaves them small; 5 is ZOOM_MAX, the hand's own, a second copy named here and there */ /* v782: the estimate's share of the box and its cap — .75 so a character of a 2×2 sign, already half the box, still comes nearer (×1.5), a four-character line ×2.2 */ /* the character's larger side as a share of the box, and the scale's cap and floor (v678: AZ_EST's looser share for an unsure place left — the reader's boxes of one line take one scale) */
 let LAST_AZ=null; /* the last decision, for Diagnostics' head line */
 /* EVERY CHARACTER'S OWN BOX, FOUND ON THE INK (v618, H on v617 with a Diagnostics dump: "Er erkennt vieles noch nicht. Die
    Erkennung der Position der characters im Bild funktioniert noch unzureichend."). v617 took the frame's even split as
@@ -4630,9 +4638,10 @@ async function autoZoom(card,d,c,tg,st,cur){
      picture is cut as wide as its text, so the first and last character of a line stand near its edge, and at scale s the
      pan can bring a point no nearer the edge than half a box divided by s. A character there is zoomed in just far enough
      to stand in the middle, up to AZ_MAX — never less than it would be anyway */
-  const P=geom.pic(), scaleOf=b=>{ const q=geom.rectOf(b), qx=q.x+q.w/2, qy=q.y+q.h/2; let t=Math.min(AZ_MAX,AZ_INK*Math.min(bw/q.w,bh/q.h));
+  const CAP=geom.page?AZ_MAX_PAGE:AZ_MAX; /* v789: a page front may go in as far as the hand */
+  const P=geom.pic(), scaleOf=b=>{ const q=geom.rectOf(b), qx=q.x+q.w/2, qy=q.y+q.h/2; let t=Math.min(CAP,AZ_INK*Math.min(bw/q.w,bh/q.h));
     if(t>1){ const ex=Math.min(qx-P.x,P.x+P.w-qx), ey=Math.min(qy-P.y,P.y+P.h-qy);
-      const need=Math.max(P.w*t>bw&&ex>0?bw/(2*ex):0, P.h*t>bh&&ey>0?bh/(2*ey):0); if(need>t) t=Math.min(AZ_MAX,need); }
+      const need=Math.max(P.w*t>bw&&ex>0?bw/(2*ex):0, P.h*t>bh&&ey>0?bh/(2*ey):0); if(need>t) t=Math.min(CAP,need); }
     return t; };
   let s=est?Math.min(AZ_GUESS_MAX,AZ_GUESS*Math.min(bw/r.w,bh/r.h)):off?0.9*Math.min(bw/r.w,bh/r.h):scaleOf(found); /* v782: the estimate's own, gentler scale */
   /* v678 (H: "Warum wird hier auf verschiedene Größen gezoomt? sollte immer gleich sein", 吃碰杠听胡 at x3.5, x2.43, x2.43): the
@@ -4645,9 +4654,9 @@ async function autoZoom(card,d,c,tg,st,cur){
      written at one size; a line held by AZ_MAX stays as near to it as the cap allows */
   if(pf&&pb.boxes){ const lines=new Map(); pb.boxes.forEach(b=>{ if(b){ if(!lines.has(b.ln)) lines.set(b.ln,[]); lines.get(b.ln).push(b); } });
     const per=[...lines.values()].map(same=>{ const full=Math.min(...same.map(b=>{ const q=geom.rectOf(b); return Math.min(bw/q.w,bh/q.h); }));
-      const t=Math.max(Math.min(Math.max(...same.map(scaleOf)),full),Math.min(AZ_MAX,AZ_INK*full)); return {ln:same[0].ln,full,fill:Math.min(1,t/full)}; });
+      const t=Math.max(Math.min(Math.max(...same.map(scaleOf)),full),Math.min(CAP,AZ_INK*full)); return {ln:same[0].ln,full,fill:Math.min(1,t/full)}; });
     const F=Math.max(...per.map(o=>o.fill)), mine=per.find(o=>o.ln===pf.ln); s=F*mine.full; }
-  s=Math.min(AZ_MAX,s); if(s<AZ_MIN) s=1;
+  s=Math.min(CAP,s); if(s<AZ_MIN) s=1;
   const held=z.focus(s,cx,cy)||{dx:0,dy:0};
   /* v666 (H: "Hier hat er ja gar nicht mittig reingezoomt", 内 of 京城内外首善全图 off-centre, and the record could not say why):
      where on the text the place was (per cent of the frame across and down), whether the picture's edge held the character off

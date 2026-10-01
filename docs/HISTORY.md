@@ -116,6 +116,23 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v789, 2026-10-01)
+- **A flashcard made from a multicard text zooms onto its own text in Learn (v789, H: "Bei einer solchen Flashcard muss im
+  Lernmodus dann bitte direkt auf diesen Textteil reingezoomt werden, sonst ist das viel zu klein im Bild", 我的 on his
+  Meituan account page; the dump: "我的 我 · no place on the photo (noframe)").** Such a card carries no frame of its own
+  (makeFlashcard, v489/v503): its picture is the page front, the multicard's whole photo cover-fitted around the card's own
+  region (pageHTML, fitPageCover), and `spotGeom` asked for `d.frame`, found none, and the zoom gave up — a 24 px label on a
+  1600 px screenshot stayed a few pixels. The region drawn on the page front (`.region.me`, the measured one when REGFIX has
+  it, v620) is the text's place on that picture, so `spotGeom` takes its fractions as the frame on a page front; the ink search
+  and the reader then look inside it as on any card, and the study card reads a page front ahead too (`pdBoxesFor` at 400 ms,
+  the overview timer waits for it). The cap on a page front is `AZ_MAX_PAGE` 5, the hand's own `ZOOM_MAX` (a named second
+  copy): at a cover fit two characters of a screenshot are a few pixels at rest and 3.5 left them small. A text at the
+  screenshot's edge is held off the middle by the edge, as v676 rules (no gap opens). Harness (`test789`, a 686×1600 screen
+  with four labels, 我的 at the bottom right, its multicard and the flashcard made of it; the reader stubbed): the zoom goes
+  in with a reader decision at ×5 on the region, the region five times its size inside the box; a card with its own picture
+  (新日) zooms at ×1.72 as before (`[guard]`): **5 of 5 on v789, 2 of 5 on v788** ("no place on the photo (noframe)", ×1).
+  test786–788 pass on v789. TO_TEST "Multicard flashcard: zoom on text?". No WHATS_NEW.
+
 ## Current state (PWA v788, 2026-10-01)
 - **The Diagnostics dump prints a seventh of what it did and says four things it could not (v788, H: "Bitte optimiere das
   Diagnostics Log. Zu lang? Fehlt was?").** Measured on the dump H sent at v786: 779 KB, 4 019 lines — 99 earlier readings
