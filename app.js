@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=792; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=793; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -11160,12 +11160,14 @@ function openLookup(shot,rid,silent){
   let el=LOOKUP&&LOOKUP.el; const swap=!!el;
   if(!el){ el=document.createElement("div"); el.className="ask lookup"; document.body.appendChild(el); }
   const from=S.mode==="cards"&&S.detail&&isPage(cardOf(S.detail))?S.detail:null; /* v453: opened on a page's detail — More and ← Back come back to it */
+  if(LOOKUP&&LOOKUP.ro) LOOKUP.ro.disconnect(); /* v793: the sheet drawn again gets its own observer */
   el.innerHTML=html; LOOKUP={shot,rid,el,card:d.id,from};
   if(!swap){ /* the sheet stands until it is closed: a tap anywhere outside it that is not on a region, or Escape */
     LOOKUP.onDown=e=>{ if(!LOOKUP||e.target.closest(".sheet.lookup")||e.target.closest("[data-region]")||e.target.closest("[data-regions]")) return; closeLookup(); };
     LOOKUP.onKey=e=>{ if(e.key==="Escape") closeLookup(); };
     document.addEventListener("pointerdown",LOOKUP.onDown,true); document.addEventListener("keydown",LOOKUP.onKey); }
   markRegion(rid); /* the frame appears on the text that was tapped, and only there (v467) */
+  lkRoom(el); /* v793: the page keeps room under it to scroll the whole photo above the sheet */
   el.querySelector("#lk-close").onclick=closeLookup;
   wireSay(el);
   if(pid) wireLkFold(el,d.id);
@@ -11207,7 +11209,19 @@ async function gradeRegion(g){
   closeLookup();
   if(S.mode==="inbox") renderShots(); else if(S.mode==="cards"&&S.detail) render(); setStats(); /* the page detail's dot takes the colour too (v453) */
 }
-function closeLookup(){ if(!LOOKUP) return; const L=LOOKUP; LOOKUP=null; markRegion(null); L.el.remove(); document.removeEventListener("pointerdown",L.onDown,true); document.removeEventListener("keydown",L.onKey); }
+/* v793 (H: "Bitte darauf achten, dass alle Felder der Multikarte immer erreichbar sein müssen, auch wenn ein Pop-up bereits
+   offen ist. Also mit diesen Texten unter der Multikarte konnte ich immer so weit hochschieben, dass ich alles in der
+   Multikarte erreichen konnte mit Pop-up"): the sheet stands over the foot of the screen, and the texts at the photo's foot
+   are reached by scrolling the page up under it — until v791 the row list gave the page that room, and v792 took the list.
+   While a sheet is open the page carries a spacer at its end, as tall as the sheet's reach up from the screen's bottom, so
+   the last dot can always be scrolled above the sheet; the spacer follows the sheet's height (the fold, the AI box, the
+   Flashcard › redraw) through a ResizeObserver and goes with the sheet. A render in between drops it (innerHTML) and the
+   sheet that comes back (relook) puts it back. */
+function lkRoom(el){ const sh=el.querySelector(".sheet"), main=$("#main"); if(!sh||!main) return;
+  const fit=()=>{ if(!LOOKUP||LOOKUP.el!==el||!sh.isConnected) return; let sp=main.querySelector(".lkspace"); if(!sp){ sp=document.createElement("div"); sp.className="lkspace"; sp.setAttribute("aria-hidden","true"); main.appendChild(sp); }
+    sp.style.height=Math.max(0,Math.round(window.innerHeight-sh.getBoundingClientRect().top))+"px"; };
+  fit(); if(window.ResizeObserver){ const ro=new ResizeObserver(fit); ro.observe(sh); LOOKUP.ro=ro; } }
+function closeLookup(){ if(!LOOKUP) return; const L=LOOKUP; LOOKUP=null; markRegion(null); if(L.ro) L.ro.disconnect(); document.querySelectorAll("#main .lkspace").forEach(e=>e.remove()); L.el.remove(); document.removeEventListener("pointerdown",L.onDown,true); document.removeEventListener("keydown",L.onKey); }
 /* the sheet the detail was opened from comes back with it (v495, H: "If I tap on a word on a multicard, then the
    description for that word opens and I go to more … Now if I go back, I should land where I came from (description) and
    not at the multicard"): More is one step deeper into the same look-up, so ← Back undoes that step, not two. The note is

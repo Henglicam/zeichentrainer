@@ -116,7 +116,21 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v792, 2026-10-01)
+## Current state (PWA v793, 2026-10-01)
+- **The page keeps room under it while a multicard's pop-up is open (v793, H: "Bitte darauf achten, dass alle Felder der
+  Multikarte immer erreichbar sein müssen, auch wenn ein Pop-up bereits offen ist. Also mit diesen Texten unter der Multikarte
+  konnte ich immer so weit hochschieben, dass ich alles in der Multikarte erreichen konnte mit Pop-up").** The sheet stands
+  over the foot of the screen and a dot at the photo's foot is reached by scrolling the page up under it; the row list of
+  v453–v791 gave the page that room and v792 took the list, so on a tall screenshot with a tall sheet (descriptions, a flag
+  note, an AI box) the last row of texts was under the sheet for good. Now `openLookup` calls `lkRoom`: a spacer `.lkspace`
+  at the end of `#main`, as tall as the sheet's reach up from the screen's bottom, kept in step with the sheet's height by a
+  ResizeObserver (the fold, the AI box, the Flashcard › redraw), removed with the sheet (`closeLookup`); a render in between
+  drops it and the sheet that comes back puts it back. Harness (`test793`, the account-page multicard with 客服 carrying a
+  short and long description, a flag note and an AI suggestion so the sheet is as tall as H's; English 390×800 light, German
+  360×640 dark where the sheet sits at its 78vh cap): with the sheet open, the page scrolls until every dot stands above it,
+  with the fold open too; a dot scrolled just above the sheet takes the tap; the spacer goes with the sheet and the page is
+  its own height again: **10 of 10; v792 2 of 10 and the flow stops at the dot the sheet covers**, which is H's report.
+  `test792` still 28 of 28. Not yet field-checked.
 - **The multicard's row list is gone; the text's pop-up carries its actions (v792, H: "Ich mag die Wörterliste unter den
   Multicards nicht. Bitte bringe in den Multicard-Pop-Ups Edit, Flag und so weiter unter, so ähnlich wie du das bei den
   normalen Lernkarten auch drin hast. Bitte beachte, dass keine wichtige Funktion vergessen werden darf", then "Go" on the plan
