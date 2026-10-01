@@ -116,7 +116,27 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v794, 2026-10-01)
+## Current state (PWA v795, 2026-10-01)
+- **The snap no longer takes a lone bar for the text (v795, H's 天禾 seal, 2026-10-01: "Au weia, warum hat er denn hier so
+  falsch gecroppt?", the card showing the top of 天 and the seal's red border).** The dump: the reader read nothing
+  (天来 at 61 %), Qwen boxed 天禾 at 34–95 % across, 56–84 % down of the frame — right —, and the snap kept one blob of
+  375 × 79 px in the seen picture ("snapped to the ink: 35–62 % across, 55–63 % down", count 2): the seal's red border line,
+  4.7 times wider than tall, where the red characters on the yellow ground did not separate as blobs. The frame was then
+  the square around that line (30–57 % across, 64–72 % down, a 116 px window on the 440 layer), and the card cut the
+  characters. v449's guard did not fire: it needs the model's box to be k squares wide (|w/h − k| ≤ 0.25 k) and the box was
+  2.88 squares for two characters (the seal's margins). The rule now: in `trim()`, a band wider than its budget
+  (`SNAP_WIDE` 1.6 × k × its tallest blob's height) that has no gap to cut at AND is one extent (the union no more than a
+  fifth wider than its widest blob — the plain pass and the eroded pass each hold the bar, so it stands in the band twice)
+  is dropped; with nothing left the snap returns null, the model's box stands (v449's own fallback, a crop with room around
+  the text, never one that cuts it), and the record says why (`SNAP_WHY`, logged by `cropSign` as "the ink inside the AI's
+  box is one blob 4.8 times wider than tall where the answer's line has 2 characters — a border or a bar, not the text: the
+  AI's box stays as drawn", `N.snapWhy`). Several distinct blobs without a gap keep v305's rule. Harness (`test795`, the
+  snap alone on a 1430 × 1087 yellow picture with Qwen's box, as H's): a 375 × 79 red bar at the box's top → old tree
+  snaps onto it (the dump's own numbers, count 2), new tree null with the reason; two separate characters [control]; a
+  four-character line fused by an underline (one blob 4.2 heights wide, within budget) and a two-character one (2.2
+  heights) [guards], both taken on both trees; a lone bar for a one-character answer → null: **5 of 5, v794 3 of 5**.
+  `test756` (the 江宁府 board, 24 labels, the reader's own path) 7 of 7 on both. Not field-checked: H's photo is not in the
+  repo; the fixture carries the dump's numbers, not the photo. TO_TEST: "Seal 天禾: the crop whole now?".
 - **The pop-up says the flashcard was made (v794, H: "Bei +Flashcard kommt zunächst keine Bestätigung, so dass unklar ist, ob
   die flashcard erzeugt wurde. Beim zweiten mal ist man dann in der flashcard. Sieht nach bug aus").** Not a bug in the
   mechanism — `makeFlashcard` writes the card at once and the sheet is drawn again — but the only sign of it was the toolbar
