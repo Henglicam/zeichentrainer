@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=805; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=806; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1568,7 +1568,7 @@ async function fixNumberSegs(){
    glosses (慢, 停, 男, 女), a meaning the AI or a hand wrote or checked, a meaning in another language. Once per phone (the
    settings row glossFix, v 718); the row keeps what changed and Diagnostics prints it. A dictionary that does not load
    leaves the row unwritten, so the next start tries again. */
-const GLOSS_FIX_V=805, GLOSS_FIX_KEEP=300; /* 805: a meaning composed word by word drops the word in front of each part */ /* 754: 牌 after a name is "brand" (AFTER_SENSES) */ /* 729: 吃 碰 杠 in OWN_SENSES, the mahjong call in the bracket */ /* 728 (H's v727 dump): 龙 and 胡 in OWN_SENSES; the OWN_PINYIN reading and the fewest-words split reach the verified cards and the cards with an AI meaning too (gloss and segs only where the meaning is not the composed one) */ /* 727: 皮 and 瘦 in OWN_SENSES */ /* 726: the fewest-words split — an unverified sign card whose meaning is still the composed one takes the new split */ /* 725: OWN_PINYIN — 夹 reads jiā, the unverified cards' pinyin and glosses follow */ /* 724 (H's v723 dump): a bound form past the third sense is not the in-word sense (入 "to conform to", 水 "additional cost", 牌 "fixed pattern for lyrics"), "I" is a pronoun (我 → "me"), a capitalised word anywhere makes a proper noun (巴 "the east of Sichuan") */ /* 723: 面 and 卡 in OWN_SENSES */ /* 722: the v5 dictionary and the two chooser rules of docs/NMAX.md — the pass waits for the fresh file */ /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
+const GLOSS_FIX_V=806, GLOSS_FIX_KEEP=300; /* 806: a multi-line meaning v805 flattened gets its line breaks back */ /* 805: a meaning composed word by word drops the word in front of each part */ /* 754: 牌 after a name is "brand" (AFTER_SENSES) */ /* 729: 吃 碰 杠 in OWN_SENSES, the mahjong call in the bracket */ /* 728 (H's v727 dump): 龙 and 胡 in OWN_SENSES; the OWN_PINYIN reading and the fewest-words split reach the verified cards and the cards with an AI meaning too (gloss and segs only where the meaning is not the composed one) */ /* 727: 皮 and 瘦 in OWN_SENSES */ /* 726: the fewest-words split — an unverified sign card whose meaning is still the composed one takes the new split */ /* 725: OWN_PINYIN — 夹 reads jiā, the unverified cards' pinyin and glosses follow */ /* 724 (H's v723 dump): a bound form past the third sense is not the in-word sense (入 "to conform to", 水 "additional cost", 牌 "fixed pattern for lyrics"), "I" is a pronoun (我 → "me"), a capitalised word anywhere makes a proper noun (巴 "the east of Sichuan") */ /* 723: 面 and 卡 in OWN_SENSES */ /* 722: the v5 dictionary and the two chooser rules of docs/NMAX.md — the pass waits for the fresh file */ /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
 const mTokens=m=>String(m||"").split(/ · | \/ /); /* the parts of a composed meaning; its lines (" / ") are parts too */
 const oldComposed=(m,c)=>{ /* v805: "三 three · 碗 bowl / 面 ?" → "three · bowl / 面"; a part that is not "word meaning" with the word in the text (a phrasebook line's own words) stays; null when none is */
   const tx=String(c||""); let n=0;
@@ -1587,8 +1587,14 @@ async function glossFix(){
       const gl=d.gloss.map((g,i)=>{ if(!g||!oneCJK(g.w)||inBook(g.w)) return g; const p=ctxP[i].p||g.p, m=cleanSense(bestSense(g.w,p,ctxP[i].inWord,ctxP[i].after)); if(!m||(m===g.m&&p===g.p)) return g; changed.push({id:d.id,w:g.w,from:(p!==g.p?(g.p||"")+" ":"")+(g.m||""),to:(p!==g.p?p+" ":"")+m}); k++; return {...g,p,m}; });
       if(gl.some((g,i)=>g!==d.gloss[i])){ u={...d,gloss:gl};
         if(d.mt&&d.mt.src==="gloss"&&!d.mt.verified&&mlOf(d)==="en"&&d.m){ /* the meaning composed word by word carries the old gloss too ("to be sold out · to finish"; "卖完 to be sold out · 了 to finish" before v805) */
-          let m=d.m; gl.forEach((g,i)=>{ const o=d.gloss[i]; if(g!==o&&o.m) m=mTokens(m).map(x=>x===o.w+" "+o.m||x===o.m?g.m:x).join(" · "); });
+          let m=d.m; gl.forEach((g,i)=>{ const o=d.gloss[i]; if(g!==o&&o.m) m=String(m).split(" / ").map(l=>l.split(" · ").map(x=>x===o.w+" "+o.m||x===o.m?g.m:x).join(" · ")).join(" / "); }); /* v806: line by line — v805 split on " / " too and joined everything with " · ", so a two-line meaning lost its line break */
           if(m!==d.m){ u.m=m; setMl(u,"en"); } } } }
+    { const b=u||d; /* v806: v805's sense swap above joined the lines of a multi-line meaning with " · " ("welcome · presence / to ask · take care" → "welcome · presence · to ask · take care") — the parts go back to their lines by the card's own word breaks (segs, one list a line, punctuation aside), only when the counts add up; not by today's split, which may differ from the one the meaning was composed with */
+      if(b.mt&&b.mt.src==="gloss"&&!b.mt.verified&&mlOf(b)==="en"&&b.m&&b.kind!=="page"&&!String(b.m).includes(" / ")&&Array.isArray(b.segs)){
+        const ls=String(b.c||"").split("\n").map(l=>l.trim()).filter(l=>CJK.test(l));
+        if(ls.length>1&&b.segs.length===ls.length){ const n=b.segs.map(sg=>(Array.isArray(sg)?sg:[]).filter(w=>!(String(w).length===1&&SIGN_PUNCT.test(w))).length), parts=String(b.m).split(" · ");
+          if(parts.length===n.reduce((x,y)=>x+y,0)){ let k0=0; const nm=n.map(x=>parts.slice(k0,k0+=x).join(" · ")).join(" / ");
+            if(nm!==b.m){ changed.push({id:d.id,w:d.c,from:b.m,to:nm}); k++; u={...b,m:nm}; setMl(u,"en"); } } } } }
     { const b=u||d; /* v805: a meaning composed before v805 drops the word in front of each part ("三 three · 碗 bowl" → "three · bowl"), only while every part is still "word meaning" with the word in the card's text */
       if(b.mt&&b.mt.src==="gloss"&&!b.mt.verified&&mlOf(b)==="en"&&b.m&&b.kind!=="page"){
         const nm=oldComposed(b.m,b.c); if(nm&&nm!==b.m){ changed.push({id:d.id,w:d.c,from:b.m,to:nm}); k++; u={...b,m:nm}; setMl(u,"en"); } } }
@@ -1797,7 +1803,7 @@ async function relayFetch(pv,body,ms,ms2){
 }
 /* the provider's or the relay's error text from a failed answer's JSON body ("" when there is none) */
 async function apiErrText(r){ try{ const j=await r.json(); return String((j.error&&(j.error.message||j.error))||j.message||""); }catch(e){ return ""; } }
-function relayError(r,t){ return r.status===429?"the daily limit of the owner's relay is reached — try again tomorrow":r.status===404||r.status===503?"the owner's relay is not set up":"relay error "+r.status+(t?": "+t:""); }
+function relayError(r,t){ /* English, as Diagnostics keeps it; the two reasons a learner can act on are keys, so the screens that show them pass them through t() (v806) */ return r.status===429?"the daily limit of the owner's relay is reached — try again tomorrow":r.status===404||r.status===503?"the owner's relay is not set up":"relay error "+r.status+(t?": "+t:""); }
 async function setAiAccount(pv,acct){ const all={...aiAccounts()}; if(acct) all[pv]={...aiAcct(pv),...acct}; else delete all[pv]; await setSetting("aiAccounts",all); }
 async function migrateAi(){
   if(!S.settings.aiKey) return; const pv=aiProvider();
@@ -2509,7 +2515,7 @@ function renderAiRow(){
   run.onclick=async()=>{
     run.disabled=true; const rs=$("#ai-runstatus");
     try{ const n=await aiReview(null,x=>{ rs.textContent=x; }); rs.textContent=t("{0} ready. Accept or dismiss under Cards.",nOf(n,"suggestion")); }
-    catch(err){ rs.textContent=t("Failed: {0}",err&&err.message||err); run.disabled=false; }
+    catch(err){ rs.textContent=t("Failed: {0}",t(err&&err.message||String(err))); run.disabled=false; }
   };
   if(!btn||!form) return;
   btn.onclick=()=>{ form.hidden=!form.hidden; if(!form.hidden&&!aiKey(form.dataset.pv)) $("#ai-key").focus(); };
@@ -3366,7 +3372,7 @@ const GFIG={
 const GUIDE=()=>[
   {h:t("Take a photo"),fig:GFIG.photo(),p:[
     t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card for you; Crop frames it by hand when the app gets it wrong."),
-    t("A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up; to learn one, open it from the list under the photo and press + Flashcard.")]},
+    t("A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up; its pop-up has + Flashcard, Flag and Edit.")]},
   {h:t("Fix the characters"),fig:GFIG.chars(),p:[
     t("Every character under the photo is a button: tap one for other readings, or draw it with your finger. Pinyin and meaning follow by themselves and the AI checks them — flag a card when something still looks wrong.")]},
   {h:t("Learn"),fig:GFIG.learn(),p:[
@@ -3377,7 +3383,7 @@ const GUIDE=()=>[
       +" "+t("Tap the star counter at the top to see how your points are counted.")] /* the counter is a tap target with no other affordance (v546), so this one sentence survives the cut */
     .concat(lockOn()?[t("Press and hold a character to walk through every card that has it; press and hold it again to come back.")]:[])}, /* v531: only while the lock is on */
   {h:t("Cards"),fig:GFIG.cards(),p:[
-    t("All your cards, newest first, with a tab of their own for multicards. Search them, filter them, and tap one to test, edit or delete it."),
+    t("All your cards, with a tab of their own for multicards. Search them, filter and sort them, and tap one to test, edit or delete it."),
     t("Tap a card's star for the ones that matter to you, and Learn can study those alone. Tags group the rest, and a card from a photo gets one for what it is.")]},
   {h:t("Language and meanings"),fig:GFIG.lang(),p:[
     t("More → Language switches the app's own texts, and new cards get their meaning in that language. Translate all cards does it for the ones you already have.")]},
@@ -3735,7 +3741,7 @@ async function explainCard(id,auto){ /* auto (v752): the card asked by itself �
     if(!charSenses(d)) await takeChars(id,d.c,r);
     if(!s){ EXPLAIN[id]=t("No description came back. Try again."); refreshDesc(id); return; }
     const d2=cardOf(id); if(!d2) return; if(d2.c!==d.c||Object.values(PENDING).includes(id)){ delete EXPLAIN[id]; refreshDesc(id); return; } /* v656: the text changed while the description was asked for (a Crop again saved before its reading was done) — it describes the old text, and a card still being read is filled by the reading */ await putCard(setDesc({...d2},s,r.ml||LANG),id); delete EXPLAIN[id]; refreshDesc(id,!auto); }
-  catch(err){ const m=err&&err.message||String(err); EXPLAIN[id]=m===AI_NET_ERR?t(m)+".":t("The AI check failed: {0}",m); refreshDesc(id); }
+  catch(err){ const m=err&&err.message||String(err); EXPLAIN[id]=m===AI_NET_ERR?t(m)+".":t("The AI check failed: {0}",t(m)); refreshDesc(id); }
 }
 /* v698 (H: "In the list overview, show the full description, but not the extended AI details those only in the opened card.
    And load it during creation of the Multicard"): a multicard's texts carry a SHORT description of their own — one sentence,
@@ -6367,7 +6373,7 @@ function renderEdit(main,c){
         if(r.desc) aiDesc={s:r.desc,ml:r.ml||"en"}; /* the description lands on the card at Save changes (v529) */ /* the fields grow with the answer — a filled value fires no input event (v281, H's two-line brand meaning cut off) */
         aiApplied=true; st.textContent=""; } /* a good answer shows nothing, the fields just fill — as in the Read preview (H, v105; the green "AI: looks right" box went in v245) */
       else st.textContent=t("The AI says this text looks misread. Fix the characters, or crop the photo again."); /* until v301 a garbage verdict left the form as it was, without a word (H: "doesn't work anymore?") */
-    }catch(err){ if(!ab.isConnected) return; const m=err&&err.message||String(err); st.textContent=m===AI_NET_ERR?t(m)+t(". Tap the button to try again."):t("The AI check failed: {0}",m); }
+    }catch(err){ if(!ab.isConnected) return; const m=err&&err.message||String(err); st.textContent=m===AI_NET_ERR?t(m)+t(". Tap the button to try again."):t("The AI check failed: {0}",t(m)); }
     ab.disabled=false;
   };
   /* ---------- the image field: the crop, Remove image, and Crop again (v239, H: "allow to re-crop a photo in edit mode",
@@ -6389,7 +6395,7 @@ function renderEdit(main,c){
         <div class="croplayer${CROP.rect?" framed":""}${zoomed?" zoomed":""}" data-id="${rid}">${zoomed?"":`<div class="croprect${READING[rid]&&!READ_FAIL.test(READING[rid])?" working":""}"${cropRectStyle()}>${READING[rid]&&!READ_FAIL.test(READING[rid])?`<div class="work" aria-hidden="true"><svg><rect/></svg></div>`:""}<div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="${t("Turn the frame")}"></div></div>`}</div>
       </div>
       <div class="imgacts"><button class="del" id="e-cropcancel">${t("Cancel")}</button></div>
-      <div class="ocr" id="ocr-${rid}">${READING[rid]?readingHTML(READING[rid],rid):res&&res.key===rectKey(CROP.rect)?`<div class="croppreview"><img src="${res.url}" alt="the new crop"><div class="badge" style="margin:6px 0 0">${res.text?t("Read as “{0}”. ",esc(res.text)):t("Picture taken, the text stays. ")}${t("Move the frame for another cut, or save.")}</div></div>`:CROP.locating?busyHTML(t("Finding the frame …")):CROP.auto?busyHTML(t("Finding the text …")):`<span class="badge">${t("Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.")}</span>`}</div></div>`;
+      <div class="ocr" id="ocr-${rid}">${READING[rid]?readingHTML(READING[rid],rid):res&&res.key===rectKey(CROP.rect)?`<div class="croppreview"><img src="${res.url}" alt="${t("the framed area")}"><div class="badge" style="margin:6px 0 0">${res.text?t("Read as “{0}”. ",esc(res.text)):t("Picture taken, the text stays. ")}${t("Move the frame for another cut, or save.")}</div></div>`:CROP.locating?busyHTML(t("Finding the frame …")):CROP.auto?busyHTML(t("Finding the text …")):`<span class="badge">${t("Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.")}</span>`}</div></div>`;
     box.querySelectorAll(".croplayer").forEach(wireCrop);
     box.onclick=e=>{ const b=e.target.closest("[data-savenow]"); if(b){ b.disabled=true; const sv=$("#e-save"); if(sv) sv.click(); } }; /* Save now beside the bar (v341, H: "allow cropping an image in edit mode and saving it before the AI finishes, same as when taking a photo"): the same hand-off as Save changes — the button sits in the reading box, which every status re-renders */
     $("#e-cropcancel").onclick=()=>{ restoreBefore(); endRecrop(); showPimg(); }; };
@@ -6453,9 +6459,9 @@ function renderEdit(main,c){
         sg.lines=sg2.lines.slice(); sg.orig=sg2.orig.slice(); sg.conf=sg2.conf; sg.boxes=sg2.boxes; sg.img=sg2.img; sg.alts=sg2.alts;
         sg.trad=!!sg2.trad; sg.tradDetected=!!sg2.tradDetected||!!sg.tradDetected; sg.tradText=sg2.tradText||""; sg.tradTouched=false; sg.tradUser=false; sg.sel=null; delete sg.ai;
         setResult(sg2.cardImg||recropImg,sg.lines.join(" / ")); /* the tightened cut when there is one, else the crop as framed; the frame stays on the photo */
-        const lab=$("#e-lines").closest(".field").querySelector("label"); if(lab) lab.textContent="Characters"+(sg.trad?" (traditional, as on the photo)":"");
+        const lab=$("#e-lines").closest(".field").querySelector("label"); if(lab) lab.textContent=sg.trad?t("Characters (traditional, as on the photo)"):t("Characters");
         syncWord(); drawLines(); pinyinFollow();
-        if(!meanTouched){ const r2=sg.lines.filter(l=>CJK.test(l)).map(lineMeaning), m=r2.map(r=>r.en).filter(Boolean).join(" / "); if(m){ $("#e-mean").value=m; autoGrow($("#e-mean")); $("#e-aistatus").textContent=`Meaning ${r2.length&&r2.every(r=>r.full)?"from the phrasebook":"composed word by word"}, unverified`; } } /* the word-by-word gloss with its source line until the AI answers, as in the Read preview (v245); a meaning typed here stays */
+        if(!meanTouched){ const r2=sg.lines.filter(l=>CJK.test(l)).map(lineMeaning), m=r2.map(r=>r.en).filter(Boolean).join(" / "); if(m){ $("#e-mean").value=m; autoGrow($("#e-mean")); $("#e-aistatus").textContent=t("Meaning {0}, unverified",r2.length&&r2.every(r=>r.full)?t("from the phrasebook"):t("composed word by word")); } } /* the word-by-word gloss with its source line until the AI answers, as in the Read preview (v245); a meaning typed here stays */
         showAi(); const ab=$("#e-ai"); if(ab&&aiLive()) ab.click(); } };
     /* the frame the card was cut with, without a reading until it is moved (v244, H: "use the previous cropping area as starting point");
        a card from before v244 has no frame stored — its crop is looked for in the photo (findFrame, v246) and the frame kept on the card;
@@ -7597,7 +7603,7 @@ async function showCropPreview(id,opts){
   _prevURL=URL.createObjectURL(r.blob);
   const onSave=!!RECROP[id]&&!noRead; /* v771 (H: "When I re-crop and save, then the new reading should happen automatically"): in the Edit form's Crop again a released frame starts NO reading of its own — until v770 the 1.2 s timer below read every moved frame (reader and AI check, 20 s on H's label, twice for two moves) before Save could be tapped. The frame waits (stage "waiting"), Save changes hands it to the background reading that fills the card (the v241 hand-off), Read now reads it here, Image only keeps the text. The Camera tab's Crop keeps its automatic read. */
   box.innerHTML=`<div class="croppreview">
-    <img src="${_prevURL}" alt="selected area">
+    <img src="${_prevURL}" alt="${t("the framed area")}">
     <div class="badge" style="margin:6px 0 8px">${noRead?(opts.found?t("The frame the app found — adjust it, then read."):t("The frame the card was cut with — move it, then save: the new cut is kept and its text read."))+(opts.win==="in"?t(" Tap outside the frame for the whole photo."):opts.win==="out"?t(" Tap outside the frame to enlarge it again."):""):onSave?t("Saving keeps this cut and reads its text."):t("Reading in a moment — drag a corner first if the frame is off.")}</div>
     <div class="cropacts">
       <button class="del" data-cropread="${id}">${t("Read now")}</button>
@@ -10755,7 +10761,7 @@ function wireSlines(root,onInput,onCommit){
   wireGrow(root);
 }
 /* the AI's failure as a sentence for the user (v201): the network case says what to do, a provider's answer is named as the check's failure */
-const aiErrText=e=>e===AI_NET_ERR?t(AI_NET_ERR)+t(". Tap Ask AI to try again."):/^[a-z]/.test(e)?t("The AI check failed: {0}",e):e;
+const aiErrText=e=>e===AI_NET_ERR?t(AI_NET_ERR)+t(". Tap Ask AI to try again."):/^[a-z]/.test(e)?t("The AI check failed: {0}",t(e)):e;
 function signEditorHTML(id){
   const sg=SIGN[id]; if(!sg) return "";
   const rows=sg.lines.map((l,k)=>slineHTML(id,k,l,false,true)).join(""); /* the line input is back under the strip (v120, H: "type the correct hanzi in a text field, like in Edit mode" — it went in v109) */
@@ -11025,7 +11031,7 @@ async function readingCard(id,sg){
 }
 async function saveSign(id){
   const sg=SIGN[id]; if(!sg) return;
-  if(sg.aiPromise){ const b=document.querySelector(`[data-signsave="${id}"]`); if(b){ b.disabled=true; b.textContent="Checking …"; } await sg.aiPromise; if(!SIGN[id]) return; }
+  if(sg.aiPromise){ const b=document.querySelector(`[data-signsave="${id}"]`); if(b){ b.disabled=true; b.textContent=t("Checking …"); } await sg.aiPromise; if(!SIGN[id]) return; }
   const built=await readingCard(id,sg); if(!built) return;
   const {card,c,mt}=built;
   if(deck().some(d=>d.c===c&&d.shot===id)){ sg.aiErr=t("This text is already saved from this photo."); renderShots(); return; } /* the same text from another photo is a new card (H, v118) */

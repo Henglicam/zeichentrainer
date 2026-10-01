@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v805, 2026-10-01)
+## Current state (PWA v806, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -312,7 +312,7 @@ is **on by default and works with no key**, so a fresh install sends every new c
 
 ## Languages
 Ten columns in `lang.js`: en, de, fr, es, ja, ko, ru, vi, th, id. **English is the key**; a missing key falls back to the
-English text, never to the key. **490 keys a column, ru 520 (three plural forms), en 15.** `nOf`/`wordOf`/`PLURAL` carry the
+English text, never to the key. **501 keys a column, ru 531 (three plural forms), en 15** (v806 — count by evaluating `lang.js`). `nOf`/`wordOf`/`PLURAL` carry the
 counts.
 
 - **The v412 rule: a pronoun or a count-agreeing verb must never cross a key boundary.** Render every count sentence at
