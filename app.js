@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=804; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=805; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -1568,7 +1568,12 @@ async function fixNumberSegs(){
    glosses (慢, 停, 男, 女), a meaning the AI or a hand wrote or checked, a meaning in another language. Once per phone (the
    settings row glossFix, v 718); the row keeps what changed and Diagnostics prints it. A dictionary that does not load
    leaves the row unwritten, so the next start tries again. */
-const GLOSS_FIX_V=754, GLOSS_FIX_KEEP=300; /* 754: 牌 after a name is "brand" (AFTER_SENSES) */ /* 729: 吃 碰 杠 in OWN_SENSES, the mahjong call in the bracket */ /* 728 (H's v727 dump): 龙 and 胡 in OWN_SENSES; the OWN_PINYIN reading and the fewest-words split reach the verified cards and the cards with an AI meaning too (gloss and segs only where the meaning is not the composed one) */ /* 727: 皮 and 瘦 in OWN_SENSES */ /* 726: the fewest-words split — an unverified sign card whose meaning is still the composed one takes the new split */ /* 725: OWN_PINYIN — 夹 reads jiā, the unverified cards' pinyin and glosses follow */ /* 724 (H's v723 dump): a bound form past the third sense is not the in-word sense (入 "to conform to", 水 "additional cost", 牌 "fixed pattern for lyrics"), "I" is a pronoun (我 → "me"), a capitalised word anywhere makes a proper noun (巴 "the east of Sichuan") */ /* 723: 面 and 卡 in OWN_SENSES */ /* 722: the v5 dictionary and the two chooser rules of docs/NMAX.md — the pass waits for the fresh file */ /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
+const GLOSS_FIX_V=805, GLOSS_FIX_KEEP=300; /* 805: a meaning composed word by word drops the word in front of each part */ /* 754: 牌 after a name is "brand" (AFTER_SENSES) */ /* 729: 吃 碰 杠 in OWN_SENSES, the mahjong call in the bracket */ /* 728 (H's v727 dump): 龙 and 胡 in OWN_SENSES; the OWN_PINYIN reading and the fewest-words split reach the verified cards and the cards with an AI meaning too (gloss and segs only where the meaning is not the composed one) */ /* 727: 皮 and 瘦 in OWN_SENSES */ /* 726: the fewest-words split — an unverified sign card whose meaning is still the composed one takes the new split */ /* 725: OWN_PINYIN — 夹 reads jiā, the unverified cards' pinyin and glosses follow */ /* 724 (H's v723 dump): a bound form past the third sense is not the in-word sense (入 "to conform to", 水 "additional cost", 牌 "fixed pattern for lyrics"), "I" is a pronoun (我 → "me"), a capitalised word anywhere makes a proper noun (巴 "the east of Sichuan") */ /* 723: 面 and 卡 in OWN_SENSES */ /* 722: the v5 dictionary and the two chooser rules of docs/NMAX.md — the pass waits for the fresh file */ /* 719: 枚 got "surname Mei" from v717's classifier rule and a lone 了 "to finish" from its lone reading — both repaired, the pass runs once more; 720: OWN_SENSES and the in-word sense beside a character; 721: a proper-noun bound form is not the in-word sense (美 "the Americas"), six more OWN_SENSES */
+const mTokens=m=>String(m||"").split(/ · | \/ /); /* the parts of a composed meaning; its lines (" / ") are parts too */
+const oldComposed=(m,c)=>{ /* v805: "三 three · 碗 bowl / 面 ?" → "three · bowl / 面"; a part that is not "word meaning" with the word in the text (a phrasebook line's own words) stays; null when none is */
+  const tx=String(c||""); let n=0;
+  const out=String(m).split(" / ").map(l=>l.split(" · ").map(x=>{ const h=x.match(/^([\u3400-\u9fff\uf900-\ufaff]+) (.+)$/); if(!h||!tx.includes(h[1])) return x; n++; return h[2]==="?"?h[1]:h[2]; }).join(" · ")).join(" / ");
+  return n?out:null; };
 async function glossFix(){
   const done=S.settings.glossFix; if(done&&done.v>=GLOSS_FIX_V) return;
   try{ await loadDict(); if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js"); }catch(e){ return; } await loadSigns().catch(()=>{});
@@ -1581,9 +1586,12 @@ async function glossFix(){
       const ctxP=glossCtx(d);
       const gl=d.gloss.map((g,i)=>{ if(!g||!oneCJK(g.w)||inBook(g.w)) return g; const p=ctxP[i].p||g.p, m=cleanSense(bestSense(g.w,p,ctxP[i].inWord,ctxP[i].after)); if(!m||(m===g.m&&p===g.p)) return g; changed.push({id:d.id,w:g.w,from:(p!==g.p?(g.p||"")+" ":"")+(g.m||""),to:(p!==g.p?p+" ":"")+m}); k++; return {...g,p,m}; });
       if(gl.some((g,i)=>g!==d.gloss[i])){ u={...d,gloss:gl};
-        if(d.mt&&d.mt.src==="gloss"&&!d.mt.verified&&mlOf(d)==="en"&&d.m){ /* the meaning composed word by word carries the old gloss too ("卖完 to be sold out · 了 to finish") */
-          let m=d.m; gl.forEach((g,i)=>{ const o=d.gloss[i]; if(g!==o&&o.m) m=m.split(o.w+" "+o.m).join(g.w+" "+g.m); });
+        if(d.mt&&d.mt.src==="gloss"&&!d.mt.verified&&mlOf(d)==="en"&&d.m){ /* the meaning composed word by word carries the old gloss too ("to be sold out · to finish"; "卖完 to be sold out · 了 to finish" before v805) */
+          let m=d.m; gl.forEach((g,i)=>{ const o=d.gloss[i]; if(g!==o&&o.m) m=mTokens(m).map(x=>x===o.w+" "+o.m||x===o.m?g.m:x).join(" · "); });
           if(m!==d.m){ u.m=m; setMl(u,"en"); } } } }
+    { const b=u||d; /* v805: a meaning composed before v805 drops the word in front of each part ("三 three · 碗 bowl" → "three · bowl"), only while every part is still "word meaning" with the word in the card's text */
+      if(b.mt&&b.mt.src==="gloss"&&!b.mt.verified&&mlOf(b)==="en"&&b.m&&b.kind!=="page"){
+        const nm=oldComposed(b.m,b.c); if(nm&&nm!==b.m){ changed.push({id:d.id,w:d.c,from:b.m,to:nm}); k++; u={...b,m:nm}; setMl(u,"en"); } } }
     if(d.mt&&d.mt.src==="dict"&&!d.mt.verified&&oneCJK(d.c)&&mlOf(d)==="en"&&!inBook(d.c)){
       const m=cleanSense(bestSense(d.c,d.p)); if(m&&m!==d.m){ changed.push({id:d.id,w:d.c,from:d.m||"",to:m}); k++; u={...(u||d),m}; setMl(u,"en"); } }
     /* v725: a card whose text holds a character of OWN_PINYIN takes the library's new reading into its own pinyin — only an
@@ -1594,8 +1602,8 @@ async function glossFix(){
     /* v728 (H's v727 dump: the verified menu texts kept 瘦肉|夹|馍): every sign card takes the new split into its word list and
        segs; the meaning follows only where it is still the composed one (H's own words, or the AI's accepted ones, stay) */
     if(d.kind==="sign"&&Array.isArray(d.gloss)&&d.gloss.length){
-      const base=u||d, pairs=base.gloss.filter(g=>g&&CJK.test(g.w)&&g.m).map(g=>g.w+" "+g.m); let pos=0; /* machine-made: every "word meaning" pair of the gloss stands in the meaning, in order */
-      const composed=mlOf(d)==="en"&&pairs.length&&pairs.every(t=>{ const i=String(base.m||"").indexOf(t,pos); if(i<0) return false; pos=i+t.length; return true; });
+      const base=u||d, pairs=base.gloss.filter(g=>g&&CJK.test(g.w)&&g.m), toks=mTokens(base.m); let pos=0; /* machine-made: every part's meaning of the gloss is a whole part of the meaning, in order ("word meaning" before v805) */
+      const composed=mlOf(d)==="en"&&pairs.length&&pairs.every(g=>{ let i=pos; while(i<toks.length&&toks[i]!==g.m&&toks[i]!==g.w+" "+g.m) i++; if(i>=toks.length) return false; pos=i+1; return true; });
       const lines=String(d.c||"").split("\n").map(l=>l.trim()).filter(l=>CJK.test(l)), rs=lines.map(lineMeaning);
       const gl=rs.flatMap(r=>r.gloss.map(g=>({w:g.w,p:g.p,m:g.m})));
       if(gl.length<base.gloss.length){ const from=base.gloss.map(g=>g.w).join("|"), to=gl.map(g=>g.w).join("|"); changed.push({id:d.id,w:d.c,from,to}); k++;
@@ -7960,8 +7968,9 @@ function lineMeaning(line){
   }
   const words=mergeUnits(parts).filter(x=>!x.punct);
   const full=words.length>0 && words.every(x=>x.ph||x.num||x.unit);
-  /* fully phrasebook-matched line reads as English; a composed line shows word + gloss for every part */
-  const en=full?words.map(x=>x.m).join(" · "):words.map(x=>x.num?x.w:x.w+" "+(x.m||"?")).join(" · ");
+  /* fully phrasebook-matched line reads as English; a composed line shows each part's meaning alone, the word itself where the
+     dictionary has none (v805, H: "三 three · 碗 bowl · 面 noodles" read as an odd format — "three · bowl · noodles") */
+  const en=words.map(x=>x.m||x.w).join(" · ");
   const py=pySpaced(words.map(x=>x.w).join(""));
   return {en,full,gloss:words,segs:mergeUnits(parts).map(x=>x.w),py};
 }

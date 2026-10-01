@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v804, 2026-10-01)
+## Current state (PWA v805, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -110,7 +110,8 @@ shot, items:[ids], tags:[kind], mt llm-verified, v}` — no `img`, no progress r
 out as context for its texts' short descriptions, v698), **not in the Deck count** (v504).
 
 **Pinyin only verified, with correct tones — never guess.** Meanings in the app's language. Dictionary/phrasebook prefills
-stay `verified:false` until a human or the AI checked them; when unsure, flag rather than invent.
+stay `verified:false` until a human or the AI checked them; when unsure, flag rather than invent. A text the dictionary lacks whole
+reads its parts' meanings, "three · bowl · noodles" — no characters in it (`lineMeaning`, v805).
 
 Export/import: progress + cards as JSON, `shizi-YYYY-MM-DD.json.txt` (the filename is never read) through the share sheet;
 import upserts by `id`. Photos ride along as base64 behind a checkbox (v166). **The export duplicates a shared photo once per
