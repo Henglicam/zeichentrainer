@@ -50,12 +50,12 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v782, 2026-10-01)
+## Current state (PWA v783, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
 
-**Recent state worth carrying in the head** (full entries by version below in the archive):
+**Recent state worth carrying in the head** (full entries by version in the archive):
 - **The v7xx state** (dictionary v5 and the gloss rules, duplicate multicards, a multicard text's region, the apps' standard
   fields — thirty categories in `APP_CATS`, a field matches a whole label only —, the wake lock):
   `grep -n "Consolidated v7xx" docs/HISTORY.md`. Where a rule there must be known before a change, the one that bites most:
@@ -147,7 +147,8 @@ and after the layout settles (v521/v532).
 - **The word line** (text state only; in the photo state `--th` is 0) reads the character being written with its in-word
   reading, then its word (v518/v540), and wraps as it needs (v600); `shortSense` strips a parenthetical from that line only.
   **The character's meaning is its sense in this word** (`cg`, written by the text model once per card beside the description,
-  v772); the dictionary's best sense for the in-word reading (`bestSense`, v573) stands until it arrives.
+  v772); the dictionary's best sense for the in-word reading (`bestSense`, v573) stands until it arrives. **A card whose answer
+  brought no senses is asked once a session** (`charsSoon`, v783: the busy mark stays as `"asked:"+text`; the reply schema names `chars`).
 - **The Chinese is read aloud at the stroke that completes a character** (v773/v774/v776/v778): the character alone,
   always (`sayChar`; H, v776: never its word), **with the reading it has in this word** — when that is not its lone reading,
   the engine gets a stand-in character with only that reading (`STANDIN`, 行 in 银行 → 航, built by `tools/standin.js`,
@@ -198,15 +199,15 @@ with its own photo takes it as its picture (`dish`, v705); no count line on the 
 
 ### Camera — photo to card
 The Camera tab is the camera: the **shutter card** (Take photo, From album) centred, work under it (v466/v470); a photo that
-made its card **leaves the tab** (v471). From album works through the batch one at a time while the app is open (v411); the
-"to go" line counts the batch's photos still to be finished (`BATCH`, v761). **A photo becomes a card by itself** (v325): a
+made its card **leaves the tab** (v471). From album works through the batch one at a time while the app is open (v411; the
+"to go" line counts the photos still to be finished, `BATCH`, v761). **A photo becomes a card by itself** (v325): a
 light band sweeps the photo, then the finished card with Edit and Delete. Save now (v237) makes the card before the reading
 is done; Crop (v437) and Crop again (v239) hand the app's frame to the hand. **In the Edit form's Crop again a released frame
 starts no reading: Save changes keeps the cut and reads it in the background** (v771, the v241 hand-off); Read now reads it
 in the form, Image only keeps the text. The Camera tab's Crop reads a released frame by itself (`READ_WAIT`). A photo whose texts stand apart becomes **one
 multicard** with a dot on every text (v453/v457), regions snapped onto the ink (v620); its photo pinches and pans like a
 card's (v634). **Add a text** (v635) frames a missing text through Crop again; **the screen stays on while the app works**
-(`appBusy`, v767/v768: a reading, Translate all, Check-up, the owner's loops and Zoom check, a download, an import); a blank never read is dropped on Cancel, a tab tap or a restart. A photo left on the tab with no card has **Read
+(`appBusy`, v767/v768: every reading, loop, download and import); a blank never read is dropped on Cancel, a tab tap or a restart. A photo left on the tab with no card has **Read
 again** (v739) — the shutter's own reading once more; Crop reads the framed part.
 
 ### More — four sections (v547)
@@ -351,7 +352,6 @@ never as a symlink into the repo. **`tools/field/` holds H's own thirteen board 
 five Meituan and three Taobao screenshots are not in the repo** — they carry his account and address.
 
 Rules that came out of the harness and cost real versions:
-
 - **A suite that pins a number breaks on every change to it — read the number from the page** (v413).
 - **A check that cannot fail on the old tree is not a test** (v419). Run the suite against the previous version and say how
   many checks flip; label the ones that pass on both `[control]` or `[guard]`, with the reason beside them.
@@ -424,14 +424,13 @@ The full list is in the archive; these are the ones that keep biting.
   before it reached the inbox), and at most once in ten minutes (v563).
 
 ## Play Store and the Android shell
-**Decided 2026-09-23: a shell around the web app, not a native rewrite; payments native, credits on the server.** The
-record from that day said the shell lived in the private repo `henglicam/zeichentrainer-app`; **that repo did not exist
-until 2026-09-30** (H: "never built, go") and nothing from 2026-09-23 was ever pushed. Since 2026-09-30 the shell is a
-**plain Kotlin WebView app** in that private repo (its own `CLAUDE.md`): the live Pages URL, a `navigator.share`
-polyfill, the camera and album pickers, and the **Quick Settings tile "识字"** that captures the screen (MediaProjection,
-a foreground service) and hands the picture to the page as a shared screenshot (`importPhotos(…, {shared:true})`, the
-web app untouched). The APK is built by GitHub Actions and installed from a release; no Play listing yet. Taking the
-public site down would break every installed copy. **The shell's deck is its own storage, not Chrome's.**
+**Decided 2026-09-23: a shell around the web app, not a native rewrite; payments native, credits on the server.** Since
+2026-09-30 the shell is a **plain Kotlin WebView app** in the private repo `henglicam/zeichentrainer-app` (its own
+`CLAUDE.md`; nothing existed there before that day — `grep -n "never built" docs/HISTORY.md`): the live Pages URL, a
+`navigator.share` polyfill, the camera and album pickers, and the **Quick Settings tile "识字"** that captures the screen
+and hands the picture to the page as a shared screenshot (`importPhotos(…, {shared:true})`, the web app untouched). The
+APK is built by GitHub Actions and installed from a release; no Play listing yet. Taking the public site down would break
+every installed copy. **The shell's deck is its own storage, not Chrome's.**
 
 H's account: passport as identity, **China as the account country** (fixed forever); a personal account needs a **closed
 test, 12 testers, 14 days**. Play does not reach mainland China. The store's keystore never enters a repo;
@@ -445,7 +444,7 @@ id abroad. **`strokes.txt.gz` and `cedict.tsv.gz` stay freely available under th
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
 as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the model's character senses (v772); the voice from the pad on the Xiaomi (v773), its reading of the stand-ins (v778) and its pace (v781); the zoom by layout on LED signs (v782); the
 apps' fields and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760); the wake
-lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768).
+lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768); whether DeepSeek sends the senses now (v783).
 
 **The crops go stale with their screens:** run `node tools/guide-shots.js` in the PR that changes the Crop view, the Edit
 form's character strip, the write pad, the study card's front, the Cards tile, the language chips or the open card's
