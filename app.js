@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=775; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=776; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -5265,7 +5265,7 @@ function mountPad(card,d,c,tg,st,cur){
        v773 spoke from charRecap, after the .3 s flash, the pad's fade and the reading's own .2 s lead, and the Xiaomi engine's
        start-up on top of that put the sound where the reading was already leaving. The last character of the card speaks the
        whole text at once (its own reading and the recap follow under it); every other one its character or word (sayChar). */
-    if(!tg.some((x,j)=>x.w&&!st.done.has(j))){ if(sayOn()&&d.c) say(d.c); } else sayChar(cur,((document.querySelector("#padline .plrow .mono")||{}).textContent||""));
+    sayChar(cur); /* v776: every character alone, the last one too — the whole text is heard with the card's recap (cardDone), where its translation stands */
     const b=card.querySelector(`.chrow .ch[data-i="${i}"]`); if(b){ b.classList.add("done"); b.classList.remove("cur"); } /* v525: the written character is the green glyph alone, no badge */
     await new Promise(r=>setTimeout(r,reduced?150:300)); if(!cv.isConnected) return; flash=0;
     /* v535 (H: "Bitte immer erst ein Wort ausschreiben und dann die anderen Characters"): the pad finishes the word it
@@ -5339,7 +5339,7 @@ function mountPad(card,d,c,tg,st,cur){
        is already on the pad. */
     const pw=document.querySelector(".card.study .padwrap"); let rc=null;
     if(pw){ if(dark){ const cvn=pw.querySelector(".wpad"); if(cvn){ cvn.style.transition="none"; pw.classList.add("recapping"); void cvn.offsetWidth; cvn.style.transition=""; } } /* v558: dark from its first frame */
-      pw.insertAdjacentHTML("beforeend",recapHTML(d)); rc=pw.lastElementChild; recapFit(rc); /* v773/v774: the whole text was spoken at the last stroke (charDone) */ /* v600: the reading is sized against the real layout before the first frame */ pw.classList.add("recapping"); requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); }); }
+      pw.insertAdjacentHTML("beforeend",recapHTML(d)); rc=pw.lastElementChild; recapFit(rc); if(sayOn()&&d.c) say(d.c); /* v776: the whole text with the recap — v774 spoke it at the last stroke, v776 gives that stroke its own character (H) */ /* v600: the reading is sized against the real layout before the first frame */ pw.classList.add("recapping"); requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); }); }
     let pr=null, fired=false, tm=0;
     const go=()=>{ if(fired) return; fired=true; clearTimeout(tm); document.removeEventListener("pointerdown",onTap,true);
       if(pr) pr.finish(); else if(PRAISE_N){ PRAISE_N=null; setStats(); } /* v543: skipped before the star flew — the counter goes straight to the day's own total rather than keeping the held number */
@@ -6647,7 +6647,7 @@ const zoomOn=()=>ZOOM_AUTO&&S.settings.learnZoom!==false;
    voices through getVoices() and still speaks through the system engine). More → Learning switches it off (`learnSay`).
    A tap that skips the reading, and a swipe, stop the voice. */
 const sayOn=()=>S.settings.learnSay!==false;
-function sayChar(cur,py){ if(!sayOn()||!cur||!CJK.test(cur.ch||"")) return; let alone=""; try{ alone=window.pinyinPro?pinyinPro.pinyin(cur.ch,{toneType:"symbol"}):""; }catch(e){} say(alone&&py&&alone.trim()===py.trim()?cur.ch:(cur.word||cur.ch)); }
+function sayChar(cur){ if(!sayOn()||!cur||!CJK.test(cur.ch||"")) return; say(cur.ch); } /* v776 (H, 一次性手套: "Bitte jeden character einzeln lesen, nicht bei einem character das gesamte Wort"): the character alone, always — v773 spoke the whole word when the character alone would read differently (一 alone yī, in 一次 yí), which H heard as the word being read for one character; a 多音字 read alone takes the engine's own reading, and that is H's choice */
 function sayStop(){ try{ if("speechSynthesis" in window) speechSynthesis.cancel(); }catch(e){} clearTimeout(SAY_TIMER); }
 const newsList=()=>Object.keys(WHATS_NEW).map(Number).sort((a,b)=>b-a);
 const newsSince=v=>newsList().filter(n=>n>v&&n<=APP_V).map(n=>({v:n,s:WHATS_NEW[n]})); /* what this phone has not been shown yet, newest first */
