@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=803; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=804; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -2184,8 +2184,15 @@ const DESC_MAX=700;
    card that has its description but no senses yet (`charsSoon`, the same 1.2 s lead and the same AI-review switch). */
 const SENSE_MAX=40, CHARS={}; let CHARS_AT=null, CHARS_T=0;
 const cjkOf=zh=>[...String(zh||"").replace(/\n/g,"")].filter(ch=>CJK.test(ch));
-const charSenses=d=>(d&&d.cg&&d.cg[LANG])||null;
-const setChars=(card,arr,ml)=>{ if(!arr||!arr.some(Boolean)) return card; card.cg={...(card.cg||{}),[ml||"en"]:arr}; return card; };
+/* v804 (H, his noodle-sign card after Crop again turned its text from 全家 into 三碗面: "wie kann 碗 auf einer Karte 2 verschiedene
+   Übersetzungen haben: Family und bowl??"): the senses are one entry per character of the text they were written for, and
+   nothing dropped them when the text changed — 全家's [whole, family] stood on 三碗面, so 碗, the second character, read
+   "family" under the pad and on the open card while the gloss said bowl. Now the senses carry the text they belong to (cgc)
+   and count only for that text; a card from before v804 carries none, so its senses count only while their number matches
+   its characters (the noodle card's two for three fail). Senses that do not count are as good as none: the dictionary's sense
+   stands and the card is asked again (charsSoon). applyCardUpdate drops them with the description when the text changes. */
+const charSenses=d=>{ const a=d&&d.cg&&d.cg[LANG]; if(!a) return null; if(d.cgc!=null) return d.cgc===d.c?a:null; return a.length===cjkOf(d.c).length?a:null; };
+const setChars=(card,arr,ml)=>{ if(!arr||!arr.some(Boolean)) return card; if(card.cgc!=null&&card.cgc!==card.c) delete card.cg; card.cg={...(card.cg||{}),[ml||"en"]:arr}; card.cgc=card.c; return card; };
 const charsWhy=()=>`write "chars": one entry per Chinese character of the text in order, [["字","meaning"],…], each meaning the sense this character has IN THIS WORD on this card (not its commonest dictionary sense), one to three words in ${meaningLangName()}; keep zh, p and m exactly as given`;
 function saneChars(raw,zh){ const want=cjkOf(zh); if(!want.length||!raw) return null;
   let list=[]; if(Array.isArray(raw)) list=raw.map(x=>Array.isArray(x)?{c:String(x[0]||""),m:String(x[1]||"")}:x&&typeof x==="object"?{c:String(x.c||x.zh||x.ch||""),m:String(x.m||x.meaning||"")}:{c:"",m:String(x||"")});
@@ -6514,7 +6521,7 @@ async function applyCardUpdate(id,upd,newC,pinByHand,lines){
   { const d0=cardOf(id); if(d0&&d0.reading&&newC&&newC.trim()&&newC.trim()!==(d0.c||"").trim()){ delete d0.reading; delete upd.reading; const k=Object.keys(PENDING).find(k=>PENDING[k]===id); if(k){ delete PENDING[k]; abandonReading(k); dropExtraShot(k); } } } /* H typed another text: the background reading is not needed (v237); an edit that keeps the text lets a re-crop's reading finish (v243) */
   const isSign=upd.kind==="sign", c=upd.c;
   if(newC && newC!==c){
-    upd.c=newC; if(upd.m) upd.ms={[mlOf(upd)]:upd.m}; else delete upd.ms; delete upd.ds; /* another text: the other languages' meanings described the old one (v265), and every description did (v529) */
+    upd.c=newC; if(upd.m) upd.ms={[mlOf(upd)]:upd.m}; else delete upd.ms; delete upd.ds; delete upd.cg; delete upd.cgc; /* another text: the other languages' meanings described the old one (v265), and every description did (v529), and so did every character's sense (v804) */
     try{
       if(!window.pinyinPro) await loadScript("./vendor/pinyin-pro.js");
       await loadDict().catch(()=>{}); if(isSign) await loadSigns().catch(()=>{});
