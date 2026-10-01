@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=784; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=785; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -718,6 +718,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["again","v782","Zoom by layout on LED signs ok?"],
   ["again","v783","Char senses: do they land now?"],
   ["again","v784","Last character read alone now?"],
+  ["again","v785","First card: one zoom, no jerk?"],
   ["again","v757","Meituan screenshots: fields right?"],
   ["again","v759","Taobao screenshots: fields right?"],
   ["again","v760","Taobao cart: 天猫 framed right?"],
@@ -4561,10 +4562,21 @@ async function autoZoom(card,d,c,tg,st,cur){
      zoom before the reader's place was looked at, leaving the photo on the previous character */
   const pk=cbKey(d), pp=pdBoxesFor(card,d), pb=PDDONE.get(pk);
   if(pb===undefined&&!st._pdWait){ st._pdWait=true; pp.then(()=>{ st._pdWait=false; if(card.isConnected&&S.pad===st&&card._az) card._az(); }); } /* card._az is the card's current character */
-  const li=spotIdx(d)[cur.pos]??-1, pf=li>=0&&pb&&pb.boxes&&pb.boxes[li];
+  const li=spotIdx(d)[cur.pos]??-1; let pf=li>=0&&pb&&pb.boxes&&pb.boxes[li]||null;
+  /* v785 (H: "Bei der Nestle karte wird ruckelig an den ersten character ran gezoomt", 新日 on the first card after a start — "ink
+     x2.44 at 36,53 %", a second later "reader x1.9 at 38,51 %"): the reader's first load outran AZ_READER, the zoom went in on
+     the ink's sure cut at 2.5 s and moved again when the reader placed the same character a hair off, v665's open case ("a reader
+     slower than that still gets the ink's guess first and the correction after"). A reader's place that lands after the zoom went
+     in on a sure ink cut of this character, and CONFIRMS it — the cut's middle lies on the reader's box — moves nothing: the ink's
+     box stays this character's place (st._azInk, noted when the ink zoom went in), and the reader's places and its one scale a
+     line (v678/v679) take over at the next character, on the glide that moves the picture anyway. A reader's box elsewhere
+     still corrects the ink's guess, as before */
+  const ink=st._azInk&&st._azInk.pos===cur.pos&&st._azInk.key===pk?st._azInk.box:null;
+  const agrees=!!(ink&&pf&&ink.x+ink.w/2>=pf.x&&ink.x+ink.w/2<=pf.x+pf.w&&ink.y+ink.h/2>=pf.y&&ink.y+ink.h/2<=pf.y+pf.h);
+  if(agrees) pf=null;
   const ck=cbKey(d); let cb=CBOX.get(ck);
-  if(!pf&&!cb){ cb=charBoxes(geom.img,geom.img.naturalWidth,geom.img.naturalHeight,geom,spotLines(d)); CBOX.set(ck,cb); if(CBOX.size>60) CBOX.delete(CBOX.keys().next().value); }
-  const found=pf||(li>=0&&cb&&cb.boxes&&cb.boxes[li])||null; let sp=found, how=pf?(pf.ok?"reader":"reader, unsure"):found?(found.ok?"ink":"ink, unsure"):"";
+  if(!pf&&!cb&&!agrees){ cb=charBoxes(geom.img,geom.img.naturalWidth,geom.img.naturalHeight,geom,spotLines(d)); CBOX.set(ck,cb); if(CBOX.size>60) CBOX.delete(CBOX.keys().next().value); }
+  const found=agrees?ink:pf||(li>=0&&cb&&cb.boxes&&cb.boxes[li])||null; let sp=found, how=pf?(pf.ok?"reader":"reader, unsure"):agrees?"ink, the reader agrees":found?(found.ok?"ink":"ink, unsure"):"";
   /* v669 (H: "Hier ist er nicht auf den nächsten character gesprungen" on 电动车/禁止入园, "Und hier entspricht der Bildausschnitt
      überhaupt nicht dem character" on 无名, both logged "ink, unsure"; 贵州茅台酒 at v664 the same): a place only the ink search
      guessed, unsure, is wrong too often to zoom on — v664 caught it only when it lay off the reader's lines. Now any place neither
@@ -4574,7 +4586,7 @@ async function autoZoom(card,d,c,tg,st,cur){
      reader placed the three lines it holds, and the ink search put a "sure" box for 爸 on 喜, the character the reader had
      already placed there, so the pad said 爸 and the photo showed 喜): an ink box whose middle lies on a reader box of another
      character is that character, not this one — the card's text whole instead */
-  const taken=!pf&&found&&found.ok&&pb&&pb.boxes&&pb.boxes.some((b,j)=>b&&j!==li&&found.x+found.w/2>=b.x&&found.x+found.w/2<=b.x+b.w&&found.y+found.h/2>=b.y&&found.y+found.h/2<=b.y+b.h);
+  const taken=!agrees&&!pf&&found&&found.ok&&pb&&pb.boxes&&pb.boxes.some((b,j)=>b&&j!==li&&found.x+found.w/2>=b.x&&found.x+found.w/2<=b.x+b.w&&found.y+found.h/2>=b.y&&found.y+found.h/2<=b.y+b.h);
   const off=!pf&&(!(found&&found.ok)||taken);
   /* v782: a card whose character neither the reader nor a sure ink cut can place, and whose text the reader did not even find
      (no area), zooms on the FRAME'S OWN LAYOUT — the photo's lines share the frame's height, a line's characters its width by
@@ -4617,6 +4629,7 @@ async function autoZoom(card,d,c,tg,st,cur){
      where on the text the place was (per cent of the frame across and down), whether the picture's edge held the character off
      the middle, and what the reader read there */
   const edge=Math.abs(held.dx)>2||Math.abs(held.dy)>2?`edge ${Math.round(-held.dx)},${Math.round(-held.dy)} px`:"";
+  if(how==="ink"&&s>1) st._azInk={pos:cur.pos,key:pk,box:found}; /* v785: the ink zoom this character went in on, for the reader's place to confirm */
   zlog({c:d.c,ch:cur.ch,how,why:found&&found.ok?"":pf?(pb.why||"read unsure"):((pb&&pb.why?"reader: "+pb.why+"; ":"")+(cb.why||(found?"cut not clean":""))),s:+s.toFixed(2),lv:level,
     pos:`${Math.round((sp.x+sp.w/2)*100)},${Math.round((sp.y+sp.h/2)*100)} %`,edge,rd:pb&&pb.read||""});
 }
