@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v789, 2026-10-01)
+## Current state (PWA v790, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -194,7 +194,8 @@ lands **without a scroll** (v752); only a tapped Explain reveals its paragraph (
 v691–v717) **left at v737** (H) — do not bring them back unasked.
 
 A **multicard's own text** swipes to the multicard's next text (v707/v753); its photo frames it alone (v700); + Flashcard
-(Flashcard › once made), then Flag · Edit (v736); the pop-up over the photo carries **no action** (v496/v692); a **Details**
+(Flashcard › once made), then Flag · Edit (v736); **the pop-up over the photo carries one quiet action, + Flashcard / Flashcard ›**
+(grey text at its foot, v790 — H's reversal of v496/v692's "no action"); a **Details**
 fold, **closed by default** (v741; open and headless v733–v740, H: "zu viel und unübersichtlich"), holds the short and long
 description, the long one asked the first time the fold is open. The multicard: **Add a text**, Delete multicard (v635/v711);
 its texts' rows (and the swipe through them) stand in the photo's reading order — rows by overlap, tall boxes attached

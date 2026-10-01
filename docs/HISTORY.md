@@ -116,6 +116,21 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v790, 2026-10-01)
+- **A multicard text's pop-up has a quiet + Flashcard button again (v790, H: "In einem Multicard Pop-up muss es möglich sein,
+  direkt eine Flashkarte rauszuerzeugen, aber bitte nicht zu prominent darstellen").** H's own reversal of v496/v692's "no
+  action in the pop-up": the look-up sheet over a multicard's photo ends in v689's quiet shape — a grey text button at its
+  foot, right-aligned, 15 px, 44 px tall, no background (`.lkmake .lkbtn`, back as v689 wrote it; `.del` would bring the
+  tint red) — **+ Flashcard**, which makes the card (`makeFlashcard`, `bump("regionCards")`, the card joins today's session as
+  from the text's screen) and draws the sheet again as **Flashcard ›**, which closes the sheet and opens the flashcard's own
+  screen as the text's screen does (`d-openfc`). A text whose flashcard exists opens on Flashcard › from the start. The
+  text's own screen keeps its row; the marked-photo sheet (no multicard) stays as it was. The guide's multicard sentence
+  changes with the screen (v259): "to learn one, press + Flashcard in its pop-up or on its own screen", in ten columns (key
+  replaced, 497 a column as before). Harness (`test790`, H's account page as a multicard of four texts; English 390 light,
+  German 360 dark): the button quiet and one line in both; a tap makes the flashcard (`from`, `of`, queued) and the sheet
+  shows Flashcard ›; that opens the card's screen with Test this card; the text tapped again opens on Flashcard ›: **7 of 7
+  on v790, 2 of 7 on v789**. WHATS_NEW 790.
+
 ## Current state (PWA v789, 2026-10-01)
 - **A flashcard made from a multicard text zooms onto its own text in Learn (v789, H: "Bei einer solchen Flashcard muss im
   Lernmodus dann bitte direkt auf diesen Textteil reingezoomt werden, sonst ist das viel zu klein im Bild", 我的 on his

@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=789; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=790; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -6567,6 +6567,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  790:"A multicard text's pop-up has a quiet + Flashcard button.",
   782:"On a sign the reader cannot read, the photo still zooms onto the character you are writing, by the lines' layout.",
   781:"The voice reads more slowly, and takes the phone's natural Mandarin voice when it has one.",
   780:"Cards can be sorted — newest, oldest, by pinyin, due soonest or most often forgotten — from the filter pill.",
@@ -11101,14 +11102,18 @@ function openLookup(shot,rid,silent){
   const r=regionOf(shot,rid), d0=r&&r.card&&cardOf(r.card); if(!r||!d0) return;
   const pv=priceView(d0), d=pv?pv.d:d0; /* v712: a dish without its price; the price on its own line */
   if(!silent) bump("regionTaps"); LAST_PAGE=d.page||LAST_PAGE; /* v735: the Zoom check's data takes this multicard along */ /* silent: the sheet coming back with ← Back (v495) is the same look-up, not a second one */
-  const pid=d.page&&cardOf(d.page)&&isPage(cardOf(d.page))?d.page:null;
+  const pid=d.page&&cardOf(d.page)&&isPage(cardOf(d.page))?d.page:null, made=pid?madeFrom(d0):null;
+  /* v790 (H: "In einem Multicard Pop-up muss es möglich sein, direkt eine Flashkarte rauszuerzeugen, aber bitte nicht zu
+     prominent darstellen"): the sheet carries one quiet action again — + Flashcard as a grey text button at its foot, right-aligned
+     (v689's shape, which v692 had moved to the text's own screen), Flashcard › once the card exists, which opens it. H's own
+     reversal of v496/v692's "no action": a flashcard stays the exception, so the button stays quiet */
   const html=`<div class="sheet lookup" role="dialog" aria-label="${esc(d.c)}">
     <button class="x" id="lk-close" aria-label="${t("Close")}">×</button>
     <div class="zh hanzi${glyphs(d.c)>8?" long":""}">${esc((d.trad||d.c).replace(/\n/g," / "))}</div>${d.trad?`<div class="script"><span class="pill trad">${t("Traditional")}</span></div>`:""}${priceLine(pv)}
     <div class="pin">${pinSay(d)}</div>${sayHint()}<div class="mean">${esc(d.m)}${mlPill(d)}</div>
     ${pid?""
         :`<div class="grades">${[["again","Hard"],["good","Medium"],["easy","Easy"]].map(([g,l])=>`<button class="grade" data-g="${g}" data-lg="${g}"><span class="lbl">${t(l)}</span></button>`).join("")}</div>`}
-    ${pid?"":`<div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div>`}${pid?lkFoldHTML(d):""}</div>`;
+    ${pid?"":`<div class="lkacts"><button class="del" id="lk-more">${t("More")}</button></div>`}${pid?lkFoldHTML(d):""}${pid?`<div class="lkmake"><button class="lkbtn" id="${made?"lk-open":"lk-make"}">${t(made?"Flashcard ›":"+ Flashcard")}</button></div>`:""}</div>`;
   /* a multicard's description is a look-up and nothing else (v496, H: "kein More und keine weiteren Funktionen in den Pop
      ups. Du kannst das doch alles über die Multicards steuern."): More opened the text's own screen, which the row list
      under the photo already opens on a tap — Edit, Flag, Delete and, since v692, + Flashcard live there. On a MARKED PHOTO (v448) More
@@ -11126,6 +11131,8 @@ function openLookup(shot,rid,silent){
   wireSay(el);
   if(pid) wireLkFold(el,d.id);
   el.querySelectorAll("[data-lg]").forEach(b=> b.onclick=()=>gradeRegion(b.dataset.lg));
+  const mk=el.querySelector("#lk-make"); if(mk) mk.onclick=async()=>{ const L=LOOKUP; if(!L) return; mk.disabled=true; bump("regionCards"); const fc=await makeFlashcard(L.card); setStats(); if(LOOKUP===L&&fc) openLookup(L.shot,L.rid,true); }; /* v790: the sheet is drawn again with Flashcard › */
+  const op=el.querySelector("#lk-open"); if(op) op.onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, fc=cid&&madeFrom(cardOf(cid)); closeLookup(); if(!fc) return; S.mode="cards"; S.cardsTab="cards"; S.detail=fc.id; S.detailFrom=null; S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); }; /* v790: the flashcard's own screen, as the text's screen opens it (d-openfc) */
   const mo=el.querySelector("#lk-more");
   if(mo) mo.onclick=()=>{ const cid=LOOKUP&&LOOKUP.card, from=LOOKUP&&LOOKUP.from, shot=LOOKUP&&LOOKUP.shot, rid=LOOKUP&&LOOKUP.rid; closeLookup(); if(!cid||!cardOf(cid)) return; if(!from) INBOX_SCROLL=window.scrollY; S.mode="cards"; S.detail=cid; S.detailFrom=from?"page:"+from:"inbox"; LOOK_BACK={shot,rid,card:cid,from:S.detailFrom}; /* v495: More is one step deeper into this look-up, so ← Back has to undo one step and not two */ S.fullPic=false; S.editing=null; LIST_CARD=null; render(); window.scrollTo({top:0}); };
 }
