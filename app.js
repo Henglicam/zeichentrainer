@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=802; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=803; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -588,7 +588,7 @@ function diagText(){
        the dump could not answer; and the session Learn stands in, so a complaint about a card can be read against its place in the queue */
     `reader · ${PD_FIRST?`first answer ${ago(PD_FIRST.at)}, ${(PD_FIRST.since/1000).toFixed(1)} s after the start, ${PD_FIRST.ms} ms`:"no answer yet in this page"}`,
     `screen lock · ${navigator.wakeLock?`${WAKE?"held":"released"} · asked ${WAKE_LOG.n}×${WAKE_LOG.err?` · last refusal "${WAKE_LOG.err}"`:""}${WAKE_LOG.at?` (${ago(WAKE_LOG.at)})`:""} · busy ${appBusy()?"yes":"no"}`:"not supported"}`,
-    (cur=>`learn · ${S.queue?S.queue.length:0} in the session, at ${(S.idx|0)+1}${cur?" · "+String(cur.c||"").replace(/\n/g,"/").slice(0,12):""} · cue ${S.cueBig} · zoom ${zoomOn()?"on":"off"} · read aloud ${sayOn()?"on":"off"} · screen ${S.mode}`)(S.queue&&cardOf(S.queue[S.idx])),
+    (cur=>`learn · ${S.queue?S.queue.length:0} in the session, at ${(S.idx|0)+1}${cur?" · "+String(cur.c||"").replace(/\n/g,"/").slice(0,12)+" (id "+String(cur.id).slice(0,20)+", shot "+(cur.shot||"none")+", crop "+(cur.img?"yes":"no")+(cur.from?", from "+String(cur.from).slice(0,20):"")+")":""} · cue ${S.cueBig} · zoom ${zoomOn()?"on":"off"} · read aloud ${sayOn()?"on":"off"} · screen ${S.mode}${S.peek?" · peek "+S.peek:""}${LAST_FRONT?" · front shows "+LAST_FRONT.src+(cur&&LAST_FRONT.id!==cur.id?" (of "+String(LAST_FRONT.id).slice(0,20)+")":"")+" ("+ago(LAST_FRONT.at)+")":""}`)(S.queue&&cardOf(S.queue[S.idx])), /* v803: the card's id, its photo and crop, a peek, and what the study card's picture actually is */
     `read aloud · voice ${(v=>v?v.lang+" "+v.name:"none listed, the system engine")(ttsVoice())} · rate ${SAY_RATE} · ${SAYLOG.length?SAYLOG.length+" utterance"+(SAYLOG.length===1?"":"s")+", newest last":"nothing said yet"}`,
     ...SAYLOG.map(x=>`  ${ago(x.t)}  "${x.text}" · ${x.after?"queued":"fresh"} · ${x.voice}${x.err?" · "+x.err:x.end!=null?` · started ${x.start==null?"?":x.start+" ms"}, ended ${x.end} ms`:x.start!=null?` · started ${x.start} ms, no end`:" · never started"}`),
     `learn zoom · ${ZLOG.length?ZLOG.length+" decisions, newest last":"no zoom yet"}${ZCHECK?` · zoom check ${ZCHECK.line} (${ago(ZCHECK.at)})`:""}`, /* v617/v618: every decision of the pad's zoom — the card, the character, how its place was found (ink, ink unsure, estimate) and why not better */
@@ -3490,14 +3490,16 @@ function pageHTML(d,pg){
   const u=urlOf(pg.blob);
   return `<div class="picbox page"${pg.src?"":` data-pic="1"`}><img class="picbg" src="${u}" alt="" aria-hidden="true"><div class="pagewrap"><img class="signimg" src="${u}" alt="${t("alt:photo")}">${regionsHTML({id:pg.shot},pg.rs,{learn:true,me:pg.me||d.id,only:!!pg.src||inPage(d)})}</div></div>`; /* v700 (H: "Wenn ich eine Karte einer Multicard öffne, dann sollte in dem Bild bitte nur der Text eingerahmt sein, der dieser Karte zugeordnet ist"): a multicard's own text frames itself alone too, as a generated card has since v499. v589: the inline --ratio went with its last reader — the rule that read it was `.picbox.page{aspect-ratio:var(--ratio)}` and v517 replaced it with a fixed `.card.study .picbox.page{aspect-ratio:2}` (the v307 rule). v499: a generated card (src) frames its own text alone; a v452 page front still frames every text — the wrapper shrinks to the picture's rendered size, so the regions' percent coordinates land on it; the blurred fill shows beside a tall page */
 }
+let LAST_FRONT=null; /* v803: what the study card's picture is — the card's own crop, a peeked card's photo, the page, a dish, the whole photo — for the dump (H's 全家 card showing a noodle sign in Learn and FamilyMart in Cards) */
+const noteFront=(d,src)=>{ if(S.mode==="study") LAST_FRONT={id:d.id,src,at:Date.now()}; };
 function frontPic(d,o){
   const pk=S.peek&&S.peek!==d.id?cardOf(S.peek):null; /* Learn: a linked card's photo, tapped in the "Also on another photo" row (v155) */
   const full=pk?fullPhoto(pk):fullPhoto(d);
   const dish=!pk&&dishOf(d); /* v705: a menu dish shows its own picture — the dish with its name and price — not the whole menu with a frame */
-  if(dish&&(!S.fullPic||!full)){ const ratio=(o&&o.fixed)?FRONT_RATIO:ratioOf(dish), tap=full?` data-pic="1"`:""; return `<div class="picbox"${tap} style="--pr:${ratio}"><img class="picbg" src="${urlOf(dish.img)}" alt="" aria-hidden="true"><img class="signimg"${tap} src="${urlOf(dish.img)}" alt="${t("alt:photo")}"></div>`; } /* v710: a generated flashcard has no whole photo to tap through to — the dish stays, and the box does not offer the tap (it showed the bare character with no way back) */
+  if(dish&&(!S.fullPic||!full)){ noteFront(d,"dish "+dish.id); const ratio=(o&&o.fixed)?FRONT_RATIO:ratioOf(dish), tap=full?` data-pic="1"`:""; return `<div class="picbox"${tap} style="--pr:${ratio}"><img class="picbg" src="${urlOf(dish.img)}" alt="" aria-hidden="true"><img class="signimg"${tap} src="${urlOf(dish.img)}" alt="${t("alt:photo")}"></div>`; } /* v710: a generated flashcard has no whole photo to tap through to — the dish stays, and the box does not offer the tap (it showed the bare character with no way back) */
   const pg=o&&o.page&&!pk?frontPage(d):null; /* v452: the page with its dots by default, the card's own cut on a tap — and v489, where the page is the multicard's photo and there is no own cut */
-  if(pg&&!S.fullPic) return pageHTML(d,pg);
-  const blob=pk?(pk.img||full):(S.fullPic&&full&&!pg?full:d.img); if(!blob) return "";
+  if(pg&&!S.fullPic){ noteFront(d,"page "+(pg.shot||"")+(pg.src?" (made from a multicard text)":"")); return pageHTML(d,pg); }
+  const blob=pk?(pk.img||full):(S.fullPic&&full&&!pg?full:d.img); noteFront(d,pk?"peek "+pk.id+(pk.img?" crop":" whole photo"):(S.fullPic&&full&&!pg?"whole photo "+(d.shot||"imgFull"):d.img?"own crop":"no picture")); if(!blob) return "";
   /* the crop sits in a fixed 16:9 box at the card's width, fitted inside on the card's grey surface, so every card has the
      same height whatever shape the frame had (v224, H's "Go" on the design review after "Bitte consistency!"); the whole
      photo, a deliberate tap, keeps its own shape */

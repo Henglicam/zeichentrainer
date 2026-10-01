@@ -116,7 +116,19 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v802, 2026-10-01)
+## Current state (PWA v803, 2026-10-01)
+- **The dump names the study card's record and what its picture is (v803, H: "Das Bild passt nicht zur karte ?!?" — the
+  Learn card 全家 with a noodle-shop sign 三碗面 as its picture, and under Cards a 全家 card whose crop is FamilyMart).** What
+  the dump could say: the zoom's reader read 三碗面 off the picture the study card showed, the picture URL is keyed by the
+  blob itself (`urlOf`), the peeked photo (`S.peek`) can only be set from a linked row that the study card does not render
+  since v667, and the restore and the requeue both put 全家 at the session's head. So the study card showed the crop of a
+  record whose text is 全家 and whose picture is the noodle sign — most likely a second record with the same text, which the
+  Cards search lists as a second tile; H opened the other one. The dump could not tell the two apart: the learn line printed
+  the text alone. Now it prints the card's id, its photo and whether it has a crop, a peek when one is set, and what
+  `frontPic` last drew on a study card (`LAST_FRONT`: own crop, peek <id> crop/whole photo, page <shot>, dish <id>, whole
+  photo <shot>, no picture), with its age. Harness (`test803`, two records of one text with two photos): the line names
+  the first record and "own crop", and after a step the second record by its own id, photo and crop: **2 of 2, v802 0 of 2**.
+  Open: how a record with the text 全家 came to carry a noodle sign's crop — H is asked for the Cards search's second tile.
 - **Diagnostics notes every move of the Learn session's place (v802, after H's report with the v801 message: "hier war gerade
   eine aus Multicard generierte Flashcard dran und die app ist direkt zur nächsten karte weiter gesprungen").** The dump
   had nothing on it — "learn · 27 in the session, at 1" and the zoom's decisions —, and the harness could not make a
