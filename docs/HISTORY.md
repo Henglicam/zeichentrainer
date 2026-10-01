@@ -116,6 +116,26 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v772, 2026-10-01)
+- **The character's meaning after writing is its sense in this word (v772, H: "The single character translations after
+  writing are still out of context. Could you please ensure translation within the context of the word/picture?").** The
+  line under the pad, and the reading that stands over the pad after each written character (`charRecap` reads that line's
+  first row), took the character's meaning from the dictionary: `bestSense(ch, syllable, inWord)` — the best sense for the
+  in-word READING (v573), chosen without the word, so 香 in 香氛 read "fragrant", 氛 "atmosphere", 示 "to show" wherever it
+  stood. Now the text model writes, once per card and language, each character's sense **as used in this word on this
+  card** — `cg = {en:["sweet-smelling","scent","to wash","hand","liquid"]}`, one entry per Chinese character of the text in
+  order (`saneChars`: pairs matched to the characters, a bare list by position, Han-only or over 40 characters dropped) —
+  and `padLineFill` shows it for the character's row and for a one-character word; the dictionary's sense stands until it
+  arrives and wherever an entry is empty. The ask rides on the description the study card already fetches by itself
+  (`explainCard` asks `chars:true` with `explain:true`: one call, both land), and a card that has its description but no
+  senses asks on its own (`charsSoon`, the same 1.2 s lead, the same AI-review switch and online gate, `takeChars` refreshes
+  the line under the pad the moment they land). The payload is the card's text, pinyin and meaning as every AI check sends
+  them; nothing new leaves the phone. Harness (the relay mocked, senses by character): a card with its description asks for
+  the senses alone and the line and the after-writing reading take them (3 flip), a card without one gets description and
+  senses in ONE call (2 flip), a reload shows them from the store with no call (1 flip), the reading unchanged (guard) — 11
+  of 11 on v772, 4 of 13 on v771. Not yet field-checked: whether the model's senses read right on H's cards. WHATS_NEW 772;
+  TO_TEST "Char senses in context: good?".
+
 ## Current state (PWA v771, 2026-10-01)
 - **Crop again in the Edit form: move the frame and save — the reading runs after Save, in the background (v771, H:
   "Warum muss ich das unter edit manuell noch mal neu lesen? Warum geht nicht neu croppen und abspeichern?" and, to the
