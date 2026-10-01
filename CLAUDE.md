@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v770, 2026-09-30)
+## Current state (PWA v771, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -185,7 +185,9 @@ The Camera tab is the camera: the **shutter card** (Take photo, From album) cent
 made its card **leaves the tab** (v471). From album works through the batch one at a time while the app is open (v411); the
 "to go" line counts the batch's photos still to be finished (`BATCH`, v761). **A photo becomes a card by itself** (v325): a
 light band sweeps the photo, then the finished card with Edit and Delete. Save now (v237) makes the card before the reading
-is done; Crop (v437) and Crop again (v239) hand the app's frame to the hand. A photo whose texts stand apart becomes **one
+is done; Crop (v437) and Crop again (v239) hand the app's frame to the hand. **In the Edit form's Crop again a released frame
+starts no reading: Save changes keeps the cut and reads it in the background** (v771, the v241 hand-off); Read now reads it
+in the form, Image only keeps the text. The Camera tab's Crop reads a released frame by itself (`READ_WAIT`). A photo whose texts stand apart becomes **one
 multicard** with a dot on every text (v453/v457), regions snapped onto the ink (v620); its photo pinches and pans like a
 card's (v634). **Add a text** (v635) frames a missing text through Crop again; **the screen stays on while the app works**
 (`appBusy`, v767/v768: a reading, Translate all, Check-up, the owner's loops and Zoom check, a download, an import); a blank never read is dropped on Cancel, a tab tap or a restart. A photo left on the tab with no card has **Read
@@ -424,7 +426,7 @@ id abroad. **`strokes.txt.gz` and `cedict.tsv.gz` stay freely available under th
 
 ## Open / not yet field-checked
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
-as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); the
+as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the
 apps' fields and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760); the wake
 lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768).
 

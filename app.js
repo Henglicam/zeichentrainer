@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=770; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=771; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -690,6 +690,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   noch fixen"): the 340 rows back to v141 went in one go. A row goes the moment H's report or his own use settles it, unasked;
   a row older than the screen it names is dead. The parked lock rows went too — the lock's code stays, the archive has them. */
   ["again","v756","Priced board: reader path ok?"],
+  ["again","v771","Crop again: save, then read ok?"],
   ["again","v757","Meituan screenshots: fields right?"],
   ["again","v759","Taobao screenshots: fields right?"],
   ["again","v760","Taobao cart: 天猫 framed right?"],
@@ -6180,7 +6181,7 @@ function renderEdit(main,c){
         <div class="croplayer${CROP.rect?" framed":""}${zoomed?" zoomed":""}" data-id="${rid}">${zoomed?"":`<div class="croprect${READING[rid]&&!READ_FAIL.test(READING[rid])?" working":""}"${cropRectStyle()}>${READING[rid]&&!READ_FAIL.test(READING[rid])?`<div class="work" aria-hidden="true"><svg><rect/></svg></div>`:""}<div class="h tl"></div><div class="h tr"></div><div class="h bl"></div><div class="h br"></div><div class="h rot" title="${t("Turn the frame")}"></div></div>`}</div>
       </div>
       <div class="imgacts"><button class="del" id="e-cropcancel">${t("Cancel")}</button></div>
-      <div class="ocr" id="ocr-${rid}">${READING[rid]?readingHTML(READING[rid],rid):res&&res.key===rectKey(CROP.rect)?`<div class="croppreview"><img src="${res.url}" alt="the new crop"><div class="badge" style="margin:6px 0 0">${res.text?t("Read as “{0}”. ",esc(res.text)):t("Picture taken, the text stays. ")}${t("Adjust the frame to read again, or save.")}</div></div>`:CROP.locating?busyHTML(t("Finding the frame …")):CROP.auto?busyHTML(t("Finding the text …")):`<span class="badge">${t("Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.")}</span>`}</div></div>`;
+      <div class="ocr" id="ocr-${rid}">${READING[rid]?readingHTML(READING[rid],rid):res&&res.key===rectKey(CROP.rect)?`<div class="croppreview"><img src="${res.url}" alt="the new crop"><div class="badge" style="margin:6px 0 0">${res.text?t("Read as “{0}”. ",esc(res.text)):t("Picture taken, the text stays. ")}${t("Move the frame for another cut, or save.")}</div></div>`:CROP.locating?busyHTML(t("Finding the frame …")):CROP.auto?busyHTML(t("Finding the text …")):`<span class="badge">${t("Draw a frame with your finger over the text — corners resize it, dragging inside moves it, the round handle turns it.")}</span>`}</div></div>`;
     box.querySelectorAll(".croplayer").forEach(wireCrop);
     box.onclick=e=>{ const b=e.target.closest("[data-savenow]"); if(b){ b.disabled=true; const sv=$("#e-save"); if(sv) sv.click(); } }; /* Save now beside the bar (v341, H: "allow cropping an image in edit mode and saving it before the AI finishes, same as when taking a photo"): the same hand-off as Save changes — the button sits in the reading box, which every status re-renders */
     $("#e-cropcancel").onclick=()=>{ restoreBefore(); endRecrop(); showPimg(); }; };
@@ -6416,6 +6417,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  771:"Crop again in the Edit form: move the frame and save — the new cut is kept and its text read in the background, no waiting.",
   770:"A multicard's texts are listed as they stand on the photo — row by row, left to right — and the swipe follows the same order.",
   769:"A text whose meaning began with its price shows its meaning again.",
   768:"The screen stays on while the app is working — reading photos, translating, checking or rebuilding cards, downloading — so a long run finishes on its own.",
@@ -7348,9 +7350,10 @@ async function showCropPreview(id,opts){
   if(!r){ box.innerHTML=`<span class="badge">${t("Frame too small — draw again.")}</span>`; return; }
   if(_prevURL) URL.revokeObjectURL(_prevURL);
   _prevURL=URL.createObjectURL(r.blob);
+  const onSave=!!RECROP[id]&&!noRead; /* v771 (H: "When I re-crop and save, then the new reading should happen automatically"): in the Edit form's Crop again a released frame starts NO reading of its own — until v770 the 1.2 s timer below read every moved frame (reader and AI check, 20 s on H's label, twice for two moves) before Save could be tapped. The frame waits (stage "waiting"), Save changes hands it to the background reading that fills the card (the v241 hand-off), Read now reads it here, Image only keeps the text. The Camera tab's Crop keeps its automatic read. */
   box.innerHTML=`<div class="croppreview">
     <img src="${_prevURL}" alt="selected area">
-    <div class="badge" style="margin:6px 0 8px">${noRead?(opts.found?t("The frame the app found — adjust it, then read."):t("The frame the card was cut with — adjust it to read again."))+(opts.win==="in"?t(" Tap outside the frame for the whole photo."):opts.win==="out"?t(" Tap outside the frame to enlarge it again."):""):t("Reading in a moment — drag a corner first if the frame is off.")}</div>
+    <div class="badge" style="margin:6px 0 8px">${noRead?(opts.found?t("The frame the app found — adjust it, then read."):t("The frame the card was cut with — move it, then save: the new cut is kept and its text read."))+(opts.win==="in"?t(" Tap outside the frame for the whole photo."):opts.win==="out"?t(" Tap outside the frame to enlarge it again."):""):onSave?t("Saving keeps this cut and reads its text."):t("Reading in a moment — drag a corner first if the frame is off.")}</div>
     <div class="cropacts">
       <button class="del" data-cropread="${id}">${t("Read now")}</button>
       <button class="del" data-cropok="${id}">${t("Image only")}</button>
@@ -7358,7 +7361,7 @@ async function showCropPreview(id,opts){
   box.querySelector("[data-cropread]").onclick=()=>{ clearTimeout(READ_TIMER[id]); cropSign(id); };
   box.querySelector("[data-cropok]").onclick=()=>{ clearTimeout(READ_TIMER[id]); cropOk(id); };
   clearTimeout(READ_TIMER[id]); if(RECROP[id]) RECROP[id].stage=noRead?"idle":"waiting";
-  if(!noRead) READ_TIMER[id]=setTimeout(()=>{ if(CROP&&CROP.id===id&&CROP.rect) cropSign(id); },READ_WAIT);
+  if(!noRead&&!onSave) READ_TIMER[id]=setTimeout(()=>{ if(CROP&&CROP.id===id&&CROP.rect) cropSign(id); },READ_WAIT);
 }
 /* ---------- the proposed frame (v203, H's poster photo that needed no framing: "do an automatic image analysis and
    suggest a crop, which the user can change if needed — or apply no crop at all") ----------

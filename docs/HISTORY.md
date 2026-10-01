@@ -116,6 +116,23 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v771, 2026-10-01)
+- **Crop again in the Edit form: move the frame and save — the reading runs after Save, in the background (v771, H:
+  "Warum muss ich das unter edit manuell noch mal neu lesen? Warum geht nicht neu croppen und abspeichern?" and, to the
+  proposal of a Read again button, "When I re-crop and save, then the new reading should happen automatically").** Until
+  v770 `showCropPreview`'s 1.2 s timer read every released frame at once — reader and AI check, 20 s on H's 香氛洗手液
+  label and twice for two moves (recrop-edit1/2 in the dump) — and Save could only follow it; "Image only" stood under the
+  preview for 1.2 s. Now a frame released in Crop again starts no reading: the preview says "Saving keeps this cut and
+  reads its text." with Read now (reads here, as before) and Image only (the text stays); the frame waits (`stage`
+  "waiting"), and Save changes hands it to the background reading that fills the card — the v241/v244 hand-off
+  (`willHand`, `PENDING`, `cropSign(rid,{rect})`), nothing new there. The Camera tab's Crop keeps its automatic read. Three
+  strings in nine columns: the opening badge ("move it, then save …"), the result badge ("Move the frame for another cut,
+  or save.") and the new one. Harness (the real reader on f03, the AI mocked): Crop again on 招牌生煎, the frame dragged onto
+  鲜虾生煎 after leaving the v247 window, 3 s wait, Save — on v770 the reading had run and the AI been called three times
+  before Save, on v771 nothing runs until Save hands over, and the card ends with the new frame and its text on both
+  (controls) — 12 of 12 on v771, 6 of 13 on v770. Not yet field-checked. WHATS_NEW 771; TO_TEST "Crop again: save, then
+  read ok?".
+
 ## Current state (PWA v770, 2026-09-30)
 - **A multicard's texts stand in the photo's reading order — row by row, left to right (v770, H on the Meituan account
   page: "kann die Reihenfolge der Multicard karten bitte der der Worte auf dem Foto entsprechen?").** `photoRegions`
