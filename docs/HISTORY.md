@@ -116,7 +116,23 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v811, 2026-10-01)
+## Current state (PWA v812, 2026-10-01)
+- **Layout over ten languages (v812, the audit's layout sweep — 700 screen states measured at 360 and 390 px).** **Show me and
+  Skip stacked over the template** on 360-wide phones (de, ru at 360×740: the row grew 40 → 82 px across the lower 40 % of the
+  pad, exactly when the learner is stuck) — `fit()` writes the pad's side (`--padw`) and the labels size to it, one row in every
+  language. **The tile marks vanished on red photos** — the New chip was tint on tint-soft (designed for a white surface,
+  v515, on the photo itself since v593) and a lit star tint on a red sign (1.0:1): the chip takes the photo-overlay look, the star
+  a white edge. **A text-only tile** drew its only identification in label3 (2:1) and its star white on near-white: label2 and a
+  label2 outline. **The admin field** shrank to 25 px in Spanish: it wraps under its label instead (`.inrow.admin`). **Korean**
+  broke between Hangul syllables 150 times over the screens: `word-break:keep-all` under `:lang(ko)`, Chinese text excepted.
+  **The Undo line** cut the verb that ends the sentence in six languages: two lines. **Touch targets:** More's fold links 36 →
+  44 px, tag chips 32 → 44, marking's All / None 21×32 → 44. **More's row titles** ("Markierte / Karten" over five lines) keep 9em
+  before the buttons wrap. **The done card's padding** 22 → 16 px (with v811's shorter fr/es labels the button is one line).
+  **The add form's "unverified" hint** is a caution, not an error (`--warn`). The guide's Cards crops regenerated (the star's
+  edge), the others untouched. **Left for H:** dark mode's tint on tint-soft at 3.5:1 and white on the tint at 4.1:1 (app-wide
+  colour); the pad's helper buttons and the edit strip at 40 px (the pad's frame is measured around them, v560); Learn's 13 px
+  scroll (not field-checked). Harness: `test812` (measured geometry and computed styles, de/ru/es/ko at 360) **9 of 9, v811 0 of 9**.
+
 - **The words in ten columns (v811, the audit's wording sweep, with the layout and first-impression sweeps' wording finds).**
   **Cut off or doubled:** the Edit form's "Save changes" ran past its red button in de, fr, es and id ("Änderungen spei") — now
   Speichern, Enregistrer, Guardar, Simpan (ru already said Сохранить), with a flex guard so the next long label takes the row
