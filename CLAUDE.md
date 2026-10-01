@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v780, 2026-10-01)
+## Current state (PWA v781, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -151,7 +151,9 @@ and after the layout settles (v521/v532).
 - **The Chinese is read aloud at the stroke that completes a character** (v773/v774/v776/v778): the character alone,
   always (`sayChar`; H, v776: never its word), **with the reading it has in this word** — when that is not its lone reading,
   the engine gets a stand-in character with only that reading (`STANDIN`, 行 in 银行 → 航, built by `tools/standin.js`,
-  v778); the whole text with the card's recap; a skip tap or a swipe stops it (`sayStop`).
+  v778); the whole text with the card's recap; a skip tap or a swipe stops it (`sayStop`). **The voice is the phone's**: the
+  natural Mandarin voice when the phone lists one, else any zh-CN (`ttsVoice`), at `SAY_RATE` .7 (v781); H's Xiaomi lists none
+  and speaks through its system engine, so the engine under Settings → Text-to-speech output is the voice there.
   **More → Learning switches it off** (`learnSay`, `sayOn`, on by default).
 - **"Details"** folds open at the card's foot — characters, pinyin, meaning **and the description** (v585, fetched by itself
   1.2 s after the card appears, `explainSoon`); then a grey toolbar **Star · Flag · Edit** (v667) — Edit comes back to the same
@@ -439,7 +441,7 @@ id abroad. **`strokes.txt.gz` and `cedict.tsv.gz` stay freely available under th
 
 ## Open / not yet field-checked
 **H's rule (v748, 2026-09-29): what he does not come back to is settled.** A version he has used without a complaint counts
-as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the model's character senses (v772); the voice from the pad on the Xiaomi (v773) and its reading of the stand-ins (v778); the
+as field-checked; only a question he is still raising is open. Open now: the reader's path on priced boards (v756); Crop again's reading after Save (v771); the model's character senses (v772); the voice from the pad on the Xiaomi (v773), its reading of the stand-ins (v778) and its pace (v781); the
 apps' fields and the split of a 40-text screen (v757–v766); a label beside its neighbour on one reader line (v760); the wake
 lock through a whole batch and a Rebuild all on Xiaomi's Chrome (v767/v768).
 

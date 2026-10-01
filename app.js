@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=780; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=781; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -714,6 +714,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["again","v771","Crop again: save, then read ok?"],
   ["again","v772","Char senses in context: good?"],
   ["again","v773","Read aloud after writing: ok?"],
+  ["again","v781","Voice: pace .7 and the voice ok?"],
   ["again","v757","Meituan screenshots: fields right?"],
   ["again","v759","Taobao screenshots: fields right?"],
   ["again","v760","Taobao cart: 天猫 framed right?"],
@@ -3510,10 +3511,16 @@ function ttsVoice(){
   if(TTS_VOICE) return TTS_VOICE;
   const vs=speechSynthesis.getVoices();
   if(!vs.length) speechSynthesis.addEventListener("voiceschanged",()=>{ if(ttsVoice()&&S.ansOpen) render(); },{once:true});
-  TTS_VOICE=vs.find(v=>/^zh[-_]?CN/i.test(v.lang))||vs.find(v=>/^(zh|cmn)/i.test(v.lang))||null;
+  /* v781 (H: "eine angenehmere Stimme … die sich natürlich anhört und langsam spricht, wie ein guter Lehrer/in"): among the
+     phone's Mandarin voices the natural one first — an engine names its neural voices (Natural, Neural, Premium, Enhanced,
+     WaveNet, Google's cmn-CN "x-" voices), the others are the older concatenative ones — then any zh-CN, then any Mandarin.
+     The list is what the phone hands over; H's Xiaomi hands over none (v165) and speaks through its system engine, so there
+     the engine chosen under Settings → Text-to-speech output is the voice. */
+  const zh=vs.filter(v=>/^(zh|cmn)/i.test(v.lang)), cn=zh.filter(v=>/^zh[-_]?CN|^cmn[-_]?(Hans[-_])?CN/i.test(v.lang)), nat=v=>/natural|neural|premium|enhanced|wavenet|-x-/i.test(v.name+" "+(v.voiceURI||""));
+  TTS_VOICE=cn.find(nat)||zh.find(nat)||cn[0]||zh[0]||null;
   return TTS_VOICE;
 }
-let SAY_TIMER=null;
+let SAY_TIMER=null; const SAY_RATE=0.7; /* v781: the pace of the voice, 1 is the engine's own; .7 reads a character and a word unhurried, as a teacher would (not yet field-checked on the Xiaomi engine) */
 function say(text){
   const v=ttsVoice(), hint=on=>{ const h=$("#say-hint"); if(h) h.hidden=!on; };
   /* the hint comes only when speaking fails, never from the voice list: H's Xiaomi reports no voices at all through
@@ -3521,7 +3528,7 @@ function say(text){
      neither starts nor errors within three seconds counts as failed too */
   try{
     speechSynthesis.cancel(); clearTimeout(SAY_TIMER);
-    const u=new SpeechSynthesisUtterance(text.replace(/\n/g,"，")); if(v){ u.voice=v; u.lang=v.lang; } else u.lang="zh-CN"; u.rate=0.85;
+    const u=new SpeechSynthesisUtterance(text.replace(/\n/g,"，")); if(v){ u.voice=v; u.lang=v.lang; } else u.lang="zh-CN"; u.rate=SAY_RATE; u.pitch=1; /* v781: a teacher's pace, SAY_RATE — .85 until v780 */
     u.onstart=()=>{ clearTimeout(SAY_TIMER); hint(false); };
     u.onerror=e=>{ clearTimeout(SAY_TIMER); if(!e||e.error!=="interrupted"&&e.error!=="canceled") hint(true); };
     SAY_TIMER=setTimeout(()=>hint(true),3000);
@@ -6491,6 +6498,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  781:"The voice reads more slowly, and takes the phone's natural Mandarin voice when it has one.",
   780:"Cards can be sorted — newest, oldest, by pinyin, due soonest or most often forgotten — from the filter pill.",
   778:"The voice says each character with the reading it has in its word — 行 in 银行 is heard as háng.",
   777:"After each character you write, the character itself stands over its meaning and reading for a moment.",
