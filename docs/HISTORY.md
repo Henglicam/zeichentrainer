@@ -116,6 +116,27 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v786, 2026-10-01)
+- **The first card of a session waits for the reader's first answer before the zoom goes in (v786, H on 雀巢/脆脆鲨 at v785:
+  "Immernoch leicht holprig").** The dump: "雀 · estimate (odd shapes) · x1.5 · at 25,25 %" and "雀 · reader · x3.5 · at
+  16,32 %" in the same second — the ink search was unsure, so v785's stay (a sure ink cut) did not apply: at `AZ_READER` 2.5 s
+  the overview timer zoomed on v782's layout estimate and the reader, landing a moment later, pulled the picture from ×1.5 to
+  ×3.5. Both of H's dumps (新日, 雀巢) are the first card after a restart: the reader's first load — two models, the worker,
+  and its first inference — ends 3 to 3.5 s after the card on the Xiaomi (5.8 s once, measured by a Rebuild all), just past
+  the cap. `PD_READY` is set by `pdRead` when the reader has answered once in this page (loading alone is not enough: in the
+  harness the models load in half a second and the first inference takes three more); until then the timer waits for the
+  reader up to `AZ_LOAD` 6000 ms, so the first card too zooms once, to the reader's place; from the second answer on
+  `AZ_READER` holds as before, and a reader slower than `AZ_LOAD` still gets the ink's guess first with v785's stay after. The
+  cost: the first card after a start shows its whole picture up to a second or two longer, once a session; a touch on the pad
+  still zooms at once and can still meet the correction (v662's rule, untouched). Harness (`test786`, the real reader with its
+  files held back by the route until a set time after the card, the service worker blocked so the hold is real; `pdRead`
+  stubbed only in mode warm): cold (files released 0.3 s after the card; load and first read land at 5.2 s) — no zoom at
+  3.3 s, the first decision "reader" in one move, one decision for 新: **4 of 4 on v786, 2 of 4 on v785** (there "ink" at
+  2.6 s); slow (released 6.5 s after) — `[guard]` the ink's guess at 6.06 s and "ink, the reader agrees" at 11.3 s, 3 of 3
+  (v785: ink at 2.6 s, 2 of 3); warm (one real read before the card, then a 4 s stub) — the flag set by the first answer,
+  `[guard]` the ink at 2.6 s and the agreement at 4.4 s, 3 of 3 (v785: no flag, 2 of 3). TO_TEST "First card: one zoom, no
+  jerk?" re-keyed to v786. No WHATS_NEW.
+
 ## Current state (PWA v785, 2026-10-01)
 - **The Learn zoom no longer moves a second time when the reader confirms the ink's place (v785, H on 新日, the first card
   after a start: "Bei der Nestle karte wird ruckelig an den ersten character ran gezoomt").** The dump: "新 · ink · x2.44 · at
