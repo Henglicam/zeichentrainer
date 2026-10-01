@@ -52,7 +52,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v808, 2026-10-01)
+## Current state (PWA v809, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -208,7 +208,7 @@ the photo's foot can always be scrolled above it — the row list used to give t
 in place; Edit opens the Edit form and comes back to the sheet (`editFrom:"lookup"`, `relookAfterEdit`, by the new id when the
 characters changed); Delete lives in the Edit form. **The row list under the photo is gone** (v792): one plain row under "Not on
 the photo" stays only for a text no dot reaches (still being read after Add a text, an unusable frame, fewer than `REGION_MIN`
-placed texts) and opens the text's own screen — which nothing else on the multicard leads to any more; it still frames its text
+placed texts, every text of a multicard whose photo is not on the phone, v809) and opens the text's own screen — which nothing else on the multicard leads to any more; it still frames its text
 alone (v700) and swipes to the next text (v707/v753). The multicard: **Add a text**, Delete multicard (v635/v711); its dots and
 the swipe stand in the photo's reading order — rows by overlap, tall boxes attached last, left to right inside a row
 (`readingOrder`, `pageOrder`, v770); the short descriptions (`dsh`, one AI call for all texts at creation and once when an older
@@ -317,7 +317,7 @@ is **on by default and works with no key**, so a fresh install sends every new c
 
 ## Languages
 Ten columns in `lang.js`: en, de, fr, es, ja, ko, ru, vi, th, id. **English is the key**; a missing key falls back to the
-English text, never to the key. **501 keys a column, ru 531 (three plural forms), en 15** (v806 — count by evaluating `lang.js`). `nOf`/`wordOf`/`PLURAL` carry the
+English text, never to the key. **505 keys a column, ru 536 (three plural forms), en 15** (v809 — count by evaluating `lang.js`). `nOf`/`wordOf`/`PLURAL` carry the
 counts.
 
 - **The v412 rule: a pronoun or a count-agreeing verb must never cross a key boundary.** Render every count sentence at

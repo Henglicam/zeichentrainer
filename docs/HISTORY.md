@@ -116,7 +116,28 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v808, 2026-10-01)
+## Current state (PWA v809, 2026-10-01)
+- **Cards and multicards do what they say (v809, the audit's fourth fix — the works, hygiene, wording and first-impression
+  sweeps).** **(1) A swipe to the next multicard closes the open pop-up** — it stood over the next one, its + Flashcard, Flag and
+  Edit acting on the first one's text (`detailSwipe`'s `go` calls `closeLookup`). **(2) A pop-up that swapped dots kept its
+  listeners:** each swap replaced `LOOKUP` without its `onDown`/`onKey`, so `closeLookup` removed nothing (four sessions: one
+  document pointerdown listener became five); the swap carries them. **(3) A multicard whose photo is not on the phone lists
+  every text** — after an export without photos (the default) and an import, on a new phone or in the Android shell, its four
+  placed texts had 0-px dots and no row and could be reached nowhere; with no photo there are no dots and every text is a row.
+  **(4) More → Flagged cards → Show opens the Cards tab** (from the Multicards tab it said "No cards match"); Show and Share
+  stand only when something is flagged. **(5) The bulk delete names what it deletes:** "Delete 1 multicard? The multicard and
+  all its texts go with it." on the Multicards tab, "Your progress on these cards goes with them." for several — it said "this
+  card" and its progress whatever was marked, the v412 rule the v594 record claimed was kept; ru "Удалить: {0}?" (the
+  accusative at 1, 21 …). New count word `multicard`, three new keys. **(6) "Added" is revealed** above the tab bar and the
+  form's AI line clears (the first-impression sweep saw it under the bar at 360 px with the AI answering; this harness did not
+  reproduce that, so its check is a guard). **(7) No filter pill over an empty list** — v780's sort rows carry keys, so the
+  pill could no longer vanish; sorting needs two cards. **(8) The open card asks its characters' senses as Learn does**
+  (`charsSoon`), and its line takes them — a German card showed the dictionary's English on the line under the tiles for good;
+  privacy.html says "a card that has no meanings yet" without "in Learn". **(9) The guide's ← Back returns where it was
+  opened** — Learn's empty deck opens it too, and Back landed on More with More lit. Harness: `test809` (real touch: swipe,
+  dots, long press, Delete; a deleted inbox photo; More; an empty deck; the senses with a mocked answer, German) **12 of 12,
+  v808 1 of 12** (the "added" guard passes on both). Keys: **505 a column, ru 536, en 15**.
+
 - **What leaves the phone, said truly in every place (v808, the audit's privacy sweep — `privacy.html` is what the Play Data
   Safety form will be filled from).** **(1) One defect: a priced board's text left with the AI review switched off.** v755's
   board path reaches `picWords` from the phone's own reading, with no picture and therefore no `pictureUp()` gate, and `aiAsk`
