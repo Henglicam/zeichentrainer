@@ -116,7 +116,24 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v797, 2026-10-01)
+## Current state (PWA v798, 2026-10-01)
+- **The brightening keeps a picture's colours (v798, H on the seal's card at v797: "Allerdings wirken die Farben unnatürlich",
+  the yellow paper poster orange, the blue gone).** Until v797 `brightenBlob` ran the one curve of `brightLut` over red,
+  green and blue alike; a curve that takes the black point off and stretches the rest multiplies a colour's saturation — on
+  a warm paper under dim light (108,74,37) with a black point near the paper's own blue, the harness measures (225,175,22):
+  blue from 37 to 22, mean saturation from 0.65 to 0.91. Now the curve is read at the pixel's luminance and the three
+  channels are scaled by the one factor it gives, capped so the largest channel reaches white and no further (`lut.lum`,
+  set by brightLut on the one-curve path): the same light, each pixel's hue and saturation kept — the same paper comes out
+  (200,145,70), saturation 0.648. The white balance of v375/v418 (`balance`, three curves) is a colour correction on purpose
+  and stays per channel. The cap means a saturated bright pixel is lifted a little less than the curve asks (the paper's
+  luminance reaches 153 instead of 173); nothing clips to a flat sheet. Not idempotent as before, and the deck is not
+  touched: a card already cut keeps its look until it is cut again (Crop again, or the re-cut that waits for H's word).
+  Harness (`test798`, `brightenBlob` alone on drawn pictures): the seal's kind under dim light keeps its mean saturation
+  within 0.02 (the old curve moved it 0.045) and the dimmer seal keeps its blue (old: crushed to 22) — both flip; a dark
+  grey picture is brightened as before, a bright one is left alone, a blue cast on a grey scene is still taken out
+  [guards]: **7 of 7, v797 5 of 7**. Not field-checked: TO_TEST "Seal 天禾: colours natural now?" — H's photo is not in
+  the repo, and whether the look he saw was the stretch alone or the stretch with the sharpening is open; the sharpening
+  (SH_AMOUNT 0.4) is untouched.
 - **The seal's crop is settled (v797, H on v796: "Jetzt ist gut").** Field-checked on the Xiaomi: the 天禾 seal crops whole.
   The TO_TEST line "Seal 天禾: the crop whole now?" goes, as v748's rule says, and the open list drops v795/v796. Nothing
   else changes; the three markers move to 797 because `app.js` is a cached file.

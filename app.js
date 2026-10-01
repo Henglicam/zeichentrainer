@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=797; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=798; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -734,6 +734,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["again","v781","Voice: pace .7 and the voice ok?"],
   ["again","v782","Zoom by layout on LED signs ok?"],
   ["again","v789","Multicard flashcard: zoom on text?"],
+  ["again","v798","Seal 天禾: colours natural now?"],
   ["again","v783","Char senses: do they land now?"],
   ["again","v784","Last character read alone now?"],
   ["again","v757","Meituan screenshots: fields right?"],
@@ -6596,6 +6597,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  798:"A dim photo's card picture is brightened without its colours turning garish.",
   794:"After + Flashcard in a multicard's pop-up, the pop-up says the card was made.",
   792:"A multicard's text is handled in its pop-up now: + Flashcard, Flag and Edit. The list under the photo is gone.",
   791:"In Cards, a flashcard made from a multicard shows its own part of the picture.",
@@ -8099,7 +8101,7 @@ function brightLut(px){ /* one curve per channel: red, green, blue */
     for(let v=0;v<256;v++){ const t=(v-a)/span;
       lut[v]=Math.round(t<=0?0:t<1?BR_KNEE*t:BR_KNEE+(255-BR_KNEE)*Math.min(1,(v-knee)/room)); }
     return lut; };
-  if(!balance){ const one=curve(lo,(hi-lo)*cap,at(0,1)); return [one,one,one]; }
+  if(!balance){ const one=curve(lo,(hi-lo)*cap,at(0,1)); return Object.assign([one,one,one],{lum:true}); } /* v798: one curve, applied to the luminance — brightenBlob scales each pixel's three channels by the same factor, so hue and saturation stay */
   return ends.map((e,i)=>curve(e.lo,Math.max(1,e.span)*cap,at(i+1,1)));
 }
 /* A card picture is sharpened at the cut (v378, H's "Go" on the offer after "Any other image improvements you
@@ -8144,8 +8146,16 @@ async function brightenBlob(blob,sharp){
     const bmp=await createImageBitmap(blob), cv=document.createElement("canvas");
     cv.width=bmp.width; cv.height=bmp.height;
     const ctx=cv.getContext("2d",{alpha:false}); ctx.drawImage(bmp,0,0); bmp.close();
-    const d=ctx.getImageData(0,0,cv.width,cv.height), lut=brightLut(d.data);
-    if(lut) for(let i=0;i<d.data.length;i+=4){ d.data[i]=lut[0][d.data[i]]; d.data[i+1]=lut[1][d.data[i+1]]; d.data[i+2]=lut[2][d.data[i+2]]; }
+    const d=ctx.getImageData(0,0,cv.width,cv.height), lut=brightLut(d.data), p=d.data;
+    /* v798 (H, the 天禾 seal's card on v797: "Allerdings wirken die Farben unnatürlich" — the seal's yellow paper came out as
+       poster orange with the blue gone): until v797 the one curve ran over red, green and blue alike, and a curve that takes
+       the black point off and stretches the rest multiplies a colour's saturation — a warm yellow (230,170,80) under a black
+       point of 60 and a gain of 2 becomes (255,229,42). Now the curve is read at the pixel's luminance and the three channels
+       are scaled by the one factor it gives, capped so the largest channel reaches white and no further: the picture gets
+       the same light, each pixel keeps its hue and its saturation. The white balance of v375/v418 (balance: a cast to take
+       out, three curves) is a colour correction on purpose and stays per channel. */
+    if(lut&&lut.lum){ const L=lut[0]; for(let i=0;i<p.length;i+=4){ const r=p[i],g=p[i+1],b=p[i+2], y=(r*77+g*151+b*28)>>8, t=L[y]; if(!y){ p[i]=p[i+1]=p[i+2]=t; continue; } let k=t/y; const mx=Math.max(r,g,b); if(k*mx>255) k=255/mx; p[i]=Math.round(r*k); p[i+1]=Math.round(g*k); p[i+2]=Math.round(b*k); } }
+    else if(lut) for(let i=0;i<p.length;i+=4){ p[i]=lut[0][p[i]]; p[i+1]=lut[1][p[i+1]]; p[i+2]=lut[2][p[i+2]]; }
     const sh=sharp?sharpen(d):false; /* the stretch first, then the edge — the sharpening's threshold then reads the picture as the card shows it */
     if(!lut&&!sh) return null;
     ctx.putImageData(d,0,0);
