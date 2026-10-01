@@ -116,6 +116,21 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v778, 2026-10-01)
+- **The voice says each character with the reading it has in its word (v778, H on v776: "Naja, die readings müssen schon
+  Sinn machen. Bitte konstruktive Vorschläge" — of three, A: "A, go").** A character spoken alone takes the engine's own
+  reading, wrong for a 多音字 (行 in 银行 is háng, alone xíng) and for tone sandhi (一 in 一次 is yí). The engine can only say
+  characters, so `sayChar` compares the syllable the pad shows for the character (the line's own `.mono`) with the
+  character's lone reading (pinyin-pro) and, when they differ, hands the engine a **stand-in**: a common character with
+  only that one reading (háng → 航, yí → 移, yì → 义). The learner hears the sound of this word's reading, one character
+  long, and sees the character itself on the pad. `STANDIN` (1 013 syllables with tone, 10 KB in app.js) is built by
+  `tools/standin.js`: pinyin-pro's readings over CEDICT's headwords, the most frequent single-reading character per
+  syllable, in five headwords at least (a rare character is one the engine may not know — bú, lè, fā, fà have none, and
+  speak the character itself), toneless syllables none. B (the character, then its word) and C (leave it) were offered and
+  not taken. Harness (the hand of v774, a recording voice): 银行's 行 speaks 航, 一次's 一 speaks 移, 银 itself, the recap the
+  word; every stand-in reads alone exactly as its key (guard) — 7 of 7 on v778, 4 of 8 on v777. Not yet field-checked: the
+  Xiaomi engine's reading of the stand-ins. WHATS_NEW 778.
+
 ## Current state (PWA v777, 2026-10-01)
 - **The character just written stands at the head of its reading (v777, H: "Der User soll sich nach dem Schreiben den
   jeweiligen character einprägen können").** Since v668 the pad — green ink and all — fades out before the character's
