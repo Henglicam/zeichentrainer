@@ -404,6 +404,7 @@ button.pill.multi{border:0;font:inherit;cursor:pointer} /* the reference is a wa
 .croprect .h.rot{left:calc(50% - 9px);top:-43px;border-radius:50%;cursor:grab} .croprect .h.rot::after{content:"";position:absolute;left:8px;top:18px;width:1px;height:23px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.6)} /* the turn handle above the top edge with its stem (v185) */
 .croppreview img{width:auto;max-width:100%;max-height:120px;display:block;border-radius:8px}
 .cropacts{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;align-items:center}
+.form>.cropacts{display:flex;flex-wrap:wrap;gap:8px} .form>.cropacts>.btn{flex:1 1 auto} .form>.cropacts>.del{flex:0 0 auto} /* v811: the Edit form's Save takes its row when its label is long, Cancel drops under it — the two-column grid cut "Änderungen spei" (the labels are short now, this is the guard) */
 
 /* sign editor (Read preview, Edit form) */
 .signed .sline{margin-bottom:8px}
