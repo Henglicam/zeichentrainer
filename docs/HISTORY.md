@@ -116,7 +116,21 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v799, 2026-10-01)
+## Current state (PWA v800, 2026-10-01)
+- **The search placeholder names the meaning (v800, H: "Suchfeld nur characters und Pinyin oder auch Translation?", then
+  "Ok for 'Characters, pinyin or meaning'").** The search has read the meaning in every language, the flag note and the
+  tags since v690; only the placeholder said "Characters or pinyin". H's wording did not fit: measured in the harness,
+  "Characters, pinyin or meaning" is 258 px of text in a field whose content box is 240 px at 390 and 210 at 360, and
+  the field's width is the "+ New" button's complement — 213 px in German, 194 in Russian under "+ Новая", 172 in French
+  under "+ Nouvelle". So the key is **"Text, pinyin or meaning"** and each column takes its longest fitting form (de
+  "Text, Pinyin, Bedeutung", fr "Texte, pinyin, sens", es "Texto, pinyin, sentido", ja 漢字・ピンイン・意味, ko 한자, 병음, 뜻,
+  ru "Текст, пиньинь, смысл", vi "Chữ, pinyin hoặc nghĩa", th "ตัวอักษร พินอิน ความหมาย", id "Aksara, pinyin, atau arti"),
+  and the placeholder is set one point smaller than the typed text (`#q::placeholder{font-size:15px}` — the 16 px floor
+  is the input's own, against the zoom on focus; the placeholder is not an input) because no Russian form of three nouns
+  fits 194 px at 16 (the shortest, "Знак, пиньинь, смысл", is 196). Rendered in all ten columns at 360 (English at 390),
+  the placeholder measured at its own size against the field's content box: every column fits, with 15 px or more to
+  spare; typing a meaning finds the card on both trees [control] (`test800`: **20 of 20, v799 10 of 20**). Screenshots
+  English 390 light and Russian 360 dark, empty field.
 - **The Camera tab's hint names the screenshot (v799, H with the tab's screenshot: "Hier bitte noch Screenshots für
   Multicards ergänzen").** The lead over the shutter card reads "Photograph a sign, a poster or a package — the card is made
   for you. A screenshot of an app becomes a multicard." — the key replaced in nine columns (499 a column, ru 529, as

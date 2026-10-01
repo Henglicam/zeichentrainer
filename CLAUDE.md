@@ -50,7 +50,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v799, 2026-10-01)
+## Current state (PWA v800, 2026-10-01)
 **The app is called 识字 Shízì** (v608; 街字 Jiēzì v601–v607) — title, manifest, logo, About, share text, `privacy.html` and
 every shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -186,7 +186,7 @@ two-line title. **Two tabs, Cards and Multicards** (v477); the filter is **one p
 the list** (newest, oldest, pinyin, due soonest, most often forgotten; a multicard by time or title — `cardsSort`,
 `sortCards`, v780, the open card's swipe follows); search also takes
 toneless pinyin (`toneless`, v690); a long press marks (v354); the list keeps its place (v352/v445); the placeholder reads
-"Characters or pinyin". From `BACKUP_AT` 25 flashcards a never-exported deck shows **one backup line with Export** under the
+"Text, pinyin or meaning" (v800, H: the search has read the meaning since v690, the placeholder said so only now; "Characters, pinyin or meaning" was 258 px of text in a 240 px field, and the Russian field under its "+ Новая" is 194 px wide — the placeholder is set at 15 px, `#q::placeholder`, so every column fits at 360 px). From `BACKUP_AT` 25 flashcards a never-exported deck shows **one backup line with Export** under the
 search bar (v717). The **open card** swipes through the list (v445); since v736 its block always stands — no "Details" bar,
 no second character line, no Flagged pill — then one button (Test this card) and the study card's toolbar Star · Flag · Edit;
 **Delete lives in the Edit form only**, which returns where the card came from. A description the card fetches by itself
