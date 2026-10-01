@@ -116,7 +116,21 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v804, 2026-10-01)
+## Current state (PWA v805, 2026-10-01)
+- **A meaning composed word by word lists the parts' meanings alone (v805, H on the noodle card's "三 three · 碗 bowl · 面
+  noodles": "Was ist denn das bitte für ein ungewöhnliches format …?"; of two offers — "three · bowl · noodles" or
+  "three bowl noodles" — H took the first).** It is the stand-in meaning of a text the dictionary does not hold whole
+  (`lineMeaning`, unverified, `mt.src` "gloss") until the AI answers; it showed only because DeepSeek had been unreachable
+  since 21:42. Each part printed its word before its meaning since the early versions; now `en` is the parts' meanings
+  joined by " · ", a part with no meaning its word itself (the "?" goes). Stored meanings in the old shape are rewritten
+  once at start: `GLOSS_FIX_V` 805, `oldComposed` drops the word in front of each "word meaning" part whose word stands in
+  the card's text, only on an unverified gloss card in English (a part of another shape, a phrasebook line's words, stays).
+  The gloss fix's two readers of the old shape (the sense swap and v726's "still composed" test) take whole parts
+  (`mTokens`) in either shape — a bare substring test would have taken H's own "three bowls of noodles" as composed.
+  Harness (`test805`, six seeded cards behind a v754 gloss-fix row): a fresh composition, a dictionary word alone, H's stored
+  noodle meaning, a mixed card ("Exit / three · bowl"), a part with no meaning, the open card's print — and three guards
+  (a meaning H checked, the AI's, one already in the new shape) that pass on both: **9 of 9, v804 3 of 9**.
+
 - **A character's sense counts only for the text it was written for (v804, H on the noodle-sign card he had just re-read with
   Crop again, its text now 三碗面: "Und wie kann 碗 auf einer Karte 2 verschiedene Übersetzungen haben: Family und bowl??").**
   The card was the wrongly texted 全家 of the evening; its senses (`cg`, v772) were 全家's own, [whole, family], and nothing
