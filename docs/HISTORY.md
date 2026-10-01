@@ -116,6 +116,22 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v784, 2026-10-01)
+- **The card's recap queues the whole text behind the last character's own reading instead of cancelling it (v784, H on
+  首都铁骑: "Hier hat er den letzten Charakter qi nicht einzeln gesagt").** The dump: 骑's last stroke snapped, "out, card
+  done" 1.6 s later — `charDone` spoke 骑 at the stroke (v774/v776), the character's reading stood for its 1.3 s, then
+  `cardDone` called `say(首都铁骑)`, and `say()` begins with `speechSynthesis.cancel()`: on the Xiaomi's system engine, whose
+  start-up v774 already measured as slow, 骑 was still pending or just starting and was thrown away for the whole text.
+  `say(text, after)`: with `after` nothing is cancelled and the utterance queues behind the one speaking, no hint timer of
+  its own (a queued utterance waits by design; the first one's timer covers a dead engine); `cardDone` uses it, and on a
+  **one-character card says nothing more** — its character was the whole text, and until now it was spoken twice (the
+  harness heard 让, 让). A fresh `say()` cancels as before, so a new character still cuts the previous one. Harness
+  (`test784`, the v776 pad driver, the recorder noting the cancel count at every utterance; 让 then 银行, the session's
+  short-first order): 让 once at the stroke and not again with the recap; 银 at the stroke; 行 as its stand-in 航 at the
+  stroke; 银行 with the recap at the same cancel count as 航 (queued); 银 → 航 one cancel apart — **8 of 8 on v784, 6 of 8 on
+  v783** (there 让 twice, and the recap's cancel between 航 and 银行). Whether the Xiaomi now reads the last character
+  through is the phone's to say; TO_TEST "Last character read alone now?". No WHATS_NEW (v773's note covers the voice).
+
 ## Current state (PWA v783, 2026-10-01)
 - **A card whose answer brings no character senses is asked once a session, and the reply schema names "chars" (v783,
   from the dump H sent with "Warum konnte ich gerade nicht swipen?").** The AI exchanges in it: 便民/超市 asked for its senses
