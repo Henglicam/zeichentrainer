@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=806; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=807; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -157,11 +157,17 @@ const cardOf = id => deck().find(d=>d.id===id);
    the cards already graded had left the due set, so S.idx pointed past the card being written (measured: [一,二,三,四] at 3,
    rbRecover at the start left [三,四] at 2 — the session looked finished; a new card then took the place of 三). The running
    session keeps its order, its repeat passes and its place; cards gone from the deck leave it, cards newly due join at its end */
-function requeue(){ const fresh=buildQueue(false); if(!S.queue.length){ S.queue=fresh; return; }
+function requeue(){ const fresh=buildQueue(false); if(!S.queue.length){ S.queue=fresh; S.sessionAt=Date.now(); return; }
   const ids=new Set(deck().map(d=>d.id)), q=[]; let idx=S.idx;
   S.queue.forEach((id,i)=>{ if(ids.has(id)) q.push(id); else if(i<S.idx) idx--; });
-  const seen=new Set(q); for(const id of fresh) if(!seen.has(id)){ q.push(id); seen.add(id); }
-  S.queue=q; S.idx=Math.max(0,Math.min(idx,q.length)); llog("queue built again"); }
+  /* v807 (the audit): a card never reviewed joins a running session only when it was made after the session began. Each new card
+     written frees a place among buildQueue's first NEW_PER_SESSION, so until v806 every reload and every card saved topped the
+     session up with unwritten new cards (12 new, 2 written, a reload: 10 in the session). Due cards still join; a starred or
+     not-yet-checked session holds every card of its kind, so it takes them as before. */
+  const {star,nw}=learnDeck(), capped=!star&&!nw, at0=S.sessionAt||0;
+  const seen=new Set(q); for(const id of fresh) if(!seen.has(id)){ if(capped&&!S.progress[id]){ const d=cardOf(id); if(!d||(d.at||0)<=at0) continue; } q.push(id); seen.add(id); }
+  const moved=idx!==S.idx||q.length!==S.queue.length||q.some((id,i)=>id!==S.queue[i]);
+  S.queue=q; S.idx=Math.max(0,Math.min(idx,q.length)); if(moved) llog("queue built again"); } /* v807: noted only when it changed something — rbRecover runs it on every start */
  /* cards are addressed by id everywhere; the text is c */
 /* The page card (v453, H, 2026-09-13, on the nine cards his Meituan order screen made: "Ich hatte doch gesagt, bitte bei
    Screenshots nicht für jeden Wortstring eine einzelne Karte anlegen, sondern den Screenshot unter Cards und in learn
@@ -392,7 +398,7 @@ async function setFilter(scope,k){
     else if(!k.startsWith("tag:")){ v=[]; await setSetting("learnStar",false); await setSetting("learnNew",false); }
     else { const x=k.slice(4); v=v.includes(x)?v.filter(y=>y!==x):[...v,x]; }
     await setSetting("learnTag",v);
-    S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false; S.single=null; S.saved=null; setStats(); return; }
+    S.queue=buildQueue(false); S.sessionAt=Date.now(); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false; S.single=null; S.saved=null; llog("filter"); setStats(); return; }
   if(k.startsWith("sort:")){ await setSetting("cardsSort",k.slice(5)); return; } /* v780: one order at a time, kept across restarts */
   if(!k){ S.filterStar=false; S.filterFlag=false; S.filterAi=false; S.filterUnv=false; S.filterNew=false; S.filterTags=[]; if(S.settings.cardsSort&&S.settings.cardsSort!=="newest") await setSetting("cardsSort","newest"); return; }
   if(k==="star") S.filterStar=!S.filterStar;
@@ -749,6 +755,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["again","v766","Bank/12 more apps: fields right?"],
   ["photo","v767","Album batch: screen stays on?"],
   ["app","v768","Rebuild/Translate: screen on?"],
+  ["again","v807","Recap: Details/Edit hold it?"],
 ];
 const TO_TEST_GROUPS=[["photo","Take any photo"],["again","Take one of these again"],["app","In the app"],["update","After an update"],["lock","Parked — the lock is off (v531)"]];
 /* What the app claims it can read, and what a photo has actually confirmed (v434, H after the untested menu
@@ -1427,7 +1434,7 @@ async function boot(){
   LANG=LANGS.some(([c])=>c===S.settings.lang)?S.settings.lang:langDefault(); applyLangStatic(); /* the app's language (v253): the setting, else the phone's */
   await syncMeanings(); /* every card shows the meaning it has in the app's language (v265); cards from before get their ms */
   S.ready=true;
-  S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false;
+  S.queue=buildQueue(false); S.sessionAt=Date.now(); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false;
   const rv=S.settings.resumeView; if(rv){ delete S.settings.resumeView; idbDel("settings","resumeView").catch(()=>{}); } /* the screen the update's reload left (v327): back to it, so the reload is not felt */
   if(rv&&Date.now()-(rv.at||0)<RESUME_MAX&&(rv.own!==false||navReload())){ if(["study","cards","inbox","more","guide"].includes(rv.mode)) S.mode=rv.mode;
     if("big" in rv) S.cueBig=rv.big==="txt"?"txt":"pic"; /* v569: the half the tap made big survives the reload a fold can cause. v580: there are two states, so a note from before it — or one that says the halves — comes back as the photo */ if(S.mode==="cards"&&rv.detail&&S.custom.some(d=>d.id===rv.detail)) S.detail=rv.detail; if(typeof rv.query==="string") S.query=rv.query; if(rv.tab==="pages"||rv.tab==="cards") S.cardsTab=rv.tab;
@@ -1435,7 +1442,7 @@ async function boot(){
        open answer and the day's count — so a reload in Learn comes back on the same card instead of at the top of a queue
        built afresh, where a card already graded is no longer due and the next one takes its place. */
     if(S.mode==="study"&&Array.isArray(rv.queue)){ const q=rv.queue.filter(id=>{ const d=cardOf(id); return d&&d.c; });
-      if(q.length){ S.queue=q; S.idx=Math.max(0,Math.min(q.length,rv.idx|0)); S.ansOpen=!!rv.revealed&&S.idx<q.length; S.done=Math.max(0,rv.done|0); S.ahead=!!rv.ahead; llog("restored after a reload",{dropped:rv.queue.length-q.length});
+      if(q.length){ S.queue=q; S.sessionAt=Date.now(); S.idx=Math.max(0,Math.min(q.length,rv.idx|0)); S.ansOpen=!!rv.revealed&&S.idx<q.length; S.done=Math.max(0,rv.done|0); S.ahead=!!rv.ahead; llog("restored after a reload",{dropped:rv.queue.length-q.length});
         if(lockOn()&&typeof rv.lock==="string"&&Array.isArray(rv.walk)){ const w=rv.walk.filter(id=>{ const d=cardOf(id); return d&&d.c; }); if(w.length){ S.lockChar=rv.lock; S.walk=w; S.walkIdx=Math.max(0,Math.min(w.length-1,rv.walkIdx|0)); } } /* v513: a reload comes back locked */
         const pn=rv.pad; if(pn&&pn.key) S.pad={key:pn.key,i:pn.i|0,k:pn.k|0,miss:pn.miss|0,hint:!!pn.hint,maxMiss:pn.maxMiss|0,done:new Set(pn.done||[]),helped:new Set(pn.helped||[]),free:[],lv:pn.lv||{}}; /* v569: the characters already written on this card, and the strokes already in. padState makes a fresh state whenever the key does not match the card it is asked for, so a stale note cannot land on the wrong card. */ } } }
   wireChrome(); render();
@@ -1447,7 +1454,7 @@ async function boot(){
   aiAuto(); window.addEventListener("online",()=>{ _aiAutoRan=false; aiAuto(); sendReport(); resumeTranslate(); resumeRecheck(); });
   /* an interrupted Translate-all, Tag-all or Check-up run, and the deck's two one-off passes, go on by themselves (v262, v368, v370, v373, v398) */
   setTimeout(updateNote,1200); /* v408: after the restored screen is up, not during the first paint */
-  setTimeout(()=>{ migrateDerived().then(n=>{ if(n){ S.queue=buildQueue(false); S.idx=0; render(); } }).catch(()=>{}); },2200); /* v487: v478's promoted cards become ordinary flashcards with their progress, once */
+  setTimeout(()=>{ migrateDerived().then(n=>{ if(n){ S.queue=buildQueue(false); S.sessionAt=Date.now(); S.idx=0; llog("queue built again"); render(); } }).catch(()=>{}); },2200); /* v487: v478's promoted cards become ordinary flashcards with their progress, once */
   setTimeout(()=>{ resumeTranslate(); resumeRecheck(); brightenPass().catch(()=>{}).then(()=>recutPass().catch(()=>{})); },2500); document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ resumeTranslate(); resumeRecheck(); autoNext(); } }); /* a Translate-all run interrupted by a restart, a lost connection or the background goes on (v262); a batch of photos held up by a reading that never ended goes on too (v411) */
   sendReport(); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) sendReport(); else if(REPORT_DIRTY) sendReport(true); }); /* the day's first row on foreground, a second one on background when cards changed (v219) */
 }
@@ -1464,7 +1471,7 @@ function wireChrome(){
       if(m==="inbox") clearResults(); /* … and the finished results of the last capture, so the Camera tab opens on the camera (v471) */
       if(S.lockChar){ S.lockChar=null; S.walk=null; S.walkIdx=0; S.pad=null; } /* … and a locked character's walk (v513, § 7) */
       endPick();                                            /* … and any marking (v351) */
-      if(S.single){ S.single=null; if(S.saved){ Object.assign(S,S.saved); S.saved=null; } S.ansOpen=false; } /* v613 (H: "Cards > open a card > test this card: Tap on Learn doesn't change to learn mode"): a tab tap ends the single-card test and puts the session queue back, as ← Cards does — until now S.single outlived every tab, so Learn stayed "Testing from the list" */
+      if(S.single){ S.single=null; if(S.saved){ Object.assign(S,S.saved); S.saved=null; } S.ansOpen=false; llog("test ended"); } /* v613 (H: "Cards > open a card > test this card: Tap on Learn doesn't change to learn mode"): a tab tap ends the single-card test and puts the session queue back, as ← Cards does — until now S.single outlived every tab, so Learn stayed "Testing from the list" */
       if(CROP&&RECROP[CROP.id]) RECROP[CROP.id].end();      /* … and its Crop again (v239) */
       if(m==="cards" && (S.mode==="cards"||S.mode==="add")) S.detail=null; /* Cards again → back to the list */
       S.mode=m; render();
@@ -3280,7 +3287,7 @@ function renderMore(main){
     const pw=$("#admin-pw"), go=async()=>{ const h=await sha256(pw.value); if(h===ADMIN_HASH){ S.admin=true; S.adminPw=pw.value; render(); window.scrollTo({top:0}); relayWatch(); } else { $("#admin-err").style.display=""; pw.value=""; } };
     $("#admin-unlock").onclick=go; pw.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
   }
-  main.querySelectorAll("[data-learnorder]").forEach(b=> b.onclick=async()=>{ await setSetting("learnOrder",b.dataset.learnorder); S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false; S.single=null; S.saved=null; setStats(); main.querySelectorAll("[data-learnorder]").forEach(x=>x.classList.toggle("on",x===b)); }); /* the Learn session follows at once (v153) */
+  main.querySelectorAll("[data-learnorder]").forEach(b=> b.onclick=async()=>{ await setSetting("learnOrder",b.dataset.learnorder); S.queue=buildQueue(false); S.sessionAt=Date.now(); S.idx=0; llog("order"); S.done=0; S.ahead=false; S.ansOpen=false; S.single=null; S.saved=null; setStats(); main.querySelectorAll("[data-learnorder]").forEach(x=>x.classList.toggle("on",x===b)); }); /* the Learn session follows at once (v153) */
   renderNmtRow(); renderAiRow();
 }
 
@@ -3831,7 +3838,7 @@ function wireLinks(root){ (root||document).querySelectorAll("[data-link]").forEa
 function endSingle(){
   /* leave single-card test mode and restore the session queue */
   const c=S.single; S.single=null;
-  if(S.saved){ Object.assign(S,S.saved); S.saved=null; } S.ansOpen=false; S.mode="cards"; S.detail=c; render();
+  if(S.saved){ Object.assign(S,S.saved); S.saved=null; } S.ansOpen=false; S.mode="cards"; S.detail=c; llog("test ended"); render();
 }
 /* v530 (H, a screenshot of a freshly swiped card: "Bei einer neu geswipten Karte erscheint ein leeres großes Pad. Dadurch
    scheint das Bild unruhig zu springen."): the carousel's neighbour carries an empty pad in place of the canvas, and until
@@ -3916,7 +3923,7 @@ function renderStudy(main){
       <div class="badge" style="margin-bottom:18px">${statsLine()}</div>
       <button class="btn" id="ahead">${t("Pull the next cards forward")}</button>
     </div>`;
-    const a=$("#ahead"); if(a) a.onclick=()=>{ const q=buildQueue(true); if(q.length){S.queue=q;S.idx=0;S.done=0;S.ahead=true;S.ansOpen=false;render();} };
+    const a=$("#ahead"); if(a) a.onclick=()=>{ const q=buildQueue(true); if(q.length){S.queue=q;S.sessionAt=Date.now();S.idx=0;S.done=0;S.ahead=true;S.ansOpen=false;llog("pulled forward");render();} };
     return;
   }
   const list=curList(), li=curIdx(), c=list[li], d=cardOf(c);
@@ -4005,6 +4012,7 @@ function renderStudy(main){
   wireSay(); wireLinks(); wireSrc(); wireAi(); wireExplain();
   if(ansOpen) explainAuto(d); else explainSoon(d); charsSoon(d); /* v772: a card with its description but no senses yet */ /* v585: the block is open, so what the card is about is fetched now; v586: and folded, a moment after the card comes up, so it is there by the time the fold is tapped */
   mountPad(card,d,c,tg,st,cur);
+  if(DWELL){ if(DWELL.c!==c) DWELL.drop(); else DWELL.show(card); } /* v807: the finished card's recap survives a redraw; another card ends the dwell */
   if(pg&&!S.fullPic) fitPageCover(card); /* D5: the multicard's picture cover-fitted around the card's own text */
   attachPicZoom(card.querySelector(".zone1 .picbox")); /* v514: pinch to zoom, one finger to pan (§ 4) */
   if(zoomOn()&&(d.img||pg)) setTimeout(()=>{ if(card.isConnected) pdBoxesFor(card,d); },400); /* v789: a page front's region is read too */ /* v653: the reader looks for the characters while the card is read, so the first touch rarely waits */
@@ -5210,6 +5218,7 @@ function brushPath(s,w,kind){
    only the dwell before the next card and what is drawn during it. One clock drives every motion, so a test can hold the
    whole moment at a given millisecond and photograph it (PRAISE_HOLD). */
 const MARK_STAR=`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4l2.95 5.98 6.6.96-4.77 4.65 1.12 6.57L12 17.52 6.1 20.56l1.13-6.57L2.45 9.34l6.6-.96z"/></svg>`;
+let DWELL=null;       /* v807: the finished card standing in its recap — {c, show(card), drop()} — so a redraw keeps the recap and another card ends it */
 let PRAISE_N=null;    /* v543: the number the counter shows from the last stroke of a card until the star lands on it; null = it shows the day's own total */
 let PRAISE_HOLD=null; /* tests only: hold the moment at this millisecond instead of running it */
 const praiseDay=()=>dayOf((S.settings.daily||{})[dayKey()]).w||0; /* the day's written points — More → Progress calls it "Written today" */
@@ -5476,6 +5485,7 @@ function mountPad(card,d,c,tg,st,cur){
        shouldn't."): v512 opened it on the last stroke, and the block appearing above the pad pushed the pad down. The line
        under the pad carries the word's pinyin and meaning on every card since v518, so the block has nothing left to say
        here; the fold button opens it when it is wanted. */
+    if(DWELL) DWELL.drop(); /* v807: a dwell still standing from another card ends before this card's render */
     const my=curIdx(), wasWalk=walking(); render(); if(cur) padLine(d,cur);
     /* v589: the card is already written and recorded by the time the dwell runs, so leaving Learn during it must not leave the
        session standing on it. Until v588 adv() bailed on S.mode!=="study" and the learner came back to the same card with its
@@ -5489,20 +5499,43 @@ function mountPad(card,d,c,tg,st,cur){
        dwell — recapMs(d), longer the more syllables the card has (v576) — and the praise (v517) lifts out of it so that
        its own POP1 ends with the dwell. A tap anywhere on the card that is not a control skips straight on — the finger
        is already on the pad. */
-    const pw=document.querySelector(".card.study .padwrap"); let rc=null;
+    const pw=document.querySelector(".card.study .padwrap"); let rc=null; const rcs=[];
     if(pw){ if(dark){ const cvn=pw.querySelector(".wpad"); if(cvn){ cvn.style.transition="none"; pw.classList.add("recapping"); void cvn.offsetWidth; cvn.style.transition=""; } } /* v558: dark from its first frame */
       pw.insertAdjacentHTML("beforeend",recapHTML(d)); rc=pw.lastElementChild; recapFit(rc); if(sayOn()&&d.c&&n>1) say(d.c,true); /* v776: the whole text with the recap — v774 spoke it at the last stroke, v776 gives that stroke its own character (H) */ /* v784 (H, 首都铁骑: "Hier hat er den letzten Charakter qi nicht einzeln gesagt"): QUEUED behind the last character's own reading, not in its place — say() cancelled whatever was speaking, and on the Xiaomi's engine 骑 was still on its way 1.6 s after its stroke; a one-character card says nothing more, its character was the whole text */ /* v600: the reading is sized against the real layout before the first frame */ pw.classList.add("recapping"); requestAnimationFrame(()=>{ if(rc.isConnected) rc.classList.add("in"); }); }
-    let pr=null, fired=false, tm=0;
-    const go=()=>{ if(fired) return; fired=true; clearTimeout(tm); document.removeEventListener("pointerdown",onTap,true);
-      if(pr) pr.finish(); else if(PRAISE_N){ PRAISE_N=null; setStats(); } /* v543: skipped before the star flew — the counter goes straight to the day's own total rather than keeping the held number */
-      if(rc){ rc.remove(); pw.classList.remove("recapping"); } adv(); };
-    const onTap=e=>{ if(e.target.closest&&e.target.closest("button,a,input,textarea,.chip")) return; go(); };
-    document.addEventListener("pointerdown",onTap,true);
+    if(rc) rcs.push(rc);
+    /* v807 (the audit, the works sweep — the likeliest cause of H's 2026-10-01 jump): the dwell holds when the learner takes the
+       finished card in hand. Until v806 Details, Star, Flag or Edit tapped during the recap re-rendered the card — the recap
+       was gone at once — and the dwell's timer moved the session on three seconds later under the learner's hands; with Edit
+       open the form was rebuilt (typed text lost) and Cancel landed on the next card. Now a control on the study card holds
+       the dwell: no timer, the star lands at once, the recap stays on the pad (renderStudy puts it back after each redraw,
+       DWELL.show) and the next tap on the card that is not a control moves on — as the recap's own tap always did, so the
+       finished pad is never a dead end (v588). A tap is a press that ends where it began, or a click: a swipe begun during
+       the recap is the card's own swipe now (it used to skip forward on the press, whatever its direction), and another card
+       drops the dwell (DWELL.drop) without moving anything. A tab tap still moves the session on (v589). */
+    let pr=null, fired=false, held=false, tm=0, tOut=0, tGo=0, down=null;
+    const praiseOff=()=>{ if(pr){ pr.finish(); pr=null; } else if(PRAISE_N){ PRAISE_N=null; setStats(); } }; /* v543: skipped before the star flew — the counter goes straight to the day's own total rather than keeping the held number */
+    const timersOff=()=>{ clearTimeout(tm); clearTimeout(tOut); clearTimeout(tGo); };
+    const off=()=>{ timersOff(); document.removeEventListener("pointerdown",onDown,true); document.removeEventListener("pointerup",onUp,true); document.removeEventListener("click",onClick,true); if(DWELL===me) DWELL=null; };
+    const unshow=()=>{ for(const el of rcs){ const w=el.parentElement; el.remove(); if(w) w.classList.remove("recapping"); } rcs.length=0; };
+    const go=()=>{ if(fired) return; fired=true; off(); praiseOff(); unshow(); adv(); };
+    const drop=()=>{ if(fired) return; fired=true; off(); praiseOff(); unshow(); };
+    const hold=()=>{ if(fired||held) return; held=true; timersOff(); praiseOff(); };
+    const show=card=>{ if(S.pad!==st){ drop(); return; } /* the pad started afresh (the text was edited): the dwell is over */ const w=card&&card.querySelector(".padwrap"); if(!w||w.querySelector(".recap")) return; const cvn=w.querySelector(".wpad");
+      if(cvn){ cvn.style.transition="none"; w.classList.add("recapping"); void cvn.offsetWidth; cvn.style.transition=""; } else w.classList.add("recapping"); /* v558: dark from its first frame */
+      w.insertAdjacentHTML("beforeend",recapHTML(cardOf(c)||d)); const el=w.lastElementChild; el.classList.add("in"); recapFit(el); rcs.push(el); }; /* standing already, so no fade in */
+    const inCard=e=>!!(e.target&&e.target.closest&&e.target.closest(".card.study")), isCtl=e=>!!(e.target&&e.target.closest&&e.target.closest("button,a,input,textarea,.chip"));
+    const tap=e=>{ if(fired||(held&&(S.editing||S.mode!=="study"||!inCard(e)))) return false; go(); return true; };
+    const swallow=()=>{ const f=e=>{ e.stopImmediatePropagation(); e.preventDefault(); document.removeEventListener("click",f,true); }; document.addEventListener("click",f,true); setTimeout(()=>document.removeEventListener("click",f,true),600); }; /* the tap's own click must not reach the card it has just left — on the photo it would flip the next card's cue */
+    const onDown=e=>{ down=null; if(isCtl(e)){ if(inCard(e)) hold(); return; } down={x:e.clientX,y:e.clientY,id:e.pointerId}; };
+    const onUp=e=>{ const d0=down; down=null; if(!d0||e.pointerId!==d0.id||Math.hypot(e.clientX-d0.x,e.clientY-d0.y)>SW_SLOP) return; if(tap(e)) swallow(); };
+    const onClick=e=>{ if(!isCtl(e)&&tap(e)){ e.stopImmediatePropagation(); e.preventDefault(); } }; /* iOS may end a tap in pointercancel (v206); the click still comes */
+    const me={c,show,drop}; DWELL=me;
+    document.addEventListener("pointerdown",onDown,true); document.addEventListener("pointerup",onUp,true); document.addEventListener("click",onClick,true);
     if(typeof PRAISE_HOLD==="number"){ pr=praiseStart(cleanCard); return; } /* held for a test: the star at once, nothing advances */
     const read=recapMs(d), dwell=read+(fw?FW_MS:0); /* a milestone card keeps its extra second for the burst (v545), and that second is NOT taken out of the reading */
-    tm=setTimeout(()=>{ if(!fired) pr=praiseStart(cleanCard); },Math.max(600,read-POP1)); /* v576: the star is placed from the END of the reading rather than from its start, so a longer recap is read first and the flight still finishes with the card */
-    if(rc) setTimeout(()=>{ if(!fired&&rc.isConnected){ rc.classList.remove("in"); rc.classList.add("out"); } },Math.max(0,dwell-RECAP_OUT)); /* v555: the final translation lifts away in the dwell's last 200 ms, so the next card does not arrive on top of it; the card still advances at NEXT_MS, and a tap still takes it at once */
-    setTimeout(go,dwell); /* a milestone card holds one second longer, for the burst */
+    tm=setTimeout(()=>{ if(!fired&&!held) pr=praiseStart(cleanCard); },Math.max(600,read-POP1)); /* v576: the star is placed from the END of the reading rather than from its start, so a longer recap is read first and the flight still finishes with the card */
+    tOut=setTimeout(()=>{ const el=rcs[rcs.length-1]; if(!fired&&!held&&el&&el.isConnected){ el.classList.remove("in"); el.classList.add("out"); } },Math.max(0,dwell-RECAP_OUT)); /* v555: the final translation lifts away in the dwell's last 200 ms, so the next card does not arrive on top of it; the card still advances at NEXT_MS, and a tap still takes it at once */
+    tGo=setTimeout(()=>{ if(!held) go(); },dwell); /* a milestone card holds one second longer, for the burst */
   };
   /* Undo and Clear are drawn only for a character the app has no strokes for, where the learner really is drawing freehand
      (v517, H: "You also don't need clear and undo at the bottom") */
@@ -5539,7 +5572,7 @@ function logPadStroke(x,k,ok,dist){ DRAWLOG.push({t:Date.now(),pad:x?x.glyph:"",
    still due, so the next session's queue picks it up). Only while the back is closed; once it is open the grades own the screen. */
 const SW_SLOP=12, SW_MIN=60, SW_GAP=16, SW_MS=220;
 /* the closed card is pushed sideways and the next one slides in from the other side and snaps into place (v414, the carousel of v417 — H: "Ich moechte die Karten quasi nach links schieben und die naechste Karte kommt von rechts rein und rastet geschmeidig ein … Die muessen nicht so zur Seite wegkippen wie bei Tinder"). Nothing is graded: only S.idx moves; a card swiped past returns in the next session, not in this one (v417). */
-function swipeHint(d){ return showHints()?`<div class="hint">${t("Trace the lit stroke; the pad moves on by itself.")}${S.settings.bigTapped?"":" "+t("Tap the photo for the pinyin and the meaning, and again for the photo.")}${curList().length>1?" "+t("Swipe left or right to pick another card."):""}${lockOn()?" "+t("Press and hold a character to walk through every card that has it; press and hold it again to come back."):""}</div>`:""; } /* v512: the reveal hint went with the reveal */
+function swipeHint(d){ return showHints()?`<div class="hint">${t("Trace the lit stroke; the pad moves on by itself.")}${S.settings.bigTapped?"":" "+t("Tap the photo for the pinyin and the meaning, and again for the photo.")}${new Set(curList()).size>1?" "+t("Swipe left or right to pick another card."):""}${lockOn()?" "+t("Press and hold a character to walk through every card that has it; press and hold it again to come back."):""}</div>`:""; } /* v512: the reveal hint went with the reveal */
 function wireSwipe(card,o){
   /* o: {n, idx, peer(i) -> the neighbour's inner HTML or null, go(i), centred} — the caller owns the list and what a
      move means, so the same gesture serves Learn's session queue and the Cards list's own order (v445) */
@@ -5657,10 +5690,13 @@ async function recordGrade(c,g){
 function nextSingle(c){
   /* only what Learn can study (v502): a multicard and its own texts are never tested, so the walk down the list skips them
      instead of opening a multicard as a study card (the v487 rule; until v501 the list was every record of the deck) */
-  const list=S.custom.filter(learnable).sort((a,b)=>(b.at||0)-(a.at||0)).map(d=>d.id);
+  /* v807 (the audit): the walk follows the Cards list as it stands — its sort (v780), its filter and its search — while the card is
+     in it; until v806 it walked newest-first whatever the list showed, so after 出口 in a pinyin-sorted list came the newest card */
+  const shown=S.cardsTab!=="pages"?cardsList().filter(learnable).map(d=>d.id):[];
+  const list=shown.includes(c)?shown:S.custom.filter(learnable).sort((a,b)=>(b.at||0)-(a.at||0)).map(d=>d.id);
   const next=list[list.indexOf(c)+1];
   if(!next){ endSingle(); return; }
-  S.single=next; S.queue=[next]; S.idx=0; S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0});
+  S.single=next; S.queue=[next]; S.idx=0; S.fullPic=false; S.peek=null; S.ansOpen=false; llog("test: next"); render(); window.scrollTo({top:0});
 }
 
 /* ---------- Add ---------- */
@@ -6271,7 +6307,7 @@ function renderCardDetail(main,c){
     attachPicZoom(dcard.querySelector(".zone1 .picbox")); }
   const test=$("#d-test"); if(test) test.onclick=()=>{
     S.saved={queue:S.queue,idx:S.idx,done:S.done,ahead:S.ahead};
-    S.single=c; S.queue=[c]; S.idx=0; S.ansOpen=false; S.mode="study"; render();
+    S.single=c; S.queue=[c]; S.idx=0; S.ansOpen=false; S.mode="study"; llog("test this card"); render();
   };
   $("#d-edit").onclick=()=>{ S.editing=c; render(); };
   if($("#d-star")) $("#d-star").onclick=async()=>{ await setStar(c,!d.star); render(); }; /* the learner's own mark (v425); a multicard's own text has no such button (v493) */
@@ -6332,7 +6368,7 @@ function renderEdit(main,c){
     if(!await confirmDelCard(cardOf(c))) return; /* v594: the same question as on the open card */
     await delCustom(c); endRecrop(); delete SIGN[eid]; /* then at once, with Undo under it (v268) */
     const from=S.editFrom; S.editing=null; S.editFrom=null;
-    if(from==="study"){ S.queue=S.queue.filter(x=>x!==c); if(S.single===c) S.single=null; S.fullPic=false; S.ansOpen=false; S.mode="study"; }
+    if(from==="study"){ S.queue=S.queue.filter(x=>x!==c); if(S.single===c) S.single=null; S.fullPic=false; S.ansOpen=false; S.mode="study"; llog("deleted"); }
     else if(from==="camera"){ S.mode="inbox"; S.fullPic=false; }
     else if(from==="lookup"){ S.mode="cards"; S.fullPic=false; LOOK_BACK=null; } /* v792: the text is gone, the multicard stays open, no sheet to come back to */
     else { S.mode="cards"; if(S.detailFrom==="inbox"){ backToPhoto(); return; } if(fromPage()){ backToPage(); return; } if(fromCard()){ backToCard(); return; } S.detail=null; } /* v736: Delete lives here only now — back where the open card came from, as its own Delete did (v594) */
@@ -6972,7 +7008,7 @@ async function undoDelete(){
       for(const x of it.items||[]){ if(S.custom.some(y=>y.id===x.d.id)) continue; S.custom.splice(Math.min(x.idx,S.custom.length),0,x.d); try{ await idbPut("custom",x.d); }catch(e){} if(x.prog){ S.progress[x.d.id]=x.prog; try{ await idbPut("progress",{id:x.d.id,...x.prog}); }catch(e){} } bump("deleted",-1); } /* the page's texts with it (v453) */
       if(d.page){ const pg=cardOf(d.page); if(pg&&pg.items&&!pg.items.includes(d.id)) await putCard({...pg,items:[...pg.items,d.id]},pg.id); } /* a text back into its page (v453) */
       if(it.shot&&!S.inbox.some(x=>x.id===it.shot.rec.id)){ S.inbox.splice(Math.min(it.shot.idx,S.inbox.length),0,it.shot.rec); try{ await idbPut("inbox",it.shot.rec); }catch(e){} } /* the photo that went with its last card (v464) */
-      if(S.mode==="study"&&!S.queue.includes(d.id)&&d.c&&!isPage(d)){ S.queue.splice(S.idx,0,d.id); S.fullPic=false; S.ansOpen=false; } /* deleted from the study back: the card comes next again */
+      if(S.mode==="study"&&!S.queue.includes(d.id)&&d.c&&!isPage(d)){ S.queue.splice(S.idx,0,d.id); S.fullPic=false; S.ansOpen=false; llog("undo"); } /* deleted from the study back: the card comes next again */
     } else {
       const rec=it.rec; if(S.inbox.some(x=>x.id===rec.id)) continue;
       S.inbox.splice(Math.min(it.idx,S.inbox.length),0,rec); try{ await idbPut("inbox",rec); }catch(e){}
@@ -11657,7 +11693,7 @@ async function importData0(e){
   }catch(err){ noteSheet(t("Import failed ({0})",err)); return; }
   prog.forEach(r=>{ const {id,...s}=r; S.progress[id]=s; });
   merged.forEach(r=>{ const i=S.custom.findIndex(x=>x.id===r.id); if(i>=0) S.custom[i]=r; else S.custom.push(r); });
-  S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false;
+  S.queue=buildQueue(false); S.sessionAt=Date.now(); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false; llog("new session");
   S.mode="study"; render();
   /* what the import did, in one sentence (v167, H: an older app had dropped the photos without a word) */
   noteSheet(t("Import"),t("Imported {0} and {1}",nOf(cust.length,"card"),nOf(prog.length,"progress entry","progress entries"))+(nInFile?t(", {0} with photos",nPhotos)+(nPhotos<nInFile?" "+t("({0} could not be read)",nInFile-nPhotos):""):". "+t("The file carries no photos; the photos on this phone were kept"))+".");
@@ -11712,7 +11748,7 @@ async function resetAll(){
   LAST_READ.ring.length=0; /* the ring holds the readings and their steps both (v479) */
   for(const k of Object.keys(NUMSOF)) delete NUMSOF[k];
   TRANSLATE=null; RECHECK=null;
-  S.queue=buildQueue(false); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false;
+  S.queue=buildQueue(false); S.sessionAt=Date.now(); S.idx=0; S.done=0; S.ahead=false; S.ansOpen=false; llog("new session");
   render();
 }
 
