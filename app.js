@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=801; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=802; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -161,7 +161,7 @@ function requeue(){ const fresh=buildQueue(false); if(!S.queue.length){ S.queue=
   const ids=new Set(deck().map(d=>d.id)), q=[]; let idx=S.idx;
   S.queue.forEach((id,i)=>{ if(ids.has(id)) q.push(id); else if(i<S.idx) idx--; });
   const seen=new Set(q); for(const id of fresh) if(!seen.has(id)){ q.push(id); seen.add(id); }
-  S.queue=q; S.idx=Math.max(0,Math.min(idx,q.length)); }
+  S.queue=q; S.idx=Math.max(0,Math.min(idx,q.length)); llog("queue built again"); }
  /* cards are addressed by id everywhere; the text is c */
 /* The page card (v453, H, 2026-09-13, on the nine cards his Meituan order screen made: "Ich hatte doch gesagt, bitte bei
    Screenshots nicht für jeden Wortstring eine einzelne Karte anlegen, sondern den Screenshot unter Cards und in learn
@@ -594,6 +594,8 @@ function diagText(){
     `learn zoom · ${ZLOG.length?ZLOG.length+" decisions, newest last":"no zoom yet"}${ZCHECK?` · zoom check ${ZCHECK.line} (${ago(ZCHECK.at)})`:""}`, /* v617/v618: every decision of the pad's zoom — the card, the character, how its place was found (ink, ink unsure, estimate) and why not better */
     ...ZLOG.flatMap((z,i)=>[`  ${ago(z.at)}  ${String(z.c||"").replace(/\n/g,"/").slice(0,12)} ${z.ch||""} · ${z.how}${z.why?" ("+z.why+")":""}${z.s!=null?" · x"+z.s:""}${z.lv!=null?" · level "+z.lv:""}${z.pos?" · at "+z.pos:""}${z.edge?" · "+z.edge:""}${z.t!=null?" · "+(z.t/1000).toFixed(1)+" s into the card":""}${z.where&&z.where!=="study"?" · on "+z.where:""}`,
       ...(z.rd&&(i===0||ZLOG[i-1].rd!==z.rd||ZLOG[i-1].c!==z.c)?[`      the reader read: ${z.rd.slice(0,240)}`]:[])]), /* v666: at, edge and the reader's text */
+    `learn moves · ${LLOG.length?LLOG.length+" noted, newest last":"none noted yet"}`, /* v802: every move of the session's place and its reason; "moved, no note" is a move no site named */
+    ...LLOG.map(l=>`  ${ago(l.at)}  ${l.why} → ${l.i+1} of ${l.n} · ${l.c}${l.gone?" · gone: "+l.gone:""}${l.from?" · from "+l.from:""}${l.dropped?" · "+l.dropped+" dropped":""}${l.mode!=="study"?" · on "+l.mode:""}`),
     `learn fit · ${LAST_FIT?Object.entries(LAST_FIT).filter(([k])=>k!=="at").map(([k,v])=>k+" "+v).join(", ")+" ("+ago(LAST_FIT.at)+")":"no study card measured yet"}`, /* v521: the pad's last measurement — where the card ends against the tab bar, and what was counted under the pad */
     navigator.userAgent, `voices (${voiceList().length}): ${voiceList().join("; ")||"none reported"}`, ""];
   /* v479: every block is one photo's own. The steps used to be a single global list that the next reading wiped, so an album
@@ -1433,7 +1435,7 @@ async function boot(){
        open answer and the day's count — so a reload in Learn comes back on the same card instead of at the top of a queue
        built afresh, where a card already graded is no longer due and the next one takes its place. */
     if(S.mode==="study"&&Array.isArray(rv.queue)){ const q=rv.queue.filter(id=>{ const d=cardOf(id); return d&&d.c; });
-      if(q.length){ S.queue=q; S.idx=Math.max(0,Math.min(q.length,rv.idx|0)); S.ansOpen=!!rv.revealed&&S.idx<q.length; S.done=Math.max(0,rv.done|0); S.ahead=!!rv.ahead;
+      if(q.length){ S.queue=q; S.idx=Math.max(0,Math.min(q.length,rv.idx|0)); S.ansOpen=!!rv.revealed&&S.idx<q.length; S.done=Math.max(0,rv.done|0); S.ahead=!!rv.ahead; llog("restored after a reload",{dropped:rv.queue.length-q.length});
         if(lockOn()&&typeof rv.lock==="string"&&Array.isArray(rv.walk)){ const w=rv.walk.filter(id=>{ const d=cardOf(id); return d&&d.c; }); if(w.length){ S.lockChar=rv.lock; S.walk=w; S.walkIdx=Math.max(0,Math.min(w.length-1,rv.walkIdx|0)); } } /* v513: a reload comes back locked */
         const pn=rv.pad; if(pn&&pn.key) S.pad={key:pn.key,i:pn.i|0,k:pn.k|0,miss:pn.miss|0,hint:!!pn.hint,maxMiss:pn.maxMiss|0,done:new Set(pn.done||[]),helped:new Set(pn.helped||[]),free:[],lv:pn.lv||{}}; /* v569: the characters already written on this card, and the strokes already in. padState makes a fresh state whenever the key does not match the card it is asked for, so a stale note cannot land on the wrong card. */ } } }
   wireChrome(); render();
@@ -3866,8 +3868,9 @@ function renderStudy(main){
      line go, come back to Learn, and renderStudy crashed on the missing card. The queue is the session's, so it is
      pruned here rather than rebuilt: the place in it is kept, and a session that runs out falls through to the done
      screen as it always did. */
-  if(S.queue.some(id=>!cardOf(id))){ const gone=S.queue.slice(0,S.idx).filter(id=>!cardOf(id)).length;
-    S.queue=S.queue.filter(id=>cardOf(id)); S.idx=Math.max(0,Math.min(S.idx-gone,S.queue.length)); }
+  if(S.queue.some(id=>!cardOf(id))){ const gone=S.queue.slice(0,S.idx).filter(id=>!cardOf(id)).length, ids=S.queue.filter(id=>!cardOf(id));
+    S.queue=S.queue.filter(id=>cardOf(id)); S.idx=Math.max(0,Math.min(S.idx-gone,S.queue.length)); llog("pruned",{gone:ids.map(x=>String(x).slice(0,16)).join(", ")}); } /* v802 */
+  { const k=lkey(); if(LLAST!==null&&k!==LLAST&&!(LLOG.length&&LLOG[LLOG.length-1].to===k)) llog("moved, no note",{from:LLAST.slice(0,24)}); LLAST=k; } /* v802: a move no site named */
   if(!deck().length){
     main.innerHTML=wxNoteHTML()+`<div class="done">
       <div class="mark">始</div>
@@ -4344,6 +4347,14 @@ function charBoxes(src,nw,nh,g,lines){
   }catch(e){ return {why:"error "+(e&&e.message||e)}; } }
 /* the zoom's own record (v618): the last ZLOG_MAX decisions, each with the character, how its place was found and why
    not better — Diagnostics prints them, since v617 kept only the last one and the dump that came back said nothing */
+/* v802 (H: a flashcard made from a multicard text came up in Learn and the app moved straight on to the next card — the
+   dump had nothing to say about it): every move of the session's place is noted with its reason — the written card's
+   advance, a swipe, a walk's lock and release, Test this card, a queue pruned of a deleted card, the queue built again, the
+   place restored after a reload —, and renderStudy notes a move no site named ("moved, no note": the one line that would
+   have named H's jump). The dump prints the last LLOG_MAX under "learn moves". */
+const LLOG=[], LLOG_MAX=30; let LLAST=null;
+const lkey=()=>(walking()?"w":"q")+curIdx()+"|"+(curList()[curIdx()]||"");
+function llog(why,o){ const id=curList()[curIdx()], d=id?cardOf(id):null; LLOG.push({at:Date.now(),why,i:curIdx(),n:curList().length,c:d?String(d.c||"").replace(/\n/g,"/").slice(0,12):(id?"?":"end"),mode:S.mode,to:lkey(),...(o||{})}); while(LLOG.length>LLOG_MAX) LLOG.shift(); LLAST=lkey(); }
 const ZLOG=[], ZLOG_MAX=30; const zlog=o=>{ ZLOG.push({at:Date.now(),where:S.mode,t:S.pad&&S.pad._at?Date.now()-S.pad._at:null,...o}); /* v788: the screen the decision was made on and how long the card had stood — v787's open card in Cards wore the pad's zoom and the dump could not say on which screen the decision fell */ while(ZLOG.length>ZLOG_MAX) ZLOG.shift(); LAST_AZ=ZLOG[ZLOG.length-1]; };
 /* THE PHONE'S READER FINDS THE CHARACTERS (v653, H: "Dieses automatische Reinzoomen und weiter Zoomen auf den aktuellen Charakter
    funktioniert leider fast nie", with a Diagnostics dump: 18 of 21 decisions "ink, unsure (odd shapes)", the zoom then loose or
@@ -4825,18 +4836,18 @@ const curList=()=>walking()?S.walk:S.queue;
 const curIdx=()=>walking()?S.walkIdx:S.idx;
 const setCurIdx=i=>{ if(walking()) S.walkIdx=i; else S.idx=i; };
 /* to another card of the list, grading nothing (v414's rule): the swipe's commit, and the harness's way now that the chevrons are gone (v520) */
-function stepCard(i){ if(i<0||i>=curList().length) return; sayStop(); setCurIdx(i); S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0}); }
+function stepCard(i){ if(i<0||i>=curList().length) return; sayStop(); setCurIdx(i); llog("swipe"); S.fullPic=false; S.peek=null; S.ansOpen=false; render(); window.scrollTo({top:0}); }
 function walkOf(ch){ const has=d=>!!(d&&d.c&&[...String(d.c)].includes(ch)), seen=new Set(), out=[];
   for(const id of S.queue){ const d=cardOf(id); if(has(d)){ seen.add(id); out.push(id); } } /* every occurrence: a second one is the card's repeat pass (§ 8.1) */
   for(const d of learnDeck().cards){ if(has(d)&&!seen.has(d.id)){ seen.add(d.id); out.push(d.id); } }
   return out; }
-function lockChar(ch,c){ S.lockChar=ch; S.walk=walkOf(ch); S.walkIdx=Math.max(0,S.walk.indexOf(c)); S.pad=null; S.ansOpen=false; S.fullPic=false; render(); window.scrollTo({top:0}); }
+function lockChar(ch,c){ S.lockChar=ch; S.walk=walkOf(ch); S.walkIdx=Math.max(0,S.walk.indexOf(c)); llog("walk on "+ch); S.pad=null; S.ansOpen=false; S.fullPic=false; render(); window.scrollTo({top:0}); }
 /* the release: the walk is the session again at the card the learner is on — a card the session did not hold joins it there —
    and the card shows the whole photo with the answer block open (H: "exits it and shows full image Translation of the current card") */
 function unlockChar(){ const w=curList(), wi=curIdx(), c=w[wi]; buzz([30,60,30]); /* two pulses for the release, one for the lock (v518) */
   const reps=w.slice(wi+1).filter((id,i)=>w.slice(0,wi+1+i).includes(id)); /* the walk's repeat passes not yet reached (§ 8.1) ride over into the session, three cards on */
   S.lockChar=null; S.walk=null; S.walkIdx=0;
-  if(c){ let i=S.queue.indexOf(c); if(i<0){ S.queue.splice(Math.min(S.idx,S.queue.length),0,c); i=Math.min(S.idx,S.queue.length-1); } S.idx=i; }
+  if(c){ let i=S.queue.indexOf(c); if(i<0){ S.queue.splice(Math.min(S.idx,S.queue.length),0,c); i=Math.min(S.idx,S.queue.length-1); } S.idx=i; } llog("walk released");
   for(const id of reps) if(!S.queue.slice(S.idx+1).includes(id)) S.queue.splice(Math.min(S.queue.length,S.idx+1+REP_GAP),0,id);
   const fin=()=>{ S.fullPic=true; S.ansOpen=true; S.pad=null; render(); window.scrollTo({top:0}); };
   const sp=[...document.querySelectorAll(".spot")]; if(sp.length){ sp.forEach(e=>e.classList.remove("on")); setTimeout(fin,SPOT_MS); } else fin(); } /* v520: the spotlight fades out before the screen changes */
@@ -5449,7 +5460,7 @@ function mountPad(card,d,c,tg,st,cur){
        the scroll wait for Learn. The other three guards are unchanged — they mean the state really was superseded. */
     const adv=()=>{ const inStudy=S.mode==="study";
       if(walking()!==wasWalk||curIdx()!==my||S.pad!==padState(c)) return; if(S.single){ if(inStudy) nextSingle(c); return; }
-      if(curIdx()+1<curList().length){ setCurIdx(curIdx()+1); S.fullPic=false; S.peek=null; S.ansOpen=false; if(inStudy){ render(); window.scrollTo({top:0}); } } else if(!walking()){ S.idx++; if(inStudy) render(); } }; /* a walk's last card stays */
+      if(curIdx()+1<curList().length){ setCurIdx(curIdx()+1); llog("written"); S.fullPic=false; S.peek=null; S.ansOpen=false; if(inStudy){ render(); window.scrollTo({top:0}); } } else if(!walking()){ S.idx++; llog("written, session done"); if(inStudy) render(); } }; /* a walk's last card stays */
     /* the recap (v523, § 12): the finished card stands large over the pad — its reading and its meaning, and since v577
        no characters, which the tiles two rows above already carry in green — for the whole
        dwell — recapMs(d), longer the more syllables the card has (v576) — and the praise (v517) lifts out of it so that
