@@ -23,11 +23,13 @@ const qwenUrl = (k: string) => k.startsWith("sk-sp-") ? QWEN_PLAN : QWEN_PAYG;
 // which is the right way to fail for a budget guard.
 // NO SCHEMA CHANGE: relay_usage is keyed (install, day), so counting under "<install>:<provider>" gives each provider
 // its own row and its own count, while relay_bump's own sum over the day stays a true total across everything.
+// Since v817 these caps are the FALLBACK: once budget.sql has run, relay_config's deepseek_cap and qwen_cap rule (the app's
+// RELAY_CAPS is the same fallback, named there; the owner's phone reads the live caps from x-relay-caps).
 const PROVIDERS: Record<string, { url: (key: string) => string; key: string; cap: number }> = {
   deepseek: { url: () => "https://api.deepseek.com/chat/completions", key: (Deno.env.get("DEEPSEEK_KEY") || "").trim(), cap: 400 },
   qwen: { url: qwenUrl, key: (Deno.env.get("QWEN_KEY") || "").trim(), cap: 80 },
 };
-// A backstop against a runaway or abuse, not a budget guard — the Token Plan is PREPAID and cannot be overspent, and
+// A backstop against a runaway or abuse; the budget guard is relay_config's monthly ceiling (v817) — the Token Plan is PREPAID and cannot be overspent, and
 // DeepSeek at 8,000 calls is about ¥2. 10000 guarded nothing (twice the whole week's Qwen quota in one day); 2000 is
 // the number v409 had to raise because it locked the whole class out on their first day, so it must stay above that.
 const CAP_ALL = 6000;
@@ -36,7 +38,21 @@ const CAP_ALL = 6000;
 // could claim the exemption by setting x-install. Unset = nobody is exempt, which is the safe default.
 const OWNER_INSTALL = (Deno.env.get("OWNER_INSTALL") || "").trim();
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-install", "Access-Control-Allow-Methods": "POST, OPTIONS" };
-const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...CORS, "content-type": "application/json" } });
+const json = (o: unknown, status = 200, extra: Record<string, string> = {}) => new Response(JSON.stringify(o), { status, headers: { ...CORS, ...extra, "content-type": "application/json" } });
+// The budget (v817, H: "Können wir da noch irgendeinen Sicherheitsschalter für mich einbauen, dass ich dann nicht riesige
+// Kosten kriege?" and "der User [muss] Bescheid wissen, warum es langsamer wird"). relay_check (budget.sql) counts the call
+// and hands back the owner's row of relay_config — the switch, the monthly ceiling in euros, the share of it from which every
+// phone's allowance halves, the caps and the prices — with this month's estimated spend. A refusal says WHY in `reason`
+// and until WHEN in `until` (a UTC date): "paused" the owner's switch, "month" the ceiling, "all" CAP_ALL, "phone" this
+// phone's allowance. The app turns that into a sentence the learner can act on. Every answer carries x-relay-mode; the
+// owner's phone (OWNER_INSTALL) also gets the month's spend, the ceiling and the caps, which Owner tools shows. After a
+// good answer its tokens are priced and added to relay_spend. Without budget.sql the function falls back to relay_bump and
+// the constants above, as before v817.
+type Check = { phone: number; all: number; paused?: boolean; cap_eur?: number | null; spent_eur?: number; reduce_at?: number | null;
+  caps?: Record<string, number | null> | null; prices?: Record<string, number[]> | null };
+const dayUTC = (add: number) => new Date(Date.now() + add * 864e5).toISOString().slice(0, 10);
+const nextMonthUTC = () => { const d = new Date(); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString().slice(0, 10); };
+const EXPOSE = "x-relay-mode, x-relay-left, x-relay-spend, x-relay-cap, x-relay-caps";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -49,13 +65,30 @@ Deno.serve(async (req) => {
   if (!/^[0-9a-f]{8,32}$/.test(install)) return json({ error: "no installation id" }, 400);
   // count first, so a refused call is counted too
   const url = Deno.env.get("SUPABASE_URL"), srv = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const rpc = (fn: string, args: unknown) => fetch(`${url}/rest/v1/rpc/${fn}`, { method: "POST", headers: { "content-type": "application/json", apikey: srv!, authorization: `Bearer ${srv}` }, body: JSON.stringify(args) });
+  let c: Check = { phone: 0, all: 0 }, budget = true;
   try {
-    const r = await fetch(`${url}/rest/v1/rpc/relay_bump`, { method: "POST", headers: { "content-type": "application/json", apikey: srv!, authorization: `Bearer ${srv}` }, body: JSON.stringify({ p_install: `${install}:${name}` }) });
-    const c = await r.json();
+    let r = await rpc("relay_check", { p_install: install, p_provider: name });
+    if (r.status === 404) { budget = false; r = await rpc("relay_bump", { p_install: `${install}:${name}` }); } // budget.sql not run yet
+    c = await r.json();
     if (!r.ok) return json({ error: "counter " + r.status }, 500);
-    const cap = (OWNER_INSTALL && install === OWNER_INSTALL) ? Infinity : pv.cap;
-    if (c.phone > cap || c.all > CAP_ALL) return json({ error: "daily limit reached" }, 429);
   } catch (e) { return json({ error: "counter failed" }, 500); }
+  const owner = !!OWNER_INSTALL && install === OWNER_INSTALL;
+  const capEur = budget && c.cap_eur != null ? +c.cap_eur : Infinity, spent = +(c.spent_eur || 0);
+  const reduced = spent >= capEur * (c.reduce_at != null ? +c.reduce_at : 0.8);
+  const caps: Record<string, number> = {};
+  for (const [k, v] of Object.entries(PROVIDERS)) caps[k] = c.caps && c.caps[k] != null ? +c.caps[k]! : v.cap;
+  const cap = owner ? Infinity : reduced ? Math.ceil(caps[name] / 2) : caps[name];
+  const mode = c.paused ? "paused" : spent >= capEur ? "month" : reduced ? "reduced" : "normal";
+  const hdr: Record<string, string> = { "Access-Control-Expose-Headers": EXPOSE, "x-relay-mode": mode };
+  if (owner && budget) Object.assign(hdr, { "x-relay-spend": spent.toFixed(2), "x-relay-cap": Number.isFinite(capEur) ? String(capEur) : "",
+    "x-relay-caps": Object.entries(caps).map(([k, v]) => `${k}=${v}`).join(",") });
+  const refuse = (reason: string, until: string, error: string) => json({ error, reason, until }, 429, hdr);
+  if (c.paused) return refuse("paused", "", "paused by the owner");
+  if (spent >= capEur) return refuse("month", nextMonthUTC(), "monthly budget reached");
+  if (c.all > CAP_ALL) return refuse("all", dayUTC(1), "daily limit reached");
+  if (c.phone > cap) return refuse("phone", dayUTC(1), "daily limit reached");
+  if (Number.isFinite(cap)) hdr["x-relay-left"] = String(Math.max(0, cap - c.phone));
   // What the provider did, in this function's own log (2026-09-29, H's 22-line board: seven relay calls each ended at
   // 75.0 s with nothing in the log, and whether Qwen answered late, closed the line or the worker was retired could not
   // be told apart). Never the text: provider, request bytes, status, seconds, answer length. A call that is cut before
@@ -73,5 +106,15 @@ Deno.serve(async (req) => {
     return json({ error: `${name} closed the line after ${secs()} s: ${why}` }, 502);
   }
   console.log(`${name} -> ${up.status} in ${secs()} s, ${text.length} chars`);
-  return new Response(text, { status: up.status, headers: { ...CORS, "content-type": up.headers.get("content-type") || "application/json" } });
+  // the answer's price: its tokens at relay_config's rates (DeepSeek reports the cache hits apart; a provider that does not,
+  // pays the full input rate). A failure here costs the estimate one call, never the answer.
+  if (budget && up.ok) {
+    try {
+      const u = JSON.parse(text).usage || {}, p = (c.prices && c.prices[name]) || [0, 0, 0];
+      const inTok = +u.prompt_tokens || 0, hit = Math.min(+u.prompt_cache_hit_tokens || 0, inTok), outTok = +u.completion_tokens || 0;
+      const usd = ((inTok - hit) * (+p[0] || 0) + hit * (+p[1] || 0) + outTok * (+p[2] || 0)) / 1e6;
+      await rpc("relay_spend_add", { p_provider: name, p_usd: usd });
+    } catch (e) { console.log(`${name} spend not counted: ${String((e as Error)?.message || e).slice(0, 120)}`); }
+  }
+  return new Response(text, { status: up.status, headers: { ...CORS, ...hdr, "content-type": up.headers.get("content-type") || "application/json" } });
 });

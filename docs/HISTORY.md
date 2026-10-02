@@ -116,6 +116,66 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v817, 2026-10-02)
+- **The relay gets a budget, an emergency switch and reasons, and the learner is told why the AI waits (v817, H on the store
+  launch: "Was, wenn die App explodiert und total viele User das plötzlich usen …? Können wir da noch irgendeinen
+  Sicherheitsschalter für mich einbauen, dass ich dann nicht riesige Kosten kriege?", then "Aber für den Fall muss natürlich
+  so geregelt sein, dass der User Bescheid weiß, warum es langsamer wird und auch die Möglichkeit hat, selber in Aktion zu
+  treten … zum Beispiel seinen eigenen DeepSeek-Key eingibt", then "let's do it").** Three parts were offered: (1) the
+  relay's limits, its reasons and the switch, (2) a sheet that lets every user enter their own DeepSeek key, (3) the store
+  shell's purchase path, hidden. **This is part 1.**
+  **What protected the owner before:** the Qwen Token Plan is prepaid, DeepSeek works from a prepaid balance, Supabase and
+  Pages are on free plans, and `CAP_ALL` 6000 calls a day stopped everyone. What it did not do: count money. 6000 DeepSeek
+  calls every day is a few hundred euros a year at the higher 2026 rates, and the per-phone cap is per installation id,
+  which anyone can make new.
+  **Now (`supabase/budget.sql`, run once after relay.sql):** one row, `relay_config`, that the owner edits in the Supabase
+  Table Editor with no redeploy — `paused` (the switch: every phone, the owner's included, stops at the next call),
+  `month_cap_eur` (15), `reduce_at` (0.8: from 80 % of the ceiling every phone's daily allowance halves), `deepseek_cap`
+  100 and `qwen_cap` 10 a phone a day, and the providers' prices in USD per million tokens with `eur_per_usd`. DeepSeek's
+  defaults (0.30 in, 0.03 cache hit, 1.20 out) are the higher of the published 2026 rates, so the estimate errs high —
+  **not checked against the owner's invoice**; Qwen's are 0 because the Token Plan is prepaid. `relay_check` counts the
+  call (the same `<install>:<provider>` rows as `relay_bump`, so `usage_latest` reads them unchanged) and answers with the
+  switch, the ceiling, this month's estimated spend, the caps and the prices; after a good answer the function prices its
+  tokens (`prompt_cache_hit_tokens` apart) and adds them to `relay_spend` (month, provider, calls, usd — no installation
+  id). Both functions are revoked from public, anon and authenticated and granted to service_role.
+  **A refusal names its reason and its day:** 429 `{error, reason, until}` — `paused` (no day), `month` (the 1st of next
+  month, UTC), `all` (CAP_ALL, tomorrow), `phone` (tomorrow); `error` keeps "daily limit reached" for the two daily ones,
+  so a phone on v816 reads its old text. Every answer carries `x-relay-mode` (normal, reduced, month, paused) and, under a
+  cap, `x-relay-left`; the owner's phone (`OWNER_INSTALL`) also gets `x-relay-spend`, `x-relay-cap` and `x-relay-caps`,
+  all exposed to the page. **Without budget.sql the function falls back to `relay_bump` and its constants (400/80)**, so
+  the deploy order does not matter.
+  **The app:** `relayFetch` hands every answer to `relayHeard`; a 429 sets `RELAY_STATE[provider]` {reason, until} (no
+  reason, a relay from before v817, reads as `phone`), a good answer of that provider or the day's arrival clears it.
+  **Per provider, found in the diff's own review:** one state for both let a refused picture — the allowance of 10 runs out
+  long before the text's 100 — say "AI checks used up" and stop the text checks that still worked. Now the text provider's
+  state speaks first; a picture refused for its own allowance says "Today's free picture readings are used up. Your cards
+  are still made, and the text checks go on."; the switch, the ceiling or the day's total heard on either speaks for all. `relayLine()` says it in the
+  app's language — "Today's free AI checks are used up. Your cards are still made, and the AI checks them tomorrow.", the
+  busy-today, paused-until-{date} and paused-for-now variants — under From album on the Camera tab (`#relay-note`) and
+  under More → AI review (`#ai-relay`); `relayError` returns the English key of the same sentence (without the month's date), which the screens translate as
+  v806 made them do, and Diagnostics keeps in English. Every sentence says the cards are still made, because they are: the reading and the dictionary need no AI,
+  and a card whose check was refused waits as pending. **`aiAuto` stands down while the state holds** — before, every new
+  card started a run over every pending card, each a refused (counted) call. The owner's phone keeps the spend in
+  `relayBudget`, shows it under Owner tools → **Relay budget**, gets one note a month at `RELAY_WARN` 0.8 of the ceiling,
+  and the All users report compares against the live caps (`relayCaps`; `RELAY_CAPS` stays as the fallback pair, named
+  on both sides).
+  **What leaves the phone does not change**; what the relay keeps does: `privacy.html` now says it also keeps each month's
+  calls per provider with their estimated cost, without an installation id, and that the app says when the allowance or
+  the budget is used up. The in-app "What is sent" (v814's wording) says the relay "keeps a count and a short log of each call", which the
+  monthly totals still are, so its ten columns stay. Five keys × nine columns (523 keys a column, ru 554); the dated one rendered at 1 November in
+  all nine (de "bis zum 1. November", ru "до 1 ноября" in the genitive, th without a year).
+  **Verified:** the SQL on a local PostgreSQL 16 — run twice, counts, spend sums, the switch, anon refused; the function
+  under Node with Deno shimmed and the database and provider mocked, **17 cases, 15 flip against the v816 relay (the relay is unchanged since v805)** (the two
+  that pass on both are guards: a learner's phone gets no spend, the fallback passes under its cap); the app in headless
+  Chromium at 390 px, en light, de dark, ru light, th dark, **69 checks** (the line on the Camera tab and in More, the
+  month's date, the learner's sentence in the error, aiAuto silent while refused and going again once cleared, a refused
+  picture with its own line and the text checks going on, the switch heard on a picture call, the owner's note once a
+  month, the budget row; every one fails on v816, which has none of these functions), plus 360 px screenshots of the owner's note and row. **Built on v805 and moved onto v816 after v806–v816 landed meanwhile** (the conflicts were the version, `TO_TEST`,
+  `relayError` and the More row; main's side was taken and the change re-applied). **Not field-checked: nothing
+  runs until H runs budget.sql and pastes the new relay in Supabase** (TO_TEST, two rows).
+  **Not this version:** the own-key sheet for every user (part 2 — today the key form sits behind the owner's password, so
+  the line cannot yet offer the way out H asked for) and the shell's hidden purchase path (part 3).
+
 ## Current state (PWA v816, 2026-10-02)
 - **Dark red, translated shares and notes, bare menu prices (v816, H: "Ok, go for all" — the audit's proposals 5, 6, 10; the
   last of the ten).** **(5) Dark mode's red** was `#E0483E` for both text and fills: white on it measured 4.07:1, the red on a

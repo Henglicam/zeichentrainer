@@ -48,7 +48,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v816, 2026-10-02)
+## Current state (PWA v817, 2026-10-02)
 **The app is called 识字 Shízì** (v608; the old names: HISTORY.md's title) wherever a learner sees a name and in every
 shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -57,6 +57,14 @@ the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's
 tools, Learn zoom, Crop again; dictionary v5 and the gloss rules, duplicate multicards, a text's region, the apps' fields, the
 wake lock. The rule that bites most: **a picture answer's text that is a whole field takes the book's words and is not asked
 of the text model** (`fieldEntry`, v757).
+
+**The relay has a budget and says why it refuses (v817).** `supabase/budget.sql` gives it one row, `relay_config`, that H edits
+in the Supabase Table Editor: `paused` (the emergency switch, every phone), `month_cap_eur`, `reduce_at` (from that share of the
+ceiling every phone's allowance halves), `deepseek_cap`/`qwen_cap` a phone a day, and the prices that turn each answer's tokens
+into `relay_spend`. A 429 carries `reason` (phone, all, month, paused) and `until`, kept **per provider** (a refused picture must
+not stop the text checks); `relayLine()` says it on the Camera tab and under More → AI review, `aiAuto` stands down while the text
+provider is refused, and the owner's phone sees the spend under Owner tools → Relay budget. **Part 1 of 3:** the own-key sheet
+for every user and the store shell's hidden purchase path are not built.
 
 ## Files
 Shell: `index.html` · `styles.css` · `lang.js` · `app.js` · `manifest.webmanifest` (with `share_target`) · `sw.js` ·
@@ -269,8 +277,9 @@ DeepSeek where possible (`textProvider()`), pictures to `pictureProvider()`; Qwe
 `PIC_TIMEOUT2_MS` 120 s (v740).
 
 **The owner's relay** (v191): a phone with no key posts to H's Supabase edge function, which adds the key, counts the call
-and refuses past the cap — **a phone a day: qwen 80, deepseek 400; all phones together `CAP_ALL` 6000**; the owner's phone
-(`OWNER_INSTALL` secret) skips the per-provider cap, never `CAP_ALL`. The Qwen endpoint follows the key's prefix (`sk-ws-` pay-as-you-go, `sk-sp-` Token Plan); both keys
+and refuses past the cap — **a phone a day from `relay_config` (budget.sql, v817; without it qwen 80, deepseek 400), all phones
+together `CAP_ALL` 6000, and the monthly ceiling in euros**; the owner's phone (`OWNER_INSTALL` secret) skips the per-provider
+cap, never `CAP_ALL`, the switch or the ceiling. The Qwen endpoint follows the key's prefix (`sk-ws-` pay-as-you-go, `sk-sp-` Token Plan); both keys
 are trimmed. **The function logs every call** (provider, bytes, status, seconds,
 never the text): Edge Functions → ai-relay → Logs (the 江宁府 board's calls dead at 75.0 s, 2026-09-29, cause open).
 
@@ -290,7 +299,7 @@ must say the same thing, corrected together (one alone went wrong at v403, v459,
 
 ## Languages
 Ten columns in `lang.js`: en, de, fr, es, ja, ko, ru, vi, th, id. **English is the key**; a missing key falls back to the
-English text, never to the key. **518 keys a column, ru 549 (three plural forms), en 15** (v816 — count by evaluating `lang.js`). `nOf`/`wordOf`/`PLURAL` carry the
+English text, never to the key. **523 keys a column, ru 554 (three plural forms), en 15** (v817 — count by evaluating `lang.js`). `nOf`/`wordOf`/`PLURAL` carry the
 counts.
 
 - **The v412 rule: a pronoun or a count-agreeing verb must never cross a key boundary.** Render every count sentence at

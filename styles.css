@@ -600,6 +600,8 @@ body.noscroll{overflow:hidden}
    a column #main, so centring is one justify-content once the pane is allowed to take the height. */
 .pane.camonly{flex:1;display:flex;flex-direction:column;justify-content:center;padding-bottom:8vh}
 .pane.camonly>.lead{margin-bottom:18px}
+.pane>.lead.relaynote,.pane.camonly>.lead.relaynote{margin:16px 0 0;font-size:14px} /* v817: why the free AI waits, under From album */
+.s.relaynote{margin-top:6px}
 .pane.camonly>#shots{display:none}
 /* the Cards list as photo tiles, two in a row (v465): the card's own picture with its heading under it. The grid lives
    on the list, so the empty badge and anything else that is not a tile spans both columns. */

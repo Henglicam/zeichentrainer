@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=816; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=817; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -669,8 +669,9 @@ const reportUrl=()=>SHARE_URL+"/functions/v1/usage-report";
    constants, so the two must be changed together. The copy is named rather than hidden because the cost of drift is a
    warning at the wrong number in a report only H reads — it cannot refuse a call or change what a phone may do.
    The owner's own phone is skipped wherever this is used: it is exempt from the per-provider caps. Owner's, English. */
-const RELAY_CAPS={qwen:80,deepseek:400}, RELAY_WARN=0.8;
-function relayNear(r){ const out=[]; for(const [pv,cap] of Object.entries(RELAY_CAPS)){ const c=+(r&&r["relay_"+pv])||0; if(c>=Math.ceil(cap*RELAY_WARN)) out.push({pv,c,cap}); } return out; }
+const RELAY_CAPS={qwen:80,deepseek:400}, RELAY_WARN=0.8; /* the relay's FALLBACK caps, the same pair as PROVIDERS in ai-relay/index.ts; since v817 relay_config holds the live ones and the owner's phone reads them from x-relay-caps (relayCaps) */
+const relayCaps=()=>({...RELAY_CAPS,...((S.settings.relayBudget||{}).caps||{})});
+function relayNear(r){ const out=[]; for(const [pv,cap] of Object.entries(relayCaps())){ const c=+(r&&r["relay_"+pv])||0; if(c>=Math.ceil(cap*RELAY_WARN)) out.push({pv,c,cap}); } return out; }
 const relayInstall=r=>((r&&r.data||{}).install)||(r&&r.install)||"";
 function relayNearRows(rows){ const me=installId(); return (rows||[]).filter(r=>relayInstall(r)!==me).map(r=>({r,near:relayNear(r)})).filter(x=>x.near.length); }
 const relayNearText=near=>near.map(x=>`${x.pv} ${x.c} of ${x.cap}`).join(", ");
@@ -775,6 +776,8 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["app","v793","Pop-up open: every dot reachable?"],
   ["app","v794","+ Flashcard: made line seen?"],
   ["photo","v803","Photo with another's text: dump"],
+  ["app","v817","budget.sql run, relay redeployed?"],
+  ["app","v817","Pause switch: learner line shows?"],
 ];
 const TO_TEST_GROUPS=[["photo","Take any photo"],["again","Take one of these again"],["app","In the app"],["update","After an update"],["lock","Parked — the lock is off (v531)"]];
 /* What the app claims it can read, and what a photo has actually confirmed (v434, H after the untested menu
@@ -895,7 +898,7 @@ function allUsersText(rows){
     `  AI checks ${n(d,"aiCalls")}, ${n(d,"pics")} with the photo`,
     reader?`  photos read ${reader}, ${n(d,"pics")} of them poorly`:null,
     `  checks via the owner's key today ${n(r,"relay_today")}`,
-    n(r,"relay_today")?`    qwen ${n(r,"relay_qwen")} of ${RELAY_CAPS.qwen}, deepseek ${n(r,"relay_deepseek")} of ${RELAY_CAPS.deepseek}`:null,
+    n(r,"relay_today")?`    qwen ${n(r,"relay_qwen")} of ${relayCaps().qwen}, deepseek ${n(r,"relay_deepseek")} of ${relayCaps().deepseek}`:null,
     errsOf(d).length?`  errors ${errsOf(d).length}, last ${day(errsOf(d)[errsOf(d).length-1].t)} ${errsOf(d)[errsOf(d).length-1].kind}`:null, /* the messages themselves in the section at the end (v271) */
     `  first used ${d.first||"?"}`, `  last report ${day(r.created_at)}`].filter(Boolean).join("\n"); };
   const section=(title,list)=>list.length?[`${title} (${list.length})`,""].concat(list.map(block).join("\n\n")).concat([""]):[];
@@ -1849,11 +1852,69 @@ async function aiFetch(url,opts,ms,ms2){ /* ms2: the second try's own limit (v74
   }
 }
 async function relayFetch(pv,body,ms,ms2){
-  return aiFetch(relayUrl(),{method:"POST",headers:{"content-type":"application/json","apikey":SHARE_KEY,"authorization":"Bearer "+SHARE_KEY,"x-install":installId()},body:JSON.stringify({provider:pv,body})},ms,ms2);
+  const r=await aiFetch(relayUrl(),{method:"POST",headers:{"content-type":"application/json","apikey":SHARE_KEY,"authorization":"Bearer "+SHARE_KEY,"x-install":installId()},body:JSON.stringify({provider:pv,body})},ms,ms2);
+  await relayHeard(r,pv); return r;
+}
+/* What the relay says about the free AI (v817, H: "…dass der User Bescheid weiß, warum es langsamer wird"). Since v817 a
+   refusal names its reason — "phone" (this phone's free checks for today are used up), "all" (every phone's together,
+   CAP_ALL), "month" (the owner's monthly ceiling), "paused" (the owner's emergency switch) — and the UTC day it ends; a relay
+   from before v817 sends none, which reads as "phone". RELAY_STATE keeps each provider's last refusal until a relay answer
+   of that provider goes through or its day comes — per provider, because the picture allowance runs out long before the
+   text one, and a refused picture must neither stop the text checks nor say they stopped. relayLine() says it in the app's
+   language on the Camera tab and under More → AI review — the text provider's state first, else the picture's — always that
+   the cards are still made, because they are: the reading and the dictionary need no AI, and the card waits as pending for
+   aiAuto, which stands down while the state holds rather than spend a refused call per new card. The owner's phone also gets
+   the month's spend, the ceiling and the caps in the headers (relayBudget, Owner tools → Relay budget) and one note a month
+   at RELAY_WARN of the ceiling. */
+const RELAY_STATE={}, RELAY_REASONS=["phone","all","month","paused"];
+async function relayHeard(r,pv){
+  try{
+    if(r.headers.get("x-relay-spend")) ownerBudget(r);
+    if(r.status===429){ let j={}; try{ j=await r.clone().json(); }catch(e){}
+      RELAY_STATE[pv]={reason:RELAY_REASONS.includes(j.reason)?j.reason:"phone", until:/^\d{4}-\d\d-\d\d$/.test(j.until||"")?j.until:"", at:Date.now()}; relayShow(); }
+    else if(r.ok&&RELAY_STATE[pv]){ delete RELAY_STATE[pv]; relayShow(); }
+  }catch(e){}
+}
+function relayRefused(pv){ /* this provider's refusal while it holds; one whose day has come is dropped */
+  const s=RELAY_STATE[pv]; if(!s) return null;
+  if(s.until&&Date.now()>=Date.parse(s.until+"T00:00:00Z")){ delete RELAY_STATE[pv]; return null; }
+  return s;
+}
+function relayWhy(){ /* the sentence that fits, as its English key and its arguments; null while the relay says yes */
+  const tp=textProvider(), pp=pictureProvider(); let s=relayRefused(tp);
+  if(!s){ const p=pp&&pp!==tp?relayRefused(pp):null; if(!p) return null;
+    if(p.reason==="phone") return {key:"Today's free picture readings are used up. Your cards are still made, and the text checks go on."};
+    s=p; } /* the switch, the ceiling and the day's total stop every provider alike */
+  if(s.reason==="month"&&s.until) return {key:"The free AI is paused until {0}. Your cards are still made, and the AI checks them then.",args:[new Date(s.until+"T00:00:00Z").toLocaleDateString(LANG_LOCALE[LANG],{day:"numeric",month:"long",timeZone:"UTC"})]};
+  if(s.reason==="paused"||s.reason==="month") return {key:"The free AI is paused for now. Your cards are still made, and the AI checks them later."};
+  if(s.reason==="all") return {key:"The free AI is busy today. Your cards are still made, and the AI checks them tomorrow."};
+  return {key:"Today's free AI checks are used up. Your cards are still made, and the AI checks them tomorrow."};
+}
+function relayLine(){ const w=relayWhy(); return w?t(w.key,...(w.args||[])):""; }
+function relayKey(){ const w=relayWhy(); return !w?"":w.args?"The free AI is paused for now. Your cards are still made, and the AI checks them later.":w.key; } /* relayError's: English, no date */
+function relayShow(){
+  const l=relayLine();
+  const el=$("#relay-note"); if(el){ el.textContent=l; el.hidden=!l; }
+  const ar=$("#ai-relay"); if(ar){ ar.textContent=l; ar.hidden=!l; }
+}
+function ownerBudget(r){
+  const h=k=>r.headers.get(k)||"", spent=+h("x-relay-spend")||0, cap=+h("x-relay-cap")||0, caps={};
+  h("x-relay-caps").split(",").forEach(p=>{ const [k,v]=p.split("="); if(k&&+v>0) caps[k]=+v; });
+  const mon=new Date().toISOString().slice(0,7), prev=S.settings.relayBudget||{};
+  const b={spent,cap,mode:h("x-relay-mode")||"normal",caps,at:Date.now(),warned:prev.warned||""};
+  if(cap&&spent>=cap*RELAY_WARN&&b.warned!==mon){ b.warned=mon; noteSheet("Relay budget",`The relay has spent about €${spent.toFixed(2)} of this month's €${cap}. From here every phone's free allowance is halved, and at €${cap} the free AI pauses until the 1st. To change it: Supabase, Table Editor, relay_config.`); }
+  setSetting("relayBudget",b); const el=$("#budget-status"); if(el) el.textContent=budgetLine();
+}
+function budgetLine(){
+  const b=S.settings.relayBudget;
+  if(!b) return "Not known yet. The relay sends it with its answers to this phone, once budget.sql has run and OWNER_INSTALL names this phone.";
+  const mode={normal:"running normally",reduced:"every phone's allowance halved",month:"paused, the ceiling is reached",paused:"paused by your switch"}[b.mode]||b.mode;
+  const caps=Object.entries(b.caps||{}).map(([k,v])=>`${k} ${v}`).join(", ");
+  return `This month about €${(+b.spent).toFixed(2)}${b.cap?` of €${b.cap}`:""}, ${mode}.${caps?` Free calls a phone a day: ${caps}.`:""} As of ${new Date(b.at).toLocaleString(LANG_LOCALE[LANG])}. Switch and ceiling: Supabase, Table Editor, relay_config.`;
 }
 /* the provider's or the relay's error text from a failed answer's JSON body ("" when there is none) */
 async function apiErrText(r){ try{ const j=await r.json(); return String((j.error&&(j.error.message||j.error))||j.message||""); }catch(e){ return ""; } }
-function relayError(r,t){ /* English, as Diagnostics keeps it; the two reasons a learner can act on are keys, so the screens that show them pass them through t() (v806) */ return r.status===429?"the daily limit of the owner's relay is reached — try again tomorrow":r.status===404||r.status===503?"the owner's relay is not set up":"relay error "+r.status+(t?": "+t:""); }
+function relayError(r,t){ /* English, as Diagnostics keeps it; the two reasons a learner can act on are keys, so the screens that show them pass them through t() (v806). Since v817 a 429 is the relay's own reason, as relayWhy() keys it, without the month's date (the screens translate the key whole; the dated line is relayLine's) */ return r.status===429?(relayKey()||"the daily limit of the owner's relay is reached — try again tomorrow"):r.status===404||r.status===503?"the owner's relay is not set up":"relay error "+r.status+(t?": "+t:""); }
 async function setAiAccount(pv,acct){ const all={...aiAccounts()}; if(acct) all[pv]={...aiAcct(pv),...acct}; else delete all[pv]; await setSetting("aiAccounts",all); }
 async function migrateAi(){
   if(!S.settings.aiKey) return; const pv=aiProvider();
@@ -2541,6 +2602,7 @@ function wireAi(root){
 let _aiAutoRan=false;
 async function aiAuto(){
   if(!aiLive()||_aiAutoRan) return;
+  if(viaRelay(textProvider())&&relayRefused(textProvider())) return; /* v817: the relay said no to the text provider until a given day — the cards wait as pending, no refused call per new card */
   const list=S.custom.filter(d=>d.c&&!isPage(d)&&d.mt&&(d.mt.pending||d.mt.suspect)&&!d.ai&&!aiRefused(d)); if(!list.length) return; /* a card still waiting for its reading has no text yet (v237) */
   _aiAutoRan=true;
   try{ await aiReview(list); if(S.mode==="more"||S.mode==="cards"||S.mode==="inbox") render(); }catch(e){ console.warn("AI auto review:",e); logErr("ai","auto review: "+(e&&e.message||e)); } /* the console is invisible on a phone — the error log reaches Diagnostics and the daily row (v403) */
@@ -3219,7 +3281,7 @@ function renderMore(main){
     <div class="mrow"><div style="flex:1"><div class="t">${t("Language")}</div><div class="s">${t("The app's own texts and the meaning of new cards. Cards keep their Chinese and pinyin.")}</div><div class="chipset" id="lang-chips" style="margin-top:8px">${LANGS.map(([c,n])=>`<button class="chip${LANG===c?" on":""}" data-lang="${c}">${n}</button>`).join("")}</div></div></div>
     ${translateRowHTML()}
     ${undoRunHTML("meanings")}
-    <div class="mrow"><div><div class="t">${t("AI review")}</div><div class="s" id="ai-status"></div>${moreFold("ai",t("What is sent"),`<div class="s" style="margin-top:6px">${t("What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it still lacks its description or its characters' meanings (asked again in a later session if none came). For most photos a picture of the text goes too, to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay with its random id; the relay forwards to the provider and keeps a count and a short log of each call — its size and time, never its content. On a multicard, all its texts go out together with the multicard's title, for their short and long descriptions — when it is made, and once when you open an older one.")}</div>`)}<label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> ${t("Check every new card with the AI automatically (when online)")}</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
+    <div class="mrow"><div><div class="t">${t("AI review")}</div><div class="s" id="ai-status"></div><div class="s relaynote" id="ai-relay"${relayLine()?"":" hidden"}>${esc(relayLine())}</div>${moreFold("ai",t("What is sent"),`<div class="s" style="margin-top:6px">${t("What is sent: a card's Chinese text, pinyin, meaning, your note and the reader's other guesses — for every new card, for every card when you tap Check-up or Translate all, and for one card when you come to it and it still lacks its description or its characters' meanings (asked again in a later session if none came). For most photos a picture of the text goes too, to a provider that takes pictures — sometimes the whole photo. Without a key of its own this phone sends through the app owner's relay with its random id; the relay forwards to the provider and keeps a count and a short log of each call — its size and time, never its content. On a multicard, all its texts go out together with the multicard's title, for their short and long descriptions — when it is made, and once when you open an older one.")}</div>`)}<label class="check" style="margin:8px 0 0"><input type="checkbox" id="ai-auto"${S.settings.aiAuto!==false?" checked":""}> ${t("Check every new card with the AI automatically (when online)")}</label></div>${S.admin?`<button class="btn mini" id="ai-btn">Set up</button>`:""}</div>
     ${S.admin?`<div class="aiform" id="ai-form" hidden>
       <div class="field"><label>Provider</label><div class="chipset" id="ai-providers">${Object.entries(AI_PROVIDERS).map(([k,v])=>`<button class="chip" data-aipv="${k}">${esc(v.short)}</button>`).join("")}</div>
         <div class="badge" id="ai-acct" style="margin-top:8px"></div>
@@ -3257,6 +3319,7 @@ function renderMore(main){
     <pre class="diag" id="field-out" hidden></pre>
     <div class="mrow"><div style="flex:1"><div class="t">All users</div><div class="s" id="users-status">${USERS?`${nOf(USERS.rows.length,"install")}, fetched ${new Date(USERS.at).toLocaleTimeString()}.`:"The latest report of every phone, from the owner's table."}</div><div class="fieldacts"><button class="btn mini" id="users-show">Show</button><button class="btn mini" id="users-share">Share</button><button class="btn mini" id="users-copy">Copy</button></div></div></div>
     <pre class="diag" id="users-out" hidden></pre>
+    <div class="mrow"><div style="flex:1"><div class="t">Relay budget</div><div class="s" id="budget-status">${esc(budgetLine())}</div></div></div>
     <div class="mrow"><div style="flex:1"><div class="t">Feedback</div><div class="s" id="fb-in-status">${FEEDBACK?`${nOf(FEEDBACK.rows.length,"message")}, fetched ${new Date(FEEDBACK.at).toLocaleTimeString()}.`:"The messages users sent from the app, newest first."}</div><div class="fieldacts"><button class="btn mini" id="fb-show">Show</button><button class="btn mini" id="fb-share">Share</button><button class="btn mini" id="fb-copy">Copy</button></div></div></div>
     <pre class="diag" id="fb-out" hidden></pre>
     <div class="fbpics" id="fb-pics" hidden></div>
@@ -11416,6 +11479,7 @@ function renderInbox(main){
     <div class="lead">${t("Photograph a sign, a poster or a package — the card is made for you. A screenshot of an app becomes a multicard.")}</div>
     <button class="shutter" id="snap"><span class="sh-f" aria-hidden="true"></span><span class="sh-ic" aria-hidden="true">${ICON_CAM}</span><span class="sh-t">${t("Take photo")}</span></button>
     <div class="snaprow"><button class="btn" id="pick">${t("From album")}</button></div>
+    <div class="lead relaynote" id="relay-note"${relayLine()?"":" hidden"}>${esc(relayLine())}</div>
     <div id="shots"></div>
   </div>`;
   $("#snap").onclick=()=>{ PICKING=Date.now(); $("#cam").click(); };
