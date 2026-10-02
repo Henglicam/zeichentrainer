@@ -48,7 +48,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v815, 2026-10-02)
+## Current state (PWA v816, 2026-10-02)
 **The app is called 识字 Shízì** (v608; the old names: HISTORY.md's title) wherever a learner sees a name and in every
 shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -192,7 +192,7 @@ to the next (v707/v753). The multicard: **Add a text**, Delete multicard (v635/v
 v698/v753), read in the fold.
 On a **menu** (kind Menu or half the texts priced) each dish shows its price at the right and name/pinyin/meaning without it
 (`priceOf`, `isMenuPage`, `priceView` — a view, the record untouched, v699/v712; a price at the head of the meaning
-takes its own token alone, v769); its flashcard is the name alone (v713); a dish
+takes its own token alone, v769; on a page tagged Menu a bare trailing number is the price too, `bareOf`, v816); its flashcard is the name alone (v713); a dish
 with its own photo takes it as its picture (`dish`, v705); no count line on the multicard's screen nor on the Camera tab (v746).
 
 ### Camera — photo to card
@@ -290,7 +290,7 @@ must say the same thing, corrected together (one alone went wrong at v403, v459,
 
 ## Languages
 Ten columns in `lang.js`: en, de, fr, es, ja, ko, ru, vi, th, id. **English is the key**; a missing key falls back to the
-English text, never to the key. **509 keys a column, ru 540 (three plural forms), en 15** (v814 — count by evaluating `lang.js`). `nOf`/`wordOf`/`PLURAL` carry the
+English text, never to the key. **518 keys a column, ru 549 (three plural forms), en 15** (v816 — count by evaluating `lang.js`). `nOf`/`wordOf`/`PLURAL` carry the
 counts.
 
 - **The v412 rule: a pronoun or a count-agreeing verb must never cross a key boundary.** Render every count sentence at
@@ -325,7 +325,7 @@ counts.
 
 ## Design (iOS-style since v82)
 Light and dark follow the phone. Tokens on `:root` in `styles.css`, iOS system values, redefined in its dark `@media`:
-`--bg` `--card` `--card2` `--fill` `--label` `--label2` `--label3` `--sep`, and `--tint` #C8372D / #E0483E, `--ok`, `--warn`,
+`--bg` `--card` `--card2` `--fill` `--label` `--label2` `--label3` `--sep`, and `--tint` #C8372D / #E0483E (rings, dots, bars), **`--tint-ink` for red text (#FF6B61 in dark) and `--tint-fill` under white (#C8372D in both)** — 4.5:1 each (v816), `--ok`, `--warn`,
 `--lock` (blue, a locked character), each with a `-soft`; `--photo-ar` **1** (the shape of any box a photo is shown small in,
 never of the cut). Radii: cards 16 (`--rc`), buttons 12 (`--r`), fields 10. Fonts: UI = Apple system stack; Hanzi = Songti/STSong/Noto Serif CJK for the big
 characters; `--mono` only for timestamps and Diagnostics. **Pinyin is set in the UI font.**
@@ -399,7 +399,7 @@ wrong, More → Diagnostics → Share with it. "Leave it as it was" means: rever
    learners. Same for the design and layout."
 
 **`WHATS_NEW` (v408):** every PR that changes something a learner would notice adds one English sentence keyed by its
-version; More → About lists the last five as a bulleted list and a line slides up after an update. **Most
+version, **with its nine translations in the same PR** (v816); More → About lists the last five as a bulleted list and a line slides up after an update. **Most
 versions get no note — that is correct.** A note describing a control that no longer exists goes with the control (v534).
 The owner's twin is **`TO_TEST`**, the Still-to-test list under Advanced settings: **a reminder of what still has to be
 corrected and checked, nothing else** (v748, H). A PR that ships something only the phone can judge adds its line; **the line

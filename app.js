@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=815; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=816; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -768,6 +768,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["app","v768","Rebuild/Translate: screen on?"],
   ["again","v807","Recap: Details/Edit hold it?"],
   ["app","v815","Back: one step back, not out?"],
+  ["app","v816","Dark mode red: readable now?"],
   ["again","v778","Voice: 行 in 银行 heard as háng?"],
   ["app","v791","Cards tile: multicard card's cut?"],
   ["app","v792","Multicard pop-up: Flag/Edit ok?"],
@@ -2620,8 +2621,8 @@ const APP_URL="https://henglicam.github.io/zeichentrainer/";
 const APP_SHARE_TEXT="识字 Shízì — learn the Chinese characters you see around you. Take a photo of a sign, get the card. Open the link in Safari or Chrome, not inside WeChat, and add it to the home screen:"; /* v219: friends tapped the link inside WeChat's browser, which cannot install the app */ /* no link in the text: the share sheet appends the url field itself (v215, H's WeChat screenshot showed the link twice) */
 async function shareApp(){
   const st=$("#app-share-status");
-  if(navigator.share){ try{ await navigator.share({title:"识字 Shízì",text:APP_SHARE_TEXT,url:APP_URL}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
-  try{ await navigator.clipboard.writeText(APP_SHARE_TEXT+" "+APP_URL); if(st) st.textContent=t("Link copied."); }catch(err){ if(st) st.textContent=t("Sharing is not available here.")+" "+t("The link: {0}",APP_URL); }
+  if(navigator.share){ try{ await navigator.share({title:"识字 Shízì",text:t(APP_SHARE_TEXT),url:APP_URL}); return; }catch(err){ if(err&&err.name==="AbortError") return; } }
+  try{ await navigator.clipboard.writeText(t(APP_SHARE_TEXT)+" "+APP_URL); if(st) st.textContent=t("Link copied."); }catch(err){ if(st) st.textContent=t("Sharing is not available here.")+" "+t("The link: {0}",APP_URL); }
 }
 /* Share report = one image of the dashboard (v277, H: "You're still sharing too much! Only this please, sexy! The rest goes to the user
    reports"): the tiles, the 30-day strip, the deck bar with its legend and the week ahead, drawn on a canvas at 1080 px in the light
@@ -3502,8 +3503,8 @@ function flagNoteHTML(d){
 function flaggedText(){
   /* plain-text list of flagged cards, e.g. to send to a teacher via the share sheet */
   const list=deck().filter(d=>d.flag);
-  const lines=list.map(d=>`${d.c.replace(/\n/g," / ")}\n  ${d.p}\n  ${d.m}${d.flagNote?`\n  note: ${d.flagNote}`:""}`);
-  return `Shizi — ${list.length} card${list.length===1?"":"s"} flagged for review (${new Date().toLocaleDateString("en-GB")})\n\n`+lines.join("\n\n")+"\n";
+  const lines=list.map(d=>`${d.c.replace(/\n/g," / ")}\n  ${d.p}\n  ${d.m}${d.flagNote?`\n  ${t("note: {0}",d.flagNote)}`:""}`);
+  return `识字 Shízì — ${t("{0} flagged for review ({1})",nOf(list.length,"card"),new Date().toLocaleDateString(LANG_LOCALE[LANG]||"en-GB"))}\n\n`+lines.join("\n\n")+"\n"; /* v816: in the app's language, as the rest of what a learner shares */
 }
 async function shareFlagged(){
   const n=deck().filter(d=>d.flag).length;
@@ -3512,7 +3513,7 @@ async function shareFlagged(){
   const name="shizi-review-"+dayKey()+".txt"; /* v810: the phone's own day */
   const file=new File([text],name,{type:"text/plain"});
   if(navigator.canShare && navigator.canShare({files:[file]})){
-    try{ await navigator.share({files:[file],title:name,text:"Cards flagged for review"}); return; }
+    try{ await navigator.share({files:[file],title:name,text:t("Cards flagged for review")}); return; }
     catch(err){ if(err && err.name==="AbortError") return; }
   }
   if(navigator.share){ try{ await navigator.share({title:name,text}); return; }catch(err){ if(err && err.name==="AbortError") return; } }
@@ -3826,13 +3827,20 @@ const isMenuPage=pg=>{ if((pg.tags||[]).includes(t("kind:Menu"))) return true; c
    v699) is shown the same way on its own screen and in the look-up — the price on a line of its own under the characters,
    the characters, pinyin and meaning without it, so ¥16/份 makes no tiles in the character strip. A VIEW of the record:
    nothing stored changes, the id is the same, and every action still hits the record. */
-const priceView=d=>{ if(!d||!inPage(d)) return null; const price=priceOf(d.c); if(!price) return null;
-  const w=x=>x==="\n"?x:noPrice(x), keep=x=>x==="\n"||!!x;
-  const v={...d,c:noPrice(d.c),p:noPricePy(d.p),m:noPriceM(d.m)};
-  if(d.trad) v.trad=noPrice(d.trad);
+/* v816 (H: "go" on the audit's proposal): on a page tagged Menu, a bare number of 1–4 digits closing a dish's line is its price —
+   a hand-written board often writes no ¥ (宫保鸡丁 38). Only on a Menu page: anywhere else a number after a text is part of it
+   (24H, 3号, 9号线). The price shows as ¥38; the record keeps what was read. */
+const BARE_PRICE=/[一-鿿]\s*(\d{1,4}(?:\.\d{1,2})?)\s*$/;
+const bareOf=d=>{ if(!d||!d.page||priceOf(d.c)) return ""; const pg=cardOf(d.page); if(!pg||!(pg.tags||[]).includes(t("kind:Menu"))) return ""; const m=String(d.c||"").match(BARE_PRICE); return m?m[1]:""; };
+const dishPrice=d=>priceOf(d&&d.c)||(bareOf(d)?"¥"+bareOf(d):"");
+const priceView=d=>{ if(!d||!inPage(d)) return null; const bare=bareOf(d), price=priceOf(d.c)||(bare?"¥"+bare:""); if(!price) return null;
+  const num=bare.replace(".","\\."), np=bare?(x=>String(x||"").replace(new RegExp("(?<![\\d.])\\s*"+num+"\\s*$"),"").trim()):noPrice;
+  const w=x=>x==="\n"?x:np(x), keep=x=>x==="\n"||!!x;
+  const v={...d,c:np(d.c),p:bare?String(d.p||"").replace(new RegExp("(?<![\\d.])\\s*"+num+"\\s*$"),"").trim():noPricePy(d.p),m:bare?String(d.m||"").replace(new RegExp("^\\s*"+num+"(?![\\d.])\\s*|(?<![\\d.])\\s+"+num+"\\s*$","g"),"").trim():noPriceM(d.m)};
+  if(d.trad) v.trad=np(d.trad);
   if(Array.isArray(d.seg)) v.seg=d.seg.map(w).filter(keep);
   if(Array.isArray(d.segs)) v.segs=d.segs.map(sg=>sg.map(w).filter(keep));
-  if(Array.isArray(d.gloss)) v.gloss=d.gloss.map(g=>({...g,w:noPrice(g.w)})).filter(g=>g.w);
+  if(Array.isArray(d.gloss)) v.gloss=d.gloss.map(g=>({...g,w:np(g.w)})).filter(g=>g.w);
   return {d:v,price}; };
 const priceLine=pv=>pv?`<div class="dprice">${esc(pv.price)}</div>`:"";
 async function pageShorts(pid){
@@ -3840,7 +3848,7 @@ async function pageShorts(pid){
   const todo=pageItems(pg).filter(d=>d.c&&!shortOf(d)); if(!todo.length) return;
   SHORTRUN.add(pid+"|"+LANG);
   const menu=isMenuPage(pg);
-  let res; try{ res=await aiAsk(todo.map(d=>({...d,short:true,shortCtx:pg.c,dish:menu&&!!priceOf(d.c)}))); }catch(e){ SHORTRUN.delete(pid+"|"+LANG); logErr("short descriptions",e&&e.message||String(e)); return; } /* v710: a failed call (the relay down, the VPN toggled) is tried again the next time the multicard is shown — the guard is for a running or answered call, not a lost one */
+  let res; try{ res=await aiAsk(todo.map(d=>({...d,short:true,shortCtx:pg.c,dish:menu&&!!dishPrice(d)}))); }catch(e){ SHORTRUN.delete(pid+"|"+LANG); logErr("short descriptions",e&&e.message||String(e)); return; } /* v710: a failed call (the relay down, the VPN toggled) is tried again the next time the multicard is shown — the guard is for a running or answered call, not a lost one */
   let n=0;
   for(let i=0;i<todo.length;i++){ const r=res[i], d=cardOf(todo[i].id); if(!r||r.bad||!d||sureKey(r.zh)!==sureKey(d.c)) continue; /* an answer is only its own text's */
     const s=saneShort(r.desc,d.c); if(!s) continue; await putCard({...d,dsh:{...(d.dsh||{}),[r.ml||LANG]:s}},d.id); n++; }
@@ -6136,8 +6144,8 @@ function cardsListHTML(){
 function cardRowHTML(d,pk,byText,dot){ /* one card's row; dot (v453): the page detail's item list. v697 (H: "Nicht in dieser Ansicht anzeigen. Sondern nur im geöffneten Zustand"): its ring — has this text a flashcard — is gone from the row; the open text says it on its own button, + Flashcard or Flashcard ›. v696 (H: "Die Tags für eine Multicard bitte in der Multicard-Übersichtskarte anzeigen und nicht in jeder einzelnen Karte der Multicard. Den gewonnenen Platz bitte für die Description"): there a text's tags are the multicard's own, shown once at its top, so the row carries its description instead, three lines at most */
   return `<button class="crow${dot?" inpage":""}${pk?" pick":""}${pk&&PICK.set.has(d.id)?" on":""}" data-id="${esc(d.id)}">
       ${d.img?`<span class="thumbbox"><img class="thumbbg" src="${thumbURL(d)}" alt="" aria-hidden="true" loading="lazy" decoding="async"><img class="thumb" src="${thumbURL(d)}" alt="" loading="lazy" decoding="async"></span>`:`<span class="thumb glyph">${esc([...d.c][0])}</span>`} <!-- the list's thumbnail in the front's box look: the crop fitted, a darkened blurred copy behind it (v232) -->
-      <span class="ct"><span class="c">${d.c?esc((dot&&priceOf(d.c)?noPrice(d.trad||d.c):(d.trad||d.c)).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(dot&&priceOf(d.c)?noPricePy(d.p):d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${srcPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${dot?"":(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(dot&&priceOf(d.c)?noPriceM(d.m):d.m)}</span>${dot&&shortOf(d)?`<span class="d">${esc(shortOf(d))}</span>`:""}</span>
-      <span class="cs">${dot&&priceOf(d.c)?`<span class="price">${esc(priceOf(d.c))}</span>`:""}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Flagged")}</span>`:""}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
+      <span class="ct"><span class="c">${d.c?esc((dot&&dishPrice(d)?((priceView(d)||{d}).d.trad||(priceView(d)||{d}).d.c):(d.trad||d.c)).replace(/\n/g," / ")):`<span class="lbl">${d.reading&&d.reading.failed?t("Nothing read"):t("Reading …")}</span>`}</span>${d.trad?`<span class="simpref"><span class="lbl">${t("Simplified")}</span><span class="hanzi">${esc(d.c.replace(/\n/g," / "))}</span></span>`:""}<span class="p">${esc(dot&&priceOf(d.c)?noPricePy(d.p):d.p)}</span>${(pl=>pl?`<span class="pills">${pl}</span>`:"")(`${d.trad?`<span class="pill trad">${t("Traditional")}</span>`:""}${mlPill(d)}${srcPill(d)}${byText.get(d.c)>1?`<span class="pill">${nOf(byText.get(d.c),"photo")}</span>`:""}${d.c&&d.reading&&!d.reading.failed?`<span class="pill">${t("Reading …")}</span>`:""}${dot?"":(d.tags||[]).map(tg=>`<span class="pill tag">${esc(tg)}</span>`).join("")}`)}<span class="m">${esc(dot&&priceOf(d.c)?noPriceM(d.m):d.m)}</span>${dot&&shortOf(d)?`<span class="d">${esc(shortOf(d))}</span>`:""}</span>
+      <span class="cs">${dot&&dishPrice(d)?`<span class="price">${esc(dishPrice(d))}</span>`:""}${d.ai?`<span class="pill ai">${t("AI")}</span>`:""}${d.flag?`<span class="pill flagged">${t("⚑ Flagged")}</span>`:""}</span>${pk?`<span class="tick" aria-hidden="true"></span>`:""}</button>`;
 }
 /* a filter whose row is gone is dropped (v308, H: "I accepted two ai suggestions, and now no cards are showing up in the
    list anymore" — the AI chip shows only while suggestions wait, so the filter had no chip left to switch it off and the
@@ -6720,6 +6728,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  816:"In dark mode the red buttons and labels read more clearly, and on a menu a bare number after a dish counts as its price.",
   815:"The phone's Back button steps back inside the app — out of an open card, a sheet or the Edit form — and Take a photo opens the camera straight away.",
   798:"A dim photo's card picture is brightened without its colours turning garish.",
   794:"After + Flashcard in a multicard's pop-up, the pop-up says the card was made.",
