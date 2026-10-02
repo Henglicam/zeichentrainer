@@ -48,7 +48,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v813, 2026-10-01)
+## Current state (PWA v814, 2026-10-02)
 **The app is called 识字 Shízì** (v608; the old names: HISTORY.md's title) wherever a learner sees a name and in every
 shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -147,7 +147,7 @@ squares** (v561/v607), then the fold row. `fit()` computes the frame per device,
 - **The Chinese is read aloud** (v773–v784): each character at its last stroke, alone (`sayChar`), **with its reading in this word** (a
   多音字 through a one-reading stand-in, `STANDIN`, 行 in 银行 → 航, `tools/standin.js`, v778); the whole text with the recap,
   **queued behind the last character, never in its place** (`say(text, after)`; not on a one-character card); a skip or a swipe
-  stops it (`sayStop`). The phone's voice (`ttsVoice`, a natural Mandarin one first) at `SAY_RATE` .7; H's Xiaomi lists none and
+  stops it (`sayStop`). The phone's voice (`ttsVoice`: one that speaks on the device first, v814, then a natural one) at `SAY_RATE` .7; H's Xiaomi lists none and
   speaks through its system engine. Off under More → Learning (`learnSay`).
 - **"Details"** folds open at the card's foot — characters, pinyin, meaning **and the description** (v585, asked by itself
   1.2 s after the card appears, `explainSoon`); then a grey toolbar **Star · Flag · Edit** (v667; Edit comes back to the card).
@@ -211,7 +211,7 @@ again** (v739, the shutter's reading); Crop reads the framed part.
 ### More — four sections (v547)
 **Learning** (Progress, Card order, the zoom and read-aloud switches, Check-up and the undo rows; Tags left at v588) · **Your cards** (Export, Import, Flagged cards, Photos,
 Duplicate multicards when there are any, Storage) · **The app** (Share the app, Feedback, How to use the app, Language,
-Meanings, AI review with the owner's setup form, Review queue, Usage sharing, Update notes, About, Open source licenses) ·
+Meanings, AI review with the owner's setup form, Review queue, Usage sharing, Update notes, About, Privacy policy (v814), Open source licenses) ·
 **Advanced settings**. The owner's tools fold behind one **Owner tools** row (Downloads, Mirror, Diagnostics with the reading tools —
 Zoom check, Re-read all, Check texts, Rebuild all —, Still to test, All users, Feedback, Start over). **The long texts fold** (v717, `moreFold`, closed at every start): What is sent ⌄ on AI
 review and Usage sharing, About the app ⌄, Write a message on Feedback; every word stays (v193).
@@ -290,7 +290,7 @@ must say the same thing, corrected together (one alone went wrong at v403, v459,
 
 ## Languages
 Ten columns in `lang.js`: en, de, fr, es, ja, ko, ru, vi, th, id. **English is the key**; a missing key falls back to the
-English text, never to the key. **507 keys a column, ru 538 (three plural forms), en 15** (v811 — count by evaluating `lang.js`). `nOf`/`wordOf`/`PLURAL` carry the
+English text, never to the key. **509 keys a column, ru 540 (three plural forms), en 15** (v814 — count by evaluating `lang.js`). `nOf`/`wordOf`/`PLURAL` carry the
 counts.
 
 - **The v412 rule: a pronoun or a count-agreeing verb must never cross a key boundary.** Render every count sentence at
