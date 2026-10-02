@@ -116,7 +116,25 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v815, 2026-10-02)
+## Current state (PWA v816, 2026-10-02)
+- **Dark red, translated shares and notes, bare menu prices (v816, H: "Ok, go for all" — the audit's proposals 5, 6, 10; the
+  last of the ten).** **(5) Dark mode's red** was `#E0483E` for both text and fills: white on it measured 4.07:1, the red on a
+  dark card 4.19:1, both under 4.5. Two tokens now split the jobs: `--tint-ink` (red text — `#FF6B61` in dark, 6.10:1 on
+  `--card`) and `--tint-fill` (filled buttons, chips, picked characters — `#C8372D` in both themes, white on it 5.20:1); every
+  `color:var(--tint)` in styles.css became `--tint-ink`, every filled `.on`/primary background `--tint-fill`; outlines, rings,
+  dots, bars and the pad's canvas keep `--tint`. Light mode is unchanged (both tokens `#C8372D`). **(6) What a learner shares
+  speaks the app's language**: Share the app's text (`t(APP_SHARE_TEXT)`), the flagged list (header "{0} flagged for review
+  ({1})" with `nOf` and the language's date, "note: {0}", the share title) — 9 keys a column with the five newest update notes
+  (816, 815, 798, 794, 792); **from now on a `WHATS_NEW` note gets its nine translations in the PR that adds it** (older notes
+  stay English, their fallback). **(10) A bare number after a dish on a menu is its price**: on a multicard tagged Menu, a text
+  ending in a Chinese character, a space or none, and 1–4 digits (two decimals allowed; `BARE_PRICE`, `bareOf`) shows "¥38" at
+  the right and its name, pinyin and meaning without the number (`priceView`; the trailing number alone, never digits of a longer
+  one — lookbehind); its flashcard is the name alone (v713); `dishPrice` feeds the price chip and the short-description call's
+  dish flag. Not on an App or other page (`8` after 待收货 is a count, not a price). Harness: `test816` **16 of 18 on v816, 2 on
+  v815** (the two misses on both: an offline resource's console line, `[guard]`); guards: light fill unchanged, App page not
+  priced, whole trailing number. Screenshots dark de: More, the menu multicard. Keys 518 / ru 549 / en 15. `WHATS_NEW` 816.
+
+## Current state (PWA v815, 2026-10-02) — before v816
 - **Ways in and out (v815, H: "go" — the audit's proposals 4, 7, 8, 9).** **(4) Android Back steps back inside the app.**
   There was no history at all, so Back left the app from any sub-screen. Now, while anything stands over a tab's own screen —
   a sheet, a multicard's pop-up, the Edit form, + New, an open card, the guide, a single-card test, a peek, marking — the page

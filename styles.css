@@ -11,7 +11,7 @@
   --photo-ar:1;
   --bg:#F2F2F7; --card:#FFFFFF; --card2:#F2F2F7; --fill:#E9E9EE;
   --label:#000000; --label2:#6E6E73; --label3:#AEAEB2; --sep:rgba(60,60,67,.24);
-  --tint:#C8372D; --tint-soft:rgba(200,55,45,.12); --ok:#2FA36B; --ok-soft:rgba(47,163,107,.12); --warn:#B5730B; --warn-soft:rgba(214,148,30,.14);
+  --tint:#C8372D; --tint-soft:rgba(200,55,45,.12); --tint-ink:#C8372D; --tint-fill:#C8372D; --ok:#2FA36B; --ok-soft:rgba(47,163,107,.12); --warn:#B5730B; --warn-soft:rgba(214,148,30,.14);
   --lock:#2F6BD6; --lock-soft:rgba(47,107,214,.12); /* v528: a locked character (§ 7) — its own colour, so red = in the pad, blue = locked, green = written never share a word */
   --bar:rgba(249,249,249,.86); --shadow:0 1px 2px rgba(0,0,0,.05), 0 6px 20px rgba(0,0,0,.05);
   --hanzi:'Songti SC','STSong','Noto Serif CJK SC','Source Han Serif SC','SimSun',serif;
@@ -23,7 +23,7 @@
 @media (prefers-color-scheme:dark){
   :root{ --bg:#000000; --card:#1C1C1E; --card2:#2C2C2E; --fill:#3A3A3C;
     --label:#FFFFFF; --label2:#A1A1A6; --label3:#6E6E73; --sep:rgba(84,84,88,.6);
-    --tint:#E0483E; --tint-soft:rgba(224,72,62,.18); --ok:#3DBE7A; --ok-soft:rgba(61,190,122,.16); --warn:#E8A93C; --warn-soft:rgba(232,169,60,.18);
+    --tint:#E0483E; --tint-soft:rgba(224,72,62,.18); --tint-ink:#FF6B61; --tint-fill:#C8372D; /* v816 (H: "go"): text in the tint reads 5:1 on the soft fill and the card, white on a filled button 5.2:1 — #E0483E gave 3.5 and 4.1 */ --ok:#3DBE7A; --ok-soft:rgba(61,190,122,.16); --warn:#E8A93C; --warn-soft:rgba(232,169,60,.18);
     --lock:#6B9BF0; --lock-soft:rgba(107,155,240,.18);
     --bar:rgba(22,22,24,.82); --shadow:none; }
 }
@@ -65,7 +65,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 #main.center{justify-content:center}
 /* Learn: the chip row stays at the top edge, the card is centred in the space below it (v158, H: "chips should always be on the upper edge, to avoid distraction from the cards") */
 /* the line for a page inside WeChat's browser (v219): at the top edge like the chips, the card centred below */
-.wxnote{width:100%;max-width:440px;margin:0 0 14px;padding:10px 14px;border-radius:var(--r);background:var(--tint-soft);color:var(--tint);font-size:14px;line-height:1.4}
+.wxnote{width:100%;max-width:440px;margin:0 0 14px;padding:10px 14px;border-radius:var(--r);background:var(--tint-soft);color:var(--tint-ink);font-size:14px;line-height:1.4}
 #main.center>.wxnote{margin-bottom:auto} #main.center>.wxnote~.card,#main.center>.wxnote~.done{margin-bottom:auto}
 
 /* bottom tab bar */
@@ -75,7 +75,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .tab{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;
   padding:4px 2px 2px;font-family:var(--sans);font-size:10px;font-weight:500;color:var(--label3)}
 .tab svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.tab.on{color:var(--tint)}
+.tab.on{color:var(--tint-ink)}
 .tab:active{opacity:.6}
 
 /* study */
@@ -104,14 +104,14 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 /* .vote/.vt — the two-button vote of v497 — went with the write pad (v512) */
 .grade{display:flex;align-items:center;justify-content:center;min-height:62px;background:var(--card2);
   color:var(--label);cursor:pointer;border:none;border-radius:var(--r);padding:8px 4px}
-.grade[data-g="again"]{background:var(--tint-soft);color:var(--tint)}
+.grade[data-g="again"]{background:var(--tint-soft);color:var(--tint-ink)}
 .grade[data-g="good"]{background:var(--warn-soft);color:var(--warn)}
 .grade[data-g="easy"]{background:var(--ok-soft);color:var(--ok)}
 .grade:active{filter:brightness(.94)}
 .grade .lbl{font-size:17px;font-weight:600;color:inherit;margin:0} /* the tile carries the colour; the page-wide .lbl rule (label2, margin-right 8px) would otherwise win over the inherited one and push the label off centre */
 
 /* buttons: primary = filled tint · default = tinted soft · danger = red on soft · del = plain text */
-.btn{background:var(--tint-soft);color:var(--tint);border:none;border-radius:var(--r);
+.btn{background:var(--tint-soft);color:var(--tint-ink);border:none;border-radius:var(--r);
   cursor:pointer;font-family:var(--sans);font-size:17px;font-weight:600;min-height:50px;padding:12px 18px}
 .btn:active{opacity:.7}
 .front.tap{cursor:pointer} .front.tap:active .reticle{opacity:.75}
@@ -130,7 +130,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .btn.block{width:100%}
 /* the Camera tab's shutter (v466): the big card IS the Take photo button — a tap opens the phone's own camera, as it always
    did — and From album sits full width under it. #shots only gets its gap when there is something under the buttons. */
-.shutter{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;aspect-ratio:var(--photo-ar);max-height:42vh;padding:0;border:0;border-radius:var(--rc);background:var(--card);box-shadow:var(--shadow);color:var(--tint);font:inherit;cursor:pointer}
+.shutter{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;aspect-ratio:var(--photo-ar);max-height:42vh;padding:0;border:0;border-radius:var(--rc);background:var(--card);box-shadow:var(--shadow);color:var(--tint-ink);font:inherit;cursor:pointer}
 .shutter .sh-ic{display:flex}
 /* four corner brackets, the crop frame's own language, so the card reads as a camera surface and not as an empty card */
 .shutter .sh-f{position:absolute;inset:16px;pointer-events:none;opacity:.32;
@@ -143,8 +143,8 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .shutter:active{background:var(--card2)}
 .snaprow{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
 #shots:not(:empty){margin-top:24px} /* the Inbox head used to carry this gap (v471) */
-.btn.primary{background:var(--tint);color:#fff}
-.btn.danger{background:var(--tint-soft);color:var(--tint);box-shadow:inset 0 0 0 1.5px var(--tint)} /* v551: the declarations were byte-identical to .btn, so the class said "destructive" and drew nothing — on the open card Delete card was the fifth of five identical tinted pills. The accent IS the red here, so the difference cannot be the colour (a filled red would out-shout .btn.primary, the thing the screen wants you to do): it is the ring. */
+.btn.primary{background:var(--tint-fill);color:#fff}
+.btn.danger{background:var(--tint-soft);color:var(--tint-ink);box-shadow:inset 0 0 0 1.5px var(--tint)} /* v551: the declarations were byte-identical to .btn, so the class said "destructive" and drew nothing — on the open card Delete card was the fifth of five identical tinted pills. The accent IS the red here, so the difference cannot be the colour (a filled red would out-shout .btn.primary, the thing the screen wants you to do): it is the ring. */
 .btn.mini{min-height:44px;padding:10px 14px;font-size:15px;white-space:nowrap}
 /* a .btn.mini on its own line under a field may wrap: the nowrap above was written for a two-word action
    ("Not here? Draw it"), and Meanings puts a whole sentence there — "Traduire toutes les cartes en Français"
@@ -152,7 +152,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
    one shape is not a free ride for another) */
 .fieldacts .btn.mini{white-space:normal;text-align:center;line-height:1.25}
 .btn:disabled{opacity:.4;cursor:not-allowed}
-.btn.on{background:var(--tint);color:#fff}
+.btn.on{background:var(--tint-fill);color:#fff}
 
 /* done screen */
 .done{text-align:center;max-width:380px;background:var(--card);border-radius:var(--rc);padding:30px 16px;box-shadow:var(--shadow)}
@@ -178,7 +178,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .field textarea.grow{resize:none;overflow:hidden;line-height:1.35;min-height:46px;display:block}
 .row{display:flex;gap:10px}
 .row .field{flex:1} .row .field.row input{flex:1;min-width:0}
-.err{font-size:14px;color:var(--tint);margin-bottom:12px}
+.err{font-size:14px;color:var(--tint-ink);margin-bottom:12px}
 .ok{font-size:14px;color:var(--ok);margin-top:12px}
 /* the note under a photo on the Camera tab (v535): no selection, or a long press on it raises the phone's selection
    toolbar and a Google search over the app (H, with a screenshot of exactly that); and a note that says the reading
@@ -188,7 +188,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .badge{font-size:14px;color:var(--label2);line-height:1.45}
 .listhead{font-size:13px;font-weight:500;color:var(--label2);margin:26px 0 8px 4px}
 .more .listhead{margin-left:16px} /* v551: the head sat at x=20 over rows whose titles sit at 32 — the one text on More that lined up with nothing. Scoped to More, since the Camera tab's marking head stands over photo tiles at 16, not over a card's inner padding. */
-.del{background:none;border:none;cursor:pointer;font-size:15px;font-weight:500;color:var(--tint);padding:10px 6px;min-height:44px;border-radius:8px}
+.del{background:none;border:none;cursor:pointer;font-size:15px;font-weight:500;color:var(--tint-ink);padding:10px 6px;min-height:44px;border-radius:8px}
 .del:active{opacity:.6}
 .more .mofold{display:block;padding:6px 0;min-height:44px;text-align:left} .more .mofold i{font-style:normal;color:var(--label3)} /* v717: the fold under a More row — What is sent, About the app — a link with a chevron, the text under it only while open */
 .more .mrow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--sep)} /* v589 flex-wrap: at 360 px the German Import button hung 8.6 px out of its own card and the Russian Flagged-cards row
@@ -209,7 +209,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .more .mrow>.btnrow,.more .mrow>button{margin-left:auto}
 .more .mrow .t{font-size:17px}
 .more .mrow .s{font-size:14px;color:var(--label2);margin-top:2px;line-height:1.4}
-.more .warn{color:var(--tint)}
+.more .warn{color:var(--tint-ink)}
 
 /* cards library */
 .topline{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -232,9 +232,9 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .chipset{display:flex;gap:6px;flex-wrap:wrap} .orderchips{margin-top:8px}
 .btnrow{display:flex;gap:6px;flex:none}
 .chip{background:var(--fill);border:none;border-radius:999px;color:var(--label);font-size:13px;font-weight:500;padding:8px 14px;min-height:44px;cursor:pointer}
-.chip.on{background:var(--tint);color:#fff}
+.chip.on{background:var(--tint-fill);color:#fff}
 .tagchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px} .tagchips .chip{min-height:44px;padding:6px 11px;font-size:13px}
-.pill.tag{background:var(--tint-soft);color:var(--tint)}
+.pill.tag{background:var(--tint-soft);color:var(--tint-ink)}
 .say{position:relative;background:var(--fill);border:none;border-radius:999px;width:38px;height:38px;margin-left:10px;vertical-align:middle;cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:center} .say::before{content:"";position:absolute;inset:-3px} /* v711: a 44 px hit area around the 38 px disc */
 .say svg{width:20px;height:20px;fill:none;stroke:var(--tint);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round} .say:active{opacity:.6}
 .crow{display:grid;grid-template-columns:124px 1fr auto;gap:12px;align-items:center;width:100%;background:var(--card);border:none;
@@ -249,7 +249,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
    that must not be cut. The negative margins keep the 44 px touch area while the box lays out as 33 × 32. */
 .star{display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-6px -11px -6px 0;cursor:pointer;color:var(--label3)}
 .star svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round}
-.star.on{color:var(--tint)} .star.on svg{fill:currentColor}
+.star.on{color:var(--tint-ink)} .star.on svg{fill:currentColor}
 .star:active{opacity:.55}
 .thumb{width:83px;height:83px;border-radius:8px;object-fit:contain;object-position:center;background:var(--card2)}
 /* the list's thumbnail like the front's photo box (v232, H: "in der Cards Liste auch"): a darkened blurred copy of the crop fills the tile behind the fitted picture */
@@ -275,7 +275,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .detailacts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:16px}
 .detailacts .primary{grid-column:1/-1} .detailacts .btn{font-size:15px;padding:12px 8px;white-space:normal;line-height:1.25}
 .pill{font-size:11px;font-weight:600;border-radius:999px;padding:2px 8px;color:var(--label2);background:var(--card2);margin-left:6px;vertical-align:middle;white-space:nowrap;display:inline-block}
-.pill.flagged{color:var(--tint);background:var(--tint-soft)}
+.pill.flagged{color:var(--tint-ink);background:var(--tint-soft)}
 .pill.ai{color:var(--ok);background:var(--ok-soft)}
 .crow .simpref{display:block;font-size:14px;color:var(--label2);margin:-2px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .crow .simpref .lbl{font-size:12px;margin-right:6px} .crow .simpref .hanzi{font-family:var(--hanzi);font-size:15px;color:var(--label2)}
 .crow .pill{font-family:var(--sans);font-weight:600}
@@ -290,12 +290,12 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .fieldacts{display:flex;justify-content:flex-end;gap:8px;margin-top:8px} /* an action under a field, as a soft button like the picker's (v160) */
 .seg{display:inline-flex;background:var(--fill);border-radius:999px;padding:3px;margin-left:auto}
 /* the Cards scope bar (v477): the same component full width under the search field, its two halves equal, so a long label in one language cannot squeeze the other */
-.seg.scope{display:flex;width:100%;margin:0 0 10px} .seg.scope .segbtn{flex:1;min-width:0;padding:6px 8px;min-height:38px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .segbtn{background:none;border:none;border-radius:999px;color:var(--label);font-size:13px;font-weight:500;padding:6px 13px;min-height:30px;cursor:pointer} .segbtn.on{background:var(--tint);color:#fff} .segbtn:disabled{color:var(--label3);cursor:default}
+.seg.scope{display:flex;width:100%;margin:0 0 10px} .seg.scope .segbtn{flex:1;min-width:0;padding:6px 8px;min-height:38px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .segbtn{background:none;border:none;border-radius:999px;color:var(--label);font-size:13px;font-weight:500;padding:6px 13px;min-height:30px;cursor:pointer} .segbtn.on{background:var(--tint-fill);color:#fff} .segbtn:disabled{color:var(--label3);cursor:default}
 .lbl{font-family:var(--sans);font-size:13px;font-weight:500;color:var(--label2);margin-right:8px}
 .scriptref{display:inline-flex;align-items:baseline;gap:0}
 .scriptref .hanzi{font-family:var(--hanzi);font-size:18px;color:var(--label)}
 .script{margin:10px 0 0;text-align:center} .script .pill{margin-left:0} .script.back{margin:0 0 10px}
-.flag{display:inline-block;font-size:13px;font-weight:500;padding:4px 10px;border-radius:999px;color:var(--tint);background:var(--tint-soft);margin-top:12px}
+.flag{display:inline-block;font-size:13px;font-weight:500;padding:4px 10px;border-radius:999px;color:var(--tint-ink);background:var(--tint-soft);margin-top:12px}
 .aibar{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:8px 8px 8px 14px;border-radius:var(--r);background:var(--ok-soft);color:var(--ok);font-size:14px;font-weight:600}
 .aibar .aiacts2{display:flex;align-items:center;gap:8px;margin-left:auto} /* align-items, or the two buttons take each glyph's own baseline and sit 12 px apart */
 /* the two bulk actions are the app's own tick and cross (v480): measured over ten languages, no layout with both words
@@ -310,7 +310,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 /* character parts on the back */
 .chars{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:16px}
 .chars .ch{font-family:var(--hanzi);font-size:22px;min-width:44px;height:44px;padding:0 8px;border:none;border-radius:10px;background:var(--card2);color:var(--label);cursor:pointer}
-.chars .ch.on{background:var(--tint);color:#fff}
+.chars .ch.on{background:var(--tint-fill);color:#fff}
 .chinfo{margin-top:10px;font-size:15px;color:var(--label2)}
 .chline{display:flex;align-items:baseline;justify-content:center;flex-wrap:wrap;gap:12px}
 .chars.sub{margin-top:10px} .chars.sub .ch{min-width:38px;height:38px;font-size:19px}
@@ -324,7 +324,7 @@ input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:tex
 .shot .meta{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px} /* v739: three buttons beside the timestamp do not fit at 360 px in German or Russian — the row wraps and the buttons stand under the time, at the right */
 .shot .ts{font-family:var(--mono);font-size:12px;color:var(--label3)}
 .shot .ts{flex:1 1 auto;min-width:0} .shot .acts{display:flex;gap:6px;margin-left:auto;white-space:nowrap} .shot .acts button{white-space:nowrap} /* v739: a button never breaks inside */
-.ocr-btn{background:var(--tint-soft);border:none;border-radius:999px;cursor:pointer;font-size:13px;font-weight:600;color:var(--tint);padding:9px 14px;min-height:38px}
+.ocr-btn{background:var(--tint-soft);border:none;border-radius:999px;cursor:pointer;font-size:13px;font-weight:600;color:var(--tint-ink);padding:9px 14px;min-height:38px}
 .ocr-btn:active{opacity:.6}
 .ocr:not(:empty){margin-top:10px}
 .ocr .field input,.ocr .field textarea{background:var(--card2);box-shadow:none} .ocr .field input:focus,.ocr .field textarea:focus{box-shadow:inset 0 0 0 2px var(--tint)} /* the preview's fields sit on the photo's card like the form's (v134) */
@@ -381,7 +381,7 @@ button.pill.multi{border:0;font:inherit;cursor:pointer} /* the reference is a wa
 .shot .reshead{margin:2px 0 10px 2px} .shot .result+.detailacts+.result{margin-top:22px;padding-top:22px;border-top:1px solid var(--sep)} /* several labels of one photo, one card each (v357): a head line and a hairline between the cards */
 /* the finished card carries the detail's own action row (v344): Edit and Delete card as two equal buttons with the detail's room above them, no photo timestamp — the row had three type sizes and touched the parts row */
 .signed .badge.ai{color:var(--ok)}
-.signed .badge.bad,.smean.bad{color:var(--tint)} .aibox.bad{background:var(--tint-soft)} .aibox.bad .aihead{color:var(--tint)}
+.signed .badge.bad,.smean.bad{color:var(--tint-ink)} .aibox.bad{background:var(--tint-soft)} .aibox.bad .aihead{color:var(--tint-ink)}
 .cropacts .del{padding:10px 6px}
 
 /* cropping: the frame must be visible on any photo colour (red on red!): bright dashed edge with a dark outline */
@@ -414,11 +414,11 @@ button.pill.multi{border:0;font:inherit;cursor:pointer} /* the reference is a wa
 .smean{margin-top:8px;font-size:16px}
 .cstrip{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0} .cstrip.selecting .ck{touch-action:none} /* a stroke along the strip marks, it does not scroll (v205) */
 .ck{font-family:var(--hanzi);font-size:22px;min-width:40px;height:40px;padding:0 6px;border:none;border-radius:8px;background:var(--card);box-shadow:inset 0 0 0 1px var(--sep);color:var(--label);cursor:pointer}
-.ck.low{box-shadow:inset 0 0 0 1.5px var(--tint)} .ck.on{background:var(--tint);color:#fff} .ck.ai{box-shadow:inset 0 0 0 1.5px var(--ok)}
+.ck.low{box-shadow:inset 0 0 0 1.5px var(--tint)} .ck.on{background:var(--tint-fill);color:#fff} .ck.ai{box-shadow:inset 0 0 0 1.5px var(--ok)}
 .ck.draw{box-shadow:inset 0 0 0 1.5px var(--label2)}
 .ckpick{margin:6px 0 10px;padding:12px;border-radius:var(--r);background:var(--card2)}
 .ckpick .ck{background:var(--card)} .signed .ck{background:var(--card2)} .pane .signed .ck{background:var(--card)}
-.signed .ck.on,.ckpick .ck.on{background:var(--tint);color:#fff} /* the chosen character stays filled whatever the surface */
+.signed .ck.on,.ckpick .ck.on{background:var(--tint-fill);color:#fff} /* the chosen character stays filled whatever the surface */
 .ckpick .cands{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 .ckhead{display:flex;justify-content:space-between;align-items:center;gap:8px} .ckx{flex:none;width:30px;height:30px;border-radius:50%;border:none;background:var(--fill);color:var(--label2);font-size:20px;line-height:30px;padding:0;cursor:pointer;font-family:var(--sans)} .form .ckpick .ckx{background:var(--card)} .ckx:active{opacity:.6}
 .ckacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px} .ckacts .grow{flex:1}
@@ -461,7 +461,7 @@ body.noscroll{overflow:hidden}
 .filter .frow+.frow{border-top:1px solid var(--sep)}
 .filter .fl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.6} /* 1.6, not the page's 1.45, since v402: Thai stacks a vowel and a tone over the letter (ทั้, ชื่), and at 16 px the taller stack stood 1 px above a line box this row clips — the only slot in the app where any ink left its box. The row's min-height 48 absorbs the 2.4 px, so no filter row grows. */
 .filter .fn{color:var(--label2);font-size:15px;flex:none} .filter .fc{width:16px;flex:none}
-.filter .frow.on .fl{color:var(--tint);font-weight:600}
+.filter .frow.on .fl{color:var(--tint-ink);font-weight:600}
 .filter .frow.on .fc::after{content:"";display:block;width:6px;height:11px;margin:0 auto;border:2px solid var(--tint);border-top:0;border-left:0;transform:rotate(45deg)}
 .filter .row{margin-top:12px;padding:12px 16px 0;border-top:1px solid var(--sep)}
 
@@ -483,14 +483,14 @@ body.noscroll{overflow:hidden}
 .aiacts{display:flex;gap:8px;margin-top:10px}
 .aiform{background:var(--card);border-radius:var(--r);padding:12px 14px 14px;margin:4px 0 10px;box-shadow:var(--shadow)}
 /* review flag */
-.flagbox{margin-top:16px;padding:10px 14px;border-radius:var(--r);color:var(--tint);font-size:14px;line-height:1.45;text-align:left;background:var(--tint-soft)}
+.flagbox{margin-top:16px;padding:10px 14px;border-radius:var(--r);color:var(--tint-ink);font-size:14px;line-height:1.45;text-align:left;background:var(--tint-soft)}
 /* three actions since v427 (the star joined Flag and Edit): the row wraps as whole buttons and a label never breaks
    mid-phrase — without nowrap the German row came out as three ragged two-line columns with the glyph stranded above its word.
    The gap is 14 px and the padding 2 px since v431: with 22 px the three buttons fitted (287 px of 322 in Russian) and the two
    gaps pushed the row over anyway, so it wrapped on the labels' account when it was the spacing */
 .backacts{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;margin-top:14px;padding-top:6px;border-top:.5px solid var(--sep)} /* v655 (H chose B): one toolbar of equal columns under a hairline, all three grey and equally quiet */
 .tbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:54px;padding:6px 2px;background:none;border:none;border-radius:10px;cursor:pointer;color:var(--label2);font:inherit;font-size:12px;font-weight:500;line-height:1.2;text-align:center} .tbtn:active{background:var(--fill)}
-.tbtn svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round} .tbtn.on{color:var(--tint)} .tbtn.on svg{fill:currentColor} .tbtn#edit-card svg{fill:none} /* on: a starred or flagged card's own button in the tint, its icon filled */
+.tbtn svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round} .tbtn.on{color:var(--tint-ink)} .tbtn.on svg{fill:currentColor} .tbtn#edit-card svg{fill:none} /* on: a starred or flagged card's own button in the tint, its icon filled */
 /* a text box inside a More row (the Feedback row, v218): the form field's look on the row's secondary surface, full width, growing with its text */
 .mrow textarea{width:100%;background:var(--card2);border:none;border-radius:10px;color:var(--label);font-family:var(--sans);font-size:17px;padding:12px 14px;outline:none;box-shadow:none;margin-top:10px;resize:none;overflow:hidden;line-height:1.35;min-height:46px;display:block}
 .mrow textarea:focus{box-shadow:inset 0 0 0 2px var(--tint)} .mrow textarea::placeholder{color:var(--label3)}
@@ -514,7 +514,7 @@ body.noscroll{overflow:hidden}
     four-line label (de@360 "Fotos einschließlen (etwa 0.0 MB mehr)") put the tick box 31.5 px down, level with line 3 of 4,
     so the control a learner must tap was a third of the way down the sentence. The 11 px keeps a one-line label's box
     centred in its own 44 px touch target, which is what align-items:center bought. */
-.field label.check input,.mrow label.check input{width:22px;height:22px;accent-color:var(--tint);margin:0;flex:none;box-shadow:none}
+.field label.check input,.mrow label.check input{width:22px;height:22px;accent-color:var(--tint-ink);margin:0;flex:none;box-shadow:none}
 
 /* card image (crop) */
 .pimg img{max-width:100%;display:block;border-radius:10px;margin-bottom:6px}
@@ -549,7 +549,7 @@ body.noscroll{overflow:hidden}
 .done .intro .notes{display:flex;flex-direction:column;justify-content:space-around;gap:10px;padding:6px 0}
 .done .intro .note{display:flex;align-items:flex-start;gap:4px}
 .done .intro .note .ar{width:34px;min-width:34px;height:19px;margin-top:3px}
-.done .intro .note span{font-family:'Bradley Hand','Segoe Script','Noteworthy','Comic Sans MS',var(--sans);font-size:14px;line-height:1.35;color:var(--tint);display:block} /* whatever handwriting face the phone has; with none it falls back to the UI font and the arrows carry the look */
+.done .intro .note span{font-family:'Bradley Hand','Segoe Script','Noteworthy','Comic Sans MS',var(--sans);font-size:14px;line-height:1.35;color:var(--tint-ink);display:block} /* whatever handwriting face the phone has; with none it falls back to the UI font and the arrows carry the look */
 .done .intro .n1{transform:rotate(-1.5deg)} .done .intro .n2{transform:rotate(.8deg)} .done .intro .n3{transform:rotate(-1deg)}
 @media(prefers-reduced-motion:reduce){.done .intro .note{transform:none}}
 
@@ -572,7 +572,7 @@ body.noscroll{overflow:hidden}
 .crow.on .tick::after,.shot.pick.on .tick::after{content:"";position:absolute;left:8px;top:4px;width:5px;height:10px;border:2px solid #fff;border-top:0;border-left:0;transform:rotate(45deg)}
 .pickbar{padding-left:6px}
 .pickbar .sp{flex:1}
-.pickbar #pick-del{color:var(--tint)}
+.pickbar #pick-del{color:var(--tint-ink)}
 .pickbar #pick-del[disabled]{color:var(--label3)}
 .pickbar #pick-done{color:var(--label2)}
 .cend{display:flex;align-items:center;gap:10px;flex:none}
@@ -681,7 +681,7 @@ body.noscroll{overflow:hidden}
 .ctile.page .prog i{display:block;height:100%;border-radius:0;background:var(--ok)}
 .ctile:active{background:var(--card2)}
 .listhead.pickhead{display:flex;align-items:center;justify-content:space-between;gap:8px} .listhead.pickhead .del{padding:2px 2px;min-height:0;font-size:14px}
-.undo button{background:none;border:none;font-family:var(--sans);font-size:16px;font-weight:600;color:var(--tint);padding:0 10px;min-height:44px;cursor:pointer;flex:none}
+.undo button{background:none;border:none;font-family:var(--sans);font-size:16px;font-weight:600;color:var(--tint-ink);padding:0 10px;min-height:44px;cursor:pointer;flex:none}
 @keyframes undoup{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
 @keyframes noteup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 /* the Progress dashboard (v274): four tiles on the row's grey surface, the 30-day strip in the tint, the deck bar in grey, tint and green */
@@ -716,7 +716,7 @@ body.noscroll{overflow:hidden}
    rounded band sitting directly under From album — itself a full-width tinted rounded button — reads as a second
    button and invites a tap that does nothing. Left-aligned tint at 13 px is unmistakably a caption, costs no width,
    and is still far more present than the grey it replaced. */
-.batchline{display:block;margin:0 2px 12px 4px;font-size:13px;font-weight:500;line-height:1.4;color:var(--tint);text-align:start}
+.batchline{display:block;margin:0 2px 12px 4px;font-size:13px;font-weight:500;line-height:1.4;color:var(--tint-ink);text-align:start}
 /* v452: a card that is one of several from one photo shows the page itself on the closed Learn front and in the detail — the whole picture in its own shape (the one exception to v223's "both boxes the same shape"), the blurred fill around it; the dots as on the Camera tab, the card's own lit; the dots take no tap there. The cap keeps the closed front — page, text box, pill and hint — above the tab bar: 100vh minus what the rest of the screen takes (measured 500 px at 390×844 with the hint, 344 px of page there, 240 at 360×740), never over 56vh on a tall screen; the revealed card shows the card's own cut, since the grades then own the screen (v421). The 16 px frame keeps a dot at the picture's own edge whole (a title at y 0, a label at the right edge — measured clipped by 14 px without it). */
 .picbox.page{--pageh:clamp(180px,calc(100vh - 500px),56vh);aspect-ratio:auto;height:auto;max-height:var(--pageh);display:flex;justify-content:center;align-items:center}
 .picbox.page .pagewrap{position:relative;display:block;margin:16px;max-width:calc(100% - 32px);max-height:calc(var(--pageh) - 32px);line-height:0}
@@ -764,9 +764,9 @@ body.noscroll{overflow:hidden}
 .chw.lockw{box-shadow:inset 0 0 0 1.5px var(--lock)} /* v526: the word that holds the locked character — in the lock colour, like the chip; where it is also the pad's word the lock colour wins, and the chip's tint glyph says the pad is here. 1.5 px and blue since v528 (H: "Das Grün knallt zu sehr raus", "Muss nicht grün sein") */
 .chrow .ch{position:relative;font-family:var(--hanzi);font-size:calc(var(--chs,56px) * 0.54);width:var(--chs,56px);height:var(--chs,56px);padding:0;border:none;border-radius:0;background:none;color:var(--label);box-shadow:none;cursor:pointer;user-select:none}
 .chw .ch+.ch{border-left:1px solid var(--sep)} /* the divider between the characters of one word (v525); border-box, so the tile keeps its width */
-.chrow .ch.cur{color:var(--tint)} /* the one in the pad: the glyph in the tint, no fill (v525) */
+.chrow .ch.cur{color:var(--tint-ink)} /* the one in the pad: the glyph in the tint, no fill (v525) */
 .chrow .ch.done{color:var(--ok)} /* written this session: the glyph in green, no fill and no badge (v525) */
-.chrow .ch.done.cur{color:var(--tint)}
+.chrow .ch.done.cur{color:var(--tint-ink)}
 .chrow .ch.num{font-family:var(--sans);font-size:17px;font-weight:600;width:auto;padding:0 10px;color:var(--label2)} /* not scaled: its width is its text's */ /* a number with its unit: one button, not writable */
 .fold{margin-top:8px;text-align:left}
 .foldbtn{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;width:100%;min-height:44px;border:none;background:var(--card2);border-radius:var(--r);padding:8px 12px;font:400 15px var(--sans);color:var(--label);cursor:pointer;text-align:left} /* v589: var(--ui) was never defined in this repo, and an undefined var kills the WHOLE font shorthand — measured, the label computed 17px/400, the card's inherited body text, instead of 15px/500 on every study card and open card */
@@ -779,7 +779,7 @@ body.noscroll{overflow:hidden}
 .desc{margin:10px auto 0;max-width:34em;font-size:15px;line-height:1.45;color:var(--label2);text-align:left}
 .desc.want{text-align:center} .desc.want .del{font-size:15px;padding:6px 10px} .desc.want .hint{margin-top:2px} .desc.want .reading{justify-content:center}
 .desc.want:empty{display:none} /* v585: a card with no description yet renders the empty landing place for refreshDesc and nothing else */
-.pill.again{margin-left:0;background:var(--tint-soft);color:var(--tint)} /* the repeat pass of a written card (§ 8.1) */
+.pill.again{margin-left:0;background:var(--tint-soft);color:var(--tint-ink)} /* the repeat pass of a written card (§ 8.1) */
 .padwrap{position:relative;margin-top:8px;display:flex;justify-content:center;width:fit-content;margin-left:auto;margin-right:auto} /* v612 (H on the unfolded screen: "show me is in the wrong place"): the wrap is exactly the pad's width, so Show me, Skip and the note are placed on the pad itself — they sat against the card's full width, which on a wide screen is 200 px wider than the pad (fit() caps the pad by height). On a phone the two widths are the same and nothing moves */
 .wpad{display:block;border-radius:var(--rc);background:var(--card2);touch-action:none;box-shadow:inset 0 0 0 1px var(--sep)} /* the pad takes the finger: a stroke is never a swipe */
 .wpad.ghost{width:100%;aspect-ratio:1} /* the carousel's neighbour carries an empty pad; since v530 sized inline to the standing pad's own side (ghostSize), this square is the fallback for a card without one */
@@ -846,7 +846,7 @@ body.noscroll{overflow:hidden}
    since v522 (H: "So unwichtig und braucht so viel Platz"), where it costs no height; under the pad from v520 to v521 */
 .foldbtn>span{white-space:nowrap} /* the label and the Again pill never break inside; a row that has no room wraps its tail onto a second line as whole items (German at 360 px) */
 .foldbtn .tail{margin-left:auto;display:inline-flex;align-items:center;gap:8px} .foldbtn .tail i{margin-left:0}
-.foldbtn .fmarks{display:inline-flex;gap:4px;color:var(--tint)} .foldbtn .fmarks svg{width:15px;height:15px;fill:currentColor;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round} /* v667: the star and flag of the card, off the photo */
+.foldbtn .fmarks{display:inline-flex;gap:4px;color:var(--tint-ink)} .foldbtn .fmarks svg{width:15px;height:15px;fill:currentColor;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round} /* v667: the star and flag of the card, off the photo */
 .foldbtn .pos{font-size:13px;font-weight:400;color:var(--label3);white-space:nowrap}
 /* the locked character lit on the photo (v520): v461's shadow around the character's own rectangle, faded in and out */
 /* the word being written, marked on the photo (v533, H: "Bitte ausgewählte Worte dezent im Bild highlighten"): a tint ring
@@ -872,11 +872,11 @@ body.noscroll{overflow:hidden}
 @media(prefers-reduced-motion:reduce){.spot{transition:none}}
 /* ===== the praise after a finished word (v517): the counter in the bar, the star that flies into it, the ring =====
    Design tokens only, so both themes come out of the same set. */
-#stat-star{color:var(--tint);gap:5px;padding:4px 11px;min-height:28px;box-sizing:border-box;align-items:center}
+#stat-star{color:var(--tint-ink);gap:5px;padding:4px 11px;min-height:28px;box-sizing:border-box;align-items:center}
 /* the points sheet (v546): what a point is, and the last seven days — the counter is the only place the points are shown, so it is where they are explained */
 .pts{text-align:start}
 .pts .ptsnow{display:flex;align-items:baseline;gap:8px;margin:2px 0 12px}
-.pts .ptsnow .n{font-size:34px;font-weight:700;color:var(--tint);font-variant-numeric:tabular-nums}
+.pts .ptsnow .n{font-size:34px;font-weight:700;color:var(--tint-ink);font-variant-numeric:tabular-nums}
 .pts .ptsnow .l{font-size:14px;color:var(--label2)}
 .pts .ptsrule{margin:0 0 14px;padding:0 0 0 18px;font-size:15px;line-height:1.45}
 .pts .ptsrule li{margin:0 0 5px}
@@ -893,7 +893,7 @@ body.noscroll{overflow:hidden}
 #stat-star.gold{color:var(--warn);background:var(--warn-soft)}
 /* the counter takes room in the bar, so the filter pill gives some back (measured at 390 and 360 px) */
 .stats:has(#stat-star:not([hidden])) #stat-filter .chip.fpill{max-width:40vw}
-.prstar{position:fixed;left:0;top:0;width:34px;height:34px;color:var(--tint);pointer-events:none;z-index:40;will-change:transform,opacity}
+.prstar{position:fixed;left:0;top:0;width:34px;height:34px;color:var(--tint-ink);pointer-events:none;z-index:40;will-change:transform,opacity}
 .prstar.gold{color:var(--warn)}
 .prstar svg{width:100%;height:100%;fill:currentColor;filter:drop-shadow(0 2px 7px rgba(0,0,0,.28))}
 .prring{position:fixed;left:0;top:0;pointer-events:none;z-index:39;border-radius:999px;box-shadow:0 0 0 3px var(--warn);will-change:transform,opacity}
@@ -914,7 +914,7 @@ body.noscroll{overflow:hidden}
    that is wider than the card on its own break inside itself. Nothing is cut any more, so no ellipsis is needed — and the
    row gap is 2px, not the 10px between the parts, so a wrapped row reads as one thing. */
 .padline .plrow>*{flex:none;min-width:0;max-width:100%;overflow-wrap:anywhere}
-.padline .hanzi{font-family:var(--hanzi);font-size:20px;color:var(--label)} .padline .hanzi b{color:var(--tint);font-weight:400} .padline .mono{font-weight:600}
+.padline .hanzi{font-family:var(--hanzi);font-size:20px;color:var(--label)} .padline .hanzi b{color:var(--tint-ink);font-weight:400} .padline .mono{font-weight:600}
 .padline .hanzi b.lock{color:var(--lock)} .padline .plock{display:inline-block;vertical-align:-1px;margin-right:4px;color:var(--lock)} .padline .plock svg{width:13px;height:13px;fill:currentColor} /* v526: the locked character in the lock colour in the line, the padlock before its word (blue since v528) */
 .padacts{display:flex;justify-content:center;gap:2px 14px;flex-wrap:wrap;margin-top:6px} .padacts .del{font-size:15px;padding:8px 6px;min-height:40px}
 /* the multicard's picture on the study card and on the open card (D5, v512): cover-fitted in the ordinary box around the
@@ -940,7 +940,7 @@ body.noscroll{overflow:hidden}
    a soft fill and a tint glyph can both be seen, so the v525 ring is gone. */
 .chrow .ch.lock{color:var(--lock);isolation:isolate}
 .chrow .ch.lock::before{content:"";position:absolute;inset:3px;border-radius:9px;background:var(--lock-soft);z-index:-1} /* isolation:isolate keeps the -1 inside the button (the v461 lesson: a negative z-index paints under the card) */
-.chrow .ch.lock.cur{color:var(--tint)}
+.chrow .ch.lock.cur{color:var(--tint-ink)}
 /* and the padlock in its corner (v518, H: "Locked on/off should be more obvious, maybe with a padlock icon?") — a small glyph in the lock colour in the chip's corner since v528, no disc */
 .chrow .ch .lockmark{position:absolute;right:6px;top:5px;width:10px;height:10px;color:var(--lock);display:inline-flex;align-items:center;justify-content:center;pointer-events:none}
 .chrow .ch .lockmark svg{width:10px;height:10px;fill:currentColor}
