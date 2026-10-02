@@ -334,6 +334,7 @@ de:{
   "Delete {0} duplicate multicards?":"{0} doppelte Multicards löschen?",
   "Delete one duplicate multicard?":"Eine doppelte Multicard löschen?",
   "copy":"{0} Kopie","copies":"{0} Kopien",
+  "Today's free AI checks are used up. Your cards are still made, and the AI checks them tomorrow.":"Die kostenlosen KI-Prüfungen für heute sind aufgebraucht. Deine Karten werden trotzdem erstellt, und die KI prüft sie morgen.","The free AI is busy today. Your cards are still made, and the AI checks them tomorrow.":"Die kostenlose KI ist heute ausgelastet. Deine Karten werden trotzdem erstellt, und die KI prüft sie morgen.","The free AI is paused until {0}. Your cards are still made, and the AI checks them then.":"Die kostenlose KI pausiert bis zum {0}. Deine Karten werden trotzdem erstellt, und die KI prüft sie dann.","The free AI is paused for now. Your cards are still made, and the AI checks them later.":"Die kostenlose KI pausiert gerade. Deine Karten werden trotzdem erstellt, und die KI prüft sie später.","Today's free picture readings are used up. Your cards are still made, and the text checks go on.":"Die kostenlosen Bild-Lesungen für heute sind aufgebraucht. Deine Karten werden trotzdem erstellt, und die Textprüfung läuft weiter.",
 },
 fr:{
   "reading confidence {0}%":"confiance de lecture {0} %","unknown {0}":"inconnus : {0}","no dictionary meaning":"aucun sens au dictionnaire","the text looks misread":"le texte semble mal lu","the framed area":"la zone encadrée","card image":"image de la carte","alt:photo":"photo",
@@ -636,6 +637,7 @@ fr:{
   "Delete {0} duplicate multicards?":"Supprimer {0} multicartes en double ?",
   "Delete one duplicate multicard?":"Supprimer une multicarte en double ?",
   "copy":"{0} copie","copies":"{0} copies",
+  "Today's free AI checks are used up. Your cards are still made, and the AI checks them tomorrow.":"Les vérifications gratuites par l'IA sont épuisées pour aujourd'hui. Tes cartes sont quand même créées, et l'IA les vérifie demain.","The free AI is busy today. Your cards are still made, and the AI checks them tomorrow.":"L'IA gratuite est saturée aujourd'hui. Tes cartes sont quand même créées, et l'IA les vérifie demain.","The free AI is paused until {0}. Your cards are still made, and the AI checks them then.":"L'IA gratuite est en pause jusqu'au {0}. Tes cartes sont quand même créées, et l'IA les vérifie à ce moment-là.","The free AI is paused for now. Your cards are still made, and the AI checks them later.":"L'IA gratuite est en pause pour le moment. Tes cartes sont quand même créées, et l'IA les vérifie plus tard.","Today's free picture readings are used up. Your cards are still made, and the text checks go on.":"Les lectures d'image gratuites sont épuisées pour aujourd'hui. Tes cartes sont quand même créées, et la vérification du texte continue.",
 },
 es:{
   "reading confidence {0}%":"confianza de lectura {0} %","unknown {0}":"desconocidos: {0}","no dictionary meaning":"sin significado en el diccionario","the text looks misread":"el texto parece mal leído","the framed area":"el área enmarcada","card image":"imagen de la tarjeta","alt:photo":"foto",
@@ -938,6 +940,7 @@ es:{
   "Delete {0} duplicate multicards?":"¿Eliminar {0} multitarjetas duplicadas?",
   "Delete one duplicate multicard?":"¿Eliminar una multitarjeta duplicada?",
   "copy":"{0} copia","copies":"{0} copias",
+  "Today's free AI checks are used up. Your cards are still made, and the AI checks them tomorrow.":"Las revisiones gratis con IA de hoy se han agotado. Tus tarjetas se crean igual, y la IA las revisa mañana.","The free AI is busy today. Your cards are still made, and the AI checks them tomorrow.":"La IA gratis está saturada hoy. Tus tarjetas se crean igual, y la IA las revisa mañana.","The free AI is paused until {0}. Your cards are still made, and the AI checks them then.":"La IA gratis está en pausa hasta el {0}. Tus tarjetas se crean igual, y la IA las revisa entonces.","The free AI is paused for now. Your cards are still made, and the AI checks them later.":"La IA gratis está en pausa por ahora. Tus tarjetas se crean igual, y la IA las revisa más tarde.","Today's free picture readings are used up. Your cards are still made, and the text checks go on.":"Las lecturas de imagen gratis de hoy se han agotado. Tus tarjetas se crean igual, y la revisión del texto sigue.",
 },
 ja:{
   "reading confidence {0}%":"読み取りの確からしさ {0}%","unknown {0}":"不明な文字：{0}","no dictionary meaning":"辞書に意味がありません","the text looks misread":"テキストの読み取りが誤っているようです","the framed area":"枠で囲んだ範囲","card image":"カードの画像","alt:photo":"写真",
@@ -1240,6 +1243,7 @@ ja:{
   "Delete {0} duplicate multicards?":"重複したマルチカード{0}枚を削除しますか？",
   "Delete one duplicate multicard?":"重複したマルチカード1枚を削除しますか？",
   "copy":"{0}枚","copies":"{0}枚",
+  "Today's free AI checks are used up. Your cards are still made, and the AI checks them tomorrow.":"今日の無料AI確認は使い切りました。カードはそのまま作られ、AIは明日確認します。","The free AI is busy today. Your cards are still made, and the AI checks them tomorrow.":"無料AIは今日混み合っています。カードはそのまま作られ、AIは明日確認します。","The free AI is paused until {0}. Your cards are still made, and the AI checks them then.":"無料AIは{0}まで一時停止中です。カードはそのまま作られ、AIはそのときに確認します。","The free AI is paused for now. Your cards are still made, and the AI checks them later.":"無料AIは今、一時停止中です。カードはそのまま作られ、AIはあとで確認します。","Today's free picture readings are used up. Your cards are still made, and the text checks go on.":"今日の無料の画像読み取りは使い切りました。カードはそのまま作られ、テキストの確認は続きます。",
 },
 ko:{
   "reading confidence {0}%":"읽기 신뢰도 {0}%","unknown {0}":"모르는 글자: {0}","no dictionary meaning":"사전에 뜻이 없어요","the text looks misread":"글자를 잘못 읽은 것 같아요","the framed area":"틀로 감싼 부분","card image":"카드 이미지","alt:photo":"사진",
@@ -1542,6 +1546,7 @@ ko:{
   "Delete {0} duplicate multicards?":"중복된 멀티카드 {0}장을 삭제할까요?",
   "Delete one duplicate multicard?":"중복된 멀티카드 1장을 삭제할까요?",
   "copy":"{0}장","copies":"{0}장",
+  "Today's free AI checks are used up. Your cards are still made, and the AI checks them tomorrow.":"오늘 무료 AI 확인을 다 썼어요. 카드는 그대로 만들어지고, AI가 내일 확인해요.","The free AI is busy today. Your cards are still made, and the AI checks them tomorrow.":"오늘은 무료 AI가 붐벼요. 카드는 그대로 만들어지고, AI가 내일 확인해요.","The free AI is paused until {0}. Your cards are still made, and the AI checks them then.":"무료 AI가 {0}까지 쉬어요. 카드는 그대로 만들어지고, AI가 그때 확인해요.","The free AI is paused for now. Your cards are still made, and the AI checks them later.":"무료 AI가 지금은 쉬고 있어요. 카드는 그대로 만들어지고, AI가 나중에 확인해요.","Today's free picture readings are used up. Your cards are still made, and the text checks go on.":"오늘 무료 사진 읽기를 다 썼어요. 카드는 그대로 만들어지고, 텍스트 확인은 계속돼요.",
 },
 /* Russian (v401, H: "Ergaenze russisch als sprache") — "ты" throughout, as every column since v255. Three forms per count
    word, so every plural key carries a "#many" twin (5 карточек, 11 карточек, 111 карточек) that only PLURAL.ru ever looks
@@ -1847,6 +1852,7 @@ ru:{
   "Delete {0} duplicate multicards?":"Удалить повторы мультикарточек: {0}?",
   "Delete one duplicate multicard?":"Удалить один повтор мультикарточки?",
   "copy":"{0} копия","copies":"{0} копии","copies#many":"{0} копий",
+  "Today's free AI checks are used up. Your cards are still made, and the AI checks them tomorrow.":"Бесплатные проверки ИИ на сегодня закончились. Карточки всё равно создаются, а ИИ проверит их завтра.","The free AI is busy today. Your cards are still made, and the AI checks them tomorrow.":"Бесплатный ИИ сегодня перегружен. Карточки всё равно создаются, а ИИ проверит их завтра.","The free AI is paused until {0}. Your cards are still made, and the AI checks them then.":"Бесплатный ИИ на паузе до {0}. Карточки всё равно создаются, а ИИ проверит их потом.","The free AI is paused for now. Your cards are still made, and the AI checks them later.":"Бесплатный ИИ сейчас на паузе. Карточки всё равно создаются, а ИИ проверит их позже.","Today's free picture readings are used up. Your cards are still made, and the text checks go on.":"Бесплатные распознавания по картинке на сегодня закончились. Карточки всё равно создаются, а проверка текста продолжается.",
 },
 vi:{
   "reading confidence {0}%":"độ chắc chắn khi đọc {0}%","unknown {0}":"không nhận ra: {0}","no dictionary meaning":"không có nghĩa trong từ điển","the text looks misread":"văn bản có vẻ bị đọc sai","the framed area":"vùng trong khung","card image":"ảnh của thẻ","alt:photo":"ảnh",
@@ -2149,6 +2155,7 @@ vi:{
   "Delete {0} duplicate multicards?":"Xóa {0} thẻ gộp trùng?",
   "Delete one duplicate multicard?":"Xóa một thẻ gộp trùng?",
   "copy":"{0} bản","copies":"{0} bản",
+  "Today's free AI checks are used up. Your cards are still made, and the AI checks them tomorrow.":"Lượt kiểm tra AI miễn phí hôm nay đã hết. Thẻ của bạn vẫn được tạo, và AI sẽ kiểm tra vào ngày mai.","The free AI is busy today. Your cards are still made, and the AI checks them tomorrow.":"Hôm nay AI miễn phí đang quá tải. Thẻ của bạn vẫn được tạo, và AI sẽ kiểm tra vào ngày mai.","The free AI is paused until {0}. Your cards are still made, and the AI checks them then.":"AI miễn phí tạm dừng đến {0}. Thẻ của bạn vẫn được tạo, và AI sẽ kiểm tra lúc đó.","The free AI is paused for now. Your cards are still made, and the AI checks them later.":"AI miễn phí đang tạm dừng. Thẻ của bạn vẫn được tạo, và AI sẽ kiểm tra sau.","Today's free picture readings are used up. Your cards are still made, and the text checks go on.":"Lượt đọc ảnh miễn phí hôm nay đã hết. Thẻ của bạn vẫn được tạo, và việc kiểm tra chữ vẫn tiếp tục.",
 },
 th:{
   "reading confidence {0}%":"ความมั่นใจในการอ่าน {0}%","unknown {0}":"ไม่รู้จัก: {0}","no dictionary meaning":"ไม่มีความหมายในพจนานุกรม","the text looks misread":"ข้อความน่าจะอ่านผิด","the framed area":"บริเวณในกรอบ","card image":"รูปของการ์ด","alt:photo":"รูป",
@@ -2451,6 +2458,7 @@ th:{
   "Delete {0} duplicate multicards?":"ลบการ์ดรวมที่ซ้ำ {0} ใบไหม",
   "Delete one duplicate multicard?":"ลบการ์ดรวมที่ซ้ำ 1 ใบไหม",
   "copy":"{0} ชุด","copies":"{0} ชุด",
+  "Today's free AI checks are used up. Your cards are still made, and the AI checks them tomorrow.":"การตรวจด้วย AI ฟรีของวันนี้หมดแล้ว การ์ดยังสร้างได้ตามปกติ และ AI จะตรวจให้พรุ่งนี้","The free AI is busy today. Your cards are still made, and the AI checks them tomorrow.":"วันนี้ AI ฟรีมีคนใช้เยอะเกินไป การ์ดยังสร้างได้ตามปกติ และ AI จะตรวจให้พรุ่งนี้","The free AI is paused until {0}. Your cards are still made, and the AI checks them then.":"AI ฟรีหยุดพักถึงวันที่ {0} การ์ดยังสร้างได้ตามปกติ และ AI จะตรวจให้ตอนนั้น","The free AI is paused for now. Your cards are still made, and the AI checks them later.":"ตอนนี้ AI ฟรีหยุดพักอยู่ การ์ดยังสร้างได้ตามปกติ และ AI จะตรวจให้ทีหลัง","Today's free picture readings are used up. Your cards are still made, and the text checks go on.":"การอ่านจากรูปฟรีของวันนี้หมดแล้ว การ์ดยังสร้างได้ตามปกติ และการตรวจข้อความยังทำต่อ",
 },
 id:{
   "reading confidence {0}%":"keyakinan pembacaan {0}%","unknown {0}":"tidak dikenal: {0}","no dictionary meaning":"tidak ada arti di kamus","the text looks misread":"teks sepertinya salah dibaca","the framed area":"area dalam bingkai","card image":"gambar kartu","alt:photo":"foto",
@@ -2752,5 +2760,6 @@ id:{
   "Delete {0} duplicate multicards?":"Hapus {0} multikartu ganda?",
   "Delete one duplicate multicard?":"Hapus satu multikartu ganda?",
   "copy":"{0} salinan","copies":"{0} salinan",
+  "Today's free AI checks are used up. Your cards are still made, and the AI checks them tomorrow.":"Cek AI gratis untuk hari ini sudah habis. Kartumu tetap dibuat, dan AI akan memeriksanya besok.","The free AI is busy today. Your cards are still made, and the AI checks them tomorrow.":"AI gratis sedang penuh hari ini. Kartumu tetap dibuat, dan AI akan memeriksanya besok.","The free AI is paused until {0}. Your cards are still made, and the AI checks them then.":"AI gratis dijeda sampai {0}. Kartumu tetap dibuat, dan AI akan memeriksanya saat itu.","The free AI is paused for now. Your cards are still made, and the AI checks them later.":"AI gratis sedang dijeda. Kartumu tetap dibuat, dan AI akan memeriksanya nanti.","Today's free picture readings are used up. Your cards are still made, and the text checks go on.":"Baca gambar gratis untuk hari ini sudah habis. Kartumu tetap dibuat, dan cek teks tetap jalan.",
 }
 };

@@ -1,4 +1,4 @@
-const CACHE = "zt-v816";
+const CACHE = "zt-v817";
 /* OCR assets (./vendor/, ~52 MB since v639 — Paddle's ~29 MB beside these: the reader's eleven files at ~15 MB plus the 7.3 MB stroke outlines of v517, which are fetched through the same path but deliberately kept out of OCR_FILES) live in their own cache that survives shell
    updates — otherwise every cache version bump would re-download all of
    Tesseract. Only bump this when vendor files change. */
