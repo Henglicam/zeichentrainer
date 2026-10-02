@@ -48,7 +48,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v814, 2026-10-02)
+## Current state (PWA v815, 2026-10-02)
 **The app is called 识字 Shízì** (v608; the old names: HISTORY.md's title) wherever a learner sees a name and in every
 shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -115,7 +115,7 @@ card** — named, not fixed.
 
 ## The app
 
-**Tabs:** Learn · Cards · Camera · More; the app opens on **Learn** (a start screen was built at
+**Tabs:** Learn · Cards · Camera · More; **the phone's Back steps back one layer while anything stands over a tab's own screen, and leaves the app from a tab** (`histSync`/`histStep`, v815); the app opens on **Learn** (a start screen was built at
 v181 and reverted at v183 — do not bring it back unasked). The Camera tab always opens at the top.
 
 ### Learn — the write pad (v512)
@@ -199,7 +199,7 @@ with its own photo takes it as its picture (`dish`, v705); no count line on the 
 The Camera tab is the camera: a hint naming photos and app screenshots (v799), the **shutter card** (Take photo, From album)
 centred, work under it (v466/v470); a photo that made its card **leaves the tab** (v471). From album works through the batch one at a time while the app is open (v411; the
 "to go" line counts what is left, `BATCH`, v761). **A photo becomes a card by itself** (v325): a
-light band sweeps the photo, then the finished card with Edit and Delete. Save now (v237) makes the card before the reading
+light band sweeps the photo, then the finished card with the quiet toolbar Star · Flag · Edit (v815; Delete in Edit). Save now (v237) makes the card before the reading
 is done; Crop (v437) and Crop again (v239) hand the app's frame to the hand. **In the Edit form's Crop again a released frame
 starts no reading: Save changes keeps the cut and reads it in the background** (v771); Read now reads it
 in the form, Image only keeps the text. The Camera tab's Crop reads a released frame by itself (`READ_WAIT`). A photo whose texts stand apart becomes **one

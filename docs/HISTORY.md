@@ -116,7 +116,22 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v814, 2026-10-02)
+## Current state (PWA v815, 2026-10-02)
+- **Ways in and out (v815, H: "go" — the audit's proposals 4, 7, 8, 9).** **(4) Android Back steps back inside the app.**
+  There was no history at all, so Back left the app from any sub-screen. Now, while anything stands over a tab's own screen —
+  a sheet, a multicard's pop-up, the Edit form, + New, an open card, the guide, a single-card test, a peek, marking — the page
+  keeps exactly one history entry of its own (`histSync`, after every render and whenever a sheet comes or goes), and Back runs
+  that screen's own way back (`histStep`: its ← button, Cancel, the sheet's close), one layer a press; on a tab's own screen
+  there is no entry and Back leaves the app as before; the app's own back buttons give the entry back silently (`HIST_SKIP`).
+  How the Kotlin shell passes Back to the page is its own matter (not verified here). **(7) Take a photo on the empty Learn
+  screen opens the camera at once**, over the Camera tab for the reading. **(8) The end of a session on a deck smaller than a
+  session** (fewer than `NEW_PER_SESSION` learnable cards) offers Take a photo beside Pull forward. **(9) The Camera tab's
+  finished card wears the open card's quiet toolbar** Star · Flag · Edit (v736) — Delete in the Edit form, which comes back to
+  the Camera tab. Harness: `test815` (real touch; Back from the open card, the Edit form, the pop-up, the filter sheet, the
+  guide; the app's own ← and then Back leaving the app; the camera input clicked inside the tap; a one-card deck's end; a photo
+  read with a mocked answer and its toolbar's Star) **12 of 12; on v814 the first Back already leaves the app and the suite
+  cannot go on**; `test809` 12/12 and `test807` 12/12 on v815. `WHATS_NEW` 815; TO_TEST +1.
+
 - **Privacy inside the app (v814, H: "Ok, go for all" on the audit's ten proposals; this is items 1–3).** **(1) More → The app
   → Privacy policy** — "What the app sends and keeps, and how to have it deleted." — opens privacy.html, as Open source
   licenses opens its file (Play asks for the policy inside the app too). **(2) privacy.html** says how to have the owner's rows

@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=814; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=815; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -767,6 +767,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["photo","v767","Album batch: screen stays on?"],
   ["app","v768","Rebuild/Translate: screen on?"],
   ["again","v807","Recap: Details/Edit hold it?"],
+  ["app","v815","Back: one step back, not out?"],
   ["again","v778","Voice: 行 in 银行 heard as háng?"],
   ["app","v791","Cards tile: multicard card's cut?"],
   ["app","v792","Multicard pop-up: Flag/Edit ok?"],
@@ -1740,7 +1741,31 @@ function frontBox(lines,base,words){
   return {W,H,fs:fit.fs,lines:fit.lines};
 }
 
-function render(){
+/* v815 (H: "go" on the audit's proposal — Android back left the app from any sub-screen; there was no history at all): while
+   anything stands over a tab's own screen — a sheet, a multicard's pop-up, the Edit form, + New, an open card, the guide, a
+   single-card test, a peek, marking — the page keeps exactly ONE history entry of its own, and the system Back runs that
+   screen's own way back (its ← button, Cancel, the sheet's close), one layer a press. On a tab's own screen there is no
+   entry, so Back leaves the app as before. The app's own back buttons give the entry back silently (HIST_SKIP). */
+let HIST_IN=false, HIST_SKIP=0, HIST_T=0;
+function histDeep(){ return !!(document.querySelector("body>.ask")||LOOKUP||S.editing||S.detail||S.single||S.peek||PICK||!["study","cards","inbox","more"].includes(S.mode)); }
+function histStep(){
+  const a=[...document.querySelectorAll("body>.ask:not(.lookup)")].pop(); if(a){ const c=a.querySelector("#ask-cancel"); if(c) c.click(); else a.click(); if(a.isConnected) a.remove(); return; }
+  if(LOOKUP){ closeLookup(); return; }
+  if(PICK){ endPick(); render(); return; }
+  const btn=id=>{ const b=document.getElementById(id); if(b){ b.click(); return true; } return false; };
+  if(S.editing){ if(!btn("e-cancel")){ S.editing=null; render(); } return; }
+  if(S.peek){ S.peek=null; render(); return; }
+  if(S.mode==="guide"){ if(!btn("back-more")){ S.mode="more"; render(); } return; }
+  if(S.single||S.mode==="add"){ if(!btn("back-cards")){ S.mode="cards"; render(); } return; }
+  if(S.detail){ if(!btn("back")){ S.detail=null; render(); } return; }
+  if(!["study","cards","inbox","more"].includes(S.mode)){ S.mode="more"; render(); } }
+function histSync(){ clearTimeout(HIST_T); HIST_T=setTimeout(()=>{ const deep=histDeep();
+  if(deep&&!HIST_IN){ try{ history.pushState({zt:1},""); HIST_IN=true; }catch(e){} }
+  else if(!deep&&HIST_IN){ HIST_IN=false; HIST_SKIP++; history.back(); } },0); }
+addEventListener("popstate",()=>{ if(HIST_SKIP){ HIST_SKIP--; return; } HIST_IN=false; if(histDeep()){ histStep(); histSync(); } });
+new MutationObserver(()=>histSync()).observe(document.body,{childList:true}); /* a sheet or the pop-up comes and goes without a render */
+function render(){ const r=render0(); histSync(); return r; }
+function render0(){
   setStats();
   noteViewSoon(); /* the screen is on disk before a reload can happen (v415) */
   const main=$("#main");
@@ -3939,7 +3964,7 @@ function renderStudy(main){
       <p class="hint">${t("New here? The guide explains the app in six short sections.")}</p>
       <button class="del" id="go-guide">${t("How to use the app")}</button>
     </div>`;
-    $("#go-cam").onclick=()=>{ S.mode="inbox"; render(); }; $("#go-guide").onclick=()=>{ S.mode="guide"; S.guideFrom="study"; render(); window.scrollTo({top:0}); }; /* the pointer to the guide (v266, idea 5) — a friend who installs the app never sees More → Help unless told */
+    $("#go-cam").onclick=()=>{ S.mode="inbox"; render(); window.scrollTo(0,0); PICKING=Date.now(); $("#cam").click(); }; /* v815 (H: "go"): the camera itself, inside the tap, and the Camera tab under it for the reading — two taps were one intent */ $("#go-guide").onclick=()=>{ S.mode="guide"; S.guideFrom="study"; render(); window.scrollTo({top:0}); }; /* the pointer to the guide (v266, idea 5) — a friend who installs the app never sees More → Help unless told */
     return;
   }
   const finished = !walking()&&S.idx>=S.queue.length; /* a walk never runs out: its last card stays (v513) */
@@ -3950,7 +3975,9 @@ function renderStudy(main){
       <p>${S.ahead?t("Pulled-forward round finished."):t("Nothing due today. Come back tomorrow — or pull the next cards forward.")}</p>
       <div class="badge" style="margin-bottom:18px">${statsLine()}</div>
       <button class="btn" id="ahead">${t("Pull the next cards forward")}</button>
+      ${deck().filter(learnable).length<NEW_PER_SESSION?`<button class="btn primary" id="done-cam" style="margin-top:10px">${t("Take a photo")}</button>`:""} <!-- v815 (H: "go"): a deck smaller than a session needs a new card more than the same card again -->
     </div>`;
+    const dc=$("#done-cam"); if(dc) dc.onclick=()=>{ S.mode="inbox"; render(); window.scrollTo(0,0); PICKING=Date.now(); $("#cam").click(); };
     const a=$("#ahead"); if(a) a.onclick=()=>{ const q=buildQueue(true); if(q.length){S.queue=q;S.sessionAt=Date.now();S.idx=0;S.done=0;S.ahead=true;S.ansOpen=false;llog("pulled forward");render();} };
     return;
   }
@@ -6693,6 +6720,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  815:"The phone's Back button steps back inside the app — out of an open card, a sheet or the Edit form — and Take a photo opens the camera straight away.",
   798:"A dim photo's card picture is brightened without its colours turning garish.",
   794:"After + Flashcard in a multicard's pop-up, the pop-up says the card was made.",
   792:"A multicard's text is handled in its pop-up now: + Flashcard, Flag and Edit. The list under the photo is gone.",
@@ -11454,7 +11482,7 @@ function renderShots(){
           <span class="tmeta"><span class="ts">${esc(new Date(s.ts).toLocaleString(LANG_LOCALE[LANG],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}))}</span></span></button>`;
       }
       if(results.length&&!rs.length) return `<div class="shot">${results.length>1?`<div class="listhead reshead">${t("{0} cards from this photo",results.length)}</div>`:""}${results.map(d=>`${resultHTML(d)}
-        <div class="detailacts"><button class="btn" data-resedit="${esc(d.id)}">${t("Edit")}</button><button class="btn danger" data-resdel="${esc(d.id)}">${t("Delete card")}</button></div>`).join("")}
+        <div class="backacts dacts resacts"><button class="tbtn${d.star?" on":""}" data-resstar="${esc(d.id)}" aria-pressed="${d.star?"true":"false"}">${starIcon}<span>${d.star?t("Starred"):t("Star")}</span></button><button class="tbtn${d.flag?" on":""}" data-resflag="${esc(d.id)}" aria-pressed="${d.flag?"true":"false"}">${flagIcon}<span>${(d.flag?t("card:⚑ Flagged"):t("⚑ Flag")).replace(/^⚑\s*/,"")}</span></button><button class="tbtn" data-resedit="${esc(d.id)}">${TB_ICON.edit}<span>${t("Edit")}</span></button></div>`).join("")} <!-- v815 (H: "go"): the open card's toolbar (v736) — Delete lives in the Edit form, which comes back here -->
         <div class="ocr" id="ocr-${s.id}">${qsAiBox(s.id)}</div>
       </div>`;
       return `<div class="shot"${S.openShot===s.id?' data-open="1"':""}${!busy&&!AUTO[s.id]&&S.inbox.length>1?` data-lp="${s.id}"`:""}>
@@ -11485,6 +11513,8 @@ function renderShots(){
   box.querySelectorAll("[data-autoedit]").forEach(b=> b.onclick=()=>editAuto(b.dataset.autoedit)); /* the frame right after the shutter (v437) */
   box.querySelectorAll("[data-autocancel]").forEach(b=> b.onclick=()=>{ const id=b.dataset.autocancel; S.openShot=id; cancelAuto(id); }); /* the card made by itself (v325): Cancel drops the placeholder, the photo stays. The pin is set BEFORE cancelAuto, which renders from inside itself (v468) */
   box.querySelectorAll("[data-resedit]").forEach(b=> b.onclick=()=>{ const cid=b.dataset.resedit; if(!cardOf(cid)) return; S.editing=cid; S.editFrom="camera"; S.editOpenFrame=true; S.fullPic=false; render(); window.scrollTo({top:0}); }); /* Edit opens the form with the photo and the frame the card was cut with */
+  box.querySelectorAll("[data-resstar]").forEach(b=> b.onclick=async()=>{ const cid=b.dataset.resstar, cd=cardOf(cid); if(!cd) return; await setStar(cid,!cd.star); renderShots(); });
+  box.querySelectorAll("[data-resflag]").forEach(b=> b.onclick=async()=>{ const cid=b.dataset.resflag, cd=cardOf(cid); if(!cd) return; await setFlag(cid,!cd.flag); renderShots(); });
   box.querySelectorAll("[data-resdel]").forEach(b=> b.onclick=async()=>{ const cid=b.dataset.resdel, cd=cardOf(cid); if(cd){ if(!await confirmDelCard(cd)) return; await delCustom(cid); } renderShots(); }); /* v594: only after the sheet, with Undo under it (v268) — Undo brings the result back, the photo stays with Crop meanwhile */
   box.querySelectorAll(".result").forEach(el=>{ const d=el.dataset.prov?(PROV[el.dataset.prov]||{}).card:cardOf(el.dataset.card); if(!d) return; /* the provisional card lives in PROV, not in the deck (v440) */
     el.querySelectorAll("[data-pic]").forEach(p=> p.onclick=e=>{ e.stopPropagation(); S.fullPic=!S.fullPic; renderShots(); }); /* the photo's tap: the whole picture and back, as on the front */
