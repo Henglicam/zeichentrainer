@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=813; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=814; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -3209,6 +3209,7 @@ function renderMore(main){
     <div class="mrow"><div><div class="t">${t("Usage sharing")}</div><div class="s"><span id="share-status">${esc(shareNote())}</span> ${t("Your id: {0}.",`<span id="share-id">${esc(installId())}</span>`)}</div>${moreFold("usage",t("What is sent"),`<div class="s" style="margin-top:6px">${t("Sends anonymous usage counts to the app's owner once a day, and again when you leave the app after making or deleting a card: your random id, the phone model, days used, cards made and reviewed, AI checks, and the app's error messages. No card text, no photos.")}</div>`)}<label class="check" style="margin:8px 0 0"><input type="checkbox" id="share-usage"${shareOn()?" checked":""}> ${t("Send once a day")}</label></div></div>
     <div class="mrow"><div><label class="check" style="margin:0"><input type="checkbox" id="update-note"${updateNoteOn()?" checked":""}> ${t("Tell me what is new after an update.")}</label></div></div>
     <div class="mrow"><div><div class="t">识字 Shízì</div><div class="s">${esc(t("Version {0}",APP_V))}</div>${moreFold("about",t("About the app"),`<div class="s" id="about-s" style="margin-top:6px">${esc(aboutBody())}</div>`)}${whatsNewHTML()}</div></div> <!-- v717: the version stands, the paragraph folds, the update notes stay in sight (v609) -->
+    <div class="mrow"><div><div class="t">${t("Privacy policy")}</div><div class="s">${t("What the app sends and keeps, and how to have it deleted.")}</div></div><button class="btn mini" id="privacy-open">${t("Open")}</button></div> <!-- v814 (H: "go" on the audit's proposal — Play wants the policy inside the app too) -->
     <div class="mrow"><div><div class="t">${t("Open source licenses")}</div><div class="s">${t("The software and data the app is built on, and who made them.")}</div></div><button class="btn mini" id="lic-open">${t("Open")}</button></div> <!-- the notices Apache-2.0, MPL-2.0 and CC BY-SA ask to be delivered with the work (v425); ./vendor/LICENSES.txt goes through the worker's vendor route, so it comes from the mirror behind the wall and is cached after the first look -->
     <div class="listhead">${t("Advanced settings")}</div>
     ${S.admin?`<div class="mrow"><div><div class="t">Logged in as admin</div><div class="s">The AI setup and the owner tools below are open until the app is closed.</div></div><button class="btn mini" id="admin-lock">Log out</button></div>`
@@ -3245,6 +3246,7 @@ function renderMore(main){
   const rc=$("#recheck-all"); if(rc) rc.onclick=recheckAll; /* Check all cards again (v370) */
   $("#guide-open").onclick=()=>{ S.mode="guide"; S.guideFrom="more"; render(); window.scrollTo({top:0}); };
   $("#lic-open").onclick=()=>{ window.open("./vendor/LICENSES.txt","_blank","noopener"); };
+  $("#privacy-open").onclick=()=>{ window.open("./privacy.html","_blank","noopener"); };
   wireGrow(main); /* the feedback box grows with its text like the forms' fields (v218, H: "looks a little bit old school") */
   document.querySelectorAll("[data-mo]").forEach(b=>b.onclick=()=>{ const k=b.dataset.mo, on=MORE_OPEN[k]=!MORE_OPEN[k]; /* v717: the folds, toggled in place */
     document.querySelectorAll(`[data-mob="${k}"]`).forEach(el=>{ el.hidden=!on; }); const bt=document.querySelector(`[data-mob="${k}-btn"]`); if(bt) bt.hidden=on;
@@ -3595,7 +3597,11 @@ function ttsVoice(){
      The list is what the phone hands over; H's Xiaomi hands over none (v165) and speaks through its system engine, so there
      the engine chosen under Settings → Text-to-speech output is the voice. */
   const zh=vs.filter(v=>/^(zh|cmn)/i.test(v.lang)), cn=zh.filter(v=>/^zh[-_]?CN|^cmn[-_]?(Hans[-_])?CN/i.test(v.lang)), nat=v=>/natural|neural|premium|enhanced|wavenet|-x-/i.test(v.name+" "+(v.voiceURI||""));
-  TTS_VOICE=cn.find(nat)||zh.find(nat)||cn[0]||zh[0]||null;
+  /* v814 (H: "go" on the privacy sweep's proposal): a voice that speaks ON the phone first — an online voice (localService
+     false: Edge's "Online (Natural)", Chrome's Google voices on a computer, Android's -network variants) hands each spoken
+     text to the browser maker's servers, which privacy.html now says; it is taken only when the phone offers no local one */
+  const loc=v=>v.localService!==false, L=zh.filter(loc), LC=cn.filter(loc);
+  TTS_VOICE=LC.find(nat)||L.find(nat)||LC[0]||L[0]||cn.find(nat)||zh.find(nat)||cn[0]||zh[0]||null;
   return TTS_VOICE;
 }
 const SAYLOG=[], SAY_KEEP=12; /* v788: the last utterances for Diagnostics — what was asked of the engine, with which voice, and whether it started, ended or failed; the open questions on the Xiaomi (v773, v778, v781, v784) have had nothing but "voices (0)" to go on */

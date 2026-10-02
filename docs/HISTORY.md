@@ -116,7 +116,20 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
-## Current state (PWA v813, 2026-10-01)
+## Current state (PWA v814, 2026-10-02)
+- **Privacy inside the app (v814, H: "Ok, go for all" on the audit's ten proposals; this is items 1–3).** **(1) More → The app
+  → Privacy policy** — "What the app sends and keeps, and how to have it deleted." — opens privacy.html, as Open source
+  licenses opens its file (Play asks for the policy inside the app too). **(2) privacy.html** says how to have the owner's rows
+  deleted (send the installation id shown under More → Usage sharing through More → Feedback; **H deletes every row carrying
+  it — in Supabase, reports and feedback tables, and the relay's counter**) and where the data goes: through the relay the
+  providers are DeepSeek and Alibaba (Qwen), companies in China, processing there (the relay's Qwen endpoints are
+  dashscope.aliyuncs.com and cn-beijing); the relay and the tables run on Supabase (its region is in the project's settings —
+  not in the repo, so the page does not name it). **(3) Read aloud takes a voice on the device first** (`localService`), an
+  online voice only when the phone offers nothing else — Edge's "Online (Natural)" and Android's `-network` voices were
+  preferred by v781's "natural first"; H's Xiaomi lists no voice, so nothing changes there. Harness: `test814` (four voice
+  lists — Edge, Android, online only, none; the Privacy row in German; privacy.html) **6 of 6, v813 2 of 6** (the online-only
+  and no-voice lists pass on both). Keys: 509, ru 540.
+
 - **The audit's last fix: the code says what it does, and the record says what the code does (v813, the hygiene and record
   sweeps).** **Code:** `LAST_AZ` (write-only since v670, its comment false) and `handMiss` (never called) leave, with an unused
   `saneM` local; `"zt-ocr-v1"` written six times in app.js is one `OCR_CACHE`, named beside sw.js's (a bump of one would have
