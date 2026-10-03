@@ -116,6 +116,30 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v825, 2026-10-03)
+- **The photo square checks the candidates (v825, H: "Können nicht die geschriebenen Strokes auch mit dem Bild irgendwie
+  abgeglichen werden, dass da nicht total der komische Kram vorgeschlagen wird oder gemalt wird?" — described, "Go").** At
+  Done the sheet takes the photo square above the pad as H framed it (`photoSquare`, `PH_SIZE` 320) and asks it two things.
+  **The phone's reader** reads it shrunk to `PH_SHRINK` .34 in the middle of its own average colour — at the square's own
+  size one big character read as "±" at 62 %, at a line's height 濱 reads at 99 % — and the character under the square's
+  middle is the photo's (`photoRead`, within .35 of the square, `PH_READ_MS` 12 s cap). **The ink:** Otsu's cut on the
+  square's core (`PH_CORE` .84), the smaller class the ink, its box scaled into a `PH_GRID` 48 square with its aspect
+  (`inkGrid`/`gridOf`), and every candidate's glyph in the Hanzi font the same way (`glyphGrid`, cached); the overlap over the
+  union (`gridSim`) is the candidate's agreement with the photo. **The order:** the stroke cost (`PH_OCR_COST` .35 for a
+  candidate only the print model gave) less `PH_WEIGHT` .3 × the overlap; the reader's character, read at `PH_SURE` 90 %,
+  joins at a cost of .12 at most; a candidate under `PH_DROP` .6 of the best overlap leaves when three remain; the first
+  candidate is the pin when the strokes fit it. **The photo says nothing unless the best overlap reaches `PH_MIN` .45** — H's
+  three 濱 drawings replayed over the test deck's 口 photo gave every candidate .21–.27 and the noise had put 殯 and 瀆 before
+  濱; gated, the list and the pin are the strokes' own (`the photo says nothing` in the log). A sheet without a photo (the
+  Add form) asks nothing; a square with no ink or all ink says nothing. Everything is in the sheet log (`photo …`). Status
+  "reading the photo …" (ten languages). Harness: `test825` (a framed photo of 禁止土烟区, the sheet on 土, 横竖横 drawn — the
+  strokes alone lead with 士; with the photo 土 leads at .88 overlap against 士's .69, 十 at .52 is dropped, the pad pins 土;
+  the Add form's sheet asks nothing) **4 of 4 on v825; on v824 士 leads**; `test819` 13, `test820` 4, `test822` 4, `test823` 5.
+  In the sheet the reader read the harness's 土 at 83 % and a rendered 濱 at 99 %. **Not field-checked.** One more call of the reader per Done (~1–2 s on the phone).
+  Also in this version, from the ten-language screenshots: the sheet's action row wrapped in Russian at 390 px (Готово under
+  Отменить черту and Стереть) — `pad:Undo` is Отменить / Annuler / ย้อนกลับ now, the row no longer wraps, Done's floor is 96 px;
+  `test825` checks fr, ru and th at 360 px (7 of 7 on v825, 3 of 7 on v824).
+
 ## Current state (PWA v824, 2026-10-03)
 - **H's own 濱 pins, and a 提 is a 提 (v824, H before boarding: "Du hast jetzt eine gute Stunde Zeit, das nochmal alles schön
   durchzugucken und fein zu tunen und sauber zu polischen und natürlich zu testen, testen, testen").** The three drawings of
