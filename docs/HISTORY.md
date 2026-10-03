@@ -117,6 +117,10 @@ below. Verbatim as they last stood:
   field-checked, and it was never compiled before the first Actions run.**
 
 ## Current state (PWA v819, 2026-10-03)
+- **Rejected (2026-10-03, no version): a learning effect in the Edit sheet.** H first asked for one when writing or copying a
+  character; after two proposals (a mask over the photo's character in Learn; pinyin under the candidates, the chosen character
+  said and shown, the write counted) he dropped it: "vergiss das mit dem Lerneffekt. Mach jetzt bitte einfach so, wie wir das
+  besprochen haben und dann teste ich das." v819 stands as built; nothing of the proposals goes in unasked.
 - **Clean strokes on the drawing sheet, and a candidate held goes onto the pad (v819, H: "Ich habe jetzt zum Beispiel einen
   fast korrekten Charakter unter den Vorschlägen und muss nur einen Teil des Charakters anders zeichnen. Das wäre schön, wenn
   ich diesen Charakter quasi auf das Zeichenpad übernehmen könnte und dann bestimmte Strokes löschen und neu zeichnen könnte",
