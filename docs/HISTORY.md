@@ -116,6 +116,19 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v824, 2026-10-03)
+- **H's own 濱 pins, and a 提 is a 提 (v824, H before boarding: "Du hast jetzt eine gute Stunde Zeit, das nochmal alles schön
+  durchzugucken und fein zu tunen und sauber zu polischen und natürlich zu testen, testen, testen").** The three drawings of
+  濱 from his dumps (16, 18 and 17 finger strokes, `tools`-free: the raw points as the log keeps them) replayed through the
+  sheet in the harness (`v823/replay.js`): **none pinned** — `pin off 濱 0.10 stray 6` — because `assign` measured his
+  strokes against the character laid out at the pad's size (`padMap`) while he had drawn it small and to the left, so six of
+  sixteen strokes lay on none of its; and the 提 of his 氵, drawn upwards, snapped to a 撇 drawn backwards at `strokeDist`'s
+  own reverse penalty .12. Two changes: the pin's assignment is measured on the character laid over the DRAWING (`fitMap` of
+  all its points, as `strokeMatch` saw it) and the pad still shows it at its own size; and `typeSnap` charges `SNAP_REV` .3
+  for the reverse way — every stroke but 提 runs down or right, so a stroke drawn upwards is a 提, not a 撇. Replayed: all
+  three drawings pin 濱 at Done (`pin 濱 0.10`, `0.09`, `0.09`), the 氵 reads 点 点 提 (was 点 点 撇r). `test819` 13, `test820`
+  4, `test822` 4, `test823` 5 of 5. **Field-checked by H's own strokes in the harness, not on the phone.**
+
 ## Current state (PWA v823, 2026-10-03)
 - **A snapped stroke lies where the finger went (v823, H: "Die Position der geschriebenen strokes ist komisch").** `fitMap` put
   the exemplar's box over the drawn stroke's box — centred, one scale for the larger side — so a 撇 drawn flat (300 wide, 200

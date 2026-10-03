@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=823; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=824; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -10729,12 +10729,13 @@ const shapeOf=pts=>{ const b=bboxOf(pts), s=Math.max(b.w,b.h,1), cx=(b.x0+b.x1)/
    the character's (ref, pad px) breaks the tie a dot and a 捺 leave at one size — the small strokes (SNAP_SMALL) cost when drawn
    large, every other when drawn tiny; the rarer compound strokes carry a small prior (SNAP_PRIOR), so a plain 捺 beats a 斜钩 on
    an even shape. Tuned on synthetic strokes and the exemplars themselves (each comes back as itself); the finger is the judge */
+const SNAP_REV=0.3; /* v824: a stroke drawn the other way round — a 提 is not a 撇 drawn upwards (H's 氵 lost its 提 to a reversed 撇 at .12, strokeDist's own penalty, which is the reader's and not the eye's); every stroke but 提 runs down or right */
 const SNAP_SMALL=new Set(["dian","ti"]), SNAP_PRIOR={hengzhewangou:.03,xiegou:.03,wogou:.03,shuwan:.03,hengzheti:.03,shuzhezhegou:.05,hengxiegou:.03,hengzhezhepie:.05,hengzhewan:.03,wangou:.03,hengzhezhezhegou:.05};
 function typeSnap(raw,ref){ const u=shapeOf(raw), b=bboxOf(raw), rd=Math.max(b.w,b.h,1)/ref; let best=null;
   for(const ex of STROKE_EX){ const name=ex.n, sh=shapeOf(ex.m);
     const size=SNAP_SMALL.has(name)?Math.max(0,Math.log(rd/0.3)):Math.max(0,Math.log(0.18/rd));
-    const dd=strokeDist(u,sh), cost=dd+SNAP_SIZE*Math.min(1.2,size)+(SNAP_PRIOR[name]||0);
-    if(!best||cost<best.cost) best={name,ex,cost,rev:dd<strokeDistFwd(u,sh)}; } /* rev: the reverse way fitted better */
+    const fwd=strokeDistFwd(u,sh), rv=strokeDistFwd(u,sh.slice().reverse())+SNAP_REV, dd=Math.min(fwd,rv), cost=dd+SNAP_SIZE*Math.min(1.2,size)+(SNAP_PRIOR[name]||0);
+    if(!best||cost<best.cost) best={name,ex,cost,rev:rv<fwd}; } /* rev: the reverse way fitted better */
   if(!best) return null;
   const side=Math.max(b.w,b.h); if(side<DOT_MIN){ const cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2; return {...best,map:fitMap(best.ex.m,[[cx-DOT_MIN/2,cy-DOT_MIN/2],[cx+DOT_MIN/2,cy+DOT_MIN/2]])}; }
   const D=resamplePts(best.rev?raw.slice().reverse():raw,STROKE_PTS), T=resamplePts(best.ex.m,STROKE_PTS), w=a=>[a[0],a[0],...a,a[a.length-1],a[a.length-1]]; return {...best,map:fitSim(w(T),w(D))}; } /* the ends counted three times: where a stroke starts and stops is what the eye checks first, and a straight finger stroke against a curved template would otherwise trade the ends for the middle */
@@ -10797,16 +10798,17 @@ function openDrawSheet(id,k,i,apply,ins,load){
     if(cur) inked(cur,cssVar("--label")||"#000");
   };
   /* a drawn stroke's distance to a template stroke of the pinned character, in character sides, the better of forward and back */
-  const ghostDist=(raw,j)=>{ const tm=tmplStroke(PIN.ch,j); if(!tm) return Infinity; const g=tm.map(p=>mapPt(PIN.map,p)), S=Math.max(1,1024*Math.abs(PIN.map.ax)*0.8); const f=traceDist(raw.map(p=>[p[0]/S,p[1]/S]),g.map(p=>[p[0]/S,p[1]/S])), r=traceDist(raw.map(p=>[p[0]/S,p[1]/S]),g.slice().reverse().map(p=>[p[0]/S,p[1]/S])); return Math.min(f,r+0.03); };
+  const ghostDist=(raw,j,m=PIN.map)=>{ const tm=tmplStroke(PIN.ch,j); if(!tm) return Infinity; const g=tm.map(p=>mapPt(m,p)), S=Math.max(1,1024*Math.abs(m.ax)*0.8); const f=traceDist(raw.map(p=>[p[0]/S,p[1]/S]),g.map(p=>[p[0]/S,p[1]/S])), r=traceDist(raw.map(p=>[p[0]/S,p[1]/S]),g.slice().reverse().map(p=>[p[0]/S,p[1]/S])); return Math.min(f,r+0.03); };
   const snapOne=s=>{ s.type=typeSnap(s.raw,refSize()); s.tk=null; if(PIN){ let best=null; for(const j of ghosts()){ const d=ghostDist(s.raw,j); if(d<SNAP_GHOST&&(!best||d<best.d)) best={j,d}; } if(best) s.tk=best.j; } };
   /* the strokes laid over the pinned character's: each takes the nearest free template stroke, nearest pairs first */
-  const assign=()=>{ strokes.forEach(s=>s.tk=null); if(!PIN) return; const st=STROKE_OF.get(PIN.ch)||[], pairs=[]; strokes.forEach((s,i)=>st.forEach((_,j)=>pairs.push({i,j,d:ghostDist(s.raw,j)}))); pairs.sort((a,b)=>a.d-b.d); const usedI=new Set(), usedJ=new Set(); for(const p of pairs){ if(p.d>SNAP_GHOST||usedI.has(p.i)||usedJ.has(p.j)) continue; strokes[p.i].tk=p.j; usedI.add(p.i); usedJ.add(p.j); } };
+  const assign=(m=PIN&&PIN.map)=>{ strokes.forEach(s=>s.tk=null); if(!PIN) return; const st=STROKE_OF.get(PIN.ch)||[], pairs=[]; strokes.forEach((s,i)=>st.forEach((_,j)=>pairs.push({i,j,d:ghostDist(s.raw,j,m)}))); pairs.sort((a,b)=>a.d-b.d); const usedI=new Set(), usedJ=new Set(); for(const p of pairs){ if(p.d>SNAP_GHOST||usedI.has(p.i)||usedJ.has(p.j)) continue; strokes[p.i].tk=p.j; usedI.add(p.i); usedJ.add(p.j); } };
   /* the character the strokes fit (v819) — since v821 only at Done, from its match (H's log: 氵, 纩, 泞, 徉, 逗, 逭, 缑, 嗐, 缩, 壇 pinned and
      dropped in turn while 濱 was being drawn, every stroke a different character on the pad: a part of a character matches some
      small whole character, and the pad jumped). The character is laid out at the pad's own size (padMap), the strokes drawn so far
      take its strokes (assign), its missing ones stand faint; the drawn strokes must lie on the character's — at most PIN_LOOSE of them stray, so
      横竖撇 is not shown as 万 (matched at .2 in the harness) while a 16-stroke 濱 with one sketchy stroke is 濱; a held character stays */
-  const pinTo=(c,cost)=>{ if(PIN&&PIN.locked) return; const was=PIN&&PIN.ch; PIN=c?{ch:c,map:padMap,locked:false}:null; assign();
+  const pinTo=(c,cost)=>{ if(PIN&&PIN.locked) return; const was=PIN&&PIN.ch; PIN=c?{ch:c,map:padMap,locked:false}:null;
+    assign(PIN&&fitMap(STROKE_OF.get(c).flat(),raws().flat())); /* v824: the strokes are matched to the character laid over the DRAWING (its box, as strokeMatch saw it) — H's 濱, drawn small and to the left, had 6 of 16 strokes stray against the character laid out at the pad's size, and was refused; the pad still shows the character at its own size */
     const stray=strokes.filter(s=>s.tk==null).length;
     if(PIN&&stray>Math.floor(strokes.length*PIN_LOOSE)){ note("pin off",c+" "+cost.toFixed(2)+" stray "+stray); PIN=null; assign(); } else if((PIN&&PIN.ch)!==was) note(PIN?"pin":"unpin",PIN?PIN.ch+" "+cost.toFixed(2)+(stray?" stray "+stray:""):"");
     paint(); };
