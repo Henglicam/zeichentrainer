@@ -116,6 +116,20 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v823, 2026-10-03)
+- **A snapped stroke lies where the finger went (v823, H: "Die Position der geschriebenen strokes ist komisch").** `fitMap` put
+  the exemplar's box over the drawn stroke's box — centred, one scale for the larger side — so a 撇 drawn flat (300 wide, 200
+  tall) stood tall over it with its ends 170 px from where the finger started and stopped, and every stroke sat a little
+  off. `fitSim` is the least-squares similarity (one scale, a rotation, a shift; Umeyama's closed form) from the exemplar's
+  points to the finger's, both resampled along their length, so the clean stroke follows the finger — ends first of all — and
+  a slanted stroke stays slanted; a stroke drawn backwards (`rev`, the reverse way fitted better) is fitted to the finger's
+  points reversed and still runs its own way. A stroke under `DOT_MIN` 24 px is a dot and keeps the box fit at that size, so a
+  tap does not become a speck. `mapPt` takes both maps (the pinned character keeps the axis-aligned `padMap`). Harness:
+  `test823` (the flat 撇's ends within 30 px — 24 measured, the ends counted three times in the fit, 78 on v822 —, a 横's
+  within 12, a 横 drawn right to left over the same span, the dot's size) **5 of 5 on v823, 3 of 5 on v822**; `test819` 13, `test820` 4, `test822` 4. **Not field-checked.**
+  H's second ask in the message — the drawn strokes checked against the photo, so nothing odd is proposed or drawn — changes
+  what the sheet does and waits for his go (proposed with this version's report).
+
 ## Current state (PWA v822, 2026-10-03)
 - **A picked character stays, snapped strokes are smooth lines, a sketchy 濱 is still 濱 (v822, H on v821 with a screenshot and
   a dump: "die geschriebenen Characters sind immer noch total komisch und kruckelig. Und darüber hinaus, wenn man Done drückt,
