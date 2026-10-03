@@ -10692,9 +10692,10 @@ async function drawPlace(sg,k,i,bmp){
 /* ---------- v819: clean strokes (H: "Könnten wir das vielleicht so machen, dass erkannt wird, welchen Stroke ich da gerade
    machen möchte und … dieser Stroke dann eben … sauber reingezeichnet wird aus der Vorlage" — and, asked how without a
    candidate: "then that stroke should snap into the most close or most obvious stroke that it could be") ----------
-   Every stroke drawn on the sheet is matched against the basic stroke shapes and shown as that shape, fitted to where and how
-   big it was drawn. The shapes are strokes of real characters in the stroke file (STROKE_EX carries each exemplar's own median and outline), so the sheet draws them as the write pad draws a template: the Kai outline when the outline file is there, the
-   brush otherwise. At Done, when the drawn strokes fit one character clearly (strokeMatch's top hit under PIN_COST; look-alikes such as 土
+   Every stroke drawn on the sheet is matched against the basic stroke shapes (typeSnap) and shown as that shape, laid along the
+   finger's own line (fitSim, v823) as a smooth ink line of one width (v822). The shapes are strokes of real characters, inline
+   (STROKE_EX, v820: each exemplar's median and Kai outline; the outline is drawn only for a pinned character). At Done the photo
+   square has its say on the candidates (v825, below). At Done, when the drawn strokes fit one character clearly (strokeMatch's top hit under PIN_COST; look-alikes such as 土
    and 士 share their strokes, so no gap to the second hit is asked) the strokes are shown as that character's own at the pad's
    size, and a stroke drawn after that snaps to one the character still lacks when it lies on it (v821: at Done only — while
    drawing, a part of a character matched some small whole one and the pad jumped from character to character). A candidate HELD
