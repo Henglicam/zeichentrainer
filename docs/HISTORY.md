@@ -116,6 +116,24 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v818, 2026-10-03)
+- **The drawing sheet's photo opens on the character being drawn (v818, H: "Wenn ich im Edit-Modus einen Charakter zeichnen
+  möchte, weil er nicht in der Liste der vorgeschlagenen Characters drin ist, dann bitte auf den nachzuzeichnenden Charakter
+  raufzoomen, damit ich ihn größer sehe").** The sheet placed its photo square by `charBox`, which wants the reader's symbol
+  boxes — the Edit form's SIGN never had them (a saved card keeps no boxes), so the square opened on the whole crop with the
+  character a few pixels tall, and H panned and pinched by hand every time. Now `drawPlace` places it as the Learn zoom places a
+  character: the card's frame puts the text in the crop (`textFracs`; a card with no frame is its text, v663), a sure ink cut
+  finds the character (`charBoxes`, v618), else the lines' layout (the estimate of v782, the character's cell squared at
+  `DRAW_GUESS` 1.35 so a neighbour stays in view). SIGN carries the card (`sg.card`) for it; a crop framed again in the form is
+  no longer the card's and keeps the old rule (its reading's boxes, else the whole crop); the Add form's sheet has no photo and
+  is unchanged. Diagnostics' drawing line names where the square opened (`place`: reader, ink, estimate, whole). Harness:
+  `test817` on a framed five-character sign (the square on 止 and on 区 within 8 % of their middles, side a quarter of the crop,
+  "ink"), a frameless card (滑 at the right, "estimate"), the Add form's sheet (pad alone, `[guard]`): **6 of 6 on v818, 3 of 6 on
+  v817** (the two placements and the frameless one flip). Screenshot: 止 fills the square. `WHATS_NEW` 818 in ten languages.
+  **Not yet field-checked.** H's second ask in the same message — take a near-miss candidate onto the pad and redraw single
+  strokes, then (spoken) have each drawn stroke recognised and replaced by the template's clean stroke — changes how he handles
+  the sheet and waits for his go (described to him with v818's report).
+
 ## Current state (PWA v817, 2026-10-02)
 - **The relay gets a budget, an emergency switch and reasons, and the learner is told why the AI waits (v817, H on the store
   launch: "Was, wenn die App explodiert und total viele User das plötzlich usen …? Können wir da noch irgendeinen
