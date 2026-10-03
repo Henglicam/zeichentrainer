@@ -116,6 +116,24 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v821, 2026-10-03)
+- **Strokes at the pad's width, the pin only at Done, picks logged (v821, H on v820 with three screenshots and a dump: "erstmal
+  zeigt er die geschriebenen Striche total komisch dünn. Und dann irgendwann hat es geklappt, aber wirklich total umständlich.
+  Und am Ende drücke ich dann und es passiert nichts").** The sheet log of v820 said it all. **(1) Hairline strokes:** a
+  snapped stroke was drawn as the exemplar's Kai outline scaled to the drawn stroke's size — an outline's thickness is the
+  glyph's, so a stroke a sixth of the pad came out a sixth as thick, a hairline. Now a stroke snapped by itself is drawn with
+  the brush at the pad's own width (`drawTmpl(…, BRUSH_W)`), and the outline is kept for a pinned character. **(2) The pad
+  jumped from character to character:** the log shows 氵, 纩, 泞, 徉, 逗, 逭, 缑, 嗐, 缩 and 壇 pinned and dropped in turn while
+  濱 was being drawn — a part of a character matches some small whole character, and `rePin` ran after every stroke. The pin
+  is at Done now, from its match (`pinTo`), laid out at the pad's size (`padMap`) rather than over the drawing; while drawing,
+  the strokes stand as their own shapes. `rePin`, `PIN_MIN`, `charMap` and `pinSeq` left with it. **(3) "Nothing happens":**
+  the log ends with Done three times, each answering 濱 瀆 嬪 擯 癀 演 — Done did work — and no tap on a candidate is logged
+  because none was; a real tap on a candidate (CDP touch) closes the sheet and puts the character into the strip in the
+  harness. The pick and Cancel are logged now (`note("pick")`), so the next dump says what the tap reached. Harness: `test819`
+  13 of 13 (the pin check turned around: nothing pinned while drawing, 士 pinned at Done; the touch-tap on a candidate new);
+  `test820` 4 of 4; `test817` 6 of 6. Screenshots: H's own small 氵 and the first strokes of 賓 at the pad's width; 士 pinned at
+  Done. **Not field-checked.**
+
 ## Current state (PWA v820, 2026-10-03)
 - **The snap needs no file, Done waits for none, and the sheet keeps a log (v820, H on v819: "Das funktioniert leider sehr
   schlecht bis überhaupt nicht", with a dump).** The dump's head said `parse strokes not yet` after minutes on the sheet and
