@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=817; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=818; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -646,7 +646,7 @@ function diagText(){
      tap on Show) and a reload, which empties the memory-only list, made it work again. */
   const drawn=DRAWLOG.filter(x=>Array.isArray(x.strokes)), traced=DRAWLOG.filter(x=>!Array.isArray(x.strokes));
   out.push("", `Drawings (${drawn.length}, newest last):`);
-  drawn.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.strokes.length} stroke${x.strokes.length===1?"":"s"} → ${(x.alts||[]).join(" ")||"nothing"}${x.strokes_best?` · strokes ${x.strokes_best.join(" ")} · print ${(x.ocr||[]).join(" ")||"nothing"}`:""}`); out.push("    strokes: "+JSON.stringify(x.strokes)); });
+  drawn.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.strokes.length} stroke${x.strokes.length===1?"":"s"} → ${(x.alts||[]).join(" ")||"nothing"}${x.strokes_best?` · strokes ${x.strokes_best.join(" ")} · print ${(x.ocr||[]).join(" ")||"nothing"}`:""}${x.place?` · photo on ${x.place}`:""}`); /* v818: where the photo square opened — reader, ink, estimate or whole */ out.push("    strokes: "+JSON.stringify(x.strokes)); });
   out.push(`Traced strokes on the pad (${traced.length}, newest last):`);
   traced.forEach(x=>out.push( `  ${ago(x.t)}  ${x.pad||"?"} stroke ${(x.k|0)+1} ${x.ok?"snapped":"missed"}${x.dist==null?"":" at "+x.dist}`)); /* the distance is against TRACE_OK 0.18 of the pad (§ 14) */
   /* v788: the same for the hundred exchanges (197 KB): the newest DIAG_AI_FULL whole, the older ones one line each with the request's head */
@@ -778,6 +778,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["photo","v803","Photo with another's text: dump"],
   ["app","v817","budget.sql run, relay redeployed?"],
   ["app","v817","Pause switch: learner line shows?"],
+  ["app","v818","Draw sheet: photo on the char?"],
 ];
 const TO_TEST_GROUPS=[["photo","Take any photo"],["again","Take one of these again"],["app","In the app"],["update","After an update"],["lock","Parked — the lock is off (v531)"]];
 /* What the app claims it can read, and what a photo has actually confirmed (v434, H after the untested menu
@@ -6452,9 +6453,10 @@ function renderEdit(main,c){
   let formCheck=null; /* v657: the picture check beside a sure reading of Crop again, until it answers or the card is saved */
   let removeImg=false, aiApplied=false, aiMl=null, aiDesc=null, recropImg=null, recropRect=null, meanTouched=false, aiRun=null; /* aiRun: the form's AI request while it runs (v341) */ /* aiMl: the language of the meaning the AI filled in (v256) */ /* recropImg: the crop framed again in this form (v239), stored on Save with its frame (recropRect, v244) */
   /* the text is edited like the Read preview (H): a character strip per line, tap a character for the picker and the
-     drawing sheet; SIGN carries the lines and the card's crop as the photo reference (no boxes: the whole crop) */
+     drawing sheet; SIGN carries the lines and the card's crop as the photo reference (no boxes; the card itself, so the sheet
+     can place the character by the card's frame, v818) */
   const eid="edit"+(S.editSeq=(S.editSeq||0)+1), lines0=isSign?d.c.split("\n"):frontLines(d); /* plain id: it goes into selectors */
-  const sg=SIGN[eid]={lines:lines0.slice(),orig:lines0.slice(),img:d.img||null,onChange:null,trad:!!d.trad,tradDetected:!!d.trad,tradText:d.trad||"",tradTouched:!!d.trad};
+  const sg=SIGN[eid]={lines:lines0.slice(),orig:lines0.slice(),img:d.img||null,card:d,onChange:null,trad:!!d.trad,tradDetected:!!d.trad,tradText:d.trad||"",tradTouched:!!d.trad};
   if(d.trad) loadScriptTables().catch(()=>{});
   const cropURL=d.img?URL.createObjectURL(d.img):""; /* the crop itself, not the whole-photo thumbnail (H: "only the cropped image, not with context") */
   const full=fullPhoto(d), rid="recrop-"+eid; /* Crop again (v239): the whole photo, when it is still on the phone, framed anew in this form */
@@ -6791,6 +6793,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  818:"When you draw a character in the Edit form, the photo above the pad opens on that character, not on the whole picture.",
   816:"In dark mode the red buttons and labels read more clearly, and on a menu a bare number after a dish counts as its price.",
   815:"The phone's Back button steps back inside the app — out of an open card, a sheet or the Edit form — and Take a photo opens the camera straight away.",
   798:"A dim photo's card picture is brightened without its colours turning garish.",
@@ -10633,9 +10636,10 @@ function attachRefView(cv,sg,k,i){
     if(!sg.img) return;
     try{
       v.bmp=await createImageBitmap(sg.img);
-      const b=charBox(sg,k,i);
+      let b=charBox(sg,k,i); v.how=b?"reader":"";
+      if(!b){ const p=await drawPlace(sg,k,i,v.bmp); if(p){ b=p; v.how=p.how; } } /* v818 */
       if(b){ const w=b.x1-b.x0, h=b.y1-b.y0; v.cx=(b.x0+b.x1)/2; v.cy=(b.y0+b.y1)/2; v.side=Math.max(w,h)*1.5; }
-      else { v.cx=v.bmp.width/2; v.cy=v.bmp.height/2; v.side=Math.max(v.bmp.width,v.bmp.height); }
+      else { v.how="whole"; v.cx=v.bmp.width/2; v.cy=v.bmp.height/2; v.side=Math.max(v.bmp.width,v.bmp.height); }
       clamp(); draw();
     }catch(e){}
   })();
@@ -10652,6 +10656,32 @@ function attachRefView(cv,sg,k,i){
   cv.onpointerup=cv.onpointercancel=e=>{ pts.delete(e.pointerId); last=summary(); };
   cv.onwheel=e=>{ e.preventDefault(); v.side*=Math.pow(1.1,e.deltaY/100); clamp(); draw(); };
   return {ready, view:v, draw, close:()=>{ if(v.bmp) v.bmp.close(); v.bmp=null; }};
+}
+/* v818 (H: "Wenn ich im Edit-Modus einen Charakter zeichnen möchte … bitte auf den nachzuzeichnenden Charakter raufzoomen"): the
+   Edit form's SIGN carries no reader boxes (a saved card keeps none), so charBox gave nothing and the photo square opened on the
+   whole crop, the character a few pixels tall. The card's own crop is placed as the Learn zoom places it: the frame puts the text
+   in the crop (textFracs; a card with no frame is its text, v663), a sure ink cut finds the character (charBoxes, v618), else the
+   lines' layout (charSpanAt's estimate, v782). A crop framed again in the form (sg.img no longer the card's) has no frame to go
+   by: its reading's boxes, or the whole crop as before. Returns crop pixels with `how`, or null */
+const DRAW_GUESS=1.35;
+async function drawPlace(sg,k,i,bmp){
+  const d=sg.card; if(!d||!bmp||i<0||sg.img!==d.img) return null;
+  const lines=sg.lines||[], line=[...(lines[k]||"")]; if(i>=line.length) return null;
+  const nw=bmp.width, nh=bmp.height, f=d.frame, framed=!!(f&&f.w>0&&f.h>0); let tf=null;
+  if(framed){ const full=fullPhoto(d); if(!full) return null;
+    try{ const key=d.shot||d.id; let ps=PICSIZE.get(key); if(!ps){ const bm=await createImageBitmap(full); ps={w:bm.width,h:bm.height}; bm.close(); PICSIZE.set(key,ps); }
+      const r=textFracs(d,nw,nh,ps.w,ps.h,false); if(typeof r!=="string") tf=r; }catch(e){} }
+  else tf={tx:0,ty:0,tw:1,th:1};
+  if(!tf) return null;
+  const li=lines.slice(0,k).reduce((a,l)=>a+[...l].length,0)+i;
+  let sp=null, how="estimate";
+  try{ const cb=charBoxes(bmp,nw,nh,tf,lines), b=cb&&cb.boxes&&cb.boxes[li]; if(b&&b.ok){ sp=b; how="ink"; } }catch(e){}
+  if(!sp){ const n=lines.length||1, U=Math.max(0.01,lineUnits(lines[k])), u=lineUnits(line.slice(0,i).join("")); sp={x:u/U,y:k/n,w:lineUnits(line[i])/U,h:1/n}; }
+  /* a sure cut is the character's own box; the estimate is a cell of the line, and a character is square — its side the smaller of
+     the cell's two (a crop with no frame is taller than its one line), shown a third looser so its neighbours stay in view */
+  const x0=(tf.tx+tf.tw*sp.x)*nw, y0=(tf.ty+tf.th*sp.y)*nh, w=tf.tw*sp.w*nw, h=tf.th*sp.h*nh, cx=x0+w/2, cy=y0+h/2, side=how==="ink"?Math.max(w,h):Math.min(w,h)*DRAW_GUESS;
+  if(!(side>0)) return null;
+  return {x0:cx-side/2,y0:cy-side/2,x1:cx+side/2,y1:cy+side/2,how};
 }
 const DRAW_SIZE=720, DRAWLOG=[]; /* the last three drawings — the strokes as drawn and what the model answered — for More → Diagnostics (v140, H: "I feel no improvement" — the synthetic test did not reflect a finger) */
 function openDrawSheet(id,k,i,apply,ins){
@@ -10705,7 +10735,7 @@ function openDrawSheet(id,k,i,apply,ins){
       const good=sm.filter(x=>x.cost<0.4).slice(0,5).map(x=>x.ch);
       const ocr=await recognizeStrokes(w,strokes,p=>{ if(my===seq) status(t("reading … {0}%",p)); });
       const alts=[...new Set([...good,...ocr])].slice(0,6);
-      DRAWLOG.push({t:Date.now(),strokes:strokes.map(st=>st.map(p=>[Math.round(p[0]),Math.round(p[1])])),alts,strokes_best:sm.slice(0,5).map(x=>x.ch+":"+x.cost.toFixed(2)),ocr}); while(DRAWLOG.length>3) DRAWLOG.shift(); /* the phone's real strokes for the diagnostics (v140) */
+      DRAWLOG.push({t:Date.now(),strokes:strokes.map(st=>st.map(p=>[Math.round(p[0]),Math.round(p[1])])),alts,strokes_best:sm.slice(0,5).map(x=>x.ch+":"+x.cost.toFixed(2)),ocr,place:refView.view&&refView.view.how||""}); while(DRAWLOG.length>3) DRAWLOG.shift(); /* the phone's real strokes for the diagnostics (v140) */
       if(my!==seq||!el.isConnected) return;
       const ctxc=SIGN[id]?charCandidates(SIGN[id].lines[k],i,ins):[];
       const ranked=alts.slice().sort((a,b)=>(ctxc.includes(b)?1:0)-(ctxc.includes(a)?1:0)); /* what fits the neighbours first, otherwise the stroke match's order */

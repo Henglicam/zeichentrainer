@@ -48,7 +48,7 @@ languages shipped). Learning content: Chinese + pinyin + meaning.
   version number per deploy, not per feature** (v426). Leave **more than ten minutes** between merges (Pages sends
   `max-age=600`). Files no phone fetches — `CLAUDE.md`, `docs/`, `supabase/`, `tools/` — need **no** bump.
 
-## Current state (PWA v817, 2026-10-02)
+## Current state (PWA v818, 2026-10-03)
 **The app is called 识字 Shízì** (v608; the old names: HISTORY.md's title) wherever a learner sees a name and in every
 shared file (`shizi-…`). **Keep the old name where renaming breaks installed copies:** the repo, the URL `/zeichentrainer/`,
 the mirror path, IndexedDB `zeichentrainer`, the `zt-vN` caches and the export's `app:"zeichentrainer"` marker.
@@ -210,7 +210,7 @@ centred, work under it (v466/v470); a photo that made its card **leaves the tab*
 light band sweeps the photo, then the finished card with the quiet toolbar Star · Flag · Edit (v815; Delete in Edit). Save now (v237) makes the card before the reading
 is done; Crop (v437) and Crop again (v239) hand the app's frame to the hand. **In the Edit form's Crop again a released frame
 starts no reading: Save changes keeps the cut and reads it in the background** (v771); Read now reads it
-in the form, Image only keeps the text. The Camera tab's Crop reads a released frame by itself (`READ_WAIT`). A photo whose texts stand apart becomes **one
+in the form, Image only keeps the text. **The Edit form's drawing sheet ("Not here? Draw it") opens its photo square on the character being drawn** (`drawPlace`: the frame, a sure ink cut, else the layout's estimate, v818). The Camera tab's Crop reads a released frame by itself (`READ_WAIT`). A photo whose texts stand apart becomes **one
 multicard** with a dot on every text (v453/v457), regions snapped onto the ink (v620); its photo pinches and pans like a
 card's (v634). **Add a text** (v635) frames a missing text through Crop again; **the screen stays on while the app works**
 (`appBusy`, v767/v768: every reading, loop, download and import); a blank never read is dropped on Cancel, a tab tap or a restart. A photo left on the tab with no card has **Read
@@ -299,7 +299,7 @@ must say the same thing, corrected together (one alone went wrong at v403, v459,
 
 ## Languages
 Ten columns in `lang.js`: en, de, fr, es, ja, ko, ru, vi, th, id. **English is the key**; a missing key falls back to the
-English text, never to the key. **523 keys a column, ru 554 (three plural forms), en 15** (v817 — count by evaluating `lang.js`). `nOf`/`wordOf`/`PLURAL` carry the
+English text, never to the key. **524 keys a column, ru 555 (three plural forms), en 15** (v818 — count by evaluating `lang.js`). `nOf`/`wordOf`/`PLURAL` carry the
 counts.
 
 - **The v412 rule: a pronoun or a count-agreeing verb must never cross a key boundary.** Render every count sentence at
