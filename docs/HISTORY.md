@@ -116,6 +116,37 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v819, 2026-10-03)
+- **Clean strokes on the drawing sheet, and a candidate held goes onto the pad (v819, H: "Ich habe jetzt zum Beispiel einen
+  fast korrekten Charakter unter den Vorschlägen und muss nur einen Teil des Charakters anders zeichnen. Das wäre schön, wenn
+  ich diesen Charakter quasi auf das Zeichenpad übernehmen könnte und dann bestimmte Strokes löschen und neu zeichnen könnte",
+  then: "dass erkannt wird, welchen Stroke ich da gerade machen möchte und … dieser Stroke dann … sauber reingezeichnet wird aus
+  der Vorlage", and on the design's one gap: "If a character is not in the candidates list, then I have to draw the first
+  stroke and then that stroke should snap into the most close or most obvious stroke that it could be"; "Go").** Three
+  mechanisms, all in `openDrawSheet`. **(1) Every stroke snaps to a basic stroke by itself** (`typeSnap`): the drawn stroke's
+  shape (centred, scaled by its larger side, eight points, `strokeDist` with the reverse penalty) against 28 exemplar strokes of
+  real characters in the stroke file (`STROKE_TYPES`: 横 一, 竖 丨, 撇 丿, 捺 人, 点 丶, 提 打, 横折 口, … 横折折折钩 乃), size as the
+  tie-break (`SNAP_SMALL` dots and 提 cost when drawn large, the rest when drawn tiny), a prior on the rarer compound strokes
+  (`SNAP_PRIOR`). The exemplar's stroke is laid over the drawn one (`fitMap`: one scale, larger side, centred) and drawn as the
+  write pad draws a template — the Kai outline when the outline file is there (`drawTmpl`, the 1024-box affine onto the pad),
+  the brush otherwise. Tuned on synthetic strokes (15 of 15 basic ones right after the size rule; three compound look-alikes
+  near-ties) and the exemplars themselves (28 of 28 come back as themselves). **(2) The strokes pin a character by themselves**
+  (`rePin`, from `PIN_MIN` 3 strokes): `strokeMatch`'s top hit under `PIN_COST` .22 — no gap to the second asked, look-alikes
+  (土/士) share their strokes — lays the character over the drawing (`charMap`), each stroke takes the nearest free stroke of it
+  within `SNAP_GHOST` (`assign`), **and a stroke that lies on none of them undoes the pin** (横竖撇 matched 万 at .2 and the pad
+  showed a clean 万 over three strokes that were not it — the first screenshot of this version); the missing ones stand faint as ghosts, and a stroke drawn on a ghost (`ghostDist` < `SNAP_GHOST` .22 of the
+  character) takes it. The match wants a whole character, so this lands at the last stroke or two — 横竖点 pins 下 at the third
+  stroke. **(3) A candidate held** (`longPress`, in the picker and on the sheet) goes onto the pad whole and stays (`PIN.locked`):
+  a tap on a stroke (`strokeAt`, within `TAP_NEAR` of the pad) removes it, its ghost stays, a correction drawn over the ghost
+  snaps to it, any other correction to its basic stroke; Undo walks the op stack (add, remove, load); Clear drops it all.
+  **Recognition reads the raw strokes, never the clean picture** — a wrong pin cannot lock itself in; a character on the pad
+  with every stroke leads the candidates. Diagnostics' drawing line names each stroke's clean shape and the pin. Guide sentence
+  and the sheet's status line say "hold it"; `WHATS_NEW` 819 in ten languages. Harness: `test819` (wobbly 横/竖/点/撇/横折 snap to
+  their shapes; 横竖横 pins 士 with every stroke on it; Done leads with it; 口 loaded, a stroke tapped away, drawn back over its
+  ghost, Undo twice; the picker's hold opens the sheet with 国 on the pad; the Diagnostics line) **12 of 12 on v819; v818 has no
+  typeSnap, the suite stops at its first check**. `test817` (the photo square) still 6 of 6. Screenshots: three snapped strokes;
+  国 on the pad with one stroke removed (the status line wraps to three in German there, so `status` re-fits the squares). **Not yet field-checked: how a finger's strokes snap — the phone judges this one.**
+
 ## Current state (PWA v818, 2026-10-03)
 - **The drawing sheet's photo opens on the character being drawn (v818, H: "Wenn ich im Edit-Modus einen Charakter zeichnen
   möchte, weil er nicht in der Liste der vorgeschlagenen Characters drin ist, dann bitte auf den nachzuzeichnenden Charakter

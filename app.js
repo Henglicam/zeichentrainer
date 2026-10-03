@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=818; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=819; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -646,7 +646,7 @@ function diagText(){
      tap on Show) and a reload, which empties the memory-only list, made it work again. */
   const drawn=DRAWLOG.filter(x=>Array.isArray(x.strokes)), traced=DRAWLOG.filter(x=>!Array.isArray(x.strokes));
   out.push("", `Drawings (${drawn.length}, newest last):`);
-  drawn.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.strokes.length} stroke${x.strokes.length===1?"":"s"} → ${(x.alts||[]).join(" ")||"nothing"}${x.strokes_best?` · strokes ${x.strokes_best.join(" ")} · print ${(x.ocr||[]).join(" ")||"nothing"}`:""}${x.place?` · photo on ${x.place}`:""}`); /* v818: where the photo square opened — reader, ink, estimate or whole */ out.push("    strokes: "+JSON.stringify(x.strokes)); });
+  drawn.forEach(x=>{ out.push(`  ${ago(x.t)}  ${x.strokes.length} stroke${x.strokes.length===1?"":"s"} → ${(x.alts||[]).join(" ")||"nothing"}${x.strokes_best?` · strokes ${x.strokes_best.join(" ")} · print ${(x.ocr||[]).join(" ")||"nothing"}`:""}${x.place?` · photo on ${x.place}`:""}${x.clean?` · clean ${x.clean.join(" ")}${x.pin?" · pin "+x.pin:""}`:""}`); /* v818: where the photo square opened — reader, ink, estimate or whole */ out.push("    strokes: "+JSON.stringify(x.strokes)); });
   out.push(`Traced strokes on the pad (${traced.length}, newest last):`);
   traced.forEach(x=>out.push( `  ${ago(x.t)}  ${x.pad||"?"} stroke ${(x.k|0)+1} ${x.ok?"snapped":"missed"}${x.dist==null?"":" at "+x.dist}`)); /* the distance is against TRACE_OK 0.18 of the pad (§ 14) */
   /* v788: the same for the hundred exchanges (197 KB): the newest DIAG_AI_FULL whole, the older ones one line each with the request's head */
@@ -779,6 +779,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["app","v817","budget.sql run, relay redeployed?"],
   ["app","v817","Pause switch: learner line shows?"],
   ["app","v818","Draw sheet: photo on the char?"],
+  ["app","v819","Clean strokes: snap right? Hold?"],
 ];
 const TO_TEST_GROUPS=[["photo","Take any photo"],["again","Take one of these again"],["app","In the app"],["update","After an update"],["lock","Parked — the lock is off (v531)"]];
 /* What the app claims it can read, and what a photo has actually confirmed (v434, H after the untested menu
@@ -3495,7 +3496,7 @@ const GUIDE=()=>[
     t("Camera → Take photo, or From album. The app finds the text, reads it and makes the card for you; Crop frames it by hand when the app gets it wrong."),
     t("A photo with several texts — an app screen, a control panel, a menu board — becomes one multicard instead. Tap any text on it to look it up; its pop-up has + Flashcard, Flag and Edit.")]},
   {h:t("Fix the characters"),fig:GFIG.chars(),p:[
-    t("Every character under the photo is a button: tap one for other readings, or draw it with your finger. Pinyin and meaning follow by themselves and the AI checks them — flag a card when something still looks wrong.")]},
+    t("Every character under the photo is a button: tap one for other readings, or draw it with your finger — each stroke snaps clean, and a suggestion that is nearly right can be held and fixed on the pad. Pinyin and meaning follow by themselves and the AI checks them — flag a card when something still looks wrong.")]},
   {h:t("Learn"),fig:GFIG.learn(),p:[
     t("Due cards first, then up to eight new ones. The photo is the question and the pad is the answer: trace the lit stroke and it moves on by itself, character by character.")
       +" "+t("A card starts with the photo: that is the question. One tap uncovers the text with its pinyin and meaning, and the next brings the photo back."), /* v568: the one thing a learner cannot find by tapping, so the guide says it (the v259 rule); the empty deck says it in its own short words beside the drawn card since v569, so this key is the guide's alone. v589: rewritten as the memory loop H described — the photo is the question, the tap uncovers the answer. Until v588 it named the tap as a view switch ("a tap gives the whole text the top of the card"), which names the characters the photo already shows and never names the pinyin and the meaning. */
@@ -6793,6 +6794,7 @@ async function delCustom(id){
    translation lands whenever it lands: t() falls back to English for a missing key, never to the key itself, so a
    friend's German phone shows the English sentence and nothing breaks. */
 const WHATS_NEW={
+  819:"When you draw a character, every stroke snaps into a clean one, and a suggestion that is nearly right can be held and fixed on the pad.",
   818:"When you draw a character in the Edit form, the photo above the pad opens on that character, not on the whole picture.",
   816:"In dark mode the red buttons and labels read more clearly, and on a menu a bare number after a dish counts as its price.",
   815:"The phone's Back button steps back inside the app — out of an open card, a sheet or the Edit form — and Take a photo opens the camera straight away.",
@@ -10585,7 +10587,7 @@ async function openCharPick(id,k,i,btn,mode){
       <div class="cands">${ai.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck ai" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${dict.filter(c=>!seen.has(c)&&seen.add(c)).map(c=>`<button class="ck" data-rep="${esc(c)}">${esc(c)}</button>`).join("")}${!dict.length&&!ai.length&&!aiBusy?`<span class="badge">${t("No match — draw it or ask the AI.")}</span>`:""}${aiBusy?`<span class="badge">${t("Asking the AI …")}</span>`:""}</div>
       <div class="ckacts">${ins||chars.length<=1?"":`<button class="btn mini danger" id="ck-del-${id}">${t("Remove {0}",`<span class="hanzi">${esc(ch)}</span>`)}</button>`}<button class="btn mini" id="ck-draw-${id}">${t("Not here? Draw it")}</button>${aiOn()&&!ai.length&&!aiBusy?`<button class="btn mini" id="ck-ai-${id}">${t("Ask AI")}</button>`:""}</div>
       ${ins?"":`<div class="ckacts ckadd"><span class="badge">${t("Add a character:")}</span><button class="del" id="ck-ins0-${id}">${t("+ before {0}",`<span class="hanzi">${esc(ch)}</span>`)}</button><button class="del" id="ck-ins1-${id}">${t("+ after {0}",`<span class="hanzi">${esc(ch)}</span>`)}</button></div>`}`;
-    box.querySelectorAll("[data-rep]").forEach(b=> b.onclick=()=>apply(b.dataset.rep));
+    box.querySelectorAll("[data-rep]").forEach(b=>{ b.onclick=()=>apply(b.dataset.rep); longPress(b,()=>openDrawSheet(id,k,i,apply,ins,b.dataset.rep)); }); /* v819: held, the candidate goes onto the drawing sheet's pad to be corrected */
     const del=$("#ck-del-"+id); if(del) del.onclick=()=>apply(null);
     const i0=$("#ck-ins0-"+id); if(i0) i0.onclick=()=>openCharPick(id,k,i,btn,"ins");
     const i1=$("#ck-ins1-"+id); if(i1) i1.onclick=()=>openCharPick(id,k,i+1,btn,"ins");
@@ -10683,8 +10685,48 @@ async function drawPlace(sg,k,i,bmp){
   if(!(side>0)) return null;
   return {x0:cx-side/2,y0:cy-side/2,x1:cx+side/2,y1:cy+side/2,how};
 }
+/* ---------- v819: clean strokes (H: "Könnten wir das vielleicht so machen, dass erkannt wird, welchen Stroke ich da gerade
+   machen möchte und … dieser Stroke dann eben … sauber reingezeichnet wird aus der Vorlage" — and, asked how without a
+   candidate: "then that stroke should snap into the most close or most obvious stroke that it could be") ----------
+   Every stroke drawn on the sheet is matched against the basic stroke shapes and shown as that shape, fitted to where and how
+   big it was drawn. The shapes are strokes of real characters in the stroke file (STROKE_TYPES names each by an exemplar and
+   its stroke), so the sheet draws them as the write pad draws a template: the Kai outline when the outline file is there, the
+   brush otherwise. Once the drawn strokes fit one character clearly (strokeMatch's top hit under PIN_COST — in practice at the last
+   stroke or two, since the match wants a whole character; look-alikes such as 土 and 士 share their strokes, so no gap to the
+   second hit is asked) the strokes are shown as that
+   character's own, and a stroke drawn after that snaps to one the character still lacks when it lies on it. A candidate HELD
+   (longPress, in the picker or on the sheet) is put on the pad whole and stays (locked): a tap on a stroke removes it and leaves
+   its ghost faint, a correction drawn over the ghost snaps to it, any other correction snaps to its shape. Recognition always
+   reads what was drawn (raw) — never the clean picture — so a wrong pin cannot lock itself in; a character on the pad with all
+   its strokes leads the candidates. */
+const STROKE_TYPES=[["heng","一",0],["shu","丨",0],["pie","丿",0],["pie","人",0],["na","人",1],["dian","丶",0],["ti","打",2],["hengzhe","口",1],["henggou","买",0],["shugou","亅",0],["shuti","长",2],["hengzhegou","力",0],["hengpie","又",0],["piedian","女",0],["piezhe","去",3],["shuzhe","山",1],["shuzhe","区",3],["shuwangou","乚",0],["hengzhewangou","九",1],["xiegou","戈",1],["wogou","心",1],["shuwan","四",3],["hengzheti","计",1],["shuzhezhegou","马",1],["hengxiegou","风",1],["hengzhezhepie","及",1],["hengzhewan","朵",1],["wangou","狗",1],["hengzhezhezhegou","乃",0]];
+const PIN_COST=0.22, PIN_MIN=3, SNAP_GHOST=0.22, SNAP_SIZE=0.25, TAP_NEAR=0.06; /* PIN_MIN: strokes before a character is pinned by itself; SNAP_GHOST: a drawn stroke this near (in character sides) a missing template stroke takes it; TAP_NEAR: a tap within this (in pad sides) of a stroke removes it */
+const tmplStroke=(ch,k)=>{ const st=STROKE_OF.get(ch); return st&&st[k]||null; };
+const bboxOf=pts=>{ let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity; for(const p of pts){ if(p[0]<x0)x0=p[0]; if(p[0]>x1)x1=p[0]; if(p[1]<y0)y0=p[1]; if(p[1]>y1)y1=p[1]; } return {x0,y0,x1,y1,w:x1-x0,h:y1-y0}; };
+const mapPt=(m,p)=>[m.ax*p[0]+m.bx,m.ay*p[1]+m.by]; /* a map from the stroke file's 1024 box onto pad pixels */
+/* the map that lays template points over drawn ones: one scale for both axes (the shape stays the template's), the larger
+   side matched, centres on each other */
+function fitMap(tm,raw){ const a=bboxOf(tm), b=bboxOf(raw), big=Math.max(a.w,a.h,1); const s=Math.max(b.w,b.h)/big; return {ax:s,ay:s,bx:(b.x0+b.x1)/2-s*(a.x0+a.x1)/2,by:(b.y0+b.y1)/2-s*(a.y0+a.y1)/2}; }
+/* a stroke's own shape: centred, scaled by its larger side, eight points */
+const shapeOf=pts=>{ const b=bboxOf(pts), s=Math.max(b.w,b.h,1), cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2; return resamplePts(pts.map(p=>[(p[0]-cx)/s+0.5,(p[1]-cy)/s+0.5]),STROKE_PTS); };
+/* which basic stroke the drawn one is: its shape first (strokeDist, a stroke drawn backwards costs a little); its size against
+   the character's (ref, pad px) breaks the tie a dot and a 捺 leave at one size — the small strokes (SNAP_SMALL) cost when drawn
+   large, every other when drawn tiny; the rarer compound strokes carry a small prior (SNAP_PRIOR), so a plain 捺 beats a 斜钩 on
+   an even shape. Tuned on synthetic strokes and the exemplars themselves (each comes back as itself); the finger is the judge */
+const SNAP_SMALL=new Set(["dian","ti"]), SNAP_PRIOR={hengzhewangou:.03,xiegou:.03,wogou:.03,shuwan:.03,hengzheti:.03,shuzhezhegou:.05,hengxiegou:.03,hengzhezhepie:.05,hengzhewan:.03,wangou:.03,hengzhezhezhegou:.05};
+function typeSnap(raw,ref){ const u=shapeOf(raw), b=bboxOf(raw), rd=Math.max(b.w,b.h,1)/ref; let best=null;
+  for(const [name,ch,k] of STROKE_TYPES){ const tm=tmplStroke(ch,k); if(!tm) continue;
+    const size=SNAP_SMALL.has(name)?Math.max(0,Math.log(rd/0.3)):Math.max(0,Math.log(0.18/rd));
+    const cost=strokeDist(u,shapeOf(tm))+SNAP_SIZE*Math.min(1.2,size)+(SNAP_PRIOR[name]||0);
+    if(!best||cost<best.cost) best={name,ch,k,cost}; }
+  return best&&{...best,map:fitMap(tmplStroke(best.ch,best.k),raw)}; }
+/* one template stroke on a canvas through map m: the Kai outline when the file has it for this character, else the brush, as
+   wide as the write pad's at the same character size */
+function drawTmpl(ctx,ch,k,m){ const tm=tmplStroke(ch,k); if(!tm) return; const o=outlinesFor(ch,STROKE_OF.get(ch).length);
+  if(o){ ctx.save(); ctx.translate(m.bx,m.by); ctx.scale(m.ax,m.ay); ctx.scale(1024/OUT_GRID,-1024/OUT_GRID); ctx.translate(0,-OUT_Y0); ctx.fill(new Path2D(o[k])); ctx.restore(); }
+  else { const w=BRUSH_W*Math.max(0.3,Math.min(1.7,(Math.abs(m.ax)+Math.abs(m.ay))/2/(DRAW_SIZE*PAD_FIT/1024))); ctx.fill(brushPath(tm.map(p=>mapPt(m,p)),w,strokeKind(tm.map(p=>[p[0]/1024,p[1]/1024])))); } }
 const DRAW_SIZE=720, DRAWLOG=[]; /* the last three drawings — the strokes as drawn and what the model answered — for More → Diagnostics (v140, H: "I feel no improvement" — the synthetic test did not reflect a finger) */
-function openDrawSheet(id,k,i,apply,ins){
+function openDrawSheet(id,k,i,apply,ins,load){
   const sg=SIGN[id]; if(!sg) return;
   const ch=ins?"":([...sg.lines[k]][i]||"");
   document.querySelectorAll(".drawsheet").forEach(x=>x.remove());
@@ -10706,49 +10748,89 @@ function openDrawSheet(id,k,i,apply,ins){
     sq.forEach(c=>{ c.style.width=S+"px"; c.style.height=S+"px"; }); };
   fitRef(); const refView=noRef?{ready:Promise.resolve(),close(){}}:attachRefView(el.querySelector(".ckref"),sg,k,ins?-1:i); refView.ready.then(fitRef); /* a new character has no box: the whole crop */ el.refView=refView; /* used by the tests */
   window.addEventListener("resize",fitRef);
-  const cv=el.querySelector(".pad"), ctx=cv.getContext("2d"), strokes=[]; let cur=null, seq=0;
-  const status=x=>{ const st=el.querySelector("#ds-st"); if(st) st.textContent=x; };
-  const close=()=>{ seq++; el.remove(); document.body.classList.remove("noscroll"); window.removeEventListener("resize",fitRef); refView.close(); };
+  const cv=el.querySelector(".pad"), ctx=cv.getContext("2d"), N=DRAW_SIZE; let cur=null, seq=0, pinSeq=0, down=null;
+  /* the sheet's state (v819): strokes [{raw, type, tk}] — raw as drawn in pad px (a loaded character's own medians for its strokes),
+     type the basic stroke it snapped to, tk its stroke of the pinned character; PIN {ch, map, locked}; ops the undo stack */
+  const strokes=[], ops=[]; let PIN=null;
+  const padMap={ax:N*PAD_FIT/1024,ay:N*PAD_FIT/1024,bx:N*(0.5-PAD_FIT/2),by:N*(0.5-PAD_FIT/2)}; /* the write pad's own place for a whole character */
+  const status=x=>{ const st=el.querySelector("#ds-st"); if(st&&st.textContent!==x){ st.textContent=x; fitRef(); } }; /* v819: the line wraps to three in German when a character is on the pad — the squares give way, or Done leaves the screen */
+  const idle=()=>status(PIN&&PIN.locked?t("{0} on the pad — tap a stroke to remove it, draw it anew, then tap Done.",PIN.ch):t("Draw all strokes, then tap Done."));
+  const close=()=>{ seq++; pinSeq++; el.remove(); document.body.classList.remove("noscroll"); window.removeEventListener("resize",fitRef); refView.close(); };
+  const raws=()=>strokes.map(s=>s.raw);
+  const refSize=()=>{ const all=raws().flat(); if(!all.length) return 0.5*N; const b=bboxOf(all); return Math.max(b.w,b.h,0.5*N); }; /* the character's size for the dot-or-捺 tie-break: what is drawn so far, never under half the pad */
+  const shown=s=>{ if(PIN&&s.tk!=null){ const tm=tmplStroke(PIN.ch,s.tk); if(tm) return tm.map(p=>mapPt(PIN.map,p)); } if(s.type){ const tm=tmplStroke(s.type.ch,s.type.k); if(tm) return tm.map(p=>mapPt(s.type.map,p)); } return s.raw; }; /* the stroke as the pad shows it, in px */
+  const ghosts=()=>{ if(!PIN) return []; const st=STROKE_OF.get(PIN.ch)||[], have=new Set(strokes.map(s=>s.tk)); return st.map((_,j)=>j).filter(j=>!have.has(j)); };
+  const inked=(s,strokeStyle)=>{ ctx.strokeStyle=strokeStyle; ctx.lineWidth=PAD_LW; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.beginPath(); ctx.moveTo(s[0][0],s[0][1]); for(const p of s) ctx.lineTo(p[0],p[1]); if(s.length===1) ctx.lineTo(s[0][0]+0.1,s[0][1]); ctx.stroke(); };
   const paint=()=>{
-    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.clearRect(0,0,N,N);
     ctx.strokeStyle=cssVar("--sep")||"#ccc"; ctx.lineWidth=2; ctx.setLineDash([10,10]);
-    ctx.beginPath(); ctx.moveTo(cv.width/2,0); ctx.lineTo(cv.width/2,cv.height); ctx.moveTo(0,cv.height/2); ctx.lineTo(cv.width,cv.height/2); ctx.stroke(); ctx.setLineDash([]);
-    ctx.strokeStyle=cssVar("--label")||"#000"; ctx.lineWidth=22; ctx.lineCap="round"; ctx.lineJoin="round";
-    for(const st of strokes.concat(cur?[cur]:[])){ if(!st.length) continue; ctx.beginPath(); ctx.moveTo(st[0][0],st[0][1]); for(const p of st) ctx.lineTo(p[0],p[1]); if(st.length===1) ctx.lineTo(st[0][0]+0.1,st[0][1]); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(N/2,0); ctx.lineTo(N/2,N); ctx.moveTo(0,N/2); ctx.lineTo(N,N/2); ctx.stroke(); ctx.setLineDash([]);
+    if(PIN){ ctx.globalAlpha=0.18; ctx.fillStyle=cssVar("--label3")||"#aaa"; for(const j of ghosts()) drawTmpl(ctx,PIN.ch,j,PIN.map); ctx.globalAlpha=1; } /* the strokes the character still lacks, faint */
+    ctx.fillStyle=cssVar("--label")||"#000";
+    for(const s of strokes){ if(PIN&&s.tk!=null&&tmplStroke(PIN.ch,s.tk)) drawTmpl(ctx,PIN.ch,s.tk,PIN.map); else if(s.type&&tmplStroke(s.type.ch,s.type.k)) drawTmpl(ctx,s.type.ch,s.type.k,s.type.map); else inked(s.raw,cssVar("--label")||"#000"); }
+    if(cur) inked(cur,cssVar("--label")||"#000");
   };
+  /* a drawn stroke's distance to a template stroke of the pinned character, in character sides, the better of forward and back */
+  const ghostDist=(raw,j)=>{ const tm=tmplStroke(PIN.ch,j); if(!tm) return Infinity; const g=tm.map(p=>mapPt(PIN.map,p)), S=Math.max(1,1024*Math.abs(PIN.map.ax)*0.8); const f=traceDist(raw.map(p=>[p[0]/S,p[1]/S]),g.map(p=>[p[0]/S,p[1]/S])), r=traceDist(raw.map(p=>[p[0]/S,p[1]/S]),g.slice().reverse().map(p=>[p[0]/S,p[1]/S])); return Math.min(f,r+0.03); };
+  const snapOne=s=>{ s.type=STROKES?typeSnap(s.raw,refSize()):null; s.tk=null; if(PIN){ let best=null; for(const j of ghosts()){ const d=ghostDist(s.raw,j); if(d<SNAP_GHOST&&(!best||d<best.d)) best={j,d}; } if(best) s.tk=best.j; } };
+  /* the strokes laid over the pinned character's: each takes the nearest free template stroke, nearest pairs first */
+  const assign=()=>{ strokes.forEach(s=>s.tk=null); if(!PIN) return; const st=STROKE_OF.get(PIN.ch)||[], pairs=[]; strokes.forEach((s,i)=>st.forEach((_,j)=>pairs.push({i,j,d:ghostDist(s.raw,j)}))); pairs.sort((a,b)=>a.d-b.d); const usedI=new Set(), usedJ=new Set(); for(const p of pairs){ if(p.d>SNAP_GHOST||usedI.has(p.i)||usedJ.has(p.j)) continue; strokes[p.i].tk=p.j; usedI.add(p.i); usedJ.add(p.j); } };
+  const charMap=(c,rw)=>{ const st=STROKE_OF.get(c); return st?fitMap(st.flat(),rw.flat()):padMap; }; /* the character laid over the drawing: prepStrokes' own normalisation (larger side, centred), undone */
+  /* the character the strokes fit by themselves (v819): the stroke match's top hit when it is clear; a held character stays */
+  const rePin=async()=>{ if(PIN&&PIN.locked) return; const my=++pinSeq, rw=raws(); if(rw.length<PIN_MIN||!STROKES){ if(PIN){ PIN=null; assign(); paint(); } return; }
+    let sm=[]; try{ sm=await strokeMatch(rw); }catch(e){} if(my!==pinSeq||!el.isConnected) return;
+    const top=sm[0], pin=top&&top.cost<PIN_COST?top.ch:null;
+    PIN=pin?{ch:pin,map:charMap(pin,rw),locked:false}:null; assign();
+    if(PIN&&strokes.some(s=>s.tk==null)){ PIN=null; assign(); } /* the whole match is not enough: every drawn stroke must lie on one of the character's (横竖撇 matched 万 at .2 in the harness and showed a clean 万 over three strokes that were not it) */
+    paint(); };
+  const loadChar=c=>{ const st=STROKE_OF.get(c); if(!st){ status(t("The app has no strokes for {0} — draw it.",c)); return; }
+    seq++; pinSeq++; showCands([]); ops.push({kind:"load",strokes:strokes.slice(),pin:PIN});
+    strokes.length=0; st.forEach((tm,j)=>strokes.push({raw:tm.map(p=>mapPt(padMap,p)),type:null,tk:j})); PIN={ch:c,map:padMap,locked:true}; paint(); idle(); };
   const pt=e=>{ const r=cv.getBoundingClientRect(); return [(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height]; };
-  cv.onpointerdown=e=>{ e.preventDefault(); try{ cv.setPointerCapture(e.pointerId); }catch(x){} cur=[pt(e)]; paint(); };
+  /* the stroke under a tap: the nearest shown stroke within TAP_NEAR of the pad side */
+  const strokeAt=p=>{ let best=null; strokes.forEach((s,i)=>{ const q=resamplePts(shown(s),24); let d=Infinity; for(const a of q) d=Math.min(d,Math.hypot(a[0]-p[0],a[1]-p[1])); if(d<TAP_NEAR*N&&(!best||d<best.d)) best={i,d}; }); return best?best.i:-1; };
+  cv.onpointerdown=e=>{ e.preventDefault(); try{ cv.setPointerCapture(e.pointerId); }catch(x){} down={x:e.clientX,y:e.clientY}; cur=[pt(e)]; paint(); };
   cv.onpointermove=e=>{ if(!cur) return; e.preventDefault(); cur.push(pt(e)); paint(); };
-  cv.onpointerup=cv.onpointercancel=e=>{ if(!cur) return; strokes.push(cur); cur=null; paint(); };
+  cv.onpointerup=cv.onpointercancel=e=>{ if(!cur) return; const s=cur; cur=null;
+    const moved=down?Math.hypot(e.clientX-down.x,e.clientY-down.y):PAD_HAND; down=null;
+    if(moved<PAD_HAND){ const j=strokeAt(s[0]); if(j>=0){ ops.push({kind:"del",j,s:strokes[j]}); strokes.splice(j,1); seq++; showCands([]); paint(); idle(); return; } } /* a tap on a stroke removes it (v819); a tap on nothing is a dot */
+    const o={raw:s,type:null,tk:null}; snapOne(o); strokes.push(o); ops.push({kind:"add"}); seq++; showCands([]); paint(); idle(); rePin(); };
+  const undo=()=>{ const op=ops.pop(); if(!op) return; if(op.kind==="add") strokes.pop(); else if(op.kind==="del") strokes.splice(op.j,0,op.s); else { strokes.length=0; strokes.push(...op.strokes); PIN=op.pin; } seq++; showCands([]); paint(); idle(); rePin(); };
+  const clear=()=>{ strokes.length=0; ops.length=0; PIN=null; seq++; pinSeq++; showCands([]); paint(); idle(); };
   const showCands=alts=>{
     const c=el.querySelector("#ds-cands"); c.innerHTML=alts.map(x=>`<button class="ck draw" data-rep="${esc(x)}">${esc(x)}</button>`).join("");
-    c.querySelectorAll("[data-rep]").forEach(b=> b.onclick=()=>{ close(); apply(b.dataset.rep); });
+    c.querySelectorAll("[data-rep]").forEach(b=>{ b.onclick=()=>{ close(); apply(b.dataset.rep); }; longPress(b,()=>loadChar(b.dataset.rep)); }); /* held: onto the pad (v819) */
   };
   const recognize=async()=>{
     const my=++seq; showCands([]);
     if(!strokes.length){ status(t("Draw the character first.")); return; }
+    const rw=raws(), whole=PIN&&strokes.length===(STROKE_OF.get(PIN.ch)||[]).length&&strokes.every(s=>s.tk!=null)?PIN.ch:""; /* every stroke of the character on the pad: it leads */
     try{
       const w=await ocrWorker(status); if(my!==seq) return;
       status(t("reading …"));
       /* stroke matching first (v141), the print model's readings after it; the database may be missing on a first use offline */
-      let sm=[]; try{ sm=await strokeMatch(strokes); }catch(err){ logErr("strokes",err&&err.message||err); }
+      let sm=[]; try{ sm=await strokeMatch(rw); }catch(err){ logErr("strokes",err&&err.message||err); }
       const good=sm.filter(x=>x.cost<0.4).slice(0,5).map(x=>x.ch);
-      const ocr=await recognizeStrokes(w,strokes,p=>{ if(my===seq) status(t("reading … {0}%",p)); });
-      const alts=[...new Set([...good,...ocr])].slice(0,6);
-      DRAWLOG.push({t:Date.now(),strokes:strokes.map(st=>st.map(p=>[Math.round(p[0]),Math.round(p[1])])),alts,strokes_best:sm.slice(0,5).map(x=>x.ch+":"+x.cost.toFixed(2)),ocr,place:refView.view&&refView.view.how||""}); while(DRAWLOG.length>3) DRAWLOG.shift(); /* the phone's real strokes for the diagnostics (v140) */
+      const ocr=await recognizeStrokes(w,rw,p=>{ if(my===seq) status(t("reading … {0}%",p)); });
+      const alts=[...new Set([...(whole?[whole]:[]),...good,...ocr])].slice(0,6);
+      DRAWLOG.push({t:Date.now(),strokes:rw.map(st=>st.map(p=>[Math.round(p[0]),Math.round(p[1])])),alts,strokes_best:sm.slice(0,5).map(x=>x.ch+":"+x.cost.toFixed(2)),ocr,place:refView.view&&refView.view.how||"",clean:strokes.map(s=>PIN&&s.tk!=null?PIN.ch+":"+s.tk:s.type?s.type.name:"-"),pin:PIN?PIN.ch+(PIN.locked?" held":""):""}); while(DRAWLOG.length>3) DRAWLOG.shift(); /* the phone's real strokes for the diagnostics (v140); v819: what each was shown as */
       if(my!==seq||!el.isConnected) return;
       const ctxc=SIGN[id]?charCandidates(SIGN[id].lines[k],i,ins):[];
-      const ranked=alts.slice().sort((a,b)=>(ctxc.includes(b)?1:0)-(ctxc.includes(a)?1:0)); /* what fits the neighbours first, otherwise the stroke match's order */
+      const ranked=alts.slice().sort((a,b)=>(a===whole?-1:b===whole?1:0)||(ctxc.includes(b)?1:0)-(ctxc.includes(a)?1:0)); /* what fits the neighbours first, otherwise the stroke match's order */
       showCands(ranked);
-      status(ranked.length?t("Read as — tap the right one. Not there? Clear and draw again."):t("Not recognized — try cleaner, well-separated strokes."));
+      status(ranked.length?t("Read as — tap the right one. Nearly right? Hold it and fix it on the pad."):t("Not recognized — try cleaner, well-separated strokes."));
     }catch(err){ if(my===seq) status(t("Reading failed: {0}",err&&err.message||err)); }
   };
-  el.querySelector("#ds-undo").onclick=()=>{ strokes.pop(); seq++; showCands([]); paint(); status(t("Draw all strokes, then tap Done.")); };
-  el.querySelector("#ds-clear").onclick=()=>{ strokes.length=0; seq++; showCands([]); paint(); status(t("Draw all strokes, then tap Done.")); };
+  el.querySelector("#ds-undo").onclick=undo;
+  el.querySelector("#ds-clear").onclick=clear;
   el.querySelector("#ds-done").onclick=recognize;
   el.querySelector("#ds-x").onclick=close;
-  el.strokes=strokes; el.recognize=recognize; el.paint=paint; /* used by the tests */
+  el.strokes=strokes; el.raws=raws; el.recognize=recognize; el.paint=paint; el.loadChar=loadChar; el.pin=()=>PIN; el.undo=undo; /* used by the tests */
   paint();
+  /* the stroke file for the snaps (a first use downloads it); the outlines behind it for the look. Strokes drawn before it is
+     there stand as the finger drew them and snap the moment it lands; a character to load waits for it */
+  loadStrokes().then(()=>{ if(!el.isConnected) return; strokes.forEach(s=>{ if(!s.type) snapOne(s); }); if(load) loadChar(load); else{ paint(); rePin(); } }).catch(err=>{ logErr("strokes",err&&err.message||err); if(load&&el.isConnected) status(t("The app has no strokes for {0} — draw it.",load)); });
+  if(!OUTLINES) loadOutlines().then(()=>{ if(el.isConnected) paint(); }).catch(()=>{});
   return el;
 }
 /* ---------- stroke matching (v141, H: "Go!") ----------
