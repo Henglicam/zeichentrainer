@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=821; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=822; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -6532,7 +6532,7 @@ function renderEdit(main,c){
       const r=await run; if(!ab.isConnected) return; /* the form is gone — Save changes took the card, and the answer lands there (v341) */
       if(sureKey($("#e-word").value)!==sureKey(zh)){ ab.disabled=false; st.textContent=""; if(aiLive()) ab.click(); return; } /* v657: the text was changed while this check ran — its answer is about the old text and must not write it back; the new text gets its own check */
       if(!r.bad){
-        if(r.zh&&CJK.test(r.zh)){ const zh=r.zh.replace(/\r/g,""); sg.lines=(isSign?zh:recutLines(zh.replace(/\s+/g,""),sg.lines)).split("\n").map(l=>l.trim()).filter(Boolean); sg.orig=sg.lines.slice(); syncWord(); drawLines(); }
+        if(r.zh&&CJK.test(r.zh)){ const zh=r.zh.replace(/\r/g,""); sg.lines=heldKeep(sg,sg.lines,(isSign?zh:recutLines(zh.replace(/\s+/g,""),sg.lines)).split("\n").map(l=>l.trim()).filter(Boolean)); sg.orig=sg.lines.slice(); syncWord(); drawLines(); } /* v822: a character the learner set by hand stays */
         if(r.p){ $("#e-pin").value=r.p; autoGrow($("#e-pin")); }
         if(r.m){ $("#e-mean").value=r.m; autoGrow($("#e-mean")); aiMl=r.ml||"en"; meanTouched=false; }
         if(r.desc) aiDesc={s:r.desc,ml:r.ml||"en"}; /* the description lands on the card at Save changes (v529) */ /* the fields grow with the answer — a filled value fires no input event (v281, H's two-line brand meaning cut off) */
@@ -10579,6 +10579,7 @@ async function openCharPick(id,k,i,btn,mode){
   box.dataset.mode=ins?"ins":"rep";
   btn.closest(".sline").appendChild(box);
   const apply=async(rep)=>{ const cs=[...sg.lines[k]], n0=cs.length; if(ins){ if(rep===null) return; cs.splice(i,0,rep); } else if(rep===null) cs.splice(i,1); else cs[i]=rep; sg.lines[k]=cs.join(""); delete sg.ai; delete sg.aiErr;
+    heldMark(sg,k,i,ins?"ins":rep===null?"del":"set"); /* v822: the learner's own character, which no AI answer overwrites */
     if(sg.trad&&sg.tradTouched){ const tl=(sg.tradText||"").split("\n"), tc=[...(tl[k]||"")]; if(tc.length===n0){ if(ins) tc.splice(i,0,s2t(rep)); else if(rep===null) tc.splice(i,1); else tc[i]=s2t(rep); tl[k]=tc.join(""); } else tl[k]=s2t(sg.lines[k]); sg.tradText=tl.join("\n"); }
     if(sg.onChange){ sg.onChange(); return; } /* the Edit form owns the re-render and the AI check */
     renderShots(); if(aiLive()) signAskAI(id); };
@@ -10730,10 +10731,11 @@ function typeSnap(raw,ref){ const u=shapeOf(raw), b=bboxOf(raw), rd=Math.max(b.w
    size, so a short drawn stroke came out as a hairline; the outline is for a pinned character, laid out at the pad's size */
 function drawTmpl(ctx,tm,o,m,w){ if(!tm) return;
   if(o&&!w){ ctx.save(); ctx.translate(m.bx,m.by); ctx.scale(m.ax,m.ay); ctx.scale(1024/OUT_GRID,-1024/OUT_GRID); ctx.translate(0,-OUT_Y0); ctx.fill(new Path2D(o)); ctx.restore(); }
-  else ctx.fill(brushPath(tm.map(p=>mapPt(m,p)),w||BRUSH_W,strokeKind(tm.map(p=>[p[0]/1024,p[1]/1024])))); }
+  else { /* v822 (H on v821: "immer noch total komisch und kruckelig"): the brush's swelling and tapering, made for a character that fills the pad, read as spikes on a stroke a sixth of it — a snapped stroke is the pad's own ink line now, the clean median smoothed, one width, round ends */
+    const q=chaikin(tm.map(p=>mapPt(m,p)),2); ctx.save(); ctx.strokeStyle=ctx.fillStyle; ctx.lineWidth=w; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.beginPath(); ctx.moveTo(q[0][0],q[0][1]); for(let i=1;i<q.length;i++) ctx.lineTo(q[i][0],q[i][1]); if(q.length===1) ctx.lineTo(q[0][0]+0.1,q[0][1]); ctx.stroke(); ctx.restore(); } }
 /* the pinned character's stroke k, with its outline when the outline file has it */
 function drawPinStroke(ctx,ch,k,m){ const st=STROKE_OF.get(ch); if(!st||!st[k]) return; const o=outlinesFor(ch,st.length); drawTmpl(ctx,st[k],o&&o[k],m); }
-const SHEETLOG=[], STROKES_WAIT=8000, SNAP_W=PAD_LW*1.15; /* SNAP_W (v821): a snapped stroke's brush, a little over the finger's own line — the write pad's BRUSH_W is for a character that fills the pad, and on a stroke a sixth of the pad it was a blob */ /* v820: the last three drawing sheets, what happened on each — the window into the phone; and how long Done waits for the stroke file before it reads without the match */
+const SHEETLOG=[], STROKES_WAIT=8000, SNAP_W=PAD_LW*1.15, PIN_LOOSE=0.2; /* SNAP_W (v821): a snapped stroke's line, a little over the finger's own; PIN_LOOSE (v822): at Done, this share of the strokes may lie on none of the matched character's and it is still pinned — H's 16-stroke 濱 matched at .10 and was refused for one stray stroke */ /* v820: the last three drawing sheets, what happened on each — the window into the phone; and how long Done waits for the stroke file before it reads without the match */
 const DRAW_SIZE=720, DRAWLOG=[]; /* the last three drawings — the strokes as drawn and what the model answered — for More → Diagnostics (v140, H: "I feel no improvement" — the synthetic test did not reflect a finger) */
 function openDrawSheet(id,k,i,apply,ins,load){
   const sg=SIGN[id]; if(!sg) return;
@@ -10788,10 +10790,11 @@ function openDrawSheet(id,k,i,apply,ins,load){
   /* the character the strokes fit (v819) — since v821 only at Done, from its match (H's log: 氵, 纩, 泞, 徉, 逗, 逭, 缑, 嗐, 缩, 壇 pinned and
      dropped in turn while 濱 was being drawn, every stroke a different character on the pad: a part of a character matches some
      small whole character, and the pad jumped). The character is laid out at the pad's own size (padMap), the strokes drawn so far
-     take its strokes (assign), its missing ones stand faint; every drawn stroke must lie on one of the character's, else no pin
-     (横竖撇 matched 万 at .2 in the harness and showed a clean 万 over three strokes that were not it); a held character stays */
+     take its strokes (assign), its missing ones stand faint; the drawn strokes must lie on the character's — at most PIN_LOOSE of them stray, so
+     横竖撇 is not shown as 万 (matched at .2 in the harness) while a 16-stroke 濱 with one sketchy stroke is 濱; a held character stays */
   const pinTo=(c,cost)=>{ if(PIN&&PIN.locked) return; const was=PIN&&PIN.ch; PIN=c?{ch:c,map:padMap,locked:false}:null; assign();
-    if(PIN&&strokes.some(s=>s.tk==null)){ note("pin off",c+" "+cost.toFixed(2)); PIN=null; assign(); } else if((PIN&&PIN.ch)!==was) note(PIN?"pin":"unpin",PIN?PIN.ch+" "+cost.toFixed(2):"");
+    const stray=strokes.filter(s=>s.tk==null).length;
+    if(PIN&&stray>Math.floor(strokes.length*PIN_LOOSE)){ note("pin off",c+" "+cost.toFixed(2)+" stray "+stray); PIN=null; assign(); } else if((PIN&&PIN.ch)!==was) note(PIN?"pin":"unpin",PIN?PIN.ch+" "+cost.toFixed(2)+(stray?" stray "+stray:""):"");
     paint(); };
   const loadChar=c=>{ const st=STROKE_OF.get(c); if(!st){ note("load failed",c+(STROKES?"":" (file "+LOG.file+")")); status(t("The app has no strokes for {0} — draw it.",c)); return; }
     note("load",c); seq++; showCands([]); ops.push({kind:"load",strokes:strokes.slice(),pin:PIN});
@@ -11108,6 +11111,14 @@ function signPreview(id){
    the reading's own pinyin and gloss. A line edited by hand before the check has no confidences left and is never guarded;
    an answer of another length (two characters fused into one) is not guarded either. Returns the first settled character. */
 const AI_SETTLED=90;
+/* v822 (H: "wenn man Done drückt, wird der neue Charakter nicht übernommen" — he picked 濱, the Edit form's AI check answered the
+   simplified 滨 and wrote it over his pick): the positions a learner set by hand (the picker, the drawing sheet) are held on SIGN
+   (`held`: line → set of indices) and an AI answer keeps their characters — heldKeep lays the old characters back over the answer's
+   line when it has the same length, and keeps the old line whole when it has not. An insert or a removal shifts the marks. */
+function heldMark(sg,k,i,how){ const h=sg.held=sg.held||{}; const set=h[k]=h[k]||new Set(); if(how==="set"){ set.add(i); return; } const out=new Set(); set.forEach(j=>{ if(how==="ins") out.add(j>=i?j+1:j); else if(j!==i) out.add(j>i?j-1:j); }); if(how==="ins") out.add(i); h[k]=out; }
+function heldKeep(sg,oldLines,newLines){ const h=sg.held; if(!h) return newLines; const out=newLines.slice();
+  Object.keys(h).forEach(k=>{ const set=h[k]; k=+k; if(!set||!set.size||oldLines[k]==null) return; const oc=[...oldLines[k]]; if(out[k]==null||[...out[k]].length!==oc.length){ out[k]=oldLines[k]; return; } const nc=[...out[k]]; set.forEach(i=>{ if(oc[i]!=null) nc[i]=oc[i]; }); out[k]=nc.join(""); });
+  return out; }
 function aiSettled(sg,lines,zh){
   const zl=zh.split("\n"); if(zl.length!==lines.length) return "";
   const alts=(sg.alts||[]).map(t=>t.split("\n"));

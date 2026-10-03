@@ -116,6 +116,27 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v822, 2026-10-03)
+- **A picked character stays, snapped strokes are smooth lines, a sketchy 濱 is still 濱 (v822, H on v821 with a screenshot and
+  a dump: "die geschriebenen Characters sind immer noch total komisch und kruckelig. Und darüber hinaus, wenn man Done drückt,
+  wird der neue Charakter nicht übernommen").** **(1) The pick was overwritten.** The sheet log shows `pick 濱` twice, and the
+  AI exchanges right after show the Edit form's own check answering `zh:"滨寿司"` for his 濱寿司 — the form wrote the answer's
+  `zh` over the lines without a look (`if(r.zh&&CJK.test(r.zh)) sg.lines=…`), so the learner's hand-picked 濱 became the
+  simplified 滨 two seconds later and the strip looked as if nothing had happened. The positions a learner sets by hand (the
+  picker and the sheet's `apply`) are held on SIGN now (`heldMark`: line → set of indices, shifted by an insert or a removal),
+  and the form's AI answer keeps their characters (`heldKeep`: the old characters laid back over a line of the same length,
+  the old line whole otherwise); the answer's pinyin and meaning still land. The reading preview has `aiSettled` for the same
+  question and is untouched. **(2) "Kruckelig":** the snapped stroke was the write pad's brush — its swelling and tapering,
+  made for a character that fills the pad, read as spikes on a stroke a sixth of it. A snapped stroke is the pad's own ink
+  line now: the clean median smoothed (`chaikin`), one width (`SNAP_W`), round ends; the brush is for a pinned character's
+  look only when the outline file is missing. **(3) The pin refused his 濱:** `pin off 濱 0.10` twice — the match was good,
+  one sketchy stroke lay on none of the character's strokes, and v821 asked for all of them. `PIN_LOOSE` .2: at Done that
+  share of the strokes may stray and the character is still pinned, so 横竖撇 is still not 万 (3 strokes, none may stray)
+  while a 16-stroke 濱 with one stray stroke is 濱. Harness: `test822` (the AI mocked to answer 滨口 for a hand-set 濱口: the
+  line, the strip and the field keep 濱, the pinyin lands; `heldMark` after an insert and a removal, `heldKeep` on a line of the
+  same length and of another) **4 of 4 on v822, 2 of 4 on v821** (the pick is overwritten there); `test819` 13 of 13, `test820`
+  4 of 4, `test817` 6 of 6. Screenshot: H's small 氵 and the first strokes of 賓 as smooth lines. **Not field-checked.**
+
 ## Current state (PWA v821, 2026-10-03)
 - **Strokes at the pad's width, the pin only at Done, picks logged (v821, H on v820 with three screenshots and a dump: "erstmal
   zeigt er die geschriebenen Striche total komisch dünn. Und dann irgendwann hat es geklappt, aber wirklich total umständlich.
