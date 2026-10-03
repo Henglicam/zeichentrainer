@@ -440,7 +440,7 @@ button.pill.multi{border:0;font:inherit;cursor:pointer} /* the reference is a wa
 .drawsheet .pad{display:block;width:300px;height:300px;max-width:100%;margin:0 auto;border-radius:var(--rc);background:var(--card);box-shadow:var(--shadow);touch-action:none}
 .drawsheet #ds-st{text-align:center} .drawsheet .cands{justify-content:center;min-height:60px;margin:0}
 .drawsheet .ck.draw{min-width:56px;height:56px;font-size:30px;background:var(--card)}
-.drawsheet .ckacts{margin-top:0} .drawsheet .btn.primary{min-width:120px}
+.drawsheet .ckacts{margin-top:0;flex-wrap:nowrap} .drawsheet .ckacts .del{white-space:nowrap;padding-left:6px;padding-right:6px} .drawsheet .btn.primary{min-width:96px} /* v825: one row at 360 px in every language — Russian's Done had dropped to a second line under Undo and Clear */
 body.noscroll{overflow:hidden}
 /* the app's own question sheet (v222): a dimmed backdrop, the card slides up from the bottom — a bold title, one line of consequence, a neutral Cancel beside the action */
 .ask{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;padding:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom))}

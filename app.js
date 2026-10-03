@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=824; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=825; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -782,6 +782,7 @@ const TO_TEST=[ /* v748 (H: "Ich sagte ja oft genug, dass es passt, sonst würde
   ["app","v817","Pause switch: learner line shows?"],
   ["app","v818","Draw sheet: photo on the char?"],
   ["app","v819","Clean strokes: snap right? Hold?"],
+  ["app","v825","Photo check: right char first?"],
 ];
 const TO_TEST_GROUPS=[["photo","Take any photo"],["again","Take one of these again"],["app","In the app"],["update","After an update"],["lock","Parked — the lock is off (v531)"]];
 /* What the app claims it can read, and what a photo has actually confirmed (v434, H after the untested menu
@@ -10691,9 +10692,10 @@ async function drawPlace(sg,k,i,bmp){
 /* ---------- v819: clean strokes (H: "Könnten wir das vielleicht so machen, dass erkannt wird, welchen Stroke ich da gerade
    machen möchte und … dieser Stroke dann eben … sauber reingezeichnet wird aus der Vorlage" — and, asked how without a
    candidate: "then that stroke should snap into the most close or most obvious stroke that it could be") ----------
-   Every stroke drawn on the sheet is matched against the basic stroke shapes and shown as that shape, fitted to where and how
-   big it was drawn. The shapes are strokes of real characters in the stroke file (STROKE_EX carries each exemplar's own median and outline), so the sheet draws them as the write pad draws a template: the Kai outline when the outline file is there, the
-   brush otherwise. At Done, when the drawn strokes fit one character clearly (strokeMatch's top hit under PIN_COST; look-alikes such as 土
+   Every stroke drawn on the sheet is matched against the basic stroke shapes (typeSnap) and shown as that shape, laid along the
+   finger's own line (fitSim, v823) as a smooth ink line of one width (v822). The shapes are strokes of real characters, inline
+   (STROKE_EX, v820: each exemplar's median and Kai outline; the outline is drawn only for a pinned character). At Done the photo
+   square has its say on the candidates (v825, below). At Done, when the drawn strokes fit one character clearly (strokeMatch's top hit under PIN_COST; look-alikes such as 土
    and 士 share their strokes, so no gap to the second hit is asked) the strokes are shown as that character's own at the pad's
    size, and a stroke drawn after that snaps to one the character still lacks when it lies on it (v821: at Done only — while
    drawing, a part of a character matched some small whole one and the pad jumped from character to character). A candidate HELD
@@ -10751,6 +10753,43 @@ function drawTmpl(ctx,tm,o,m,w){ if(!tm) return;
 /* the pinned character's stroke k, with its outline when the outline file has it */
 function drawPinStroke(ctx,ch,k,m){ const st=STROKE_OF.get(ch); if(!st||!st[k]) return; const o=outlinesFor(ch,st.length); drawTmpl(ctx,st[k],o&&o[k],m); }
 const SHEETLOG=[], STROKES_WAIT=8000, SNAP_W=PAD_LW*1.15, PIN_LOOSE=0.2; /* SNAP_W (v821): a snapped stroke's line, a little over the finger's own; PIN_LOOSE (v822): at Done, this share of the strokes may lie on none of the matched character's and it is still pinned — H's 16-stroke 濱 matched at .10 and was refused for one stray stroke */ /* v820: the last three drawing sheets, what happened on each — the window into the phone; and how long Done waits for the stroke file before it reads without the match */
+/* ---------- v825: the photo square checks the candidates (H, "Go": "Können nicht die geschriebenen Strokes auch mit dem Bild
+   irgendwie abgeglichen werden, dass da nicht total der komische Kram vorgeschlagen wird") ----------
+   At Done the sheet reads the photo square above the pad — the part H framed — with the phone's reader (the character under
+   the square's middle, `photoRead`), and lays every candidate's printed glyph over the square's ink (`inkGrid`/`glyphGrid`, the
+   ink's box scaled into a PH_GRID square, aspect kept; `gridSim` the overlap over the union). The candidates are ordered by
+   their stroke cost less PH_WEIGHT × the overlap; a candidate the photo plainly contradicts (overlap under PH_DROP of the best)
+   leaves when three remain; the reader's character, read surely, joins at the head when the strokes allow it and is the pin.
+   A blurred or badly framed square says nothing (no ink, no reader line) and the list stands as it was. Everything is logged. */
+const PH_SIZE=320, PH_GRID=48, PH_CORE=0.84, PH_WEIGHT=0.3, PH_DROP=0.6, PH_SURE=90, PH_OCR_COST=0.35, PH_READ_MS=12000, PH_MIN=0.45, PH_SHRINK=0.34; /* PH_MIN: the best overlap must reach this before the photo says anything — a square that does not show the character (framed off, or the test's 口 under a drawn 濱) gives every candidate .2–.27 and reordered them by noise; PH_SHRINK: the square is read by the phone's reader at this scale, a glyph of a line's height — at the square's own size one big character read as ± */
+function photoSquare(view){ const v=view; if(!v||!v.bmp||!(v.side>0)) return null; const cv=document.createElement("canvas"); cv.width=cv.height=PH_SIZE; const ctx=cv.getContext("2d");
+  const sx=v.cx-v.side/2, sy=v.cy-v.side/2, k=PH_SIZE/v.side; ctx.fillStyle="#888"; ctx.fillRect(0,0,PH_SIZE,PH_SIZE);
+  const ix=Math.max(0,sx), iy=Math.max(0,sy), ex=Math.min(v.bmp.width,sx+v.side), ey=Math.min(v.bmp.height,sy+v.side); if(ex<=ix||ey<=iy) return null;
+  ctx.drawImage(v.bmp,ix,iy,ex-ix,ey-iy,(ix-sx)*k,(iy-sy)*k,(ex-ix)*k,(ey-iy)*k); return cv; }
+/* the ink of a canvas's core as a PH_GRID×PH_GRID grid: Otsu's cut on the grey values, the smaller class the ink, the ink's box scaled in with its aspect */
+function inkGrid(cv,core){ const W=cv.width, H=cv.height, g=cv.getContext("2d",{willReadFrequently:true}), m=Math.round(W*(1-core)/2), x0=m, y0=m, w=W-2*m, h=H-2*m;
+  const px=g.getImageData(x0,y0,w,h).data, grey=new Uint8Array(w*h), hist=new Uint32Array(256);
+  for(let i=0;i<w*h;i++){ const v=(px[i*4]*299+px[i*4+1]*587+px[i*4+2]*114)/1000|0; grey[i]=v; hist[v]++; }
+  let sum=0; for(let i=0;i<256;i++) sum+=i*hist[i]; let sb=0, wb=0, best=0, thr=128; const N=w*h;
+  for(let i=0;i<256;i++){ wb+=hist[i]; if(!wb) continue; const wf=N-wb; if(!wf) break; sb+=i*hist[i]; const mb=sb/wb, mf=(sum-sb)/wf, v=wb*wf*(mb-mf)*(mb-mf); if(v>best){ best=v; thr=i; } }
+  let dark=0; for(let i=0;i<N;i++) if(grey[i]<=thr) dark++; const inkDark=dark<=N/2; const ink=new Uint8Array(N); let n=0; for(let i=0;i<N;i++){ ink[i]=(grey[i]<=thr)===inkDark?1:0; n+=ink[i]; }
+  if(n<N*0.01||n>N*0.6) return null; /* no ink, or a square that is all ink: nothing to compare */
+  return gridOf(ink,w,h); }
+function gridOf(ink,w,h){ let bx0=w,by0=h,bx1=-1,by1=-1; for(let y=0;y<h;y++) for(let x=0;x<w;x++) if(ink[y*w+x]){ if(x<bx0)bx0=x; if(x>bx1)bx1=x; if(y<by0)by0=y; if(y>by1)by1=y; } if(bx1<0) return null;
+  const bw=bx1-bx0+1, bh=by1-by0+1, side=Math.max(bw,bh), G=PH_GRID, out=new Uint8Array(G*G), ox=(side-bw)/2, oy=(side-bh)/2; let n=0;
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++) if(ink[y*w+x]){ const gx=Math.min(G-1,((x-bx0+ox)/side*G)|0), gy=Math.min(G-1,((y-by0+oy)/side*G)|0); if(!out[gy*G+gx]){ out[gy*G+gx]=1; n++; } }
+  return n?out:null; }
+let GLYPH_GRIDS=new Map();
+function glyphGrid(ch){ if(GLYPH_GRIDS.has(ch)) return GLYPH_GRIDS.get(ch); const S=160, cv=document.createElement("canvas"); cv.width=cv.height=S; const g=cv.getContext("2d",{willReadFrequently:true}); g.fillStyle="#fff"; g.fillRect(0,0,S,S); g.fillStyle="#000"; g.font=`${Math.round(S*0.72)}px ${cssVar("--hanzi")||"serif"}`; g.textAlign="center"; g.textBaseline="middle"; g.fillText(ch,S/2,S/2);
+  const px=g.getImageData(0,0,S,S).data, ink=new Uint8Array(S*S); for(let i=0;i<S*S;i++) ink[i]=px[i*4]<128?1:0; const out=gridOf(ink,S,S); GLYPH_GRIDS.set(ch,out); return out; }
+function gridSim(a,b){ if(!a||!b) return 0; let i=0, u=0; for(let k=0;k<a.length;k++){ if(a[k]&&b[k]) i++; if(a[k]||b[k]) u++; } return u?i/u:0; }
+/* the phone's reader on the square: the character under its middle, with its confidence — or nothing */
+async function photoRead(cv){ const S=cv.width, rd=document.createElement("canvas"); rd.width=rd.height=S; const g=rd.getContext("2d"); const px=cv.getContext("2d").getImageData(0,0,S,S).data; let r=0,gg=0,b=0,n=0; for(let i=0;i<px.length;i+=4*97){ r+=px[i]; gg+=px[i+1]; b+=px[i+2]; n++; } g.fillStyle=`rgb(${r/n|0},${gg/n|0},${b/n|0})`; g.fillRect(0,0,S,S); const w=S*PH_SHRINK, o=(S-w)/2; g.drawImage(cv,o,o,w,w); /* the square small in the middle of its own average colour, so the reader sees a line's glyph */
+  const lines=await Promise.race([pdRead(rd),new Promise((_,rej)=>setTimeout(()=>rej(new Error("the reader took over "+PH_READ_MS/1000+" s")),PH_READ_MS))]);
+  const mid=PH_SIZE/2; let best=null;
+  for(const l of lines||[]){ const chars=[...(l.text||"")], n=chars.length; if(!n) continue;
+    chars.forEach((ch,i)=>{ if(!CJK.test(ch)) return; const cx=l.vert?l.x+l.w/2:l.x+l.w*(i+0.5)/n, cy=l.vert?l.y+l.h*(i+0.5)/n:l.y+l.h/2, d=Math.hypot(cx-mid,cy-mid), cf=Math.round(((l.cfs&&l.cfs[i])||l.conf||0)*100); if(!best||d<best.d) best={ch,cf,d}; }); }
+  return best&&best.d<PH_SIZE*0.35?best:null; }
 const DRAW_SIZE=720, DRAWLOG=[]; /* the last three drawings — the strokes as drawn and what the model answered — for More → Diagnostics (v140, H: "I feel no improvement" — the synthetic test did not reflect a finger) */
 function openDrawSheet(id,k,i,apply,ins,load){
   const sg=SIGN[id]; if(!sg) return;
@@ -10840,10 +10879,23 @@ function openDrawSheet(id,k,i,apply,ins,load){
       /* stroke matching first (v141), the print model's readings after it; the database may be missing on a first use offline */
       let sm=[]; try{ sm=await Promise.race([strokeMatch(rw),new Promise((_,rej)=>setTimeout(()=>rej(new Error("the stroke file is not here after "+STROKES_WAIT/1000+" s")),STROKES_WAIT))]); }catch(err){ note("match failed",err&&err.message||err); logErr("strokes",err&&err.message||err); } /* v820: a stroke file that never lands (H's phone) must not hold Done for ever — the print model reads alone then */
       if(my!==seq) return;
-      if(sm[0]&&sm[0].cost<PIN_COST) pinTo(sm[0].ch,sm[0].cost); else pinTo(null,0); /* v821: the pin, here and only here */
       const good=sm.filter(x=>x.cost<0.4).slice(0,5).map(x=>x.ch);
       const ocr=await recognizeStrokes(w,rw,p=>{ if(my===seq) status(t("reading … {0}%",p)); });
-      const alts=[...new Set([...(whole?[whole]:[]),...good,...ocr])].slice(0,6);
+      if(my!==seq) return;
+      /* v825: the photo square's say — the reader's character and every candidate's overlap with the ink */
+      let ph=null; const sq=photoSquare(refView.view); if(sq){ status(t("reading the photo …")); const g=inkGrid(sq,PH_CORE); let rd=null; try{ rd=await photoRead(sq); }catch(err){ note("photo read failed",err&&err.message||err); } if(my!==seq) return; ph={rd,g}; }
+      const costOf=c=>{ const x=sm.find(y=>y.ch===c); return x?x.cost:PH_OCR_COST; };
+      let pool=[...new Set([...(whole?[whole]:[]),...good,...ocr,...(ph&&ph.rd&&ph.rd.cf>=PH_SURE?[ph.rd.ch]:[])])];
+      if(ph&&ph.g){ const sims=new Map(pool.map(c=>[c,gridSim(ph.g,glyphGrid(c))])); const top=Math.max(0,...sims.values());
+        if(top<PH_MIN){ note("photo",`${ph.rd?ph.rd.ch+" "+ph.rd.cf+"%":"reader -"} · best overlap ${top.toFixed(2)} under ${PH_MIN}, the photo says nothing · ${[...sims].map(([c,v])=>c+":"+v.toFixed(2)).join(" ")}`); ph.g=null; }
+        else { const score=c=>(whole===c?-1:0)+(ph.rd&&ph.rd.ch===c&&ph.rd.cf>=PH_SURE?Math.min(costOf(c),0.12):costOf(c))-PH_WEIGHT*sims.get(c);
+        pool.sort((a,b)=>score(a)-score(b));
+        const kept=pool.filter(c=>sims.get(c)>=PH_DROP*top); if(kept.length>=3) pool=kept;
+        note("photo",`${ph.rd?ph.rd.ch+" "+ph.rd.cf+"%":"reader -"} · ${[...sims].map(([c,v])=>c+":"+v.toFixed(2)).join(" ")}`); } }
+      else if(ph) note("photo",(ph.rd?ph.rd.ch+" "+ph.rd.cf+"%":"reader -")+" · no ink");
+      const alts=pool.slice(0,6);
+      const lead=alts[0]&&costOf(alts[0])<PIN_COST?alts[0]:null; /* v825: the first candidate as the photo ordered them is the pin, when the strokes fit it; the reader's sure character stands at the head when the strokes allow it (score) */
+      if(lead) pinTo(lead,costOf(lead)); else pinTo(null,0); /* v821: the pin, here and only here */
       DRAWLOG.push({t:Date.now(),strokes:rw.map(st=>st.map(p=>[Math.round(p[0]),Math.round(p[1])])),alts,strokes_best:sm.slice(0,5).map(x=>x.ch+":"+x.cost.toFixed(2)),ocr,place:refView.view&&refView.view.how||"",clean:strokes.map(s=>PIN&&s.tk!=null?PIN.ch+":"+s.tk:s.type?s.type.name:"-"),pin:PIN?PIN.ch+(PIN.locked?" held":""):""}); while(DRAWLOG.length>3) DRAWLOG.shift(); /* the phone's real strokes for the diagnostics (v140); v819: what each was shown as */
       if(my!==seq||!el.isConnected) return;
       const ctxc=SIGN[id]?charCandidates(SIGN[id].lines[k],i,ins):[];
