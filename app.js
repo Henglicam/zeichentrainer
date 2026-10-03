@@ -10726,14 +10726,14 @@ function typeSnap(raw,ref){ const u=shapeOf(raw), b=bboxOf(raw), rd=Math.max(b.w
   return best&&{...best,map:fitMap(best.ex.m,raw)}; }
 /* one template stroke (its median tm, its Kai outline o when there is one) on a canvas through map m: the outline, else the
    brush at width w. v821 (H's screenshots: "die geschriebenen Striche total komisch dünn"): a stroke snapped by itself is drawn
-   with the BRUSH at the pad's own width, never the outline — an outline's thickness is the glyph's and scales with the stroke's
+   with the BRUSH at one width (SNAP_W), never the outline — an outline's thickness is the glyph's and scales with the stroke's
    size, so a short drawn stroke came out as a hairline; the outline is for a pinned character, laid out at the pad's size */
 function drawTmpl(ctx,tm,o,m,w){ if(!tm) return;
   if(o&&!w){ ctx.save(); ctx.translate(m.bx,m.by); ctx.scale(m.ax,m.ay); ctx.scale(1024/OUT_GRID,-1024/OUT_GRID); ctx.translate(0,-OUT_Y0); ctx.fill(new Path2D(o)); ctx.restore(); }
   else ctx.fill(brushPath(tm.map(p=>mapPt(m,p)),w||BRUSH_W,strokeKind(tm.map(p=>[p[0]/1024,p[1]/1024])))); }
 /* the pinned character's stroke k, with its outline when the outline file has it */
 function drawPinStroke(ctx,ch,k,m){ const st=STROKE_OF.get(ch); if(!st||!st[k]) return; const o=outlinesFor(ch,st.length); drawTmpl(ctx,st[k],o&&o[k],m); }
-const SHEETLOG=[], STROKES_WAIT=8000; /* v820: the last three drawing sheets, what happened on each — the window into the phone; and how long Done waits for the stroke file before it reads without the match */
+const SHEETLOG=[], STROKES_WAIT=8000, SNAP_W=PAD_LW*1.15; /* SNAP_W (v821): a snapped stroke's brush, a little over the finger's own line — the write pad's BRUSH_W is for a character that fills the pad, and on a stroke a sixth of the pad it was a blob */ /* v820: the last three drawing sheets, what happened on each — the window into the phone; and how long Done waits for the stroke file before it reads without the match */
 const DRAW_SIZE=720, DRAWLOG=[]; /* the last three drawings — the strokes as drawn and what the model answered — for More → Diagnostics (v140, H: "I feel no improvement" — the synthetic test did not reflect a finger) */
 function openDrawSheet(id,k,i,apply,ins,load){
   const sg=SIGN[id]; if(!sg) return;
@@ -10777,7 +10777,7 @@ function openDrawSheet(id,k,i,apply,ins,load){
     ctx.beginPath(); ctx.moveTo(N/2,0); ctx.lineTo(N/2,N); ctx.moveTo(0,N/2); ctx.lineTo(N,N/2); ctx.stroke(); ctx.setLineDash([]);
     if(PIN){ ctx.globalAlpha=0.18; ctx.fillStyle=cssVar("--label3")||"#aaa"; for(const j of ghosts()) drawPinStroke(ctx,PIN.ch,j,PIN.map); ctx.globalAlpha=1; } /* the strokes the character still lacks, faint */
     ctx.fillStyle=cssVar("--label")||"#000";
-    for(const s of strokes){ if(PIN&&s.tk!=null&&tmplStroke(PIN.ch,s.tk)) drawPinStroke(ctx,PIN.ch,s.tk,PIN.map); else if(s.type) drawTmpl(ctx,s.type.ex.m,null,s.type.map,BRUSH_W); else inked(s.raw,cssVar("--label")||"#000"); }
+    for(const s of strokes){ if(PIN&&s.tk!=null&&tmplStroke(PIN.ch,s.tk)) drawPinStroke(ctx,PIN.ch,s.tk,PIN.map); else if(s.type) drawTmpl(ctx,s.type.ex.m,null,s.type.map,SNAP_W); else inked(s.raw,cssVar("--label")||"#000"); }
     if(cur) inked(cur,cssVar("--label")||"#000");
   };
   /* a drawn stroke's distance to a template stroke of the pinned character, in character sides, the better of forward and back */
