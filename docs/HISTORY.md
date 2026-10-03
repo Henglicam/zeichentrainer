@@ -116,6 +116,25 @@ below. Verbatim as they last stood:
   the background). A debug keystore in the private repo so builds install over one another. **Nothing of it is
   field-checked, and it was never compiled before the first Actions run.**
 
+## Current state (PWA v820, 2026-10-03)
+- **The snap needs no file, Done waits for none, and the sheet keeps a log (v820, H on v819: "Das funktioniert leider sehr
+  schlecht bis überhaupt nicht", with a dump).** The dump's head said `parse strokes not yet` after minutes on the sheet and
+  no drawing was ever logged — the stroke file (2.4 MB, `vendor/strokes.txt.gz`) had not landed in that page, and v819 hung
+  everything on it: `typeSnap` read the exemplar strokes out of `STROKE_OF`, so nothing snapped; `rePin` and a held candidate
+  needed it; and Done's `strokeMatch` awaited `loadStrokes` with no bound, so a file that never comes held "reading …" for
+  ever. Why the file did not land on his phone is not known from the dump (no error was logged, so the fetch was pending —
+  the origin through the VPN, or a stalled connection; the SW turns to the mirror only after `ORIGIN_WAIT` 6 s of silence).
+  Three changes: **(1) the 29 exemplar strokes are inline** (`STROKE_EX`, 12.7 KB: each one's median and Kai outline, made by
+  `tools/stroke-exemplars.js` from the vendor files), so every stroke snaps the moment the sheet opens; the file is only for
+  the pin, Done's match and a character to load. **(2) Done waits `STROKES_WAIT` 8 s for the file, then reads with the print
+  model alone** (`Promise.race`, the miss logged). **(3) `SHEETLOG`** — the last three sheets, each with the file's state at
+  its opening and every event (stroke with its snap and cost, a ghost taken, tap off, pin / unpin / pin off, load, undo,
+  clear, the file landing or failing, the match failing, Done's candidates) — printed in Diagnostics under "Drawing sheets",
+  so the next dump says what the sheet did. Harness: `test820` with the stroke file routed to never answer: 横 and 竖 snap,
+  Done comes back in 8.9 s through the print model, the Diagnostics line reads `file loading · stroke 24p heng 0.02 · … ·
+  match failed … · done 十` — **4 of 4 on v820; on v819 1 of 4 — the strokes stay "-" and Done is still "reading …" after 40 s**. `test819` 12 of 12.
+  No `WHATS_NEW` (v819's note still describes it). **Not field-checked: whether the file lands on H's phone at all.**
+
 ## Current state (PWA v819, 2026-10-03)
 - **Rejected (2026-10-03, no version): a learning effect in the Edit sheet.** H first asked for one when writing or copying a
   character; after two proposals (a mask over the photo's character in Learn; pinyin under the candidates, the chosen character
