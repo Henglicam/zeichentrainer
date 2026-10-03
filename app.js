@@ -8,7 +8,7 @@
 const NEW_PER_SESSION = 8;
 const CJK = /[\u4e00-\u9fff]/;
 const pySpaced=t=>{ const out=[]; for(const x of pinyinPro.pinyin(t,{type:"array",toneType:"symbol"})){ const prev=out[out.length-1]; if(prev!==undefined&&/^[\d.]+[a-zA-Z%]*$/.test(prev)&&/^[\da-zA-Z%.]$/.test(x)&&!(/[a-zA-Z%]$/.test(prev)&&/[\d.]/.test(x))) out[out.length-1]=prev+x; else out.push(x); } return out.join(" "); }; /* syllables with tone marks, space-separated; a number stays one token (30, not 3 0), with the unit letters the library hands out one by one (380ml, not 380 m l — v323) */
-const APP_V=822; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
+const APP_V=823; /* must equal the PWA vN label in index.html — the boot check repairs a shell whose files are of different versions */
 let PICKING=0; const PICK_MAX=10*60000, picking=()=>PICKING>0&&Date.now()-PICKING<PICK_MAX; /* a photo is being taken or picked (v316): from the tap on Take photo or From album until the input's change or cancel, at most ten minutes — no update reload meanwhile, see reloadSoon */
 const glyphs = s => [...String(s)].filter(ch => CJK.test(ch)).length;
 const headFont = s => { const n = glyphs(s); return n<=1?150:n===2?104:n===3?74:n<=8?58:n<=12?44:34; };
@@ -10708,7 +10708,18 @@ const STROKE_EX=[{"n":"heng","ch":"一","k":0,"m":[[121,507],[193,528],[417,498]
 const PIN_COST=0.22, SNAP_GHOST=0.22, SNAP_SIZE=0.25, TAP_NEAR=0.06; /* SNAP_GHOST: a drawn stroke this near (in character sides) a missing template stroke takes it; TAP_NEAR: a tap within this (in pad sides) of a stroke removes it */
 const tmplStroke=(ch,k)=>{ const st=STROKE_OF.get(ch); return st&&st[k]||null; }; /* a stroke of the stroke file, for the pinned character */
 const bboxOf=pts=>{ let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity; for(const p of pts){ if(p[0]<x0)x0=p[0]; if(p[0]>x1)x1=p[0]; if(p[1]<y0)y0=p[1]; if(p[1]>y1)y1=p[1]; } return {x0,y0,x1,y1,w:x1-x0,h:y1-y0}; };
-const mapPt=(m,p)=>[m.ax*p[0]+m.bx,m.ay*p[1]+m.by]; /* a map from the stroke file's 1024 box onto pad pixels */
+const mapPt=(m,p)=>m.a!=null?[m.a*p[0]+m.c*p[1]+m.e,m.b*p[0]+m.d*p[1]+m.f]:[m.ax*p[0]+m.bx,m.ay*p[1]+m.by]; /* a map from the stroke file's 1024 box onto pad pixels: axis-aligned {ax,ay,bx,by}, or a similarity {a,b,c,d,e,f} (v823) */
+/* v823 (H: "Die Position der geschriebenen strokes ist komisch"): the snapped stroke lies where the finger went. fitMap put the
+   template's box over the drawn stroke's box — centred, one scale for the larger side — so a 撇 drawn flat stood tall over it,
+   and a stroke's ends landed away from where the finger started and stopped. fitSim is the least-squares similarity (one
+   scale, a rotation, a shift; Umeyama) from the template's points to the drawn stroke's, both resampled along their length, so
+   every point of the clean stroke lies as near as it can to the finger's, ends first of all. A stroke drawn backwards (the
+   reverse fits better, strokeDist) is fitted to the finger's points reversed, so the clean stroke still runs its own way */
+function fitSim(T,D){ const n=T.length; let mx=0,my=0,ux=0,uy=0; for(let i=0;i<n;i++){ mx+=T[i][0]; my+=T[i][1]; ux+=D[i][0]; uy+=D[i][1]; } mx/=n; my/=n; ux/=n; uy/=n;
+  let sxx=0,sxy=0,syx=0,syy=0,v=0; for(let i=0;i<n;i++){ const tx=T[i][0]-mx, ty=T[i][1]-my, dx=D[i][0]-ux, dy=D[i][1]-uy; sxx+=tx*dx; sxy+=tx*dy; syx+=ty*dx; syy+=ty*dy; v+=tx*tx+ty*ty; }
+  const th=Math.atan2(sxy-syx,sxx+syy), cs=Math.cos(th), sn=Math.sin(th), sc=((sxx+syy)*cs+(sxy-syx)*sn)/(v||1);
+  const a=sc*cs, b=sc*sn, c=-sc*sn, d=sc*cs; return {a,b,c,d,e:ux-(a*mx+c*my),f:uy-(b*mx+d*my)}; }
+const DOT_MIN=24; /* a stroke drawn smaller than this (px) is a dot: its points carry no direction to fit, it takes the box fit at this size */
 /* the map that lays template points over drawn ones: one scale for both axes (the shape stays the template's), the larger
    side matched, centres on each other */
 function fitMap(tm,raw){ const a=bboxOf(tm), b=bboxOf(raw), big=Math.max(a.w,a.h,1); const s=Math.max(b.w,b.h)/big; return {ax:s,ay:s,bx:(b.x0+b.x1)/2-s*(a.x0+a.x1)/2,by:(b.y0+b.y1)/2-s*(a.y0+a.y1)/2}; }
@@ -10720,11 +10731,14 @@ const shapeOf=pts=>{ const b=bboxOf(pts), s=Math.max(b.w,b.h,1), cx=(b.x0+b.x1)/
    an even shape. Tuned on synthetic strokes and the exemplars themselves (each comes back as itself); the finger is the judge */
 const SNAP_SMALL=new Set(["dian","ti"]), SNAP_PRIOR={hengzhewangou:.03,xiegou:.03,wogou:.03,shuwan:.03,hengzheti:.03,shuzhezhegou:.05,hengxiegou:.03,hengzhezhepie:.05,hengzhewan:.03,wangou:.03,hengzhezhezhegou:.05};
 function typeSnap(raw,ref){ const u=shapeOf(raw), b=bboxOf(raw), rd=Math.max(b.w,b.h,1)/ref; let best=null;
-  for(const ex of STROKE_EX){ const name=ex.n;
+  for(const ex of STROKE_EX){ const name=ex.n, sh=shapeOf(ex.m);
     const size=SNAP_SMALL.has(name)?Math.max(0,Math.log(rd/0.3)):Math.max(0,Math.log(0.18/rd));
-    const cost=strokeDist(u,shapeOf(ex.m))+SNAP_SIZE*Math.min(1.2,size)+(SNAP_PRIOR[name]||0);
-    if(!best||cost<best.cost) best={name,ex,cost}; }
-  return best&&{...best,map:fitMap(best.ex.m,raw)}; }
+    const dd=strokeDist(u,sh), cost=dd+SNAP_SIZE*Math.min(1.2,size)+(SNAP_PRIOR[name]||0);
+    if(!best||cost<best.cost) best={name,ex,cost,rev:dd<strokeDistFwd(u,sh)}; } /* rev: the reverse way fitted better */
+  if(!best) return null;
+  const side=Math.max(b.w,b.h); if(side<DOT_MIN){ const cx=(b.x0+b.x1)/2, cy=(b.y0+b.y1)/2; return {...best,map:fitMap(best.ex.m,[[cx-DOT_MIN/2,cy-DOT_MIN/2],[cx+DOT_MIN/2,cy+DOT_MIN/2]])}; }
+  const D=resamplePts(best.rev?raw.slice().reverse():raw,STROKE_PTS), T=resamplePts(best.ex.m,STROKE_PTS), w=a=>[a[0],a[0],...a,a[a.length-1],a[a.length-1]]; return {...best,map:fitSim(w(T),w(D))}; } /* the ends counted three times: where a stroke starts and stops is what the eye checks first, and a straight finger stroke against a curved template would otherwise trade the ends for the middle */
+const strokeDistFwd=(a,b)=>{ let f=0; for(let k=0;k<STROKE_PTS;k++) f+=Math.hypot(a[k][0]-b[k][0],a[k][1]-b[k][1]); return f/STROKE_PTS; }; /* the forward distance alone — strokeDist takes the better of the two ways and says not which */
 /* one template stroke (its median tm, its Kai outline o when there is one) on a canvas through map m: the outline, else the
    brush at width w. v821 (H's screenshots: "die geschriebenen Striche total komisch dünn"): a stroke snapped by itself is drawn
    with the BRUSH at one width (SNAP_W), never the outline — an outline's thickness is the glyph's and scales with the stroke's
